@@ -62,6 +62,7 @@ if (current_cpu != "") {
       "$zx/system/dev/display/vim-display:vim-display-test",
       "$zx/system/dev/ethernet/ethernet:ethernet-unittest",
       "$zx/system/dev/ethernet/ethertap:ethertap-unittest",
+      "$zx/system/dev/ethernet/usb-cdc-ecm:usb-cdc-ecm-unittest",
       "$zx/system/dev/gpio/aml-axg-gpio:aml-axg-gpio-test",
       "$zx/system/dev/gpio/as370-gpio:as370-gpio-test",
       "$zx/system/dev/gpio/mt-8167:mtk-gpio",

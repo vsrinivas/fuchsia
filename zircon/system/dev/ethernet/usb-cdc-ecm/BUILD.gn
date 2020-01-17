@@ -5,14 +5,32 @@
 zx_driver("usb-cdc-ecm") {
   sources = [ "usb-cdc-ecm.c" ]
   deps = [
+    ":usb-cdc-ecm-lib",
+    "$zx/system/banjo/ddk.protocol.usb.request",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+source_set("usb-cdc-ecm-lib") {
+  sources = [ "usb-cdc-ecm-lib.c" ]
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
+  ]
+}
+
+zx_test("usb-cdc-ecm-unittest") {
+  output_name = "usb-cdc-ecm-unittest"
+  sources = [ "usb-cdc-ecm-unittest.cc" ]
+  deps = [
+    ":usb-cdc-ecm-lib",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
   ]
 }

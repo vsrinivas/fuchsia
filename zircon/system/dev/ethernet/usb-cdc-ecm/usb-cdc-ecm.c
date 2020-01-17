@@ -1,26 +1,20 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #include <inttypes.h>
-#include <lib/sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
 #include <zircon/hw/usb/cdc.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/composite.h>
 #include <usb/usb-request.h>
-#include <usb/usb.h>
 
-#define CDC_SUPPORTED_VERSION 0x0110 /* 1.10 */
+#include "usb-cdc-ecm-lib.h"
 
 // The maximum amount of memory we are willing to allocate to transaction buffers
 #define MAX_TX_BUF_SZ 32768
@@ -34,62 +28,6 @@
 #define ETHERNET_INITIAL_RECV_DELAY 0
 #define ETHERNET_INITIAL_PACKET_FILTER \
   (USB_CDC_PACKET_TYPE_DIRECTED | USB_CDC_PACKET_TYPE_BROADCAST | USB_CDC_PACKET_TYPE_MULTICAST)
-
-const char* module_name = "usb-cdc-ecm";
-
-typedef struct {
-  uint8_t addr;
-  uint16_t max_packet_size;
-} ecm_endpoint_t;
-
-typedef struct {
-  zx_device_t* zxdev;
-  zx_device_t* usb_device;
-  usb_protocol_t usb;
-  // Ethernet lock -- must be acquired after tx_mutex
-  // when both locks are held.
-  mtx_t ethernet_mutex;
-  ethernet_ifc_protocol_t ethernet_ifc;
-
-  // Device attributes
-  uint8_t mac_addr[ETH_MAC_SIZE];
-  uint16_t mtu;
-
-  // Connection attributes
-  bool online;
-  uint32_t ds_bps;
-  uint32_t us_bps;
-
-  // Interrupt handling
-  ecm_endpoint_t int_endpoint;
-  usb_request_t* int_txn_buf;
-  sync_completion_t completion;
-  thrd_t int_thread;
-
-  // Send context
-  // TX lock -- Must be acquired before ethernet_mutex
-  // when both locks are held.
-  mtx_t tx_mutex;
-  ecm_endpoint_t tx_endpoint;
-  list_node_t tx_txn_bufs;       // list of usb_request_t
-  list_node_t tx_pending_infos;  // list of txn_info_t
-  bool unbound;                  // set to true when device is going away. Guarded by tx_mutex
-  uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
-
-  size_t parent_req_size;
-
-  // Receive context
-  ecm_endpoint_t rx_endpoint;
-  uint64_t rx_endpoint_delay;  // wait time between 2 recv requests
-  uint16_t rx_packet_filter;
-} ecm_ctx_t;
-
-typedef struct txn_info {
-  ethernet_netbuf_t netbuf;
-  ethernet_impl_queue_tx_callback completion_cb;
-  void* cookie;
-  list_node_t node;
-} txn_info_t;
 
 static void complete_txn(txn_info_t* txn, zx_status_t status) {
   txn->completion_cb(txn->cookie, status, &txn->netbuf);
@@ -563,69 +501,6 @@ static int ecm_int_handler_thread(void* cookie) {
   }
 }
 
-static bool parse_cdc_header(usb_cs_header_interface_descriptor_t* header_desc) {
-  // Check for supported CDC version
-  zxlogf(TRACE, "%s: device reports CDC version as 0x%x\n", module_name, header_desc->bcdCDC);
-  return header_desc->bcdCDC >= CDC_SUPPORTED_VERSION;
-}
-
-static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
-                                          usb_cs_ethernet_interface_descriptor_t* desc) {
-  ctx->mtu = desc->wMaxSegmentSize;
-
-  // MAC address is stored in a string descriptor in UTF-16 format, so we get one byte of
-  // address for each 32 bits of text.
-  const size_t expected_str_size = sizeof(usb_string_descriptor_t) + ETH_MAC_SIZE * 4;
-  char str_desc_buf[expected_str_size];
-
-  // Read string descriptor for MAC address (string index is in iMACAddress field)
-  size_t out_length;
-  zx_status_t result =
-      usb_get_descriptor(&ctx->usb, 0, USB_DT_STRING, desc->iMACAddress, str_desc_buf,
-                         sizeof(str_desc_buf), ZX_TIME_INFINITE, &out_length);
-  if (result < 0) {
-    zxlogf(ERROR, "%s: error reading MAC address\n", module_name);
-    return false;
-  }
-  if (out_length != expected_str_size) {
-    zxlogf(ERROR, "%s: MAC address string incorrect length (saw %zd, expected %zd)\n", module_name,
-           out_length, expected_str_size);
-    return false;
-  }
-
-  // Convert MAC address to something more machine-friendly
-  usb_string_descriptor_t* str_desc = (usb_string_descriptor_t*)str_desc_buf;
-  uint8_t* str = str_desc->bString;
-  size_t ndx;
-  for (ndx = 0; ndx < ETH_MAC_SIZE * 4; ndx++) {
-    if (ndx % 2 == 1) {
-      if (str[ndx] != 0) {
-        zxlogf(ERROR, "%s: MAC address contains invalid characters\n", module_name);
-        return false;
-      }
-      continue;
-    }
-    uint8_t value;
-    if (str[ndx] >= '0' && str[ndx] <= '9') {
-      value = str[ndx] - '0';
-    } else if (str[ndx] >= 'A' && str[ndx] <= 'F') {
-      value = (str[ndx] - 'A') + 0xa;
-    } else {
-      zxlogf(ERROR, "%s: MAC address contains invalid characters\n", module_name);
-      return false;
-    }
-    if (ndx % 4 == 0) {
-      ctx->mac_addr[ndx / 4] = value << 4;
-    } else {
-      ctx->mac_addr[ndx / 4] |= value;
-    }
-  }
-
-  zxlogf(ERROR, "%s: MAC address is %02X:%02X:%02X:%02X:%02X:%02X\n", module_name, ctx->mac_addr[0],
-         ctx->mac_addr[1], ctx->mac_addr[2], ctx->mac_addr[3], ctx->mac_addr[4], ctx->mac_addr[5]);
-  return true;
-}
-
 static void copy_endpoint_info(ecm_endpoint_t* ep_info, usb_endpoint_descriptor_t* desc) {
   ep_info->addr = desc->bEndpointAddress;
   ep_info->max_packet_size = desc->wMaxPacketSize;
@@ -677,122 +552,20 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   ecm_ctx->rx_packet_filter = ETHERNET_INITIAL_PACKET_FILTER;
   ecm_ctx->parent_req_size = usb_get_request_size(&ecm_ctx->usb);
 
-  usb_desc_iter_t iter;
-  result = usb_desc_iter_init(&usb, &iter);
-  if (result != ZX_OK) {
-    goto fail;
-  }
-  result = ZX_ERR_NOT_SUPPORTED;
-
   // Find the CDC descriptors and endpoints
-  usb_descriptor_header_t* desc;
-  usb_cs_header_interface_descriptor_t* cdc_header_desc = NULL;
-  usb_cs_ethernet_interface_descriptor_t* cdc_eth_desc = NULL;
   usb_endpoint_descriptor_t* int_ep = NULL;
   usb_endpoint_descriptor_t* tx_ep = NULL;
   usb_endpoint_descriptor_t* rx_ep = NULL;
   usb_interface_descriptor_t* default_ifc = NULL;
   usb_interface_descriptor_t* data_ifc = NULL;
-  while ((desc = usb_desc_iter_peek(&iter)) != NULL) {
-    if (desc->bDescriptorType == USB_DT_INTERFACE) {
-      usb_interface_descriptor_t* ifc_desc =
-          usb_desc_iter_get_structure(&iter, sizeof(usb_interface_descriptor_t));
-      if (ifc_desc == NULL) {
-        goto fail;
-      }
-      if (ifc_desc->bInterfaceClass == USB_CLASS_CDC) {
-        if (ifc_desc->bNumEndpoints == 0) {
-          if (default_ifc) {
-            zxlogf(ERROR, "%s: multiple default interfaces found\n", module_name);
-            goto fail;
-          }
-          default_ifc = ifc_desc;
-        } else if (ifc_desc->bNumEndpoints == 2) {
-          if (data_ifc) {
-            zxlogf(ERROR, "%s: multiple data interfaces found\n", module_name);
-            goto fail;
-          }
-          data_ifc = ifc_desc;
-        }
-      }
-    } else if (desc->bDescriptorType == USB_DT_CS_INTERFACE) {
-      usb_cs_interface_descriptor_t* cs_ifc_desc =
-          usb_desc_iter_get_structure(&iter, sizeof(usb_cs_interface_descriptor_t));
-      if (cs_ifc_desc == NULL) {
-        goto fail;
-      }
-      if (cs_ifc_desc->bDescriptorSubType == USB_CDC_DST_HEADER) {
-        if (cdc_header_desc != NULL) {
-          zxlogf(ERROR, "%s: multiple CDC headers\n", module_name);
-          goto fail;
-        }
-        cdc_header_desc =
-            usb_desc_iter_get_structure(&iter, sizeof(usb_cs_header_interface_descriptor_t));
-      } else if (cs_ifc_desc->bDescriptorSubType == USB_CDC_DST_ETHERNET) {
-        if (cdc_eth_desc != NULL) {
-          zxlogf(ERROR, "%s: multiple CDC ethernet descriptors\n", module_name);
-          goto fail;
-        }
-        cdc_eth_desc =
-            usb_desc_iter_get_structure(&iter, sizeof(usb_cs_ethernet_interface_descriptor_t));
-      }
-    } else if (desc->bDescriptorType == USB_DT_ENDPOINT) {
-      usb_endpoint_descriptor_t* endpoint_desc =
-          usb_desc_iter_get_structure(&iter, sizeof(usb_endpoint_descriptor_t));
-      if (endpoint_desc == NULL) {
-        goto fail;
-      }
-      if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_IN &&
-          usb_ep_type(endpoint_desc) == USB_ENDPOINT_INTERRUPT) {
-        if (int_ep != NULL) {
-          zxlogf(ERROR, "%s: multiple interrupt endpoint descriptors\n", module_name);
-          goto fail;
-        }
-        int_ep = endpoint_desc;
-      } else if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_OUT &&
-                 usb_ep_type(endpoint_desc) == USB_ENDPOINT_BULK) {
-        if (tx_ep != NULL) {
-          zxlogf(ERROR, "%s: multiple tx endpoint descriptors\n", module_name);
-          goto fail;
-        }
-        tx_ep = endpoint_desc;
-      } else if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_IN &&
-                 usb_ep_type(endpoint_desc) == USB_ENDPOINT_BULK) {
-        if (rx_ep != NULL) {
-          zxlogf(ERROR, "%s: multiple rx endpoint descriptors\n", module_name);
-          goto fail;
-        }
-        rx_ep = endpoint_desc;
-      } else {
-        zxlogf(ERROR, "%s: unrecognized endpoint\n", module_name);
-        goto fail;
-      }
-    }
-    usb_desc_iter_advance(&iter);
-  }
-  if (cdc_header_desc == NULL || cdc_eth_desc == NULL) {
-    zxlogf(ERROR, "%s: CDC %s descriptor(s) not found", module_name,
-           cdc_header_desc ? "ethernet" : cdc_eth_desc ? "header" : "ethernet and header");
+  usb_desc_iter_t iter = {};
+  result = usb_desc_iter_init(&usb, &iter);
+  if (result != ZX_OK) {
     goto fail;
   }
-  if (int_ep == NULL || tx_ep == NULL || rx_ep == NULL) {
-    zxlogf(ERROR, "%s: missing one or more required endpoints\n", module_name);
-    goto fail;
-  }
-  if (default_ifc == NULL) {
-    zxlogf(ERROR, "%s: unable to find CDC default interface\n", module_name);
-    goto fail;
-  }
-  if (data_ifc == NULL) {
-    zxlogf(ERROR, "%s: unable to find CDC data interface\n", module_name);
-    goto fail;
-  }
-
-  // Parse the information in the CDC descriptors
-  if (!parse_cdc_header(cdc_header_desc)) {
-    goto fail;
-  }
-  if (!parse_cdc_ethernet_descriptor(ecm_ctx, cdc_eth_desc)) {
+  result = parse_usb_descriptor(&iter, &int_ep, &tx_ep, &rx_ep, &default_ifc, &data_ifc, ecm_ctx);
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to parse usb descriptor: %d\n", module_name, (int)result);
     goto fail;
   }
 
@@ -901,11 +674,12 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     goto fail;
   }
 
-  usb_desc_iter_release(&iter);
   return ZX_OK;
 
 fail:
-  usb_desc_iter_release(&iter);
+  if (iter.desc) {
+    usb_desc_iter_release(&iter);
+  }
   ecm_free(ecm_ctx);
   zxlogf(ERROR, "%s: failed to bind\n", module_name);
   return result;

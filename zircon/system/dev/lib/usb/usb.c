@@ -143,6 +143,10 @@ __EXPORT usb_descriptor_header_t* usb_desc_iter_peek(usb_desc_iter_t* iter) {
   if (end > iter->desc_end) {
     return NULL;
   }
+  if (header->bLength == 0) {
+    // An descriptor must not have 0 length, otherwise, it might cause infinite loop.
+    return NULL;
+  }
   return header;
 }
 
