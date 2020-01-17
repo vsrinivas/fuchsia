@@ -81,6 +81,15 @@ func (b *Buffer) Write(p []byte) (int, error) {
 	return total, nil
 }
 
+// Bytes returns the number of unread bytes in the buffer.
+func (b Buffer) Bytes() []byte {
+	b.Lock()
+	defer b.Unlock()
+	p := make([]byte, b.write-b.read)
+	b.copyToBuffer(p, b.read)
+	return p
+}
+
 func (b *Buffer) copyToBuffer(p []byte, start int) {
 	N := len(b.buf)
 	P := len(p)
@@ -99,7 +108,7 @@ func (b *Buffer) copyToBuffer(p []byte, start int) {
 	}
 }
 
-func (b* Buffer) copyFromBuffer(p []byte, start int) {
+func (b *Buffer) copyFromBuffer(p []byte, start int) {
 	N := len(b.buf)
 	P := len(p)
 

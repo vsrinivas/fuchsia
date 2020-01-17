@@ -17,6 +17,36 @@ func TestBuffer(t *testing.T) {
 		var _ io.ReadWriter = (*Buffer)(nil)
 	})
 
+	t.Run("test unread bytes are correct", func(t *testing.T) {
+		rb := NewBuffer(5)
+
+		unreadBytesAre := func(t *testing.T, expected []byte) {
+			actual := rb.Bytes()
+			if bytes.Compare(actual, expected) != 0 {
+				t.Fatalf("unexpected unread bytes:\nexpected: %s;\nactual: %s", expected, actual)
+			}
+		}
+
+		unreadBytesAre(t, nil)
+		io.WriteString(rb, "01")
+		unreadBytesAre(t, []byte("01"))
+		io.WriteString(rb, "234")
+		unreadBytesAre(t, []byte("01234"))
+		io.WriteString(rb, "56")
+		unreadBytesAre(t, []byte("23456"))
+
+		p := make([]byte, 3)
+		rb.Read(p)
+		unreadBytesAre(t, []byte("56"))
+
+		q := make([]byte, 1)
+		rb.Read(q)
+		unreadBytesAre(t, []byte("6"))
+
+		rb.Read(q)
+		unreadBytesAre(t, nil)
+	})
+
 	roundtrips := []struct {
 		name     string
 		size     int
