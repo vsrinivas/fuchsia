@@ -75,6 +75,8 @@ TEST_F(SandboxMetadataTest, Parse) {
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
     EXPECT_THAT(sandbox.services(), ::testing::ElementsAre("fuchsia.sys.Launcher"));
+    EXPECT_TRUE(sandbox.HasService("fuchsia.sys.Launcher"));
+    EXPECT_FALSE(sandbox.HasService("potato"));
   }
 
   // pkgfs

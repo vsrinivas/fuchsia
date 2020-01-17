@@ -88,5 +88,30 @@ TEST_F(RealmTest, ReplaceAsExecPolicyAbsent) {
       "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"));
 }
 
+TEST_F(RealmTest, PackageResolverPolicy) {
+  static constexpr char kFile[] = R"F(
+  fuchsia-pkg://fuchsia.com/system_updater#meta/system_updater.cmx
+  )F";
+
+  // Stub out a dispatcher.  We won't actually run anything on it, but some
+  // things in Realm assert they can grab the implicit default eventloop, so
+  // keep them happy.
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+
+  // Add the allowlist.
+  ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
+  auto filename = NewFile(dir, "allowlist/package_resolver.txt", kFile);
+  auto realm = CreateTestRealm(std::move(dirfd));
+
+  EXPECT_TRUE(realm->IsAllowedToUsePackageResolver(
+      "fuchsia-pkg://fuchsia.com/system_updater#meta/system_updater.cmx"));
+  EXPECT_FALSE(
+      realm->IsAllowedToUsePackageResolver("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"));
+}
+
 }  // namespace
 }  // namespace component

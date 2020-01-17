@@ -157,6 +157,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   bool IsAllowedToUseDeprecatedShell(std::string ns_id);
   bool IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id);
   bool IsAllowedToConnectToComponentEventProvider(std::string ns_id);
+  bool IsAllowedToUsePackageResolver(std::string ns_id);
 
   // Notifies the |ComponentEventListener| of this realm or the closest parent realm (if there's
   // one) with a component out/diagnostics directory when the directory is available.

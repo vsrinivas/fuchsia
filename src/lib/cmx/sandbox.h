@@ -22,6 +22,8 @@ class SandboxMetadata {
   bool HasFeature(const std::string& feature) const;
   void AddFeature(std::string feature);
 
+  bool HasService(const std::string& service) const;
+
   bool HasInternalFeature(const std::string& feature) const;
 
   const std::vector<std::string>& dev() const { return dev_; }

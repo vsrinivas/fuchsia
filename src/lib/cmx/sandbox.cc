@@ -67,4 +67,8 @@ bool SandboxMetadata::HasInternalFeature(const std::string& feature) const {
 
 void SandboxMetadata::AddFeature(std::string feature) { features_.push_back(std::move(feature)); }
 
+bool SandboxMetadata::HasService(const std::string& service) const {
+  return std::find(services_.begin(), services_.end(), service) != services_.end();
+}
+
 }  // namespace component
