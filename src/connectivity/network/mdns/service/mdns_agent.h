@@ -6,12 +6,12 @@
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_AGENT_H_
 
 #include <lib/fit/function.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
-#include "src/lib/fxl/time/time_point.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {
@@ -27,10 +27,12 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
    public:
     virtual ~Host() {}
 
+    // Gets the current time.
+    virtual zx::time now() = 0;
+
     // Posts a task to be executed at the specified time. Scheduled tasks posted
     // by agents that have since been removed are not executed.
-    virtual void PostTaskForTime(MdnsAgent* agent, fit::closure task,
-                                 fxl::TimePoint target_time) = 0;
+    virtual void PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) = 0;
 
     // Sends a question to the multicast address.
     virtual void SendQuestion(std::shared_ptr<DnsQuestion> question) = 0;
@@ -91,9 +93,12 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     return *addresses_;
   }
 
+  // Gets the current time.
+  zx::time now() { return host_->now(); }
+
   // Posts a task to be executed at the specified time. Scheduled tasks posted
   // by agents that have since been removed are not executed.
-  void PostTaskForTime(fit::closure task, fxl::TimePoint target_time) {
+  void PostTaskForTime(fit::closure task, zx::time target_time) {
     host_->PostTaskForTime(this, std::move(task), target_time);
   }
 

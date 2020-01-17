@@ -5,13 +5,14 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_INSTANCE_RESPONDER_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_INSTANCE_RESPONDER_H_
 
+#include <lib/zx/time.h>
+
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "src/connectivity/network/mdns/service/mdns.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
-#include "src/lib/fxl/time/time_delta.h"
 #include "src/lib/inet/ip_port.h"
 
 namespace mdns {
@@ -45,8 +46,8 @@ class InstanceResponder : public MdnsAgent {
   void Reannounce();
 
  private:
-  static constexpr fxl::TimeDelta kInitialAnnouncementInterval = fxl::TimeDelta::FromSeconds(1);
-  static constexpr fxl::TimeDelta kMaxAnnouncementInterval = fxl::TimeDelta::FromSeconds(4);
+  static constexpr zx::duration kInitialAnnouncementInterval = zx::sec(1);
+  static constexpr zx::duration kMaxAnnouncementInterval = zx::sec(4);
 
   // Sends an announcement and schedules the next announcement, as appropriate.
   void SendAnnouncement();
@@ -77,7 +78,7 @@ class InstanceResponder : public MdnsAgent {
   std::string instance_full_name_;
   Mdns::Publisher* publisher_;
   std::vector<std::string> subtypes_;
-  fxl::TimeDelta announcement_interval_ = kInitialAnnouncementInterval;
+  zx::duration announcement_interval_ = kInitialAnnouncementInterval;
 };
 
 }  // namespace mdns

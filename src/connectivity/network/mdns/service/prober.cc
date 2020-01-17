@@ -4,16 +4,15 @@
 
 #include "src/connectivity/network/mdns/service/prober.h"
 
+#include <lib/zx/time.h>
 #include <zircon/syscalls.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_delta.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace mdns {
 
 // static
-constexpr fxl::TimeDelta Prober::kMaxProbeInterval = fxl::TimeDelta::FromMilliseconds(250);
+constexpr zx::duration Prober::kMaxProbeInterval = zx::msec(250);
 
 Prober::Prober(MdnsAgent::Host* host, DnsType type, CompletionCallback callback)
     : MdnsAgent(host), type_(type), callback_(std::move(callback)) {
@@ -51,20 +50,19 @@ void Prober::ReceiveResource(const DnsResource& resource, MdnsResourceSection se
           // referencing any members.
           callback(false);
         },
-        fxl::TimePoint::Now());
+        now());
   }
 }
 
-fxl::TimeDelta Prober::InitialDelay() {
+zx::duration Prober::InitialDelay() {
   uint64_t random = 0;
   zx_cprng_draw(&random, sizeof(random));
   int64_t random_nonnegative_int64 = static_cast<int64_t>(random >> 1);
   FXL_DCHECK(random_nonnegative_int64 >= 0);
-  return fxl::TimeDelta::FromNanoseconds(random_nonnegative_int64 %
-                                         kMaxProbeInterval.ToNanoseconds());
+  return zx::nsec(random_nonnegative_int64 % kMaxProbeInterval.to_nsecs());
 }
 
-void Prober::Probe(fxl::TimeDelta delay) {
+void Prober::Probe(zx::duration delay) {
   PostTaskForTime(
       [this]() {
         if (++probe_attempt_count_ > kMaxProbeAttemptCount) {
@@ -80,7 +78,7 @@ void Prober::Probe(fxl::TimeDelta delay) {
           Probe(kMaxProbeInterval);
         }
       },
-      fxl::TimePoint::Now() + delay);
+      now() + delay);
 }
 
 }  // namespace mdns

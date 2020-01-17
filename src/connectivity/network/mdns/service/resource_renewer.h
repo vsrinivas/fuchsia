@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_RESOURCE_RENEWER_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_RESOURCE_RENEWER_H_
 
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
+
 #include <memory>
 #include <queue>
 #include <string>
@@ -65,8 +68,8 @@ class ResourceRenewer : public MdnsAgent {
     std::string name_;
     DnsType type_;
 
-    fxl::TimePoint time_;
-    fxl::TimeDelta interval_;
+    zx::time time_;
+    zx::duration interval_;
     uint32_t queries_remaining_;
 
     // Time value used for |schedule|. In some cases, we want to postpone a
@@ -74,13 +77,13 @@ class ResourceRenewer : public MdnsAgent {
     // will be increased, but |schedule_time_| will remain unchanged. When the
     // entry comes up in the schedule, the entry should be rescheduled if
     // |time_| is different from |schedule_time_|.
-    fxl::TimePoint schedule_time_;
+    zx::time schedule_time_;
 
     bool delete_ = false;
 
     // Sets |time_|, |interval_| and |queries_remaining_| to their initial
     // values to initiate the eventual renewal of the resource.
-    void SetFirstQuery(uint32_t time_to_live);
+    void SetFirstQuery(zx::time now, uint32_t time_to_live);
 
     // Updates |time_| and |queries_remaining_| for the purposes of scheduling
     // the next query or expiration.

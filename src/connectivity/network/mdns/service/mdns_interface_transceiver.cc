@@ -23,7 +23,6 @@
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver_v6.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace mdns {
 

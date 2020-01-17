@@ -8,6 +8,7 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/zx/clock.h>
 
 #include <memory>
 #include <queue>
@@ -19,7 +20,6 @@
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
 #include "src/connectivity/network/mdns/service/mdns_transceiver.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/time/time_point.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {
@@ -156,7 +156,7 @@ class Mdns : public MdnsAgent::Host {
 
   // Resolves |host_name| to one or two |IpAddress|es. Must not be called before
   // |Start|'s ready callback is called.
-  void ResolveHostName(const std::string& host_name, fxl::TimePoint timeout,
+  void ResolveHostName(const std::string& host_name, zx::time timeout,
                        ResolveHostNameCallback callback);
 
   // Subscribes to the specified service. The subscription is cancelled when
@@ -184,7 +184,7 @@ class Mdns : public MdnsAgent::Host {
   };
 
   struct TaskQueueEntry {
-    TaskQueueEntry(MdnsAgent* agent, fit::closure task, fxl::TimePoint time)
+    TaskQueueEntry(MdnsAgent* agent, fit::closure task, zx::time time)
         : agent_(agent), task_(std::move(task)), time_(time) {}
 
     MdnsAgent* agent_;
@@ -192,7 +192,7 @@ class Mdns : public MdnsAgent::Host {
     // for its contents which makes it otherwise impossible to move the closure
     // out of the queue when it is time to dispatch the task
     mutable fit::closure task_;
-    fxl::TimePoint time_;
+    zx::time time_;
 
     bool operator<(const TaskQueueEntry& other) const { return time_ > other.time_; }
   };
@@ -228,7 +228,9 @@ class Mdns : public MdnsAgent::Host {
   void OnHostNameConflict();
 
   // MdnsAgent::Host implementation.
-  void PostTaskForTime(MdnsAgent* agent, fit::closure task, fxl::TimePoint target_time) override;
+  zx::time now() override;
+
+  void PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) override;
 
   void SendQuestion(std::shared_ptr<DnsQuestion> question) override;
 
@@ -274,7 +276,7 @@ class Mdns : public MdnsAgent::Host {
   std::string host_full_name_;
   State state_ = State::kNotStarted;
   std::priority_queue<TaskQueueEntry> task_queue_;
-  fxl::TimePoint posted_task_time_ = fxl::TimePoint::Max();
+  zx::time posted_task_time_ = zx::time::infinite();
   std::unordered_map<ReplyAddress, DnsMessage, ReplyAddressHash>
       outbound_messages_by_reply_address_;
   std::vector<std::shared_ptr<MdnsAgent>> agents_awaiting_start_;

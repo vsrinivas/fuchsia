@@ -9,6 +9,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <unistd.h>
 
 #include "lib/fidl/cpp/type_converter.h"
@@ -129,7 +131,7 @@ void MdnsServiceImpl::ResolveHostName(std::string host, int64_t timeout_ns,
   }
 
   mdns_.ResolveHostName(
-      host, fxl::TimePoint::Now() + fxl::TimeDelta::FromNanoseconds(timeout_ns),
+      host, zx::clock::get_monotonic() + zx::nsec(timeout_ns),
       [callback = std::move(callback)](const std::string& host, const inet::IpAddress& v4_address,
                                        const inet::IpAddress& v6_address) {
         callback(v4_address ? std::make_unique<fuchsia::net::Ipv4Address>(

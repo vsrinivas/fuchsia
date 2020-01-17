@@ -4,8 +4,9 @@
 
 #include "src/connectivity/network/mdns/service/resource_renewer.h"
 
+#include <lib/zx/clock.h>
+
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace mdns {
 
@@ -21,7 +22,7 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
 
   if (iter == entries_.end()) {
     auto entry = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
-    entry->SetFirstQuery(resource.time_to_live_);
+    entry->SetFirstQuery(now(), resource.time_to_live_);
 
     Schedule(entry.get());
 
@@ -31,7 +32,7 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
 
     entries_.insert(std::move(entry));
   } else {
-    (*iter)->SetFirstQuery(resource.time_to_live_);
+    (*iter)->SetFirstQuery(now(), resource.time_to_live_);
     (*iter)->delete_ = false;
   }
 }
@@ -52,7 +53,7 @@ void ResourceRenewer::Quit() {
 }
 
 void ResourceRenewer::SendRenewals() {
-  fxl::TimePoint now = fxl::TimePoint::Now();
+  zx::time now = this->now();
 
   while (!schedule_.empty() && schedule_.top()->schedule_time_ <= now) {
     Entry* entry = const_cast<Entry*>(schedule_.top());
@@ -96,10 +97,9 @@ void ResourceRenewer::EraseEntry(Entry* entry) {
   unique_entry.release();
 }
 
-void ResourceRenewer::Entry::SetFirstQuery(uint32_t time_to_live) {
-  time_ = fxl::TimePoint::Now() +
-          fxl::TimeDelta::FromMilliseconds(time_to_live * kFirstQueryPerThousand);
-  interval_ = fxl::TimeDelta::FromMilliseconds(time_to_live * kQueryIntervalPerThousand);
+void ResourceRenewer::Entry::SetFirstQuery(zx::time now, uint32_t time_to_live) {
+  time_ = now + zx::msec(time_to_live * kFirstQueryPerThousand);
+  interval_ = zx::msec(time_to_live * kQueryIntervalPerThousand);
   queries_remaining_ = kQueriesToAttempt;
 }
 

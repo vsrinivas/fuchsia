@@ -8,7 +8,6 @@
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace mdns {
 
@@ -66,7 +65,7 @@ void InstanceResponder::Quit() {
   if (started()) {
     SendGoodbye();
   }
-  
+
   RemoveSelf(instance_full_name_);
 
   publisher_ = nullptr;
@@ -124,7 +123,7 @@ void InstanceResponder::SendAnnouncement() {
     return;
   }
 
-  PostTaskForTime([this]() { SendAnnouncement(); }, fxl::TimePoint::Now() + announcement_interval_);
+  PostTaskForTime([this]() { SendAnnouncement(); }, now() + announcement_interval_);
 
   announcement_interval_ = announcement_interval_ * 2;
 }

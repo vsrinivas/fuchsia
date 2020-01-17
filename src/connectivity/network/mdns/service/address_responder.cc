@@ -6,7 +6,6 @@
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace mdns {
 

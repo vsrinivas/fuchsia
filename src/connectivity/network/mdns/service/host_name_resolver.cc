@@ -4,14 +4,15 @@
 
 #include "src/connectivity/network/mdns/service/host_name_resolver.h"
 
+#include <lib/zx/time.h>
+
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace mdns {
 
 HostNameResolver::HostNameResolver(MdnsAgent::Host* host, const std::string& host_name,
-                                   fxl::TimePoint timeout, Mdns::ResolveHostNameCallback callback)
+                                   zx::time timeout, Mdns::ResolveHostNameCallback callback)
     : MdnsAgent(host),
       host_name_(host_name),
       host_full_name_(MdnsNames::LocalHostFullName(host_name)),
@@ -64,7 +65,7 @@ void HostNameResolver::EndOfMessage() {
   if (v4_address_ || v6_address_) {
     callback_(host_name_, v4_address_, v6_address_);
     callback_ = nullptr;
-    PostTaskForTime([this]() { RemoveSelf(); }, fxl::TimePoint::Now());
+    PostTaskForTime([this]() { RemoveSelf(); }, now());
   }
 }
 

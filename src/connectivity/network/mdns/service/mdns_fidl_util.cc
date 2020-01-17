@@ -4,6 +4,8 @@
 
 #include "src/connectivity/network/mdns/service/mdns_fidl_util.h"
 
+#include <lib/zx/time.h>
+
 #include "lib/fidl/cpp/type_converter.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
@@ -136,9 +138,9 @@ std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
                                 fidl::To<std::vector<std::string>>(publication_ptr->text),
                                 publication_ptr->srv_priority, publication_ptr->srv_weight);
 
-  publication->ptr_ttl_seconds_ = zx::duration(publication_ptr->ptr_ttl).to_secs();
-  publication->srv_ttl_seconds_ = zx::duration(publication_ptr->srv_ttl).to_secs();
-  publication->txt_ttl_seconds_ = zx::duration(publication_ptr->txt_ttl).to_secs();
+  publication->ptr_ttl_seconds_ = zx::nsec(publication_ptr->ptr_ttl).to_secs();
+  publication->srv_ttl_seconds_ = zx::nsec(publication_ptr->srv_ttl).to_secs();
+  publication->txt_ttl_seconds_ = zx::nsec(publication_ptr->txt_ttl).to_secs();
 
   return publication;
 }

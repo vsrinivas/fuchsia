@@ -6,6 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 
 #include <iostream>
 #include <limits>
@@ -22,7 +24,6 @@
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/connectivity/network/mdns/service/resource_renewer.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace mdns {
 
@@ -119,7 +120,7 @@ void Mdns::Stop() {
   state_ = State::kNotStarted;
 }
 
-void Mdns::ResolveHostName(const std::string& host_name, fxl::TimePoint timeout,
+void Mdns::ResolveHostName(const std::string& host_name, zx::time timeout,
                            ResolveHostNameCallback callback) {
   FXL_DCHECK(MdnsNames::IsValidHostName(host_name));
   FXL_DCHECK(callback);
@@ -241,7 +242,9 @@ void Mdns::OnHostNameConflict() {
   StartAddressProbe(os.str());
 }
 
-void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task, fxl::TimePoint target_time) {
+zx::time Mdns::now() { return zx::clock::get_monotonic(); }
+
+void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) {
   task_queue_.emplace(agent, std::move(task), target_time);
   PostTask();
 }
@@ -429,9 +432,9 @@ void Mdns::PostTask() {
       dispatcher_,
       [this]() {
         // Suppress recursive calls to this method.
-        posted_task_time_ = fxl::TimePoint::Min();
+        posted_task_time_ = zx::time::infinite_past();
 
-        fxl::TimePoint now = fxl::TimePoint::Now();
+        zx::time now = this->now();
 
         while (!task_queue_.empty() && task_queue_.top().time_ <= now) {
           fit::closure task = std::move(task_queue_.top().task_);
@@ -441,12 +444,12 @@ void Mdns::PostTask() {
 
         SendMessages();
 
-        posted_task_time_ = fxl::TimePoint::Max();
+        posted_task_time_ = zx::time::infinite();
         if (!task_queue_.empty()) {
           PostTask();
         }
       },
-      zx::time(posted_task_time_.ToEpochDelta().ToNanoseconds()));
+      zx::time(posted_task_time_));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

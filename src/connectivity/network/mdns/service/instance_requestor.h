@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_INSTANCE_REQUESTOR_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_INSTANCE_REQUESTOR_H_
 
+#include <lib/zx/time.h>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -12,7 +14,6 @@
 
 #include "src/connectivity/network/mdns/service/mdns.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
-#include "src/lib/fxl/time/time_delta.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {
@@ -85,7 +86,7 @@ class InstanceRequestor : public MdnsAgent {
   std::unordered_set<Mdns::Subscriber*> subscribers_;
   std::unordered_map<std::string, InstanceInfo> instance_infos_by_full_name_;
   std::unordered_map<std::string, TargetInfo> target_infos_by_full_name_;
-  fxl::TimeDelta query_delay_;
+  zx::duration query_delay_;
   std::shared_ptr<DnsQuestion> question_;
 };
 

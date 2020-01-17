@@ -6,12 +6,12 @@
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_PROBER_H_
 
 #include <lib/fit/function.h>
+#include <lib/zx/clock.h>
 
 #include <memory>
 #include <string>
 
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace mdns {
 
@@ -56,15 +56,15 @@ class Prober : public MdnsAgent {
   virtual void SendProposedResources(MdnsResourceSection section) = 0;
 
  private:
-  static const fxl::TimeDelta kMaxProbeInterval;
+  static const zx::duration kMaxProbeInterval;
   static constexpr uint32_t kMaxProbeAttemptCount = 3;
 
   // Returns a time delta between 0 and |kMaxProbeInterval|.
-  fxl::TimeDelta InitialDelay();
+  zx::duration InitialDelay();
 
   // Waits for |delay| and either sends a probe message or signals success and
   // calls |RemoveSelf|.
-  void Probe(fxl::TimeDelta delay);
+  void Probe(zx::duration delay);
 
   DnsType type_;
   CompletionCallback callback_;

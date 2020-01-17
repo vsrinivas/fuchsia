@@ -4,6 +4,8 @@
 
 #include "src/connectivity/network/mdns/service/instance_requestor.h"
 
+#include <lib/zx/time.h>
+
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/lib/fxl/logging.h"
 
@@ -11,7 +13,7 @@ namespace mdns {
 namespace {
 
 // static
-static constexpr fxl::TimeDelta kMaxQueryInterval = fxl::TimeDelta::FromSeconds(60 * 60);
+static constexpr zx::duration kMaxQueryInterval = zx::sec(60 * 60);
 
 }  // namespace
 
@@ -171,8 +173,8 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
 void InstanceRequestor::SendQuery() {
   SendQuestion(question_);
 
-  if (query_delay_ == fxl::TimeDelta::Zero()) {
-    query_delay_ = fxl::TimeDelta::FromSeconds(1);
+  if (query_delay_ == zx::sec(0)) {
+    query_delay_ = zx::sec(1);
   } else {
     query_delay_ = query_delay_ * 2;
     if (query_delay_ > kMaxQueryInterval) {
@@ -180,7 +182,7 @@ void InstanceRequestor::SendQuery() {
     }
   }
 
-  PostTaskForTime([this]() { SendQuery(); }, fxl::TimePoint::Now() + query_delay_);
+  PostTaskForTime([this]() { SendQuery(); }, now() + query_delay_);
 }
 
 void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
