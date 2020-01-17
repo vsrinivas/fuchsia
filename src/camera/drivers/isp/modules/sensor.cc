@@ -10,7 +10,6 @@
 #include <memory>
 
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 
 #include "../mali-009/global_regs.h"
 #include "../mali-009/pingpong_regs.h"
@@ -236,11 +235,7 @@ zx_status_t Sensor::GetInfo(camera_sensor_info_t* out_info) {
 std::unique_ptr<Sensor> Sensor::Create(const ddk::MmioView& isp_mmio,
                                        const ddk::MmioView& isp_mmio_local,
                                        ddk::CameraSensorProtocolClient camera_sensor) {
-  fbl::AllocChecker ac;
-  auto sensor = fbl::make_unique_checked<Sensor>(&ac, isp_mmio, isp_mmio_local, camera_sensor);
-  if (!ac.check()) {
-    return nullptr;
-  }
+  auto sensor = std::make_unique<Sensor>(isp_mmio, isp_mmio_local, camera_sensor);
 
   zx_status_t status = sensor->Init();
   if (status != ZX_OK) {

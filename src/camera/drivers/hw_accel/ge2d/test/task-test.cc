@@ -17,6 +17,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -247,11 +248,8 @@ class TaskTest : public zxtest::Test {
 
 TEST_F(TaskTest, BasicCreationTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  fbl::AllocChecker ac;
-  auto resize_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
-  auto watermark_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto resize_task = std::make_unique<Ge2dTask>();
+  auto watermark_task = std::make_unique<Ge2dTask>();
   zx_status_t status;
   status = resize_task->InitResize(
       &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
@@ -269,9 +267,7 @@ TEST_F(TaskTest, BasicCreationTest) {
 // a fake canvas id that is a function of the vmo handle.
 TEST_F(TaskTest, CanvasIdTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<Ge2dTask>();
   zx_status_t status;
   status = task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
                             &output_image_format_table_[0], output_image_format_table_,
@@ -306,9 +302,7 @@ TEST_F(TaskTest, CanvasIdTest) {
 
 TEST_F(TaskTest, WatermarkResTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  fbl::AllocChecker ac;
-  auto wm_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto wm_task = std::make_unique<Ge2dTask>();
   zx_status_t status;
   status = wm_task->InitWatermark(&input_buffer_collection_, &output_buffer_collection_,
                                   &watermark_info_, watermark_vmo_, output_image_format_table_,
@@ -322,9 +316,7 @@ TEST_F(TaskTest, WatermarkResTest) {
 
 TEST_F(TaskTest, InitOutputResTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  fbl::AllocChecker ac;
-  auto resize_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto resize_task = std::make_unique<Ge2dTask>();
   zx_status_t status;
   status = resize_task->InitResize(
       &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
@@ -338,9 +330,7 @@ TEST_F(TaskTest, InitOutputResTest) {
 
 TEST_F(TaskTest, InitInputResTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  fbl::AllocChecker ac;
-  auto resize_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto resize_task = std::make_unique<Ge2dTask>();
   zx_status_t status;
   status = resize_task->InitResize(
       &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
@@ -357,9 +347,7 @@ TEST_F(TaskTest, InvalidFormatTest) {
   image_format_2_t format;
   EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
   format.pixel_format.type = ZX_PIXEL_FORMAT_MONO_8;
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<Ge2dTask>();
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
                              &format, output_image_format_table_, kImageFormatTableSize, 0,
@@ -369,9 +357,7 @@ TEST_F(TaskTest, InvalidFormatTest) {
 
 TEST_F(TaskTest, InvalidVmoTest) {
   SetUpBufferCollections(0);
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<Ge2dTask>();
   zx_status_t status;
   status = task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
                             &output_image_format_table_[0], output_image_format_table_,
@@ -744,9 +730,7 @@ TEST(TaskTest, NonContigVmoTest) {
       (kWidth / 4) * (kHeight / 4) * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888);
   status = zx::vmo::create_contiguous(bti_handle, watermark_size, 0, &watermark_vmo);
   ASSERT_OK(status);
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<Ge2dTask>();
   EXPECT_OK(camera::GetImageFormat(watermark_info.wm_image_format,
                                    fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
                                    kHeight / 4));
@@ -778,9 +762,7 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
       (kWidth / 4) * (kHeight / 4) * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_ARGB_8888);
   zx_status_t status = zx::vmo::create_contiguous(bti_handle, watermark_size, 0, &watermark_vmo);
   ASSERT_OK(status);
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<Ge2dTask>();
   image_format_2_t format;
   EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,

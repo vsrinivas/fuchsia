@@ -13,7 +13,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
 
@@ -210,11 +209,7 @@ void AmlMipiDevice::DdkRelease() { delete this; }
 
 // static
 zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
-  fbl::AllocChecker ac;
-  auto mipi_device = std::unique_ptr<AmlMipiDevice>(new (&ac) AmlMipiDevice(parent));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  auto mipi_device = std::make_unique<AmlMipiDevice>(parent);
 
   zx_status_t status = mipi_device->InitPdev(parent);
   if (status != ZX_OK) {

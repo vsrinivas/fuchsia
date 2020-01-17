@@ -5,7 +5,6 @@
 #include "gdc-on-device-test.h"
 
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 
 #include "../gdc-regs.h"
 #include "../gdc.h"

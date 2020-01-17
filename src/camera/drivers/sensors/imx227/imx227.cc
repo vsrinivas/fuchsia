@@ -17,7 +17,6 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
@@ -368,15 +367,10 @@ zx_status_t Imx227Device::Create(void* ctx, zx_device_t* parent,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  fbl::AllocChecker ac;
-  auto sensor_device = std::unique_ptr<Imx227Device>(
-      new (&ac) Imx227Device(parent, components[COMPONENT_I2C], components[COMPONENT_GPIO_VANA],
-                             components[COMPONENT_GPIO_VDIG], components[COMPONENT_GPIO_CAM_RST],
-                             components[COMPONENT_CLK24], components[COMPONENT_MIPICSI]));
-  if (!ac.check()) {
-    zxlogf(ERROR, "%s Could not create Imx227Device device\n", __func__);
-    return ZX_ERR_NO_MEMORY;
-  }
+  auto sensor_device = std::make_unique<Imx227Device>(
+      parent, components[COMPONENT_I2C], components[COMPONENT_GPIO_VANA],
+      components[COMPONENT_GPIO_VDIG], components[COMPONENT_GPIO_CAM_RST],
+      components[COMPONENT_CLK24], components[COMPONENT_MIPICSI]);
 
   zx_status_t status = sensor_device->InitPdev(parent);
   if (status != ZX_OK) {

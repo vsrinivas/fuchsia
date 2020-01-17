@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -251,13 +252,11 @@ class TaskTest : public zxtest::Test {
 
 TEST_F(TaskTest, BasicCreationTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  EXPECT_TRUE(ac.check());
-  zx_status_t status;
-  status = task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
-                      output_image_format_table_, 1, 0, &config_info_, 1, &frame_callback_,
-                      &res_callback_, &remove_task_callback_, bti_handle_);
+  auto task = std::make_unique<GdcTask>();
+  zx_status_t status =
+      task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
+                 output_image_format_table_, 1, 0, &config_info_, 1, &frame_callback_,
+                 &res_callback_, &remove_task_callback_, bti_handle_);
   EXPECT_OK(status);
 }
 
@@ -266,9 +265,7 @@ TEST_F(TaskTest, InvalidFormatTest) {
   image_format_2_t format;
   EXPECT_OK(camera::GetImageFormat(format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
   format.pixel_format.type = ZX_PIXEL_FORMAT_MONO_8;
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<GdcTask>();
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             task->Init(&input_buffer_collection_, &output_buffer_collection_, &format,
                        output_image_format_table_, 1, 0, &config_info_, 1, &frame_callback_,
@@ -277,9 +274,7 @@ TEST_F(TaskTest, InvalidFormatTest) {
 
 TEST_F(TaskTest, InputBufferTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<GdcTask>();
   auto status = task->Init(&input_buffer_collection_, &output_buffer_collection_,
                            &input_image_format_, output_image_format_table_, 1, 0, &config_info_, 1,
                            &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
@@ -298,9 +293,7 @@ TEST_F(TaskTest, InputBufferTest) {
 
 TEST_F(TaskTest, InvalidVmoAndOutputFormatCountTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<GdcTask>();
   auto status =
       task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
                  output_image_format_table_, kImageFormatTableSize, 0, &config_info_, 1,
@@ -310,9 +303,7 @@ TEST_F(TaskTest, InvalidVmoAndOutputFormatCountTest) {
 
 TEST_F(TaskTest, InvalidVmoTest) {
   SetUpBufferCollections(0);
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<GdcTask>();
   auto status = task->Init(&input_buffer_collection_, &output_buffer_collection_,
                            &input_image_format_, output_image_format_table_, 1, 0, &config_info_, 1,
                            &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_);
@@ -622,9 +613,7 @@ TEST(TaskTest, NonContigVmoTest) {
   info.config_vmo = config_vmo.release();
   info.size = kConfigSize;
 
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<GdcTask>();
   image_format_2_t image_format_table[kImageFormatTableSize];
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
                                    kWidth, kHeight));
@@ -664,9 +653,7 @@ TEST(TaskTest, InvalidConfigVmoTest) {
   info.config_vmo = ZX_HANDLE_INVALID;
   info.size = kConfigSize;
 
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<GdcTask>();
   image_format_2_t image_format_table[kImageFormatTableSize];
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
                                    kWidth, kHeight));
@@ -693,9 +680,7 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
 
   ASSERT_OK(zx::vmo::create_contiguous(bti_handle, kConfigSize, 0, &config_vmo));
 
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  EXPECT_TRUE(ac.check());
+  auto task = std::make_unique<GdcTask>();
   image_format_2_t image_format_table[kImageFormatTableSize];
 
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,

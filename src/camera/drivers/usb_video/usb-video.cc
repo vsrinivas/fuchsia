@@ -91,7 +91,6 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
   int video_source_index = 0;
   video::usb::UvcFormatList formats;
   fbl::Vector<video::usb::UsbVideoStreamingSetting> streaming_settings;
-  fbl::AllocChecker ac;
 
   usb_descriptor_header_t* header;
   // Most recent USB interface descriptor.
@@ -286,11 +285,7 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
                                                           .transactions_per_microframe = per_mf,
                                                           .max_packet_size = max_packet_size,
                                                           .ep_type = usb_ep_type(endp)};
-          streaming_settings.push_back(setting, &ac);
-          if (!ac.check()) {
-            status = ZX_ERR_NO_MEMORY;
-            goto error_return;
-          }
+          streaming_settings.push_back(setting);
         }
         break;
       }

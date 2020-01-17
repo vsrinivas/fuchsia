@@ -6,16 +6,12 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 
 namespace camera {
 
 zx_status_t MockSensorDevice::Create(void* ctx, zx_device_t* parent) {
-  fbl::AllocChecker ac;
-  auto device = fbl::make_unique_checked<MockSensorDevice>(&ac, parent);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  auto device = std::make_unique<MockSensorDevice>(parent);
+
   zx_status_t status = device->DdkAdd("mock-sensor");
   if (status != ZX_OK) {
     zxlogf(ERROR, "mock-sensor-device: Could not add mock-sensor: %d\n", status);

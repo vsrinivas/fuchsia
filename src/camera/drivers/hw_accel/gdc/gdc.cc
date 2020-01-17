@@ -15,7 +15,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
@@ -81,11 +80,7 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::AllocChecker ac;
-  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  auto task = std::make_unique<GdcTask>();
   zx_status_t status = task->Init(
       input_buffer_collection, output_buffer_collection, input_image_format,
       output_image_format_table_list, output_image_format_table_count, output_image_format_index,
@@ -519,14 +514,9 @@ zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr
     return status;
   }
 
-  fbl::AllocChecker ac;
-  auto gdc_device = std::unique_ptr<GdcDevice>(
-      new (&ac) GdcDevice(parent, std::move(*clk_mmio), std::move(*gdc_mmio), std::move(gdc_irq),
-                          std::move(bti), std::move(port)));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
+  auto gdc_device =
+      std::make_unique<GdcDevice>(parent, std::move(*clk_mmio), std::move(*gdc_mmio),
+                                  std::move(gdc_irq), std::move(bti), std::move(port));
   gdc_device->InitClocks();
 
   status = gdc_device->StartThread();

@@ -147,12 +147,8 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
       return ZX_ERR_NOT_SUPPORTED;
   }
 
-  fbl::AllocChecker ac;
   // TODO(garratt): add case for format with no frame_desc
-  formats_.reserve(formats_.size() + want_num_frame_descs, &ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  formats_.reserve(formats_.size() + want_num_frame_descs);
 
   // The format descriptor mut be immediately followed by its frame descriptors,
   // if any.

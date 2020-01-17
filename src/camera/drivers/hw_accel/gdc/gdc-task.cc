@@ -11,7 +11,6 @@
 #include <memory>
 
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 
 constexpr auto kTag = "gdc";
 
@@ -19,12 +18,8 @@ namespace gdc {
 
 zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_t config_vmos_count,
                                    const zx::bti& bti) {
-  fbl::AllocChecker ac;
   pinned_config_vmos_ =
-      fbl::Array<fzl::PinnedVmo>(new (&ac) fzl::PinnedVmo[config_vmos_count], config_vmos_count);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+      fbl::Array<fzl::PinnedVmo>(new fzl::PinnedVmo[config_vmos_count], config_vmos_count);
 
   for (uint32_t i = 0; i < config_vmos_count; i++) {
     zx::vmo vmo(config_vmo_list[i].config_vmo);

@@ -12,7 +12,6 @@
 #include <memory>
 
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 
 constexpr uint32_t kEndianness = 7;
 constexpr auto kTag = "ge2d";
@@ -93,17 +92,12 @@ zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* inpu
     return ZX_ERR_INVALID_ARGS;
   }
   num_input_canvas_ids_ = 0;
-  fbl::AllocChecker ac;
-  std::unique_ptr<input_image_canvas_id_t[]> input_image_canvas_ids;
-  input_image_canvas_ids = std::unique_ptr<input_image_canvas_id_t[]>(
-      new (&ac) input_image_canvas_id_t[input_buffer_collection->buffer_count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  zx_status_t status;
+
+  auto input_image_canvas_ids =
+      std::make_unique<input_image_canvas_id_t[]>(input_buffer_collection->buffer_count);
   for (uint32_t i = 0; i < input_buffer_collection->buffer_count; i++) {
-    status = AllocCanvasId(input_image_format, input_buffer_collection->buffers[i].vmo,
-                           input_image_canvas_ids[i].canvas_ids, CANVAS_FLAGS_READ);
+    zx_status_t status = AllocCanvasId(input_image_format, input_buffer_collection->buffers[i].vmo,
+                                       input_image_canvas_ids[i].canvas_ids, CANVAS_FLAGS_READ);
     if (status != ZX_OK) {
       return status;
     }
@@ -143,13 +137,9 @@ zx_status_t Ge2dTask::AllocOutputCanvasIds(
     fzl::VmoPool::Buffer output_buffer;
     image_canvas_id_t canvas_ids;
   } buf_canvas_ids_t;
-  std::unique_ptr<buf_canvas_ids_t[]> buf_canvas_ids;
-  fbl::AllocChecker ac;
-  buf_canvas_ids = std::unique_ptr<buf_canvas_ids_t[]>(
-      new (&ac) buf_canvas_ids_t[output_buffer_collection->buffer_count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+
+  auto buf_canvas_ids =
+      std::make_unique<buf_canvas_ids_t[]>(output_buffer_collection->buffer_count);
   for (uint32_t i = 0; i < output_buffer_collection->buffer_count; i++) {
     buf_canvas_ids[i].output_buffer = *WriteLockOutputBuffer();
     zx_handle_t vmo_handle = buf_canvas_ids[i].output_buffer.vmo_handle();

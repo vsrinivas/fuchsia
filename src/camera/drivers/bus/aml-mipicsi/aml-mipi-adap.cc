@@ -11,7 +11,6 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
 

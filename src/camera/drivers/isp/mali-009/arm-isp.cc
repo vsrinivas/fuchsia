@@ -14,7 +14,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
@@ -547,23 +546,16 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   }
 
   // Allocate buffers for ISP SW configuration and metering information.
-  fbl::AllocChecker ac;
   mmio_buffer_t local_mmio_buffer;
   local_mmio_buffer.vaddr =
-      new (static_cast<std::align_val_t>(alignof(uint32_t)), &ac) char[kLocalBufferSize];
+      new (static_cast<std::align_val_t>(alignof(uint32_t))) char[kLocalBufferSize];
   local_mmio_buffer.size = kLocalBufferSize;
   local_mmio_buffer.vmo = ZX_HANDLE_INVALID;
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
 
-  auto isp_device = std::unique_ptr<ArmIspDevice>(new (&ac) ArmIspDevice(
+  auto isp_device = std::make_unique<ArmIspDevice>(
       parent, std::move(*hiu_mmio), std::move(*power_mmio), std::move(*memory_pd_mmio),
       std::move(*reset_mmio), std::move(*isp_mmio), local_mmio_buffer, std::move(isp_irq),
-      std::move(bti), components[COMPONENT_CAMERA_SENSOR]));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+      std::move(bti), components[COMPONENT_CAMERA_SENSOR]);
 
   status = isp_device->InitIsp();
   if (status != ZX_OK) {

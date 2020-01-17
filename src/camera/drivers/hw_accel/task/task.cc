@@ -12,7 +12,6 @@
 #include <memory>
 
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 
 constexpr auto kTag = "GenericTask";
 
@@ -62,23 +61,14 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
   }
 
   // Make a copy of the output image_format_table.
-  fbl::AllocChecker ac;
-  output_image_format_list_ = std::unique_ptr<image_format_2_t[]>(
-      new (&ac) image_format_2_t[output_image_format_table_count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  output_image_format_list_ = std::make_unique<image_format_2_t[]>(output_image_format_table_count);
   for (uint32_t i = 0; i < output_image_format_table_count; i++) {
     output_image_format_list_.get()[i] = output_image_format_table_list[i];
   }
   output_image_format_count_ = output_image_format_table_count;
   cur_output_image_format_index_ = output_image_format_index;
 
-  input_image_format_list_ = std::unique_ptr<image_format_2_t[]>(
-      new (&ac) image_format_2_t[input_image_format_table_count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  input_image_format_list_ = std::make_unique<image_format_2_t[]>(input_image_format_table_count);
   for (uint32_t i = 0; i < input_image_format_table_count; i++) {
     input_image_format_list_.get()[i] = input_image_format_table_list[i];
   }
@@ -113,12 +103,8 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
 
   // Pin the input buffers.
   input_buffers_ =
-      fbl::Array<fzl::PinnedVmo>(new (&ac) fzl::PinnedVmo[input_buffer_collection->buffer_count],
+      fbl::Array<fzl::PinnedVmo>(new fzl::PinnedVmo[input_buffer_collection->buffer_count],
                                  input_buffer_collection->buffer_count);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
   for (uint32_t i = 0; i < input_buffer_collection->buffer_count; ++i) {
     zx::vmo vmo(input_buffer_collection->buffers[i].vmo);
     status = input_buffers_[i].Pin(vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);

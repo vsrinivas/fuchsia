@@ -8,7 +8,6 @@
 #include <zircon/fidl.h>
 
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
@@ -22,12 +21,7 @@ namespace camera {
 constexpr auto kTag = "arm-isp";
 
 zx_status_t ArmIspDeviceTester::Create(ArmIspDevice* isp, fit::callback<void()>* on_isp_unbind) {
-  fbl::AllocChecker ac;
-  auto isp_test_device = fbl::make_unique_checked<ArmIspDeviceTester>(&ac, isp, isp->zxdev());
-  if (!ac.check()) {
-    zxlogf(ERROR, "%s: Unable to start ArmIspDeviceTester \n", __func__);
-    return ZX_ERR_NO_MEMORY;
-  }
+  auto isp_test_device = std::make_unique<ArmIspDeviceTester>(isp, isp->zxdev());
 
   *on_isp_unbind = fit::bind_member(isp_test_device.get(), &ArmIspDeviceTester::Disconnect);
 

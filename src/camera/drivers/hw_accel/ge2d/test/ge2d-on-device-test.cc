@@ -11,7 +11,6 @@
 #include <vector>
 
 #include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 
 #include "src/camera/drivers/hw_accel/ge2d/ge2d-regs.h"
 #include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
