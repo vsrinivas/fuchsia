@@ -222,7 +222,6 @@ if (current_cpu != "") {
       "dlfcn",
       "dlopen-indirect-deps",
       "driver-test",
-      "events",
       "exception",
       "fidl",
       "fidl-coding-tables",
