@@ -203,7 +203,6 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/aml-gpu",
       "sys/platform/05:00:21/nelson-usb-phy",
-      "sys/platform/05:03:1e/cpu",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
@@ -238,7 +237,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-017/block",
       "tcs3400-light/tcs-3400/hid-device-000",
       "sys/platform/05:03:11/clocks",
-      "aml-thermal/thermal",
+      // "aml-thermal/thermal",
+      // "sys/platform/05:03:1e/cpu",
       "aml-secure-mem/aml-securemem",
   };
 
