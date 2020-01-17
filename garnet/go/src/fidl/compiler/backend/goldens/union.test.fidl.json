@@ -12,7 +12,7 @@
       "name": "test.name/NullableUnionStruct",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-        "line": 24,
+        "line": 36,
         "column": 8
       },
       "anonymous": false,
@@ -26,7 +26,7 @@
           "name": "the_union",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 25,
+            "line": 37,
             "column": 12
           },
           "field_shape_v1": {
@@ -111,6 +111,153 @@
           "offset": 8
         }
       ],
+      "strict": true,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      }
+    },
+    {
+      "name": "test.name/FlexibleUnion",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+        "line": 9,
+        "column": 16
+      },
+      "members": [
+        {
+          "xunion_ordinal": 1,
+          "reserved": false,
+          "name": "Primitive",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 10,
+            "column": 14
+          },
+          "size": 4,
+          "offset": 8
+        },
+        {
+          "xunion_ordinal": 2,
+          "reserved": false,
+          "name": "StringNeedsConstructor",
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 11,
+            "column": 15
+          },
+          "size": 16,
+          "offset": 8
+        },
+        {
+          "xunion_ordinal": 3,
+          "reserved": false,
+          "name": "VectorStringAlsoNeedsConstructor",
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "string",
+              "nullable": false
+            },
+            "nullable": false
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 12,
+            "column": 23
+          },
+          "size": 16,
+          "offset": 8
+        }
+      ],
+      "strict": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      }
+    },
+    {
+      "name": "test.name/StrictUnion",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+        "line": 15,
+        "column": 14
+      },
+      "members": [
+        {
+          "xunion_ordinal": 1,
+          "reserved": false,
+          "name": "Primitive",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 16,
+            "column": 14
+          },
+          "size": 4,
+          "offset": 8
+        },
+        {
+          "xunion_ordinal": 2,
+          "reserved": false,
+          "name": "StringNeedsConstructor",
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 17,
+            "column": 15
+          },
+          "size": 16,
+          "offset": 8
+        },
+        {
+          "xunion_ordinal": 3,
+          "reserved": false,
+          "name": "VectorStringAlsoNeedsConstructor",
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "string",
+              "nullable": false
+            },
+            "nullable": false
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 18,
+            "column": 23
+          },
+          "size": 16,
+          "offset": 8
+        }
+      ],
+      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -126,7 +273,7 @@
       "name": "test.name/FieldCollision",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-        "line": 9,
+        "line": 21,
         "column": 7
       },
       "members": [
@@ -140,13 +287,14 @@
           },
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 10,
+            "line": 22,
             "column": 14
           },
           "size": 4,
           "offset": 4
         }
       ],
+      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -162,7 +310,7 @@
       "name": "test.name/ExplicitUnion",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-        "line": 13,
+        "line": 25,
         "column": 7
       },
       "members": [
@@ -176,7 +324,7 @@
           },
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 15,
+            "line": 27,
             "column": 14
           },
           "size": 4,
@@ -187,7 +335,7 @@
           "reserved": true,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 14,
+            "line": 26,
             "column": 5
           }
         },
@@ -201,13 +349,14 @@
           },
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 16,
+            "line": 28,
             "column": 15
           },
           "size": 16,
           "offset": 8
         }
       ],
+      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -223,7 +372,7 @@
       "name": "test.name/ReverseOrdinalUnion",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-        "line": 19,
+        "line": 31,
         "column": 7
       },
       "members": [
@@ -237,7 +386,7 @@
           },
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 21,
+            "line": 33,
             "column": 15
           },
           "size": 4,
@@ -253,13 +402,14 @@
           },
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 20,
+            "line": 32,
             "column": 15
           },
           "size": 4,
           "offset": 4
         }
       ],
+      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -276,14 +426,18 @@
   "type_alias_declarations": [],
   "declaration_order": [
     "test.name/Union",
+    "test.name/StrictUnion",
     "test.name/ReverseOrdinalUnion",
     "test.name/NullableUnionStruct",
+    "test.name/FlexibleUnion",
     "test.name/FieldCollision",
     "test.name/ExplicitUnion"
   ],
   "declarations": {
     "test.name/NullableUnionStruct": "struct",
     "test.name/Union": "union",
+    "test.name/FlexibleUnion": "union",
+    "test.name/StrictUnion": "union",
     "test.name/FieldCollision": "union",
     "test.name/ExplicitUnion": "union",
     "test.name/ReverseOrdinalUnion": "union"

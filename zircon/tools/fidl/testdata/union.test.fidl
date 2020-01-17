@@ -19,3 +19,13 @@ union ExplicitPizzaOrPasta {
     1: Pizza pizza;
     4: Pasta pasta;
 };
+
+flexible union FlexiblePizzaOrPasta {
+    1: Pizza pizza;
+    2: Pasta pasta;
+};
+
+strict union StrictPizzaOrPasta {
+    1: Pizza pizza;
+    2: Pasta pasta;
+};

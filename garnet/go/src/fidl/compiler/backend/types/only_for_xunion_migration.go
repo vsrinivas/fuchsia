@@ -44,6 +44,6 @@ func ConvertUnionToXUnion(union Union) XUnion {
 		Name:        union.Name,
 		Members:     members,
 		TypeShapeV1: typeShape,
-		Strictness:  true,
+		Strictness:  union.Strictness,
 	}
 }

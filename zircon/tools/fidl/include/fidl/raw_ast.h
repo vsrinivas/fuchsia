@@ -624,17 +624,19 @@ class UnionDeclaration final : public SourceElement {
  public:
   UnionDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<UnionMember>> members)
+                   std::vector<std::unique_ptr<UnionMember>> members, types::Strictness strictness)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        strictness(strictness) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<UnionMember>> members;
+  const types::Strictness strictness;
 };
 
 class XUnionMember final : public SourceElement {

@@ -14,10 +14,33 @@ void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(Union, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
+void ::llcpp::test::name::StrictUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(StrictUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(StrictUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
 void ::llcpp::test::name::ReverseOrdinalUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ReverseOrdinalUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(ReverseOrdinalUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(ReverseOrdinalUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+auto ::llcpp::test::name::FlexibleUnion::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
+  switch (ordinal()) {
+  case Ordinal::kPrimitive:
+  case Ordinal::kStringNeedsConstructor:
+  case Ordinal::kVectorStringAlsoNeedsConstructor:
+    return static_cast<Tag>(ordinal());
+  default:
+    return Tag::kUnknown;
+  }
+}
+
+void ::llcpp::test::name::FlexibleUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(FlexibleUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(FlexibleUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(FlexibleUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::test::name::FieldCollision::SizeAndOffsetAssertionHelper() {

@@ -1106,7 +1106,7 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
 }
 
 std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
   std::vector<std::unique_ptr<raw::UnionMember>> members;
 
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
@@ -1148,7 +1148,8 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
         "to define a placeholder variant");
 
   return std::make_unique<raw::UnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                 std::move(identifier), std::move(members));
+                                                 std::move(identifier), std::move(members),
+                                                 strictness);
 }
 
 std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
@@ -1284,6 +1285,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
             return More;
           }
           break;
+        case CASE_IDENTIFIER(Token::Subkind::kUnion):
+          break;
         case CASE_IDENTIFIER(Token::Subkind::kXUnion):
           if (maybe_strictness.value() == types::Strictness::kFlexible) {
             Fail(previous_token_,
@@ -1358,7 +1361,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kUnion):
         done_with_library_imports = true;
-        union_declaration_list.emplace_back(ParseUnionDeclaration(std::move(attributes), scope));
+        union_declaration_list.emplace_back(ParseUnionDeclaration(
+            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict)));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kXUnion):
