@@ -47,7 +47,7 @@ class job final : public task<job> {
     return zx_job_set_policy(get(), options, topic, policy, count);
   }
 
-  zx_status_t set_critical(uint32_t options, const zx::process& process) {
+  zx_status_t set_critical(uint32_t options, const zx::process& process) const {
     return zx_job_set_critical(get(), options, process.get());
   }
 
