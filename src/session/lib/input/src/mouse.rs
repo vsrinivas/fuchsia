@@ -163,8 +163,8 @@ impl input_device::InputDeviceBinding for MouseBinding {
                 let (event_sender, event_receiver) =
                     futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
-                let device_descriptor: MouseDeviceDescriptor =
-                    MouseDeviceDescriptor { device_id: 1 };
+                let device_id = 0;
+                let device_descriptor: MouseDeviceDescriptor = MouseDeviceDescriptor { device_id };
 
                 Ok(MouseBinding { event_sender, event_receiver, device_descriptor })
             }
