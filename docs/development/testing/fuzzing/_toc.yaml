@@ -4,6 +4,8 @@
 toc:
 - title: "LibFuzzer in Fuchsia"
   path: /docs/development/testing/fuzzing/libfuzzer.md
+- title: "LibFuzzer and Go"
+  path: /docs/development/testing/fuzzing/libfuzzer_go.md
 - title: "LibFuzzer and FIDL"
   path: /docs/development/testing/fuzzing/libfuzzer_fidl.md
 - title: "Fuzzing the FIDL host tools"
