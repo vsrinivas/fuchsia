@@ -65,9 +65,15 @@ foreach(font_pkgs_path, font_pkgs_paths) {
 #     Default: "all"
 #     Type: string
 #
+#   empty
+#     Optional: If set to true, indicates that this collection is intentionally
+#     empty.
+#     Type: boolean
+#
 #   testonly
 #     Optional: If set to true, config_data will *not* be generated for
-#     pkg_resolver, which doesn't support loading arbitrary font package registry files.
+#     pkg_resolver, which doesn't support loading arbitrary font package
+#     registry files.
 #     Type: boolean
 template("font_collection") {
   forward_variables_from(invoker,
@@ -88,6 +94,10 @@ template("font_collection") {
 
   if (!defined(manifest_prefix)) {
     manifest_prefix = _default_manifest_prefix
+  }
+
+  if (!defined(invoker.empty)) {
+    invoker.empty = false
   }
 
   if (!defined(invoker.testonly)) {
@@ -112,8 +122,9 @@ template("font_collection") {
     local_font_bundles += [ ":${bundle_name}" ]
   }
 
-  assert(font_packages + local_font_bundles != [],
-         "font_collection can't be empty")
+  # `fx format-code` insists on removing clarifying parentheses here.
+  assert(font_packages + local_font_bundles == [] == invoker.empty,
+         "An empty font_collection must explicitly declare `empty = true`")
 
   ##############################################################################
   # Generate font_packages.json, used by pkg-resolver to know which Fuchsia

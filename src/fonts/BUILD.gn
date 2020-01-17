@@ -274,3 +274,10 @@ font_collection("open-fonts-collection") {
   font_packages = [ ":open-fonts" ]
   local_font_bundles = [ ":open-fonts-local" ]
 }
+
+# Empty font collection for products that spawn a font server but don't want any
+# actual fonts. This should be added to `base_package_labels` or
+# `cache_package_labels`.
+font_collection("empty-font-collection") {
+  empty = true
+}
