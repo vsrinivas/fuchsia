@@ -81,7 +81,7 @@ function main {
   fi
 
   # TODO: remove reliance on pkgfs/packages.
-  fx-command-run shell runtests "pkgfs/packages/${target}/0/test" "$@" |& fx-symbolize
+  fx-command-run shell runtests "pkgfs/packages/${target}/0/test" "$@" 2>&1 | fx-symbolize
 }
 
 main "$@"
