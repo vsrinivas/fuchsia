@@ -11,7 +11,7 @@
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/mdns_fidl_util.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -22,9 +22,9 @@ MdnsTransceiver::~MdnsTransceiver() {}
 void MdnsTransceiver::Start(fuchsia::netstack::NetstackPtr netstack, const MdnsAddresses& addresses,
                             fit::closure link_change_callback,
                             InboundMessageCallback inbound_message_callback) {
-  FXL_DCHECK(netstack);
-  FXL_DCHECK(link_change_callback);
-  FXL_DCHECK(inbound_message_callback);
+  FX_DCHECK(netstack);
+  FX_DCHECK(link_change_callback);
+  FX_DCHECK(inbound_message_callback);
 
   netstack_ = std::move(netstack);
   addresses_ = &addresses;
@@ -57,11 +57,11 @@ MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(const inet::I
 }
 
 void MdnsTransceiver::SendMessage(DnsMessage* message, const ReplyAddress& reply_address) {
-  FXL_DCHECK(message);
+  FX_DCHECK(message);
 
   if (reply_address.socket_address() == addresses_->v4_multicast()) {
     for (auto& [address, interface] : interface_transceivers_by_address_) {
-      FXL_DCHECK(interface);
+      FX_DCHECK(interface);
       interface->SendMessage(message, reply_address.socket_address());
     }
 
@@ -76,7 +76,7 @@ void MdnsTransceiver::SendMessage(DnsMessage* message, const ReplyAddress& reply
 
 void MdnsTransceiver::LogTraffic() {
   for (auto& [address, interface] : interface_transceivers_by_address_) {
-    FXL_DCHECK(interface);
+    FX_DCHECK(interface);
     interface->LogTraffic();
   }
 }
@@ -126,7 +126,7 @@ void MdnsTransceiver::InterfacesChanged(std::vector<fuchsia::netstack::NetInterf
   }
 
   for (auto& [address, interface] : prev) {
-    FXL_DCHECK(interface);
+    FX_DCHECK(interface);
     interface->Stop();
     interface.reset();
     link_change = true;
@@ -141,7 +141,7 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(
     const inet::IpAddress& address, const inet::IpAddress& alternate_address, uint32_t id,
     const std::string& name,
     std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>* prev) {
-  FXL_DCHECK(prev);
+  FX_DCHECK(prev);
 
   if (!address.is_valid()) {
     return false;
@@ -151,9 +151,9 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(
 
   auto iter = prev->find(address);
   if (iter != prev->end()) {
-    FXL_DCHECK(iter->second);
+    FX_DCHECK(iter->second);
     auto& existing = iter->second;
-    FXL_DCHECK(existing->address() == address);
+    FX_DCHECK(existing->address() == address);
 
     if (existing->name() == name && existing->index() == id) {
       // An interface transceiver already exists for this address. Move it to

@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -22,7 +22,7 @@ InstanceResponder::InstanceResponder(MdnsAgent::Host* host, const std::string& s
 InstanceResponder::~InstanceResponder() {}
 
 void InstanceResponder::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
-  FXL_DCHECK(!host_full_name.empty());
+  FX_DCHECK(!host_full_name.empty());
 
   MdnsAgent::Start(host_full_name, addresses);
 
@@ -180,7 +180,7 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
 
 void InstanceResponder::SendSubtypePtrRecord(const std::string& subtype, uint32_t ttl,
                                              const ReplyAddress& reply_address) const {
-  FXL_DCHECK(!subtype.empty());
+  FX_DCHECK(!subtype.empty());
 
   auto ptr_resource = std::make_shared<DnsResource>(
       MdnsNames::LocalServiceSubtypeFullName(service_name_, subtype), DnsType::kPtr);

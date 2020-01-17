@@ -4,8 +4,6 @@
 
 #include "src/connectivity/network/mdns/service/address_prober.h"
 
-#include "src/lib/fxl/logging.h"
-
 namespace mdns {
 
 AddressProber::AddressProber(MdnsAgent::Host* host, CompletionCallback callback)

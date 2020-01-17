@@ -7,7 +7,7 @@
 #include <lib/zx/time.h>
 #include <zircon/syscalls.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -16,13 +16,13 @@ constexpr zx::duration Prober::kMaxProbeInterval = zx::msec(250);
 
 Prober::Prober(MdnsAgent::Host* host, DnsType type, CompletionCallback callback)
     : MdnsAgent(host), type_(type), callback_(std::move(callback)) {
-  FXL_DCHECK(callback_);
+  FX_DCHECK(callback_);
 }
 
 Prober::~Prober() {}
 
 void Prober::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
-  FXL_DCHECK(!host_full_name.empty());
+  FX_DCHECK(!host_full_name.empty());
 
   MdnsAgent::Start(host_full_name, addresses);
 
@@ -58,7 +58,7 @@ zx::duration Prober::InitialDelay() {
   uint64_t random = 0;
   zx_cprng_draw(&random, sizeof(random));
   int64_t random_nonnegative_int64 = static_cast<int64_t>(random >> 1);
-  FXL_DCHECK(random_nonnegative_int64 >= 0);
+  FX_DCHECK(random_nonnegative_int64 >= 0);
   return zx::nsec(random_nonnegative_int64 % kMaxProbeInterval.to_nsecs());
 }
 

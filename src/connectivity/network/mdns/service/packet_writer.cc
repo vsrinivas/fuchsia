@@ -6,7 +6,7 @@
 
 #include <endian.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -34,7 +34,7 @@ void PacketWriter::PutBytes(size_t count, const void* source) {
     return;
   }
 
-  FXL_DCHECK(source != nullptr);
+  FX_DCHECK(source != nullptr);
 
   if (packet_.size() < position_ + count) {
     packet_.resize(position_ + count);

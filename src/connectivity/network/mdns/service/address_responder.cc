@@ -5,7 +5,7 @@
 #include "src/connectivity/network/mdns/service/address_responder.h"
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -14,7 +14,7 @@ AddressResponder::AddressResponder(MdnsAgent::Host* host) : MdnsAgent(host) {}
 AddressResponder::~AddressResponder() {}
 
 void AddressResponder::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
-  FXL_DCHECK(!host_full_name.empty());
+  FX_DCHECK(!host_full_name.empty());
 
   MdnsAgent::Start(host_full_name, addresses);
   host_full_name_ = host_full_name;

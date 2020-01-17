@@ -16,6 +16,7 @@
 
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
 #include "src/lib/inet/ip_port.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -92,23 +93,23 @@ class ResourceRenewer : public MdnsAgent {
 
   struct Hash {
     size_t operator()(const std::unique_ptr<Entry>& m) const {
-      FXL_DCHECK(m);
+      FX_DCHECK(m);
       return std::hash<std::string>{}(m->name_) ^ std::hash<DnsType>{}(m->type_);
     }
   };
 
   struct Equals {
     size_t operator()(const std::unique_ptr<Entry>& a, const std::unique_ptr<Entry>& b) const {
-      FXL_DCHECK(a);
-      FXL_DCHECK(b);
+      FX_DCHECK(a);
+      FX_DCHECK(b);
       return a->name_ == b->name_ && a->type_ == b->type_;
     }
   };
 
   struct LaterScheduleTime {
     size_t operator()(const Entry* a, const Entry* b) {
-      FXL_DCHECK(a != nullptr);
-      FXL_DCHECK(b != nullptr);
+      FX_DCHECK(a != nullptr);
+      FX_DCHECK(b != nullptr);
       return a->schedule_time_ > b->schedule_time_;
     }
   };

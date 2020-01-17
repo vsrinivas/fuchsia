@@ -6,16 +6,16 @@
 
 #include <lib/zx/clock.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
 ResourceRenewer::ResourceRenewer(MdnsAgent::Host* host) : MdnsAgent(host) {}
 
-ResourceRenewer::~ResourceRenewer() { FXL_DCHECK(entries_.size() == schedule_.size()); }
+ResourceRenewer::~ResourceRenewer() { FX_DCHECK(entries_.size() == schedule_.size()); }
 
 void ResourceRenewer::Renew(const DnsResource& resource) {
-  FXL_DCHECK(resource.time_to_live_ != 0);
+  FX_DCHECK(resource.time_to_live_ != 0);
 
   auto key = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
   auto iter = entries_.find(key);
@@ -38,7 +38,7 @@ void ResourceRenewer::Renew(const DnsResource& resource) {
 }
 
 void ResourceRenewer::ReceiveResource(const DnsResource& resource, MdnsResourceSection section) {
-  FXL_DCHECK(section != MdnsResourceSection::kExpired);
+  FX_DCHECK(section != MdnsResourceSection::kExpired);
 
   auto key = std::make_unique<Entry>(resource.name_.dotted_string_, resource.type_);
   auto iter = entries_.find(key);
@@ -49,7 +49,7 @@ void ResourceRenewer::ReceiveResource(const DnsResource& resource, MdnsResourceS
 
 void ResourceRenewer::Quit() {
   // This never gets called.
-  FXL_DCHECK(false);
+  FX_DCHECK(false);
 }
 
 void ResourceRenewer::SendRenewals() {
@@ -104,7 +104,7 @@ void ResourceRenewer::Entry::SetFirstQuery(zx::time now, uint32_t time_to_live) 
 }
 
 void ResourceRenewer::Entry::SetNextQueryOrExpiration() {
-  FXL_DCHECK(queries_remaining_ != 0);
+  FX_DCHECK(queries_remaining_ != 0);
   time_ = time_ + interval_;
   --queries_remaining_;
 }

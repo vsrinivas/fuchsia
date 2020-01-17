@@ -10,7 +10,6 @@
 
 #include <ostream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {

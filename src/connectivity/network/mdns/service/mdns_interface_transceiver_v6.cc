@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -25,11 +25,11 @@ int MdnsInterfaceTransceiverV6::SetOptionDisableMulticastLoop() {
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
-      FXL_LOG(WARNING) << "NET-291 IPV6_MULTICAST_LOOP not supported "
+      FX_LOGS(WARNING) << "NET-291 IPV6_MULTICAST_LOOP not supported "
                           "(ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
-      FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_LOOP, " << strerror(errno);
+      FX_LOGS(ERROR) << "Failed to set socket option IPV6_MULTICAST_LOOP, " << strerror(errno);
     }
   }
 
@@ -43,10 +43,10 @@ int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_JOIN_GROUP, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENODEV) {
-      FXL_LOG(WARNING) << "NET-2180 IPV6_JOIN_GROUP returned ENODEV, mDNS will "
+      FX_LOGS(WARNING) << "NET-2180 IPV6_JOIN_GROUP returned ENODEV, mDNS will "
                           "not communicate via IPV6";
     } else {
-      FXL_LOG(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, " << strerror(errno);
+      FX_LOGS(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, " << strerror(errno);
     }
   }
 
@@ -59,11 +59,11 @@ int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF, &index, sizeof(index));
   if (result < 0) {
     if (errno == EOPNOTSUPP) {
-      FXL_LOG(WARNING) << "NET-1901 IPV6_MULTICAST_IF not supported "
+      FX_LOGS(WARNING) << "NET-1901 IPV6_MULTICAST_IF not supported "
                           "(EOPNOTSUPP), continuing anyway";
       result = 0;
     } else {
-      FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_IF, " << strerror(errno);
+      FX_LOGS(ERROR) << "Failed to set socket option IPV6_MULTICAST_IF, " << strerror(errno);
     }
   }
 
@@ -77,10 +77,11 @@ int MdnsInterfaceTransceiverV6::SetOptionUnicastTtl() {
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
       // TODO(fxb/41357): remove the bug reference when the bug is fixed.
-      FXL_LOG(WARNING) << "fxb/41357: IPV6_UNICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
+      FX_LOGS(WARNING)
+          << "fxb/41357: IPV6_UNICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
-      FXL_LOG(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, " << strerror(errno);
+      FX_LOGS(ERROR) << "Failed to set socket option IPV6_UNICAST_HOPS, " << strerror(errno);
     }
   }
 
@@ -93,10 +94,10 @@ int MdnsInterfaceTransceiverV6::SetOptionMulticastTtl() {
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_HOPS, &param, sizeof(param));
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
-      FXL_LOG(WARNING) << "IPV6_MULTICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
+      FX_LOGS(WARNING) << "IPV6_MULTICAST_HOPS not supported (ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
-      FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, " << strerror(errno);
+      FX_LOGS(ERROR) << "Failed to set socket option IPV6_MULTICAST_HOPS, " << strerror(errno);
     }
   }
 
@@ -110,10 +111,10 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
       // TODO(fxb/41358): remove the bug reference when the bug is fixed.
-      FXL_LOG(WARNING) << "fxb/41358: IPV6_HOPLIMIT not supported (ENOPROTOOPT), continuing anyway";
+      FX_LOGS(WARNING) << "fxb/41358: IPV6_HOPLIMIT not supported (ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
-      FXL_LOG(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, " << strerror(errno);
+      FX_LOGS(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, " << strerror(errno);
     }
     return result;
   }
@@ -122,7 +123,7 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   param = 1;
   result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_V6ONLY, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_V6ONLY, " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to set socket option IPV6_V6ONLY, " << strerror(errno);
     return false;
   }
 
@@ -133,7 +134,7 @@ int MdnsInterfaceTransceiverV6::Bind() {
   int result =
       bind(socket_fd().get(), addresses().v6_bind().as_sockaddr(), addresses().v6_bind().socklen());
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to bind socket to V6 address, " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to bind socket to V6 address, " << strerror(errno);
   }
 
   return result;

@@ -7,8 +7,8 @@
 #include <sstream>
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace {
@@ -89,7 +89,7 @@ const char kPerformProbeKey[] = "perform_probe";
 const char Config::kConfigDir[] = "/config/data";
 
 void Config::ReadConfigFiles(const std::string& host_name, const std::string& config_dir) {
-  FXL_DCHECK(MdnsNames::IsValidHostName(host_name));
+  FX_DCHECK(MdnsNames::IsValidHostName(host_name));
 
   auto schema = json_parser::InitSchema(kSchema);
   parser_.ParseFromDirectory(config_dir, [this, &schema, &host_name](rapidjson::Document document) {
@@ -103,17 +103,17 @@ void Config::ReadConfigFiles(const std::string& host_name, const std::string& co
 }
 
 void Config::IntegrateDocument(const rapidjson::Document& document, const std::string& host_name) {
-  FXL_DCHECK(document.IsObject());
+  FX_DCHECK(document.IsObject());
 
   if (document.HasMember(kPortKey)) {
-    FXL_DCHECK(document[kPortKey].IsUint());
-    FXL_DCHECK(document[kPortKey].GetUint() >= 1);
-    FXL_DCHECK(document[kPortKey].GetUint() <= 65535);
+    FX_DCHECK(document[kPortKey].IsUint());
+    FX_DCHECK(document[kPortKey].GetUint() >= 1);
+    FX_DCHECK(document[kPortKey].GetUint() <= 65535);
     addresses_.SetPort(inet::IpPort::From_uint16_t(document[kPortKey].GetUint()));
   }
 
   if (document.HasMember(kV4MultcastAddressKey)) {
-    FXL_DCHECK(document[kV4MultcastAddressKey].IsString());
+    FX_DCHECK(document[kV4MultcastAddressKey].IsString());
     auto address =
         inet::IpAddress::FromString(document[kV4MultcastAddressKey].GetString(), AF_INET);
     if (!address.is_valid()) {
@@ -128,7 +128,7 @@ void Config::IntegrateDocument(const rapidjson::Document& document, const std::s
   }
 
   if (document.HasMember(kV6MultcastAddressKey)) {
-    FXL_DCHECK(document[kV6MultcastAddressKey].IsString());
+    FX_DCHECK(document[kV6MultcastAddressKey].IsString());
     auto address =
         inet::IpAddress::FromString(document[kV6MultcastAddressKey].GetString(), AF_INET6);
     if (!address.is_valid()) {
@@ -143,7 +143,7 @@ void Config::IntegrateDocument(const rapidjson::Document& document, const std::s
   }
 
   if (document.HasMember(kPerformHostNameProbeKey)) {
-    FXL_DCHECK(document[kPerformHostNameProbeKey].IsBool());
+    FX_DCHECK(document[kPerformHostNameProbeKey].IsBool());
     SetPerformHostNameProbe(document[kPerformHostNameProbeKey].GetBool());
     if (parser_.HasError()) {
       return;
@@ -151,7 +151,7 @@ void Config::IntegrateDocument(const rapidjson::Document& document, const std::s
   }
 
   if (document.HasMember(kPublicationsKey)) {
-    FXL_DCHECK(document[kPublicationsKey].IsArray());
+    FX_DCHECK(document[kPublicationsKey].IsArray());
     for (auto& item : document[kPublicationsKey].GetArray()) {
       IntegratePublication(item, host_name);
       if (parser_.HasError()) {
@@ -162,13 +162,13 @@ void Config::IntegrateDocument(const rapidjson::Document& document, const std::s
 }
 
 void Config::IntegratePublication(const rapidjson::Value& value, const std::string& host_name) {
-  FXL_DCHECK(value.IsObject());
-  FXL_DCHECK(value.HasMember(kServiceKey));
-  FXL_DCHECK(value[kServiceKey].IsString());
-  FXL_DCHECK(value.HasMember(kPortKey));
-  FXL_DCHECK(value[kPortKey].IsUint());
-  FXL_DCHECK(value[kPortKey].GetUint() >= 1);
-  FXL_DCHECK(value[kPortKey].GetUint() <= 65535);
+  FX_DCHECK(value.IsObject());
+  FX_DCHECK(value.HasMember(kServiceKey));
+  FX_DCHECK(value[kServiceKey].IsString());
+  FX_DCHECK(value.HasMember(kPortKey));
+  FX_DCHECK(value[kPortKey].IsUint());
+  FX_DCHECK(value[kPortKey].GetUint() >= 1);
+  FX_DCHECK(value[kPortKey].GetUint() <= 65535);
 
   auto service = value[kServiceKey].GetString();
   if (!MdnsNames::IsValidServiceName(service)) {
@@ -201,9 +201,9 @@ void Config::IntegratePublication(const rapidjson::Value& value, const std::stri
 
   std::vector<std::string> text;
   if (value.HasMember(kTextKey)) {
-    FXL_DCHECK(value[kTextKey].IsArray());
+    FX_DCHECK(value[kTextKey].IsArray());
     for (auto& item : value[kTextKey].GetArray()) {
-      FXL_DCHECK(item.IsString());
+      FX_DCHECK(item.IsString());
       if (!MdnsNames::IsValidTextString(item.GetString())) {
         parser_.ReportError((std::stringstream() << kTextKey << " item value " << item.GetString()
                                                  << " is not avalid text string.")
@@ -217,7 +217,7 @@ void Config::IntegratePublication(const rapidjson::Value& value, const std::stri
 
   bool perform_probe = true;
   if (value.HasMember(kPerformProbeKey)) {
-    FXL_DCHECK(value[kPerformProbeKey].IsBool());
+    FX_DCHECK(value[kPerformProbeKey].IsBool());
     perform_probe = value[kPerformProbeKey].GetBool();
   }
 

@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "lib/fostr/hex_dump.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace test {
@@ -29,8 +30,8 @@ class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
 
   // Dumps a golden for |SendTo|.
   void DumpSendToGolden() {
-    FXL_CHECK(send_to_buffer_ != nullptr);
-    FXL_CHECK(send_to_size_ != 0);
+    FX_CHECK(send_to_buffer_ != nullptr);
+    FX_CHECK(send_to_size_ != 0);
 
     std::cout << fostr::HexDump(send_to_buffer_, send_to_size_, 0) << "\n\n";
 

@@ -7,8 +7,8 @@
 #include <functional>
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace {
@@ -79,7 +79,7 @@ MdnsParams::MdnsParams(const fxl::CommandLine& command_line) {
   }
 
   for (std::string& subtype : announce_) {
-    FXL_DCHECK(!subtype.empty());
+    FX_DCHECK(!subtype.empty());
     if (subtype[subtype.size() - 1] == '.') {
       std::cout << "subtype '" << subtype << "' must not end in '.'\n\n";
       Usage();
@@ -125,21 +125,21 @@ void MdnsParams::Usage() {
 }
 
 bool MdnsParams::Parse(const std::string& string_value, uint16_t* out) {
-  FXL_DCHECK(out);
+  FX_DCHECK(out);
 
   std::istringstream istream(string_value);
   return (istream >> *out) && istream.eof();
 }
 
 bool MdnsParams::Parse(const std::string& string_value, uint32_t* out) {
-  FXL_DCHECK(out);
+  FX_DCHECK(out);
 
   std::istringstream istream(string_value);
   return (istream >> *out) && istream.eof();
 }
 
 bool MdnsParams::Parse(const std::string& string_value, std::vector<std::string>* out) {
-  FXL_DCHECK(out);
+  FX_DCHECK(out);
 
   if (string_value.empty()) {
     return false;
@@ -160,7 +160,7 @@ bool MdnsParams::Parse(const std::string& string_value, std::vector<std::string>
 }
 
 bool MdnsParams::ParseHostName(const std::string& string_value, std::string* out) {
-  FXL_DCHECK(out);
+  FX_DCHECK(out);
 
   if (string_value.empty() || string_value[string_value.size() - 1] == '.') {
     std::cout << "'" << string_value << "' is not a valid host name\n\n";
@@ -172,7 +172,7 @@ bool MdnsParams::ParseHostName(const std::string& string_value, std::string* out
 }
 
 bool MdnsParams::ParseServiceName(const std::string& string_value, std::string* out) {
-  FXL_DCHECK(out);
+  FX_DCHECK(out);
 
   if (string_value.size() <= kTcpSuffix.size() + 1 || string_value.compare(0, 1, "_") != 0 ||
       (string_value.compare(string_value.size() - kTcpSuffix.size(), kTcpSuffix.size(),
@@ -188,7 +188,7 @@ bool MdnsParams::ParseServiceName(const std::string& string_value, std::string* 
 }
 
 bool MdnsParams::ParseInstanceName(const std::string& string_value, std::string* out) {
-  FXL_DCHECK(out);
+  FX_DCHECK(out);
 
   if (string_value.empty() || string_value[string_value.size() - 1] == '.') {
     std::cout << "'" << string_value << "' is not a instance name\n\n";

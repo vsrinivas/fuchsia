@@ -4,7 +4,7 @@
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -27,14 +27,14 @@ std::string Concatenate(const std::initializer_list<const std::string*>& strings
   size_t result_size = 0;
 
   for (auto string : strings) {
-    FXL_DCHECK(string);
+    FX_DCHECK(string);
     result_size += string->length();
   }
 
   result.reserve(result_size);
 
   for (auto& string : strings) {
-    FXL_DCHECK(string);
+    FX_DCHECK(string);
     result.append(*string);
   }
 
@@ -109,14 +109,14 @@ const std::string MdnsNames::kAnyServiceFullName = "_services._dns-sd._udp.local
 
 // static
 std::string MdnsNames::LocalHostFullName(const std::string& host_name) {
-  FXL_DCHECK(IsValidHostName(host_name));
+  FX_DCHECK(IsValidHostName(host_name));
 
   return Concatenate({&host_name, &kLabelSeparator, &kLocalDomainName});
 }
 
 // static
 std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
-  FXL_DCHECK(IsValidServiceName(service_name));
+  FX_DCHECK(IsValidServiceName(service_name));
 
   return Concatenate({&service_name, &kLocalDomainName});
 }
@@ -124,8 +124,8 @@ std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
 // static
 std::string MdnsNames::LocalServiceSubtypeFullName(const std::string& service_name,
                                                    const std::string& subtype) {
-  FXL_DCHECK(IsValidServiceName(service_name));
-  FXL_DCHECK(IsValidSubtypeName(subtype));
+  FX_DCHECK(IsValidServiceName(service_name));
+  FX_DCHECK(IsValidSubtypeName(subtype));
 
   return Concatenate({&subtype, &kSubtypeSeparator, &service_name, &kLocalDomainName});
 }
@@ -133,8 +133,8 @@ std::string MdnsNames::LocalServiceSubtypeFullName(const std::string& service_na
 // static
 std::string MdnsNames::LocalInstanceFullName(const std::string& instance_name,
                                              const std::string& service_name) {
-  FXL_DCHECK(IsValidInstanceName(instance_name));
-  FXL_DCHECK(IsValidServiceName(service_name));
+  FX_DCHECK(IsValidInstanceName(instance_name));
+  FX_DCHECK(IsValidServiceName(service_name));
 
   return Concatenate({&instance_name, &kLabelSeparator, &service_name, &kLocalDomainName});
 }
@@ -142,8 +142,8 @@ std::string MdnsNames::LocalInstanceFullName(const std::string& instance_name,
 // static
 bool MdnsNames::ExtractInstanceName(const std::string& instance_full_name,
                                     const std::string& service_name, std::string* instance_name) {
-  FXL_DCHECK(IsValidServiceName(service_name));
-  FXL_DCHECK(instance_name);
+  FX_DCHECK(IsValidServiceName(service_name));
+  FX_DCHECK(instance_name);
 
   // instance_name "." service_name kLocalDomainName
 
@@ -155,8 +155,8 @@ bool MdnsNames::ExtractInstanceName(const std::string& instance_full_name,
 // static
 bool MdnsNames::MatchServiceName(const std::string& name, const std::string& service_name,
                                  std::string* subtype_out) {
-  FXL_DCHECK(IsValidServiceName(service_name));
-  FXL_DCHECK(subtype_out);
+  FX_DCHECK(IsValidServiceName(service_name));
+  FX_DCHECK(subtype_out);
 
   // [ subtype kSubtypeSeparator ] service_name kLocalDomainName
 

@@ -13,6 +13,7 @@
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/lib/inet/socket_address.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -84,12 +85,12 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   virtual void Quit() { RemoveSelf(); }
 
  protected:
-  MdnsAgent(Host* host) : host_(host) { FXL_DCHECK(host_); }
+  MdnsAgent(Host* host) : host_(host) { FX_DCHECK(host_); }
 
   bool started() const { return addresses_ != nullptr; }
 
   const MdnsAddresses& addresses() const {
-    FXL_DCHECK(addresses_);
+    FX_DCHECK(addresses_);
     return *addresses_;
   }
 

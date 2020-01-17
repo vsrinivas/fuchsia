@@ -8,7 +8,7 @@
 
 #include "lib/fidl/cpp/type_converter.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -57,11 +57,11 @@ void MdnsFidlUtil::UpdateServiceInstance(
 
 // static
 fuchsia::net::Ipv4Address MdnsFidlUtil::CreateIpv4Address(const inet::IpAddress& ip_address) {
-  FXL_DCHECK(ip_address);
-  FXL_DCHECK(ip_address.is_v4());
+  FX_DCHECK(ip_address);
+  FX_DCHECK(ip_address.is_v4());
 
   fuchsia::net::Ipv4Address addr;
-  FXL_DCHECK(addr.addr.size() == ip_address.byte_count());
+  FX_DCHECK(addr.addr.size() == ip_address.byte_count());
   std::memcpy(addr.addr.data(), ip_address.as_bytes(), addr.addr.size());
 
   return addr;
@@ -69,11 +69,11 @@ fuchsia::net::Ipv4Address MdnsFidlUtil::CreateIpv4Address(const inet::IpAddress&
 
 // static
 fuchsia::net::Ipv6Address MdnsFidlUtil::CreateIpv6Address(const inet::IpAddress& ip_address) {
-  FXL_DCHECK(ip_address);
-  FXL_DCHECK(ip_address.is_v6());
+  FX_DCHECK(ip_address);
+  FX_DCHECK(ip_address.is_v6());
 
   fuchsia::net::Ipv6Address addr;
-  FXL_DCHECK(addr.addr.size() == ip_address.byte_count());
+  FX_DCHECK(addr.addr.size() == ip_address.byte_count());
   std::memcpy(addr.addr.data(), ip_address.as_bytes(), addr.addr.size());
 
   return addr;
@@ -81,8 +81,8 @@ fuchsia::net::Ipv6Address MdnsFidlUtil::CreateIpv6Address(const inet::IpAddress&
 
 // static
 fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV4(const inet::SocketAddress& socket_address) {
-  FXL_DCHECK(socket_address);
-  FXL_DCHECK(socket_address.is_v4());
+  FX_DCHECK(socket_address);
+  FX_DCHECK(socket_address.is_v4());
 
   fuchsia::net::Endpoint endpoint;
   endpoint.addr.set_ipv4(CreateIpv4Address(socket_address.address()));
@@ -93,8 +93,8 @@ fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV4(const inet::SocketAddress&
 
 // static
 fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV6(const inet::SocketAddress& socket_address) {
-  FXL_DCHECK(socket_address);
-  FXL_DCHECK(socket_address.is_v6());
+  FX_DCHECK(socket_address);
+  FX_DCHECK(socket_address.is_v6());
 
   fuchsia::net::Endpoint endpoint;
   endpoint.addr.set_ipv6(CreateIpv6Address(socket_address.address()));
@@ -105,21 +105,21 @@ fuchsia::net::Endpoint MdnsFidlUtil::CreateEndpointV6(const inet::SocketAddress&
 
 // static
 inet::IpAddress MdnsFidlUtil::IpAddressFrom(const fuchsia::net::IpAddress* addr) {
-  FXL_DCHECK(addr != nullptr);
+  FX_DCHECK(addr != nullptr);
   switch (addr->Which()) {
     case fuchsia::net::IpAddress::Tag::kIpv4:
       if (!addr->is_ipv4()) {
         return inet::IpAddress();
       }
 
-      FXL_DCHECK(addr->ipv4().addr.size() == sizeof(in_addr));
+      FX_DCHECK(addr->ipv4().addr.size() == sizeof(in_addr));
       return inet::IpAddress(*reinterpret_cast<const in_addr*>(addr->ipv4().addr.data()));
     case fuchsia::net::IpAddress::Tag::kIpv6:
       if (!addr->is_ipv6()) {
         return inet::IpAddress();
       }
 
-      FXL_DCHECK(addr->ipv6().addr.size() == sizeof(in6_addr));
+      FX_DCHECK(addr->ipv6().addr.size() == sizeof(in6_addr));
       return inet::IpAddress(*reinterpret_cast<const in6_addr*>(addr->ipv6().addr.data()));
     default:
       return inet::IpAddress();

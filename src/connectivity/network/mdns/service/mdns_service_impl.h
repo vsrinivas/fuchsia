@@ -16,6 +16,7 @@
 #include "src/connectivity/network/mdns/service/config.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -149,11 +150,11 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   class BindingSet {
    public:
     BindingSet(TProtocol* impl, const std::string& label) : impl_(impl), label_(label) {
-      FXL_DCHECK(impl_);
+      FX_DCHECK(impl_);
     }
 
     void OnBindRequest(fidl::InterfaceRequest<TProtocol> request) {
-      FXL_DCHECK(request);
+      FX_DCHECK(request);
       if (ready_) {
         bindings_.AddBinding(impl_, std::move(request));
       } else {

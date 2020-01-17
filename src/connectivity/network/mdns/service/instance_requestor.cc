@@ -7,7 +7,7 @@
 #include <lib/zx/time.h>
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace {
@@ -89,7 +89,7 @@ void InstanceRequestor::EndOfMessage() {
     }
 
     auto iter = target_infos_by_full_name_.find(instance_info.target_);
-    FXL_DCHECK(iter != target_infos_by_full_name_.end());
+    FX_DCHECK(iter != target_infos_by_full_name_.end());
     TargetInfo& target_info = iter->second;
 
     // Keep this target info around.
@@ -153,7 +153,7 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
     }
 
     auto iter = target_infos_by_full_name_.find(instance_info.target_);
-    FXL_DCHECK(iter != target_infos_by_full_name_.end());
+    FX_DCHECK(iter != target_infos_by_full_name_.end());
     TargetInfo& target_info = iter->second;
 
     if (!target_info.v4_address_ && !target_info.v6_address_) {
@@ -201,7 +201,7 @@ void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
 
   if (instance_infos_by_full_name_.find(instance_full_name) == instance_infos_by_full_name_.end()) {
     auto pair = instance_infos_by_full_name_.emplace(instance_full_name, InstanceInfo{});
-    FXL_DCHECK(pair.second);
+    FX_DCHECK(pair.second);
     pair.first->second.instance_name_ = instance_name;
   }
 

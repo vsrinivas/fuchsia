@@ -7,8 +7,6 @@
 #include <iomanip>
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
-
 namespace mdns {
 
 template <typename T>

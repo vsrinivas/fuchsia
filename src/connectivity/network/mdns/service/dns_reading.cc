@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 namespace {
@@ -42,7 +42,7 @@ void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
 
       if (end_position_of_original_run == 0) {
         end_position_of_original_run = reader.bytes_consumed();
-        FXL_DCHECK(end_position_of_original_run != 0);
+        FX_DCHECK(end_position_of_original_run != 0);
       }
 
       // Set the read position to that offset and rest of the name.
@@ -174,7 +174,9 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
 
     if (length > reader.bytes_remaining()) {
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-      FXL_DLOG(ERROR) << "Bad string length, offset " << reader.bytes_consumed();
+#ifndef NDEBUG
+      FX_LOGS(ERROR) << "Bad string length, offset " << reader.bytes_consumed();
+#endif
 #endif
       reader.MarkUnhealthy();
       return reader;
@@ -190,8 +192,8 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataTxt& value) {
     value.strings_.emplace_back(s);
   }
 
-  FXL_DCHECK(reader.healthy());
-  FXL_DCHECK(reader.bytes_remaining() == 0);
+  FX_DCHECK(reader.healthy());
+  FX_DCHECK(reader.bytes_remaining() == 0);
 
   return reader;
 }
@@ -214,8 +216,8 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataOpt& value) {
   value.options_.resize(reader.bytes_remaining());
   reader.GetBytes(reader.bytes_remaining(), value.options_.data());
 
-  FXL_DCHECK(reader.healthy());
-  FXL_DCHECK(reader.bytes_remaining() == 0);
+  FX_DCHECK(reader.healthy());
+  FX_DCHECK(reader.bytes_remaining() == 0);
 
   return reader;
 }
@@ -232,8 +234,8 @@ PacketReader& operator>>(PacketReader& reader, DnsResourceDataNSec& value) {
   value.bits_.resize(reader.bytes_remaining());
   reader.GetBytes(reader.bytes_remaining(), value.bits_.data());
 
-  FXL_DCHECK(reader.healthy());
-  FXL_DCHECK(reader.bytes_remaining() == 0);
+  FX_DCHECK(reader.healthy());
+  FX_DCHECK(reader.bytes_remaining() == 0);
 
   return reader;
 }
@@ -248,8 +250,9 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
   if (data_size > reader.bytes_remaining()) {
     reader.MarkUnhealthy();
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-    FXL_DLOG(ERROR) << "data_size is " << data_size << ", remaining is "
-                    << reader.bytes_remaining();
+#ifndef NDEBUG
+    FX_LOGS(ERROR) << "data_size is " << data_size << ", remaining is " << reader.bytes_remaining();
+#endif
 #endif
   }
 
@@ -282,7 +285,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
       reader.SetBytesRemaining(data_size);
       reader >> value.txt_;
       if (reader.healthy()) {
-        FXL_DCHECK(reader.bytes_remaining() == 0);
+        FX_DCHECK(reader.bytes_remaining() == 0);
         reader.SetBytesRemaining(bytes_remaining - data_size);
       }
     } break;
@@ -300,7 +303,7 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
       reader.SetBytesRemaining(data_size);
       reader >> value.opt_;
       if (reader.healthy()) {
-        FXL_DCHECK(reader.bytes_remaining() == 0);
+        FX_DCHECK(reader.bytes_remaining() == 0);
         reader.SetBytesRemaining(bytes_remaining - data_size);
       }
     } break;
@@ -310,14 +313,16 @@ PacketReader& operator>>(PacketReader& reader, DnsResource& value) {
       reader.SetBytesRemaining(data_size);
       reader >> value.nsec_;
       if (reader.healthy()) {
-        FXL_DCHECK(reader.bytes_remaining() == 0);
+        FX_DCHECK(reader.bytes_remaining() == 0);
         reader.SetBytesRemaining(bytes_remaining - data_size);
       }
     } break;
     default:
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-      FXL_DLOG(WARNING) << "Skipping data for unsupported resource type "
-                        << static_cast<uint16_t>(value.type_);
+#ifndef NDEBUG
+      FX_LOGS(WARNING) << "Skipping data for unsupported resource type "
+                       << static_cast<uint16_t>(value.type_);
+#endif
 #endif
       reader.Bytes(data_size);
       break;
@@ -333,7 +338,9 @@ PacketReader& operator>>(PacketReader& reader, DnsMessage& value) {
       value.header_.authority_count_ > kMaxAuthorities ||
       value.header_.additional_count_ > kMaxAdditionals) {
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-    FXL_DLOG(ERROR) << "Max record count exceeded; rejecting message.";
+#ifndef NDEBUG
+    FX_LOGS(ERROR) << "Max record count exceeded; rejecting message.";
+#endif
 #endif
     reader.MarkUnhealthy();
     return reader;

@@ -17,7 +17,7 @@
 #include "src/connectivity/network/mdns/util/formatting.h"
 #include "src/connectivity/network/mdns/util/mdns_params.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -27,9 +27,9 @@ MdnsImpl::MdnsImpl(sys::ComponentContext* component_context, MdnsParams* params,
       quit_callback_(std::move(quit_callback)),
       responder_binding_(this),
       subscriber_binding_(this) {
-  FXL_DCHECK(component_context);
-  FXL_DCHECK(params);
-  FXL_DCHECK(quit_callback_);
+  FX_DCHECK(component_context);
+  FX_DCHECK(params);
+  FX_DCHECK(quit_callback_);
 
   switch (params->command_verb()) {
     case MdnsParams::CommandVerb::kResolve:

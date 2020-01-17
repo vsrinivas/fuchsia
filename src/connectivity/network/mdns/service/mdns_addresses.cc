@@ -4,16 +4,18 @@
 
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace mdns {
 
 void MdnsAddresses::SetPort(inet::IpPort port) { port_ = port; }
 
 void MdnsAddresses::SetMulticastAddress(inet::IpAddress address) {
-  FXL_DCHECK(address.is_valid());
+  FX_DCHECK(address.is_valid());
   if (address.is_v4()) {
     v4_multicast_ = address;
   } else {
-    FXL_DCHECK(address.is_v6());
+    FX_DCHECK(address.is_v6());
     v6_multicast_ = address;
   }
 }

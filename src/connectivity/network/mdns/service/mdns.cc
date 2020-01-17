@@ -23,7 +23,7 @@
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/connectivity/network/mdns/service/resource_renewer.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -40,9 +40,9 @@ void Mdns::SetVerbose(bool verbose) {
 void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& host_name,
                  const MdnsAddresses& addresses, bool perform_address_probe,
                  fit::closure ready_callback) {
-  FXL_DCHECK(!host_name.empty());
-  FXL_DCHECK(ready_callback);
-  FXL_DCHECK(state_ == State::kNotStarted);
+  FX_DCHECK(!host_name.empty());
+  FX_DCHECK(ready_callback);
+  FX_DCHECK(state_ == State::kNotStarted);
 
   ready_callback_ = std::move(ready_callback);
   state_ = State::kWaitingForInterfaces;
@@ -72,7 +72,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack, const std::string& hos
       [this](std::unique_ptr<DnsMessage> message, const ReplyAddress& reply_address) {
 #ifdef MDNS_TRACE
         if (verbose_) {
-          FXL_LOG(INFO) << "Inbound message from " << reply_address << ":" << *message;
+          FX_LOGS(INFO) << "Inbound message from " << reply_address << ":" << *message;
         }
 #endif  // MDNS_TRACE
 
@@ -122,17 +122,17 @@ void Mdns::Stop() {
 
 void Mdns::ResolveHostName(const std::string& host_name, zx::time timeout,
                            ResolveHostNameCallback callback) {
-  FXL_DCHECK(MdnsNames::IsValidHostName(host_name));
-  FXL_DCHECK(callback);
-  FXL_DCHECK(state_ == State::kActive);
+  FX_DCHECK(MdnsNames::IsValidHostName(host_name));
+  FX_DCHECK(callback);
+  FX_DCHECK(state_ == State::kActive);
 
   AddAgent(std::make_shared<HostNameResolver>(this, host_name, timeout, std::move(callback)));
 }
 
 void Mdns::SubscribeToService(const std::string& service_name, Subscriber* subscriber) {
-  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
-  FXL_DCHECK(subscriber);
-  FXL_DCHECK(state_ == State::kActive);
+  FX_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FX_DCHECK(subscriber);
+  FX_DCHECK(state_ == State::kActive);
 
   std::shared_ptr<InstanceRequestor> agent;
 
@@ -151,10 +151,10 @@ void Mdns::SubscribeToService(const std::string& service_name, Subscriber* subsc
 
 bool Mdns::PublishServiceInstance(const std::string& service_name, const std::string& instance_name,
                                   bool perform_probe, Publisher* publisher) {
-  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
-  FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
-  FXL_DCHECK(publisher);
-  FXL_DCHECK(state_ == State::kActive);
+  FX_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FX_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
+  FX_DCHECK(publisher);
+  FX_DCHECK(state_ == State::kActive);
 
   auto agent = std::make_shared<InstanceResponder>(this, service_name, instance_name, publisher);
 
@@ -187,7 +187,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   // Create an address prober to look for host name conflicts. The address
   // prober removes itself immediately before it calls the callback.
   auto address_prober = std::make_shared<AddressProber>(this, [this](bool successful) {
-    FXL_DCHECK(agents_.empty());
+    FX_DCHECK(agents_.empty());
 
     if (!successful) {
       std::cerr << "mDNS: Another host is using name " << host_full_name_ << "\n";
@@ -228,7 +228,7 @@ void Mdns::OnReady() {
   agents_awaiting_start_.clear();
 
   // Let the client know we're ready.
-  FXL_DCHECK(ready_callback_);
+  FX_DCHECK(ready_callback_);
   ready_callback_();
   ready_callback_ = nullptr;
 }
@@ -250,14 +250,14 @@ void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_
 }
 
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
-  FXL_DCHECK(question);
+  FX_DCHECK(question);
   DnsMessage& message = outbound_messages_by_reply_address_[addresses_->multicast_reply()];
   message.questions_.push_back(question);
 }
 
 void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                         const ReplyAddress& reply_address) {
-  FXL_DCHECK(resource);
+  FX_DCHECK(resource);
 
   if (section == MdnsResourceSection::kExpired) {
     // Expirations are distributed to local agents. We handle this case
@@ -285,7 +285,7 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSecti
       message.additionals_.push_back(resource);
       break;
     case MdnsResourceSection::kExpired:
-      FXL_DCHECK(false);
+      FX_DCHECK(false);
       break;
   }
 }
@@ -297,8 +297,8 @@ void Mdns::SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_
 void Mdns::Renew(const DnsResource& resource) { resource_renewer_->Renew(resource); }
 
 void Mdns::RemoveAgent(const MdnsAgent* agent, const std::string& published_instance_full_name) {
-  FXL_DCHECK(agent);
-  FXL_DCHECK(!prohibit_agent_removal_);
+  FX_DCHECK(agent);
+  FX_DCHECK(!prohibit_agent_removal_);
 
   agents_.erase(agent);
 
@@ -325,7 +325,7 @@ void Mdns::RemoveAgent(const MdnsAgent* agent, const std::string& published_inst
 void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   if (state_ == State::kActive) {
     agents_.emplace(agent.get(), agent);
-    FXL_DCHECK(!host_full_name_.empty());
+    FX_DCHECK(!host_full_name_.empty());
     agent->Start(host_full_name_, *addresses_);
     SendMessages();
   } else {
@@ -336,8 +336,8 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
 bool Mdns::AddInstanceResponder(const std::string& service_name, const std::string& instance_name,
                                 inet::IpPort port, std::shared_ptr<InstanceResponder> agent,
                                 bool perform_probe) {
-  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
-  FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
+  FX_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FX_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
 
   std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance_name, service_name);
 
@@ -385,9 +385,9 @@ void Mdns::SendMessages() {
 #ifdef MDNS_TRACE
     if (verbose_) {
       if (reply_address == addresses_->multicast_reply()) {
-        FXL_LOG(INFO) << "Outbound message (multicast): " << message;
+        FX_LOGS(INFO) << "Outbound message (multicast): " << message;
       } else {
-        FXL_LOG(INFO) << "Outbound message to " << reply_address << ":" << message;
+        FX_LOGS(INFO) << "Outbound message to " << reply_address << ":" << message;
       }
     }
 #endif  // MDNS_TRACE
@@ -420,7 +420,7 @@ void Mdns::ReceiveResource(const DnsResource& resource, MdnsResourceSection sect
 }
 
 void Mdns::PostTask() {
-  FXL_DCHECK(!task_queue_.empty());
+  FX_DCHECK(!task_queue_.empty());
 
   if (task_queue_.top().time_ >= posted_task_time_) {
     return;
@@ -480,7 +480,7 @@ std::unique_ptr<Mdns::Publication> Mdns::Publication::Clone() {
 Mdns::Subscriber::~Subscriber() { Unsubscribe(); }
 
 void Mdns::Subscriber::Connect(std::shared_ptr<InstanceRequestor> instance_requestor) {
-  FXL_DCHECK(instance_requestor);
+  FX_DCHECK(instance_requestor);
   instance_subscriber_ = instance_requestor;
 }
 
@@ -515,7 +515,7 @@ void Mdns::Publisher::Unpublish() {
 }
 
 void Mdns::Publisher::Connect(std::shared_ptr<InstanceResponder> instance_responder) {
-  FXL_DCHECK(instance_responder);
+  FX_DCHECK(instance_responder);
   instance_responder_ = instance_responder;
 }
 

@@ -6,7 +6,7 @@
 
 #include <endian.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -25,7 +25,7 @@ bool PacketReader::GetBytes(size_t count, void* dest) {
     return true;
   }
 
-  FXL_DCHECK(dest != nullptr);
+  FX_DCHECK(dest != nullptr);
   std::memcpy(dest, bytes, count);
   return true;
 }

@@ -18,6 +18,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/inet/ip_address.h"
 #include "src/lib/inet/socket_address.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -78,7 +79,7 @@ class MdnsInterfaceTransceiver {
 
   const fbl::unique_fd& socket_fd() const { return socket_fd_; }
   const MdnsAddresses& addresses() const {
-    FXL_DCHECK(addresses_);
+    FX_DCHECK(addresses_);
     return *addresses_;
   }
 

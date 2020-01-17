@@ -16,7 +16,7 @@
 #include "garnet/public/lib/fostr/fidl/fuchsia/net/mdns/formatting.h"
 #include "lib/fidl/cpp/type_converter.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 const std::string kLocalArgument = "--local";
 const std::string kRemoteArgument = "--remote";
@@ -29,8 +29,9 @@ constexpr uint16_t kPriority = 4;
 constexpr uint16_t kWeight = 5;
 const std::string kRemoteHostName = "mdns-test-device-remote";
 const fuchsia::net::Ipv4Address kRemoteV4Address{{192, 168, 0, 1}};
-//const fuchsia::net::Ipv6Address kRemoteV6Address{{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//                                                  0x46, 0x07, 0x0b, 0xff, 0xfe, 0x60, 0x59, 0x5d}};
+// const fuchsia::net::Ipv6Address kRemoteV6Address{{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+//                                                  0x46, 0x07, 0x0b, 0xff, 0xfe, 0x60, 0x59,
+//                                                  0x5d}};
 const zx_duration_t kTimeout = ZX_SEC(60);
 
 namespace mdns::test {
@@ -150,7 +151,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
   }
 
   void Quit(int exit_code = 0) {
-    FXL_DCHECK(quit_callback_);
+    FX_DCHECK(quit_callback_);
     subscriber_.set_error_handler(nullptr);
     subscriber_.Unbind();
     subscriber_binding_.set_error_handler(nullptr);
@@ -275,7 +276,7 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder {
   }
 
   void Quit(int exit_code = 0) {
-    FXL_DCHECK(quit_callback_);
+    FX_DCHECK(quit_callback_);
     publisher_.set_error_handler(nullptr);
     publisher_.Unbind();
     responder_binding_.set_error_handler(nullptr);
@@ -325,7 +326,7 @@ int main(int argc, const char** argv) {
         });
     loop.Run();
   } else {
-    FXL_DCHECK(remote);
+    FX_DCHECK(remote);
     auto remote_end =
         mdns::test::RemoteEnd::Create(component_context.get(), [&loop, &result](int exit_code) {
           result = exit_code;

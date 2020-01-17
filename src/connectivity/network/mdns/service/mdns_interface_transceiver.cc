@@ -22,7 +22,7 @@
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver_v4.h"
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver_v6.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -49,8 +49,8 @@ MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
 bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
                                      InboundMessageCallback callback) {
-  FXL_DCHECK(callback);
-  FXL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
+  FX_DCHECK(callback);
+  FX_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
   addresses_ = &addresses;
 
@@ -60,7 +60,7 @@ bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
   socket_fd_ = fbl::unique_fd(socket(address_.family(), SOCK_DGRAM, 0));
 
   if (!socket_fd_.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to open socket, " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to open socket, " << strerror(errno);
     return false;
   }
 
@@ -80,22 +80,22 @@ bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
 }
 
 void MdnsInterfaceTransceiver::Stop() {
-  FXL_DCHECK(socket_fd_.is_valid()) << "Stop called when stopped.";
+  FX_DCHECK(socket_fd_.is_valid()) << "Stop called when stopped.";
   fd_waiter_.Cancel();
   socket_fd_.reset();
 }
 
 void MdnsInterfaceTransceiver::SetAlternateAddress(const inet::IpAddress& alternate_address) {
-  FXL_DCHECK(alternate_address.family() != address_.family());
+  FX_DCHECK(alternate_address.family() != address_.family());
 
   alternate_address_ = alternate_address;
 }
 
 void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
                                            const inet::SocketAddress& address) {
-  FXL_DCHECK(message);
-  FXL_DCHECK(address.is_valid());
-  FXL_DCHECK(address.family() == address_.family() || address == addresses_->v4_multicast());
+  FX_DCHECK(message);
+  FX_DCHECK(address.is_valid());
+  FX_DCHECK(address.family() == address_.family() || address == addresses_->v4_multicast());
 
   FixUpAddresses(&message->answers_);
   FixUpAddresses(&message->authorities_);
@@ -113,7 +113,7 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
   bytes_sent_ += packet_size;
 
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to sendto, " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to sendto, " << strerror(errno);
     return;
   }
 }
@@ -146,14 +146,14 @@ int MdnsInterfaceTransceiver::SetOptionSharePort() {
   int param = 1;
   int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEADDR, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEADDR, " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to set socket option SO_REUSEADDR, " << strerror(errno);
     return result;
   }
 
   param = 1;
   result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_REUSEPORT, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option SO_REUSEPORT, " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to set socket option SO_REUSEPORT, " << strerror(errno);
   }
 
   return result;
@@ -171,7 +171,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
       recvfrom(socket_fd_.get(), inbound_buffer_.data(), inbound_buffer_.size(), 0,
                reinterpret_cast<sockaddr*>(&source_address_storage), &source_address_length);
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to recvfrom, " << strerror(errno);
+    FX_LOGS(ERROR) << "Failed to recvfrom, " << strerror(errno);
     // Wait a bit before trying again to avoid spamming the log.
     async::PostDelayedTask(
         async_get_default_dispatcher(), [this]() { WaitForInbound(); }, zx::sec(10));
@@ -195,11 +195,11 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
   reader >> *message.get();
 
   if (reader.complete()) {
-    FXL_DCHECK(inbound_message_callback_);
+    FX_DCHECK(inbound_message_callback_);
     inbound_message_callback_(std::move(message), reply_address);
   } else {
     inbound_buffer_.resize(result);
-    FXL_LOG(ERROR) << "Couldn't parse message from " << reply_address << ", " << result
+    FX_LOGS(ERROR) << "Couldn't parse message from " << reply_address << ", " << result
                    << " bytes: " << fostr::HexDump(inbound_buffer_);
     inbound_buffer_.resize(kMaxPacketSize);
   }
@@ -209,7 +209,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
 
 std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAddressResource(
     const std::string& host_full_name) {
-  FXL_DCHECK(address_.is_valid());
+  FX_DCHECK(address_.is_valid());
 
   if (!address_resource_ || address_resource_->name_.dotted_string_ != host_full_name) {
     address_resource_ = MakeAddressResource(host_full_name, address_);
@@ -220,7 +220,7 @@ std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAddressResource(
 
 std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAlternateAddressResource(
     const std::string& host_full_name) {
-  FXL_DCHECK(alternate_address_.is_valid());
+  FX_DCHECK(alternate_address_.is_valid());
 
   if (!alternate_address_resource_ ||
       alternate_address_resource_->name_.dotted_string_ != host_full_name) {
@@ -247,7 +247,7 @@ std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::MakeAddressResource(
 
 void MdnsInterfaceTransceiver::FixUpAddresses(
     std::vector<std::shared_ptr<DnsResource>>* resources) {
-  FXL_DCHECK(resources);
+  FX_DCHECK(resources);
 
   // This method is called from |SendMessage| to 'fix up' address resources in
   // a DNS message. |SendMessage| calls this method once for each of the three
@@ -289,7 +289,7 @@ void MdnsInterfaceTransceiver::FixUpAddresses(
     return;
   }
 
-  FXL_DCHECK(!name.empty());
+  FX_DCHECK(!name.empty());
 
   // There is at least one open slot. Fill it with the first A/AAAA resource
   // with the address resource for this interface.

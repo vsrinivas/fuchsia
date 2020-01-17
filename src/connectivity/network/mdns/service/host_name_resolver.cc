@@ -7,7 +7,7 @@
 #include <lib/zx/time.h>
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
 
@@ -18,7 +18,7 @@ HostNameResolver::HostNameResolver(MdnsAgent::Host* host, const std::string& hos
       host_full_name_(MdnsNames::LocalHostFullName(host_name)),
       timeout_(timeout),
       callback_(std::move(callback)) {
-  FXL_DCHECK(callback_);
+  FX_DCHECK(callback_);
 }
 
 HostNameResolver::~HostNameResolver() {}

@@ -5,7 +5,6 @@
 #include "src/connectivity/network/mdns/service/instance_prober.h"
 
 #include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/lib/fxl/logging.h"
 
 namespace mdns {
 
