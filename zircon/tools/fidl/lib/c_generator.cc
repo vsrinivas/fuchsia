@@ -32,50 +32,13 @@ class IOFlagsGuard {
 constexpr const char* kIndent = "    ";
 
 const std::set<std::string> allowed_c_unions{{
-    "fuchsia_cobalt_EventPayload",
-    "fuchsia_cobalt_Value",
-    "fuchsia_device_Controller_Bind_Result",
-    "fuchsia_device_Controller_GetDevicePowerCaps_Result",
-    "fuchsia_device_Controller_GetPowerStateMapping_Result",
-    "fuchsia_device_Controller_GetTopologicalPath_Result",
-    "fuchsia_device_Controller_Rebind_Result",
-    "fuchsia_device_Controller_Resume_Result",
-    "fuchsia_device_Controller_ScheduleUnbind_Result",
-    "fuchsia_device_Controller_UpdatePowerStateMapping_Result",
-    "fuchsia_device_manager_Coordinator_AddCompositeDevice_Result",
-    "fuchsia_device_manager_Coordinator_AddDevice_Result",
-    "fuchsia_device_manager_Coordinator_AddDeviceInvisible_Result",
-    "fuchsia_device_manager_Coordinator_AddMetadata_Result",
-    "fuchsia_device_manager_Coordinator_BindDevice_Result",
-    "fuchsia_device_manager_Coordinator_DirectoryWatch_Result",
-    "fuchsia_device_manager_Coordinator_GetMetadata_Result",
-    "fuchsia_device_manager_Coordinator_GetMetadataSize_Result",
-    "fuchsia_device_manager_Coordinator_GetTopologicalPath_Result",
-    "fuchsia_device_manager_Coordinator_LoadFirmware_Result",
-    "fuchsia_device_manager_Coordinator_MakeVisible_Result",
-    "fuchsia_device_manager_Coordinator_PublishMetadata_Result",
-    "fuchsia_device_manager_Coordinator_RunCompatibilityTests_Result",
     "fuchsia_device_manager_DeviceController_CompleteRemoval_Result",
     "fuchsia_device_manager_DeviceController_Unbind_Result",
-    "fuchsia_device_NameProvider_GetDeviceName_Result",
     "fuchsia_hardware_display_Controller_ImportImageForCapture_Result",
     "fuchsia_hardware_display_Controller_IsCaptureSupported_Result",
     "fuchsia_hardware_display_Controller_ReleaseCapture_Result",
     "fuchsia_hardware_display_Controller_StartCapture_Result",
-    "fuchsia_hardware_power_statecontrol_Admin_Suspend_Result",
-    "fuchsia_hardware_serial_NewDevice_Read_Result",
-    "fuchsia_hardware_serial_NewDevice_Write_Result",
-    "fuchsia_hardware_usb_peripheral_Device_SetConfiguration_Result",
     "fuchsia_io_NodeInfo",
-    "fuchsia_paver_BootManager_QueryActiveConfiguration_Result",
-    "fuchsia_paver_BootManager_QueryConfigurationStatus_Result",
-    "fuchsia_paver_DataSink_ReadAsset_Result",
-    "fuchsia_paver_DataSink_WipeVolume_Result",
-    "fuchsia_paver_ReadResult",
-    "fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_Result",
-    "fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_Result",
-    "fuchsia_wlan_stats_MlmeStats",
-    "fuchsia_hardware_audio_RingBuffer_GetVmo_Result",
 }};
 
 const std::vector<std::string> allowed_c_union_prefixes{
@@ -84,6 +47,12 @@ const std::vector<std::string> allowed_c_union_prefixes{
 };
 
 bool CUnionAllowed(const std::string& union_name) {
+  assert(union_name.size() > 0);
+  if (union_name[union_name.size()-1] == '*') {
+    std::string not_pointer(union_name);
+    not_pointer.resize(not_pointer.size() -1);
+    return CUnionAllowed(not_pointer);
+  }
   if (allowed_c_unions.find(union_name) != allowed_c_unions.end()) {
     return true;
   }
@@ -481,8 +450,16 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
           case flat::Decl::Kind::kXUnion:
             assert(false && "c-codegen for extensible unions not yet implemented");
             break;
-          case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kUnion:
+            if (!CUnionAllowed(member.type)) {
+              *file << kIndent
+                    << "ZX_PANIC(\"FIDL C union not supported at (%s:%d): %s\", __FILE__, "
+                       "__LINE__, \""
+                    << member.type << "\");\n";
+              break;
+            }
+            __FALLTHROUGH;
+          case flat::Decl::Kind::kStruct:
             switch (member.nullability) {
               case types::Nullability::kNullable:
                 *file << kIndent << "if (" << name << ") {\n";
@@ -825,6 +802,9 @@ void CGenerator::GenerateStructDeclaration(std::string_view name,
 
   auto emit_member = [this](const Member& member) {
     file_ << kIndent;
+    if (member.decl_kind == flat::Decl::Kind::kUnion && !CUnionAllowed(member.type)) {
+      file_ << "// ";
+    }
     EmitMemberDecl(&file_, member);
     file_ << ";\n";
   };
@@ -1439,8 +1419,17 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
               case flat::Decl::Kind::kXUnion:
                 assert(false && "c-codegen for extensible unions not yet implemented");
                 break;
-              case flat::Decl::Kind::kStruct:
               case flat::Decl::Kind::kUnion:
+                if (!CUnionAllowed(member.type)) {
+                  file_ << kIndent
+                        << "ZX_PANIC(\"FIDL C union not supported at (%s:%d): %s\", __FILE__, "
+                           "__LINE__, \""
+                        << member.type << "\");\n";
+                  break;
+                }
+                __FALLTHROUGH;
+
+              case flat::Decl::Kind::kStruct:
                 switch (member.nullability) {
                   case types::Nullability::kNullable:
                     file_ << kIndent << "if (_response->" << name << ") {\n";
@@ -1891,6 +1880,7 @@ std::ostringstream CGenerator::ProduceClient() {
   EmitIncludeHeader(&file_, "<lib/fidl/txn_header.h>");
   EmitIncludeHeader(&file_, "<alloca.h>");
   EmitIncludeHeader(&file_, "<string.h>");
+  EmitIncludeHeader(&file_, "<zircon/assert.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
   EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
   EmitBlank(&file_);
@@ -1933,6 +1923,7 @@ std::ostringstream CGenerator::ProduceServer() {
   EmitIncludeHeader(&file_, "<lib/fidl/txn_header.h>");
   EmitIncludeHeader(&file_, "<alloca.h>");
   EmitIncludeHeader(&file_, "<string.h>");
+  EmitIncludeHeader(&file_, "<zircon/assert.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
   EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
   EmitBlank(&file_);
