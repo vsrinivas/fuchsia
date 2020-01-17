@@ -103,6 +103,80 @@ if (defined(zx)) {
     ]
     deps = [ ":fidl" ]
   }
+
+  action("fidlgen_llcpp") {
+    assert(current_os != "fuchsia")
+    gopath = rebase_path("//../garnet/go")
+    go = rebase_path("//../prebuilt/third_party/go/${host_platform}/bin/go")
+    if (current_os == "mac") {
+      goos = "darwin"
+    } else {
+      goos = current_os
+    }
+    if (current_cpu == "x64") {
+      goarch = "amd64"
+    } else {
+      goarch = current_cpu
+    }
+    output_name = "$target_out_dir/fidlgen_llcpp"
+    script = "/usr/bin/env"
+    args = [
+      "GOPATH=$gopath",
+      "GOOS=$goos",
+      "GOARCH=$goarch",
+      go,
+      "build",
+      "-o",
+      rebase_path(output_name),
+      "fidl/compiler/llcpp_backend",
+    ]
+
+    # Taken from ./host_x64/exe.unstripped/fidlgen_llcpp.d in the Fuchsia build:
+    inputs = [
+      "$zx/../garnet/go/src/fidl/compiler/backend/common/names.go",
+      "$zx/../garnet/go/src/fidl/compiler/backend/common/strings.go",
+      "$zx/../garnet/go/src/fidl/compiler/backend/cpp/ir/ir.go",
+      "$zx/../garnet/go/src/fidl/compiler/backend/types/config.go",
+      "$zx/../garnet/go/src/fidl/compiler/backend/types/only_for_ordinal_migration.go",
+      "$zx/../garnet/go/src/fidl/compiler/backend/types/only_for_xunion_migration.go",
+      "$zx/../garnet/go/src/fidl/compiler/backend/types/types.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/generator.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/main.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/files/header.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/files/source.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/bits.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/const.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/enum.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/helpers.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/interface.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/reply_c_flavor.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/reply_caller_allocate.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/reply_in_place.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/send_event_c_flavor.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/send_event_caller_allocate.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/send_event_in_place.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/service.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/struct.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_event_handler.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_request_caller_allocate.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_request_in_place.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_request_managed.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_server.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/table.tmpl.go",
+      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/xunion.tmpl.go",
+    ]
+    outputs = [ output_name ]
+
+    # See host_tool_action().
+    metadata = {
+      # Dependencies come before the "--".
+      host_tool_rspfile = rebase_path(inputs, root_build_dir)
+      host_tool_rspfile += [ "--" ]
+
+      # The command line to run comes after the "--".
+      host_tool_rspfile += [ rebase_path(output_name, root_build_dir) ]
+    }
+  }
 } else {
   # TODO(BLD-353): Referenced by //garnet/public/lib/fidl/fuzz:compiler.
 
