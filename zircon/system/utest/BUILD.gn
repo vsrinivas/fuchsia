@@ -248,7 +248,6 @@ if (current_cpu != "") {
       "loader-service",
       "log",
       "logger",
-      "memfs",
       "mexec",
       "minfs-micro-benchmark",
       "mt8167-thermal",

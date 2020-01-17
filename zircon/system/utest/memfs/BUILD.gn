@@ -2,7 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("memfs") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("memfs") {
+  output_dir = "$root_out_dir/zircon-migrated"
+
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   test_group = "fs"
   sources = [
     "fidl-tests.cc",
@@ -10,23 +29,26 @@ zx_test("memfs") {
     "vmofile-tests.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/memfs",
-    "$zx/system/ulib/memfs:memfs-cpp",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/trace-engine",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/memfs-cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/trace-engine",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
+}
+
+migrated_manifest("memfs-manifest") {
+  deps = [ ":memfs" ]
 }
