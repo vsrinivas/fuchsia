@@ -83,14 +83,28 @@ std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
 
 void AmlPdmDevice::InitRegs() {
   // Setup toddr block
-  audio_mmio_.Write32((0x02 << 13) |    // Right justified 16-bit
-                          (31 << 8) |   // msb position of data out of pdm
-                          (16 << 3) |   // lsb position of data out of pdm
-                          (0x04 << 0),  // select pdm as data source
-                      GetToddrOffset(TODDR_CTRL0_OFFS));
-  audio_mmio_.Write32(((fifo_depth_ / 8 / 2) << 16) |  // trigger ddr when fifo half full
-                          (0x02 << 8),                 // STATUS2 source is ddr position
-                      GetToddrOffset(TODDR_CTRL1_OFFS));
+  switch (version_) {
+    case AmlVersion::kS905D2G:
+      audio_mmio_.Write32((0x02 << 13) |    // Right justified 16-bit
+                              (31 << 8) |   // msb position of data out of pdm
+                              (16 << 3) |   // lsb position of data out of pdm
+                              (0x04 << 0),  // select pdm as data source
+                          GetToddrOffset(TODDR_CTRL0_OFFS));
+      audio_mmio_.Write32(((fifo_depth_ / 8 / 2) << 16) |  // trigger ddr when fifo half full
+                              (0x02 << 8),                 // STATUS2 source is ddr position
+                          GetToddrOffset(TODDR_CTRL1_OFFS));
+      break;
+    case AmlVersion::kS905D3G:
+      audio_mmio_.Write32((0x02 << 13) |   // Right justified 16-bit
+                              (31 << 8) |  // msb position of data out of pdm
+                              (16 << 3),   // lsb position of data out of pdm
+                          GetToddrOffset(TODDR_CTRL0_OFFS));
+      audio_mmio_.Write32((0x04 << 28) |                       // select pdm as data source
+                              ((fifo_depth_ / 8 / 2) << 12) |  // trigger ddr when fifo half full
+                              (0x02 << 8),                     // STATUS2 source is ddr position
+                          GetToddrOffset(TODDR_CTRL1_OFFS));
+      break;
+  }
 
   //*To keep things simple, we are using the same clock source for both the
   // pdm sysclk and dclk.  Sysclk needs to be ~100-200MHz per AmLogic recommendations.

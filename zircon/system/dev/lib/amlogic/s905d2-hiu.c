@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <string.h>
-
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -67,7 +66,6 @@ zx_status_t s905d2_hiu_init_etc(aml_hiu_dev_t* device, uint8_t* hiubase) {
 
   return ZX_OK;
 }
-
 
 static zx_status_t s905d2_pll_init_regs(aml_pll_dev_t* pll_dev) {
   aml_hiu_dev_t* device = pll_dev->hiu;

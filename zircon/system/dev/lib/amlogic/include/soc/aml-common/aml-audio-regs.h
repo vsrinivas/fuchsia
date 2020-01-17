@@ -74,17 +74,18 @@ __BEGIN_CDECLS
 #define EE_AUDIO_CLK_PDMIN_CTRL1      0x00b0
 
 //TODDR control reg blocks and offsets
-#define TODDR_CTRL0_OFFS        (0x00)
-#define TODDR_CTRL1_OFFS        (0x04)
-#define TODDR_START_ADDR_OFFS   (0x08)
-#define TODDR_FINISH_ADDR_OFFS  (0x0c)
-#define TODDR_INT_ADDR_OFFS     (0x10)
-#define TODDR_STATUS1_OFFS      (0x14)
-#define TODDR_STATUS2_OFFS      (0x18)
-#define TODDR_START_ADDRB_OFFS  (0x1c)
-#define TODDR_FINISH_ADDRB_OFFS (0x20)
-#define TODDR_INIT_ADDR_OFFS    (0x24)
-
+#define TODDR_CTRL0_OFFS        (0x00 << 2)
+#define TODDR_CTRL1_OFFS        (0x01 << 2)
+#define TODDR_START_ADDR_OFFS   (0x02 << 2)
+#define TODDR_FINISH_ADDR_OFFS  (0x03 << 2)
+#define TODDR_INT_ADDR_OFFS     (0x04 << 2)
+#define TODDR_STATUS1_OFFS      (0x05 << 2)
+#define TODDR_STATUS2_OFFS      (0x06 << 2)
+#define TODDR_START_ADDRB_OFFS  (0x07 << 2)
+#define TODDR_FINISH_ADDRB_OFFS (0x08 << 2)
+#define TODDR_INIT_ADDR_OFFS    (0x09 << 2)
+// For version S905D3G.
+#define TODDR_CTRL2_OFFS_D3G    (0x0a << 2)
 
 //FRDDR control reg blocks and offsets
 #define FRDDR_CTRL0_OFFS        (0x00 << 2)

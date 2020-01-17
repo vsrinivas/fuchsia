@@ -176,6 +176,7 @@ aggregate_manifest("legacy-image") {
     ":driver.mtk-thermal",
     ":driver.nand",
     ":driver.nand-broker",
+    ":driver.nelson-pdm-input",
     ":driver.nelson-tdm-output",
     ":driver.nelson-usb-phy",
     ":driver.nvme",

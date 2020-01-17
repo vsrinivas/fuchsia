@@ -72,6 +72,9 @@ static const device_component_t controller_components[] = {
     {countof(ref_out_codec_component), ref_out_codec_component},
     {countof(ref_out_clk0_component), ref_out_clk0_component},
 };
+static const device_component_t in_components[] = {
+    {countof(ref_out_clk0_component), ref_out_clk0_component},
+};
 
 zx_status_t Nelson::AudioInit() {
   const pbus_mmio_t mmios_out[] = {
@@ -98,6 +101,34 @@ zx_status_t Nelson::AudioInit() {
   controller_out.bti_list = btis_out;
   controller_out.bti_count = countof(btis_out);
 
+  const pbus_mmio_t mmios_in[] = {
+      {
+          .base = S905D3_EE_PDM_BASE,
+          .length = S905D3_EE_PDM_LENGTH,
+      },
+      {
+          .base = S905D3_EE_AUDIO_BASE,
+          .length = S905D3_EE_AUDIO_LENGTH,
+      },
+  };
+
+  const pbus_bti_t btis_in[] = {
+      {
+          .iommu_index = 0,
+          .bti_id = BTI_AUDIO_IN,
+      },
+  };
+
+  pbus_dev_t dev_in = {};
+  dev_in.name = "nelson-audio-in";
+  dev_in.vid = PDEV_VID_AMLOGIC;
+  dev_in.pid = PDEV_PID_AMLOGIC_S905D3;
+  dev_in.did = PDEV_DID_AMLOGIC_PDM;
+  dev_in.mmio_list = mmios_in;
+  dev_in.mmio_count = countof(mmios_in);
+  dev_in.bti_list = btis_in;
+  dev_in.bti_count = countof(btis_in);
+
   // TDM pin assignments.
   gpio_impl_.SetAltFunction(S905D2_GPIOA(1), S905D2_GPIOA_1_TDMB_SCLK_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(2), S905D2_GPIOA_2_TDMB_FS_FN);
@@ -106,6 +137,10 @@ zx_status_t Nelson::AudioInit() {
 
   // CODEC pin assignments.
   gpio_impl_.ConfigOut(S905D2_GPIOA(5), 0);
+
+  // PDM pin assignments
+  gpio_impl_.SetAltFunction(S905D2_GPIOA(7), S905D2_GPIOA_7_PDM_DCLK_FN);
+  gpio_impl_.SetAltFunction(S905D2_GPIOA(8), S905D2_GPIOA_8_PDM_DIN0_FN);
 
   // Output devices.
   constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
@@ -131,6 +166,13 @@ zx_status_t Nelson::AudioInit() {
                                     countof(controller_components), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
+    return status;
+  }
+
+  // Input device.
+  status = pbus_.CompositeDeviceAdd(&dev_in, in_components, countof(in_components), UINT32_MAX);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s adding audio input device failed %d\n", __FILE__, status);
     return status;
   }
   return ZX_OK;
