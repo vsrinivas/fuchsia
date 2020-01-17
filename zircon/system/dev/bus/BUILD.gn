@@ -6,7 +6,6 @@ group("bus") {
   deps = [
     "pci",
     "platform",
-    "virtio",
     "virtio:virtio_block",
     "virtio:virtio_console",
     "virtio:virtio_ethernet",
