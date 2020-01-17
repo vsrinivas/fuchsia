@@ -47,9 +47,7 @@ impl App {
 
         let display_info = scenic.get_display_info().await?;
         let context = view::Context::new_ptr(session.clone(), display_info);
-
         let view = view::View::new(context.clone())?;
-
         Ok(App { session, context, view })
     }
 

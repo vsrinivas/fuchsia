@@ -1,0 +1,48 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("all") {
+  deps = [
+    ":scene_manager_session",
+    "//src/ui/scenic:scenic_pkg",
+  ]
+}
+
+rustc_binary("scene_manager_session_bin") {
+  name = "scene_manager_session"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/session/lib/scene_management",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+package("scene_manager_session") {
+  deps = [ ":scene_manager_session_bin" ]
+
+  meta = [
+    {
+      path = rebase_path("meta/scene_manager_session.cml")
+      dest = "scene_manager_session.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "scene_manager_session"
+    },
+  ]
+}

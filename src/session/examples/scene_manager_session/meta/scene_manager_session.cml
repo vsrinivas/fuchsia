@@ -1,0 +1,13 @@
+{
+    program: {
+        binary: "bin/scene_manager_session",
+    },
+    use: [
+        {
+            protocol: "/svc/fuchsia.ui.scenic.Scenic",
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+        }
+    ],
+}

@@ -7,5 +7,14 @@
             // The Scenic service allows the session to display images.
             protocol: "/svc/fuchsia.ui.scenic.Scenic",
         },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+        },
     ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.ui.app.ViewProvider",
+            from: "self",
+        }
+    ]
 }

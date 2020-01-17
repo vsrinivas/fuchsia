@@ -37,6 +37,9 @@ pub struct FlatSceneManager {
     /// added to the Scene.
     views: Vec<scenic::ViewHolder>,
 
+    /// The node for the cursor. It is optional in case a scene doesn't render a cursor.
+    cursor_node: Option<scenic::EntityNode>,
+
     /// The resources used to construct the scene. If these are dropped, they will be removed
     /// from Scenic, so they must be kept alive for the lifetime of `FlatSceneManager`.
     _resources: ScenicResources,
@@ -114,6 +117,7 @@ impl SceneManager for FlatSceneManager {
             _resources: resources,
             views: vec![],
             display_metrics,
+            cursor_node: None,
         })
     }
 
@@ -124,12 +128,31 @@ impl SceneManager for FlatSceneManager {
     ) -> Result<scenic::EntityNode, Error> {
         let token_pair = scenic::ViewTokenPair::new()?;
         view_provider.create_view(token_pair.view_token.value, None, None)?;
-
         let view_holder_node = self.create_view_holder_node(token_pair.view_holder_token, name);
         self.root_node.add_child(&view_holder_node);
         self.present();
-
         Ok(view_holder_node)
+    }
+
+    fn get_session(&self) -> scenic::SessionPtr {
+        return self.session.clone();
+    }
+
+    fn set_cursor_location(&mut self, x: f32, y: f32) {
+        if self.cursor_node.is_none() {
+            // We don't already have a cursor node so let's make one with the default cursor
+            self.set_cursor_shape(&self.get_default_cursor());
+        }
+
+        self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
+        self.present();
+    }
+
+    fn set_cursor_shape(&mut self, shape: &scenic::ShapeNode) {
+        // TODO(fxb/44217) The 'Scenic` api doesn't currently support removing of children from an
+        // `EntityNode` so if this is called multiple times the shapes will just stack on each other.
+        self.cursor_node().add_child(shape);
+        self.present();
     }
 
     fn present(&self) {
@@ -146,7 +169,9 @@ impl SceneManager for FlatSceneManager {
 impl FlatSceneManager {
     /// The depth of the bounds of any added views. This can be used to compute where a view
     /// should be placed to render "in front of" another view.
-    const VIEW_BOUNDS_DEPTH: f32 = 1000.0;
+    const VIEW_BOUNDS_DEPTH: f32 = -800.0;
+    /// The depth at which to draw the cursor in order to ensure it's on top of everything else
+    const CURSOR_DEPTH: f32 = FlatSceneManager::VIEW_BOUNDS_DEPTH - 1.0;
 
     /// Creates a new Scenic session.
     ///
@@ -264,7 +289,7 @@ impl FlatSceneManager {
 
         let view_properties = ui_gfx::ViewProperties {
             bounding_box: ui_gfx::BoundingBox {
-                min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: -FlatSceneManager::VIEW_BOUNDS_DEPTH },
+                min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: FlatSceneManager::VIEW_BOUNDS_DEPTH },
                 max: ui_gfx::Vec3 {
                     x: self.display_metrics.width_in_pips(),
                     y: self.display_metrics.height_in_pips(),
@@ -285,5 +310,18 @@ impl FlatSceneManager {
         self.views.push(view_holder);
 
         view_holder_node
+    }
+
+    /// Gets the `EntityNode` for the cursor or creates one if it doesn't exist yet.
+    ///
+    /// # Returns
+    /// The [`scenic::EntityNode`] that contains the cursor.
+    fn cursor_node(&mut self) -> &scenic::EntityNode {
+        if self.cursor_node.is_none() {
+            self.cursor_node = Some(scenic::EntityNode::new(self.session.clone()));
+            self.root_node.add_child(self.cursor_node.as_ref().unwrap());
+        }
+
+        self.cursor_node.as_ref().unwrap()
     }
 }

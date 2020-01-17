@@ -4,6 +4,7 @@
 
 mod display_metrics;
 mod flat_scene_manager;
+mod graphics_utils;
 mod scene_manager;
 
 pub use display_metrics::DisplayMetrics;
