@@ -566,6 +566,15 @@ zx_status_t H264Decoder::InitializeStream() {
   }
   uint32_t mb_height = stream_info.total_mbs() / mb_width;
 
+  constexpr uint32_t kMaxDimension = 4096;
+  constexpr uint32_t kMacroblockPixels = 16;
+
+  if (mb_width > kMaxDimension / kMacroblockPixels ||
+      mb_height > kMaxDimension / kMacroblockPixels) {
+    DECODE_ERROR("Unsupported dimensions %dx%d macroblocks\n", mb_width, mb_height);
+    return ZX_ERR_INTERNAL;
+  }
+
   uint32_t max_dpb_size = GetMaxDpbSize(level_idc, mb_width, mb_height);
   if (max_dpb_size == 0) {
     LOG(WARN, "mb_width and/or mb_height invalid? - mb_width: %u mb_height: %u", mb_width,

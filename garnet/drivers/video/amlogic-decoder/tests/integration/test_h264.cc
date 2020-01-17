@@ -396,3 +396,9 @@ TEST(H264, DecodeMalformedHang) {
   // Parameters found through fuzzing.
   TestH264::DecodeMalformed(638, 44);
 }
+
+TEST(H264, DecodeMalformedTooLarge) {
+  // Parameters found through fuzzing - causes mb_width=3 and total_mbs=4986, so the height is
+  // calculated as 26592 pixels.
+  TestH264::DecodeMalformed(593, 176);
+}
