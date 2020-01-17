@@ -71,6 +71,7 @@ sdk://fidl/fuchsia.tracing.provider
 sdk://fidl/fuchsia.ui.activity
 sdk://fidl/fuchsia.ui.activity.control
 sdk://fidl/fuchsia.ui.app
+sdk://fidl/fuchsia.ui.brightness
 sdk://fidl/fuchsia.ui.gfx
 sdk://fidl/fuchsia.ui.input
 sdk://fidl/fuchsia.ui.input2

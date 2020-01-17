@@ -1,0 +1,4 @@
+{
+  "fidl/fuchsia.ui.brightness/brightness.fidl": "d20401807e7983d8dc9aa173b824f2e6",
+  "fidl/fuchsia.ui.brightness/color_adjustment.fidl": "4da920bcc087766a232470207d2448d5"
+}
