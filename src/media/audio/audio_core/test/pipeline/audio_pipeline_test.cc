@@ -47,8 +47,6 @@ void AudioPipelineTest::TearDownTestSuite() {
 void AudioPipelineTest::SetUp() {
   HermeticAudioCoreTest::SetUp();
 
-  audio_core_->SetSystemGain(kUnityGainDb);
-
   environment()->ConnectToService(audio_dev_enum_.NewRequest());
   audio_dev_enum_.set_error_handler(ErrorHandler());
 
