@@ -25,7 +25,7 @@ source_set("driver_sources") {
 
   public_deps = [
     "../include",
-    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:macros",
     "//garnet/lib/magma/src/magma_util/platform:logger",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",

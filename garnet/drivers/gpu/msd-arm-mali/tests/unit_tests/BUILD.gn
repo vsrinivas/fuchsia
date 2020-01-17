@@ -57,7 +57,7 @@ group("test_deps") {
     "../../include",
     "//garnet/drivers/gpu/msd-arm-mali/src",
     "//garnet/lib/magma/include:msd_abi",
-    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:macros",
     "//garnet/lib/magma/src/magma_util/platform:port",
     "//garnet/lib/magma/src/sys_driver:sys_driver",
     "//garnet/lib/magma/tests/helper:command_buffer_helper",

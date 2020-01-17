@@ -17,8 +17,6 @@ config("tracing") {
 source_set("address_range") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [ "$magma_build_root/src/magma_util" ]
-
   sources = [ "platform_address_range.h" ]
 
   deps = [ "zircon:address_range" ]
@@ -41,6 +39,7 @@ source_set("buffer_header") {
   public_deps = [
     ":handle",
     "//garnet/lib/magma/include:magma_abi",
+    "//garnet/lib/magma/src/magma_util:status",
   ]
   sources = [ "platform_buffer.h" ]
 }
@@ -50,7 +49,7 @@ source_set("buffer") {
 
   public_deps = [
     ":buffer_header",
-    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util:macros",
   ]
 
   if (is_fuchsia) {
@@ -78,7 +77,7 @@ source_set("bus_mapper") {
     ":buffer",
     ":bus_mapper_header",
     ":handle",
-    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util:macros",
   ]
 
   if (is_fuchsia) {
@@ -107,7 +106,7 @@ group("entry_test") {
 source_set("handle_header") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [ "$magma_build_root/src/magma_util:common" ]
+  public_deps = [ "$magma_build_root/src/magma_util:macros" ]
 
   sources = [ "platform_handle.h" ]
 }
@@ -128,7 +127,7 @@ source_set("iommu_header") {
 
   public_deps = [
     ":bus_mapper",
-    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util:macros",
   ]
 
   sources = [ "platform_iommu.h" ]
@@ -148,7 +147,7 @@ source_set("iommu") {
 source_set("mmio_header") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [ "$magma_build_root/src/magma_util:common" ]
+  public_deps = [ "$magma_build_root/src/magma_util:macros" ]
 
   sources = [ "platform_mmio.h" ]
 }
@@ -160,7 +159,8 @@ source_set("device_header") {
     ":buffer_header",
     ":handle_header",
     ":mmio_header",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
+    "$magma_build_root/src/magma_util:status",
   ]
 
   sources = [
@@ -206,7 +206,8 @@ source_set("connection_client_header") {
     ":buffer",
     ":object",
     ":thread",
-    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util:macros",
+    "$magma_build_root/src/magma_util:status",
     "//garnet/lib/magma/include:magma_abi",
   ]
 }
@@ -233,7 +234,7 @@ source_set("connection_header") {
     ":object",
     ":semaphore",
     ":thread",
-    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util:macros",
     "//garnet/lib/magma/include:magma_abi",
     "//garnet/lib/magma/include:msd_abi",
   ]
@@ -291,6 +292,8 @@ source_set("event_header") {
   public_configs = [ ":platform_include_config" ]
 
   sources = [ "platform_event.h" ]
+
+  public_deps = [ "$magma_build_root/src/magma_util:status" ]
 }
 
 source_set("event") {
@@ -358,7 +361,8 @@ source_set("semaphore_header") {
 
   public_deps = [
     ":object",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
+    "$magma_build_root/src/magma_util:status",
   ]
 }
 
@@ -380,7 +384,7 @@ source_set("port_header") {
 
   sources = [ "platform_port.h" ]
 
-  public_deps = [ "$magma_build_root/src/magma_util" ]
+  public_deps = [ "$magma_build_root/src/magma_util:status" ]
 }
 
 source_set("port") {
@@ -484,7 +488,8 @@ source_set("sysmem_connection_header") {
 
   public_deps = [
     ":buffer",
-    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util:macros",
+    "$magma_build_root/src/magma_util:status",
     "//garnet/lib/magma/include:magma_abi",
   ]
 }

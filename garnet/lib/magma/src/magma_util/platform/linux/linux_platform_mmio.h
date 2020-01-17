@@ -5,7 +5,6 @@
 #ifndef LINUX_PLATFORM_MMIO_H
 #define LINUX_PLATFORM_MMIO_H
 
-#include "magma_util/macros.h"
 #include "platform_mmio.h"
 
 namespace magma {

@@ -10,7 +10,7 @@ source_set("address_range") {
   sources = [ "zircon_platform_address_range.cc" ]
 
   deps = [
-    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:macros",
     "//zircon/public/lib/zx",
   ]
 
@@ -31,7 +31,7 @@ source_set("buffer") {
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:trace",
     "..:object",
   ]
@@ -51,7 +51,7 @@ source_set("bus_mapper") {
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/ddk",
     "..:logger",
@@ -64,7 +64,7 @@ entry_deps = [
   "..:trace",
   "..:trace_provider",
   "..:trace_provider_with_fdio",
-  "//garnet/lib/magma/src/magma_util",
+  "//garnet/lib/magma/src/magma_util:macros",
   "//garnet/lib/magma/src/sys_driver",
   "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
   "//src/devices/host:driver",
@@ -112,7 +112,7 @@ source_set("device") {
   deps = [
     ":bus_mapper",
     ":interrupt",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:device_header",
     "//src/devices/host:driver",
@@ -129,7 +129,7 @@ source_set("connection_client") {
 
   deps = [
     "$magma_build_root/include:msd_abi",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:connection_client_header",
     "..:trace",
@@ -145,7 +145,7 @@ source_set("connection") {
 
   deps = [
     "$magma_build_root/include:msd_abi",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/zx",
     "..:connection_header",
@@ -161,7 +161,7 @@ source_set("device_client") {
   deps = [
     "..:device_client_header",
     "//garnet/lib/magma/include:msd_abi",
-    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:macros",
     "//sdk/fidl/fuchsia.gpu.magma",
     "//zircon/public/lib/zx",
   ]
@@ -199,7 +199,7 @@ source_set("event") {
   sources = [ "zircon_platform_event.cc" ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:event_header",
   ]
@@ -218,7 +218,7 @@ source_set("handle") {
     "..:handle_header",
   ]
 
-  deps = [ "$magma_build_root/src/magma_util" ]
+  deps = [ "$magma_build_root/src/magma_util:macros" ]
 }
 
 source_set("iommu") {
@@ -256,7 +256,7 @@ source_set("object") {
   sources = [ "zircon_platform_object.cc" ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "..:object_header",
     "//zircon/public/lib/zx",
   ]
@@ -271,7 +271,7 @@ source_set("semaphore") {
   ]
 
   public_deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:semaphore_header",
     "..:trace",
@@ -289,7 +289,7 @@ source_set("port") {
   sources = [ "zircon_platform_port.cc" ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/fit",
     "$zircon_build_root/public/lib/zx",
     "..:port_header",
@@ -308,7 +308,7 @@ source_set("trace") {
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/async-cpp",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/trace-vthread-with-static-engine",
@@ -331,7 +331,7 @@ source_set("trace_provider") {
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/async-cpp",
     "..:trace_provider_header",
   ]
@@ -355,7 +355,7 @@ source_set("trace_provider_with_fdio") {
 
   deps = [
     ":trace_provider",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "..:trace_provider_with_fdio_header",
     "//zircon/public/lib/fdio",
   ]

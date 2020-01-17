@@ -8,7 +8,7 @@ source_set("platform_device_helper") {
   public_configs = [ "$magma_build_root:magma_tests_include_config" ]
 
   public_deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:device",
   ]
 
@@ -60,5 +60,9 @@ source_set("inflight_list") {
 
   sources = [ "inflight_list.h" ]
 
-  public_deps = [ "$magma_build_root/include:magma_abi" ]
+  public_deps = [
+    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/src/magma_util:macros",
+    "$magma_build_root/src/magma_util:status",
+  ]
 }

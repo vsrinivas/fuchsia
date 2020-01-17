@@ -10,7 +10,7 @@ static_library("libmagma_linux") {
 
   deps = [
     ":magma_generic($shlib_toolchain)",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "//garnet/lib/magma/include/virtio",
   ]
 

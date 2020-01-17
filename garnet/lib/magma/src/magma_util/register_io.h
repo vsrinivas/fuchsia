@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "magma_util/dlog.h"
+#include "magma_util/macros.h"
 #include "platform_mmio.h"
 
 namespace magma {

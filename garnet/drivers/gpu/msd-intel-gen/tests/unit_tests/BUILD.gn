@@ -61,7 +61,7 @@ group("test_deps") {
 
   public_deps = [
     "$magma_build_root/include:msd_abi",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/tests/helper:command_buffer_helper",

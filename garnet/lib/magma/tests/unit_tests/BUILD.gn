@@ -43,7 +43,7 @@ source_set("magma_system_tests") {
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/sys_driver",
     "$magma_build_root/tests/helper:command_buffer_helper",
@@ -150,7 +150,7 @@ source_set("magma_platform_hardware_tests") {
   deps = [
     ":magma_platform_device_test",
     "$magma_build_root/include:magma_abi",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:bus_mapper",
     "$magma_build_root/src/magma_util/platform:device",

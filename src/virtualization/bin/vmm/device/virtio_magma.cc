@@ -17,7 +17,6 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
-#include "garnet/lib/magma/src/magma_util/macros.h"
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 

@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "magma_util/macros.h"
 #include "platform_logger.h"
 
 using __u64 = uint64_t;

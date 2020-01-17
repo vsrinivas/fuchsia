@@ -8,7 +8,7 @@ source_set("buffer") {
   configs += [ "..:platform_include_config" ]
 
   public_deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "..:buffer_header",
   ]
 
@@ -22,9 +22,8 @@ source_set("bus_mapper") {
   configs += [ "..:platform_include_config" ]
 
   public_deps = [
+    ":buffer",
     ":handle",
-    "$magma_build_root/src/magma_util",
-    "..:buffer",
     "..:bus_mapper_header",
   ]
 
@@ -33,7 +32,10 @@ source_set("bus_mapper") {
     ":logger",
   ]
 
-  sources = [ "linux_platform_bus_mapper.cc" ]
+  sources = [
+    "linux_platform_bus_mapper.cc",
+    "linux_platform_bus_mapper.h",
+  ]
 }
 
 source_set("connection_client") {
@@ -68,7 +70,7 @@ source_set("device") {
 
   public_deps = [
     ":handle",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "..:device_header",
     "..:logger",
   ]
@@ -105,7 +107,7 @@ source_set("entry") {
     ":connection",
     ":entry_header",
     "..:logger",
-    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:macros",
     "//garnet/lib/magma/src/sys_driver",
   ]
 }
@@ -120,7 +122,7 @@ source_set("handle") {
 
   public_deps = [ "..:handle_header" ]
 
-  deps = [ "$magma_build_root/src/magma_util" ]
+  deps = [ "$magma_build_root/src/magma_util:macros" ]
 }
 
 source_set("iommu") {
@@ -134,8 +136,9 @@ source_set("iommu") {
   public_deps = [ "//garnet/lib/magma/src/magma_util/platform:iommu_header" ]
 
   deps = [
+    ":bus_mapper",
     ":device",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
   ]
 }
 
@@ -148,7 +151,7 @@ source_set("object") {
   sources = [ "linux_platform_object.cc" ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:macros",
     "..:object_header",
   ]
 }

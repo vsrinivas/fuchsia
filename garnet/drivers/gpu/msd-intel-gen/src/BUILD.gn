@@ -53,7 +53,7 @@ source_set("src") {
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util:address_space",
     "$magma_build_root/src/magma_util:allocator",
-    "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util:ringbuffer",
     "$magma_build_root/src/magma_util:semaphore_port",

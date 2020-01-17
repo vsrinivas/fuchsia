@@ -187,7 +187,6 @@ source_set("virtio_magma_lib") {
     ":virtio_magma_generic",
     "//garnet/lib/magma/include:magma_abi",
     "//garnet/lib/magma/include/virtio",
-    "//garnet/lib/magma/src/magma_util",
   ]
 
   if (virtmagma_debug) {

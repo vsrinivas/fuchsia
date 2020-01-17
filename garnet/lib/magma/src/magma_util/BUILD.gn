@@ -4,6 +4,12 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+visibility_list = [
+  "//garnet/lib/magma/*",
+  "//garnet/drivers/gpu/*",
+  "//third_party/imgtec-pvr-rgx-km/*",
+]
+
 config("magma_util_config") {
   if (is_debug) {
     defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=1" ]
@@ -12,32 +18,29 @@ config("magma_util_config") {
   }
 }
 
+# Deprecated
 group("magma_util") {
-  public_configs = [
-    ":magma_util_config",
-    "$magma_build_root:magma_src_include_config",
-  ]
-
-  public_deps = [
-    ":common",
-    "$magma_build_root/include:magma_abi_common",
-  ]
+  public_deps = [ ":macros" ]
 }
 
 source_set("address_space") {
+  visibility = visibility_list
+
   sources = [
     "accessor.h",
     "address_space.h",
     "gpu_mapping.h",
   ]
   public_deps = [
-    ":common",
+    ":macros",
     "platform:buffer",
     "platform:bus_mapper",
   ]
 }
 
-source_set("common") {
+source_set("macros") {
+  visibility = visibility_list
+
   public_configs = [
     ":magma_util_config",
     "$magma_build_root:magma_src_include_config",
@@ -49,26 +52,30 @@ source_set("common") {
   ]
 }
 
+source_set("status") {
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [ "status.h" ]
+
+  public_deps = [ "$magma_build_root/include:magma_abi_common" ]
+}
+
 source_set("thread") {
-  public_configs = [
-    ":magma_util_config",
-    "$magma_build_root:magma_src_include_config",
-  ]
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
   sources = [ "thread.h" ]
 
   deps = [ "platform:thread" ]
 }
 
-group("system") {
-  public_deps = [ ":allocator" ]
-}
-
 source_set("allocator") {
-  public_configs = [
-    ":magma_util_config",
-    "$magma_build_root:magma_src_include_config",
-  ]
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
   sources = [
     "address_space_allocator.h",
@@ -79,21 +86,20 @@ source_set("allocator") {
   ]
 
   public_deps = [
-    ":common",
+    ":macros",
     "//zircon/public/lib/fit",
   ]
 }
 
 source_set("semaphore_port") {
-  public_configs = [
-    ":magma_util_config",
-    "$magma_build_root:magma_src_include_config",
-  ]
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
   sources = [ "semaphore_port.h" ]
 
   public_deps = [
-    ":common",
+    ":macros",
     "$magma_build_root/src/magma_util/platform:trace",
     "platform:port",
     "platform:semaphore",
@@ -101,6 +107,8 @@ source_set("semaphore_port") {
 }
 
 source_set("registers") {
+  visibility = visibility_list
+
   public_configs = [
     ":magma_util_config",
     "$magma_build_root:magma_src_include_config",
@@ -112,19 +120,24 @@ source_set("registers") {
     "register_io.h",
   ]
 
-  public_deps = [ "platform:device" ]
+  public_deps = [
+    ":macros",
+    "platform:device",
+  ]
 }
 
 source_set("ringbuffer") {
-  public_configs = [
-    ":magma_util_config",
-    "$magma_build_root:magma_src_include_config",
-  ]
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
   sources = [
     "instruction_writer.h",
     "ringbuffer.h",
   ]
 
-  public_deps = [ ":address_space" ]
+  public_deps = [
+    ":address_space",
+    ":macros",
+  ]
 }
