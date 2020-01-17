@@ -15,6 +15,7 @@
 
 #include "lz4.h"
 #include "zstd-plain.h"
+#include "zstd-rac.h"
 
 namespace blobfs {
 
@@ -47,6 +48,22 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
       std::unique_ptr<ZSTDCompressor> compressor;
       status = ZSTDCompressor::Create(blob_size, compressed_blob.start(), compressed_blob.size(),
                                       &compressor);
+      if (status != ZX_OK) {
+        return std::nullopt;
+      }
+      auto result = BlobCompressor(std::move(compressor), std::move(compressed_blob));
+      return std::make_optional(std::move(result));
+    }
+    case CompressionAlgorithm::ZSTD_SEEKABLE: {
+      fzl::OwnedVmoMapper compressed_blob;
+      size_t max = ZSTDSeekableCompressor::BufferMax(blob_size);
+      zx_status_t status = compressed_blob.CreateAndMap(max, "zstd-blob");
+      if (status != ZX_OK) {
+        return std::nullopt;
+      }
+      std::unique_ptr<ZSTDSeekableCompressor> compressor;
+      status = ZSTDSeekableCompressor::Create(blob_size, compressed_blob.start(),
+                                              compressed_blob.size(), &compressor);
       if (status != ZX_OK) {
         return std::nullopt;
       }

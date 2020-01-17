@@ -16,6 +16,7 @@ namespace blobfs {
 enum class CompressionAlgorithm {
   LZ4,
   ZSTD,
+  ZSTD_SEEKABLE,
 };
 
 // A Compressor is used to compress data transparently before it is written

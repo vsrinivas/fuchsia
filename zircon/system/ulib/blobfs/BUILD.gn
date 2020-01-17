@@ -11,6 +11,7 @@ zx_library("blobfs") {
     "common.cc",
     "compression/lz4.cc",
     "compression/zstd-plain.cc",
+    "compression/zstd-rac.cc",
     "iterator/allocated-extent-iterator.cc",
     "iterator/block-iterator.cc",
     "iterator/vector-extent-iterator.cc",
@@ -22,6 +23,9 @@ zx_library("blobfs") {
     "$zx/system/ulib/fs/transaction:headers",
     "$zx/system/ulib/range:headers",
     "$zx/system/ulib/storage/buffer:headers",
+
+    # Seekable zstd include_dirs config required for all compilation units that incorporate it.
+    "$zx/third_party/ulib/zstd:zstdseek",
 
     # <blobfs/format.h> has #include <digest/digest.h>.
     "$zx/system/ulib/digest:headers",

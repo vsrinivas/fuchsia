@@ -16,6 +16,7 @@
 #include "compression/blob-compressor.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
+#include "compression/zstd-rac.h"
 #include "zircon/errors.h"
 
 namespace blobfs {
@@ -79,6 +80,9 @@ void DecompressionHelper(CompressionAlgorithm algorithm, const void* compressed,
       break;
     case CompressionAlgorithm::ZSTD:
       ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
+      break;
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed, src_size));
       break;
     default:
       FAIL("Bad algorithm");
@@ -173,7 +177,41 @@ TEST(CompressorTests, CompressDecompressZSTDCompressible4) {
   RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
 }
 
-TEST(CompressorTests, DecompressZSTDCompressiblesFailsOnNoSize) {
+TEST(CompressorTests, CompressDecompressZSTDSeekableRandom1) {
+  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDSeekableRandom2) {
+  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDSeekableRandom3) {
+  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDSeekableRandom4) {
+  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 15,
+                            1 << 10);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible1) {
+  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 0, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible2) {
+  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 1, 1 << 0);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible3) {
+  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 10, 1 << 5);
+}
+
+TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible4) {
+  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 15,
+                            1 << 10);
+}
+
+TEST(CompressorTests, DecompressZSTDSeekableCompressiblesFailsOnNoSize) {
   size_t output_size = 512;
   size_t input_size = 512;
   size_t invalid_size = 0;
@@ -213,6 +251,10 @@ TEST(CompressorTests, UpdateNoDataLZ4) { RunUpdateNoDataTest(CompressionAlgorith
 
 TEST(CompressorTests, UpdateNoDataZSTD) { RunUpdateNoDataTest(CompressionAlgorithm::ZSTD); }
 
+TEST(CompressorTests, UpdateNoDataZSTDSeekable) {
+  RunUpdateNoDataTest(CompressionAlgorithm::ZSTD_SEEKABLE);
+}
+
 void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compressed,
                               size_t rounded_compressed_size, const void* expected,
                               size_t expected_size) {
@@ -225,6 +267,9 @@ void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compre
       break;
     case CompressionAlgorithm::ZSTD:
       ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
+      break;
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed, src_size));
       break;
     default:
       FAIL("Bad algorithm");
@@ -291,6 +336,9 @@ TEST(CompressorTests, CompressRoundDecompressZSTDRandom3) {
 TEST(CompressorTests, CompressRoundDecompressZSTDRandom4) {
   RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
 }
+
+// TODO(markdittmer): Add CompressRoundDecompress tests for ZSTDSeekable once unrounded compressed
+// size is available.
 
 }  // namespace
 }  // namespace blobfs
