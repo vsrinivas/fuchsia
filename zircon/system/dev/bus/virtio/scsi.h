@@ -15,6 +15,7 @@
 #include <atomic>
 #include <memory>
 
+#include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <virtio/scsi.h>
@@ -27,7 +28,9 @@ namespace virtio {
 
 constexpr int MAX_IOS = 16;
 
-class ScsiDevice : public Device, public scsi::Controller {
+class ScsiDevice : public virtio::Device,
+                   public scsi::Controller,
+                   public ddk::Device<ScsiDevice, ddk::UnbindableDeprecated> {
  public:
   enum Queue {
     CONTROL = 0,
@@ -36,12 +39,13 @@ class ScsiDevice : public Device, public scsi::Controller {
   };
 
   ScsiDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend)
-      : Device(device, std::move(bti), std::move(backend)) {}
+      : virtio::Device(device, std::move(bti), std::move(backend)),
+        ddk::Device<ScsiDevice, ddk::UnbindableDeprecated>(device) {}
 
   // virtio::Device overrides
   zx_status_t Init() override;
-  void Unbind() override;
-  void Release() override;
+  void DdkUnbindDeprecated();
+  void DdkRelease();
   // Invoked for most device interrupts.
   virtual void IrqRingUpdate() override;
   // Invoked on config change interrupts.

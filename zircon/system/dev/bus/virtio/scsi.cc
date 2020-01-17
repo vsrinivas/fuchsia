@@ -354,21 +354,27 @@ zx_status_t ScsiDevice::WorkerThread() {
 zx_status_t ScsiDevice::Init() {
   LTRACE_ENTRY;
 
-  Device::DeviceReset();
-  Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, num_queues), &config_.num_queues);
-  Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, seg_max), &config_.seg_max);
-  Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, max_sectors),
-                                     &config_.max_sectors);
-  Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, cmd_per_lun),
-                                     &config_.cmd_per_lun);
-  Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, event_info_size),
-                                     &config_.event_info_size);
-  Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, sense_size), &config_.sense_size);
-  Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, cdb_size), &config_.cdb_size);
-  Device::ReadDeviceConfig<uint16_t>(offsetof(virtio_scsi_config, max_channel),
-                                     &config_.max_channel);
-  Device::ReadDeviceConfig<uint16_t>(offsetof(virtio_scsi_config, max_target), &config_.max_target);
-  Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, max_lun), &config_.max_lun);
+  virtio::Device::DeviceReset();
+  virtio::Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, num_queues),
+                                             &config_.num_queues);
+  virtio::Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, seg_max),
+                                             &config_.seg_max);
+  virtio::Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, max_sectors),
+                                             &config_.max_sectors);
+  virtio::Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, cmd_per_lun),
+                                             &config_.cmd_per_lun);
+  virtio::Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, event_info_size),
+                                             &config_.event_info_size);
+  virtio::Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, sense_size),
+                                             &config_.sense_size);
+  virtio::Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, cdb_size),
+                                             &config_.cdb_size);
+  virtio::Device::ReadDeviceConfig<uint16_t>(offsetof(virtio_scsi_config, max_channel),
+                                             &config_.max_channel);
+  virtio::Device::ReadDeviceConfig<uint16_t>(offsetof(virtio_scsi_config, max_target),
+                                             &config_.max_target);
+  virtio::Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, max_lun),
+                                             &config_.max_lun);
 
   // Validate config.
   {
@@ -378,7 +384,7 @@ zx_status_t ScsiDevice::Init() {
     }
   }
 
-  Device::DriverStatusAck();
+  virtio::Device::DriverStatusAck();
 
   if (!bti().is_valid()) {
     zxlogf(ERROR, "invalid bti handle\n");
@@ -412,18 +418,16 @@ zx_status_t ScsiDevice::Init() {
     active_ios_ = 0;
     scsi_transport_tag_ = 0;
   }
-  Device::StartIrqThread();
-  Device::DriverStatusOk();
+  virtio::Device::StartIrqThread();
+  virtio::Device::DriverStatusOk();
 
-  device_add_args_t args{};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "virtio-scsi";
-  args.ops = &device_ops_;
-  args.ctx = this;
   // Synchronize against Unbind()/Release() before the worker thread is running.
   fbl::AutoLock lock(&lock_);
-  auto status = device_add(Device::bus_device_, &args, &device_);
+  auto status = DdkAdd("virtio-scsi");
+  device_ = zxdev();
   if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to run DdkAdd\n");
+    device_ = nullptr;
     return status;
   }
 
@@ -439,9 +443,9 @@ zx_status_t ScsiDevice::Init() {
   return status;
 }
 
-void ScsiDevice::Unbind() { Device::Unbind(); }
+void ScsiDevice::DdkUnbindDeprecated() { virtio::Device::Unbind(); }
 
-void ScsiDevice::Release() {
+void ScsiDevice::DdkRelease() {
   {
     fbl::AutoLock lock(&lock_);
     worker_thread_should_exit_ = true;
@@ -450,7 +454,7 @@ void ScsiDevice::Release() {
     }
   }
   thrd_join(worker_thread_, nullptr);
-  Device::Release();
+  virtio::Device::Release();
 }
 
 }  // namespace virtio
