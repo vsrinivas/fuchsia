@@ -213,7 +213,6 @@ if (current_cpu != "") {
       "channel-fatal",
       "chromeos-disk-setup",
       "closure-queue",
-      "compiler",
       "core",
       "core-display",
       "debugger",
