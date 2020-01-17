@@ -44,7 +44,7 @@ class EffectBase {
   virtual bool UpdateConfiguration(std::string_view) { return false; }
 
   virtual bool ProcessInplace(uint32_t, float*) { return false; }
-  virtual bool Process(uint32_t, const float*, float*) { return false; }
+  virtual bool Process(uint32_t, const float*, float**) { return false; }
   virtual bool Flush() { return true; }
 
  protected:

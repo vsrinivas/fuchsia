@@ -23,6 +23,7 @@ class RechannelEffect : public EffectBase {
   static constexpr uint16_t kNumChannelsIn = 6;
   static constexpr uint16_t kNumChannelsOut = 2;
   static constexpr uint32_t kLatencyFrames = 0;
+  static constexpr size_t kOutputBufferSizeFrames = 2048;
 
   static bool GetInfo(fuchsia_audio_effects_description* desc) {
     std::strcpy(desc->name, "5.1 to Stereo");
@@ -40,7 +41,9 @@ class RechannelEffect : public EffectBase {
 
   RechannelEffect(uint32_t frame_rate)
       : EffectBase(Effect::Rechannel, frame_rate, kNumChannelsIn, kNumChannelsOut, kLatencyFrames,
-                   kLatencyFrames) {}
+                   kLatencyFrames) {
+    output_buffer_ = std::make_unique<float[]>(kOutputBufferSizeFrames);
+  }
 
   // Effect converts a 5.1 mix into stereo.
   // Left  = FL + FC*sqr(.5) + BL  -and-  Right = FR + FC*sqr(.5) + BR
@@ -50,7 +53,11 @@ class RechannelEffect : public EffectBase {
   // Left  = FL + FC*sqr(.5) + BL*sqr(.75) + BR*sqr(.25)
   // Right = FR + FC*sqr(.5) - BL*sqr(.25) - BR*sqr(.75)
   // To normalize: div by (1+.7071+.8660+.5) or *= .32540090689572506
-  bool Process(uint32_t num_frames, const float* buff_in, float* buff_out) {
+  bool Process(uint32_t num_frames, const float* buff_in, float** output) {
+    if (num_frames > kOutputBufferSizeFrames) {
+      return false;
+    }
+    auto buff_out = output_buffer_.get();
     for (uint32_t frame = 0; frame < num_frames; ++frame) {
       uint32_t out = frame * channels_out_;
       uint32_t in = frame * channels_in_;
@@ -68,11 +75,13 @@ class RechannelEffect : public EffectBase {
                             0.325400906f;
       }
     }
+    *output = buff_out;
     return true;
   }
 
  private:
   bool encode_ = false;
+  std::unique_ptr<float[]> output_buffer_;
 };
 
 }  // namespace media::audio_effects_example

@@ -254,13 +254,13 @@ TEST_F(SwapEffectTest, ProcessInPlace) {
 TEST_F(DelayEffectTest, Process) {
   constexpr uint32_t kNumFrames = 1;
   float audio_buff_in[kNumFrames * kTestChans] = {0.0f};
-  float audio_buff_out[kNumFrames * kTestChans] = {0.0f};
+  float* audio_buff_out = nullptr;
 
   // These stereo-to-stereo effects should ONLY process in-place
   media::audio::Effect effect = effects_loader_->CreateEffect(Effect::Delay, 48000, kTestChans,
                                                               kTestChans, kDelayEffectConfig);
   ASSERT_TRUE(effect);
-  EXPECT_NE(effect.Process(kNumFrames, audio_buff_in, audio_buff_out), ZX_OK);
+  EXPECT_NE(effect.Process(kNumFrames, audio_buff_in, &audio_buff_out), ZX_OK);
 }
 
 // Tests the process ABI, and that the effect behaves as expected.
@@ -268,7 +268,7 @@ TEST_F(RechannelEffectTest, Process) {
   constexpr uint32_t kNumFrames = 1;
   float audio_buff_in[kNumFrames * RechannelEffect::kNumChannelsIn] = {
       1.0f, -1.0f, 0.25f, -1.0f, 0.98765432f, -0.09876544f};
-  float audio_buff_out[kNumFrames * RechannelEffect::kNumChannelsOut] = {0.0f};
+  float* audio_buff_out = nullptr;
   float expected[kNumFrames * RechannelEffect::kNumChannelsOut] = {0.799536645f, -0.340580851f};
 
   media::audio::Effect effect =
@@ -276,16 +276,16 @@ TEST_F(RechannelEffectTest, Process) {
                                     RechannelEffect::kNumChannelsOut, {});
   ASSERT_TRUE(effect);
 
-  EXPECT_EQ(effect.Process(kNumFrames, audio_buff_in, audio_buff_out), ZX_OK);
+  EXPECT_EQ(effect.Process(kNumFrames, audio_buff_in, &audio_buff_out), ZX_OK);
   EXPECT_EQ(audio_buff_out[0], expected[0]) << std::setprecision(9) << audio_buff_out[0];
   EXPECT_EQ(audio_buff_out[1], expected[1]) << std::setprecision(9) << audio_buff_out[1];
 
-  EXPECT_EQ(effect.Process(0, audio_buff_in, audio_buff_out), ZX_OK);
+  EXPECT_EQ(effect.Process(0, audio_buff_in, &audio_buff_out), ZX_OK);
 
   // Test null buffer_in, buffer_out
-  EXPECT_NE(effect.Process(kNumFrames, nullptr, audio_buff_out), ZX_OK);
+  EXPECT_NE(effect.Process(kNumFrames, nullptr, &audio_buff_out), ZX_OK);
   EXPECT_NE(effect.Process(kNumFrames, audio_buff_in, nullptr), ZX_OK);
-  EXPECT_NE(effect.Process(0, nullptr, audio_buff_out), ZX_OK);
+  EXPECT_NE(effect.Process(0, nullptr, &audio_buff_out), ZX_OK);
   EXPECT_NE(effect.Process(0, audio_buff_in, nullptr), ZX_OK);
 }
 
@@ -293,13 +293,13 @@ TEST_F(RechannelEffectTest, Process) {
 TEST_F(SwapEffectTest, Process) {
   constexpr uint32_t kNumFrames = 1;
   float audio_buff_in[kNumFrames * kTestChans] = {0.0f};
-  float audio_buff_out[kNumFrames * kTestChans] = {0.0f};
+  float* audio_buff_out = nullptr;
 
   // These stereo-to-stereo effects should ONLY process in-place
   media::audio::Effect effect =
       effects_loader_->CreateEffect(Effect::Swap, 48000, kTestChans, kTestChans, {});
   ASSERT_TRUE(effect);
-  EXPECT_NE(effect.Process(kNumFrames, audio_buff_in, audio_buff_out), ZX_OK);
+  EXPECT_NE(effect.Process(kNumFrames, audio_buff_in, &audio_buff_out), ZX_OK);
 }
 
 // Tests the process_inplace ABI thru successive in-place calls.

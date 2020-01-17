@@ -93,7 +93,7 @@ bool example_audio_effects_process_inplace(fuchsia_audio_effects_handle_t effect
 // Synchronously processes ‘num_frames’ from audio_buff_in to audio_buff_out.
 bool example_audio_effects_process(fuchsia_audio_effects_handle_t effects_handle,
                                    uint32_t num_frames, const float* audio_buff_in,
-                                   float* audio_buff_out) {
+                                   float** audio_buff_out) {
   if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || audio_buff_in == nullptr ||
       audio_buff_out == nullptr) {
     return false;
