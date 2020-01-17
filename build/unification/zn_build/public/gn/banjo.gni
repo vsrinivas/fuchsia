@@ -31,6 +31,16 @@ template("banjo_library") {
 
     name = main_target_name
 
+    # Tests migrated from the Zircon build depend on Banjo libraries.
+    # However, these tests cannot be marked as "testonly"
+    # for legacy reasons (in short: the -many- targets that transitively depend
+    # on them via manifests are not testonly). Rather than introduce a huge
+    # number of testonly markers everywhere, we disable it here, knowing that
+    # we can and should reintroduce it when these libraries are migrated away
+    # from the Zircon build. This seems like an acceptable compromise given that
+    # the vast majority of these libraries do not have the marker anyways.
+    testonly = false
+
     deps = []
     if (defined(invoker.public_deps)) {
       deps += invoker.public_deps
