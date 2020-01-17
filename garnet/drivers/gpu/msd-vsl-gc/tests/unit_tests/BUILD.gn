@@ -34,6 +34,7 @@ source_set("hardware_tests") {
   sources = [
     "//third_party/etnaviv_gpu_tests/src/etnaviv_cl_test_gc7000.c",
     "test_device.cc",
+    "test_events.cc",
     "test_memory_write.cc",
   ]
 

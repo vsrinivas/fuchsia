@@ -132,8 +132,10 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   std::mutex events_mutex_;
 
   friend class TestMsdVslDevice;
-  friend class MsdVslDevice_AllocFreeInterruptEvents_Test;
-  friend class MsdVslDevice_WriteInterruptEvents_Test;
+  friend class TestEvents;
+  friend class TestEvents_AllocAndFree_Test;
+  friend class TestEvents_Submit_Test;
+  friend class TestEvents_Write_Test;
   friend class MsdVslDeviceTest_FetchEngineDma_Test;
   friend class MsdVslDeviceTest_LoadAddressSpace_Test;
 };

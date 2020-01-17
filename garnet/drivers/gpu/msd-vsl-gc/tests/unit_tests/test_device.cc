@@ -20,6 +20,7 @@ class MsdVslDeviceTest : public ::testing::Test {
     EXPECT_NE(device_, nullptr);
   }
 
+ protected:
   std::unique_ptr<MsdVslDevice> device_;
 };
 

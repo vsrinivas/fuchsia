@@ -521,13 +521,19 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   // Number of new commands to be added to the ringbuffer - EVENT WAIT LINK.
   const uint16_t kRbPrefetch = 3;
 
-  // Write a LINK at the end of the command buffer that links back to the ringbuffer.
-  if (!WriteLinkCommand(buf, length, kRbPrefetch,
-                        static_cast<uint32_t>(rb_gpu_addr + ringbuffer_->tail()))) {
-    return DRETF(false, "Failed to write LINK from command buffer to ringbuffer");
+  if (buf) {
+    // Write a LINK at the end of the command buffer that links back to the ringbuffer.
+    if (!WriteLinkCommand(buf, length, kRbPrefetch,
+                          static_cast<uint32_t>(rb_gpu_addr + ringbuffer_->tail()))) {
+      return DRETF(false, "Failed to write LINK from command buffer to ringbuffer");
+    }
+    // Increment the command buffer length to account for the LINK command size.
+    length += (kInstructionDwords * sizeof(uint32_t));
+  } else {
+    // If there is no command buffer, we link directly to the new ringbuffer commands.
+    gpu_addr = rb_gpu_addr + ringbuffer_->tail();
+    length = kRbPrefetch * sizeof(uint64_t);
   }
-  // Increment the command buffer length to account for the LINK command size.
-  length += (kInstructionDwords * sizeof(uint32_t));
 
   uint32_t prefetch = magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t);
   if (prefetch & 0xFFFF0000)
