@@ -27,7 +27,6 @@ rustc_library("lib") {
   edition = "2018"
   with_unit_tests = true
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
@@ -36,6 +35,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -77,12 +77,12 @@ rustc_binary("setui_client_interface_test_bin") {
   edition = "2018"
   deps = [
     ":lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

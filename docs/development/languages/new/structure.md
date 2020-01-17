@@ -156,7 +156,7 @@ deserialization, and dispatch.
 
  * [C](/zircon/system/ulib/fidl)
  * [C++](/sdk/lib/fidl/cpp/)
- * [Rust](/garnet/public/lib/fidl/rust/fidl)
+ * [Rust](/src/lib/fidl/rust/fidl)
  * [Dart](https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/)
  * [Go](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)
 

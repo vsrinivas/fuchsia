@@ -9,9 +9,9 @@ rustc_binary("bt-pairing-tool") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

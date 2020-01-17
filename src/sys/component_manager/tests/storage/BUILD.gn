@@ -12,8 +12,8 @@ rustc_test("storage_integration_test_bin") {
   source_root = "integration_test.rs"
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -34,8 +34,8 @@ rustc_binary("storage_realm_coll_bin") {
   edition = "2018"
   source_root = "storage_realm_coll.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components-rustc",
@@ -50,7 +50,7 @@ rustc_binary("storage_user_bin") {
   source_root = "storage_user.rs"
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
     "//src/lib/storage/pseudo-fs-mt",

@@ -8,7 +8,7 @@ rustc_binary("echo_server") {
   edition = "2018"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

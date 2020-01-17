@@ -15,9 +15,9 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/pseudo-fs",
@@ -70,8 +70,8 @@ rustc_test("fake_factory_store_providers_test") {
 
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

@@ -10,10 +10,10 @@ rustc_test("multi-clients") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/tests/tel-dev:tel_dev",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

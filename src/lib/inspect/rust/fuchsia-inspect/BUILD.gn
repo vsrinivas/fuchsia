@@ -12,9 +12,9 @@ rustc_library("fuchsia-inspect") {
 
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",

@@ -13,7 +13,7 @@ rustc_library("process_builder") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
     "//src/lib/zerocopy",
@@ -57,8 +57,8 @@ rustc_binary("root_job_test_runner") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -85,7 +85,7 @@ rustc_binary("test_util") {
 
   deps = [
     ":test-util-fidl-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

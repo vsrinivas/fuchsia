@@ -12,9 +12,9 @@ rustc_binary("guest") {
   deps = [
     ":lib",
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -31,8 +31,8 @@ rustc_library("lib") {
   edition = "2018"
   name = "netemul_guest_lib"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest-rustc",
     "//third_party/rust_crates:anyhow",

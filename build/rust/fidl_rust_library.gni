@@ -32,7 +32,7 @@ template("fidl_rust_library") {
     edition = "2018"
     forward_variables_from(invoker, [ "testonly" ])
     deps = [
-      "//garnet/public/lib/fidl/rust/fidl",
+      "//src/lib/fidl/rust/fidl",
       "//src/lib/zircon/rust:fuchsia-zircon-status",
       "//third_party/rust_crates:futures",
     ]

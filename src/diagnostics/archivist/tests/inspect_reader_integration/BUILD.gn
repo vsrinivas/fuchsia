@@ -11,11 +11,11 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-hyper",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-url",

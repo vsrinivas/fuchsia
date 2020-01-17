@@ -27,9 +27,9 @@ rustc_library("stream_processor_test_lib") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -65,9 +65,9 @@ rustc_library("stream_processor_decoder_factory_lib") {
 
   deps = [
     ":stream_processor_test_lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -83,9 +83,9 @@ rustc_library("stream_processor_encoder_factory_lib") {
 
   deps = [
     ":stream_processor_test_lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -101,8 +101,8 @@ rustc_test("audio_decoder_test_bin") {
   deps = [
     ":stream_processor_decoder_factory_lib",
     ":stream_processor_test_lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/mundane",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -144,8 +144,8 @@ rustc_test("audio_encoder_test_bin") {
   deps = [
     ":stream_processor_encoder_factory_lib",
     ":stream_processor_test_lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/mundane",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -180,8 +180,8 @@ rustc_library("video_frame_hasher_lib") {
 
   deps = [
     ":stream_processor_test_lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/mundane",
     "//src/media/stream_processors/fuchsia-stream-processors",
     "//third_party/rust_crates:anyhow",
@@ -212,8 +212,8 @@ rustc_test("h264_decoder_test_bin") {
     ":stream_processor_decoder_factory_lib",
     ":stream_processor_test_lib",
     ":video_frame_hasher_lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",

@@ -15,7 +15,6 @@ rustc_library("carnelian") {
   edition = "2018"
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
@@ -30,6 +29,7 @@ rustc_library("carnelian") {
     "//src/graphics/lib/compute/spinel-mold",
     "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
@@ -59,8 +59,8 @@ rustc_binary("spinning_square_example") {
   source_root = "examples/spinning_square.rs"
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/ui/carnelian",
     "//src/lib/ui/fuchsia-scenic",
@@ -76,10 +76,10 @@ rustc_binary("embedding_example") {
   edition = "2018"
   source_root = "examples/embedding.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/ui/carnelian",
@@ -217,11 +217,11 @@ rustc_binary("clockface") {
   edition = "2018"
   source_root = "examples/clockface.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//src/graphics/lib/compute/mold",
     "//src/graphics/lib/compute/spinel-mold",
     "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/argh",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
@@ -260,13 +260,13 @@ rustc_binary("ink") {
   edition = "2018"
   source_root = "examples/ink.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//src/graphics/lib/compute/mold",
     "//src/graphics/lib/compute/spinel-mold",
     "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/argh",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
@@ -306,7 +306,6 @@ rustc_binary("infinite_scroll") {
   edition = "2018"
   source_root = "examples/infinite_scroll.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//src/graphics/lib/compute/mold",
@@ -314,6 +313,7 @@ rustc_binary("infinite_scroll") {
     "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/argh",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",

@@ -46,8 +46,8 @@ rustc_binary("use_dir_rights") {
   source_root = "use_dir_rights.rs"
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
@@ -59,8 +59,8 @@ rustc_binary("use_storage") {
   source_root = "use_storage.rs"
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",

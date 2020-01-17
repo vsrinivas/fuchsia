@@ -44,9 +44,9 @@ rustc_binary("log_tests") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/lib/validating-log-listener",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",

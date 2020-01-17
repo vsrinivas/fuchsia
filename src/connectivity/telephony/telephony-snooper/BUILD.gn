@@ -10,11 +10,11 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/tests/tel-dev:tel_dev",
     "//src/lib/argh",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/fuchsia-vfs-watcher",

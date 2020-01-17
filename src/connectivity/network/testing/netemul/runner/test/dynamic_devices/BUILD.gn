@@ -9,10 +9,10 @@ rustc_binary("dynamic_devices") {
   name = "dynamic_devices"
   edition = "2018"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

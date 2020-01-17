@@ -9,12 +9,12 @@ rustc_test("fake-qmi-query") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/lib/tel-devmgr/fidl:devmgr-rustc",
     "//src/connectivity/telephony/tests/tel-dev:tel_dev",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/fuchsia-vfs-watcher",

@@ -10,11 +10,11 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.external:fuchsia.identity.external-rustc",
     "//src/identity/lib/identity_common",
     "//src/identity/lib/token_manager",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

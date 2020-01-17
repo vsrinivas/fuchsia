@@ -20,9 +20,9 @@ rustc_library("driver") {
 
   deps = [
     ":ui-test-tools",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -40,10 +40,10 @@ rustc_library("ui-test-tools") {
   version = "0.1.0"
   edition = "2018"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",

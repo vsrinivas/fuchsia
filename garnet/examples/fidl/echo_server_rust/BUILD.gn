@@ -11,7 +11,7 @@ rustc_binary("echo_server_rust_bin") {
 
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",

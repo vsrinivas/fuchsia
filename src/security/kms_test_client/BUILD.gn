@@ -12,8 +12,8 @@ rustc_test("bin") {
   edition = "2018"
   source_root = "src/main.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.kms:fuchsia.kms-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/mundane:mundane",

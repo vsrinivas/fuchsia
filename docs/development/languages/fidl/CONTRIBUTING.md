@@ -30,7 +30,7 @@ Target     | Back-end                                               | Runtime Li
 C          | [//zircon/tools/fidl/lib/c_generator.cc][be-c]         | [//zircon/system/ulib/fidl/][rtl-c]
 C++        | [//garnet/go/src/fidl/compiler/backend/cpp/][be-cpp]   | [//zircon/system/ulib/fidl/][rtl-c] & [//sdk/lib/fidl/cpp/][rtl-cpp]
 Go         | [//garnet/go/src/fidl/compiler/backend/golang/][be-go] | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
-Rust       | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//garnet/public/lib/fidl/rust/fidl/][rtl-rust]
+Rust       | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//src/lib/fidl/rust/fidl/][rtl-rust]
 Dart       | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
 JavaScript | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
 
@@ -418,7 +418,7 @@ fx build host-tools/gidl
 | llcpp bindings tests     | fx run-test fidl_llcpp_types_test                   | garnet/go/src/fidl/compiler/llcpp_backend                               |
 | go bindings tests        | fx run-test go_fidl_tests                           | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
 | dart bindings tests      | fx run-test fidl_bindings_test                      | topaz/public/dart/fidl                                                  |
-| rust bindings            | fx run-test rust_fidl_tests                         | garnet/public/lib/fidl/rust/fidl                                        |
+| rust bindings            | fx run-test rust_fidl_tests                         | src/lib/fidl/rust/fidl                                        |
 
 
 The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:zircon
@@ -572,7 +572,7 @@ fidl fmt --library my_library.fidl -i
 [rtl-cpp]: /garnet/public/lib/fidl/llcpp/
 [rtl-dart]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/
 [rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/
-[rtl-rust]: /garnet/public/lib/fidl/rust/fidl/
+[rtl-rust]: /src/lib/fidl/rust/fidl/
 [rtl-js]: https://chromium.googlesource.com/chromium/src/+/master/build/fuchsia/fidlgen_js/runtime/
 [getting_started]: /docs/getting_started.md
 [compat_readme]: /garnet/public/lib/fidl/compatibility_test/README.md

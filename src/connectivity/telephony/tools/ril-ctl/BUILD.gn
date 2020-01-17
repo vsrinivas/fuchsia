@@ -11,13 +11,13 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.telephony.manager:fuchsia.telephony.manager-rustc",
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//src/connectivity/telephony/lib/qmi",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

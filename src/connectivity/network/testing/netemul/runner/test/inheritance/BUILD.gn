@@ -15,9 +15,9 @@ rustc_binary("inheritance") {
   edition = "2018"
   deps = [
     ":counter-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

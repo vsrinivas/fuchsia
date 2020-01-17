@@ -9,13 +9,13 @@ rustc_library("token_manager") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.external:fuchsia.identity.external-rustc",
     "//sdk/fidl/fuchsia.identity.tokens:fuchsia.identity.tokens-rustc",
     "//src/identity/lib/identity_common",
     "//src/identity/lib/token_cache",
     "//src/identity/lib/token_store",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

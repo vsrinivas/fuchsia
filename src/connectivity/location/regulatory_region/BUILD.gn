@@ -12,8 +12,8 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     ":lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

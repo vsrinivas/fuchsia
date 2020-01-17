@@ -11,7 +11,7 @@ rustc_library("pseudo-fs-mt") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/storage/pseudo-fs-mt/macros",
     "//src/lib/zircon/rust:fuchsia-zircon",

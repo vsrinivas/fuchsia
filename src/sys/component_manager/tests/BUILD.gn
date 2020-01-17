@@ -31,7 +31,7 @@ rustc_library("breakpoint_system_client") {
   edition = "2018"
   source_root = "breakpoint_system_client.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
@@ -46,7 +46,7 @@ rustc_library("trigger_capability") {
   edition = "2018"
   source_root = "trigger_capability.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests:breakpoint_system_client",
@@ -64,7 +64,7 @@ rustc_library("echo_capability") {
   deps = [
     ":breakpoint_system_client",
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -80,9 +80,9 @@ rustc_library("test_utils") {
   deps = [
     ":breakpoint_system_client",
     "//garnet/lib/rust/files_async",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",

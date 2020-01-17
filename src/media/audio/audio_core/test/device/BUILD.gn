@@ -9,9 +9,9 @@ rustc_test("audio_device_tests_bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/test_util",
     "//src/media/audio/lib/test/hermetic_audio_environment/rust",

@@ -17,10 +17,10 @@ if (host_toolchain == current_toolchain) {
     deps = [
       ":bridge-rustc",
       ":daemon",
-      "//garnet/public/lib/fidl/rust/fidl",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//src/connectivity/overnet/lib/hoist",
       "//src/lib/argh",
+      "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
@@ -39,11 +39,11 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       ":bridge-rustc",
-      "//garnet/public/lib/fidl/rust/fidl",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/tools/ascendd:lib",
       "//src/developer/remote-control/service:remote-control-rustc",
+      "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",

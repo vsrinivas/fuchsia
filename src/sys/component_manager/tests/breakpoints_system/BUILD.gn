@@ -12,7 +12,7 @@ rustc_test("breakpoints_system_integration_test_bin") {
   source_root = "integration_test.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:echo_capability",

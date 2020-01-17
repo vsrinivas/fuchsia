@@ -9,8 +9,8 @@ import("//build/testing/environments.gni")
 rustc_library("fidl_fuchsia_fonts_ext") {
   edition = "2018"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//src/lib/fidl/rust/fidl",
   ]
 }

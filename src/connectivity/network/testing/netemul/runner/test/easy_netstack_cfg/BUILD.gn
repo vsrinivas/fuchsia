@@ -11,10 +11,10 @@ rustc_binary("easy_netstack_cfg") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
     "//src/lib/argh",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

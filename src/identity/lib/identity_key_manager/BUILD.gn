@@ -9,9 +9,9 @@ rustc_library("identity_key_manager") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.identity.keys:fuchsia.identity.keys-rustc",
     "//src/identity/lib/identity_common",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/test_util",

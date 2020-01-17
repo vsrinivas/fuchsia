@@ -25,7 +25,6 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
@@ -40,6 +39,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/icu_data/rust/icu_data",
@@ -101,9 +101,9 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

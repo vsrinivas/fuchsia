@@ -425,7 +425,7 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 	panic(fmt.Sprintf("unexpected decl %v", decl))
 }
 
-// Rust errors are defined in garnet/public/lib/fidl/rust/fidl/src/error.rs
+// Rust errors are defined in src/lib/fidl/rust/fidl/src/error.rs
 var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "OutOfRange",
 	gidlir.NonEmptyStringWithNullBody: "UnexpectedNullRef",

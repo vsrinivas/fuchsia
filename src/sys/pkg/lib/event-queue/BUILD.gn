@@ -17,7 +17,7 @@ rustc_library("event-queue") {
 
   test_deps = [
     ":test.pkg.eventqueue-rustc",
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:matches",
   ]

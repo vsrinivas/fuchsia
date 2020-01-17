@@ -26,7 +26,6 @@ rustc_library("lib") {
   deps = [
     "third_party/term-model",
     "//garnet/bin/terminal/third_party/term-model",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
@@ -36,6 +35,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/shared-buffer",

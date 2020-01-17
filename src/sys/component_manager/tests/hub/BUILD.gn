@@ -11,7 +11,7 @@ rustc_library("hub_report_capability") {
   edition = "2018"
   source_root = "hub_report_capability.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",

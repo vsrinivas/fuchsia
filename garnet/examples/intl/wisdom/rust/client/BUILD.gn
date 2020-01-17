@@ -17,8 +17,8 @@ rustc_binary("intl_wisdom_client_rust") {
   deps = [
     "//garnet/examples/intl/wisdom/fidl:wisdom-rustc",
     "//garnet/lib/rust/fidl_fuchsia_intl_ext",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/icu_data/rust/icu_data",

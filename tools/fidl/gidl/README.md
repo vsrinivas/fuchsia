@@ -40,7 +40,7 @@ for each language / binding.
     * Run: `fx run-test fidl_llcpp_conformance_test`
 
 * Rust:
-    * Build: `fx build garnet/public/lib/fidl/rust/fidl_tests`
+    * Build: `fx build src/lib/fidl/rust/fidl_tests`
     * Run: `fx run-test rust_fidl_tests`
 
 * Dart:

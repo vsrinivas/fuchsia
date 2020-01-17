@@ -142,7 +142,7 @@ idioms.
 - [C and low-level C++ bindings](/zircon/system/ulib/fidl)
 - [High-level C++ bindings](/sdk/lib/fidl/cpp)
 - [Go bindings](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)
-- [Rust bindings](/garnet/public/lib/fidl/rust)
+- [Rust bindings](/src/lib/fidl/rust)
 
 ## Constituent Parts of Specification
 

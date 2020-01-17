@@ -13,13 +13,13 @@ rustc_library("lib") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.router.config:fuchsia.router.config-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -37,5 +37,5 @@ rustc_library("lib") {
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 
-  test_deps = [ "//garnet/public/lib/fidl/rust/fidl" ]
+  test_deps = [ "//src/lib/fidl/rust/fidl" ]
 }

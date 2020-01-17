@@ -13,11 +13,11 @@ if (!is_fuchsia) {
     edition = "2018"
 
     deps = [
-      "//garnet/public/lib/fidl/rust/fidl",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/core",
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/lib/salt_slab",
+      "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:futures",
