@@ -10,7 +10,7 @@ library fuchsia.overnet;
 using fuchsia.overnet.protocol;
 
 /// Interfaces applicable to consuming services from other devices
-[FragileBase, Discoverable]
+[Discoverable]
 protocol ServiceConsumer {
     /// Returns a list of all peers that are connected to this Overnet.
     /// If this list has not been updated since the last call to this method, it waits until
@@ -24,7 +24,7 @@ protocol ServiceConsumer {
 };
 
 /// Interfaces applicable to sharing services with ServiceConsumer's
-[FragileBase, Discoverable]
+[Discoverable]
 protocol ServicePublisher {
     /// Register a new service to be exported by Overnet.
     /// If an existing service has the same `service_name`, it's replaced by this service.
@@ -37,14 +37,6 @@ protocol ServicePublisher {
 protocol MeshController {
     /// Attach a socket as a new link. Bad socket options will result in the channel being closed.
     AttachSocketLink(handle<socket> socket, SocketLinkOptions options);
-};
-
-/// Legacy Overnet interface for applications that did not distinguish between ServiceConsumer and
-/// ServicePublisher
-[Discoverable, Deprecated]
-protocol Overnet {
-    compose ServiceConsumer;
-    compose ServicePublisher;
 };
 
 /// A ServiceProvider is a factory for one service.

@@ -10,9 +10,9 @@ mod mdns;
 
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_overnet::{
-    MeshControllerRequest, MeshControllerRequestStream, OvernetListPeersResponder, OvernetRequest,
-    OvernetRequestStream, ServiceConsumerListPeersResponder, ServiceConsumerRequest,
-    ServiceConsumerRequestStream, ServicePublisherRequest, ServicePublisherRequestStream,
+    MeshControllerRequest, MeshControllerRequestStream, ServiceConsumerListPeersResponder,
+    ServiceConsumerRequest, ServiceConsumerRequestStream, ServicePublisherRequest,
+    ServicePublisherRequestStream,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -240,38 +240,13 @@ fn register_udp(addr: SocketAddr, node_id: NodeId) -> Result<(), Error> {
     })
 }
 
-trait ListPeersResponder {
-    fn respond(
-        self,
-        peers: &mut dyn ExactSizeIterator<Item = &mut fidl_fuchsia_overnet::Peer>,
-    ) -> Result<(), fidl::Error>;
-}
-
-impl ListPeersResponder for ServiceConsumerListPeersResponder {
-    fn respond(
-        self,
-        peers: &mut dyn ExactSizeIterator<Item = &mut fidl_fuchsia_overnet::Peer>,
-    ) -> Result<(), fidl::Error> {
-        self.send(peers)
-    }
-}
-
-impl ListPeersResponder for OvernetListPeersResponder {
-    fn respond(
-        self,
-        peers: &mut dyn ExactSizeIterator<Item = &mut fidl_fuchsia_overnet::Peer>,
-    ) -> Result<(), fidl::Error> {
-        self.send(peers)
-    }
-}
-
-async fn run_list_peers_inner(responder: impl ListPeersResponder) -> Result<(), Error> {
+async fn run_list_peers_inner(responder: ServiceConsumerListPeersResponder) -> Result<(), Error> {
     let mut peers = with_app_mut(|app| app.node.clone().list_peers()).await?;
-    responder.respond(&mut peers.iter_mut())?;
+    responder.send(&mut peers.iter_mut())?;
     Ok(())
 }
 
-async fn run_list_peers(responder: impl ListPeersResponder) {
+async fn run_list_peers(responder: ServiceConsumerListPeersResponder) {
     if let Err(e) = run_list_peers_inner(responder).await {
         log::warn!("List peers gets error: {:?}", e);
     }
@@ -327,32 +302,10 @@ async fn run_mesh_controller_server(mut stream: MeshControllerRequestStream) -> 
     Ok(())
 }
 
-async fn run_legacy_overnet_server(mut stream: OvernetRequestStream) -> Result<(), Error> {
-    while let Some(request) = stream.try_next().await.context("error running overnet server")? {
-        let result = with_app_mut(|app| match request {
-            OvernetRequest::PublishService { service_name, provider, .. } => {
-                app.node.register_service(service_name, provider)
-            }
-            OvernetRequest::ListPeers { responder, .. } => {
-                fasync::spawn_local(run_list_peers(responder));
-                Ok(())
-            }
-            OvernetRequest::ConnectToService { node, service_name, chan, .. } => {
-                app.node.connect_to_service(node.id.into(), &service_name, chan)
-            }
-        });
-        if let Err(e) = result {
-            log::warn!("Error servicing request: {:?}", e);
-        }
-    }
-    Ok(())
-}
-
 enum IncomingService {
     ServiceConsumer(ServiceConsumerRequestStream),
     ServicePublisher(ServicePublisherRequestStream),
     MeshController(MeshControllerRequestStream),
-    LegacyOvernet(OvernetRequestStream),
     // ... more services here
 }
 
@@ -365,7 +318,6 @@ async fn main() -> Result<(), Error> {
     svc_dir.add_fidl_service(IncomingService::ServiceConsumer);
     svc_dir.add_fidl_service(IncomingService::ServicePublisher);
     svc_dir.add_fidl_service(IncomingService::MeshController);
-    svc_dir.add_fidl_service(IncomingService::LegacyOvernet);
 
     fs.take_and_serve_directory_handle()?;
 
@@ -387,9 +339,6 @@ async fn main() -> Result<(), Error> {
         }
         IncomingService::ServiceConsumer(stream) => {
             run_service_consumer_server(stream).unwrap_or_else(|e| log::trace!("{:?}", e)).boxed()
-        }
-        IncomingService::LegacyOvernet(stream) => {
-            run_legacy_overnet_server(stream).unwrap_or_else(|e| log::trace!("{:?}", e)).boxed()
         }
     })
     .await;
