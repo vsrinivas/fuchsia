@@ -802,6 +802,13 @@ async fn do_set<T: Write>(
             printer.println(format!("Response: {:?}", response));
             Ok(())
         }
+
+        Set::DeleteFilter { mut rule_id } => {
+            let response =
+                router_admin.delete_filter(&mut rule_id).await.context("error getting response")?;
+            printer.println(format!("Response: {:?}", response));
+            Ok(())
+        }
     }
 }
 

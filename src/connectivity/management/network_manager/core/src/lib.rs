@@ -29,7 +29,7 @@ use crate::lifmgr::{LIFProperties, LIFType, LifIpAddr};
 use crate::portmgr::PortId;
 use fidl_fuchsia_net_stack as stack;
 use fidl_fuchsia_netstack as netstack;
-use fidl_fuchsia_router_config::LifProperties;
+use fidl_fuchsia_router_config::{Id, LifProperties};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 // TODO(cgibson): Remove this when we have the ability to add one port at a time the bridge.
@@ -751,6 +751,7 @@ impl DeviceState {
     pub fn lifs(&self, t: LIFType) -> impl Iterator<Item = &lifmgr::LIF> {
         self.lif_manager.lifs(t)
     }
+
     /// Returns all managed ports.
     pub fn ports(&self) -> impl ExactSizeIterator<Item = &portmgr::Port> {
         self.port_manager.ports()
@@ -821,6 +822,23 @@ impl DeviceState {
             Err(e) => {
                 warn!("Failed to set new filter rules: {:?}", e);
                 Err(error::NetworkManager::SERVICE(error::Service::ErrorAddingPacketFilterRules))
+            }
+        }
+    }
+
+    /// Deletes a packet filter rule.
+    pub async fn delete_filter(&self, _id: Id) -> error::Result<()> {
+        // TODO(44183): Currently this method deletes all of the installed filter rules.
+        // We need to associate each rule with an id when it is installed, so that individual filter
+        // rules can be removed.
+        warn!("Deleting numbered filter rules is not supported yet: Clearing all rules instead.");
+
+        // TODO(cgibson): Need to support tracking element numbers. fxb/44183.
+        match self.packet_filter.clear_filters().await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                warn!("Failed to clear filter rules: {:?}", e);
+                Err(error::NetworkManager::SERVICE(error::Service::ErrorClearingPacketFilterRules))
             }
         }
     }

@@ -284,6 +284,40 @@ impl PacketFilter {
         }
     }
 
+    /// Clears any existing filter rules.
+    ///
+    /// Netfilter does not have a `clear` or `delete` filter API. Instead, to clear all the filter
+    /// ruleset, we have to install a new, empty, ruleset.
+    pub(crate) async fn clear_filters(&self) -> error::Result<()> {
+        let mut empty_ruleset = Vec::<netfilter::Rule>::new();
+        let generation: u32 = match self.filter_svc.get_rules().await {
+            Ok((_, generation, Status::Ok)) => generation,
+            Ok((_, _, status)) => {
+                warn!("Failed to get generation number! Status was: {:?}", status);
+                return Err(error::NetworkManager::SERVICE(
+                    error::Service::ErrorClearingPacketFilterRules,
+                ));
+            }
+            Err(e) => {
+                warn!("fidl error: {:?}", e);
+                return Err(error::NetworkManager::SERVICE(
+                    error::Service::ErrorClearingPacketFilterRules,
+                ));
+            }
+        };
+        match self.filter_svc.update_rules(&mut empty_ruleset.iter_mut(), generation).await {
+            Ok(Status::Ok) => Ok(()),
+            Ok(status) => {
+                warn!("failed to clear filter state: {:?}", status);
+                Err(error::NetworkManager::SERVICE(error::Service::ErrorClearingPacketFilterRules))
+            }
+            Err(e) => {
+                warn!("fidl error: {:?}", e);
+                Err(error::NetworkManager::SERVICE(error::Service::ErrorClearingPacketFilterRules))
+            }
+        }
+    }
+
     /// Updates the NAT configuration.
     ///
     /// Allow incremental updates to the NAT configuration before installing the actual NAT rules

@@ -120,6 +120,8 @@ pub enum Service {
     NotDisabled,
     #[error("Failed to add new packet filter rules")]
     ErrorAddingPacketFilterRules,
+    #[error("Failed to clear packet filter rules")]
+    ErrorClearingPacketFilterRules,
     #[error("Failed to get packet filter rules")]
     ErrorGettingPacketFilterRules,
     #[error("Failed to enable IP forwarding")]

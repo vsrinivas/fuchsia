@@ -40,7 +40,7 @@ use fidl_fuchsia_router_config::{
     SecurityFeatures,
 };
 use futures::channel::mpsc;
-use futures::prelude::*;
+use futures::StreamExt;
 use network_manager_core::{
     hal::NetCfg, lifmgr::LIFType, packet_filter::PacketFilter, portmgr::PortId, DeviceState,
 };
@@ -313,7 +313,15 @@ impl EventLoop {
             }
             RouterAdminRequest::DeleteFilter { rule_id, responder } => {
                 info!("{:?}", rule_id);
-                responder.send(not_supported!())
+                let r = self
+                    .device
+                    .delete_filter(rule_id)
+                    .await
+                    .context("Error deleting packet filter rule");
+                match r {
+                    Ok(()) => responder.send(None),
+                    Err(e) => responder.send(internal_error!(e.to_string())),
+                }
             }
             RouterAdminRequest::SetIpv6PinHole { rule, responder } => {
                 info!("{:?}", rule);

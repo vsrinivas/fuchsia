@@ -1073,3 +1073,17 @@ async fn test_link_events() {
          "There should be one LAN interfaces."),
     ]).await;
 }
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_flush_filter_rules() {
+    let device = test_device().await;
+    execute_test_suite(&device, test_suite![
+        // ("command to test", "expected regex match statement", description),
+       ("show filterstate", "0 filters installed.*", "test starts with no filters installed yet."),
+       ("set filter allow 127.0.0.1/32 31337-31337 0.0.0.0/0 31337-31337 tcp", "Response: \\(None, None\\)", "add a new filter rule"),
+       ("show filterstate", "1 filters installed\\n\\[FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[127, 0, 0, 1\\] \\}\\)\\), prefix_length: Some\\(32\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 31337, to: 31337 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 31337, to: 31337 \\}\\]\\), protocol: Some\\(Tcp\\) \\} \\}\\]", "test that the new filter shows up in the rule set"),
+       ("set delete-filter 0", "Response: None", "deletes the new filter rule"),
+       ("show filterstate", "0 filters installed.*", "no filters installed again."),
+    ]).await;
+}

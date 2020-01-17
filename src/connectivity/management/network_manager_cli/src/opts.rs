@@ -398,6 +398,13 @@ pub enum Set {
         dst_port_range: Option<String>,
         protocol: Option<String>,
     },
+
+    #[structopt(name = "delete-filter")]
+    /// Clears all packet filter rules.
+    DeleteFilter {
+        #[structopt(parse(try_from_str = "construct_id"), raw(required = "true"))]
+        rule_id: Id,
+    },
 }
 
 #[cfg(test)]
