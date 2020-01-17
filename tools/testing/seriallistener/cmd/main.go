@@ -4,138 +4,101 @@
 
 package main
 
-// Program to watch for a specific string to appear in a socket and
-// then exits with code 0.  As long as the file is being actively written
-// to the tool will keep watching, but after ioTimeout of inactivity it
-// will fail.
-
-// To manually test, do something like the following.
-//
-// $ SOCKET=socket
-// $ rm $SOCKET &> /dev/null || true
-// $ go run main.go -socket $SOCKET -success-string FOO &
-// $ nc -U $SOCKET -l
-//
-// Any lines typed into stdin of nc will be sent to the this program.  When
-// the success string is sent, this program will exit, closing the socket,
-// and causing nc to exit.  Likewise, both programs will exit when the
-// timeout is reached.
+// Program to watch for a specific string to appear from a socket's output and
+// then exits successfully.
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+)
+
+const (
+	socketPathEnvVar = "FUCHSIA_SERIAL_SOCKET"
 )
 
 var (
-	ioTimeout     time.Duration
-	socket        string
-	successString string
-	colors        color.EnableColor
-	level         logger.LogLevel
+	timeout        time.Duration
+	successString  string
+	redirectStdout bool
 )
 
-const serialSocketVar = "FUCHSIA_SERIAL_SOCKET"
-
 func init() {
-	flag.DurationVar(&ioTimeout, "io-timeout", 30*time.Second,
-		"amount of time to wait for new data (seconds)")
-
-	defaultSocket := os.Getenv(serialSocketVar)
-	flag.StringVar(&socket, "socket", defaultSocket,
-		fmt.Sprintf("unix socket to watch (required if %s not set)",
-			serialSocketVar))
-
-	flag.StringVar(&successString, "success-string", "",
-		"string which means the test passed")
-
-	colors = color.ColorAuto
-	flag.Var(&colors, "color",
-		"use color in output, can be never, auto, always")
-
-	level = logger.TraceLevel
-	flag.Var(&level, "level",
-		"output verbosity, can be fatal, error, warning, info, "+
-			"debug or trace")
+	flag.DurationVar(&timeout, "timeout", 10*time.Minute, "amount of time to wait for success string")
+	flag.BoolVar(&redirectStdout, "stdout", false, "whether to redirect serial output to stdout")
+	flag.StringVar(&successString, "success-str", "", "string that - if read - indicates success")
 }
 
-func max(x int, y int) int {
-	if x < y {
-		return y
-	}
-	return x
-}
-
-func Main(ctx context.Context) error {
-	if socket == "" {
+func execute(ctx context.Context, socketPath string, stdout io.Writer) error {
+	if socketPath == "" {
 		flag.Usage()
-		return errors.New("no socket specified")
+		return fmt.Errorf("could not find socket in environment")
 	}
-	logger.Infof(ctx, "socket: %s", socket)
+	logger.Debugf(ctx, "socket: %s", socketPath)
 
 	if successString == "" {
 		flag.Usage()
-		return errors.New("no success string specified")
+		return fmt.Errorf("-success is a required argument")
 	}
-	logger.Infof(ctx, "success string: %#v", successString)
 
-	logger.Infof(ctx, "io-timeout: %v", ioTimeout)
-
-	// Connect to the socket, retry for up to a minute.
-	var err error
-	var conn net.Conn
-	backoff := retry.WithMaxDuration(
-		retry.NewConstantBackoff(time.Second), time.Minute)
-	retry.Retry(ctx, backoff, func() error {
-		conn, err = net.DialTimeout("unix", socket, 5*time.Second)
-		return err
-	}, nil)
+	socket, err := net.Dial("unix", socketPath)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-	logger.Infof(ctx, "connection successful")
+	defer socket.Close()
 
-	buf := make([]byte, 4096)
-	currPage := ""
-
-	// Repeatedly read from the socket, setting a timeout before every Read().
-	for {
-		conn.SetReadDeadline(time.Now().Add(ioTimeout))
-		n, err := conn.Read(buf)
-		if err != nil {
-			return err
+	m := iomisc.NewSequenceMatchingReader(socket, successString)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	errs := make(chan error)
+	go func() {
+		if _, err := io.Copy(stdout, m); err != nil {
+			errs <- err
 		}
+	}()
 
-		currPage = currPage[max(0, len(currPage)-len(successString)):]
-		currPage += string(buf[0:n])
-
-		logger.Infof(ctx, "currPage: %#v", currPage)
-		if strings.Contains(currPage, successString) {
-			logger.Infof(ctx, "success string found")
-			return nil
+	go func() {
+		for {
+			if m.Match() != nil {
+				logger.Debugf(ctx, "success string found: %q", successString)
+				errs <- nil
+				return
+			}
 		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timed out before success string %q was read from serial", successString)
+	case err := <-errs:
+		return err
 	}
 }
 
 func main() {
 	flag.Parse()
 
-	log := logger.NewLogger(level, color.NewColor(colors),
+	log := logger.NewLogger(logger.DebugLevel, color.NewColor(color.ColorAuto),
 		os.Stdout, os.Stderr, "seriallistener ")
 	ctx := logger.WithLogger(context.Background(), log)
 
-	err := Main(ctx)
-	if err != nil {
+	socketPath := os.Getenv(socketPathEnvVar)
+
+	stdout := ioutil.Discard
+	if redirectStdout {
+		stdout = os.Stdout
+	}
+
+	if err := execute(ctx, socketPath, stdout); err != nil {
 		logger.Fatalf(ctx, "%s", err)
 	}
 }

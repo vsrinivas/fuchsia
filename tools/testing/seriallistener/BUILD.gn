@@ -10,8 +10,8 @@ go_library("main") {
   source_dir = "cmd"
   deps = [
     "//tools/lib/color",
+    "//tools/lib/iomisc",
     "//tools/lib/logger",
-    "//tools/lib/retry",
   ]
 }
 
