@@ -354,6 +354,7 @@ async fn players_get_ids() -> Result<()> {
 #[test]
 async fn users_can_watch_session_status() -> Result<()> {
     let service = TestService::new()?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
 
     let mut player1 = TestPlayer::new(&service).await?;
     let mut player2 = TestPlayer::new(&service).await?;
@@ -362,6 +363,7 @@ async fn users_can_watch_session_status() -> Result<()> {
     service.discovery.connect_to_session(player1.id, session1_request)?;
 
     player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let _updates = watcher.wait_for_n_updates(1).await?;
     let status1 = session1.watch_status().await.context("Watching session status (1st time)")?;
     assert_matches!(
         status1.player_status,
@@ -370,6 +372,7 @@ async fn users_can_watch_session_status() -> Result<()> {
 
     player2.emit_delta(delta_with_state(PlayerState::Buffering)).await?;
     player1.emit_delta(delta_with_state(PlayerState::Paused)).await?;
+    let _updates = watcher.wait_for_n_updates(2).await?;
     let status1 = session1.watch_status().await.context("Watching session status (2nd time)")?;
     assert_matches!(
         status1.player_status,
