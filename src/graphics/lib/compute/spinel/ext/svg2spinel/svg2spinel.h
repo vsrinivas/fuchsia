@@ -55,16 +55,18 @@ spn_svg_layers_decode(struct svg const * const   svg,
 //
 
 void
-spn_svg_paths_release(struct svg * const svg, spn_context_t context, spn_path_t * const paths);
+spn_svg_paths_release(struct svg const * const svg,
+                      spn_context_t            context,
+                      spn_path_t * const       paths);
 
 //
 // Releases all rasters in the SVG doc
 //
 
 void
-spn_svg_rasters_release(struct svg * const   svg,
-                        spn_context_t        context,
-                        spn_raster_t * const rasters);
+spn_svg_rasters_release(struct svg const * const svg,
+                        spn_context_t            context,
+                        spn_raster_t * const     rasters);
 
 //
 //

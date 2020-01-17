@@ -146,6 +146,8 @@ impl Painter {
             self.cells[i] = Cell::default();
         }
 
+        self.cover_wip_zero();
+
         for segment in segments {
             self.cover_line(&Segment::new(
                 Point::new(segment.p0.x + delta.x, segment.p0.y + delta.y),

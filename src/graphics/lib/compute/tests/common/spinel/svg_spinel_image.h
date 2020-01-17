@@ -20,9 +20,9 @@ struct SvgSpinelImage : public SpinelImage
   {
   }
   void
-  init(svg * svg, spn_context_t context, const SpinelImage::Config & config);
+  init(const svg * svg, spn_context_t context, const SpinelImage::Config & config);
   void
-  init(svg * svg, spn_context_t context);
+  init(const svg * svg, spn_context_t context);
   void
   reset();
 
@@ -60,7 +60,7 @@ struct SvgSpinelImage : public SpinelImage
   }
 
  protected:
-  svg *          svg_     = nullptr;
+  const svg *    svg_     = nullptr;
   spn_path_t *   paths_   = nullptr;
   spn_raster_t * rasters_ = nullptr;
 };

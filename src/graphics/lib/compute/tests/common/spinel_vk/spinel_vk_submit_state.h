@@ -33,10 +33,13 @@ extern "C" {
 //   - Call spn_render() with an spn_render_submit_t struct whose |ext| field
 //     is the result of spinel_vk_submit_state_get_ext().
 //
-//   - Call spinel_vk_submit_state_wait() to ensure that all related operations
-//     have completed. IMPORTANT: The content of a given SpinelVkSubmitState
-//     instance should not be modified until all Spinel operations for this
-//     image have completed. This is the simplest way to achieve this.
+//     Note that spn_render() doesn't submit work to the compute queue
+//     immediately. It only prepares a command buffer for submission.
+//     Unsealing the composition or styling passed as arguments will however
+//     always force the submit.
+//
+//   - Optionally call spinel_vk_submit_state_was_submitted() to verify that
+//     the rendering command buffer was properly submitted.
 //
 
 // A callback type, invoked after Spinel enqueues its command buffer,
@@ -122,15 +125,20 @@ spinel_vk_submit_state_add_post_copy_to_buffer(SpinelVkSubmitState * state,
                                                VkExtent2D            extent);
 
 // Retrieve the value of the spn_render_submit_t::ext field to use when calling
-// spn_render() for this instance.
+// spn_render() for this instance. IMPORTANT: The content of |state| should not
+// be modified after this point until spinel_vk_submit_state_is_enqueued()
+// returns true.
 extern void *
 spinel_vk_submit_state_get_ext(const SpinelVkSubmitState * state);
 
-// After a call to spn_render(), wait until Spinel has properly queued its
-// command buffer to the GPU. This is necessary to be able to enqueue a wait on
-// the |signal_semaphore| passed to spinel_vk_submit_state_reset().
-extern void
-spinel_vk_submit_state_wait_enqueued(SpinelVkSubmitState * state, spn_context_t context);
+// Returns true iff a previous spn_render() call that used the result of
+// spinel_vk_submit_state_get_ext() was submitted. Useful for debugging.
+// The best way to ensure this is to unseal the composition or styling.
+// Another one is to call spn_vk_context_wait(), though this is unrecommended,
+// compared with unsealing because it waits for _all_ transient rendering
+// operations to complete.
+bool
+spinel_vk_submit_state_was_submitted(const SpinelVkSubmitState * state);
 
 #ifdef __cplusplus
 }

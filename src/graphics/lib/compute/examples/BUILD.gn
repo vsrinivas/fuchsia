@@ -1,0 +1,141 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../gn/build_rules.gni")
+
+#
+# Common targets that only depend on Vulkan and the Vulkan API.
+#
+source_set("common") {
+  sources = [
+    "common/demo_spinel_image.h",
+    "common/demo_utils.cc",
+    "common/demo_utils.h",
+    "common/demo_vulkan_app.cc",
+    "common/demo_vulkan_app.h",
+    "common/svg_demo_spinel_image.cc",
+    "common/svg_demo_spinel_image.h",
+  ]
+  public_deps = [
+    "${graphics_compute_dir}/tests:common_vk",
+    "${graphics_compute_dir}/tests/common/spinel:spinel_utils",
+  ]
+}
+
+graphics_compute_unittests("common_vk_unittests") {
+  sources = [ "common/demo_vulkan_app_unittest.cc" ]
+  deps = [ ":common" ]
+}
+
+#
+# Common source files for demos that use Spinel.
+#
+source_set("common_spinel") {
+  sources = [
+    "common/demo_spinel_app.cc",
+    "common/demo_spinel_app.h",
+  ]
+  public_deps = [
+    ":common",
+    "${graphics_compute_dir}/spinel:spinel_vk_for_tests",
+    "${graphics_compute_dir}/tests/common/spinel_vk:spinel_vk_utils",
+  ]
+}
+
+#
+# Common sources files for demos that use Mold.
+#
+source_set("common_mold") {
+  sources = [
+    "common/demo_mold_app.cc",
+    "common/demo_mold_app.h",
+  ]
+  deps = [ "${graphics_compute_dir}/tests/common/spinel:spinel_utils" ]
+  public_deps = [
+    ":common",
+    "${graphics_compute_dir}/spinel-mold:spinel-mold-c",
+    "${graphics_compute_dir}/tests:common",
+    "${graphics_compute_dir}/tests:common_vk",
+  ]
+}
+
+#
+# A template used to define a set of demo programs that use Spinel or Mold
+# as backends for the Spinel API.
+#
+# Accepts all variables from graphics_compute_executable() plus:
+#
+#  spinel_backend: A required string that must be either "spinel" or "mold"
+#
+template("graphics_compute_spinel_demo_executable") {
+  assert(defined(invoker.spinel_backend), "spinel_backend must be defined!")
+
+  graphics_compute_executable(target_name) {
+    forward_variables_from(invoker, "*", [ "spinel_backend" ])
+
+    if (!defined(defines)) {
+      defines = []
+    }
+    defines += [ "PROGRAM_NAME=\"${target_name}\"" ]
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    if (invoker.spinel_backend == "spinel") {
+      deps += [
+        ":common",
+        ":common_spinel",
+      ]
+    } else if (invoker.spinel_backend == "mold") {
+      deps += [
+        ":common",
+        ":common_mold",
+      ]
+      defines += [ "USE_MOLD=1" ]
+    } else {
+      assert(false, "Invalid spinel_backend value: ${invoker.spinel_backend}")
+    }
+
+    needs_vulkan = true
+  }
+}
+
+# Defines several executable targets for a Spinel API demo.
+#
+# Each one with a spinel_${target_name} or mold_${target_name} prefix.
+# This makes it easy to share common demo code between several backends.
+#
+template("graphics_compute_spinel_demo") {
+  graphics_compute_spinel_demo_executable("spinel_${target_name}") {
+    forward_variables_from(invoker, "*", [ "target_name" ])
+    spinel_backend = "spinel"
+  }
+  graphics_compute_spinel_demo_executable("mold_${target_name}") {
+    forward_variables_from(invoker, "*", [ "target_name" ])
+    spinel_backend = "mold"
+  }
+
+  group(target_name) {
+    deps = [
+      ":mold_${target_name}",
+      ":spinel_${target_name}",
+    ]
+  }
+}
+
+#
+# Demo programs that display an input SVG file
+#
+graphics_compute_spinel_demo("svg_demo") {
+  sources = [ "main_svg_demo.cc" ]
+  deps = [ "${graphics_compute_dir}/tests/common/svg" ]
+}
+
+#
+#  All examples in this group.
+#
+group("examples") {
+  deps = [ ":svg_demo" ]
+}

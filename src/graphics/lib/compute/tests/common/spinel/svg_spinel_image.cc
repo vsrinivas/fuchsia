@@ -11,14 +11,14 @@
 #include "tests/common/utils.h"  // For ASSERT_MSG()
 
 void
-SvgSpinelImage::init(svg * svg, spn_context_t context, const SpinelImage::Config & config)
+SvgSpinelImage::init(const svg * svg, spn_context_t context, const SpinelImage::Config & config)
 {
   svg_ = svg;
   SpinelImage::init(context, config);
 }
 
 void
-SvgSpinelImage::init(svg * svg, spn_context_t context)
+SvgSpinelImage::init(const svg * svg, spn_context_t context)
 {
   svg_ = svg;
   SpinelImage::init(context);

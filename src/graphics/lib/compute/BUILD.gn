@@ -74,6 +74,7 @@ group("all_tests") {
     ":graphics_compute_mold_c_unittests",
     ":graphics_compute_vk_unittests",
     ":tests",
+    "examples",
     "hotsort:tests",
     "spinel:tests",
     "tests:tests",

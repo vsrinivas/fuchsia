@@ -27,7 +27,7 @@
 //
 
 void
-spn_svg_paths_release(struct svg * const svg, spn_context_t context, spn_path_t * const paths)
+spn_svg_paths_release(const struct svg * const svg, spn_context_t context, spn_path_t * const paths)
 {
   uint32_t const n = svg_path_count(svg);
 
@@ -37,7 +37,9 @@ spn_svg_paths_release(struct svg * const svg, spn_context_t context, spn_path_t 
 }
 
 void
-spn_svg_rasters_release(struct svg * const svg, spn_context_t context, spn_raster_t * const rasters)
+spn_svg_rasters_release(const struct svg * const svg,
+                        spn_context_t            context,
+                        spn_raster_t * const     rasters)
 
 {
   uint32_t const n = svg_raster_count(svg);

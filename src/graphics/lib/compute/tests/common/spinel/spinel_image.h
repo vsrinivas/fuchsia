@@ -19,7 +19,7 @@ struct transform_stack;
 // as well.
 //
 // Usage:
-//    1) Create instance, and call init() with our without a custom config.
+//    1) Create instance, and call init() with or without a custom config.
 //    2) Access the context, builders, composition and styling handles directly.
 //    3) Allocated path and raster handles should be managed by the client code.
 //    4) Optionally call render() to render the image.

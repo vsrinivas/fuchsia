@@ -156,11 +156,8 @@ spinel_vk_submit_state_get_ext(const SpinelVkSubmitState * state)
   return state->chain_head;
 }
 
-void
-spinel_vk_submit_state_wait_enqueued(SpinelVkSubmitState * state, spn_context_t context)
+bool
+spinel_vk_submit_state_was_submitted(const SpinelVkSubmitState * state)
 {
-  while (state->submit_not_enqueued)
-    {
-      spn_vk_context_wait(context, 0, NULL, true, UINT64_MAX);
-    }
+  return !state->submit_not_enqueued;
 }
