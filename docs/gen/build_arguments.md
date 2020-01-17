@@ -1950,6 +1950,19 @@ custom kernel for development purposes.
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:12
 
+### test_durations_file
+A file in integration containing historical test duration data for this
+build configuration. This file is used by infra to efficiently schedule
+tests. "default.json" is a dummy file that contains no real duration data,
+and causes infra to schedule tests as if each one has the same duration.
+TODO(fxb/43704): Change to
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/6c1d3d8c7bf20dd6998e2e471a286adc3f8dddf2/infra/test_durations/default.json)" after the recipes start
+setting this arg.
+
+**Current value (from the default):** `"//integration/infra/test_durations.json"`
+
+From //BUILD.gn:36
+
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
@@ -2037,7 +2050,7 @@ From //products/core.gni:78
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:35
+From //BUILD.gn:44
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
@@ -2045,7 +2058,7 @@ From //products/core.gni:78
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:35
+From //BUILD.gn:44
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2092,7 +2105,7 @@ From //build/config/lto/config.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/a18d1cbacca31efe73314c3380f47b3b327e4647/src/intel/vulkan/BUILD.gn#25)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/4c5e2097c7a0a7086516cde4a6b2f1901b738358/src/intel/vulkan/BUILD.gn#25)
 
 ### use_netstack3
 
@@ -2301,7 +2314,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:84
+From //BUILD.gn:93
 
 ### zircon_asserts
 
@@ -2326,7 +2339,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:63
+From //BUILD.gn:72
 
 ### zircon_enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -2338,7 +2351,7 @@ From //products/core.gni:12
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:56
+From //BUILD.gn:65
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -2346,7 +2359,7 @@ From //products/core.gni:12
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:56
+From //BUILD.gn:65
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2363,14 +2376,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:48
+From //BUILD.gn:57
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:52
+From //BUILD.gn:61
 
 ### zircon_r_partition
 
@@ -2384,7 +2397,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:60
+From //BUILD.gn:69
 
 ### zvb_partition_name
 Partition name from where image will be verified
