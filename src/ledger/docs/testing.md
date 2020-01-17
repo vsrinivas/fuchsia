@@ -14,7 +14,7 @@ execution itself happens on the target.
 
 For testing on an x64 device:
 ```sh
-fx set core.x64 --with //peridot/packages/tests:ledger \
+fx set core.x64 --with //src/ledger:tests \
  --variant asan/ledger_unittests --variant asan/ledger_integration_tests \
  --variant asan/ledger_e2e_local --variant asan/ledger \
  --variant asan/ledger_lib_unittests --variant asan/cloud_provider_in_memory \
@@ -114,7 +114,7 @@ Ledger uses LibFuzzer for fuzz tests. We have a single fuzz package called
 `ledger_fuzzers`. It can be built as follows:
 
 ```sh
-fx set core.x64 --with //peridot/packages/tests:ledger --fuzz-with asan
+fx set core.x64 --with //src/ledger:tests --fuzz-with asan
 fx build
 ```
 

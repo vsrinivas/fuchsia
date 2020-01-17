@@ -27,6 +27,10 @@ group("tests") {
   deps = [
     ":ledger_tests",
     "third_party/bup:bup_tests",
+    "//src/ledger/bin",
+    "//src/ledger/bin:ledger_fuzzers",
+    "//src/ledger/bin/testing/ledger_test_instance_provider:ledger_test_instance_provider",
+    "//src/ledger/cloud_provider_in_memory/bin",
   ]
 }
 
