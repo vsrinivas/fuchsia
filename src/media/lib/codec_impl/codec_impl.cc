@@ -1348,15 +1348,10 @@ void CodecImpl::EnsureUnbindCompleted() {
 
     EnsureBuffersNotConfigured(lock, kOutputPort);
 
-    // This unbinds any BufferCollection bindings.  This is effectively part
-    // of the overall unbind of anything generating activity on FIDL thread
-    // based on incoming channel messages.
-    if (port_settings_[kInputPort] && port_settings_[kInputPort]->is_partial_settings()) {
-      port_settings_[kInputPort]->UnbindBufferCollection();
-    }
-    if (port_settings_[kOutputPort] && port_settings_[kOutputPort]->is_partial_settings()) {
-      port_settings_[kOutputPort]->UnbindBufferCollection();
-    }
+    // By this point both PortSettings should have already been deleted.
+    ZX_DEBUG_ASSERT(!port_settings_[kInputPort]);
+    ZX_DEBUG_ASSERT(!port_settings_[kOutputPort]);
+
     // Unbind the sysmem_ fuchsia::sysmem::Allocator connection - this also
     // ensures that any in-flight requests' completions will not run.
     sysmem_.Unbind();

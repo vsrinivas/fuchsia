@@ -543,6 +543,55 @@ TEST_F(ClearDecryptorAdapterTest, UnmappedOutputBuffers) {
   AssertNoChannelErrors();
 }
 
+TEST_F(ClearDecryptorAdapterTest, DecryptorClosesBuffersCleanly) {
+  ConnectDecryptor(false);
+  decryptor_adapter_->set_has_keys(true);
+
+  RunLoopUntil([this]() { return input_buffer_info_.has_value(); });
+  AssertNoChannelErrors();
+  ASSERT_TRUE(input_buffer_info_);
+
+  ConfigureInputPackets();
+
+  decryptor_->QueueInputFormatDetails(kStreamLifetimeOrdinal,
+                                      CreateInputFormatDetails("clear", {}, {}));
+
+  // Queue a single input packet.
+  ASSERT_TRUE(HasFreePackets());
+  decryptor_->QueueInputPacket(CreateInputPacket(*input_iter_++));
+
+  // Wait until the output collection has been allocated.
+  RunLoopUntil([this]() { return output_buffer_info_.has_value(); });
+  AssertNoChannelErrors();
+  ASSERT_TRUE(output_buffer_info_);
+
+  // Wait until receive first output packet.
+  RunLoopUntil([this]() { return !output_data_.empty(); });
+  AssertNoChannelErrors();
+
+  // Drop the decryptor_. This should not cause any buffer collection failures.
+  decryptor_ = nullptr;
+  AssertNoChannelErrors();
+
+  // If the below fail, the collections have failed.
+  std::optional<zx_status_t> input_status;
+  std::optional<zx_status_t> output_status;
+  EXPECT_TRUE(input_collection_.is_bound());
+  EXPECT_TRUE(output_collection_.is_bound());
+  input_collection_->CheckBuffersAllocated([&input_status](zx_status_t s) { input_status = s; });
+  output_collection_->CheckBuffersAllocated([&output_status](zx_status_t s) { output_status = s; });
+  RunLoopUntil([&]() { return input_status.has_value() && output_status.has_value(); });
+  EXPECT_EQ(*input_status, ZX_OK);
+  EXPECT_EQ(*output_status, ZX_OK);
+  AssertNoChannelErrors();
+  EXPECT_FALSE(stream_error_.has_value());
+
+  // Buffers are A-OK after dropping decryptor_.
+
+  // ClearText decryptor just copies data across, and only one input packet was sent.
+  EXPECT_EQ(output_data_[0], input_data_[0]);
+}
+
 class SecureDecryptorAdapterTest : public DecryptorAdapterTest<FakeSecureDecryptorAdapter> {};
 
 TEST_F(SecureDecryptorAdapterTest, FailsToAcquireSecureBuffers) {
