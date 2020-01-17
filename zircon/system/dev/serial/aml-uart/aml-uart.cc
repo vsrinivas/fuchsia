@@ -34,28 +34,26 @@ constexpr auto kMinBaudRate = 2;
 
 zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
-  ddk::PDev pdev(parent);
+
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "AmlUart::Could not get composite protocol\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_device_t* components[1];
+  size_t component_count;
+  composite.GetComponents(components, fbl::count_of(components), &component_count);
+  // Only pdev component is required.
+  if (component_count < 1) {
+    zxlogf(ERROR, "AmlUart: Could not get components\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  ddk::PDev pdev(components[0]);
   if (!pdev.is_valid()) {
-    ddk::CompositeProtocolClient composite(parent);
-    if (!composite.is_valid()) {
-      zxlogf(ERROR, "AmlUart::Could not get composite protocol\n");
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_device_t* components[1];
-    size_t component_count;
-    composite.GetComponents(components, fbl::count_of(components), &component_count);
-    // Only pdev component is required.
-    if (component_count < 1) {
-      zxlogf(ERROR, "AmlUart: Could not get components\n");
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    pdev = components[0];
-    if (!pdev.is_valid()) {
-      zxlogf(ERROR, "AmlUart::Create: Could not get pdev\n");
-      return ZX_ERR_NO_RESOURCES;
-    }
+    zxlogf(ERROR, "AmlUart::Create: Could not get pdev\n");
+    return ZX_ERR_NO_RESOURCES;
   }
   pdev_protocol_t proto;
   pdev.GetProto(&proto);
@@ -473,19 +471,9 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace serial
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_uart, serial::driver_ops, "zircon", "0.1", 11)
-    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 0),
-    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PDEV, 1),
-    // Composite device support
-    BI_LABEL(0),
+ZIRCON_DRIVER_BEGIN(aml_uart, serial::driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_UART),
-    BI_ABORT(),
-    // Platform bus support
-    BI_LABEL(1),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_UART),
-    BI_ABORT(),
 ZIRCON_DRIVER_END(aml_uart)
     // clang-format on

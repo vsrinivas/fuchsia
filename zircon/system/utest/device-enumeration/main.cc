@@ -200,7 +200,6 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/nelson",
       "sys/platform/05:03:1/aml-axg-gpio",
       "nelson-buttons/hid-buttons",
-      "sys/platform/05:00:3/aml-uart",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/aml-gpu",
       "sys/platform/05:00:21/nelson-usb-phy",
