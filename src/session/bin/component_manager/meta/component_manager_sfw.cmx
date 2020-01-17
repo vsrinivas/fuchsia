@@ -18,7 +18,8 @@
             "fuchsia.sys.Loader",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input2.Keyboard",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.setui.SetUiService"
         ]
     }
 }

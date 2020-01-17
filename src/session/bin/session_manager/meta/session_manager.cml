@@ -78,5 +78,12 @@
                 "#session",
             ],
         },
+        {
+            protocol: "/svc/fuchsia.setui.SetUiService",
+            from: "realm",
+            to: [
+                "#session",
+            ],
+        },
     ],
 }
