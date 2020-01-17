@@ -137,6 +137,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
 
       plane_clipped_vertices = false;
       clipped_vertices.ClearAll();
+      clipped_vertices.SetSize(input_mesh.positions.size() * 2);
       reordered_indices.clear();
       new_edge_vertex_indices.clear();
     }
