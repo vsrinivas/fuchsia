@@ -8,7 +8,6 @@ import("//build/testing/environments.gni")
 
 source_set("cm_schema_json") {
   inputs = [
-    "cm_schema.json",
     "cml_schema.json",
     "cmx_schema.json",
   ]

@@ -32,7 +32,6 @@ rustc_binary("cmc") {
 
   non_rust_deps = [
     ":cmc_test_schemas",
-    "//garnet/lib/rust/cm_json:cm_schema_json",
   ]
 
   test_deps = [ "//src/lib/test_util" ]

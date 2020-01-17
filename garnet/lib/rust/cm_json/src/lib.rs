@@ -40,8 +40,6 @@ impl<'a> JsonSchema<'a> {
 }
 
 // Directly include schemas in the library. These are used to parse component manifests.
-pub const CM_SCHEMA: &JsonSchema<'_> =
-    &JsonSchema::new("cm_schema.json", include_str!("../cm_schema.json"));
 pub const CML_SCHEMA: &JsonSchema<'_> =
     &JsonSchema::new("cml_schema.json", include_str!("../cml_schema.json"));
 pub const CMX_SCHEMA: &JsonSchema<'_> =
