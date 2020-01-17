@@ -24,6 +24,6 @@ protocol NightMode {
 
 /// Settings related to Night mode.
 table NightModeSettings {
-    /// If true, the device is in Night mode.
-    1: bool night_mode_status;
+    /// If true, the device/user have opted in for NightMode routine.
+    1: bool night_mode_enabled;
 };

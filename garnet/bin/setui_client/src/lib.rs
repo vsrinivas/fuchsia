@@ -112,7 +112,7 @@ pub enum SettingClient {
     #[structopt(name = "night_mode")]
     NightMode {
         #[structopt(short, long)]
-        night_mode_status: Option<bool>,
+        night_mode_enabled: Option<bool>,
     },
 
     #[structopt(name = "privacy")]
@@ -289,10 +289,10 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                     .await?;
             println!("Intl: {}", output);
         }
-        SettingClient::NightMode { night_mode_status } => {
+        SettingClient::NightMode { night_mode_enabled } => {
             let night_mode_service = connect_to_service::<fidl_fuchsia_settings::NightModeMarker>()
                 .context("Failed to connect to night mode service")?;
-            let output = night_mode::command(night_mode_service, night_mode_status).await?;
+            let output = night_mode::command(night_mode_service, night_mode_enabled).await?;
             println!("NightMode: {}", output);
         }
         SettingClient::Accessibility(accessibility_options) => {

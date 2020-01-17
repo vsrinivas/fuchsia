@@ -180,7 +180,7 @@ async fn main() -> Result<(), Error> {
     println!("  client calls night mode watch");
     validate_night_mode(None).await?;
 
-    println!("  client calls set night_mode_status");
+    println!("  client calls set night_mode_enabled");
     validate_night_mode(Some(true)).await?;
 
     println!("  set() output");
@@ -638,12 +638,12 @@ async fn validate_dnd(
     Ok(())
 }
 
-async fn validate_night_mode(expected_night_mode_status: Option<bool>) -> Result<(), Error> {
+async fn validate_night_mode(expected_night_mode_enabled: Option<bool>) -> Result<(), Error> {
     let env = create_service!(
         Services::NightMode, NightModeRequest::Set { settings, responder, } => {
-            if let (Some(night_mode_status), Some(expected_night_mode_status_value)) =
-                (settings.night_mode_status, expected_night_mode_status) {
-                assert_eq!(night_mode_status, expected_night_mode_status_value);
+            if let (Some(night_mode_enabled), Some(expected_night_mode_enabled_value)) =
+                (settings.night_mode_enabled, expected_night_mode_enabled) {
+                assert_eq!(night_mode_enabled, expected_night_mode_enabled_value);
                 responder.send(&mut Ok(()))?;
             } else {
                 panic!("Unexpected call to set");
@@ -651,7 +651,7 @@ async fn validate_night_mode(expected_night_mode_status: Option<bool>) -> Result
         },
         NightModeRequest::Watch { responder } => {
             responder.send(NightModeSettings {
-                night_mode_status: Some(false),
+                night_mode_enabled: Some(false),
             })?;
         }
     );
@@ -660,19 +660,19 @@ async fn validate_night_mode(expected_night_mode_status: Option<bool>) -> Result
         .connect_to_service::<NightModeMarker>()
         .context("Failed to connect to night mode service")?;
 
-    night_mode::command(night_mode_service, expected_night_mode_status).await?;
+    night_mode::command(night_mode_service, expected_night_mode_enabled).await?;
 
     Ok(())
 }
 
-async fn validate_night_mode_set_output(expected_night_mode_status: bool) -> Result<(), Error> {
+async fn validate_night_mode_set_output(expected_night_mode_enabled: bool) -> Result<(), Error> {
     let env = create_service!(
         Services::NightMode, NightModeRequest::Set { settings: _, responder, } => {
             responder.send(&mut Ok(()))?;
         },
         NightModeRequest::Watch { responder } => {
             responder.send(NightModeSettings {
-                night_mode_status: Some(expected_night_mode_status),
+                night_mode_enabled: Some(expected_night_mode_enabled),
             })?;
         }
     );
@@ -681,18 +681,18 @@ async fn validate_night_mode_set_output(expected_night_mode_status: bool) -> Res
         .connect_to_service::<NightModeMarker>()
         .context("Failed to connect to night mode service")?;
 
-    let output = night_mode::command(night_mode_service, Some(expected_night_mode_status)).await?;
+    let output = night_mode::command(night_mode_service, Some(expected_night_mode_enabled)).await?;
 
     assert_eq!(
         output,
-        format!("Successfully set night_mode_status to {}", expected_night_mode_status)
+        format!("Successfully set night_mode_enabled to {}", expected_night_mode_enabled)
     );
 
     Ok(())
 }
 
 async fn validate_night_mode_watch_output(
-    expected_night_mode_status: Option<bool>,
+    expected_night_mode_enabled: Option<bool>,
 ) -> Result<(), Error> {
     let env = create_service!(
         Services::NightMode, NightModeRequest::Set { settings: _, responder, } => {
@@ -700,7 +700,7 @@ async fn validate_night_mode_watch_output(
         },
         NightModeRequest::Watch { responder } => {
             responder.send(NightModeSettings {
-                night_mode_status: expected_night_mode_status,
+                night_mode_enabled: expected_night_mode_enabled,
             })?;
         }
     );
@@ -714,7 +714,7 @@ async fn validate_night_mode_watch_output(
 
     assert_eq!(
         output,
-        format!("{:#?}", NightModeSettings { night_mode_status: expected_night_mode_status })
+        format!("{:#?}", NightModeSettings { night_mode_enabled: expected_night_mode_enabled })
     );
 
     Ok(())

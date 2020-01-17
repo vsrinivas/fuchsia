@@ -6,16 +6,16 @@ use {anyhow::Error, fidl_fuchsia_settings::*};
 
 pub async fn command(
     proxy: NightModeProxy,
-    night_mode_status: Option<bool>,
+    night_mode_enabled: Option<bool>,
 ) -> Result<String, Error> {
-    if let Some(night_mode_status_value) = night_mode_status {
+    if let Some(night_mode_enabled_value) = night_mode_enabled {
         let mut settings = NightModeSettings::empty();
-        settings.night_mode_status = Some(night_mode_status_value);
+        settings.night_mode_enabled = Some(night_mode_enabled_value);
 
         let mutate_result = proxy.set(settings).await?;
         match mutate_result {
             Ok(_) => {
-                Ok(format!("Successfully set night_mode_status to {}", night_mode_status_value))
+                Ok(format!("Successfully set night_mode_enabled to {}", night_mode_enabled_value))
             }
             Err(err) => Ok(format!("{:#?}", err)),
         }
