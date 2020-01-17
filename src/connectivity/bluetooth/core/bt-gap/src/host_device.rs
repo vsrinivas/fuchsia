@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::format_err,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth::DeviceClass,
     fidl_fuchsia_bluetooth::PeerId as FidlPeerId,
@@ -18,10 +19,10 @@ use {
         types::{BondingData, HostInfo, Peer, PeerId},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    futures::{future, Future, FutureExt, StreamExt},
+    futures::{Future, FutureExt, StreamExt},
     parking_lot::RwLock,
     pin_utils::pin_mut,
-    std::{collections::HashMap, convert::TryInto, path::PathBuf, str::FromStr, sync::Arc},
+    std::{collections::HashMap, convert::TryInto, path::PathBuf, sync::Arc},
 };
 
 use crate::types::{self, from_fidl_status, Error};
@@ -161,15 +162,24 @@ pub async fn refresh_host_info(host: Arc<RwLock<HostDevice>>) -> types::Result<(
     Ok(())
 }
 
-pub async fn watch_events<H: HostListener>(
+/// Monitors updates from a bt-host device and notifies `listener`. The returned Future represents
+/// a task that never ends in successful operation and only returns in case of a failure to
+/// communicate with the bt-host device.
+pub async fn watch_events<H: HostListener + Clone>(
     listener: H,
     host: Arc<RwLock<HostDevice>>,
 ) -> types::Result<()> {
-    let handle_fidl = handle_fidl_events(listener, host.clone());
+    let handle_fidl = handle_fidl_events(listener.clone(), host.clone());
+    let watch_peers = watch_peers(listener, host.clone());
     let watch_state = watch_state(host);
     pin_mut!(handle_fidl);
+    pin_mut!(watch_peers);
     pin_mut!(watch_state);
-    future::select(handle_fidl, watch_state).await.factor_first().0
+    futures::select! {
+        res1 = handle_fidl.fuse() => res1,
+        res2 = watch_peers.fuse() => res2,
+        res3 = watch_state.fuse() => res3,
+    }
 }
 
 async fn handle_fidl_events<H: HostListener>(
@@ -177,15 +187,8 @@ async fn handle_fidl_events<H: HostListener>(
     host: Arc<RwLock<HostDevice>>,
 ) -> types::Result<()> {
     let mut stream = host.read().host.take_event_stream();
-
     while let Some(event) = stream.next().await {
         match event? {
-            // TODO(613): Add integration test for this.
-            HostEvent::OnDeviceUpdated { device } => listener.on_peer_updated(device.try_into()?),
-            // TODO(814): Add integration test for this.
-            HostEvent::OnDeviceRemoved { identifier } => {
-                listener.on_peer_removed(PeerId::from_str(&identifier)?)
-            }
             HostEvent::OnNewBondingData { data } => {
                 fx_log_info!("Received bonding data");
                 let data: BondingData = match data.try_into() {
@@ -201,7 +204,23 @@ async fn handle_fidl_events<H: HostListener>(
             }
         };
     }
-    Ok(())
+    Err(types::Error::InternalError(format_err!("Host FIDL event stream terminated")))
+}
+
+async fn watch_peers<H: HostListener + Clone>(
+    mut listener: H,
+    host: Arc<RwLock<HostDevice>>,
+) -> types::Result<()> {
+    let proxy = host.read().host.clone();
+    loop {
+        let (updated, removed) = proxy.watch_peers().await?;
+        for peer in updated.into_iter() {
+            listener.on_peer_updated(peer.try_into()?);
+        }
+        for id in removed.into_iter() {
+            listener.on_peer_removed(id.into());
+        }
+    }
 }
 
 async fn watch_state(host: Arc<RwLock<HostDevice>>) -> types::Result<()> {

@@ -49,21 +49,20 @@ protocol Host {
     /// Assigns local data to this host.
     SetLocalData(fuchsia.bluetooth.control.HostData host_data);
 
-    /// Returns a list of all known connectable devices, included those that are
-    /// currently connected and/or bonded. This list does not include
-    /// non-connectable devices such as LE broadcasters.
+    /// Monitors updates for connectable peers known to the system. Replies only when
+    /// peers have been added, modified, or removed since the most recent call to WatchPeers().
     ///
-    /// Notes:
+    /// Peers are added and updated as new information is obtained during discovery, connection
+    /// establishment, and bonding procedures.
     ///
-    /// - When used in the GAP central role (BR/EDR or LE) the listed devices are
-    /// obtained during discovery and connection procedures. While in the
-    /// peripheral role, this will contain devices that have successfully initiated
-    /// connections to this host.
+    /// Peers are removed either:
+    ///   a. explicitly via [`fuchsia.bluetooth.host.Host/Forget`], or
+    ///   b. no transmission has been received from the peer for an internally determined duration
+    ///      of time and the peer is neither connected nor bonded.
     ///
-    /// - This list contains connectable devices that are discovered or connected
-    /// via other interfaces obtained using the interface request methods declared
-    /// above.
-    ListDevices() -> (vector<fuchsia.bluetooth.control.RemoteDevice> devices);
+    /// - response `updated` Peers that were added or updated since the last call to WatchPeers().
+    /// - response `removed` Ids of peers that were removed since the last call to WatchPeers().
+    WatchPeers() -> (vector<sys.Peer> updated, vector<bt.PeerId> removed);
 
     /// Sets the local name for this host device.
     SetLocalName(string local_name) -> (fuchsia.bluetooth.Status status);
@@ -72,16 +71,13 @@ protocol Host {
     SetDeviceClass(bt.DeviceClass device_class) -> (fuchsia.bluetooth.Status status);
 
     /// Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
-    /// devices will be reported via OnDeviceUpdated events.
+    /// peers can be monitored using the [`fuchsia.bluetooth.host/Host.WatchPeers`] method.
     ///
     /// On the LE transport, only general-discoverable and connectable peripherals will be reported.
     ///
     /// Discovery will continue until it is terminated via StopDiscovery() or if the Host protocol
     /// channel gets closed. If the device does not support BR/EDR, only LE discovery will be
     /// performed.
-    ///
-    /// An OnDeviceUpdated event will be sent when the discovery procedures are
-    /// started.
     StartDiscovery() -> (fuchsia.bluetooth.Status status);
 
     /// Terminates discovery if one was started via StartDiscovery().
@@ -135,9 +131,9 @@ protocol Host {
     /// enforced during service access.
     Pair(fuchsia.bluetooth.PeerId id, fuchsia.bluetooth.control.PairingOptions options) -> (fuchsia.bluetooth.Status status);
 
-    /// Deletes a peer from the Bluetooth host. If the peer is connected, it will be disconnected,
-    /// then OnDeviceUpdated will be sent. OnDeviceRemoved will be sent. `device_id` will no longer
-    /// refer to any peer, even if a device with the same address(es) is discovered again.
+    /// Deletes a peer from the Bluetooth host. If the peer is connected, it will be disconnected.
+    /// `device_id` will no longer refer to any peer, even if a device with the same address is
+    /// discovered again.
     ///
     /// Returns success after no peer exists that's identified by `device_id` (even if it didn't
     /// exist before Forget), failure if the peer specified by `device_id` could not be
@@ -170,11 +166,6 @@ protocol Host {
     AddBondedDevices(vector<fuchsia.bluetooth.control.BondingData> bonds) -> (fuchsia.bluetooth.Status status);
 
     // ===== Events =====
-
-    /// Events that are sent when a connectable device is added, updated, or
-    /// removed as a result of connection and discovery procedures.
-    -> OnDeviceUpdated(fuchsia.bluetooth.control.RemoteDevice device);
-    -> OnDeviceRemoved(string identifier);
 
     /// Notifies when bonding data for a device has been updated.
     -> OnNewBondingData(fuchsia.bluetooth.control.BondingData data);

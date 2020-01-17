@@ -7,7 +7,6 @@ use {
     fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters},
     fuchsia_bluetooth::{
         expectation::{
-            self,
             asynchronous::{ExpectableState, ExpectableStateExt},
             Predicate,
         },
@@ -17,7 +16,7 @@ use {
 };
 
 use crate::harness::control::{
-    activate_fake_host, control_expectation, control_timeout, ControlHarness, ControlState,
+    activate_fake_host, control_timeout, expectation, ControlHarness, ControlState,
     FAKE_HCI_ADDRESS,
 };
 
@@ -54,10 +53,7 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
         let fut = control.aux().set_active_adapter(host);
         fut.await?;
         control
-            .when_satisfied(
-                control_expectation::active_host_is(host.to_string()),
-                control_timeout(),
-            )
+            .when_satisfied(expectation::active_host_is(host.to_string()), control_timeout())
             .await?;
     }
 
@@ -65,9 +61,7 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
     fake_hci_1.destroy_and_wait().await?;
 
     for host in fake_hosts {
-        control
-            .when_satisfied(control_expectation::host_not_present(host), control_timeout())
-            .await?;
+        control.when_satisfied(expectation::host_not_present(host), control_timeout()).await?;
     }
 
     Ok(())
@@ -78,7 +72,6 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
 
     // Insert a fake peer to test connection and disconnection.
     let peer_address = Address::Random([1, 0, 0, 0, 0, 0]);
-    let peer_address_string = peer_address.to_string();
     let peer_params = LowEnergyPeerParameters {
         address: Some(peer_address.into()),
         connectable: Some(true),
@@ -98,7 +91,7 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
     fut.await?;
     let state = control
         .when_satisfied(
-            control_expectation::peer_exists(expectation::peer::address(&peer_address_string)),
+            expectation::peer_with_address(&peer_address.to_string()),
             control_timeout(),
         )
         .await?;
@@ -107,20 +100,16 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
     // verify the controller state here.
 
     // We can safely unwrap here as this is guarded by the previous expectation
-    let peer = state.peers.iter().find(|(_, d)| &d.address == &peer_address_string).unwrap().0;
+    let peer = state.peers.iter().find(|(_, p)| &p.address == &peer_address.to_string()).unwrap().0;
 
     let fut = control.aux().connect(peer);
     fut.await?;
 
-    control
-        .when_satisfied(control_expectation::peer_connected(peer, true), control_timeout())
-        .await?;
+    control.when_satisfied(expectation::peer_connected(peer, true), control_timeout()).await?;
     let fut = control.aux().disconnect(peer);
     fut.await?;
 
-    control
-        .when_satisfied(control_expectation::peer_connected(peer, false), control_timeout())
-        .await?;
+    control.when_satisfied(expectation::peer_connected(peer, false), control_timeout()).await?;
 
     hci.destroy_and_wait().await?;
     Ok(())

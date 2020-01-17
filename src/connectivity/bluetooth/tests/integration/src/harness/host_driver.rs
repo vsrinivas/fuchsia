@@ -3,28 +3,25 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth_control::RemoteDevice,
-    fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
+    anyhow::Error,
+    fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         constants::HOST_DEVICE_DIR,
         device_watcher::DeviceWatcher,
-        error::Error as BtError,
         expectation::{
             asynchronous::{ExpectableState, ExpectableStateExt, ExpectationHarness},
             Predicate,
         },
         hci_emulator::Emulator,
         host,
-        types::HostInfo,
-        util::clone_remote_device,
+        types::{HostInfo, Peer, PeerId},
     },
     fuchsia_zircon::{Duration, DurationNum},
     futures::{
         future::{self, BoxFuture},
-        FutureExt, TryFutureExt, TryStreamExt,
+        FutureExt, TryFutureExt,
     },
     parking_lot::MappedRwLockWriteGuard,
     std::{
@@ -45,22 +42,34 @@ pub fn timeout_duration() -> Duration {
     TIMEOUT_SECONDS.seconds()
 }
 
-pub fn expect_remote_device(
-    test_state: &HostDriverHarness,
-    address: &str,
-    expected: &Predicate<RemoteDevice>,
-) -> Result<(), Error> {
-    let state = test_state.read();
-    let peer = state
-        .peers
-        .values()
-        .find(|dev| dev.address == address)
-        .ok_or(BtError::new(&format!("Peer with address '{}' not found", address)))?;
-    expect_true!(expected.satisfied(peer))
+// Returns a Future that resolves when the state of any RemoteDevice matches `target`.
+pub async fn expect_peer(
+    host: &HostDriverHarness,
+    target: Predicate<Peer>,
+) -> Result<HostState, Error> {
+    let fut = host.when_satisfied(
+        Predicate::<HostState>::new(
+            move |host| host.peers.iter().any(|(_, p)| target.satisfied(&p)),
+            None,
+        ),
+        timeout_duration(),
+    );
+    fut.await
+}
+
+pub async fn expect_host_state(
+    host: &HostDriverHarness,
+    target: Predicate<HostInfo>,
+) -> Result<HostState, Error> {
+    let fut = host.when_satisfied(
+        Predicate::<HostState>::new(move |host| target.satisfied(&host.host_info), None),
+        timeout_duration(),
+    );
+    fut.await
 }
 
 // Returns a future that resolves when a peer matching `id` is not present on the host.
-pub async fn expect_no_peer(host: &HostDriverHarness, id: String) -> Result<(), Error> {
+pub async fn expect_no_peer(host: &HostDriverHarness, id: PeerId) -> Result<(), Error> {
     let fut = host.when_satisfied(
         Predicate::<HostState>::new(move |host| host.peers.iter().all(|(i, _)| i != &id), None),
         timeout_duration(),
@@ -79,7 +88,13 @@ pub struct HostState {
     host_info: HostInfo,
 
     // All known remote devices, indexed by their identifiers.
-    peers: HashMap<String, RemoteDevice>,
+    peers: HashMap<PeerId, Peer>,
+}
+
+impl HostState {
+    pub fn peers(&self) -> &HashMap<PeerId, Peer> {
+        &self.peers
+    }
 }
 
 impl Clone for HostState {
@@ -88,7 +103,7 @@ impl Clone for HostState {
             emulator_state: self.emulator_state.clone(),
             host_path: self.host_path.clone(),
             host_info: self.host_info.clone(),
-            peers: self.peers.iter().map(|(k, v)| (k.clone(), clone_remote_device(v))).collect(),
+            peers: self.peers.clone(),
         }
     }
 }
@@ -115,18 +130,18 @@ impl TestHarness for HostDriverHarness {
     fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let (harness, emulator) = new_host_harness().await?;
-            let host_events = handle_host_events(harness.clone())
-                .map_err(|e| e.context("Error handling host events"))
-                .err_into();
-            let watch_state = watch_host_state(harness.clone())
+            let watch_info = watch_host_info(harness.clone())
                 .map_err(|e| e.context("Error watching host state"))
                 .err_into();
-            let watch_cp = watch_controller_parameters(harness.clone())
+            let watch_peers = watch_peers(harness.clone())
+                .map_err(|e| e.context("Error watching peers"))
+                .err_into();
+            let watch_emulator_params = watch_controller_parameters(harness.clone())
                 .map_err(|e| e.context("Error watching controller parameters"))
                 .err_into();
             let path = harness.read().host_path;
 
-            let run = future::try_join3(host_events, watch_state, watch_cp)
+            let run = future::try_join3(watch_info, watch_peers, watch_emulator_params)
                 .map_ok(|((), (), ())| ())
                 .boxed();
             Ok((harness, (path, emulator), run))
@@ -178,56 +193,23 @@ async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
     Ok((harness, emulator))
 }
 
-// Returns a Future that resolves when the state of any RemoteDevice matches `target`.
-pub async fn expect_host_peer(
-    host: &HostDriverHarness,
-    target: Predicate<RemoteDevice>,
-) -> Result<HostState, Error> {
-    let fut = host.when_satisfied(
-        Predicate::<HostState>::new(
-            move |host| host.peers.iter().any(|(_, p)| target.satisfied(p)),
-            None,
-        ),
-        timeout_duration(),
-    );
-    fut.await
-}
-
-pub async fn expect_host_state(
-    host: &HostDriverHarness,
-    target: Predicate<HostInfo>,
-) -> Result<HostState, Error> {
-    let fut = host.when_satisfied(
-        Predicate::<HostState>::new(move |host| target.satisfied(&host.host_info), None),
-        timeout_duration(),
-    );
-    fut.await
-}
-
-// Returns a Future that handles Host interface events.
-async fn handle_host_events(harness: HostDriverHarness) -> Result<(), Error> {
-    let mut events = harness.aux().proxy().take_event_stream();
-
-    while let Some(e) = events.try_next().await? {
-        match e {
-            HostEvent::OnDeviceUpdated { device } => {
-                harness.write_state().peers.insert(device.identifier.clone(), device);
-            }
-            HostEvent::OnDeviceRemoved { identifier } => {
-                harness.write_state().peers.remove(&identifier);
-            }
-            // TODO(armansito): handle other events
-            e => {
-                eprintln!("Unhandled event: {:?}", e);
-            }
+async fn watch_peers(harness: HostDriverHarness) -> Result<(), Error> {
+    loop {
+        // Clone the proxy so that the aux() lock is not held while waiting.
+        let proxy = harness.aux().proxy().clone();
+        let (updated, removed) = proxy.watch_peers().await?;
+        for peer in updated.into_iter() {
+            let peer: Peer = peer.try_into()?;
+            harness.write_state().peers.insert(peer.id.clone(), peer);
+            harness.notify_state_changed();
         }
-        harness.notify_state_changed();
+        for id in removed.into_iter() {
+            harness.write_state().peers.remove(&id.into());
+        }
     }
-
-    Ok(())
 }
 
-async fn watch_host_state(harness: HostDriverHarness) -> Result<(), Error> {
+async fn watch_host_info(harness: HostDriverHarness) -> Result<(), Error> {
     loop {
         let proxy = harness.aux().proxy().clone();
         let info = proxy.watch_state().await?;

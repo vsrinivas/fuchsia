@@ -72,43 +72,41 @@ impl<T: 'static> Predicate<T> {
 /// Expectations for Bluetooth Peers (i.e. Remote Devices)
 pub mod peer {
     use super::Predicate;
-    use fidl_fuchsia_bluetooth_control::{RemoteDevice, TechnologyType};
+    use {
+        crate::types::{Address, Peer, PeerId},
+        fidl_fuchsia_bluetooth_sys::TechnologyType,
+    };
 
-    pub fn name(expected_name: &str) -> Predicate<RemoteDevice> {
-        let name = Some(expected_name.to_string());
-        Predicate::<RemoteDevice>::new(
-            move |peer| peer.name == name,
-            Some(&format!("name == {}", expected_name)),
+    pub fn name(name: &str) -> Predicate<Peer> {
+        let name_owned = Some(name.to_string());
+        Predicate::<Peer>::new(
+            move |peer| peer.name == name_owned,
+            Some(&format!("name == {}", name)),
         )
     }
-    pub fn identifier(expected_ident: &str) -> Predicate<RemoteDevice> {
-        let identifier = expected_ident.to_string();
-        Predicate::<RemoteDevice>::new(
-            move |peer| peer.identifier == identifier,
-            Some(&format!("identifier == {}", expected_ident)),
-        )
+    pub fn identifier(id: PeerId) -> Predicate<Peer> {
+        Predicate::<Peer>::new(move |peer| peer.id == id, Some(&format!("peer id == {}", id)))
     }
-    pub fn address(expected_address: &str) -> Predicate<RemoteDevice> {
-        let address = expected_address.to_string();
-        Predicate::<RemoteDevice>::new(
+    pub fn address(address: Address) -> Predicate<Peer> {
+        Predicate::<Peer>::new(
             move |peer| peer.address == address,
-            Some(&format!("address == {}", expected_address)),
+            Some(&format!("address == {}", address)),
         )
     }
-    pub fn technology(tech: TechnologyType) -> Predicate<RemoteDevice> {
-        Predicate::<RemoteDevice>::new(
+    pub fn technology(tech: TechnologyType) -> Predicate<Peer> {
+        Predicate::<Peer>::new(
             move |peer| peer.technology == tech,
             Some(&format!("technology == {:?}", tech)),
         )
     }
-    pub fn connected(connected: bool) -> Predicate<RemoteDevice> {
-        Predicate::<RemoteDevice>::new(
+    pub fn connected(connected: bool) -> Predicate<Peer> {
+        Predicate::<Peer>::new(
             move |peer| peer.connected == connected,
             Some(&format!("connected == {}", connected)),
         )
     }
-    pub fn bonded(bonded: bool) -> Predicate<RemoteDevice> {
-        Predicate::<RemoteDevice>::new(
+    pub fn bonded(bonded: bool) -> Predicate<Peer> {
+        Predicate::<Peer>::new(
             move |peer| peer.bonded == bonded,
             Some(&format!("bonded == {}", bonded)),
         )
@@ -143,56 +141,57 @@ pub mod host_driver {
 
 #[cfg(test)]
 mod test {
-    use crate::expectation::*;
-    use fidl_fuchsia_bluetooth_control::{Appearance, RemoteDevice, TechnologyType};
+    use crate::{
+        expectation::*,
+        types::{Address, Peer, PeerId},
+    };
+    use fidl_fuchsia_bluetooth_sys::TechnologyType;
 
     const TEST_PEER_NAME: &'static str = "TestPeer";
-    const TEST_PEER_ADDRESS: &'static str = "00:00:00:00:00:01";
+    const TEST_PEER_ADDRESS: Address = Address::Public([1, 0, 0, 0, 0, 0]);
     const INCORRECT_PEER_NAME: &'static str = "IncorrectPeer";
-    const INCORRECT_PEER_ADDRESS: &'static str = "00:00:00:00:00:02";
+    const INCORRECT_PEER_ADDRESS: Address = Address::Public([2, 0, 0, 0, 0, 0]);
 
-    fn correct_name() -> Predicate<RemoteDevice> {
+    fn correct_name() -> Predicate<Peer> {
         peer::name(TEST_PEER_NAME)
     }
-    fn incorrect_name() -> Predicate<RemoteDevice> {
+    fn incorrect_name() -> Predicate<Peer> {
         peer::name(INCORRECT_PEER_NAME)
     }
-    fn correct_address() -> Predicate<RemoteDevice> {
+    fn correct_address() -> Predicate<Peer> {
         peer::address(TEST_PEER_ADDRESS)
     }
-    fn incorrect_address() -> Predicate<RemoteDevice> {
+    fn incorrect_address() -> Predicate<Peer> {
         peer::address(INCORRECT_PEER_ADDRESS)
     }
 
-    fn test_peer() -> RemoteDevice {
-        RemoteDevice {
-            name: Some(TEST_PEER_NAME.into()),
-            address: TEST_PEER_ADDRESS.into(),
+    fn test_peer() -> Peer {
+        Peer {
+            id: PeerId(1),
+            address: TEST_PEER_ADDRESS,
             technology: TechnologyType::LowEnergy,
             connected: false,
             bonded: false,
-            appearance: Appearance::Unknown,
-            identifier: "".into(),
+            name: Some(TEST_PEER_NAME.into()),
+            appearance: None,
+            device_class: None,
             rssi: None,
             tx_power: None,
-            service_uuids: vec![],
+            services: vec![],
         }
     }
 
     #[test]
     fn simple_predicate_succeeds() {
-        let predicate = Predicate::<RemoteDevice>::new(
-            move |peer| peer.name == Some(TEST_PEER_NAME.into()),
-            None,
-        );
+        let predicate =
+            Predicate::<Peer>::new(move |peer| peer.name == Some(TEST_PEER_NAME.into()), None);
         assert!(predicate.satisfied(&test_peer()));
     }
+
     #[test]
-    fn simple_incorrect_predicate_error() {
-        let predicate = Predicate::<RemoteDevice>::new(
-            move |peer| peer.name == Some("INCORRECT_NAME".into()),
-            None,
-        );
+    fn simple_incorrect_predicate_fails() {
+        let predicate =
+            Predicate::<Peer>::new(move |peer| peer.name == Some("INCORRECT_NAME".into()), None);
         assert!(!predicate.satisfied(&test_peer()));
     }
 

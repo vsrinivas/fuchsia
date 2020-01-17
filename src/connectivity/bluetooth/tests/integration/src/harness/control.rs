@@ -113,10 +113,10 @@ impl TestHarness for ControlHarness {
     }
 }
 
-pub mod control_expectation {
+pub mod expectation {
     use crate::harness::control::ControlState;
     use fidl_fuchsia_bluetooth_control::RemoteDevice;
-    use fuchsia_bluetooth::expectation::{peer, Predicate};
+    use fuchsia_bluetooth::expectation::Predicate;
 
     pub fn active_host_is(id: String) -> Predicate<ControlState> {
         let msg = format!("active bt-host is {}", id);
@@ -132,16 +132,47 @@ pub mod control_expectation {
         Predicate::new(move |state: &ControlState| !state.hosts.contains_key(&id), Some(&msg))
     }
 
-    pub fn peer_exists(p: Predicate<RemoteDevice>) -> Predicate<ControlState> {
-        let msg = format!("Peer exists satisfying {}", p.describe());
-        Predicate::new(
-            move |state: &ControlState| state.peers.iter().any(|(_, d)| p.satisfied(d)),
-            Some(&msg),
-        )
+    mod peer {
+        use super::*;
+
+        pub(crate) fn exists(p: Predicate<RemoteDevice>) -> Predicate<ControlState> {
+            let msg = format!("peer exists satisfying {}", p.describe());
+            Predicate::new(
+                move |state: &ControlState| state.peers.iter().any(|(_, d)| p.satisfied(d)),
+                Some(&msg),
+            )
+        }
+
+        pub(crate) fn with_identifier(id: &str) -> Predicate<RemoteDevice> {
+            let id_owned = id.to_string();
+            Predicate::<RemoteDevice>::new(
+                move |d| d.identifier == id_owned,
+                Some(&format!("identifier == {}", id)),
+            )
+        }
+
+        pub(crate) fn with_address(address: &str) -> Predicate<RemoteDevice> {
+            let addr_owned = address.to_string();
+            Predicate::<RemoteDevice>::new(
+                move |d| d.address == addr_owned,
+                Some(&format!("address == {}", address)),
+            )
+        }
+
+        pub(crate) fn connected(connected: bool) -> Predicate<RemoteDevice> {
+            Predicate::<RemoteDevice>::new(
+                move |d| d.connected == connected,
+                Some(&format!("connected == {}", connected)),
+            )
+        }
     }
 
     pub fn peer_connected(id: &str, connected: bool) -> Predicate<ControlState> {
-        peer_exists(peer::identifier(id).and(peer::connected(connected)))
+        peer::exists(peer::with_identifier(id).and(peer::connected(connected)))
+    }
+
+    pub fn peer_with_address(address: &str) -> Predicate<ControlState> {
+        peer::exists(peer::with_address(address))
     }
 }
 
@@ -193,9 +224,7 @@ pub async fn activate_fake_host(
 
     let fut = control.aux().set_active_adapter(&host);
     fut.await?;
-    control
-        .when_satisfied(control_expectation::active_host_is(host.clone()), control_timeout())
-        .await?;
+    control.when_satisfied(expectation::active_host_is(host.clone()), control_timeout()).await?;
     Ok((host, hci))
 }
 
@@ -219,10 +248,7 @@ impl ActivatedFakeHost {
 
         // Wait for BT-GAP to unregister the associated fake host
         self.control
-            .when_satisfied(
-                control_expectation::host_not_present(self.host.clone()),
-                control_timeout(),
-            )
+            .when_satisfied(expectation::host_not_present(self.host.clone()), control_timeout())
             .await?;
         Ok(())
     }

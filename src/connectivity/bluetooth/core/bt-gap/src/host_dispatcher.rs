@@ -684,11 +684,8 @@ impl HostDispatcher {
             .map_err(|e| e.as_failure())?;
 
         // Assign the name that is currently assigned to the HostDispatcher as the local name.
-        host_device
-            .read()
-            .set_name(self.state.read().name.clone())
-            .await
-            .map_err(|e| e.as_failure())?;
+        let fut = host_device.read().set_name(self.state.read().name.clone());
+        fut.await.map_err(|e| e.as_failure())?;
 
         let (gatt_server_proxy, remote_gatt_server) = fidl::endpoints::create_proxy()?;
         host_device.read().get_host().request_gatt_server_(remote_gatt_server)?;
@@ -698,11 +695,8 @@ impl HostDispatcher {
         host_device.read().enable_privacy(true).map_err(|e| e.as_failure())?;
 
         // TODO(845): Only the active host should be made connectable and scanning in the background.
-        host_device
-            .read()
-            .set_connectable(true)
-            .await
-            .map_err(|_| format_err!("failed to set connectable"))?;
+        let fut = host_device.read().set_connectable(true);
+        fut.await.map_err(|_| format_err!("failed to set connectable"))?;
         host_device
             .read()
             .enable_background_scan(true)
@@ -719,6 +713,8 @@ impl HostDispatcher {
         fasync::spawn(host_device::watch_events(self.clone(), host_device.clone()).map(|r| {
             r.unwrap_or_else(|err| {
                 fx_log_warn!("Error handling host event: {:?}", err);
+                // TODO(fxb/44180): This should probably remove the bt-host since termination of the
+                // `watch_events` task indicates that it no longer functions properly.
             })
         }));
 

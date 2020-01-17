@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_bluetooth::{DeviceClass, MAJOR_DEVICE_CLASS_TOY},
-    fidl_fuchsia_bluetooth_control::TechnologyType,
     fidl_fuchsia_bluetooth_host::HostProxy,
+    fidl_fuchsia_bluetooth_sys::TechnologyType,
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciError, PeerProxy},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
@@ -15,18 +15,17 @@ use {
         expectation::{self, asynchronous::ExpectableStateExt, peer},
         hci_emulator::Emulator,
         host,
-        types::{Address, HostInfo},
+        types::{Address, HostInfo, PeerId},
     },
     fuchsia_zircon as zx,
     std::{convert::TryInto, path::PathBuf},
 };
 
 use crate::harness::{
-    emulator,
+    emulator::{self, EmulatorHarness},
     expect::expect_eq,
     host_driver::{
-        expect_host_peer, expect_host_state, expect_no_peer, expect_remote_device,
-        timeout_duration, HostDriverHarness,
+        expect_host_state, expect_no_peer, expect_peer, timeout_duration, HostDriverHarness,
     },
 };
 
@@ -70,37 +69,37 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
 }
 
 // Tests that the bt-host driver assigns the local name to "fuchsia" when initialized.
-async fn test_default_local_name(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_default_local_name(harness: HostDriverHarness) -> Result<(), Error> {
     const NAME: &str = "fuchsia";
-    let _ = test_state
+    let _ = harness
         .when_satisfied(emulator::expectation::local_name_is(NAME), timeout_duration())
         .await?;
-    let fut = expect_host_state(&test_state, expectation::host_driver::name(NAME));
+    let fut = expect_host_state(&harness, expectation::host_driver::name(NAME));
     fut.await?;
     Ok(())
 }
 
 // Tests that the local name assigned to a bt-host is reflected in `AdapterState` and propagated
 // down to the controller.
-async fn test_set_local_name(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_set_local_name(harness: HostDriverHarness) -> Result<(), Error> {
     const NAME: &str = "test1234";
-    let fut = test_state.aux().proxy().set_local_name(NAME);
+    let fut = harness.aux().proxy().set_local_name(NAME);
     fut.await?;
-    let _ = test_state
+    let _ = harness
         .when_satisfied(emulator::expectation::local_name_is(NAME), timeout_duration())
         .await?;
-    let fut = expect_host_state(&test_state, expectation::host_driver::name(NAME));
+    let fut = expect_host_state(&harness, expectation::host_driver::name(NAME));
     fut.await?;
 
     Ok(())
 }
 
 // Tests that the device class assigned to a bt-host gets propagated down to the controller.
-async fn test_set_device_class(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_set_device_class(harness: HostDriverHarness) -> Result<(), Error> {
     let mut device_class = DeviceClass { value: MAJOR_DEVICE_CLASS_TOY + 4 };
-    let fut = test_state.aux().proxy().set_device_class(&mut device_class);
+    let fut = harness.aux().proxy().set_device_class(&mut device_class);
     fut.await?;
-    let _ = test_state
+    let _ = harness
         .when_satisfied(emulator::expectation::device_class_is(device_class), timeout_duration())
         .await?;
     Ok(())
@@ -108,244 +107,240 @@ async fn test_set_device_class(test_state: HostDriverHarness) -> Result<(), Erro
 
 // Tests that host state updates when discoverable mode is turned on.
 // TODO(armansito): Test for FakeHciDevice state changes.
-async fn test_discoverable(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_discoverable(harness: HostDriverHarness) -> Result<(), Error> {
     // Enable discoverable mode.
-    let fut = test_state.aux().proxy().set_discoverable(true);
+    let fut = harness.aux().proxy().set_discoverable(true);
     fut.await?;
-    expect_host_state(&test_state, expectation::host_driver::discoverable(true)).await?;
+    expect_host_state(&harness, expectation::host_driver::discoverable(true)).await?;
 
     // Disable discoverable mode
-    let fut = test_state.aux().proxy().set_discoverable(false);
+    let fut = harness.aux().proxy().set_discoverable(false);
     fut.await?;
-    expect_host_state(&test_state, expectation::host_driver::discoverable(false)).await?;
+    expect_host_state(&harness, expectation::host_driver::discoverable(false)).await?;
 
     Ok(())
 }
 
 // Tests that host state updates when discovery is started and stopped.
 // TODO(armansito): Test for FakeHciDevice state changes.
-async fn test_discovery(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_discovery(harness: HostDriverHarness) -> Result<(), Error> {
     // Start discovery. "discovering" should get set to true.
-    let fut = test_state.aux().proxy().start_discovery();
+    let fut = harness.aux().proxy().start_discovery();
     fut.await?;
-    expect_host_state(&test_state, expectation::host_driver::discovering(true)).await?;
+    expect_host_state(&harness, expectation::host_driver::discovering(true)).await?;
 
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
-    let fut = test_state.aux().add_le_peer_default(&address);
+    let fut = harness.aux().add_le_peer_default(&address);
     let _peer = fut.await?;
 
     // The host should discover a fake peer.
-    expect_host_peer(&test_state, peer::name("Fake").and(peer::address(&address.to_string())))
-        .await?;
+    expect_peer(&harness, peer::name("Fake").and(peer::address(address))).await?;
 
     // Stop discovery. "discovering" should get set to false.
-    let fut = test_state.aux().proxy().stop_discovery();
+    let fut = harness.aux().proxy().stop_discovery();
     fut.await?;
-    expect_host_state(&test_state, expectation::host_driver::discovering(false)).await?;
+    expect_host_state(&harness, expectation::host_driver::discovering(false)).await?;
 
     Ok(())
 }
 
 // Tests that "close" cancels all operations.
 // TODO(armansito): Test for FakeHciDevice state changes.
-async fn test_close(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_close(harness: HostDriverHarness) -> Result<(), Error> {
     // Enable all procedures.
-    let fut = test_state.aux().proxy().start_discovery();
+    let fut = harness.aux().proxy().start_discovery();
     fut.await?;
-    let fut = test_state.aux().proxy().set_discoverable(true);
+    let fut = harness.aux().proxy().set_discoverable(true);
     fut.await?;
     let active_state = expectation::host_driver::discoverable(true)
         .and(expectation::host_driver::discovering(true));
-    expect_host_state(&test_state, active_state).await?;
+    expect_host_state(&harness, active_state).await?;
 
     // Close should cancel these procedures.
-    test_state.aux().proxy().close()?;
+    harness.aux().proxy().close()?;
 
     let closed_state_update = expectation::host_driver::discoverable(false)
         .and(expectation::host_driver::discovering(false));
 
-    expect_host_state(&test_state, closed_state_update).await?;
+    expect_host_state(&harness, closed_state_update).await?;
 
     Ok(())
 }
 
-// Tests that "list_devices" returns devices from a host's cache.
-async fn test_list_devices(test_state: HostDriverHarness) -> Result<(), Error> {
-    // Devices should be initially empty.
-    let fut = test_state.aux().proxy().list_devices();
-    let devices = fut.await?;
-    expect_eq!(vec![], devices)?;
+async fn test_watch_peers(harness: HostDriverHarness) -> Result<(), Error> {
+    // `HostDriverHarness` internally calls `Host.WatchPeers()` to monitor peers and satisfy peer
+    // expectations. `harness.peers()` represents the local cache monitored using this method.
+    // Peers should be initially empty.
+    expect_eq!(0, harness.state().peers().len())?;
+
+    // Calling `Host.WatchPeers()` directly will hang since the harness already calls this
+    // internally. We issue our own request and verify that it gets satisfied later.
 
     // Add a LE and a BR/EDR peer with the given addresses.
     let le_peer_address = Address::Random([1, 0, 0, 0, 0, 0]);
     let bredr_peer_address = Address::Public([2, 0, 0, 0, 0, 0]);
 
-    let fut = test_state.aux().add_le_peer_default(&le_peer_address);
+    let fut = harness.aux().add_le_peer_default(&le_peer_address);
     let _le_peer = fut.await?;
-    let fut = test_state.aux().add_bredr_peer_default(&bredr_peer_address);
+    let fut = harness.aux().add_bredr_peer_default(&bredr_peer_address);
     let _bredr_peer = fut.await?;
 
+    // At this stage the fake peers are registered with the emulator but bt-host does not know about
+    // them yet. Check that `watch_fut` is still unsatisfied.
+    expect_eq!(0, harness.state().peers().len())?;
+
     // Wait for all fake devices to be discovered.
-    let fut = test_state.aux().proxy().start_discovery();
-    fut.await?;
-    let expected_le = peer::address(&le_peer_address.to_string())
-        .and(peer::technology(TechnologyType::LowEnergy));
-    let expected_bredr = peer::address(&bredr_peer_address.to_string())
-        .and(peer::technology(TechnologyType::Classic));
+    let proxy = harness.aux().proxy().clone();
+    let _ = proxy.start_discovery().await?;
+    let expected_le =
+        peer::address(le_peer_address).and(peer::technology(TechnologyType::LowEnergy));
+    let expected_bredr =
+        peer::address(bredr_peer_address).and(peer::technology(TechnologyType::Classic));
 
-    expect_host_peer(&test_state, expected_le.clone()).await?;
-    expect_host_peer(&test_state, expected_bredr.clone()).await?;
+    expect_peer(&harness, expected_le).await?;
+    expect_peer(&harness, expected_bredr).await?;
+    expect_eq!(2, harness.state().peers().len())?;
 
-    // List the host's devices
-    let fut = test_state.aux().proxy().list_devices();
-    let devices = fut.await?;
-
-    // Both fake devices should be in the map.
-    expect_eq!(2, devices.len())?;
-    expect_remote_device(&test_state, &le_peer_address.to_string(), &expected_le)?;
-    expect_remote_device(&test_state, &bredr_peer_address.to_string(), &expected_bredr)?;
     Ok(())
 }
 
-async fn test_connect(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_connect(harness: HostDriverHarness) -> Result<(), Error> {
     let address1 = Address::Random([1, 0, 0, 0, 0, 0]);
     let address2 = Address::Random([2, 0, 0, 0, 0, 0]);
-    let fut = test_state.aux().add_le_peer_default(&address1);
+    let fut = harness.aux().add_le_peer_default(&address1);
     let _peer1 = fut.await?;
-    let fut = test_state.aux().add_le_peer_default(&address2);
+    let fut = harness.aux().add_le_peer_default(&address2);
     let peer2 = fut.await?;
 
     // Configure `peer2` to return an error for the connection attempt.
     let _ = peer2.assign_connection_status(HciError::ConnectionTimeout).await?;
 
     // Start discovery and let bt-host process the fake devices.
-    let fut = test_state.aux().proxy().start_discovery();
+    let fut = harness.aux().proxy().start_discovery();
     fut.await?;
 
-    let le_dev = peer::address(&address1.to_string());
-    let le_error_dev = peer::address(&address2.to_string());
+    expect_peer(&harness, peer::address(address1)).await?;
+    expect_peer(&harness, peer::address(address2)).await?;
 
-    expect_host_peer(&test_state, le_dev).await?;
-    expect_host_peer(&test_state, le_error_dev).await?;
-
-    let fut = test_state.aux().proxy().list_devices();
-    let devices = fut.await?;
-    expect_true!(devices.len() >= 2)?;
+    let peers = harness.state().peers().clone();
+    expect_eq!(2, peers.len())?;
 
     // Obtain bt-host assigned IDs of the devices.
-    let success_dev = devices
+    let success_id = peers
         .iter()
-        .find(|x| x.address == address1.to_string())
-        .ok_or(format_err!("success peer not found"))?;
-    let failure_dev = devices
+        .find(|x| x.1.address == address1)
+        .ok_or(format_err!("success peer not found"))?
+        .0;
+    let failure_id = peers
         .iter()
-        .find(|x| x.address == address2.to_string())
-        .ok_or(format_err!("error peer not found"))?;
+        .find(|x| x.1.address == address2)
+        .ok_or(format_err!("error peer not found"))?
+        .0;
 
     // Connecting to the failure peer should result in an error.
-    let fut = test_state.aux().proxy().connect(&failure_dev.identifier);
+    let fut = harness.aux().proxy().connect(&failure_id.to_string());
     let status = fut.await?;
     expect_true!(status.error.is_some())?;
 
     // Connecting to the success peer should return success and the peer should become connected.
-    let fut = test_state.aux().proxy().connect(&success_dev.identifier);
+    let fut = harness.aux().proxy().connect(&success_id.to_string());
     let status = fut.await?;
     expect_true!(status.error.is_none())?;
 
-    let connected = peer::identifier(&success_dev.identifier).and(peer::connected(true));
-    expect_host_peer(&test_state, connected).await?;
+    let connected = peer::identifier(*success_id).and(peer::connected(true));
+    expect_peer(&harness, connected).await?;
     Ok(())
 }
 
-async fn wait_for_test_device(
-    test_state: HostDriverHarness,
+async fn wait_for_test_peer(
+    harness: HostDriverHarness,
     address: &Address,
-) -> Result<(String, PeerProxy), Error> {
-    let fut = test_state.aux().add_le_peer_default(&address);
-    let peer = fut.await?;
+) -> Result<(PeerId, PeerProxy), Error> {
+    let fut = harness.aux().add_le_peer_default(&address);
+    let proxy = fut.await?;
 
     // Start discovery and let bt-host process the fake LE peer.
-    let fut = test_state.aux().proxy().start_discovery();
+    let fut = harness.aux().proxy().start_discovery();
     fut.await?;
-    let le_dev = expectation::peer::address(&address.to_string());
-    expect_host_peer(&test_state, le_dev).await?;
-    let fut = test_state.aux().proxy().list_devices();
-    let devices = fut.await?;
-    expect_true!(devices.len() == 1)?;
+    let le_dev = expectation::peer::address(address.clone());
+    expect_peer(&harness, le_dev).await?;
 
-    // Obtain bt-host assigned IDs of the device.
-    let success_dev = devices
+    let peer_id = harness
+        .state()
+        .peers()
         .iter()
-        .find(|x| x.address == address.to_string())
-        .ok_or(format_err!("success peer not found"))?;
-
-    Ok((success_dev.identifier.clone(), peer))
+        .find(|(_, p)| p.address == *address)
+        .ok_or(format_err!("could not find peer with address: {}", address))?
+        .0
+        .clone();
+    Ok((peer_id, proxy))
 }
 
 // TODO(BT-932) - Add a test for disconnect failure when a connection attempt is outgoing, provided
 // that we can provide a manner of doing so that will not flake.
 
 /// Disconnecting from an unknown device should succeed
-async fn test_disconnect_unknown_device(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_disconnect_unknown_device(harness: HostDriverHarness) -> Result<(), Error> {
     let unknown_id = "0123401234";
-    let fut = test_state.aux().proxy().disconnect(unknown_id);
+    let fut = harness.aux().proxy().disconnect(unknown_id);
     let status = fut.await?;
     expect_eq!(status.error, None)
 }
 
 /// Disconnecting from a known, unconnected device should succeed
-async fn test_disconnect_unconnected_device(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_disconnect_unconnected_device(harness: HostDriverHarness) -> Result<(), Error> {
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
-    let (success_dev, _proxy) = wait_for_test_device(test_state.clone(), &address).await?;
-    let fut = test_state.aux().proxy().disconnect(&success_dev);
+    let (success_dev, _proxy) = wait_for_test_peer(harness.clone(), &address).await?;
+    let fut = harness.aux().proxy().disconnect(&success_dev.to_string());
     let status = fut.await?;
     expect_eq!(status.error, None)
 }
 
 /// Disconnecting from a connected device should succeed and result in the device being disconnected
-async fn test_disconnect_connected_device(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_disconnect_connected_device(harness: HostDriverHarness) -> Result<(), Error> {
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
-    let (success_dev, _proxy) = wait_for_test_device(test_state.clone(), &address).await?;
+    let (success_dev, _proxy) = wait_for_test_peer(harness.clone(), &address).await?;
+    let success_dev = success_dev.to_string();
 
-    let fut = test_state.aux().proxy().connect(&success_dev);
+    let fut = harness.aux().proxy().connect(&success_dev);
     let status = fut.await?;
     expect_eq!(status.error, None)?;
 
-    let connected = peer::address(&address.to_string()).and(peer::connected(true));
-    let disconnected = peer::address(&address.to_string()).and(peer::connected(false));
+    let connected = peer::address(address).and(peer::connected(true));
+    let disconnected = peer::address(address).and(peer::connected(false));
 
-    let _ = expect_host_peer(&test_state, connected).await?;
-    let fut = test_state.aux().proxy().disconnect(&success_dev);
+    let _ = expect_peer(&harness, connected).await?;
+    let fut = harness.aux().proxy().disconnect(&success_dev);
     let status = fut.await?;
     expect_eq!(status.error, None)?;
-    let _ = expect_host_peer(&test_state, disconnected).await?;
+    let _ = expect_peer(&harness, disconnected).await?;
     Ok(())
 }
 
-async fn test_forget(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_forget(harness: HostDriverHarness) -> Result<(), Error> {
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
-    let (le_peer, _proxy) = wait_for_test_device(test_state.clone(), &address).await?;
+    let (le_peer, _proxy) = wait_for_test_peer(harness.clone(), &address).await?;
 
     // Start discovery and let bt-host process the fake peers.
-    let fut = test_state.aux().proxy().start_discovery();
+    let fut = harness.aux().proxy().start_discovery();
     fut.await?;
 
     // Wait for fake peer to be discovered.
-    let expected_peer = expectation::peer::address(&address.to_string());
-    expect_host_peer(&test_state, expected_peer.clone()).await?;
+    let expected_peer = expectation::peer::address(address);
+    expect_peer(&harness, expected_peer.clone()).await?;
 
     // Connecting to the peer should return success and the peer should become connected.
-    let fut = test_state.aux().proxy().connect(&le_peer);
+    let fut = harness.aux().proxy().connect(&le_peer.to_string());
     let mut status = fut.await?;
     expect_true!(status.error.is_none())?;
 
-    expect_host_peer(&test_state, expected_peer.and(expectation::peer::connected(true))).await?;
+    expect_peer(&harness, expected_peer.and(expectation::peer::connected(true))).await?;
 
     // Forgetting the peer should result in its removal.
-    let fut = test_state.aux().proxy().forget(&le_peer);
+    let fut = harness.aux().proxy().forget(&le_peer.to_string());
     status = fut.await?;
     expect_true!(status.error.is_none())?;
-    expect_no_peer(&test_state, le_peer).await?;
+    expect_no_peer(&harness, le_peer).await?;
 
     // TODO(BT-879): Test that the link closes by querying fake HCI.
 
@@ -364,7 +359,7 @@ pub fn run_all() -> Result<(), Error> {
             test_discoverable,
             test_discovery,
             test_close,
-            test_list_devices,
+            test_watch_peers,
             test_connect,
             test_forget,
             test_disconnect_unknown_device,
