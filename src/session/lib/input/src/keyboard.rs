@@ -175,7 +175,7 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
 ///
 /// # Errors
 /// If there was an error binding to any keyboard.
-async fn all_keyboard_bindings() -> Result<Vec<KeyboardBinding>, Error> {
+pub async fn all_keyboard_bindings() -> Result<Vec<KeyboardBinding>, Error> {
     let device_proxies = input_device::all_devices(input_device::InputDeviceType::Keyboard).await?;
     let mut device_bindings: Vec<KeyboardBinding> = vec![];
 

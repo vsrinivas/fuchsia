@@ -354,7 +354,7 @@ impl TouchBinding {
 ///
 /// # Errors
 /// If there was an error binding to any touch device.
-async fn all_touch_bindings() -> Result<Vec<TouchBinding>, Error> {
+pub async fn all_touch_bindings() -> Result<Vec<TouchBinding>, Error> {
     let device_proxies = input_device::all_devices(input_device::InputDeviceType::Touch).await?;
     let mut device_bindings: Vec<TouchBinding> = vec![];
 

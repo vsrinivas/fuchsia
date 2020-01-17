@@ -270,7 +270,7 @@ fn buttons_from_optional_report(
 ///
 /// # Errors
 /// If there was an error binding to any mouse.
-async fn all_mouse_bindings() -> Result<Vec<MouseBinding>, Error> {
+pub async fn all_mouse_bindings() -> Result<Vec<MouseBinding>, Error> {
     let device_proxies = input_device::all_devices(input_device::InputDeviceType::Mouse).await?;
     let mut device_bindings: Vec<MouseBinding> = vec![];
 
