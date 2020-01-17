@@ -83,7 +83,7 @@ template("banjo_c_target") {
     if (!defined(testonly)) {
       # Only mark this set as testonly if the parent library hasn't been
       # explicitly tagged with testonly already.
-      # TODO(3367): always mark testonly once unification is complete.
+      # TODO(44278): always mark testonly once unification is complete.
       testonly = true
     }
 
