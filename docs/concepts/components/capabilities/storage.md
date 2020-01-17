@@ -9,6 +9,9 @@ non-overlapping for each [component instance][component-instance], preventing
 any component instances from accessing files belonging to any other component
 instance (including their own children).
 
+There are different types of storage capabilities, each with different
+semantics. For more information, see [storage types][storage-types].
+
 ## Directory vs storage capabilities
 
 As an example, if component instance `a` receives a _directory_ capability from
@@ -142,5 +145,6 @@ before the change.
 [offer]: /docs/glossary.md#offer
 [realm]: /docs/glossary.md#realm
 [storage-syntax]: /docs/concepts/components/component_manifests.md#storage
+[storage-types]: /docs/concepts/components/component_manifests.md#storage-types
 [use-syntax]: /docs/concepts/components/component_manifests.md#use
 [use]: /docs/glossary.md#use
