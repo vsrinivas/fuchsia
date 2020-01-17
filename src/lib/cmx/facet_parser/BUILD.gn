@@ -5,6 +5,14 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":cmx_facet_parser_tests"
+  ]
+}
+
 source_set("cmx_facet_parser") {
   sources = [
     "cmx_facet_parser.cc",
@@ -21,10 +29,8 @@ source_set("cmx_facet_parser") {
   ]
 }
 
-executable("tests") {
+executable("cmx_facet_parser_unittest") {
   testonly = true
-
-  output_name = "cmx_facet_parser_unittest"
 
   sources = [ "cmx_facet_parser_unittest.cc" ]
 
@@ -39,8 +45,9 @@ executable("tests") {
   ]
 }
 
-test_package("cmx_facet_parser_unittests") {
-  deps = [ ":tests" ]
+test_package("cmx_facet_parser_tests") {
+  deps = [ ":cmx_facet_parser_unittest" ]
+
   tests = [
     {
       name = "cmx_facet_parser_unittest"

@@ -246,7 +246,6 @@ group("all") {
     ":boringssl",
     ":catapult_converter",
     ":chrealm",
-    ":cmx",
     ":cobalt_client",
     ":component_cpp",
     ":containers_cpp",
@@ -363,14 +362,6 @@ group("fidl_llcpp_conformance_test") {
 group("fidl_llcpp_types_test") {
   testonly = true
   public_deps = [ "//garnet/public/lib/fidl/llcpp:fidl_llcpp_types_test" ]
-}
-
-group("cmx") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/cmx:cmx_unittests",
-    "//garnet/public/lib/cmx_facet_parser:cmx_facet_parser_unittests",
-  ]
 }
 
 group("libc") {

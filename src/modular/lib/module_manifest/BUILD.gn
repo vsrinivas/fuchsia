@@ -30,12 +30,12 @@ source_set("module_facet_reader_impl") {
   deps = [
     ":json_xdr",
     ":module_facet_reader",
-    "//garnet/public/lib/cmx_facet_parser",
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//src/lib/cmx/facet_parser:cmx_facet_parser",
     "//src/lib/fsl",
+    "//src/lib/json_parser",
     "//src/lib/pkg_url",
     "//src/modular/lib/fidl:json_xdr",
   ]
@@ -48,10 +48,10 @@ source_set("module_facet_reader_impl_unittest") {
 
   deps = [
     ":module_facet_reader_impl",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/lib/scoped_tmpfs",
     "//third_party/googletest:gtest",
   ]

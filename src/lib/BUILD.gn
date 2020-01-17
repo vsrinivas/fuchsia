@@ -47,6 +47,7 @@ group("tests") {
     "backoff:tests",
     "by_addr:tests",
     "callback:tests",
+    "cmx:tests",
     "cobalt:tests",
     "containers/cpp:tests",
     "cstr:tests",
