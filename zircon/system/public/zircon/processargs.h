@@ -150,7 +150,7 @@ struct zx_proc_args {
 // A clock which provides access to UTC.  Used by runtimes which are expected to
 // provide access to UTC via their standard libraries.
 //
-#define PA_CLOCK_UTC 0x40
+#define PA_CLOCK_UTC 0x40u
 
 // --- Various ---
 
