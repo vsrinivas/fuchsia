@@ -92,6 +92,8 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_MIC_PRIVACY},
     // For SDIO.
     {GPIO_SD_EMMC_RESET},
+    // For SPI.
+    {GPIO_SPICC1_SS0},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

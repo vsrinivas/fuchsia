@@ -22,5 +22,6 @@ namespace nelson {
 #define GPIO_VOLUME_BOTH S905D2_GPIOAO(10)
 #define GPIO_MIC_PRIVACY S905D2_GPIOZ(2)
 #define GPIO_SD_EMMC_RESET S905D2_GPIOBOOT(12)
+#define GPIO_SPICC1_SS0 S905D2_GPIOH(6)
 
 }  // namespace nelson

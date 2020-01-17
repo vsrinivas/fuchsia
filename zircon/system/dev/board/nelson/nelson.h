@@ -48,11 +48,17 @@ typedef struct {
   iommu_protocol_t iommu;
 } aml_bus_t;
 
-// These should match the mmio table defined in nelson-i2c.c
+// These should match the mmio table defined in nelson-i2c.cc
 enum {
   NELSON_I2C_A0_0,
   NELSON_I2C_2,
   NELSON_I2C_3,
+};
+
+// Nelson SPI bus arbiters (should match spi_channels[] in nelson-spi.cc).
+enum {
+  NELSON_SPICC0,
+  NELSON_SPICC1,
 };
 
 // Nelson Board Revs
@@ -110,6 +116,7 @@ class Nelson : public NelsonType {
   zx_status_t SdioInit();
   zx_status_t Start();
   zx_status_t SecureMemInit();
+  zx_status_t SpiInit();
   zx_status_t SysmemInit();
   zx_status_t TeeInit();
   zx_status_t ThermalInit();

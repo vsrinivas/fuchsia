@@ -19,6 +19,7 @@ zx_driver("nelson") {
     "nelson-mali.cc",
     "nelson-sdio.cc",
     "nelson-securemem.cc",
+    "nelson-spi.cc",
     "nelson-sysmem.cc",
     "nelson-tee.cc",
     "nelson-thermal.cc",

@@ -50,6 +50,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_OT_RADIO           35  // OpenThread radio
 #define PDEV_DID_CRASH_TEST         36  // Crash-device
 #define PDEV_DID_GOODIX_GTX8X       37  // Goodix GTx8X touch controllers
+#define PDEV_DID_RADAR_SENSOR       38  // Radar Sensor
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
@@ -301,6 +302,10 @@ __BEGIN_CDECLS
 #define PDEV_VID_MARVELL            23
 #define PDEV_PID_MARVELL_88W8987     1
 #define PDEV_DID_MARVELL_WIFI        1
+
+// Infineon
+#define PDEV_VID_INFINEON            24
+#define PDEV_PID_INFINEON_BGT60TR13C  1
 // clang-format on
 
 __END_CDECLS

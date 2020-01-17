@@ -97,6 +97,10 @@ int Nelson::Thread() {
     zxlogf(ERROR, "CpuInit failed: %d\n", status);
   }
 
+  if ((status = SpiInit()) != ZX_OK) {
+    zxlogf(ERROR, "SpiInit failed: %d\n", status);
+  }
+
   if ((status = MaliInit()) != ZX_OK) {
     zxlogf(ERROR, "MaliInit failed: %d\n", status);
   }
