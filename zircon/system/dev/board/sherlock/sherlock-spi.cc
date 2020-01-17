@@ -16,7 +16,7 @@
 #include "sherlock.h"
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
-#define spicc_0_clk_sel_fclk_div2 (4 << 7)
+#define spicc_0_clk_sel_fclk_div5 (5 << 7)
 #define spicc_0_clk_en (1 << 6)
 #define spicc_0_clk_div(x) ((x)-1)
 
@@ -124,7 +124,7 @@ zx_status_t Sherlock::SpiInit() {
     }
 
     // SPICC0 clock enable
-    buf->Write32(spicc_0_clk_sel_fclk_div2 | spicc_0_clk_en | spicc_0_clk_div(10),
+    buf->Write32(spicc_0_clk_sel_fclk_div5 | spicc_0_clk_en | spicc_0_clk_div(10),
                  HHI_SPICC_CLK_CNTL);
   }
 
