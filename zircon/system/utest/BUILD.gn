@@ -239,7 +239,6 @@ if (current_cpu != "") {
       "fs-test-utils",
       "fvm",
       "hid",
-      "hypervisor",
       "kcounter",
       "kernel-cmdline:test",
       "loader-service",

@@ -198,6 +198,7 @@ static bool setup(test_t* test, const char* start, const char* end) {
   END_HELPER;
 }
 
+#if __x86_64__
 static bool setup_and_interrupt(test_t* test, const char* start, const char* end) {
   ASSERT_TRUE(setup(test, start, end));
   if (!test->supported) {
@@ -218,6 +219,7 @@ static bool setup_and_interrupt(test_t* test, const char* start, const char* end
 
   return true;
 }
+#endif
 
 static inline bool exception_thrown(const zx_packet_guest_mem_t& guest_mem, const zx::vcpu& vcpu) {
 #if __x86_64__
