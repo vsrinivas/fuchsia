@@ -1,5 +1,5 @@
 {
   "fidl/fuchsia.camera3/device.fidl": "edc6cbb007edcbf02443d9fc8d5413f7",
   "fidl/fuchsia.camera3/device_watcher.fidl": "3dcffd0f89e9506b4a72ed7a3c0cda53",
-  "fidl/fuchsia.camera3/stream.fidl": "3e302afba58bda80472ec8f60b9761e8"
+  "fidl/fuchsia.camera3/stream.fidl": "cb0e3ef98a21d16a892c8ccfecdacb37"
 }

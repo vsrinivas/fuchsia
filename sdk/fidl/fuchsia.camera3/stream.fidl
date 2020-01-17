@@ -11,22 +11,22 @@ using zx;
 /// A Stream represents timing, sequencing, and other camera-specific properties that apply to a set
 /// of buffers.
 protocol Stream {
-    /// Sets the region of interest to the provided region, with the top-left of the image
-    /// represented by (0,0) and the bottom-right of the image represented by (1,1). If the
-    /// implementation does not precisely support the provided value, it will be expanded to the
-    /// minimum region that covers the provided region. If region is set to null, the region of
-    /// interest is unset, which is equivalent to specifying a region covering the entire image.
-    /// Upon initial connection, the region of interest is unset. Frames requested after calling
-    /// this method will return with the new region, however previously sent frames may still be in
-    /// flight using the previous region. If the stream does not support region of interest, the
-    /// connection is closed with the ZX_ERR_NOT_SUPPORTED epitaph.
-    SetRegionOfInterest(fuchsia.math.RectF? region);
+    /// Sets the Stream's crop region to the provided region, with the top-left of the image
+    /// represented by (0,0) and the bottom-right of the image represented by (1,1). The resulting
+    /// content is subsequently scaled to fill the output buffer. If the implementation does not
+    /// precisely support the provided value, it will be expanded to the minimum region that covers
+    /// the provided region. If region is set to null, the crop region is unset, which is
+    /// equivalent to specifying a region covering the entire image. Upon initial connection, the
+    /// region is unset. Frames requested after calling this method will return with the new
+    /// region, however previously sent frames may still be in flight using the previous region.
+    /// If the stream does not support crop region, the connection is closed with the
+    /// ZX_ERR_NOT_SUPPORTED epitaph.
+    SetCropRegion(fuchsia.math.RectF? region);
 
-    /// Returns the region of interest if it has changed from a previously returned value, or is
-    /// called by a client for the first time. Frame callbacks received after receiving this
-    /// callback reflect the use of the new region. See SetRegionOfInterest for a description of
-    /// the region parameter.
-    WatchRegionOfInterest() -> (fuchsia.math.RectF? region);
+    /// Returns the crop region if it has changed from a previously returned value, or is called by
+    /// a client for the first time. Frame callbacks received after receiving this callback reflect
+    /// the use of the new region. See SetCropRegion for a description of the region parameter.
+    WatchCropRegion() -> (fuchsia.math.RectF? region);
 
     /// Sets the resolution of the stream to the provided index. Frames requested after calling
     /// this method will return with the new resolution, however previously sent frames may still
@@ -34,10 +34,10 @@ protocol Stream {
     /// index 0.
     SetResolution(uint32 index);
 
-    /// Returns the resolution it has changed from a previously returned value, or is called by a
-    /// client for the first time. Frame callbacks received after receiving this callback reflect
-    /// the new region.
-    WatchResolution() -> (fuchsia.math.RectF? region);
+    /// Returns the resolution index if it has changed from a previously returned value, or is
+    /// called by a client for the first time. Frame callbacks received after receiving this
+    /// callback reflect the new resolution.
+    WatchResolution() -> (uint32 index);
 
     /// Request the next available frame for this stream. Returns when the stream has completed
     /// populating the buffer and may be read by the client, provided the number of unreleased
@@ -102,6 +102,6 @@ struct StreamProperties {
     /// resolution, and that resolution will match that specified by image_format.
     vector<Resolution>:MAX_RESOLUTIONS_PER_STREAM supported_resolutions;
 
-    /// Indicates whether a stream supports the SetRegionOfInterest method.
-    bool supports_region_of_interest;
+    /// Indicates whether a stream supports the SetCropRegion method.
+    bool supports_crop_region;
 };
