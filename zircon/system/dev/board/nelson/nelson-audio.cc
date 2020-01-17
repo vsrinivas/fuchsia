@@ -110,6 +110,7 @@ static const pbus_dev_t pdm_dev = []() {
 zx_status_t Nelson::AudioInit() {
   zx_status_t status;
 
+  /* Don't Meddle with G12A PLLs on a SM1 SoC
   status = clk_impl_.Disable(g12a_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d\n",
@@ -130,6 +131,7 @@ zx_status_t Nelson::AudioInit() {
            __func__, status);
     return status;
   }
+  */
 
   // TDM pin assignments
   gpio_impl_.SetAltFunction(S905D2_GPIOA(1), S905D2_GPIOA_1_TDMB_SCLK_FN);

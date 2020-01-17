@@ -16,6 +16,10 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <soc/aml-meson/aml-clk-common.h>
 
+#include "aml-sm1-blocks.h"
+#include <soc/aml-meson/sm1-clk.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
+
 namespace amlogic_clock {
 
 namespace {
@@ -127,6 +131,55 @@ TEST(ClkTestAml, G12aEnableDisableAll) {
   }
 
   EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D2_HIU_LENGTH), 0);
+}
+
+TEST(ClkTestAml, Sm1EnableDisableAll) {
+  auto actual = std::make_unique<uint8_t[]>(S905D3_HIU_LENGTH);
+  auto expected = std::make_unique<uint8_t[]>(S905D3_HIU_LENGTH);
+
+  mmio_buffer_t buffer;
+  buffer.vaddr = actual.get();
+  buffer.offset = 0;
+  buffer.size = S905D3_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  AmlClockTest clk(buffer, PDEV_DID_AMLOGIC_SM1_CLK);
+
+  // Initialization sets a bunch of registers that we don't care about, so we
+  // can reset the array to a clean slate.
+  memset(actual.get(), 0, S905D3_HIU_LENGTH);
+  memset(expected.get(), 0, S905D3_HIU_LENGTH);
+
+  EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D3_HIU_LENGTH), 0);
+
+  constexpr uint16_t kClkStart = 0;
+  constexpr uint16_t kClkEnd = static_cast<uint16_t>(sm1_clk::CLK_SM1_COUNT);
+
+  for (uint16_t i = kClkStart; i < kClkEnd; ++i) {
+    const uint32_t reg = sm1_clk_gates[i].reg;
+    const uint32_t bit = (1u << sm1_clk_gates[i].bit);
+    uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[reg]);
+    (*ptr) |= bit;
+
+    const uint32_t clk_i = aml_clk_common::AmlClkId(i, aml_clk_common::aml_clk_type::kMesonGate);
+    zx_status_t st = clk.ClockImplEnable(clk_i);
+    EXPECT_OK(st);
+  }
+
+  EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D3_HIU_LENGTH), 0);
+
+  for (uint16_t i = kClkStart; i < kClkEnd; ++i) {
+    const uint32_t reg = sm1_clk_gates[i].reg;
+    const uint32_t bit = (1u << sm1_clk_gates[i].bit);
+    uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[reg]);
+    (*ptr) &= ~(bit);
+
+    const uint32_t clk_i = aml_clk_common::AmlClkId(i, aml_clk_common::aml_clk_type::kMesonGate);
+    zx_status_t st = clk.ClockImplDisable(clk_i);
+    EXPECT_OK(st);
+  }
+
+  EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D3_HIU_LENGTH), 0);
 }
 
 static void TestPlls(const uint32_t did) {

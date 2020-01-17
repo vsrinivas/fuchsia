@@ -8,8 +8,8 @@
 #include <ddk/metadata/clock.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <soc/aml-meson/g12a-clk.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
+#include <soc/aml-meson/sm1-clk.h>
 
 #include "nelson.h"
 
@@ -18,20 +18,18 @@ namespace nelson {
 constexpr pbus_mmio_t clk_mmios[] = {
     // CLK Registers
     {
-        .base = S905D2_HIU_BASE,
-        .length = S905D2_HIU_LENGTH,
+        .base = S905D3_HIU_BASE,
+        .length = S905D3_HIU_LENGTH,
     },
     // CLK MSR block
     {
-        .base = S905D2_MSR_CLK_BASE,
-        .length = S905D2_MSR_CLK_LENGTH,
+        .base = S905D3_MSR_CLK_BASE,
+        .length = S905D3_MSR_CLK_LENGTH,
     },
 };
 
 constexpr clock_id_t clock_ids[] = {
-    // For thermal driver.
-    {g12a_clk::CLK_SYS_PLL_DIV16},
-    {g12a_clk::CLK_SYS_CPU_CLK_DIV16},
+  {sm1_clk::CLK_RESET},   // PLACEHOLDER.
 };
 
 constexpr pbus_metadata_t clock_metadata[] = {
@@ -46,8 +44,8 @@ static const pbus_dev_t clk_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "nelson-clk";
   dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
-  dev.did = PDEV_DID_AMLOGIC_G12A_CLK;
+  dev.pid = PDEV_PID_AMLOGIC_S905D3;
+  dev.did = PDEV_DID_AMLOGIC_SM1_CLK;
   dev.mmio_list = clk_mmios;
   dev.mmio_count = countof(clk_mmios);
   dev.metadata_list = clock_metadata;

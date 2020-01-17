@@ -24,6 +24,7 @@
 #include "aml-g12a-blocks.h"
 #include "aml-g12b-blocks.h"
 #include "aml-gxl-blocks.h"
+#include "aml-sm1-blocks.h"
 
 namespace amlogic_clock {
 
@@ -40,6 +41,7 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
   // Populate the correct register blocks.
   switch (device_id) {
     case PDEV_DID_AMLOGIC_AXG_CLK: {
+      // Gauss
       gates_ = axg_clk_gates;
       gate_count_ = countof(axg_clk_gates);
       break;
@@ -50,6 +52,7 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
       break;
     }
     case PDEV_DID_AMLOGIC_G12A_CLK: {
+      // Astro
       clk_msr_offsets_ = g12a_clk_msr;
 
       clk_table_ = static_cast<const char* const*>(g12a_clk_table);
@@ -63,6 +66,7 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
       break;
     }
     case PDEV_DID_AMLOGIC_G12B_CLK: {
+      // Sherlock
       clk_msr_offsets_ = g12b_clk_msr;
 
       clk_table_ = static_cast<const char* const*>(g12b_clk_table);
@@ -72,6 +76,13 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
       gate_count_ = countof(g12b_clk_gates);
 
       InitHiu();
+
+      break;
+    }
+    case PDEV_DID_AMLOGIC_SM1_CLK : {
+      // Nelson
+      gates_ = sm1_clk_gates;
+      gate_count_ = countof(sm1_clk_gates);
 
       break;
     }
@@ -417,7 +428,7 @@ static constexpr zx_driver_ops_t aml_clk_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_clk, aml_clk_driver_ops, "zircon", "0.1", 6)
+ZIRCON_DRIVER_BEGIN(aml_clk, aml_clk_driver_ops, "zircon", "0.1", 7)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     // we support multiple SOC variants.
@@ -425,4 +436,5 @@ BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GXL_CLK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_G12A_CLK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_G12B_CLK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SM1_CLK),
 ZIRCON_DRIVER_END(aml_clk)

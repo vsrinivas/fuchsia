@@ -133,6 +133,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AMLOGIC_PWM_INIT    31
 #define PDEV_DID_NELSON_PDM          32
 #define PDEV_DID_NELSON_USB_PHY      33
+#define PDEV_DID_AMLOGIC_SM1_CLK     34
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6
