@@ -89,11 +89,13 @@ typedef struct {
                           float* audio_buff_in_out);
 
   // Synchronously process ‘num_frames’ from audio_buff_in to audio_buff_out. 'num_frames' cannot
-  // exceed frame_rate: it must be <= 1 second of audio.
+  // exceed frame_rate: it must be <= 1 second of audio. The effect implementation is responsible
+  // for allocating the buffer returned in |audio_buf_out|. The frames written into |audio_buf_out|
+  // must not be modified until a subsequent call to |process|.
   //
   // `process` requires that `channels_in` != `channels_out`.
   bool (*process)(fuchsia_audio_effects_handle_t effects_handle, uint32_t num_frames,
-                  const float* audio_buff_in, float* audio_buff_out);
+                  const float* audio_buff_in, float** audio_buff_out);
 
   // Flushes any cached state this effect identified by `effects_handle`.
   bool (*flush)(fuchsia_audio_effects_handle_t effects_handle);

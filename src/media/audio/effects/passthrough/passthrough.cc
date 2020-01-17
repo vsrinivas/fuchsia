@@ -97,7 +97,7 @@ bool passthrough_process_inplace(fuchsia_audio_effects_handle_t effects_handle, 
 
 // Synchronously processes ‘num_frames’ from audio_buff_in to audio_buff_out.
 // This library has only in-place effects, so this call always returns false.
-bool passthrough_process(fuchsia_audio_effects_handle_t, uint32_t, const float*, float*) {
+bool passthrough_process(fuchsia_audio_effects_handle_t, uint32_t, const float*, float**) {
   return false;
 }
 

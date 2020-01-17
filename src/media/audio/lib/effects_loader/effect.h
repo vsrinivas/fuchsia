@@ -64,7 +64,8 @@ class Effect {
   zx_status_t Delete();
   zx_status_t UpdateConfiguration(std::string_view config) const;
   zx_status_t ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out) const;
-  zx_status_t Process(uint32_t num_frames, const float* audio_buff_in, float* audio_buff_out) const;
+  zx_status_t Process(uint32_t num_frames, const float* audio_buff_in,
+                      float** audio_buff_out) const;
   zx_status_t Flush() const;
   zx_status_t GetParameters(fuchsia_audio_effects_parameters* params) const;
 

@@ -71,7 +71,7 @@ class TestEffect {
     return true;
   }
 
-  bool Process(uint32_t num_frames, const float* audio_buff_in, float* audio_buff_out) {
+  bool Process(uint32_t num_frames, const float* audio_buff_in, float** audio_buff_out) {
     // Not yet implemented.
     return false;
   }
@@ -156,7 +156,7 @@ bool process_inplace(fuchsia_audio_effects_handle_t effects_handle, uint32_t num
 }
 
 bool process(fuchsia_audio_effects_handle_t effects_handle, uint32_t num_frames,
-             const float* audio_buff_in, float* audio_buff_out) {
+             const float* audio_buff_in, float** audio_buff_out) {
   if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE || !audio_buff_in || !audio_buff_out) {
     return false;
   }

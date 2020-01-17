@@ -57,7 +57,7 @@ zx_status_t Effect::ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out
 }
 
 zx_status_t Effect::Process(uint32_t num_frames, const float* audio_buff_in,
-                            float* audio_buff_out) const {
+                            float** audio_buff_out) const {
   TRACE_DURATION("audio", "Effect::Process", "num_frames", num_frames);
   FX_DCHECK(module_);
   FX_DCHECK(effects_handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
