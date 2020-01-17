@@ -1,0 +1,45 @@
+{
+  "program": {
+    "binary": "bin/fshost",
+  },
+  "use": [
+    { "runner": "elf" },
+    { "directory": "/dev", "rights": ["rw*"] },
+    { "directory": "/boot", "rights": ["rx*"] },
+    { "protocol": [
+      "/svc/fuchsia.boot.Arguments",
+      "/svc/fuchsia.boot.Items",
+      "/svc/fuchsia.cobalt.LoggerFactory",
+      "/svc/fuchsia.process.Launcher",
+      "/svc/fuchsia.tracing.provider.Registry",
+    ] },
+  ],
+  "expose": [
+    { "directory": "/delayed/fs/pkgfs", "from": "self", "as": "/pkgfs-delayed", "rights": ["rx*"] },
+    { "directory": "/delayed/fs/system", "from": "self", "as": "/system-delayed", "rights": ["rx*"] },
+    { "directory": "/fs/bin", "from": "self", "as": "/bin", "rights": ["rx*"] },
+    { "directory": "/fs/blob", "from": "self", "as": "/blob", "rights": ["rw*"] },
+    { "directory": "/fs/data", "from": "self", "as": "/minfs", "rights": ["rw*", "admin"] },
+    { "directory": "/fs/install", "from": "self", "as": "/install", "rights": ["rw*"] },
+    { "directory": "/fs/pkgfs", "from": "self", "as": "/pkgfs", "rights": ["rx*"] },
+    { "directory": "/fs/system", "from": "self", "as": "/system", "rights": ["rx*"] },
+    { "directory": "/fs/tmp", "from": "self", "as": "/tmp", "rights": ["rw*", "admin"] },
+
+    // TODO: this volume directory is only used by the paver lib in netsvc under
+    // devcoordinator. The paver lib could create its own memfs instead, so
+    // this should eventually be removed.
+    { "directory": "/fs/volume", "from": "self", "as": "/volume", "rights": ["rw*", "admin"] },
+
+    { "protocol": "/fs-manager-svc/fuchsia.fshost.Filesystems", "from": "self", "as": "/svc/fuchsia.fshost.Filesystems" },
+    { "protocol": "/fs-manager-svc/fuchsia.fshost.Registry", "from": "self", "as": "/svc/fuchsia.fshost.Registry" },
+    { "protocol": "/svc/fuchsia.fshost.Admin", "from": "self" },
+
+    // This service name is breaking the convention whereby the directory entry
+    // name matches the protocol name. This is an implementation of
+    // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
+    // this implementation comes from fshost.
+    // TODO(fxb/34633): This service is deprecated and should only be routed to
+    // devcoordinator
+    { "protocol": "/svc/fuchsia.fshost.Loader", "from": "self" , "as": "/svc/fuchsia.fshost.Loader"},
+  ],
+}

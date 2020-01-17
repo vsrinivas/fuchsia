@@ -197,6 +197,7 @@ int main(int argc, char** argv) {
   while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
     switch (opt) {
       case kDisableBlockWatcher:
+        printf("fshost: received --disable-block-watcher\n");
         disable_block_watcher = true;
         break;
     }

@@ -31,7 +31,7 @@ pub enum ModelError {
     Unsupported { feature: String },
     #[error("component declaration invalid")]
     ComponentInvalid,
-    #[error("component manifest invalid")]
+    #[error("component manifest invalid {}: {}", url, err)]
     ManifestInvalid {
         url: String,
         #[source]
@@ -44,7 +44,7 @@ pub enum ModelError {
         #[source]
         err: ClonableError,
     },
-    #[error("resolver error")]
+    #[error("resolver error: {}", err)]
     ResolverError {
         #[source]
         err: ResolverError,
@@ -54,12 +54,12 @@ pub enum ModelError {
         #[source]
         err: RunnerError,
     },
-    #[error("capability discovery error")]
+    #[error("capability discovery error: {}", err)]
     CapabilityDiscoveryError {
         #[source]
         err: ClonableError,
     },
-    #[error("storage error")]
+    #[error("storage error: {}", err)]
     StorageError {
         #[source]
         err: StorageError,

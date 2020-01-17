@@ -43,30 +43,28 @@ enum class FdioAction {
 
 // clang-format off
 
-static struct {
+const static struct {
     const char* mount;
     const char* name;
     uint32_t flags;
     FdioAction action;
 } FSTAB[] = {
-    { "/svc",       "svc",       FS_SVC,      FdioAction::AddNsEntry },
-    { "/hub",       "hub",       FS_HUB,      FdioAction::AddNsEntry },
-    { "/bin",       "bin",       FS_BIN,      FdioAction::AddNsEntry },
-    { "/dev",       "dev",       FS_DEV,      FdioAction::AddNsEntry },
+    { "/bin",       "bin",       FS_BIN,      FdioAction::CloneDir },
+    { "/blob",      "blob",      FS_BLOB,     FdioAction::CloneDir },
     { "/boot",      "boot",      FS_BOOT,     FdioAction::CloneDir },
-    { "/data",      "data",      FS_DATA,     FdioAction::AddNsEntry },
-    { "/system",    "system",    FS_SYSTEM,   FdioAction::AddNsEntry },
-    { "/install",   "install",   FS_INSTALL,  FdioAction::AddNsEntry },
-    { "/volume",    "volume",    FS_VOLUME,   FdioAction::AddNsEntry },
-    { "/blob",      "blob",      FS_BLOB,     FdioAction::AddNsEntry },
-    { "/pkgfs",     "pkgfs",     FS_PKGFS,    FdioAction::AddNsEntry },
-    { "/tmp",       "tmp",       FS_TMP,      FdioAction::AddNsEntry },
+    { "/data",      "data",      FS_DATA,     FdioAction::CloneDir },
+    { "/dev",       "dev",       FS_DEV,      FdioAction::AddNsEntry },
+    { "/hub",       "hub",       FS_HUB,      FdioAction::CloneDir },
+    { "/install",   "install",   FS_INSTALL,  FdioAction::CloneDir },
+    { "/pkgfs",     "pkgfs",     FS_PKGFS,    FdioAction::CloneDir },
+    { "/svc",       "svc",       FS_SVC,      FdioAction::AddNsEntry },
+    { "/system",    "system",    FS_SYSTEM,   FdioAction::CloneDir },
+    { "/tmp",       "tmp",       FS_TMP,      FdioAction::CloneDir },
+    { "/volume",    "volume",    FS_VOLUME,   FdioAction::CloneDir },
 };
 
 // clang-format on
 //
-void devmgr_disable_appmgr_services() { FSTAB[1].flags = 0; }
-
 FsProvider::~FsProvider() {}
 
 DevmgrLauncher::DevmgrLauncher(FsProvider* fs_provider) : fs_provider_(fs_provider) {}

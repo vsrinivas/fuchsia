@@ -108,6 +108,23 @@ async fn main() -> Result<(), Error> {
         pkgfs_client_end.into_channel().into_handle(),
     ));
 
+    let (svc_for_sys_client_end, svc_for_sys_server_end) = create_endpoints::<fio::NodeMarker>()?;
+    fasync::spawn(async move {
+        let fake_svc_for_sys = pseudo_directory! {};
+        fake_svc_for_sys.open(
+            ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            pfsPath::empty(),
+            svc_for_sys_server_end,
+        );
+    });
+    let svc_for_sys_c_str = CString::new("/svc_for_sys").unwrap();
+    spawn_actions.push(fdio::SpawnAction::add_namespace_entry(
+        &svc_for_sys_c_str,
+        svc_for_sys_client_end.into_channel().into_handle(),
+    ));
+
     let mut spawn_options = fdio::SpawnOptions::empty();
     spawn_options.insert(fdio::SpawnOptions::DEFAULT_LOADER);
     spawn_options.insert(fdio::SpawnOptions::CLONE_JOB);

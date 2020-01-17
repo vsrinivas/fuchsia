@@ -204,6 +204,24 @@ impl ElfRunner {
 
         let child_job = job_default().create_child_job()?;
 
+        child_job
+            .set_policy(zx::JobPolicy::TimerSlack(
+                zx::Duration::from_micros(500),
+                zx::JobDefaultTimerMode::Late,
+            ))
+            .context("error setting job policy to configure timer slack")?;
+
+        // TODO(fxb/39947): The hermetic-decompressor library used in fshost requires the ability
+        // to directly create new processes, and this policy breaks that.
+        if url != "fuchsia-boot:///#meta/fshost.cm" {
+            child_job
+                .set_policy(zx::JobPolicy::Basic(
+                    zx::JobPolicyOption::Absolute,
+                    vec![(zx::JobCondition::NewProcess, zx::JobAction::Deny)],
+                ))
+                .context("error setting job policy to deny new processes")?;
+        }
+
         let child_job_dup = child_job.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
 
         let mut string_iters: Vec<_> =

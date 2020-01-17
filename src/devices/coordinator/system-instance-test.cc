@@ -90,23 +90,4 @@ class SystemInstanceFsProvider : public zxtest::Test {
   std::unique_ptr<SystemInstanceForTest> under_test_;
 };
 
-// Test that asking SystemInstance's FsProvider impl for blob opens /fs/blob from the current
-// installed namespace without the EXEC right
-TEST_F(SystemInstanceFsProvider, CloneBlobNonExec) {
-  // Importantly, this list of expected_flags lacks ZX_FS_RIGHT_EXECUTABLE
-  uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_ADMIN |
-                            ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
-  CloneFsAndCheckFlags("blob", expected_flags);
-}
-
-// Cloning /pkgfs should provide READ | EXEC rights, as should /bin and /pkgfs which are both paths
-// into pkgfs
-TEST_F(SystemInstanceFsProvider, ClonePkgfs) {
-  uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_RIGHT_ADMIN |
-                            ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
-  CloneFsAndCheckFlags("pkgfs", expected_flags);
-  CloneFsAndCheckFlags("bin", expected_flags);
-  CloneFsAndCheckFlags("system", expected_flags);
-}
-
 }  // namespace

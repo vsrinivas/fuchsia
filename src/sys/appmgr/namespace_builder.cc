@@ -148,11 +148,9 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       PushDirectoryFromPath("/data");
       PushDirectoryFromPath("/dev");
       AddHub(hub_directory_factory);
-      PushDirectoryFromPath("/install");
       PushDirectoryFromPath("/pkgfs");
       PushDirectoryFromPath("/system");
       PushDirectoryFromPath("/tmp");
-      PushDirectoryFromPath("/volume");
     } else if (feature == "shell-commands") {
       PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
     } else if (feature == "system-temp") {

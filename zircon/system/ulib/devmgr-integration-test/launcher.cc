@@ -105,7 +105,8 @@ void ForwardService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
 // Components v2/Test Framework concepts as soon as those are ready enough. For now this has to be
 // manually kept in sync with devcoordinator's manifest in //src/sys/root/devcoordinator.cml
 // (although it already seems to be incomplete).
-zx_status_t host_svc_directory(zx::channel bootsvc_server, GetBootItemFunction get_boot_item,
+zx_status_t host_svc_directory(zx::channel bootsvc_server, zx::channel fshost_outgoing_client,
+                               GetBootItemFunction get_boot_item,
                                GetArgumentsFunction get_arguments, zx::unowned_job root_job) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
@@ -131,9 +132,26 @@ zx_status_t host_svc_directory(zx::channel bootsvc_server, GetBootItemFunction g
     }
   }
 
+  // Connect to /svc in fshost's outgoing directory
+  zx::channel fshost_svc_client;
+  {
+    zx::channel fshost_svc_server;
+    zx_status_t status = zx::channel::create(0, &fshost_svc_client, &fshost_svc_server);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = fdio_open_at(fshost_outgoing_client.get(), "svc",
+                          ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_DIRECTORY,
+                          fshost_svc_server.release());
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   // Forward required services from the current namespace. Currently this is just
   // fuchsia.process.Launcher.
   ForwardService(root, fuchsia_process_Launcher_Name, zx::unowned_channel(svc_client));
+  ForwardService(root, "fuchsia.fshost.Loader", zx::unowned_channel(fshost_svc_client));
 
   // Host fake instances of some services normally provided by bootsvc and routed to devcoordinator
   // by component_manager. The difference between these fakes and the optional services above is
@@ -171,9 +189,7 @@ devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
 }
 
 __EXPORT
-IsolatedDevmgr::~IsolatedDevmgr() {
-  Terminate();
-}
+IsolatedDevmgr::~IsolatedDevmgr() { Terminate(); }
 
 __EXPORT
 void IsolatedDevmgr::Terminate() {
@@ -195,13 +211,20 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
     return status;
   }
 
+  zx::channel fshost_outgoing_client, fshost_outgoing_server;
+  status = zx::channel::create(0, &fshost_outgoing_client, &fshost_outgoing_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   GetBootItemFunction get_boot_item = std::move(args.get_boot_item);
   GetArgumentsFunction get_arguments = std::move(args.get_arguments);
 
   IsolatedDevmgr devmgr;
   zx::channel devfs;
   zx::channel outgoing_svc_root;
-  status = devmgr_launcher::Launch(std::move(args), std::move(svc_client), &devmgr.job_, &devfs,
+  status = devmgr_launcher::Launch(std::move(args), std::move(svc_client),
+                                   std::move(fshost_outgoing_server), &devmgr.job_, &devfs,
                                    &outgoing_svc_root);
   if (status != ZX_OK) {
     return status;
@@ -209,8 +232,8 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
 
   // Launch host_svc_directory thread after calling devmgr_launcher::Launch, to
   // avoid a race when accessing devmgr.job_.
-  std::thread(host_svc_directory, std::move(svc_server), std::move(get_boot_item),
-              std::move(get_arguments), zx::unowned_job(devmgr.job_))
+  std::thread(host_svc_directory, std::move(svc_server), std::move(fshost_outgoing_client),
+              std::move(get_boot_item), std::move(get_arguments), zx::unowned_job(devmgr.job_))
       .detach();
 
   int fd;

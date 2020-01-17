@@ -98,7 +98,18 @@ zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
     return status;
   }
   auto defer = fit::defer([ns] { fdio_ns_destroy(ns); });
-  status = fdio_ns_bind(ns, "/boot", system_instance->CloneFs("boot").release());
+  zx::channel boot_client, boot_server;
+  status = zx::channel::create(0, &boot_client, &boot_server);
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to create channel %d\n", status);
+    return status;
+  }
+  status = fdio_open("/boot", FS_READONLY_DIR_FLAGS, boot_server.release());
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to connect to /boot %d\n", status);
+    return status;
+  }
+  status = fdio_ns_bind(ns, "/boot", boot_client.release());
   if (status != ZX_OK) {
     fprintf(stderr, "devcoordinator: failed to bind namespace %d\n", status);
     return status;

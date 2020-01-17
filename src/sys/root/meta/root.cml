@@ -3,6 +3,14 @@
     {
       "name": "devcoordinator",
       "url": "fuchsia-boot:///#meta/devcoordinator.cm",
+    },
+    {
+      "name": "fshost",
+      "url": "fuchsia-boot:///#meta/fshost.cm",
+    },
+    {
+      "name": "appmgr",
+      "url": "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
       "startup": "eager",
     },
     {
@@ -22,31 +30,121 @@
     {
       "directory": "/boot",
       "from": "realm",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#devcoordinator", "#fshost", "#appmgr" ],
       "rights": ["rx*"],
     },
+    // Services routed from "realm" at the root are either provided by
+    // bootsvc through component_manager's namespace or by component_manager
+    // itself as a builtin service
     {
       "protocol": [
-        // These services and directories routed from "realm" at the root are provided by bootsvc
-        // through component_manager's namespace.
-        "/svc/fuchsia.boot.Arguments",
         "/svc/fuchsia.boot.FactoryItems",
-        "/svc/fuchsia.boot.Items",
-        "/svc/fuchsia.kernel.Stats",
-        // ...except for these, which are provided by component_manager itself as a builtin service.
+        "/svc/fuchsia.boot.ReadOnlyLog",
         "/svc/fuchsia.boot.RootJob",
         "/svc/fuchsia.boot.RootJobForInspect",
-        "/svc/fuchsia.boot.ReadOnlyLog",
         "/svc/fuchsia.boot.WriteOnlyLog",
-        "/svc/fuchsia.process.Launcher",
+        "/svc/fuchsia.kernel.Stats",
       ],
       "from": "realm",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#devcoordinator", "#appmgr" ],
     },
     {
       "protocol": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
-      "to": [ "#devcoordinator", "#console", "#sysinfo"],
+      "to": [ "#appmgr", "#devcoordinator", "#console", "#sysinfo" ],
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.boot.Arguments",
+        "/svc/fuchsia.boot.Items",
+      ],
+      "from": "realm",
+      "to": [ "#devcoordinator", "#fshost" ],
+    },
+    {
+      "protocol": "/svc/fuchsia.process.Launcher",
+      "from": "realm",
+      "to": [ "#devcoordinator", "#fshost", "#appmgr" ],
+    },
+    // ...and the rest of these are services provided by components for each other
+    {
+      // TODO(fxb/34633): DEPRECATED. Do not add new dependencies on the fshost
+      // loader service!
+      "protocol": "/svc/fuchsia.fshost.Loader",
+      "from": "#fshost",
+      "to": [ "#devcoordinator" ],
+    },
+    {
+      "directory": "/dev",
+      "from": "#devcoordinator",
+      "to": [ "#fshost", "#appmgr", "#sysinfo" ],
+    },
+    {
+      "directory": "/minfs",
+      "from": "#fshost",
+      "to": [ "#appmgr", "#devcoordinator" ],
+    },
+    {
+      "directory": "/pkgfs",
+      "from": "#fshost",
+      "to": [ "#appmgr", "#devcoordinator" ],
+    },
+    {
+      "directory": "/system-delayed",
+      "from": "#fshost",
+      "to": [ "#devcoordinator" ],
+    },
+    {
+      "directory": "/system",
+      "from": "#fshost",
+      "to": [ "#appmgr", "#devcoordinator" ],
+    },
+    {
+      "directory": "/blob",
+      "from": "#fshost",
+      "to": [ "#appmgr", "#devcoordinator" ],
+    },
+    {
+      "directory": "/volume",
+      "from": "#fshost",
+      "to": [ "#devcoordinator" ],
+    },
+    {
+      "directory": "/install",
+      "from": "#fshost",
+      "to": [ "#devcoordinator" ],
+    },
+    {
+      "directory": "/tmp",
+      "from": "#fshost",
+      "to": [ "#appmgr", "#devcoordinator" ],
+    },
+    {
+      "directory": "/bin",
+      "from": "#fshost",
+      "to": [ "#devcoordinator" ],
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.device.NameProvider",
+        "/svc/fuchsia.device.manager.Administrator",
+        "/svc/fuchsia.device.manager.DebugDumper",
+        "/svc/fuchsia.kernel.Counter",
+        "/svc/fuchsia.kernel.DebugBroker",
+        "/svc/fuchsia.paver.Paver",
+        "/svc/fuchsia.scheduler.ProfileProvider",
+        "/svc/fuchsia.virtualconsole.SessionManager",
+      ],
+      "from": "#devcoordinator",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.cobalt.LoggerFactory",
+        "/svc/fuchsia.tracing.provider.Registry",
+      ],
+      "from": "#appmgr",
+      "to": [ "#devcoordinator", "#fshost" ],
     },
     // Offer the kernel serial console to the devcoordinator
     {
@@ -55,29 +153,78 @@
       "to": [ "#devcoordinator" ],
       "as": "/svc/console",
     },
-    // Offer the pty service to devcoordinator (temporary hack to expose it to appmgr).
+    // Offer the pty service to appmgr
     {
       "protocol": "/svc/fuchsia.hardware.pty.Device",
       "from": "#ptysvc",
+      "to": [
+        "#appmgr",
+        "#devcoordinator",
+      ],
+    },
+
+    // devcoordinator needs the v1 hub for the serial console
+    {
+      "directory": "/hub",
+      "from": "#appmgr",
       "to": [ "#devcoordinator" ],
     },
      {
       "protocol": "/svc/fuchsia.sysinfo.SysInfo",
       "from": "#sysinfo",
-      "to": [ "#devcoordinator" ],
-    },
-    // Offer platform bus sysinfo interface to sysinfo service
-    {
-      "directory": "/dev",
-      "from": "#devcoordinator",
-      "to": [ "#sysinfo" ],
+      "to": [ "#appmgr", "#devcoordinator" ],
     },
     // Offer the ELF runner to children.
     {
       "runner": "elf",
       "from": "realm",
-      "to": [ "#devcoordinator", "#console", "#ptysvc", "#sysinfo" ],
-    }
+      "to": [
+          "#appmgr",
+          "#console",
+          "#devcoordinator",
+          "#fshost",
+          "#ptysvc",
+          "#sysinfo",
+      ],
+    },
+    // Non-zircon services for svchost
+    {
+      "protocol": [
+        "/svc/fuchsia.amber.Control",
+        "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+        "/svc/fuchsia.exception.Handler",
+        "/svc/fuchsia.logger.Log",
+        "/svc/fuchsia.logger.LogSink",
+        "/svc/fuchsia.net.NameLookup",
+        "/svc/fuchsia.net.stack.Log",
+        "/svc/fuchsia.net.stack.Stack",
+        "/svc/fuchsia.netstack.Netstack",
+        "/svc/fuchsia.pkg.PackageResolver",
+        "/svc/fuchsia.pkg.RepositoryManager",
+        "/svc/fuchsia.pkg.rewrite.Engine",
+        "/svc/fuchsia.posix.socket.Provider",
+        "/svc/fuchsia.process.Resolver",
+        "/svc/fuchsia.sys.Environment",
+        "/svc/fuchsia.sys.Launcher",
+        "/svc/fuchsia.tracing.controller.Controller",
+        "/svc/fuchsia.wlan.service.Wlan",
+      ],
+      "from": "#appmgr",
+      "to": [ "#devcoordinator" ],
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.fshost.Admin",
+        "/svc/fuchsia.fshost.Filesystems",
+        "/svc/fuchsia.fshost.Registry",
+      ],
+      "from": "#fshost",
+      "to": [ "#devcoordinator" ],
+    },
+  ],
+  "expose": [
+    // This handle is used by component manager to resolve packages from the
+    // base package set.
+    { "directory": "/pkgfs-delayed", "from": "#fshost", "as": "/pkgfs" },
   ]
 }
-

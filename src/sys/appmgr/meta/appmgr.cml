@@ -1,0 +1,88 @@
+{
+  "program": { "binary": "bin/appmgr" },
+  "use": [
+    { "runner": "elf" },
+
+    { "directory": "/blob", "rights": ["rw*"] },
+    { "directory": "/boot", "rights": ["rx*"] },
+    { "directory": "/dev", "rights": ["rw*"] },
+    { "directory": "/minfs", "as": "/data", "rights": ["rw*", "admin"] },
+    { "directory": "/pkgfs", "rights": ["rx*"] },
+    { "directory": "/system", "rights": ["rx*"] },
+    { "directory": "/tmp", "rights": ["rw*"] },
+
+    // Services used by appmgr with the svc_for_sys prefix are passed through to
+    // the sys realm
+
+    // From bootsvc
+    { "protocol": "/svc/fuchsia.boot.FactoryItems", "as": "/svc_for_sys/fuchsia.boot.FactoryItems" },
+    { "protocol": "/svc/fuchsia.boot.ReadOnlyLog", "as": "/svc_for_sys/fuchsia.boot.ReadOnlyLog" },
+    { "protocol": "/svc/fuchsia.boot.RootJob", "as": "/svc_for_sys/fuchsia.boot.RootJob" },
+    { "protocol": "/svc/fuchsia.boot.RootJobForInspect", "as": "/svc_for_sys/fuchsia.boot.RootJobForInspect" },
+    { "protocol": "/svc/fuchsia.boot.RootResource", "as": "/svc_for_sys/fuchsia.boot.RootResource" },
+    { "protocol": "/svc/fuchsia.boot.WriteOnlyLog", "as": "/svc_for_sys/fuchsia.boot.WriteOnlyLog" },
+    { "protocol": "/svc/fuchsia.kernel.Stats", "as": "/svc_for_sys/fuchsia.kernel.Stats" },
+
+    // From ptysvc
+    { "protocol": "/svc/fuchsia.hardware.pty.Device", "as": "/svc_for_sys/fuchsia.hardware.pty.Device" },
+
+    // From devcoordinator
+    { "protocol": "/svc/fuchsia.device.NameProvider", "as": "/svc_for_sys/fuchsia.device.NameProvider" },
+    { "protocol": "/svc/fuchsia.device.manager.Administrator", "as": "/svc_for_sys/fuchsia.device.manager.Administrator" },
+    { "protocol": "/svc/fuchsia.device.manager.DebugDumper", "as": "/svc_for_sys/fuchsia.device.manager.DebugDumper" },
+    { "protocol": "/svc/fuchsia.kernel.Counter", "as": "/svc_for_sys/fuchsia.kernel.Counter" },
+    { "protocol": "/svc/fuchsia.kernel.DebugBroker", "as": "/svc_for_sys/fuchsia.kernel.DebugBroker" },
+    { "protocol": "/svc/fuchsia.paver.Paver", "as": "/svc_for_sys/fuchsia.paver.Paver" },
+    { "protocol": "/svc/fuchsia.scheduler.ProfileProvider", "as": "/svc_for_sys/fuchsia.scheduler.ProfileProvider" },
+    { "protocol": "/svc/fuchsia.virtualconsole.SessionManager", "as": "/svc_for_sys/fuchsia.virtualconsole.SessionManager" },
+
+    // From component_manager
+    { "protocol": "/svc/fuchsia.process.Launcher", "as": "/svc_for_sys/fuchsia.process.Launcher" },
+
+    // From sysinfo
+    { "protocol": "/svc/fuchsia.sysinfo.Sysinfo", "as": "/svc_for_sys/fuchsia.sysinfo.Sysinfo" },
+
+    // These services are used by appmgr directly
+    {
+      "protocol": [
+        "/svc/fuchsia.process.Launcher"
+      ]
+    }
+  ],
+  "expose": [
+    { "directory": "/hub", "from": "self", "rights": ["rw*"] },
+
+    // These services exposed by appmgr are services from the v1 component
+    // runtime being made available to the v2 component runtime. These all cause
+    // dependency cycles between the two runtimes. Cycles require trickier
+    // runtime logic to ensure correctness, are a general design smell, and may
+    // be disallowed in the future. Please talk to dgonyeo@google.com before
+    // adding any additional exposed services to this list.
+
+    {
+      "protocol": [
+        "/svc/fuchsia.amber.Control",
+        "/svc/fuchsia.cobalt.LoggerFactory",
+        "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+        "/svc/fuchsia.exception.Handler",
+        "/svc/fuchsia.logger.Log",
+        "/svc/fuchsia.logger.LogSink",
+        "/svc/fuchsia.net.NameLookup",
+        "/svc/fuchsia.net.stack.Log",
+        "/svc/fuchsia.net.stack.Stack",
+        "/svc/fuchsia.netstack.Netstack",
+        "/svc/fuchsia.pkg.PackageResolver",
+        "/svc/fuchsia.pkg.RepositoryManager",
+        "/svc/fuchsia.pkg.rewrite.Engine",
+        "/svc/fuchsia.posix.socket.Provider",
+        "/svc/fuchsia.process.Resolver",
+        "/svc/fuchsia.sys.Environment",
+        "/svc/fuchsia.sys.Launcher",
+        "/svc/fuchsia.tracing.controller.Controller",
+        "/svc/fuchsia.tracing.provider.Registry",
+        "/svc/fuchsia.wlan.service.Wlan",
+      ],
+      "from": "self",
+    }
+  ],
+}

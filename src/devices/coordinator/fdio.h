@@ -37,10 +37,9 @@ namespace devmgr {
 // clang-format on
 
 #define FS_FOR_FSPROC (FS_SVC)
-#define FS_FOR_APPMGR (FS_ALL & (~FS_HUB))
 
-#define FS_READONLY_DIR_FLAGS \
-  (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
+// TODO: we might be able to remove NOREMOTE
+#define FS_READONLY_DIR_FLAGS (ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY)
 
 #define FS_READ_EXEC_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_EXECUTABLE)
 #define FS_READ_WRITE_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
@@ -100,8 +99,6 @@ class ArgumentVector {
   const char* argv_[kMaxArgs + 1];
   std::unique_ptr<char[]> raw_bytes_;
 };
-
-void devmgr_disable_appmgr_services();
 
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.

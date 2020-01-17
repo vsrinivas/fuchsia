@@ -75,8 +75,6 @@ source_set("lib") {
     "//zircon/public/lib/loader-service",
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-device",
-    "//zircon/system/fidl/fuchsia-inspect-deprecated",
     "//zircon/system/fidl/fuchsia-process",
   ]
 
@@ -114,14 +112,6 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/system/fidl/fuchsia-boot",
-    "//zircon/system/fidl/fuchsia-device-manager",
-    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol",
-    "//zircon/system/fidl/fuchsia-hardware-pty",
-    "//zircon/system/fidl/fuchsia-kernel",
-    "//zircon/system/fidl/fuchsia-paver",
-    "//zircon/system/fidl/fuchsia-scheduler",
-    "//zircon/system/fidl/fuchsia-virtualconsole",
   ]
 
   # appmgr starts early in the boot sequence before shared libraries from
@@ -162,19 +152,20 @@ executable("unittest_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/memfs",
-    "//zircon/system/fidl/fuchsia-device-manager",
-    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol",
-    "//zircon/system/fidl/fuchsia-kernel",
   ]
 }
 
 package("appmgr") {
-  deprecated_system_image = true
-
   deps = [ ":bin" ]
   binaries = [
     {
       name = "appmgr"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/appmgr.cml")
+      dest = "appmgr.cm"
     },
   ]
 }

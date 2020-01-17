@@ -33,15 +33,14 @@ class SystemInstance : public devmgr::FsProvider {
   // The heart of the public API, in the order that things get called during
   // startup.
   zx_status_t CreateSvcJob(const zx::job& root_job);
-  zx_status_t CreateFuchsiaJob(const zx::job& root_job);
   zx_status_t PrepareChannels();
 
   zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
-                           devmgr::Coordinator* coordinator, zx::channel fshost_client);
+                           devmgr::Coordinator* coordinator);
   zx_status_t ReuseExistingSvchost();
 
-  void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
-                       zx::channel fshost_server);
+  void devmgr_vfs_init();
+
   // Thread entry point
   static int pwrbtn_monitor_starter(void* arg);
   int PwrbtnMonitorStarter(devmgr::Coordinator* coordinator);
@@ -52,7 +51,7 @@ class SystemInstance : public devmgr::FsProvider {
   // Thread entry point
   static int service_starter(void* arg);
   int ServiceStarter(devmgr::Coordinator* coordinator);
-  int FuchsiaStarter(devmgr::Coordinator* coordinator);
+  int WaitForSystemAvailable(devmgr::Coordinator* coordinator);
 
   // TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
   zx_status_t clone_fshost_ldsvc(zx::channel* loader);
@@ -65,14 +64,6 @@ class SystemInstance : public devmgr::FsProvider {
  private:
   // Private helper functions.
   void do_autorun(const char* name, const char* cmd, const zx::resource& root_resource);
-  zx::channel fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args);
-
-  // The handle used to transmit messages to appmgr.
-  zx::channel appmgr_client_;
-
-  // The handle used by appmgr to serve incoming requests.
-  // If appmgr cannot be launched within a timeout, this handle is closed.
-  zx::channel appmgr_server_;
 
   // The handle used to transmit messages to miscsvc.
   zx::channel miscsvc_client_;
@@ -92,9 +83,6 @@ class SystemInstance : public devmgr::FsProvider {
   // The job in which we run "svc" realm services, like svchost, fshost,
   // miscsvc, netsvc, the consoles, autorun, and others.
   zx::job svc_job_;
-
-  // The job in which we run appmgr.
-  zx::job fuchsia_job_;
 
   // Used to bind the svchost to the virtual-console binary to provide fidl
   // services.

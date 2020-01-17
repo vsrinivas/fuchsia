@@ -263,18 +263,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  status = system_instance.CreateFuchsiaJob(root_job);
-  if (status != ZX_OK) {
-    return 1;
-  }
-
-  zx::channel fshost_client, fshost_server;
-  status = zx::channel::create(0, &fshost_client, &fshost_server);
-  if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to create fshost channels %s\n",
-            zx_status_get_string(status));
-    return 1;
-  }
   status = system_instance.PrepareChannels();
   if (status != ZX_OK) {
     fprintf(stderr, "devcoordinator: failed to create other system channels %s\n",
@@ -283,8 +271,7 @@ int main(int argc, char** argv) {
   }
 
   if (devmgr_args.start_svchost) {
-    status = system_instance.StartSvchost(root_job, require_system, &coordinator,
-                                          std::move(fshost_client));
+    status = system_instance.StartSvchost(root_job, require_system, &coordinator);
     if (status != ZX_OK) {
       fprintf(stderr, "devcoordinator: failed to start svchost: %s\n",
               zx_status_get_string(status));
@@ -312,13 +299,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  system_instance.devmgr_vfs_init(&coordinator, devmgr_args, std::move(fshost_server));
-
-  // If this is not a full Fuchsia build, do not setup appmgr services, as
-  // this will delay startup.
-  if (!require_system) {
-    devmgr::devmgr_disable_appmgr_services();
-  }
+  system_instance.devmgr_vfs_init();
 
   thrd_t t;
 
@@ -351,6 +332,7 @@ int main(int argc, char** argv) {
     status =
         devmgr::DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
     if (status != ZX_OK) {
+      log(ERROR, "devcoordinator: failed to create loader service\n");
       return 1;
     }
     coordinator.set_loader_service_connector(
@@ -382,18 +364,6 @@ int main(int argc, char** argv) {
                         fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAddedInit));
   }
 
-  // Special case early handling for the ramdisk boot
-  // path where /system is present before the coordinator
-  // starts.  This avoids breaking the "priority hack" and
-  // can be removed once the real driver priority system
-  // exists.
-  if (coordinator.system_available()) {
-    status = coordinator.ScanSystemDrivers();
-    if (status != ZX_OK) {
-      return 1;
-    }
-  }
-
   if (coordinator.require_system() && !coordinator.system_loaded()) {
     printf(
         "devcoordinator: full system required, ignoring fallback drivers until /system is "
@@ -408,9 +378,9 @@ int main(int argc, char** argv) {
   coordinator.BindDrivers();
 
   // Expose /dev directory for use in sysinfo service; specifically to connect to /dev/sys/platform
-  auto outgoing_dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  outgoing_dir->AddEntry(
-      "dev", fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(system_instance.CloneFs("dev"))));
+  auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  outgoing_dir->AddEntry("dev", fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("dev")));
+  outgoing_dir->AddEntry("svc", fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("svc")));
 
   fs::ManagedVfs outgoing_vfs = fs::ManagedVfs(loop.dispatcher());
   outgoing_vfs.ServeDirectory(outgoing_dir,

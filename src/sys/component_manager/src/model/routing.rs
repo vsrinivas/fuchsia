@@ -66,10 +66,7 @@ pub(super) async fn route_use_capability<'a>(
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
     match use_decl {
-        UseDecl::Service(_)
-        | UseDecl::Protocol(_)
-        | UseDecl::Directory(_)
-        | UseDecl::Runner(_) => {
+        UseDecl::Service(_) | UseDecl::Protocol(_) | UseDecl::Directory(_) | UseDecl::Runner(_) => {
             let source = find_used_capability_source(use_decl, target_realm).await?;
             open_capability_at_source(
                 model,
@@ -146,13 +143,6 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
     ) -> Result<(), ModelError> {
         // Start the source component, if necessary
         let source_realm = self.model.bind(&self.source_moniker).await?;
-
-        // TODO(36541): changing the flags for pkgfs is a hack, directory permissions
-        // should be recorded in the manifests
-        let mut flags = flags;
-        if self.path.to_string().contains("pkgfs") {
-            flags = fio::OPEN_RIGHT_READABLE;
-        }
         source_realm.open_outgoing(flags, open_mode, &self.path, server_end).await?;
         Ok(())
     }
@@ -741,9 +731,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
             )))?;
         let (source, target) = match expose {
             ExposeDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
-            ExposeDecl::Protocol(ls) => {
-                (ExposeSource::Protocol(&ls.source), &ls.target)
-            }
+            ExposeDecl::Protocol(ls) => (ExposeSource::Protocol(&ls.source), &ls.target),
             ExposeDecl::Directory(d) => (ExposeSource::Directory(&d.source), &d.target),
             ExposeDecl::Runner(r) => (ExposeSource::Runner(&r.source), &r.target),
         };

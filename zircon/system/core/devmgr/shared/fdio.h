@@ -105,8 +105,6 @@ class ArgumentVector {
   std::unique_ptr<char[]> raw_bytes_;
 };
 
-void devmgr_disable_appmgr_services();
-
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.
 #define LDSO_TRACE_CMDLINE "ldso.trace"

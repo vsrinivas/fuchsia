@@ -5,6 +5,7 @@
 #include "src/sys/appmgr/appmgr.h"
 
 #include "fcntl.h"
+#include "lib/fdio/directory.h"
 #include "lib/sys/cpp/termination_reason.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -39,20 +40,28 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   FXL_CHECK(root_realm_) << "Cannot create root realm ";
 
   // 2. Publish outgoing directories.
-  // Publish the root realm's hub directory as 'hub/' and the first nested
-  // realm's (to be created by sysmgr) service directory as 'svc/'.
+  // Connect to the tracing service, and then publish the root realm's hub
+  // directory as 'hub/' and the first nested realm's (to be created by sysmgr)
+  // service directory as 'svc/'.
+  zx::channel svc_client_chan, svc_server_chan;
+  zx_status_t status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "failed to create channel: " << status;
+    return;
+  }
+  status = root_realm_->BindFirstNestedRealmSvc(std::move(svc_server_chan));
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "failed to bind to root realm services: " << status;
+    return;
+  }
+  status = fdio_service_connect_at(svc_client_chan.get(), "fuchsia.tracing.provider.Registry",
+                                   args.trace_server_channel.release());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "failed to connect to tracing: " << status;
+    // In test environments the tracing registry may not be available. If this
+    // fails, let's still proceed.
+  }
   if (args.pa_directory_request != ZX_HANDLE_INVALID) {
-    zx::channel svc_client_chan, svc_server_chan;
-    zx_status_t status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "failed to create channel: " << status;
-      return;
-    }
-    status = root_realm_->BindFirstNestedRealmSvc(std::move(svc_server_chan));
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "failed to bind to root realm services: " << status;
-      return;
-    }
     auto svc = fbl::AdoptRef(new fs::RemoteDir(std::move(svc_client_chan)));
     publish_dir_->AddEntry("hub", root_realm_->hub_dir());
     publish_dir_->AddEntry("svc", svc);

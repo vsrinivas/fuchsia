@@ -101,56 +101,8 @@ zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
   return ZX_OK;
 }
 
-zx_status_t SystemInstance::CreateFuchsiaJob(const zx::job& root_job) {
-  zx_status_t status = zx::job::create(root_job, 0u, &fuchsia_job_);
-  if (status != ZX_OK) {
-    printf("devcoordinator: unable to create fuchsia job: %d (%s)\n", status,
-           zx_status_get_string(status));
-    return status;
-  }
-
-  fuchsia_job_.set_property(ZX_PROP_NAME, "fuchsia", 7);
-
-  const zx_policy_basic_v2_t basic_policy[] = {
-      // Lock down process creation. Child tasks must use fuchsia.process.Launcher.
-      {.condition = ZX_POL_NEW_PROCESS,
-       .action = ZX_POL_ACTION_DENY,
-       .flags = ZX_POL_OVERRIDE_DENY}};
-
-  status = fuchsia_job_.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, basic_policy,
-                                   fbl::count_of(basic_policy));
-  if (status != ZX_OK) {
-    printf("devcoordinator: unable to set basic policy for fuchsia job: %d (%s)\n", status,
-           zx_status_get_string(status));
-    return status;
-  }
-
-  // Set the minimum timer slack amount and default mode. The amount should be large enough to
-  // allow for some coalescing of timers, but small enough to ensure applications don't miss
-  // deadlines.
-  //
-  // Why LATE and not CENTER or EARLY? Timers firing a little later than requested is not uncommon
-  // in non-realtime systems. Programs are generally tolerant of some delays. However, timers
-  // firing before their dealine can be unexpected and lead to bugs.
-  const zx_policy_timer_slack_t timer_slack_policy{ZX_USEC(500), ZX_TIMER_SLACK_LATE, {}};
-
-  status =
-      fuchsia_job_.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &timer_slack_policy, 1);
-  if (status != ZX_OK) {
-    printf("devcoordinator: unable to set timer slack policy for fuchsia job: %d (%s)\n", status,
-           zx_status_get_string(status));
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t SystemInstance::PrepareChannels() {
   zx_status_t status;
-  status = zx::channel::create(0, &appmgr_client_, &appmgr_server_);
-  if (status != ZX_OK) {
-    return status;
-  }
   status = zx::channel::create(0, &miscsvc_client_, &miscsvc_server_);
   if (status != ZX_OK) {
     return status;
@@ -164,8 +116,7 @@ zx_status_t SystemInstance::PrepareChannels() {
 }
 
 zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_system,
-                                         devmgr::Coordinator* coordinator,
-                                         zx::channel fshost_client) {
+                                         devmgr::Coordinator* coordinator) {
   zx::channel dir_request, svchost_local;
   zx_status_t status = zx::channel::create(0, &dir_request, &svchost_local);
   if (status != ZX_OK) {
@@ -176,20 +127,6 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
   status = zx::debuglog::create(coordinator->root_resource(), 0, &logger);
   if (status != ZX_OK) {
     return status;
-  }
-
-  zx::channel appmgr_svc;
-  {
-    zx::channel appmgr_svc_req;
-    status = zx::channel::create(0, &appmgr_svc_req, &appmgr_svc);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = fdio_service_connect_at(appmgr_client_.get(), "svc", appmgr_svc_req.release());
-    if (status != ZX_OK) {
-      return status;
-    }
   }
 
   zx::job root_job_copy;
@@ -318,12 +255,6 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
       .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO), .handle = logger.release()},
   });
 
-  // Remove once svchost hosts the fuchsia.tracing.provider service itself.
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 0), .handle = appmgr_svc.release()},
-  });
-
   // Give svchost a restricted root job handle. svchost is already a privileged system service
   // as it controls system-wide process launching. With the root job it can consolidate a few
   // services such as crashsvc and the profile service.
@@ -341,21 +272,12 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
     });
   }
 
-  // TODO(smklein): Merge "coordinator_client" (proxying requests to devmgr) and
-  // "fshost_client" (proxying requests to fshost) into one service provider
-  // PseudoDirectory.
-
   // Add handle to channel to allow svchost to proxy fidl services to us.
   actions.push_back((fdio_spawn_action_t){
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
       .h = {.id = PA_HND(PA_USER0, 3), .handle = coordinator_client.release()},
   });
 
-  // Add a handle to allow svchost to proxy services to fshost.
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 4), .handle = fshost_client.release()},
-  });
   if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
     // Add handle to channel to allow svchost to proxy fidl services to
     // virtcon.
@@ -440,68 +362,7 @@ zx_status_t SystemInstance::ReuseExistingSvchost() {
   return ZX_OK;
 }
 
-// Binds common filesystems from fshost into our namespace. This is a temporary
-// workaround until fshost is run as a v2 component, as once that is complete
-// these paths will exist in devcoordinator's namespace when it is started.
-void bind_fshost_filesystems(zx::channel fshost_out_dir, zx::channel fshost_server, fdio_ns_t* ns) {
-  zx_status_t r;
-  if ((r = fdio_ns_bind(ns, "/fshost", fshost_out_dir.release())) != ZX_OK) {
-    printf("devcoordinator: cannot bind /fshost to namespace: %s\n", zx_status_get_string(r));
-    return;
-  }
-
-  const char* fstab[] = {
-      "/bin", "/data", "/system", "/install", "/volume", "/blob", "/pkgfs", "/tmp",
-  };
-  const uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_ADMIN |
-                         ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_EXECUTABLE;
-  for (unsigned n = 0; n < fbl::count_of(fstab); n++) {
-    zx::channel client, server;
-    if ((r = zx::channel::create(0, &server, &client)) != ZX_OK) {
-      printf("devcoordinator: failed to create channel: %s\n", zx_status_get_string(r));
-      return;
-    }
-    fbl::String fshost_path =
-        fbl::String::Concat({fbl::String("/fshost/fs"), fbl::String(fstab[n])});
-    if ((r = fdio_open(fshost_path.c_str(), flags, server.release())) != ZX_OK) {
-      printf("devcoordinator: cannot open %s: %s\n", fshost_path.c_str(), zx_status_get_string(r));
-      return;
-    }
-    if ((r = fdio_ns_bind(ns, fstab[n], client.release())) != ZX_OK) {
-      // Some of these may already exist if devcoordinator is run in a test
-      // environment
-      printf("devcoordinator: cannot bind %s to namespace: %s\n", fstab[n],
-             zx_status_get_string(r));
-      continue;
-    }
-  }
-
-  zx::channel delayed_system_client, delayed_system_server;
-  if ((r = zx::channel::create(0, &delayed_system_server, &delayed_system_client)) != ZX_OK) {
-    printf("devcoordinator: failed to create channel: %s\n", zx_status_get_string(r));
-    return;
-  }
-  printf("devcoordinator: opening /system-delayed\n");
-  if ((r = fdio_open("/fshost/delayed/fs/system", flags, delayed_system_server.release())) !=
-      ZX_OK) {
-    printf("devcoordinator: cannot open %s: %s\n", "/system-delayed", zx_status_get_string(r));
-    return;
-  }
-  printf("devcoordinator: successfully opened /system-delayed\n");
-  if ((r = fdio_ns_bind(ns, "/system-delayed", delayed_system_client.release())) != ZX_OK) {
-    printf("devcoordinator: cannot bind %s to namespace: %s\n", "/system-delayed",
-           zx_status_get_string(r));
-    return;
-  }
-
-  r = fdio_open("/fshost/fs-manager-svc", FS_READ_WRITE_DIR_FLAGS, fshost_server.release());
-  ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot open /fshost/fs-manager-svc: %s\n",
-                zx_status_get_string(r));
-}
-
-void SystemInstance::devmgr_vfs_init(devmgr::Coordinator* coordinator,
-                                     const devmgr::DevmgrArgs& devmgr_args,
-                                     zx::channel fshost_server) {
+void SystemInstance::devmgr_vfs_init() {
   fdio_ns_t* ns;
   zx_status_t r;
   r = fdio_ns_get_installed(&ns);
@@ -509,9 +370,6 @@ void SystemInstance::devmgr_vfs_init(devmgr::Coordinator* coordinator,
   r = fdio_ns_bind(ns, "/dev", CloneFs("dev").release());
   ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot bind /dev to namespace: %s\n",
                 zx_status_get_string(r));
-
-  zx::channel fshost_out_dir = fshost_start(coordinator, devmgr_args);
-  bind_fshost_filesystems(std::move(fshost_out_dir), std::move(fshost_server), ns);
 }
 
 // Thread entry point
@@ -718,11 +576,11 @@ int SystemInstance::service_starter(void* arg) {
   return args->instance->ServiceStarter(args->coordinator);
 }
 
-// Thread trampoline for FuchsiaStarter, which ServiceStarter spawns
-int fuchsia_starter(void* arg) {
+// Thread trampoline for WaitForSystemAvailable, which ServiceStarter spawns
+int wait_for_system_available(void* arg) {
   auto args = std::unique_ptr<SystemInstance::ServiceStarterArgs>(
       static_cast<SystemInstance::ServiceStarterArgs*>(arg));
-  return args->instance->FuchsiaStarter(args->coordinator);
+  return args->instance->WaitForSystemAvailable(args->coordinator);
 }
 
 int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
@@ -867,7 +725,8 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
   starter_args->instance = this;
   starter_args->coordinator = coordinator;
   thrd_t t;
-  int ret = thrd_create_with_name(&t, fuchsia_starter, starter_args.release(), "fuchsia-starter");
+  int ret = thrd_create_with_name(&t, wait_for_system_available, starter_args.release(),
+                                  "wait-for-system-available");
   if (ret == thrd_success) {
     thrd_detach(t);
   }
@@ -875,10 +734,13 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
   return 0;
 }
 
-int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
+int SystemInstance::WaitForSystemAvailable(devmgr::Coordinator* coordinator) {
   // Block this thread until /system-delayed is available. Note that this is
   // only used for coordinating events between fshost and devcoordinator, the
   // /system path is used for loading drivers and appmgr below.
+  // TODO: It's pretty wasteful to create a thread just so it can sit blocked in
+  // sync I/O opening '/system-delayed'. Once a simple async I/O wrapper exists
+  // this should switch to use that
   int fd = open("/system-delayed", O_RDONLY);
   if (!fd) {
     fprintf(stderr,
@@ -888,44 +750,13 @@ int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
   }
   close(fd);
 
-  // we're starting the appmgr because /system is present
-  // so we also signal the device coordinator that those
-  // drivers are now loadable
+  // Load in drivers from /system
   coordinator->set_system_available(true);
   coordinator->ScanSystemDrivers();
 
-  const char* argv_appmgr[] = {
-      "/system/bin/appmgr",
-      nullptr,
-  };
-
-  zx::channel ldsvc;
-  zx_status_t status = clone_fshost_ldsvc(&ldsvc);
-  if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to clone fshost loader for appmgr: %d\n", status);
-    return 1;
-  }
-
-  unsigned int appmgr_hnd_count = 0;
-  zx_handle_t appmgr_hnds[2] = {};
-  uint32_t appmgr_ids[2] = {};
-  if (appmgr_server_.is_valid()) {
-    ZX_ASSERT(appmgr_hnd_count < fbl::count_of(appmgr_hnds));
-    appmgr_hnds[appmgr_hnd_count] = appmgr_server_.release();
-    appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
-    appmgr_hnd_count++;
-  }
-  status =
-      launcher_.LaunchWithLoader(fuchsia_job_, "appmgr", zx::vmo(), std::move(ldsvc), argv_appmgr,
-                                 nullptr, -1, coordinator->root_resource(), appmgr_hnds, appmgr_ids,
-                                 appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
-  if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to launch appmgr: %s\n", zx_status_get_string(status));
-    return 1;
-  }
-
   do_autorun("autorun:system", coordinator->boot_args().Get("zircon.autorun.system"),
              coordinator->root_resource());
+
   return 0;
 }
 
@@ -936,7 +767,7 @@ zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
   if (status != ZX_OK) {
     return status;
   }
-  return fdio_service_connect("/fshost/svc/fuchsia.fshost.Loader", remote.release());
+  return fdio_service_connect("/svc/fuchsia.fshost.Loader", remote.release());
 }
 
 void SystemInstance::do_autorun(const char* name, const char* cmd,
@@ -962,55 +793,6 @@ void SystemInstance::do_autorun(const char* name, const char* cmd,
   }
 }
 
-zx::channel SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
-                                         const devmgr::DevmgrArgs& devmgr_args) {
-  // assemble handles to pass down to fshost
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t types[fbl::count_of(handles)];
-  size_t n = 0;
-
-  // pass directory request handle to fshost
-  zx::channel dir_request_local, dir_request_remote;
-  if (zx::channel::create(0, &dir_request_local, &dir_request_remote) == ZX_OK) {
-    handles[n] = dir_request_remote.release();
-    types[n++] = PA_HND(PA_DIRECTORY_REQUEST, 0);
-  }
-
-  // pass VDSO VMOS to fshost
-  for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
-    uint32_t type = PA_HND(PA_VMO_VDSO, m);
-    handles[n] = zx_take_startup_handle(type);
-
-    if (handles[n] != ZX_HANDLE_INVALID) {
-      types[n++] = type;
-    } else {
-      break;
-    }
-  }
-
-  // pass command line to the fshost
-  fbl::Vector<const char*> args{"/boot/bin/fshost"};
-  if (devmgr_args.disable_block_watcher) {
-    args.push_back("--disable-block-watcher");
-  }
-  args.push_back(nullptr);
-
-  launcher_.Launch(svc_job_, "fshost", args.data(), nullptr, -1, coordinator->root_resource(),
-                   handles, types, n, nullptr, FS_BOOT | FS_DEV | FS_SVC);
-  return dir_request_local;
-}
-
-static struct {
-  const char* name;
-  uint32_t flags;
-} DIRECTORY_RIGHTS[] = {
-    {"bin", FS_READ_EXEC_DIR_FLAGS},   {"blob", FS_READ_WRITE_DIR_FLAGS},
-    {"boot", ZX_FS_RIGHT_READABLE},    {"data", FS_READ_WRITE_DIR_FLAGS},
-    {"hub", FS_READ_WRITE_DIR_FLAGS},  {"install", FS_READ_WRITE_DIR_FLAGS},
-    {"pkgfs", FS_READ_EXEC_DIR_FLAGS}, {"system", FS_READ_EXEC_DIR_FLAGS},
-    {"tmp", FS_READ_WRITE_DIR_FLAGS},  {"volume", FS_READ_WRITE_DIR_FLAGS},
-};
-
 zx::channel SystemInstance::CloneFs(const char* path) {
   if (!strcmp(path, "dev")) {
     return devmgr::devfs_root_clone();
@@ -1027,22 +809,6 @@ zx::channel SystemInstance::CloneFs(const char* path) {
     zx::unowned_channel fs = devmgr::devfs_root_borrow();
     path += 4;
     status = fdio_open_at(fs->get(), path, FS_READ_WRITE_DIR_FLAGS, h1.release());
-  } else if (!strcmp(path, "hub")) {
-    status = fdio_open_at(appmgr_client_.get(), path, FS_READ_WRITE_DIR_FLAGS, h1.release());
-  } else {
-    int flags = 0;
-    for (unsigned n = 0; n < fbl::count_of(DIRECTORY_RIGHTS); n++) {
-      if (!strcmp(path, DIRECTORY_RIGHTS[n].name)) {
-        flags = DIRECTORY_RIGHTS[n].flags;
-        break;
-      }
-    }
-    if (flags == 0) {
-      log(ERROR, "devcoordinator: CloneFs failed for path %s: unexpected path\n", path);
-      return zx::channel();
-    }
-    fbl::String abs_path = fbl::String::Concat({fbl::String("/"), fbl::String(path)});
-    status = fdio_ns_connect(default_ns_, abs_path.c_str(), flags, h1.release());
   }
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: CloneFs failed for path %s: %s\n", path,

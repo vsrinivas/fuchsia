@@ -28,6 +28,7 @@ struct AppmgrArgs {
   fidl::VectorPtr<std::string> sysmgr_args;
   bool run_virtual_console;
   bool retry_sysmgr_crash;
+  zx::channel trace_server_channel;
 };
 
 class Appmgr {

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_DEVMGR_LAUNCHER_LAUNCH_H_
+#define LIB_DEVMGR_LAUNCHER_LAUNCH_H_
 
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
@@ -62,7 +63,9 @@ struct Args {
 //
 // Returns its containing job and a channel to the root of its devfs.
 // To destroy the devmgr, issue |devmgr_job->kill()|.
-zx_status_t Launch(Args args, zx::channel svc_client, zx::job* devmgr_job, zx::channel* devfs_root,
-                   zx::channel* outgoing_svc_root);
+zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
+                   zx::job* devmgr_job, zx::channel* devfs_root, zx::channel* outgoing_svc_root);
 
 }  // namespace devmgr_launcher
+
+#endif  // LIB_DEVMGR_LAUNCHER_LAUNCH_H_

@@ -9,10 +9,9 @@ cm_compile("root.cm") {
   data = rebase_path("meta/root.cml")
 }
 
-# TODO(BLD-448): This should move into the devcoordinator package that's
-# included in bootfs along with devcoordinator's binary and other
-# resources/libraries. For now it's here since cm_compile doesn't exist in
-# //zircon.
+# TODO(BLD-448): These should move into their appropriate packages that are
+# included in bootfs along with the binaries and other resources/libraries. For
+# now they here since cm_compile doesn't exist in //zircon.
 cm_compile("devcoordinator.cm") {
   data = rebase_path("meta/devcoordinator.cml")
 }
@@ -25,12 +24,16 @@ cm_compile("ptysvc.cm") {
 cm_compile("sysinfo.cm") {
   data = rebase_path("meta/sysinfo.cml")
 }
+cm_compile("fshost.cm") {
+  data = rebase_path("meta/fshost.cml")
+}
 
 # TODO(BLD-448): Should become a package just containing the root manifests.
 generate_manifest("root_manifests.bootfs") {
   deps = [
     ":console.cm",
     ":devcoordinator.cm",
+    ":fshost.cm",
     ":ptysvc.cm",
     ":root.cm",
     ":sysinfo.cm",
@@ -38,6 +41,7 @@ generate_manifest("root_manifests.bootfs") {
 
   root_cm_out = get_target_outputs(":root.cm")
   devc_cm_out = get_target_outputs(":devcoordinator.cm")
+  fshost_cm_out = get_target_outputs(":fshost.cm")
   console_cm_out = get_target_outputs(":console.cm")
   ptysvc_cm_out = get_target_outputs(":ptysvc.cm")
   sysinfo_cm_out = get_target_outputs(":sysinfo.cm")
@@ -47,5 +51,6 @@ generate_manifest("root_manifests.bootfs") {
     "--entry=meta/console.cm=" + rebase_path(console_cm_out[0]),
     "--entry=meta/ptysvc.cm=" + rebase_path(ptysvc_cm_out[0]),
     "--entry=meta/sysinfo.cm=" + rebase_path(sysinfo_cm_out[0]),
+    "--entry=meta/fshost.cm=" + rebase_path(fshost_cm_out[0]),
   ]
 }

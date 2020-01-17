@@ -212,13 +212,13 @@ static constexpr const char* devcoordinator_services[] = {
     fuchsia_boot_FactoryItems_Name,
     fuchsia_boot_Items_Name,
     fuchsia_boot_ReadOnlyLog_Name,
-    fuchsia_boot_RootJob_Name,
     fuchsia_boot_RootJobForInspect_Name,
+    fuchsia_boot_RootJob_Name,
     fuchsia_boot_RootResource_Name,
     fuchsia_boot_WriteOnlyLog_Name,
+    fuchsia_hardware_pty_Device_Name,
     fuchsia_kernel_Stats_Name,
     fuchsia_process_Launcher_Name,
-    fuchsia_hardware_pty_Device_Name,
     fuchsia_sysinfo_SysInfo_Name,
     nullptr,
     // clang-format on
@@ -314,11 +314,9 @@ int main(int argc, char** argv) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
   svc::Outgoing outgoing(dispatcher);
 
-  zx::channel appmgr_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
   root_job = zx_take_startup_handle(PA_HND(PA_USER0, 1));
   root_resource = zx_take_startup_handle(PA_HND(PA_USER0, 2));
   zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
-  zx::channel fshost_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 4)));
   zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
   zx::channel miscsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 6)));
   zx::channel devcoordinator_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 7)));
@@ -375,8 +373,9 @@ int main(int argc, char** argv) {
     }
   }
 
-  publish_services(outgoing.svc_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
-  publish_services(outgoing.svc_dir(), fshost_services, zx::unowned_channel(fshost_svc));
+  publish_services(outgoing.svc_dir(), deprecated_services,
+                   zx::unowned_channel(devcoordinator_svc));
+  publish_services(outgoing.svc_dir(), fshost_services, zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
   publish_services(outgoing.svc_dir(), devcoordinator_services,
                    zx::unowned_channel(devcoordinator_svc));
@@ -390,8 +389,8 @@ int main(int argc, char** argv) {
   }
 
   thrd_t thread;
-  status = start_crashsvc(zx::job(root_job), require_system ? appmgr_svc.get() : ZX_HANDLE_INVALID,
-                          &thread);
+  status = start_crashsvc(zx::job(root_job),
+                          require_system ? devcoordinator_svc.get() : ZX_HANDLE_INVALID, &thread);
   if (status != ZX_OK) {
     // The system can still function without crashsvc, log the error but
     // keep going.

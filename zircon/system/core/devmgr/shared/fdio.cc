@@ -65,8 +65,6 @@ static struct {
 };
 
 // clang-format on
-//
-void devmgr_disable_appmgr_services() { FSTAB[1].flags = 0; }
 
 FsProvider::~FsProvider() {}
 

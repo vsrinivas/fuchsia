@@ -2,21 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/boot/cpp/fidl.h>
-#include <fuchsia/device/cpp/fidl.h>
-#include <fuchsia/device/manager/cpp/fidl.h>
-#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
-#include <fuchsia/hardware/pty/cpp/fidl.h>
-#include <fuchsia/kernel/cpp/fidl.h>
-#include <fuchsia/paver/cpp/fidl.h>
-#include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/virtualconsole/cpp/fidl.h>
+#include <dirent.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
+#include <src/lib/files/directory.h>
 #include <trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
@@ -24,27 +18,17 @@
 
 namespace {
 
+// Returns the set of service names that should be proxied to the root realm
+// from appmgr's namespace
 std::vector<std::string> RootRealmServices() {
-  return std::vector<std::string>{
-      fuchsia::boot::Arguments::Name_,
-      fuchsia::boot::FactoryItems::Name_,
-      fuchsia::boot::ReadOnlyLog::Name_,
-      fuchsia::boot::RootJob::Name_,
-      fuchsia::boot::RootJobForInspect::Name_,
-      fuchsia::boot::RootResource::Name_,
-      fuchsia::boot::WriteOnlyLog::Name_,
-      fuchsia::device::NameProvider::Name_,
-      fuchsia::device::manager::Administrator::Name_,
-      fuchsia::hardware::power::statecontrol::Admin::Name_,
-      fuchsia::device::manager::DebugDumper::Name_,
-      fuchsia::hardware::pty::Device::Name_,
-      fuchsia::kernel::Counter::Name_,
-      fuchsia::kernel::DebugBroker::Name_,
-      fuchsia::kernel::Stats::Name_,
-      fuchsia::paver::Paver::Name_,
-      fuchsia::scheduler::ProfileProvider::Name_,
-      fuchsia::virtualconsole::SessionManager::Name_,
-  };
+  std::vector<std::string> res;
+  bool success = files::ReadDirContents("/svc_for_sys", &res);
+  if (!success) {
+    FXL_LOG(WARNING) << "failed to read /svc_for_sys (" << errno
+                     << "), not forwarding services to sys realm";
+    return std::vector<std::string>();
+  }
+  return res;
 }
 
 }  // namespace
@@ -53,7 +37,23 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
-  auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
+  zx::channel svc_for_sys_server, svc_for_sys_client;
+  zx_status_t status = zx::channel::create(0, &svc_for_sys_server, &svc_for_sys_client);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "failed to create channel: " << errno;
+    return status;
+  }
+  status =
+      fdio_open("/svc_for_sys", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_WRITABLE,
+                svc_for_sys_server.release());
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "failed to open /svc_for_sys (" << errno
+                     << "), not forwarding services to sys realm";
+    return status;
+  }
+
+  auto environment_services =
+      std::make_shared<sys::ServiceDirectory>(std::move(svc_for_sys_client));
 
   // Certain services in appmgr's /svc, which is served by svchost, are added to
   // the root realm so they can be routed into a nested environment (such as the
@@ -62,7 +62,14 @@ int main(int argc, char** argv) {
   root_realm_services->names = RootRealmServices();
   root_realm_services->host_directory = environment_services->CloneChannel().TakeChannel();
 
-  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+  zx::channel trace_client, trace_server;
+  status = zx::channel::create(0, &trace_client, &trace_server);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "failed to create tracing channel: " << status;
+    return status;
+  }
+
+  trace::TraceProvider trace_provider(std::move(trace_client), loop.dispatcher());
 
   component::AppmgrArgs args{.pa_directory_request = std::move(request),
                              .root_realm_services = std::move(root_realm_services),
@@ -70,7 +77,8 @@ int main(int argc, char** argv) {
                              .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
                              .sysmgr_args = {},
                              .run_virtual_console = true,
-                             .retry_sysmgr_crash = true};
+                             .retry_sysmgr_crash = true,
+                             .trace_server_channel = std::move(trace_server)};
   component::Appmgr appmgr(loop.dispatcher(), std::move(args));
 
   loop.Run();
