@@ -26,6 +26,15 @@ declare_args() {
   # pressure arises or other policies indicate.
   cache_package_labels = []
 
+  # A file in integration containing historical test duration data for this
+  # build configuration. This file is used by infra to efficiently schedule
+  # tests. "default.json" is a dummy file that contains no real duration data,
+  # and causes infra to schedule tests as if each one has the same duration.
+  # TODO(fxb/43704): Change to
+  # "//integration/infra/test_durations/default.json" after the recipes start
+  # setting this arg.
+  test_durations_file = "//integration/infra/test_durations.json"
+
   # If you add package labels to this variable, the packages will be included
   # in the 'universe' package set, which represents all software that is
   # produced that is to be published to a package repository or to the SDK by
@@ -335,8 +344,8 @@ build_api_module("tests") {
   ]
 }
 
-# test_durations.json contains historical test durations and timeout data to be
-# used for scheduling tests.
+# test_durations.json contains historical test durations data to be used for
+# scheduling tests.
 #
 # It contains a list of JSON objects with the following fields:
 #
@@ -350,13 +359,9 @@ build_api_module("tests") {
 #     time, in milliseconds.
 #     Type: int
 #
-#   timeout_ms
-#     Required: The timeout to set for this test.
-#     Type: int
-#
 build_api_module("test_durations") {
   testonly = true
-  contents = read_file("//integration/infra/test_durations.json", "json")
+  contents = read_file(test_durations_file, "json")
 }
 
 # See //zircon:tool_paths for a description and schema definition.
