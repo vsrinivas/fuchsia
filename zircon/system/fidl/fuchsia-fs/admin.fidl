@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fs;
+
+/// Administration functionality for filesystems.
+[Discoverable]
+protocol Admin {
+    /// Shuts down the filesystem. Once the filesystem recieves the shutdown request, it will
+    /// complete any active requests before terminating, but will not respond to new requests. This
+    /// call blocks until all open connections to the filesystem are terminated and any underlying
+    /// block devices or other owned channels are released, then it responds to this request and
+    /// closes this channel.
+    Shutdown() -> ();
+};

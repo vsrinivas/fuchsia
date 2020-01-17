@@ -25,6 +25,7 @@ namespace llcpp {
 namespace fuchsia {
 namespace fs {
 
+class Admin;
 enum class FsType : uint32_t {
   BLOBFS = 2657701153u,
   MINFS = 1852394785u,
@@ -426,6 +427,174 @@ struct Query_GetInfo_Result {
   Ordinal ordinal_;
   FIDL_ALIGNDECL
   fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t v1_fuchsia_fs_AdminShutdownRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_fs_AdminShutdownResponseTable;
+// Administration functionality for filesystems.
+class Admin final {
+  Admin() = delete;
+ public:
+  static constexpr char Name[] = "fuchsia.fs.Admin";
+
+  using ShutdownResponse = ::fidl::AnyZeroArgMessage;
+  using ShutdownRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class Shutdown_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Shutdown_Impl(::zx::unowned_channel _client_end);
+      ~Shutdown_Impl() = default;
+      Shutdown_Impl(Shutdown_Impl&& other) = default;
+      Shutdown_Impl& operator=(Shutdown_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using Shutdown = Shutdown_Impl<ShutdownResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class Shutdown_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Shutdown_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Shutdown_Impl() = default;
+      Shutdown_Impl(Shutdown_Impl&& other) = default;
+      Shutdown_Impl& operator=(Shutdown_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using Shutdown = Shutdown_Impl<ShutdownResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Shuts down the filesystem. Once the filesystem recieves the shutdown request, it will
+    // complete any active requests before terminating, but will not respond to new requests. This
+    // call blocks until all open connections to the filesystem are terminated and any underlying
+    // block devices or other owned channels are released, then it responds to this request and
+    // closes this channel.
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Shutdown Shutdown();
+
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Shuts down the filesystem. Once the filesystem recieves the shutdown request, it will
+    // complete any active requests before terminating, but will not respond to new requests. This
+    // call blocks until all open connections to the filesystem are terminated and any underlying
+    // block devices or other owned channels are released, then it responds to this request and
+    // closes this channel.
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Shutdown Shutdown(::zx::unowned_channel _client_end);
+
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Shuts down the filesystem. Once the filesystem recieves the shutdown request, it will
+    // complete any active requests before terminating, but will not respond to new requests. This
+    // call blocks until all open connections to the filesystem are terminated and any underlying
+    // block devices or other owned channels are released, then it responds to this request and
+    // closes this channel.
+    static ::fidl::DecodeResult<ShutdownResponse> Shutdown(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = Admin;
+    using _Base = ::fidl::CompleterBase;
+
+    class ShutdownCompleterBase : public _Base {
+     public:
+      void Reply();
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ShutdownCompleter = ::fidl::Completer<ShutdownCompleterBase>;
+
+    virtual void Shutdown(ShutdownCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ShutdownRequest(const ::fidl::DecodedMessage<Admin::ShutdownRequest>& _msg);
+    static void ShutdownResponse(const ::fidl::DecodedMessage<Admin::ShutdownResponse>& _msg);
+  };
 };
 
 // The maximum length of the name of a filesystem.
