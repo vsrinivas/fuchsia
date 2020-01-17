@@ -88,10 +88,25 @@ to GN build arguments that override any hardcoded defaults.  This means just
 repeating `gn gen build-dir` preserves what you did last time.
 
 You can also add `--args=...` to gn gen or use the `gn args` command to
-configure your build arguments.  The` gn args` command gives you a way to run
+configure your build arguments.  The `gn args` command gives you a way to run
 your $EDITOR on the `args.gn` file, and upon exiting the editor the command
 will re-run `gn gen` for you with the new arguments.  You can also just edit
-`args.gn `any time, and the next Ninja run will re-generate the build files.
+`args.gn` any time, and the next Ninja run will re-generate the build files.
+
+Args can also be set using the `fx set` command which invokes `gn gen`. Note
+that Zircon args are set differently than args for the rest of Fuchsia. For
+example, to set `foxtrot` in Fuchsia and `zulu` in Zircon both to `true` via
+`fx set`:
+
+```sh
+$ fx set <your configuration> --args 'foxtrot = true' \
+    --args 'zircon_extra_args = { zulu = true }'
+```
+
+See [GN Build Arguments](/docs/gen/build_arguments.md), particularly
+[zircon_args](/docs/gen/build_arguments.md#zircon_args) and
+[zircon_extra_args](/docs/gen/build_arguments.md#zircon_extra_args), for
+details.
 
 ## GN syntax and formatting
 
