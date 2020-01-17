@@ -16,7 +16,6 @@ zx_library("simplehid") {
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/sync",

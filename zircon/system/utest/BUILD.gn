@@ -68,7 +68,6 @@ if (current_cpu != "") {
       "$zx/system/dev/gpio/qcom-gpio:qcom-gpio-test",
       "$zx/system/dev/i2c/dw-i2c:dw-i2c-test",
       "$zx/system/dev/i2c/mt8167-i2c:mt8167-i2c-test",
-      "$zx/system/dev/input/bma253:bma253-test",
       "$zx/system/dev/input/cypress:cypress-touch-test",
       "$zx/system/dev/input/goodix:gt92xx-test",
       "$zx/system/dev/input/hid:hid-test",
