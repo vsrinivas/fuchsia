@@ -58,6 +58,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TearDown() override {
+    loop_.Shutdown();
     context_ = nullptr;
     sysmem_allocator1_ = nullptr;
     sysmem_allocator2_ = nullptr;
