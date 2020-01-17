@@ -17,6 +17,7 @@
             "fuchsia.settings.Display",
             "fuchsia.settings.DoNotDisturb",
             "fuchsia.settings.Intl",
+            "fuchsia.settings.NightMode",
             "fuchsia.settings.Privacy",
             "fuchsia.settings.Setup",
             "fuchsia.settings.System",

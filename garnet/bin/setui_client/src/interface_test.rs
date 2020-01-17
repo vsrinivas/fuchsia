@@ -17,6 +17,7 @@ use {
     setui_client_lib::display,
     setui_client_lib::do_not_disturb,
     setui_client_lib::intl,
+    setui_client_lib::night_mode,
     setui_client_lib::privacy,
     setui_client_lib::setup,
     setui_client_lib::system,
@@ -32,6 +33,7 @@ enum Services {
     Display(DisplayRequestStream),
     DoNotDisturb(DoNotDisturbRequestStream),
     Intl(IntlRequestStream),
+    NightMode(NightModeRequestStream),
     Privacy(PrivacyRequestStream),
     Setup(SetupRequestStream),
     System(SystemRequestStream),
@@ -173,6 +175,22 @@ async fn main() -> Result<(), Error> {
     validate_intl_set().await?;
     println!("  client calls intl watch");
     validate_intl_watch().await?;
+
+    println!("night mode service tests");
+    println!("  client calls night mode watch");
+    validate_night_mode(None).await?;
+
+    println!("  client calls set night_mode_status");
+    validate_night_mode(Some(true)).await?;
+
+    println!("  set() output");
+    validate_night_mode_set_output(true).await?;
+    validate_night_mode_set_output(false).await?;
+
+    println!("  watch() output");
+    validate_night_mode_watch_output(None).await?;
+    validate_night_mode_watch_output(Some(true)).await?;
+    validate_night_mode_watch_output(Some(false)).await?;
 
     println!("privacy service tests");
     println!("  client calls privacy watch");
@@ -616,6 +634,88 @@ async fn validate_dnd(
 
     do_not_disturb::command(do_not_disturb_service, expected_user_dnd, expected_night_mode_dnd)
         .await?;
+
+    Ok(())
+}
+
+async fn validate_night_mode(expected_night_mode_status: Option<bool>) -> Result<(), Error> {
+    let env = create_service!(
+        Services::NightMode, NightModeRequest::Set { settings, responder, } => {
+            if let (Some(night_mode_status), Some(expected_night_mode_status_value)) =
+                (settings.night_mode_status, expected_night_mode_status) {
+                assert_eq!(night_mode_status, expected_night_mode_status_value);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Unexpected call to set");
+            }
+        },
+        NightModeRequest::Watch { responder } => {
+            responder.send(NightModeSettings {
+                night_mode_status: Some(false),
+            })?;
+        }
+    );
+
+    let night_mode_service = env
+        .connect_to_service::<NightModeMarker>()
+        .context("Failed to connect to night mode service")?;
+
+    night_mode::command(night_mode_service, expected_night_mode_status).await?;
+
+    Ok(())
+}
+
+async fn validate_night_mode_set_output(expected_night_mode_status: bool) -> Result<(), Error> {
+    let env = create_service!(
+        Services::NightMode, NightModeRequest::Set { settings: _, responder, } => {
+            responder.send(&mut Ok(()))?;
+        },
+        NightModeRequest::Watch { responder } => {
+            responder.send(NightModeSettings {
+                night_mode_status: Some(expected_night_mode_status),
+            })?;
+        }
+    );
+
+    let night_mode_service = env
+        .connect_to_service::<NightModeMarker>()
+        .context("Failed to connect to night mode service")?;
+
+    let output = night_mode::command(night_mode_service, Some(expected_night_mode_status)).await?;
+
+    assert_eq!(
+        output,
+        format!("Successfully set night_mode_status to {}", expected_night_mode_status)
+    );
+
+    Ok(())
+}
+
+async fn validate_night_mode_watch_output(
+    expected_night_mode_status: Option<bool>,
+) -> Result<(), Error> {
+    let env = create_service!(
+        Services::NightMode, NightModeRequest::Set { settings: _, responder, } => {
+            responder.send(&mut Ok(()))?;
+        },
+        NightModeRequest::Watch { responder } => {
+            responder.send(NightModeSettings {
+                night_mode_status: expected_night_mode_status,
+            })?;
+        }
+    );
+
+    let night_mode_service = env
+        .connect_to_service::<NightModeMarker>()
+        .context("Failed to connect to night_mode service")?;
+
+    // Pass in None to call Watch() on the service.
+    let output = night_mode::command(night_mode_service, None).await?;
+
+    assert_eq!(
+        output,
+        format!("{:#?}", NightModeSettings { night_mode_status: expected_night_mode_status })
+    );
 
     Ok(())
 }

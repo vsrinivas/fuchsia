@@ -16,6 +16,7 @@ pub mod device;
 pub mod display;
 pub mod do_not_disturb;
 pub mod intl;
+pub mod night_mode;
 pub mod privacy;
 pub mod setup;
 pub mod system;
@@ -106,6 +107,12 @@ pub enum SettingClient {
         #[structopt(long)]
         /// If set, this flag will set locales as an empty list. Overrides the locales arguments.
         clear_locales: bool,
+    },
+
+    #[structopt(name = "night_mode")]
+    NightMode {
+        #[structopt(short, long)]
+        night_mode_status: Option<bool>,
     },
 
     #[structopt(name = "privacy")]
@@ -281,6 +288,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 intl::command(intl_service, time_zone, temperature_unit, locales, clear_locales)
                     .await?;
             println!("Intl: {}", output);
+        }
+        SettingClient::NightMode { night_mode_status } => {
+            let night_mode_service = connect_to_service::<fidl_fuchsia_settings::NightModeMarker>()
+                .context("Failed to connect to night mode service")?;
+            let output = night_mode::command(night_mode_service, night_mode_status).await?;
+            println!("NightMode: {}", output);
         }
         SettingClient::Accessibility(accessibility_options) => {
             let accessibility_service =
