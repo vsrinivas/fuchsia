@@ -16,6 +16,8 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/ethernet.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/ethernet.h>
 #include <fbl/macros.h>
 #include <virtio/net.h>
 
@@ -24,26 +26,43 @@
 
 namespace virtio {
 
-class EthernetDevice : public Device {
+class EthernetDevice;
+using DeviceType = ddk::Device<EthernetDevice, ddk::GetProtocolable, ddk::UnbindableDeprecated>;
+class EthernetDevice : public Device,
+                       // Mixins for protocol device:
+                       public DeviceType,
+                       // Mixin for Ethernet banjo protocol:
+                       public ddk::EthernetImplProtocol<EthernetDevice, ddk::base_protocol> {
  public:
   explicit EthernetDevice(zx_device_t* device, zx::bti, std::unique_ptr<Backend> backend);
   virtual ~EthernetDevice();
 
   zx_status_t Init() override TA_EXCL(state_lock_);
-  void Release() override TA_EXCL(state_lock_);
+  void DdkRelease() TA_EXCL(state_lock_);
+  void DdkUnbindDeprecated() { virtio::Device::Unbind(); }
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 
   // VirtIO callbacks
   void IrqRingUpdate() override TA_EXCL(state_lock_);
   void IrqConfigChange() override TA_EXCL(state_lock_);
 
   // DDK protocol hooks; see ddk/protocol/ethernet.h
-  zx_status_t Query(uint32_t options, ethernet_info_t* info) TA_EXCL(state_lock_);
-  void Stop() TA_EXCL(state_lock_);
-  zx_status_t Start(const ethernet_ifc_protocol_t* ifc) TA_EXCL(state_lock_);
-  void QueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
-               ethernet_impl_queue_tx_callback completion_cb, void* cookie) TA_EXCL(state_lock_);
+  zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info) TA_EXCL(state_lock_);
+  void EthernetImplStop() TA_EXCL(state_lock_);
+  zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc) TA_EXCL(state_lock_);
+  void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                           ethernet_impl_queue_tx_callback completion_cb, void* cookie)
+      TA_EXCL(state_lock_);
 
   const char* tag() const override { return "virtio-net"; }
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data_buffer,
+                                   size_t data_size) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  void EthernetImplGetBti(zx::bti* out_bti) {
+    // return ZX_ERR_NOT_SUPPORTED;
+  }
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(EthernetDevice);

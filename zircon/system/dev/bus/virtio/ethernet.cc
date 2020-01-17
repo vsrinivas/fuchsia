@@ -60,61 +60,6 @@ const uint16_t kTxId = 1u;
 // Strictly for convenience...
 typedef struct vring_desc desc_t;
 
-// Device bridge helpers
-void virtio_net_unbind(void* ctx) {
-  virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
-  eth->Unbind();
-}
-
-void virtio_net_release(void* ctx) {
-  std::unique_ptr<virtio::EthernetDevice> eth(static_cast<virtio::EthernetDevice*>(ctx));
-  eth->Release();
-}
-
-const zx_protocol_device_t kDeviceOps = []() {
-  zx_protocol_device_t ops = {};
-  ops.version = DEVICE_OPS_VERSION;
-  ops.unbind = virtio_net_unbind;
-  ops.release = virtio_net_release;
-  return ops;
-}();
-
-// Protocol bridge helpers
-zx_status_t virtio_net_query(void* ctx, uint32_t options, ethernet_info_t* info) {
-  virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
-  return eth->Query(options, info);
-}
-
-void virtio_net_stop(void* ctx) {
-  virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
-  eth->Stop();
-}
-
-zx_status_t virtio_net_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
-  virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
-  return eth->Start(ifc);
-}
-
-void virtio_net_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
-                         ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
-  virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
-  eth->QueueTx(options, netbuf, completion_cb, cookie);
-}
-
-static zx_status_t virtio_set_param(void* ctx, uint32_t param, int32_t value, const void* data,
-                                    size_t data_size) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-ethernet_impl_protocol_ops_t kProtoOps = {
-    virtio_net_query,
-    virtio_net_stop,
-    virtio_net_start,
-    virtio_net_queue_tx,
-    virtio_set_param,
-    NULL,  // get_bti not implemented because we don't have FEATURE_DMA
-};
-
 // I/O buffer helpers
 zx_status_t InitBuffers(const zx::bti& bti, std::unique_ptr<io_buffer_t[]>* out) {
   zx_status_t rc;
@@ -177,9 +122,20 @@ uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id, siz
 
 }  // namespace
 
+zx_status_t EthernetDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
+  auto* proto = static_cast<ddk::AnyProtocol*>(out);
+  proto->ctx = this;
+  if (proto_id == ZX_PROTOCOL_ETHERNET_IMPL) {
+    proto->ops = &ethernet_impl_protocol_ops_;
+    return ZX_OK;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 EthernetDevice::EthernetDevice(zx_device_t* bus_device, zx::bti bti,
                                std::unique_ptr<Backend> backend)
-    : Device(bus_device, std::move(bti), std::move(backend)),
+    : virtio::Device(bus_device, std::move(bti), std::move(backend)),
+      DeviceType(bus_device),
       rx_(this),
       tx_(this),
       bufs_(nullptr),
@@ -228,7 +184,7 @@ zx_status_t EthernetDevice::Init() {
   }
 
   // Plan to clean up unless everything goes right.
-  auto cleanup = fbl::MakeAutoCall([this]() { Release(); });
+  auto cleanup = fbl::MakeAutoCall([this]() { DdkRelease(); });
 
   // Allocate I/O buffers and virtqueues.
   uint16_t num_descs = static_cast<uint16_t>(kBacklog & 0xffff);
@@ -266,18 +222,12 @@ zx_status_t EthernetDevice::Init() {
   StartIrqThread();
 
   // Initialize the zx_device and publish us
-  device_add_args_t args;
-  memset(&args, 0, sizeof(args));
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "virtio-net";
-  args.ctx = this;
-  args.ops = &kDeviceOps;
-  args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
-  args.proto_ops = &kProtoOps;
-  if ((rc = device_add(bus_device_, &args, &device_)) != ZX_OK) {
+  auto status = DdkAdd("virtio-net");
+  if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add device: %s\n", zx_status_get_string(rc));
-    return rc;
+    return status;
   }
+  device_ = zxdev();
   // Give the rx buffers to the host
   rx_.Kick();
 
@@ -287,7 +237,7 @@ zx_status_t EthernetDevice::Init() {
   return ZX_OK;
 }
 
-void EthernetDevice::Release() {
+void EthernetDevice::DdkRelease() {
   LTRACE_ENTRY;
   fbl::AutoLock lock(&state_lock_);
   ReleaseLocked();
@@ -296,7 +246,7 @@ void EthernetDevice::Release() {
 void EthernetDevice::ReleaseLocked() {
   ifc_.ops = nullptr;
   ReleaseBuffers(std::move(bufs_));
-  Device::Release();
+  virtio::Device::Release();
 }
 
 void EthernetDevice::IrqRingUpdate() {
@@ -368,7 +318,7 @@ void EthernetDevice::IrqConfigChange() {
   ethernet_ifc_status(&ifc_, (config_.status & VIRTIO_NET_S_LINK_UP) ? ETHERNET_STATUS_ONLINE : 0);
 }
 
-zx_status_t EthernetDevice::Query(uint32_t options, ethernet_info_t* info) {
+zx_status_t EthernetDevice::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
   LTRACE_ENTRY;
   if (options) {
     return ZX_ERR_INVALID_ARGS;
@@ -383,13 +333,13 @@ zx_status_t EthernetDevice::Query(uint32_t options, ethernet_info_t* info) {
   return ZX_OK;
 }
 
-void EthernetDevice::Stop() {
+void EthernetDevice::EthernetImplStop() {
   LTRACE_ENTRY;
   fbl::AutoLock lock(&state_lock_);
   ifc_.ops = nullptr;
 }
 
-zx_status_t EthernetDevice::Start(const ethernet_ifc_protocol_t* ifc) {
+zx_status_t EthernetDevice::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
   LTRACE_ENTRY;
   if (!ifc) {
     return ZX_ERR_INVALID_ARGS;
@@ -403,8 +353,9 @@ zx_status_t EthernetDevice::Start(const ethernet_ifc_protocol_t* ifc) {
   return ZX_OK;
 }
 
-void EthernetDevice::QueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
-                             ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
+void EthernetDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                                         ethernet_impl_queue_tx_callback completion_cb,
+                                         void* cookie) {
   LTRACE_ENTRY;
   eth::BorrowedOperation<> op(netbuf, completion_cb, cookie, sizeof(ethernet_netbuf_t));
   const void* data = op.operation()->data_buffer;
