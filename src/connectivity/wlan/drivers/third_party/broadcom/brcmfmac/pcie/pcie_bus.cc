@@ -17,6 +17,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_handlers.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_master.h"
 
 namespace wlan {
@@ -67,7 +68,7 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
     return status;
   }
 
-  std::list<std::unique_ptr<PcieInterruptMaster::InterruptHandler>> pcie_interrupt_handlers;
+  std::list<std::unique_ptr<InterruptProviderInterface::InterruptHandler>> pcie_interrupt_handlers;
   pcie_interrupt_handlers.emplace_back(new PcieSleepInterruptHandler(
       pcie_interrupt_master.get(), pcie_buscore.get(), pcie_firmware.get()));
   pcie_interrupt_handlers.emplace_back(
@@ -129,6 +130,12 @@ const brcmf_bus_ops* PcieBus::GetBusOps() {
   };
   return &bus_ops;
 }
+
+DmaBufferProviderInterface* PcieBus::GetDmaBufferProvider() { return pcie_buscore_.get(); }
+
+DmaRingProviderInterface* PcieBus::GetDmaRingProvider() { return pcie_ring_master_.get(); }
+
+InterruptProviderInterface* PcieBus::GetInterruptProvider() { return pcie_interrupt_master_.get(); }
 
 // static
 brcmf_bus_type PcieBus::GetBusType() { return BRCMF_BUS_TYPE_PCIE; }

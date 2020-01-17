@@ -15,6 +15,7 @@
 namespace wlan {
 namespace brcmfmac {
 
+class MsgbufProto;
 class PcieBus;
 
 // This class implements Device for Broadcom chips that live on the PCIE bus.  This marks the design
@@ -41,6 +42,7 @@ class PcieDevice : public Device {
   ~PcieDevice();
 
   std::unique_ptr<PcieBus> pcie_bus_;
+  std::unique_ptr<MsgbufProto> msgbuf_proto_;
 };
 
 }  // namespace brcmfmac

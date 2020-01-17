@@ -16,6 +16,7 @@
 #include <ddktl/protocol/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_interfaces.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -25,7 +26,7 @@ class DmaBuffer;
 // This class implements the brcmfmac buscore functionality (see: chip.h) for the PCIE bus.  It
 // implements the C-style bus transaction logic as defined by brcmf_buscore_ops, used to perform
 // reads and writes over the PCIE bus.
-class PcieBuscore {
+class PcieBuscore : public DmaBufferProviderInterface {
  public:
   // This class represents a view into a particular core's register space.  Core register access
   // requires setting the BAR0 window mapping, which is global state on the device.  Since this
@@ -68,7 +69,7 @@ class PcieBuscore {
   };
 
   PcieBuscore();
-  ~PcieBuscore();
+  ~PcieBuscore() override;
 
   // Static factory function for PcieBuscore instances.
   static zx_status_t Create(zx_device_t* device, std::unique_ptr<PcieBuscore>* out_buscore);
@@ -92,9 +93,9 @@ class PcieBuscore {
   // Get a pointer to the device shared memory region.
   volatile void* GetTcmPointer(uint32_t offset);
 
-  // Create a DMA buffer, suitable for use with the device.
+  // DmaBufferProviderInterface implementation.
   zx_status_t CreateDmaBuffer(uint32_t cache_policy, size_t size,
-                              std::unique_ptr<DmaBuffer>* out_dma_buffer);
+                              std::unique_ptr<DmaBuffer>* out_dma_buffer) override;
 
   // Manually set the ramsize for this PCIE buscore chip.
   void SetRamsize(size_t ramsize);

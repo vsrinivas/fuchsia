@@ -14,8 +14,8 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -23,6 +23,7 @@ namespace brcmfmac {
 class Device;
 class PcieBuscore;
 class PcieFirmware;
+class PcieInterruptMaster;
 class PcieRingMaster;
 
 // This class implements the brcmfmc bus functionality (see: bus.h) for the PCIE bus.  It implements
@@ -37,6 +38,11 @@ class PcieBus {
 
   // Get the brcmf_bus_ops struct that forwards brcmf driver bus calls to a PcieBus instance.
   static const brcmf_bus_ops* GetBusOps();
+
+  // Return the MSGBUF interfaces that this class provides.
+  DmaBufferProviderInterface* GetDmaBufferProvider();
+  DmaRingProviderInterface* GetDmaRingProvider();
+  InterruptProviderInterface* GetInterruptProvider();
 
  private:
   // Bus functionality implemnentation.
@@ -58,7 +64,7 @@ class PcieBus {
   std::unique_ptr<PcieFirmware> pcie_firmware_;
   std::unique_ptr<PcieRingMaster> pcie_ring_master_;
   std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master_;
-  std::list<std::unique_ptr<PcieInterruptMaster::InterruptHandler>> pcie_interrupt_handlers_;
+  std::list<std::unique_ptr<InterruptProviderInterface::InterruptHandler>> pcie_interrupt_handlers_;
   std::unique_ptr<brcmf_bus> brcmf_bus_;
   std::unique_ptr<brcmf_mp_device> brcmf_mp_device_;
 };

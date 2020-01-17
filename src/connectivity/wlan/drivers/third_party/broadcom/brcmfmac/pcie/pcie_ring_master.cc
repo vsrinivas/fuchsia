@@ -286,7 +286,9 @@ zx_status_t PcieRingMaster::Create(PcieBuscore* buscore, PcieFirmware* firmware,
   return ZX_OK;
 }
 
-const PcieRingMaster::DmaConfig& PcieRingMaster::GetDmaConfig() const { return dma_config_; }
+const DmaRingProviderInterface::DmaConfig& PcieRingMaster::GetDmaConfig() const {
+  return dma_config_;
+}
 
 WriteDmaRing* PcieRingMaster::GetControlSubmitRing() { return control_submit_ring_.get(); }
 

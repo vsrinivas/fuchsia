@@ -3,6 +3,9 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
 
+#include <zircon/errors.h>
+
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_proto.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_bus.h"
 
 namespace wlan {
@@ -33,7 +36,15 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device, PcieDevice** out_devi
     return status;
   }
 
+  std::unique_ptr<MsgbufProto> msgbuf_proto;
+  if ((status = MsgbufProto::Create(device.get(), pcie_bus->GetDmaBufferProvider(),
+                                    pcie_bus->GetDmaRingProvider(),
+                                    pcie_bus->GetInterruptProvider(), &msgbuf_proto)) != ZX_OK) {
+    return status;
+  }
+
   device->pcie_bus_ = std::move(pcie_bus);
+  device->msgbuf_proto_ = std::move(msgbuf_proto);
 
   // TODO(sheu): make the device visible once higher-level functionality is present.
   // device->DdkMakeVisible();

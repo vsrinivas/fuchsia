@@ -15,6 +15,7 @@
 
 #include <ddk/device.h>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 
 namespace wlan {
@@ -22,34 +23,18 @@ namespace brcmfmac {
 
 // This class implements interrupt master functionality for the PCIE bus.  It receives hardware
 // interrupts over the bus, and distributes them to the driver appropriately.
-class PcieInterruptMaster {
+class PcieInterruptMaster : public InterruptProviderInterface {
  public:
-  // This is the interface for interrupt handlers that can be registered to the PcieInterruptMaster.
-  class InterruptHandler {
-   public:
-    virtual ~InterruptHandler();
-
-    // The interrupt handler is invoked through this implementation.  The value of the interrupt
-    // register will be passed in at the time of the interrupt, and the call should return the bits
-    // of the register that will be masked off before the next handler is invoked.
-    virtual uint32_t HandleInterrupt(uint32_t mailboxint) = 0;
-  };
-
   PcieInterruptMaster();
-  ~PcieInterruptMaster();
+  ~PcieInterruptMaster() override;
 
   // Static factory function for PcieInterruptMaster instances.
   static zx_status_t Create(zx_device_t* device, PcieBuscore* buscore,
                             std::unique_ptr<PcieInterruptMaster>* out_interrupt_master);
 
-  // Add an interrupt handler to the provider, for the provider to invoke when an interrupt occurs.
-  // Handlers will be invoked in the order in which they are added.  The handler added by this call
-  // may be invoked before this call returns.
-  zx_status_t AddInterruptHandler(InterruptHandler* handler);
-
-  // Remove a previously added interrupt handler.  The handler will not execute, and is guaranteed
-  // not to be currently executing, once this call returns.
-  zx_status_t RemoveInterruptHandler(InterruptHandler* handler);
+  // InterruptProviderInterface implementation.
+  zx_status_t AddInterruptHandler(InterruptHandler* handler) override;
+  zx_status_t RemoveInterruptHandler(InterruptHandler* handler) override;
 
  private:
   // Handle the modification of the interrupt handlers list.

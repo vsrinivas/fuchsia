@@ -20,6 +20,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_proto.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
@@ -264,6 +265,14 @@ zx_status_t RunPcieDeviceComponentsTest(zx_device_t* parent) {
   if (pcie_bus->GetBusOps()->get_ramsize(device.drvr()->bus_if) == 0) {
     BRCMF_ERR("PcieBus returned 0 ramsize\n");
     return ZX_ERR_NO_RESOURCES;
+  }
+
+  std::unique_ptr<MsgbufProto> msgbuf_proto;
+  if ((status = MsgbufProto::Create(&device, pcie_bus->GetDmaBufferProvider(),
+                                    pcie_bus->GetDmaRingProvider(),
+                                    pcie_bus->GetInterruptProvider(), &msgbuf_proto)) != ZX_OK) {
+    BRCMF_ERR("MsgbufProto creation failed: %s\n", zx_status_get_string(status));
+    return status;
   }
 
   return ZX_OK;

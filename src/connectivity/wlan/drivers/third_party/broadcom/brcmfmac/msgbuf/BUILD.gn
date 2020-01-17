@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+# Sources for the MSGBUF firmware protocol.
+source_set("msgbuf") {
+  sources = [
+    "msgbuf_interfaces.cc",
+    "msgbuf_proto.cc",
+  ]
+  public = [
+    "msgbuf_interfaces.h",
+    "msgbuf_proto.h",
+  ]
+  deps =
+      [ "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug" ]
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//zircon/system/public",
+  ]
+}

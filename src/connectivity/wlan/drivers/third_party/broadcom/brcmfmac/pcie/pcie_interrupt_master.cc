@@ -28,8 +28,6 @@ constexpr int kUserPacketRemoveHandler = 3;
 
 }  // namespace
 
-PcieInterruptMaster::InterruptHandler::~InterruptHandler() = default;
-
 PcieInterruptMaster::PcieInterruptMaster() = default;
 
 PcieInterruptMaster::~PcieInterruptMaster() {
