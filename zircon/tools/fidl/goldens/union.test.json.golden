@@ -136,7 +136,6 @@
           "offset": 8
         }
       ],
-      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -209,117 +208,6 @@
           "offset": 8
         }
       ],
-      "strict": true,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 3,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": false,
-        "contains_union": true
-      }
-    },
-    {
-      "name": "fidl.test.json/FlexiblePizzaOrPasta",
-      "location": {
-        "filename": "union.test.fidl",
-        "line": 23,
-        "column": 16
-      },
-      "members": [
-        {
-          "xunion_ordinal": 1,
-          "reserved": false,
-          "name": "pizza",
-          "type": {
-            "kind": "identifier",
-            "identifier": "fidl.test.json/Pizza",
-            "nullable": false
-          },
-          "location": {
-            "filename": "union.test.fidl",
-            "line": 24,
-            "column": 14
-          },
-          "size": 16,
-          "offset": 8
-        },
-        {
-          "xunion_ordinal": 2,
-          "reserved": false,
-          "name": "pasta",
-          "type": {
-            "kind": "identifier",
-            "identifier": "fidl.test.json/Pasta",
-            "nullable": false
-          },
-          "location": {
-            "filename": "union.test.fidl",
-            "line": 25,
-            "column": 14
-          },
-          "size": 16,
-          "offset": 8
-        }
-      ],
-      "strict": false,
-      "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 3,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": false,
-        "contains_union": true
-      }
-    },
-    {
-      "name": "fidl.test.json/StrictPizzaOrPasta",
-      "location": {
-        "filename": "union.test.fidl",
-        "line": 28,
-        "column": 14
-      },
-      "members": [
-        {
-          "xunion_ordinal": 1,
-          "reserved": false,
-          "name": "pizza",
-          "type": {
-            "kind": "identifier",
-            "identifier": "fidl.test.json/Pizza",
-            "nullable": false
-          },
-          "location": {
-            "filename": "union.test.fidl",
-            "line": 29,
-            "column": 14
-          },
-          "size": 16,
-          "offset": 8
-        },
-        {
-          "xunion_ordinal": 2,
-          "reserved": false,
-          "name": "pasta",
-          "type": {
-            "kind": "identifier",
-            "identifier": "fidl.test.json/Pasta",
-            "nullable": false
-          },
-          "location": {
-            "filename": "union.test.fidl",
-            "line": 30,
-            "column": 14
-          },
-          "size": 16,
-          "offset": 8
-        }
-      ],
-      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -337,17 +225,13 @@
   "declaration_order": [
     "fidl.test.json/Pizza",
     "fidl.test.json/Pasta",
-    "fidl.test.json/StrictPizzaOrPasta",
     "fidl.test.json/PizzaOrPasta",
-    "fidl.test.json/FlexiblePizzaOrPasta",
     "fidl.test.json/ExplicitPizzaOrPasta"
   ],
   "declarations": {
     "fidl.test.json/Pizza": "struct",
     "fidl.test.json/Pasta": "struct",
     "fidl.test.json/PizzaOrPasta": "union",
-    "fidl.test.json/ExplicitPizzaOrPasta": "union",
-    "fidl.test.json/FlexiblePizzaOrPasta": "union",
-    "fidl.test.json/StrictPizzaOrPasta": "union"
+    "fidl.test.json/ExplicitPizzaOrPasta": "union"
   }
 }

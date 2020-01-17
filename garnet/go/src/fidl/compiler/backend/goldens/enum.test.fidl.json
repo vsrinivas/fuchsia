@@ -10,7 +10,7 @@
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/enum.test.fidl",
         "line": 3,
-        "column": 15
+        "column": 28
       },
       "type": "uint32",
       "members": [

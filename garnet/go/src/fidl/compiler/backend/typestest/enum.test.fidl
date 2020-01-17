@@ -1,6 +1,6 @@
 library test.name;
 
-flexible enum MyEnum : uint32 {
+experimental_flexible enum MyEnum : uint32 {
     FOO = 1;
     BAR = 2;
 };

@@ -6,29 +6,23 @@
 
 static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullableTable;
 extern const fidl_type_t test_name_UnionTable;
-extern const fidl_type_t test_name_StrictUnionTable;
 extern const fidl_type_t test_name_ReverseOrdinalUnionTable;
 extern const fidl_type_t test_name_NullableUnionStructTable;
-extern const fidl_type_t test_name_FlexibleUnionTable;
 extern const fidl_type_t test_name_FieldCollisionTable;
 extern const fidl_type_t test_name_ExplicitUnionTable;
 static const fidl_type_t v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable;
 extern const fidl_type_t v1_test_name_UnionTable;
 static const fidl_type_t v1_Pointer18v1_test_name_UnionTable;
-extern const fidl_type_t v1_test_name_StrictUnionTable;
 extern const fidl_type_t v1_test_name_ReverseOrdinalUnionTable;
 extern const fidl_type_t v1_test_name_NullableUnionStructTable;
-extern const fidl_type_t v1_test_name_FlexibleUnionTable;
 extern const fidl_type_t v1_test_name_FieldCollisionTable;
 extern const fidl_type_t v1_test_name_ExplicitUnionTable;
 
 // Coding tables for old wire format.
 
 extern const fidl_type_t test_name_UnionTable;
-extern const fidl_type_t test_name_StrictUnionTable;
 extern const fidl_type_t test_name_ReverseOrdinalUnionTable;
 extern const fidl_type_t test_name_NullableUnionStructTable;
-extern const fidl_type_t test_name_FlexibleUnionTable;
 extern const fidl_type_t test_name_FieldCollisionTable;
 extern const fidl_type_t test_name_ExplicitUnionTable;
 
@@ -46,13 +40,6 @@ static const struct FidlUnionField Fields15test_name_Union[] = {
 };
 const fidl_type_t test_name_UnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields15test_name_Union, .field_count=3u, .data_offset=8u, .size=24u, .name="test.name/Union", .alt_type=&v1_test_name_UnionTable}}};
 
-static const struct FidlUnionField Fields21test_name_StrictUnion[] = {
-    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=1u},
-    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=2u},
-    /*FidlUnionField*/{.type=&Vector4294967295nonnullable27String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=3u}
-};
-const fidl_type_t test_name_StrictUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields21test_name_StrictUnion, .field_count=3u, .data_offset=8u, .size=24u, .name="test.name/StrictUnion", .alt_type=&v1_test_name_StrictUnionTable}}};
-
 static const struct FidlUnionField Fields29test_name_ReverseOrdinalUnion[] = {
     /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u},
     /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=2u}
@@ -63,13 +50,6 @@ static const struct FidlStructField Fields29test_name_NullableUnionStruct[] = {
     /*FidlStructField*/{.type=&Pointer15test_name_UnionTable, .offset=0u, .padding=0u}
 };
 const fidl_type_t test_name_NullableUnionStructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields29test_name_NullableUnionStruct, .field_count=1u, .size=8u, .max_out_of_line=4294967295u, .contains_union=true, .name="test.name/NullableUnionStruct", .alt_type=&v1_test_name_NullableUnionStructTable}}};
-
-static const struct FidlUnionField Fields23test_name_FlexibleUnion[] = {
-    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=1u},
-    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=2u},
-    /*FidlUnionField*/{.type=&Vector4294967295nonnullable27String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=3u}
-};
-const fidl_type_t test_name_FlexibleUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields23test_name_FlexibleUnion, .field_count=3u, .data_offset=8u, .size=24u, .name="test.name/FlexibleUnion", .alt_type=&v1_test_name_FlexibleUnionTable}}};
 
 static const struct FidlUnionField Fields24test_name_FieldCollision[] = {
     /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u}
@@ -86,10 +66,8 @@ const fidl_type_t test_name_ExplicitUnionTable = {.type_tag=kFidlTypeUnion, {.co
 
 extern const fidl_type_t v1_test_name_UnionTable;
 static const fidl_type_t v1_Pointer18v1_test_name_UnionTable;
-extern const fidl_type_t v1_test_name_StrictUnionTable;
 extern const fidl_type_t v1_test_name_ReverseOrdinalUnionTable;
 extern const fidl_type_t v1_test_name_NullableUnionStructTable;
-extern const fidl_type_t v1_test_name_FlexibleUnionTable;
 extern const fidl_type_t v1_test_name_FieldCollisionTable;
 extern const fidl_type_t v1_test_name_ExplicitUnionTable;
 
@@ -111,12 +89,6 @@ static const struct FidlXUnionField Fields30v1_Pointer18v1_test_name_Union[] = {
     /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u}
 };
 static const fidl_type_t v1_Pointer18v1_test_name_UnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields30v1_Pointer18v1_test_name_Union, .nullable=kFidlNullability_Nullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer15test_name_UnionTable}}};
-static const struct FidlXUnionField Fields24v1_test_name_StrictUnion[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
-    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
-    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u}
-};
-const fidl_type_t v1_test_name_StrictUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields24v1_test_name_StrictUnion, .nullable=kFidlNullability_Nonnullable, .name="test.name/StrictUnion", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_StrictUnionTable}}};
 static const struct FidlXUnionField Fields32v1_test_name_ReverseOrdinalUnion[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
     /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
@@ -127,12 +99,6 @@ static const struct FidlStructField Fields32v1_test_name_NullableUnionStruct[] =
 };
 const fidl_type_t v1_test_name_NullableUnionStructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32v1_test_name_NullableUnionStruct, .field_count=1u, .size=24u, .max_out_of_line=4294967295u, .contains_union=true, .name="test.name/NullableUnionStruct", .alt_type=&test_name_NullableUnionStructTable}}};
 
-static const struct FidlXUnionField Fields26v1_test_name_FlexibleUnion[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
-    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
-    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u}
-};
-const fidl_type_t v1_test_name_FlexibleUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields26v1_test_name_FlexibleUnion, .nullable=kFidlNullability_Nonnullable, .name="test.name/FlexibleUnion", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_FlexibleUnionTable}}};
 static const struct FidlXUnionField Fields27v1_test_name_FieldCollision[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u}
 };

@@ -458,8 +458,6 @@ void JSONGenerator::Generate(const flat::Union& value) {
     // this by sorting members by xunion_ordinal before emitting them.
     GenerateObjectMember("members", value.MembersSortedByXUnionOrdinal());
 
-    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
-
     GenerateTypeShapes(value);
   });
 }

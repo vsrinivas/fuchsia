@@ -368,8 +368,7 @@ type Union struct {
 	Attributes
 	Name        EncodedCompoundIdentifier `json:"name"`
 	Members     []UnionMember             `json:"members"`
-	Strictness  `json:"strict"`
-	TypeShapeV1 TypeShape `json:"type_shape_v1"`
+	TypeShapeV1 TypeShape                 `json:"type_shape_v1"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL union.

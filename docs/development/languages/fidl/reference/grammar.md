@@ -74,17 +74,13 @@ declaration = bits-declaration | const-declaration | enum-declaration | protocol
             | struct-declaration | table-declaration | union-declaration
             | type-alias-declaration | service-declaration ;
 
-declaration-modifiers = "flexible" | "strict" ;
-
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
 
-enum-declaration = ( attribute-list ) , ( declaration-modifiers )* , "enum" , IDENTIFIER ,
-                   ( ":" , type-constructor ) , "{" , ( bits-or-enum-member , ";" )+ ,
-                   "}" ; [NOTE 1]
+enum-declaration = ( attribute-list ) , ( "strict" ) , "enum" , IDENTIFIER , ( ":" , type-constructor ) ,
+                   "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 1]
 
-bits-declaration = ( attribute-list ) , ( declaration-modifiers )* , "bits" , IDENTIFIER ,
-                   ( ":" , type-constructor ) , "{" , ( bits-or-enum-member , ";" )+ ,
-                   "}" ; [NOTE 2]
+bits-declaration = ( attribute-list ) , ( "strict" ) , "bits" , IDENTIFIER , ( ":" , type-constructor ) ,
+                   "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 2]
 
 bits-or-enum-member = ( attribute-list ) , IDENTIFIER , "=" , bits-or-enum-member-value ;
 
@@ -106,14 +102,11 @@ parameter = ( attribute-list ) , type-constructor , IDENTIFIER ;
 
 protocol-compose = "compose" , compound-identifier ;
 
-struct-declaration = ( attribute-list ) , "struct" , IDENTIFIER , "{" , ( member-field , ";" )* ,
-                     "}" ;
+struct-declaration = ( attribute-list ) , "struct" , IDENTIFIER , "{" , ( member-field , ";" )* , "}" ;
 
-union-declaration = ( attribute-list ) , ( declaration-modifiers )* , "union" , IDENTIFIER , "{" ,
-                    ( ordinal-member-field , ";" )+ , "}" ;
+union-declaration = ( attribute-list ) , ( "strict" ) , "union" , IDENTIFIER , "{" , ( ordinal-member-field , ";" )+ , "}" ;
 
-table-declaration = ( attribute-list ) , ( declaration-modifiers )* , "table" , IDENTIFIER , "{" ,
-                    ( ordinal-member-field , ";" )* , "}" ;
+table-declaration = ( attribute-list ) , ( "strict" ) , "table" , IDENTIFIER , "{" , ( ordinal-member-field , ";" )* , "}" ;
 
 member-field = ( attribute-list ) , type-constructor , IDENTIFIER , ( "=" , constant ) ;
 
@@ -123,8 +116,7 @@ ordinal-member-field-body = member-field | "reserved";
 
 type-alias-declaration = ( attribute-list ) , "using" , IDENTIFIER ,  "=" , type-constructor ;
 
-service-declaration = ( attribute-list ) , "service" , IDENTIFIER , "{" ,
-                      ( service-member , ";" )* , "}" ;
+service-declaration = ( attribute-list ) , "service" , IDENTIFIER , "{" , ( service-member , ";" )* , "}" ;
 
 service-member = ( attribute-list ) , type-constructor , IDENTIFIER ; [NOTE 6]
 

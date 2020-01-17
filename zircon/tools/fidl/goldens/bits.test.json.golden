@@ -8,7 +8,7 @@
       "location": {
         "filename": "bits.test.fidl",
         "line": 3,
-        "column": 15
+        "column": 28
       },
       "type": {
         "kind": "primitive",

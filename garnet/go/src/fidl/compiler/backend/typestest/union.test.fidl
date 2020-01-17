@@ -6,18 +6,6 @@ union Union {
     3: vector<string> VectorStringAlsoNeedsConstructor;
 };
 
-flexible union FlexibleUnion {
-    1: int32 Primitive;
-    2: string StringNeedsConstructor;
-    3: vector<string> VectorStringAlsoNeedsConstructor;
-};
-
-strict union StrictUnion {
-    1: int32 Primitive;
-    2: string StringNeedsConstructor;
-    3: vector<string> VectorStringAlsoNeedsConstructor;
-};
-
 union FieldCollision {
     1: int32 field_collision_tag;
 };

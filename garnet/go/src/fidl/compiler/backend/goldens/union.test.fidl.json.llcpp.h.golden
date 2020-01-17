@@ -22,10 +22,8 @@ namespace test {
 namespace name {
 
 struct Union;
-struct StrictUnion;
 struct ReverseOrdinalUnion;
 struct NullableUnionStruct;
-struct FlexibleUnion;
 struct FieldCollision;
 struct ExplicitUnion;
 
@@ -137,114 +135,6 @@ struct Union {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t v1_test_name_StrictUnionTable;
-
-struct StrictUnion {
-  StrictUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
-
-  enum class Tag : fidl_xunion_tag_t {
-    kPrimitive = 1,  // 0x1
-    kStringNeedsConstructor = 2,  // 0x2
-    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
-  };
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_Primitive() const { return ordinal() == Ordinal::kPrimitive; }
-
-  static StrictUnion WithPrimitive(int32_t* val) {
-    StrictUnion result;
-    result.set_Primitive(val);
-    return result;
-  }
-
-  void set_Primitive(int32_t* elem) {
-    ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  int32_t& mutable_Primitive() {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
-  }
-  const int32_t& Primitive() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
-  }
-
-  bool is_StringNeedsConstructor() const { return ordinal() == Ordinal::kStringNeedsConstructor; }
-
-  static StrictUnion WithStringNeedsConstructor(::fidl::StringView* val) {
-    StrictUnion result;
-    result.set_StringNeedsConstructor(val);
-    return result;
-  }
-
-  void set_StringNeedsConstructor(::fidl::StringView* elem) {
-    ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  ::fidl::StringView& mutable_StringNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
-  }
-  const ::fidl::StringView& StringNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
-  }
-
-  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor; }
-
-  static StrictUnion WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
-    StrictUnion result;
-    result.set_VectorStringAlsoNeedsConstructor(val);
-    return result;
-  }
-
-  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* elem) {
-    ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
-  }
-  const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
-  }
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
-  }
-
-  static constexpr const fidl_type_t* Type = &v1_test_name_StrictUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kPrimitive = 1,  // 0x1
-    kStringNeedsConstructor = 2,  // 0x2
-    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
-  };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
-
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
-};
-
 extern "C" const fidl_type_t v1_test_name_ReverseOrdinalUnionTable;
 
 struct ReverseOrdinalUnion {
@@ -317,116 +207,6 @@ struct ReverseOrdinalUnion {
     Invalid = 0,
     kFirst = 1,  // 0x1
     kSecond = 2,  // 0x2
-  };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
-
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
-};
-
-extern "C" const fidl_type_t v1_test_name_FlexibleUnionTable;
-
-struct FlexibleUnion {
-  FlexibleUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
-
-  enum class Tag : fidl_xunion_tag_t {
-    kPrimitive = 1,  // 0x1
-    kStringNeedsConstructor = 2,  // 0x2
-    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_Primitive() const { return ordinal() == Ordinal::kPrimitive; }
-
-  static FlexibleUnion WithPrimitive(int32_t* val) {
-    FlexibleUnion result;
-    result.set_Primitive(val);
-    return result;
-  }
-
-  void set_Primitive(int32_t* elem) {
-    ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  int32_t& mutable_Primitive() {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
-  }
-  const int32_t& Primitive() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
-  }
-
-  bool is_StringNeedsConstructor() const { return ordinal() == Ordinal::kStringNeedsConstructor; }
-
-  static FlexibleUnion WithStringNeedsConstructor(::fidl::StringView* val) {
-    FlexibleUnion result;
-    result.set_StringNeedsConstructor(val);
-    return result;
-  }
-
-  void set_StringNeedsConstructor(::fidl::StringView* elem) {
-    ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  ::fidl::StringView& mutable_StringNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
-  }
-  const ::fidl::StringView& StringNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
-  }
-
-  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor; }
-
-  static FlexibleUnion WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
-    FlexibleUnion result;
-    result.set_VectorStringAlsoNeedsConstructor(val);
-    return result;
-  }
-
-  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* elem) {
-    ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
-  }
-  const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
-  }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data;
-  }
-  Tag which() const;
-
-  static constexpr const fidl_type_t* Type = &v1_test_name_FlexibleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kPrimitive = 1,  // 0x1
-    kStringNeedsConstructor = 2,  // 0x2
-    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
   Ordinal ordinal() const {
@@ -607,10 +387,6 @@ struct IsFidlType<::llcpp::test::name::Union> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::Union>);
 
 template <>
-struct IsFidlType<::llcpp::test::name::StrictUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::StrictUnion>);
-
-template <>
 struct IsFidlType<::llcpp::test::name::ReverseOrdinalUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::ReverseOrdinalUnion>);
 
@@ -619,10 +395,6 @@ struct IsFidlType<::llcpp::test::name::NullableUnionStruct> : public std::true_t
 static_assert(std::is_standard_layout_v<::llcpp::test::name::NullableUnionStruct>);
 static_assert(offsetof(::llcpp::test::name::NullableUnionStruct, the_union) == 0);
 static_assert(sizeof(::llcpp::test::name::NullableUnionStruct) == ::llcpp::test::name::NullableUnionStruct::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::test::name::FlexibleUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::FlexibleUnion>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::FieldCollision> : public std::true_type {};

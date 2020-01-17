@@ -25,30 +25,6 @@ test_name_UnionOutOfLine [
 test_name_UnionHandles [
        void void
 ][varlen]
-test_name_FlexibleUnionInLine [
-       primitive fidl_union_member[test_name_FlexibleUnionTag_Primitive, int32]
-       string_needs_constructorInLine fidl_union_member[test_name_FlexibleUnionTag_StringNeedsConstructor, fidl_string]
-       vector_string_also_needs_constructorInLine fidl_union_member[test_name_FlexibleUnionTag_VectorStringAlsoNeedsConstructor, fidl_vector]
-]
-test_name_FlexibleUnionOutOfLine [
-       string_needs_constructorOutOfLine fidl_aligned[stringnoz]
-       vector_string_also_needs_constructorOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
-][varlen]
-test_name_FlexibleUnionHandles [
-       void void
-][varlen]
-test_name_StrictUnionInLine [
-       primitive fidl_union_member[test_name_StrictUnionTag_Primitive, int32]
-       string_needs_constructorInLine fidl_union_member[test_name_StrictUnionTag_StringNeedsConstructor, fidl_string]
-       vector_string_also_needs_constructorInLine fidl_union_member[test_name_StrictUnionTag_VectorStringAlsoNeedsConstructor, fidl_vector]
-]
-test_name_StrictUnionOutOfLine [
-       string_needs_constructorOutOfLine fidl_aligned[stringnoz]
-       vector_string_also_needs_constructorOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
-][varlen]
-test_name_StrictUnionHandles [
-       void void
-][varlen]
 test_name_FieldCollisionInLine [
        field_collision_tag fidl_union_member[test_name_FieldCollisionTag_field_collision_tag, int32]
 ]

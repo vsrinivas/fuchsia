@@ -1605,10 +1605,10 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
   result_attributes.emplace_back(*method, "Result", "");
   auto result_attributelist =
       std::make_unique<raw::AttributeList>(*method, std::move(result_attributes));
-  auto union_decl = std::make_unique<Union>(std::move(result_attributelist), std::move(result_name),
-                                            std::move(result_members), types::Strictness::kStrict);
-  auto result_decl = union_decl.get();
-  if (!RegisterDecl(std::move(union_decl)))
+  auto xunion_decl = std::make_unique<Union>(std::move(result_attributelist),
+                                             std::move(result_name), std::move(result_members));
+  auto result_decl = xunion_decl.get();
+  if (!RegisterDecl(std::move(xunion_decl)))
     return false;
 
   // Make a new response struct for the method containing just the
@@ -1823,8 +1823,8 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 
   auto attributes = std::move(union_declaration->attributes);
 
-  return RegisterDecl(std::make_unique<Union>(std::move(attributes), std::move(name),
-                                              std::move(members), union_declaration->strictness));
+  return RegisterDecl(
+      std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));
 }
 
 bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
