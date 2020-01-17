@@ -60,7 +60,7 @@ class HubTest : public sys::testing::TestWithEnvironment {
   }
 };
 
-TEST(ProbeHub, Component) {
+TEST(ProbeHub, DISABLED_Component) {
   constexpr char kGlob[] = "/hub/c/*/*/out/debug";
   files::Glob glob(kGlob);
   EXPECT_GE(glob.size(), 1u) << kGlob << " expected to match at least once.";
