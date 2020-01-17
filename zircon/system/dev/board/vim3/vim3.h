@@ -44,6 +44,7 @@ class Vim3 : public Vim3Type {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vim3);
 
   zx_status_t ClkInit();
+  zx_status_t EthInit();
   zx_status_t GpioInit();
   zx_status_t I2cInit();
   zx_status_t Start();

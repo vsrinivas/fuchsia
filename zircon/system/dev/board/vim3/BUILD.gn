@@ -5,6 +5,7 @@
 zx_driver("vim3") {
   sources = [
     "vim3-clk.cc",
+    "vim3-eth.cc",
     "vim3-gpio.cc",
     "vim3-i2c.cc",
     "vim3-sysmem.cc",

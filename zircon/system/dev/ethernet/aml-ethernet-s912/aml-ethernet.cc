@@ -33,10 +33,12 @@ namespace eth {
 #define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
 
 zx_status_t AmlEthernet::EthBoardResetPhy() {
-  gpios_[PHY_RESET].Write(0);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-  gpios_[PHY_RESET].Write(1);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  if (has_reset_) {
+    gpios_[PHY_RESET].Write(0);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    gpios_[PHY_RESET].Write(1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  }
   return ZX_OK;
 }
 
@@ -52,9 +54,15 @@ zx_status_t AmlEthernet::InitPdev() {
   zx_device_t* components[COMPONENT_COUNT];
   size_t actual;
   composite_get_components(&composite, components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    zxlogf(ERROR, "could not get components\n");
-    return ZX_ERR_NOT_SUPPORTED;
+  if (actual == fbl::count_of(components)) {
+    has_reset_ = true;
+  } else {
+    if (actual == (fbl::count_of(components) - 1)) {
+      has_reset_ = false;
+    } else {
+      zxlogf(ERROR, "could not get components\n");
+      return ZX_ERR_NOT_SUPPORTED;
+    }
   }
 
   pdev_protocol_t pdev;
@@ -74,12 +82,14 @@ zx_status_t AmlEthernet::InitPdev() {
   i2c_ = &i2c;
 
   gpio_protocol_t gpio;
-  status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &gpio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get GPIO protocol\n");
-    return status;
+  if (has_reset_) {
+    status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &gpio);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Could not get GPIO protocol\n");
+      return status;
+    }
+    gpios_[PHY_RESET] = &gpio;
   }
-  gpios_[PHY_RESET] = &gpio;
 
   status = device_get_protocol(components[COMPONENT_INTR_GPIO], ZX_PROTOCOL_GPIO, &gpio);
   if (status != ZX_OK) {
@@ -106,8 +116,10 @@ zx_status_t AmlEthernet::InitPdev() {
 }
 
 zx_status_t AmlEthernet::Bind() {
-  // Set reset line to output
-  gpios_[PHY_RESET].ConfigOut(0);
+  // Set reset line to output if implemented
+  if (has_reset_) {
+    gpios_[PHY_RESET].ConfigOut(0);
+  }
 
   // Initialize AMLogic peripheral registers associated with dwmac.
   // Sorry about the magic...rtfm
@@ -155,6 +167,7 @@ void AmlEthernet::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 void AmlEthernet::DdkRelease() { delete this; }
 
 zx_status_t AmlEthernet::Create(void* ctx, zx_device_t* parent) {
+  zxlogf(INFO, "aml-ethernet: adding driver\n");
   fbl::AllocChecker ac;
   auto eth_device = fbl::make_unique_checked<AmlEthernet>(&ac, parent);
   if (!ac.check()) {
@@ -163,6 +176,7 @@ zx_status_t AmlEthernet::Create(void* ctx, zx_device_t* parent) {
 
   zx_status_t status = eth_device->InitPdev();
   if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-ethernet: failed to init platform device\n");
     return status;
   }
 
@@ -190,9 +204,10 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace eth
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_eth, eth::driver_ops, "aml-ethernet", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(aml_eth, eth::driver_ops, "aml-ethernet", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_ETH),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_ETH),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A311D),
 ZIRCON_DRIVER_END(aml_eth)

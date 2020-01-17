@@ -28,6 +28,7 @@ enum {
   BTI_CANVAS,
   BTI_SYSMEM,
   BTI_SD,
+  BTI_ETHERNET,
 };
 
 class Vim;

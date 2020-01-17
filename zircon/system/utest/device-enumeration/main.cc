@@ -152,6 +152,8 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "sys/platform/05:00:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-81/rtc",
+      "dwmac/eth_phy/phy_null_device",
+      "dwmac/Designware MAC/ethernet",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

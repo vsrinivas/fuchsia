@@ -39,8 +39,8 @@ class AmlEthernet : public DeviceType,
   enum {
     COMPONENT_PDEV,
     COMPONENT_I2C,
-    COMPONENT_RESET_GPIO,
     COMPONENT_INTR_GPIO,
+    COMPONENT_RESET_GPIO,
     COMPONENT_COUNT,
   };
 
@@ -60,6 +60,7 @@ class AmlEthernet : public DeviceType,
   zx_status_t InitPdev();
   zx_status_t Bind();
 
+  bool has_reset_ = true;
   ddk::PDev pdev_;
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient gpios_[GPIO_COUNT];
