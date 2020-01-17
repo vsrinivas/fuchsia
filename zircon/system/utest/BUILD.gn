@@ -260,7 +260,6 @@ if (current_cpu != "") {
       "task-utils",
       "thread-initial-state",
       "thread-safe-deleter",
-      "thread-state",
       "timers",
       "trace",
       "usb",

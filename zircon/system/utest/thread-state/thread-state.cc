@@ -24,8 +24,6 @@
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
-static int thread_func(void* arg);
-
 // argv[0]
 static char* program_path;
 
@@ -356,15 +354,6 @@ static void msg_loop(zx_handle_t channel) {
         break;
     }
   }
-}
-
-static int thread_func(void* arg) {
-  unittest_printf("test thread starting\n");
-  zx_handle_t msg_channel = (zx_handle_t)(uintptr_t)arg;
-  msg_loop(msg_channel);
-  unittest_printf("test thread exiting\n");
-  tu_handle_close(msg_channel);
-  return 0;
 }
 
 static void __NO_RETURN test_child(void) {
