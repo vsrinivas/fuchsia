@@ -22,7 +22,7 @@ use {
     fuchsia_trace_provider as trace_provider,
     fuchsia_zircon::JobCriticalOptions,
     log::*,
-    std::{panic, process, sync::Arc},
+    std::{panic, process, sync::Arc, thread, time::Duration},
 };
 
 const NUM_THREADS: usize = 2;
@@ -33,6 +33,20 @@ fn main() -> Result<(), Error> {
     // existing hook.
     panic::set_hook(Box::new(|_| {
         println!("Panic in component_manager, aborting process.");
+        // TODO remove after 43671 is resolved
+        std::thread::spawn(move || {
+            let mut nap_duration = Duration::from_secs(1);
+            // Do a short sleep, hopefully under "normal" circumstances the
+            // process will exit before this is printed
+            thread::sleep(nap_duration);
+            println!("component manager abort was started");
+            // set a fairly long duration so we don't spam logs
+            nap_duration = Duration::from_secs(30);
+            loop {
+                thread::sleep(nap_duration);
+                println!("component manager alive long after abort");
+            }
+        });
         process::abort();
     }));
 
