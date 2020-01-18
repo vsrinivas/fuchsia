@@ -403,7 +403,7 @@ pub fn rx_wlan_data_frame(
 
 pub async fn loop_until_iface_is_found() {
     let wlan_service = connect_to_service::<WlanMarker>().expect("connecting to wlan service");
-    let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
+    let mut retry = test_utils::RetryWithBackoff::infinite_with_max_interval(10.seconds());
     loop {
         let status = wlan_service.status().await.expect("getting wlan status");
         if status.error.code != ErrCode::Ok {

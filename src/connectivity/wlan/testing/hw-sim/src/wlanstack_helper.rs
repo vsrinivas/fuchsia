@@ -5,7 +5,7 @@
 use {
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, QueryIfaceResponse},
     fidl_fuchsia_wlan_sme::ApSmeProxy,
-    fuchsia_zircon::sys::ZX_OK,
+    fuchsia_zircon::{sys::ZX_OK, DurationNum},
 };
 
 /// Queries wlanstack service and return the first iface id that makes |filter(iface)| true.
@@ -15,7 +15,8 @@ pub async fn get_first_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
     filter: F,
 ) -> u16 {
     // Sleep between queries to make main future yield.
-    let mut infite_timeout = super::test_utils::RetryWithBackoff::infinite();
+    let mut infinite_timeout =
+        super::test_utils::RetryWithBackoff::infinite_with_max_interval(10.seconds());
     loop {
         let ifaces = svc.list_ifaces().await.expect("getting iface list").ifaces;
         {
@@ -28,7 +29,7 @@ pub async fn get_first_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
                 }
             }
         }
-        assert!(infite_timeout.sleep_unless_timed_out().await);
+        assert!(infinite_timeout.sleep_unless_timed_out().await);
     }
 }
 

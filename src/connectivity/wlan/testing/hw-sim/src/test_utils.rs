@@ -9,7 +9,13 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt},
-    std::{future::Future, marker::Unpin, pin::Pin, sync::Arc, task::{Context, Poll}},
+    std::{
+        future::Future,
+        marker::Unpin,
+        pin::Pin,
+        sync::Arc,
+        task::{Context, Poll},
+    },
     wlan_common::test_utils::ExpectWithin,
     wlantap_client::Wlantap,
 };
@@ -130,6 +136,7 @@ pub struct RetryWithBackoff {
     deadline: Time,
     prev_delay: zx::Duration,
     delay: zx::Duration,
+    max_delay: zx::Duration,
 }
 
 impl RetryWithBackoff {
@@ -138,11 +145,12 @@ impl RetryWithBackoff {
             deadline: Time::after(timeout),
             prev_delay: 0.millis(),
             delay: 1.millis(),
+            max_delay: std::i64::MAX.nanos(),
         }
     }
 
-    pub fn infinite() -> Self {
-        Self { deadline: Time::INFINITE, ..Self::new(0.nanos()) }
+    pub fn infinite_with_max_interval(max_delay: zx::Duration) -> Self {
+        Self { deadline: Time::INFINITE, max_delay, ..Self::new(0.nanos()) }
     }
 
     /// Sleep (in async term) a little longer (following Fibonacci series) after each call until
@@ -153,9 +161,11 @@ impl RetryWithBackoff {
             false
         } else {
             let () = Timer::new(::std::cmp::min(Time::after(self.delay), self.deadline)).await;
-            let new_delay = self.prev_delay + self.delay;
-            self.prev_delay = self.delay;
-            self.delay = new_delay;
+            if self.delay < self.max_delay {
+                let new_delay = std::cmp::min(self.max_delay, self.prev_delay + self.delay);
+                self.prev_delay = self.delay;
+                self.delay = new_delay;
+            }
             true
         }
     }
