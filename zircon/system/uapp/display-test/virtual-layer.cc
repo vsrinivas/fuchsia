@@ -137,7 +137,7 @@ bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
         return false;
       }
     } else {
-      zx_object_signal(layer->import_info[alt_image_].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
+      layer->import_info[alt_image_].events[WAIT_EVENT].signal(0, ZX_EVENT_SIGNALED);
     }
 
     fhd::ImageConfig image_config;
@@ -283,7 +283,7 @@ void PrimaryLayer::Render(int32_t frame_num) {
   }
   images_[alt_image_]->Render(frame_num < 2 ? 0 : frame_num - 2, frame_num);
   for (auto& layer : layers_) {
-    zx_object_signal(layer.import_info[alt_image_].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
+    layer.import_info[alt_image_].events[WAIT_EVENT].signal(0, ZX_EVENT_SIGNALED);
   }
 }
 
@@ -310,11 +310,11 @@ bool PrimaryLayer::Wait(uint32_t idx) {
     if (!layer.active) {
       continue;
     }
-    zx_handle_t event = layer.import_info[alt_image_].events[idx];
+    auto& event = layer.import_info[alt_image_].events[idx];
     zx_status_t res;
-    if ((res = zx_object_wait_one(event, ZX_EVENT_SIGNALED, deadline, &observed)) == ZX_OK) {
+    if ((res = event.wait_one(ZX_EVENT_SIGNALED, zx::time(deadline), &observed)) == ZX_OK) {
       if (layer_flipping_) {
-        zx_object_signal(event, ZX_EVENT_SIGNALED, 0);
+        event.signal(ZX_EVENT_SIGNALED, 0);
       }
     } else {
       return false;
@@ -347,7 +347,7 @@ bool CursorLayer::Init(fhd::Controller::SyncClient* dc) {
     if (!image_->Import(dc, &layer->import_info[0])) {
       return false;
     }
-    zx_object_signal(layer->import_info[0].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
+    layer->import_info[0].events[WAIT_EVENT].signal(0, ZX_EVENT_SIGNALED);
 
     fhd::ImageConfig image_config = {};
     image_config.height = info.height;

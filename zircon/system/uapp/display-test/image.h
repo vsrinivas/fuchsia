@@ -24,7 +24,7 @@
 
 typedef struct image_import {
   uint64_t id;
-  zx_handle_t events[2];
+  zx::event events[2];
   uint64_t event_ids[2];
 } image_import_t;
 

@@ -317,19 +317,18 @@ void Image::GetConfig(fhd::ImageConfig* config_out) {
 bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {
   for (int i = 0; i < 2; i++) {
     static int event_id = fhd::invalidId + 1;
-    zx_handle_t e1, e2;
-    if (zx_event_create(0, &e1) != ZX_OK ||
-        zx_handle_duplicate(e1, ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK) {
+    zx::event e1, e2;
+    if (zx::event::create(0, &e1) != ZX_OK || e1.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK) {
       printf("Failed to create event\n");
       return false;
     }
 
-    info_out->events[i] = e1;
+    info_out->events[i] = std::move(e1);
     info_out->event_ids[i] = event_id;
-    dc->ImportEvent(zx::event(e2), event_id++);
+    dc->ImportEvent(std::move(e2), event_id++);
 
     if (i != WAIT_EVENT) {
-      zx_object_signal(e1, 0, ZX_EVENT_SIGNALED);
+      info_out->events[i].signal(0, ZX_EVENT_SIGNALED);
     }
   }
 
