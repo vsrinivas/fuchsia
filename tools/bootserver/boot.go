@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -75,7 +76,7 @@ var transferOrder = map[string]int{
 	kernelNetsvcName:         13,
 }
 
-func downloadImages(imgs []Image) ([]Image, func() error, error) {
+func downloadImagesToDir(dir string, imgs []Image) ([]Image, func() error, error) {
 	var newImgs []Image
 	// Copy each in a goroutine for efficiency's sake.
 	errs := make(chan error, len(imgs))
@@ -86,7 +87,7 @@ func downloadImages(imgs []Image) ([]Image, func() error, error) {
 		go func(img Image) {
 			defer wg.Done()
 			if img.Reader != nil {
-				f, err := downloadAndOpenImage(img.Name, img)
+				f, err := downloadAndOpenImage(filepath.Join(dir, img.Name), img)
 				if err != nil {
 					errs <- err
 					return
@@ -175,7 +176,12 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 
 	// This is needed because imgs from GCS are compressed and we cannot get the correct size of the uncompressed images, so we have to download them first.
 	// TODO(ihuh): We should enable this step as a command line option.
-	imgs, closeFunc, err := downloadImages(imgs)
+	workdir, err := ioutil.TempDir("", "working-dir")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(workdir)
+	imgs, closeFunc, err := downloadImagesToDir(workdir, imgs)
 	if err != nil {
 		return err
 	}
