@@ -1,0 +1,79 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Generates a file containing static data extracted from ICU using icu_data_extractor.
+#
+# Example:
+#
+#   static_icu_data("revision") {
+#     command = "tz-version"
+#     output = "${target_gen_dir}/revision.txt"
+#   }
+#
+#   package("my_package") {
+#     # ...
+#     resources = [
+#       {
+#         path = rebase_path("${target_gen_dir}/revision.txt"})
+#         dest = "revision.txt"
+#       }
+#     ]
+#   }
+#
+# To view all the supported commands and arguments, run
+#
+#    fx build host-tools/icu_data_extractor && out/default/host_x64/icu_data_extractor
+#
+# Parameters
+#
+#   output:
+#     Required: Path to the output file. This should usually be something like
+#     "${target_gen_dir}/myfile.txt".
+#     Type: file
+#
+#   command:
+#     Required: icu_data_extractor command ("tz-version", "tz-ids")
+#     Type: string
+#
+#   command_args:
+#     Optional: Additional arguments to icu_data_extractor command.
+#     Type: list(string)
+#
+template("static_icu_data") {
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "command_args",
+                             "command",
+                             "output",
+                           ])
+
+    if (!defined(command_args)) {
+      command_args = []
+    }
+
+    tool = "//src/lib/icu/tools/extractor:icu_data_extractor"
+
+    icu_data_file = "//third_party/icu/common/icudtl.dat"
+    tz_res_dir = "//third_party/icu/tzres/"
+
+    sources = [ icu_data_file ]
+    outputs = [ output ]
+
+    rebased_icu_data_file = rebase_path(icu_data_file)
+    rebased_tz_res_dir = rebase_path(tz_res_dir)
+    rebased_output_path = rebase_path(output)
+
+    args = [
+             "--icu-data-file=${rebased_icu_data_file}",
+             "--tz-res-dir=${rebased_tz_res_dir}",
+             command,
+             "--output=${rebased_output_path}",
+           ] + command_args
+  }
+}

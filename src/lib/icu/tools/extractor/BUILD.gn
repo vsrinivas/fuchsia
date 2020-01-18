@@ -8,7 +8,12 @@ if (is_host) {
   executable("icu_data_extractor") {
     output_name = "icu_data_extractor"
     sources = [
+      "command.h",
+      "common.cc",
+      "common.h",
       "main.cc",
+      "tz_ids.cc",
+      "tz_ids.h",
       "tz_version.cc",
       "tz_version.h",
     ]

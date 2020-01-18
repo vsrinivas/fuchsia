@@ -5,14 +5,27 @@
 #include "tz_version.h"
 
 #include <iostream>
+#include <sstream>
 
-#include "src/lib/files/file.h"
+#include "common.h"
+#include "src/lib/fxl/command_line.h"
 #include "third_party/icu/source/common/unicode/utypes.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
 
+namespace icu_data_extractor {
+
+namespace {
+
+constexpr const char kName[] = "tz-version";
+
 constexpr ssize_t kTzVersionLength = 5;
 
-int icu_data_extractor::ExtractTzVersion(std::optional<std::string> output_path) {
+}  // namespace
+
+std::string_view TzVersion::Name() const { return kName; }
+
+int TzVersion::Execute(const fxl::CommandLine& command_line,
+                       const fxl::CommandLine& sub_command_line) const {
   UErrorCode err = U_ZERO_ERROR;
   const char* version = icu::TimeZone::getTZDataVersion(err);
 
@@ -26,14 +39,13 @@ int icu_data_extractor::ExtractTzVersion(std::optional<std::string> output_path)
     return -1;
   }
 
-  if (output_path.has_value()) {
-    if (!files::WriteFile(output_path.value(), version, kTzVersionLength)) {
-      std::cerr << "Couldn't write to " << output_path.value() << std::endl;
-      return -1;
-    }
-  } else {
-    std::cout << version;
-  }
-
-  return 0;
+  return WriteToOutputFileOrStdOut(sub_command_line, std::string(version));
 }
+
+void TzVersion::PrintDocs(std::ostream& os) const {
+  os << "  " << kName << "\n    --" << kArgOutputPath
+     << "=FILE\t\t\tPath to output file (if omitted, STDOUT)"
+     << "\n\n  Extract the time zone version string, e.g. \"2019c\"";
+}
+
+}  // namespace icu_data_extractor
