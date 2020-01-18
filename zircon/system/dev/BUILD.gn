@@ -21,7 +21,6 @@ group("dev") {
     "fw",
     "gpio",
     "gpu",
-    "i2c",
     "input",
     "light",
     "light-sensor",
