@@ -1460,6 +1460,11 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 
 		sp.metadata.addEndpoint(localE, ep)
 
+		if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalOutgoing); err != nil {
+			s.close()
+			return socket.ProviderSocket2Result{}, err
+		}
+
 		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
 			S: socket.BaseSocketInterface(datagramSocketInterface),
 		}), nil

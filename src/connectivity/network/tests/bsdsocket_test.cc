@@ -2204,11 +2204,19 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
 }
 
-// TODO port reuse
+TEST(NetDatagramTest, DatagramPOLLOUT) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  struct pollfd fds = {fd.get(), POLLOUT, 0};
+  int nfds = poll(&fds, 1, kTimeout);
+  EXPECT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << strerror(errno);
+
+  EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
+}
 
 // DatagramSendtoRecvfrom tests if UDP send automatically binds an ephemeral
 // port where the receiver can responds to.
-
 TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   int recvfd;
   ASSERT_GE(recvfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
