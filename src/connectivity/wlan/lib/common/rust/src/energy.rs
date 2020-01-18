@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use core::ops::{Add, Sub};
+use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
-struct DecibelMilliWatt(pub i8);
+pub struct DecibelMilliWatt(pub i8);
 
 // In the past dBm values were simply added up when computing a moving average rather than first
 // converting dBm to mWatt. To prevent such mistakes in the future, provide an implementation for
@@ -18,6 +18,12 @@ impl Add for DecibelMilliWatt {
     }
 }
 
+impl AddAssign for DecibelMilliWatt {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = (FemtoWatt::from(*self) + FemtoWatt::from(rhs)).into();
+    }
+}
+
 impl Sub for DecibelMilliWatt {
     type Output = Self;
 
@@ -26,8 +32,14 @@ impl Sub for DecibelMilliWatt {
     }
 }
 
+impl SubAssign for DecibelMilliWatt {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = (FemtoWatt::from(*self) - FemtoWatt::from(rhs)).into();
+    }
+}
+
 #[derive(PartialEq, Debug, Clone, Copy)]
-struct FemtoWatt(pub u64);
+pub struct FemtoWatt(pub u64);
 
 impl Add for FemtoWatt {
     type Output = Self;
@@ -37,16 +49,28 @@ impl Add for FemtoWatt {
     }
 }
 
+impl AddAssign for FemtoWatt {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 + rhs.0);
+    }
+}
+
 impl Sub for FemtoWatt {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Self(self.0 - rhs.0)
+        Self(if self.0 > rhs.0 { self.0 - rhs.0 } else { 0 })
+    }
+}
+
+impl SubAssign for FemtoWatt {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = Self(if self.0 > rhs.0 { self.0 - rhs.0 } else { 0 });
     }
 }
 
 impl From<FemtoWatt> for DecibelMilliWatt {
-    /// Uses absolute value of mWatt.
+    /// Uses absolute value of femtoWatt.
     fn from(fw: FemtoWatt) -> Self {
         // Note: Negative power returns an invalid value.
         if fw.0 == 0 {
@@ -203,14 +227,29 @@ mod tests {
         // 21.6227766 mWatt = 13.349114613 dbm
         let dbm = DecibelMilliWatt(15) - DecibelMilliWatt(10);
         assert_eq!(dbm.0, 13);
+
+        // Avoid underflow
+        assert_eq!((DecibelMilliWatt(1) - DecibelMilliWatt(2)).0, -128);
     }
 
     #[test]
     pub fn add_sub_fwatt() {
         let fw = FemtoWatt(10) + FemtoWatt(20);
         assert_eq!(fw.0, 30);
+        let mut fw = FemtoWatt(10);
+        fw += FemtoWatt(20);
+        assert_eq!(fw.0, 30);
 
         let fw = FemtoWatt(20) - FemtoWatt(10);
         assert_eq!(fw.0, 10);
+        let mut fw = FemtoWatt(20);
+        fw -= FemtoWatt(10);
+        assert_eq!(fw.0, 10);
+
+        let fw = FemtoWatt(10) - FemtoWatt(20);
+        assert_eq!(fw.0, 0);
+        let mut fw = FemtoWatt(10);
+        fw -= FemtoWatt(20);
+        assert_eq!(fw.0, 0);
     }
 }
