@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_ONFI_H_
+#define ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_ONFI_H_
 
 #include <lib/zx/time.h>
 #include <zircon/types.h>
@@ -80,15 +81,21 @@ struct nand_chip_table {
 
 class Onfi {
  public:
+  virtual ~Onfi() = default;
+
   // OnfiWait() and OnfiCommand() are generic ONFI protocol compliant.
   // Sends onfi command down to the controller.
-  void OnfiCommand(uint32_t command, int32_t column, int32_t page_addr, uint32_t capacity_mb,
-                   uint32_t chip_delay_us, int buswidth_16);
+  virtual void OnfiCommand(uint32_t command, int32_t column, int32_t page_addr,
+                           uint32_t capacity_mb, uint32_t chip_delay_us, int buswidth_16);
+
   // Generic wait function used by both program (write) and erase functionality.
-  zx_status_t OnfiWait(zx::duration timeout, zx::duration first_interval,
-                       zx::duration polling_interval);
+  virtual zx_status_t OnfiWait(zx::duration timeout, zx::duration first_interval,
+                               zx::duration polling_interval);
+
+  // Sets the device-specific functions to send a command and read a byte.
   void Init(fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
             fbl::Function<uint8_t()> read_byte);
+
   // Finds the entry in the NAND chip table database based on manufacturer
   // id and device id.
   struct nand_chip_table* FindNandChipTable(uint8_t manuf_id, uint8_t device_id);
@@ -97,3 +104,5 @@ class Onfi {
   fbl::Function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl_;
   fbl::Function<uint8_t()> read_byte_;
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_ONFI_H_

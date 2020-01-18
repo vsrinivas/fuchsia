@@ -90,6 +90,7 @@ if (current_cpu != "") {
       "$zx/system/dev/light/aml-light:aml-light-test",
       "$zx/system/dev/light/lp50xx-light:lp50xx-light-test",
       "$zx/system/dev/misc/cpu-trace:tests",
+      "$zx/system/dev/nand/aml-rawnand/test",
       "$zx/system/dev/nand/broker/test",
       "$zx/system/dev/nand/cadence-hpnfc:cadence-hpnfc-test",
       "$zx/system/dev/nand/nand/test",
