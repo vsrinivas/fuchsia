@@ -19,6 +19,7 @@ const IE_SUPPORTED_EXTENDED_RATES: &str = "extended_supported_rates";
 const IE_RSNE: &str = "rsne";
 const IE_BSS_MAX_IDLE_PERIOD: &str = "bss_max_idle_period";
 const IE_DSSS_PARAM_SET: &str = "dsss_param_set";
+const IE_WPA1: &str = "wpa1";
 
 /// Field carrying necessary meta information to generate relevant tokens.
 #[derive(Hash, Eq, Ord, PartialEq, PartialOrd, Clone, Copy)]
@@ -35,6 +36,7 @@ pub enum Ie {
     Rsne,
     BssMaxIdlePeriod,
     DsssParamSet,
+    Wpa1,
 }
 
 pub struct IeDefinition {
@@ -164,6 +166,10 @@ impl BufferWrite for IeDefinition {
             Ie::DsssParamSet => {
                 frame_len!(bss_max_idle_period, IE_PREFIX_LEN + size_of::<ie::DsssParamSet>())
             }
+            Ie::Wpa1 => {
+                // IE + Vendor OUI + Vendor specific type + WPA1 body
+                frame_len!(wpa1, self.optional, IE_PREFIX_LEN + 4 + wpa1.len())
+            }
         })
     }
 
@@ -213,6 +219,7 @@ impl BufferWrite for IeDefinition {
             Ie::DsssParamSet => {
                 apply_on!(dsss, &self.value, ie::write_dsss_param_set(&mut w, &dsss)?)
             }
+            Ie::Wpa1 => apply_on!(wpa1, &self.value, ie::write_wpa1_ie(&mut w, &wpa1)?),
         })
     }
 
@@ -226,6 +233,7 @@ impl BufferWrite for IeDefinition {
             Ie::Rsne => declare_var!(rsne, self.optional, &self.value),
             Ie::BssMaxIdlePeriod => declare_var!(bss_max_idle_period, self.optional, &self.value),
             Ie::DsssParamSet => declare_var!(dsss, &self.value),
+            Ie::Wpa1 => declare_var!(wpa1, &self.value),
         })
     }
 }
@@ -296,6 +304,7 @@ impl Parse for IeDefinition {
             }
             IE_RSNE => Ie::Rsne,
             IE_BSS_MAX_IDLE_PERIOD => Ie::BssMaxIdlePeriod,
+            IE_WPA1 => Ie::Wpa1,
             unknown => return Err(Error::new(name.span(), format!("unknown IE: '{}'", unknown))),
         };
         Ok(IeDefinition { name, value, type_, optional })

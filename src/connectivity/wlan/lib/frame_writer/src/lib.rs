@@ -22,11 +22,13 @@ mod tests {
                 self,
                 rsn::{
                     akm::{Akm, PSK},
-                    cipher::{Cipher, CCMP_128},
+                    cipher::{Cipher, CCMP_128, TKIP},
                     rsne,
                 },
+                wpa,
             },
             mac::*,
+            organization::Oui,
         },
     };
 
@@ -245,6 +247,33 @@ mod tests {
                 0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
                 1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
                 1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
+            ][..],
+            &buf[..]
+        );
+    }
+
+    #[test]
+    fn write_wpa1() {
+        let wpa_ie = wpa::WpaIe {
+            multicast_cipher: Cipher { oui: Oui::MSFT, suite_type: TKIP },
+            unicast_cipher_list: vec![Cipher { oui: Oui::MSFT, suite_type: TKIP }],
+            akm_list: vec![Akm { oui: Oui::MSFT, suite_type: PSK }],
+        };
+
+        let buffer_provider = BufferProvider;
+        let (buf, bytes_written) = write_frame!(buffer_provider, {
+            ies: { wpa1: &wpa_ie, }
+        })
+        .expect("frame construction failed");
+        assert_eq!(bytes_written, 24);
+        assert_eq!(
+            &[
+                0xdd, 0x16, // Vendor IE header
+                0x00, 0x50, 0xf2, // MSFT OUI
+                0x01, 0x01, 0x00, // WPA IE header
+                0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
+                0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher: TKIP
+                0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
             ][..],
             &buf[..]
         );
