@@ -59,7 +59,7 @@ class MappedLoudnessTransform final : public LoudnessTransform {
   float EvaluateStageGain(const LoudnessTransform::Stage& stages) const override;
 
  private:
-  const VolumeCurve& volume_curve_;
+  const VolumeCurve volume_curve_;
 };
 
 // A `LoudnessTransform` that always returns unity gain, no matter what loudness stages are given.

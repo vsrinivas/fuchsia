@@ -55,5 +55,15 @@ TEST(ProcessConfigTest, SetInstance) {
   }
 }
 
+TEST(ProcessConfigTest, CanCopy) {
+  auto handle = [] {
+    auto volume_curve = VolumeCurve::DefaultForMinGain(-160.0f);
+    auto config = ProcessConfig::Builder().SetDefaultVolumeCurve(volume_curve).Build();
+    return ProcessConfig::set_instance(config);
+  }();
+
+  ProcessConfig::instance().default_loudness_transform()->Evaluate<1>({VolumeValue{1}});
+}
+
 }  // namespace
 }  // namespace media::audio
