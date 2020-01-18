@@ -2043,19 +2043,20 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
   // assembled into the final shared library.
   //
   // This establishes a new protocol with the debugger: there will be a
-  // debugging section called .zxdb_debug_api (non-allocated like other
-  // such sections).  ELF symbols in this section provide named API
-  // "calls".  Each "call" is a DWARF expression whose offset into the
-  // section and size in bytes are indicated by the st_value and st_size
-  // fields of the symbol.  The protocol for what values each call expects
-  // on the stack and/or delivers on the stack on return is described for
-  // each call below.  Every call may need access to process memory via
+  // debugging section called .zxdb_debug_api; this is allocated for the
+  // convenience of zxdb's current implementation, but in principle should be
+  // non-allocated like other such sections.  ELF symbols in this section
+  // provide named API "calls".  Each "call" is a DWARF expression whose
+  // offset into the section and size in bytes are indicated by the st_value
+  // and st_size fields of the symbol.  The protocol for what values each call
+  // expects on the stack and/or delivers on the stack on return is described
+  // for each call below.  Every call may need access to process memory via
   // DW_OP_deref et al.  Some calls need access to thread registers via
   // DW_OP_breg*; these calls document that need in their "Input:" section.
-  // Any DW_OP_addr operations encode an address relative to the load
-  // address of the module containing this section.
+  // Any DW_OP_addr operations encode an address relative to the load address
+  // of the module containing this section.
   __asm__ volatile(
-      ".pushsection .zxdb_debug_api,\"\",%%progbits\n"
+      ".pushsection .zxdb_debug_api,\"a\",%%progbits\n"
 #define DEBUG_API(name) #name ":\n"
 #define DEBUG_API_END(name) ".size " #name ", . - " #name "\n"
 
