@@ -150,6 +150,8 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/aml-gpu",
       "sys/platform/05:00:18/aml-usb-phy-v2",
+      "class/bt-transport/000",
+      "class/bt-hci/000",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
@@ -200,6 +202,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/nelson",
       "sys/platform/05:03:1/aml-axg-gpio",
       "nelson-buttons/hid-buttons",
+      "class/bt-transport/000",
+      "class/bt-hci/000",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/aml-gpu",
       "sys/platform/05:00:21/nelson-usb-phy",

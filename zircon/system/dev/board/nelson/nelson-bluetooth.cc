@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/serial/c/fidl.h>
+#include <lib/mmio/mmio.h>
+#include <unistd.h>
+
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
 #include <hw/reg.h>
-#include <lib/mmio/mmio.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
-#include <unistd.h>
 
 #include "nelson.h"
 
@@ -55,6 +57,16 @@ static const pbus_boot_metadata_t bt_uart_boot_metadata[] = {
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = MACADDR_BLUETOOTH,
     },
+};
+
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const device_component_part_t uart_component[] = {
+    {countof(root_match), root_match},
+};
+static const device_component_t uart_components[] = {
+    {countof(uart_component), uart_component},
 };
 
 static pbus_dev_t bt_uart_dev = []() {
@@ -148,7 +160,7 @@ zx_status_t Nelson::BluetoothInit() {
   usleep(100 * 1000);
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.DeviceAdd(&bt_uart_dev);
+  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, uart_components, 1, UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
     return status;
