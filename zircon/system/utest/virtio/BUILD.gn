@@ -2,19 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("virtio") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("virtio") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
-    "$zx/system/dev/bus/virtio/input_touch.cc",
+    "//zircon/system/dev/bus/virtio/input_touch.cc",
     "virtio-input.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.hidbus",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hid",
-    "$zx/system/ulib/hid-parser",
-    "$zx/system/ulib/virtio",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/virtio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.hidbus",
   ]
+}
+
+migrated_manifest("virtio-manifest") {
+  deps = [ ":virtio" ]
 }

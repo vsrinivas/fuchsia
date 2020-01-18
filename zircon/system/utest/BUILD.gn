@@ -261,7 +261,6 @@ if (current_cpu != "") {
       "usb-virtual-bus:test",
       "utc-procargs",
       "util",
-      "virtio",
       "zxcrypt",
 
       # disabled for now:
