@@ -41,7 +41,7 @@ template("test") {
     # instead.
     forward_variables_from(invoker, "*", [ "test_group" ])
 
-    # TODO(3367): always force `testonly` once all ZN tests are moved to
+    # TODO(44278): always force `testonly` once all ZN tests are moved to
     # packages.
     if (!defined(testonly)) {
       testonly = true
