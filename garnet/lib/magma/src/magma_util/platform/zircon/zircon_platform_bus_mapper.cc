@@ -26,7 +26,7 @@ std::unique_ptr<PlatformBusMapper::BusMapping> ZirconPlatformBusMapper::MapPageR
   static_assert(sizeof(zx_paddr_t) == sizeof(uint64_t), "unexpected sizeof(zx_paddr_t)");
 
   if ((page_count == 0) || (start_page_index + page_count) * PAGE_SIZE > buffer->size())
-    return DRETP(nullptr, "Invalid range: %d, %d\n", start_page_index, page_count);
+    return DRETP(nullptr, "Invalid range: %d, %d", start_page_index, page_count);
 
   std::vector<uint64_t> page_addr(page_count);
   zx::pmt pmt;

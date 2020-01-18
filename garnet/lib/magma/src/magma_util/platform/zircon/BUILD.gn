@@ -214,6 +214,7 @@ source_set("handle") {
   ]
 
   public_deps = [
+    "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:handle_header",
   ]

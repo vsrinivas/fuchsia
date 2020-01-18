@@ -27,24 +27,10 @@ static void print_level(PlatformLogger::LogLevel level) {
   }
 }
 
-void PlatformLogger::Log(LogLevel level, const char* msg, ...) {
+void PlatformLogger::LogVa(LogLevel level, const char* msg, va_list args) {
   print_level(level);
-  va_list args;
-  va_start(args, msg);
   vprintf(msg, args);
-  va_end(args);
   printf("\n");
-}
-
-void PlatformLogger::LogFrom(PlatformLogger::LogLevel level, const char* file, int line,
-                             const char* msg, ...) {
-  print_level(level);
-  char buffer[kBufferSize];
-  va_list args;
-  va_start(args, msg);
-  FormatBuffer(buffer, file, line, msg, args);
-  va_end(args);
-  printf("%s\n", buffer);
 }
 
 }  // namespace magma

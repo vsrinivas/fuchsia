@@ -54,21 +54,8 @@ static fx_log_severity_t get_severity(PlatformLogger::LogLevel level) {
   }
 }
 
-void PlatformLogger::Log(LogLevel level, const char* msg, ...) {
-  va_list args;
-  va_start(args, msg);
+void PlatformLogger::LogVa(LogLevel level, const char* msg, va_list args) {
   _FX_LOGVF(get_severity(level), "magma", msg, args);
-  va_end(args);
-}
-
-void PlatformLogger::LogFrom(PlatformLogger::LogLevel level, const char* file, int line,
-                             const char* msg, ...) {
-  char buffer[kBufferSize];
-  va_list args;
-  va_start(args, msg);
-  FormatBuffer(buffer, file, line, msg, args);
-  va_end(args);
-  _FX_LOGF(get_severity(level), "magma", "%s", buffer);
 }
 
 }  // namespace magma

@@ -14,6 +14,7 @@ executable("vkext") {
 
   deps = [
     "../vkreadback:vkreadback_src",
+    "//garnet/lib/magma/src/magma_util/platform:logger_impl",
     "//garnet/lib/magma/src/magma_util/platform:semaphore",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

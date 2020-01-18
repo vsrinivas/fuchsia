@@ -45,6 +45,7 @@ source_set("macros") {
     ":magma_util_config",
     "$magma_build_root:magma_src_include_config",
   ]
+  public_deps = [ "platform:logger" ]
 
   sources = [
     "dlog.h",

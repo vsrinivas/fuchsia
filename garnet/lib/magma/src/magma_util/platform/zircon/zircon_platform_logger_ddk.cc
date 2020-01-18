@@ -16,7 +16,7 @@ bool PlatformLogger::IsInitialized() { return true; }
 bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) { return true; }
 
 static void log_cstr(PlatformLogger::LogLevel level, const char* cstr) {
-  const char* fmt = "%s";
+  const char* fmt = "%s\n";
   switch (level) {
     case PlatformLogger::LOG_ERROR:
       zxlogf(ERROR, fmt, cstr);
@@ -30,22 +30,9 @@ static void log_cstr(PlatformLogger::LogLevel level, const char* cstr) {
   }
 }
 
-void PlatformLogger::Log(LogLevel level, const char* msg, ...) {
-  char buffer[kBufferSize];
-  va_list args;
-  va_start(args, msg);
-  FormatBuffer(buffer, nullptr, 0, msg, args);
-  va_end(args);
-  log_cstr(level, buffer);
-}
-
-void PlatformLogger::LogFrom(PlatformLogger::LogLevel level, const char* file, int line,
-                             const char* msg, ...) {
-  char buffer[kBufferSize];
-  va_list args;
-  va_start(args, msg);
-  FormatBuffer(buffer, file, line, msg, args);
-  va_end(args);
+void PlatformLogger::LogVa(LogLevel level, const char* msg, va_list args) {
+  char buffer[512];
+  vsnprintf(buffer, sizeof(buffer), msg, args);
   log_cstr(level, buffer);
 }
 

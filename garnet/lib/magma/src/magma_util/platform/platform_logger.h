@@ -24,32 +24,14 @@ class PlatformLogger {
   static bool IsInitialized();
 
   __attribute__((format(printf, 2, 3))) static void Log(PlatformLogger::LogLevel level,
-                                                        const char* msg, ...);
-
-  __attribute__((format(printf, 4, 5))) static void LogFrom(PlatformLogger::LogLevel level,
-                                                            const char* file, int line,
-                                                            const char* msg, ...);
-  static constexpr size_t kBufferSize = 512;
-  static constexpr size_t kSentinelSize = 4;
-
-  static void FormatBuffer(char buffer_out[kBufferSize], const char* file, int line,
-                           const char* msg, va_list args) {
-    const char kSentinel[] = "***";
-    static_assert(sizeof(kSentinel) == kSentinelSize, "sanity");
-    constexpr int kMaxSize = kBufferSize - sizeof(kSentinel);
-    strcpy(buffer_out + kMaxSize, kSentinel);
-
-    int size = 0;
-    if (file) {
-      size += snprintf(buffer_out, kMaxSize, "%s:%d ", file, line);
-    }
-    if (size < kMaxSize) {
-      size += vsnprintf(buffer_out + size, kMaxSize - size, msg, args);
-    }
-    if (size < kMaxSize) {
-      snprintf(buffer_out + size, kMaxSize - size, "\n");
-    }
+                                                        const char* msg, ...) {
+    va_list args;
+    va_start(args, msg);
+    LogVa(level, msg, args);
+    va_end(args);
   }
+
+  static void LogVa(PlatformLogger::LogLevel level, const char* msg, va_list args);
 };
 
 }  // namespace magma

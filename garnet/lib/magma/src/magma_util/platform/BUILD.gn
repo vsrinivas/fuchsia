@@ -39,6 +39,7 @@ source_set("buffer_header") {
   public_deps = [
     ":handle",
     "//garnet/lib/magma/include:magma_abi",
+    "//garnet/lib/magma/src/magma_util:macros",
     "//garnet/lib/magma/src/magma_util:status",
   ]
   sources = [ "platform_buffer.h" ]
@@ -105,8 +106,6 @@ group("entry_test") {
 
 source_set("handle_header") {
   public_configs = [ ":platform_include_config" ]
-
-  public_deps = [ "$magma_build_root/src/magma_util:macros" ]
 
   sources = [ "platform_handle.h" ]
 }

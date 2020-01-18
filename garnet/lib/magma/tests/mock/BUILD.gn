@@ -46,6 +46,7 @@ source_set("magma_system") {
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:logger_impl",
     "$magma_build_root/src/magma_util/platform:semaphore",
   ]
 }
