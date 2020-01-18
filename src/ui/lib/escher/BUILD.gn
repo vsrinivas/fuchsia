@@ -472,12 +472,20 @@ template("escher_library") {
   }
 }
 
-escher_library("escher") {
+escher_library("escher_with_glslang") {
   use_runtime_glsl = true
 }
 
 escher_library("escher_no_glslang") {
   use_runtime_glsl = false
+}
+
+source_set("escher") {
+  if (escher_use_runtime_glsl) {
+    public_deps = [ "//src/ui/lib/escher:escher_with_glslang" ]
+  } else {
+    public_deps = [ "//src/ui/lib/escher:escher_no_glslang" ]
+  }
 }
 
 group("unittests") {

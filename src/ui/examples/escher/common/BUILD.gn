@@ -40,7 +40,7 @@ source_set("demo_base") {
     "demo.cc",
     "demo.h",
   ]
-  public_deps = [ "//src/ui/lib/escher:escher" ]
+  public_deps = [ "//src/ui/lib/escher:escher_with_glslang" ]
 }
 
 source_set("demo_harness_fuchsia") {
@@ -80,5 +80,5 @@ source_set("demo_harness_linux") {
 source_set("headers") {
   visibility = [ ":*" ]
   sources = [ "demo_harness.h" ]
-  public_deps = [ "//src/ui/lib/escher:escher" ]
+  public_deps = [ "//src/ui/lib/escher:escher_with_glslang" ]
 }

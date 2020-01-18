@@ -200,8 +200,13 @@ template("gtest_escher_library") {
       "vk_debug_report_collector.h",
     ]
     public_deps = [ ":gtest_vulkan" ]
+
+    # Explicitly check for runtime glsl here instead of simply
+    # doing "public_deps += [ "//src/ui/lib/escher" ] and letting
+    # it set automatically, so that we can have tests with and without
+    # glsl, regardless of what the rest of Scenic is doing.
     if (gtest_escher_library_use_runtime_glsl) {
-      public_deps += [ "//src/ui/lib/escher" ]
+      public_deps += [ "//src/ui/lib/escher:escher_with_glslang" ]
     } else {
       public_deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
     }

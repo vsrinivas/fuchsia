@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/ui/lib/escher/build_args.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
@@ -33,15 +32,6 @@ source_set("common_gfx_config_source_set") {
   ]
 }
 
-# Use build flag to determine which version of escher is used.
-source_set("escher_maybe_with_glsl") {
-  if (escher_use_runtime_glsl) {
-    public_deps = [ "//src/ui/lib/escher" ]
-  } else {
-    public_deps = [ "//src/ui/lib/escher:escher_no_glslang" ]
-  }
-}
-
 # These sources (all part of :gfx) are especially performance-sensitive, so we
 # apply full optimization in debug as well as --release.
 source_set("gfx_always_optimized") {
@@ -55,7 +45,7 @@ source_set("gfx_always_optimized") {
     "-O3",
   ]
   public_configs = [ ":common_include_dirs" ]
-  public_deps = [ ":escher_maybe_with_glsl" ]
+  public_deps = [ "//src/ui/lib/escher" ]
 
   deps = [
     "//sdk/lib/images/cpp",
@@ -294,8 +284,8 @@ source_set("util") {
   ]
   deps = [
     # TODO(SCN-1398): Needed by wrap/unwrap.  Move to separate source_set?
-    ":escher_maybe_with_glsl",
     "//src/lib/fxl",
+    "//src/ui/lib/escher",
   ]
 }
 

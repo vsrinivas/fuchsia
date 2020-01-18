@@ -35,7 +35,7 @@ executable("service") {
     "//src/lib/fxl",
     "//src/lib/vulkan",
     "//src/ui/examples/escher/common",
-    "//src/ui/lib/escher:escher",
+    "//src/ui/lib/escher:escher_with_glslang",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
