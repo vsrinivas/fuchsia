@@ -2,21 +2,44 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("asix-88179") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("asix-88179") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "asix-88179.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.ethernet",
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/dev/lib/dev-operation",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/third_party/ulib/cksum",
+    "//src/devices:driver",
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/dev-operation",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
+}
+
+migrated_manifest("asix-88179-manifest") {
+  deps = [ ":asix-88179" ]
 }

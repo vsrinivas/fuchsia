@@ -17,7 +17,6 @@ group("dev") {
     "codec",
     "cpu",
     "display",
-    "ethernet",
     "fw",
     "gpu",
     "input",

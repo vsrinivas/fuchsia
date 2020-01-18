@@ -2,32 +2,54 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("dwmac") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("dwmac") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "dwmac-debug.cc",
     "dwmac.cc",
     "pinned-buffer.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.clock",
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.ethernet",
-    "$zx/system/banjo/ddk.protocol.ethernet.board",
-    "$zx/system/banjo/ddk.protocol.ethernet.mac",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.test",
-    "$zx/system/dev/lib/dev-operation",
-    "$zx/system/dev/lib/device-protocol-pdev",
-    "$zx/system/dev/lib/device-protocol-platform-device",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/device-protocol-platform-device",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/dev-operation",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.clock",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//zircon/system/banjo/ddk.protocol.ethernet.board",
+    "//zircon/system/banjo/ddk.protocol.ethernet.mac",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.test",
   ]
+}
+
+migrated_manifest("dwmac-manifest") {
+  deps = [ ":dwmac" ]
 }

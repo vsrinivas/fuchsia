@@ -2,35 +2,66 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("usb-cdc-ecm") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("usb-cdc-ecm") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-ecm.c" ]
   deps = [
     ":usb-cdc-ecm-lib",
-    "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zircon",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/pretty",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
 }
 
 source_set("usb-cdc-ecm-lib") {
   sources = [ "usb-cdc-ecm-lib.c" ]
   public_deps = [
-    "$zx/system/banjo/ddk.protocol.ethernet",
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/sync",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
   ]
 }
 
-zx_test("usb-cdc-ecm-unittest") {
+test("usb-cdc-ecm-unittest") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "usb-cdc-ecm-unittest"
   sources = [ "usb-cdc-ecm-unittest.cc" ]
   deps = [
     ":usb-cdc-ecm-lib",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+migrated_manifest("usb-cdc-ecm-manifest") {
+  deps = [ ":usb-cdc-ecm" ]
+}
+
+migrated_manifest("usb-cdc-ecm-unittest-manifest") {
+  deps = [ ":usb-cdc-ecm-unittest" ]
 }
