@@ -101,38 +101,6 @@ void main(List<String> args) {
         ['non-utf8-trace', 'json', nonUtf8Data]);
   });
 
-  test('process trace', () async {
-    final mockRunProcessObserver = MockRunProcessObserver();
-    final performance =
-        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
-
-    // Test trace processing with [appName] set.
-    await performance.processTrace(
-        '/bin/process_sample_trace', File('sample-trace.json'), 'test1',
-        appName: 'test-app');
-
-    var verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
-        '/bin/process_sample_trace', captureAny))
-      ..called(1);
-    var capturedArgs = verifyMockRunProcessObserver.captured.single;
-    expect(capturedArgs[0], '-test_suite_name=test1');
-    expect(capturedArgs[1], '-flutter_app_name=test-app');
-    expect(capturedArgs[2], endsWith('test1-benchmark.fuchsiaperf.json'));
-    expect(capturedArgs[3], endsWith('sample-trace.json'));
-
-    // Test trace processing without an [appName] set.
-    await performance.processTrace(
-        '/bin/process_sample_trace', File('sample-trace.json'), 'test1');
-
-    verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
-        '/bin/process_sample_trace', captureAny))
-      ..called(1);
-    capturedArgs = verifyMockRunProcessObserver.captured.single;
-    expect(capturedArgs[0], '-test_suite_name=test1');
-    expect(capturedArgs[1], endsWith('test1-benchmark.fuchsiaperf.json'));
-    expect(capturedArgs[2], endsWith('sample-trace.json'));
-  });
-
   test('convert results', () async {
     final mockRunProcessObserver = MockRunProcessObserver();
     final performance =
