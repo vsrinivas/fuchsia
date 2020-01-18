@@ -5,6 +5,7 @@
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
 
 #include "src/ui/lib/escher/flatland/flatland_static_config.h"
+#include "src/ui/lib/escher/flatland/rectangle_renderable.h"
 #include "src/ui/lib/escher/mesh/indexed_triangle_mesh_upload.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
@@ -18,8 +19,11 @@ namespace {
 void DrawSingle(CommandBuffer* cmd_buf, const RectangleRenderable& renderable, const float& z) {
   TRACE_DURATION("gfx", "RectangleCompositor::DrawSingle");
 
-  // Bind texture.
-  FXL_DCHECK(renderable.texture);
+  // Checks to make sure all the renderable data is valid, including textures,
+  // uv coordinates, etc.
+  FXL_DCHECK(RectangleRenderable::IsValid(renderable));
+
+  // Bind texture to use in the fragment shader.
   cmd_buf->BindTexture(/*set*/ 0, /*binding*/ 0, renderable.texture);
 
   // Struct to store all the push constant data in the vertex shader
@@ -27,15 +31,14 @@ void DrawSingle(CommandBuffer* cmd_buf, const RectangleRenderable& renderable, c
   struct VertexShaderPushConstants {
     alignas(16) vec3 origin;
     alignas(8) vec2 extent;
-    alignas(8) vec2 uvs[4];
+    alignas(8) std::array<vec2, 4> uvs;
   };
 
   // Set up the push constants struct with data from the renderable and z value.
   VertexShaderPushConstants constants = {
       .origin = vec3(renderable.dest.origin, z),
       .extent = renderable.dest.extent,
-      .uvs = {renderable.source.uv_top_left, renderable.source.uv_top_right,
-              renderable.source.uv_bottom_right, renderable.source.uv_bottom_left},
+      .uvs = renderable.source.uv_coordinates_clockwise,
   };
 
   // We offset by 16U to account for the fact that the previous call to

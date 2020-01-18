@@ -36,6 +36,7 @@ if (is_mac) {
       "fixtures/readback_test.cc",
       "fixtures/readback_test.h",
       "flatland/rectangle_compositor_unittest.cc",
+      "flatland/rectangle_renderable_unittest.cc",
       "fs/hack_filesystem_unittest.cc",
       "geometry/bounding_box_unittest.cc",
       "geometry/indexed_triangle_mesh_clip_unittest.cc",

@@ -127,9 +127,9 @@ VK_TEST_F(RectangleCompositorTest, SingleRenderableTest) {
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, {renderable}, frame_data_.color_attachment, depth_texture);
 
-  auto bytes =
-      ReadbackFromColorAttachment(frame_data_.frame, frame_data_.color_attachment->swapchain_layout(),
-                                  vk::ImageLayout::eColorAttachmentOptimal);
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
@@ -209,12 +209,8 @@ VK_TEST_F(RectangleCompositorTest, RotatedTextureTest) {
   gpu_uploader->Submit();
 
   // Rotated 90 degrees.
-  RectangleSourceSpec source = {
-      .uv_top_left = vec2(0, 1),
-      .uv_top_right = vec2(0, 0),
-      .uv_bottom_right = vec2(1, 0),
-      .uv_bottom_left = vec2(1, 1),
-  };
+  RectangleSourceSpec source({/*uv_top_left*/ vec2(0, 1), /*uv_top_right*/ vec2(0, 0),
+                              /*uv_bottom_right*/ vec2(1, 0), /*uv_bottom_left*/ vec2(1, 1)});
 
   RectangleDestinationSpec dest = {
       .origin = vec2(256, 0),
