@@ -403,7 +403,7 @@ template("clang_toolchain") {
         rspfile_content = "{{inputs_newline}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\" {{solibs}} {{libs}}"
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" @\"$rspfile\" {{solibs}} {{libs}}"
         rspfile_content = "{{inputs}}"
         default_output_extension = ".so"
       }
