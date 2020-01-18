@@ -1,8 +1,0 @@
-fuchsia-pkg://fuchsia.com/system_updater#meta/system_updater.cmx
-fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx
-fuchsia-pkg://fuchsia.com/component_manager#meta/component_manager_sfw.cmx
-fuchsia-pkg://fuchsia.com/system_updater_isolated#meta/system_updater_isolated.cmx
-# Minimizing this list is tracked in fxb/43629. At least the following will be removed.
-fuchsia-pkg://fuchsia.com/amberctl#meta/amberctl.cmx
-fuchsia-pkg://fuchsia.com/pkgctl#meta/pkgctl.cmx
-fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker-for-integration-test.cmx

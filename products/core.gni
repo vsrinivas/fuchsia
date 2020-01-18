@@ -63,7 +63,6 @@ base_package_labels += [
   "//src/identity/bin:core",
   "//src/media/audio/bundles:audio_config",
   "//src/recovery/factory_reset",
-  "//src/security/policy:appmgr_package_resolver_allowlist_userdebug",
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_component_event_provider_allowlist",
   "//src/sys/appmgr:appmgr_deprecated_shell_allowlist",
