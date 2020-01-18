@@ -1440,7 +1440,7 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 		s.entry.Callback = callback(func(*waiter.Entry) {
 			var err error
 			s.endpointWithEvent.incoming.mu.Lock()
-			if !s.endpointWithEvent.incoming.mu.asserted {
+			if !s.endpointWithEvent.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) != 0 {
 				err = s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalIncoming)
 				s.endpointWithEvent.incoming.mu.asserted = true
 			}
