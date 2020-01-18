@@ -32,6 +32,7 @@ group("tools") {
 group("examples") {
   testonly = true
   deps = [
+    "//src/media/audio/examples/effects",
     "//src/media/audio/examples/fx",
     "//src/media/audio/examples/simple_sine",
     "//src/media/audio/examples/sync_sine",
