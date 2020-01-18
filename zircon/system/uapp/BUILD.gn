@@ -22,7 +22,6 @@ group("uapp") {
     "fs-mount",
     "fs-umount",
     "fvm-check",
-    "gpt",
     "hid",
     "hidsensor",
     "hidtouch",
