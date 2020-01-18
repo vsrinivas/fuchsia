@@ -468,9 +468,9 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t cod
 
   uint32_t actual_dpb_size = frame_count;
   ZX_DEBUG_ASSERT(actual_dpb_size <= kMaxActualDPBSize);
-  ZX_DEBUG_ASSERT(next_max_reference_size_ <= next_max_dpb_size_);
+  ZX_DEBUG_ASSERT(next_mv_buffer_count_ <= next_max_dpb_size_ + 1);
   uint32_t av_scratch0 =
-      (next_max_reference_size_ << 24) | (actual_dpb_size << 16) | (next_max_dpb_size_ << 8);
+      (next_mv_buffer_count_ << 24) | (actual_dpb_size << 16) | (next_max_dpb_size_ << 8);
   AvScratch0::Get().FromValue(av_scratch0).WriteTo(owner_->dosbus());
 
   state_ = DecoderState::kRunning;
@@ -577,42 +577,60 @@ zx_status_t H264Decoder::InitializeStream() {
 
   uint32_t max_dpb_size = GetMaxDpbSize(level_idc, mb_width, mb_height);
   if (max_dpb_size == 0) {
-    LOG(WARN, "mb_width and/or mb_height invalid? - mb_width: %u mb_height: %u", mb_width,
-        mb_height);
-    max_dpb_size = kMaxActualDPBSize;
+    LOG(WARN,
+        "level_idc, mb_width and/or mb_height invalid? - level_idc: %u mb_width: %u mb_height: %u",
+        level_idc, mb_width, mb_height);
+    return ZX_ERR_INTERNAL;
   }
   // GetMaxDpbSize() returns max 16, but kMaxActualDPBSize is 24.
   ZX_DEBUG_ASSERT(max_dpb_size < kMaxActualDPBSize);
 
-  // The firmware says how many reference frames are needed by this stream.  We don't expect the
-  // firmware to mess this up, but warn if it does, and try to fixup.  If fixup is actually
-  // triggered, it won't necessarily help.
+  // |max_reference_size| comes directly from max_num_ref_frames from the bitstream. Fix it up at
+  // least enough to avoid crashes, but if this value is invalid it's possible anything else in the
+  // bitstream could be broken.
   uint32_t max_reference_size = stream_info.max_reference_size();
-  if (max_reference_size > kMaxActualDPBSize - 1) {
-    LOG(WARN, "max_reference_size is too large - clamping - max_reference_size: %u",
-        max_reference_size);
-    max_reference_size = kMaxActualDPBSize - 1;
+  if (max_reference_size > max_dpb_size) {
+    LOG(WARN,
+        "max_reference_size is too large - clamping - max_reference_size: %u max_dpb_size: %u",
+        max_reference_size, max_dpb_size);
+    max_reference_size = max_dpb_size;
   } else if (max_reference_size == 0) {
+    // This is technically permissible by the h.264 spec, but still try to increase it to avoid
+    // issues.
     LOG(WARN, "max_reference_size is zero - unexpected - using default: %u", max_dpb_size);
-    max_reference_size = max_dpb_size - 1;
+    max_reference_size = max_dpb_size;
   }
 
   // The HW decoder / firmware seems to require several extra frames or it won't continue decoding
-  // frames. TODO(fxb/43085): Verify that min_buffer_count_for_camping (as opposed to
-  // min_buffer_count) can't be reduced.
+  // frames. TODO(fxb/43085): Verify whether min_buffer_count_for_camping (as opposed to
+  // min_buffer_count) can be reduced to max_dpb_size + 1, which is what you would expect based on
+  // max_num_reorder_frames from the h.264 spec.
   constexpr uint32_t kDbpSizeAdj = 6;
-  // Use kDpbSizeAdj should include the frame that's decoded into, so we don't need to add 1 extra
-  // here.
-  uint32_t min_buffer_count = max_reference_size + kDbpSizeAdj;
-  min_buffer_count = std::min(min_buffer_count, kMaxActualDPBSize);
+  // Seems needed for decoding bear.h264, but unclear why.
+  constexpr uint32_t kAbsoluteMinBufferCount = 10u;
+  // Technically the max we should need to camp on to decode is max_dpb_size + 1. That's because a
+  // frame is guaranteed to be output when the DPB is full and the hardware tries to insert the
+  // newly-decoding frame into it. That's also the minimum because until the DPB is full we don't
+  // know which frame should be output first (except in certain special cases like IDR frames or SEI
+  // data reducing the limit).
+  // In practice the firmware won't necessarily output frames immediately, so we need to add on some
+  // slack. |max_reference_size| + 6 is what the linux driver does in low memory situations, so it
+  // should normally work. However, when max_dpb_size and max_reference_size are very low (like in
+  // bear.h264) that isn't always enough for the firmware, so we require at least 10.
+  uint32_t min_buffer_count = std::max(std::max(max_reference_size + kDbpSizeAdj, max_dpb_size + 1),
+                                       kAbsoluteMinBufferCount);
+  ZX_DEBUG_ASSERT(min_buffer_count < kMaxActualDPBSize);
 
-  // Add 1 because firmware may expect this.
-  max_reference_size++;
+  // These we pass back to the firmware later, having computed/adjusted as above.
+  next_max_dpb_size_ = max_dpb_size;
+  // We need to store reference MVs for all active reference frames, as well as 1 extra for the
+  // frame that's being decoded into (in case it later becomes a reference frame).
+  next_mv_buffer_count_ = max_reference_size + 1;
 
   // Rounding to 4 macroblocks is for matching the linux driver, in case the
   // hardware happens to round up as well.
-  uint32_t mv_buffer_size =
-      fbl::round_up(mb_height, 4u) * fbl::round_up(mb_width, 4u) * mb_mv_byte * max_reference_size;
+  uint32_t mv_buffer_size = fbl::round_up(mb_height, 4u) * fbl::round_up(mb_width, 4u) *
+                            mb_mv_byte * next_mv_buffer_count_;
   uint32_t mv_buffer_alloc_size = fbl::round_up(mv_buffer_size, ZX_PAGE_SIZE);
 
   auto create_result = InternalBuffer::Create("H264ReferenceMvs", &owner_->SysmemAllocatorSyncPtr(),
@@ -686,10 +704,6 @@ zx_status_t H264Decoder::InitializeStream() {
       ZX_DEBUG_ASSERT(sar_width != 0 && sar_height != 0);
     }
   }
-
-  // These we pass back to the firmware later, having computed/adjusted as above.
-  next_max_reference_size_ = max_reference_size;
-  next_max_dpb_size_ = max_dpb_size;
 
   // The actual # of buffers is determined by sysmem, but constrainted by "max_dpb_size" as the min
   // # of needed buffers for reference and re-ordering purposes, not counting decode-into buffer.

@@ -25,6 +25,8 @@ class TestFrameAllocator : public TestBasicClient {
 
   void set_decoder(VideoDecoder* decoder) { decoder_ = decoder; }
 
+  void set_use_minimum_frame_count(bool use_minimum) { use_minimum_frame_count_ = use_minimum; }
+
   zx_status_t InitializeFrames(zx::bti bti, uint32_t min_frame_count, uint32_t max_frame_count,
                                uint32_t coded_width, uint32_t coded_height, uint32_t stride,
                                uint32_t display_width, uint32_t display_height, bool has_sar,
@@ -39,7 +41,8 @@ class TestFrameAllocator : public TestBasicClient {
       uint32_t frame_vmo_bytes = coded_height * stride * 3 / 2;
       std::uniform_int_distribution<uint32_t> frame_count_distribution(min_frame_count,
                                                                        max_frame_count);
-      uint32_t frame_count = frame_count_distribution(prng_);
+      uint32_t frame_count =
+          use_minimum_frame_count_ ? min_frame_count : frame_count_distribution(prng_);
       LOG(INFO, "AllocateFrames() - frame_count: %u min_frame_count: %u max_frame_count: %u",
           frame_count, min_frame_count, max_frame_count);
       for (uint32_t i = 0; i < frame_count; i++) {
@@ -79,6 +82,7 @@ class TestFrameAllocator : public TestBasicClient {
   uint64_t next_non_codec_buffer_lifetime_ordinal_ = 1;
   std::random_device rd_;
   std::mt19937 prng_;
+  bool use_minimum_frame_count_ = false;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_

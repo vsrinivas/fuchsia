@@ -59,10 +59,11 @@ static void ValidateInputRegisters(AmlogicVideo* video) {
 
 class TestH264 {
  public:
-  static void Decode(bool use_parser) {
+  static void Decode(bool use_parser, bool use_minimum_frame_count) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
     TestFrameAllocator client(video.get());
+    client.set_use_minimum_frame_count(use_minimum_frame_count);
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
@@ -316,7 +317,7 @@ class TestH264 {
     video.reset();
   }
 
-  static void DecodeMalformed(uint64_t location, uint8_t value) {
+  static void DecodeMalformed(uint64_t location, uint8_t value, bool enforce_no_frames) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
     TestFrameAllocator client(video.get());
@@ -368,8 +369,10 @@ class TestH264 {
     video->parser()->CancelParsing();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    // No frames should be returned because the error happened too early.
-    EXPECT_EQ(0u, frame_count);
+
+    if (enforce_no_frames) {
+      EXPECT_EQ(0u, frame_count);
+    }
 
     video.reset();
   }
@@ -382,9 +385,11 @@ class TestH264 {
   }
 };
 
-TEST(H264, Decode) { TestH264::Decode(true); }
+TEST(H264, Decode) { TestH264::Decode(true, /*use_minimum_frame_count=*/false); }
 
-TEST(H264, DecodeNoParser) { TestH264::Decode(false); }
+TEST(H264, DecodeMinimumFrames) { TestH264::Decode(true, /*use_minimum_frame_count=*/true); }
+
+TEST(H264, DecodeNoParser) { TestH264::Decode(false, /*use_minimum_frame_count=*/false); }
 
 TEST(H264, DelayedReturn) { TestH264::DelayedReturn(); }
 
@@ -394,11 +399,21 @@ TEST(H264, DecodeNalUnitsNoParser) { TestH264::DecodeNalUnits(false); }
 
 TEST(H264, DecodeMalformedHang) {
   // Parameters found through fuzzing.
-  TestH264::DecodeMalformed(638, 44);
+  TestH264::DecodeMalformed(638, 44, true);
 }
 
 TEST(H264, DecodeMalformedTooLarge) {
   // Parameters found through fuzzing - causes mb_width=3 and total_mbs=4986, so the height is
   // calculated as 26592 pixels.
-  TestH264::DecodeMalformed(593, 176);
+  TestH264::DecodeMalformed(593, 176, true);
+}
+
+TEST(H264, DecodeMalformedBadDPB) {
+  // Parameters found through fuzzing. Gives an invalid level_idc.
+  TestH264::DecodeMalformed(16016, 199, false);
+}
+
+TEST(H264, DecodeMalformedBadReferenceCount) {
+  // Parameters found through fuzzing. Gives an invalid number of reference frames.
+  TestH264::DecodeMalformed(591, 141, false);
 }

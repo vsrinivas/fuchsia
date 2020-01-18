@@ -64,10 +64,10 @@ class H264Decoder : public VideoDecoder {
   DecoderState state_ = DecoderState::kRunning;
 
   // These are set in InitializeFrames for use in InitializedFrames.
-  // next_max_reference_size_ and next_max_dpb_size_ are specified to the firmware, along with the
+  // next_mv_buffer_count_ and next_max_dpb_size_ are specified to the firmware, along with the
   // actual number of frames.  It's not immediately clear why/whether the firmware actually needs
   // these in addition to actual number of frames.
-  uint32_t next_max_reference_size_ = 0;
+  uint32_t next_mv_buffer_count_ = 0;
   uint32_t next_max_dpb_size_ = 0;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
