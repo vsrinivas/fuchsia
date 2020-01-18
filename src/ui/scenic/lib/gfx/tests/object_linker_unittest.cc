@@ -9,6 +9,7 @@
 #include <zircon/types.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
 
 namespace scenic_impl {
@@ -22,6 +23,16 @@ constexpr int kImportValue = 42;
   std::bind([]() { EXPECT_TRUE(false) << "Delegate called unexpectedly: " << str; })
 
 class ObjectLinkerTest : public ErrorReportingTest {
+ public:
+  void TearDown() override {
+    ErrorReportingTest::TearDown();
+
+    EXPECT_EQ(0u, object_linker_.ExportCount());
+    EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
+    EXPECT_EQ(0u, object_linker_.ImportCount());
+    EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
+  }
+
  protected:
   struct TestExportObj {
     int value = 0;
@@ -757,7 +768,8 @@ TEST_F(ObjectLinkerTest, MoveInitializedLink) {
 
 TEST_F(ObjectLinkerTest, ImportLinkDeathDestroysImport) {
   // Use a custom ObjectLinker template.
-  using SharedTestObjectLinker = ObjectLinker<std::shared_ptr<TestExportObj>, std::shared_ptr<TestImportObj>>;
+  using SharedTestObjectLinker =
+      ObjectLinker<std::shared_ptr<TestExportObj>, std::shared_ptr<TestImportObj>>;
   SharedTestObjectLinker object_linker;
 
   zx::eventpair export_token, import_token;
@@ -774,8 +786,7 @@ TEST_F(ObjectLinkerTest, ImportLinkDeathDestroysImport) {
       object_linker.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
-  import_link.Initialize(ERROR_IF_CALLED("import.link_resolved"),
-                         [](bool on_link_destruction) {});
+  import_link.Initialize(ERROR_IF_CALLED("import.link_resolved"), [](bool on_link_destruction) {});
 
   // This should cause the import to get a link_disconnected event when the eventloop ticks, which
   // will delete the only shared pointer to the object, invalidating the weak pointer.
@@ -787,7 +798,8 @@ TEST_F(ObjectLinkerTest, ImportLinkDeathDestroysImport) {
 
 TEST_F(ObjectLinkerTest, ExportLinkDeathDestroysExport) {
   // Use a custom ObjectLinker template.
-  using SharedTestObjectLinker = ObjectLinker<std::shared_ptr<TestExportObj>, std::shared_ptr<TestImportObj>>;
+  using SharedTestObjectLinker =
+      ObjectLinker<std::shared_ptr<TestExportObj>, std::shared_ptr<TestImportObj>>;
   SharedTestObjectLinker object_linker;
 
   zx::eventpair export_token, import_token;
@@ -804,8 +816,7 @@ TEST_F(ObjectLinkerTest, ExportLinkDeathDestroysExport) {
       object_linker.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
-  export_link.Initialize(ERROR_IF_CALLED("import.link_resolved"),
-                         [](bool on_link_destruction) {});
+  export_link.Initialize(ERROR_IF_CALLED("import.link_resolved"), [](bool on_link_destruction) {});
 
   // This should cause the export to get a link_disconnected event when the eventloop ticks, which
   // will delete the only shared pointer to the object, invalidating the weak pointer.
@@ -813,6 +824,286 @@ TEST_F(ObjectLinkerTest, ExportLinkDeathDestroysExport) {
   EXPECT_TRUE(RunLoopUntilIdle());
 
   EXPECT_TRUE(weak_export_obj.expired());
+}
+
+TEST_F(ObjectLinkerTest, LinkOnlyReleasesTokenOnce) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  const zx_koid_t import_koid = fsl::GetKoid(import_token.get());
+  const zx_koid_t export_koid = fsl::GetKoid(export_token.get());
+
+  TestImportObj import_obj(kImportValue);
+  TestExportObj export_obj(kExportValue);
+
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
+
+  auto released_import = import_link.ReleaseToken();
+  EXPECT_TRUE(released_import.has_value());
+  EXPECT_EQ(fsl::GetKoid(released_import.value().get()), import_koid);
+
+  auto released_import2 = import_link.ReleaseToken();
+  EXPECT_FALSE(released_import2.has_value());
+
+  auto released_export = export_link.ReleaseToken();
+  EXPECT_TRUE(released_export.has_value());
+  EXPECT_EQ(fsl::GetKoid(released_export.value().get()), export_koid);
+
+  auto released_export2 = export_link.ReleaseToken();
+  EXPECT_FALSE(released_export2.has_value());
+}
+
+TEST_F(ObjectLinkerTest, ReleaseImportTokenBeforeInitialization) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  const zx_koid_t import_koid = fsl::GetKoid(import_token.get());
+
+  TestImportObj import_obj(kImportValue);
+
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
+
+  // Releasing the token invalidates the |import_link|.
+  auto token = import_link.ReleaseToken();
+  EXPECT_TRUE(token.has_value());
+  EXPECT_EQ(fsl::GetKoid(token.value().get()), import_koid);
+
+  EXPECT_FALSE(import_link.valid());
+  EXPECT_EQ(object_linker_.ImportCount(), 0u);
+  EXPECT_EQ(object_linker_.UnresolvedImportCount(), 0u);
+}
+
+TEST_F(ObjectLinkerTest, ReleaseExportTokenBeforeInitialization) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  const zx_koid_t export_koid = fsl::GetKoid(export_token.get());
+
+  TestExportObj export_obj(kExportValue);
+
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
+
+  // Releasing the token invalidates the |export_link|.
+  auto token = export_link.ReleaseToken();
+  EXPECT_TRUE(token.has_value());
+  EXPECT_EQ(fsl::GetKoid(token.value().get()), export_koid);
+
+  EXPECT_FALSE(export_link.valid());
+  EXPECT_EQ(object_linker_.ExportCount(), 0u);
+  EXPECT_EQ(object_linker_.UnresolvedExportCount(), 0u);
+}
+
+TEST_F(ObjectLinkerTest, ReleaseImportTokenAfterInitialization) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  const zx_koid_t import_koid = fsl::GetKoid(import_token.get());
+
+  TestImportObj import_obj(kImportValue);
+
+  bool import_disconnected = false;
+
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
+  import_link.Initialize(ERROR_IF_CALLED("import.link_resolved"), [&](bool on_link_destruction) {
+    EXPECT_FALSE(on_link_destruction);
+    import_disconnected = true;
+  });
+
+  // Releasing the token from the |import_link| causes the invalidation of the link.
+  auto token = import_link.ReleaseToken();
+  EXPECT_TRUE(token.has_value());
+  EXPECT_EQ(fsl::GetKoid(token.value().get()), import_koid);
+
+  EXPECT_FALSE(import_link.valid());
+  EXPECT_TRUE(import_disconnected);
+  EXPECT_EQ(object_linker_.ImportCount(), 0u);
+  EXPECT_EQ(object_linker_.UnresolvedImportCount(), 0u);
+}
+
+TEST_F(ObjectLinkerTest, ReleaseExportTokenAfterInitialization) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  const zx_koid_t export_koid = fsl::GetKoid(export_token.get());
+
+  TestExportObj export_obj(kExportValue);
+
+  bool export_disconnected = false;
+
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
+  export_link.Initialize(ERROR_IF_CALLED("export.link_resolved"), [&](bool on_link_destruction) {
+    EXPECT_FALSE(on_link_destruction);
+    export_disconnected = true;
+  });
+
+  // Releasing the token from the |export_link| causes the invalidation of the link.
+  auto token = export_link.ReleaseToken();
+  EXPECT_TRUE(token.has_value());
+  EXPECT_EQ(fsl::GetKoid(token.value().get()), export_koid);
+
+  EXPECT_FALSE(export_link.valid());
+  EXPECT_TRUE(export_disconnected);
+  EXPECT_EQ(object_linker_.ExportCount(), 0u);
+  EXPECT_EQ(object_linker_.UnresolvedExportCount(), 0u);
+}
+
+TEST_F(ObjectLinkerTest, ReleaseImportTokenAfterLinkResolution) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  TestImportObj import_obj(kImportValue);
+  TestExportObj export_obj(kExportValue);
+
+  int import_connected = 0;
+  int export_connected = 0;
+  int import_disconnected = 0;
+  int export_disconnected = 0;
+  int last_linked_import = 0;
+
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
+
+  import_link.Initialize(
+      [&import_connected](TestExportObj obj) { import_connected++; },
+      [&import_disconnected](bool on_link_destruction) { import_disconnected++; });
+  export_link.Initialize(
+      [&export_connected, &last_linked_import](TestImportObj obj) {
+        last_linked_import = obj.value;
+        export_connected++;
+      },
+      [&export_disconnected](bool on_link_destruction) { export_disconnected++; });
+
+  EXPECT_EQ(import_connected, 1);
+  EXPECT_EQ(export_connected, 1);
+  EXPECT_EQ(import_disconnected, 0);
+  EXPECT_EQ(export_disconnected, 0);
+  EXPECT_EQ(last_linked_import, kImportValue);
+
+  // Releasing the import token triggers the disconnect callbacks for both links. The export link
+  // remains valid but unresolved, but the import link becomes invalid.
+  auto token = import_link.ReleaseToken();
+  EXPECT_TRUE(token.has_value());
+  zx::eventpair import_token2 = zx::eventpair(std::move(token.value()));
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(import_link.valid());
+  EXPECT_TRUE(export_link.initialized());
+  EXPECT_EQ(import_disconnected, 1);
+  EXPECT_EQ(export_disconnected, 1);
+  EXPECT_EQ(object_linker_.UnresolvedImportCount(), 0u);
+  EXPECT_EQ(object_linker_.ImportCount(), 0u);
+  EXPECT_EQ(object_linker_.UnresolvedExportCount(), 1u);
+  EXPECT_EQ(object_linker_.ExportCount(), 1u);
+
+  // The import token can then be used to initialize a different ImportLink.
+  const int import_value2 = 2 * kImportValue;
+  TestImportObj import_obj2(import_value2);
+
+  int import_connected2 = 0;
+  int import_disconnected2 = 0;
+
+  TestObjectLinker::ImportLink import_link2 = object_linker_.CreateImport(
+      std::move(import_obj2), std::move(import_token2), error_reporter());
+
+  import_link2.Initialize(
+      [&import_connected2](TestExportObj obj) { import_connected2++; },
+      [&import_disconnected2](bool on_link_destruction) { import_disconnected2++; });
+
+  EXPECT_EQ(import_connected2, 1);
+  EXPECT_EQ(export_connected, 2);
+  EXPECT_EQ(import_disconnected2, 0);
+  EXPECT_EQ(export_disconnected, 1);
+  EXPECT_EQ(last_linked_import, import_value2);
+  EXPECT_EQ(object_linker_.UnresolvedImportCount(), 0u);
+  EXPECT_EQ(object_linker_.ImportCount(), 1u);
+  EXPECT_EQ(object_linker_.UnresolvedExportCount(), 0u);
+  EXPECT_EQ(object_linker_.ExportCount(), 1u);
+}
+
+TEST_F(ObjectLinkerTest, ReleaseExportTokenAfterLinkResolution) {
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  TestImportObj import_obj(kImportValue);
+  TestExportObj export_obj(kExportValue);
+
+  int import_connected = 0;
+  int export_connected = 0;
+  int import_disconnected = 0;
+  int export_disconnected = 0;
+  int last_linked_export = 0;
+
+  TestObjectLinker::ImportLink import_link =
+      object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
+  TestObjectLinker::ExportLink export_link =
+      object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
+
+  import_link.Initialize(
+      [&import_connected, &last_linked_export](TestExportObj obj) {
+        last_linked_export = obj.value;
+        import_connected++;
+      },
+      [&import_disconnected](bool on_link_destruction) { import_disconnected++; });
+  export_link.Initialize(
+      [&export_connected](TestImportObj obj) { export_connected++; },
+      [&export_disconnected](bool on_link_destruction) { export_disconnected++; });
+
+  EXPECT_EQ(import_connected, 1);
+  EXPECT_EQ(export_connected, 1);
+  EXPECT_EQ(import_disconnected, 0);
+  EXPECT_EQ(export_disconnected, 0);
+  EXPECT_EQ(last_linked_export, kExportValue);
+
+  // Releasing the export token triggers the disconnect callbacks for both links. The import link
+  // remains valid but unresolved, but the export link becomes invalid.
+  auto token = export_link.ReleaseToken();
+  EXPECT_TRUE(token.has_value());
+  zx::eventpair export_token2 = zx::eventpair(std::move(token.value()));
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(export_link.valid());
+  EXPECT_TRUE(import_link.initialized());
+  EXPECT_EQ(import_disconnected, 1);
+  EXPECT_EQ(export_disconnected, 1);
+  EXPECT_EQ(object_linker_.UnresolvedImportCount(), 1u);
+  EXPECT_EQ(object_linker_.ImportCount(), 1u);
+  EXPECT_EQ(object_linker_.UnresolvedExportCount(), 0u);
+  EXPECT_EQ(object_linker_.ExportCount(), 0u);
+
+  // The import token can then be used to initialize a different ExportLink.
+  const int export_value2 = 2 * kExportValue;
+  TestExportObj export_obj2(export_value2);
+
+  int export_connected2 = 0;
+  int export_disconnected2 = 0;
+
+  TestObjectLinker::ExportLink export_link2 = object_linker_.CreateExport(
+      std::move(export_obj2), std::move(export_token2), error_reporter());
+
+  export_link2.Initialize(
+      [&export_connected2](TestImportObj obj) { export_connected2++; },
+      [&export_disconnected2](bool on_link_destruction) { export_disconnected2++; });
+
+  EXPECT_EQ(import_connected, 2);
+  EXPECT_EQ(export_connected2, 1);
+  EXPECT_EQ(import_disconnected, 1);
+  EXPECT_EQ(export_disconnected2, 0);
+  EXPECT_EQ(last_linked_export, export_value2);
+  EXPECT_EQ(object_linker_.UnresolvedImportCount(), 0u);
+  EXPECT_EQ(object_linker_.ImportCount(), 1u);
+  EXPECT_EQ(object_linker_.UnresolvedExportCount(), 0u);
+  EXPECT_EQ(object_linker_.ExportCount(), 1u);
 }
 
 }  // namespace test

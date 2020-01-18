@@ -30,9 +30,9 @@ class ObjectLinkerBase {
   virtual ~ObjectLinkerBase() = default;
 
   size_t ExportCount() { return exports_.size(); }
-  size_t UnresolvedExportCount() { return unresolved_exports_.size(); }
+  size_t UnresolvedExportCount();
   size_t ImportCount() { return imports_.size(); }
-  size_t UnresolvedImportCount() { return unresolved_imports_.size(); }
+  size_t UnresolvedImportCount();
 
  protected:
   class Link {
@@ -40,10 +40,19 @@ class ObjectLinkerBase {
     virtual ~Link() = default;
 
    protected:
-    virtual void Invalidate(bool on_destruction) = 0;
+    // When invalidating a link, the caller may choose to not invalidate the peer, which instead
+    // returns the peer to an initialized-but-unresolved state. This is primarily used when the
+    // caller releases the token of an existing link.
+    virtual void Invalidate(bool on_destruction, bool invalidate_peer) = 0;
     // Must be virtual so ObjectLinker::Link can pull the typed PeerObject from `peer_link`.
     virtual void LinkResolved(ObjectLinkerBase::Link* peer_link) = 0;
+
+    // Invalidating a link deletes the token it was created with, making the link permanently
+    // invalid and therefore allowing for the deletion of the |link_invalidated_| callback.
+    // Unresolving a link means its peer's token was released and may be used again, so the callback
+    // is called but not deleted.
     void LinkInvalidated(bool on_destruction);
+    void LinkUnresolved();
 
     fit::function<void(bool on_destruction)> link_invalidated_;
 
@@ -54,13 +63,10 @@ class ObjectLinkerBase {
   struct Endpoint {
     zx_koid_t peer_endpoint_id = ZX_KOID_INVALID;
     Link* link = nullptr;
-  };
+    zx::handle token;                                // The token may be released by the link owner.
+    std::unique_ptr<async::Wait> peer_death_waiter;  // Only non-null if the link is unresolved.
 
-  // Information used to match one end of a link with its peer(s) on the
-  // other end.
-  struct UnresolvedEndpoint {
-    zx::handle token;  // Token for initial matching to peer endpoint.
-    std::unique_ptr<async::Wait> peer_death_waiter;
+    bool IsUnresolved() const { return peer_death_waiter != nullptr; }
   };
 
   // Only concrete ObjectLinker types should instantiate these.
@@ -76,7 +82,7 @@ class ObjectLinkerBase {
   // Destroys the Endpoint pointed to by |endpoint_id| and removes all traces
   // of it from the linker.  If the Endpoint is linked to a peer, the peer
   // will be notified of the Endpoint's destruction.
-  void DestroyEndpoint(zx_koid_t endpoint_id, bool is_import);
+  void DestroyEndpoint(zx_koid_t endpoint_id, bool is_import, bool destroy_peer);
 
   // Puts the Endpoint pointed to by |endpoint_id| into an initialized state
   // by supplying it with an object and connection callbacks.  The Endpoint
@@ -95,10 +101,16 @@ class ObjectLinkerBase {
   std::unique_ptr<async::Wait> WaitForPeerDeath(zx_handle_t endpoint_handle, zx_koid_t endpoint_id,
                                                 bool is_import);
 
+  // Releases the zx::handle for the Endpoint associated with |endpoint_id|, allowing the caller
+  // to establish a new link with it.
+  //
+  // This operation works regardless of whether or not the link has resolved. If the link was
+  // resolved, the peer Endpoint receives a |link_invalidated| callback and is put back in the
+  // initialized-but-unresolved state.
+  zx::handle ReleaseToken(zx_koid_t endpoint_id, bool is_import);
+
   std::unordered_map<zx_koid_t, Endpoint> exports_;
   std::unordered_map<zx_koid_t, Endpoint> imports_;
-  std::unordered_map<zx_koid_t, UnresolvedEndpoint> unresolved_exports_;
-  std::unordered_map<zx_koid_t, UnresolvedEndpoint> unresolved_imports_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ObjectLinkerBase);
 };
@@ -149,9 +161,9 @@ class ObjectLinker : public ObjectLinkerBase {
     using PeerObj = typename std::conditional<is_import, Export, Import>::type;
 
     Link() = default;
-    virtual ~Link() { Invalidate(true); }
+    virtual ~Link() { Invalidate(/*on_destruction=*/true, /*invalidate_peer=*/true); }
     Link(Link&& other) { *this = std::move(other); }
-    Link& operator=(nullptr_t) { Invalidate(false); }
+    Link& operator=(nullptr_t) { Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true); }
     Link& operator=(Link&& other);
 
     bool valid() const { return linker_ && endpoint_id_ != ZX_KOID_INVALID; }
@@ -159,12 +171,19 @@ class ObjectLinker : public ObjectLinkerBase {
     zx_koid_t endpoint_id() const { return endpoint_id_; }
 
     // Initialize the Link with an |object| and callbacks for |link_resolved|
-    // and |link_failed| events, making it ready for connection to its peer.
-    // peer. The |link_failed| event is guaranteed to be called regardless of
+    // and |link_invalidated| events, making it ready for connection to its peer.
+    // peer. The |link_invalidated| event is guaranteed to be called regardless of
     // whether or not the |link_resolved| callback is, including if this Link
     // is destroyed, in which case |on_destruction| will be true.
     void Initialize(fit::function<void(PeerObj peer_object)> link_resolved = nullptr,
-                    fit::function<void(bool on_destruction)> link_failed = nullptr);
+                    fit::function<void(bool on_destruction)> link_invalidated = nullptr);
+
+    // Releases the zx::handle for this link, allowing the caller to establish a new link with it.
+    //
+    // This operation works regardless of whether or not the link has resolved. If the link was
+    // resolved, the peer receives a |link_invalidated| callback and is put back in the
+    // initialized-but-unresolved state.
+    std::optional<zx::handle> ReleaseToken();
 
    private:
     // Kept private so only an ObjectLinker can construct a valid Link.
@@ -172,7 +191,7 @@ class ObjectLinker : public ObjectLinkerBase {
         : object_(std::move(object)), endpoint_id_(endpoint_id), linker_(std::move(linker)) {}
 
     void LinkResolved(ObjectLinkerBase::Link* peer_link) override;
-    void Invalidate(bool on_destruction) override;
+    void Invalidate(bool on_destruction, bool invalidate_peer) override;
 
     std::optional<Obj> object_;
     zx_koid_t endpoint_id_ = ZX_KOID_INVALID;
@@ -233,7 +252,7 @@ template <typename Export, typename Import>
 template <bool is_import>
 auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> Link& {
   // Invalidate the existing Link if its still valid.
-  Invalidate(false);
+  Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true);
 
   // Move data from the other Link and manually invalidate it, so it won't destroy
   // its endpoint when it dies.
@@ -268,9 +287,21 @@ void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
 
 template <typename Export, typename Import>
 template <bool is_import>
-void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(bool on_destruction) {
+std::optional<zx::handle> ObjectLinker<Export, Import>::Link<is_import>::ReleaseToken() {
+  if (!valid()) {
+    return std::optional<zx::handle>();
+  }
+  zx::handle token = linker_->ReleaseToken(endpoint_id_, is_import);
+  Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/false);
+  return std::move(token);
+}
+
+template <typename Export, typename Import>
+template <bool is_import>
+void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(bool on_destruction,
+                                                               bool invalidate_peer) {
   if (valid()) {
-    linker_->DestroyEndpoint(endpoint_id_, is_import);
+    linker_->DestroyEndpoint(endpoint_id_, is_import, invalidate_peer);
   }
   linker_.reset();
   object_.reset();
