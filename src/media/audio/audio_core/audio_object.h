@@ -52,6 +52,37 @@ class AudioObject {
   // The VolumeCurve for the object, representing its mapping from volume to gain.
   virtual std::optional<VolumeCurve> GetVolumeCurve() const { return std::nullopt; }
 
+  // Initialize(Source|Dest)Link
+  //
+  // Called on the AudioCore's main message loop any time a source and a destination are being
+  // linked via AudioObject::LinkObjects. By default, these hooks do nothing, but AudioObject
+  // subclasses may use them to set the properties of a link (or reject the link) before the link
+  // gets added to the source and destination link sets.
+  //
+  // For example, Sources like an AudioRenderer override InitializeDestLink in order to set the
+  // source gain and to make a copy of their pending packet queue. Destinations like an output
+  // override InitializeSourceLink in order to choose and initialize an appropriate resampling
+  // filter.
+  //
+  // When initializing a source link, an implementor must provide a mixer. The source object
+  // and their stream are provided.
+  //
+  // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
+  virtual fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
+      const AudioObject& source, std::shared_ptr<Stream> stream) {
+    return fit::ok(std::make_shared<audio::mixer::NoOp>());
+  }
+  virtual fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
+      const AudioObject& dest) {
+    return fit::ok(nullptr);
+  }
+
+  virtual void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) {}
+  virtual void CleanupDestLink(const AudioObject& dest) {}
+
+  // Called immediately after a new link is added to the object.
+  virtual void OnLinkAdded() {}
+
   // Note: format() is subject to change and must only be accessed from the main message loop
   // thread. Outputs which are running on mixer threads should never access format() directly
   // from a mix thread. Instead, they should use the format which was assigned to the AudioLink
@@ -88,37 +119,6 @@ class AudioObject {
 
  protected:
   explicit AudioObject(Type type) : type_(type) {}
-
-  // Initialize(Source|Dest)Link
-  //
-  // Called on the AudioCore's main message loop any time a source and a destination are being
-  // linked via AudioObject::LinkObjects. By default, these hooks do nothing, but AudioObject
-  // subclasses may use them to set the properties of a link (or reject the link) before the link
-  // gets added to the source and destination link sets.
-  //
-  // For example, Sources like an AudioRenderer override InitializeDestLink in order to set the
-  // source gain and to make a copy of their pending packet queue. Destinations like an output
-  // override InitializeSourceLink in order to choose and initialize an appropriate resampling
-  // filter.
-  //
-  // When initializing a source link, an implementor must provide a mixer. The source object
-  // and their stream are provided.
-  //
-  // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
-  virtual fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<Stream> stream) {
-    return fit::ok(std::make_shared<audio::mixer::NoOp>());
-  }
-  virtual fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
-      const AudioObject& dest) {
-    return fit::ok(nullptr);
-  }
-
-  virtual void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) {}
-  virtual void CleanupDestLink(const AudioObject& dest) {}
-
-  // Called immediately after a new link is added to the object.
-  virtual void OnLinkAdded() {}
 
   std::mutex links_lock_;
 
