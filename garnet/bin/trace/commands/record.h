@@ -62,7 +62,7 @@ class RecordCommand : public CommandWithController {
   void Start(const fxl::CommandLine& command_line) override;
 
  private:
-  void StopTrace(int32_t return_code);
+  void TerminateTrace(int32_t return_code);
   void ProcessMeasurements();
   void DoneTrace();
   void LaunchComponentApp();
@@ -77,10 +77,13 @@ class RecordCommand : public CommandWithController {
   fuchsia::sys::EnvironmentControllerPtr environment_controller_;
   zx::process spawned_app_;
   async::WaitMethod<RecordCommand, &RecordCommand::OnSpawnedAppExit> wait_spawned_app_;
+
   std::unique_ptr<std::ostream> binary_out_;
   // TODO(PT-113): Remove |exporter_|.
   std::unique_ptr<ChromiumExporter> exporter_;
+
   std::unique_ptr<Tracer> tracer_;
+
   // Aggregate events if there are any measurements to be performed, so that we
   // can sort them by timestamp and process in order.
   bool aggregate_events_ = false;
@@ -91,6 +94,7 @@ class RecordCommand : public CommandWithController {
   std::unique_ptr<measure::MeasureDuration> measure_duration_;
   std::unique_ptr<measure::MeasureTimeBetween> measure_time_between_;
   std::unique_ptr<measure::MeasureArgumentValue> measure_argument_value_;
+
   bool tracing_ = false;
   int32_t return_code_ = 0;
   Options options_;

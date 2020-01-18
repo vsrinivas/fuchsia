@@ -5,11 +5,14 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_UTIL_H_
 #define GARNET_BIN_TRACE_MANAGER_UTIL_H_
 
-#include <iosfwd>
-
+#include <fuchsia/tracing/controller/cpp/fidl.h>
 #include <lib/zx/socket.h>
 
+#include <iosfwd>
+
 namespace tracing {
+
+namespace controller = ::fuchsia::tracing::controller;
 
 enum class TransferStatus {
   // The transfer is complete.
@@ -24,6 +27,10 @@ enum class TransferStatus {
 };
 
 std::ostream& operator<<(std::ostream& out, TransferStatus status);
+
+std::ostream& operator<<(std::ostream& out, controller::BufferDisposition disposition);
+
+std::ostream& operator<<(std::ostream& out, controller::SessionState state);
 
 // Writes |len| bytes from |buffer| to |socket|. Returns
 // TransferStatus::kComplete if the entire buffer has been

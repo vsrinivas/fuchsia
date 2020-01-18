@@ -18,12 +18,16 @@ namespace tracing {
 
 class TraceManagerApp {
  public:
-  explicit TraceManagerApp(std::unique_ptr<sys::ComponentContext> context, const Config& config);
+  explicit TraceManagerApp(std::unique_ptr<sys::ComponentContext> context, Config config);
   ~TraceManagerApp();
 
   // For testing.
   sys::ComponentContext* context() const { return context_.get(); }
   const TraceManager* trace_manager() const { return &trace_manager_; }
+
+  const fidl::BindingSet<controller::Controller>& controller_bindings() const {
+    return controller_bindings_;
+  }
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;

@@ -18,45 +18,89 @@ const uint32 MAX_NUM_CATEGORIES = 100;
 /// The maximum length of a category name.
 const uint32 MAX_CATEGORY_NAME_LENGTH = 100;
 
-// The controller interface used by the trace tool to start/stop tracing.
+/// The maximum length of a category description.
+const uint32 MAX_CATEGORY_DESCRIPTION_LENGTH = 400;
+
+/// The state of the tracing session.
+/// A "session" is everything between |Initialize| and |Terminate|.
+enum SessionState {
+    /// The tracing system is ready for a new session.
+    /// There can be only one session at a time.
+    READY = 1;
+    /// A new tracing session has been initialized.
+    INITIALIZED = 2;
+    /// Tracing is in the midst of starting.
+    STARTING = 3;
+    /// Tracing has started.
+    STARTED = 4;
+    /// Tracing is in the midst of being stopped.
+    STOPPING = 5;
+    /// Tracing has fully stopped.
+    STOPPED = 6;
+    /// Tracing is in the midst of being terminated.
+    /// Once the system has completely terminated the session it goes back
+    /// to the READY state.
+    TERMINATING = 7;
+};
+
+/// The controller interface used by the trace tool to initialize/start/stop/terminate tracing.
+///
+/// The trace controller may lightly validate the structure of
+/// trace records as it copies them from trace buffers into the output.
+/// In particular, it may verify the size of each record header to ensure
+/// that the framing of trace records in the data stream is maintained.
+///
+/// The trace controller does not validate the contents of the trace records
+/// themselves.  For example, it does not try to check argument lengths in
+/// events.  This ensures that the trace format can be extended without needing
+/// to modify the trace controller.
 [Discoverable]
 protocol Controller {
-    // Requests to start tracing with the specified `options`.
-    //
-    // The trace controller acknowledges the request when all registered providers have been
-    // started or after `options.start_timeout_milliseconds` milliseconds.
-    //
-    // The trace controller emits trace data to `output` as a sequence of
-    // binary formatted trace records.  Traces obtained from different providers
-    // are delimited by metadata records within the stream.
-    //
-    // The trace controller is responsible for lightly validating the structure of
-    // trace records as it copies them from trace buffers into the output.
-    // In particular, it must verify the size of each record header to ensure
-    // that the framing of trace records in the data stream is maintained.
-    //
-    // The trace controller does not validate the contents of the trace records
-    // themselves.  For example, it should not try to check argument lengths in
-    // events.  This ensures that the trace format can be extended without needing
-    // to modify the trace controller.
-    StartTracing(TraceOptions options, handle<socket> output) -> ();
+    /// Requests to initialize tracing with the specified |config|.
+    ///
+    /// A bad request will terminate the connection.
+    ///
+    /// The trace controller emits trace data to `output` as a sequence of
+    /// binary formatted trace records.  Traces obtained from different providers
+    /// are delimited by metadata records within the stream.
+    InitializeTracing(TraceConfig config, handle<socket> output);
 
-    // Requests to stop tracing.
-    //
-    // The trace controller continues to transfer any remaining data to the
-    // output until finished, then closes the output.
-    StopTracing();
+    /// Requests to terminate tracing.
+    ///
+    /// If tracing has not yet stopped it is stopped first.
+    /// If |options.write_results| is true, then the trace controller
+    /// continues to transfer any remaining data to the output socket
+    /// until finished, then closes the output.
+    TerminateTracing(TerminateOptions options) -> (TerminateResult result);
+
+    /// Requests to start tracing with the specified |options|.
+    ///
+    /// If tracing has already started then the request is ignored,
+    /// except to send back an error code.
+    ///
+    /// The trace controller acknowledges the request when all
+    /// registered providers have been started or after
+    /// |TraceConfig.start_timeout_milliseconds| milliseconds.
+    /// One useful reason for the has-started acknowledgement is that the
+    /// trace program can start a program to trace knowing that all the
+    /// providers are started.
+    StartTracing(StartOptions options) -> () error StartErrorCode;
+
+    /// Requests to stop tracing.
+    ///
+    /// If tracing has already stopped then this does nothing.
+    /// Returning a result lets callers know when it's ok to, for example,
+    /// start tracing again.
+    StopTracing(StopOptions options) -> ();
 
     /// Return the set of registered providers.
     GetProviders() -> (vector<ProviderInfo>:MAX_NUM_PROVIDERS providers);
 
     // Gets the known categories.
-    GetKnownCategories() -> (vector<KnownCategory> categories);
-};
+    GetKnownCategories() -> (vector<KnownCategory>:MAX_NUM_CATEGORIES categories);
 
-struct KnownCategory {
-    string:MAX_CATEGORY_NAME_LENGTH name;
-    string description;
+    /// Event sent when the session state changes.
+    -> OnSessionStateChange(SessionState state);
 };
 
 // This is a copy of provider.fidl:BufferingMode.
@@ -73,7 +117,7 @@ table ProviderSpec {
 };
 
 /// Provides options for the trace.
-table TraceOptions {
+table TraceConfig {
     /// The trace categories to record, or an empty array for all.
     1: vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES categories;
 
@@ -90,6 +134,99 @@ table TraceOptions {
 
     /// Overrides for particular providers.
     5: vector<ProviderSpec>:MAX_NUM_PROVIDERS provider_specs;
+};
+
+/// Terminate options.
+table TerminateOptions {
+    /// If true then write trace results.
+    /// If false then discard trace results.
+    1: bool write_results;
+};
+
+/// Result of a terminate request.
+table TerminateResult {
+    // TODO(dje): Provider stats.
+};
+
+/// Choices for clearing/retaining trace buffer contents at Start.
+/// A brief summary of buffer contents:
+/// The trace buffer is divided into two main pieces: durable and
+/// non-durable.
+/// The durable portion contains things like the string and thread data for
+/// their respective references (trace_encoded_string_ref_t and
+/// trace_encoded_thread_ref_t). The non-durable portion contains the rest of
+/// the trace data like events); this is the portion that, for example, is
+/// discarded in circular buffering mode when the (non-durable) buffer fills.
+enum BufferDisposition : uint8 {
+    /// Clear the entire buffer, including durable buffer contents.
+    /// N.B. If this is done mid-session, then string and thread references
+    /// from prior to this point will become invalid - the underlying data
+    /// will be gone. To prevent this save buffer contents before clearing.
+    ///
+    /// This is typically used when buffer contents were saved after the
+    /// preceding Stop.
+    CLEAR_ALL = 1;
+
+    /// Clear the non-durable portion of the buffer, retaining the durable
+    /// portion.
+    ///
+    /// This is typically used when buffer contents were not saved after the
+    /// preceding Stop and the current contents are to be discarded.
+    CLEAR_NONDURABLE = 2;
+
+    /// Retain buffer contents. New trace data is added whether the previous
+    /// trace run left off.
+    ///
+    /// This is typically used when buffer contents were not saved after the
+    /// preceding Stop and the current contents are to be retained.
+    RETAIN = 3;
+};
+
+/// Error codes from Start operations.
+enum StartErrorCode {
+    /// Tracing hasn't been initialized, not ready to start.
+    NOT_INITIALIZED = 1;
+    /// Tracing has already been started.
+    ALREADY_STARTED = 2;
+    /// Tracing is currently being stopped.
+    STOPPING = 3;
+    /// Tracing is currently being terminated.
+    TERMINATING = 4;
+};
+
+/// Additional options to control trace data collection.
+table StartOptions {
+    /// Whether and how to clear the buffer when starting data collection.
+    /// This allows, for example, multiple Start/Stop trace runs to be
+    /// collected in the same buffer.
+    ///
+    /// If the preceding |Stop()| request had |save_after_stopped=true|
+    /// then this value is overridden to CLEAR_ENTIRE_BUFFER to avoid
+    /// duplicate data being saved.
+    1: BufferDisposition buffer_disposition;
+
+    /// The trace categories to add to the initial set provided in
+    /// |TraceConfig|. If the combined number of categories goes over the
+    /// limit then the extra categories past the limit are discarded.
+    2: vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES
+           additional_categories;
+};
+
+/// Additional options to control stopping of a trace.
+table StopOptions {
+    /// If true then write all collected data after tracing has stopped.
+    /// This is useful in situations where one wants to clear the buffer
+    /// before starting the next trace, without having to first terminate the
+    /// trace and start a new one.
+    1: bool write_results;
+};
+
+/// Result of |GetKnownCategories|.
+struct KnownCategory {
+    // Category name.
+    string:MAX_CATEGORY_NAME_LENGTH name;
+    // Category description.
+    string:MAX_CATEGORY_DESCRIPTION_LENGTH description;
 };
 
 /// Result of |GetProviders|.

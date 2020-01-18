@@ -40,6 +40,8 @@ controller::BufferingMode TranslateBufferingMode(BufferingMode mode);
 std::vector<controller::ProviderSpec> TranslateProviderSpecs(
     const std::vector<ProviderSpec>& specs);
 
+const char* StartErrorCodeToString(controller::StartErrorCode code);
+
 }  // namespace tracing
 
 #endif  // GARNET_BIN_TRACE_CMD_UTILS_H_

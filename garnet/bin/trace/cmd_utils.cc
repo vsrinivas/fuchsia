@@ -100,4 +100,19 @@ std::vector<controller::ProviderSpec> TranslateProviderSpecs(
   return uniquified_specs;
 }
 
+const char* StartErrorCodeToString(controller::StartErrorCode code) {
+  switch (code) {
+    case controller::StartErrorCode::NOT_INITIALIZED:
+      return "not initialized";
+    case controller::StartErrorCode::ALREADY_STARTED:
+      return "already started";
+    case controller::StartErrorCode::STOPPING:
+      return "stopping";
+    case controller::StartErrorCode::TERMINATING:
+      return "terminating";
+    default:
+      return "<unknown>";
+  }
+}
+
 }  // namespace tracing

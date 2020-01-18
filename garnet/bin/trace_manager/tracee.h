@@ -30,17 +30,27 @@ class TraceSession;
 class Tracee {
  public:
   enum class State {
-    // All systems go, provider hasn't been started, yet.
+    // The provider is ready to be initialized.
     kReady,
+    // The provider has been initialized.
+    kInitialized,
     // The provider was asked to start.
-    kStartPending,
+    kStarting,
     // The provider is started and tracing.
     kStarted,
     // The provider is being stopped right now.
     kStopping,
     // The provider is stopped.
-    kStopped
+    kStopped,
+    // The provider is terminating.
+    kTerminating,
+    // The provider is terminated.
+    kTerminated,
   };
+
+  using StartCallback = fit::closure;
+  using StopCallback = fit::function<void(bool write_results)>;
+  using TerminateCallback = fit::closure;
 
   // The size of the initialization record.
   static constexpr size_t kInitRecordSizeBytes = 16;
@@ -49,13 +59,19 @@ class Tracee {
   ~Tracee();
 
   bool operator==(TraceProviderBundle* bundle) const;
-  bool Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
-             provider::BufferingMode buffering_mode, fit::closure started_callback,
-             fit::closure stopped_callback);
-  void Stop();
 
-  // Called once at the end of the trace to transfer all collected records
-  // to |socket|.
+  bool Initialize(fidl::VectorPtr<std::string> categories, size_t buffer_size,
+                  provider::BufferingMode buffering_mode, StartCallback start_callback,
+                  StopCallback stop_callback, TerminateCallback terminate_callback);
+
+  void Terminate();
+
+  void Start(controller::BufferDisposition buffer_disposition,
+             const std::vector<std::string>& additional_categories);
+
+  void Stop(bool write_results);
+
+  // Transfer all collected records to |socket|.
   TransferStatus TransferRecords(const zx::socket& socket) const;
 
   // Save the buffer specified by |wrapped_count|.
@@ -69,6 +85,8 @@ class Tracee {
 
   const TraceProviderBundle* bundle() const { return bundle_; }
   State state() const { return state_; }
+  bool was_started() const { return was_started_; }
+  bool results_written() const { return results_written_; }
 
  private:
   // The size of the fifo, in packets.
@@ -122,20 +140,40 @@ class Tracee {
 
   void NotifyBufferSaved(uint32_t wrapped_count, uint64_t durable_data_end);
 
+  // Called when a problem is detected warranting shutting the connection down.
+  void Abort();
+
   const TraceSession* const session_;
   const TraceProviderBundle* const bundle_;
   State state_ = State::kReady;
+
   provider::BufferingMode buffering_mode_;
   zx::vmo buffer_vmo_;
   size_t buffer_vmo_size_ = 0u;
   zx::fifo fifo_;
-  fit::closure started_callback_;
-  fit::closure stopped_callback_;
+
+  StartCallback start_callback_;
+  StopCallback stop_callback_;
+  TerminateCallback terminate_callback_;
+
   async_dispatcher_t* dispatcher_ = nullptr;
   async::WaitMethod<Tracee, &Tracee::OnHandleReady> wait_;
+
   uint32_t last_wrapped_count_ = 0u;
   uint64_t last_durable_data_end_ = 0;
   mutable bool provider_info_record_written_ = false;
+
+  // Set to true when starting. This is used to not write any results,
+  // including provider info, if the tracee was never started.
+  bool was_started_ = false;
+
+  // The |write_results| flag passed to |Stop()|.
+  // We do nothing with this except to pass it back to |stop_callback_|.
+  bool write_results_ = false;
+
+  // Set to false when starting and true when results are written.
+  // This is used to not save the results twice when terminating.
+  mutable bool results_written_ = false;
 
   fxl::WeakPtrFactory<Tracee> weak_ptr_factory_;
 

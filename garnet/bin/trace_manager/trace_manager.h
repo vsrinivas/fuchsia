@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/socket.h>
 
 #include <list>
 
@@ -23,22 +24,25 @@ namespace tracing {
 namespace controller = ::fuchsia::tracing::controller;
 namespace provider = ::fuchsia::tracing::provider;
 
-// TODO(dje): Temporary alias to ease renaming of TraceOptions to TraceConfig.
-using TraceConfig = controller::TraceOptions;
+// forward decl, here to break mutual header dependency
+class TraceManagerApp;
 
 class TraceManager : public controller::Controller, public provider::Registry {
  public:
-  TraceManager(sys::ComponentContext* context, const Config& config);
+  TraceManager(TraceManagerApp* app, sys::ComponentContext* context, Config config);
   ~TraceManager() override;
 
   // For testing.
   const TraceSession* session() const { return session_.get(); }
 
+  void OnEmptyControllerSet();
+
  private:
   // |Controller| implementation.
-  void StartTracing(TraceConfig config, zx::socket output,
-                    StartTracingCallback cb) override;
-  void StopTracing() override;
+  void InitializeTracing(controller::TraceConfig config, zx::socket output) override;
+  void TerminateTracing(controller::TerminateOptions options, TerminateTracingCallback cb) override;
+  void StartTracing(controller::StartOptions options, StartTracingCallback cb) override;
+  void StopTracing(controller::StopOptions options, StopTracingCallback cb) override;
   void GetProviders(GetProvidersCallback cb) override;
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;
 
@@ -51,17 +55,21 @@ class TraceManager : public controller::Controller, public provider::Registry {
                                      uint64_t pid, std::string name,
                                      RegisterProviderSynchronouslyCallback callback) override;
 
-  void FinalizeTracing();
+  void SendSessionStateEvent(controller::SessionState state);
+  controller::SessionState TranslateSessionState(TraceSession::State state);
   void LaunchConfiguredProviders();
 
+  TraceManagerApp* const app_;
+
+  // Non-owning copy of component context. |TraceManagerApp| has the owning
+  // copy, but we need it too. This works out ok as |TraceManagerApp| owns us.
   sys::ComponentContext* const context_;
-  const Config& config_;
+
+  const Config config_;
 
   uint32_t next_provider_id_ = 1u;
   fxl::RefPtr<TraceSession> session_;
   std::list<TraceProviderBundle> providers_;
-  // True if tracing has been started, and is not (yet) being stopped.
-  bool trace_running_ = false;
 
   TraceManager(const TraceManager&) = delete;
   TraceManager(TraceManager&&) = delete;

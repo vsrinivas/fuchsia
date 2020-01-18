@@ -19,7 +19,12 @@ executable("trace_manager_tests_bin") {
   sources = [
     "fake_provider.cc",
     "fake_provider.h",
+    "init_to_fini_tests.cc",
+    "initialize_tests.cc",
     "provider_tests.cc",
+    "start_tests.cc",
+    "stop_tests.cc",
+    "terminate_tests.cc",
     "trace_manager_test.cc",
     "trace_manager_test.h",
   ]

@@ -10,23 +10,17 @@
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/time.h>
-#include <netdb.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <zircon/status.h>
 
 #include <fstream>
 #include <string>
 #include <unordered_set>
 
-#include <src/lib/files/file.h>
-#include <src/lib/files/path.h>
-#include <src/lib/files/unique_fd.h>
-#include <third_party/zlib/contrib/iostream3/zfstream.h>
-
 #include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
-#include "src/lib/fsl/types/type_converters.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
@@ -415,31 +409,39 @@ void RecordCommand::Start(const fxl::CommandLine& command_line) {
 
   tracing_ = true;
 
-  TraceConfig trace_config;
+  controller::TraceConfig trace_config;
   trace_config.set_categories(options_.categories);
   trace_config.set_buffer_size_megabytes_hint(options_.buffer_size_megabytes);
   // TODO(dje): start_timeout_milliseconds
   trace_config.set_buffering_mode(options_.buffering_mode);
   trace_config.set_provider_specs(TranslateProviderSpecs(options_.provider_specs));
 
-  tracer_->Start(
+  tracer_->Initialize(
       std::move(trace_config), options_.binary, std::move(bytes_consumer),
       std::move(record_consumer), std::move(error_handler),
-      [this] {
-        if (!options_.app.empty())
-          options_.spawn ? LaunchSpawnedApp() : LaunchComponentApp();
-        StartTimer();
-      },
       [this] { DoneTrace(); },  // TODO(37435): For now preserve existing behaviour.
       [this] { DoneTrace(); });
+
+  tracer_->Start([this](controller::Controller_StartTracing_Result result) {
+    if (result.is_err()) {
+      FXL_LOG(ERROR) << "Unable to start trace: " << StartErrorCodeToString(result.err());
+      tracing_ = false;
+      Done(EXIT_FAILURE);
+      return;
+    }
+    if (!options_.app.empty()) {
+      options_.spawn ? LaunchSpawnedApp() : LaunchComponentApp();
+    }
+    StartTimer();
+  });
 }
 
-void RecordCommand::StopTrace(int32_t return_code) {
+void RecordCommand::TerminateTrace(int32_t return_code) {
   if (tracing_) {
-    out() << "Stopping trace..." << std::endl;
+    out() << "Terminating trace..." << std::endl;
     tracing_ = false;
     return_code_ = return_code;
-    tracer_->Stop();
+    tracer_->Terminate();
     if (spawned_app_ && !options_.detach) {
       KillSpawnedApp();
     }
@@ -558,7 +560,7 @@ static std::string JoinArgsForLogging(const std::vector<std::string>& args) {
 void RecordCommand::LaunchComponentApp() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = options_.app;
-  launch_info.arguments = fidl::To<fidl::VectorPtr<std::string>>(options_.args);
+  launch_info.arguments = options_.args;
 
   // Include the arguments here for when invoked by traceutil: It's useful to
   // see how the passed command+args ended up after shell processing.
@@ -588,8 +590,8 @@ void RecordCommand::LaunchComponentApp() {
           << std::endl;
     if (!options_.decouple)
       // The trace might have been already stopped by the |Wait()| callback. In
-      // that case, |StopTrace| below does nothing.
-      StopTrace(EXIT_FAILURE);
+      // that case, |TerminateTrace| below does nothing.
+      TerminateTrace(EXIT_FAILURE);
   });
   component_controller_.events().OnTerminated =
       [this](int64_t return_code, fuchsia::sys::TerminationReason termination_reason) {
@@ -599,9 +601,9 @@ void RecordCommand::LaunchComponentApp() {
         component_controller_.set_error_handler([](zx_status_t error) {});
         if (!options_.decouple) {
           if (options_.return_child_result) {
-            StopTrace(return_code);
+            TerminateTrace(return_code);
           } else {
-            StopTrace(EXIT_SUCCESS);
+            TerminateTrace(EXIT_SUCCESS);
           }
         }
       };
@@ -621,7 +623,7 @@ void RecordCommand::LaunchSpawnedApp() {
   zx::process subprocess;
   zx_status_t status = Spawn(all_args, &subprocess);
   if (status != ZX_OK) {
-    StopTrace(EXIT_FAILURE);
+    TerminateTrace(EXIT_FAILURE);
     FXL_LOG(ERROR) << "Subprocess launch failed: \"" << status
                    << "\" Did you provide the full path to the tool?";
     return;
@@ -638,7 +640,7 @@ void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::Wait
                                      zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for spawned app: status=" << status;
-    StopTrace(EXIT_FAILURE);
+    TerminateTrace(EXIT_FAILURE);
     return;
   }
 
@@ -651,9 +653,9 @@ void RecordCommand::OnSpawnedAppExit(async_dispatcher_t* dispatcher, async::Wait
     out() << "Application exited with return code " << proc_info.return_code << std::endl;
     if (!options_.decouple) {
       if (options_.return_child_result) {
-        StopTrace(proc_info.return_code);
+        TerminateTrace(proc_info.return_code);
       } else {
-        StopTrace(EXIT_SUCCESS);
+        TerminateTrace(EXIT_SUCCESS);
       }
     }
   } else {
@@ -677,7 +679,7 @@ void RecordCommand::StartTimer() {
       dispatcher_,
       [weak = weak_ptr_factory_.GetWeakPtr()] {
         if (weak)
-          weak->StopTrace(EXIT_SUCCESS);
+          weak->TerminateTrace(EXIT_SUCCESS);
       },
       zx::nsec(options_.duration.ToNanoseconds()));
   out() << "Starting trace; will stop in " << options_.duration.ToSecondsF() << " seconds..."

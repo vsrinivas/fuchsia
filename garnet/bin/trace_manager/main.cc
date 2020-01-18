@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdlib.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <stdlib.h>
 
 #include "garnet/bin/trace_manager/app.h"
 #include "src/lib/fxl/command_line.h"
@@ -37,7 +36,7 @@ int main(int argc, char** argv) {
   FXL_LOG(INFO) << "Trace Manager starting with config: " << config_file;
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  tracing::TraceManagerApp trace_manager_app(sys::ComponentContext::Create(), config);
+  tracing::TraceManagerApp trace_manager_app{sys::ComponentContext::Create(), std::move(config)};
   loop.Run();
   return EXIT_SUCCESS;
 }

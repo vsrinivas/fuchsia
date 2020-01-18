@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This file provides the FIDL interface for "trace record".
+
 #include "garnet/bin/trace/tracer.h"
 
 #include <lib/async/cpp/task.h>
@@ -24,16 +26,10 @@ Tracer::Tracer(controller::Controller* controller)
 
 Tracer::~Tracer() { CloseSocket(); }
 
-void Tracer::Start(TraceConfig config, bool binary, BytesConsumer bytes_consumer,
-                   RecordConsumer record_consumer, ErrorHandler error_handler,
-                   StartCallback start_callback, FailCallback fail_callback,
-                   DoneCallback done_callback) {
-  FXL_DCHECK(state_ == State::kStopped);
-
-  state_ = State::kStarted;
-  start_callback_ = std::move(start_callback);
-  fail_callback_ = std::move(fail_callback);
-  done_callback_ = std::move(done_callback);
+void Tracer::Initialize(controller::TraceConfig config, bool binary, BytesConsumer bytes_consumer,
+                        RecordConsumer record_consumer, ErrorHandler error_handler,
+                        FailCallback fail_callback, DoneCallback done_callback) {
+  FXL_DCHECK(state_ == State::kReady);
 
   zx::socket outgoing_socket;
   zx_status_t status = zx::socket::create(0u, &socket_, &outgoing_socket);
@@ -43,30 +39,56 @@ void Tracer::Start(TraceConfig config, bool binary, BytesConsumer bytes_consumer
     return;
   }
 
-  controller_->StartTracing(std::move(config), std::move(outgoing_socket),
-                            [this]() { start_callback_(); });
+  controller_->InitializeTracing(std::move(config), std::move(outgoing_socket));
 
   binary_ = binary;
   bytes_consumer_ = std::move(bytes_consumer);
   reader_.reset(new trace::TraceReader(std::move(record_consumer), std::move(error_handler)));
 
+  fail_callback_ = std::move(fail_callback);
+  done_callback_ = std::move(done_callback);
+
   dispatcher_ = async_get_default_dispatcher();
   wait_.set_object(socket_.get());
   status = wait_.Begin(dispatcher_);
   FXL_CHECK(status == ZX_OK) << "Failed to add handler: status=" << status;
+
+  state_ = State::kInitialized;
 }
 
-void Tracer::Stop() {
-  // Note: The controller will close the socket when finished.
-  if (state_ == State::kStarted) {
-    state_ = State::kStopping;
-    controller_->StopTracing();
-  }
+void Tracer::Start(StartCallback start_callback) {
+  FXL_DCHECK(state_ == State::kInitialized);
+
+  start_callback_ = std::move(start_callback);
+
+  // All our categories are passed when we initialize, and we're just
+  // starting tracing so the buffer is already empty, so there's nothing to
+  // pass for |StartOptions| here.
+  controller::StartOptions start_options{};
+
+  controller_->StartTracing(std::move(start_options),
+                            [this](controller::Controller_StartTracing_Result result) {
+                              start_callback_(std::move(result));
+                            });
+
+  state_ = State::kStarted;
+}
+
+void Tracer::Terminate() {
+  // Note: The controller will close the consumer socket when finished.
+  FXL_DCHECK(state_ != State::kReady);
+  state_ = State::kTerminating;
+  controller::TerminateOptions terminate_options{};
+  terminate_options.set_write_results(true);
+  controller_->TerminateTracing(std::move(terminate_options),
+                                [](controller::TerminateResult result) {
+                                  // TODO(dje): Print provider stats.
+                                });
 }
 
 void Tracer::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                            zx_status_t status, const zx_packet_signal_t* signal) {
-  FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
+  FXL_DCHECK(state_ == State::kStarted || state_ == State::kTerminating);
 
   if (status != ZX_OK) {
     OnHandleError(status);
@@ -144,14 +166,12 @@ void Tracer::CloseSocket() {
   }
 }
 
-void Tracer::Fail() {
-  fail_callback_();
-}
+void Tracer::Fail() { fail_callback_(); }
 
 void Tracer::Done() {
-  FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
+  FXL_DCHECK(state_ == State::kStarted || state_ == State::kTerminating);
 
-  state_ = State::kStopped;
+  state_ = State::kTerminated;
   reader_.reset();
 
   CloseSocket();

@@ -5,22 +5,20 @@
 #ifndef GARNET_BIN_TRACE_TRACER_H_
 #define GARNET_BIN_TRACE_TRACER_H_
 
-#include <array>
-#include <string>
-
 #include <fuchsia/tracing/controller/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
+
+#include <array>
+#include <string>
+
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
 namespace tracing {
 
 namespace controller = ::fuchsia::tracing::controller;
-
-// TODO(dje): Temporary alias to ease renaming of TraceOptions to TraceConfig.
-using TraceConfig = controller::TraceOptions;
 
 // Runs traces.
 class Tracer {
@@ -31,30 +29,38 @@ class Tracer {
   using ErrorHandler = trace::TraceReader::ErrorHandler;
 
   // Called when tracing has completed starting.
-  using StartCallback = fit::closure;
+  using StartCallback = fit::callback<void(controller::Controller_StartTracing_Result result)>;
 
   // This is called when there's a failure and trace processing must stop.
-  using FailCallback = fit::closure;
+  using FailCallback = fit::callback<void()>;
 
   // This is called on successfully writing trace results.
+  // This is not a |fit::callback| as async::PostTask takes a |fit::closure|.
   using DoneCallback = fit::closure;
 
   explicit Tracer(controller::Controller* controller);
   ~Tracer();
 
-  // Starts tracing.
+  // Initialize tracing.
   // Streams records |record_consumer| and errors to |error_handler|.
-  // Invokes |done_callback| when tracing stops.
+  // Invokes |done_callback| when tracing stops and |fail_callback| upon failure.
   // TODO(PT-113): Remove |binary,record_consumer,error_handler|
-  void Start(TraceConfig config, bool binary, BytesConsumer bytes_consumer,
-             RecordConsumer record_consumer, ErrorHandler error_handler,
-             StartCallback start_callback, FailCallback fail_callback, DoneCallback done_callback);
+  void Initialize(controller::TraceConfig config, bool binary, BytesConsumer bytes_consumer,
+                  RecordConsumer record_consumer, ErrorHandler error_handler,
+                  FailCallback fail_callback, DoneCallback done_callback);
 
-  // Stops the trace.
-  // Does nothing if not started or if already stopping.
-  void Stop();
+  // Start tracing.
+  // Tracing must not already be started.
+  // |start_callback| is called when tracing has fully started.
+  void Start(StartCallback start_callback);
+
+  // Terminates the trace.
+  // Does nothing if not started or if already terminating.
+  void Terminate();
 
  private:
+  enum class State { kReady, kInitialized, kStarted, kTerminating, kTerminated };
+
   // Note: Buffer needs to be big enough to store records of maximum size.
   static constexpr size_t kReadBufferSize = trace::RecordFields::kMaxRecordSizeBytes * 4;
 
@@ -69,9 +75,8 @@ class Tracer {
 
   controller::Controller* const controller_;
 
-  enum class State { kStopped, kStarted, kStopping };
+  State state_ = State::kReady;
 
-  State state_ = State::kStopped;
   StartCallback start_callback_;
   FailCallback fail_callback_;
   DoneCallback done_callback_;

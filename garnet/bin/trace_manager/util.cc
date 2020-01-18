@@ -60,4 +60,48 @@ std::ostream& operator<<(std::ostream& out, TransferStatus status) {
   return out;
 }
 
+std::ostream& operator<<(std::ostream& out, controller::BufferDisposition disposition) {
+  switch (disposition) {
+    case controller::BufferDisposition::CLEAR_ALL:
+      out << "clear-all";
+      break;
+    case controller::BufferDisposition::CLEAR_NONDURABLE:
+      out << "clear-nondurable";
+      break;
+    case controller::BufferDisposition::RETAIN:
+      out << "retain";
+      break;
+  }
+
+  return out;
+}
+
+std::ostream& operator<<(std::ostream& out, controller::SessionState state) {
+  switch (state) {
+    case controller::SessionState::READY:
+      out << "ready";
+      break;
+    case controller::SessionState::INITIALIZED:
+      out << "initialized";
+      break;
+    case controller::SessionState::STARTING:
+      out << "starting";
+      break;
+    case controller::SessionState::STARTED:
+      out << "started";
+      break;
+    case controller::SessionState::STOPPING:
+      out << "stopping";
+      break;
+    case controller::SessionState::STOPPED:
+      out << "stopped";
+      break;
+    case controller::SessionState::TERMINATING:
+      out << "terminaing";
+      break;
+  }
+
+  return out;
+}
+
 }  // namespace tracing

@@ -44,7 +44,7 @@ void Command::Done(int32_t return_code) {
 CommandWithController::CommandWithController(sys::ComponentContext* context)
     : Command(context), controller_(context->svc()->Connect<controller::Controller>()) {
   controller_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Trace controller(controller) disconnected unexpectedly";
+    FXL_LOG(ERROR) << "Trace controller disconnected unexpectedly";
     Done(EXIT_FAILURE);
   });
 }
