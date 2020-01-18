@@ -200,7 +200,8 @@ def print_size(value):
 
 def compare_summaries(reference, current):
     '''Compares summaries for two states of the build.'''
-    match = True
+    has_errors = False
+    has_warnings = False
     for type in Type.all():
         reference_objects = reference.get_objects(type)
         current_objects = current.get_objects(type)
@@ -209,7 +210,7 @@ def compare_summaries(reference, current):
 
         # Missing and new files.
         if reference_names != current_names:
-            match = False
+            has_errors = True
             for element in reference_names - current_names:
                 report(type, True, 'element removed: ' + element)
             for element in current_names - reference_names:
@@ -223,11 +224,13 @@ def compare_summaries(reference, current):
                 continue
             is_diff_positive = current_size > reference_size
             diff_percentage = 100 * (current_size - reference_size) / reference_size
-            is_error = False
             if (diff_percentage < -MAX_SIZE_DECREASE or
                 diff_percentage > MAX_SIZE_INCREASE):
-                match = False
+                has_errors = True
                 is_error = True
+            else:
+                has_warnings = True
+                is_error = False
             report(type, is_error, 'size change for ' + name + ': ' +
                    ('+' if is_diff_positive else '-') +
                    str(abs(diff_percentage)) + '% (' +
@@ -240,7 +243,7 @@ def compare_summaries(reference, current):
             if current_libs == reference_libs:
                 continue
             for lib in reference_libs - current_libs:
-                match = False
+                has_errors = True
                 report(type, True, 'shared library removed from ' + name +
                        ': ' + lib)
             for lib in current_libs - reference_libs:
@@ -249,13 +252,19 @@ def compare_summaries(reference, current):
                     lib == 'libdevmgr-integration-test.so' or
                     lib == 'libdriver-integration-test.so'):
                     is_error = False
+                    has_warnings = True
                 else:
                     is_error = True
-                    match = False
+                    has_errors = True
                 report(type, is_error, 'shared library added to ' + name +
                        ': ' + lib)
 
-    return match
+    if has_errors:
+        print('Error: summaries do not match!')
+        return False
+    if not has_warnings:
+        print('<none>')
+    return True
 
 
 def main():
@@ -303,10 +312,7 @@ def main():
     if args.reference:
         with open(args.reference, 'r') as input_file:
             reference = Summary.from_json(input_file)
-            if compare_summaries(reference, summary):
-                print('<none>')
-            else:
-                print('Error: summaries do not match!')
+            if not compare_summaries(reference, summary):
                 return 1
 
     return 0
