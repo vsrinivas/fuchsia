@@ -15,6 +15,10 @@ config("use_runtime_glsl_config") {
   defines = [ "ESCHER_USE_RUNTIME_GLSL=1" ]
 }
 
+config("test_for_glsl_spirv_mismatch_config") {
+  defines = [ "ESCHER_TEST_FOR_GLSL_SPIRV_MISMATCH=1" ]
+}
+
 test_package("escher_tests") {
   deps = [
     "test:escher_unittests",
@@ -486,6 +490,9 @@ source_set("escher") {
     public_deps = [ "//src/ui/lib/escher:escher_with_glslang" ]
   } else {
     public_deps = [ "//src/ui/lib/escher:escher_no_glslang" ]
+  }
+  if (escher_test_for_glsl_spirv_mismatch) {
+    public_configs += [ ":test_for_glsl_spirv_mismatch_config" ]
   }
 }
 

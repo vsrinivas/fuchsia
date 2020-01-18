@@ -21,6 +21,15 @@
 #include "src/ui/lib/escher/vk/shader_variant_args.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
+#if ESCHER_USE_RUNTIME_GLSL
+// This include requires a nogncheck to workaround a known GN issue that doesn't
+// take ifdefs into account when checking includes, meaning that even when
+// ESCHER_USE_RUNTIME_GLSL is false, GN will check the validity of this include
+// and find that it shouldn't be allowed, since there is no shaderc when that
+// macro is false. "nogncheck" prevents this.
+#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"  // nogncheck
+#endif
+
 namespace {
 using namespace escher;
 
@@ -146,6 +155,64 @@ VK_TEST_F(ShaderProgramTest, SpirVReadFileTest) {
   load_and_check_program(kShadowVolumeGeometryDebugProgramData);
   load_and_check_program(kFlatlandStandardProgram);
 }
+
+// Test to check to the "SpirvExistsOnDisk" function, which determines
+// if the spirv contents of a file on disk have changed relative to a
+// different spirv vector.
+//
+// This test checks against real Escher shader files, which means that
+// it will fail if someone modifies a shader source file for Escher but
+// forgets to run the precompile script to generate the spirv. This will
+// help in keeping the precompiled shaders up to date.
+//
+// This test is only meant to be run locally by the Escher development team,
+// as such it is not included on CQ at all, which has ESCHER_USE_RUNTIME_GLSL
+// set to false by default. This is because it is possible for other teams
+// (e.g. Spinel) to update the SpirV compiler, which would cause the new
+// shader spirv to differ from that on disk, causing this test to fail. Since
+// we do not want other teams to be burned with having to run the shader
+// precompile script, it is the job of the Escher team to run this test locally
+// when making shader changes to make sure all precompiled shaders are checked
+// in successfully.
+#if ESCHER_TEST_FOR_GLSL_SPIRV_MISMATCH
+VK_TEST_F(ShaderProgramTest, SpirvNotChangedTest) {
+  auto escher = test::GetEscher();
+  auto filesystem = escher->shader_program_factory()->filesystem();
+
+  auto check_spirv_change = [&](const ShaderProgramData& program_data) {
+    // Loop over all the shader stages for the provided program.
+    for (const auto& iter : program_data.source_files) {
+      // Skip if path is empty.
+      if (iter.second.length() == 0) {
+        continue;
+      }
+
+      ShaderStage stage = iter.first;
+      EXPECT_TRUE(program_data.source_files.count(stage));
+      auto compiler = std::make_unique<shaderc::Compiler>();
+      std::string shader_name = iter.second;
+      auto shader = fxl::MakeRefCounted<ShaderModuleTemplate>(vk::Device(), compiler.get(), stage,
+                                                              shader_name, filesystem);
+
+      // The shader source code should still compile properly.
+      std::vector<uint32_t> spirv;
+      EXPECT_TRUE(shader->CompileVariantToSpirv(program_data.args, &spirv));
+
+      // The new spirv should not be any different than the spirv that is already on disk.
+      EXPECT_FALSE(shader_util::SpirvExistsOnDisk(
+          program_data.args, *filesystem->base_path() + "/shaders/", shader_name, spirv));
+    };
+  };
+
+  check_spirv_change(kAmbientLightProgramData);
+  check_spirv_change(kNoLightingProgramData);
+  check_spirv_change(kPointLightProgramData);
+  check_spirv_change(kPointLightFalloffProgramData);
+  check_spirv_change(kShadowVolumeGeometryProgramData);
+  check_spirv_change(kShadowVolumeGeometryDebugProgramData);
+  check_spirv_change(kFlatlandStandardProgram);
+}
+#endif  // ESCHER_TEST_FOR_GLSL_SPIRV_MISMATCH
 
 VK_TEST_F(ShaderProgramTest, CachedVariants) {
   auto escher = test::GetEscher();

@@ -63,5 +63,17 @@ bool ReadSpirvFromDisk(const ShaderVariantArgs& args, const std::string& base_pa
   return false;
 }
 
+bool SpirvExistsOnDisk(const ShaderVariantArgs& args, const std::string& abs_root,
+                       const std::string& shader_name, const std::vector<uint32_t>& spirv) {
+  bool should_write_spirv = true;
+  std::vector<uint32_t> existing_spirv;
+  if (shader_util::ReadSpirvFromDisk(args, abs_root, shader_name, &existing_spirv)) {
+    if (existing_spirv == spirv) {
+      should_write_spirv = false;
+    }
+  }
+  return should_write_spirv;
+}
+
 }  // namespace shader_util
 }  // namespace escher

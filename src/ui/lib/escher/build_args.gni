@@ -16,4 +16,12 @@ declare_args() {
   # escher binary and as a result shaders will not be able to be compiled at
   # runtime. Precompiled spirv code will be loaded into memory from disk instead.
   escher_use_runtime_glsl = false
+
+  # If true, this enables the |SpirvNotChangedTest| to check if the precompiled
+  # shaders on disk are up to date and reflect the current shader source code
+  # compiled with the latest shaderc tools/optimizations. People on the Scenic
+  # team should build with this flag turned on to make sure that any shader
+  # changes that were not run through the precompiler have their updated spirv
+  # written to disk. Other teams and CQ do not need to worry about this flag.
+  escher_test_for_glsl_spirv_mismatch = false
 }

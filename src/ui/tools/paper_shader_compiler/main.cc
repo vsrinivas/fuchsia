@@ -10,13 +10,13 @@
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
-#include "src/ui/lib/escher/impl/glsl_compiler.h"  // nogncheck
+#include "src/ui/lib/escher/impl/glsl_compiler.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/shaders/util/spirv_file_util.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 
-#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"  // nogncheck
+#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
 namespace escher {
 
@@ -35,13 +35,16 @@ bool CompileAndWriteComputeShader(HackFilesystemPtr filesystem, const char* sour
       compiler.Compile(vk::ShaderStageFlagBits::eCompute, {{code.c_str()}}, std::string(), "main")
           .get();
 
-  if (shader_util::WriteSpirvToDisk(spirv, {}, abs_root, name)) {
-    FXL_LOG(INFO) << "Processing compute shader " << name;
-    return true;
+  FXL_LOG(INFO) << "Processing shader " << name;
+  if (shader_util::SpirvExistsOnDisk({}, abs_root, name, spirv)) {
+    if (!shader_util::WriteSpirvToDisk(spirv, {}, abs_root, name)) {
+      FXL_LOG(ERROR) << "could not write shader " << name << " to disk.";
+      return false;
+    }
+  } else {
+    FXL_LOG(INFO) << "Shader already exists on disk.";
   }
-  FXL_LOG(ERROR) << "could not write shader " << name << " to disk.";
-
-  return false;
+  return true;
 }
 
 // Compiles all of the provided shader modules and writes out their spirv
@@ -69,9 +72,14 @@ bool CompileAndWriteShader(HackFilesystemPtr filesystem, ShaderProgramData progr
       return false;
     }
 
-    if (!shader_util::WriteSpirvToDisk(spirv, program_data.args, abs_root, iter.second)) {
-      FXL_LOG(ERROR) << "could not write shader " << iter.second << " to disk.";
-      return false;
+    // As per above, only write out the spirv if there has been a change.
+    if (shader_util::SpirvExistsOnDisk(program_data.args, abs_root, iter.second, spirv)) {
+      if (!shader_util::WriteSpirvToDisk(spirv, program_data.args, abs_root, iter.second)) {
+        FXL_LOG(ERROR) << "could not write shader " << iter.second << " to disk.";
+        return false;
+      }
+    } else {
+      FXL_LOG(INFO) << "Shader already exists on disk.";
     }
   }
   return true;
