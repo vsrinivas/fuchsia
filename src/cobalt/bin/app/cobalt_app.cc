@@ -65,37 +65,18 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
   auto global_project_context_factory =
       std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
 
+  // |target_pipeline| is the pipeline used for sending data to cobalt. In particular, it is the
+  // source of the encryption keys, as well as determining the destination for generated
+  // observations (either clearcut, or the local filesystem).
   std::unique_ptr<TargetPipelineInterface> target_pipeline;
-  std::vector<std::unique_ptr<TargetPipelineInterface>> extra_pipelines;
-
-  // |target_pipeline| is the primary pipeline used for sending data to cobalt. In particular, it is
-  // the source of the encryption key for the analyzer, as well as determining the destination for
-  // generated observations (Either clearcut, or the local filesystem)
-  //
-  // |extra_pipelines| is used to send observations to a different clearcut log source (e.g. PROD
-  // and DEV). It is important to understand that extra pipelines cannot change which http client
-  // will be used, or which clearcut endpoint will be used (it will be sent to the same endpoint
-  // with the same http client as target_pipeline), or how the individual observations are encrypted
-  // (It will use the same analyzer encryption key from the target_pipeline).
-  //
-  // TODO(camrdale) Remove extra_pipelines once they are no longer necessary.
-  for (const auto& backend_environment : configuration_data_.GetBackendEnvironments()) {
-    if (target_pipeline == nullptr) {
-      if (backend_environment == system_data::Environment::LOCAL) {
-        target_pipeline = std::make_unique<LocalPipeline>();
-      } else {
-        target_pipeline = std::make_unique<TargetPipeline>(
-            backend_environment,
-            ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath(backend_environment)),
-            ReadPublicKeyPem(configuration_data_.AnalyzerPublicKeyPath()),
-            std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher),
-            kClearcutMaxRetries);
-      }
-    } else {
-      extra_pipelines.emplace_back(std::make_unique<ExtraPipeline>(
-          backend_environment,
-          ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath(backend_environment))));
-    }
+  const auto& backend_environment = configuration_data_.GetBackendEnvironment();
+  if (backend_environment == system_data::Environment::LOCAL) {
+    target_pipeline = std::make_unique<LocalPipeline>();
+  } else {
+    target_pipeline = std::make_unique<TargetPipeline>(
+        backend_environment, ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath()),
+        ReadPublicKeyPem(configuration_data_.AnalyzerPublicKeyPath()),
+        std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher), kClearcutMaxRetries);
   }
 
   auto internal_project_context = global_project_context_factory->NewProjectContext(
@@ -127,7 +108,6 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
       .initial_interval = initial_interval,
 
       .target_pipeline = std::move(target_pipeline),
-      .extra_pipelines = std::move(extra_pipelines),
 
       .local_shipping_manager_path = kLocalLogFilePath,
 
