@@ -20,7 +20,7 @@ use {
 pub const INPUT_EVENT_BUFFER_SIZE: usize = 15;
 
 /// An [`InputEvent`] holds information about an input event and the device that produced the event.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct InputEvent {
     /// The `device_event` contains the device-specific input event information.
     pub device_event: InputDeviceEvent,
@@ -37,7 +37,7 @@ pub struct InputEvent {
 ///
 /// Each [`InputDeviceBinding`] generates the type of [`InputDeviceEvent`]s that are appropriate
 /// for their device.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceEvent {
     Keyboard(keyboard::KeyboardEvent),
     Mouse(mouse::MouseEvent),
@@ -78,7 +78,7 @@ pub enum InputDeviceDescriptor {
 /// }
 /// ```
 #[async_trait]
-pub trait InputDeviceBinding: Sized {
+pub trait InputDeviceBinding: Send {
     /// Retrieves a proxy to the default input device of type `Self`.
     ///
     /// For example, [`MouseBinding`] finds the first available input device
@@ -89,13 +89,17 @@ pub trait InputDeviceBinding: Sized {
     ///
     /// # Errors
     /// If no default device exists.
-    async fn any_input_device() -> Result<InputDeviceProxy, Error>;
+    async fn any_input_device() -> Result<InputDeviceProxy, Error>
+    where
+        Self: Sized;
 
     /// Retrieves a list of proxies to all devices of type `Self`.
     ///
     /// # Errors
     /// If no devices of the correct type exist.
-    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>;
+    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>
+    where
+        Self: Sized;
 
     /// Binds the provided input device to a new instance of `Self`.
     ///
@@ -112,7 +116,9 @@ pub trait InputDeviceBinding: Sized {
     /// # Errors
     /// If the device descriptor could not be retrieved, or the descriptor could
     /// not be parsed correctly.
-    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error>;
+    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error>
+    where
+        Self: Sized;
 
     /// Returns information about the input device.
     fn get_device_descriptor(&self) -> InputDeviceDescriptor;
@@ -144,7 +150,9 @@ pub trait InputDeviceBinding: Sized {
         previous_report: Option<InputReport>,
         device_descriptor: &InputDeviceDescriptor,
         input_event_sender: &mut Sender<InputEvent>,
-    ) -> Option<InputReport>;
+    ) -> Option<InputReport>
+    where
+        Self: Sized;
 
     /// Creates a new [`InputDeviceBinding`] for the input type's default input device.
     ///
@@ -153,7 +161,10 @@ pub trait InputDeviceBinding: Sized {
     ///
     /// # Errors
     /// If there was an error finding or binding to the default input device.
-    async fn any_device() -> Result<Self, Error> {
+    async fn any_device() -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
         let device_proxy: InputDeviceProxy = Self::any_input_device().await?;
         let device_binding = Self::bind_device(&device_proxy).await?;
         device_binding.initialize_report_stream(device_proxy);
@@ -171,7 +182,10 @@ pub trait InputDeviceBinding: Sized {
     ///
     /// # Errors
     /// If there was an error binding to the proxy.
-    async fn new(device_proxy: InputDeviceProxy) -> Result<Self, Error> {
+    async fn new(device_proxy: InputDeviceProxy) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
         let device_binding = Self::bind_device(&device_proxy).await?;
         device_binding.initialize_report_stream(device_proxy);
 
@@ -186,7 +200,10 @@ pub trait InputDeviceBinding: Sized {
     ///
     /// # Parameters
     /// - `device_proxy`: The device proxy which is used to get input reports.
-    fn initialize_report_stream(&self, device_proxy: fidl_fuchsia_input_report::InputDeviceProxy) {
+    fn initialize_report_stream(&self, device_proxy: fidl_fuchsia_input_report::InputDeviceProxy)
+    where
+        Self: Sized,
+    {
         let mut event_sender = self.input_event_sender();
         let descriptor = self.get_device_descriptor();
         fasync::spawn(async move {

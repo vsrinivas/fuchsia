@@ -146,12 +146,18 @@ impl input_device::InputDeviceBinding for MouseBinding {
         Some(report)
     }
 
-    async fn any_input_device() -> Result<InputDeviceProxy, Error> {
+    async fn any_input_device() -> Result<InputDeviceProxy, Error>
+    where
+        Self: Sized,
+    {
         let mut devices = Self::all_devices().await?;
         devices.pop().ok_or(format_err!("Couldn't find a default mouse."))
     }
 
-    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error> {
+    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>
+    where
+        Self: Sized,
+    {
         input_device::all_devices(input_device::InputDeviceType::Mouse).await
     }
 

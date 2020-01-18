@@ -4,7 +4,6 @@
 
 use {crate::input_device, async_trait::async_trait};
 
-#[async_trait]
 /// An [`InputHandler`] dispatches InputEvents to an external service. It maintains
 /// service connections necessary to handle the events.
 ///
@@ -13,10 +12,8 @@ use {crate::input_device, async_trait::async_trait};
 /// [`InputHandler`]s process individual input events through [`handle_input_event()`], which can
 /// produce multiple events as an outcome. If the [`InputHandler`] sends an InputEvent to a service
 /// that consumes the event, then the [`InputHandler`] doesn't return any events.
-///
-/// TODO(vickiecheng): Add a usage example once a helper function for passing events through
-/// handlers exists.
-pub trait InputHandler: Sized {
+#[async_trait]
+pub trait InputHandler: Send {
     /// Returns a vector of InputEvents after handling `input_event`.
     ///
     /// # Parameters

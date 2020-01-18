@@ -186,12 +186,18 @@ impl input_device::InputDeviceBinding for TouchBinding {
         input_device::InputDeviceDescriptor::Touch(self.device_descriptor.clone())
     }
 
-    async fn any_input_device() -> Result<InputDeviceProxy, Error> {
+    async fn any_input_device() -> Result<InputDeviceProxy, Error>
+    where
+        Self: Sized,
+    {
         let mut devices = Self::all_devices().await?;
         devices.pop().ok_or(format_err!("Couldn't find a default touch device."))
     }
 
-    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error> {
+    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>
+    where
+        Self: Sized,
+    {
         input_device::all_devices(input_device::InputDeviceType::Touch).await
     }
 
@@ -396,8 +402,10 @@ mod tests {
 
         let expected_events = vec![create_touch_event(
             hashmap! {
-                fidl_ui_input::PointerEventPhase::Add => vec![create_touch_contact(TOUCH_ID, 0, 0)],
-                fidl_ui_input::PointerEventPhase::Down => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                fidl_ui_input::PointerEventPhase::Add
+                    => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                fidl_ui_input::PointerEventPhase::Down
+                    => vec![create_touch_contact(TOUCH_ID, 0, 0)],
             },
             &descriptor,
         )];

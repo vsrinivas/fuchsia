@@ -33,7 +33,7 @@ use {
 /// key is present in a subsequent [`InputReport`]. Clients can assume that
 /// a key is pressed for all received input events until the key is present in
 /// the [`KeyEventPhase::Released`] entry of [`keys`].
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct KeyboardEvent {
     /// The keys associated with this input event, sorted by their `KeyEventPhase`
     /// (e.g., whether they are pressed or released).
@@ -140,12 +140,18 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
         Some(report)
     }
 
-    async fn any_input_device() -> Result<InputDeviceProxy, Error> {
+    async fn any_input_device() -> Result<InputDeviceProxy, Error>
+    where
+        Self: Sized,
+    {
         let mut devices = Self::all_devices().await?;
         devices.pop().ok_or(format_err!("Couldn't find a default keyboard."))
     }
 
-    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error> {
+    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>
+    where
+        Self: Sized,
+    {
         input_device::all_devices(input_device::InputDeviceType::Keyboard).await
     }
 
