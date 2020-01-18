@@ -160,9 +160,8 @@ The `sandbox` property is a JSON object with the following schema:
 The `dev` array contains a list of well-known device directories that are
 provided to the component. For example, if the string `class/input` appears in
 the `dev` array, then `/dev/class/input` will appear in the namespaces of components
-loaded from the package. To allow access to a `misc` device, such as
-`/dev/misc/sysinfo`, add the string `misc` to the `dev` array. Unfortunately,
-allowing access to individual `misc` devices is not possible currently.
+loaded from the package. To allow access to a `misc` device, add the string `misc`
+to the `dev` array. Allowing access to individual `misc` devices is not possible.
 
 The `system` array contains a list of well-known paths within the system package
 that are provided to the component. For example, if the string `bin` appears

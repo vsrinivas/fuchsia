@@ -37,7 +37,7 @@ static constexpr uint32_t trap_kind(TrapType type) {
   }
 }
 
-static zx_status_t get_hypervisor_resource(const fuchsia::sysinfo::DeviceSyncPtr& sysinfo,
+static zx_status_t get_hypervisor_resource(const fuchsia::sysinfo::SysInfoSyncPtr& sysinfo,
                                            zx::resource* resource) {
   zx_status_t fidl_status;
   zx_status_t status = sysinfo->GetHypervisorResource(&fidl_status, resource);
@@ -57,7 +57,7 @@ static constexpr uint32_t cache_policy(MemoryPolicy policy) {
 }
 
 zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
-  fuchsia::sysinfo::DeviceSyncPtr sysinfo = get_sysinfo();
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
   zx::resource hypervisor_resource;
   zx_status_t status = get_hypervisor_resource(sysinfo, &hypervisor_resource);
   if (status != ZX_OK) {

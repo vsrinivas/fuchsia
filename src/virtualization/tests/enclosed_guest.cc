@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/single_threaded_executor.h>
@@ -107,6 +108,12 @@ zx_status_t EnclosedGuest::Start() {
   status = services->AddService(fake_scenic_.GetHandler(), fuchsia::ui::scenic::Scenic::Name_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failure launching fake scenic service: " << zx_status_get_string(status);
+    return status;
+  }
+
+  status = services->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failure adding sysinfo service: " << zx_status_get_string(status);
     return status;
   }
 

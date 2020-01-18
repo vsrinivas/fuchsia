@@ -109,6 +109,7 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.sys.Launcher",
                                                "fuchsia.sys.Loader",
                                                "fuchsia.sys.test.CacheControl",
+                                               "fuchsia.sysinfo.SysInfo",
                                                "fuchsia.virtualconsole.SessionManager"};
     sysmgr::Config config;
     const auto service_map = config.TakeServices();

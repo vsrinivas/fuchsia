@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -87,30 +87,19 @@ constexpr bool kStartEventAggregatorWorkerDefault(true);
 // of the ZBI. This string will never exceed a length of 32.
 //
 // If the reading of the board name fails for any reason, this will return "".
-std::string ReadBoardName() {
-  const char kSysInfoPath[] = "/dev/misc/sysinfo";
-  const int fd = open(kSysInfoPath, O_RDWR);
-  if (fd < 0) {
-    return "";
-  }
-
-  // Connect to the fuchsia-sysinfo service through the file system API.
-  zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    return "";
-  }
+std::string ReadBoardName(const std::shared_ptr<sys::ServiceDirectory>& services) {
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
+  services->Connect<fuchsia::sysinfo::SysInfo>(sysinfo.NewRequest());
 
   // Read the board name out of the ZBI.
-  char board_name[ZBI_BOARD_NAME_LEN];
-  size_t actual_size = 0;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
-                                                               sizeof(board_name), &actual_size);
+  zx_status_t status;
+  fidl::StringPtr board_name;
+  zx_status_t fidl_status = sysinfo->GetBoardName(&status, &board_name);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     return "";
   }
 
-  return std::string(board_name, actual_size);
+  return board_name.value();
 }
 
 std::string ReadBuildInfo(std::string value) {
@@ -233,11 +222,12 @@ int main(int argc, const char** argv) {
     FX_LOGS(INFO) << "Unable to lower current thread provider. ProfileProvider is down.";
   }
 
+  auto boardname = ReadBoardName(context->svc());
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");
   cobalt::CobaltApp app(std::move(context), loop.dispatcher(), schedule_interval, min_interval,
                         initial_interval, event_aggregator_backfill_days,
                         start_event_aggregator_worker, use_memory_observation_store,
-                        max_bytes_per_observation_store, ReadBuildInfo("product"), ReadBoardName(),
+                        max_bytes_per_observation_store, ReadBuildInfo("product"), boardname,
                         ReadBuildInfo("version"));
   loop.Run();
   return 0;

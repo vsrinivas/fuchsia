@@ -22,7 +22,7 @@ namespace {
 constexpr uint32_t kWrongBoard = 1;
 
 zx_status_t IsBoardName(const char* requested_board_name) {
-  constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+  constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
   fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDWR));
   if (!sysinfo) {
     printf("Failed to open sysinfo\n");
@@ -37,10 +37,10 @@ zx_status_t IsBoardName(const char* requested_board_name) {
 
   char board_name[ZX_MAX_NAME_LEN];
   size_t actual_size;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+  zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(channel.get(), &status, board_name,
                                                                sizeof(board_name), &actual_size);
   if (status != ZX_OK) {
-    printf("Failed to fuchsia_sysinfo_DeviceGetBoardName. status = %d\n", status);
+    printf("Failed to fuchsia_sysinfo_SysInfoGetBoardName. status = %d\n", status);
     return status;
   }
   if (fidl_status != ZX_OK) {

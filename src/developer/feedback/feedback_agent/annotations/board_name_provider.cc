@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <zircon/errors.h>
@@ -30,29 +31,19 @@ std::set<std::string> BoardNameProvider::GetSupportedAnnotations() {
 }
 
 std::optional<std::string> BoardNameProvider::GetAnnotation() {
-  // fuchsia.sysinfo.Device is not Discoverable so we need to construct the channel ourselves.
-  const char kSysInfoPath[] = "/dev/misc/sysinfo";
-  const int fd = open(kSysInfoPath, O_RDWR);
-  if (fd < 0) {
-    FX_LOGS(ERROR) << "failed to open " << kSysInfoPath;
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
+
+  zx_status_t out_status = fdio_service_connect("/svc/fuchsia.sysinfo.SysInfo",
+                                                sysinfo.NewRequest().TakeChannel().release());
+  if (out_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Error connecting to sysinfo: " << out_status;
     return std::nullopt;
   }
 
-  zx::channel channel;
-  const zx_status_t channel_status = fdio_get_service_handle(fd, channel.reset_and_get_address());
-  if (channel_status != ZX_OK) {
-    FX_PLOGS(ERROR, channel_status) << "failed to open a channel at " << kSysInfoPath;
-    return std::nullopt;
-  }
-
-  fidl::SynchronousInterfacePtr<fuchsia::sysinfo::Device> device;
-  device.Bind(std::move(channel));
-
-  zx_status_t out_status;
   fidl::StringPtr out_board_name;
-  const zx_status_t fidl_status = device->GetBoardName(&out_status, &out_board_name);
+  const zx_status_t fidl_status = sysinfo->GetBoardName(&out_status, &out_board_name);
   if (fidl_status != ZX_OK) {
-    FX_PLOGS(ERROR, fidl_status) << "failed to connect to fuchsia.sysinfo.Device";
+    FX_PLOGS(ERROR, fidl_status) << "failed to get board name";
     return std::nullopt;
   }
   if (out_status != ZX_OK) {

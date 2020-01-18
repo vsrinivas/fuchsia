@@ -3,9 +3,6 @@
         "binary": "bin/feedback_agent"
     },
     "sandbox": {
-        "dev": [
-            "misc/sysinfo"
-        ],
         "features": [
             "build-info",
             "config-data",
@@ -21,7 +18,8 @@
             "fuchsia.hwinfo.Product",
             "fuchsia.process.Launcher",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.update.channel.Provider"
+            "fuchsia.update.channel.Provider",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

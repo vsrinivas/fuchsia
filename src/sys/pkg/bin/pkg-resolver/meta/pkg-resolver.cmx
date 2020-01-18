@@ -5,7 +5,7 @@
     "sandbox": {
         "dev": [
             "class/skip-block",
-            "misc/sysinfo"
+            "sys/platform"
         ],
         "features": [
             "config-data",

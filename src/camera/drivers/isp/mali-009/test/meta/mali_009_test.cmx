@@ -1,17 +1,24 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
     "program": {
         "binary": "test/mali_009_test"
     },
     "sandbox": {
         "dev": [
-            "misc/sysinfo",
             "class/input",
             "class/isp-device-test"
         ],
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.camera.test.IspTester",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

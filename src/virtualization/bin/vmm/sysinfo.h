@@ -8,11 +8,11 @@
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 
-static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+static constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
 static constexpr char kRootResourceSvc[] = "/svc/fuchsia.boot.RootResource";
 
-static inline fuchsia::sysinfo::DeviceSyncPtr get_sysinfo() {
-  fuchsia::sysinfo::DeviceSyncPtr device;
+static inline fuchsia::sysinfo::SysInfoSyncPtr get_sysinfo() {
+  fuchsia::sysinfo::SysInfoSyncPtr device;
   fdio_service_connect(kSysInfoPath, device.NewRequest().TakeChannel().release());
   return device;
 }

@@ -10,9 +10,9 @@
         "binary": "test/memory_monitor_unittests"
     },
     "sandbox": {
-        "dev": [
-            "misc/sysinfo"
-        ],
-        "services": [ "fuchsia.kernel.Stats" ]
+        "services": [
+            "fuchsia.kernel.Stats",
+            "fuchsia.sysinfo.SysInfo"
+        ]
     }
 }

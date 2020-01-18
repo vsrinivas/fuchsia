@@ -221,6 +221,7 @@ executable("server_daemon_test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
@@ -303,6 +304,7 @@ executable("guest_interaction_service_test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
 }
 

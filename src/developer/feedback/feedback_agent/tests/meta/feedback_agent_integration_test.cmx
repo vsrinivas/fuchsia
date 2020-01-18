@@ -17,6 +17,7 @@
             },
             "system-services": [
                 "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader"
             ]

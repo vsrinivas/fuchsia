@@ -28,8 +28,8 @@ use futures::future;
 
 async fn get_board_name() -> Result<String, Error> {
     let (client, server) = zx::Channel::create()?;
-    fdio::service_connect("/dev/misc/sysinfo", server)?;
-    let svc = fsysinfo::DeviceProxy::new(fasync::Channel::from_channel(client)?);
+    fdio::service_connect("/svc/fuchsia.sysinfo.SysInfo", server)?;
+    let svc = fsysinfo::SysInfoProxy::new(fasync::Channel::from_channel(client)?);
     let (status, name_opt) = svc.get_board_name().await.context("get_board_name failed")?;
     zx::Status::ok(status).context("get_board_name returned error status")?;
     name_opt.ok_or(format_err!("Failed to get board name"))

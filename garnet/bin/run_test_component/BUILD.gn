@@ -41,6 +41,7 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-net",
     "//zircon/system/fidl/fuchsia-posix-socket",
     "//zircon/system/fidl/fuchsia-scheduler",
+    "//zircon/system/fidl/fuchsia-sysinfo",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }

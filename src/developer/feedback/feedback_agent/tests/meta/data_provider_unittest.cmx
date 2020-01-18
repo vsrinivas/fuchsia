@@ -2,10 +2,14 @@
     "program": {
         "binary": "test/data_provider_unittest"
     },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
     "sandbox": {
-        "dev": [
-            "misc/sysinfo"
-        ],
         "features": [
             "build-info",
             "hub",
@@ -14,7 +18,8 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

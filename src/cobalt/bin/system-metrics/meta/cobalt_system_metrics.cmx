@@ -12,7 +12,8 @@
             "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.activity.Provider"
+            "fuchsia.ui.activity.Provider",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

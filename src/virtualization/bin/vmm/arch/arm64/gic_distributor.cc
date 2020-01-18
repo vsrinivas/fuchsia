@@ -162,7 +162,7 @@ static uint32_t typer(uint32_t num_interrupts, uint8_t num_cpus,
 static uint32_t pidr2_arch_rev(uint32_t revision) { return set_bits(revision, 7, 4); }
 
 static zx_status_t get_interrupt_controller_info(
-    const fuchsia::sysinfo::DeviceSyncPtr& sysinfo,
+    const fuchsia::sysinfo::SysInfoSyncPtr& sysinfo,
     fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
   zx_status_t fidl_status;
   zx_status_t status = sysinfo->GetInterruptControllerInfo(&fidl_status, info);
@@ -176,7 +176,7 @@ GicDistributor::GicDistributor(Guest* guest) : guest_(guest) {}
 
 zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& interrupts) {
   // Fetch the interrupt controller type.
-  fuchsia::sysinfo::DeviceSyncPtr sysinfo = get_sysinfo();
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
   fuchsia::sysinfo::InterruptControllerInfoPtr info;
   zx_status_t status = get_interrupt_controller_info(sysinfo, &info);
   if (status != ZX_OK) {

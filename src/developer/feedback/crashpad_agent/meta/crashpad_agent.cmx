@@ -3,9 +3,6 @@
         "binary": "bin/crashpad_agent"
     },
     "sandbox": {
-        "dev": [
-            "misc/sysinfo"
-        ],
         "features": [
             "build-info",
             "config-data",

@@ -142,6 +142,7 @@ source_set("lib") {
     "//src/virtualization/lib/vsh:client",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.netstack",

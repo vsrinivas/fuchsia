@@ -2,6 +2,13 @@
     "program": {
         "binary": "test/server_daemon_test"
     },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
     "sandbox": {
         "features": [
             "isolated-persistent-storage"
@@ -12,7 +19,8 @@
             "fuchsia.logger.LogSink",
             "fuchsia.netemul.network.Endpoint",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

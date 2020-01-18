@@ -2,6 +2,13 @@
     "program": {
         "binary": "test/guest_interaction_service_test"
     },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
     "sandbox": {
         "features": [
             "isolated-persistent-storage"
@@ -9,7 +16,8 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

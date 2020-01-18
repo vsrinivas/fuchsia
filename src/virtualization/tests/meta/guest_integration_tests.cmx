@@ -2,13 +2,21 @@
     "program": {
         "binary": "test/guest_integration_tests"
     },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
     "sandbox": {
         "features": [
             "isolated-temp"
         ],
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

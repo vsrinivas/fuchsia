@@ -80,6 +80,7 @@ source_set("src") {
     "//zircon/public/lib/memfs-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-sysinfo",
   ]
 
   public_deps = [

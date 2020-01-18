@@ -40,7 +40,7 @@
     { "protocol": "/svc/fuchsia.process.Launcher", "as": "/svc_for_sys/fuchsia.process.Launcher" },
 
     // From sysinfo
-    { "protocol": "/svc/fuchsia.sysinfo.Sysinfo", "as": "/svc_for_sys/fuchsia.sysinfo.Sysinfo" },
+    { "protocol": "/svc/fuchsia.sysinfo.SysInfo", "as": "/svc_for_sys/fuchsia.sysinfo.SysInfo" },
 
     // These services are used by appmgr directly
     {

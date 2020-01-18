@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "dev": [
-            "class/ethernet",
-            "misc"
+            "class/ethernet"
         ],
         "features": [
             "deprecated-ambient-replace-as-executable"
@@ -15,7 +14,8 @@
             "fuchsia.virtualization.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

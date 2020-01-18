@@ -3,9 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [
-            "misc/sysinfo"
-        ],
         "features": [
             "root-ssl-certificates",
             "isolated-persistent-storage",
@@ -22,7 +19,8 @@
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.time.Utc",
             "fuchsia.scheduler.ProfileProvider",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

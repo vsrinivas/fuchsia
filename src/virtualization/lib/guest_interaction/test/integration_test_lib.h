@@ -7,6 +7,7 @@
 
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -114,6 +115,9 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     guest_manager_launch_info.err = sys::CloneFileDescriptor(2);
     services_->AddServiceWithLaunchInfo(std::move(guest_manager_launch_info),
                                         fuchsia::virtualization::Manager::Name_);
+
+    // Allow sysinfo service
+    services_->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
   }
 };
 
