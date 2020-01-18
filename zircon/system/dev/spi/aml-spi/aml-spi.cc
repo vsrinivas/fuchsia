@@ -115,6 +115,10 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
       for (uint32_t i = 0; i < burst_size; i++) {
         *rx++ = static_cast<uint8_t>(mmio_.Read32(AML_SPI_RXDATA));
       }
+    } else {
+      for (uint32_t i = 0; i < burst_size; i++) {
+        mmio_.Read32(AML_SPI_RXDATA);
+      }
     }
 
     exchange_size -= burst_size;
