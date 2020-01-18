@@ -9,23 +9,30 @@ use {
     fidl_fuchsia_media::{
         AudioConsumerProxy, AudioConsumerStartFlags, AudioConsumerStatus, AudioSampleFormat,
         AudioStreamType, Compression, SessionAudioConsumerFactoryMarker,
-        SessionAudioConsumerFactoryProxy, StreamPacket, StreamSinkProxy, AUDIO_ENCODING_AACLATM,
-        AUDIO_ENCODING_SBC, NO_TIMESTAMP, STREAM_PACKET_FLAG_DISCONTINUITY,
+        SessionAudioConsumerFactoryProxy, StreamPacket, StreamSinkProxy, NO_TIMESTAMP,
+        STREAM_PACKET_FLAG_DISCONTINUITY,
     },
+    fuchsia_audio_codec::StreamProcessor,
+    fuchsia_syslog::fx_log_info,
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{Future, FutureExt, StreamExt},
+    futures::{io::AsyncWriteExt, select, stream::pending, FutureExt, Stream, StreamExt},
 };
 
+use crate::codec::CodecExtra;
 use crate::hanging_get::HangingGetStream;
+use crate::DEFAULT_SAMPLE_RATE;
 
 const DEFAULT_BUFFER_LEN: usize = 65536;
+
+pub type DecodedStreamItem = Result<Vec<u8>, Error>;
+pub type DecodedStream = Box<dyn Stream<Item = DecodedStreamItem> + Unpin>;
 
 /// Players are configured and accept media frames, which are sent to the
 /// media subsystem.
 pub struct Player {
     buffer: zx::Vmo,
     buffer_len: usize,
-    codec: String,
+    codec_extra: CodecExtra,
     current_offset: usize,
     stream_sink: StreamSinkProxy,
     audio_consumer: AudioConsumerProxy,
@@ -33,6 +40,8 @@ pub struct Player {
     playing: bool,
     next_packet_flags: u32,
     last_seq_played: u16,
+    decoder: Option<StreamProcessor>,
+    decoded_stream: DecodedStream,
 }
 
 pub enum PlayerEvent {
@@ -132,21 +141,30 @@ impl SbcHeader {
 impl Player {
     /// Attempt to make a new player that decodes and plays frames encoded in the
     /// `codec`
-    pub async fn new(session_id: u64, codec: String, sample_freq: u32) -> Result<Player, Error> {
+    pub async fn new(session_id: u64, codec_extra: CodecExtra) -> Result<Player, Error> {
         let audio_consumer_factory =
             fuchsia_component::client::connect_to_service::<SessionAudioConsumerFactoryMarker>()
                 .context("Failed to connect to audio consumer factory")?;
-        Self::from_proxy(session_id, codec, sample_freq, audio_consumer_factory).await
+        Self::from_proxy(session_id, codec_extra, audio_consumer_factory).await
     }
 
     /// Build a AudioConsumer given a SessionAudioConsumerFactoryProxy.
     /// Used in tests.
     async fn from_proxy(
         session_id: u64,
-        codec: String,
-        sample_freq: u32,
+        codec_extra: CodecExtra,
         audio_consumer_factory: SessionAudioConsumerFactoryProxy,
     ) -> Result<Player, Error> {
+        let (decoder, decoded_stream) = match &codec_extra {
+            CodecExtra::Sbc(codec_extra_data) => {
+                let mut decoder =
+                    StreamProcessor::create_decoder("audio/sbc", Some(codec_extra_data.to_vec()))?;
+                let decoded_stream = Box::new(decoder.take_output_stream()?);
+                (Some(decoder), decoded_stream as DecodedStream)
+            }
+            _ => (None, Box::new(pending::<DecodedStreamItem>()) as DecodedStream),
+        };
+
         let (audio_consumer, audio_consumer_server) = fidl::endpoints::create_proxy()?;
 
         audio_consumer_factory.create_audio_consumer(session_id, audio_consumer_server)?;
@@ -156,10 +174,15 @@ impl Player {
         let mut audio_stream_type = AudioStreamType {
             sample_format: AudioSampleFormat::Signed16,
             channels: 2, // Stereo
-            frames_per_second: sample_freq,
+            frames_per_second: codec_extra.sample_freq().unwrap_or(DEFAULT_SAMPLE_RATE),
         };
 
-        let mut compression = Compression { type_: codec.clone(), parameters: None };
+        let mut compression = match decoder {
+            None => {
+                Some(Compression { type_: codec_extra.stream_type().to_string(), parameters: None })
+            }
+            Some(_) => None,
+        };
 
         let buffer = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
         let buffers = vec![buffer.duplicate_handle(zx::Rights::SAME_RIGHTS)?];
@@ -167,7 +190,7 @@ impl Player {
         audio_consumer.create_stream_sink(
             &mut buffers.into_iter(),
             &mut audio_stream_type,
-            Some(&mut compression),
+            compression.as_mut(),
             stream_sink_server,
         )?;
 
@@ -178,7 +201,7 @@ impl Player {
         let mut player = Player {
             buffer,
             buffer_len: DEFAULT_BUFFER_LEN,
-            codec,
+            codec_extra,
             stream_sink,
             audio_consumer,
             watch_status_stream,
@@ -186,6 +209,8 @@ impl Player {
             playing: false,
             next_packet_flags: 0,
             last_seq_played: 0,
+            decoder,
+            decoded_stream,
         };
 
         // wait for initial event
@@ -218,7 +243,7 @@ impl Player {
 
     /// Accepts a payload which may contain multiple frames and breaks it into
     /// frames and sends it to media.
-    pub fn push_payload(&mut self, payload: &[u8]) -> Result<(), Error> {
+    pub async fn push_payload(&mut self, payload: &[u8]) -> Result<(), Error> {
         let rtp = RtpHeader::new(payload)?;
 
         let seq = rtp.sequence_number();
@@ -232,38 +257,55 @@ impl Player {
 
         let mut offset = RtpHeader::LENGTH;
 
-        if self.codec == AUDIO_ENCODING_SBC {
+        if let CodecExtra::Sbc(_) = self.codec_extra {
             // TODO(40918) Handle SBC packet header
             offset += 1;
         }
 
         while offset < payload.len() {
-            if self.codec == AUDIO_ENCODING_SBC {
-                let len = Player::find_sbc_frame_len(&payload[offset..]).or_else(|e| {
-                    self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
-                    Err(e)
-                })?;
-                if offset + len > payload.len() {
-                    self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
-                    return Err(format_err!("Ran out of buffer for SBC frame"));
+            match self.codec_extra {
+                CodecExtra::Sbc(_) => {
+                    let len = Player::find_sbc_frame_len(&payload[offset..]).or_else(|e| {
+                        self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
+                        Err(e)
+                    })?;
+                    if offset + len > payload.len() {
+                        self.next_packet_flags |= STREAM_PACKET_FLAG_DISCONTINUITY;
+                        return Err(format_err!("Ran out of buffer for SBC frame"));
+                    }
+
+                    match &mut self.decoder {
+                        Some(decoder) => {
+                            decoder.write(&payload[offset..offset + len]).await?;
+                        }
+                        None => {
+                            self.send_frame(&payload[offset..offset + len])?;
+                        }
+                    }
+
+                    offset += len;
                 }
-                self.send_frame(&payload[offset..offset + len])?;
-                offset += len;
-            } else if self.codec == AUDIO_ENCODING_AACLATM {
-                self.send_frame(&payload[offset..])?;
-                offset = payload.len();
-            } else {
-                return Err(format_err!("Unrecognized codec!"));
+                CodecExtra::Aac(_) => {
+                    self.send_frame(&payload[offset..])?;
+                    offset = payload.len();
+                }
+                _ => return Err(format_err!("Unrecognized codec!")),
             }
         }
+
+        if let Some(decoder) = &mut self.decoder {
+            decoder.flush()?;
+        }
+
         Ok(())
     }
 
     /// Push an encoded media frame into the buffer and signal that it's there to media.
-    pub fn send_frame(&mut self, frame: &[u8]) -> Result<(), Error> {
+    fn send_frame(&mut self, frame: &[u8]) -> Result<(), Error> {
         let mut full_frame_len = frame.len();
 
-        if self.codec == AUDIO_ENCODING_AACLATM {
+        // add room for LOAS header
+        if let CodecExtra::Aac(_) = self.codec_extra {
             full_frame_len += 3;
         }
 
@@ -277,7 +319,7 @@ impl Player {
 
         let start_offset = self.current_offset;
 
-        if self.codec == AUDIO_ENCODING_AACLATM {
+        if let CodecExtra::Aac(_) = self.codec_extra {
             // Prepend LOAS sync word and mux length so mediaplayer decoder can handle it
             let loas_syncword = [
                 0x56_u8,
@@ -325,12 +367,26 @@ impl Player {
 
     /// If PlayerEvent::Closed is returned, that indicates the underlying
     /// service went away and the player should be closed/rebuilt
-    pub fn next_event(&mut self) -> impl Future<Output = PlayerEvent> + '_ {
-        self.watch_status_stream.next().map(|event| match event {
-            None => PlayerEvent::Closed,
-            Some(Err(_)) => PlayerEvent::Closed,
-            Some(Ok(s)) => PlayerEvent::Status(s),
-        })
+    ///
+    /// This function should be always be polled when running
+    pub async fn next_event(&mut self) -> PlayerEvent {
+        loop {
+            select! {
+                event = self.watch_status_stream.next().fuse() => {
+                    return match event {
+                        None => PlayerEvent::Closed,
+                        Some(Err(_)) => PlayerEvent::Closed,
+                        Some(Ok(s)) => PlayerEvent::Status(s),
+                    }
+                },
+                frame = self.decoded_stream.next().fuse() => {
+                    match frame {
+                        Some(Ok(frame)) => self.send_frame(&frame).unwrap_or_else(|e| fx_log_info!("failed to send frame")),
+                        _ => fx_log_info!("error decoding"),
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -343,6 +399,8 @@ impl Drop for Player {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::codec::CodecExtra;
+    use futures::future::{self, Either};
     use matches::assert_matches;
 
     use {
@@ -352,7 +410,7 @@ mod tests {
             StreamSinkRequest, StreamSinkRequestStream,
         },
         fuchsia_async as fasync,
-        std::task::Poll,
+        futures::{pin_mut, task::Poll},
     };
 
     #[test]
@@ -390,9 +448,8 @@ mod tests {
     /// the VMO payload buffer that was provided to the AudioConsumer.
     fn setup_player(
         exec: &mut fasync::Executor,
-        codec: &str,
+        codec_extra: CodecExtra,
     ) -> (Player, StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
-        const TEST_SAMPLE_FREQ: u32 = 48000;
         const TEST_SESSION_ID: u64 = 1;
 
         let (audio_consumer_factory_proxy, mut audio_consumer_factory_request_stream) =
@@ -401,8 +458,7 @@ mod tests {
 
         let mut player_new_fut = Box::pin(Player::from_proxy(
             TEST_SESSION_ID,
-            codec.to_string(),
-            TEST_SAMPLE_FREQ,
+            codec_extra,
             audio_consumer_factory_proxy,
         ));
 
@@ -484,7 +540,7 @@ mod tests {
     fn test_player_setup() {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
-        setup_player(&mut exec, "test");
+        setup_player(&mut exec, CodecExtra::Unknown);
     }
 
     #[test]
@@ -496,7 +552,8 @@ mod tests {
     fn test_send_frame() {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
-        let (mut player, mut sink_request_stream, _, sink_vmo) = setup_player(&mut exec, "test");
+        let (mut player, mut sink_request_stream, _, sink_vmo) =
+            setup_player(&mut exec, CodecExtra::Unknown);
 
         let payload = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -530,17 +587,36 @@ mod tests {
         player: &mut Player,
         sink_request_stream: &mut StreamSinkRequestStream,
     ) -> u32 {
-        player.push_payload(payload).expect("send happens okay");
+        {
+            let push_fut = player.push_payload(payload);
+            pin_mut!(push_fut);
+            exec.run_singlethreaded(&mut push_fut).expect("wrote payload");
+        }
 
-        let complete = exec.run_until_stalled(&mut sink_request_stream.select_next_some());
-        let sink_req = match complete {
-            Poll::Ready(Ok(req)) => req,
-            x => panic!("expected player req message but got {:?}", x),
-        };
+        if let Some(_) = player.decoder {
+            // if decoder enabled, drive event stream future till packet is sent to sink.
+            let event_fut = player.next_event();
+            pin_mut!(event_fut);
 
-        match sink_req {
-            StreamSinkRequest::SendPacketNoReply { packet, .. } => packet.flags,
-            _ => panic!("should have received a packet"),
+            let either = exec.run_singlethreaded(&mut future::select(
+                event_fut,
+                sink_request_stream.select_next_some(),
+            ));
+
+            match either {
+                Either::Right((Ok(StreamSinkRequest::SendPacketNoReply { packet, .. }), _)) => {
+                    packet.flags
+                }
+                _ => panic!("should have received a packet"),
+            }
+        } else {
+            let sink_req = exec
+                .run_singlethreaded(&mut sink_request_stream.select_next_some())
+                .expect("sent packet");
+            match sink_req {
+                StreamSinkRequest::SendPacketNoReply { packet, .. } => packet.flags,
+                _ => panic!("should have received a packet"),
+            }
         }
     }
 
@@ -552,7 +628,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
-            setup_player(&mut exec, AUDIO_ENCODING_AACLATM);
+            setup_player(&mut exec, CodecExtra::Aac([0; 6]));
 
         player.play().expect("player plays");
 
@@ -581,6 +657,37 @@ mod tests {
         raw[3] = 8;
         let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
         assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, STREAM_PACKET_FLAG_DISCONTINUITY);
+    }
+
+    #[test]
+    /// Test that bytes flow through to decoder when SBC is active
+    fn test_sbc_decoder_write() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
+        let (mut player, mut sink_request_stream, mut player_request_stream, _) =
+            setup_player(&mut exec, CodecExtra::Sbc([0x82, 0x00, 0x00, 0x00]));
+
+        player.play().expect("player plays");
+
+        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
+        let player_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected player req message but got {:?}", x),
+        };
+
+        assert_matches!(player_req, AudioConsumerRequest::Start { .. });
+
+        // raw rtp header with sequence number of 1 followed by 1 sbc frame
+        let raw = [
+            128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0x9c, 0xb1, 0x20, 0x3b, 0x80, 0x00, 0x00,
+            0x11, 0x7f, 0xfa, 0xab, 0xef, 0x7f, 0xfa, 0xab, 0xef, 0x80, 0x4a, 0xab, 0xaf, 0x80,
+            0xf2, 0xab, 0xcf, 0x83, 0x8a, 0xac, 0x32, 0x8a, 0x78, 0x8a, 0x53, 0x90, 0xdc, 0xad,
+            0x49, 0x96, 0xba, 0xaa, 0xe6, 0x9c, 0xa2, 0xab, 0xac, 0xa2, 0x72, 0xa9, 0x2d, 0xa8,
+            0x9a, 0xab, 0x75, 0xae, 0x82, 0xad, 0x49, 0xb4, 0x6a, 0xad, 0xb1, 0xba, 0x52, 0xa9,
+            0xa8, 0xc0, 0x32, 0xad, 0x11, 0xc6, 0x5a, 0xab, 0x3a,
+        ];
+
+        push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
     }
 
     #[test]
