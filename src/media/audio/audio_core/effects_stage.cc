@@ -53,6 +53,7 @@ std::pair<int64_t, uint32_t> AlignBufferRequest(int64_t frame, uint32_t length,
 // static
 std::shared_ptr<EffectsStage> EffectsStage::Create(
     const std::vector<PipelineConfig::Effect>& effects, std::shared_ptr<Stream> source) {
+  TRACE_DURATION("audio", "EffectsStage::Create");
   if (source->format().sample_format() != fuchsia::media::AudioSampleFormat::FLOAT) {
     FX_LOGS(ERROR) << "EffectsStage can only be added to streams with FLOAT samples";
     return nullptr;
@@ -81,6 +82,7 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
 
 std::optional<Stream::Buffer> EffectsStage::LockBuffer(zx::time ref_time, int64_t frame,
                                                        uint32_t frame_count) {
+  TRACE_DURATION("audio", "EffectsStage::LockBuffer", "frame", frame, "length", frame_count);
   // If we have a partially consumed block, return that here.
   if (current_block_ && frame >= current_block_->start() && frame < current_block_->end()) {
     return current_block_;

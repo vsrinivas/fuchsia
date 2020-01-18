@@ -54,7 +54,7 @@ void MixStage::RemoveInput(const Stream& stream) {
 
 std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
                                                    uint32_t frame_count) {
-  TRACE_DURATION("audio", "MixStage::LockBuffer");
+  TRACE_DURATION("audio", "MixStage::LockBuffer", "frame", frame, "length", frame_count);
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
   cur_mix_job_.buf = mix_buf_.get();
