@@ -2016,7 +2016,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   // Allocate two VParts, one active, and one inactive.
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
-  request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
+  request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
   request.slice_count = 1;
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
@@ -2049,7 +2049,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
 
   // Try to upgrade the partition (from GUID2 --> GUID)
-  request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
+  request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   fbl::unique_fd new_fd(
@@ -2090,7 +2090,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   ASSERT_FALSE(openable(kTestUniqueGUID2, kTestPartGUIDData));
 
   // Try upgrading when the "old" version doesn't exist.
-  request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
+  request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
   memcpy(request.guid, kTestUniqueGUID2, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName2);
   new_fd.reset(
@@ -2126,7 +2126,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   partition_caller.reset();
-  request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
+  request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
   memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
   strcpy(request.name, kTestPartName1);
   new_fd.reset(

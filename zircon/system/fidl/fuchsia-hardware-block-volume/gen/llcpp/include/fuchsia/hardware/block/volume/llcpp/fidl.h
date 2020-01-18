@@ -88,7 +88,7 @@ struct VolumeInfo {
 
 constexpr uint32_t MAX_SLICE_REQUESTS = 16u;
 
-constexpr uint32_t AllocatePartitionFlagInactive = 1u;
+constexpr uint32_t ALLOCATE_PARTITION_FLAG_INACTIVE = 1u;
 
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeGetInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeGetInfoResponseTable;

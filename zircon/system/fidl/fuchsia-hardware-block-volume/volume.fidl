@@ -43,7 +43,7 @@ struct VolumeManagerInfo {
 
 // Indicates that the partition should be created as inactive, implying that it
 // will be destroyed on reboot (unless activated by a call to "Activate").
-const uint32 AllocatePartitionFlagInactive = 0x00000001;
+const uint32 ALLOCATE_PARTITION_FLAG_INACTIVE = 0x00000001;
 
 // VolumeManager controls a collection of Volumes.
 [Layout = "Simple"]

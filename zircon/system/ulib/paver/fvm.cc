@@ -557,7 +557,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
     alloc_req_t alloc;
     // Allocate this partition as inactive so it gets deleted on the next
     // reboot if this stream fails.
-    alloc.flags = (*parts)[p].active ? 0 : volume::AllocatePartitionFlagInactive;
+    alloc.flags = (*parts)[p].active ? 0 : volume::ALLOCATE_PARTITION_FLAG_INACTIVE;
     alloc.slice_count = ext->slice_count;
     memcpy(&alloc.type, (*parts)[p].pd->type, sizeof(alloc.type));
     zx_cprng_draw(alloc.guid, GPT_GUID_LEN);

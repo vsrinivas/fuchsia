@@ -8,9 +8,9 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #endif
 
-#include <fvm/format.h>
-
 #include <zircon/assert.h>
+
+#include <fvm/format.h>
 
 namespace fvm {
 namespace {
@@ -24,7 +24,7 @@ constexpr uint32_t kVPartitionEntryFlagInactive = 0x00000001;
 #ifdef __Fuchsia__
 // Enforce target and host flags to match.
 static_assert(kVPartitionEntryFlagInactive ==
-                  fuchsia_hardware_block_volume_AllocatePartitionFlagInactive,
+                  fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE,
               "Inactive Flag must match FIDL definition.");
 #endif
 
