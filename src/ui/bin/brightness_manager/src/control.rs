@@ -29,6 +29,9 @@ const QUICK_SCAN_TIMEOUT_MS: i64 = 100;
 // This seems small but it is significant and works nicely.
 const LARGE_CHANGE_THRESHOLD_NITS: i32 = 0.016 as i32;
 const AUTO_MINIMUM_BRIGHTNESS: f32 = 0.004;
+const BRIGHTNESS_USER_MULTIPLIER_CENTER: f32 = 1.0;
+const BRIGHTNESS_USER_MULTIPLIER_MAX: f32 = 8.0;
+const BRIGHTNESS_USER_MULTIPLIER_MIN: f32 = 0.25;
 
 //This is the default table, and a default curve will be generated base on this table.
 //This will be replaced once SetBrightnessTable is called.
@@ -51,6 +54,7 @@ lazy_static! {
 
 lazy_static! {
     static ref GET_BRIGHTNESS_FAILED_FIRST: Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
+    static ref AUTO_BRIGHTNESS_ADJUSTMENT: Arc<Mutex<f32>> = Arc::new(Mutex::new(1.0));
 }
 
 pub struct WatcherCurrentResponder {
@@ -181,7 +185,7 @@ impl Control {
                 adjustment,
                 control_handle: _,
             } => {
-                self.set_auto_brightness_adjustment(adjustment).await;
+                self.scale_new_adjustment(adjustment).await;
             }
             BrightnessControlRequest::WatchAutoBrightnessAdjustment { responder } => {
                 let watch_adjustment_result = self
@@ -292,22 +296,26 @@ impl Control {
         }
     }
 
-    async fn set_auto_brightness_adjustment(&mut self, adjustment: f32) {
-        let old_table = {
-            let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
-            BrightnessTable { points: points.to_vec() }
-        };
-        let BrightnessTable { points } = &old_table;
-        let mut new_table = Vec::new();
-        for brightness_point in points {
-            new_table.push(BrightnessPoint {
-                ambient_lux: brightness_point.ambient_lux,
-                display_nits: brightness_point.display_nits * adjustment,
-            });
-        }
-        let new_table = BrightnessTable { points: new_table };
-        self.set_brightness_table(&new_table).await;
+    async fn scale_new_adjustment(&mut self, mut adjustment: f32) -> f32 {
         self.adjustment_sender_channel.lock().await.send_value(adjustment);
+        // |adjustment| ranges from [-1.0, 1.0]
+        // Default adjustment is 0.0, map that to x1.0
+        if adjustment >= 0.0 {
+            // Map from [0.0, 1.0] to [BRIGHTNESS_USER_MULTIPLIER_CENTER,
+            // BRIGHTNESS_USER_MULTIPLIER_MAX]
+            adjustment = adjustment
+                * (BRIGHTNESS_USER_MULTIPLIER_MAX - BRIGHTNESS_USER_MULTIPLIER_CENTER)
+                + BRIGHTNESS_USER_MULTIPLIER_CENTER;
+        } else {
+            // Map from [-1.0, 0.0) to [BRIGHTNESS_USER_MULTIPLIER_MIN,
+            // BRIGHTNESS_USER_MULTIPLIER_CENTER)
+            adjustment = adjustment
+                * (BRIGHTNESS_USER_MULTIPLIER_CENTER - BRIGHTNESS_USER_MULTIPLIER_MIN)
+                + BRIGHTNESS_USER_MULTIPLIER_CENTER;
+        }
+
+        *AUTO_BRIGHTNESS_ADJUSTMENT.lock().await = adjustment;
+        return adjustment;
     }
 
     async fn watch_auto_brightness_adjustment(
@@ -421,7 +429,8 @@ fn start_auto_brightness_task(
                     if let Some(handle) = set_brightness_abort_handle {
                         handle.abort();
                     }
-                    value = num_traits::clamp(value, AUTO_MINIMUM_BRIGHTNESS, 1.0);
+                    let adjustment = *AUTO_BRIGHTNESS_ADJUSTMENT.lock().await;
+                    value = num_traits::clamp(value * adjustment, AUTO_MINIMUM_BRIGHTNESS, 1.0);
                     set_brightness_abort_handle =
                         Some(set_brightness(value, backlight_clone).await);
                     sender_channel.lock().await.send_value(value);
@@ -703,36 +712,14 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_brightness_table_after_set_an_adjustment() {
+    async fn test_scale_new_adjustment() {
         let mut control = generate_control_struct().await;
-        control.set_auto_brightness_adjustment(0.3).await;
-
-        assert_eq!(cmp_float(0.0, brightness_curve_lux_to_nits(0, &control.spline).await), true);
-        assert_eq!(cmp_float(0.099, brightness_curve_lux_to_nits(1, &control.spline).await), true);
-        assert_eq!(cmp_float(0.199, brightness_curve_lux_to_nits(2, &control.spline).await), true);
-        assert_eq!(cmp_float(1.725, brightness_curve_lux_to_nits(15, &control.spline).await), true);
-        assert_eq!(cmp_float(1.871, brightness_curve_lux_to_nits(16, &control.spline).await), true);
-        assert_eq!(
-            cmp_float(11.061, brightness_curve_lux_to_nits(100, &control.spline).await),
-            true
-        );
-        assert_eq!(
-            cmp_float(16.236, brightness_curve_lux_to_nits(150, &control.spline).await),
-            true
-        );
-        assert_eq!(
-            cmp_float(30.791, brightness_curve_lux_to_nits(200, &control.spline).await),
-            true
-        );
-        assert_eq!(
-            cmp_float(36.361, brightness_curve_lux_to_nits(240, &control.spline).await),
-            true
-        );
-        assert_eq!(
-            cmp_float(48.888, brightness_curve_lux_to_nits(300, &control.spline).await),
-            true
-        );
-        assert_eq!(cmp_float(90., brightness_curve_lux_to_nits(340, &control.spline).await), true);
+        let mut new_adjust = control.scale_new_adjustment(-1.0).await;
+        assert_eq!(0.25, new_adjust);
+        new_adjust = control.scale_new_adjustment(1.0).await;
+        assert_eq!(8.0, new_adjust);
+        new_adjust = control.scale_new_adjustment(0.0).await;
+        assert_eq!(1.0, new_adjust);
     }
 
     #[fasync::run_singlethreaded(test)]
