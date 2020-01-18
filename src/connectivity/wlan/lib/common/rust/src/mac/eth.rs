@@ -11,6 +11,7 @@ use {
 // https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml
 pub const ETHER_TYPE_EAPOL: u16 = 0x888E;
 pub const ETHER_TYPE_IPV4: u16 = 0x0800;
+pub const ETHER_TYPE_IPV6: u16 = 0x86DD;
 
 pub const MAX_ETH_FRAME_LEN: usize = 2048;
 

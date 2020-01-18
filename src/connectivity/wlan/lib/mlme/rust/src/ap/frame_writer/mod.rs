@@ -14,7 +14,7 @@ use {
         mac::{self, Aid, Bssid, MacAddr, StatusCode},
         mgmt_writer,
         sequence::SequenceManager,
-        TimeUnit,
+        wmm, TimeUnit,
     },
     zerocopy::LayoutVerified,
 };
@@ -219,8 +219,13 @@ pub fn write_data_frame<B: Appendable>(
         .with_protected(protected)
         .with_from_ds(true);
 
-    // QoS is not fully supported. Write default, all zeroed QoS Control field.
-    let qos_ctrl = if qos_ctrl { Some(mac::QosControl(0)) } else { None };
+    let mut qos_ctrl = if qos_ctrl { Some(mac::QosControl(0)) } else { None };
+    if let Some(qos_ctrl) = &mut qos_ctrl {
+        if let Some(tid) = wmm::derive_tid(ether_type, payload) {
+            qos_ctrl.set_tid(tid as u16);
+        }
+    }
+
     let seq_ctrl = match qos_ctrl.as_ref() {
         None => mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&dst) as u16),
         Some(qos_ctrl) => {
@@ -449,7 +454,7 @@ mod tests {
         .expect("expected OK");
         assert_eq!(
             &[
-                // Mgmt header
+                // Data header
                 0b00001000, 0b00000010, // Frame Control
                 0, 0, // Duration
                 3, 3, 3, 3, 3, 3, // addr1
@@ -497,6 +502,78 @@ mod tests {
                 0x12, 0x34, // Protocol ID
                 // Data
                 1, 2, 3, 4, 5,
+            ][..],
+            &buf[..]
+        );
+    }
+
+    #[test]
+    fn data_frame_ipv4_qos() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_data_frame(
+            &mut buf,
+            &mut seq_mgr,
+            [3; 6],
+            Bssid([2; 6]),
+            [1; 6],
+            false,
+            true,                // qos_ctrl
+            0x0800,              // IPv4
+            &[1, 0xB0, 3, 4, 5], // DSCP = 0b101100 (i.e. VOICE-ADMIT)
+        )
+        .expect("expected OK");
+        assert_eq!(
+            &[
+                // Data header
+                0b10001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0x06, 0, // QoS Control - TID = 6
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x08, 0x00, // Protocol ID
+                // Data
+                1, 0xB0, 3, 4, 5,
+            ][..],
+            &buf[..]
+        );
+    }
+
+    #[test]
+    fn data_frame_ipv6_qos() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_data_frame(
+            &mut buf,
+            &mut seq_mgr,
+            [3; 6],
+            Bssid([2; 6]),
+            [1; 6],
+            false,
+            true,                           // qos_ctrl
+            0x86DD,                         // IPv6
+            &[0b0101, 0b10000000, 3, 4, 5], // DSCP = 0b010110 (i.e. AF23)
+        )
+        .expect("expected OK");
+        assert_eq!(
+            &[
+                // Data header
+                0b10001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0x03, 0, // QoS Control - TID = 3
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x86, 0xDD, // Protocol ID
+                // Data
+                0b0101, 0b10000000, 3, 4, 5,
             ][..],
             &buf[..]
         );

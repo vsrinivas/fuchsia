@@ -12,6 +12,7 @@ use {
         mac::{self, Aid, Bssid, MacAddr, PowerState},
         mgmt_writer,
         sequence::SequenceManager,
+        wmm,
     },
 };
 
@@ -144,8 +145,13 @@ pub fn write_data_frame<B: Appendable>(
         .with_protected(protected)
         .with_to_ds(true);
 
-    // QoS is not fully supported. Write default, all zeroed QoS Control field.
-    let qos_ctrl = if qos_ctrl { Some(mac::QosControl(0)) } else { None };
+    let mut qos_ctrl = if qos_ctrl { Some(mac::QosControl(0)) } else { None };
+    if let Some(qos_ctrl) = &mut qos_ctrl {
+        if let Some(tid) = wmm::derive_tid(ether_type, payload) {
+            qos_ctrl.set_tid(tid as u16);
+        }
+    }
+
     let seq_ctrl = match qos_ctrl.as_ref() {
         None => mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&dst) as u16),
         Some(qos_ctrl) => {
@@ -527,6 +533,78 @@ mod tests {
             0xAB, 0xCD, // Protocol ID
             // Payload
             4, 5, 6,
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    fn data_frame_ipv4_qos() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_data_frame(
+            &mut buf,
+            &mut seq_mgr,
+            Bssid([1; 6]),
+            [2; 6],
+            [3; 6],
+            true,   // protected
+            true,   // qos_ctrl
+            0x0800, // IPv4
+            // not valid IPv4 payload (too short), but we only care that it includes the DS field
+            &[4, 0xB0, 6], // DSCP = 0b101100 (i.e. VOICE-ADMIT)
+        )
+        .expect("failed writing data frame");
+        let expected = [
+            // Data header
+            0b10001000, 0b01000001, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            3, 3, 3, 3, 3, 3, // addr3
+            0x10, 0, // Sequence Control
+            0x06, 0, // QoS Control - TID = 6
+            // LLC header
+            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+            0, 0, 0, // OUI
+            0x08, 0x00, // Protocol ID
+            // Payload
+            4, 0xB0, 6,
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    fn data_frame_ipv6_qos() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_data_frame(
+            &mut buf,
+            &mut seq_mgr,
+            Bssid([1; 6]),
+            [2; 6],
+            [3; 6],
+            true,   // protected
+            true,   // qos_ctrl
+            0x86DD, // IPv6
+            // not valid IPv6 payload (too short), but we only care that it includes the DS field
+            &[0b0101, 0b10000000, 6], // DSCP = 0b010110 (i.e. AF23)
+        )
+        .expect("failed writing data frame");
+        let expected = [
+            // Data header
+            0b10001000, 0b01000001, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            3, 3, 3, 3, 3, 3, // addr3
+            0x10, 0, // Sequence Control
+            0x03, 0, // QoS Control - TID = 3
+            // LLC header
+            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+            0, 0, 0, // OUI
+            0x86, 0xDD, // Protocol ID
+            // Payload
+            0b0101, 0b10000000, 6,
         ];
         assert_eq!(&expected[..], &buf[..]);
     }

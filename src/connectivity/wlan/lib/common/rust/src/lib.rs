@@ -31,6 +31,7 @@ pub mod test_utils;
 pub mod tim;
 pub mod time;
 pub mod unaligned_view;
+pub mod wmm;
 
 use {
     channel::{Cbw, Phy},
