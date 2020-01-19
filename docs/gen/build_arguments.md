@@ -1968,7 +1968,7 @@ build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
 TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/631bb2ad3a6b9fa59f31b47e8111fa113566989e/infra/test_durations/default.json)" after the recipes start
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/212af4f54e753a1d25b25a8d0d396491f86402f4/infra/test_durations/default.json)" after the recipes start
 setting this arg.
 
 **Current value (from the default):** `"//integration/infra/test_durations.json"`
