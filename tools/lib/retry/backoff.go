@@ -4,6 +4,8 @@
 package retry
 
 import (
+	"math"
+	"math/rand"
 	"time"
 )
 
@@ -89,4 +91,38 @@ func (b *maxDurationBackoff) Reset() {
 // duration.
 func WithMaxDuration(b Backoff, max time.Duration) Backoff {
 	return &maxDurationBackoff{backOff: b, maxDuration: max, c: &systemClock{}}
+}
+
+// ExponentialBackoff is a policy that increase the delay exponentially.
+type ExponentialBackoff struct {
+	initialInterval time.Duration
+	maxInterval     time.Duration
+	multiplier      float64
+	iteration       int
+	randObj         *rand.Rand
+}
+
+// NewExponentialBackoff returns a new ExponentialBackoff object.
+func NewExponentialBackoff(initialInterval time.Duration, maxInterval time.Duration, multiplier float64) *ExponentialBackoff {
+	return &ExponentialBackoff{
+		initialInterval: initialInterval,
+		maxInterval:     maxInterval,
+		multiplier:      multiplier,
+		iteration:       0,
+		randObj:         rand.New(rand.NewSource(time.Now().UnixNano())),
+	}
+}
+
+func (e *ExponentialBackoff) Reset() {
+	e.iteration = 0
+}
+
+func (e *ExponentialBackoff) Next() time.Duration {
+	// next is sec in float64
+	next := float64(e.initialInterval)/float64(time.Second)*math.Pow(e.multiplier, float64(e.iteration)) + 10*e.randObj.Float64()
+	if next > float64(e.maxInterval)/float64(time.Second) {
+		return e.maxInterval
+	}
+	e.iteration++
+	return time.Duration(float64(time.Second) * next)
 }

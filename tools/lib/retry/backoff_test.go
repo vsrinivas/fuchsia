@@ -55,3 +55,33 @@ func TestMaxDurationBackoff(t *testing.T) {
 		t.Error("did not stop")
 	}
 }
+
+func TestExponentialBackoff(t *testing.T) {
+	backoff := NewExponentialBackoff(time.Second*5, time.Second*64, 2)
+	testBackoff := func() {
+		val := backoff.Next()
+		if val < 5*time.Second || val > 15*time.Second {
+			t.Errorf("expecting backoff between 5 to 15 secs, got %v", val)
+		}
+		val = backoff.Next()
+		if val < 10*time.Second || val > 25*time.Second {
+			t.Errorf("expecting backoff between 10 to 25 secs, got %v", val)
+		}
+		val = backoff.Next()
+		if val < 20*time.Second || val > 35*time.Second {
+			t.Errorf("expecting backoff between 20 to 35 secs, got %v", val)
+		}
+		val = backoff.Next()
+		if val < 40*time.Second || val > 55*time.Second {
+			t.Errorf("expecting backoff between 40 to 55 secs, got %v", val)
+		}
+		val = backoff.Next()
+		if val != 64*time.Second {
+			t.Errorf("expecting backoff of 64 secs, got %v", val)
+		}
+	}
+	testBackoff()
+	// Reset and test again
+	backoff.Reset()
+	testBackoff()
+}
