@@ -53,13 +53,6 @@ typedef struct fdio_socket_msg {
 */
 import "C"
 
-// Data owned by providerImpl used for statistics and other
-// introspection.
-type socketMetadata struct {
-	newSocketNotifications chan<- struct{}
-	ns                     *Netstack
-}
-
 // endpoint is the base structure that models all network sockets.
 type endpoint struct {
 	// TODO(fxb/37419): Remove TransitionalBase after methods landed.
@@ -79,7 +72,7 @@ type endpoint struct {
 	transProto tcpip.TransportProtocolNumber
 	netProto   tcpip.NetworkProtocolNumber
 
-	metadata *socketMetadata
+	ns *Netstack
 }
 
 func (ep *endpoint) close(cleanup func()) int64 {
@@ -215,7 +208,7 @@ func (ep *endpoint) SetSockOpt(level, optName int16, optVal []uint8) (socket.Bas
 		ep.mu.sockOptTimestamp = v != 0
 		ep.mu.Unlock()
 	} else {
-		if err := SetSockOpt(ep.ep, ep.metadata.ns, level, optName, optVal); err != nil {
+		if err := SetSockOpt(ep.ep, ep.ns, level, optName, optVal); err != nil {
 			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	}
@@ -236,7 +229,7 @@ func (ep *endpoint) GetSockOpt(level, optName int16) (socket.BaseSocketGetSockOp
 		ep.mu.Unlock()
 	} else {
 		var err *tcpip.Error
-		val, err = GetSockOpt(ep.ep, ep.metadata.ns, ep.netProto, ep.transProto, level, optName)
+		val, err = GetSockOpt(ep.ep, ep.ns, ep.netProto, ep.transProto, level, optName)
 		if err != nil {
 			return socket.BaseSocketGetSockOptResultWithErr(tcpipErrorToCode(err)), nil
 		}
@@ -294,7 +287,7 @@ type endpointWithSocket struct {
 	closeOnce sync.Once
 }
 
-func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, metadata *socketMetadata) (*endpointWithSocket, error) {
+func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, ns *Netstack) (*endpointWithSocket, error) {
 	var flags uint32
 	if transProto == tcp.ProtocolNumber {
 		flags |= zx.SocketStream
@@ -312,7 +305,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 			wq:         wq,
 			transProto: transProto,
 			netProto:   netProto,
-			metadata:   metadata,
+			ns:         ns,
 		},
 		local:         localS,
 		peer:          peerS,
@@ -345,7 +338,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	// Wait for initial state checking to complete.
 	<-initCh
 
-	metadata.addEndpoint(zx.Handle(localS), ep)
+	ns.onAddEndpoint(zx.Handle(localS), ep)
 
 	return eps, nil
 }
@@ -382,7 +375,7 @@ func (epe *endpointWithEvent) close() int64 {
 			panic(err)
 		}
 
-		epe.endpoint.metadata.removeEndpoint(key)
+		epe.endpoint.ns.onRemoveEndpoint(key)
 	})
 }
 
@@ -472,7 +465,7 @@ func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
 				panic(err)
 			}
 
-			eps.endpoint.metadata.removeEndpoint(key)
+			eps.endpoint.ns.onRemoveEndpoint(key)
 		})
 	})
 }
@@ -532,7 +525,7 @@ func (eps *endpointWithSocket) Accept() (int32, *endpointWithSocket, error) {
 		}
 	}
 	{
-		ep, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.metadata)
+		ep, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.ns)
 		return 0, ep, err
 	}
 }
@@ -1283,8 +1276,8 @@ func (s *streamSocketImpl) Accept(flags int16) (socket.StreamSocketAcceptResult,
 	return socket.StreamSocketAcceptResultWithResponse(socket.StreamSocketAcceptResponse{S: streamSocketInterface}), nil
 }
 
-func (metadata *socketMetadata) addEndpoint(handle zx.Handle, ep tcpip.Endpoint) {
-	if ep, loaded := metadata.ns.endpoints.LoadOrStore(handle, ep); loaded {
+func (ns *Netstack) onAddEndpoint(handle zx.Handle, ep tcpip.Endpoint) {
+	if ep, loaded := ns.endpoints.LoadOrStore(handle, ep); loaded {
 		var info stack.TransportEndpointInfo
 		switch t := ep.Info().(type) {
 		case *tcp.EndpointInfo:
@@ -1295,23 +1288,19 @@ func (metadata *socketMetadata) addEndpoint(handle zx.Handle, ep tcpip.Endpoint)
 		syslog.Errorf("endpoint map store error, key %d exists with endpoint %+v", handle, info)
 	}
 
-	metadata.ns.stats.SocketsCreated.Increment()
-	select {
-	case metadata.newSocketNotifications <- struct{}{}:
-	default:
-	}
+	ns.stats.SocketsCreated.Increment()
 }
 
-func (metadata *socketMetadata) removeEndpoint(handle zx.Handle) {
-	metadata.ns.endpoints.Delete(handle)
-	metadata.ns.stats.SocketsDestroyed.Increment()
+func (ns *Netstack) onRemoveEndpoint(handle zx.Handle) {
+	ns.endpoints.Delete(handle)
+	ns.stats.SocketsDestroyed.Increment()
 }
 
 type providerImpl struct {
 	controlService        socket.ControlService
 	datagramSocketService socket.DatagramSocketService
 	streamSocketService   socket.StreamSocketService
-	metadata              socketMetadata
+	ns                    *Netstack
 }
 
 var _ socket.Provider = (*providerImpl)(nil)
@@ -1362,14 +1351,14 @@ func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.Contr
 		return int16(code), socket.ControlInterface{}, nil
 	}
 	wq := new(waiter.Queue)
-	sp.metadata.ns.mu.Lock()
-	ep, err := sp.metadata.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
-	sp.metadata.ns.mu.Unlock()
+	sp.ns.mu.Lock()
+	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
+	sp.ns.mu.Unlock()
 	if err != nil {
 		return int16(tcpipErrorToCode(err)), socket.ControlInterface{}, nil
 	}
 	{
-		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, &sp.metadata)
+		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, sp.ns)
 		if err != nil {
 			return 0, socket.ControlInterface{}, err
 		}
@@ -1394,15 +1383,15 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 		return socket.ProviderSocket2ResultWithErr(code), nil
 	}
 	wq := new(waiter.Queue)
-	sp.metadata.ns.mu.Lock()
-	ep, err := sp.metadata.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
-	sp.metadata.ns.mu.Unlock()
+	sp.ns.mu.Lock()
+	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
+	sp.ns.mu.Unlock()
 	if err != nil {
 		return socket.ProviderSocket2ResultWithErr(tcpipErrorToCode(err)), nil
 	}
 
 	if transProto == tcp.ProtocolNumber {
-		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, &sp.metadata)
+		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, sp.ns)
 		if err != nil {
 			return socket.ProviderSocket2Result{}, err
 		}
@@ -1429,7 +1418,7 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 					wq:         wq,
 					transProto: transProto,
 					netProto:   netProto,
-					metadata:   &sp.metadata,
+					ns:         sp.ns,
 				},
 				local: localE,
 				peer:  peerE,
@@ -1458,7 +1447,7 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 		}
 		datagramSocketInterface := socket.DatagramSocketInterface{Channel: peerC}
 
-		sp.metadata.addEndpoint(localE, ep)
+		sp.ns.onAddEndpoint(localE, ep)
 
 		if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalOutgoing); err != nil {
 			s.close()

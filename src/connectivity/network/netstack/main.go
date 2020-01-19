@@ -168,8 +168,7 @@ func Main() {
 
 	var posixSocketProviderService socket.ProviderService
 
-	socketNotifications := make(chan struct{}, 1)
-	socketProviderImpl := providerImpl{metadata: socketMetadata{newSocketNotifications: socketNotifications, ns: ns}}
+	socketProviderImpl := providerImpl{ns: ns}
 	ns.stats = stats{
 		Stats: stk.Stats(),
 		SocketCount: bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
@@ -294,7 +293,7 @@ func Main() {
 		syslog.Warnf("could not initialize cobalt client: %s", err)
 	} else {
 		go func() {
-			if err := runCobaltClient(ctx, cobaltLogger, &ns.stats, ns.mu.stack, socketNotifications); err != nil {
+			if err := runCobaltClient(ctx, cobaltLogger, &ns.stats, ns.mu.stack); err != nil {
 				syslog.Errorf("cobalt client exited unexpectedly: %s", err)
 			}
 		}()

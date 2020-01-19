@@ -22,7 +22,6 @@ import (
 	"netstack/link/bridge"
 	"netstack/link/eth"
 	"netstack/routes"
-	"netstack/schedule"
 	"netstack/util"
 	networking_metrics "networking_metrics_golib"
 
@@ -81,7 +80,7 @@ type stats struct {
 // Map from Cobalt metric ID to metric value.
 type nicStats map[uint32]uint64
 
-func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, stats *stats, stk *stack.Stack, notify <-chan struct{}) error {
+func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, stats *stats, stk *stack.Stack) error {
 	// Metric                         | Sampling Interval | Aggregation Strategy
 	// SocketCountMax                 | socket creation   | max
 	// SocketsCreated                 | 1 minute          | delta
@@ -102,100 +101,104 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 	previousTime := time.Now()
 
 	lastNICStats := make(map[tcpip.NICID]nicStats)
-	return schedule.OncePerTick(ctx, notify, ticker.C, func() {
-		if sockets := stats.SocketCount.Value(); sockets > socketCountMax {
-			socketCountMax = sockets
-		}
-	}, func(ts time.Time) {
-		created := stats.SocketsCreated.Value()
-		destroyed := stats.SocketsDestroyed.Value()
-		tcpConnectionsClosed := stats.TCP.EstablishedClosed.Value()
-		tcpConnectionsReset := stats.TCP.EstablishedResets.Value()
-		tcpConnectionsTimedOut := stats.TCP.EstablishedTimedout.Value()
-
-		// TODO: replace with time.Duration.Microseconds when it's available.
-		period := ts.Sub(previousTime).Nanoseconds() / 1e3
-		previousTime = ts
-		events := []cobalt.CobaltEvent{
-			{
-				MetricId: networking_metrics.SocketCountMaxMetricId,
-				Payload:  eventCount(period, socketCountMax),
-			},
-			{
-				MetricId: networking_metrics.SocketsCreatedMetricId,
-				Payload:  eventCount(period, created-lastCreated),
-			},
-			{
-				MetricId: networking_metrics.SocketsDestroyedMetricId,
-				Payload:  eventCount(period, destroyed-lastDestroyed),
-			},
-			{
-				MetricId: networking_metrics.TcpConnectionsEstablishedTotalMetricId,
-				Payload:  eventCount(period, stats.TCP.CurrentEstablished.Value()),
-			},
-			{
-				MetricId: networking_metrics.TcpConnectionsClosedMetricId,
-				Payload:  eventCount(period, tcpConnectionsClosed-lastTcpConnectionsClosed),
-			},
-			{
-				MetricId: networking_metrics.TcpConnectionsResetMetricId,
-				Payload:  eventCount(period, tcpConnectionsReset-lastTcpConnectionsReset),
-			},
-			{
-				MetricId: networking_metrics.TcpConnectionsTimedOutMetricId,
-				Payload:  eventCount(period, tcpConnectionsTimedOut-lastTcpConnectionsTimedOut),
-			},
-		}
-
-		nicInfos := stk.NICInfo()
-		for nicid, info := range nicInfos {
-			packetsSent, packetsReceived := info.Stats.Tx.Packets.Value(), info.Stats.Rx.Packets.Value()
-			bytesSent, bytesReceived := info.Stats.Tx.Bytes.Value(), info.Stats.Rx.Bytes.Value()
-
-			lastStats, ok := lastNICStats[nicid]
-			if !ok {
-				lastStats = make(nicStats)
-				lastNICStats[nicid] = lastStats
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ts := <-ticker.C:
+			if sockets := stats.SocketCount.Value(); sockets > socketCountMax {
+				socketCountMax = sockets
 			}
-			deltaPacketsSent := packetsSent - lastStats[networking_metrics.PacketsSentMetricId]
-			deltaPacketsReceived := packetsReceived - lastStats[networking_metrics.PacketsReceivedMetricId]
-			deltaBytesSent := bytesSent - lastStats[networking_metrics.BytesSentMetricId]
-			deltaBytesReceived := bytesReceived - lastStats[networking_metrics.BytesReceivedMetricId]
+			created := stats.SocketsCreated.Value()
+			destroyed := stats.SocketsDestroyed.Value()
+			tcpConnectionsClosed := stats.TCP.EstablishedClosed.Value()
+			tcpConnectionsReset := stats.TCP.EstablishedResets.Value()
+			tcpConnectionsTimedOut := stats.TCP.EstablishedTimedout.Value()
 
-			lastStats[networking_metrics.PacketsSentMetricId] = packetsSent
-			lastStats[networking_metrics.PacketsReceivedMetricId] = packetsReceived
-			lastStats[networking_metrics.BytesSentMetricId] = bytesSent
-			lastStats[networking_metrics.BytesReceivedMetricId] = bytesReceived
+			// TODO: replace with time.Duration.Microseconds when it's available.
+			period := ts.Sub(previousTime).Nanoseconds() / 1e3
+			previousTime = ts
+			events := []cobalt.CobaltEvent{
+				{
+					MetricId: networking_metrics.SocketCountMaxMetricId,
+					Payload:  eventCount(period, socketCountMax),
+				},
+				{
+					MetricId: networking_metrics.SocketsCreatedMetricId,
+					Payload:  eventCount(period, created-lastCreated),
+				},
+				{
+					MetricId: networking_metrics.SocketsDestroyedMetricId,
+					Payload:  eventCount(period, destroyed-lastDestroyed),
+				},
+				{
+					MetricId: networking_metrics.TcpConnectionsEstablishedTotalMetricId,
+					Payload:  eventCount(period, stats.TCP.CurrentEstablished.Value()),
+				},
+				{
+					MetricId: networking_metrics.TcpConnectionsClosedMetricId,
+					Payload:  eventCount(period, tcpConnectionsClosed-lastTcpConnectionsClosed),
+				},
+				{
+					MetricId: networking_metrics.TcpConnectionsResetMetricId,
+					Payload:  eventCount(period, tcpConnectionsReset-lastTcpConnectionsReset),
+				},
+				{
+					MetricId: networking_metrics.TcpConnectionsTimedOutMetricId,
+					Payload:  eventCount(period, tcpConnectionsTimedOut-lastTcpConnectionsTimedOut),
+				},
+			}
 
-			// TODO(43237): log the NIC features (eth, WLAN, bridge) associated with each datapoint
-			events = append(
-				events,
-				cobalt.CobaltEvent{
-					MetricId: networking_metrics.PacketsSentMetricId,
-					Payload:  eventCount(period, deltaPacketsSent),
-				},
-				cobalt.CobaltEvent{
-					MetricId: networking_metrics.PacketsReceivedMetricId,
-					Payload:  eventCount(period, deltaPacketsReceived),
-				},
-				cobalt.CobaltEvent{
-					MetricId: networking_metrics.BytesSentMetricId,
-					Payload:  eventCount(period, deltaBytesSent),
-				},
-				cobalt.CobaltEvent{
-					MetricId: networking_metrics.BytesReceivedMetricId,
-					Payload:  eventCount(period, deltaBytesReceived),
-				},
-			)
+			nicInfos := stk.NICInfo()
+			for nicid, info := range nicInfos {
+				packetsSent, packetsReceived := info.Stats.Tx.Packets.Value(), info.Stats.Rx.Packets.Value()
+				bytesSent, bytesReceived := info.Stats.Tx.Bytes.Value(), info.Stats.Rx.Bytes.Value()
+
+				lastStats, ok := lastNICStats[nicid]
+				if !ok {
+					lastStats = make(nicStats)
+					lastNICStats[nicid] = lastStats
+				}
+				deltaPacketsSent := packetsSent - lastStats[networking_metrics.PacketsSentMetricId]
+				deltaPacketsReceived := packetsReceived - lastStats[networking_metrics.PacketsReceivedMetricId]
+				deltaBytesSent := bytesSent - lastStats[networking_metrics.BytesSentMetricId]
+				deltaBytesReceived := bytesReceived - lastStats[networking_metrics.BytesReceivedMetricId]
+
+				lastStats[networking_metrics.PacketsSentMetricId] = packetsSent
+				lastStats[networking_metrics.PacketsReceivedMetricId] = packetsReceived
+				lastStats[networking_metrics.BytesSentMetricId] = bytesSent
+				lastStats[networking_metrics.BytesReceivedMetricId] = bytesReceived
+
+				// TODO(43237): log the NIC features (eth, WLAN, bridge) associated with each datapoint
+				events = append(
+					events,
+					cobalt.CobaltEvent{
+						MetricId: networking_metrics.PacketsSentMetricId,
+						Payload:  eventCount(period, deltaPacketsSent),
+					},
+					cobalt.CobaltEvent{
+						MetricId: networking_metrics.PacketsReceivedMetricId,
+						Payload:  eventCount(period, deltaPacketsReceived),
+					},
+					cobalt.CobaltEvent{
+						MetricId: networking_metrics.BytesSentMetricId,
+						Payload:  eventCount(period, deltaBytesSent),
+					},
+					cobalt.CobaltEvent{
+						MetricId: networking_metrics.BytesReceivedMetricId,
+						Payload:  eventCount(period, deltaBytesReceived),
+					},
+				)
+			}
+			cobaltLogger.LogCobaltEvents(events)
+			socketCountMax = stats.SocketCount.Value()
+			lastCreated = created
+			lastDestroyed = destroyed
+			lastTcpConnectionsClosed = tcpConnectionsClosed
+			lastTcpConnectionsReset = tcpConnectionsReset
+			lastTcpConnectionsTimedOut = tcpConnectionsTimedOut
 		}
-		cobaltLogger.LogCobaltEvents(events)
-		socketCountMax = stats.SocketCount.Value()
-		lastCreated = created
-		lastDestroyed = destroyed
-		lastTcpConnectionsClosed = tcpConnectionsClosed
-		lastTcpConnectionsReset = tcpConnectionsReset
-		lastTcpConnectionsTimedOut = tcpConnectionsTimedOut
-	})
+	}
 }
 
 func eventCount(period int64, count uint64) cobalt.EventPayload {

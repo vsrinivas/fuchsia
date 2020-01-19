@@ -63,7 +63,6 @@ test_package("netstack_gotests") {
     ":netstack_test",
     "ifconfig:netstack_ifconfig_test",
     "netstack_service_test",
-    "schedule:netstack_schedule_test",
     "util:netstack_util_test",
   ]
 
@@ -166,7 +165,6 @@ group("tests") {
     "dns:netstack_dns_gotests",
     "link/bridge:netstack_link_bridge_test($host_toolchain)",
     "routes:netstack_routes_gotests",
-    "schedule:netstack_schedule_test($host_toolchain)",
     "tests:netstack_manual_tests",
     "util:netstack_util_test($host_toolchain)",
   ]
