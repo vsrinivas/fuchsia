@@ -109,11 +109,7 @@ zx_status_t dh_send_init(Device* dev_ptr) {
 zx_status_t dh_send_suspend(Device* dev_ptr, uint32_t flags) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Suspend(flags, [dev](zx_status_t status) {
-    if (status != ZX_OK) {
-      log(ERROR, "devcoordinator: rpc: suspend '%s' status %d\n", dev->name().data(), status);
-    }
-
-    log(ERROR, "devcoordinator: suspended name='%s' status %d\n", dev->name().data(), status);
+    log(INFO, "devcoordinator: suspended name='%s' status %d\n", dev->name().data(), status);
     dev->CompleteSuspend(status);
   });
   return ZX_OK;
