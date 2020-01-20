@@ -24,7 +24,7 @@ able to write a black box test that can:
 - Access the hub of the root component.
 - Wait for events to occur in component manager.
 - Halt a component manager task on an event.
-- Inject framework or builtin capabilities into component manager.
+- Inject or mock out capabilities.
 - Interpose between a client and a service.
 
 Note: The black box testing framework covers all of these points.
@@ -97,7 +97,7 @@ component manager. This code demonstrates using the `BreakpointSystem` service:
 ```rust
 let breakpoint_system = test.connect_to_breakpoint_system().await?;
 let receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
-breakpoint_system.start_component_manager().await?;
+breakpoint_system.start_component_tree().await?;
 ```
 
 By the end of this code block:
@@ -166,13 +166,13 @@ let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").a
 
 // Get a receiver by setting breakpoints
 let breakpoint_system = test.connect_to_breakpoint_system().await?;
-let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
 // Unblock component manager
-breakpoint_system.start_component_manager().await?;
+breakpoint_system.start_component_tree().await?;
 
 // Wait for an invocation
-let invocation = receiver.expect_type::<StartInstance>().await?;
+let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
 
 // Verify state
 ...
@@ -198,15 +198,15 @@ It is possible to register multiple receivers, each listening to their own set
 of events:
 
 ```rust
-// StartInstance and RouteCapability events can be interleaved,
+// BeforeStartInstance and RouteCapability events can be interleaved,
 // so use different receivers.
-let start_receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+let start_receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 let route_receiver =
     breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
 // Expect 5 components to start
 for _ in 1..=5 {
-    let invocation = start_receiver.expect_type::<StartInstance>().await?;
+    let invocation = start_receiver.expect_type::<BeforeStartInstance>().await?;
     invocation.resume().await?;
 }
 
@@ -246,15 +246,36 @@ invocation.resume().await?;
 
 #### Capability injection {#capability-injection}
 
-Several tests need to communicate with components directly. The simplest way
-to do this is for a component to connect to a capability offered by the test.
+Several tests need to communicate with components directly. It is often also
+desirable to mock out capabilities that a component connects to in the test. The
+simplest way to do this is to implement an `Injector`.
 
-It is possible to listen for a `RouteCapability` event and inject an external
-capability provider:
+```rust
+/// Client <---> EchoCapability
+/// EchoCapability implements the Echo protocol and responds to clients.
+struct EchoCapability;
+
+#[async_trait]
+impl Injector for EchoCapability {
+    type Marker = fecho::EchoMarker;
+
+    async fn serve(self: Arc<Self>, mut request_stream: fecho::EchoRequestStream) {
+        // Start listening to requests from client
+        while let Some(Ok(fecho::EchoRequest::EchoString { value: Some(input), responder })) =
+            request_stream.next().await
+        {
+            // Respond to the client with the echo string.
+            responder.send(Some(&input)).expect("failed to send echo response");
+        }
+    }
+}
+```
+
+It is possible to listen for a `RouteCapability` event and install the injector:
 
 ```rust
 // Create the server end of EchoService
-let echo_service = EchoService::new();
+let echo_capability = EchoCapability::new();
 
 // Set a breakpoint on RouteCapability events
 let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
@@ -265,12 +286,22 @@ let invocation = receiver.wait_until_component_capability(
     "/svc/fuchsia.echo.EchoService",
 ).await?;
 
-// Inject the EchoService capability
-let serve_fn = echo_capability.serve_async();
-invocation.inject(serve_fn).await?;
+invocation.inject(echo_capability).await?;
 
 // Resume from the invocation
 invocation.resume().await?;
+```
+
+Alternatively, the `BreakpointSystem` can automatically install an injector
+matching the capability requested by any component in the test.
+
+```rust
+let echo_capability = EchoCapability::new();
+breakpoint_system.install_injector(echo_capability).await?;
+
+// Set up other breakpoints.
+
+breakpoint_system.start_component_tree().await?;
 ```
 
 #### Capability interposition {#capability-interposition}
@@ -330,6 +361,18 @@ invocation.interpose(interposer).await?;
 invocation.resume().await?;
 ```
 
+Alternatively, the `BreakpointSystem` can automatically install an interposer
+matching the capability requested by any component in the test.
+
+```rust
+let (interposer, mut rx) = EchoInterposer::new();
+breakpoint_system.install_interposer(interposer).await?;
+
+// Set up other breakpoints.
+
+breakpoint_system.start_component_tree().await?;
+```
+
 #### Event sinks {#event-sinks}
 
 It is possible to soak up events of certain types and drain them at a later
@@ -337,7 +380,7 @@ point in time:
 
 ```rust
 let receiver = breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
-let sink = breakpoint_system.soak_events(vec![StartInstance::TYPE]).await?;
+let sink = breakpoint_system.soak_events(vec![BeforeStartInstance::TYPE]).await?;
 
 // Wait for the root component to be destroyed
 let invocation = receiver.expect_exact::<PostDestroyInstance>("/").await?;
@@ -349,15 +392,15 @@ let events = sink.drain().await;
 // Verify that the 3 components were started in the correct order
 assert_eq!(events, vec![
     DrainedEvent {
-        event_type: StartInstance::TYPE,
+        event_type: BeforeStartInstance::TYPE,
         target_moniker: "/".to_string()
     },
     DrainedEvent {
-        event_type: StartInstance::TYPE,
+        event_type: BeforeStartInstance::TYPE,
         target_moniker: "/foo:0".to_string()
     },
     DrainedEvent {
-        event_type: StartInstance::TYPE,
+        event_type: BeforeStartInstance::TYPE,
         target_moniker: "/foo:0/bar:0".to_string()
     }
 ]);

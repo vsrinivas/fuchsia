@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     breakpoint_system_client::Injector,
     fidl_fidl_examples_routing_echo as fecho,
-    futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
 };
 
@@ -81,17 +81,14 @@ impl Injector for EchoCapability {
     type Marker = fecho::EchoMarker;
 
     async fn serve(self: Arc<Self>, mut request_stream: fecho::EchoRequestStream) {
-        while let Some(event) =
-            request_stream.try_next().await.expect("failed to serve echo service")
+        // Start listening to requests from the client.
+        while let Some(Ok(fecho::EchoRequest::EchoString { value: Some(input), responder })) =
+            request_stream.next().await
         {
-            let fecho::EchoRequest::EchoString { value, responder } = event;
-            let echo = self
-                .tx
-                .send(value.clone().unwrap_or(String::new()))
-                .await
-                .expect("failed to send echo to test");
+            let echo = self.tx.send(input.clone()).await.expect("failed to send echo to test");
             echo.await.expect("Failed to receive a response");
-            responder.send(value.as_deref()).expect("failed to send echo response");
+            // Respond to the client with the echo string.
+            responder.send(Some(&input)).expect("failed to send echo response");
         }
     }
 }
