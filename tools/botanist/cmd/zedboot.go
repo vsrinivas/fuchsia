@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
@@ -121,59 +120,58 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	defer cancel()
 	errs := make(chan error)
 
-	if serial := devices[0].Serial(); serial != nil && cmd.serialLogFile != "" {
-		defer serial.Close()
+	var serialLogs []*logWriter
+	for i, device := range devices {
+		if device.Serial() != nil {
+			if cmd.serialLogFile != "" {
+				serialLogFile := cmd.serialLogFile
+				if len(devices) > 1 {
+					serialLogFile = getIndexedFilename(cmd.serialLogFile, i)
+				}
+				serialLog, err := os.Create(serialLogFile)
+				if err != nil {
+					return err
+				}
+				serialLogs = append(serialLogs, &logWriter{
+					name: serialLogFile,
+					file: serialLog})
 
-		// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
-		// arm64 devices should already be enabling kernel.serial at compile time.
-		cmdlineArgs = append(cmdlineArgs, "kernel.serial=legacy")
-		// Force serial output to the console instead of buffering it.
-		cmdlineArgs = append(cmdlineArgs, "kernel.bypass-debuglog=true")
+				// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
+				// output file.  This should give us everything since Zedboot boot, and new messages should
+				// be written to directly to the serial port without needing to tail with `dlog -f`.
+				if _, err = io.WriteString(device.Serial(), "\ndlog\n"); err != nil {
+					logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
+				}
 
-		serialLog, err := os.Create(cmd.serialLogFile)
-		if err != nil {
-			return err
-		}
-		defer serialLog.Close()
-		// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
-		// output file.  This should give us everything since Zedboot boot, and new messages should
-		// be written to directly to the serial port without needing to tail with `dlog -f`.
-		if _, err = io.WriteString(serial, "\ndlog\n"); err != nil {
-			return fmt.Errorf("failed to tail zedboot dlog: %v", err)
-		}
-		go func() {
-			if _, err := io.Copy(serialLog, serial); err != nil {
-				errs <- fmt.Errorf("failed to write serial log: %v", err)
+				go func(device *target.DeviceTarget) {
+					for {
+						_, err := io.Copy(serialLog, device.Serial())
+						if err != nil && err != io.EOF {
+							logger.Errorf(ctx, "failed to write serial log: %v", err)
+							return
+						}
+					}
+				}(device)
+				cmdlineArgs = append(cmdlineArgs, "kernel.bypass-debuglog=true")
 			}
-		}()
-	}
-
-	// Defer asynchronously restarts of each device.
-	defer func() {
-		var wg sync.WaitGroup
-		for _, device := range devices {
-			wg.Add(1)
-			go func(device *target.DeviceTarget) {
-				defer wg.Done()
-				device.Restart(ctx)
-			}(device)
+			// Modify the cmdlineArgs passed to the kernel on boot to enable serial on x64.
+			// arm64 devices should already be enabling kernel.serial at compile time.
+			cmdlineArgs = append(cmdlineArgs, "kernel.serial=legacy")
 		}
-		wg.Wait()
-	}()
 
-	var wg sync.WaitGroup
-	for _, device := range devices {
-		wg.Add(1)
 		go func(device *target.DeviceTarget) {
-			defer wg.Done()
 			if err := device.Start(ctx, imgs, cmdlineArgs); err != nil {
 				errs <- err
 			}
 		}(device)
 	}
-
+	for _, log := range serialLogs {
+		defer log.file.Close()
+	}
+	for _, device := range devices {
+		defer device.Restart(ctx)
+	}
 	go func() {
-		wg.Wait()
 		// We execute tests here against the 0th device, there may be N devices
 		// in the test bed but all other devices are driven by the tests not
 		// the test runner.
@@ -184,8 +182,9 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	case err := <-errs:
 		return err
 	case <-ctx.Done():
-		return nil
 	}
+
+	return checkEmptyLogs(ctx, serialLogs)
 }
 
 func (cmd *ZedbootCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
