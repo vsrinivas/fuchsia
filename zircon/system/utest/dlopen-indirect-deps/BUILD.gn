@@ -2,45 +2,72 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("dlopen-indirect-deps") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("dlopen-indirect-deps") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dlopen-indirect-deps.c" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/unittest",
   ]
   data_deps = [ ":dlopen-indirect-deps-test-module" ]
 }
 
-zx_library("dlopen-indirect-deps-test-module") {
+shared_library("dlopen-indirect-deps-test-module") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",
-    "$zx/system/utest/debugger:*",
+    "//zircon/system/utest/debugger:*",
   ]
-  testonly = true
-  shared = true
   sources = [ "dlopen-indirect-deps-test-module/test-module.c" ]
   deps = [ ":dlopen-indirect-deps-test-liba" ]
 }
 
-zx_library("dlopen-indirect-deps-test-liba") {
+shared_library("dlopen-indirect-deps-test-liba") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",
-    "$zx/system/utest/debugger:*",
+    "//zircon/system/utest/debugger:*",
   ]
-  testonly = true
-  shared = true
   sources = [
     "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/liba.c",
   ]
   deps = [ ":dlopen-indirect-deps-test-libb" ]
 }
 
-zx_library("dlopen-indirect-deps-test-libb") {
+shared_library("dlopen-indirect-deps-test-libb") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",
-    "$zx/system/utest/debugger:*",
+    "//zircon/system/utest/debugger:*",
   ]
-  testonly = true
-  shared = true
   sources = [ "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/dlopen-indirect-deps-test-libb/libb.c" ]
+}
+
+migrated_manifest("dlopen-indirect-deps-manifest") {
+  deps = [ ":dlopen-indirect-deps" ]
 }
