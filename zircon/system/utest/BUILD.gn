@@ -237,7 +237,6 @@ if (current_cpu != "") {
       "service:test",
       "stdio",
       "sysinfo",
-      "sysmem",
       "thread-initial-state",
       "thread-safe-deleter",
       "timers",
