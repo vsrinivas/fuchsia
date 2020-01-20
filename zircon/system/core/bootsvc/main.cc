@@ -159,13 +159,13 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 //     - fuchsia.boot.RootJob, which provides root job handles
 //     - fuchsia.boot.RootResource, which provides root resource handles
 // - A loader that can load libraries from /boot, hosted by bootsvc
-// If set to true `shutdown` will cause the system to power off when the next
-// process exits. If set to false, the system will reboot insted of powering
-// off.
+//
+// If the next process terminates, bootsvc will quit.
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
-                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc, bool shutdown,
-                       const zx::resource& root_rsrc, const zx::debuglog& log) {
+                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc,
+                       const zx::resource& root_rsrc, const zx::debuglog& log,
+                       async::Loop& loop) {
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
     bootsvc_next =
@@ -255,23 +255,24 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   printf("bootsvc: Launched %s\n", next_program);
 
   // wait for termination and then reboot or power off the system
-  zx_signals_t observed = ZX_SIGNAL_NONE;
+  zx_signals_t observed;
   zx_status_t termination_result =
       proc_handle.wait_one(ZX_TASK_TERMINATED, zx::time::basic_time::infinite(), &observed);
   if (termination_result != ZX_OK) {
     printf("bootsvc: failure waiting for next process termination %i\n", termination_result);
-    return;
   }
-  if (shutdown) {
-    zx_system_powerctl(root_rsrc.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
-  } else {
-    zx_system_powerctl(root_rsrc.get(), ZX_SYSTEM_POWERCTL_REBOOT, NULL);
-  }
+
+  // If the next process terminated, quit the main loop.
+  loop.Quit();
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
+  // Close the loader-service channel so the service can go away.
+  // We won't use it any more (no dlopen calls in this process).
+  zx_handle_close(dl_set_loader_service(ZX_HANDLE_INVALID));
+
   // NOTE: This will be the only source of zx::debuglog in the system.
   // Eventually, we will receive this through a startup handle from userboot.
   zx::debuglog log;
@@ -283,9 +284,9 @@ int main(int argc, char** argv) {
 
   printf("bootsvc: Starting...\n");
 
-  // Close the loader-service channel so the service can go away.
-  // We won't use it any more (no dlopen calls in this process).
-  zx_handle_close(dl_set_loader_service(ZX_HANDLE_INVALID));
+  status = zx::job::default_job()->set_critical(0, *zx::process::self());
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to set bootsvc as critical to root-job: %s\n",
+                zx_status_get_string(status));
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
@@ -299,7 +300,7 @@ int main(int argc, char** argv) {
   ZX_ASSERT_MSG(status == ZX_OK, "BootfsService creation failed: %s\n",
                 zx_status_get_string(status));
   status = bootfs_svc->AddBootfs(std::move(bootfs_vmo));
-  ZX_ASSERT_MSG(status == ZX_OK, "bootfs add failed: %s\n", zx_status_get_string(status));
+  ZX_ASSERT_MSG(status == ZX_OK, "Bootfs add failed: %s\n", zx_status_get_string(status));
 
   // Process the ZBI boot image
   printf("bootsvc: Retrieving boot image...\n");
@@ -351,24 +352,16 @@ int main(int argc, char** argv) {
   ZX_ASSERT_MSG(status == ZX_OK, "BootfsLoaderService creation failed: %s\n",
                 zx_status_get_string(status));
 
-  const char* suspend_behavior = getenv("bootsvc.on_next_process_exit");
-  bool shutdown = false;
-  if (suspend_behavior != nullptr) {
-    if (strlen(suspend_behavior) == 8 && strcmp("shutdown", suspend_behavior) == 0) {
-      shutdown = true;
-    }
-  }
-
   // Launch the next process in the chain.  This must be in a thread, since
   // it may issue requests to the loader, which runs in the async loop that
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
-  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, shutdown,
-              std::cref(root_resource), std::cref(log))
+  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc,
+              std::cref(root_resource), std::cref(log), std::ref(loop))
       .detach();
 
   // Begin serving the bootfs fileystem and loader
   loop.Run();
-  printf("bootsvc: exiting\n");
+  printf("bootsvc: Exiting\n");
   return 0;
 }

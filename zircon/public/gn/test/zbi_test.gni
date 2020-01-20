@@ -12,7 +12,7 @@ import("$zx/public/gn/zbi.gni")
 # zero, but shutting down.  This string includes some random data that
 # shouldn't appear elsewhere, to avoid false-positive matches.
 zbi_test_success_string =
-    "*** ZBI test successful! MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0= ***"
+    "***ZBI-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"
 
 # Build a ZBI file to be run as a standalone ZBI test.
 #

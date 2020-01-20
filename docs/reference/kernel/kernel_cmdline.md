@@ -41,11 +41,6 @@ Arguments to the program can optionally be specified using a comma separator
 between the program and individual arguments. For example,
 'bootsvc.next=bin/mybin,arg1,arg2'.
 
-## bootsvc.on_next_process_exit=reboot|shutdown
-
-What bootsvc should do when the "next process" (see
-[bootsvc.next](#bootsvc_next_bootfs-path)) exits. This defaults to 'reboot'.
-
 ## clock\.backstop=\<seconds\>
 
 Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
@@ -372,19 +367,22 @@ kernel thread should sleep between checks.
 The `k oom info` command will show the current value of this and other
 parameters.
 
-## kernel.root-job.reboot=\<bool>
+## kernel.root-job.behavior=\<string>
 
-This option specifies whether the kernel should reboot the system when the root
-job is either: terminated, or has no jobs and no processes.
+This option specifies what action the kernel should take when the root job is
+either terminated, or has no jobs and no processes. This can take one of the
+following values:
 
-By default, the kernel will halt the system, stopping any further execution.
+* halt -- Halt the system
+* reboot -- Reboot the system (the default)
+* bootloader -- Reboot into the bootloader
+* recovery -- Reboot into the recovery partition
+* shutdown -- Shut down the system
 
-## kernel.root-job.shutdown=\<bool>
+## kernel.root-job.notice=\<string>
 
-This option specifies whether the kernel should shutdown the system when the
-root job is either: terminated, or has no jobs and no processes.
-
-By default, the kernel will halt the system, stopping any further execution.
+The option allows a notice to be printed when the root job is either:
+terminated, or has no jobs and no processes.
 
 ## kernel.x86.disable_spec_mitigations=\<bool>
 
@@ -447,7 +445,7 @@ This option only affects x86 systems.
 If false, this option leaves PCI devices running when calling mexec. Defaults
 to true.
 
-## kernel.serial=\<string\>
+## kernel.serial=\<string>
 
 This controls what serial port is used.  If provided, it overrides the serial
 port described by the system's bootdata.  The kernel debug serial port is

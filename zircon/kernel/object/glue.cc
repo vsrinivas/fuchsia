@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/crashlog.h>
+#include <lib/debuglog.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
@@ -52,18 +53,40 @@ class RootJobObserver final : public StateObserver {
     if (HasChild(state)) {
       return 0;
     }
-    if (gCmdline.GetBool("kernel.root-job.reboot", false)) {
-      printf("root-job: rebooting\n");
-      platform_halt(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
-    } else if (gCmdline.GetBool("kernel.root-job.shutdown", true)) {
-      printf("root-job: shutting down\n");
-      platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
-    } else {
-      printf("root-job: halting\n");
-      platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
-    }
+    // We may be in an interrupt context, e.g. thread_process_pending_signals(),
+    // so we schedule a DPC.
+    dpc_queue(&dpc_, true);
     return kNeedRemoval;
   }
+
+  static void Halt(dpc_t* dpc) {
+    const char* notice = gCmdline.GetString("kernel.root-job.notice");
+    if (notice != nullptr) {
+      printf("root-job: notice: %s\n", notice);
+    }
+
+    const char* behavior = gCmdline.GetString("kernel.root-job.behavior");
+    if (behavior == nullptr) {
+      behavior = "reboot";
+    }
+
+    printf("root-job: taking %s action\n", behavior);
+    dlog_shutdown();
+
+    if (!strcmp(behavior, "halt")) {
+      platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
+    } else if (!strcmp(behavior, "bootloader")) {
+      platform_halt(HALT_ACTION_REBOOT_BOOTLOADER, HALT_REASON_SW_RESET);
+    } else if (!strcmp(behavior, "recovery")) {
+      platform_halt(HALT_ACTION_REBOOT_RECOVERY, HALT_REASON_SW_RESET);
+    } else if (!strcmp(behavior, "shutdown")) {
+      platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
+    } else {
+      platform_halt(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
+    }
+  }
+
+  dpc_t dpc_{LIST_INITIAL_CLEARED_VALUE, &Halt, nullptr};
 };
 
 static ktl::unique_ptr<RootJobObserver> root_job_observer;

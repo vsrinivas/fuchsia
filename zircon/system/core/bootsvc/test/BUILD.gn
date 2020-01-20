@@ -8,6 +8,7 @@ group("test") {
   testonly = true
   deps = [
     ":bootsvc-integration-tests",
+    ":bootsvc-root-job-test",
     ":bootsvc-unit-test",
   ]
 }
@@ -117,6 +118,7 @@ zbi_test("bootsvc-integration-tests") {
   args = [
     "userboot=bin/bootsvc",
     "bootsvc.next=bin/bootsvc-integration-test,testargument",
+    "kernel.root-job.behavior=shutdown",
   ]
   deps = [
     # We need a zircon kernel to get off the ground at all.
@@ -137,4 +139,26 @@ zbi_test("bootsvc-integration-tests") {
 
   output_dir = root_build_dir
   output_name = "$target_name-$current_cpu"
+}
+
+zbi_test("bootsvc-root-job-test") {
+  args = [
+    "userboot=bin/bootsvc",
+    "bootsvc.next=test/core/zbi-child-test",
+    "kernel.root-job.behavior=shutdown",
+    "kernel.root-job.notice=$zbi_test_success_string",
+  ]
+  deps = [
+    # We need a zircon kernel to get off the ground at all.
+    "$zx/kernel",
+
+    # Include bootsvc itself, since that's what we're testing here.  Note
+    # that this uses the package() target for bootsvc, which comes with its
+    # own data_deps to exercise the `userboot.root` option to find bootsvc
+    # and its libraries inside a package directory in the BOOTFS.
+    "..",
+
+    # Include the integration test binary, which bootsvc will launch.
+    "$zx/system/utest/mexec:zbi-child",
+  ]
 }
