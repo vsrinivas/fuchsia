@@ -84,7 +84,6 @@ class DevfsConnection : public fbl::RefCounted<DevfsConnection>,
   void GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync completer) override;
   void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
                          SetDriverLogFlagsCompleter::Sync _completer) override;
-  void DebugSuspend(DebugSuspendCompleter::Sync _completer) override;
   void DebugResume(DebugResumeCompleter::Sync _completer) override;
   void RunCompatibilityTests(int64_t hook_wait_time,
                              RunCompatibilityTestsCompleter::Sync _completer) override;
@@ -156,9 +155,7 @@ inline Connection* Connection::FromTxn(fidl_txn_t* txn) {
   return reinterpret_cast<Connection*>(txn);
 }
 
-inline Connection Connection::CopyTxn(fidl_txn_t* txn) {
-  return *FromTxn(txn);
-}
+inline Connection Connection::CopyTxn(fidl_txn_t* txn) { return *FromTxn(txn); }
 
 class Transaction : public fidl::Transaction {
  public:

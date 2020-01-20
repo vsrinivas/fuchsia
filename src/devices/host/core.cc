@@ -69,7 +69,8 @@ static zx_status_t default_open(void* ctx, zx_device_t** out, uint32_t flags) { 
 static zx_status_t default_close(void* ctx, uint32_t flags) { return ZX_OK; }
 
 static void default_unbind(void* ctx) {}
-
+static void default_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
+                            uint8_t suspend_reason) {}
 static void default_release(void* ctx) {}
 
 static zx_status_t default_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
@@ -82,8 +83,6 @@ static zx_status_t default_write(void* ctx, const void* buf, size_t count, zx_of
 }
 
 static zx_off_t default_get_size(void* ctx) { return 0; }
-
-static zx_status_t default_suspend(void* ctx, uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
 
 static zx_status_t default_resume(void* ctx, uint32_t target_system_state) {
   return ZX_ERR_NOT_SUPPORTED;
@@ -112,8 +111,8 @@ zx_protocol_device_t device_default_ops = []() {
   ops.read = default_read;
   ops.write = default_write;
   ops.get_size = default_get_size;
-  ops.suspend = default_suspend;
   ops.resume = default_resume;
+  ops.suspend_new = default_suspend;
   ops.rxrpc = default_rxrpc;
   ops.message = default_message;
   ops.set_performance_state = default_set_performance_state;
@@ -131,6 +130,8 @@ static zx_protocol_device_t device_invalid_ops = []() {
   ops.open = +[](void* ctx, zx_device_t**, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.close = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.unbind = +[](void* ctx) { device_invalid_fatal(ctx); };
+  ops.suspend_new = +[](void* ctx, uint8_t requested_state, bool enable_wake,
+                        uint8_t suspend_reason) { device_invalid_fatal(ctx); };
   ops.release = +[](void* ctx) { device_invalid_fatal(ctx); };
   ops.read =
       +[](void* ctx, void*, size_t, size_t, size_t*) -> zx_status_t { device_invalid_fatal(ctx); };
@@ -138,7 +139,6 @@ static zx_protocol_device_t device_invalid_ops = []() {
     device_invalid_fatal(ctx);
   };
   ops.get_size = +[](void* ctx) -> zx_off_t { device_invalid_fatal(ctx); };
-  ops.suspend = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.resume = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.rxrpc = +[](void* ctx, zx_handle_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.message =
@@ -465,12 +465,11 @@ zx_status_t devhost_device_init(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK
   return ZX_OK;
 }
 
-void devhost_device_init_reply(const fbl::RefPtr<zx_device_t>& dev,
-                               zx_status_t status,
+void devhost_device_init_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                                const device_init_reply_args_t* args) REQ_DM_LOCK {
   if (!(dev->flags & DEV_FLAG_INITIALIZING)) {
-    ZX_PANIC("device: %p(%s): cannot reply to init, flags are: (%x)\n",
-             dev.get(), dev->name, dev->flags);
+    ZX_PANIC("device: %p(%s): cannot reply to init, flags are: (%x)\n", dev.get(), dev->name,
+             dev->flags);
   }
   if (status == ZX_OK) {
     if (args && args->power_states && args->power_state_count != 0) {
@@ -483,8 +482,8 @@ void devhost_device_init_reply(const fbl::RefPtr<zx_device_t>& dev,
   if (dev->init_cb) {
     dev->init_cb(status);
   } else {
-    ZX_PANIC("device: %p(%s): cannot reply to init, no callback set, flags are 0x%x\n",
-             dev.get(), dev->name, dev->flags);
+    ZX_PANIC("device: %p(%s): cannot reply to init, no callback set, flags are 0x%x\n", dev.get(),
+             dev->name, dev->flags);
   }
 }
 
@@ -714,29 +713,27 @@ void devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
                                      fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
     log(INFO, "Devhost: system suspend overriding auto suspend for %s\n", dev->name);
   }
-  enum_lock_acquire();
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new suspend hook is implemented, prefer that.
   if (dev->ops->suspend_new) {
     ::llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
     uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
-    ApiAutoRelock relock;
+
     status = devhost_device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,
                                                              &suspend_reason);
     if (status == ZX_OK) {
-      dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
-                            new_state_info.wakeup_enable, suspend_reason);
+      enum_lock_acquire();
+      {
+        ApiAutoRelock relock;
+        dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
+                              new_state_info.wakeup_enable, suspend_reason);
+      }
+      enum_lock_release();
       return;
     }
-  } else if (dev->ops->suspend) {
-    // Invoke suspend hook otherwise.
-    ApiAutoRelock relock;
-    status = dev->ops->suspend(dev->ctx, flags);
   }
 
-  enum_lock_release();
-
-  // default_suspend() returns ZX_ERR_NOT_SUPPORTED
+  // If suspend hook is not implemented, do not throw error during system suspend.
   if (status == ZX_ERR_NOT_SUPPORTED) {
     status = ZX_OK;
   }

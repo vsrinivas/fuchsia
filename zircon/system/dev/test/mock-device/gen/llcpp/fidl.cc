@@ -35,6 +35,12 @@ constexpr uint64_t kMockDeviceThread_UnbindReplyDone_Ordinal = 0x6c9ed25d0000000
 constexpr uint64_t kMockDeviceThread_UnbindReplyDone_GenOrdinal = 0x7cadbb1dcfd931b3lu;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
+[[maybe_unused]]
+constexpr uint64_t kMockDeviceThread_SuspendReplyDone_Ordinal = 0x17b00f4e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kMockDeviceThread_SuspendReplyDone_GenOrdinal = 0x158f6f5c096bef9elu;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadSuspendReplyDoneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadSuspendReplyDoneEventTable;
 
 }  // namespace
 
@@ -124,6 +130,9 @@ zx_status_t MockDeviceThread::Call::HandleEvents(::zx::unowned_channel client_en
     if (::fidl::internal::ClampedMessageSize<UnbindReplyDoneResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<UnbindReplyDoneResponse, ::fidl::MessageDirection::kReceiving>();
     }
+    if (::fidl::internal::ClampedMessageSize<SuspendReplyDoneResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<SuspendReplyDoneResponse, ::fidl::MessageDirection::kReceiving>();
+    }
     return x;
   })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -133,6 +142,9 @@ zx_status_t MockDeviceThread::Call::HandleEvents(::zx::unowned_channel client_en
     }
     if (UnbindReplyDoneResponse::MaxNumHandles >= x) {
       x = UnbindReplyDoneResponse::MaxNumHandles;
+    }
+    if (SuspendReplyDoneResponse::MaxNumHandles >= x) {
+      x = SuspendReplyDoneResponse::MaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -192,6 +204,16 @@ zx_status_t MockDeviceThread::Call::HandleEvents(::zx::unowned_channel client_en
       }
       auto message = result.message.message();
       return handlers.unbind_reply_done(std::move(message->action_id));
+    }
+    case kMockDeviceThread_SuspendReplyDone_Ordinal:
+    case kMockDeviceThread_SuspendReplyDone_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<SuspendReplyDoneResponse>(&msg);
+      if (result.status != ZX_OK) {
+        return result.status;
+      }
+      auto message = result.message.message();
+      return handlers.suspend_reply_done(std::move(message->action_id));
     }
     default:
       zx_handle_close_many(read_handles, actual_handles);
@@ -311,6 +333,41 @@ zx_status_t MockDeviceThread::SendUnbindReplyDoneEvent(::zx::unowned_channel _ch
 }
 
 
+zx_status_t MockDeviceThread::SendSuspendReplyDoneEvent(::zx::unowned_channel _chan, uint64_t action_id) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendReplyDoneResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<SuspendReplyDoneResponse*>(_write_bytes);
+  MockDeviceThread::SetTransactionHeaderFor::SuspendReplyDoneResponse(
+      ::fidl::DecodedMessage<SuspendReplyDoneResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SuspendReplyDoneResponse::PrimarySize,
+              SuspendReplyDoneResponse::PrimarySize)));
+  _response.action_id = std::move(action_id);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SuspendReplyDoneResponse));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<SuspendReplyDoneResponse>(std::move(_response_bytes)));
+}
+
+zx_status_t MockDeviceThread::SendSuspendReplyDoneEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, uint64_t action_id) {
+  if (_buffer.capacity() < SuspendReplyDoneResponse::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  auto& _response = *reinterpret_cast<SuspendReplyDoneResponse*>(_buffer.data());
+  MockDeviceThread::SetTransactionHeaderFor::SuspendReplyDoneResponse(
+      ::fidl::DecodedMessage<SuspendReplyDoneResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SuspendReplyDoneResponse::PrimarySize,
+              SuspendReplyDoneResponse::PrimarySize)));
+  _response.action_id = std::move(action_id);
+  _buffer.set_actual(sizeof(SuspendReplyDoneResponse));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<SuspendReplyDoneResponse>(std::move(_buffer)));
+}
+
+zx_status_t MockDeviceThread::SendSuspendReplyDoneEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<SuspendReplyDoneResponse> params) {
+  MockDeviceThread::SetTransactionHeaderFor::SuspendReplyDoneResponse(params);
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
+}
+
+
 
 void MockDeviceThread::SetTransactionHeaderFor::PerformActionsRequest(const ::fidl::DecodedMessage<MockDeviceThread::PerformActionsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDeviceThread_PerformActions_GenOrdinal);
@@ -324,6 +381,11 @@ void MockDeviceThread::SetTransactionHeaderFor::AddDeviceDoneResponse(const ::fi
 
 void MockDeviceThread::SetTransactionHeaderFor::UnbindReplyDoneResponse(const ::fidl::DecodedMessage<MockDeviceThread::UnbindReplyDoneResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDeviceThread_UnbindReplyDone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void MockDeviceThread::SetTransactionHeaderFor::SuspendReplyDoneResponse(const ::fidl::DecodedMessage<MockDeviceThread::SuspendReplyDoneResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDeviceThread_SuspendReplyDone_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -419,6 +481,12 @@ constexpr uint64_t kMockDevice_UnbindReplyDone_Ordinal = 0x4d0946a100000000lu;
 constexpr uint64_t kMockDevice_UnbindReplyDone_GenOrdinal = 0x6f057a72a4b6c2e8lu;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kMockDevice_SuspendReplyDone_Ordinal = 0x2786b91000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kMockDevice_SuspendReplyDone_GenOrdinal = 0x457f0f17b95a8de1lu;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceSuspendReplyDoneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceSuspendReplyDoneResponseTable;
 
 }  // namespace
 template <>
@@ -1000,7 +1068,7 @@ MockDevice::UnownedResultOf::GetSize MockDevice::Call::GetSize(::zx::unowned_cha
 }
 
 template <>
-MockDevice::ResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1008,23 +1076,25 @@ MockDevice::ResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(::
   memset(_write_bytes, 0, SuspendRequest::PrimarySize);
   auto& _request = *reinterpret_cast<SuspendRequest*>(_write_bytes);
   _request.record = std::move(record);
-  _request.flags = std::move(flags);
+  _request.requested_state = std::move(requested_state);
+  _request.enable_wake = std::move(enable_wake);
+  _request.suspend_reason = std::move(suspend_reason);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SuspendRequest));
   ::fidl::DecodedMessage<SuspendRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
       MockDevice::InPlace::Suspend(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-MockDevice::ResultOf::Suspend MockDevice::SyncClient::Suspend(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
-    return ResultOf::Suspend(::zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
+MockDevice::ResultOf::Suspend MockDevice::SyncClient::Suspend(::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
+    return ResultOf::Suspend(::zx::unowned_channel(this->channel_), std::move(record), std::move(requested_state), std::move(enable_wake), std::move(suspend_reason));
 }
 
-MockDevice::ResultOf::Suspend MockDevice::Call::Suspend(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
-  return ResultOf::Suspend(std::move(_client_end), std::move(record), std::move(flags));
+MockDevice::ResultOf::Suspend MockDevice::Call::Suspend(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
+  return ResultOf::Suspend(std::move(_client_end), std::move(record), std::move(requested_state), std::move(enable_wake), std::move(suspend_reason));
 }
 
 template <>
-MockDevice::UnownedResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SuspendRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SuspendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1032,19 +1102,21 @@ MockDevice::UnownedResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_
   memset(_request_buffer.data(), 0, SuspendRequest::PrimarySize);
   auto& _request = *reinterpret_cast<SuspendRequest*>(_request_buffer.data());
   _request.record = std::move(record);
-  _request.flags = std::move(flags);
+  _request.requested_state = std::move(requested_state);
+  _request.enable_wake = std::move(enable_wake);
+  _request.suspend_reason = std::move(suspend_reason);
   _request_buffer.set_actual(sizeof(SuspendRequest));
   ::fidl::DecodedMessage<SuspendRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
       MockDevice::InPlace::Suspend(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-MockDevice::UnownedResultOf::Suspend MockDevice::SyncClient::Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Suspend(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
+MockDevice::UnownedResultOf::Suspend MockDevice::SyncClient::Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Suspend(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(requested_state), std::move(enable_wake), std::move(suspend_reason), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Suspend MockDevice::Call::Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Suspend(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
+MockDevice::UnownedResultOf::Suspend MockDevice::Call::Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Suspend(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(requested_state), std::move(enable_wake), std::move(suspend_reason), std::move(_response_buffer));
 }
 
 ::fidl::DecodeResult<MockDevice::SuspendResponse> MockDevice::InPlace::Suspend(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer) {
@@ -1378,6 +1450,69 @@ MockDevice::UnownedResultOf::UnbindReplyDone MockDevice::Call::UnbindReplyDone(:
 }
 
 
+MockDevice::ResultOf::SuspendReplyDone_Impl::SuspendReplyDone_Impl(::zx::unowned_channel _client_end, uint64_t action_id) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendReplyDoneRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, SuspendReplyDoneRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SuspendReplyDoneRequest*>(_write_bytes);
+  _request.action_id = std::move(action_id);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SuspendReplyDoneRequest));
+  ::fidl::DecodedMessage<SuspendReplyDoneRequest> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      MockDevice::InPlace::SuspendReplyDone(std::move(_client_end), std::move(_decoded_request)));
+}
+
+MockDevice::ResultOf::SuspendReplyDone MockDevice::SyncClient::SuspendReplyDone(uint64_t action_id) {
+    return ResultOf::SuspendReplyDone(::zx::unowned_channel(this->channel_), std::move(action_id));
+}
+
+MockDevice::ResultOf::SuspendReplyDone MockDevice::Call::SuspendReplyDone(::zx::unowned_channel _client_end, uint64_t action_id) {
+  return ResultOf::SuspendReplyDone(std::move(_client_end), std::move(action_id));
+}
+
+
+MockDevice::UnownedResultOf::SuspendReplyDone_Impl::SuspendReplyDone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
+  if (_request_buffer.capacity() < SuspendReplyDoneRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, SuspendReplyDoneRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<SuspendReplyDoneRequest*>(_request_buffer.data());
+  _request.action_id = std::move(action_id);
+  _request_buffer.set_actual(sizeof(SuspendReplyDoneRequest));
+  ::fidl::DecodedMessage<SuspendReplyDoneRequest> _decoded_request(std::move(_request_buffer));
+  Super::operator=(
+      MockDevice::InPlace::SuspendReplyDone(std::move(_client_end), std::move(_decoded_request)));
+}
+
+MockDevice::UnownedResultOf::SuspendReplyDone MockDevice::SyncClient::SuspendReplyDone(::fidl::BytePart _request_buffer, uint64_t action_id) {
+  return UnownedResultOf::SuspendReplyDone(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(action_id));
+}
+
+MockDevice::UnownedResultOf::SuspendReplyDone MockDevice::Call::SuspendReplyDone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
+  return UnownedResultOf::SuspendReplyDone(std::move(_client_end), std::move(_request_buffer), std::move(action_id));
+}
+
+::fidl::internal::StatusAndError MockDevice::InPlace::SuspendReplyDone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendReplyDoneRequest> params) {
+  MockDevice::SetTransactionHeaderFor::SuspendReplyDoneRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
 bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -1517,7 +1652,7 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         return true;
       }
       auto message = result.message.message();
-      impl->Suspend(std::move(message->record), std::move(message->flags),
+      impl->Suspend(std::move(message->record), std::move(message->requested_state), std::move(message->enable_wake), std::move(message->suspend_reason),
           Interface::SuspendCompleter::Sync(txn));
       return true;
     }
@@ -1584,6 +1719,19 @@ bool MockDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       auto message = result.message.message();
       impl->UnbindReplyDone(std::move(message->action_id),
           Interface::UnbindReplyDoneCompleter::Sync(txn));
+      return true;
+    }
+    case kMockDevice_SuspendReplyDone_Ordinal:
+    case kMockDevice_SuspendReplyDone_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<SuspendReplyDoneRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->SuspendReplyDone(std::move(message->action_id),
+          Interface::SuspendReplyDoneCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -2275,6 +2423,11 @@ void MockDevice::SetTransactionHeaderFor::AddDeviceDoneRequest(const ::fidl::Dec
 
 void MockDevice::SetTransactionHeaderFor::UnbindReplyDoneRequest(const ::fidl::DecodedMessage<MockDevice::UnbindReplyDoneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_UnbindReplyDone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void MockDevice::SetTransactionHeaderFor::SuspendReplyDoneRequest(const ::fidl::DecodedMessage<MockDevice::SuspendReplyDoneRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_SuspendReplyDone_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

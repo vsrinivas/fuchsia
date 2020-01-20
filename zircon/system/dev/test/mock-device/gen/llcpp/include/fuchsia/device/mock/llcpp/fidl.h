@@ -26,6 +26,7 @@ namespace mock {
 struct AddDeviceAction;
 struct HookInvocation;
 struct UnbindReplyAction;
+struct SuspendReplyAction;
 struct Action;
 class MockDeviceThread;
 class MockDevice;
@@ -43,6 +44,7 @@ struct Action {
     kAsyncRemoveDevice = 4,  // 0x4
     kUnbindReply = 5,  // 0x5
     kAddDevice = 6,  // 0x6
+    kSuspendReply = 7,  // 0x7
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
@@ -190,6 +192,30 @@ struct Action {
     ZX_ASSERT(ordinal() == Ordinal::kAddDevice);
     return *static_cast<::llcpp::fuchsia::device::mock::AddDeviceAction*>(envelope_.data);
   }
+
+  bool is_suspend_reply() const { return ordinal() == Ordinal::kSuspendReply; }
+
+  static Action WithSuspendReply(::llcpp::fuchsia::device::mock::SuspendReplyAction* val) {
+    Action result;
+    result.set_suspend_reply(val);
+    return result;
+  }
+
+  // Signal that the suspend has completed.
+  void set_suspend_reply(::llcpp::fuchsia::device::mock::SuspendReplyAction* elem) {
+    ordinal_ = Ordinal::kSuspendReply;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Signal that the suspend has completed.
+  ::llcpp::fuchsia::device::mock::SuspendReplyAction& mutable_suspend_reply() {
+    ZX_ASSERT(ordinal() == Ordinal::kSuspendReply);
+    return *static_cast<::llcpp::fuchsia::device::mock::SuspendReplyAction*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::mock::SuspendReplyAction& suspend_reply() const {
+    ZX_ASSERT(ordinal() == Ordinal::kSuspendReply);
+    return *static_cast<::llcpp::fuchsia::device::mock::SuspendReplyAction*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal());
@@ -211,6 +237,7 @@ struct Action {
     kAsyncRemoveDevice = 4,  // 0x4
     kUnbindReply = 5,  // 0x5
     kAddDevice = 6,  // 0x6
+    kSuspendReply = 7,  // 0x7
   };
 
   Ordinal ordinal() const {
@@ -291,12 +318,29 @@ struct UnbindReplyAction {
   uint64_t action_id = {};
 };
 
+extern "C" const fidl_type_t v1_fuchsia_device_mock_SuspendReplyActionTable;
+
+// Marker struct for suspend reply action
+struct SuspendReplyAction {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_SuspendReplyActionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
+
+  // Value that will be echoed back in the completion message
+  uint64_t action_id = {};
+};
+
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadPerformActionsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadAddDeviceDoneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadSuspendReplyDoneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadSuspendReplyDoneEventTable;
 
 // Interface for requesting a mock device thread do something.  The mock device implements
 // this interface.  Closing the interface causes the thread to exit.
@@ -352,12 +396,29 @@ class MockDeviceThread final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
+  struct SuspendReplyDoneResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint64_t action_id;
+
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceThreadSuspendReplyDoneEventTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
 
   struct EventHandlers {
     // Notification that the requested action was done
     fit::callback<zx_status_t(uint64_t action_id)> add_device_done;
 
     fit::callback<zx_status_t(uint64_t action_id)> unbind_reply_done;
+
+    fit::callback<zx_status_t(uint64_t action_id)> suspend_reply_done;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -515,6 +576,14 @@ class MockDeviceThread final {
   // Messages are encoded in-place.
   static zx_status_t SendUnbindReplyDoneEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<UnbindReplyDoneResponse> params);
 
+  static zx_status_t SendSuspendReplyDoneEvent(::zx::unowned_channel _chan, uint64_t action_id);
+
+  // Caller provides the backing storage for FIDL message via response buffers.
+  static zx_status_t SendSuspendReplyDoneEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, uint64_t action_id);
+
+  // Messages are encoded in-place.
+  static zx_status_t SendSuspendReplyDoneEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<SuspendReplyDoneResponse> params);
+
 
   // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
   class SetTransactionHeaderFor final {
@@ -523,6 +592,7 @@ class MockDeviceThread final {
     static void PerformActionsRequest(const ::fidl::DecodedMessage<MockDeviceThread::PerformActionsRequest>& _msg);
     static void AddDeviceDoneResponse(const ::fidl::DecodedMessage<MockDeviceThread::AddDeviceDoneResponse>& _msg);
     static void UnbindReplyDoneResponse(const ::fidl::DecodedMessage<MockDeviceThread::UnbindReplyDoneResponse>& _msg);
+    static void SuspendReplyDoneResponse(const ::fidl::DecodedMessage<MockDeviceThread::SuspendReplyDoneResponse>& _msg);
   };
 };
 
@@ -556,6 +626,8 @@ extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceAddDeviceDoneReque
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceAddDeviceDoneResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceSuspendReplyDoneRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceSuspendReplyDoneResponseTable;
 
 // Interface for controlling a mock device.  The test suite will implement this interface.
 // Any method that returns a list of actions is interpreted as requesting the corresponding hook
@@ -880,7 +952,9 @@ class MockDevice final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
-    uint32_t flags;
+    uint8_t requested_state;
+    bool enable_wake;
+    uint8_t suspend_reason;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceSuspendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -1023,6 +1097,24 @@ class MockDevice final {
     uint64_t action_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+  };
+
+  struct SuspendReplyDoneRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint64_t action_id;
+
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceSuspendReplyDoneRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1183,7 +1275,7 @@ class MockDevice final {
     class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Suspend_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+      Suspend_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason);
       ~Suspend_Impl() = default;
       Suspend_Impl(Suspend_Impl&& other) = default;
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
@@ -1265,6 +1357,17 @@ class MockDevice final {
       using Super::error;
       using Super::ok;
     };
+    class SuspendReplyDone_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      SuspendReplyDone_Impl(::zx::unowned_channel _client_end, uint64_t action_id);
+      ~SuspendReplyDone_Impl() = default;
+      SuspendReplyDone_Impl(SuspendReplyDone_Impl&& other) = default;
+      SuspendReplyDone_Impl& operator=(SuspendReplyDone_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
 
    public:
     using Bind = Bind_Impl<BindResponse>;
@@ -1282,6 +1385,7 @@ class MockDevice final {
     using Rxrpc = Rxrpc_Impl<RxrpcResponse>;
     using AddDeviceDone = AddDeviceDone_Impl;
     using UnbindReplyDone = UnbindReplyDone_Impl;
+    using SuspendReplyDone = SuspendReplyDone_Impl;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1432,7 +1536,7 @@ class MockDevice final {
     class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Suspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+      Suspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason, ::fidl::BytePart _response_buffer);
       ~Suspend_Impl() = default;
       Suspend_Impl(Suspend_Impl&& other) = default;
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
@@ -1514,6 +1618,17 @@ class MockDevice final {
       using Super::error;
       using Super::ok;
     };
+    class SuspendReplyDone_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      SuspendReplyDone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
+      ~SuspendReplyDone_Impl() = default;
+      SuspendReplyDone_Impl(SuspendReplyDone_Impl&& other) = default;
+      SuspendReplyDone_Impl& operator=(SuspendReplyDone_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
 
    public:
     using Bind = Bind_Impl<BindResponse>;
@@ -1531,6 +1646,7 @@ class MockDevice final {
     using Rxrpc = Rxrpc_Impl<RxrpcResponse>;
     using AddDeviceDone = AddDeviceDone_Impl;
     using UnbindReplyDone = UnbindReplyDone_Impl;
+    using SuspendReplyDone = SuspendReplyDone_Impl;
   };
 
   class SyncClient final {
@@ -1601,10 +1717,10 @@ class MockDevice final {
     UnownedResultOf::GetSize GetSize(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
-    ResultOf::Suspend Suspend(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+    ResultOf::Suspend Suspend(::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::Resume Resume(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
@@ -1637,6 +1753,12 @@ class MockDevice final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::UnbindReplyDone UnbindReplyDone(::fidl::BytePart _request_buffer, uint64_t action_id);
+
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SuspendReplyDone SuspendReplyDone(uint64_t action_id);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SuspendReplyDone SuspendReplyDone(::fidl::BytePart _request_buffer, uint64_t action_id);
 
    private:
     ::zx::channel channel_;
@@ -1704,10 +1826,10 @@ class MockDevice final {
     static UnownedResultOf::GetSize GetSize(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+    static ResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::Resume Resume(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
@@ -1740,6 +1862,12 @@ class MockDevice final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::UnbindReplyDone UnbindReplyDone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
+
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SuspendReplyDone SuspendReplyDone(::zx::unowned_channel _client_end, uint64_t action_id);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SuspendReplyDone SuspendReplyDone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
 
   };
 
@@ -1780,6 +1908,8 @@ class MockDevice final {
     static ::fidl::internal::StatusAndError AddDeviceDone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceDoneRequest> params);
 
     static ::fidl::internal::StatusAndError UnbindReplyDone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindReplyDoneRequest> params);
+
+    static ::fidl::internal::StatusAndError SuspendReplyDone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendReplyDoneRequest> params);
 
   };
 
@@ -1919,7 +2049,7 @@ class MockDevice final {
 
     using SuspendCompleter = ::fidl::Completer<SuspendCompleterBase>;
 
-    virtual void Suspend(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, SuspendCompleter::Sync _completer) = 0;
+    virtual void Suspend(::llcpp::fuchsia::device::mock::HookInvocation record, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason, SuspendCompleter::Sync _completer) = 0;
 
     class ResumeCompleterBase : public _Base {
      public:
@@ -1970,6 +2100,10 @@ class MockDevice final {
     using UnbindReplyDoneCompleter = ::fidl::Completer<>;
 
     virtual void UnbindReplyDone(uint64_t action_id, UnbindReplyDoneCompleter::Sync _completer) = 0;
+
+    using SuspendReplyDoneCompleter = ::fidl::Completer<>;
+
+    virtual void SuspendReplyDone(uint64_t action_id, SuspendReplyDoneCompleter::Sync _completer) = 0;
 
   };
 
@@ -2023,6 +2157,7 @@ class MockDevice final {
     static void RxrpcResponse(const ::fidl::DecodedMessage<MockDevice::RxrpcResponse>& _msg);
     static void AddDeviceDoneRequest(const ::fidl::DecodedMessage<MockDevice::AddDeviceDoneRequest>& _msg);
     static void UnbindReplyDoneRequest(const ::fidl::DecodedMessage<MockDevice::UnbindReplyDoneRequest>& _msg);
+    static void SuspendReplyDoneRequest(const ::fidl::DecodedMessage<MockDevice::SuspendReplyDoneRequest>& _msg);
   };
 };
 
@@ -2067,6 +2202,12 @@ static_assert(offsetof(::llcpp::fuchsia::device::mock::UnbindReplyAction, action
 static_assert(sizeof(::llcpp::fuchsia::device::mock::UnbindReplyAction) == ::llcpp::fuchsia::device::mock::UnbindReplyAction::PrimarySize);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::mock::SuspendReplyAction> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::mock::SuspendReplyAction>);
+static_assert(offsetof(::llcpp::fuchsia::device::mock::SuspendReplyAction, action_id) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::mock::SuspendReplyAction) == ::llcpp::fuchsia::device::mock::SuspendReplyAction::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::mock::Action> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::mock::Action>);
 
@@ -2093,6 +2234,14 @@ struct IsFidlMessage<::llcpp::fuchsia::device::mock::MockDeviceThread::UnbindRep
 static_assert(sizeof(::llcpp::fuchsia::device::mock::MockDeviceThread::UnbindReplyDoneResponse)
     == ::llcpp::fuchsia::device::mock::MockDeviceThread::UnbindReplyDoneResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDeviceThread::UnbindReplyDoneResponse, action_id) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::mock::MockDeviceThread::SuspendReplyDoneResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::mock::MockDeviceThread::SuspendReplyDoneResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::mock::MockDeviceThread::SuspendReplyDoneResponse)
+    == ::llcpp::fuchsia::device::mock::MockDeviceThread::SuspendReplyDoneResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDeviceThread::SuspendReplyDoneResponse, action_id) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::mock::MockDevice::BindRequest> : public std::true_type {};
@@ -2244,7 +2393,9 @@ struct IsFidlMessage<::llcpp::fuchsia::device::mock::MockDevice::SuspendRequest>
 static_assert(sizeof(::llcpp::fuchsia::device::mock::MockDevice::SuspendRequest)
     == ::llcpp::fuchsia::device::mock::MockDevice::SuspendRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDevice::SuspendRequest, record) == 16);
-static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDevice::SuspendRequest, flags) == 40);
+static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDevice::SuspendRequest, requested_state) == 40);
+static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDevice::SuspendRequest, enable_wake) == 41);
+static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDevice::SuspendRequest, suspend_reason) == 42);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::mock::MockDevice::SuspendResponse> : public std::true_type {};
@@ -2318,5 +2469,13 @@ struct IsFidlMessage<::llcpp::fuchsia::device::mock::MockDevice::UnbindReplyDone
 static_assert(sizeof(::llcpp::fuchsia::device::mock::MockDevice::UnbindReplyDoneRequest)
     == ::llcpp::fuchsia::device::mock::MockDevice::UnbindReplyDoneRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDevice::UnbindReplyDoneRequest, action_id) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::mock::MockDevice::SuspendReplyDoneRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::mock::MockDevice::SuspendReplyDoneRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::mock::MockDevice::SuspendReplyDoneRequest)
+    == ::llcpp::fuchsia::device::mock::MockDevice::SuspendReplyDoneRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::mock::MockDevice::SuspendReplyDoneRequest, action_id) == 16);
 
 }  // namespace fidl

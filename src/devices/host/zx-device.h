@@ -66,10 +66,6 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   void ReleaseOp() { Dispatch(ops->release); }
 
-  zx_status_t SuspendOp(uint32_t flags) {
-    return Dispatch(ops->suspend, ZX_ERR_NOT_SUPPORTED, flags);
-  }
-
   void SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
     Dispatch(ops->suspend_new, requested_state, enable_wake, suspend_reason);
   }

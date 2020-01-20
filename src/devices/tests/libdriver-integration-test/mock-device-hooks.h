@@ -4,16 +4,17 @@
 
 #pragma once
 
+#include <fuchsia/device/mock/cpp/fidl.h>
+#include <lib/fidl/coding.h>
+#include <lib/fit/bridge.h>
+#include <lib/fit/function.h>
+#include <lib/zx/channel.h>
+
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <fuchsia/device/mock/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/fidl/coding.h>
-#include <lib/fit/function.h>
-#include <lib/fit/bridge.h>
-#include <lib/zx/channel.h>
 
 #include "action-list.h"
 
@@ -57,7 +58,8 @@ class MockDeviceHooks : public fuchsia::device::mock::MockDevice {
 
   void GetSize(HookInvocation record, GetSizeCallback callback) override { Fail(__FUNCTION__); }
 
-  void Suspend(HookInvocation record, uint32_t flags, SuspendCallback callback) override {
+  void Suspend(HookInvocation record, uint8_t requested_state, bool enable_wake,
+               uint8_t suspend_reason, SuspendCallback callback) override {
     Fail(__FUNCTION__);
   }
 
@@ -71,6 +73,7 @@ class MockDeviceHooks : public fuchsia::device::mock::MockDevice {
 
   void AddDeviceDone(uint64_t action_id) final { ZX_ASSERT(false); }
   void UnbindReplyDone(uint64_t action_id) final { ZX_ASSERT(false); }
+  void SuspendReplyDone(uint64_t action_id) final { ZX_ASSERT(false); }
 
   virtual ~MockDeviceHooks() = default;
 
@@ -207,7 +210,8 @@ class UnorderedHooks : public MockDeviceHooks {
   void Write(HookInvocation record, std::vector<uint8_t> buffer, zx_off_t off,
              WriteCallback callback) override;
   void GetSize(HookInvocation record, GetSizeCallback callback) override;
-  void Suspend(HookInvocation record, uint32_t flags, SuspendCallback callback) override;
+  void Suspend(HookInvocation record, uint8_t requested_state, bool enable_wake,
+               uint8_t suspend_reason, SuspendCallback callback) override;
   void Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) override;
   void Message(HookInvocation record, MessageCallback callback) override;
   void Rxrpc(HookInvocation record, RxrpcCallback callback) override;
@@ -227,7 +231,7 @@ class UnorderedHooks : public MockDeviceHooks {
   fit::function<ActionList(HookInvocation, uint64_t, zx_off_t)> read_;
   fit::function<ActionList(HookInvocation, std::vector<uint8_t>, zx_off_t)> write_;
   fit::function<ActionList(HookInvocation)> get_size_;
-  fit::function<ActionList(HookInvocation, uint32_t)> suspend_;
+  fit::function<ActionList(HookInvocation, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason)> suspend_;
   fit::function<ActionList(HookInvocation, uint32_t)> resume_;
   fit::function<ActionList(HookInvocation)> message_;
   fit::function<ActionList(HookInvocation)> rxrpc_;

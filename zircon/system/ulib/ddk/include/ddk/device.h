@@ -324,9 +324,6 @@ typedef struct zx_protocol_device {
   //
 
   zx_status_t (*configure_auto_suspend)(void* ctx, bool enable, uint8_t deepest_sleep_state);
-  // Stops the device and puts it in a low power mode
-  // DEPRECATED: Use suspend_new instead.
-  zx_status_t (*suspend)(void* ctx, uint32_t flags);
 
   // This hook is never invoked.
   // DEPRECATED: Use resume_new instead.

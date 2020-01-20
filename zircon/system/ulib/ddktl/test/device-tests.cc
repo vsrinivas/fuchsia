@@ -69,8 +69,10 @@ BEGIN_SUCCESS_CASE(Messageable)
 zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) { return ZX_OK; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(Suspendable)
-zx_status_t DdkSuspend(uint32_t flags) { return ZX_OK; }
+BEGIN_SUCCESS_CASE(SuspendableNew)
+// As the txn does not contain a valid device pointer, the destructor won't throw an error
+// if we don't reply.
+void DdkSuspendNew(ddk::SuspendTxn txn) {}
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Resumable)
@@ -134,10 +136,7 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
     return 0;
   }
 
-  zx_status_t DdkSuspend(uint32_t flags) {
-    suspend_called = true;
-    return ZX_OK;
-  }
+  void DdkSuspendNew(ddk::SuspendTxn txn) { suspend_called = true; }
 
   zx_status_t DdkResume(uint32_t flags) {
     resume_called = true;
@@ -183,7 +182,7 @@ static bool test_dispatch() {
   EXPECT_EQ(ZX_OK, ops->read(ctx, nullptr, 0, 0, nullptr), "");
   EXPECT_EQ(ZX_OK, ops->write(ctx, nullptr, 0, 0, nullptr), "");
   EXPECT_EQ(0, ops->get_size(ctx), "");
-  EXPECT_EQ(ZX_OK, ops->suspend(ctx, 0), "");
+  ops->suspend_new(ctx, 2, false, 0);
   EXPECT_EQ(ZX_OK, ops->resume(ctx, 0), "");
   EXPECT_EQ(ZX_OK, ops->rxrpc(ctx, 0), "");
 
@@ -226,7 +225,7 @@ DEFINE_FAIL_CASE(Readable)
 DEFINE_FAIL_CASE(Writable)
 DEFINE_FAIL_CASE(IotxnQueueable)
 DEFINE_FAIL_CASE(GetSizable)
-DEFINE_FAIL_CASE(Suspendable)
+DEFINE_FAIL_CASE(SuspendableNew)
 DEFINE_FAIL_CASE(Resumable)
 DEFINE_FAIL_CASE(Rxrpcable)
 
@@ -289,7 +288,7 @@ RUN_NAMED_TEST("ddk::UnbindableNew", do_test<TestUnbindableNew>);
 RUN_NAMED_TEST("ddk::Readable", do_test<TestReadable>);
 RUN_NAMED_TEST("ddk::Writable", do_test<TestWritable>);
 RUN_NAMED_TEST("ddk::GetSizable", do_test<TestGetSizable>);
-RUN_NAMED_TEST("ddk::Suspendable", do_test<TestSuspendable>);
+RUN_NAMED_TEST("ddk::SuspendableNew", do_test<TestSuspendableNew>);
 RUN_NAMED_TEST("ddk::Resumable", do_test<TestResumable>);
 RUN_NAMED_TEST("ddk::Rxrpcable", do_test<TestRxrpcable>);
 

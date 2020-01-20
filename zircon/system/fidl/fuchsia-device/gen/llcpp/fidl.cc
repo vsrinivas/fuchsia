@@ -303,12 +303,6 @@ constexpr uint64_t kController_SetDriverLogFlags_GenOrdinal = 0x45a98c40a24b8cf0
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kController_DebugSuspend_Ordinal = 0x65f2322400000000lu;
-[[maybe_unused]]
-constexpr uint64_t kController_DebugSuspend_GenOrdinal = 0x37827c5e2f45e12elu;
-extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugSuspendRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugSuspendResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kController_DebugResume_Ordinal = 0x5fee29c400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_DebugResume_GenOrdinal = 0xe1555cdd68b40e6lu;
@@ -929,67 +923,6 @@ Controller::UnownedResultOf::SetDriverLogFlags Controller::Call::SetDriverLogFla
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Controller::SetDriverLogFlagsResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Controller::ResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>::DebugSuspend_Impl(::zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, DebugSuspendRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(DebugSuspendRequest));
-  ::fidl::DecodedMessage<DebugSuspendRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Controller::InPlace::DebugSuspend(std::move(_client_end), Super::response_buffer()));
-}
-
-Controller::ResultOf::DebugSuspend Controller::SyncClient::DebugSuspend() {
-    return ResultOf::DebugSuspend(::zx::unowned_channel(this->channel_));
-}
-
-Controller::ResultOf::DebugSuspend Controller::Call::DebugSuspend(::zx::unowned_channel _client_end) {
-  return ResultOf::DebugSuspend(std::move(_client_end));
-}
-
-template <>
-Controller::UnownedResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>::DebugSuspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DebugSuspendRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, DebugSuspendRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(DebugSuspendRequest));
-  ::fidl::DecodedMessage<DebugSuspendRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Controller::InPlace::DebugSuspend(std::move(_client_end), std::move(_response_buffer)));
-}
-
-Controller::UnownedResultOf::DebugSuspend Controller::SyncClient::DebugSuspend(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::DebugSuspend(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-Controller::UnownedResultOf::DebugSuspend Controller::Call::DebugSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::DebugSuspend(std::move(_client_end), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Controller::DebugSuspendResponse> Controller::InPlace::DebugSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(DebugSuspendRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<DebugSuspendRequest> params(std::move(_request_buffer));
-  Controller::SetTransactionHeaderFor::DebugSuspendRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Controller::DebugSuspendResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<DebugSuspendRequest, DebugSuspendResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Controller::DebugSuspendResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -1738,18 +1671,6 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
           Interface::SetDriverLogFlagsCompleter::Sync(txn));
       return true;
     }
-    case kController_DebugSuspend_Ordinal:
-    case kController_DebugSuspend_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<DebugSuspendRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->DebugSuspend(
-          Interface::DebugSuspendCompleter::Sync(txn));
-      return true;
-    }
     case kController_DebugResume_Ordinal:
     case kController_DebugResume_GenOrdinal:
     {
@@ -2331,42 +2252,6 @@ void Controller::Interface::SetDriverLogFlagsCompleterBase::Reply(::fidl::Decode
 }
 
 
-void Controller::Interface::DebugSuspendCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DebugSuspendResponse*>(_write_bytes);
-  Controller::SetTransactionHeaderFor::DebugSuspendResponse(
-      ::fidl::DecodedMessage<DebugSuspendResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              DebugSuspendResponse::PrimarySize,
-              DebugSuspendResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DebugSuspendResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DebugSuspendResponse>(std::move(_response_bytes)));
-}
-
-void Controller::Interface::DebugSuspendCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < DebugSuspendResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<DebugSuspendResponse*>(_buffer.data());
-  Controller::SetTransactionHeaderFor::DebugSuspendResponse(
-      ::fidl::DecodedMessage<DebugSuspendResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              DebugSuspendResponse::PrimarySize,
-              DebugSuspendResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(DebugSuspendResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DebugSuspendResponse>(std::move(_buffer)));
-}
-
-void Controller::Interface::DebugSuspendCompleterBase::Reply(::fidl::DecodedMessage<DebugSuspendResponse> params) {
-  Controller::SetTransactionHeaderFor::DebugSuspendResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
 void Controller::Interface::DebugResumeCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -2906,15 +2791,6 @@ void Controller::SetTransactionHeaderFor::SetDriverLogFlagsRequest(const ::fidl:
 }
 void Controller::SetTransactionHeaderFor::SetDriverLogFlagsResponse(const ::fidl::DecodedMessage<Controller::SetDriverLogFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetDriverLogFlags_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-}
-
-void Controller::SetTransactionHeaderFor::DebugSuspendRequest(const ::fidl::DecodedMessage<Controller::DebugSuspendRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_DebugSuspend_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-}
-void Controller::SetTransactionHeaderFor::DebugSuspendResponse(const ::fidl::DecodedMessage<Controller::DebugSuspendResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_DebugSuspend_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

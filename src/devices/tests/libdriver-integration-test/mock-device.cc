@@ -50,8 +50,9 @@ void MockDevice::GetSize(HookInvocation record, GetSizeCallback callback) {
   hooks_->GetSize(record, std::move(callback));
 }
 
-void MockDevice::Suspend(HookInvocation record, uint32_t flags, SuspendCallback callback) {
-  hooks_->Suspend(record, flags, std::move(callback));
+void MockDevice::Suspend(HookInvocation record, uint8_t requested_state, bool enable_wake,
+                         uint8_t suspend_reason, SuspendCallback callback) {
+  hooks_->Suspend(record, requested_state, enable_wake, suspend_reason, std::move(callback));
 }
 
 void MockDevice::Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) {
@@ -75,6 +76,8 @@ void MockDevice::AddDeviceDone(uint64_t action_id) {
 }
 
 void MockDevice::UnbindReplyDone(uint64_t action_id) { AddDeviceDone(action_id); }
+
+void MockDevice::SuspendReplyDone(uint64_t action_id) { AddDeviceDone(action_id); }
 
 std::vector<ActionList::Action> MockDevice::FinalizeActionList(ActionList action_list) {
   return action_list.FinalizeActionList(&pending_actions_, &next_action_id_);

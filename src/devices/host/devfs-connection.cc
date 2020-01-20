@@ -213,10 +213,6 @@ void DevfsConnection::SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags
   completer.Reply(ZX_OK);
 }
 
-void DevfsConnection::DebugSuspend(DebugSuspendCompleter::Sync completer) {
-  completer.Reply(this->dev->SuspendOp(0));
-}
-
 void DevfsConnection::DebugResume(DebugResumeCompleter::Sync completer) {
   completer.Reply(this->dev->ResumeOp(0));
 }

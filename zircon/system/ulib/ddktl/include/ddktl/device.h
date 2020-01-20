@@ -80,8 +80,6 @@
 // |                          |                                                    |
 // | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
 // |                          |                                                    |
-// | ddk::Suspendable         | zx_status_t DdkSuspend(uint32_t flags)             |
-// |                          |                                                    |
 // | ddk::Resumable           | zx_status_t DdkResume(uint32_t flags)              |
 // |                          |                                                    |
 // | ddk::UnbindableDeprecated| void DdkUnbindDeprecated()                         |
@@ -285,20 +283,6 @@ class Messageable : public base_mixin {
  private:
   static zx_status_t Message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
     return static_cast<D*>(ctx)->DdkMessage(msg, txn);
-  }
-};
-
-template <typename D>
-class Suspendable : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckSuspendable<D>();
-    proto->suspend = Suspend;
-  }
-
- private:
-  static zx_status_t Suspend(void* ctx, uint32_t flags) {
-    return static_cast<D*>(ctx)->DdkSuspend(flags);
   }
 };
 
@@ -558,7 +542,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 // zx_protocol_device_t methods.
 template <class D>
 using FullDevice = Device<D, GetProtocolable, Initializable, Openable, Closable, UnbindableNew,
-                          Readable, Writable, GetSizable, Suspendable, Resumable, Rxrpcable>;
+                          Readable, Writable, GetSizable, SuspendableNew, Resumable, Rxrpcable>;
 
 }  // namespace ddk
 

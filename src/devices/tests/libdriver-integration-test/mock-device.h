@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <memory>
-#include <utility>
-
 #include <fuchsia/device/mock/cpp/fidl.h>
-#include <lib/zx/channel.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/zx/channel.h>
+
+#include <memory>
+#include <utility>
 
 #include "action-list.h"
 #include "mock-device-hooks.h"
@@ -46,13 +46,15 @@ class MockDevice : public fuchsia::device::mock::MockDevice {
   void Write(HookInvocation record, std::vector<uint8_t> buffer, uint64_t off,
              WriteCallback callback) override;
   void GetSize(HookInvocation record, GetSizeCallback callback) override;
-  void Suspend(HookInvocation record, uint32_t flags, SuspendCallback callback) override;
+  void Suspend(HookInvocation record, uint8_t requested_state, bool enable_wake,
+               uint8_t suspend_reason, SuspendCallback callback) override;
   void Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) override;
   void Message(HookInvocation record, MessageCallback callback) override;
   void Rxrpc(HookInvocation record, RxrpcCallback callback) override;
 
   void AddDeviceDone(uint64_t action_id) override;
   void UnbindReplyDone(uint64_t action_id) override;
+  void SuspendReplyDone(uint64_t action_id) override;
 
  private:
   // The buffers inside of |msg_out| must be allocated by the caller.

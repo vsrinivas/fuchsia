@@ -36,7 +36,6 @@ For completeness, the following mixins are also provided, but have been deprecat
 
 Deprecated Mixin class      | Function             | Purpose
 ----------------------------|----------------------|------------------------------
-`ddk::Suspendable`          | **DdkSuspend()**     | to suspend device
 `ddk::Resumable`            | **DdkResume()**      | to resume device
 `ddk::Readable`             | **DdkRead()**        | client's **read()**
 `ddk::Writable`             | **DdkWrite()**       | client's **write()**

@@ -92,11 +92,12 @@ void UnorderedHooks::GetSize(HookInvocation record, GetSizeCallback callback) {
   TryFinish();
 }
 
-void UnorderedHooks::Suspend(HookInvocation record, uint32_t flags, SuspendCallback callback) {
+void UnorderedHooks::Suspend(HookInvocation record, uint8_t requested_state, bool enable_wake,
+                             uint8_t suspend_reason, SuspendCallback callback) {
   if (!suspend_) {
     return Fail(__FUNCTION__);
   }
-  callback(action_list_finalizer_(suspend_(record, flags)));
+  callback(action_list_finalizer_(suspend_(record, requested_state, enable_wake, suspend_reason)));
   suspend_ = nullptr;
   TryFinish();
 }

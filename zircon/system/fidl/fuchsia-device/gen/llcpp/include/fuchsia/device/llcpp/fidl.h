@@ -1248,8 +1248,6 @@ extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDriverLogFlagsReques
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugSuspendRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugSuspendResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugResumeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugResumeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
@@ -1483,23 +1481,6 @@ class Controller final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = SetDriverLogFlagsResponse;
   };
-
-  struct DebugSuspendResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerDebugSuspendResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  using DebugSuspendRequest = ::fidl::AnyZeroArgMessage;
 
   struct DebugResumeResponse final {
     FIDL_ALIGNDECL
@@ -1927,22 +1908,6 @@ class Controller final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class DebugSuspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      DebugSuspend_Impl(::zx::unowned_channel _client_end);
-      ~DebugSuspend_Impl() = default;
-      DebugSuspend_Impl(DebugSuspend_Impl&& other) = default;
-      DebugSuspend_Impl& operator=(DebugSuspend_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class DebugResume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -2113,7 +2078,6 @@ class Controller final {
     using GetEventHandle = GetEventHandle_Impl<GetEventHandleResponse>;
     using GetDriverLogFlags = GetDriverLogFlags_Impl<GetDriverLogFlagsResponse>;
     using SetDriverLogFlags = SetDriverLogFlags_Impl<SetDriverLogFlagsResponse>;
-    using DebugSuspend = DebugSuspend_Impl<DebugSuspendResponse>;
     using DebugResume = DebugResume_Impl<DebugResumeResponse>;
     using RunCompatibilityTests = RunCompatibilityTests_Impl<RunCompatibilityTestsResponse>;
     using GetDevicePowerCaps = GetDevicePowerCaps_Impl<GetDevicePowerCapsResponse>;
@@ -2267,22 +2231,6 @@ class Controller final {
       ~SetDriverLogFlags_Impl() = default;
       SetDriverLogFlags_Impl(SetDriverLogFlags_Impl&& other) = default;
       SetDriverLogFlags_Impl& operator=(SetDriverLogFlags_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class DebugSuspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      DebugSuspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~DebugSuspend_Impl() = default;
-      DebugSuspend_Impl(DebugSuspend_Impl&& other) = default;
-      DebugSuspend_Impl& operator=(DebugSuspend_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -2462,7 +2410,6 @@ class Controller final {
     using GetEventHandle = GetEventHandle_Impl<GetEventHandleResponse>;
     using GetDriverLogFlags = GetDriverLogFlags_Impl<GetDriverLogFlagsResponse>;
     using SetDriverLogFlags = SetDriverLogFlags_Impl<SetDriverLogFlagsResponse>;
-    using DebugSuspend = DebugSuspend_Impl<DebugSuspendResponse>;
     using DebugResume = DebugResume_Impl<DebugResumeResponse>;
     using RunCompatibilityTests = RunCompatibilityTests_Impl<RunCompatibilityTestsResponse>;
     using GetDevicePowerCaps = GetDevicePowerCaps_Impl<GetDevicePowerCapsResponse>;
@@ -2567,14 +2514,6 @@ class Controller final {
     // Each set bit in `set_flags` will then be set in the log flags state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetDriverLogFlags SetDriverLogFlags(::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer);
-
-    // Debug command: execute the device's suspend hook
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::DebugSuspend DebugSuspend();
-
-    // Debug command: execute the device's suspend hook
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::DebugSuspend DebugSuspend(::fidl::BytePart _response_buffer);
 
     // Debug command: execute the device's resume hook
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -2777,14 +2716,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetDriverLogFlags SetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer);
 
-    // Debug command: execute the device's suspend hook
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::DebugSuspend DebugSuspend(::zx::unowned_channel _client_end);
-
-    // Debug command: execute the device's suspend hook
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::DebugSuspend DebugSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
     // Debug command: execute the device's resume hook
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::DebugResume DebugResume(::zx::unowned_channel _client_end);
@@ -2934,9 +2865,6 @@ class Controller final {
     // Each set bit in `clear_flags` will be cleared in the log flags state.
     // Each set bit in `set_flags` will then be set in the log flags state.
     static ::fidl::DecodeResult<SetDriverLogFlagsResponse> SetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDriverLogFlagsRequest> params, ::fidl::BytePart response_buffer);
-
-    // Debug command: execute the device's suspend hook
-    static ::fidl::DecodeResult<DebugSuspendResponse> DebugSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Debug command: execute the device's resume hook
     static ::fidl::DecodeResult<DebugResumeResponse> DebugResume(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -3130,20 +3058,6 @@ class Controller final {
     using SetDriverLogFlagsCompleter = ::fidl::Completer<SetDriverLogFlagsCompleterBase>;
 
     virtual void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags, SetDriverLogFlagsCompleter::Sync _completer) = 0;
-
-    class DebugSuspendCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<DebugSuspendResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using DebugSuspendCompleter = ::fidl::Completer<DebugSuspendCompleterBase>;
-
-    virtual void DebugSuspend(DebugSuspendCompleter::Sync _completer) = 0;
 
     class DebugResumeCompleterBase : public _Base {
      public:
@@ -3340,8 +3254,6 @@ class Controller final {
     static void GetDriverLogFlagsResponse(const ::fidl::DecodedMessage<Controller::GetDriverLogFlagsResponse>& _msg);
     static void SetDriverLogFlagsRequest(const ::fidl::DecodedMessage<Controller::SetDriverLogFlagsRequest>& _msg);
     static void SetDriverLogFlagsResponse(const ::fidl::DecodedMessage<Controller::SetDriverLogFlagsResponse>& _msg);
-    static void DebugSuspendRequest(const ::fidl::DecodedMessage<Controller::DebugSuspendRequest>& _msg);
-    static void DebugSuspendResponse(const ::fidl::DecodedMessage<Controller::DebugSuspendResponse>& _msg);
     static void DebugResumeRequest(const ::fidl::DecodedMessage<Controller::DebugResumeRequest>& _msg);
     static void DebugResumeResponse(const ::fidl::DecodedMessage<Controller::DebugResumeResponse>& _msg);
     static void RunCompatibilityTestsRequest(const ::fidl::DecodedMessage<Controller::RunCompatibilityTestsRequest>& _msg);
@@ -3594,14 +3506,6 @@ struct IsFidlMessage<::llcpp::fuchsia::device::Controller::SetDriverLogFlagsResp
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::SetDriverLogFlagsResponse)
     == ::llcpp::fuchsia::device::Controller::SetDriverLogFlagsResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::SetDriverLogFlagsResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::Controller::DebugSuspendResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::Controller::DebugSuspendResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::Controller::DebugSuspendResponse)
-    == ::llcpp::fuchsia::device::Controller::DebugSuspendResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller::DebugSuspendResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::DebugResumeResponse> : public std::true_type {};

@@ -21,7 +21,7 @@ using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriver;
 using DeviceType =
-    ddk::Device<TestPowerDriver, ddk::UnbindableNew, ddk::Suspendable, ddk::Messageable>;
+    ddk::Device<TestPowerDriver, ddk::UnbindableNew, ddk::SuspendableNew, ddk::Messageable>;
 class TestPowerDriver : public DeviceType,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD>,
                         public TestDevice::Interface {
@@ -30,10 +30,9 @@ class TestPowerDriver : public DeviceType,
   zx_status_t Bind();
   void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
-  zx_status_t DdkSuspend(uint32_t flags) {
-    // Set current_power_state to indicate that the suspend is called.
-    current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D1;
-    return ZX_OK;
+  void DdkSuspendNew(ddk::SuspendTxn txn) {
+    current_power_state_ = static_cast<DevicePowerState>(txn.requested_state());
+    txn.Reply(ZX_OK, txn.requested_state());
   }
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                               ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
@@ -54,7 +53,7 @@ class TestPowerDriver : public DeviceType,
 
  private:
   DevicePowerState current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
-  uint32_t current_performance_state_ = 0;
+  uint8_t current_performance_state_ = 0;
   bool auto_suspend_enabled_ = false;
   DevicePowerState deepest_autosuspend_sleep_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
 };

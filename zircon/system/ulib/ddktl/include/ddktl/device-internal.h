@@ -248,8 +248,8 @@ DECLARE_HAS_MEMBER_FN(has_ddk_get_size, DdkGetSize);
 template <typename D>
 constexpr void CheckGetSizable() {
   static_assert(has_ddk_get_size<D>::value, "GetSizable classes must implement DdkGetSize");
-  static_assert(std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void)>::value
-                || std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void) const>::value,
+  static_assert(std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void)>::value ||
+                    std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void) const>::value,
                 "DdkGetSize must be a public non-static member function with signature "
                 "'zx_off_t DdkGetSize()'.");
 }
@@ -263,16 +263,6 @@ constexpr void CheckMessageable() {
       std::is_same<decltype(&D::DdkMessage), zx_status_t (D::*)(fidl_msg_t*, fidl_txn_t*)>::value,
       "DdkMessage must be a public non-static member function with signature "
       "'zx_status_t DdkMessage(fidl_msg_t*, fidl_txn_t*)'.");
-}
-
-DECLARE_HAS_MEMBER_FN(has_ddk_suspend, DdkSuspend);
-
-template <typename D>
-constexpr void CheckSuspendable() {
-  static_assert(has_ddk_suspend<D>::value, "Suspendable classes must implement DdkSuspend");
-  static_assert(std::is_same<decltype(&D::DdkSuspend), zx_status_t (D::*)(uint32_t)>::value,
-                "DdkSuspend must be a public non-static member function with signature "
-                "'zx_status_t DdkSuspend(uint32_t)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_suspend_new, DdkSuspendNew);

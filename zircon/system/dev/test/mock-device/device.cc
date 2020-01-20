@@ -27,6 +27,7 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
+#include "ddktl/suspend-txn.h"
 #include "fidl.h"
 
 namespace mock_device {
@@ -51,7 +52,7 @@ class MockDevice : public MockDeviceType {
   zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  zx_status_t DdkSuspend(uint32_t flags);
+  void DdkSuspendNew(ddk::SuspendTxn txn);
   zx_status_t DdkResume(uint32_t flags);
   zx_status_t DdkRxrpc(zx_handle_t channel);
 
@@ -114,6 +115,8 @@ struct ProcessActionsContext {
   bool is_thread = false;
   // IN: The txn used to reply to the unbind hook.
   std::optional<ddk::UnbindTxn> pending_unbind_txn = std::nullopt;
+  // IN: The txn used to reply to the suspend hook.
+  std::optional<ddk::SuspendTxn> pending_suspend_txn = std::nullopt;
 };
 
 // Execute the actions returned by a hook
@@ -200,18 +203,17 @@ void MockDevice::DdkRelease() {
   // Launch a thread to do the actual joining and delete, since this could get
   // called from a thread.
   thrd_t thrd;
-  int ret = thrd_create(
-      &thrd,
-      [](void* arg) {
-        auto me = static_cast<MockDevice*>(arg);
-        fbl::AutoLock guard(&me->lock_);
-        for (auto& t : me->threads_) {
-          thrd_join(t, nullptr);
-        }
-        delete me;
-        return 0;
-      },
-      this);
+  int ret = thrd_create(&thrd,
+                        [](void* arg) {
+                          auto me = static_cast<MockDevice*>(arg);
+                          fbl::AutoLock guard(&me->lock_);
+                          for (auto& t : me->threads_) {
+                            thrd_join(t, nullptr);
+                          }
+                          delete me;
+                          return 0;
+                        },
+                        this);
   ZX_ASSERT(ret == thrd_success);
   thrd_detach(thrd);
 }
@@ -295,13 +297,14 @@ zx_status_t MockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return ctx.hook_status;
 }
 
-zx_status_t MockDevice::DdkSuspend(uint32_t flags) {
-  auto result = controller_.Suspend(ConstructHookInvocation(), flags);
+void MockDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
+  auto result = controller_.Suspend(ConstructHookInvocation(), txn.requested_state(),
+                                    txn.enable_wake(), txn.suspend_reason());
   ZX_ASSERT(result.ok());
   ProcessActionsContext ctx(controller_.channel(), true, this, zxdev());
+  ctx.pending_suspend_txn = std::move(txn);
   zx_status_t status = ProcessActions(std::move(result->actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
-  return ctx.hook_status;
 }
 
 zx_status_t MockDevice::DdkResume(uint32_t flags) {
@@ -393,6 +396,25 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         } else {
           status = device_mock::MockDevice::Call::UnbindReplyDone(
                        zx::unowned_channel(*ctx->channel), action.unbind_reply().action_id)
+                       .status();
+        }
+        ZX_ASSERT(status == ZX_OK);
+        break;
+      }
+
+      case device_mock::Action::Tag::kSuspendReply: {
+        if (!ctx->pending_suspend_txn) {
+          printf("MockDevice::SuspendReply: asked to reply to unbind but no unbind is pending\n");
+          return ZX_ERR_INVALID_ARGS;
+        }
+        ctx->pending_suspend_txn->Reply(ZX_OK, 0);
+        zx_status_t status;
+        if (ctx->is_thread) {
+          status = device_mock::MockDeviceThread::SendSuspendReplyDoneEvent(
+              zx::unowned_channel(*ctx->channel), action.suspend_reply().action_id);
+        } else {
+          status = device_mock::MockDevice::Call::SuspendReplyDone(
+                       zx::unowned_channel(*ctx->channel), action.suspend_reply().action_id)
                        .status();
         }
         ZX_ASSERT(status == ZX_OK);

@@ -785,7 +785,7 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
-            DevicePowerState::DEVICE_POWER_STATE_D1);
+            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
 }
 
 TEST_F(PowerTestCase, Resume_Success) {
@@ -1009,7 +1009,6 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
   ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::SYSTEM_POWER_STATE_REBOOT)]
                    .wakeup_enable);
 }
-
 TEST_F(PowerTestCase, SystemSuspend) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
@@ -1088,5 +1087,5 @@ TEST_F(PowerTestCase, SystemSuspend) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
-            DevicePowerState::DEVICE_POWER_STATE_D1);
+            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
 }
