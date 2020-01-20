@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_RESUME_TASK_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_RESUME_TASK_H_
+#ifndef SRC_DEVICES_COORDINATOR_RESUME_TASK_H_
+#define SRC_DEVICES_COORDINATOR_RESUME_TASK_H_
 
 #include "device.h"
 #include "task.h"
@@ -37,4 +37,4 @@ class ResumeTask final : public Task {
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVCOORDINATOR_RESUME_TASK_H_
+#endif  // SRC_DEVICES_COORDINATOR_RESUME_TASK_H_

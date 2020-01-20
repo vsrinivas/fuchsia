@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/c/fidl.h>
+
 #include <vector>
 
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <fbl/vector.h>
-#include <fuchsia/io/c/fidl.h>
 #include <zxtest/zxtest.h>
 
 #include "multiple-device-test.h"
@@ -1120,19 +1121,18 @@ TEST_F(CompositeTestCase, ComponentDeviceInit) {
   static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
 
   const char* kCompositeDevName = "composite-dev";
-  ASSERT_NO_FATAL_FAILURES(
-      BindCompositeDefineComposite(platform_bus(), protocol_id, fbl::count_of(protocol_id),
-                                   nullptr /* props */, 0, kCompositeDevName));
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+                                                        fbl::count_of(protocol_id),
+                                                        nullptr /* props */, 0, kCompositeDevName));
 
   // Add the devices to construct the composite out of.
   zx_txid_t txns[fbl::count_of(device_indexes)] = {};
   for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
     char name[32];
     snprintf(name, sizeof(name), "device-%zu", i);
-    ASSERT_NO_FATAL_FAILURES(
-        AddDevice(platform_bus(), name, protocol_id[i], "", false /* invisible */,
-        true /* has_init */, false /* reply_to_init */, true /* always_init */,
-        &device_indexes[i]));
+    ASSERT_NO_FATAL_FAILURES(AddDevice(
+        platform_bus(), name, protocol_id[i], "", false /* invisible */, true /* has_init */,
+        false /* reply_to_init */, true /* always_init */, &device_indexes[i]));
     auto index = device_indexes[i];
     ASSERT_FALSE(device(index)->device->is_visible());
     ASSERT_NO_FATAL_FAILURES(CheckInitReceived(device(index)->controller_remote, &txns[i]));

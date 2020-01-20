@@ -27,7 +27,7 @@
 
 namespace devmgr {
 
-  // TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
+// TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
 static constexpr bool kEnableAlwaysInit = false;
 
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
@@ -90,8 +90,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
 
   auto dev = fbl::MakeRefCounted<Device>(coordinator, std::move(name), std::move(driver_path),
                                          std::move(args), real_parent, protocol_id,
-                                         std::move(client_remote),
-                                         wait_make_visible);
+                                         std::move(client_remote), wait_make_visible);
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -789,8 +788,8 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, false /* invisible */,
-      has_init, kEnableAlwaysInit, std::move(client_remote), &device);
+      props.count(), name, protocol_id, driver_path, args, false /* invisible */, has_init,
+      kEnableAlwaysInit, std::move(client_remote), &device);
   if (device != nullptr &&
       (device_add_config &
        llcpp::fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE)) {
@@ -802,8 +801,8 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
     response.set_err(&status);
     completer.Reply(std::move(response));
   } else {
-    llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response resp{
-        .local_device_id = local_id};
+    llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response resp{.local_device_id =
+                                                                             local_id};
     response.set_response(&resp);
     completer.Reply(std::move(response));
   }
@@ -843,16 +842,16 @@ void Device::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, true /* invisible */,
-      has_init, kEnableAlwaysInit, std::move(client_remote), &device);
+      props.count(), name, protocol_id, driver_path, args, true /* invisible */, has_init,
+      kEnableAlwaysInit, std::move(client_remote), &device);
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
   if (status != ZX_OK) {
     response.set_err(&status);
     completer.Reply(std::move(response));
   } else {
-    llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response resp{
-        .local_device_id = local_id};
+    llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response resp{.local_device_id =
+                                                                                      local_id};
     response.set_response(&resp);
     completer.Reply(std::move(response));
   }

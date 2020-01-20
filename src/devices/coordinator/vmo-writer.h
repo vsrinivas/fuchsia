@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_VMO_WRITER_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_VMO_WRITER_H_
+#ifndef SRC_DEVICES_COORDINATOR_VMO_WRITER_H_
+#define SRC_DEVICES_COORDINATOR_VMO_WRITER_H_
 
 #include <lib/zx/vmo.h>
 
@@ -34,4 +34,4 @@ class VmoWriter {
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_VMO_WRITER_H_
+#endif  // SRC_DEVICES_COORDINATOR_VMO_WRITER_H_

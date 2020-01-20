@@ -59,7 +59,8 @@ void BindDriverTestOutput(const zx::channel& remote, zx::channel test_output) {
   // Write the BindDriver response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal);
+  fidl_init_txn_header(&resp->hdr, txid,
+                       fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal);
   resp->status = ZX_OK;
   resp->test_output = test_output.release();
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
@@ -152,7 +153,8 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
   // Write the BindDriver response.
   memset(bytes, 0, sizeof(bytes));
   auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal);
+  fidl_init_txn_header(&resp->hdr, txid,
+                       fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal);
   resp->status = ZX_OK;
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
                        sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
@@ -375,13 +377,11 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_OK(status);
 
   fbl::RefPtr<devmgr::Device> device;
-  status = coordinator.AddDevice(coordinator.test_device(), std::move(controller_local),
-                                 std::move(coordinator_local), nullptr /* props_data */,
-                                 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
-                                 nullptr /* driver_path */, nullptr /* args */,
-                                 false /* invisible */, false /* has_init */,
-                                 true /* always_init */, zx::channel() /* client_remote */,
-                                 &device);
+  status = coordinator.AddDevice(
+      coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
+      nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
+      nullptr /* driver_path */, nullptr /* args */, false /* invisible */, false /* has_init */,
+      true /* always_init */, zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
@@ -430,13 +430,11 @@ TEST(MiscTestCase, TestOutput) {
   ASSERT_OK(status);
 
   fbl::RefPtr<devmgr::Device> device;
-  status = coordinator.AddDevice(coordinator.test_device(), std::move(controller_local),
-                                 std::move(coordinator_local), nullptr /* props_data */,
-                                 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
-                                 nullptr /* driver_path */, nullptr /* args */,
-                                 false /* invisible */, false /* has_init */,
-                                 true /* always_init */, zx::channel() /* client_remote */,
-                                 &device);
+  status = coordinator.AddDevice(
+      coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
+      nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
+      nullptr /* driver_path */, nullptr /* args */, false /* invisible */, false /* has_init */,
+      true /* always_init */, zx::channel() /* client_remote */, &device);
   device->AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());

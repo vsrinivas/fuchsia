@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVFS_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVFS_H_
+#ifndef SRC_DEVICES_COORDINATOR_DEVFS_H_
+#define SRC_DEVICES_COORDINATOR_DEVFS_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
@@ -42,4 +42,4 @@ zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* devic
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DEVFS_H_
+#endif  // SRC_DEVICES_COORDINATOR_DEVFS_H_

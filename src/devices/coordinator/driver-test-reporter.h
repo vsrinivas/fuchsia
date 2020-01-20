@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DRIVER_TEST_REPORTER_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DRIVER_TEST_REPORTER_H_
+#ifndef SRC_DEVICES_COORDINATOR_DRIVER_TEST_REPORTER_H_
+#define SRC_DEVICES_COORDINATOR_DRIVER_TEST_REPORTER_H_
 
 #include <fuchsia/driver/test/c/fidl.h>
 
@@ -34,4 +34,4 @@ class DriverTestReporter {
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_DRIVER_TEST_REPORTER_H_
+#endif  // SRC_DEVICES_COORDINATOR_DRIVER_TEST_REPORTER_H_

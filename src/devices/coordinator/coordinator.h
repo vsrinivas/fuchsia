@@ -308,7 +308,8 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
   void Suspend(uint32_t flags);
-  void Resume(SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
+  void Resume(
+      SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
 
   SuspendContext& suspend_context() { return suspend_context_; }
   const SuspendContext& suspend_context() const { return suspend_context_; }

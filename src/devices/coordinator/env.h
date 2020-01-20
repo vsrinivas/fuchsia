@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_ENV_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_ENV_H_
+#ifndef SRC_DEVICES_COORDINATOR_ENV_H_
+#define SRC_DEVICES_COORDINATOR_ENV_H_
 
 namespace devmgr {
 
@@ -14,4 +14,4 @@ bool getenv_bool(const char* key, bool default_value);
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_ENV_H_
+#endif  // SRC_DEVICES_COORDINATOR_ENV_H_

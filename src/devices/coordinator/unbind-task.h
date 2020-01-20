@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_UNBIND_TASK_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_UNBIND_TASK_H_
+#ifndef SRC_DEVICES_COORDINATOR_UNBIND_TASK_H_
+#define SRC_DEVICES_COORDINATOR_UNBIND_TASK_H_
 
 #include "device.h"
 #include "task.h"
@@ -74,4 +74,4 @@ class RemoveTask final : public Task {
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_UNBIND_TASK_H_
+#endif  // SRC_DEVICES_COORDINATOR_UNBIND_TASK_H_

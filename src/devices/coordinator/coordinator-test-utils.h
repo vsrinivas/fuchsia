@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_COORDINATOR_TEST_H_
-#define SRC_DRIVER_FRAMEWORK_COORDINATOR_TEST_H_
+#ifndef SRC_DEVICES_COORDINATOR_COORDINATOR_TEST_UTILS_H_
+#define SRC_DEVICES_COORDINATOR_COORDINATOR_TEST_UTILS_H_
 
 #include <fuchsia/driver/test/c/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
@@ -40,4 +40,4 @@ void InitializeCoordinator(devmgr::Coordinator* coordinator);
 
 void CheckBindDriverReceived(const zx::channel& remote, const char* expected_driver);
 
-#endif  // SRC_DRIVER_FRAMEWORK_COORDINATOR_TEST_H_
+#endif  // SRC_DEVICES_COORDINATOR_COORDINATOR_TEST_UTILS_H_

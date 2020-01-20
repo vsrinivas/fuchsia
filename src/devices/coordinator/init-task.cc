@@ -10,8 +10,7 @@
 namespace devmgr {
 
 InitTask::InitTask(fbl::RefPtr<Device> device, Completion completion)
-    : Task(device->coordinator->dispatcher(), std::move(completion)),
-      device_(std::move(device)) {}
+    : Task(device->coordinator->dispatcher(), std::move(completion)), device_(std::move(device)) {}
 
 InitTask::~InitTask() = default;
 

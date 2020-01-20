@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COMPOSITE_DEVICE_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COMPOSITE_DEVICE_H_
+#ifndef SRC_DEVICES_COORDINATOR_COMPOSITE_DEVICE_H_
+#define SRC_DEVICES_COORDINATOR_COMPOSITE_DEVICE_H_
 
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
@@ -184,4 +184,4 @@ class CompositeDevice {
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_COMPOSITE_DEVICE_H_
+#endif  // SRC_DEVICES_COORDINATOR_COMPOSITE_DEVICE_H_

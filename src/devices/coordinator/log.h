@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_LOG_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_LOG_H_
+#ifndef SRC_DEVICES_COORDINATOR_LOG_H_
+#define SRC_DEVICES_COORDINATOR_LOG_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -36,4 +36,4 @@ extern uint32_t log_flags;
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_LOG_H_
+#endif  // SRC_DEVICES_COORDINATOR_LOG_H_
