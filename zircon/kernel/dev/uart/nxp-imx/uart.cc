@@ -104,10 +104,6 @@ static interrupt_eoi uart_irq_handler(void* arg) {
 
 /* panic-time getc/putc */
 static void imx_uart_pputc(char c) {
-  if (!uart_base) {
-    return;
-  }
-
   /* spin while fifo is full */
   while (UARTREG(MX8_UTS) & UTS_TXFULL)
     ;
@@ -115,10 +111,6 @@ static void imx_uart_pputc(char c) {
 }
 
 static int imx_uart_pgetc() {
-  if (!uart_base) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   if ((UARTREG(MX8_UTS) & UTS_RXEMPTY)) {
     return ZX_ERR_INTERNAL;
   }
@@ -127,10 +119,6 @@ static int imx_uart_pgetc() {
 }
 
 static int imx_uart_getc(bool wait) {
-  if (!uart_base) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   if (initialized) {
     char c;
     if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
@@ -147,9 +135,6 @@ static void imx_dputs(const char* str, size_t len, bool block, bool map_NL) {
   spin_lock_saved_state_t state;
   bool copied_CR = false;
 
-  if (!uart_base) {
-    return;
-  }
   if (!uart_tx_irq_enabled) {
     block = false;
   }

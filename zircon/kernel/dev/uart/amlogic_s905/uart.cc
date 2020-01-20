@@ -190,10 +190,6 @@ static void s905_uart_init(const void* driver_data, uint32_t length) {
 
 /* panic-time getc/putc */
 static void s905_uart_pputc(char c) {
-  if (!s905_uart_base) {
-    return;
-  }
-
   /* spin while fifo is full */
   while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL)
     ;
@@ -201,10 +197,6 @@ static void s905_uart_pputc(char c) {
 }
 
 static int s905_uart_pgetc() {
-  if (!s905_uart_base) {
-    return 0;
-  }
-
   if ((UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_RXEMPTY) == 0) {
     return UARTREG(s905_uart_base, S905_UART_RFIFO);
   } else {
@@ -213,10 +205,6 @@ static int s905_uart_pgetc() {
 }
 
 static int s905_uart_getc(bool wait) {
-  if (!s905_uart_base) {
-    return -1;
-  }
-
   if (initialized) {
     // do cbuf stuff here
     char c;
@@ -243,9 +231,6 @@ static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
   spin_lock_saved_state_t state;
   bool copied_CR = false;
 
-  if (!s905_uart_base) {
-    return;
-  }
   if (!uart_tx_irq_enabled) {
     block = false;
   }

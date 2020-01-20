@@ -134,10 +134,6 @@ static interrupt_eoi dw8250_uart_irq(void* arg) {
 
 /* panic-time getc/putc */
 static void dw8250_uart_pputc(char c) {
-  if (!uart_base) {
-    return;
-  }
-
   // spin while fifo is full
   while (!(UARTREG(UART_LSR) & UART_LSR_THRE))
     ;
@@ -145,10 +141,6 @@ static void dw8250_uart_pputc(char c) {
 }
 
 static int dw8250_uart_pgetc() {
-  if (!uart_base) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   // spin while fifo is empty
   while (!(UARTREG(UART_LSR) & UART_LSR_DR))
     ;
@@ -156,10 +148,6 @@ static int dw8250_uart_pgetc() {
 }
 
 static int dw8250_uart_getc(bool wait) {
-  if (!uart_base) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   if (initialized) {
     char c;
     if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
@@ -176,9 +164,6 @@ static void dw8250_dputs(const char* str, size_t len, bool block, bool map_NL) {
   spin_lock_saved_state_t state;
   bool copied_CR = false;
 
-  if (!uart_base) {
-    return;
-  }
   if (!uart_tx_irq_enabled) {
     block = false;
   }

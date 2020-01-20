@@ -130,10 +130,6 @@ static inline void yield(void) { __asm__ volatile("yield" ::: "memory"); }
 
 // panic-time getc/putc
 static void msm_pputc(char c) {
-  if (!uart_base) {
-    return;
-  }
-
   // spin while fifo is full
   while (!(uart_read(UART_DM_SR) & UART_DM_SR_TXEMT)) {
     yield();
@@ -278,9 +274,6 @@ static void msm_dputs(const char* str, size_t len, bool block, bool map_NL) {
   spin_lock_saved_state_t state;
   bool copied_CR = false;
 
-  if (!uart_base) {
-    return;
-  }
   if (!uart_tx_irq_enabled) {
     block = false;
   }
