@@ -1448,7 +1448,7 @@ fn write_dirent_bytes(buf: &mut Vec<u8>, ino: u64, typ: u8, name: &str) -> Resul
     buf.write_u64::<LittleEndian>(ino).unwrap();
     buf.write_u8(name.len() as u8).unwrap();
     buf.write_u8(typ as u8).unwrap();
-    buf.write(name.as_ref()).unwrap();
+    buf.write_all(name.as_ref()).unwrap();
     Ok(())
 }
 
