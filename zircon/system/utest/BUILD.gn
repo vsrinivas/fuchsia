@@ -243,7 +243,6 @@ if (current_cpu != "") {
       "svchost",
       "sysinfo",
       "sysmem",
-      "task-utils",
       "thread-initial-state",
       "thread-safe-deleter",
       "timers",
