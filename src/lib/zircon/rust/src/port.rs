@@ -271,7 +271,7 @@ impl GuestIoPacket {
         }
         if let guest::AccessType::Write = self.access_type() {
             unsafe {
-                let data = &*(self.0.data.as_ptr() as *const DataUnion);
+                let data = &DataUnion { bit8: self.0.data };
                 self.access_size().map(|size| match size {
                     guest::PortAccessSize::Bits8 => guest::PortData::Data8(data.bit8[0]),
                     guest::PortAccessSize::Bits16 => guest::PortData::Data16(data.bit16[0]),
