@@ -204,7 +204,6 @@ if (current_cpu != "") {
       "blobfs-bench",
       "channel-fatal",
       "chromeos-disk-setup",
-      "closure-queue",
       "core",
       "core-display",
       "debugger",
