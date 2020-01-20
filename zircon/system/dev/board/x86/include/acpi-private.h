@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <ddk/device.h>
+#include <ddk/protocol/acpi.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
 
@@ -24,15 +25,14 @@ struct AcpiDevicePioResource {
 
 struct AcpiDeviceMmioResource {
   AcpiDeviceMmioResource(bool writeable, uint32_t base_address, uint32_t alignment,
-                              uint32_t address_length)
+                         uint32_t address_length)
       : writeable{writeable},
         base_address{base_address},
         alignment{alignment},
         address_length{address_length} {}
 
   explicit AcpiDeviceMmioResource(const resource_memory_t& mem)
-      : AcpiDeviceMmioResource{mem.writeable, mem.minimum, mem.alignment, mem.address_length} {
-  }
+      : AcpiDeviceMmioResource{mem.writeable, mem.minimum, mem.alignment, mem.address_length} {}
 
   bool writeable;
   uint32_t base_address;
@@ -66,7 +66,7 @@ struct acpi_device_t {
   zx_device_t* zxdev;
   zx_device_t* platform_bus;
 
-  fbl::Mutex lock;
+  mutable fbl::Mutex lock;
 
   bool got_resources;
 
@@ -81,6 +81,14 @@ struct acpi_device_t {
 
   // handle to the corresponding ACPI node
   ACPI_HANDLE ns_node;
+
+  zx_status_t ReportCurrentResources();
+  ACPI_STATUS AddResource(ACPI_RESOURCE*);
+  zx_status_t AcpiOpGetPioLocked(uint32_t index, zx_handle_t* out_pio);
+  zx_status_t AcpiOpGetMmioLocked(uint32_t index, acpi_mmio* out_mmio);
+  zx_status_t AcpiOpMapInterruptLocked(int64_t which_irq, zx_handle_t* out_handle);
+  zx_status_t AcpiOpConnectSysmemLocked(zx_handle_t handle) const;
+  zx_status_t AcpiOpRegisterSysmemHeapLocked(uint64_t heap, zx_handle_t handle) const;
 };
 
 struct publish_acpi_device_ctx_t {

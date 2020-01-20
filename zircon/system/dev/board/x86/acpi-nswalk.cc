@@ -13,6 +13,7 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/threads.h>
 
+#include <variant>
 #include <vector>
 
 #include <acpica/acpi.h>
@@ -41,15 +42,7 @@ zx_protocol_device_t acpi_device_proto = [] {
   return ops;
 }();
 
-struct acpi_crs_ctx_t {
-  std::vector<AcpiDevicePioResource> pio_resources;
-  std::vector<AcpiDeviceMmioResource> mmio_resources;
-  std::vector<AcpiDeviceIrqResource> irqs;
-};
-
-static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void* _ctx) {
-  acpi_crs_ctx_t* ctx = (acpi_crs_ctx_t*)_ctx;
-
+ACPI_STATUS acpi_device_t::AddResource(ACPI_RESOURCE* res) {
   if (resource_is_memory(res)) {
     resource_memory_t mem;
     zx_status_t st = resource_parse_memory(res, &mem);
@@ -58,7 +51,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     if ((st != ZX_OK) || (mem.minimum != mem.maximum)) {
       return AE_ERROR;
     }
-    ctx->mmio_resources.emplace_back(mem);
+    mmio_resources.emplace_back(mem);
 
   } else if (resource_is_address(res)) {
     resource_address_t addr;
@@ -68,9 +61,8 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
     }
     if ((addr.resource_type == RESOURCE_ADDRESS_MEMORY) && addr.min_address_fixed &&
         addr.max_address_fixed && (addr.maximum < addr.minimum)) {
-      ctx->mmio_resources.emplace_back(/* writeable= */ true, addr.min_address_fixed,
-                                       /* alignment= */ 0,
-                                       static_cast<uint32_t>(addr.address_length));
+      mmio_resources.emplace_back(/* writeable= */ true, addr.min_address_fixed,
+                                  /* alignment= */ 0, static_cast<uint32_t>(addr.address_length));
     }
 
   } else if (resource_is_io(res)) {
@@ -80,7 +72,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
       return AE_ERROR;
     }
 
-    ctx->pio_resources.emplace_back(io);
+    pio_resources.emplace_back(io);
 
   } else if (resource_is_irq(res)) {
     resource_irq_t irq;
@@ -89,50 +81,47 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
       return AE_ERROR;
     }
     for (auto i = 0; i < irq.pin_count; i++) {
-      ctx->irqs.emplace_back(irq, i);
+      irqs.emplace_back(irq, i);
     }
   }
 
   return AE_OK;
 }
 
-static zx_status_t report_current_resources(acpi_device_t* dev) {
-  if (dev->got_resources) {
+zx_status_t acpi_device_t::ReportCurrentResources() {
+  if (got_resources) {
     return ZX_OK;
   }
 
-  acpi_crs_ctx_t ctx;
   // call _CRS to fill in resources
-  ACPI_STATUS acpi_status =
-      AcpiWalkResources(dev->ns_node, (char*)"_CRS", report_current_resources_resource_cb, &ctx);
+  ACPI_STATUS acpi_status = AcpiWalkResources(
+      ns_node, (char*)"_CRS",
+      [](ACPI_RESOURCE* res, void* ctx) {
+        return reinterpret_cast<acpi_device_t*>(ctx)->AddResource(res);
+      },
+      this);
   if ((acpi_status != AE_NOT_FOUND) && (acpi_status != AE_OK)) {
     return acpi_to_zx_status(acpi_status);
   }
 
-  dev->pio_resources = std::move(ctx.pio_resources);
-  dev->mmio_resources = std::move(ctx.mmio_resources);
-  dev->irqs = std::move(ctx.irqs);
-
   zxlogf(TRACE, "acpi-bus[%s]: found %zd port resources %zd memory resources %zx irqs\n",
-         device_get_name(dev->zxdev), dev->pio_resources.size(), dev->mmio_resources.size(),
-         dev->irqs.size());
+         device_get_name(zxdev), pio_resources.size(), mmio_resources.size(), irqs.size());
   if (driver_get_log_flags() & DDK_LOG_SPEW) {
     zxlogf(SPEW, "port resources:\n");
-    for (size_t i = 0; i < dev->pio_resources.size(); i++) {
-      zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x\n", i,
-             dev->pio_resources[i].base_address, dev->pio_resources[i].address_length,
-             dev->pio_resources[i].alignment);
+    for (size_t i = 0; i < pio_resources.size(); i++) {
+      zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x\n", i, pio_resources[i].base_address,
+             pio_resources[i].address_length, pio_resources[i].alignment);
     }
     zxlogf(SPEW, "memory resources:\n");
-    for (size_t i = 0; i < dev->mmio_resources.size(); i++) {
+    for (size_t i = 0; i < mmio_resources.size(); i++) {
       zxlogf(SPEW, "  %02zd: addr=0x%x length=0x%x align=0x%x writeable=%d\n", i,
-             dev->mmio_resources[i].base_address, dev->mmio_resources[i].address_length,
-             dev->mmio_resources[i].alignment, dev->mmio_resources[i].writeable);
+             mmio_resources[i].base_address, mmio_resources[i].address_length,
+             mmio_resources[i].alignment, mmio_resources[i].writeable);
     }
     zxlogf(SPEW, "irqs:\n");
-    for (size_t i = 0; i < dev->irqs.size(); i++) {
+    for (size_t i = 0; i < irqs.size(); i++) {
       const char* trigger;
-      switch (dev->irqs[i].trigger) {
+      switch (irqs[i].trigger) {
         case ACPI_IRQ_TRIGGER_EDGE:
           trigger = "edge";
           break;
@@ -144,7 +133,7 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
           break;
       }
       const char* polarity;
-      switch (dev->irqs[i].polarity) {
+      switch (irqs[i].polarity) {
         case ACPI_IRQ_ACTIVE_BOTH:
           polarity = "both";
           break;
@@ -158,37 +147,34 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
           polarity = "bad_polarity";
           break;
       }
-      zxlogf(SPEW, "  %02zd: pin=%u %s %s %s %s\n", i, dev->irqs[i].pin, trigger, polarity,
-             (dev->irqs[i].sharable == ACPI_IRQ_SHARED) ? "shared" : "exclusive",
-             dev->irqs[i].wake_capable ? "wake" : "nowake");
+      zxlogf(SPEW, "  %02zd: pin=%u %s %s %s %s\n", i, irqs[i].pin, trigger, polarity,
+             (irqs[i].sharable == ACPI_IRQ_SHARED) ? "shared" : "exclusive",
+             irqs[i].wake_capable ? "wake" : "nowake");
     }
   }
 
-  dev->got_resources = true;
+  got_resources = true;
 
   return ZX_OK;
 }
 
-static zx_status_t acpi_op_get_pio(void* ctx, uint32_t index, zx_handle_t* out_pio) {
-  acpi_device_t* dev = (acpi_device_t*)ctx;
-  fbl::AutoLock<fbl::Mutex> guard{&dev->lock};
-
-  zx_status_t st = report_current_resources(dev);
+zx_status_t acpi_device_t::AcpiOpGetPioLocked(uint32_t index, zx_handle_t* out_pio) {
+  zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
     return st;
   }
 
-  if (index >= dev->pio_resources.size()) {
+  if (index >= pio_resources.size()) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  const AcpiDevicePioResource& res = dev->pio_resources[index];
+  const AcpiDevicePioResource& res = pio_resources[index];
 
   zx_handle_t resource;
   // Please do not use get_root_resource() in new code. See ZX-1467.
   // TODO: figure out what to pass to name here
   st = zx_resource_create(get_root_resource(), ZX_RSRC_KIND_IOPORT, res.base_address,
-                          res.address_length, device_get_name(dev->zxdev), 0, &resource);
+                          res.address_length, device_get_name(zxdev), 0, &resource);
   if (st != ZX_OK) {
     return st;
   }
@@ -197,24 +183,21 @@ static zx_status_t acpi_op_get_pio(void* ctx, uint32_t index, zx_handle_t* out_p
   return ZX_OK;
 }
 
-static zx_status_t acpi_op_get_mmio(void* ctx, uint32_t index, acpi_mmio_t* out_mmio) {
-  acpi_device_t* dev = (acpi_device_t*)ctx;
-  fbl::AutoLock<fbl::Mutex> guard{&dev->lock};
-
-  zx_status_t st = report_current_resources(dev);
+zx_status_t acpi_device_t::AcpiOpGetMmioLocked(uint32_t index, acpi_mmio* out_mmio) {
+  zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
     return st;
   }
 
-  if (index >= dev->mmio_resources.size()) {
+  if (index >= mmio_resources.size()) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  const AcpiDeviceMmioResource& res = dev->mmio_resources[index];
+  const AcpiDeviceMmioResource& res = mmio_resources[index];
   if (((res.base_address & (PAGE_SIZE - 1)) != 0) ||
       ((res.address_length & (PAGE_SIZE - 1)) != 0)) {
     zxlogf(ERROR, "acpi-bus[%s]: memory id=%d addr=0x%08x len=0x%x is not page aligned\n",
-           device_get_name(dev->zxdev), index, res.base_address, res.address_length);
+           device_get_name(zxdev), index, res.base_address, res.address_length);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -233,20 +216,17 @@ static zx_status_t acpi_op_get_mmio(void* ctx, uint32_t index, acpi_mmio_t* out_
   return ZX_OK;
 }
 
-static zx_status_t acpi_op_map_interrupt(void* ctx, int64_t which_irq, zx_handle_t* out_handle) {
-  acpi_device_t* dev = (acpi_device_t*)ctx;
-  fbl::AutoLock<fbl::Mutex> guard{&dev->lock};
-
-  zx_status_t st = report_current_resources(dev);
+zx_status_t acpi_device_t::AcpiOpMapInterruptLocked(int64_t which_irq, zx_handle_t* out_handle) {
+  zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
     return st;
   }
 
-  if ((uint)which_irq >= dev->irqs.size()) {
+  if ((uint)which_irq >= irqs.size()) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  const AcpiDeviceIrqResource& irq = dev->irqs[which_irq];
+  const AcpiDeviceIrqResource& irq = irqs[which_irq];
   uint32_t mode;
   mode = ZX_INTERRUPT_MODE_DEFAULT;
   st = ZX_OK;
@@ -312,12 +292,9 @@ static zx_status_t acpi_op_get_bti(void* ctx, uint32_t bdf, uint32_t index, zx_h
   return zx_bti_create(iommu_handle, 0, bdf, bti);
 }
 
-static zx_status_t acpi_op_connect_sysmem(void* ctx, zx_handle_t handle) {
-  acpi_device_t* dev = (acpi_device_t*)ctx;
-  fbl::AutoLock<fbl::Mutex> guard{&dev->lock};
-
+zx_status_t acpi_device_t::AcpiOpConnectSysmemLocked(zx_handle_t handle) const {
   sysmem_protocol_t sysmem;
-  zx_status_t st = device_get_protocol(dev->platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
+  zx_status_t st = device_get_protocol(platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
   if (st != ZX_OK) {
     zx_handle_close(handle);
     return st;
@@ -325,12 +302,9 @@ static zx_status_t acpi_op_connect_sysmem(void* ctx, zx_handle_t handle) {
   return sysmem_connect(&sysmem, handle);
 }
 
-static zx_status_t acpi_op_register_sysmem_heap(void* ctx, uint64_t heap, zx_handle_t handle) {
-  acpi_device_t* dev = (acpi_device_t*)ctx;
-  fbl::AutoLock<fbl::Mutex> guard{&dev->lock};
-
+zx_status_t acpi_device_t::AcpiOpRegisterSysmemHeapLocked(uint64_t heap, zx_handle_t handle) const {
   sysmem_protocol_t sysmem;
-  zx_status_t st = device_get_protocol(dev->platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
+  zx_status_t st = device_get_protocol(platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
   if (st != ZX_OK) {
     zx_handle_close(handle);
     return st;
@@ -339,18 +313,25 @@ static zx_status_t acpi_op_register_sysmem_heap(void* ctx, uint64_t heap, zx_han
   return sysmem_register_heap(&sysmem, heap, handle);
 }
 
+template <auto Fn, typename... Args>
+auto GuardedDeviceFn(void* ctx, Args... args) {
+  auto& device = *reinterpret_cast<acpi_device_t*>(ctx);
+  fbl::AutoLock<fbl::Mutex> guard{&device.lock};
+  return (device.*Fn)(std::forward<Args&&>(args)...);
+}
+
 // TODO marking unused until we publish some devices
 __attribute__((unused)) acpi_protocol_ops_t acpi_proto = {
-    .get_pio = acpi_op_get_pio,
-    .get_mmio = acpi_op_get_mmio,
-    .map_interrupt = acpi_op_map_interrupt,
+    .get_pio = &GuardedDeviceFn<&acpi_device_t::AcpiOpGetPioLocked>,
+    .get_mmio = &GuardedDeviceFn<&acpi_device_t::AcpiOpGetMmioLocked>,
+    .map_interrupt = &GuardedDeviceFn<&acpi_device_t::AcpiOpMapInterruptLocked>,
     .get_bti = acpi_op_get_bti,
-    .connect_sysmem = acpi_op_connect_sysmem,
-    .register_sysmem_heap = acpi_op_register_sysmem_heap,
+    .connect_sysmem = &GuardedDeviceFn<&acpi_device_t::AcpiOpConnectSysmemLocked>,
+    .register_sysmem_heap = &GuardedDeviceFn<&acpi_device_t::AcpiOpRegisterSysmemHeapLocked>,
 };
 
 static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
-  const char* hid = NULL;
+  const char* hid = nullptr;
   if ((info->Valid & ACPI_VALID_HID) && (info->HardwareId.Length > 0) &&
       ((info->HardwareId.Length - 1) <= sizeof(uint64_t))) {
     hid = (const char*)info->HardwareId.String;
@@ -422,21 +403,17 @@ zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI
     }
   }
 
-  acpi_device_t* dev = static_cast<acpi_device_t*>(calloc(1, sizeof(acpi_device_t)));
-  if (!dev) {
-    return nullptr;
-  }
+  auto dev = std::make_unique<acpi_device_t>();
   dev->platform_bus = platform_bus;
-
   dev->ns_node = handle;
 
   device_add_args_t args = {};
 
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.name = name;
-  args.ctx = dev;
+  args.ctx = dev.get();
   args.ops = &acpi_device_proto;
-  args.props = (propcount > 0) ? props : NULL;
+  args.props = (propcount > 0) ? props : nullptr;
   args.prop_count = static_cast<uint32_t>(propcount);
   args.proto_id = protocol_id;
   args.proto_ops = protocol_ops;
@@ -445,12 +422,12 @@ zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI
   if ((status = device_add(parent, &args, &dev->zxdev)) != ZX_OK) {
     zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)\n", status, device_get_name(parent),
            parent);
-    free(dev);
-    return NULL;
+    return nullptr;
   } else {
-    zxlogf(ERROR, "acpi: published device %s(%p), parent=%s(%p), handle=%p\n", name, dev,
+    zxlogf(ERROR, "acpi: published device %s(%p), parent=%s(%p), handle=%p\n", name, dev.get(),
            device_get_name(parent), parent, (void*)dev->ns_node);
-    return dev->zxdev;
+    // device_add takes ownership of args.ctx, but only on success.
+    return dev.release()->zxdev;
   }
 }
 
@@ -460,9 +437,9 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   if (!memcmp(&info->Name, "I2C0", 4)) {
     ACPI_BUFFER buffer = {
         .Length = ACPI_ALLOCATE_BUFFER,
-        .Pointer = NULL,
+        .Pointer = nullptr,
     };
-    acpi_status = AcpiEvaluateObject(object, (char*)"H00A._PR0", NULL, &buffer);
+    acpi_status = AcpiEvaluateObject(object, (char*)"H00A._PR0", nullptr, &buffer);
     if (acpi_status == AE_OK) {
       ACPI_OBJECT* pkg = static_cast<ACPI_OBJECT*>(buffer.Pointer);
       for (unsigned i = 0; i < pkg->Package.Count; i++) {
@@ -471,7 +448,7 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
           zxlogf(TRACE, "acpi: Ignoring wrong type 0x%x\n", ref->Type);
         } else {
           zxlogf(TRACE, "acpi: Enabling HID controller at I2C0.H00A._PR0[%u]\n", i);
-          acpi_status = AcpiEvaluateObject(ref->Reference.Handle, (char*)"_ON", NULL, NULL);
+          acpi_status = AcpiEvaluateObject(ref->Reference.Handle, (char*)"_ON", nullptr, nullptr);
           if (acpi_status != AE_OK) {
             zxlogf(ERROR, "acpi: acpi error 0x%x in I2C0._PR0._ON\n", acpi_status);
           }
@@ -483,7 +460,7 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   // Acer workaround: Turn on the HID controller.
   else if (!memcmp(&info->Name, "I2C1", 4)) {
     zxlogf(TRACE, "acpi: Enabling HID controller at I2C1\n");
-    acpi_status = AcpiEvaluateObject(object, (char*)"_PS0", NULL, NULL);
+    acpi_status = AcpiEvaluateObject(object, (char*)"_PS0", nullptr, nullptr);
     if (acpi_status != AE_OK) {
       zxlogf(ERROR, "acpi: acpi error in I2C1._PS0: 0x%x\n", acpi_status);
     }
@@ -492,7 +469,7 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
 
 static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_level, void* context,
                                          void** status) {
-  ACPI_DEVICE_INFO* info = NULL;
+  ACPI_DEVICE_INFO* info = nullptr;
   ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
   if (acpi_status != AE_OK) {
     return acpi_status;
@@ -526,7 +503,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
     return AE_OK;
   }
   const char* cid;
-  cid = NULL;
+  cid = nullptr;
   if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
       // IDs may be 7 or 8 bytes, and Length includes the null byte
       (info->CompatibleIdList.Ids[0].Length == HID_LENGTH ||
@@ -615,7 +592,7 @@ zx_status_t publish_acpi_devices(zx_device_t* parent, zx_device_t* sys_root,
   };
   ACPI_STATUS acpi_status =
       AcpiWalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
-                        acpi_ns_walk_callback, NULL, &ctx, NULL);
+                        acpi_ns_walk_callback, nullptr, &ctx, nullptr);
   if (acpi_status != AE_OK) {
     return ZX_ERR_BAD_STATE;
   } else {
