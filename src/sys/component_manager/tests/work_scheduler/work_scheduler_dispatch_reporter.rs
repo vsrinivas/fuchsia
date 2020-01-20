@@ -23,9 +23,6 @@ use {
     },
 };
 
-pub static WORK_SCHEDULER_DISPATCH_REPORTER: &str =
-    "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter";
-
 #[derive(Debug)]
 pub struct Timeout(Duration);
 

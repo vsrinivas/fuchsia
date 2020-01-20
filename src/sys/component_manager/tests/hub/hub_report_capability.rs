@@ -10,8 +10,6 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
-pub static HUB_REPORT_SERVICE: &str = "/svc/fuchsia.test.hub.HubReport";
-
 #[derive(Debug)]
 pub enum HubReportEvent {
     DirectoryListing { listing: Vec<String>, responder: fhub::HubReportListDirectoryResponder },

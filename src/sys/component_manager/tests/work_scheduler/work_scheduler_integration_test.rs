@@ -5,21 +5,9 @@
 use {
     anyhow::Error,
     breakpoint_system_client::*,
-    fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_test_workscheduler as fws,
     test_utils::*,
-    work_scheduler_dispatch_reporter::{
-        DispatchedEvent, WorkSchedulerDispatchReporter, WORK_SCHEDULER_DISPATCH_REPORTER,
-    },
+    work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
-
-#[test]
-fn work_scheduler_dispatch_reporter_paths() {
-    assert_eq!(
-        format!("/svc/{}", fws::WorkSchedulerDispatchReporterMarker::NAME),
-        WORK_SCHEDULER_DISPATCH_REPORTER.to_string()
-    );
-}
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn basic_work_scheduler_test() -> Result<(), Error> {
