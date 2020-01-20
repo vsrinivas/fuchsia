@@ -309,6 +309,7 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_IOMMU:
       if (iommu_) {
         iommu_->GetProto(static_cast<iommu_protocol_t*>(out));
+        return ZX_OK;
       } else {
         // return default implementation
         auto proto = static_cast<iommu_protocol_t*>(out);
