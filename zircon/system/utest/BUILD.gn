@@ -230,7 +230,6 @@ if (current_cpu != "") {
       "logger",
       "mexec",
       "minfs-micro-benchmark",
-      "mt8167-thermal",
       "noop-fuzzer",
       "platform-bus",
       "policy",
