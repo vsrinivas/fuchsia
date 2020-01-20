@@ -240,7 +240,6 @@ if (current_cpu != "") {
       "runtests-utils",
       "service:test",
       "stdio",
-      "svchost",
       "sysinfo",
       "sysmem",
       "thread-initial-state",
