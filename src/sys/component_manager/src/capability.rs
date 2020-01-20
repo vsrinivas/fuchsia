@@ -194,23 +194,17 @@ impl ComponentCapability {
     pub fn source_path(&self) -> Option<&CapabilityPath> {
         match self {
             ComponentCapability::Use(use_) => match use_ {
-                UseDecl::Protocol(UseProtocolDecl { source_path, .. }) => {
-                    Some(source_path)
-                }
+                UseDecl::Protocol(UseProtocolDecl { source_path, .. }) => Some(source_path),
                 UseDecl::Directory(UseDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
             ComponentCapability::Expose(expose) => match expose {
-                ExposeDecl::Protocol(ExposeProtocolDecl { source_path, .. }) => {
-                    Some(source_path)
-                }
+                ExposeDecl::Protocol(ExposeProtocolDecl { source_path, .. }) => Some(source_path),
                 ExposeDecl::Directory(ExposeDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
             ComponentCapability::Offer(offer) => match offer {
-                OfferDecl::Protocol(OfferProtocolDecl { source_path, .. }) => {
-                    Some(source_path)
-                }
+                OfferDecl::Protocol(OfferProtocolDecl { source_path, .. }) => Some(source_path),
                 OfferDecl::Directory(OfferDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },

@@ -124,15 +124,22 @@ impl Realm {
                 .unwrap()
                 .try_into()
                 .map_err(|e| ModelError::manifest_invalid(realm.component_url.clone(), e))?;
-            {
+            let new_realm_state = {
                 let mut state = realm.lock_state().await;
                 if state.is_none() {
                     *state = Some(RealmState::new(realm, &decl).await?);
+                    true
+                } else {
+                    false
                 }
+            };
+            // Only dispatch the `ResolveInstance` event if a `RealmState` was installed
+            // in this call.
+            if new_realm_state {
+                let event =
+                    Event::new(realm.abs_moniker.clone(), EventPayload::ResolveInstance { decl });
+                realm.hooks.dispatch(&event).await?;
             }
-            let event =
-                Event::new(realm.abs_moniker.clone(), EventPayload::ResolveInstance { decl });
-            realm.hooks.dispatch(&event).await?;
         }
         Ok(())
     }

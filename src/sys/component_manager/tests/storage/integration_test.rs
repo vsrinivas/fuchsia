@@ -42,7 +42,7 @@ async fn storage() -> Result<(), Error> {
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
     let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Expect the root component to be bound to
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
@@ -85,7 +85,7 @@ async fn storage_from_collection() -> Result<(), Error> {
     let trigger_capability = TriggerCapability::new();
     breakpoint_system.install_injector(trigger_capability).await?;
 
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Expect the root component to be started
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;

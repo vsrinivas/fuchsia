@@ -102,7 +102,7 @@ impl BreakpointSystemClient {
         Ok(())
     }
 
-    pub async fn start_component_manager(&self) -> Result<(), Error> {
+    pub async fn start_component_tree(&self) -> Result<(), Error> {
         self.proxy.start_component_tree().await.context("could not start component tree")?;
         Ok(())
     }

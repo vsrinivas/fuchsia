@@ -34,7 +34,7 @@ async fn destruction() -> Result<(), Error> {
     let sink =
         breakpoint_system.soak_events(vec![StopInstance::TYPE, PostDestroyInstance::TYPE]).await?;
     let receiver = breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Wait for `coll:root` to be destroyed.
     let invocation = receiver.wait_until_exact::<PostDestroyInstance>("./coll:root:1").await?;

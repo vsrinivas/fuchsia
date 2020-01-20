@@ -199,9 +199,9 @@ mod tests {
         super::*,
         crate::model::testing::{mocks, test_helpers, test_helpers::*},
         cm_rust::{
-            CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeRunnerDecl,
-            ExposeProtocolDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
-            UseRunnerDecl, UseProtocolDecl, UseSource, UseStorageDecl,
+            CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
+            ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
+            UseProtocolDecl, UseRunnerDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,

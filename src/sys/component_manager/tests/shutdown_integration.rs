@@ -14,7 +14,7 @@ async fn test() -> Result<(), Error> {
     test.connect_to_breakpoint_system()
         .await
         .expect("break point system is unavailable")
-        .start_component_manager()
+        .start_component_tree()
         .await?;
 
     test.component_manager_app

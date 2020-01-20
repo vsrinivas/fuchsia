@@ -350,11 +350,21 @@ impl ComponentDecl {
         self.runners.iter().find(|s| &s.name == runner_name)
     }
 
-    /// Locate an exposed-to-framework service by its `target_path`.
-    pub fn is_service_exposed_to_framework(&self, target_path: &CapabilityPath) -> bool {
+    /// Indicates whether the capability specified by `target_path` is exposed to the framework.
+    pub fn is_protocol_exposed_to_framework(&self, target_path: &CapabilityPath) -> bool {
         self.exposes.iter().any(|expose| match expose {
             ExposeDecl::Protocol(ls) => {
                 ls.target == ExposeTarget::Framework && ls.target_path == *target_path
+            }
+            _ => false,
+        })
+    }
+
+    /// Indicates whether the capability specified by `target_path` is requested.
+    pub fn uses_protocol_from_framework(&self, target_path: &CapabilityPath) -> bool {
+        self.uses.iter().any(|use_decl| match use_decl {
+            UseDecl::Protocol(ls) => {
+                ls.source == UseSource::Framework && ls.target_path == *target_path
             }
             _ => false,
         })

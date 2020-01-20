@@ -31,7 +31,7 @@ async fn base_resolver_test() -> Result<(), Error> {
     let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
     // Begin component manager's execution
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Expect the root component to be bound to
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;

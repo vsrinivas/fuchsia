@@ -10,11 +10,11 @@ use {
         model::Model,
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
-        realm::{ExecutionState, Realm, RealmState, Runtime},
+        realm::{ExecutionState, Realm, Runtime},
         resolver::Resolver,
         routing_facade::RoutingFacade,
     },
-    cm_rust::{data, ComponentDecl},
+    cm_rust::data,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -23,7 +23,7 @@ use {
         lock::Mutex,
         FutureExt,
     },
-    std::{convert::TryInto, sync::Arc},
+    std::sync::Arc,
 };
 
 #[derive(Clone)]
@@ -44,14 +44,10 @@ impl Model {
         // Resolve the component and find the runner to use.
         let component = realm.resolver_registry.resolve(&realm.component_url).await?;
         let (decl, live_child_descriptors) = {
-            let mut state = realm.lock_state().await;
-            if state.is_none() {
-                let decl: ComponentDecl =
-                    component.decl.unwrap().try_into().map_err(|e| {
-                        ModelError::manifest_invalid(realm.component_url.clone(), e)
-                    })?;
-                *state = Some(RealmState::new(&realm, &decl).await?);
-            }
+            // The `ComponentDecl` must always be resolved by `resolve_decl` as that
+            // can trigger a `ResolveInstance` event.
+            Realm::resolve_decl(&realm).await?;
+            let state = realm.lock_state().await;
             let state = state.as_ref().unwrap();
             let decl = state.decl().clone();
             let live_child_descriptors: Vec<_> = state

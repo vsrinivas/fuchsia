@@ -10,8 +10,8 @@ use {
     },
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
-        OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
-        UseProtocolDecl, UseSource,
+        OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl, UseProtocolDecl,
+        UseSource,
     },
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,

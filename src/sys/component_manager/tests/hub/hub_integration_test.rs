@@ -60,7 +60,7 @@ impl TestRunner {
             breakpoint_system.install_injector(hub_report_capability.clone()).await?;
 
             // Unblock component manager
-            breakpoint_system.start_component_manager().await?;
+            breakpoint_system.start_component_tree().await?;
 
             // Wait for the root component to start up
             start_receiver.expect_exact::<BeforeStartInstance>(".").await?.resume().await?;

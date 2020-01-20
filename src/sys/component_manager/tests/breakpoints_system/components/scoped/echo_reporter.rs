@@ -40,6 +40,8 @@ async fn start_echo_reporter(mut trigger_receiver: TriggerReceiver) -> Result<()
         .soak_events(vec![BeforeStartInstance::TYPE, RouteCapability::TYPE])
         .await?;
 
+    breakpoint_system.start_component_tree().await?;
+
     start_logging_trigger.resume();
 
     let stop_logging_trigger = trigger_receiver.next().await.unwrap();

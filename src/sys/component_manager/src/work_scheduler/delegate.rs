@@ -71,7 +71,7 @@ impl WorkSchedulerDelegate {
         target_moniker: &AbsoluteMoniker,
         decl: &ComponentDecl,
     ) {
-        if decl.is_service_exposed_to_framework(&WORKER_CAPABILITY_PATH) {
+        if decl.is_protocol_exposed_to_framework(&WORKER_CAPABILITY_PATH) {
             self.worker_monikers.push(target_moniker.clone());
         }
     }

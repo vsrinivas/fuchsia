@@ -167,6 +167,7 @@ pub async fn launch_component_and_expect_output_with_extra_dirs(
     dir_handles: Vec<(String, zx::Handle)>,
     expected_output: String,
 ) -> Result<(), Error> {
+    // TODO(fsamuel): Once we have LogEvents, we can remove this utiltiy function.
     let (file, pipe_handle) = make_pipe();
     let test = BlackBoxTest::custom(
         COMPONENT_MANAGER_URL,
@@ -177,7 +178,7 @@ pub async fn launch_component_and_expect_output_with_extra_dirs(
     .await?;
 
     let breakpoint_system_client = &test.connect_to_breakpoint_system().await?;
-    breakpoint_system_client.start_component_manager().await?;
+    breakpoint_system_client.start_component_tree().await?;
     read_from_pipe(file, expected_output)
 }
 

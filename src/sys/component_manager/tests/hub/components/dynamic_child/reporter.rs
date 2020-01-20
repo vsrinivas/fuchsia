@@ -14,6 +14,10 @@ use {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let breakpoint_system = BreakpointSystemClient::new()?;
+    // Creating children will not complete until `start_component_tree` is called.
+    breakpoint_system.start_component_tree().await?;
+
     // Create a dynamic child component
     let realm = connect_to_service::<fsys::RealmMarker>().context("error connecting to realm")?;
     let mut collection_ref = fsys::CollectionRef { name: String::from("coll") };
@@ -65,8 +69,6 @@ async fn main() -> Result<(), Error> {
     // Read the instance id of the dynamic child's static child and pass the results to the
     // integration test via HubReport
     hub_report.report_file_content("/hub/children/coll:simple_instance/children/child/id").await?;
-
-    let breakpoint_system = BreakpointSystemClient::new()?;
 
     // Register breakpoints for relevant events
     let receiver = breakpoint_system

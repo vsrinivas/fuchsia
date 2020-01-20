@@ -29,7 +29,7 @@ async fn empty_component() -> Result<(), Error> {
         test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
     let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Root must be created first
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
@@ -60,7 +60,7 @@ async fn tree() -> Result<(), Error> {
         test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
     let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Root must be created first
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
@@ -152,7 +152,7 @@ async fn echo_realm() -> Result<(), Error> {
         test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
 
     let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // 3 components are started. Order is irrelevant.
     // root and echo_client are started eagerly.

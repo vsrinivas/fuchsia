@@ -17,6 +17,7 @@ async fn main() -> Result<(), Error> {
 
     // Connect to the Breakpoint
     let breakpoint_system = BreakpointSystemClient::new()?;
+    breakpoint_system.start_component_tree().await?;
 
     let hub_report = {
         // Register for RouteCapability events

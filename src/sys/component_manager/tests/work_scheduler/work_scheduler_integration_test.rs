@@ -34,7 +34,7 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
     breakpoint_system.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
 
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Expect the root component to be bound to
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
@@ -61,7 +61,7 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
     breakpoint_system.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
 
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Expect the root component to be bound to
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;

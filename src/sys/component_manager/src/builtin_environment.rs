@@ -16,12 +16,10 @@ use {
         framework::RealmCapabilityHost,
         model::{
             binding::Binder,
-            breakpoints::core::BreakpointSystem,
+            breakpoints::core::BreakpointSystemFactory,
             error::ModelError,
-            hooks::EventType,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
-            moniker::AbsoluteMoniker,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
         runner::BuiltinRunner,
@@ -66,7 +64,7 @@ pub struct BuiltinEnvironment {
     pub realm_capability_host: RealmCapabilityHost,
     pub hub: Hub,
     pub builtin_runners: HashMap<CapabilityName, BuiltinRunner>,
-    pub breakpoint_system: Option<BreakpointSystem>,
+    pub breakpoint_system_factory: Option<BreakpointSystemFactory>,
     pub stop_notifier: Mutex<Option<RootRealmStopNotifier>>,
 }
 
@@ -161,9 +159,9 @@ impl BuiltinEnvironment {
         let stop_notifier = RootRealmStopNotifier::new();
         model.root_realm.hooks.install(stop_notifier.hooks()).await;
 
-        let breakpoint_system = {
+        let breakpoint_system_factory = {
             if args.debug {
-                Some(BreakpointSystem::new())
+                Some(BreakpointSystemFactory::new())
             } else {
                 None
             }
@@ -183,7 +181,7 @@ impl BuiltinEnvironment {
             realm_capability_host,
             hub,
             builtin_runners,
-            breakpoint_system,
+            breakpoint_system_factory,
             stop_notifier: Mutex::new(Some(stop_notifier)),
         })
     }
@@ -206,21 +204,14 @@ impl BuiltinEnvironment {
 
         // If component manager is in debug mode, create a breakpoint system scoped at the
         // root and offer it via ServiceFs to the outside world.
-        if let Some(breakpoint_system) = &self.breakpoint_system {
-            model.root_realm.hooks.install(breakpoint_system.hooks()).await;
+        if let Some(breakpoint_system_factory) = &self.breakpoint_system_factory {
+            model.root_realm.hooks.install(breakpoint_system_factory.hooks()).await;
 
-            // Indicates whether the ScopedBreakpointSystem should set a `ResolveInstance`
-            // breakpoint on the root component. This allows integration tests to set up
-            // other breakpoints before starting the root component. However, this is only
-            // relevant to the first requester of the breakpoint system and so this flag
-            // is reset after the first request.
-            let system = breakpoint_system.create_scope(AbsoluteMoniker::root());
-            let mut root_instance_resolved_receiver =
-                Some(system.set_breakpoints(vec![EventType::ResolveInstance]).await);
+            let system = breakpoint_system_factory.create(None).await;
 
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let system = system.clone();
-                system.serve_async(stream, root_instance_resolved_receiver.take());
+                system.serve_async(stream);
             });
         }
 

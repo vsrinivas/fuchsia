@@ -280,9 +280,9 @@ pub mod tests {
             },
         },
         cm_rust::{
-            CapabilityPath, ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
-            OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
-            UseProtocolDecl, UseSource,
+            CapabilityPath, ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
+            OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl, UseProtocolDecl,
+            UseSource,
         },
         fidl_fuchsia_sys2 as fsys,
         std::{convert::TryFrom, sync::Weak, task::Context},

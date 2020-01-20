@@ -6,7 +6,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
-            breakpoints::core::ScopedBreakpointSystem,
+            breakpoints::core::BreakpointSystem,
             breakpoints::registry::{Invocation, InvocationReceiver},
             error::ModelError,
             hooks::{EventPayload, EventType},
@@ -22,9 +22,8 @@ use {
 };
 
 pub async fn serve_system(
-    system: ScopedBreakpointSystem,
+    mut system: BreakpointSystem,
     mut stream: fbreak::BreakpointSystemRequestStream,
-    mut root_instance_resolved_receiver: Option<InvocationReceiver>,
 ) {
     while let Some(Ok(request)) = stream.next().await {
         match request {
@@ -45,28 +44,15 @@ pub async fn serve_system(
 
                 // Serve the receiver over FIDL asynchronously
                 fasync::spawn(async move {
-                    serve_receiver(receiver, scope, server_end).await;
+                    serve_receiver(receiver, scope.unwrap_or(AbsoluteMoniker::root()), server_end)
+                        .await;
                 });
 
                 // Unblock the component
                 responder.send().unwrap();
             }
             fbreak::BreakpointSystemRequest::StartComponentTree { responder } => {
-                // Unblock component manager if the receiver is provided.
-                if let Some(mut receiver) = root_instance_resolved_receiver {
-                    // Get the next invocation
-                    let invocation = receiver.next().await;
-
-                    // Ensure that this is a ResolveInstance event on the root instance
-                    assert_eq!(EventType::ResolveInstance, invocation.event.payload.type_());
-                    assert_eq!(AbsoluteMoniker::root(), invocation.event.target_moniker);
-
-                    // Resume from the invocation. This unblocks component manager.
-                    invocation.resume();
-
-                    // Ensure that StartComponentTree can only be called once.
-                    root_instance_resolved_receiver = None;
-                }
+                system.start_component_tree().await;
                 responder.send().unwrap();
             }
         }

@@ -620,9 +620,8 @@ mod tests {
 
         let breakpoint_events = vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance];
         let breakpoint_registry = Arc::new(BreakpointRegistry::new());
-        let mut breakpoint_receiver = breakpoint_registry
-            .set_breakpoints(AbsoluteMoniker::root(), breakpoint_events.clone())
-            .await;
+        let mut breakpoint_receiver =
+            breakpoint_registry.set_breakpoints(None, breakpoint_events.clone()).await;
 
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());

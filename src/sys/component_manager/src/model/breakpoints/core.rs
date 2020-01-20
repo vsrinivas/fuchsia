@@ -15,13 +15,17 @@ use {
             moniker::AbsoluteMoniker,
         },
     },
+    anyhow::format_err,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
+    futures::{future::BoxFuture, lock::Mutex},
     lazy_static::lazy_static,
-    std::convert::TryInto,
-    std::sync::{Arc, Weak},
+    std::{
+        collections::HashMap,
+        convert::TryInto,
+        sync::{Arc, Weak},
+    },
 };
 
 lazy_static! {
@@ -29,13 +33,13 @@ lazy_static! {
         "/svc/fuchsia.test.breakpoints.BreakpointSystem".try_into().unwrap();
 }
 
-pub struct BreakpointSystem {
-    inner: Arc<BreakpointSystemInner>,
+pub struct BreakpointSystemFactory {
+    inner: Arc<BreakpointSystemFactoryInner>,
 }
 
-impl BreakpointSystem {
+impl BreakpointSystemFactory {
     pub fn new() -> Self {
-        Self { inner: BreakpointSystemInner::new() }
+        Self { inner: BreakpointSystemFactoryInner::new() }
     }
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
@@ -53,35 +57,43 @@ impl BreakpointSystem {
                     EventType::RouteCapability,
                     EventType::StopInstance,
                 ],
-                Arc::downgrade(&self.inner.registry) as Weak<dyn Hook>,
+                Arc::downgrade(&self.inner.breakpoint_registry) as Weak<dyn Hook>,
             ),
             // This hook provides the Breakpoint capability to components in the tree
             HooksRegistration::new(
-                "BreakpointSystem",
-                vec![EventType::RouteCapability],
+                "BreakpointSystemFactory",
+                vec![EventType::ResolveInstance, EventType::RouteCapability],
                 Arc::downgrade(&self.inner) as Weak<dyn Hook>,
             ),
         ]
     }
 
-    /// Creates a `ScopedBreakpointSystem` that only receives breakpoint invocations
-    /// within the realm specified by `scope_moniker`.
-    pub fn create_scope(&self, scope_moniker: AbsoluteMoniker) -> ScopedBreakpointSystem {
-        ScopedBreakpointSystem::new(scope_moniker, self.inner.registry.clone())
+    pub async fn create(&self, scope_moniker: Option<AbsoluteMoniker>) -> BreakpointSystem {
+        self.inner.create(scope_moniker).await
     }
 }
 
-struct BreakpointSystemInner {
-    registry: Arc<BreakpointRegistry>,
+struct BreakpointSystemFactoryInner {
+    breakpoint_system_registry: Mutex<HashMap<Option<AbsoluteMoniker>, BreakpointSystem>>,
+    breakpoint_registry: Arc<BreakpointRegistry>,
 }
 
-impl BreakpointSystemInner {
+impl BreakpointSystemFactoryInner {
     pub fn new() -> Arc<Self> {
-        Arc::new(Self { registry: Arc::new(BreakpointRegistry::new()) })
+        Arc::new(Self {
+            breakpoint_system_registry: Mutex::new(HashMap::new()),
+            breakpoint_registry: Arc::new(BreakpointRegistry::new()),
+        })
     }
 
-    /// Creates and returns a ScopedBreakpointSystem when a component uses
-    /// the Breakpoint framework service. A ScopedBreakpointSystem holds an
+    /// Creates a `BreakpointSystem` that only receives breakpoint invocations
+    /// within the realm specified by `scope_moniker`.
+    pub async fn create(&self, scope_moniker: Option<AbsoluteMoniker>) -> BreakpointSystem {
+        BreakpointSystem::new(scope_moniker, self.breakpoint_registry.clone()).await
+    }
+
+    /// Creates and returns a BreakpointSystem when a component uses
+    /// the Breakpoint framework service. A BreakpointSystem holds an
     /// AbsoluteMoniker that corresponds to the realm in which it will receive
     /// breakpoint invocations.
     async fn on_route_scoped_framework_capability_async(
@@ -94,31 +106,51 @@ impl BreakpointSystemInner {
             (None, FrameworkCapability::Protocol(source_path))
                 if *source_path == *BREAKPOINT_SYSTEM_SERVICE =>
             {
-                let system = ScopedBreakpointSystem::new(scope_moniker, self.registry.clone());
-                return Ok(Some(Box::new(system) as Box<dyn CapabilityProvider>));
+                let key = Some(scope_moniker.clone());
+                let breakpoint_system_registry = self.breakpoint_system_registry.lock().await;
+                if let Some(system) = breakpoint_system_registry.get(&key) {
+                    return Ok(Some(Box::new(system.clone()) as Box<dyn CapabilityProvider>));
+                } else {
+                    return Err(ModelError::capability_discovery_error(format_err!(
+                        "Unable to find BreakpointSystem in registry for {}",
+                        scope_moniker
+                    )));
+                }
             }
             (c, _) => return Ok(c),
         };
     }
 }
 
-impl Hook for BreakpointSystemInner {
+impl Hook for BreakpointSystemFactoryInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(async move {
-            if let EventPayload::RouteCapability {
-                source:
-                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
-                capability_provider,
-            } = &event.payload
-            {
-                let mut capability_provider = capability_provider.lock().await;
-                *capability_provider = self
-                    .on_route_scoped_framework_capability_async(
-                        &capability,
-                        scope_moniker.clone(),
-                        capability_provider.take(),
-                    )
-                    .await?;
+            match &event.payload {
+                EventPayload::RouteCapability {
+                    source:
+                        CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+                    capability_provider,
+                } => {
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
+                        .on_route_scoped_framework_capability_async(
+                            &capability,
+                            scope_moniker.clone(),
+                            capability_provider.take(),
+                        )
+                        .await?;
+                }
+                EventPayload::ResolveInstance { decl } => {
+                    if decl.uses_protocol_from_framework(&BREAKPOINT_SYSTEM_SERVICE) {
+                        let key = Some(event.target_moniker.clone());
+                        let mut breakpoint_system_registry =
+                            self.breakpoint_system_registry.lock().await;
+                        assert!(!breakpoint_system_registry.contains_key(&key));
+                        let breakpoint_system = self.create(key.clone()).await;
+                        breakpoint_system_registry.insert(key, breakpoint_system);
+                    }
+                }
+                _ => {}
             }
             Ok(())
         })
@@ -128,18 +160,32 @@ impl Hook for BreakpointSystemInner {
 /// A system responsible for implementing basic breakpoint functionality on a scoped realm.
 /// If this object is dropped, there are no guarantees about breakpoint functionality.
 #[derive(Clone)]
-pub struct ScopedBreakpointSystem {
-    scope_moniker: AbsoluteMoniker,
+pub struct BreakpointSystem {
+    scope_moniker: Option<AbsoluteMoniker>,
     registry: Arc<BreakpointRegistry>,
+    resolve_instance_receiver: Arc<Mutex<Option<InvocationReceiver>>>,
 }
 
-impl ScopedBreakpointSystem {
-    pub fn new(scope_moniker: AbsoluteMoniker, registry: Arc<BreakpointRegistry>) -> Self {
-        Self { scope_moniker, registry }
+impl BreakpointSystem {
+    pub async fn new(
+        scope_moniker: Option<AbsoluteMoniker>,
+        registry: Arc<BreakpointRegistry>,
+    ) -> Self {
+        let resolve_instance_receiver = Arc::new(Mutex::new(Some(
+            registry.set_breakpoints(scope_moniker.clone(), vec![EventType::ResolveInstance]).await,
+        )));
+        Self { scope_moniker, registry, resolve_instance_receiver }
+    }
+
+    /// Drops the `ResolveInstance` receiver, thereby permitting components within the
+    /// realm to be started.
+    pub async fn start_component_tree(&mut self) {
+        let mut resolve_instance_receiver = self.resolve_instance_receiver.lock().await;
+        *resolve_instance_receiver = None;
     }
 
     /// Sets breakpoints corresponding to the `events` vector. The breakpoints are scoped
-    /// to this `ScopedBreakpointSystem`'s realm. In other words, this breakpoint system
+    /// to this `BreakpointSystem`'s realm. In other words, this breakpoint system
     /// will only receive events that have a target moniker within the realm of this breakpoint
     /// system's scope.
     pub async fn set_breakpoints(&self, events: Vec<EventType>) -> InvocationReceiver {
@@ -147,29 +193,21 @@ impl ScopedBreakpointSystem {
         self.registry.set_breakpoints(self.scope_moniker.clone(), events.clone()).await
     }
 
-    /// Serves a `BreakpointSystem` FIDL protocol. `root_instance_resolved_receiver`
-    /// is an optional reciever corresponding to a `ResolveInstance` breakpoint. This is only
-    /// relevant for the root `ScopedBreakpointSystem`. The `ResolveInstance` breakpoint on the
-    /// root component permits integration tests to install additional breakpoints before
-    /// the root component starts to avoid races.
-    pub fn serve_async(
-        self,
-        stream: fbreak::BreakpointSystemRequestStream,
-        root_instance_resolved_receiver: Option<InvocationReceiver>,
-    ) {
+    /// Serves a `BreakpointSystem` FIDL protocol.
+    pub fn serve_async(self, stream: fbreak::BreakpointSystemRequestStream) {
         fasync::spawn(async move {
-            serve_system(self, stream, root_instance_resolved_receiver).await;
+            serve_system(self, stream).await;
         });
     }
 
-    /// Returns an AbsoluteMoniker corresponding to the scope of this breakpoint system.
-    pub fn scope(&self) -> AbsoluteMoniker {
+    // Returns an AbsoluteMoniker corresponding to the scope of this breakpoint system.
+    pub fn scope(&self) -> Option<AbsoluteMoniker> {
         self.scope_moniker.clone()
     }
 }
 
 #[async_trait]
-impl CapabilityProvider for ScopedBreakpointSystem {
+impl CapabilityProvider for BreakpointSystem {
     async fn open(
         self: Box<Self>,
         _flags: u32,
@@ -180,7 +218,7 @@ impl CapabilityProvider for ScopedBreakpointSystem {
         let stream = ServerEnd::<fbreak::BreakpointSystemMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        self.serve_async(stream, None);
+        self.serve_async(stream);
         Ok(())
     }
 }

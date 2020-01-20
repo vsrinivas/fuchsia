@@ -71,7 +71,7 @@ async fn echo_interposer_test() -> Result<(), Error> {
     let (interposer, mut rx) = EchoInterposer::new();
     breakpoint_system.install_interposer(interposer).await?;
 
-    breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_tree().await?;
 
     // Ensure that the string "Interposed: Hippos rule!" is sent 10 times as a response
     // from server to client.
@@ -97,7 +97,7 @@ async fn scoped_breakpoints_test() -> Result<(), Error> {
     let mut echo_rx = {
         let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
-        breakpoint_system.start_component_manager().await?;
+        breakpoint_system.start_component_tree().await?;
 
         // Wait for `echo_reporter` to attempt to connect to the Echo service
         let invocation = receiver

@@ -44,8 +44,8 @@ impl Invocation {
 /// and propagates it to the client.
 #[derive(Clone)]
 pub struct InvocationSender {
-    /// Specifies a realm that this InvocationSender can dispatch breakpoints from.
-    scope_moniker: AbsoluteMoniker,
+    /// Optionally specifies a realm that this InvocationSender can dispatch breakpoints from.
+    scope_moniker: Option<AbsoluteMoniker>,
     /// An `mpsc::Sender` used to dispatch a breakpoint invocation. Note that this
     /// `mpsc::Sender` is wrapped in an Arc<Mutex<..>> to allow it to be cloneable
     /// and passed along to other tasks for dispatch.
@@ -53,15 +53,17 @@ pub struct InvocationSender {
 }
 
 impl InvocationSender {
-    fn new(scope_moniker: AbsoluteMoniker, tx: mpsc::Sender<Invocation>) -> Self {
+    fn new(scope_moniker: Option<AbsoluteMoniker>, tx: mpsc::Sender<Invocation>) -> Self {
         Self { scope_moniker, tx: Arc::new(Mutex::new(tx)) }
     }
 
     /// Sends the event to a receiver, if fired in the scope of `scope_moniker`. Returns
     /// a responder which can be blocked on.
     async fn send(&self, event: Event) -> Result<Option<oneshot::Receiver<()>>, Error> {
-        if !self.scope_moniker.contains_in_realm(&event.target_moniker) {
-            return Ok(None);
+        if let Some(scope_moniker) = &self.scope_moniker {
+            if !scope_moniker.contains_in_realm(&event.target_moniker) {
+                return Ok(None);
+            }
         }
 
         trace::duration!("component_manager", "breakpoints:send");
@@ -133,7 +135,7 @@ impl BreakpointRegistry {
     /// Registers breakpoints against a set of EventTypes.
     pub async fn set_breakpoints(
         &self,
-        scope_moniker: AbsoluteMoniker,
+        scope_moniker: Option<AbsoluteMoniker>,
         event_types: Vec<EventType>,
     ) -> InvocationReceiver {
         let (tx, rx) = mpsc::channel(0);
