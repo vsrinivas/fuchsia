@@ -2,17 +2,41 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("usb-tester") {  # TODO: test_driver?
-  testonly = true
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("usb-tester") {  # TODO: test_driver?
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-tester.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/fidl/fuchsia-hardware-usb-tester:c",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/fidl/fuchsia-hardware-usb-tester:c",
   ]
+}
+
+migrated_manifest("usb-tester-manifest") {
+  deps = [ ":usb-tester" ]
 }

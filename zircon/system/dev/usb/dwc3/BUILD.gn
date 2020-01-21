@@ -2,7 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("dwc3") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+config("internal") {
+  cflags = [ "-Wno-unused-function" ]
+}
+
+driver_module("dwc3") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "dwc3-commands.cc",
     "dwc3-endpoints.cc",
@@ -11,23 +33,27 @@ zx_driver("dwc3") {
     "dwc3.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.dci",
-    "$zx/system/banjo/ddk.protocol.usb.modeswitch",
-    "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/dev/lib/device-protocol-platform-device",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-platform-device",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.dci",
+    "//zircon/system/banjo/ddk.protocol.usb.modeswitch",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+  public_configs = [ ":internal" ]
+}
+
+migrated_manifest("dwc3-manifest") {
+  deps = [ ":dwc3" ]
 }

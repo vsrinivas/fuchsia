@@ -5,22 +5,9 @@
 group("usb") {
   testonly = true
   deps = [
-    "aml-usb-phy-v2",
-    "dwc2",
-    "dwc3",
-    "hikey-usb",
-    "mt-musb-host",
-    "mt-musb-peripheral",
-    "nelson-usb-phy",
     "usb-bus",
     "usb-bus:tests",
-    "usb-composite",
-    "usb-dfu",
-    "usb-hub",
-    "usb-peripheral",
     "usb-peripheral-test",
-    "usb-test",
-    "usb-virtual-bus",
     "xhci",
   ]
 }

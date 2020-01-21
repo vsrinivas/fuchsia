@@ -2,11 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("mt-musb-host") {
-  deps = [ ":common" ]
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("mt-musb-host") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  deps = [
+    ":common",
+    "//src/devices:driver",
+  ]
 }
 
 source_set("common") {
+  defines = [ "_ALL_SOURCE" ]
   visibility = [ ":*" ]
   sources = [
     "usb-device.cc",
@@ -17,74 +40,100 @@ source_set("common") {
     "usb-transaction.cc",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk.protocol.usb.bus",
-    "$zx/system/banjo/ddk.protocol.usb.hci",
-    "$zx/system/dev/lib/device-protocol-pdev",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/mt8167",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/mt8167",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.usb.bus",
+    "//zircon/system/banjo/ddk.protocol.usb.hci",
   ]
 }
 
-zx_test("mt-hci-test") {
+test("mt-hci-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mt-hci-test"
   sources = [ "usb-hci-test.cc" ]
   deps = [
     ":common",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
-zx_test("mt-hci-transaction-test") {
+test("mt-hci-transaction-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "usb-transaction-test.cc",
     "usb-transaction.cc",
   ]
   deps = [
-    "$zx/system/dev/lib/device-protocol-pdev",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/mt8167",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/mt8167",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
-zx_test("mt-hci-request-queue-test") {
+test("mt-hci-request-queue-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "usb-request-queue-test.cc",
     "usb-request-queue.cc",
     "usb-transaction.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.usb.hci",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/mt8167",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/mock-function",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/mt8167",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.usb.hci",
   ]
+}
+
+migrated_manifest("mt-musb-host-manifest") {
+  deps = [ ":mt-musb-host" ]
+}
+
+migrated_manifest("mt-hci-test-manifest") {
+  deps = [ ":mt-hci-test" ]
+}
+
+migrated_manifest("mt-hci-transaction-test-manifest") {
+  deps = [ ":mt-hci-transaction-test" ]
+}
+
+migrated_manifest("mt-hci-request-queue-test-manifest") {
+  deps = [ ":mt-hci-request-queue-test" ]
 }
