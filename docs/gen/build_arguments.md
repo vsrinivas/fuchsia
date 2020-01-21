@@ -38,7 +38,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:1026
+From //build/images/BUILD.gn:1033
 
 ### audio_core_trace_enabled
 Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
@@ -248,7 +248,7 @@ with `sources` and `outputs` in the style of a copy() target:
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:469
+From //build/images/BUILD.gn:476
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -276,7 +276,7 @@ process.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:483
+From //build/images/BUILD.gn:490
 
 ### bootloader_prebuilt
 Prebuilt bootloader image to be included into update (OTA) package and
@@ -284,7 +284,7 @@ paving process.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:479
+From //build/images/BUILD.gn:486
 
 ### build_all_vp9_file_decoder_conformance_tests
 
@@ -715,7 +715,7 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:452
+From //build/images/BUILD.gn:459
 
 ### enable_api_diff
 Detect dart API changes
@@ -1137,7 +1137,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:457
+From //build/images/BUILD.gn:464
 
 **Current value for `target_cpu = "x64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
@@ -1145,7 +1145,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:457
+From //build/images/BUILD.gn:464
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -1155,7 +1155,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:463
+From //build/images/BUILD.gn:470
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -1968,7 +1968,7 @@ build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
 TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/e8d1f37d9005d655edd8b029c4144a7dad8f518c/infra/test_durations/default.json)" after the recipes start
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/feddb958c89cf85be204e448342b5c090e0cdab8/infra/test_durations/default.json)" after the recipes start
 setting this arg.
 
 **Current value (from the default):** `"//integration/infra/test_durations.json"`
@@ -2090,7 +2090,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:475
+From //build/images/BUILD.gn:482
 
 ### use_ccache
 Set to true to enable compiling with ccache
