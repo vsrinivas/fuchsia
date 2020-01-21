@@ -8,8 +8,6 @@
 #include <zircon/types.h>
 
 #include <fbl/macros.h>
-#include <lz4/lz4frame.h>
-#include <zstd/zstd.h>
 
 namespace blobfs {
 

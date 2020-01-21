@@ -43,6 +43,8 @@ constexpr uint32_t kExtentCount = 5;
 namespace blobfs {
 namespace {
 
+// TODO(markdittmer): Abstract choice of host compressor, decompressor and metadata flag to support
+// choosing from multiple strategies.
 using HostCompressor = ZSTDCompressor;
 const auto HostDecompressor = ZSTDDecompress;
 constexpr uint32_t kBlobFlagCompressed = kBlobFlagZSTDCompressed;

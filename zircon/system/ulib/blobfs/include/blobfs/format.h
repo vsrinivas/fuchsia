@@ -242,6 +242,9 @@ constexpr uint16_t kBlobFlagExtentContainer = 1 << 2;
 // Identifies that the on-disk storage of the blob is ZSTD compressed.
 constexpr uint16_t kBlobFlagZSTDCompressed = 1 << 3;
 
+// Identifies that the on-disk storage of the blob is ZSTD-seekable compressed.
+constexpr uint16_t kBlobFlagZSTDSeekableCompressed = 1 << 4;
+
 // The number of extents within a normal inode.
 constexpr uint32_t kInlineMaxExtents = 1;
 // The number of extents within an extent container node.

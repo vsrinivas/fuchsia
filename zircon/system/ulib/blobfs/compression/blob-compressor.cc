@@ -57,7 +57,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionAlgorithm algori
     case CompressionAlgorithm::ZSTD_SEEKABLE: {
       fzl::OwnedVmoMapper compressed_blob;
       size_t max = ZSTDSeekableCompressor::BufferMax(blob_size);
-      zx_status_t status = compressed_blob.CreateAndMap(max, "zstd-blob");
+      zx_status_t status = compressed_blob.CreateAndMap(max, "zstd-seekable-blob");
       if (status != ZX_OK) {
         return std::nullopt;
       }

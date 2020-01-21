@@ -82,7 +82,7 @@ void DecompressionHelper(CompressionAlgorithm algorithm, const void* compressed,
       ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
       break;
     case CompressionAlgorithm::ZSTD_SEEKABLE:
-      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed, src_size));
+      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed));
       break;
     default:
       FAIL("Bad algorithm");
@@ -269,7 +269,7 @@ void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compre
       ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
       break;
     case CompressionAlgorithm::ZSTD_SEEKABLE:
-      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed, src_size));
+      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed));
       break;
     default:
       FAIL("Bad algorithm");
@@ -337,8 +337,25 @@ TEST(CompressorTests, CompressRoundDecompressZSTDRandom4) {
   RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
 }
 
-// TODO(markdittmer): Add CompressRoundDecompress tests for ZSTDSeekable once unrounded compressed
-// size is available.
+TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom1) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 0,
+                                 1 << 0);
+}
+
+TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom2) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 1,
+                                 1 << 0);
+}
+
+TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom3) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 10,
+                                 1 << 5);
+}
+
+TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom4) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 15,
+                                 1 << 10);
+}
 
 }  // namespace
 }  // namespace blobfs

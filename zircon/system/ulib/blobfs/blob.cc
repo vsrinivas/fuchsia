@@ -31,6 +31,7 @@
 #include "blobfs.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
+#include "compression/zstd-rac.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/block-iterator.h"
 #include "iterator/extent-iterator.h"
@@ -144,9 +145,9 @@ zx_status_t Blob::InitVmos() {
   FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
 
   // Use the pager only if the blob is uncompressed AND blobfs has a pager set up.
-  bool use_pager =
-      (((inode_.header.flags & (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed)) == 0) &&
-       blobfs_->PagingEnabled());
+  bool use_pager = (((inode_.header.flags & (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed |
+                                             kBlobFlagZSTDSeekableCompressed)) == 0) &&
+                    blobfs_->PagingEnabled());
 
   zx_status_t status;
   if (use_pager) {
@@ -188,6 +189,8 @@ zx_status_t Blob::InitVmos() {
     status = InitCompressed(CompressionAlgorithm::LZ4);
   } else if ((inode_.header.flags & kBlobFlagZSTDCompressed) != 0) {
     status = InitCompressed(CompressionAlgorithm::ZSTD);
+  } else if ((inode_.header.flags & kBlobFlagZSTDSeekableCompressed) != 0) {
+    status = InitCompressed(CompressionAlgorithm::ZSTD_SEEKABLE);
   } else {
     status = InitUncompressed();
   }
@@ -287,6 +290,10 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
       break;
     case CompressionAlgorithm::ZSTD:
       status = ZSTDDecompress(GetData(), &target_size, compressed_buffer, &compressed_size);
+      break;
+    case CompressionAlgorithm::ZSTD_SEEKABLE:
+      // TODO(markdittmer): This does not have the same signature as other decompression routines.
+      status = ZSTDSeekableDecompress(GetData(), &target_size, compressed_buffer);
       break;
     default:
       FS_TRACE_ERROR("Unsupported decompression algorithm");
@@ -426,6 +433,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
   if (inode_.blob_size >= kCompressionMinBytesSaved) {
+    // TODO(markdittmer): Lookup stored choice of compression algorithm here.
     write_info->compressor = BlobCompressor::Create(CompressionAlgorithm::ZSTD, inode_.blob_size);
     if (!write_info->compressor) {
       FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
@@ -522,7 +530,8 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
     ZX_ASSERT(populator.Walk(on_node, on_extent) == ZX_OK);
 
     // Ensure all non-allocation flags are propagated to the inode.
-    const uint16_t non_allocation_flags = kBlobFlagZSTDCompressed | kBlobFlagLZ4Compressed;
+    const uint16_t non_allocation_flags =
+        kBlobFlagZSTDCompressed | kBlobFlagLZ4Compressed | kBlobFlagZSTDSeekableCompressed;
     mapped_inode->header.flags |= (inode_.header.flags & non_allocation_flags);
   } else {
     // Special case: Empty node.
@@ -672,6 +681,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       ZX_DEBUG_ASSERT(inode_.block_count > blocks);
 
       inode_.block_count = blocks;
+      // TODO(markdittmer): Use flag of chosen algorithm here.
       inode_.header.flags |= kBlobFlagZSTDCompressed;
     } else {
       uint64_t blocks64 = fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;

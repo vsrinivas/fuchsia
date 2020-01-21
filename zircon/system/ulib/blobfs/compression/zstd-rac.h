@@ -48,8 +48,7 @@ class ZSTDSeekableCompressor : public Compressor {
 
 // Decompress the source buffer into the target buffer, until either the source is drained or
 // the target is filled (or both).
-zx_status_t ZSTDSeekableDecompress(void* target_buf, size_t* target_size, const void* src_buf,
-                                   size_t src_size);
+zx_status_t ZSTDSeekableDecompress(void* target_buf, size_t* target_size, const void* src_buf);
 
 }  // namespace blobfs
 
