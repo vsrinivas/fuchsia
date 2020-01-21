@@ -337,7 +337,6 @@
     "embedder",
     "subview",
     "shapes_mod",
-    "embedding_rs",
     "mind_reader_client",
     "mind_reader_server",
     "mine_digger",

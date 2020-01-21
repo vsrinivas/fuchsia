@@ -71,27 +71,6 @@ rustc_binary("spinning_square_example") {
   ]
 }
 
-rustc_binary("embedding_example") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/embedding.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
-    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
-    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:thiserror",
-  ]
-}
-
 rustc_binary("button_example") {
   version = "0.1.0"
   edition = "2018"
@@ -367,24 +346,6 @@ package("spinning_square_rs") {
     {
       path = rebase_path("meta/example.cmx")
       dest = "spinning_square_rs.cmx"
-    },
-  ]
-}
-
-package("embedding_rs") {
-  deps = [ ":embedding_example" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "embedding_example"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "embedding_rs.cmx"
     },
   ]
 }
@@ -667,7 +628,6 @@ group("examples") {
     "//src/lib/ui/carnelian:clockface_rs",
     "//src/lib/ui/carnelian:drawing_mold_rs",
     "//src/lib/ui/carnelian:drawing_rs",
-    "//src/lib/ui/carnelian:embedding_rs",
     "//src/lib/ui/carnelian:infinite_scroll_rs",
     "//src/lib/ui/carnelian:ink_rs",
     "//src/lib/ui/carnelian:perf_test_01_rs",
