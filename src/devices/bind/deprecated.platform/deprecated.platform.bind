@@ -4,6 +4,11 @@
 
 library deprecated.platform;
 
+extend uint deprecated.BIND_PROTOCOL {
+  BUS = 84,
+  DEVICE = 85,
+};
+
 extend uint deprecated.BIND_PLATFORM_DEV_VID {
   GENERIC = 0,
   QEMU = 1,
