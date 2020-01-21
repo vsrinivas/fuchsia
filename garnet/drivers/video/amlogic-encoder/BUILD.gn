@@ -17,7 +17,7 @@ driver_module("amlogic_encoder") {
   ]
 
   deps = [
-    "//src/devices/host:driver",
+    "//src/devices:driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fit",
   ]

@@ -16,7 +16,7 @@ executable("magma_info") {
     "$zircon_build_root/public/lib/ddk",
     "$zircon_build_root/public/lib/fdio",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-    "//src/devices/host:driver",
+    "//src/devices:driver",
     "//src/lib/fxl",
   ]
 

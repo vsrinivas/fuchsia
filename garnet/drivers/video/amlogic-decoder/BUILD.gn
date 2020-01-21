@@ -54,7 +54,7 @@ if (target_cpu == "arm64") {
 
   source_set("test_support") {
     deps = [
-      "//src/devices/host:driver",
+      "//src/devices:driver",
       "//zircon/public/lib/ddk",
     ]
     sources = [ "tests/test_support.h" ]
@@ -121,7 +121,7 @@ if (target_cpu == "arm64") {
       "local_codec_factory.h",
     ]
     public_deps = [
-      "//src/devices/host:driver",
+      "//src/devices:driver",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/async-loop-cpp",
       "//zircon/public/lib/async-loop-default",

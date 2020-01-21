@@ -1,0 +1,119 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+
+group("driver_host") {
+  deps = [
+    ":device-host",
+    ":driver",
+  ]
+}
+
+executable("device-host") {
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":common",
+    ":driver",
+  ]
+}
+
+source_set("common") {
+  sources = [
+    "api.cc",
+    "composite-device.cc",
+    "connection-destroyer.cc",
+    "core.cc",
+    "devfs-connection.cc",
+    "devhost-context.cc",
+    "devhost.cc",
+    "device-controller-connection.cc",
+    "env.cc",
+    "proxy-iostate.cc",
+    "rpc-server.cc",
+    "scheduler_profile.cc",
+    "tracing.cc",
+    "zx-device.cc",
+  ]
+
+  public_deps = [
+    "//src/storage/deprecated-fs-fidl-handler",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxio",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/fidl/fuchsia-device-manager:llcpp",
+    "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/fidl/fuchsia-scheduler:c",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+shared_library("driver") {
+  sources = []
+
+  deps = [ ":common" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":devhost-tests" ]
+}
+
+executable("devhost-test-bin") {
+  output_name = "devhost-tests"
+  testonly = true
+
+  sources = [
+    "core-test.cc",
+    "device-api-test.cc",
+    "device-controller-connection-test.cc",
+    "proxy-iostate-test.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/driver-integration-test",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-device-test:c",
+  ]
+}
+
+test_package("devhost-tests") {
+  deps = [ ":devhost-test-bin" ]
+
+  binaries = [
+    {
+      name = "devhost-tests"
+    },
+  ]
+
+  tests = [
+    {
+      name = "devhost-tests"
+      environments = basic_envs
+    },
+  ]
+}

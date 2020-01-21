@@ -7,8 +7,8 @@ import("//build/package.gni")
 group("devices") {
   testonly = true
   deps = [
-    "coordinator",
-    "host",
+    "driver_host",
+    "driver_manager",
     "tools",
   ]
 }
@@ -16,22 +16,22 @@ group("devices") {
 group("tests") {
   testonly = true
   deps = [
-    "coordinator:coordinator_tests",
-    "host:tests",
+    "driver_host:tests",
+    "driver_manager:coordinator_tests",
     "tests",
     "tools:tests",
   ]
 }
 
 group("driver") {
-  deps = [ "host:driver" ]
+  deps = [ "driver_host:driver" ]
 }
 
 generate_manifest("devices.bootfs") {
   deps = [
-    "coordinator",
-    "host",
-    "host:driver",
+    "driver_host",
+    "driver_host:driver",
+    "driver_manager",
     "//src/bringup/virtcon:virtual-console",
     "//src/ui/drivers/hid-input-report",
   ]

@@ -40,7 +40,7 @@ template("driver_source_template") {
       "//garnet/lib/magma/src/sys_driver",
       "//garnet/lib/magma/tests/helper:platform_device_helper",
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-      "//src/devices/host:driver",
+      "//src/devices:driver",
       "//third_party/imgtec-pvr-rgx-km:src",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",

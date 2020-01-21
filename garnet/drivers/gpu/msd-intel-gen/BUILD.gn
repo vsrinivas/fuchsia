@@ -47,7 +47,7 @@ source_set("msd_intel_entry") {
     "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
     "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-    "//src/devices/host:driver",
+    "//src/devices:driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zx",
   ]
@@ -69,7 +69,7 @@ source_set("msd_intel_test_entry") {
     "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
     "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-    "//src/devices/host:driver",
+    "//src/devices:driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zx",
   ]
