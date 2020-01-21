@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:glob/glob.dart';
 import 'package:test/test.dart';
+// ignore: avoid_as
 import 'package:sl4f/sl4f.dart' as sl4f;
 
 void main() {
@@ -47,7 +48,7 @@ void main() {
       // ignore: avoid_as
       final file = Glob('*-open-for-write.tmp')
           .listSync(root: dumpDir.path)
-          .single as File;
+          .single as File; // ignore: avoid_as
       expect(file.path, startsWith(dumpDir.path));
       expect(
           file.path,
