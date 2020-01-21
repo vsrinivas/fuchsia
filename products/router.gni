@@ -37,6 +37,7 @@ base_package_labels += [
   "//garnet/packages/tools:boringssl",
   "//src/connectivity/management/network_manager",
   "//src/connectivity/management/network_manager:network_manager_sysmgr_config",
+  "//src/connectivity/management/network_manager:router_config",
   "//src/connectivity/management/network_manager_cli",
   "//src/connectivity/network/dhcp:dhcpd",
   "//src/connectivity/network/mdns/bundles:utils",

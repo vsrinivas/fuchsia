@@ -128,7 +128,7 @@ impl DeviceState {
             },
             config: config::Config::new(
                 "/data/user_config.json",
-                "/pkg/data/factory_config.json",
+                "/config/data/factory_config.json",
                 "/pkg/data/device_schema.json",
             ),
         }

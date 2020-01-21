@@ -58,19 +58,24 @@ package("network_manager") {
     },
   ]
 
-  # TODO(cgibson): Need to figure out an appropriate delivery mechanism
-  # for configuration file data. Since we are only running on Toulouse, we
-  # can do this for now.
   resources = [
-    {
-      path = rebase_path("data/toulouse.json")
-      dest = "factory_config.json"
-    },
     {
       path = rebase_path("data/device_schema.json")
       dest = "device_schema.json"
     },
   ]
+}
+
+config_data("network_manager_config") {
+  for_pkg = "network_manager"
+  sources = [ rebase_path("config/network_manager_default.json") ]
+  outputs = [ "factory_config.json" ]
+}
+
+config_data("router_config") {
+  for_pkg = "network_manager"
+  sources = [ rebase_path("config/toulouse.json") ]
+  outputs = [ "factory_config.json" ]
 }
 
 test_package("network_manager_tests") {
@@ -108,8 +113,12 @@ test_package("network_manager_tests") {
       dest = "device_schema.json"
     },
     {
-      path = rebase_path("data/toulouse.json")
+      path = rebase_path("config/toulouse.json")
       dest = "toulouse_factory_config.json"
+    },
+    {
+      path = rebase_path("config/network_manager_default.json")
+      dest = "default_factory_config.json"
     },
   ]
 }

@@ -1283,6 +1283,16 @@ mod tests {
     }
 
     #[test]
+    fn verify_default_factory_config() {
+        let config_path = "/pkg/data/default_factory_config.json";
+        let mut contents = String::new();
+        let mut f = File::open(config_path).unwrap();
+        f.read_to_string(&mut contents).unwrap();
+        let _deserialized_config: DeviceConfig = serde_json::from_str(&contents)
+            .expect(format!("Failed to deserialized {}", config_path).as_ref());
+    }
+
+    #[test]
     fn test_validate_interface_types() {
         let test_config = create_test_config_no_paths();
         let mut intf = create_test_interface();
