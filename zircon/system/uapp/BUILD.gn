@@ -15,7 +15,6 @@ group("uapp") {
     "fs-fsck",
     "fvm-check",
     "hid",
-    "hidsensor",
     "ihda",
     "kcounter",
     "kstress",
