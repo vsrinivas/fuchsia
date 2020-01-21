@@ -127,6 +127,13 @@ group("packages") {
     ":meta_packages",
     ":universe_packages",
   ]
+
+  if (enable_netboot || bootfs_only) {
+    data_deps = [
+      ":netboot",
+      ":netboot-script",
+    ]
+  }
 }
 
 template("package_list") {
@@ -1271,6 +1278,7 @@ if (!bootfs_only) {
       ]
     }
   }
+  default_image_deps += [ ":netboot" ]
 } else {
   # The bootfs_only image is already a netboot'able image.
   group("netboot") {
@@ -1444,7 +1452,6 @@ paver_targets = [
     outputs = [ "$root_build_dir/netboot.sh" ]
     switch = "--netboot="
     extra_bootserver_arguments = ""
-    deps = [ ":netboot" ]
     metadata = {
       name = "netboot"
       path = "netboot.sh"
@@ -1522,11 +1529,9 @@ foreach(target, paver_targets) {
       ":default-images",
       ":flash_script",
       ":ids.txt",
+      ":netboot",
       "zedboot",
     ]
-    if (defined(target.deps)) {
-      deps += target.deps
-    }
     testonly = true
     outputs = target.outputs
     depfile = "${outputs[0]}.d"
@@ -2080,9 +2085,6 @@ group("images") {
     ":zedboot-script",
     "//build/images/zedboot",
   ]
-  if (enable_netboot) {
-    deps += [ ":netboot-script" ]
-  }
 }
 
 group("default-images") {
