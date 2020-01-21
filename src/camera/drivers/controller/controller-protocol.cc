@@ -4,6 +4,7 @@
 
 #include "controller-protocol.h"
 
+#include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 
 #include "fuchsia/camera2/cpp/fidl.h"
@@ -61,6 +62,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   uint32_t image_format_index,
                                   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
+  TRACE_DURATION("camera", "ControllerImpl::CreateStream");
   zx_status_t status = ZX_OK;
   auto cleanup = fbl::MakeAutoCall([&stream, &status]() { stream.Close(status); });
 

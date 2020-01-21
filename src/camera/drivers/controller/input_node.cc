@@ -7,6 +7,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <ddk/trace/event.h>
+
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -77,6 +79,7 @@ void InputNode::OnReadyToProcess(const frame_available_info_t* info) {
 }
 
 void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
+  TRACE_DURATION("camera", "InputNode::OnFrameAvailable", "buffer_index", info->buffer_id);
   if (!shutdown_requested_) {
     UpdateFrameCounterForAllChildren();
 
@@ -89,6 +92,7 @@ void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
 }
 
 void InputNode::OnReleaseFrame(uint32_t buffer_index) {
+  TRACE_DURATION("camera", "InputNode::OnReleaseFrame", "buffer_index", buffer_index);
   fbl::AutoLock al(&in_use_buffer_lock_);
   ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
   in_use_buffer_count_[buffer_index]--;

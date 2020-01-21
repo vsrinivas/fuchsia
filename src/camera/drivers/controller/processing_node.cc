@@ -7,6 +7,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <ddk/trace/event.h>
 #include <src/lib/fxl/logging.h>
 
 #include "stream_protocol.h"
@@ -30,6 +31,7 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
   ZX_ASSERT_MSG(type_ != NodeType::kOutputStream, "Invalid for OuputNode");
   frame_available_info_t local_info = *info;
   async::PostTask(dispatcher_, [this, local_info]() {
+    TRACE_DURATION("camera", "ProcessNode::OnFrameAvailable");
     // Free up parent's frame.
     if (type_ != kInputStream && !shutdown_requested_) {
       parent_node_->OnReleaseFrame(local_info.metadata.input_buffer_index);

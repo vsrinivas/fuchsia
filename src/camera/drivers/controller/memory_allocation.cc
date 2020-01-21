@@ -7,8 +7,9 @@
 #include <lib/syslog/global.h>
 #include <zircon/errors.h>
 
-#include "fuchsia/sysmem/cpp/fidl.h"
+#include <ddk/trace/event.h>
 
+#include "fuchsia/sysmem/cpp/fidl.h"
 namespace camera {
 
 constexpr auto kTag = "camera_controller";
@@ -16,6 +17,7 @@ constexpr auto kTag = "camera_controller";
 zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints,
     fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info) const {
+  TRACE_DURATION("camera", "ControllerMemoryAllocator::AllocateSharedMemory");
   if (out_buffer_collection_info == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }

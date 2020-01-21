@@ -7,6 +7,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 
 #include "src/camera/drivers/controller/graph_utils.h"
@@ -123,6 +124,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 }
 
 void Ge2dNode::OnFrameAvailable(const frame_available_info_t* info) {
+  TRACE_DURATION("camera", "Ge2dNode::OnFrameAvailable", "buffer_index", info->buffer_id);
   // Once shutdown is requested no calls should be made to the driver.
   if (!shutdown_requested_) {
     UpdateFrameCounterForAllChildren();
@@ -137,6 +139,7 @@ void Ge2dNode::OnFrameAvailable(const frame_available_info_t* info) {
 }
 
 void Ge2dNode::OnReleaseFrame(uint32_t buffer_index) {
+  TRACE_DURATION("camera", "Ge2dNode::OnReleaseFrame", "buffer_index", buffer_index);
   fbl::AutoLock guard(&in_use_buffer_lock_);
   ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
   in_use_buffer_count_[buffer_index]--;
@@ -150,6 +153,7 @@ void Ge2dNode::OnReleaseFrame(uint32_t buffer_index) {
 
 void Ge2dNode::OnReadyToProcess(const frame_available_info_t* info) {
   async::PostTask(dispatcher_, [this, buffer_index = info->buffer_id]() {
+    TRACE_DURATION("camera", "Ge2dNode::OnReadyToProcess", "buffer_index", buffer_index);
     if (enabled_) {
       ZX_ASSERT(ZX_OK == ge2d_.ProcessFrame(task_index_, buffer_index));
     } else {

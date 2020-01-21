@@ -7,6 +7,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <ddk/trace/event.h>
+
 #include "src/lib/syslog/cpp/logger.h"
 #include "stream_protocol.h"
 
@@ -46,6 +48,7 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
 }
 
 void OutputNode::OnReadyToProcess(const frame_available_info_t* info) {
+  TRACE_DURATION("camera", "OutputNode::OnReadyToProcess", "info->buffer_id", info->buffer_id);
   if (enabled_) {
     ZX_ASSERT(client_stream_ != nullptr);
     client_stream_->FrameReady(info);
@@ -57,6 +60,7 @@ void OutputNode::OnReadyToProcess(const frame_available_info_t* info) {
 }
 
 void OutputNode::OnReleaseFrame(uint32_t buffer_index) {
+  TRACE_DURATION("camera", "OutputNode::OnReleaseFrame", "buffer_index", buffer_index);
   parent_node_->OnReleaseFrame(buffer_index);
 }
 
