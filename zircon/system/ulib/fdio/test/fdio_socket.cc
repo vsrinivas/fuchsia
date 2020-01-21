@@ -398,7 +398,7 @@ TEST_F(TcpSocketTest, RcvTimeout) {
   timeout<SO_RCVTIMEO>(client_fd.release(), std::move(server_socket));
 }
 
-TEST_F(TcpSocketTest, SndTimeout) {
+TEST_F(TcpSocketTest, DISABLED_SndTimeout) {
   server.FillPeerSocket();
   timeout<SO_SNDTIMEO>(client_fd.release(), std::move(server_socket));
 }
