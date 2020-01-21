@@ -9,8 +9,10 @@ namespace test {
 namespace name {
 
 class Union;
+class StrictUnion;
 class ReverseOrdinalUnion;
 class NullableUnionStruct;
+class FlexibleUnion;
 class FieldCollision;
 class ExplicitUnion;
 
@@ -124,6 +126,117 @@ inline zx_status_t Clone(const ::test::name::Union& value,
 }
 
 using UnionPtr = ::std::unique_ptr<Union>;
+
+class StrictUnion final {
+ public:
+ static const fidl_type_t* FidlType;
+
+  StrictUnion();
+  ~StrictUnion();
+
+  StrictUnion(StrictUnion&&);
+  StrictUnion& operator=(StrictUnion&&);
+
+  
+  static StrictUnion WithPrimitive(int32_t&&);
+  static StrictUnion WithStringNeedsConstructor(::std::string&&);
+  static StrictUnion WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+  
+    kPrimitive = 1,  // 0x1
+    kStringNeedsConstructor = 2,  // 0x2
+    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<StrictUnion> New() { return ::std::make_unique<StrictUnion>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, StrictUnion* value, size_t offset);
+  zx_status_t Clone(StrictUnion* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+  
+  int32_t& Primitive() {
+    EnsureStorageInitialized(Tag::kPrimitive);
+    return Primitive_;
+  }
+  
+  const int32_t& Primitive() const {
+    ZX_ASSERT(is_Primitive());
+    return Primitive_;
+  }
+  StrictUnion& set_Primitive(int32_t value);
+
+  bool is_StringNeedsConstructor() const { return tag_ == Tag::kStringNeedsConstructor; }
+  
+  ::std::string& StringNeedsConstructor() {
+    EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+    return StringNeedsConstructor_;
+  }
+  
+  const ::std::string& StringNeedsConstructor() const {
+    ZX_ASSERT(is_StringNeedsConstructor());
+    return StringNeedsConstructor_;
+  }
+  StrictUnion& set_StringNeedsConstructor(::std::string value);
+
+  bool is_VectorStringAlsoNeedsConstructor() const { return tag_ == Tag::kVectorStringAlsoNeedsConstructor; }
+  
+  ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() {
+    EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
+    return VectorStringAlsoNeedsConstructor_;
+  }
+  
+  const ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() const {
+    ZX_ASSERT(is_VectorStringAlsoNeedsConstructor());
+    return VectorStringAlsoNeedsConstructor_;
+  }
+  StrictUnion& set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value);
+
+  Tag Which() const {
+    
+    return Tag(tag_);
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    return nullptr;
+  }
+
+  friend ::fidl::Equality<::test::name::StrictUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  union {
+    int32_t Primitive_;
+    ::std::string StringNeedsConstructor_;
+    ::std::vector<::std::string> VectorStringAlsoNeedsConstructor_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::name::StrictUnion& value,
+                         ::test::name::StrictUnion* result) {
+  return value.Clone(result);
+}
+
+using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
 
 class ReverseOrdinalUnion final {
  public:
@@ -239,6 +352,117 @@ inline zx_status_t Clone(const ::test::name::NullableUnionStruct& _value,
 }
 
 using NullableUnionStructPtr = ::std::unique_ptr<NullableUnionStruct>;
+
+class FlexibleUnion final {
+ public:
+ static const fidl_type_t* FidlType;
+
+  FlexibleUnion();
+  ~FlexibleUnion();
+
+  FlexibleUnion(FlexibleUnion&&);
+  FlexibleUnion& operator=(FlexibleUnion&&);
+
+  
+  static FlexibleUnion WithPrimitive(int32_t&&);
+  static FlexibleUnion WithStringNeedsConstructor(::std::string&&);
+  static FlexibleUnion WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+  
+    kPrimitive = 1,  // 0x1
+    kStringNeedsConstructor = 2,  // 0x2
+    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<FlexibleUnion> New() { return ::std::make_unique<FlexibleUnion>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, FlexibleUnion* value, size_t offset);
+  zx_status_t Clone(FlexibleUnion* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+  
+  int32_t& Primitive() {
+    EnsureStorageInitialized(Tag::kPrimitive);
+    return Primitive_;
+  }
+  
+  const int32_t& Primitive() const {
+    ZX_ASSERT(is_Primitive());
+    return Primitive_;
+  }
+  FlexibleUnion& set_Primitive(int32_t value);
+
+  bool is_StringNeedsConstructor() const { return tag_ == Tag::kStringNeedsConstructor; }
+  
+  ::std::string& StringNeedsConstructor() {
+    EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+    return StringNeedsConstructor_;
+  }
+  
+  const ::std::string& StringNeedsConstructor() const {
+    ZX_ASSERT(is_StringNeedsConstructor());
+    return StringNeedsConstructor_;
+  }
+  FlexibleUnion& set_StringNeedsConstructor(::std::string value);
+
+  bool is_VectorStringAlsoNeedsConstructor() const { return tag_ == Tag::kVectorStringAlsoNeedsConstructor; }
+  
+  ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() {
+    EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
+    return VectorStringAlsoNeedsConstructor_;
+  }
+  
+  const ::std::vector<::std::string>& VectorStringAlsoNeedsConstructor() const {
+    ZX_ASSERT(is_VectorStringAlsoNeedsConstructor());
+    return VectorStringAlsoNeedsConstructor_;
+  }
+  FlexibleUnion& set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value);
+
+  Tag Which() const {
+    
+    return Tag(tag_);
+    
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    return nullptr;
+  }
+
+  friend ::fidl::Equality<::test::name::FlexibleUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  union {
+    int32_t Primitive_;
+    ::std::string StringNeedsConstructor_;
+    ::std::vector<::std::string> VectorStringAlsoNeedsConstructor_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::name::FlexibleUnion& value,
+                         ::test::name::FlexibleUnion* result) {
+  return value.Clone(result);
+}
+
+using FlexibleUnionPtr = ::std::unique_ptr<FlexibleUnion>;
 
 class FieldCollision final {
  public:
@@ -476,6 +700,64 @@ struct Equality<::test::name::Union> {
     }
 };
 template <>
+struct IsFidlXUnion<::test::name::StrictUnion> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::name::StrictUnion>
+    : public EncodableCodingTraits<::test::name::StrictUnion, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::StrictUnion>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::StrictUnion>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::StrictUnion>* value, size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::StrictUnion);
+
+    ::test::name::StrictUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::name::StrictUnion& value,
+                         ::test::name::StrictUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::StrictUnion> {
+  static inline bool Equals(const ::test::name::StrictUnion& _lhs, const ::test::name::StrictUnion& _rhs) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::name::StrictUnion::Tag::Invalid):
+        return true;
+      case ::test::name::StrictUnion::Tag::kPrimitive:
+        return ::fidl::Equals(_lhs.Primitive_, _rhs.Primitive_);
+      case ::test::name::StrictUnion::Tag::kStringNeedsConstructor:
+        return ::fidl::Equals(_lhs.StringNeedsConstructor_, _rhs.StringNeedsConstructor_);
+      case ::test::name::StrictUnion::Tag::kVectorStringAlsoNeedsConstructor:
+        return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor_, _rhs.VectorStringAlsoNeedsConstructor_);
+      
+      default:
+        return false;
+      }
+    }
+};
+template <>
 struct IsFidlXUnion<::test::name::ReverseOrdinalUnion> : public std::true_type {};
 
 template <>
@@ -548,6 +830,64 @@ struct Equality<::test::name::NullableUnionStruct> {
     }
     return true;
   }
+};
+template <>
+struct IsFidlXUnion<::test::name::FlexibleUnion> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::name::FlexibleUnion>
+    : public EncodableCodingTraits<::test::name::FlexibleUnion, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::FlexibleUnion>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::FlexibleUnion>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::FlexibleUnion>* value, size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::FlexibleUnion);
+
+    ::test::name::FlexibleUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::name::FlexibleUnion& value,
+                         ::test::name::FlexibleUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::FlexibleUnion> {
+  static inline bool Equals(const ::test::name::FlexibleUnion& _lhs, const ::test::name::FlexibleUnion& _rhs) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::name::FlexibleUnion::Tag::Invalid):
+        return true;
+      case ::test::name::FlexibleUnion::Tag::kPrimitive:
+        return ::fidl::Equals(_lhs.Primitive_, _rhs.Primitive_);
+      case ::test::name::FlexibleUnion::Tag::kStringNeedsConstructor:
+        return ::fidl::Equals(_lhs.StringNeedsConstructor_, _rhs.StringNeedsConstructor_);
+      case ::test::name::FlexibleUnion::Tag::kVectorStringAlsoNeedsConstructor:
+        return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor_, _rhs.VectorStringAlsoNeedsConstructor_);
+      
+      default:
+        return false;
+      }
+    }
 };
 template <>
 struct IsFidlXUnion<::test::name::FieldCollision> : public std::true_type {};

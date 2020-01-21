@@ -67,7 +67,7 @@ KEYWORD(Service, "service")
 KEYWORD(Strict, "strict")
 KEYWORD(Struct, "struct")
 KEYWORD(Table, "table")
-KEYWORD(Flexible, "experimental_flexible")
+KEYWORD(Flexible, "flexible")
 KEYWORD(Union, "union")
 KEYWORD(XUnion, "xunion")
 

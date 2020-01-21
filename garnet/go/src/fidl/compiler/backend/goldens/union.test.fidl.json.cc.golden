@@ -218,6 +218,218 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+extern "C" const fidl_type_t v1_test_name_StrictUnionTable;
+const fidl_type_t* StrictUnion::FidlType = &v1_test_name_StrictUnionTable;
+
+StrictUnion::StrictUnion() {}
+
+StrictUnion::~StrictUnion() {
+  Destroy();
+}
+
+StrictUnion::StrictUnion(StrictUnion&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+  switch (tag_) {
+    case Tag::kPrimitive:
+      Primitive_ = std::move(other.Primitive_);
+      break;
+    case Tag::kStringNeedsConstructor:
+      new (&StringNeedsConstructor_) ::std::string();
+      StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+  }
+}
+
+StrictUnion& StrictUnion::operator=(StrictUnion&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = GetWriteOrdinal(other.tag_);
+    switch (tag_) {
+      case Tag::kPrimitive:
+        Primitive_ = std::move(other.Primitive_);
+        break;
+      case Tag::kStringNeedsConstructor:
+        new (&StringNeedsConstructor_) ::std::string();
+        StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
+        break;
+      case Tag::kVectorStringAlsoNeedsConstructor:
+        new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+        VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+StrictUnion StrictUnion::WithPrimitive(int32_t&& val) {
+  StrictUnion result;
+  result.set_Primitive(std::move(val));
+  return result;
+}
+StrictUnion StrictUnion::WithStringNeedsConstructor(::std::string&& val) {
+  StrictUnion result;
+  result.set_StringNeedsConstructor(std::move(val));
+  return result;
+}
+StrictUnion StrictUnion::WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&& val) {
+  StrictUnion result;
+  result.set_VectorStringAlsoNeedsConstructor(std::move(val));
+  return result;
+}
+
+
+fidl_xunion_tag_t StrictUnion::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
+  return ordinal;
+}
+
+void StrictUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (tag_) {
+    case Tag::kPrimitive: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &Primitive_, envelope_offset);
+      break;
+    }
+    case Tag::kStringNeedsConstructor: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &StringNeedsConstructor_, envelope_offset);
+      break;
+    }
+    case Tag::kVectorStringAlsoNeedsConstructor: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::std::string>, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor_, envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void StrictUnion::Decode(::fidl::Decoder* decoder, StrictUnion* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
+    case Tag::kPrimitive:
+      ::fidl::Decode(decoder, &value->Primitive_, envelope_offset);
+      break;
+    case Tag::kStringNeedsConstructor:
+      new (&value->StringNeedsConstructor_) ::std::string();
+      ::fidl::Decode(decoder, &value->StringNeedsConstructor_, envelope_offset);
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      new (&value->VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      ::fidl::Decode(decoder, &value->VectorStringAlsoNeedsConstructor_, envelope_offset);
+      break;
+  }
+
+}
+
+zx_status_t StrictUnion::Clone(StrictUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kPrimitive:
+      return ::fidl::Clone(Primitive_, &result->Primitive_);
+    case Tag::kStringNeedsConstructor:
+      new (&result->StringNeedsConstructor_) ::std::string();
+      return ::fidl::Clone(StringNeedsConstructor_, &result->StringNeedsConstructor_);
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      new (&result->VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      return ::fidl::Clone(VectorStringAlsoNeedsConstructor_, &result->VectorStringAlsoNeedsConstructor_);
+    default:
+      return ZX_OK;
+  }
+}
+
+StrictUnion& StrictUnion::set_Primitive(int32_t value) {
+  EnsureStorageInitialized(Tag::kPrimitive);
+  Primitive_ = std::move(value);
+  return *this;
+}
+
+StrictUnion& StrictUnion::set_StringNeedsConstructor(::std::string value) {
+  EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+  StringNeedsConstructor_ = std::move(value);
+  return *this;
+}
+
+StrictUnion& StrictUnion::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value) {
+  EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
+  VectorStringAlsoNeedsConstructor_ = std::move(value);
+  return *this;
+}
+
+void StrictUnion::Destroy() {
+  switch (tag_) {
+    case Tag::kPrimitive:
+      break;
+    case Tag::kStringNeedsConstructor:
+      StringNeedsConstructor_.~basic_string();
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      VectorStringAlsoNeedsConstructor_.~vector();
+      break;
+  
+    default:
+      break;
+  
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+}
+
+void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
+  if (tag_ != canonical_tag) {
+    Destroy();
+    tag_ = canonical_tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kPrimitive:
+        new (&Primitive_) int32_t();
+        break;
+      case Tag::kStringNeedsConstructor:
+        new (&StringNeedsConstructor_) ::std::string();
+        break;
+      case Tag::kVectorStringAlsoNeedsConstructor:
+        new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+        break;
+      default:
+        break;
+    }
+  }
+}
 extern "C" const fidl_type_t v1_test_name_ReverseOrdinalUnionTable;
 const fidl_type_t* ReverseOrdinalUnion::FidlType = &v1_test_name_ReverseOrdinalUnionTable;
 
@@ -404,6 +616,218 @@ zx_status_t NullableUnionStruct::Clone(NullableUnionStruct* _result) const {
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;
+}
+extern "C" const fidl_type_t v1_test_name_FlexibleUnionTable;
+const fidl_type_t* FlexibleUnion::FidlType = &v1_test_name_FlexibleUnionTable;
+
+FlexibleUnion::FlexibleUnion() {}
+
+FlexibleUnion::~FlexibleUnion() {
+  Destroy();
+}
+
+FlexibleUnion::FlexibleUnion(FlexibleUnion&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+  switch (tag_) {
+    case Tag::kPrimitive:
+      Primitive_ = std::move(other.Primitive_);
+      break;
+    case Tag::kStringNeedsConstructor:
+      new (&StringNeedsConstructor_) ::std::string();
+      StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+  }
+}
+
+FlexibleUnion& FlexibleUnion::operator=(FlexibleUnion&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = GetWriteOrdinal(other.tag_);
+    switch (tag_) {
+      case Tag::kPrimitive:
+        Primitive_ = std::move(other.Primitive_);
+        break;
+      case Tag::kStringNeedsConstructor:
+        new (&StringNeedsConstructor_) ::std::string();
+        StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
+        break;
+      case Tag::kVectorStringAlsoNeedsConstructor:
+        new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+        VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+FlexibleUnion FlexibleUnion::WithPrimitive(int32_t&& val) {
+  FlexibleUnion result;
+  result.set_Primitive(std::move(val));
+  return result;
+}
+FlexibleUnion FlexibleUnion::WithStringNeedsConstructor(::std::string&& val) {
+  FlexibleUnion result;
+  result.set_StringNeedsConstructor(std::move(val));
+  return result;
+}
+FlexibleUnion FlexibleUnion::WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&& val) {
+  FlexibleUnion result;
+  result.set_VectorStringAlsoNeedsConstructor(std::move(val));
+  return result;
+}
+
+
+fidl_xunion_tag_t FlexibleUnion::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
+  return ordinal;
+}
+
+void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (tag_) {
+    case Tag::kPrimitive: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &Primitive_, envelope_offset);
+      break;
+    }
+    case Tag::kStringNeedsConstructor: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &StringNeedsConstructor_, envelope_offset);
+      break;
+    }
+    case Tag::kVectorStringAlsoNeedsConstructor: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::std::string>, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor_, envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void FlexibleUnion::Decode(::fidl::Decoder* decoder, FlexibleUnion* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
+    case Tag::kPrimitive:
+      ::fidl::Decode(decoder, &value->Primitive_, envelope_offset);
+      break;
+    case Tag::kStringNeedsConstructor:
+      new (&value->StringNeedsConstructor_) ::std::string();
+      ::fidl::Decode(decoder, &value->StringNeedsConstructor_, envelope_offset);
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      new (&value->VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      ::fidl::Decode(decoder, &value->VectorStringAlsoNeedsConstructor_, envelope_offset);
+      break;
+  }
+
+}
+
+zx_status_t FlexibleUnion::Clone(FlexibleUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kPrimitive:
+      return ::fidl::Clone(Primitive_, &result->Primitive_);
+    case Tag::kStringNeedsConstructor:
+      new (&result->StringNeedsConstructor_) ::std::string();
+      return ::fidl::Clone(StringNeedsConstructor_, &result->StringNeedsConstructor_);
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      new (&result->VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      return ::fidl::Clone(VectorStringAlsoNeedsConstructor_, &result->VectorStringAlsoNeedsConstructor_);
+    default:
+      return ZX_OK;
+  }
+}
+
+FlexibleUnion& FlexibleUnion::set_Primitive(int32_t value) {
+  EnsureStorageInitialized(Tag::kPrimitive);
+  Primitive_ = std::move(value);
+  return *this;
+}
+
+FlexibleUnion& FlexibleUnion::set_StringNeedsConstructor(::std::string value) {
+  EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+  StringNeedsConstructor_ = std::move(value);
+  return *this;
+}
+
+FlexibleUnion& FlexibleUnion::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value) {
+  EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
+  VectorStringAlsoNeedsConstructor_ = std::move(value);
+  return *this;
+}
+
+void FlexibleUnion::Destroy() {
+  switch (tag_) {
+    case Tag::kPrimitive:
+      break;
+    case Tag::kStringNeedsConstructor:
+      StringNeedsConstructor_.~basic_string();
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      VectorStringAlsoNeedsConstructor_.~vector();
+      break;
+  
+    default:
+      break;
+  
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+}
+
+void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
+  if (tag_ != canonical_tag) {
+    Destroy();
+    tag_ = canonical_tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kPrimitive:
+        new (&Primitive_) int32_t();
+        break;
+      case Tag::kStringNeedsConstructor:
+        new (&StringNeedsConstructor_) ::std::string();
+        break;
+      case Tag::kVectorStringAlsoNeedsConstructor:
+        new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+        break;
+      default:
+        break;
+    }
+  }
 }
 extern "C" const fidl_type_t v1_test_name_FieldCollisionTable;
 const fidl_type_t* FieldCollision::FidlType = &v1_test_name_FieldCollisionTable;

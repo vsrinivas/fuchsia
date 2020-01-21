@@ -275,7 +275,7 @@ class Parser {
 
   std::unique_ptr<raw::UnionMember> ParseUnionMember();
   std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
 
   std::unique_ptr<raw::XUnionMember> ParseXUnionMember();
   std::unique_ptr<raw::XUnionDeclaration> ParseXUnionDeclaration(

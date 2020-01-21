@@ -383,6 +383,7 @@
           "offset": 4
         }
       ],
+      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -423,6 +424,7 @@
           "offset": 4
         }
       ],
+      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -460,6 +462,7 @@
           "offset": 8
         }
       ],
+      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,
@@ -500,6 +503,7 @@
           "offset": 4
         }
       ],
+      "strict": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,

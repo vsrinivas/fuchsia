@@ -1039,9 +1039,10 @@ struct Union final : public TypeDecl {
   using Member = UnionMember;
 
   Union(std::unique_ptr<raw::AttributeList> attributes, Name name,
-        std::vector<Member> unparented_members)
+        std::vector<Member> unparented_members, types::Strictness strictness)
       : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
-        members(std::move(unparented_members)) {
+        members(std::move(unparented_members)),
+        strictness(strictness) {
     for (auto& member : members) {
       if (member.maybe_used) {
         member.maybe_used->parent = this;
@@ -1050,6 +1051,7 @@ struct Union final : public TypeDecl {
   }
 
   std::vector<Member> members;
+  const types::Strictness strictness;
 
   // Returns references to union members sorted by their xunion_ordinal.
   std::vector<std::reference_wrapper<const Member>> MembersSortedByXUnionOrdinal() const;
