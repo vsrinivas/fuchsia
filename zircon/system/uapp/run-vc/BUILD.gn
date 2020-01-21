@@ -22,6 +22,10 @@ executable("run-vc") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/fidl/fuchsia-virtualconsole:c",
   ]
+
+  # TODO(44350): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 migrated_manifest("run-vc-manifest") {

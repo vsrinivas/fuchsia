@@ -372,3 +372,7 @@ config("no-shadow-call-stack") {
     cflags = [ "-fsanitize=no-shadow-call-stack" ]
   }
 }
+
+config("temporarily_disable_ubsan_do_not_use") {
+  cflags = [ "-fno-sanitize=undefined" ]
+}
