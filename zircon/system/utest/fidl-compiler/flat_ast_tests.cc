@@ -6,10 +6,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <regex>
+
 #include <fidl/flat_ast.h>
 #include <unittest/unittest.h>
-
-#include <regex>
 
 namespace {
 
@@ -28,12 +28,14 @@ static bool implicit_assumptions() {
 
 static bool compare_handles() {
   Name name_not_important(nullptr, "ignore");
-  HandleType nonnullable_channel(name_not_important, HandleSubtype::kChannel,
+  HandleType nonnullable_channel(name_not_important, HandleSubtype::kChannel, nullptr, nullptr,
                                  Nullability::kNonnullable);
-  HandleType nullable_channel(name_not_important, HandleSubtype::kChannel, Nullability::kNullable);
-  HandleType nonnullable_event(name_not_important, HandleSubtype::kEvent,
+  HandleType nullable_channel(name_not_important, HandleSubtype::kChannel, nullptr, nullptr,
+                              Nullability::kNullable);
+  HandleType nonnullable_event(name_not_important, HandleSubtype::kEvent, nullptr, nullptr,
                                Nullability::kNonnullable);
-  HandleType nullable_event(name_not_important, HandleSubtype::kEvent, Nullability::kNullable);
+  HandleType nullable_event(name_not_important, HandleSubtype::kEvent, nullptr, nullptr,
+                            Nullability::kNullable);
 
   // Comparison is nullability, then type.
   EXPECT_TRUE(nullable_channel < nonnullable_channel);

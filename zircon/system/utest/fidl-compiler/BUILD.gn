@@ -121,6 +121,7 @@ if (current_toolchain == default_toolchain) {
       "errors_tests.cc",
       "flat_ast_tests.cc",
       "formatter_tests.cc",
+      "handle_tests.cc",
       "json_findings_tests.cc",
       "json_generator_tests.cc",
       "lint_findings_tests.cc",

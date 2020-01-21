@@ -219,6 +219,8 @@
           "type": {
             "kind": "handle",
             "subtype": "handle",
+            "required_rights": 0,
+            "optional_rights": 4294967295,
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
@@ -242,6 +244,8 @@
           "type": {
             "kind": "handle",
             "subtype": "handle",
+            "required_rights": 0,
+            "optional_rights": 4294967295,
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
@@ -265,6 +269,8 @@
           "type": {
             "kind": "handle",
             "subtype": "handle",
+            "required_rights": 0,
+            "optional_rights": 4294967295,
             "nullable": true
           },
           "experimental_maybe_from_type_alias": {

@@ -670,10 +670,16 @@ struct StringType final : public Type {
 };
 
 struct HandleType final : public Type {
-  HandleType(const Name& name, types::HandleSubtype subtype, types::Nullability nullability)
-      : Type(name, Kind::kHandle, nullability), subtype(subtype) {}
+  HandleType(const Name& name, types::HandleSubtype subtype, const Constant* required_rights,
+             const Constant* optional_rights, types::Nullability nullability)
+      : Type(name, Kind::kHandle, nullability),
+        subtype(subtype),
+        required_rights(required_rights),
+        optional_rights(optional_rights) {}
 
   const types::HandleSubtype subtype;
+  const Constant* required_rights;
+  const Constant* optional_rights;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -714,6 +720,7 @@ struct IdentifierType final : public Type {
   }
 };
 
+// TODO(fxb/43803) Add required and optional rights.
 struct RequestHandleType final : public Type {
   RequestHandleType(const Name& name, const IdentifierType* protocol_type,
                     types::Nullability nullability)
@@ -748,10 +755,14 @@ struct TypeConstructor final {
 
   TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
                   std::optional<types::HandleSubtype> handle_subtype,
+                  std::unique_ptr<Constant> handle_required_rights,
+                  std::unique_ptr<Constant> handle_optional_rights,
                   std::unique_ptr<Constant> maybe_size, types::Nullability nullability)
       : name(std::move(name)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
         handle_subtype(handle_subtype),
+        handle_required_rights(std::move(handle_required_rights)),
+        handle_optional_rights(std::move(handle_optional_rights)),
         maybe_size(std::move(maybe_size)),
         nullability(nullability) {}
 
@@ -762,6 +773,8 @@ struct TypeConstructor final {
   const Name name;
   const std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
   const std::optional<types::HandleSubtype> handle_subtype;
+  const std::unique_ptr<Constant> handle_required_rights;
+  const std::unique_ptr<Constant> handle_optional_rights;
   const std::unique_ptr<Constant> maybe_size;
   const types::Nullability nullability;
 
@@ -1198,7 +1211,9 @@ class TypeTemplate {
   const Name* name() const { return &name_; }
 
   virtual bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-                      const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
+                      const std::optional<types::HandleSubtype>& handle_subtype,
+                      const Constant* handle_required_rights,
+                      const Constant* handle_optional_rights, const Size* size,
                       types::Nullability nullability, std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
 
@@ -1241,8 +1256,9 @@ class Typespace {
   explicit Typespace(ErrorReporter* error_reporter) : error_reporter_(error_reporter) {}
 
   bool Create(const flat::Name& name, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
-              types::Nullability nullability, const Type** out_type,
+              const std::optional<types::HandleSubtype>& handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* size, types::Nullability nullability, const Type** out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
 
   void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
@@ -1256,7 +1272,9 @@ class Typespace {
   friend class TypeAliasTypeTemplate;
 
   bool CreateNotOwned(const flat::Name& name, const Type* arg_type,
-                      const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
+                      const std::optional<types::HandleSubtype>& handle_subtype,
+                      const Constant* handle_required_rights,
+                      const Constant* handle_optional_rights, const Size* size,
                       types::Nullability nullability, std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
   const TypeTemplate* LookupTemplate(const flat::Name& name) const;
@@ -1540,6 +1558,10 @@ class Library {
   // TODO(FIDL-389): Remove when canonicalizing types.
   const Name kSizeTypeName = Name(nullptr, "uint32");
   const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
+
+  const Name kRightsTypeName = Name(nullptr, "uint32");
+  const PrimitiveType kRightsType =
+      PrimitiveType(kRightsTypeName, types::PrimitiveSubtype::kUint32);
 
   std::unique_ptr<raw::AttributeList> attributes_;
 

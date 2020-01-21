@@ -1069,6 +1069,8 @@
             "required": [
                 "kind",
                 "subtype",
+                "required_rights",
+                "optional_rights",
                 "nullable"
             ],
             "properties": {
@@ -1082,6 +1084,14 @@
                 "subtype": {
                     "description": "Sub-type of handle type",
                     "$ref": "#/definitions/handle-subtype"
+                },
+                "required_rights": {
+                    "description": "Rights that must be present on a handle",
+                    "type": "integer"
+                },
+                "optional_rights": {
+                    "description": "Rights that may be present or not present on a handle",
+                    "type": "integer"
                 },
                 "nullable": {
                     "description": "Flag indicating nullability of handle type",

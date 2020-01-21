@@ -19,9 +19,10 @@ bool CheckPrimitiveType(const Library* library, Typespace* typespace, const char
 
   auto the_type_name = Name(library, owned_name);
   const Type* the_type;
-  ASSERT_TRUE(typespace->Create(the_type_name, nullptr /* maybe_arg_type */,
-                                std::optional<types::HandleSubtype>(), nullptr /* maybe_size */,
-                                types::Nullability::kNonnullable, &the_type, nullptr));
+  ASSERT_TRUE(typespace->Create(
+      the_type_name, nullptr /* maybe_arg_type */, std::optional<types::HandleSubtype>(),
+      nullptr /* handle_required_rights */, nullptr /* handle_optional_rights */,
+      nullptr /* maybe_size */, types::Nullability::kNonnullable, &the_type, nullptr));
   ASSERT_NONNULL(the_type, name);
   auto the_type_p = static_cast<const PrimitiveType*>(the_type);
   ASSERT_EQ(the_type_p->subtype, subtype, name);

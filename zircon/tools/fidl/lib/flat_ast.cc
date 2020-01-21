@@ -32,6 +32,13 @@ namespace {
 // TODO(fxb/42311) remove this check
 constexpr uint32_t kXunionOrdinalCutoff = 512;
 
+constexpr uint32_t kHandleNoRights = 0x00000000;
+constexpr uint32_t kHandleAllRights = 0xffffffff;
+
+// During the handle rights migration, rights need defaults if not set.
+constexpr uint32_t kHandleLegacyRequiredRights = kHandleNoRights;
+constexpr uint32_t kHandleLegacyOptionalRights = kHandleAllRights;
+
 class ScopeInsertResult {
  public:
   explicit ScopeInsertResult(std::unique_ptr<SourceSpan> previous_occurrence)
@@ -249,12 +256,14 @@ std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByX
 }
 
 bool Typespace::Create(const flat::Name& name, const Type* arg_type,
-                       const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
+                       const std::optional<types::HandleSubtype>& handle_subtype,
+                       const Constant* handle_required_rights,
+                       const Constant* handle_optional_rights, const Size* size,
                        types::Nullability nullability, const Type** out_type,
                        std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   std::unique_ptr<Type> type;
-  if (!CreateNotOwned(name, arg_type, handle_subtype, size, nullability, &type,
-                      out_from_type_alias))
+  if (!CreateNotOwned(name, arg_type, handle_subtype, handle_required_rights,
+                      handle_optional_rights, size, nullability, &type, out_from_type_alias))
     return false;
   types_.push_back(std::move(type));
   *out_type = types_.back().get();
@@ -263,8 +272,9 @@ bool Typespace::Create(const flat::Name& name, const Type* arg_type,
 
 bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
                                const std::optional<types::HandleSubtype>& handle_subtype,
-                               const Size* size, types::Nullability nullability,
-                               std::unique_ptr<Type>* out_type,
+                               const Constant* handle_required_rights,
+                               const Constant* handle_optional_rights, const Size* size,
+                               types::Nullability nullability, std::unique_ptr<Type>* out_type,
                                std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   // TODO(pascallouis): lookup whether we've already created the type, and
   // return it rather than create a new one. Lookup must be by name,
@@ -277,7 +287,8 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
     error_reporter_->ReportError(name.span(), message);
     return false;
   }
-  return type_template->Create(name.span(), arg_type, handle_subtype, size, nullability, out_type,
+  return type_template->Create(name.span(), arg_type, handle_subtype, handle_required_rights,
+                               handle_optional_rights, size, nullability, out_type,
                                out_from_type_alias);
 }
 
@@ -313,10 +324,14 @@ class PrimitiveTypeTemplate : public TypeTemplate {
       : TypeTemplate(Name(nullptr, name), typespace, error_reporter), subtype_(subtype) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& no_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* maybe_size, types::Nullability nullability,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+    assert(!handle_required_rights);
+    assert(!handle_optional_rights);
 
     if (maybe_arg_type != nullptr)
       return CannotBeParameterized(span);
@@ -339,10 +354,13 @@ class BytesTypeTemplate final : public TypeTemplate {
       : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter), uint8_type_(kUint8Type) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& no_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* size, types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+    assert(!handle_required_rights);
+    assert(!handle_optional_rights);
 
     if (maybe_arg_type != nullptr)
       return CannotBeParameterized(span);
@@ -368,10 +386,13 @@ class ArrayTypeTemplate final : public TypeTemplate {
       : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& no_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* size, types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+    assert(!handle_required_rights);
+    assert(!handle_optional_rights);
 
     if (arg_type == nullptr)
       return MustBeParameterized(span);
@@ -393,10 +414,13 @@ class VectorTypeTemplate final : public TypeTemplate {
       : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& no_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* size, types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+    assert(!handle_required_rights);
+    assert(!handle_optional_rights);
 
     if (arg_type == nullptr)
       return MustBeParameterized(span);
@@ -417,10 +441,13 @@ class StringTypeTemplate final : public TypeTemplate {
       : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& no_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* size, types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+    assert(!handle_required_rights);
+    assert(!handle_optional_rights);
 
     if (arg_type != nullptr)
       return CannotBeParameterized(span);
@@ -438,11 +465,22 @@ class StringTypeTemplate final : public TypeTemplate {
 class HandleTypeTemplate final : public TypeTemplate {
  public:
   HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {}
+      : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {
+    no_rights = std::make_unique<Constant>(Constant::Kind::kSynthesized, SourceSpan());
+    no_rights->ResolveTo(std::make_unique<NumericConstantValue<uint32_t>>(kHandleNoRights));
+    legacy_required_rights = std::make_unique<Constant>(Constant::Kind::kSynthesized, SourceSpan());
+    legacy_required_rights->ResolveTo(
+        std::make_unique<NumericConstantValue<uint32_t>>(kHandleLegacyRequiredRights));
+    legacy_optional_rights = std::make_unique<Constant>(Constant::Kind::kSynthesized, SourceSpan());
+    legacy_optional_rights->ResolveTo(
+        std::make_unique<NumericConstantValue<uint32_t>>(kHandleLegacyOptionalRights));
+  }
 
   bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
-              const std::optional<types::HandleSubtype>& opt_handle_subtype, const Size* maybe_size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& opt_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* maybe_size, types::Nullability nullability,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(maybe_arg_type == nullptr);
 
@@ -450,10 +488,22 @@ class HandleTypeTemplate final : public TypeTemplate {
       return CannotHaveSize(span);
 
     auto handle_subtype = opt_handle_subtype.value_or(types::HandleSubtype::kHandle);
+    if (handle_required_rights == nullptr) {
+      handle_required_rights = legacy_required_rights.get();
+      handle_optional_rights = legacy_optional_rights.get();
+    } else if (handle_optional_rights == nullptr) {
+      handle_optional_rights = no_rights.get();
+    }
 
-    *out_type = std::make_unique<HandleType>(name_, handle_subtype, nullability);
+    *out_type = std::make_unique<HandleType>(name_, handle_subtype, handle_required_rights,
+                                             handle_optional_rights, nullability);
     return true;
   }
+
+ private:
+  std::unique_ptr<Constant> no_rights;
+  std::unique_ptr<Constant> legacy_required_rights;
+  std::unique_ptr<Constant> legacy_optional_rights;
 };
 
 class RequestTypeTemplate final : public TypeTemplate {
@@ -462,10 +512,14 @@ class RequestTypeTemplate final : public TypeTemplate {
       : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& no_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* maybe_size, types::Nullability nullability,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+    assert(!handle_required_rights);
+    assert(!handle_optional_rights);
 
     if (arg_type == nullptr)
       return MustBeParameterized(span);
@@ -496,10 +550,13 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         type_decl_(type_decl) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
-              types::Nullability nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& no_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* size, types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+    assert(!handle_required_rights);
+    assert(!handle_optional_rights);
 
     if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
       if (type_decl_->compiling) {
@@ -550,10 +607,14 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       : TypeTemplate(std::move(name), typespace, error_reporter), library_(library), decl_(decl) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
-              types::Nullability maybe_nullability, std::unique_ptr<Type>* out_type,
+              const std::optional<types::HandleSubtype>& no_handle_subtype,
+              const Constant* handle_required_rights, const Constant* handle_optional_rights,
+              const Size* maybe_size, types::Nullability maybe_nullability,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+    assert(!handle_required_rights);
+    assert(!handle_optional_rights);
 
     if (!decl_->compiled) {
       assert(!decl_->compiling && "TODO(fxb/35218): Improve support for recursive types.");
@@ -596,8 +657,10 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type,
                                     // TODO(pascallouis): Oops, that's wrong. Need to pass handle
                                     // parametrization down.
-                                    std::optional<types::HandleSubtype>(), size, nullability,
-                                    out_type, nullptr))
+                                    std::optional<types::HandleSubtype>(),
+                                    decl_->partial_type_ctor->handle_required_rights.get(),
+                                    decl_->partial_type_ctor->handle_optional_rights.get(), size,
+                                    nullability, out_type, nullptr))
       return false;
     if (out_from_type_alias)
       *out_from_type_alias =
@@ -1441,9 +1504,21 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
       return false;
   }
 
+  std::unique_ptr<Constant> handle_required_rights;
+  std::unique_ptr<Constant> handle_optional_rights;
+  if (raw_type_ctor->handle_required_rights != nullptr) {
+    if (!ConsumeConstant(std::move(raw_type_ctor->handle_required_rights), &handle_required_rights))
+      return false;
+  }
+  if (raw_type_ctor->handle_optional_rights != nullptr) {
+    if (!ConsumeConstant(std::move(raw_type_ctor->handle_optional_rights), &handle_optional_rights))
+      return false;
+  }
+
   *out_type_ctor = std::make_unique<TypeConstructor>(
       std::move(name.value()), std::move(maybe_arg_type_ctor), raw_type_ctor->handle_subtype,
-      std::move(maybe_size), raw_type_ctor->nullability);
+      std::move(handle_required_rights), std::move(handle_optional_rights), std::move(maybe_size),
+      raw_type_ctor->nullability);
   return true;
 }
 
@@ -1689,7 +1764,8 @@ std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl
                                                                 types::Nullability nullability) {
   return std::make_unique<TypeConstructor>(
       Name(decl->name.library(), std::string(decl->name.name_part())), nullptr /* maybe_arg_type */,
-      std::optional<types::HandleSubtype>(), nullptr /* maybe_size */, nullability);
+      std::optional<types::HandleSubtype>(), nullptr /* handle_required_rights */,
+      nullptr /* handle_optional_rights */, nullptr /* maybe_size */, nullability);
 }
 
 bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
@@ -3350,8 +3426,17 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
     return false;
   }
 
-  if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->handle_subtype, size,
-                          type_ctor->nullability, &type_ctor->type, &type_ctor->from_type_alias))
+  if (type_ctor->handle_required_rights)
+    if (!ResolveConstant(type_ctor->handle_required_rights.get(), &kRightsType))
+      return Fail("unable to resolve required rights");
+  if (type_ctor->handle_optional_rights)
+    if (!ResolveConstant(type_ctor->handle_optional_rights.get(), &kRightsType))
+      return Fail("unable to resolve optional rights");
+
+  if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->handle_subtype,
+                          type_ctor->handle_required_rights.get(),
+                          type_ctor->handle_optional_rights.get(), size, type_ctor->nullability,
+                          &type_ctor->type, &type_ctor->from_type_alias))
     return false;
 
   return true;
@@ -3490,6 +3575,7 @@ const std::set<Library*>& Library::dependencies() const { return dependencies_.d
 std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
   return std::make_unique<TypeConstructor>(
       Name(nullptr, "uint32"), nullptr /* maybe_arg_type */, std::optional<types::HandleSubtype>(),
+      nullptr /* handle_required_rights */, nullptr /* handle_optional_rights */,
       nullptr /* maybe_size */, types::Nullability::kNonnullable);
 }
 

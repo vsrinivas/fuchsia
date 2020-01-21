@@ -170,12 +170,21 @@ void JSONGenerator::Generate(const flat::Type* value) {
       case flat::Type::Kind::kHandle: {
         auto type = static_cast<const flat::HandleType*>(value);
         GenerateObjectMember("subtype", type->subtype);
+        GenerateObjectMember(
+            "required_rights",
+            static_cast<const flat::NumericConstantValue<uint32_t>&>(type->required_rights->Value())
+                .value);
+        GenerateObjectMember(
+            "optional_rights",
+            static_cast<const flat::NumericConstantValue<uint32_t>&>(type->optional_rights->Value())
+                .value);
         GenerateObjectMember("nullable", type->nullability);
         break;
       }
       case flat::Type::Kind::kRequestHandle: {
         auto type = static_cast<const flat::RequestHandleType*>(value);
         GenerateObjectMember("subtype", type->protocol_type->name);
+        // TODO(fxb/43803) Add required and optional rights.
         GenerateObjectMember("nullable", type->nullability);
         break;
       }
@@ -575,6 +584,10 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
       GenerateObjectMember("maybe_size", value.maybe_size);
     if (value.handle_subtype)
       GenerateObjectMember("maybe_handle_subtype", value.handle_subtype.value());
+    if (value.handle_required_rights)
+      GenerateObjectMember("required_rights", value.handle_required_rights);
+    if (value.handle_optional_rights)
+      GenerateObjectMember("optional_rights", value.handle_optional_rights);
   });
 }
 

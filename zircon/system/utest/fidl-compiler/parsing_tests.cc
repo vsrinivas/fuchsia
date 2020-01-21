@@ -141,6 +141,33 @@ struct Handles {
   END_TEST;
 }
 
+bool parsing_handle_constraint_test() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Handles {
+    handle plain_handle;
+    handle<none> plain_handle_explicit;
+    handle<none, 1> plain_handle_only_required_rights;
+    handle<none, 1, 2> plain_handle_required_and_optional_rights;
+
+    handle<vmo> no_rights_for_migration;
+    handle<vmo, 1> only_required_rights;
+    handle<vmo, 1, 2> required_and_optional_rights;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  EXPECT_TRUE(library.Compile());
+
+  END_TEST;
+}
+
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
 bool parsing_reserved_words_in_union_test() {
@@ -572,7 +599,8 @@ BEGIN_TEST_CASE(parsing_tests)
 RUN_TEST(bad_compound_identifier_test)
 RUN_TEST(bad_library_name_test)
 RUN_TEST(parsing_reserved_words_in_struct_test)
-RUN_TEST(parsing_handles_in_struct_test);
+RUN_TEST(parsing_handles_in_struct_test)
+RUN_TEST(parsing_handle_constraint_test)
 RUN_TEST(parsing_reserved_words_in_union_test)
 RUN_TEST(parsing_reserved_words_in_protocol_test)
 RUN_TEST(bad_char_at_sign_test)
