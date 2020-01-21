@@ -30,6 +30,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(component_url, result.launch_info.url);
     EXPECT_EQ(0u, result.launch_info.arguments->size());
     EXPECT_EQ(0u, result.matching_urls.size());
+    EXPECT_EQ("", result.realm_label);
   }
 
   {
@@ -41,6 +42,25 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(2u, result.launch_info.arguments->size());
     EXPECT_EQ(argv[2], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[3], result.launch_info.arguments->at(1));
+    EXPECT_EQ("", result.realm_label);
+  }
+
+  {
+    const char* argv[] = {kBinName, "--static-realm-label=kittens", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_FALSE(result.error);
+    EXPECT_EQ(component_url, result.launch_info.url);
+    ASSERT_TRUE(result.launch_info.arguments.has_value());
+    EXPECT_EQ(2u, result.launch_info.arguments->size());
+    EXPECT_EQ(argv[3], result.launch_info.arguments->at(0));
+    EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
+    EXPECT_EQ("kittens", result.realm_label);
+  }
+
+  {
+    const char* argv[] = {kBinName, "--unknown-argument=gives_error", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_TRUE(result.error);
   }
 
   {
@@ -62,6 +82,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_FALSE(result.error);
     EXPECT_EQ(expected_urls.size(), result.matching_urls.size());
     EXPECT_THAT(result.matching_urls, ::testing::UnorderedElementsAreArray(expected_urls));
+    EXPECT_EQ("", result.realm_label);
   }
 
   {
@@ -75,6 +96,7 @@ TEST(RunTest, ParseArgs) {
     ASSERT_EQ(1u, result.matching_urls.size());
     EXPECT_EQ(result.matching_urls[0], expected_url);
     EXPECT_EQ(expected_url, result.launch_info.url);
+    EXPECT_EQ("", result.realm_label);
   }
 }
 

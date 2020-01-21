@@ -17,6 +17,7 @@ struct ParseArgsResult {
   std::string error_msg;
   fuchsia::sys::LaunchInfo launch_info;
   std::vector<std::string> matching_urls;
+  std::string realm_label;
 };
 
 // Parses args.

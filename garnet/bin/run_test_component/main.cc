@@ -38,8 +38,7 @@ constexpr char kConfigPath[] = "/pkgfs/packages/run_test_component/0/data/enviro
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component <test_url> [arguments...]
-       run_test_component <test_matcher> [arguments...]
+Usage: run_test_component [--static-realm-label=<label>] <test_url>|<test_matcher> [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
@@ -53,6 +52,13 @@ Usage: run_test_component <test_url> [arguments...]
        example:
         run_test_component run_test_component_unit
           will match fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/run_test_component_unittests.cmx and run it.
+
+       By default each test component will be run in an environment with
+       transient storage and a randomly-generated identifier, ensuring that
+       the tests have no persisted side-effects. If --static-realm-label is
+       specified then the test will run in a persisted realm with that label,
+       allowing files to be provide to, or retrieve from, the test, e.g. for
+       diagnostic purposes.
 )");
 }
 
@@ -229,10 +235,18 @@ int main(int argc, const char** argv) {
       test_env_services->AllowParentService(service);
     }
 
-    uint32_t rand;
-    zx_cprng_draw(&rand, sizeof(rand));
-    std::string env_label = fxl::StringPrintf("%s%08x", kEnvPrefix, rand);
-    fuchsia::sys::EnvironmentOptions env_opt{.delete_storage_on_death = true};
+    // By default run tests in a realm with a random name and transient storage.
+    // Callers may specify a static realm label through which to exchange files
+    // with the test component.
+    std::string env_label = std::move(parse_result.realm_label);
+    fuchsia::sys::EnvironmentOptions env_opt;
+    if (env_label.empty()) {
+      uint32_t rand;
+      zx_cprng_draw(&rand, sizeof(rand));
+      env_label = fxl::StringPrintf("%s%08x", kEnvPrefix, rand);
+      env_opt.delete_storage_on_death = true;
+    }
+
     enclosing_env = sys::testing::EnclosingEnvironment::Create(
         std::move(env_label), parent_env, std::move(test_env_services), std::move(env_opt));
     launcher = enclosing_env->launcher_ptr();

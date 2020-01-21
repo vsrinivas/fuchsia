@@ -23,16 +23,33 @@ using fuchsia::sys::index::ComponentIndexSyncPtr;
 static constexpr char kComponentIndexerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
 
+static constexpr char kLabelArgPrefix[] = "--static-realm-label=";
+
 ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
                           const char** argv) {
   ParseArgsResult result;
   result.error = false;
-  if (argc < 2) {
-    result.error = true;
-    result.error_msg = "Pass atleast one argument";
-    return result;
+  int url_or_matcher_argi = 1;
+
+  std::string url;
+  while (true) {
+    if (argc < url_or_matcher_argi+1) {
+      result.error = true;
+      result.error_msg = "Missing test URL, or matcher argument";
+      return result;
+    }
+
+    std::string argument = argv[url_or_matcher_argi];
+    const size_t kLabelArgPrefixLength = strlen(kLabelArgPrefix);
+    if (argument.substr(0, kLabelArgPrefixLength) == kLabelArgPrefix) {
+      result.realm_label = argument.substr(kLabelArgPrefixLength);
+      url_or_matcher_argi++;
+      continue;
+    }
+
+    url = argument;
+    break;
   }
-  std::string url = argv[1];
 
   if (!component::FuchsiaPkgUrl::IsFuchsiaPkgScheme(url)) {
     fuchsia::sys::LaunchInfo index_launch_info;
@@ -50,7 +67,7 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
     ComponentIndexSyncPtr index;
     index_provider->Connect(index.NewRequest());
 
-    std::string test_name = argv[1];
+    std::string test_name = url;
     ComponentIndex_FuzzySearch_Result fuzzy_search_result;
     zx_status_t status = index->FuzzySearch(test_name, &fuzzy_search_result);
     if (status != ZX_OK) {
@@ -90,7 +107,7 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
 
   result.launch_info.url = url;
   result.launch_info.arguments.emplace();
-  for (int i = 2; i < argc; i++) {
+  for (int i = url_or_matcher_argi+1; i < argc; i++) {
     result.launch_info.arguments->push_back(argv[i]);
   }
   return result;
