@@ -48,7 +48,7 @@ class PerfTestHelper {
 
     // TODO(fxb/23091): Enable uploading to the Catapult dashboard after
     // this test has been removed from the old benchmarks runner (in
-    // peridot/tests/benchmarks), and after we are able to test via trybots
+    // src/tests/benchmarks), and after we are able to test via trybots
     // what would get uploaded (TODO(fxb/39941)).
     await performance.convertResults('runtime_deps/catapult_converter',
         localResultsFile, Platform.environment,

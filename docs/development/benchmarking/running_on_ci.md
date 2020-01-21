@@ -33,7 +33,7 @@ please read the [Fuchsia Build overview].
 We have shell scripts that run all of a layer's benchmarks at every commit to that layer.
 
 * Garnet: [//garnet/tests/benchmarks](/garnet/tests/benchmarks)
-* Peridot: [//peridot/tests/benchmarks](/peridot/tests/benchmarks)
+* Fuchsia: [//src/tests/benchmarks](/src/tests/benchmarks)
 * Topaz: [//topaz/tests/benchmarks](https://fuchsia.googlesource.com/topaz/+/master/tests/benchmarks)
 
 These shell scripts are written using a helper library called [benchmarking].  Add a

@@ -11,7 +11,7 @@ void main() {
   // function properly.
   //
   // This list should be kept in sync with the list in
-  // peridot/tests/benchmarks/benchmarks.cc until that list is removed
+  // src/tests/benchmarks/benchmarks.cc until that list is removed
   // (TODO(fxb/23091)).
   const ledgerTests = [
     'stories_single_active.tspec',
