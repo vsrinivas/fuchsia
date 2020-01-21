@@ -14,7 +14,7 @@ namespace fidl_codec {
 class TypeVisitor {
  protected:
   virtual void VisitType(const Type* type) {}
-  virtual void VisitRawType(const RawType* type) { VisitType(type); }
+  virtual void VisitInvalidType(const InvalidType* type) { VisitType(type); }
   virtual void VisitBoolType(const BoolType* type) { VisitType(type); }
   virtual void VisitIntegralType(const Type* type) { VisitNumericType(type); }
   virtual void VisitUint8Type(const Uint8Type* type) { VisitIntegralType(type); }
@@ -40,7 +40,7 @@ class TypeVisitor {
   virtual void VisitTableType(const TableType* type) { VisitType(type); }
 
   friend class Type;
-  friend class RawType;
+  friend class InvalidType;
   friend class BoolType;
   template <typename T>
   friend class IntegralType;

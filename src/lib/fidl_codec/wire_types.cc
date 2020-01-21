@@ -170,21 +170,15 @@ void Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   printer << Red << "invalid" << ResetColor;
 }
 
-std::string RawType::Name() const { return "unknown"; }
+std::string InvalidType::Name() const { return "unknown"; }
 
-size_t RawType::InlineSize() const { return inline_size_; }
+size_t InvalidType::InlineSize() const { return 0; }
 
-bool RawType::Nullable() const { return true; }
-
-std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  const uint8_t* data = decoder->GetAddress(offset, inline_size_);
-  if (data == nullptr) {
-    return std::make_unique<InvalidValue>();
-  }
-  return std::make_unique<RawValue>(data, inline_size_);
+std::unique_ptr<Value> InvalidType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  return std::make_unique<InvalidValue>();
 }
 
-void RawType::Visit(TypeVisitor* visitor) const { visitor->VisitRawType(this); }
+void InvalidType::Visit(TypeVisitor* visitor) const { visitor->VisitInvalidType(this); }
 
 size_t BoolType::InlineSize() const { return sizeof(uint8_t); }
 
@@ -498,7 +492,7 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
 
 void TableType::Visit(TypeVisitor* visitor) const { visitor->VisitTableType(this); }
 
-std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name, size_t inline_size) {
+std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name) {
   static std::map<std::string, std::function<std::unique_ptr<Type>()>> scalar_type_map_{
       {"bool", []() { return std::make_unique<BoolType>(); }},
       {"int8", []() { return std::make_unique<Int8Type>(); }},
@@ -516,24 +510,24 @@ std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name, siz
   if (it != scalar_type_map_.end()) {
     return it->second();
   }
-  return std::make_unique<RawType>(inline_size);
+  return std::make_unique<InvalidType>();
 }
 
-std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type, size_t inline_size) {
+std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type) {
   if (!type.HasMember("subtype")) {
     FXL_LOG(ERROR) << "Invalid type";
-    return std::make_unique<RawType>(inline_size);
+    return std::make_unique<InvalidType>();
   }
 
   std::string subtype = type["subtype"].GetString();
-  return ScalarTypeFromName(subtype, inline_size);
+  return ScalarTypeFromName(subtype);
 }
 
-std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader, const rapidjson::Value& type,
-                                               size_t inline_size) {
+std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
+                                               const rapidjson::Value& type) {
   if (!type.HasMember("identifier")) {
     FXL_LOG(ERROR) << "Invalid type";
-    return std::make_unique<RawType>(inline_size);
+    return std::make_unique<InvalidType>();
   }
   std::string id = type["identifier"].GetString();
   size_t split_index = id.find('/');
@@ -541,21 +535,20 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader, const rapi
   Library* library = loader->GetLibraryFromName(library_name);
   if (library == nullptr) {
     FXL_LOG(ERROR) << "Unknown type for identifier: " << library_name;
-    return std::make_unique<RawType>(inline_size);
+    return std::make_unique<InvalidType>();
   }
 
   bool is_nullable = false;
   if (type.HasMember("nullable")) {
     is_nullable = type["nullable"].GetBool();
   }
-  return library->TypeFromIdentifier(is_nullable, id, inline_size);
+  return library->TypeFromIdentifier(is_nullable, id);
 }
 
-std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Value& type,
-                                    size_t inline_size) {
+std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Value& type) {
   if (!type.HasMember("kind")) {
     FXL_LOG(ERROR) << "Invalid type";
-    return std::make_unique<RawType>(inline_size);
+    return std::make_unique<InvalidType>();
   }
   std::string kind = type["kind"].GetString();
   if (kind == "string") {
@@ -567,23 +560,23 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
   if (kind == "array") {
     const rapidjson::Value& element_type = type["element_type"];
     uint32_t element_count = std::strtol(type["element_count"].GetString(), nullptr, kDecimalBase);
-    return std::make_unique<ArrayType>(GetType(loader, element_type, 0), element_count);
+    return std::make_unique<ArrayType>(GetType(loader, element_type), element_count);
   }
   if (kind == "vector") {
     const rapidjson::Value& element_type = type["element_type"];
-    return std::make_unique<VectorType>(GetType(loader, element_type, 0));
+    return std::make_unique<VectorType>(GetType(loader, element_type));
   }
   if (kind == "request") {
     return std::make_unique<HandleType>();
   }
   if (kind == "primitive") {
-    return Type::TypeFromPrimitive(type, inline_size);
+    return Type::TypeFromPrimitive(type);
   }
   if (kind == "identifier") {
-    return Type::TypeFromIdentifier(loader, type, inline_size);
+    return Type::TypeFromIdentifier(loader, type);
   }
   FXL_LOG(ERROR) << "Invalid type " << kind;
-  return std::make_unique<RawType>(inline_size);
+  return std::make_unique<InvalidType>();
 }
 
 }  // namespace fidl_codec

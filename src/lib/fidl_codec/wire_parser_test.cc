@@ -1596,7 +1596,8 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
   }
 
-  ASSERT_STREQ(actual["i32"].GetString(), "ef be ad de");
+  // Checks that an invalid type generates an invalid value.
+  ASSERT_STREQ(actual["i32"].GetString(), "(invalid)");
 
   delete[] handle_infos;
 }

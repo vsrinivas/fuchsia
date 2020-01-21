@@ -176,8 +176,6 @@ class Union {
 
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
-  uint64_t alignment() const { return alignment_; }
-  uint32_t size() const { return size_; }
   const std::vector<std::unique_ptr<UnionMember>>& members() const { return members_; }
 
   const UnionMember* MemberWithTag(uint32_t tag) const;
@@ -195,8 +193,6 @@ class Union {
   Library* enclosing_library_;
   const rapidjson::Value* json_definition_;
   std::string name_;
-  uint64_t alignment_;
-  uint64_t size_;
   std::vector<std::unique_ptr<UnionMember>> members_;
 };
 
@@ -212,7 +208,6 @@ class StructMember {
 
  private:
   const std::string name_;
-  const uint64_t size_ = 0;
   uint64_t offset_ = 0;
   std::unique_ptr<Type> type_;
 };
@@ -289,7 +284,6 @@ class Table {
 
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
-  uint32_t size() const { return size_; }
   const std::vector<std::unique_ptr<TableMember>>& members() const { return members_; }
 
   const TableMember* GetMember(uint64_t ordinal) const {
@@ -314,7 +308,6 @@ class Table {
   Library* enclosing_library_;
   const rapidjson::Value* json_definition_;
   std::string name_;
-  uint64_t size_;
   std::vector<std::unique_ptr<TableMember>> members_;
 };
 
@@ -400,8 +393,7 @@ class Library {
   // Decode all the content of this FIDL file.
   bool DecodeAll();
 
-  std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable, std::string& identifier,
-                                           size_t inline_size);
+  std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable, std::string& identifier);
 
   // The size of the type with name |identifier| when it is inline (e.g.,
   // embedded in an array)
@@ -426,18 +418,12 @@ class Library {
   // Extract a scalar type from a JSON value.
   std::unique_ptr<Type> ExtractScalarType(const rapidjson::Value* json_definition,
                                           std::string_view container_type,
-                                          std::string_view container_name, const char* field_name,
-                                          uint64_t size);
+                                          std::string_view container_name, const char* field_name);
   // Extract a type from a JSON value.
   std::unique_ptr<Type> ExtractType(const rapidjson::Value* json_definition,
                                     std::string_view container_type,
-                                    std::string_view container_name, const char* field_name,
-                                    uint64_t size);
-  // Extract type info
-  uint64_t ExtractTypeSize(const rapidjson::Value* json_definition, std::string_view container_type,
-                           std::string_view container_name);
-  uint64_t ExtractTypeAlignment(const rapidjson::Value* json_definition,
-                                std::string_view container_type, std::string_view container_name);
+                                    std::string_view container_name, const char* field_name);
+  // Extract field offset.
   uint64_t ExtractFieldOffset(const rapidjson::Value* json_definition,
                               std::string_view container_type, std::string_view container_name);
   // Display an error when a field is not found.

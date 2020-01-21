@@ -25,10 +25,9 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
   }
   name_ = enclosing_library->ExtractString(json_definition_, supertype_name, "<unknown>", "name");
   if (is_scalar) {
-    type_ =
-        enclosing_library->ExtractScalarType(json_definition_, supertype_name, name_, "type", 0);
+    type_ = enclosing_library->ExtractScalarType(json_definition_, supertype_name, name_, "type");
   } else {
-    type_ = enclosing_library->ExtractType(json_definition_, supertype_name, name_, "type", 0);
+    type_ = enclosing_library->ExtractType(json_definition_, supertype_name, name_, "type");
   }
 
   if (!json_definition_->HasMember("members")) {
@@ -107,9 +106,9 @@ UnionMember::UnionMember(const Union& union_definition, Library* enclosing_libra
                                  ? enclosing_library->ExtractUint32(json_definition, "union member",
                                                                     name_, "xunion_ordinal")
                                  : 0)),
-      type_(reserved_ ? std::make_unique<RawType>(0)
-                      : enclosing_library->ExtractType(json_definition, "union member", name_,
-                                                       "type", 0)) {}
+      type_(reserved_
+                ? std::make_unique<InvalidType>()
+                : enclosing_library->ExtractType(json_definition, "union member", name_, "type")) {}
 
 UnionMember::~UnionMember() = default;
 
@@ -121,8 +120,6 @@ void Union::DecodeTypes(bool for_xunion) {
     return;
   }
   name_ = enclosing_library_->ExtractString(json_definition_, "union", "<unknown>", "name");
-  alignment_ = enclosing_library_->ExtractTypeAlignment(json_definition_, "union", name_);
-  size_ = enclosing_library_->ExtractTypeSize(json_definition_, "union", name_);
 
   if (!json_definition_->HasMember("members")) {
     enclosing_library_->FieldNotFound("union", name_, "members");
@@ -165,10 +162,8 @@ const UnionMember* Union::MemberWithOrdinal(Ordinal32 ordinal) const {
 StructMember::StructMember(Library* enclosing_library, const rapidjson::Value* json_definition)
     : name_(
           enclosing_library->ExtractString(json_definition, "struct member", "<unknown>", "name")),
-      size_(enclosing_library->ExtractUint64(json_definition, "struct member", name_, "size")),
       offset_(enclosing_library->ExtractFieldOffset(json_definition, "struct member", name_)),
-      type_(
-          enclosing_library->ExtractType(json_definition, "struct member", name_, "type", size_)) {}
+      type_(enclosing_library->ExtractType(json_definition, "struct member", name_, "type")) {}
 
 StructMember::StructMember(std::string_view name, std::unique_ptr<Type> type)
     : name_(name), type_(std::move(type)) {}
@@ -244,9 +239,9 @@ TableMember::TableMember(Library* enclosing_library, const rapidjson::Value* jso
                       : enclosing_library->ExtractString(json_definition, "table member",
                                                          "<unknown>", "name")),
       ordinal_(enclosing_library->ExtractUint32(json_definition, "table member", name_, "ordinal")),
-      type_(reserved_ ? std::make_unique<RawType>(0)
-                      : enclosing_library->ExtractType(json_definition, "table member", name_,
-                                                       "type", 0)) {}
+      type_(reserved_
+                ? std::make_unique<InvalidType>()
+                : enclosing_library->ExtractType(json_definition, "table member", name_, "type")) {}
 
 TableMember::~TableMember() = default;
 
@@ -260,7 +255,6 @@ void Table::DecodeTypes() {
     return;
   }
   name_ = enclosing_library_->ExtractString(json_definition_, "table", "<unknown>", "name");
-  size_ = enclosing_library_->ExtractTypeSize(json_definition_, "table", name_);
 
   if (!json_definition_->HasMember("members")) {
     enclosing_library_->FieldNotFound("table", name_, "members");
@@ -429,8 +423,7 @@ bool Library::DecodeAll() {
   return !has_errors_;
 }
 
-std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string& identifier,
-                                                  size_t inline_size) {
+std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string& identifier) {
   auto str = structs_.find(identifier);
   if (str != structs_.end()) {
     str->second->DecodeStructTypes();
@@ -467,7 +460,7 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string&
   if (GetInterfaceByName(identifier, &ifc)) {
     return std::make_unique<HandleType>();
   }
-  return std::make_unique<RawType>(inline_size);
+  return std::make_unique<InvalidType>();
 }
 
 bool Library::GetInterfaceByName(const std::string& name, const Interface** ptr) const {
@@ -522,45 +515,23 @@ uint32_t Library::ExtractUint32(const rapidjson::Value* json_definition,
 std::unique_ptr<Type> Library::ExtractScalarType(const rapidjson::Value* json_definition,
                                                  std::string_view container_type,
                                                  std::string_view container_name,
-                                                 const char* field_name, uint64_t size) {
+                                                 const char* field_name) {
   if (!json_definition->HasMember(field_name)) {
     FieldNotFound(container_type, container_name, field_name);
-    return std::make_unique<RawType>(size);
+    return std::make_unique<InvalidType>();
   }
-  return Type::ScalarTypeFromName((*json_definition)[field_name].GetString(), size);
+  return Type::ScalarTypeFromName((*json_definition)[field_name].GetString());
 }
 
 std::unique_ptr<Type> Library::ExtractType(const rapidjson::Value* json_definition,
                                            std::string_view container_type,
-                                           std::string_view container_name, const char* field_name,
-                                           uint64_t size) {
+                                           std::string_view container_name,
+                                           const char* field_name) {
   if (!json_definition->HasMember(field_name)) {
     FieldNotFound(container_type, container_name, field_name);
-    return std::make_unique<RawType>(size);
+    return std::make_unique<InvalidType>();
   }
-  return Type::GetType(enclosing_loader(), (*json_definition)[field_name], size);
-}
-
-uint64_t Library::ExtractTypeSize(const rapidjson::Value* json_definition,
-                                  std::string_view container_type,
-                                  std::string_view container_name) {
-  if (!json_definition->HasMember("type_shape_v1")) {
-    FieldNotFound(container_type, container_name, "type_shape_v1");
-    return 0;
-  }
-  return ExtractUint64(&(*json_definition)["type_shape_v1"], container_type, container_name,
-                       "inline_size");
-}
-
-uint64_t Library::ExtractTypeAlignment(const rapidjson::Value* json_definition,
-                                       std::string_view container_type,
-                                       std::string_view container_name) {
-  if (!json_definition->HasMember("type_shape_v1")) {
-    FieldNotFound(container_type, container_name, "type_shape_v1");
-    return 0;
-  }
-  return ExtractUint64(&(*json_definition)["type_shape_v1"], container_type, container_name,
-                       "alignment");
+  return Type::GetType(enclosing_loader(), (*json_definition)[field_name]);
 }
 
 uint64_t Library::ExtractFieldOffset(const rapidjson::Value* json_definition,

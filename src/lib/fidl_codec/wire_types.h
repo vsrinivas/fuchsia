@@ -64,50 +64,44 @@ class Type {
   // Use a visitor on this value;
   virtual void Visit(TypeVisitor* visitor) const = 0;
 
-  // Gets a Type object representing the |type|.  |type| is a JSON object a
-  // field "kind" that states the type (e.g., "array", "vector", "foo.bar/Baz").
-  // |loader| is the set of libraries to use to find types that need to be given
-  // by identifier (e.g., "foo.bar/Baz").
-  static std::unique_ptr<Type> GetType(LibraryLoader* loader, const rapidjson::Value& type,
-                                       size_t inline_size);
+  // Gets a Type object representing the |type_name|.  |type| is a string that
+  // represents a scalar type (e.g., "float64", "uint32").
+  static std::unique_ptr<Type> ScalarTypeFromName(const std::string& type_name);
 
   // Gets a Type object representing the |type|.  |type| is a JSON object with a
   // "subtype" field that represents a scalar type (e.g., "float64", "uint32")
-  static std::unique_ptr<Type> TypeFromPrimitive(const rapidjson::Value& type, size_t inline_size);
-
-  // Gets a Type object representing the |type_name|.  |type| is a string that
-  // represents a scalar type (e.g., "float64", "uint32").
-  static std::unique_ptr<Type> ScalarTypeFromName(const std::string& type_name, size_t inline_size);
+  static std::unique_ptr<Type> TypeFromPrimitive(const rapidjson::Value& type);
 
   // Gets a Type object representing the |type|.  |type| is a JSON object a
   // field "kind" that states the type.  "kind" is an identifier
   // (e.g.,"foo.bar/Baz").  |loader| is the set of libraries to use to lookup
   // that identifier.
   static std::unique_ptr<Type> TypeFromIdentifier(LibraryLoader* loader,
-                                                  const rapidjson::Value& type, size_t inline_size);
+                                                  const rapidjson::Value& type);
+
+  // Gets a Type object representing the |type|.  |type| is a JSON object a
+  // field "kind" that states the type (e.g., "array", "vector", "foo.bar/Baz").
+  // |loader| is the set of libraries to use to find types that need to be given
+  // by identifier (e.g., "foo.bar/Baz").
+  static std::unique_ptr<Type> GetType(LibraryLoader* loader, const rapidjson::Value& type);
 
   Type& operator=(const Type& other) = default;
   Type(const Type& other) = default;
 };
 
 // An instance of this class is created when the system can't determine the real
-// class (e.g., in cases of corrupted metadata). Only a hexa dump is generated.
-class RawType : public Type {
+// class (e.g., in cases of corrupted metadata).
+class InvalidType : public Type {
  public:
-  explicit RawType(size_t inline_size) : inline_size_(inline_size) {}
+  InvalidType() = default;
 
   std::string Name() const override;
 
   size_t InlineSize() const override;
 
-  bool Nullable() const override;
-
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
   void Visit(TypeVisitor* visitor) const override;
-
- private:
-  size_t inline_size_;
 };
 
 class BoolType : public Type {
