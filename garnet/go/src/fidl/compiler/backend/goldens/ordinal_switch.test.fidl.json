@@ -123,6 +123,10 @@
     "test.name/SwitchingOrdinals"
   ],
   "declarations": {
-    "test.name/SwitchingOrdinals": "interface"
+    "test.name/SwitchingOrdinals": "interface",
+    "test.name/SomeLongAnonymousPrefix0": "struct",
+    "test.name/SomeLongAnonymousPrefix1": "struct",
+    "test.name/SomeLongAnonymousPrefix2": "struct",
+    "test.name/SomeLongAnonymousPrefix3": "struct"
   }
 }

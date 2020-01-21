@@ -62,6 +62,7 @@ namespace types = fidl::types;
 using WireFormat = fidl::WireFormat;
 
 constexpr uint32_t kSizeOfTransactionHeader = 16;
+constexpr uint32_t kAlignmentOfTransactionHeader = 8;
 constexpr uint32_t kHandleSize = 4;
 
 DataSize UnalignedSize(const flat::Object& object, const WireFormat wire_format);
@@ -150,6 +151,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
               case WireFormat::kOld:
                 return DataSize(8);
               case WireFormat::kV1NoEe:
+              case WireFormat::kV1Header:
                 return DataSize(24);
             }
           case flat::Decl::Kind::kXUnion:
@@ -182,13 +184,16 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::Struct& object) override {
     if (object.members.empty()) {
-      // Object is an empty struct or a transaction header.
-      return object.is_request_or_response ? DataSize(kSizeOfTransactionHeader) : DataSize(1);
+      // Object is an empty struct
+      if (object.is_request_or_response && wire_format() != WireFormat::kV1Header) {
+        return DataSize(kSizeOfTransactionHeader);
+      }
+      return DataSize(1);
     }
 
     DataSize size = 0;
 
-    if (object.is_request_or_response) {
+    if (object.is_request_or_response && wire_format() != WireFormat::kV1Header) {
       size += kSizeOfTransactionHeader;
     }
 
@@ -243,6 +248,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
         return tag_size + AlignTo(max_member_size, tag_size);
       }
       case WireFormat::kV1NoEe:
+      case WireFormat::kV1Header:
         return DataSize(24);
     }
   }
@@ -333,7 +339,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
       // which changed method ordinals from 32 to 64 bits. Before FTP-029, the assumed alignment was
       // 4, but in practice, all FIDL bindings and typeshape calculation code were assuming a
       // minimum alignment of 8.)
-      return DataSize(8);
+      return DataSize(kAlignmentOfTransactionHeader);
     }
 
     if (object.members.empty()) {
@@ -380,6 +386,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
         return DataSize(4);
       }
       case WireFormat::kV1NoEe:
+      case WireFormat::kV1Header:
         return DataSize(8);
     }
   }
@@ -447,6 +454,7 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
               case WireFormat::kOld:
                 return DataSize(1) + Depth(object.type_decl);
               case WireFormat::kV1NoEe:
+              case WireFormat::kV1Header:
                 return Depth(object.type_decl);
             }
           case flat::Decl::Kind::kXUnion:
@@ -532,6 +540,7 @@ class DepthVisitor final : public TypeShapeVisitor<DataSize> {
       case WireFormat::kOld:
         return max_depth;
       case WireFormat::kV1NoEe:
+      case WireFormat::kV1Header:
         return DataSize(1) + max_depth;
     }
   }
@@ -745,8 +754,9 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
             switch (wire_format()) {
               case WireFormat::kOld:
                 return ObjectAlign(UnalignedSize(object.type_decl, wire_format())) +
-                      MaxOutOfLine(object.type_decl);
+                       MaxOutOfLine(object.type_decl);
               case WireFormat::kV1NoEe:
+              case WireFormat::kV1Header:
                 return MaxOutOfLine(object.type_decl);
             }
           case flat::Decl::Kind::kXUnion:
@@ -828,6 +838,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
           case WireFormat::kOld:
             return MaxOutOfLine(member);
           case WireFormat::kV1NoEe:
+          case WireFormat::kV1Header:
             // Same as XUnions.
             return ObjectAlign(UnalignedSize(member, wire_format())) + MaxOutOfLine(member);
         }
@@ -995,6 +1006,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
 
         return false;
       }
+      case WireFormat::kV1Header:
       case WireFormat::kV1NoEe: {
         // TODO(fxb/36332): XUnions currently return true for has_padding in all cases, which should
         // be fixed.
@@ -1226,9 +1238,7 @@ class ContainsUnionVisitor final : public flat::Object::Visitor<bool> {
     return ContainsUnion(object.type_ctor->type);
   }
 
-  std::any Visit(const flat::Union& object) override {
-    return true;
-  }
+  std::any Visit(const flat::Union& object) override { return true; }
 
   std::any Visit(const flat::Union::Member& object) override {
     return object.maybe_used ? ContainsUnion(*object.maybe_used) : false;
@@ -1351,7 +1361,7 @@ FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_f
   assert(parent.members.size());
   const std::vector<flat::StructMember>& members = parent.members;
 
-  if (parent.is_request_or_response) {
+  if (parent.is_request_or_response && wire_format != WireFormat::kV1Header) {
     offset += kSizeOfTransactionHeader;
   }
 
@@ -1386,6 +1396,7 @@ FieldShape::FieldShape(const flat::UnionMemberUsed& member, const WireFormat wir
           case WireFormat::kOld:
             return Alignment(member.parent, wire_format).RawValue();
           case WireFormat::kV1NoEe:
+          case WireFormat::kV1Header:
             return 0u;
         }
       }()),
@@ -1395,6 +1406,7 @@ FieldShape::FieldShape(const flat::UnionMemberUsed& member, const WireFormat wir
             return AlignedSize(member.parent, wire_format) - offset -
                    UnalignedSize(member, wire_format).RawValue();
           case WireFormat::kV1NoEe:
+          case WireFormat::kV1Header:
             // Same as XUnions.
             return ::Padding(UnalignedSize(member, wire_format),
                              Alignment(member.parent, wire_format));

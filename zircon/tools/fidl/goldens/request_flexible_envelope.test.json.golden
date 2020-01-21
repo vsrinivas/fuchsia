@@ -44,6 +44,7 @@
               "size": 24
             }
           ],
+          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -75,6 +76,7 @@
               "size": 24
             }
           ],
+          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -117,6 +119,7 @@
               "size": 24
             }
           ],
+          "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix2",
           "maybe_request_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -148,6 +151,7 @@
               "size": 24
             }
           ],
+          "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix3",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -164,7 +168,164 @@
     }
   ],
   "service_declarations": [],
-  "struct_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "fidl.test.json/SomeLongAnonymousPrefix0",
+      "location": {
+        "filename": "generated",
+        "line": 1,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.json/StrictFoo",
+            "nullable": false
+          },
+          "name": "s",
+          "location": {
+            "filename": "request_flexible_envelope.test.fidl",
+            "line": 14,
+            "column": 45
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 24
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "fidl.test.json/SomeLongAnonymousPrefix1",
+      "location": {
+        "filename": "generated",
+        "line": 2,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.json/FlexibleFoo",
+            "nullable": false
+          },
+          "name": "f",
+          "location": {
+            "filename": "request_flexible_envelope.test.fidl",
+            "line": 14,
+            "column": 64
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 24
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "fidl.test.json/SomeLongAnonymousPrefix2",
+      "location": {
+        "filename": "generated",
+        "line": 3,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.json/FlexibleFoo",
+            "nullable": false
+          },
+          "name": "s",
+          "location": {
+            "filename": "request_flexible_envelope.test.fidl",
+            "line": 15,
+            "column": 47
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 24
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "fidl.test.json/SomeLongAnonymousPrefix3",
+      "location": {
+        "filename": "generated",
+        "line": 4,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.json/StrictFoo",
+            "nullable": false
+          },
+          "name": "f",
+          "location": {
+            "filename": "request_flexible_envelope.test.fidl",
+            "line": 15,
+            "column": 64
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 24
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    }
+  ],
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [
@@ -291,6 +452,10 @@
   ],
   "declarations": {
     "fidl.test.json/Protocol": "interface",
+    "fidl.test.json/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.json/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.json/SomeLongAnonymousPrefix2": "struct",
+    "fidl.test.json/SomeLongAnonymousPrefix3": "struct",
     "fidl.test.json/FlexibleFoo": "xunion",
     "fidl.test.json/StrictFoo": "xunion"
   }

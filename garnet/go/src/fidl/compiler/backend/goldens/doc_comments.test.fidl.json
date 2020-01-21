@@ -452,6 +452,8 @@
     "test.name/MyEnum": "enum",
     "test.name/Interface": "interface",
     "test.name/Service": "service",
+    "test.name/SomeLongAnonymousPrefix0": "struct",
+    "test.name/SomeLongAnonymousPrefix1": "struct",
     "test.name/Struct": "struct",
     "test.name/Table": "table",
     "test.name/Union": "union"

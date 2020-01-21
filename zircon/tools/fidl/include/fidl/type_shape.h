@@ -21,9 +21,12 @@ struct XUnionMemberUsed;
 }  // namespace flat
 
 enum class WireFormat {
-  kOld,     // The v0 wire format, where "union" is a static union on-the-wire.
-  kV1NoEe,  // The v1-no-ee wire format, where "union" is an extensible union on-the-wire,
-            // but without efficient envelope support.
+  kOld,       // The v0 wire format, where "union" is a static union on-the-wire.
+  kV1NoEe,    // The v1-no-ee wire format, where "union" is an extensible union on-the-wire,
+              // but without efficient envelope support.
+  kV1Header,  // The v1 wire format, except where request and response structs do not receive
+              // any special treatment (e.g. having their size increased by 16 for the transactional
+              // header)
 };
 
 struct TypeShape {

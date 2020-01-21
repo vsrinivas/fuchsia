@@ -189,6 +189,8 @@
     "test.name/SecondProtocol": "interface",
     "test.name/SingleMemberService": "service",
     "test.name/MultiHeterogeneousMemberService": "service",
-    "test.name/MultiHomogeneousMemberService": "service"
+    "test.name/MultiHomogeneousMemberService": "service",
+    "test.name/SomeLongAnonymousPrefix0": "struct",
+    "test.name/SomeLongAnonymousPrefix1": "struct"
   }
 }

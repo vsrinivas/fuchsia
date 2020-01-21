@@ -48,6 +48,7 @@ std::string WireFormatPrefix(const WireFormat wire_format) {
     case WireFormat::kOld:
       return "";
     case WireFormat::kV1NoEe:
+    case WireFormat::kV1Header:
       return "v1_";
   }
 }

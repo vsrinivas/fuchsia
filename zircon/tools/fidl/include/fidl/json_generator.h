@@ -59,8 +59,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
 
   std::ostringstream Produce();
 
-  // Temporarily specializing for structs to avoid printing anonymous
-  // declarations.
+  // Specializing for structs to avoid printing request/response structs, which are
+  // handled separately.
   void GenerateArray(std::vector<std::unique_ptr<flat::Struct>>::const_iterator begin,
                      std::vector<std::unique_ptr<flat::Struct>>::const_iterator end) {
     EmitArrayBegin();
@@ -118,7 +118,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Service& value);
   void Generate(const flat::Service::Member& value);
   void Generate(const flat::Struct& value);
-  void Generate(const flat::Struct::Member& value);
+  void Generate(const flat::Struct* value);
+  void Generate(const flat::Struct::Member& value, bool is_request_or_response = false);
   void Generate(const flat::Table& value);
   void Generate(const flat::Table::Member& value);
   void Generate(const flat::Union& value);
@@ -138,8 +139,10 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void GenerateDeclarationsMember(const flat::Library* library,
                                   Position position = Position::kSubsequent);
   void GenerateTypeShapes(const flat::Object& object);
-  void GenerateTypeShapes(std::string prefix, const flat::Object& object);
-  void GenerateFieldShapes(const flat::Struct::Member& struct_member);
+  void GenerateTypeShapes(std::string prefix, const flat::Object& object,
+                          bool is_request_or_response = false);
+  void GenerateFieldShapes(const flat::Struct::Member& struct_member,
+                           bool is_request_or_response = false);
 
   const flat::Library* library_;
   std::ostringstream json_file_;

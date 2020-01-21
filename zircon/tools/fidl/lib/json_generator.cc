@@ -337,8 +337,33 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& va
 }
 
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
-  GenerateObjectMember(prefix, value.members);
-  GenerateTypeShapes(prefix, value);
+  // Temporarily hardcode the generation of request/response struct members to use the old
+  // wire format, in order to maintain compatibility during the transition for fxb/7024.
+  // This block of code is copied from JsonWriter::GenerateArray (with the difference
+  // noted below), and will be removed once backends are updated to use anonymous structs.
+  GenerateObjectPunctuation(Position::kSubsequent);
+  EmitObjectKey(prefix);
+  EmitArrayBegin();
+  if (value.members.begin() != value.members.end()) {
+    Indent();
+    EmitNewlineWithIndent();
+  }
+  for (auto it = value.members.begin(); it != value.members.end(); ++it) {
+    if (it != value.members.begin())
+      EmitArraySeparator();
+    // call Generate with is_request_response = true on each struct member
+    Generate(*it, true);
+  }
+  if (value.members.begin() != value.members.end()) {
+    Outdent();
+    EmitNewlineWithIndent();
+  }
+  EmitArrayEnd();
+
+  if (!value.members.empty()) {
+    GenerateObjectMember(prefix + "_payload", value.name);
+  }
+  GenerateTypeShapes(prefix, value, true);
 }
 
 void JSONGenerator::Generate(const flat::Service& value) {
@@ -373,7 +398,9 @@ void JSONGenerator::Generate(const flat::Struct& value) {
   });
 }
 
-void JSONGenerator::Generate(const flat::Struct::Member& value) {
+void JSONGenerator::Generate(const flat::Struct* value) { Generate(*value); }
+
+void JSONGenerator::Generate(const flat::Struct::Member& value, bool is_request_or_response) {
   GenerateObject([&]() {
     GenerateTypeAndFromTypeAlias(*value.type_ctor, Position::kFirst);
     GenerateObjectMember("name", value.name);
@@ -382,8 +409,8 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_default_value)
       GenerateObjectMember("maybe_default_value", value.maybe_default_value);
-    GenerateFieldShapes(value);
 
+    GenerateFieldShapes(value, is_request_or_response);
     // TODO(fxb/43957): this should be removed or updated
     auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
     GenerateObjectMember("size", deprecated_type_shape.InlineSize());
@@ -615,16 +642,24 @@ void JSONGenerator::GenerateTypeShapes(const flat::Object& object) {
   GenerateTypeShapes("", object);
 }
 
-void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Object& object) {
+void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Object& object,
+                                       bool is_request_or_response) {
   if (prefix.size() > 0) {
     prefix.push_back('_');
   }
 
-  GenerateObjectMember(prefix + "type_shape_v1", TypeShape(object, WireFormat::kV1NoEe));
+  // NOTE: while the transition for fxb/7024 is ongoing, we need to treat request/responses
+  // specially as before, but this will be removed once the transition is complete
+  const auto& v1 = is_request_or_response ? WireFormat::kV1NoEe : WireFormat::kV1Header;
+  GenerateObjectMember(prefix + "type_shape_v1", TypeShape(object, v1));
 }
 
-void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member) {
-  GenerateObjectMember("field_shape_v1", FieldShape(struct_member, WireFormat::kV1NoEe));
+void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member,
+                                        bool is_request_or_response) {
+  // NOTE: while the transition for fxb/7024 is ongoing, we need to treat request/responses
+  // specially as before, but this will be removed once the transition is complete
+  const auto& v1 = is_request_or_response ? WireFormat::kV1NoEe : WireFormat::kV1Header;
+  GenerateObjectMember("field_shape_v1", FieldShape(struct_member, v1));
 }
 
 void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name,
@@ -660,8 +695,6 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
       GenerateDeclarationsEntry(count++, decl->name, "service");
 
     for (const auto& decl : library->struct_declarations_) {
-      if (decl->is_request_or_response)
-        continue;
       GenerateDeclarationsEntry(count++, decl->name, "struct");
     }
 
@@ -725,6 +758,38 @@ std::set<const flat::Library*, LibraryComparator> TransitiveDependencies(
   return dependencies;
 }
 
+// Return all structs that should be emitted in the JSON IR, which consists of
+// two parts: all structs from this library (which includes all struct definitions
+// and request/response payloads defined in this library), plus any request/response
+// payloads defined in other libraries that are composed into a protocol in this
+// library.
+std::vector<const flat::Struct*> AllStructs(const flat::Library* library) {
+  std::vector<const flat::Struct*> all_structs;
+
+  for (const auto& struct_decl : library->struct_declarations_) {
+    if (struct_decl->is_request_or_response && struct_decl->members.empty())
+      continue;
+    all_structs.push_back(struct_decl.get());
+  }
+
+  for (const auto& protocol : library->protocol_declarations_) {
+    for (const auto method_with_info : protocol->all_methods) {
+      // these are already included in the library's struct declarations
+      if (!method_with_info.is_composed)
+        continue;
+      const auto& method = method_with_info.method;
+      if (method->maybe_request && !method->maybe_request->members.empty()) {
+        all_structs.push_back(method->maybe_request);
+      }
+      if (method->maybe_response && !method->maybe_response->members.empty()) {
+        all_structs.push_back(method->maybe_response);
+      }
+    }
+  }
+
+  return all_structs;
+}
+
 }  // namespace
 
 std::ostringstream JSONGenerator::Produce() {
@@ -747,7 +812,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("enum_declarations", library_->enum_declarations_);
     GenerateObjectMember("interface_declarations", library_->protocol_declarations_);
     GenerateObjectMember("service_declarations", library_->service_declarations_);
-    GenerateObjectMember("struct_declarations", library_->struct_declarations_);
+    GenerateObjectMember("struct_declarations", AllStructs(library_));
     GenerateObjectMember("table_declarations", library_->table_declarations_);
     GenerateObjectMember("union_declarations", library_->union_declarations_);
     GenerateObjectMember("xunion_declarations", library_->xunion_declarations_);

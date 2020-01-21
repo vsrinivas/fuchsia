@@ -542,19 +542,21 @@ type ServiceMember struct {
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
-	Ordinal             uint64      `json:"ordinal"`
-	GenOrdinal          uint64      `json:"generated_ordinal"`
-	Name                Identifier  `json:"name"`
-	HasRequest          bool        `json:"has_request"`
-	Request             []Parameter `json:"maybe_request,omitempty"`
-	RequestTypeShapeV1  TypeShape   `json:"maybe_request_type_shape_v1,omitempty"`
-	RequestPadding      bool        `json:"maybe_request_has_padding,omitempty"`
-	RequestFlexible     bool        `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
-	HasResponse         bool        `json:"has_response"`
-	Response            []Parameter `json:"maybe_response,omitempty"`
-	ResponseTypeShapeV1 TypeShape   `json:"maybe_response_type_shape_v1,omitempty"`
-	ResponsePadding     bool        `json:"maybe_response_has_padding,omitempty"`
-	ResponseFlexible    bool        `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
+	Ordinal             uint64                    `json:"ordinal"`
+	GenOrdinal          uint64                    `json:"generated_ordinal"`
+	Name                Identifier                `json:"name"`
+	HasRequest          bool                      `json:"has_request"`
+	Request             []Parameter               `json:"maybe_request,omitempty"`
+	RequestPayload      EncodedCompoundIdentifier `json:"maybe_request_payload,omitempty"`
+	RequestTypeShapeV1  TypeShape                 `json:"maybe_request_type_shape_v1,omitempty"`
+	RequestPadding      bool                      `json:"maybe_request_has_padding,omitempty"`
+	RequestFlexible     bool                      `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
+	HasResponse         bool                      `json:"has_response"`
+	Response            []Parameter               `json:"maybe_response,omitempty"`
+	ResponsePayload     EncodedCompoundIdentifier `json:"maybe_response_payload,omitempty"`
+	ResponseTypeShapeV1 TypeShape                 `json:"maybe_response_type_shape_v1,omitempty"`
+	ResponsePadding     bool                      `json:"maybe_response_has_padding,omitempty"`
+	ResponseFlexible    bool                      `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.

@@ -38,11 +38,28 @@ bool CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
 }
 
 bool CheckTypeShape(const fidl::flat::Object* actual, Expected expected_old,
+                    Expected expected_v1_no_ee, Expected expected_v1_header) {
+  if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kOld), expected_old)) {
+    return false;
+  }
+  if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_no_ee)) {
+    return false;
+  }
+  if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1Header), expected_v1_header)) {
+    return false;
+  }
+  return true;
+}
+
+bool CheckTypeShape(const fidl::flat::Object* actual, Expected expected_old,
                     Expected expected_v1_no_ee) {
   if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kOld), expected_old)) {
     return false;
   }
   if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_no_ee)) {
+    return false;
+  }
+  if (!CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1Header), expected_v1_no_ee)) {
     return false;
   }
   return true;
@@ -1957,12 +1974,25 @@ protocol MessagePort {
   auto& post_message = message_port->methods[0];
   auto post_message_request = post_message.maybe_request;
   ASSERT_NONNULL(post_message_request);
-  EXPECT_TRUE(CheckTypeShape(post_message_request, Expected{
-                                                       .inline_size = 24,
-                                                       .alignment = 8,
-                                                       .max_handles = 1,
-                                                       .has_padding = true,
-                                                   }));
+  EXPECT_TRUE(CheckTypeShape(post_message_request,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 8,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             }));
   ASSERT_EQ(post_message_request->members.size(), 1);
   EXPECT_TRUE(
       CheckFieldShape(post_message_request->members[0], ExpectedField{.offset = 16, .padding = 4}));
@@ -2000,12 +2030,25 @@ protocol MessagePort {
   auto& post_message = message_port->methods[0];
   auto post_message_request = post_message.maybe_request;
   ASSERT_NONNULL(post_message_request);
-  EXPECT_TRUE(CheckTypeShape(post_message_request, Expected{
-                                                       .inline_size = 24,
-                                                       .alignment = 8,
-                                                       .max_handles = 1,
-                                                       .has_padding = true,
-                                                   }));
+  EXPECT_TRUE(CheckTypeShape(post_message_request,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 8,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             }));
 
   END_TEST;
 }
@@ -2040,12 +2083,25 @@ protocol MessagePort {
   auto& post_message = message_port->methods[0];
   auto post_message_request = post_message.maybe_request;
   ASSERT_NONNULL(post_message_request);
-  EXPECT_TRUE(CheckTypeShape(post_message_request, Expected{
-                                                       .inline_size = 24,
-                                                       .alignment = 8,
-                                                       .max_handles = 1,
-                                                       .has_padding = true,
-                                                   }));
+  EXPECT_TRUE(CheckTypeShape(post_message_request,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 8,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             }));
 
   END_TEST;
 }
@@ -2080,12 +2136,25 @@ protocol MessagePort {
   auto& post_message = message_port->methods[0];
   auto post_message_request = post_message.maybe_request;
   ASSERT_NONNULL(post_message_request);
-  EXPECT_TRUE(CheckTypeShape(post_message_request, Expected{
-                                                       .inline_size = 24,
-                                                       .alignment = 8,
-                                                       .max_handles = 1,
-                                                       .has_padding = true,
-                                                   }));
+  EXPECT_TRUE(CheckTypeShape(post_message_request,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             },
+                             Expected{
+                                 .inline_size = 8,
+                                 .alignment = 8,
+                                 .max_handles = 1,
+                                 .has_padding = true,
+                             }));
 
   END_TEST;
 }
@@ -2374,10 +2443,22 @@ protocol Child {
   auto& sync_with_info = child->all_methods[0];
   auto sync_request = sync_with_info.method->maybe_request;
   ASSERT_NONNULL(sync_request);
-  EXPECT_TRUE(CheckTypeShape(sync_request, Expected{
-                                               .inline_size = 16,
-                                               .alignment = 8,
-                                           }));
+  EXPECT_TRUE(CheckTypeShape(sync_request,
+                             Expected{
+                                 .inline_size = 16,
+                                 .alignment = 8,
+                             },
+                             Expected{
+                                 .inline_size = 16,
+                                 .alignment = 8,
+                             },
+                             // Note that this typeshape is not actually included
+                             // in the JSON IR since it corresponds to an empty
+                             // payload.
+                             Expected{
+                                 .inline_size = 8,
+                                 .alignment = 8,
+                             }));
 
   END_TEST;
 }

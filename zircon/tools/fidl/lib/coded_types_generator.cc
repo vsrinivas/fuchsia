@@ -188,6 +188,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
               assert(coded_xunion_type->maybe_reference_type != nullptr &&
                      "Named coded xunion must have a reference type!");
               break;
+            case WireFormat::kV1Header:
             case WireFormat::kV1NoEe: {
               if (!coded_xunion_type->FromUnion()) {
                 break;
@@ -404,6 +405,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
           }
           break;
         }
+        case WireFormat::kV1Header:
         case WireFormat::kV1NoEe: {
           coded::XUnionType* coded_xunion = static_cast<coded::XUnionType*>(type);
 
@@ -593,6 +595,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
                                                  NameFlatName(union_decl->name)));
           break;
         }
+        case WireFormat::kV1Header:
         case WireFormat::kV1NoEe: {
           auto xunion_type = std::make_unique<coded::XUnionType>(
               union_name, std::vector<coded::XUnionField>(), NameFlatName(union_decl->name),

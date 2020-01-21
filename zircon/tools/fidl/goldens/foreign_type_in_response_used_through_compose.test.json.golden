@@ -11,7 +11,9 @@
     {
       "name": "middle",
       "declarations": {
-        "middle/Middle": "interface"
+        "middle/Middle": "interface",
+        "middle/SomeLongAnonymousPrefix0": "struct",
+        "middle/SomeLongAnonymousPrefix1": "struct"
       }
     }
   ],
@@ -69,6 +71,7 @@
               "size": 4
             }
           ],
+          "maybe_response_payload": "middle/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -85,7 +88,47 @@
     }
   ],
   "service_declarations": [],
-  "struct_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "middle/SomeLongAnonymousPrefix1",
+      "location": {
+        "filename": "generated",
+        "line": 2,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "bottom/Foo",
+            "nullable": false
+          },
+          "name": "foo",
+          "location": {
+            "filename": "middle.test.fidl",
+            "line": 7,
+            "column": 29
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
+          "size": 4
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    }
+  ],
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": [],

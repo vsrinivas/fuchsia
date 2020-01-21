@@ -163,6 +163,7 @@
               "size": 16
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix4",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -204,6 +205,7 @@
               "size": 16
             }
           ],
+          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix5",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -246,6 +248,7 @@
               "size": 16
             }
           ],
+          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix6",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -299,6 +302,7 @@
               "size": 16
             }
           ],
+          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix8",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -329,6 +333,7 @@
               "size": 16
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix9",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -395,6 +400,7 @@
               "size": 16
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix11",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -459,6 +465,7 @@
               "size": 32
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix13",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -513,6 +520,7 @@
               "size": 8
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix15",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -567,6 +575,7 @@
               "size": 8
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix17",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -641,6 +650,7 @@
               "size": 8
             }
           ],
+          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix18",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -701,6 +711,7 @@
               "size": 8
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix19",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -759,6 +770,7 @@
               "size": 8
             }
           ],
+          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix20",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -789,6 +801,7 @@
               "size": 8
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix21",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -833,6 +846,7 @@
               "size": 4
             }
           ],
+          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix22",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -866,6 +880,7 @@
               "size": 4
             }
           ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix23",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -883,6 +898,234 @@
   ],
   "service_declarations": [],
   "struct_declarations": [
+    {
+      "name": "test.name/SomeLongAnonymousPrefix4",
+      "location": {
+        "filename": "generated",
+        "line": 5,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "ret",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 6,
+            "column": 40
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 16
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix5",
+      "location": {
+        "filename": "generated",
+        "line": 6,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "arg",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 7,
+            "column": 34
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 16
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix6",
+      "location": {
+        "filename": "generated",
+        "line": 7,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "arg",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 8,
+            "column": 37
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 16
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix8",
+      "location": {
+        "filename": "generated",
+        "line": 9,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "arg",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 9,
+            "column": 36
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 16
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix9",
+      "location": {
+        "filename": "generated",
+        "line": 10,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "ret",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 9,
+            "column": 52
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 16
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix11",
+      "location": {
+        "filename": "generated",
+        "line": 12,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "ret",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 11,
+            "column": 30
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 16
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
     {
       "name": "test.name/WithErrorSyntax_ResponseAsStruct_Response",
       "location": {
@@ -956,6 +1199,45 @@
       }
     },
     {
+      "name": "test.name/SomeLongAnonymousPrefix13",
+      "location": {
+        "filename": "generated",
+        "line": 19,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/WithErrorSyntax_ResponseAsStruct_Result",
+            "nullable": false
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 18,
+            "column": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 32
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      }
+    },
+    {
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
       "location": {
         "filename": "generated",
@@ -976,6 +1258,45 @@
       }
     },
     {
+      "name": "test.name/SomeLongAnonymousPrefix15",
+      "location": {
+        "filename": "generated",
+        "line": 26,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/WithErrorSyntax_ErrorAsPrimitive_Result",
+            "nullable": false
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 25,
+            "column": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 8
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      }
+    },
+    {
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
       "location": {
         "filename": "generated",
@@ -991,6 +1312,326 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix17",
+      "location": {
+        "filename": "generated",
+        "line": 33,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/WithErrorSyntax_ErrorAsEnum_Result",
+            "nullable": false
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 32,
+            "column": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 8
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix18",
+      "location": {
+        "filename": "generated",
+        "line": 34,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "a",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 27,
+            "column": 19
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 8
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "b",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 27,
+            "column": 28
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "size": 8
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix19",
+      "location": {
+        "filename": "generated",
+        "line": 35,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "a",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 28,
+            "column": 21
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 8
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "b",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 28,
+            "column": 30
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "size": 8
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix20",
+      "location": {
+        "filename": "generated",
+        "line": 36,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "a",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 29,
+            "column": 19
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 8
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "b",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 29,
+            "column": 28
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "size": 8
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix21",
+      "location": {
+        "filename": "generated",
+        "line": 37,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "result",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 29,
+            "column": 41
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "size": 8
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix22",
+      "location": {
+        "filename": "generated",
+        "line": 38,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "socket",
+            "nullable": false
+          },
+          "name": "a",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 30,
+            "column": 33
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
+          "size": 4
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix23",
+      "location": {
+        "filename": "generated",
+        "line": 39,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "socket",
+            "nullable": false
+          },
+          "name": "b",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+            "line": 30,
+            "column": 55
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
+          "size": 4
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
         "has_flexible_envelope": false,
         "contains_union": false
       }
@@ -1199,9 +1840,33 @@
     "test.name/WithAndWithoutRequestResponse": "interface",
     "test.name/WithErrorSyntax": "interface",
     "test.name/ChannelProtocol": "interface",
+    "test.name/SomeLongAnonymousPrefix0": "struct",
+    "test.name/SomeLongAnonymousPrefix1": "struct",
+    "test.name/SomeLongAnonymousPrefix2": "struct",
+    "test.name/SomeLongAnonymousPrefix3": "struct",
+    "test.name/SomeLongAnonymousPrefix4": "struct",
+    "test.name/SomeLongAnonymousPrefix5": "struct",
+    "test.name/SomeLongAnonymousPrefix6": "struct",
+    "test.name/SomeLongAnonymousPrefix7": "struct",
+    "test.name/SomeLongAnonymousPrefix8": "struct",
+    "test.name/SomeLongAnonymousPrefix9": "struct",
+    "test.name/SomeLongAnonymousPrefix10": "struct",
+    "test.name/SomeLongAnonymousPrefix11": "struct",
+    "test.name/SomeLongAnonymousPrefix12": "struct",
     "test.name/WithErrorSyntax_ResponseAsStruct_Response": "struct",
+    "test.name/SomeLongAnonymousPrefix13": "struct",
+    "test.name/SomeLongAnonymousPrefix14": "struct",
     "test.name/WithErrorSyntax_ErrorAsPrimitive_Response": "struct",
+    "test.name/SomeLongAnonymousPrefix15": "struct",
+    "test.name/SomeLongAnonymousPrefix16": "struct",
     "test.name/WithErrorSyntax_ErrorAsEnum_Response": "struct",
+    "test.name/SomeLongAnonymousPrefix17": "struct",
+    "test.name/SomeLongAnonymousPrefix18": "struct",
+    "test.name/SomeLongAnonymousPrefix19": "struct",
+    "test.name/SomeLongAnonymousPrefix20": "struct",
+    "test.name/SomeLongAnonymousPrefix21": "struct",
+    "test.name/SomeLongAnonymousPrefix22": "struct",
+    "test.name/SomeLongAnonymousPrefix23": "struct",
     "test.name/WithErrorSyntax_ResponseAsStruct_Result": "union",
     "test.name/WithErrorSyntax_ErrorAsPrimitive_Result": "union",
     "test.name/WithErrorSyntax_ErrorAsEnum_Result": "union"
