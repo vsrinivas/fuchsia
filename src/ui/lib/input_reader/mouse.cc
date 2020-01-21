@@ -98,11 +98,6 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len, fuchsia::ui::input::Inp
   FXL_CHECK(report);
   FXL_CHECK(report->mouse);
 
-  if (data[0] != report_id_) {
-    FXL_VLOG(0) << " Mouse report " << static_cast<uint32_t>(data[0])
-                << " does not match report id " << static_cast<uint32_t>(report_id_);
-  }
-
   Report mouse_report = {};
   if (len != report_size_) {
     FXL_LOG(INFO) << "Mouse HID Report is not correct size, (" << len << " != " << report_size_

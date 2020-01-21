@@ -390,13 +390,6 @@ void Hardcoded::NotifyRegistry(fuchsia::ui::input::InputDeviceRegistry* registry
 
 void Hardcoded::Read(const uint8_t* report, int report_len, bool discard) {
   switch (mouse_device_type_) {
-    case MouseDeviceType::BOOT:
-      ParseMouseReport(report, report_len, mouse_report_.get());
-      if (!discard) {
-        TRACE_FLOW_BEGIN("input", "hid_read_to_listener", mouse_report_->trace_id);
-        input_device_->DispatchReport(CloneReport(*mouse_report_));
-      }
-      break;
     case MouseDeviceType::GAMEPAD:
       // TODO(cpu): remove this once we have a good way to test gamepad.
       if (ParseGamepadMouseReport(report, report_len, mouse_report_.get())) {

@@ -376,14 +376,6 @@ bool InputInterpreter::ParseProtocol() {
     return false;
   }
 
-  // Check the boot mode. For most keyboards and mouses Zircon requests the boot protocol
-  // which has a fixed layout. This covers the following two cases:
-  HidDecoder::BootMode boot_mode = hid_decoder_->ReadBootMode();
-  if (boot_mode == HidDecoder::BootMode::MOUSE) {
-    protocol_ = Protocol::BootMouse;
-    return true;
-  }
-
   // Check the report descriptor against a hardcoded one. This involves memcmp() of the
   // known hardcoded descriptors.
   Protocol protocol = hardcoded_.MatchProtocol(desc, hid_decoder_.get());
