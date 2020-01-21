@@ -13,6 +13,8 @@
 #include <memory>
 
 #include <ddk/protocol/block.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/block.h>
 #include <virtio/block.h>
 
 #include "backends/backend.h"
@@ -32,36 +34,37 @@ struct block_txn_t {
 };
 
 class Ring;
-
-class BlockDevice : public Device {
+class BlockDevice;
+using DeviceType =
+    ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableDeprecated>;
+class BlockDevice : public Device,
+                    // Mixins for protocol device:
+                    public DeviceType,
+                    // Mixin for Block banjo protocol:
+                    public ddk::BlockImplProtocol<BlockDevice, ddk::base_protocol> {
  public:
   BlockDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
 
   virtual zx_status_t Init() override;
-  virtual void Release() override;
-  virtual void Unbind() override;
+
+  // DDKTL device hooks:
+  void DdkRelease();
+  void DdkUnbindDeprecated();
+  zx_off_t DdkGetSize() const { return config_.capacity * config_.blk_size; }
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 
   virtual void IrqRingUpdate() override;
   virtual void IrqConfigChange() override;
 
-  uint64_t GetSize() const { return config_.capacity * config_.blk_size; }
   uint32_t GetBlockSize() const { return config_.blk_size; }
   uint64_t GetBlockCount() const { return config_.capacity; }
   const char* tag() const override { return "virtio-blk"; }
 
+  // DDKTL Block protocol banjo functions:
+  void BlockImplQuery(block_info_t* bi, size_t* bopsz);
+  void BlockImplQueue(block_op_t* bop, block_impl_queue_callback completion_cb, void* cookie);
+
  private:
-  // DDK driver hooks
-  static zx_off_t virtio_block_get_size(void* ctx);
-
-  static void virtio_block_query(void* ctx, block_info_t* bi, size_t* bopsz);
-  static void virtio_block_queue(void* ctx, block_op_t* bop,
-                                 block_impl_queue_callback completion_cb, void* cookie);
-
-  static void virtio_block_unbind(void* ctx);
-  static void virtio_block_release(void* ctx);
-
-  void GetInfo(block_info_t* info);
-
   void SignalWorker(block_txn_t* txn);
   void WorkerThread();
   void FlushPendingTxns();
@@ -117,8 +120,6 @@ class BlockDevice : public Device {
   list_node worker_txn_list_ = LIST_INITIAL_VALUE(worker_txn_list_);
   sync_completion_t worker_signal_;
   std::atomic_bool worker_shutdown_ = false;
-
-  block_impl_protocol_ops_t block_ops_ = {};
 };
 
 }  // namespace virtio

@@ -3,11 +3,18 @@
 # found in the LICENSE file.
 
 zx_driver("virtio_block") {
-  sources = [
-    "block.cc",
-    "block_driver.cc",
-  ]
+  sources = [ "block_driver.cc" ]
   deps = [
+    ":block_lib",
+    ":common",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/ulib/ddktl",
+  ]
+}
+
+source_set("block_lib") {
+  sources = [ "block.cc" ]
+  public_deps = [
     ":common",
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/ulib/ddktl",
@@ -164,10 +171,12 @@ source_set("common") {
 
 zx_test("virtio-test") {
   sources = [
+    "block_test.cc",
     "gpu_test.cc",
     "scsi_test.cc",
   ]
   deps = [
+    ":block_lib",
     ":common",
     ":gpu_lib",
     ":scsi_lib",

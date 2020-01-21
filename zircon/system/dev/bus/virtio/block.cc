@@ -42,56 +42,40 @@ void BlockDevice::txn_complete(block_txn_t* txn, zx_status_t status) {
 
 // DDK level ops
 
-// Optional: return the size (in bytes) of the readable/writable space of the device.  Will default
-// to 0 (non-seekable) if this is unimplemented.
-zx_off_t BlockDevice::virtio_block_get_size(void* ctx) {
-  LTRACEF("ctx %p\n", ctx);
-
-  BlockDevice* bd = static_cast<BlockDevice*>(ctx);
-
-  return bd->GetSize();
-}
-
-void BlockDevice::GetInfo(block_info_t* info) {
+void BlockDevice::BlockImplQuery(block_info_t* info, size_t* bopsz) {
   memset(info, 0, sizeof(*info));
   info->block_size = GetBlockSize();
-  info->block_count = GetSize() / GetBlockSize();
+  info->block_count = DdkGetSize() / GetBlockSize();
   info->max_transfer_size = (uint32_t)(PAGE_SIZE * (ring_size - 2));
 
   // Limit max transfer to our worst case scatter list size.
   if (info->max_transfer_size > MAX_MAX_XFER) {
     info->max_transfer_size = MAX_MAX_XFER;
   }
-}
-
-void BlockDevice::virtio_block_query(void* ctx, block_info_t* info, size_t* bopsz) {
-  BlockDevice* bd = static_cast<BlockDevice*>(ctx);
-  bd->GetInfo(info);
   *bopsz = sizeof(block_txn_t);
 }
 
-void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop,
-                                     block_impl_queue_callback completion_cb, void* cookie) {
-  BlockDevice* bd = static_cast<BlockDevice*>(ctx);
+void BlockDevice::BlockImplQueue(block_op_t* bop, block_impl_queue_callback completion_cb,
+                                 void* cookie) {
   block_txn_t* txn = static_cast<block_txn_t*>((void*)bop);
   txn->pmt = ZX_HANDLE_INVALID;
   txn->completion_cb = completion_cb;
   txn->cookie = cookie;
-  bd->SignalWorker(txn);
+  SignalWorker(txn);
 }
 
-void BlockDevice::virtio_block_unbind(void* ctx) {
-  BlockDevice* bd = static_cast<BlockDevice*>(ctx);
-  bd->Unbind();
-}
-
-void BlockDevice::virtio_block_release(void* ctx) {
-  std::unique_ptr<BlockDevice> bd(static_cast<BlockDevice*>(ctx));
-  bd->Release();
+zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
+  auto* proto = static_cast<ddk::AnyProtocol*>(out);
+  proto->ctx = this;
+  if (proto_id == ZX_PROTOCOL_BLOCK_IMPL) {
+    proto->ops = &block_impl_protocol_ops_;
+    return ZX_OK;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 BlockDevice::BlockDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
-    : Device(bus_device, std::move(bti), std::move(backend)) {
+    : virtio::Device(bus_device, std::move(bti), std::move(backend)), DeviceType(bus_device) {
   sync_completion_reset(&txn_signal_);
   sync_completion_reset(&worker_signal_);
 
@@ -163,23 +147,10 @@ zx_status_t BlockDevice::Init() {
   }
 
   // Initialize and publish the zx_device.
-  device_ops_.get_size = &virtio_block_get_size;
-  device_ops_.unbind = &virtio_block_unbind;
-  device_ops_.release = &virtio_block_release;
-
-  block_ops_.query = &virtio_block_query;
-  block_ops_.queue = &virtio_block_queue;
-
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "virtio-block";
-  args.ctx = this;
-  args.ops = &device_ops_;
-  args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
-  args.proto_ops = &block_ops_;
-
-  status = device_add(bus_device_, &args, &device_);
+  status = DdkAdd("virtio-block");
+  device_ = zxdev();
   if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to run DdkAdd\n");
     device_ = nullptr;
     return status;
   }
@@ -188,17 +159,17 @@ zx_status_t BlockDevice::Init() {
   return ZX_OK;
 }
 
-void BlockDevice::Release() {
+void BlockDevice::DdkRelease() {
   thrd_join(worker_thread_, nullptr);
   io_buffer_release(&blk_req_buf_);
-  Device::Release();
+  virtio::Device::Release();
 }
 
-void BlockDevice::Unbind() {
+void BlockDevice::DdkUnbindDeprecated() {
   worker_shutdown_.store(true);
   sync_completion_signal(&worker_signal_);
   sync_completion_signal(&txn_signal_);
-  Device::Unbind();
+  virtio::Device::Unbind();
 }
 
 void BlockDevice::IrqRingUpdate() {
