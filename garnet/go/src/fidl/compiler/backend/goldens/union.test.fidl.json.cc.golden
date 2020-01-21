@@ -183,10 +183,10 @@ void Union::Destroy() {
     case Tag::kPrimitive:
       break;
     case Tag::kStringNeedsConstructor:
-      StringNeedsConstructor_.~basic_string();
+      StringNeedsConstructor_.~decltype(StringNeedsConstructor_)();
       break;
     case Tag::kVectorStringAlsoNeedsConstructor:
-      VectorStringAlsoNeedsConstructor_.~vector();
+      VectorStringAlsoNeedsConstructor_.~decltype(VectorStringAlsoNeedsConstructor_)();
       break;
   
     default:
@@ -395,10 +395,10 @@ void StrictUnion::Destroy() {
     case Tag::kPrimitive:
       break;
     case Tag::kStringNeedsConstructor:
-      StringNeedsConstructor_.~basic_string();
+      StringNeedsConstructor_.~decltype(StringNeedsConstructor_)();
       break;
     case Tag::kVectorStringAlsoNeedsConstructor:
-      VectorStringAlsoNeedsConstructor_.~vector();
+      VectorStringAlsoNeedsConstructor_.~decltype(VectorStringAlsoNeedsConstructor_)();
       break;
   
     default:
@@ -794,10 +794,10 @@ void FlexibleUnion::Destroy() {
     case Tag::kPrimitive:
       break;
     case Tag::kStringNeedsConstructor:
-      StringNeedsConstructor_.~basic_string();
+      StringNeedsConstructor_.~decltype(StringNeedsConstructor_)();
       break;
     case Tag::kVectorStringAlsoNeedsConstructor:
-      VectorStringAlsoNeedsConstructor_.~vector();
+      VectorStringAlsoNeedsConstructor_.~decltype(VectorStringAlsoNeedsConstructor_)();
       break;
   
     default:
@@ -1113,7 +1113,7 @@ void ExplicitUnion::Destroy() {
     case Tag::kPrimitive:
       break;
     case Tag::kStringNeedsConstructor:
-      StringNeedsConstructor_.~basic_string();
+      StringNeedsConstructor_.~decltype(StringNeedsConstructor_)();
       break;
   
     default:

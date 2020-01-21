@@ -177,7 +177,7 @@ WithErrorSyntax_ResponseAsStruct_Result& WithErrorSyntax_ResponseAsStruct_Result
 void WithErrorSyntax_ResponseAsStruct_Result::Destroy() {
   switch (tag_) {
     case Tag::kResponse:
-      response_.~WithErrorSyntax_ResponseAsStruct_Response();
+      response_.~decltype(response_)();
       break;
     case Tag::kErr:
       break;
@@ -369,7 +369,7 @@ WithErrorSyntax_ErrorAsPrimitive_Result& WithErrorSyntax_ErrorAsPrimitive_Result
 void WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
   switch (tag_) {
     case Tag::kResponse:
-      response_.~WithErrorSyntax_ErrorAsPrimitive_Response();
+      response_.~decltype(response_)();
       break;
     case Tag::kErr:
       break;
@@ -1366,10 +1366,10 @@ WithErrorSyntax_ErrorAsEnum_Result& WithErrorSyntax_ErrorAsEnum_Result::set_err(
 void WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
   switch (tag_) {
     case Tag::kResponse:
-      response_.~WithErrorSyntax_ErrorAsEnum_Response();
+      response_.~decltype(response_)();
       break;
     case Tag::kErr:
-      err_.~ErrorEnun();
+      err_.~decltype(err_)();
       break;
   
     default:

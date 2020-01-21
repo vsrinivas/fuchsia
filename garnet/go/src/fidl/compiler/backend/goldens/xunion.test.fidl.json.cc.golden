@@ -209,7 +209,7 @@ void StrictSimpleXUnion::Destroy() {
     case Tag::kF:
       break;
     case Tag::kS:
-      s_.~basic_string();
+      s_.~decltype(s_)();
       break;
   
     default:
@@ -363,7 +363,7 @@ StrictBoundedXUnion& StrictBoundedXUnion::set_v(::std::vector<uint8_t> value) {
 void StrictBoundedXUnion::Destroy() {
   switch (tag_) {
     case Tag::kV:
-      v_.~vector();
+      v_.~decltype(v_)();
       break;
   
     default:
@@ -1034,10 +1034,10 @@ void NewerSimpleUnion::Destroy() {
     case Tag::kI:
       break;
     case Tag::kS:
-      s_.~basic_string();
+      s_.~decltype(s_)();
       break;
     case Tag::kV:
-      v_.~vector();
+      v_.~decltype(v_)();
       break;
   
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1420,7 +1420,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::set_empty(class Empty 
 void XUnionContainingEmptyStruct::Destroy() {
   switch (tag_) {
     case Tag::kEmpty:
-      empty_.~Empty();
+      empty_.~decltype(empty_)();
       break;
   
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):

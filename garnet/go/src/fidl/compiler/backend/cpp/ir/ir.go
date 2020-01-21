@@ -50,8 +50,9 @@ type Type struct {
 	Decl   string
 	LLDecl string
 
-	Dtor   string
-	LLDtor string
+	// NeedsDtor indicates whether this type needs to be destructed explicitely
+	// or not.
+	NeedsDtor bool
 
 	DeclType types.DeclType
 
@@ -513,11 +514,6 @@ func formatLibraryPath(library types.LibraryIdentifier) string {
 	return formatLibrary(library, "/")
 }
 
-func formatDestructor(eci types.EncodedCompoundIdentifier) string {
-	val := types.ParseCompoundIdentifier(eci)
-	return fmt.Sprintf("~%s", changeIfReserved(val.Name, ""))
-}
-
 type compiler struct {
 	namespace          string
 	symbolPrefix       string
@@ -631,43 +627,34 @@ func (c *compiler) compileType(val types.Type) Type {
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
-		r.Dtor = fmt.Sprintf("~array")
-		r.LLDtor = fmt.Sprintf("~Array")
+		r.NeedsDtor = true
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
 		if val.Nullable {
 			r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
-			r.Dtor = fmt.Sprintf("~VectorPtr")
 		} else {
 			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
-			r.Dtor = fmt.Sprintf("~vector")
 		}
+		r.NeedsDtor = true
 	case types.StringType:
 		r.LLDecl = "::fidl::StringView"
 		if val.Nullable {
 			r.Decl = "::fidl::StringPtr"
-			r.Dtor = "~StringPtr"
 		} else {
 			r.Decl = "::std::string"
-			r.Dtor = "~basic_string"
 		}
+		r.NeedsDtor = true
 	case types.HandleType:
 		c.handleTypes[val.HandleSubtype] = true
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.LLDecl = r.Decl
-		if val.HandleSubtype == "handle" {
-			r.Dtor = "~object<void>"
-		} else {
-			r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
-		}
-		r.LLDtor = r.Dtor
+		r.NeedsDtor = true
 	case types.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
 		r.LLDecl = "::zx::channel"
-		r.Dtor = "~InterfaceRequest"
-		r.LLDtor = "~channel"
+		r.NeedsDtor = true
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.LLDecl = r.Decl
@@ -704,18 +691,16 @@ func (c *compiler) compileType(val types.Type) Type {
 				} else {
 					r.LLDecl = fmt.Sprintf("%s*", ft)
 				}
-				r.Dtor = "~unique_ptr"
+				r.NeedsDtor = true
 			} else {
 				r.Decl = t
 				r.LLDecl = ft
-				r.Dtor = formatDestructor(val.Identifier)
-				r.LLDtor = r.Dtor
+				r.NeedsDtor = true
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
-			r.Dtor = fmt.Sprintf("~InterfaceHandle")
 			r.LLDecl = "::zx::channel"
-			r.LLDtor = "~channel"
+			r.NeedsDtor = true
 		default:
 			log.Fatal("Unknown declaration type: ", declType)
 		}

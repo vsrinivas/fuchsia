@@ -202,7 +202,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   switch (tag_) {
   {{- range .Members }}
     case Tag::{{ .TagName }}:
-    {{- if .Type.Dtor }}
+    {{- if .Type.NeedsDtor }}
       new (&{{ .StorageName }}) {{ .Type.Identifier }}();
     {{- end }}
       {{ .StorageName }} = std::move(other.{{ .StorageName }});
@@ -226,7 +226,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     switch (tag_) {
     {{- range .Members }}
       case Tag::{{ .TagName }}:
-        {{- if .Type.Dtor }}
+        {{- if .Type.NeedsDtor }}
         new (&{{ .StorageName }}) {{ .Type.Identifier }}();
         {{- end }}
         {{ .StorageName }} = std::move(other.{{ .StorageName }});
@@ -318,7 +318,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   switch (value->tag_) {
   {{- range .Members }}
     case Tag::{{ .TagName }}:
-      {{- if .Type.Dtor }}
+      {{- if .Type.NeedsDtor }}
       new (&value->{{ .StorageName }}) {{ .Type.Identifier }}();
       {{- end }}
       ::fidl::Decode(decoder, &value->{{ .StorageName }}, envelope_offset);
@@ -340,7 +340,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   switch (tag_) {
     {{- range .Members }}
     case Tag::{{ .TagName }}:
-      {{- if .Type.Dtor }}
+      {{- if .Type.NeedsDtor }}
       new (&result->{{ .StorageName }}) {{ .Type.Identifier }}();
       {{- end }}
       return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
@@ -364,8 +364,8 @@ void {{ .Name }}::Destroy() {
   switch (tag_) {
   {{- range .Members }}
     case Tag::{{ .TagName }}:
-      {{- if .Type.Dtor }}
-      {{ .StorageName }}.{{ .Type.Dtor }}();
+      {{- if .Type.NeedsDtor }}
+      {{ .StorageName }}.~decltype({{ .StorageName }})();
       {{- end }}
       break;
   {{- end }}
