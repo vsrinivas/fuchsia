@@ -175,10 +175,12 @@ int Tcs3400Device::Thread() {
           if (FillInputRpt() == ZX_OK && client_.is_valid()) {
             if (input_rpt_.illuminance > threshold_high) {
               input_rpt_.event = HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_UPWARD_VAL;
-              client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
+              client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t),
+                              zx_clock_get_monotonic());
             } else if (input_rpt_.illuminance < threshold_low) {
               input_rpt_.event = HID_USAGE_SENSOR_EVENT_LOW_THRESHOLD_CROSS_DOWNWARD_VAL;
-              client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
+              client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t),
+                              zx_clock_get_monotonic());
             }
           }
           // If report could not be filled, we do not ioqueue
@@ -203,7 +205,7 @@ int Tcs3400Device::Thread() {
         if (client_.is_valid()) {
           FillInputRpt();  // We ioqueue even if report filling failed reporting bad state
           input_rpt_.event = HID_USAGE_SENSOR_EVENT_PERIOD_EXCEEDED_VAL;
-          client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t));
+          client_.IoQueue(&input_rpt_, sizeof(ambient_light_input_rpt_t), zx_clock_get_monotonic());
         }
       }
         {

@@ -634,7 +634,8 @@ static void i8042_process_scode(i8042_device_t* dev, uint8_t scode, unsigned int
   const hid_boot_kbd_report_t* report = rollover ? &report_err_rollover : &dev->report.kbd;
   mtx_lock(&dev->lock);
   if (dev->ifc.ops) {
-    hidbus_ifc_io_queue(&dev->ifc, (const uint8_t*)report, sizeof(*report));
+    hidbus_ifc_io_queue(&dev->ifc, (const uint8_t*)report, sizeof(*report),
+                        zx_clock_get_monotonic());
   }
   mtx_unlock(&dev->lock);
 }
@@ -664,7 +665,7 @@ static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int 
       mtx_lock(&dev->lock);
       if (dev->ifc.ops) {
         hidbus_ifc_io_queue(&dev->ifc, (const uint8_t*)&dev->report.mouse,
-                            sizeof(dev->report.mouse));
+                            sizeof(dev->report.mouse), zx_clock_get_monotonic());
       }
       mtx_unlock(&dev->lock);
       memset(&dev->report.mouse, 0, sizeof(dev->report.mouse));

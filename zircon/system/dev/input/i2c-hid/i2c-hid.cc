@@ -193,7 +193,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
     {
       fbl::AutoLock lock(&ifc_lock_);
       if (ifc_.is_valid()) {
-        ifc_.IoQueue(buf + 2, report_len - 2);
+        ifc_.IoQueue(buf + 2, report_len - 2, zx_clock_get_monotonic());
       }
     }
 
@@ -226,7 +226,8 @@ int I2cHidbus::WorkerThreadIrq() {
   const zx_duration_t kMinTimeBetweenWarnings = ZX_SEC(10);
 
   while (true) {
-    zx_status_t status = irq_.wait(nullptr);
+    zx::time timestamp;
+    zx_status_t status = irq_.wait(&timestamp);
     if (status != ZX_OK) {
       if (status != ZX_ERR_CANCELED) {
         zxlogf(ERROR, "i2c-hid: interrupt wait failed %d\n", status);
@@ -281,7 +282,7 @@ int I2cHidbus::WorkerThreadIrq() {
     {
       fbl::AutoLock lock(&ifc_lock_);
       if (ifc_.is_valid()) {
-        ifc_.IoQueue(buf + 2, report_len - 2);
+        ifc_.IoQueue(buf + 2, report_len - 2, timestamp.get());
       }
     }
   }
@@ -329,7 +330,7 @@ zx_status_t I2cHidbus::ReadI2cHidDesc(I2cHidDesc* hiddesc) {
 
   // We can safely cast here because the descriptor length is the first
   // 2 bytes of out.
-  uint16_t desc_len = letoh16(*(reinterpret_cast<uint16_t *>(out)));
+  uint16_t desc_len = letoh16(*(reinterpret_cast<uint16_t*>(out)));
   if (desc_len > sizeof(I2cHidDesc)) {
     desc_len = sizeof(I2cHidDesc);
   }

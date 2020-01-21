@@ -253,7 +253,7 @@ static void hogd_report_notification(void* ctx, bt_gatt_id_t id,
 
   mtx_lock(&child->lock);
   if (child->ifc.ops) {
-    hidbus_ifc_io_queue(&child->ifc, value, len);
+    hidbus_ifc_io_queue(&child->ifc, value, len, zx_clock_get_monotonic());
   }
   mtx_unlock(&child->lock);
 }

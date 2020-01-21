@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_SIMPLEHID_SIMPLEHID_H_
+#define LIB_SIMPLEHID_SIMPLEHID_H_
 
+#include <lib/fit/function.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/port.h>
 #include <threads.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/syscalls/types.h>
+#include <zircon/threads.h>
 
 #include <ddk/debug.h>
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <lib/fit/function.h>
-#include <lib/zx/port.h>
-#include <zircon/syscalls/port.h>
-#include <zircon/syscalls/types.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/threads.h>
 
 namespace simplehid {
 
@@ -121,7 +122,7 @@ class SimpleHid {
           if (get_input_report_(&report) == ZX_OK) {
             fbl::AutoLock lock(&client_lock_);
             if (client_.is_valid()) {
-              client_.IoQueue(&report, sizeof(report));
+              client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
             }
           }
 
@@ -153,3 +154,5 @@ class SimpleHid {
 };
 
 }  // namespace simplehid
+
+#endif  // LIB_SIMPLEHID_SIMPLEHID_H_

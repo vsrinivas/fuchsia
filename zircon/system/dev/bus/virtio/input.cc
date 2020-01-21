@@ -311,7 +311,7 @@ void InputDevice::ReceiveEvent(virtio_input_event_t* event) {
     if (hidbus_ifc_.ops) {
       size_t size;
       const uint8_t* report = hid_device_->GetReport(&size);
-      hidbus_ifc_io_queue(&hidbus_ifc_, report, size);
+      hidbus_ifc_io_queue(&hidbus_ifc_, report, size, zx_clock_get_monotonic());
     }
   }
 }

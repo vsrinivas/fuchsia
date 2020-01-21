@@ -162,6 +162,8 @@ struct FidlKeyboardInputReport {
 
 struct FidlInputReport {
   fuchsia_input_report::InputReport::Builder builder = fuchsia_input_report::InputReport::Build();
+
+  zx_time_t time;
   std::variant<FidlMouseInputReport, FidlSensorInputReport, FidlTouchInputReport,
                FidlKeyboardInputReport>
       report;

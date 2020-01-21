@@ -52,12 +52,16 @@ zx_status_t InputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   return ZX_OK;
 }
 
-void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t report_size) {
+void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t report_size,
+                                                 zx_time_t report_time) {
   for (auto& device : devices_) {
     if (device->InputReportId() != 0 && device->InputReportId() != report[0]) {
       continue;
     }
+
     hid_input_report::InputReport input_report = {};
+    input_report.time = report_time;
+
     if (device->ParseInputReport(report, report_size, &input_report) !=
         hid_input_report::ParseResult::kParseOk) {
       zxlogf(ERROR, "ReceiveReport: Device failed to parse report correctly\n");

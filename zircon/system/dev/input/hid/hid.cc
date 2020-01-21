@@ -9,6 +9,7 @@
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
+#include <zircon/syscalls.h>
 
 #include <algorithm>
 #include <memory>
@@ -186,7 +187,7 @@ void HidDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len) {
+void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len, zx_time_t time) {
   const uint8_t* buf = static_cast<const uint8_t*>(_buf);
   HidDevice* hid = static_cast<HidDevice*>(cookie);
 
@@ -267,7 +268,7 @@ void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len) {
     {
       fbl::AutoLock lock(&hid->listener_lock_);
       if (hid->report_listener_.is_valid()) {
-        hid->report_listener_.ReceiveReport(rbuf, rlen);
+        hid->report_listener_.ReceiveReport(rbuf, rlen, time);
       }
     }
   }

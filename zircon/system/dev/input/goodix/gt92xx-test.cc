@@ -49,7 +49,7 @@ class Gt92xxTest : public Gt92xxDevice {
 
 static std::atomic<uint8_t> rpt_ran = 0;
 
-void rpt_handler(void* ctx, const void* buffer, size_t size) {
+void rpt_handler(void* ctx, const void* buffer, size_t size, zx_time_t time) {
   gt92xx_touch_t touch_rpt = {};
   touch_rpt.rpt_id = GT92XX_RPT_ID_TOUCH;
   touch_rpt.fingers[0] = {0x01, 0x110, 0x100};

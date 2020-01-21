@@ -18,8 +18,9 @@ const uint16 HID_MAX_REPORT_IDS = 256;
 
 [Layout = "ddk-interface"]
 protocol HidReportListener {
-    /// Sends a single report to the listener.
-    ReceiveReport(vector<uint8>:MAX_REPORT_LEN report);
+    /// Sends a single report to the listener. This comes with a timestamp that was gotten
+    /// from the computer's monotonic clock.
+    ReceiveReport(vector<uint8>:MAX_REPORT_LEN report, zx.time report_time);
 };
 
 [Layout = "ddk-protocol"]

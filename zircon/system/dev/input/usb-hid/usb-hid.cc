@@ -51,7 +51,7 @@ void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
       break;
     case ZX_OK:
       if (ifc_.is_valid()) {
-        ifc_.IoQueue(buffer, req->response.actual);
+        ifc_.IoQueue(buffer, req->response.actual, zx_clock_get_monotonic());
       }
       break;
     default:

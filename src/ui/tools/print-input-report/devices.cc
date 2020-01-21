@@ -182,6 +182,9 @@ int PrintInputReport(Printer* printer, fuchsia_input_report::InputDevice::SyncCl
     auto& reports = result->reports;
     for (auto& report : reports) {
       printer->SetIndent(0);
+      if (report.has_event_time()) {
+        printer->Print("EventTime: 0x%016lx\n", report.event_time());
+      }
       if (report.has_mouse()) {
         auto& mouse = report.mouse();
         PrintMouseInputReport(printer, mouse);

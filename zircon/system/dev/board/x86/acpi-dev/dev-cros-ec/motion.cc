@@ -97,7 +97,7 @@ zx_status_t AcpiCrOsEcMotionDevice::ConsumeFifoLocked() {
 void AcpiCrOsEcMotionDevice::QueueHidReportLocked(const uint8_t* data, size_t len) {
   // Default unit is lux
   if (client_.is_valid()) {
-    client_.IoQueue(data, len);
+    client_.IoQueue(data, len, zx_clock_get_monotonic());
   }
 }
 

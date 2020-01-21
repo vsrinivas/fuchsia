@@ -46,7 +46,10 @@ struct HidInfo {
 [Layout = "ddk-interface"]
 protocol HidbusIfc {
     /// Queues a report received by the hidbus device.
-    IoQueue(vector<voidptr> buf) -> ();
+    /// Timestamp should be whenever the report was created. Ideally it should
+    /// come from the driver's IRQ callback. If the driver doesn't have
+    /// something like that it should fill this with `zx_clock_get_monotonic()`
+    IoQueue(vector<voidptr> buf, zx.time timestamp) -> ();
 };
 
 [Layout = "ddk-protocol"]

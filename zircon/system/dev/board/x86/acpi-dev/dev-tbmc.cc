@@ -147,7 +147,7 @@ zx_status_t AcpiTbmcDevice::QueueHidReportLocked() {
   if (client_.is_valid()) {
     zxlogf(TRACE, "acpi-tbmc:  queueing report\n");
     uint8_t report = tablet_mode_;
-    client_.IoQueue(&report, sizeof(report));
+    client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
   }
   return ZX_OK;
 }

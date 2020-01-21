@@ -150,7 +150,7 @@ void AcpiPwrbtnDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx
 void AcpiPwrbtnDevice::QueueHidReportLocked() {
   if (client_.is_valid()) {
     uint8_t report = 1;
-    client_.IoQueue(&report, sizeof(report));
+    client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
   }
 }
 

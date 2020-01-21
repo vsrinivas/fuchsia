@@ -136,6 +136,7 @@ struct ReportDescriptor {
 };
 
 struct InputReport {
+  std::optional<zx_time_t> time;
   std::variant<std::monostate, MouseInputReport, SensorInputReport, TouchInputReport,
                KeyboardInputReport>
       report;

@@ -78,7 +78,12 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
 
   void SendReport(const uint8_t* report_data, size_t report_size) {
     ASSERT_NE(ifc_.ops, nullptr);
-    ifc_.ops->io_queue(ifc_.ctx, report_data, report_size);
+    ifc_.ops->io_queue(ifc_.ctx, report_data, report_size, zx_clock_get_monotonic());
+  }
+
+  void SendReportWithTime(const uint8_t* report_data, size_t report_size, zx_time_t time) {
+    ASSERT_NE(ifc_.ops, nullptr);
+    ifc_.ops->io_queue(ifc_.ctx, report_data, report_size, time);
   }
 
   void HidbusStop() { ifc_.ops = nullptr; }
@@ -255,6 +260,30 @@ TEST_F(HidDeviceTest, BootMouseSendReport) {
   }
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDeviceTest, BootMouseSendReportWithTime) {
+  SetupBootMouseDevice();
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+  ASSERT_OK(device_->Bind(client_));
+
+  // Regsiter a device listener
+  std::pair<sync_completion_t, zx_time_t> callback_data;
+  callback_data.second = 0xabcd;
+
+  hid_report_listener_protocol_ops_t listener_ops;
+  listener_ops.receive_report = [](void* ctx, const uint8_t* report_list, size_t report_count,
+                                   zx_time_t report_time) {
+    auto callback_data = static_cast<std::pair<sync_completion_t, zx_time_t>*>(ctx);
+    ASSERT_EQ(callback_data->second, report_time);
+    sync_completion_signal(&callback_data->first);
+  };
+  hid_report_listener_protocol_t listener = {&listener_ops, &callback_data};
+  device_->HidDeviceRegisterListener(&listener);
+
+  fake_hidbus_.SendReportWithTime(mouse_report, sizeof(mouse_report), callback_data.second);
+  sync_completion_wait_deadline(&callback_data.first, zx::time::infinite().get());
+  ASSERT_NO_FATAL_FAILURES();
 }
 
 TEST_F(HidDeviceTest, BootMouseSendReportInPieces) {
@@ -551,7 +580,8 @@ TEST_F(HidDeviceTest, BanjoRegisterListenerSendReport) {
   ctx.known_report = mouse_report;
 
   hid_report_listener_protocol_ops_t ops;
-  ops.receive_report = [](void* ctx, const uint8_t* report_list, size_t report_count) {
+  ops.receive_report = [](void* ctx, const uint8_t* report_list, size_t report_count,
+                          zx_time_t time) {
     ASSERT_EQ(sizeof(mouse_report), report_count);
     auto report_ctx = reinterpret_cast<ReportCtx*>(ctx);
     ASSERT_BYTES_EQ(report_ctx->known_report, report_list, report_count);

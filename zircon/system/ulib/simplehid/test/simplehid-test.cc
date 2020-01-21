@@ -5,6 +5,7 @@
 #include "lib/simplehid/simplehid.h"
 
 #include <lib/sync/completion.h>
+
 #include <zxtest/zxtest.h>
 
 namespace simplehid {
@@ -22,7 +23,7 @@ struct TestContext {
   size_t report_size = 0;
 };
 
-void IoQueueMock(void* ctx, const void* buf_buffer, size_t buf_size) {
+void IoQueueMock(void* ctx, const void* buf_buffer, size_t buf_size, zx_time_t time) {
   TestContext* test = reinterpret_cast<TestContext*>(ctx);
 
   test->report_size = buf_size;

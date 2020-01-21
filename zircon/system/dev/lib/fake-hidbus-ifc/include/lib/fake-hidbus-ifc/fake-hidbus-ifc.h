@@ -34,7 +34,7 @@ class FakeHidbusIfc : public ddk::HidbusIfcProtocol<FakeHidbusIfc> {
 
   size_t NumReportsSeen() { return reports_seen_; }
 
-  void HidbusIfcIoQueue(const void* buf_buffer, size_t buf_size) {
+  void HidbusIfcIoQueue(const void* buf_buffer, size_t buf_size, zx_time_t time) {
     reports_seen_++;
     auto buf = reinterpret_cast<const uint8_t*>(buf_buffer);
     {

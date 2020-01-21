@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_MOCK_HIDBUS_IFC_INCLUDE_LIB_MOCK_HIDBUS_IFC_MOCK_HIDBUS_IFC_H_
+#define ZIRCON_SYSTEM_DEV_LIB_MOCK_HIDBUS_IFC_INCLUDE_LIB_MOCK_HIDBUS_IFC_MOCK_HIDBUS_IFC_H_
+
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <lib/sync/completion.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <zxtest/zxtest.h>
 
 namespace mock_hidbus_ifc {
@@ -70,7 +72,7 @@ class MockHidbusIfc : public ddk::HidbusIfcProtocol<MockHidbusIfc<T>> {
     return reports_.size();
   }
 
-  void HidbusIfcIoQueue(const void* buffer, size_t buf_size) {
+  void HidbusIfcIoQueue(const void* buffer, size_t buf_size, zx_time_t time) {
     HidbusIfcIoQueueHelper(buffer, buf_size);
   }
 
@@ -93,3 +95,5 @@ class MockHidbusIfc : public ddk::HidbusIfcProtocol<MockHidbusIfc<T>> {
 };
 
 }  // namespace mock_hidbus_ifc
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_MOCK_HIDBUS_IFC_INCLUDE_LIB_MOCK_HIDBUS_IFC_MOCK_HIDBUS_IFC_H_

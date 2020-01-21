@@ -203,6 +203,11 @@ zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc
 
 zx_status_t SetFidlInputReport(const hid_input_report::InputReport& hid_report,
                                FidlInputReport* report) {
+  if (hid_report.time) {
+    report->time = *hid_report.time;
+    report->builder.set_event_time(&report->time);
+  }
+
   if (std::holds_alternative<MouseInputReport>(hid_report.report)) {
     report->report = FidlMouseInputReport();
     FidlMouseInputReport* mouse = &std::get<FidlMouseInputReport>(report->report);

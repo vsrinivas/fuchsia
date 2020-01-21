@@ -45,9 +45,10 @@ void FtDevice::ParseReport(ft3x27_finger_t* rpt, uint8_t* buf) {
 
 int FtDevice::Thread() {
   zx_status_t status;
+  zx::time timestamp;
   zxlogf(INFO, "focaltouch: entering irq thread\n");
   while (true) {
-    status = irq_.wait(nullptr);
+    status = irq_.wait(&timestamp);
     if (!running_.load()) {
       return ZX_OK;
     }
@@ -65,7 +66,8 @@ int FtDevice::Thread() {
         ParseReport(&ft_rpt_.fingers[i], &i2c_buf[i * kFingerRptSize + 1]);
       }
       if (client_.is_valid()) {
-        client_.IoQueue(reinterpret_cast<uint8_t*>(&ft_rpt_), sizeof(ft3x27_touch_t));
+        client_.IoQueue(reinterpret_cast<uint8_t*>(&ft_rpt_), sizeof(ft3x27_touch_t),
+                        timestamp.get());
       }
     } else {
       zxlogf(ERROR, "focaltouch: i2c read error\n");

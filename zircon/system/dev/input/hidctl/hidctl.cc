@@ -280,7 +280,7 @@ zx_status_t HidDevice::Recv(uint8_t* buffer, uint32_t capacity) {
       hexdump8_ex(buffer, actual, 0);
     }
     if (client_.is_valid()) {
-      client_.IoQueue(buffer, actual);
+      client_.IoQueue(buffer, actual, zx_clock_get_monotonic());
     }
   }
   return ZX_OK;

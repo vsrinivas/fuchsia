@@ -40,7 +40,8 @@ class InputReport : public DeviceType,
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
-  void HidReportListenerReceiveReport(const uint8_t* report, size_t report_size);
+  void HidReportListenerReceiveReport(const uint8_t* report, size_t report_size,
+                                      zx_time_t report_time);
 
   void RemoveInstanceFromList(InputReportInstance* instance) override;
   const hid_input_report::ReportDescriptor* GetDescriptors(size_t* size) override;

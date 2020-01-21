@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 #include "dev-lid.h"
-#include "dev.h"
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
 #include <utility>
 
 #include <acpica/acpi.h>
@@ -16,10 +19,8 @@
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/auto_lock.h>
 #include <hid/descriptor.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
 
+#include "dev.h"
 #include "errors.h"
 
 namespace {
@@ -83,7 +84,7 @@ void AcpiLidDevice::QueueHidReportLocked() TA_REQ(lock_) {
   if (client_.is_valid()) {
     zxlogf(TRACE, "acpi-lid: queueing report\n");
     uint8_t report = LidStateToHidReport(lid_state_);
-    client_.IoQueue(&report, sizeof(report));
+    client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
   }
 }
 
@@ -144,8 +145,9 @@ void AcpiLidDevice::HidbusStop() {
   client_.clear();
 }
 
-zx_status_t AcpiLidDevice::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
-                                size_t data_size, size_t* out_data_actual) {
+zx_status_t AcpiLidDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                               void* out_data_buffer, size_t data_size,
+                                               size_t* out_data_actual) {
   zxlogf(TRACE, "acpi-lid: hid bus get descriptor\n");
 
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {

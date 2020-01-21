@@ -90,7 +90,8 @@ int Cy8cmbr3108::Thread() {
     } else {
       fbl::AutoLock lock(&client_lock_);
       if (client_.is_valid()) {
-        client_.IoQueue(&input_rpt, sizeof(visalia_touch_buttons_input_rpt_t));
+        client_.IoQueue(&input_rpt, sizeof(visalia_touch_buttons_input_rpt_t),
+                        zx_clock_get_monotonic());
         // If report could not be filled, we do not ioqueue.
       }
     }

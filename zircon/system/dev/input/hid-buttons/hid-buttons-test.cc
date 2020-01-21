@@ -265,7 +265,7 @@ TEST(HidButtonsTest, DirectButtonUnpushedReport) {
 
   EXPECT_OK(device.BindTest());
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size) {
+  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t report_volume_up = {};
     report_volume_up.rpt_id = 1;
     report_volume_up.volume_up = 0;  // Unpushed.
@@ -296,7 +296,7 @@ TEST(HidButtonsTest, DirectButtonPushedReport) {
 
   EXPECT_OK(device.BindTest());
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size) {
+  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t report_volume_up = {};
     report_volume_up.rpt_id = 1;
     report_volume_up.volume_up = 1;  // Pushed
@@ -430,7 +430,7 @@ TEST(HidButtonsTest, MatrixButtonPush) {
   mock_gpios[3].ExpectConfigOut(ZX_OK, gpios_matrix[3].output_value);  // Restore colument.
 
   hidbus_ifc_protocol_ops_t ops = {};
-  ops.io_queue = [](void* ctx, const void* buffer, size_t size) {
+  ops.io_queue = [](void* ctx, const void* buffer, size_t size, zx_time_t time) {
     buttons_input_rpt_t report_volume_up = {};
     report_volume_up.rpt_id = 1;
     report_volume_up.volume_up = 1;

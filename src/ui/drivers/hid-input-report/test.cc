@@ -10,6 +10,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
 
 #include <ddktl/protocol/hiddevice.h>
 #include <hid/ambient-light.h>
@@ -127,7 +128,8 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
   void SetReport(std::vector<uint8_t> report) { report_ = report; }
 
   void SendReport() {
-    listener_.ops->receive_report(listener_.ctx, report_.data(), report_.size());
+    listener_.ops->receive_report(listener_.ctx, report_.data(), report_.size(),
+                                  zx_clock_get_monotonic());
   }
 
   hid_report_listener_protocol_t listener_;
@@ -242,6 +244,7 @@ TEST_F(HidDevTest, GetReportTest) {
   ASSERT_EQ(1, reports.count());
 
   auto& report = reports[0];
+  ASSERT_TRUE(report.has_event_time());
   ASSERT_TRUE(report.has_mouse());
   auto& mouse = report.mouse();
 
