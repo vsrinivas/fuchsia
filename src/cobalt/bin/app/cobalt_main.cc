@@ -107,9 +107,13 @@ std::string ReadBuildInfo(std::string value) {
   if (file.is_open()) {
     std::stringstream buffer;
     buffer << file.rdbuf();
-    return buffer.str();
+    auto val = buffer.str();
+    if (val == "") {
+      return "<" + value + " not specified>";
+    }
+    return val;
   } else {
-    return "";
+    return "<" + value + " read failed>";
   }
 }
 
