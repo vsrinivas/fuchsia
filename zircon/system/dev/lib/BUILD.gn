@@ -18,6 +18,8 @@ group("lib") {
     "device-protocol-pdev",
     "device-protocol-platform-device",
     "fake-bti",
+    "fake-hidbus-ifc",
+    "fake-i2c",
     "fake-resource",
     "fake_ddk",
     "focaltech",

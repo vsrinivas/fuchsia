@@ -72,6 +72,7 @@ test("bma253-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.i2c",
   ]
 }

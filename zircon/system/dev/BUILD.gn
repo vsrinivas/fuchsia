@@ -19,7 +19,6 @@ group("dev") {
     "display",
     "fw",
     "gpu",
-    "input",
     "light",
     "light-sensor",
     "misc",

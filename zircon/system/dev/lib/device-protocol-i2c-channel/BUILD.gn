@@ -11,9 +11,13 @@ zx_library("device-protocol-i2c-channel") {
     "$zx/system/banjo/ddk.protocol.i2c",
 
     # <lib/device-protocol-i2c-channel/i2c-channel.h> include <lib/device-protocol/i2c.h>
-    "$zx/system/dev/lib/device-protocol-i2c",
+    "$zx/system/dev/lib/device-protocol-i2c:headers",
 
     # <lib/device-protocol-i2c-channel/i2c-channel.h> has #include <zircon/types.h>
+    "$zx/system/ulib/zx:headers",
+  ]
+  deps = [
+    "$zx/system/dev/lib/device-protocol-i2c",
     "$zx/system/ulib/zx",
   ]
 }
