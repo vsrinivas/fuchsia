@@ -24,14 +24,13 @@ class WindowedFramePredictorTest : public ::gtest::TestLoopFixture {
  protected:
   // | ::testing::Test |
   void SetUp() override {
-    predictor_ = std::make_unique<WindowedFramePredictor>(kInitialRenderTimePrediction,
-                                                          kInitialUpdateTimePrediction);
+    predictor_ = std::make_unique<WindowedFramePredictor>(
+        kMinPredictedFrameDuration, kInitialRenderTimePrediction, kInitialUpdateTimePrediction);
   }
   // | ::testing::Test |
-  void TearDown() override {
-    predictor_.reset();
-  }
+  void TearDown() override { predictor_.reset(); }
 
+  static constexpr zx::duration kMinPredictedFrameDuration = zx::msec(0);
   static constexpr zx::duration kInitialRenderTimePrediction = zx::msec(4);
   static constexpr zx::duration kInitialUpdateTimePrediction = zx::msec(2);
 
@@ -255,6 +254,63 @@ TEST_F(WindowedFramePredictorTest, AttemptsToBeTooAggressive_ShouldNotBePossible
 
   // We should not have been able to schedule the frame for this vsync.
   EXPECT_LE(prediction.latch_point_time.get(), now.get() + vsync_interval.get());
+}
+
+TEST(WindowedFramePredictorMinFrameDurationTest, BasicPredictions_ShouldRespectMinFrameTime) {
+  zx::duration kMinPredictedFrameDuration = zx::msec(14);
+  zx::duration kInitialRenderTimePrediction = zx::msec(2);
+  zx::duration kInitialUpdateTimePrediction = zx::msec(2);
+  auto predictor = std::make_unique<WindowedFramePredictor>(
+      kMinPredictedFrameDuration, kInitialRenderTimePrediction, kInitialUpdateTimePrediction);
+
+  PredictionRequest request = {.now = ms_to_time(1),
+                               .requested_presentation_time = ms_to_time(16),
+                               .last_vsync_time = ms_to_time(0),
+                               .vsync_interval = zx::msec(16)};
+
+  auto prediction = predictor->GetPrediction(request);
+  EXPECT_EQ(prediction.presentation_time - prediction.latch_point_time, kMinPredictedFrameDuration);
+}
+
+TEST(WindowedFramePredictorMinFrameDurationTest, BasicPredictions_CanPassMinFrameTime) {
+  zx::duration kMinPredictedFrameDuration = zx::msec(5);
+  zx::duration kInitialRenderTimePrediction = zx::msec(3);
+  zx::duration kInitialUpdateTimePrediction = zx::msec(3);
+  auto predictor = std::make_unique<WindowedFramePredictor>(
+      kMinPredictedFrameDuration, kInitialRenderTimePrediction, kInitialUpdateTimePrediction);
+
+  PredictionRequest request = {.now = ms_to_time(1),
+                               .requested_presentation_time = ms_to_time(16),
+                               .last_vsync_time = ms_to_time(0),
+                               .vsync_interval = zx::msec(16)};
+
+  auto prediction = predictor->GetPrediction(request);
+  EXPECT_GT(prediction.presentation_time - prediction.latch_point_time, kMinPredictedFrameDuration);
+}
+
+TEST(WindowedFramePredictorMinFrameDurationTest,
+     PredictionsAfterUpdating_ShouldRespectMinFrameTime) {
+  zx::duration kMinPredictedFrameDuration = zx::msec(13);
+  zx::duration kInitialRenderTimePrediction = zx::msec(2);
+  zx::duration kInitialUpdateTimePrediction = zx::msec(2);
+  auto predictor = std::make_unique<WindowedFramePredictor>(
+      kMinPredictedFrameDuration, kInitialRenderTimePrediction, kInitialUpdateTimePrediction);
+
+  const zx::duration update_duration = zx::msec(3);
+  const zx::duration render_duration = zx::msec(3);
+  const size_t kBiggerThanAllPredictionWindows = 5;
+  for (size_t i = 0; i < kBiggerThanAllPredictionWindows; ++i) {
+    predictor->ReportRenderDuration(render_duration);
+    predictor->ReportUpdateDuration(update_duration);
+  }
+
+  PredictionRequest request = {.now = ms_to_time(1),
+                               .requested_presentation_time = ms_to_time(16),
+                               .last_vsync_time = ms_to_time(0),
+                               .vsync_interval = zx::msec(16)};
+
+  auto prediction = predictor->GetPrediction(request);
+  EXPECT_EQ(prediction.presentation_time - prediction.latch_point_time, kMinPredictedFrameDuration);
 }
 
 // ---------------------------------------------------------------------------

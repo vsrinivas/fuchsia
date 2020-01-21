@@ -18,6 +18,7 @@
 #endif
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/files/file.h"
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
@@ -47,6 +48,23 @@ class Dependency : public scenic_impl::System {
     return nullptr;
   };
 };
+
+zx::duration GetMinimumPredictedFrameDuration() {
+  std::string frame_scheduler_min_predicted_frame_duration;
+  int frame_scheduler_min_predicted_frame_duration_in_us = 0;
+  if (files::ReadFileToString("/config/data/frame_scheduler_min_predicted_frame_duration_in_us",
+                              &frame_scheduler_min_predicted_frame_duration)) {
+    frame_scheduler_min_predicted_frame_duration_in_us =
+        atoi(frame_scheduler_min_predicted_frame_duration.c_str());
+    FXL_DCHECK(frame_scheduler_min_predicted_frame_duration_in_us >= 0);
+    FXL_LOG(INFO) << "min_predicted_frame_duration(us): "
+                  << frame_scheduler_min_predicted_frame_duration_in_us;
+  }
+  return frame_scheduler_min_predicted_frame_duration_in_us > 0
+             ? zx::usec(frame_scheduler_min_predicted_frame_duration_in_us)
+             : scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
+}
+
 }  // namespace
 
 namespace scenic_impl {
@@ -147,9 +165,11 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   if (cobalt_logger == nullptr) {
     FX_LOGS(ERROR) << "CobaltLogger creation failed!";
   }
+
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       display->vsync_timing(),
       std::make_unique<scheduling::WindowedFramePredictor>(
+          GetMinimumPredictedFrameDuration(),
           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
           scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
       scenic_.inspect_node()->CreateChild("FrameScheduler"), std::move(cobalt_logger));

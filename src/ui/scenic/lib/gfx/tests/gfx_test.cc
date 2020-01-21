@@ -26,6 +26,7 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::WindowedFramePredictor>(
+          scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration,
           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
           scheduling::DefaultFrameScheduler::kInitialUpdateDuration));
   engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler_,

@@ -28,7 +28,8 @@ void FrameSchedulerTest::TearDown() {
 std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameScheduler() {
   auto scheduler = std::make_unique<DefaultFrameScheduler>(
       vsync_timing_,
-      std::make_unique<WindowedFramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
+      std::make_unique<WindowedFramePredictor>(DefaultFrameScheduler::kMinPredictedFrameDuration,
+                                               DefaultFrameScheduler::kInitialRenderDuration,
                                                DefaultFrameScheduler::kInitialUpdateDuration));
   scheduler->SetFrameRenderer(mock_renderer_->GetWeakPtr());
   scheduler->AddSessionUpdater(mock_updater_->GetWeakPtr());

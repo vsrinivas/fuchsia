@@ -13,7 +13,8 @@ namespace scheduling {
 
 class WindowedFramePredictor : public FramePredictor {
  public:
-  WindowedFramePredictor(zx::duration initial_render_duration_prediction,
+  WindowedFramePredictor(zx::duration min_predicted_frame_duration,
+                         zx::duration initial_render_duration_prediction,
                          zx::duration initial_update_duration_prediction);
   ~WindowedFramePredictor();
 
@@ -39,7 +40,11 @@ class WindowedFramePredictor : public FramePredictor {
   // Rarely, it is possible for abnormally long GPU contexts to occur, and
   // when they occur we do not want them to mess up future predictions by
   // too much. We therefore clamp RenderDurations by this much.
-  const zx::duration kMaxFrameTime = zx::usec(16'667);  // 16.667ms
+  const zx::duration kMaxPredictedFrameDuration = zx::usec(16'667);  // 16.667ms
+
+  // Lower bound for frame time prediction. It is useful when we want to set a fixed offset for
+  // certain cases. It can be set specifically for the board via config.
+  const zx::duration min_predicted_frame_duration_;
 
   // Render time prediction.
   const size_t kRenderPredictionWindowSize = 3;

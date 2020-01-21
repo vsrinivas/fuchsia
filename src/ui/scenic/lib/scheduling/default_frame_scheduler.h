@@ -69,6 +69,7 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   void ClearCallbacksForSession(SessionId session_id) override;
 
+  constexpr static zx::duration kMinPredictedFrameDuration = zx::msec(0);
   constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
   constexpr static zx::duration kInitialUpdateDuration = zx::msec(1);
 
