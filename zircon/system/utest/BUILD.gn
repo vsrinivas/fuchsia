@@ -205,7 +205,6 @@ if (current_cpu != "") {
       "channel-fatal",
       "chromeos-disk-setup",
       "core",
-      "core-display",
       "devfs",
       "device-enumeration",
       "dlfcn",

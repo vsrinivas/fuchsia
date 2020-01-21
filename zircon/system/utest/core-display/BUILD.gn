@@ -2,20 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("core-display") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("core-display") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "core-display-test.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.display.controller",
-    "$zx/system/fidl/fuchsia-hardware-display:llcpp",
-    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
-    "$zx/system/fidl/fuchsia-sysmem:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async-2",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async-2",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.display.controller",
+    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
+    "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
+}
+
+migrated_manifest("core-display-manifest") {
+  deps = [ ":core-display" ]
 }
