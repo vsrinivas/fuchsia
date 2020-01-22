@@ -45,7 +45,7 @@ pub struct DsssParamSet {
 pub struct BitmapControl(pub u8);
 
 // IEEE Std 802.11-2016, 9.4.2.6
-#[derive(FromBytes, AsBytes, Unaligned)]
+#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy)]
 #[repr(C, packed)]
 pub struct TimHeader {
     pub dtim_count: u8,
@@ -54,7 +54,7 @@ pub struct TimHeader {
 }
 
 pub struct TimView<B> {
-    pub header: LayoutVerified<B, TimHeader>,
+    pub header: TimHeader,
     pub bitmap: B,
 }
 

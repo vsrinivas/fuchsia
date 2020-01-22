@@ -187,6 +187,61 @@ mod tests {
     }
 
     #[test]
+    fn write_tim() {
+        let (buf, bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+            ies: {
+                tim: ie::TimView {
+                    header: ie::TimHeader {
+                        dtim_count: 1,
+                        dtim_period: 2,
+                        bmp_ctrl: ie::BitmapControl(3)
+                    },
+                    bitmap: &[4, 5, 6][..],
+                }
+            }
+        })
+        .expect("frame construction failed");
+        assert_eq!(bytes_written, 8);
+        assert_eq!(&[5, 6, 1, 2, 3, 4, 5, 6][..], &buf[..]);
+    }
+
+    #[test]
+    fn write_tim_empty_bitmap() {
+        let err = write_frame_with_dynamic_buf!(vec![], {
+            ies: {
+                tim: ie::TimView {
+                    header: ie::TimHeader {
+                        dtim_count: 1,
+                        dtim_period: 2,
+                        bmp_ctrl: ie::BitmapControl(3)
+                    },
+                    bitmap: &[][..],
+                }
+            }
+        })
+        .expect_err("frame construction succeeded");
+        assert_eq!(err, Error::FrameWriteError);
+    }
+
+    #[test]
+    fn write_tim_bitmap_too_long() {
+        let err = write_frame_with_dynamic_buf!(vec![], {
+            ies: {
+                tim: ie::TimView {
+                    header: ie::TimHeader {
+                        dtim_count: 1,
+                        dtim_period: 2,
+                        bmp_ctrl: ie::BitmapControl(3)
+                    },
+                    bitmap: &[0xFF_u8; 252][..],
+                }
+            }
+        })
+        .expect_err("frame construction succeeded");
+        assert_eq!(err, Error::FrameWriteError);
+    }
+
+    #[test]
     fn write_rates() {
         let buffer_provider = BufferProvider;
         let (buf, bytes_written) = write_frame!(buffer_provider, {

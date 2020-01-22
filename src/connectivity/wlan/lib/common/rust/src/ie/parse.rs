@@ -48,7 +48,7 @@ pub fn parse_tim<B: ByteSlice>(raw_body: B) -> FrameParseResult<TimView<B>> {
         .ok_or(FrameParseError::new("Element body is too short to include a TIM header"))?;
     validate!(!bitmap.is_empty(), "Bitmap in TIM is empty");
     validate!(bitmap.len() <= TIM_MAX_BITMAP_LEN, "Bitmap in TIM is too long");
-    Ok(TimView { header, bitmap })
+    Ok(TimView { header: *header, bitmap })
 }
 
 pub fn parse_ht_capabilities<B: ByteSlice>(

@@ -72,6 +72,7 @@ use proc_macro_hack::proc_macro_hack;
 ///                   Note: `extended_supported_rates` cannot be used without also declaring
 ///                         `supported_rates` first. `extended_supported_rates` may not directly
 ///                         follow the `supported_rates` IE.
+/// * tim: wlan_common::ie::TimView
 /// * ht_caps: wlan_common::ie::HtCapabilities
 /// * vht_caps: wlan_common::ie::VhtCapabilities
 /// * rsne: wlan_common::ie::rsn::rsne::Rsne
