@@ -70,7 +70,7 @@ class AppModel {
     // TODO(http://fxb/44105): Remove SessionShell needed for Presentation API.
     sessionShell = SessionShell(
       startupContext: _startupContext,
-      onStoryStarted: null,
+      onStoryStarted: ({controller, info, sessionShell}) => null,
     )..start();
 
     topbarModel = TopbarModel(appModel: this);
