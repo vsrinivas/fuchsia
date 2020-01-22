@@ -18,13 +18,13 @@ rustc_binary("scene_manager_session_bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/session/lib/scene_management",
     "//third_party/rust_crates:anyhow",
   ]
