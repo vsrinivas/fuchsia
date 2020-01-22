@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
@@ -138,7 +139,7 @@ func assertShardsContainTests(t *testing.T, shards []*Shard, expectedShards [][]
 	}
 }
 
-func TestWithSize(t *testing.T) {
+func TestWithTargetDuration(t *testing.T) {
 	env1 := build.Environment{
 		Tags: []string{"env1"},
 	}
@@ -151,24 +152,33 @@ func TestWithSize(t *testing.T) {
 		"*": {MedianDuration: 1},
 	}
 
-	t.Run("does nothing if size is 0", func(t *testing.T) {
-		assertEqual(t, defaultInput, WithSize(defaultInput, 0, defaultDurations))
+	t.Run("does nothing if test count and duration are 0", func(t *testing.T) {
+		assertEqual(t, defaultInput, WithTargetDuration(defaultInput, 0, 0, defaultDurations))
 	})
 
-	t.Run("does nothing if size is < 0", func(t *testing.T) {
-		assertEqual(t, defaultInput, WithSize(defaultInput, -7, defaultDurations))
+	t.Run("does nothing if test count and duration are < 0", func(t *testing.T) {
+		assertEqual(t, defaultInput, WithTargetDuration(defaultInput, -5, -7, defaultDurations))
 	})
 
-	t.Run("returns one shard if target size is greater than test count", func(t *testing.T) {
-		actual := WithSize(defaultInput, 20, defaultDurations)
+	t.Run("returns one shard if target test count is greater than test count", func(t *testing.T) {
+		actual := WithTargetDuration(defaultInput, 0, 20, defaultDurations)
 		expectedTests := [][]string{
 			{"test1", "test2", "test3", "test4", "test5", "test6"},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 
+	t.Run("returns one shard if target duration is greater than total duration", func(t *testing.T) {
+		expectedTests := [][]string{
+			{"test1", "test2", "test3", "test4", "test5", "test6"},
+		}
+		targetDuration := time.Duration(len(expectedTests[0]) + 1)
+		actual := WithTargetDuration(defaultInput, targetDuration, 0, defaultDurations)
+		assertShardsContainTests(t, actual, expectedTests)
+	})
+
 	t.Run("evenly distributes equal-duration tests", func(t *testing.T) {
-		actual := WithSize(defaultInput, 4, defaultDurations)
+		actual := WithTargetDuration(defaultInput, 4, 0, defaultDurations)
 		expectedTests := [][]string{
 			{"test1", "test3", "test5"},
 			{"test2", "test4", "test6"},
@@ -181,7 +191,26 @@ func TestWithSize(t *testing.T) {
 			"*":     {MedianDuration: 1},
 			"test1": {MedianDuration: 10},
 		}
-		actual := WithSize(defaultInput, 4, durations)
+		actual := WithTargetDuration(defaultInput, 5, 0, durations)
+		expectedTests := [][]string{
+			{"test1"},
+			{"test2", "test3", "test4", "test5", "test6"},
+		}
+		assertShardsContainTests(t, actual, expectedTests)
+	})
+
+	t.Run("uses longest test as target duration, if longer than target duration", func(t *testing.T) {
+		durations := TestDurationsMap{
+			"*":     {MedianDuration: 1},
+			"test1": {MedianDuration: 10},
+		}
+		// targetDuration is 2, but the longest test's duration is 10 and we
+		// can't split a single test across shards. So we must have at least one
+		// shard of duration >= 10. Therefore, we won't gain anything from
+		// splitting the other tests into shards of duration < 10, so they
+		// should all go in the same shard, even if its duration is greater than
+		// the given target.
+		actual := WithTargetDuration(defaultInput, 2, 0, durations)
 		expectedTests := [][]string{
 			{"test1"},
 			{"test2", "test3", "test4", "test5", "test6"},
@@ -198,7 +227,7 @@ func TestWithSize(t *testing.T) {
 			"test4": {MedianDuration: 2},
 			"test5": {MedianDuration: 5},
 		}
-		actual := WithSize(input, 4, durations)
+		actual := WithTargetDuration(input, 7, 0, durations)
 		expectedTests := [][]string{
 			{"test1", "test5"},          // total duration: 1 + 5 = 6
 			{"test2", "test3", "test4"}, // total duration: 2 + 2 + 2 = 6
@@ -211,7 +240,7 @@ func TestWithSize(t *testing.T) {
 			namedShard(env1, "env1", 1),
 			namedShard(env2, "env2", 2, 3, 4, 5, 6, 7),
 		}
-		actual := WithSize(input, 4, defaultDurations)
+		actual := WithTargetDuration(input, 4, 0, defaultDurations)
 		expectedTests := [][]string{
 			{"test1"},
 			{"test2", "test4", "test6"},
@@ -224,7 +253,10 @@ func TestWithSize(t *testing.T) {
 		input := []*Shard{
 			namedShard(env1, "env1", 3, 2, 1, 4, 0),
 		}
-		actual := WithSize(input, 1, defaultDurations)
+		actual := WithTargetDuration(input, 1, 0, defaultDurations)
+		if len(actual) != len(input[0].Tests) {
+			t.Fatalf("expected %d shards but got %d", len(actual), len(input[0].Tests))
+		}
 		for i, shard := range actual {
 			expectedFirstTest := fmt.Sprintf("test%d", i)
 			if len(shard.Tests) != 1 || shard.Tests[0].Name != expectedFirstTest {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
@@ -32,7 +33,10 @@ var (
 	multipliersPath string
 
 	// Maximum number of tests per shard.
-	targetShardSize int
+	targetTestCount int
+
+	// Maximum number of tests per shard.
+	targetDurationSecs int
 )
 
 func usage() {
@@ -50,9 +54,10 @@ func init() {
 	flag.Var(&mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
 	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
 	flag.StringVar(&multipliersPath, "multipliers", "", "path to the json manifest containing tests to multiply")
-	// TODO(olivernewman): Rename or replace this flag once it's no longer set
-	// by the recipes, to reflect the fact that it is no longer a hard maximum.
-	flag.IntVar(&targetShardSize, "max-shard-size", 0, "target number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
+	flag.IntVar(&targetDurationSecs, "target-duration-secs", 0, "approximate duration that each shard should run in")
+	// TODO(olivernewman): Delete this flag once it's no longer set by the
+	// recipes.
+	flag.IntVar(&targetTestCount, "max-shard-size", 0, "target number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
 	flag.Usage = usage
 }
 
@@ -67,6 +72,11 @@ func execute() error {
 
 	if buildDir == "" {
 		return fmt.Errorf("must specify a Fuchsia build output directory")
+	}
+
+	targetDuration := time.Duration(targetDurationSecs) * time.Second
+	if targetTestCount > 0 && targetDuration > 0 {
+		return fmt.Errorf("max-shard-size and target-duration-secs cannot both be set")
 	}
 
 	m, err := build.NewModules(buildDir)
@@ -93,7 +103,7 @@ func execute() error {
 	}
 
 	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
-	shards = testsharder.WithSize(shards, targetShardSize, testDurations)
+	shards = testsharder.WithTargetDuration(shards, targetDuration, targetTestCount, testDurations)
 
 	if err := testsharder.ExtractDeps(shards, m.BuildDir()); err != nil {
 		return err

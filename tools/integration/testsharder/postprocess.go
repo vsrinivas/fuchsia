@@ -105,19 +105,44 @@ func divRoundUp(a, b int) int {
 	return (a / b) + 1
 }
 
-// WithSize returns a list of shards such that each shard contains "roughly"
-// targetSize tests.
-// If targetSize <= 0, just returns its input.
-func WithSize(shards []*Shard, targetSize int, testDurations TestDurationsMap) []*Shard {
-	if targetSize <= 0 {
+// WithTargetDuration returns a list of shards such that all shards are expected
+// to complete in approximately `targetDuration` time.
+// If targetDuration <= 0, just returns its input.
+// Alternatively, accepts a `targetTestCount` argument for backwards compatibility.
+func WithTargetDuration(shards []*Shard, targetDuration time.Duration, targetTestCount int, testDurations TestDurationsMap) []*Shard {
+	if targetDuration <= 0 && targetTestCount <= 0 {
 		return shards
 	}
+
+	if targetDuration > 0 {
+		// If any single test is expected to take longer than `targetDuration`,
+		// it's no use creating shards whose entire expected runtimes are
+		// shorter than that one test. So in that case we use the longest test's
+		// expected duration as the target duration.
+		for _, shard := range shards {
+			for _, t := range shard.Tests {
+				duration := testDurations.Get(t).MedianDuration
+				if duration > targetDuration {
+					targetDuration = duration
+				}
+			}
+		}
+	}
+
 	output := make([]*Shard, 0, len(shards))
 	for _, shard := range shards {
-		numNewShards := min(
-			divRoundUp(len(shard.Tests), targetSize),
-			maxShardsPerEnvironment,
-		)
+		numNewShards := 0
+		if targetDuration > 0 {
+			var total time.Duration
+			for _, t := range shard.Tests {
+				total += testDurations.Get(t).MedianDuration
+			}
+			numNewShards = divRoundUp(int(total), int(targetDuration))
+		} else {
+			numNewShards = divRoundUp(len(shard.Tests), targetTestCount)
+		}
+		numNewShards = min(numNewShards, maxShardsPerEnvironment)
+
 		newShards := shardByTime(shard, testDurations, numNewShards)
 		output = append(output, newShards...)
 	}
