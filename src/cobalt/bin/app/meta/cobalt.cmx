@@ -4,10 +4,10 @@
     },
     "sandbox": {
         "features": [
-            "root-ssl-certificates",
-            "isolated-persistent-storage",
             "build-info",
-            "config-data"
+            "config-data",
+            "isolated-persistent-storage",
+            "root-ssl-certificates"
         ],
         "pkgfs": [
             "packages"
@@ -15,12 +15,12 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.net.oldhttp.HttpService",
-            "fuchsia.time.Utc",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.scheduler.ProfileProvider",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.sysinfo.SysInfo",
+            "fuchsia.time.Utc",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }
