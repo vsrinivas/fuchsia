@@ -24,7 +24,7 @@ Without too many extra dependencies, adding the `audio` bundle and
 required services so adding the following to your Fuchsia set configuration
 should build them all and make them available:
 
-`--with //src/connectivity/bluetooth/profiles/bt-a2dp-source --with //src/media/audio/bundles:audio --with //garnet/packages/prod:media_codec_sw_sbc`
+`--with //src/connectivity/bluetooth/profiles/bt-a2dp-source --with src/media/audio --with src/media/codec/codecs/sw/sbc --with src/media/codec/factory`
 
 The profile makes an effort to determine if encoding media will fail, and quits
 with a message on startup.
