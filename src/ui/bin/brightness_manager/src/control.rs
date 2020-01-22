@@ -40,11 +40,11 @@ lazy_static! {
         let mut lux_to_nits = Vec::new();
         lux_to_nits.push(BrightnessPoint { ambient_lux: 0., display_nits: 0. });
         lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 3.33 });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 13.02 });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 60., display_nits: 26.19 });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 100., display_nits: 36.87 });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 150., display_nits: 54.12 });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 210., display_nits: 112.34 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 8.7 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 60., display_nits: 18.27 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 100., display_nits: 32.785 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 150., display_nits: 36.82 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 210., display_nits: 75.0 });
         lux_to_nits.push(BrightnessPoint { ambient_lux: 250., display_nits: 124.16 });
         lux_to_nits.push(BrightnessPoint { ambient_lux: 300., display_nits: 162.96 });
         lux_to_nits.push(BrightnessPoint { ambient_lux: 340., display_nits: 300. });
@@ -660,12 +660,12 @@ mod tests {
         assert_eq!(cmp_float(0., brightness_curve_lux_to_nits(0, &spline).await), true);
         assert_eq!(cmp_float(0.333, brightness_curve_lux_to_nits(1, &spline).await), true);
         assert_eq!(cmp_float(0.666, brightness_curve_lux_to_nits(2, &spline).await), true);
-        assert_eq!(cmp_float(5.75, brightness_curve_lux_to_nits(15, &spline).await), true);
-        assert_eq!(cmp_float(6.23, brightness_curve_lux_to_nits(16, &spline).await), true);
-        assert_eq!(cmp_float(36.87, brightness_curve_lux_to_nits(100, &spline).await), true);
-        assert_eq!(cmp_float(54.12, brightness_curve_lux_to_nits(150, &spline).await), true);
-        assert_eq!(cmp_float(102.63, brightness_curve_lux_to_nits(200, &spline).await), true);
-        assert_eq!(cmp_float(121.2, brightness_curve_lux_to_nits(240, &spline).await), true);
+        assert_eq!(cmp_float(4.67, brightness_curve_lux_to_nits(15, &spline).await), true);
+        assert_eq!(cmp_float(4.94, brightness_curve_lux_to_nits(16, &spline).await), true);
+        assert_eq!(cmp_float(32.78, brightness_curve_lux_to_nits(100, &spline).await), true);
+        assert_eq!(cmp_float(36.82, brightness_curve_lux_to_nits(150, &spline).await), true);
+        assert_eq!(cmp_float(68.63, brightness_curve_lux_to_nits(200, &spline).await), true);
+        assert_eq!(cmp_float(111.87, brightness_curve_lux_to_nits(240, &spline).await), true);
         assert_eq!(cmp_float(162.96, brightness_curve_lux_to_nits(300, &spline).await), true);
         assert_eq!(cmp_float(300., brightness_curve_lux_to_nits(340, &spline).await), true);
     }
