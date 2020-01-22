@@ -7,8 +7,9 @@ import("//build/test/test_package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-group("driver_manager") {
-  deps = [ ":coordinator" ]
+group("tests") {
+  testonly = true
+  deps = [ ":driver_manager_tests" ]
 }
 
 # Common source files and dependencies between :coordinator and :test
@@ -88,7 +89,7 @@ source_set("lib") {
   defines = [ "_ALL_SOURCE=1" ]
 }
 
-executable("coordinator") {
+executable("driver_manager") {
   sources = [ "main.cc" ]
 
   deps = [ ":lib" ]
@@ -96,10 +97,7 @@ executable("coordinator") {
   defines = [ "_ALL_SOURCE=1" ]
 }
 
-executable("devcoordinator-test") {
-  output_name = "devcoordinator-test"
-  testonly = true
-
+test("driver_manager_test") {
   sources = [
     "binding-test.cc",
     "composite-device-tests.cc",
@@ -121,20 +119,20 @@ executable("devcoordinator-test") {
   ]
 }
 
-test_package("coordinator_tests") {
+test_package("driver_manager_tests") {
   deprecated_shell = "//build"
 
-  deps = [ ":devcoordinator-test" ]
+  deps = [ ":driver_manager_test" ]
 
   binaries = [
     {
-      name = "devcoordinator-test"
+      name = "driver_manager_test"
     },
   ]
 
   tests = [
     {
-      name = "devcoordinator-test"
+      name = "driver_manager_test"
       environments = basic_envs
     },
   ]

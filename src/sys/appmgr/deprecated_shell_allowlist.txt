@@ -1,7 +1,7 @@
 fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx
-fuchsia-pkg://fuchsia.com/coordinator_tests#meta/devcoordinator-test.cmx
 fuchsia-pkg://fuchsia.com/cpuperf_provider_integration_tests#meta/cpuperf_provider_integration_tests.cmx
 fuchsia-pkg://fuchsia.com/cpuperf_provider_tests#meta/cpuperf_provider_integration_tests.cmx
+fuchsia-pkg://fuchsia.com/driver_manager_tests#meta/driver_manager_test.cmx
 fuchsia-pkg://fuchsia.com/format_sl4f_sl4f#meta/format_sl4f_sl4f.cmx
 fuchsia-pkg://fuchsia.com/format_trace_trace#meta/format_trace_trace.cmx
 fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/run_simplest_app_benchmark.cmx

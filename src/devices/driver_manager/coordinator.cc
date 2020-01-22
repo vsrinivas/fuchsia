@@ -329,7 +329,7 @@ static const char* get_devhost_bin(bool asan_drivers) {
   // be able to be more flexible about which drivers must get loaded into
   // the same devhost and thus be able to use both ASan and non-ASan
   // devhosts at the same time when only a subset of drivers use ASan.
-  return "/boot/bin/devhost";
+  return "/boot/bin/driver_host";
 }
 
 zx_handle_t get_service_root();

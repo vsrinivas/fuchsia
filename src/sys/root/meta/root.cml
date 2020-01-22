@@ -1,8 +1,8 @@
 {
   "children": [
     {
-      "name": "devcoordinator",
-      "url": "fuchsia-boot:///#meta/devcoordinator.cm",
+      "name": "driver_manager",
+      "url": "fuchsia-boot:///#meta/driver_manager.cm",
     },
     {
       "name": "fshost",
@@ -30,7 +30,7 @@
     {
       "directory": "/boot",
       "from": "realm",
-      "to": [ "#devcoordinator", "#fshost", "#appmgr" ],
+      "to": [ "#driver_manager", "#fshost", "#appmgr" ],
       "rights": ["rx*"],
     },
     // Services routed from "realm" at the root are either provided by
@@ -46,12 +46,12 @@
         "/svc/fuchsia.kernel.Stats",
       ],
       "from": "realm",
-      "to": [ "#devcoordinator", "#appmgr" ],
+      "to": [ "#driver_manager", "#appmgr" ],
     },
     {
       "protocol": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
-      "to": [ "#appmgr", "#devcoordinator", "#console", "#sysinfo" ],
+      "to": [ "#appmgr", "#driver_manager", "#console", "#sysinfo" ],
     },
     {
       "protocol": [
@@ -59,12 +59,12 @@
         "/svc/fuchsia.boot.Items",
       ],
       "from": "realm",
-      "to": [ "#devcoordinator", "#fshost" ],
+      "to": [ "#driver_manager", "#fshost" ],
     },
     {
       "protocol": "/svc/fuchsia.process.Launcher",
       "from": "realm",
-      "to": [ "#devcoordinator", "#fshost", "#appmgr" ],
+      "to": [ "#driver_manager", "#fshost", "#appmgr" ],
     },
     // ...and the rest of these are services provided by components for each other
     {
@@ -72,57 +72,57 @@
       // loader service!
       "protocol": "/svc/fuchsia.fshost.Loader",
       "from": "#fshost",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
     },
     {
       "directory": "/dev",
-      "from": "#devcoordinator",
+      "from": "#driver_manager",
       "to": [ "#fshost", "#appmgr", "#sysinfo" ],
     },
     {
       "directory": "/minfs",
       "from": "#fshost",
-      "to": [ "#appmgr", "#devcoordinator" ],
+      "to": [ "#appmgr", "#driver_manager" ],
     },
     {
       "directory": "/pkgfs",
       "from": "#fshost",
-      "to": [ "#appmgr", "#devcoordinator" ],
+      "to": [ "#appmgr", "#driver_manager" ],
     },
     {
       "directory": "/system-delayed",
       "from": "#fshost",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
     },
     {
       "directory": "/system",
       "from": "#fshost",
-      "to": [ "#appmgr", "#devcoordinator" ],
+      "to": [ "#appmgr", "#driver_manager" ],
     },
     {
       "directory": "/blob",
       "from": "#fshost",
-      "to": [ "#appmgr", "#devcoordinator" ],
+      "to": [ "#appmgr", "#driver_manager" ],
     },
     {
       "directory": "/volume",
       "from": "#fshost",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
     },
     {
       "directory": "/install",
       "from": "#fshost",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
     },
     {
       "directory": "/tmp",
       "from": "#fshost",
-      "to": [ "#appmgr", "#devcoordinator" ],
+      "to": [ "#appmgr", "#driver_manager" ],
     },
     {
       "directory": "/bin",
       "from": "#fshost",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
     },
     {
       "protocol": [
@@ -135,7 +135,7 @@
         "/svc/fuchsia.scheduler.ProfileProvider",
         "/svc/fuchsia.virtualconsole.SessionManager",
       ],
-      "from": "#devcoordinator",
+      "from": "#driver_manager",
       "to": [ "#appmgr" ],
     },
     {
@@ -144,13 +144,13 @@
         "/svc/fuchsia.tracing.provider.Registry",
       ],
       "from": "#appmgr",
-      "to": [ "#devcoordinator", "#fshost" ],
+      "to": [ "#driver_manager", "#fshost" ],
     },
-    // Offer the kernel serial console to the devcoordinator
+    // Offer the kernel serial console to the driver_manager
     {
       "protocol": "/svc/fuchsia.hardware.pty.Device",
       "from": "#console",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
       "as": "/svc/console",
     },
     // Offer the pty service to appmgr
@@ -159,20 +159,20 @@
       "from": "#ptysvc",
       "to": [
         "#appmgr",
-        "#devcoordinator",
+        "#driver_manager",
       ],
     },
 
-    // devcoordinator needs the v1 hub for the serial console
+    // driver_manager needs the v1 hub for the serial console
     {
       "directory": "/hub",
       "from": "#appmgr",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
     },
      {
       "protocol": "/svc/fuchsia.sysinfo.SysInfo",
       "from": "#sysinfo",
-      "to": [ "#appmgr", "#devcoordinator" ],
+      "to": [ "#appmgr", "#driver_manager" ],
     },
     // Offer the ELF runner to children.
     {
@@ -181,7 +181,7 @@
       "to": [
           "#appmgr",
           "#console",
-          "#devcoordinator",
+          "#driver_manager",
           "#fshost",
           "#ptysvc",
           "#sysinfo",
@@ -210,7 +210,7 @@
         "/svc/fuchsia.wlan.service.Wlan",
       ],
       "from": "#appmgr",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
     },
     {
       "protocol": [
@@ -219,7 +219,7 @@
         "/svc/fuchsia.fshost.Registry",
       ],
       "from": "#fshost",
-      "to": [ "#devcoordinator" ],
+      "to": [ "#driver_manager" ],
     },
   ],
   "expose": [

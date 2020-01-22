@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/devcoordinator-test"
+        "binary": "test/driver_manager_test"
     },
     "sandbox": {
         "features": [

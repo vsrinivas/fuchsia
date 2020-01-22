@@ -24,7 +24,7 @@
 
 namespace {
 
-constexpr const char* kDevmgrPath = "/boot/bin/devcoordinator";
+constexpr const char* kDevmgrPath = "/boot/bin/driver_manager";
 constexpr const char* kFshostPath = "/boot/bin/fshost";
 
 }  // namespace

@@ -12,8 +12,8 @@ cm_compile("root.cm") {
 # TODO(BLD-448): These should move into their appropriate packages that are
 # included in bootfs along with the binaries and other resources/libraries. For
 # now they here since cm_compile doesn't exist in //zircon.
-cm_compile("devcoordinator.cm") {
-  data = rebase_path("meta/devcoordinator.cml")
+cm_compile("driver_manager.cm") {
+  data = rebase_path("meta/driver_manager.cml")
 }
 cm_compile("console.cm") {
   data = rebase_path("meta/console.cml")
@@ -32,7 +32,7 @@ cm_compile("fshost.cm") {
 generate_manifest("root_manifests.bootfs") {
   deps = [
     ":console.cm",
-    ":devcoordinator.cm",
+    ":driver_manager.cm",
     ":fshost.cm",
     ":ptysvc.cm",
     ":root.cm",
@@ -40,14 +40,14 @@ generate_manifest("root_manifests.bootfs") {
   ]
 
   root_cm_out = get_target_outputs(":root.cm")
-  devc_cm_out = get_target_outputs(":devcoordinator.cm")
+  devc_cm_out = get_target_outputs(":driver_manager.cm")
   fshost_cm_out = get_target_outputs(":fshost.cm")
   console_cm_out = get_target_outputs(":console.cm")
   ptysvc_cm_out = get_target_outputs(":ptysvc.cm")
   sysinfo_cm_out = get_target_outputs(":sysinfo.cm")
   args = [
     "--entry=meta/root.cm=" + rebase_path(root_cm_out[0]),
-    "--entry=meta/devcoordinator.cm=" + rebase_path(devc_cm_out[0]),
+    "--entry=meta/driver_manager.cm=" + rebase_path(devc_cm_out[0]),
     "--entry=meta/console.cm=" + rebase_path(console_cm_out[0]),
     "--entry=meta/ptysvc.cm=" + rebase_path(ptysvc_cm_out[0]),
     "--entry=meta/sysinfo.cm=" + rebase_path(sysinfo_cm_out[0]),

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/devhost-tests"
+        "binary": "test/driver_host_test"
     },
     "sandbox": {
         "features": [],

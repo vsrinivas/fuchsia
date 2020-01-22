@@ -24,12 +24,10 @@ template("devmgr_manifest") {
     visibility = [ ":*" ]
     sources = zircon_boot_manifests
     deps = zircon_boot_manifests_deps
-    outputs = [
-      "$target_gen_dir/devmgr.manifest",
-    ]
+    outputs = [ "$target_gen_dir/devmgr.manifest" ]
     script = "//build/images/manifest.py"
     args = [
-      "--include=bin/devcoordinator",
+      "--include=bin/driver_manager",
       "--include=bin/fshost",
       "--output=" + rebase_path(outputs[0], root_build_dir),
     ]
