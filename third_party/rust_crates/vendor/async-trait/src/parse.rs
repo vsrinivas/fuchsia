@@ -18,7 +18,12 @@ pub enum Item {
 impl Parse for Item {
     fn parse(input: ParseStream) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
-        let lookahead = input.lookahead1();
+        let mut lookahead = input.lookahead1();
+        if lookahead.peek(Token![unsafe]) {
+            let ahead = input.fork();
+            ahead.parse::<Token![unsafe]>()?;
+            lookahead = ahead.lookahead1();
+        }
         if lookahead.peek(Token![pub]) || lookahead.peek(Token![trait]) {
             let mut item: ItemTrait = input.parse()?;
             item.attrs = attrs;

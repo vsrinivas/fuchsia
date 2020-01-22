@@ -576,6 +576,16 @@
             "package_name": "tracing-subscriber"
         },
         {
+            "crate_name": "trust_dns_proto",
+            "crate_type": "lib",
+            "package_name": "trust-dns-proto"
+        },
+        {
+            "crate_name": "trust_dns_resolver",
+            "crate_type": "lib",
+            "package_name": "trust-dns-resolver"
+        },
+        {
             "crate_name": "unic_char_range",
             "crate_type": "lib",
             "package_name": "unic-char-range"

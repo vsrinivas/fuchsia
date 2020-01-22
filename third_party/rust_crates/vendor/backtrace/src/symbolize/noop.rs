@@ -1,12 +1,19 @@
-use types::{BytesOrWideString, c_void};
-use SymbolName;
+//! Empty symbolication strategy used to compile for platforms that have no
+//! support.
 
-pub unsafe fn resolve(_addr: *mut c_void, _cb: &mut FnMut(&super::Symbol)) {
+use crate::symbolize::ResolveWhat;
+use crate::types::BytesOrWideString;
+use crate::SymbolName;
+use core::ffi::c_void;
+use core::marker;
+
+pub unsafe fn resolve(_addr: ResolveWhat, _cb: &mut FnMut(&super::Symbol)) {}
+
+pub struct Symbol<'a> {
+    _marker: marker::PhantomData<&'a i32>,
 }
 
-pub struct Symbol;
-
-impl Symbol {
+impl Symbol<'_> {
     pub fn name(&self) -> Option<SymbolName> {
         None
     }
@@ -16,6 +23,11 @@ impl Symbol {
     }
 
     pub fn filename_raw(&self) -> Option<BytesOrWideString> {
+        None
+    }
+
+    #[cfg(feature = "std")]
+    pub fn filename(&self) -> Option<&::std::path::Path> {
         None
     }
 

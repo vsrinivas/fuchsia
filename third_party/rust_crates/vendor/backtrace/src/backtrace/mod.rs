@@ -1,5 +1,5 @@
+use core::ffi::c_void;
 use core::fmt;
-use types::c_void;
 
 /// Inspects the current call-stack, passing all active frames into the closure
 /// provided to calculate a stack trace.
@@ -27,6 +27,13 @@ use types::c_void;
 /// This function requires the `std` feature of the `backtrace` crate to be
 /// enabled, and the `std` feature is enabled by default.
 ///
+/// # Panics
+///
+/// This function strives to never panic, but if the `cb` provided panics then
+/// some platforms will force a double panic to abort the process. Some
+/// platforms use a C library which internally uses callbacks which cannot be
+/// unwound through, so panicking from `cb` may trigger a process abort.
+///
 /// # Example
 ///
 /// ```
@@ -40,10 +47,9 @@ use types::c_void;
 ///     });
 /// }
 /// ```
-#[inline(always)]
 #[cfg(feature = "std")]
 pub fn trace<F: FnMut(&Frame) -> bool>(cb: F) {
-    let _guard = ::lock::lock();
+    let _guard = crate::lock::lock();
     unsafe { trace_unsynchronized(cb) }
 }
 
@@ -52,11 +58,13 @@ pub fn trace<F: FnMut(&Frame) -> bool>(cb: F) {
 /// This function does not have synchronization guarentees but is available
 /// when the `std` feature of this crate isn't compiled in. See the `trace`
 /// function for more documentation and examples.
-#[inline(never)]
+///
+/// # Panics
+///
+/// See information on `trace` for caveats on `cb` panicking.
 pub unsafe fn trace_unsynchronized<F: FnMut(&Frame) -> bool>(mut cb: F) {
     trace_imp(&mut cb)
 }
-
 
 /// A trait representing one frame of a backtrace, yielded to the `trace`
 /// function of this crate.
@@ -64,8 +72,9 @@ pub unsafe fn trace_unsynchronized<F: FnMut(&Frame) -> bool>(mut cb: F) {
 /// The tracing function's closure will be yielded frames, and the frame is
 /// virtually dispatched as the underlying implementation is not always known
 /// until runtime.
+#[derive(Clone)]
 pub struct Frame {
-    inner: FrameImp,
+    pub(crate) inner: FrameImp,
 }
 
 impl Frame {
@@ -103,27 +112,41 @@ impl fmt::Debug for Frame {
     }
 }
 
-cfg_if! {
-    if #[cfg(all(unix,
-                 not(target_os = "emscripten"),
-                 not(all(target_os = "ios", target_arch = "arm")),
-                 feature = "libunwind"))] {
+cfg_if::cfg_if! {
+    if #[cfg(
+        any(
+            all(
+                unix,
+                not(target_os = "emscripten"),
+                not(all(target_os = "ios", target_arch = "arm")),
+                feature = "libunwind",
+            ),
+            all(
+                target_env = "sgx",
+                target_vendor = "fortanix",
+            ),
+        )
+    )] {
         mod libunwind;
         use self::libunwind::trace as trace_imp;
-        use self::libunwind::Frame as FrameImp;
-    } else if #[cfg(all(unix,
-                        not(target_os = "emscripten"),
-                        feature = "unix-backtrace"))] {
+        pub(crate) use self::libunwind::Frame as FrameImp;
+    } else if #[cfg(
+        all(
+            unix,
+            not(target_os = "emscripten"),
+            feature = "unix-backtrace",
+        )
+    )] {
         mod unix_backtrace;
         use self::unix_backtrace::trace as trace_imp;
-        use self::unix_backtrace::Frame as FrameImp;
-    } else if #[cfg(all(windows, feature = "dbghelp"))] {
+        pub(crate) use self::unix_backtrace::Frame as FrameImp;
+    } else if #[cfg(all(windows, feature = "dbghelp", not(target_vendor = "uwp")))] {
         mod dbghelp;
         use self::dbghelp::trace as trace_imp;
-        use self::dbghelp::Frame as FrameImp;
+        pub(crate) use self::dbghelp::Frame as FrameImp;
     } else {
         mod noop;
         use self::noop::trace as trace_imp;
-        use self::noop::Frame as FrameImp;
+        pub(crate) use self::noop::Frame as FrameImp;
     }
 }

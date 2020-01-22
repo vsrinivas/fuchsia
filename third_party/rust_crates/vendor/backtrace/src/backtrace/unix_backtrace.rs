@@ -8,21 +8,33 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+//! Unwinding through the `backtrace` function provided in Unix.
+//!
+//! This is an alternative unwinding strategy for Unix platforms which don't
+//! have support for libunwind but do have support for `backtrace`. Currently
+//! there's not a whole lot of those though. This module is a relatively
+//! straightforward binding of the `backtrace` API to the `Frame` API that we'd
+//! like to have.
+
+use core::ffi::c_void;
 use core::mem;
 use libc::c_int;
 
-use types::c_void;
-
+#[derive(Clone)]
 pub struct Frame {
-    addr: *mut c_void,
+    addr: usize,
 }
 
 impl Frame {
-    pub fn ip(&self) -> *mut c_void { self.addr }
-    pub fn symbol_address(&self) -> *mut c_void { self.addr }
+    pub fn ip(&self) -> *mut c_void {
+        self.addr as *mut c_void
+    }
+    pub fn symbol_address(&self) -> *mut c_void {
+        self.ip()
+    }
 }
 
-extern {
+extern "C" {
     fn backtrace(buf: *mut *mut c_void, sz: c_int) -> c_int;
 }
 
@@ -38,10 +50,12 @@ pub unsafe fn trace(cb: &mut FnMut(&super::Frame) -> bool) {
 
     for addr in buf[..cnt as usize].iter() {
         let cx = super::Frame {
-            inner: Frame { addr: *addr },
+            inner: Frame {
+                addr: *addr as usize,
+            },
         };
         if !cb(&cx) {
-            return
+            return;
         }
     }
 }

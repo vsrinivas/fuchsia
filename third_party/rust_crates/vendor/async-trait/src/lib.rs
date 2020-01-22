@@ -1,7 +1,7 @@
 //! <h5>Type erasure for async trait methods</h5>
 //!
 //! The async/await language feature is on track for an initial round of
-//! stabilizations in Rust 1.38 (tracking issue: [rust-lang/rust#62149]), but
+//! stabilizations in Rust 1.39 (tracking issue: [rust-lang/rust#62149]), but
 //! this does not include support for async fn in traits. Trying to include an
 //! async fn in a trait produces the following error:
 //!
@@ -22,6 +22,12 @@
 //! ```
 //!
 //! This crate provides an attribute macro to make async fn in traits work.
+//!
+//! Please refer to [*why async fn in traits are hard*][hard] for a deeper
+//! analysis of how this implementation differs from what the compiler and
+//! language hope to deliver in the future.
+//!
+//! [hard]: https://smallcultfollowing.com/babysteps/blog/2019/10/26/async-fn-in-traits-are-hard/
 //!
 //! <br>
 //!
@@ -125,7 +131,7 @@
 //!             /* the original method body */
 //!         }
 //!
-//!         Pin::from(Box::new(run(self)))
+//!         Box::pin(run(self))
 //!     }
 //! }
 //! # };

@@ -1,4 +1,11 @@
+#![cfg_attr(async_trait_nightly_testing, feature(specialization, const_generics))]
+
 use async_trait::async_trait;
+
+pub mod executor;
+
+// Dummy module to check that the expansion refer to rust's core crate
+mod core {}
 
 #[async_trait]
 trait Trait {
@@ -129,8 +136,20 @@ pub async fn test_object_no_send() {
     object.f().await;
 }
 
+#[async_trait]
+pub unsafe trait UnsafeTrait {}
+
+#[async_trait]
+unsafe impl UnsafeTrait for () {}
+
+#[async_trait]
+pub(crate) unsafe trait UnsafeTraitPubCrate {}
+
+#[async_trait]
+unsafe trait UnsafeTraitPrivate {}
+
 // https://github.com/dtolnay/async-trait/issues/1
-mod issue1 {
+pub mod issue1 {
     use async_trait::async_trait;
 
     #[async_trait]
@@ -145,7 +164,7 @@ mod issue1 {
 }
 
 // https://github.com/dtolnay/async-trait/issues/2
-mod issue2 {
+pub mod issue2 {
     use async_trait::async_trait;
     use std::future::Future;
 
@@ -163,7 +182,7 @@ mod issue2 {
 }
 
 // https://github.com/dtolnay/async-trait/issues/9
-mod issue9 {
+pub mod issue9 {
     use async_trait::async_trait;
 
     #[async_trait]
@@ -173,7 +192,7 @@ mod issue9 {
 }
 
 // https://github.com/dtolnay/async-trait/issues/11
-mod issue11 {
+pub mod issue11 {
     use async_trait::async_trait;
     use std::sync::Arc;
 
@@ -191,7 +210,7 @@ mod issue11 {
 }
 
 // https://github.com/dtolnay/async-trait/issues/15
-mod issue15 {
+pub mod issue15 {
     use async_trait::async_trait;
     use std::marker::PhantomData;
 
@@ -204,7 +223,7 @@ mod issue15 {
 }
 
 // https://github.com/dtolnay/async-trait/issues/17
-mod issue17 {
+pub mod issue17 {
     use async_trait::async_trait;
 
     #[async_trait]
@@ -225,7 +244,7 @@ mod issue17 {
 }
 
 // https://github.com/dtolnay/async-trait/issues/23
-mod issue23 {
+pub mod issue23 {
     use async_trait::async_trait;
 
     #[async_trait]
@@ -250,4 +269,236 @@ mod issue23 {
     }
 
     fn do_something<T>(_: &mut T) {}
+}
+
+// https://github.com/dtolnay/async-trait/issues/25
+#[cfg(async_trait_nightly_testing)]
+pub mod issue25 {
+    use crate::executor;
+    use async_trait::async_trait;
+    use std::fmt::{Display, Write};
+
+    #[async_trait]
+    trait AsyncToString {
+        async fn async_to_string(&self) -> String;
+    }
+
+    #[async_trait]
+    impl AsyncToString for String {
+        async fn async_to_string(&self) -> String {
+            "special".to_owned()
+        }
+    }
+
+    macro_rules! hide_from_stable_parser {
+        ($($tt:tt)*) => {
+            $($tt)*
+        };
+    }
+
+    hide_from_stable_parser! {
+        #[async_trait]
+        impl<T: ?Sized + Display + Sync> AsyncToString for T {
+            default async fn async_to_string(&self) -> String {
+                let mut buf = String::new();
+                buf.write_fmt(format_args!("{}", self)).unwrap();
+                buf
+            }
+        }
+    }
+
+    #[test]
+    fn test() {
+        let fut = true.async_to_string();
+        assert_eq!(executor::block_on_simple(fut), "true");
+
+        let string = String::new();
+        let fut = string.async_to_string();
+        assert_eq!(executor::block_on_simple(fut), "special");
+    }
+}
+
+// https://github.com/dtolnay/async-trait/issues/28
+pub mod issue28 {
+    use async_trait::async_trait;
+
+    struct Str<'a>(&'a str);
+
+    #[async_trait]
+    trait Trait1<'a> {
+        async fn f(x: Str<'a>) -> &'a str;
+        async fn g(x: Str<'a>) -> &'a str {
+            x.0
+        }
+    }
+
+    #[async_trait]
+    impl<'a> Trait1<'a> for str {
+        async fn f(x: Str<'a>) -> &'a str {
+            x.0
+        }
+    }
+
+    #[async_trait]
+    trait Trait2 {
+        async fn f();
+    }
+
+    #[async_trait]
+    impl<'a> Trait2 for &'a () {
+        async fn f() {}
+    }
+
+    #[async_trait]
+    trait Trait3<'a, 'b> {
+        async fn f(_: &'a &'b ()); // chain 'a and 'b
+        async fn g(_: &'b ()); // chain 'b only
+        async fn h(); // do not chain
+    }
+}
+
+// https://github.com/dtolnay/async-trait/issues/31
+pub mod issue31 {
+    use async_trait::async_trait;
+
+    pub struct Struct<'a> {
+        pub name: &'a str,
+    }
+
+    #[async_trait]
+    pub trait Trait<'a> {
+        async fn hello(thing: Struct<'a>) -> String;
+        async fn hello_twice(one: Struct<'a>, two: Struct<'a>) -> String {
+            let str1 = Self::hello(one).await;
+            let str2 = Self::hello(two).await;
+            str1 + &str2
+        }
+    }
+}
+
+// https://github.com/dtolnay/async-trait/issues/42
+pub mod issue42 {
+    use async_trait::async_trait;
+
+    #[async_trait]
+    pub trait Context: Sized {
+        async fn from_parts() -> Self;
+    }
+
+    pub struct TokenContext;
+
+    #[async_trait]
+    impl Context for TokenContext {
+        async fn from_parts() -> TokenContext {
+            TokenContext
+        }
+    }
+}
+
+// https://github.com/dtolnay/async-trait/issues/44
+pub mod issue44 {
+    use async_trait::async_trait;
+
+    #[async_trait]
+    pub trait StaticWithWhereSelf
+    where
+        Box<Self>: Sized,
+        Self: Sized + Send,
+    {
+        async fn get_one() -> u8 {
+            1
+        }
+    }
+
+    pub struct Struct;
+
+    #[async_trait]
+    impl StaticWithWhereSelf for Struct {}
+}
+
+// https://github.com/dtolnay/async-trait/issues/46
+pub mod issue46 {
+    use async_trait::async_trait;
+
+    macro_rules! implement_commands {
+        ($tyargs:tt : $ty:tt) => {
+            #[async_trait]
+            pub trait AsyncCommands: Sized {
+                async fn f<$tyargs: $ty>(&mut self, x: $tyargs) {
+                    self.f(x).await
+                }
+            }
+        };
+    }
+
+    implement_commands!(K: Send);
+}
+
+// https://github.com/dtolnay/async-trait/issues/53
+pub mod issue53 {
+    use async_trait::async_trait;
+
+    pub struct Unit;
+    pub struct Tuple(u8);
+    pub struct Struct {
+        pub x: u8,
+    }
+
+    #[async_trait]
+    pub trait Trait {
+        async fn method();
+    }
+
+    #[async_trait]
+    impl Trait for Unit {
+        async fn method() {
+            let _ = Self;
+        }
+    }
+
+    #[async_trait]
+    impl Trait for Tuple {
+        async fn method() {
+            let _ = Self(0);
+        }
+    }
+
+    #[async_trait]
+    impl Trait for Struct {
+        async fn method() {
+            let _ = Self { x: 0 };
+        }
+    }
+
+    #[async_trait]
+    impl Trait for std::marker::PhantomData<Struct> {
+        async fn method() {
+            let _ = Self;
+        }
+    }
+}
+
+// https://github.com/dtolnay/async-trait/issues/57
+#[cfg(async_trait_nightly_testing)]
+pub mod issue57 {
+    use crate::executor;
+    use async_trait::async_trait;
+
+    #[async_trait]
+    trait Trait {
+        async fn const_generic<T: Send, const C: usize>(_: [T; C]) {}
+    }
+
+    struct Struct;
+
+    #[async_trait]
+    impl Trait for Struct {
+        async fn const_generic<T: Send, const C: usize>(_: [T; C]) {}
+    }
+
+    #[test]
+    fn test() {
+        let fut = Struct::const_generic([0; 10]);
+        executor::block_on_simple(fut);
+    }
 }

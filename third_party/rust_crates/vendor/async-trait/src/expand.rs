@@ -1,8 +1,10 @@
 use crate::lifetime::{has_async_lifetime, CollectLifetimes};
 use crate::parse::Item;
-use crate::receiver::{has_self_in_block, has_self_in_sig, ReplaceReceiver};
+use crate::receiver::{
+    has_self_in_block, has_self_in_sig, has_self_in_where_predicate, ReplaceReceiver,
+};
 use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote, ToTokens};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::mem;
 use syn::punctuated::Punctuated;
 use syn::visit_mut::VisitMut;
@@ -33,6 +35,22 @@ enum Context<'a> {
         receiver: &'a Type,
         as_trait: &'a Path,
     },
+}
+
+impl Context<'_> {
+    fn lifetimes<'a>(&'a self, used: &'a [Lifetime]) -> impl Iterator<Item = &'a GenericParam> {
+        let generics = match self {
+            Context::Trait { generics, .. } => generics,
+            Context::Impl { impl_generics, .. } => impl_generics,
+        };
+        generics.params.iter().filter(move |param| {
+            if let GenericParam::Lifetime(param) = param {
+                used.contains(&param.lifetime)
+            } else {
+                false
+            }
+        })
+    }
 }
 
 type Supertraits = Punctuated<TypeParamBound, Token![+]>;
@@ -109,72 +127,69 @@ fn transform_sig(
         ReturnType::Type(_, ret) => quote!(#ret),
     };
 
-    let mut elided = CollectLifetimes::new();
+    let mut lifetimes = CollectLifetimes::new();
     for arg in sig.inputs.iter_mut() {
         match arg {
-            FnArg::Receiver(arg) => elided.visit_receiver_mut(arg),
-            FnArg::Typed(arg) => elided.visit_type_mut(&mut arg.ty),
+            FnArg::Receiver(arg) => lifetimes.visit_receiver_mut(arg),
+            FnArg::Typed(arg) => lifetimes.visit_type_mut(&mut arg.ty),
         }
     }
 
-    let lifetime: Lifetime;
-    if !sig.generics.params.is_empty() || !elided.lifetimes.is_empty() || has_self {
-        lifetime = parse_quote!('async_trait);
-        let where_clause = sig
-            .generics
-            .where_clause
-            .get_or_insert_with(|| WhereClause {
-                where_token: Default::default(),
-                predicates: Punctuated::new(),
-            });
-        for param in &sig.generics.params {
-            match param {
-                GenericParam::Type(param) => {
-                    let param = &param.ident;
-                    where_clause
-                        .predicates
-                        .push(parse_quote!(#param: #lifetime));
-                }
-                GenericParam::Lifetime(param) => {
-                    let param = &param.lifetime;
-                    where_clause
-                        .predicates
-                        .push(parse_quote!(#param: #lifetime));
-                }
-                GenericParam::Const(_) => {}
+    let where_clause = sig
+        .generics
+        .where_clause
+        .get_or_insert_with(|| WhereClause {
+            where_token: Default::default(),
+            predicates: Punctuated::new(),
+        });
+    for param in sig
+        .generics
+        .params
+        .iter()
+        .chain(context.lifetimes(&lifetimes.explicit))
+    {
+        match param {
+            GenericParam::Type(param) => {
+                let param = &param.ident;
+                where_clause
+                    .predicates
+                    .push(parse_quote!(#param: 'async_trait));
             }
+            GenericParam::Lifetime(param) => {
+                let param = &param.lifetime;
+                where_clause
+                    .predicates
+                    .push(parse_quote!(#param: 'async_trait));
+            }
+            GenericParam::Const(_) => {}
         }
-        for elided in elided.lifetimes {
-            sig.generics.params.push(parse_quote!(#elided));
-            where_clause
-                .predicates
-                .push(parse_quote!(#elided: #lifetime));
-        }
-        sig.generics.params.push(parse_quote!(#lifetime));
-        if has_self {
-            let bound: Ident = match sig.inputs.iter().next() {
-                Some(FnArg::Receiver(Receiver {
-                    reference: Some(_),
-                    mutability: None,
-                    ..
-                })) => parse_quote!(Sync),
-                _ => parse_quote!(Send),
-            };
-            let assume_bound = match context {
-                Context::Trait { supertraits, .. } => {
-                    !has_default || has_bound(supertraits, &bound)
-                }
-                Context::Impl { .. } => true,
-            };
-            where_clause.predicates.push(if assume_bound || is_local {
-                parse_quote!(Self: #lifetime)
-            } else {
-                parse_quote!(Self: core::marker::#bound + #lifetime)
-            });
-        }
-    } else {
-        lifetime = parse_quote!('static);
-    };
+    }
+    for elided in lifetimes.elided {
+        sig.generics.params.push(parse_quote!(#elided));
+        where_clause
+            .predicates
+            .push(parse_quote!(#elided: 'async_trait));
+    }
+    sig.generics.params.push(parse_quote!('async_trait));
+    if has_self {
+        let bound: Ident = match sig.inputs.iter().next() {
+            Some(FnArg::Receiver(Receiver {
+                reference: Some(_),
+                mutability: None,
+                ..
+            })) => parse_quote!(Sync),
+            _ => parse_quote!(Send),
+        };
+        let assume_bound = match context {
+            Context::Trait { supertraits, .. } => !has_default || has_bound(supertraits, &bound),
+            Context::Impl { .. } => true,
+        };
+        where_clause.predicates.push(if assume_bound || is_local {
+            parse_quote!(Self: 'async_trait)
+        } else {
+            parse_quote!(Self: ::core::marker::#bound + 'async_trait)
+        });
+    }
 
     for (i, arg) in sig.inputs.iter_mut().enumerate() {
         match arg {
@@ -195,14 +210,14 @@ fn transform_sig(
     }
 
     let bounds = if is_local {
-        quote!(#lifetime)
+        quote!('async_trait)
     } else {
-        quote!(core::marker::Send + #lifetime)
+        quote!(::core::marker::Send + 'async_trait)
     };
 
     sig.output = parse_quote! {
-        -> core::pin::Pin<Box<
-            dyn core::future::Future<Output = #ret> + #bounds
+        -> ::core::pin::Pin<Box<
+            dyn ::core::future::Future<Output = #ret> + #bounds
         >>
     };
 }
@@ -216,7 +231,7 @@ fn transform_sig(
 //     async fn f<T, AsyncTrait>(_self: &AsyncTrait, x: &T) -> Ret {
 //         _self + x
 //     }
-//     Pin::from(Box::new(async_trait_method::<T, Self>(self, x)))
+//     Box::pin(async_trait_method::<T, Self>(self, x))
 fn transform_block(
     context: Context,
     sig: &mut Signature,
@@ -227,7 +242,7 @@ fn transform_block(
     if cfg!(feature = "support_old_nightly") {
         let brace = block.brace_token;
         *block = parse_quote!({
-            core::pin::Pin::from(Box::new(async move #block))
+            Box::pin(async move #block)
         });
         block.brace_token = brace;
         return;
@@ -248,11 +263,30 @@ fn transform_block(
     let mut standalone = sig.clone();
     standalone.ident = inner.clone();
 
-    let outer_generics = match context {
+    let generics = match context {
         Context::Trait { generics, .. } => generics,
         Context::Impl { impl_generics, .. } => impl_generics,
     };
-    let fn_generics = mem::replace(&mut standalone.generics, outer_generics.clone());
+
+    let mut outer_generics = generics.clone();
+    if !has_self {
+        if let Some(mut where_clause) = outer_generics.where_clause {
+            where_clause.predicates = where_clause
+                .predicates
+                .into_iter()
+                .filter_map(|mut pred| {
+                    if has_self_in_where_predicate(&mut pred) {
+                        None
+                    } else {
+                        Some(pred)
+                    }
+                })
+                .collect();
+            outer_generics.where_clause = Some(where_clause);
+        }
+    }
+
+    let fn_generics = mem::replace(&mut standalone.generics, outer_generics);
     standalone.generics.params.extend(fn_generics.params);
     if let Some(where_clause) = fn_generics.where_clause {
         standalone
@@ -292,8 +326,8 @@ fn transform_block(
             match context {
                 Context::Trait { .. } => {
                     self_bound = Some(match mutability {
-                        Some(_) => parse_quote!(core::marker::Send),
-                        None => parse_quote!(core::marker::Sync),
+                        Some(_) => parse_quote!(::core::marker::Send),
+                        None => parse_quote!(::core::marker::Sync),
                     });
                     *arg = parse_quote! {
                         #under_self: &#lifetime #mutability AsyncTrait
@@ -318,7 +352,7 @@ fn transform_block(
             let under_self = Ident::new("_self", self_token.span);
             match context {
                 Context::Trait { .. } => {
-                    self_bound = Some(parse_quote!(core::marker::Send));
+                    self_bound = Some(parse_quote!(::core::marker::Send));
                     *arg = parse_quote! {
                         #mutability #under_self: AsyncTrait
                     };
@@ -371,12 +405,23 @@ fn transform_block(
     replace.visit_signature_mut(&mut standalone);
     replace.visit_block_mut(block);
 
+    let mut generics = types;
+    let consts = standalone
+        .generics
+        .const_params()
+        .map(|param| param.ident.clone());
+    generics.extend(consts);
+
     let brace = block.brace_token;
-    *block = parse_quote!({
-        #[allow(clippy::used_underscore_binding)]
+    let box_pin = quote_spanned!(brace.span=> {
+        #[allow(
+            clippy::missing_docs_in_private_items,
+            clippy::used_underscore_binding,
+        )]
         #standalone #block
-        core::pin::Pin::from(Box::new(#inner::<#(#types),*>(#(#args),*)))
+        Box::pin(#inner::<#(#generics),*>(#(#args),*))
     });
+    *block = parse_quote!(#box_pin);
     block.brace_token = brace;
 }
 

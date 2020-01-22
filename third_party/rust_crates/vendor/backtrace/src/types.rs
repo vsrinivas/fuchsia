@@ -1,16 +1,12 @@
 //! Platform dependent types.
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(feature = "std")] {
-        pub use std::os::raw::c_void;
         use std::borrow::Cow;
         use std::fmt;
         use std::path::PathBuf;
         use std::prelude::v1::*;
-    } else if #[cfg(rustc_1_30)] {
-        pub use core::ffi::c_void;
-    } else {
-        compile_error!("`backtrace` requires Rust >=1.30.0 to support `no_std`.");
+        use std::str;
     }
 }
 
@@ -29,6 +25,11 @@ pub enum BytesOrWideString<'a> {
 impl<'a> BytesOrWideString<'a> {
     /// Lossy converts to a `Cow<str>`, will allocate if `Bytes` is not valid
     /// UTF-8 or if `BytesOrWideString` is `Wide`.
+    ///
+    /// # Required features
+    ///
+    /// This function requires the `std` feature of the `backtrace` crate to be
+    /// enabled, and the `std` feature is enabled by default.
     pub fn to_str_lossy(&self) -> Cow<'a, str> {
         use self::BytesOrWideString::*;
 
@@ -39,35 +40,38 @@ impl<'a> BytesOrWideString<'a> {
     }
 
     /// Provides a `Path` representation of `BytesOrWideString`.
+    ///
+    /// # Required features
+    ///
+    /// This function requires the `std` feature of the `backtrace` crate to be
+    /// enabled, and the `std` feature is enabled by default.
     pub fn into_path_buf(self) -> PathBuf {
         #[cfg(unix)]
         {
-            use self::BytesOrWideString::*;
             use std::ffi::OsStr;
             use std::os::unix::ffi::OsStrExt;
 
-            match self {
-                Bytes(slice) => PathBuf::from(OsStr::from_bytes(slice)),
-                _ => unreachable!(),
+            if let BytesOrWideString::Bytes(slice) = self {
+                return PathBuf::from(OsStr::from_bytes(slice));
             }
         }
 
         #[cfg(windows)]
         {
-            use self::BytesOrWideString::*;
             use std::ffi::OsString;
             use std::os::windows::ffi::OsStringExt;
 
-            match self {
-                Wide(slice) => PathBuf::from(OsString::from_wide(slice)),
-                _ => unreachable!(),
+            if let BytesOrWideString::Wide(slice) = self {
+                return PathBuf::from(OsString::from_wide(slice));
             }
         }
 
-        #[cfg(all(not(windows), not(unix)))]
-        {
-            unreachable!()
+        if let BytesOrWideString::Bytes(b) = self {
+            if let Ok(s) = str::from_utf8(b) {
+                return PathBuf::from(s);
+            }
         }
+        unreachable!()
     }
 }
 
