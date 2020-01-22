@@ -763,7 +763,7 @@ zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
   enum_lock_release();
 
   // default_resume() returns ZX_ERR_NOT_SUPPORTED
-  if ((status != ZX_OK) && (status != ZX_ERR_NOT_SUPPORTED)) {
+  if (status != ZX_ERR_NOT_SUPPORTED) {
     return status;
   }
   return ZX_OK;
