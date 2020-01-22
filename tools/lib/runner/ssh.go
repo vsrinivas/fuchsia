@@ -37,10 +37,11 @@ func NewSSHRunner(client *ssh.Client, config *ssh.ClientConfig) *SSHRunner {
 // Run executes the given command, returning a *sshutil.ConnectionError if the
 // connection has become unresponsive.
 func (r *SSHRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
-	r.Lock()
-	defer r.Unlock()
 	if err := r.run(ctx, command, stdout, stderr); err != nil {
-		if checkErr := sshutil.CheckConnection(r.client); checkErr != nil {
+		r.Lock()
+		checkErr := sshutil.CheckConnection(r.client)
+		r.Unlock()
+		if checkErr != nil {
 			logger.Errorf(ctx, "ssh client not responsive: %v", err)
 			return checkErr
 		}
@@ -50,7 +51,9 @@ func (r *SSHRunner) Run(ctx context.Context, command []string, stdout, stderr io
 }
 
 func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
+	r.Lock()
 	session, err := r.client.NewSession()
+	r.Unlock()
 	if err != nil {
 		return fmt.Errorf("failed to create an SSH session: %v", err)
 	}
@@ -93,9 +96,9 @@ func (r *SSHRunner) Reconnect(ctx context.Context) error {
 		return fmt.Errorf("failed to create a new client: %v", err)
 	}
 	r.Lock()
-	defer r.Unlock()
 	r.client.Close()
 	r.client = client
+	r.Unlock()
 	return nil
 }
 
@@ -103,9 +106,9 @@ func (r *SSHRunner) Reconnect(ctx context.Context) error {
 // reconnect if unresponsive.
 func (r *SSHRunner) ReconnectIfNecessary(ctx context.Context) error {
 	r.Lock()
-	defer r.Unlock()
-
-	if err := sshutil.CheckConnection(r.client); err != nil {
+	err := sshutil.CheckConnection(r.client)
+	r.Unlock()
+	if err != nil {
 		logger.Errorf(ctx, "SSH connection unresponsive; trying to reconnect: %v", err)
 		return r.Reconnect(ctx)
 	}
