@@ -167,6 +167,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	go func() {
 		defer close(out)
 		scanner := bufio.NewScanner(reader)
+		scanner.Buffer(nil, 1024 * 1024)
 		for ; scanner.Scan(); lineno++ {
 			select {
 			case <-ctx.Done():
