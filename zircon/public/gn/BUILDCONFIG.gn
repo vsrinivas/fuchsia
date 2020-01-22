@@ -420,7 +420,9 @@ template("library") {
             get_path_info(get_label_info(label, "name"), "extension") ==
             "headers" ||
             get_path_info(get_label_info(label, "dir"), "dir") ==
-            "$zx/system/banjo") {
+            "$zx/system/banjo" ||
+            get_path_info(get_label_info(label, "dir"), "dir") ==
+            "$zx/system/fidl") {
           sdk_deps += [ label ]
         }
       }
