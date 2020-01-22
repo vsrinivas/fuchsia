@@ -131,7 +131,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/fdio/test",
       "$zx/system/ulib/ffl/test",
       "$zx/system/ulib/fidl-async/test:fidl-async-test",
-      "$zx/system/ulib/fit/test:fit-unittest",
       "$zx/system/ulib/framebuffer:framebuffer-test",
       "$zx/system/ulib/fs:test",
       "$zx/system/ulib/fs-pty/test",
