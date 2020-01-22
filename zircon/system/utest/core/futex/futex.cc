@@ -129,39 +129,8 @@ class TestThread {
     if (thread_handle_.is_valid()) {
       zx_status_t res =
           thread_handle_.wait_one(ZX_THREAD_TERMINATED, zx::deadline_after(zx::sec(10)), nullptr);
-      EXPECT_OK(res, "Thread did not terminate in a timely fashion!");
-      if (res == ZX_OK) {
-        // If we have already explicitly killed this thread, do not
-        // attempt to join it.
-        //
-        // The ZXR runtime currently depends on the thread thread_t
-        // exiting via it's trampoline in order to properly clean up and
-        // signal it's join waiters.  Attempting to join a thread which
-        // was explicitly killed using a task syscall will result in a
-        // hang.
-        //
-        // Note: This means that if we kill a thread created using the
-        // C11 thrd_t routines, then we are fundamentally leaking
-        // resources (such as the thread's internal handle, the stack,
-        // the thread's copy of the root VMAR handle, and so on).
-        // Generally speaking, this is Bad and we should not be doing
-        // it.  Unfortunately, ZXR does not provide a way to kill a
-        // thread directly, so it is difficult to construct our kill
-        // test in a way which says in sync with ZXR.
-        //
-        // At some point, either we need to figure out a way to keep ZXR
-        // in sync with direct kill methods (seems difficult), provide a
-        // way to kill and clean up from ZXR, or come back to this code
-        // and create threads without using the ZXR routines at all in
-        // order to avoid this situation.  Right now, we just deal with
-        // the fact that we are leaking resources and that they will be
-        // cleaned up when the test exits.
-        if (!explicitly_killed_) {
-          EXPECT_EQ(thrd_join(thread_, nullptr), thrd_success, "thrd_join failed");
-        }
-      } else {
-        EXPECT_OK(thread_handle_.kill(), "Failed to kill unresponsive thread!");
-      }
+      ASSERT_OK(res, "Thread did not terminate in a timely fashion!");
+      EXPECT_EQ(thrd_join(thread_, nullptr), thrd_success, "thrd_join failed");
       thread_handle_.reset();
     }
   }
@@ -171,26 +140,10 @@ class TestThread {
     ASSERT_EQ(state(), State::kWaitReturned, "Thread in wrong state");
   }
 
-  void WaitUntilInvoluntarilyTerminated() const {
-    ASSERT_TRUE(thread_handle_.is_valid());
-    ASSERT_TRUE(explicitly_killed_);
-
-    ASSERT_OK(thread_handle_.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr),
-              "Failed to wait for thread temination.");
-    EXPECT_EQ(state(), State::kAboutToWait);
-    EXPECT_EQ(wait_result(), ZX_ERR_INTERNAL);
-  }
-
   void CheckIsBlockedOnFutex() const {
     zx_thread_state_t state;
     ASSERT_NO_FATAL_FAILURES(GetThreadState(thread_handle_, &state));
     ASSERT_EQ(state, ZX_THREAD_STATE_BLOCKED_FUTEX);
-  }
-
-  void Kill() {
-    ASSERT_TRUE(thread_handle_.is_valid());
-    EXPECT_OK(thread_handle_.kill());
-    explicitly_killed_ = true;
   }
 
   const zx::thread& thread() const { return thread_handle_; }
@@ -222,7 +175,6 @@ class TestThread {
   zx::duration timeout_ = zx::duration::infinite();
   zx::thread thread_handle_;
   thrd_t thread_;
-  bool explicitly_killed_ = false;
 };
 
 void AssertWokeThreadCount(const TestThread threads[], uint32_t total_thread_count,
@@ -485,42 +437,6 @@ TEST(FutexTest, RequeueUnqueuedOnTimeout) {
   for (auto& t : threads) {
     ASSERT_NO_FATAL_FAILURES(t.Shutdown());
   }
-
-  cleanup.cancel();
-}
-
-// Test that we can successfully kill a thread that is waiting on a futex,
-// and that we can join the thread afterwards.  This checks that waiting on
-// a futex does not leave the thread in an unkillable state.
-TEST(FutexTest, ThreadKilled) {
-  fbl::futex_t futex_value1(1);
-
-  // TODO(johngro): Is this statement true?  It does not seem like it should
-  // be.   The MUSL thread handle should still be valid and keeping the thread
-  // object alive, even though the thread was killed.  In order to avoid
-  // leaking the handle, it seems like a user would _have_ to join the dead
-  // thread if we killed it directly using the zircon syscall.
-  //
-  // Note: TestThread will ensure the kernel thread died, though
-  // it's not possible to thrd_join after killing the thread.
-  TestThread thread;
-
-  // If something goes wrong and we bail out early, do our best to shut down as cleanly as we
-  auto cleanup = fbl::MakeAutoCall([&]() {
-    zx_futex_wake(&futex_value1, kThreadWakeAllCount);
-    thread.Shutdown();
-  });
-
-  ASSERT_NO_FATAL_FAILURES(thread.Start(&futex_value1));
-  ASSERT_NO_FATAL_FAILURES(thread.CheckIsBlockedOnFutex());
-  ASSERT_NO_FATAL_FAILURES(thread.Kill());
-
-  // Wait for the thread to make it to the DEAD state, and verify that it has
-  // not managed to update either its wait_result_ or state_ members.
-  ASSERT_NO_FATAL_FAILURES(thread.WaitUntilInvoluntarilyTerminated());
-
-  // TODO: update the way shutdown and kill work so that this is correct.
-  ASSERT_NO_FATAL_FAILURES(thread.Shutdown());
 
   cleanup.cancel();
 }
