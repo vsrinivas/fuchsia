@@ -29,13 +29,6 @@ enum {
   COMPONENT_COUNT,
 };
 
-// Device FIDL thunks
-fuchsia_hardware_audio_Device_ops_t TdmOutputStream::AUDIO_FIDL_THUNKS{
-    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
-      return reinterpret_cast<TdmOutputStream*>(ctx)->GetChannel(txn);
-    },
-};
-
 #define RegOffset(field) offsetof(aml_tdm_regs_t, field)
 
 TdmOutputStream::~TdmOutputStream() {}
@@ -210,7 +203,7 @@ void TdmOutputStream::DdkRelease() {
   auto thiz = fbl::ImportFromRawPtr(this);
 }
 
-zx_status_t TdmOutputStream::GetChannel(fidl_txn_t* txn) {
+void TdmOutputStream::GetChannel(GetChannelCompleter::Sync completer) {
   fbl::AutoLock lock(&lock_);
 
   // Attempt to allocate a new driver channel and bind it to us.  If we don't
@@ -219,8 +212,10 @@ zx_status_t TdmOutputStream::GetChannel(fidl_txn_t* txn) {
   // formats).
   bool privileged = (stream_channel_ == nullptr);
   auto channel = dispatcher::Channel::Create();
-  if (channel == nullptr)
-    return ZX_ERR_NO_MEMORY;
+  if (channel == nullptr) {
+    completer.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
 
   dispatcher::Channel::ProcessHandler phandler(
       [stream = fbl::RefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
@@ -246,10 +241,10 @@ zx_status_t TdmOutputStream::GetChannel(fidl_txn_t* txn) {
       stream_channel_ = channel;
     }
 
-    return fuchsia_hardware_audio_DeviceGetChannel_reply(txn, client_endpoint.release());
+    completer.Reply(std::move(client_endpoint));
+    return;
   }
-
-  return res;
+  completer.Close(ZX_ERR_INTERNAL);
 }
 
 #define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                    \

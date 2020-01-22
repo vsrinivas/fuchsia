@@ -28,7 +28,7 @@ zx_library("intel-hda") {
   public_deps = [
     # <intel-hda/codec-utils/stream-base.h> has #include <ddk/protocol/intelhda/codec.h>.
     "$zx/system/banjo/ddk.protocol.intelhda.codec",
-    "$zx/system/fidl/fuchsia-hardware-audio:c",
+    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
     "$zx/system/ulib/abs_clock",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/dispatcher-pool",

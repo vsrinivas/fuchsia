@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TDM_AUDIO_STREAM_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TDM_AUDIO_STREAM_H_
 
-#include <fuchsia/hardware/audio/c/fidl.h>
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/clock.h>
@@ -22,6 +22,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
@@ -38,7 +39,8 @@ using TdmAudioStreamBase = ddk::Device<TdmOutputStream, ddk::Messageable, ddk::U
 
 class TdmOutputStream : public TdmAudioStreamBase,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_OUTPUT>,
-                        public fbl::RefCounted<TdmOutputStream> {
+                        public fbl::RefCounted<TdmOutputStream>,
+                        public ::llcpp::fuchsia::hardware::audio::Device::Interface {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
@@ -48,7 +50,9 @@ class TdmOutputStream : public TdmAudioStreamBase,
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+    DdkTransaction transaction(txn);
+    llcpp::fuchsia::hardware::audio::Device::Dispatch(this, msg, &transaction);
+    return transaction.Status();
   }
 
  private:
@@ -71,7 +75,7 @@ class TdmOutputStream : public TdmAudioStreamBase,
   virtual ~TdmOutputStream();
 
   // Device FIDL implementation
-  zx_status_t GetChannel(fidl_txn_t* txn);
+  void GetChannel(GetChannelCompleter::Sync completer) override;
 
   zx_status_t Bind(const char* devname);
 
@@ -121,8 +125,6 @@ class TdmOutputStream : public TdmAudioStreamBase,
       __TA_REQUIRES(lock_);
   zx_status_t OnStopLocked(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
       __TA_REQUIRES(lock_);
-
-  static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
 
   fbl::Mutex lock_;
   fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);

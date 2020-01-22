@@ -21,18 +21,14 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
-// Device FIDL thunks
-fuchsia_hardware_audio_Device_ops_t IntelHDAStreamBase::AUDIO_FIDL_THUNKS{
-    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
-      return reinterpret_cast<IntelHDAStreamBase*>(ctx)->GetChannel(txn);
-    },
-};
-
 zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = []() {
   zx_protocol_device_t sdt = {};
   sdt.version = DEVICE_OPS_VERSION;
   sdt.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_audio_Device_dispatch(ctx, txn, msg, &AUDIO_FIDL_THUNKS);
+    IntelHDAStreamBase* thiz = static_cast<IntelHDAStreamBase*>(ctx);
+    DdkTransaction transaction(txn);
+    llcpp::fuchsia::hardware::audio::Device::Dispatch(thiz, msg, &transaction);
+    return transaction.Status();
   };
   return sdt;
 }();
@@ -300,12 +296,14 @@ zx_status_t IntelHDAStreamBase::SetDMAStreamLocked(uint16_t id, uint8_t tag) {
   return ZX_OK;
 }
 
-zx_status_t IntelHDAStreamBase::GetChannel(fidl_txn_t* txn) {
+void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync completer) {
   fbl::AutoLock obj_lock(&obj_lock_);
 
   // Do not allow any new connections if we are in the process of shutting down
-  if (!is_active())
-    return ZX_ERR_BAD_STATE;
+  if (!is_active()) {
+    completer.Close(ZX_ERR_BAD_STATE);
+    return;
+  }
 
   // For now, block new connections if we currently have no privileged
   // connection, but there is a SetFormat request in flight to the codec
@@ -326,16 +324,20 @@ zx_status_t IntelHDAStreamBase::GetChannel(fidl_txn_t* txn) {
   // that a portion of the TID is used for stream routing, while another
   // portion is used for requests like this.
   bool privileged = (stream_channel_ == nullptr);
-  if (privileged && (set_format_tid_ != AUDIO_INVALID_TRANSACTION_ID))
-    return ZX_ERR_SHOULD_WAIT;
+  if (privileged && (set_format_tid_ != AUDIO_INVALID_TRANSACTION_ID)) {
+    completer.Close(ZX_ERR_SHOULD_WAIT);
+    return;
+  }
 
   // Attempt to allocate a new driver channel and bind it to us.  If we don't
   // already have a stream_channel_, flag this channel is the privileged
   // connection (The connection which is allowed to do things like change
   // formats).
   auto channel = dispatcher::Channel::Create();
-  if (channel == nullptr)
-    return ZX_ERR_NO_MEMORY;
+  if (channel == nullptr) {
+    completer.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
 
   dispatcher::Channel::ProcessHandler phandler(
       [stream = fbl::RefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
@@ -358,10 +360,10 @@ zx_status_t IntelHDAStreamBase::GetChannel(fidl_txn_t* txn) {
       stream_channel_ = channel;
     }
 
-    fuchsia_hardware_audio_DeviceGetChannel_reply(txn, client_endpoint.release());
+    completer.Reply(std::move(client_endpoint));
+    return;
   }
-
-  return res;
+  completer.Close(ZX_ERR_INTERNAL);
 }
 
 zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(dispatcher::Channel* channel,

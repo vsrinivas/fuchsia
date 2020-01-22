@@ -31,13 +31,6 @@
 namespace audio {
 namespace usb {
 
-// Device FIDL thunks
-fuchsia_hardware_audio_Device_ops_t UsbAudioStream::AUDIO_FIDL_THUNKS{
-    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
-      return reinterpret_cast<UsbAudioStream*>(ctx)->GetChannel(txn);
-    },
-};
-
 static constexpr uint32_t MAX_OUTSTANDING_REQ = 8;
 
 static constexpr uint32_t ExtractSampleRate(const usb_audio_as_samp_freq& sr) {
@@ -244,7 +237,7 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
   ring_buffer_vmo_.reset();
 }
 
-zx_status_t UsbAudioStream::GetChannel(fidl_txn_t* txn) {
+void UsbAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
   fbl::AutoLock lock(&lock_);
 
   // Attempt to allocate a new driver channel and bind it to us.  If we don't
@@ -253,8 +246,10 @@ zx_status_t UsbAudioStream::GetChannel(fidl_txn_t* txn) {
   // formats).
   bool privileged = (stream_channel_ == nullptr);
   auto channel = dispatcher::Channel::Create();
-  if (channel == nullptr)
-    return ZX_ERR_NO_MEMORY;
+  if (channel == nullptr) {
+    completer.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
 
   dispatcher::Channel::ProcessHandler phandler(
       [stream = fbl::RefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
@@ -280,10 +275,10 @@ zx_status_t UsbAudioStream::GetChannel(fidl_txn_t* txn) {
       stream_channel_ = channel;
     }
 
-    return fuchsia_hardware_audio_DeviceGetChannel_reply(txn, client_endpoint.release());
+    completer.Reply(std::move(client_endpoint));
+    return;
   }
-
-  return res;
+  completer.Close(ZX_ERR_INTERNAL);
 }
 
 void UsbAudioStream::DdkUnbindNew(ddk::UnbindTxn txn) {

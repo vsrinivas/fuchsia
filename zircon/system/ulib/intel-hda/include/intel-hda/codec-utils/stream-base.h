@@ -5,7 +5,7 @@
 #ifndef INTEL_HDA_CODEC_UTILS_STREAM_BASE_H_
 #define INTEL_HDA_CODEC_UTILS_STREAM_BASE_H_
 
-#include <fuchsia/hardware/audio/c/fidl.h>
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include <utility>
@@ -14,6 +14,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/intelhda/codec.h>
+#include <ddktl/fidl.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -31,7 +32,8 @@ namespace codecs {
 class IntelHDACodecDriverBase;
 
 class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
-                           public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>> {
+                           public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>>,
+                           public ::llcpp::fuchsia::hardware::audio::Device::Interface {
  public:
   zx_status_t Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
                        const fbl::RefPtr<dispatcher::Channel>& codec_channel)
@@ -132,7 +134,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
 
  private:
   // fuchsia.hardware.audio.Device
-  zx_status_t GetChannel(fidl_txn_t* txn) __TA_EXCLUDES(obj_lock_);
+  void GetChannel(GetChannelCompleter::Sync completer) override;
 
   // Thunks for dispatching channel events.
   zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool privileged);
@@ -184,7 +186,6 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   static zx_status_t EncodeStreamFormat(const audio_proto::StreamSetFmtReq& fmt,
                                         uint16_t* encoded_fmt_out);
 
-  static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
   static zx_protocol_device_t STREAM_DEVICE_THUNKS;
 };
 

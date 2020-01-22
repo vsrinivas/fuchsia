@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_H_
 
-#include <fuchsia/hardware/audio/c/fidl.h>
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
@@ -15,6 +15,7 @@
 #include <audio-proto/audio-proto.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <fbl/intrusive_double_list.h>
@@ -46,7 +47,8 @@ using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::Messageable, ddk::Un
 class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
                        public fbl::RefCounted<UsbAudioStream>,
-                       public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>> {
+                       public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>>,
+                       public ::llcpp::fuchsia::hardware::audio::Device::Interface {
  public:
   static fbl::RefPtr<UsbAudioStream> Create(UsbAudioDevice* parent,
                                             std::unique_ptr<UsbAudioStreamInterface> ifc);
@@ -58,7 +60,9 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+    DdkTransaction transaction(txn);
+    llcpp::fuchsia::hardware::audio::Device::Dispatch(this, msg, &transaction);
+    return transaction.Status();
   }
 
  private:
@@ -81,7 +85,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
   // Device FIDL implementation
-  zx_status_t GetChannel(fidl_txn_t* txn);
+  void GetChannel(GetChannelCompleter::Sync completer) override;
 
   // Thunks for dispatching stream channel events.
   zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged);
@@ -125,8 +129,6 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void CompleteRequestLocked(usb_request_t* req) __TA_REQUIRES(req_lock_);
 
   static void RequestCompleteCallback(void* ctx, usb_request_t* request);
-
-  static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
 
   UsbAudioDevice& parent_;
   const std::unique_ptr<UsbAudioStreamInterface> ifc_;

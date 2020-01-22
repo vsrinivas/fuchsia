@@ -16,7 +16,7 @@ zx_library("audio-utils") {
     "audio-output.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-audio:c",
+    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",

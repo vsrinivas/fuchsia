@@ -6,10 +6,11 @@
 
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/audio/c/fidl.h>
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 
 #include <atomic>
 #include <utility>
@@ -33,7 +34,8 @@ using GaussPdmInputStreamBase = ddk::Device<GaussPdmInputStream, ddk::Messageabl
 
 class GaussPdmInputStream : public GaussPdmInputStreamBase,
                             public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_INPUT>,
-                            public fbl::RefCounted<GaussPdmInputStream> {
+                            public fbl::RefCounted<GaussPdmInputStream>,
+                            public ::llcpp::fuchsia::hardware::audio::Device::Interface {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
@@ -41,7 +43,9 @@ class GaussPdmInputStream : public GaussPdmInputStreamBase,
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
+    DdkTransaction transaction(txn);
+    llcpp::fuchsia::hardware::audio::Device::Dispatch(this, msg, &transaction);
+    return transaction.Status();
   }
 
  private:
@@ -54,7 +58,7 @@ class GaussPdmInputStream : public GaussPdmInputStreamBase,
   virtual ~GaussPdmInputStream();
 
   // Device FIDL implementation
-  zx_status_t GetChannel(fidl_txn_t* txn);
+  void GetChannel(GetChannelCompleter::Sync completer) override;
 
   int IrqThread();
 
@@ -98,8 +102,6 @@ class GaussPdmInputStream : public GaussPdmInputStreamBase,
 
   zx_status_t OnStop(dispatcher::Channel* channel, const audio_proto::RingBufStopReq& req)
       __TA_REQUIRES(lock_);
-
-  static fuchsia_hardware_audio_Device_ops_t AUDIO_FIDL_THUNKS;
 
   fbl::Mutex lock_;
 

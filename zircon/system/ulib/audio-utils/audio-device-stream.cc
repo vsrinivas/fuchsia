@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/audio/c/fidl.h>
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
@@ -101,19 +103,16 @@ zx_status_t AudioDeviceStream::Open() {
   if (stream_ch_ != ZX_HANDLE_INVALID)
     return ZX_ERR_BAD_STATE;
 
-  fbl::unique_fd fd{::open(name(), O_RDONLY)};
-  if (!fd.is_valid()) {
-    printf("Failed to open \"%s\"\n", name());
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  fzl::FdioCaller dev(std::move(fd));
-  zx_status_t res = fuchsia_hardware_audio_DeviceGetChannel(dev.borrow_channel(),
-                                                            stream_ch_.reset_and_get_address());
-
+  zx::channel local, remote;
+  auto res = zx::channel::create(0, &local, &remote);
   if (res != ZX_OK) {
-    printf("Failed to obtain channel (res %d)\n", res);
+    printf("Failed to create channel (res %d)\n", res);
   }
+  res = fdio_service_connect(name(), remote.release());
+  using Device = ::llcpp::fuchsia::hardware::audio::Device;
+  Device::SyncClient client_wrap(std::move(local));
+  Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
+  stream_ch_ = std::move(channel_wrap->channel);
 
   return res;
 }
