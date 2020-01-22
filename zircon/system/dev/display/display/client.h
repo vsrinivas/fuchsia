@@ -118,7 +118,7 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
   fbl::Array<zx_pixel_format_t> pixel_formats_;
   fbl::Array<cursor_info_t> cursor_infos_;
 
-  uint32_t vsync_layer_count_;
+  uint32_t vsync_layer_count_ = 0xffffffff;
   bool display_config_change_ = false;
 
   friend Client;
@@ -156,6 +156,9 @@ class Client : private FenceCallback {
   bool IsValid() { return server_handle_ != ZX_HANDLE_INVALID; }
   uint32_t id() const { return id_; }
   void CaptureCompleted();
+
+  // Test helpers
+  size_t TEST_imported_images_count() const { return images_.size(); }
 
  private:
   void HandleImportVmoImage(const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
@@ -341,8 +344,12 @@ class ClientProxy : public ClientParent {
   // This is used for testing
   void CloseTest();
 
- private:
+  // Test helpers
+  size_t TEST_imported_images_count() const { return handler_.TEST_imported_images_count(); }
+
+ protected:
   void CloseOnControllerLoop();
+  friend IntegrationTest;
 
   Controller* controller_;
   bool is_vc_;

@@ -888,7 +888,7 @@ void Client::HandleSetLayerImage(const fuchsia_hardware_display_ControllerSetLay
                                  fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
   auto layer = layers_.find(req->layer_id);
   if (!layer.IsValid()) {
-    zxlogf(ERROR, "SetLayerImage ordinal with invalid layer\n");
+    zxlogf(ERROR, "SetLayerImage ordinal with invalid layer %lu\n", req->layer_id);
     TearDown();
     return;
   }
