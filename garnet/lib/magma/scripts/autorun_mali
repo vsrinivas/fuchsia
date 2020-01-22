@@ -1,27 +1,10 @@
-#!/boot/bin/sh
-echo Welcome to magma autorun -- waiting for device
-while [ ! -e /dev/class/gpu/000 ]; do
-  echo "Device not found, sleeping"
-  sleep 1
-done
-
-if [ -z ${GTEST_OUTPUT+x} ]; then
-  gtest_output_arg=""
-else
-  gtest_output_arg=--gtest_output=$GTEST_OUTPUT
-fi
-echo [UNIT TEST START=]
-run-test-component magma_unit_tests $gtest_output_arg
-run-test-component msd_arm_mali_nonhardware_tests $gtest_output_arg
-echo [UNIT TEST END===]
-echo [INTEGRATION TEST START=]
-run-test-component magma_abi_conformance_tests $gtest_output_arg
-run-test-component msd_arm_mali_integration_tests $gtest_output_arg
-if [ -e /pkgfs/packages/vulkan-tests/0/test/vkext ]; then
-  run-test-component vkext $gtest_output_arg
-  run-test-component vkreadback $gtest_output_arg
-  run-test-component vk_timer_query_tests $gtest_output_arg
-else
-  echo SKIPPED app tests - no /pkgfs/packages/vulkan-tests/0/test/vkext
-fi
-echo [INTEGRATION TEST END===]
+/pkgfs/packages/magma_nonhardware_tests/0/test/magma_unit_tests
+/pkgfs/packages/msd_arm_mali_nonhardware_tests/0/test/msd_arm_mali_nonhardware_tests
+/pkgfs/packages/magma_abi_conformance_tests/0/test/magma_abi_conformance_tests
+/pkgfs/packages/msd-arm-mali-integration-tests/0/test/msd_arm_mali_integration_tests
+/pkgfs/packages/vulkan-tests/0/test/icd_load
+/pkgfs/packages/vulkan-tests/0/test/vkreadback
+/pkgfs/packages/vulkan-tests/0/test/vkloop
+/pkgfs/packages/vulkan-tests/0/test/vkext_protected 
+/pkgfs/packages/vulkan-tests/0/test/vkext_unprotected 
+/pkgfs/packages/vulkan-tests/0/test/vk_timer_query_tests

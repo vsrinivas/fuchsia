@@ -1,27 +1,12 @@
-#!/boot/bin/sh
-echo Welcome to magma autorun -- waiting for device
-while [ ! -e /dev/class/gpu/000 ]; do
-  echo "Device not found, sleeping"
-  sleep 1
-done
-if [ -z ${GTEST_OUTPUT+x} ]; then
-  gtest_output_arg=""
-else
-  gtest_output_arg=--gtest_output=$GTEST_OUTPUT
-fi
-echo [UNIT TEST START=]
-run-test-component magma_unit_tests $gtest_output_arg
-run-test-component msd_intel_gen_nonhardware_tests $gtest_output_arg
-### Mesa tests
-run-test-component mesa_unit_tests $gtest_output_arg
-run-test-component fuchsia-pkg://fuchsia.com/magma_intel_gen_nonhardware_tests#meta/state_pool.cmx $gtest_output_arg
-run-test-component state_pool_free_list_only $gtest_output_arg
-run-test-component state_pool_no_free $gtest_output_arg
-run-test-component block_pool_no_free $gtest_output_arg
-echo [UNIT TEST END===]
-echo [INTEGRATION TEST START=]
-run-test-component magma_abi_conformance_tests $gtest_output_arg
-run-test-component msd_intel_gen_integration_tests $gtest_output_arg --gtest_filter=-*Stress*
-run-test-component vkext_unprotected $gtest_output_arg
-run-test-component vkreadback $gtest_output_arg
-echo [INTEGRATION TEST END===]
+/pkgfs/packages/magma_nonhardware_tests/0/test/magma_unit_tests
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/msd_intel_gen_nonhardware_tests
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool_free_list_only 
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool_no_free 
+/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/block_pool_no_free 
+/pkgfs/packages/magma_abi_conformance_tests/0/test/magma_abi_conformance_tests
+/pkgfs/packages/magma_intel_gen_integration_tests/0/test/msd_intel_gen_integration_tests
+/pkgfs/packages/vulkan-tests/0/test/icd_load
+/pkgfs/packages/vulkan-tests/0/test/vkext_unprotected 
+/pkgfs/packages/vulkan-tests/0/test/vkreadback
+/pkgfs/packages/vulkan-tests/0/test/vkloop

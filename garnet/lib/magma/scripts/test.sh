@@ -8,8 +8,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$(cd "${script_dir}/../../../../tools/devshell" && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-test_out=/tmp/magma_test_out
-
 case "$1" in
 intel)
   fx-command-run cp "${script_dir}/autorun_intel" /tmp/magma_autorun
@@ -27,11 +25,4 @@ pvr)
   ;;
 esac
 
-fx-command-run shell "rm -rf ${test_out}; export GTEST_OUTPUT=xml:${test_out}/ && /boot/bin/sh /tmp/magma_autorun"
-
-rm -rf -- "${test_out}"
-mkdir "${test_out}"
-fx-command-run scp "[$(get-fuchsia-device-addr)]:${test_out}/*.xml" "${test_out}"
-
-echo "Grepping for failures:"
-grep failures "${test_out}"/* | grep -v 'failures=\"0\"'
+fx-command-run shell -t runtests -f /tmp/magma_autorun
