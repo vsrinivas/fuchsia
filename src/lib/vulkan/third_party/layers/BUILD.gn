@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 
 import("//build/package.gni")
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 package("screenshot_layer") {
   deprecated_system_image = true

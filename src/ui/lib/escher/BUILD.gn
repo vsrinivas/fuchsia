@@ -5,7 +5,7 @@
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 
 import("//src/ui/lib/escher/build_args.gni")
