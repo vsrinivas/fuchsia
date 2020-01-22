@@ -52,6 +52,7 @@ zx_test("minfs-integration") {
     "integration/integration_main.cc",
     "integration/minfs_fixtures.cc",
     "integration/mount_test.cc",
+    "integration/truncate_test.cc",
     "integration/utils.cc",
   ]
   deps = [
@@ -65,6 +66,7 @@ zx_test("minfs-integration") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs-test-utils",
+    "$zx/system/ulib/fs/test/posix:posix_tests",
     "$zx/system/ulib/fs/test_support",
     "$zx/system/ulib/memfs",
     "$zx/system/ulib/minfs",

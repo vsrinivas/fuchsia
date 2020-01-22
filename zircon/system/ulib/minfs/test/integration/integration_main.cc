@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   }
 
   config.mount_path = kMountPath;
-  config.ramdisk_block_count = 1 << 15;  // 16 MB.
+  config.ramdisk_block_count = 1 << 20;  // 1M blocks.
   config.format_type = DISK_FORMAT_MINFS;
 
   auto parent = std::make_unique<fs::Environment>(config);

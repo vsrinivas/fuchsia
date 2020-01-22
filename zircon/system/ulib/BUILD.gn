@@ -76,6 +76,7 @@ group("ulib") {
     "fs-test-utils",
     "fs/journal",
     "fs/metrics",
+    "fs/test/posix:posix_tests",
     "fs/transaction",
     "ftl",
     "fvm",

@@ -50,13 +50,13 @@ class FilesystemTest : public zxtest::Test {
   // Queries the filesystem for generic info.
   void GetFsInfo(::llcpp::fuchsia::io::FilesystemInfo* info);
 
+  bool CanBeRemounted() { return true; }
   void set_read_only(bool read_only) { read_only_ = read_only; }
   const std::string& device_path() const { return device_path_; }
   disk_format_type format_type() const { return environment_->format_type(); }
   const char* mount_path() const { return environment_->mount_path(); }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(FilesystemTest);
-
 
  protected:
   // Helper function for launching a filesystem and exposing it to tests. Including:

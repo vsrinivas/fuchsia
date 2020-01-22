@@ -1,0 +1,13 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("posix_tests") {
+  testonly = true
+  sources = [ "truncate.cc" ]
+  deps = [
+    "$zx/system/ulib/fs/test_support",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
