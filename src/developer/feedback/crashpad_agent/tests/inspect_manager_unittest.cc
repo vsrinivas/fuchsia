@@ -59,8 +59,7 @@ class InspectManagerTest : public testing::Test {
  public:
   void SetUp() override {
     inspector_ = std::make_unique<inspect::Inspector>();
-    clock_ = std::make_unique<timekeeper::TestClock>();
-    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
+    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_);
   }
 
  protected:
@@ -70,7 +69,7 @@ class InspectManagerTest : public testing::Test {
     return result.take_value();
   }
 
-  std::unique_ptr<timekeeper::TestClock> clock_;
+  timekeeper::TestClock clock_;
   std::unique_ptr<InspectManager> inspect_manager_;
 
  private:
@@ -88,7 +87,7 @@ TEST_F(InspectManagerTest, InitialInspectTree) {
 }
 
 TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
-  clock_->Set(kTime1);
+  clock_.Set(kTime1);
   EXPECT_TRUE(inspect_manager_->AddReport("program_1", "local_report_id_1"));
   EXPECT_THAT(
       InspectTree(),
@@ -100,7 +99,7 @@ TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
                         NameMatches("local_report_id_1"),
                         PropertyList(ElementsAre(StringIs("creation_time", kTime1Str))))))))))))));
 
-  clock_->Set(kTime2);
+  clock_.Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program_1", "local_report_id_2"));
   EXPECT_THAT(
       InspectTree(),
@@ -116,7 +115,7 @@ TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
                                                                     "creation_time", kTime2Str))))),
                                           })))))))));
 
-  clock_->Set(kTime3);
+  clock_.Set(kTime3);
   EXPECT_TRUE(inspect_manager_->AddReport("program_2", "local_report_id_3"));
   EXPECT_TRUE(inspect_manager_->AddReport("program_2", "local_report_id_4"));
   EXPECT_TRUE(inspect_manager_->AddReport("program_2", "local_report_id_5"));
@@ -151,7 +150,7 @@ TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
 
 TEST_F(InspectManagerTest, Succeed_AddReport_ProgramNameHasBackslashes) {
   const std::string program_name = "fuchsia-pkg://fuchsia.com/foo_bar.cmx";
-  clock_->Set(kTime1);
+  clock_.Set(kTime1);
   EXPECT_TRUE(inspect_manager_->AddReport(program_name, "local_report_id_1"));
   EXPECT_THAT(
       InspectTree(),
@@ -165,9 +164,9 @@ TEST_F(InspectManagerTest, Succeed_AddReport_ProgramNameHasBackslashes) {
 }
 
 TEST_F(InspectManagerTest, Fail_AddReport_DuplicateReport) {
-  clock_->Set(kTime2);
+  clock_.Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
-  clock_->Set(kTime3);
+  clock_.Set(kTime3);
   EXPECT_FALSE(inspect_manager_->AddReport("program", "local_report_id"));
   EXPECT_THAT(
       InspectTree(),
@@ -181,7 +180,7 @@ TEST_F(InspectManagerTest, Fail_AddReport_DuplicateReport) {
 }
 
 TEST_F(InspectManagerTest, Succeed_SetUploadAttempt) {
-  clock_->Set(kTime2);
+  clock_.Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
   EXPECT_TRUE(inspect_manager_->SetUploadAttempt("local_report_id", 1u));
   EXPECT_THAT(InspectTree(),
@@ -197,9 +196,9 @@ TEST_F(InspectManagerTest, Succeed_SetUploadAttempt) {
 }
 
 TEST_F(InspectManagerTest, Succeed_MarkReportAsUploaded) {
-  clock_->Set(kTime2);
+  clock_.Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
-  clock_->Set(kTime3);
+  clock_.Set(kTime3);
   EXPECT_TRUE(inspect_manager_->SetUploadAttempt("local_report_id", 1u));
   EXPECT_TRUE(inspect_manager_->MarkReportAsUploaded("local_report_id", "server_report_id"));
   EXPECT_THAT(InspectTree(),
@@ -222,7 +221,7 @@ TEST_F(InspectManagerTest, Succeed_MarkReportAsUploaded) {
 }
 
 TEST_F(InspectManagerTest, Succeed_MarkReportAsArchived) {
-  clock_->Set(kTime2);
+  clock_.Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
   EXPECT_TRUE(inspect_manager_->MarkReportAsArchived("local_report_id"));
   EXPECT_THAT(InspectTree(),
@@ -238,7 +237,7 @@ TEST_F(InspectManagerTest, Succeed_MarkReportAsArchived) {
 }
 
 TEST_F(InspectManagerTest, Succeed_MarkReportAsGarbageCollected) {
-  clock_->Set(kTime2);
+  clock_.Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
   EXPECT_TRUE(inspect_manager_->MarkReportAsGarbageCollected("local_report_id"));
   EXPECT_THAT(

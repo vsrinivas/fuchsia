@@ -131,34 +131,30 @@ TEST(TimeTest, FormatDuration_NegativeRandomNSec) {
   EXPECT_EQ(FormatDuration(kNegRndmNSecs), std::nullopt);
 }
 
-TEST(TimeTest, CurrentUTCTimeRaw_NullClock) { EXPECT_EQ(CurrentUTCTimeRaw(nullptr), std::nullopt); }
+TEST(TimeTest, CurrentUTCTimeRaw) {
+  timekeeper::TestClock clock;
 
-TEST(TimeTest, CurrentUTCTimeRaw_ValidClock) {
-  auto clock = std::make_unique<timekeeper::TestClock>();
+  clock.Set(kTime1);
+  EXPECT_EQ(CurrentUTCTimeRaw(clock), kTime1);
 
-  clock->Set(kTime1);
-  EXPECT_EQ(CurrentUTCTimeRaw(clock.get()), kTime1);
+  clock.Set(kTime2);
+  EXPECT_EQ(CurrentUTCTimeRaw(clock), kTime2);
 
-  clock->Set(kTime2);
-  EXPECT_EQ(CurrentUTCTimeRaw(clock.get()), kTime2);
-
-  clock->Set(kTime3);
-  EXPECT_EQ(CurrentUTCTimeRaw(clock.get()), kTime3);
+  clock.Set(kTime3);
+  EXPECT_EQ(CurrentUTCTimeRaw(clock), kTime3);
 }
 
-TEST(TimeTest, CurrentUTCTime_NullClock) { EXPECT_EQ(CurrentUTCTime(nullptr), std::nullopt); }
+TEST(TimeTest, CurrentUTCTime) {
+  timekeeper::TestClock clock;
 
-TEST(TimeTest, CurrentUTCTime_ValidClock) {
-  auto clock = std::make_unique<timekeeper::TestClock>();
+  clock.Set(kTime1);
+  EXPECT_EQ(CurrentUTCTime(clock), kTime1Str);
 
-  clock->Set(kTime1);
-  EXPECT_EQ(CurrentUTCTime(clock.get()), kTime1Str);
+  clock.Set(kTime2);
+  EXPECT_EQ(CurrentUTCTime(clock), kTime2Str);
 
-  clock->Set(kTime2);
-  EXPECT_EQ(CurrentUTCTime(clock.get()), kTime2Str);
-
-  clock->Set(kTime3);
-  EXPECT_EQ(CurrentUTCTime(clock.get()), kTime3Str);
+  clock.Set(kTime3);
+  EXPECT_EQ(CurrentUTCTime(clock), kTime3Str);
 }
 
 }  // namespace

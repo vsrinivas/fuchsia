@@ -123,9 +123,8 @@ class CrashpadAgentTest : public UnitTestFixture, public CobaltTestFixture {
 
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
     inspector_ = std::make_unique<inspect::Inspector>();
-    clock_ = std::make_unique<timekeeper::TestClock>();
-    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(),
-                                                  dispatcher(), services());
+    info_context_ =
+        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
     agent_ = CrashpadAgent::TryCreate(dispatcher(), services(), info_context_, std::move(config),
                                       std::move(crash_server));
     FXL_CHECK(agent_);
@@ -419,7 +418,7 @@ class CrashpadAgentTest : public UnitTestFixture, public CobaltTestFixture {
   StubCrashServer* crash_server_;
   std::string attachments_dir_;
   std::unique_ptr<inspect::Inspector> inspector_;
-  std::unique_ptr<timekeeper::TestClock> clock_;
+  timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
 };
 

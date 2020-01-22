@@ -23,7 +23,7 @@ namespace feedback {
 // Encapsulates the global state exposed through Inspect.
 class InspectManager {
  public:
-  InspectManager(inspect::Node* root_node, timekeeper::Clock* clock);
+  InspectManager(inspect::Node* root_node, const timekeeper::Clock& clock);
 
   // Exposes the static configuration of the crash reporter.
   void ExposeConfig(const feedback::Config& config);
@@ -127,11 +127,13 @@ class InspectManager {
   };
 
   InspectNodeManager node_manager_;
-  timekeeper::Clock* clock_;
+  const timekeeper::Clock& clock_;
+
   Config config_;
   Settings settings_;
   Database database_;
   Queue queue_;
+
   // Maps a local report ID to a |Report|.
   std::map<std::string, Report> reports_;
 

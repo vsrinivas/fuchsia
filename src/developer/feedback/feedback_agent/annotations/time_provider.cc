@@ -30,7 +30,7 @@ std::optional<std::string> GetUptime() {
   return uptime;
 }
 
-std::optional<std::string> GetUTCTime(Clock* clock) {
+std::optional<std::string> GetUTCTime(const Clock& clock) {
   const std::optional<std::string> time = CurrentUTCTime(clock);
   if (!time) {
     FX_LOGS(ERROR) << "error getting UTC time from timekeeper::Clock::Now()";
@@ -65,7 +65,7 @@ fit::promise<std::vector<Annotation>> TimeProvider::GetAnnotations() {
     if (annotation_key == kAnnotationDeviceUptime) {
       annotation_value = GetUptime();
     } else if (annotation_key == kAnnotationDeviceUTCTime) {
-      annotation_value = GetUTCTime(clock_.get());
+      annotation_value = GetUTCTime(*clock_);
     }
 
     if (annotation_value) {

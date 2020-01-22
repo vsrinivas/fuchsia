@@ -96,10 +96,9 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
   DatabaseTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture*/ this) {}
 
   void SetUp() override {
-    clock_ = std::make_unique<timekeeper::TestClock>();
     inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(),
-                                                  dispatcher(), services());
+    info_context_ =
+        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
 
     SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb);
     SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
@@ -189,7 +188,7 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
  protected:
-  std::unique_ptr<timekeeper::TestClock> clock_;
+  timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
   std::string attachments_dir_;
 
@@ -498,7 +497,7 @@ TEST_F(DatabaseTest, Attempt_Archive_AfterReportIsPruned) {
 }
 
 TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
-  clock_->Set(kTime);
+  clock_.Set(kTime);
 
   // Add a crash report.
   UUID local_report_id;
@@ -540,7 +539,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
 }
 
 TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
-  clock_->Set(kTime);
+  clock_.Set(kTime);
 
   // Add a crash report.
   UUID local_report_id;
@@ -572,7 +571,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
   // Set up the database with a max size of 0, meaning any reports in the database with size > 0
   // will get garbage collected.
   SetUpDatabase(/*max_size_in_kb=*/0u);
-  clock_->Set(kTime);
+  clock_.Set(kTime);
 
   // Add a crash report.
   UUID local_report_id;

@@ -82,8 +82,8 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
     (*annotations)[kEventIdKey] = report.event_id();
   }
 
-  timekeeper::SystemClock clock;
-  auto current_time = CurrentUTCTimeRaw(&clock);
+  const timekeeper::SystemClock clock;
+  auto current_time = CurrentUTCTimeRaw(clock);
 
   if (current_time.has_value()) {
     (*annotations)[kReportTimeMillis] =

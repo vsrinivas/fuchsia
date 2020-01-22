@@ -88,11 +88,10 @@ class QueueTest : public UnitTestFixture {
     expected_queue_contents_.clear();
 
     settings_.set_upload_policy(UploadPolicy::LIMBO);
-    clock_ = std::make_unique<timekeeper::TestClock>();
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(),
-                                                  dispatcher(), services());
+    info_context_ =
+        std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
     queue_ = Queue::TryCreate(dispatcher(), info_context_, crash_server_.get());
 
     ASSERT_TRUE(queue_);
@@ -225,7 +224,7 @@ class QueueTest : public UnitTestFixture {
   std::vector<bool>::const_iterator next_upload_attempt_result_;
 
   Settings settings_;
-  std::unique_ptr<timekeeper::TestClock> clock_;
+  timekeeper::TestClock clock_;
   std::unique_ptr<StubCrashServer> crash_server_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::shared_ptr<InfoContext> info_context_;
