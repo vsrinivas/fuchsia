@@ -15,7 +15,6 @@ group("uapp") {
     "disk-inspect",
     "disk-pave",
     "display-test",
-    "dlog",
     "driverctl",
     "fs-fsck",
     "fs-mkfs",
