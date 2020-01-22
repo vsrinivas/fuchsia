@@ -159,8 +159,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 16
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix4",
@@ -201,8 +200,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 16
+              }
             }
           ],
           "maybe_request_payload": "test.name/SomeLongAnonymousPrefix5",
@@ -244,8 +242,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 16
+              }
             }
           ],
           "maybe_request_payload": "test.name/SomeLongAnonymousPrefix6",
@@ -298,8 +295,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 16
+              }
             }
           ],
           "maybe_request_payload": "test.name/SomeLongAnonymousPrefix8",
@@ -329,8 +325,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 16
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix9",
@@ -396,8 +391,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 16
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix11",
@@ -461,8 +455,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 32
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix13",
@@ -516,8 +509,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 8
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix15",
@@ -571,8 +563,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 8
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix17",
@@ -629,8 +620,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 8
+              }
             },
             {
               "type": {
@@ -646,8 +636,7 @@
               "field_shape_v1": {
                 "offset": 24,
                 "padding": 0
-              },
-              "size": 8
+              }
             }
           ],
           "maybe_request_payload": "test.name/SomeLongAnonymousPrefix18",
@@ -690,8 +679,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 8
+              }
             },
             {
               "type": {
@@ -707,8 +695,7 @@
               "field_shape_v1": {
                 "offset": 24,
                 "padding": 0
-              },
-              "size": 8
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix19",
@@ -749,8 +736,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 8
+              }
             },
             {
               "type": {
@@ -766,8 +752,7 @@
               "field_shape_v1": {
                 "offset": 24,
                 "padding": 0
-              },
-              "size": 8
+              }
             }
           ],
           "maybe_request_payload": "test.name/SomeLongAnonymousPrefix20",
@@ -797,8 +782,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 0
-              },
-              "size": 8
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix21",
@@ -842,8 +826,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
-              },
-              "size": 4
+              }
             }
           ],
           "maybe_request_payload": "test.name/SomeLongAnonymousPrefix22",
@@ -876,8 +859,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
-              },
-              "size": 4
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix23",
@@ -921,8 +903,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {
@@ -959,8 +940,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {
@@ -997,8 +977,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {
@@ -1035,8 +1014,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {
@@ -1073,8 +1051,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {
@@ -1111,8 +1088,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {
@@ -1149,8 +1125,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 8
+          }
         },
         {
           "type": {
@@ -1166,8 +1141,7 @@
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
-          },
-          "size": 8
+          }
         },
         {
           "type": {
@@ -1183,8 +1157,7 @@
           "field_shape_v1": {
             "offset": 16,
             "padding": 0
-          },
-          "size": 8
+          }
         }
       ],
       "type_shape_v1": {
@@ -1222,8 +1195,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 32
+          }
         }
       ],
       "type_shape_v1": {
@@ -1281,8 +1253,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 8
+          }
         }
       ],
       "type_shape_v1": {
@@ -1340,8 +1311,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 8
+          }
         }
       ],
       "type_shape_v1": {
@@ -1378,8 +1348,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 8
+          }
         },
         {
           "type": {
@@ -1395,8 +1364,7 @@
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
-          },
-          "size": 8
+          }
         }
       ],
       "type_shape_v1": {
@@ -1433,8 +1401,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 8
+          }
         },
         {
           "type": {
@@ -1450,8 +1417,7 @@
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
-          },
-          "size": 8
+          }
         }
       ],
       "type_shape_v1": {
@@ -1488,8 +1454,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 8
+          }
         },
         {
           "type": {
@@ -1505,8 +1470,7 @@
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
-          },
-          "size": 8
+          }
         }
       ],
       "type_shape_v1": {
@@ -1543,8 +1507,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 8
+          }
         }
       ],
       "type_shape_v1": {
@@ -1584,8 +1547,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {
@@ -1625,8 +1587,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {
@@ -1670,9 +1631,7 @@
             "filename": "generated",
             "line": 16,
             "column": 1
-          },
-          "size": 24,
-          "offset": 8
+          }
         },
         {
           "xunion_ordinal": 2,
@@ -1686,9 +1645,7 @@
             "filename": "generated",
             "line": 17,
             "column": 1
-          },
-          "size": 4,
-          "offset": 8
+          }
         }
       ],
       "strict": true,
@@ -1730,9 +1687,7 @@
             "filename": "generated",
             "line": 23,
             "column": 1
-          },
-          "size": 1,
-          "offset": 4
+          }
         },
         {
           "xunion_ordinal": 2,
@@ -1746,9 +1701,7 @@
             "filename": "generated",
             "line": 24,
             "column": 1
-          },
-          "size": 4,
-          "offset": 4
+          }
         }
       ],
       "strict": true,
@@ -1790,9 +1743,7 @@
             "filename": "generated",
             "line": 30,
             "column": 1
-          },
-          "size": 1,
-          "offset": 4
+          }
         },
         {
           "xunion_ordinal": 2,
@@ -1807,9 +1758,7 @@
             "filename": "generated",
             "line": 31,
             "column": 1
-          },
-          "size": 4,
-          "offset": 4
+          }
         }
       ],
       "strict": true,

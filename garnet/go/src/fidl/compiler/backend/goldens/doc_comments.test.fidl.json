@@ -317,8 +317,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {
@@ -366,8 +365,7 @@
               "name": "Doc",
               "value": " table field comment #1\n\n table field comment #3\n"
             }
-          ],
-          "size": 4
+          ]
         }
       ],
       "strict": false,
@@ -416,9 +414,7 @@
               "name": "Doc",
               "value": " union member comment #1\n\n union member comment #3\n"
             }
-          ],
-          "size": 4,
-          "offset": 4
+          ]
         }
       ],
       "strict": true,

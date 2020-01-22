@@ -36,8 +36,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {
@@ -75,8 +74,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {
@@ -114,9 +112,7 @@
             "filename": "union.test.fidl",
             "line": 12,
             "column": 14
-          },
-          "size": 16,
-          "offset": 8
+          }
         },
         {
           "xunion_ordinal": 2,
@@ -131,9 +127,7 @@
             "filename": "union.test.fidl",
             "line": 13,
             "column": 14
-          },
-          "size": 16,
-          "offset": 8
+          }
         }
       ],
       "strict": true,
@@ -169,9 +163,7 @@
             "filename": "union.test.fidl",
             "line": 19,
             "column": 14
-          },
-          "size": 16,
-          "offset": 8
+          }
         },
         {
           "xunion_ordinal": 2,
@@ -204,9 +196,7 @@
             "filename": "union.test.fidl",
             "line": 20,
             "column": 14
-          },
-          "size": 16,
-          "offset": 8
+          }
         }
       ],
       "strict": true,
@@ -242,9 +232,7 @@
             "filename": "union.test.fidl",
             "line": 24,
             "column": 14
-          },
-          "size": 16,
-          "offset": 8
+          }
         },
         {
           "xunion_ordinal": 2,
@@ -259,9 +247,7 @@
             "filename": "union.test.fidl",
             "line": 25,
             "column": 14
-          },
-          "size": 16,
-          "offset": 8
+          }
         }
       ],
       "strict": false,
@@ -297,9 +283,7 @@
             "filename": "union.test.fidl",
             "line": 29,
             "column": 14
-          },
-          "size": 16,
-          "offset": 8
+          }
         },
         {
           "xunion_ordinal": 2,
@@ -314,9 +298,7 @@
             "filename": "union.test.fidl",
             "line": 30,
             "column": 14
-          },
-          "size": 16,
-          "offset": 8
+          }
         }
       ],
       "strict": true,

@@ -31,8 +31,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
-          },
-          "size": 1
+          }
         },
         {
           "type": {
@@ -52,8 +51,7 @@
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
-          },
-          "size": 16
+          }
         },
         {
           "type": {
@@ -74,8 +72,7 @@
           "field_shape_v1": {
             "offset": 24,
             "padding": 0
-          },
-          "size": 16
+          }
         },
         {
           "type": {
@@ -96,8 +93,7 @@
           "field_shape_v1": {
             "offset": 40,
             "padding": 0
-          },
-          "size": 16
+          }
         }
       ],
       "type_shape_v1": {

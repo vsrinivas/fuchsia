@@ -581,8 +581,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 8
+          }
         },
         {
           "type": {
@@ -608,8 +607,7 @@
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
-          },
-          "size": 16
+          }
         },
         {
           "type": {
@@ -635,8 +633,7 @@
           "field_shape_v1": {
             "offset": 24,
             "padding": 3
-          },
-          "size": 1
+          }
         },
         {
           "type": {
@@ -659,8 +656,7 @@
           "field_shape_v1": {
             "offset": 28,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -683,8 +679,7 @@
           "field_shape_v1": {
             "offset": 32,
             "padding": 4
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {

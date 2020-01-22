@@ -29,8 +29,7 @@
             "filename": "table.test.fidl",
             "line": 4,
             "column": 14
-          },
-          "size": 1
+          }
         },
         {
           "ordinal": 2,
@@ -44,8 +43,7 @@
             "filename": "table.test.fidl",
             "line": 5,
             "column": 13
-          },
-          "size": 1
+          }
         },
         {
           "ordinal": 3,
@@ -54,8 +52,7 @@
             "filename": "table.test.fidl",
             "line": 6,
             "column": 5
-          },
-          "size": 0
+          }
         }
       ],
       "strict": false,

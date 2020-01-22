@@ -61,8 +61,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
-              },
-              "size": 4
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix1",
@@ -116,8 +115,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
-              },
-              "size": 4
+              }
             }
           ],
           "maybe_response_payload": "test.name/SomeLongAnonymousPrefix3",
@@ -159,8 +157,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
-              },
-              "size": 4
+              }
             }
           ],
           "maybe_request_payload": "test.name/SomeLongAnonymousPrefix4",
@@ -203,8 +200,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 4
-              },
-              "size": 4
+              }
             }
           ],
           "maybe_request_payload": "test.name/SomeLongAnonymousPrefix5",
@@ -250,8 +246,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {
@@ -289,8 +284,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {
@@ -328,8 +322,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {
@@ -367,8 +360,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {

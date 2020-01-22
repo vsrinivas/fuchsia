@@ -409,11 +409,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value, bool is_request_
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_default_value)
       GenerateObjectMember("maybe_default_value", value.maybe_default_value);
-
     GenerateFieldShapes(value, is_request_or_response);
-    // TODO(fxb/43957): this should be removed or updated
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
   });
 }
 
@@ -446,10 +442,6 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       GenerateObjectMember("reserved", true);
       GenerateObjectMember("location", NameSpan(value.span.value()));
     }
-
-    // TODO(fxb/43957): this should be removed or updated
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
   });
 }
 
@@ -511,12 +503,6 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
-
-      // TODO(fxb/43957): this should be removed or updated
-      auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-      auto deprecated_field_shape = value.maybe_used->fieldshape(WireFormat::kOld);
-      GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-      GenerateObjectMember("offset", deprecated_field_shape.Offset());
     } else {
       GenerateObjectMember("reserved", true);
       GenerateObjectMember("location", NameSpan(value.span.value()));
@@ -549,12 +535,6 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
-
-      // TODO(fxb/43957): this should be removed or updated
-      auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-      auto deprecated_field_shape = value.maybe_used->fieldshape(WireFormat::kOld);
-      GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-      GenerateObjectMember("offset", deprecated_field_shape.Offset());
     } else {
       GenerateObjectMember("reserved", true);
       GenerateObjectMember("location", NameSpan(value.span.value()));

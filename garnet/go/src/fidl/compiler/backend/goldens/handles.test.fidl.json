@@ -34,8 +34,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -54,8 +53,7 @@
           "field_shape_v1": {
             "offset": 4,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -74,8 +72,7 @@
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -94,8 +91,7 @@
           "field_shape_v1": {
             "offset": 12,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -114,8 +110,7 @@
           "field_shape_v1": {
             "offset": 16,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -134,8 +129,7 @@
           "field_shape_v1": {
             "offset": 20,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -154,8 +148,7 @@
           "field_shape_v1": {
             "offset": 24,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -174,8 +167,7 @@
           "field_shape_v1": {
             "offset": 28,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -194,8 +186,7 @@
           "field_shape_v1": {
             "offset": 32,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -214,8 +205,7 @@
           "field_shape_v1": {
             "offset": 36,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -234,8 +224,7 @@
           "field_shape_v1": {
             "offset": 40,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -254,8 +243,7 @@
           "field_shape_v1": {
             "offset": 44,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -274,8 +262,7 @@
           "field_shape_v1": {
             "offset": 48,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -294,8 +281,7 @@
           "field_shape_v1": {
             "offset": 52,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -314,8 +300,7 @@
           "field_shape_v1": {
             "offset": 56,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -334,8 +319,7 @@
           "field_shape_v1": {
             "offset": 60,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -354,8 +338,7 @@
           "field_shape_v1": {
             "offset": 64,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -374,8 +357,7 @@
           "field_shape_v1": {
             "offset": 68,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -394,8 +376,7 @@
           "field_shape_v1": {
             "offset": 72,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -414,8 +395,7 @@
           "field_shape_v1": {
             "offset": 76,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -434,8 +414,7 @@
           "field_shape_v1": {
             "offset": 80,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -454,8 +433,7 @@
           "field_shape_v1": {
             "offset": 84,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -474,8 +452,7 @@
           "field_shape_v1": {
             "offset": 88,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -494,8 +471,7 @@
           "field_shape_v1": {
             "offset": 92,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -514,8 +490,7 @@
           "field_shape_v1": {
             "offset": 96,
             "padding": 0
-          },
-          "size": 4
+          }
         },
         {
           "type": {
@@ -534,8 +509,7 @@
           "field_shape_v1": {
             "offset": 100,
             "padding": 0
-          },
-          "size": 4
+          }
         }
       ],
       "type_shape_v1": {

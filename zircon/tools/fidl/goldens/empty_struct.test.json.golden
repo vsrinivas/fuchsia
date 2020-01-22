@@ -40,8 +40,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 7
-              },
-              "size": 1
+              }
             }
           ],
           "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix0",
@@ -85,8 +84,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 7
-              },
-              "size": 1
+              }
             }
           ],
           "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix1",
@@ -128,8 +126,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 7
-              },
-              "size": 1
+              }
             }
           ],
           "maybe_request_payload": "fidl.test.json/SomeLongAnonymousPrefix2",
@@ -160,8 +157,7 @@
               "field_shape_v1": {
                 "offset": 16,
                 "padding": 7
-              },
-              "size": 1
+              }
             }
           ],
           "maybe_response_payload": "fidl.test.json/SomeLongAnonymousPrefix3",
@@ -206,8 +202,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
-          },
-          "size": 1
+          }
         }
       ],
       "type_shape_v1": {
@@ -245,8 +240,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
-          },
-          "size": 1
+          }
         }
       ],
       "type_shape_v1": {
@@ -284,8 +278,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
-          },
-          "size": 1
+          }
         }
       ],
       "type_shape_v1": {
@@ -323,8 +316,7 @@
           "field_shape_v1": {
             "offset": 0,
             "padding": 7
-          },
-          "size": 1
+          }
         }
       ],
       "type_shape_v1": {
