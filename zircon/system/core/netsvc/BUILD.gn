@@ -118,3 +118,25 @@ zx_test("netsvc-test") {
   ]
   data_deps = [ ":netsvc" ]
 }
+
+zx_test("netsvc-stress-test") {
+  output_name = "netsvc-stress-test"
+  sources = [
+    "test/paver-stress-test.cc",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    ":netsvc_common",
+    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+  data_deps = [ ":netsvc" ]
+}

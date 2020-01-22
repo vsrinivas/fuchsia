@@ -24,6 +24,7 @@ if (current_cpu != "") {
       "$zx/system/core/devmgr/fshost:fshost-metrics-test",
       "$zx/system/core/devmgr/fshost:fshost-test",
       "$zx/system/core/netsvc:netsvc-test",
+      "$zx/system/core/netsvc:netsvc-stress-test",
       "$zx/system/core/ptysvc:ptysvc-test",
       "$zx/system/core/svchost:crashsvc-test",
       "$zx/system/dev/audio/codecs/max98373:max98373-test",
