@@ -2,16 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("thread-initial-state") {
-  sources = [ "init-state.c" ]
-  if (current_cpu == "x64") {
-    sources += [ "x86-64.S" ]
-  } else {
-    sources += [ "${zircon_cpu}.S" ]
-  }
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("thread-initial-state") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [
+    "${current_cpu}.S",
+    "init-state.c",
   ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/unittest",
+  ]
+  libs = [ "zircon" ]
+}
+
+migrated_manifest("thread-initial-state-manifest") {
+  deps = [ ":thread-initial-state" ]
 }
