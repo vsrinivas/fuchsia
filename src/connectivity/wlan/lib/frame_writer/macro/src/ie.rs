@@ -7,7 +7,7 @@ use {
     quote::quote,
     syn::{
         parse::{Parse, ParseStream},
-        Error, Expr, ExprIf, Ident, Result, Token,
+        Error, Expr, Ident, Result, Token,
     },
 };
 
@@ -61,7 +61,6 @@ macro_rules! declare_var {
     ($name:expr, $optional:expr, $expr:expr) => {
         match $expr {
             Expr::If(if_expr) => {
-                let if_expr: &ExprIf = if_expr;
                 if if_expr.else_branch.is_some() {
                     if $optional {
                         quote!(let $name: Option<_> = #if_expr;)
@@ -219,7 +218,9 @@ impl BufferWrite for IeDefinition {
             Ie::DsssParamSet => {
                 apply_on!(dsss, &self.value, ie::write_dsss_param_set(&mut w, &dsss)?)
             }
-            Ie::Wpa1 => apply_on!(wpa1, &self.value, ie::write_wpa1_ie(&mut w, &wpa1)?),
+            Ie::Wpa1 => {
+                apply_on!(wpa1, self.optional, &self.value, ie::write_wpa1_ie(&mut w, &wpa1)?)
+            }
         })
     }
 
@@ -261,6 +262,7 @@ impl Parse for IeDefinition {
             | Expr::Tuple(_)
             | Expr::Unary(_)
             | Expr::Index(_)
+            | Expr::Match(_)
             | Expr::Path(_) => (),
             other => {
                 return Err(Error::new(
