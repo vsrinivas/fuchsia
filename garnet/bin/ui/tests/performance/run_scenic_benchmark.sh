@@ -106,11 +106,11 @@ TRACE_FILE="/tmp/trace-${DATE}.json"
 
 kill_processes() {
   echo "== $BENCHMARK_LABEL: Killing processes..."
-  killall root_presenter* || true
-  killall scenic* || true
-  killall basemgr* || true
-  killall flutter* || true
-  killall present_view* || true
+  killall "root_presenter*" || true
+  killall "scenic*" || true
+  killall "basemgr*" || true
+  killall "flutter*" || true
+  killall "present_view*" || true
 }
 
 kill_processes

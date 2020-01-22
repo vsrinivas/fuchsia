@@ -31,13 +31,13 @@ TRACE_FILE="/tmp/trace-$(date +%Y-%m-%dT%H:%M:%S).json"
 
 echo "== $BENCHMARK_LABEL: Killing processes..."
 kill_processes() {
-  killall root_presenter* || true
-  killall scenic* || true
-  killall basemgr* || true
-  killall view_manager* || true
-  killall flutter* || true
-  killall present_view* || true
-  killall yuv_to_image_pipe* || true
+  killall "root_presenter*" || true
+  killall "scenic*" || true
+  killall "basemgr*" || true
+  killall "view_manager*" || true
+  killall "flutter*" || true
+  killall "present_view*" || true
+  killall "yuv_to_image_pipe*" || true
 }
 
 kill_processes
