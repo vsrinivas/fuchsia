@@ -182,6 +182,7 @@ zbi("zbi") {
     images = [
       {
         if (custom_signing_script == "" && !use_vboot) {
+          archive = true
           bootserver_pave = [ "--zirconr" ]
           bootserver_pave_zedboot = [ "--zircona" ]
         }
@@ -206,6 +207,7 @@ if (custom_signing_script != "") {
     metadata = {
       images = [
         {
+          archive = true
           bootserver_pave = [ "--zirconr" ]
           bootserver_pave_zedboot = [ "--zircona" ]
           name = "zircon-r.signed"
@@ -223,6 +225,7 @@ if (custom_signing_script != "") {
     metadata = {
       images = [
         {
+          archive = true
           bootserver_pave = [ "--zirconr" ]
           bootserver_pave_zedboot = [ "--zircona" ]
           name = "zircon-r.signed"
@@ -268,7 +271,6 @@ if (use_vbmeta) {
       images = [
         {
           archive = true
-
           bootserver_pave = [ "--vbmetar" ]
           bootserver_pave_zedboot = [ "--vbmetaa" ]
           name = "zircon-r"

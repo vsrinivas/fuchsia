@@ -117,7 +117,8 @@ class NilArchiver(object):
 
     def add_path(self, path, name, executable):
         # Check that the source path exists.
-        assert (os.path.exists(path))
+        assert os.path.exists(path), (
+            "missing input file %s for %s" % (path, name))
 
     def add_contents(self, contents, name, executable):
         pass
@@ -299,10 +300,7 @@ def main():
     if args.archive:
         outfile = args.archive
         archive_images = [
-            image for image in images if (
-                image.get('archive', False) or 'bootserver_pave' in image or
-                'bootserver_pave_zedboot' in image or
-                'bootserver_netboot' in image)
+            image for image in images if image.get('archive', False)
         ]
         files_read |= set(image['path'] for image in archive_images)
         write_archive(

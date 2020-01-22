@@ -127,13 +127,6 @@ group("packages") {
     ":meta_packages",
     ":universe_packages",
   ]
-
-  if (enable_netboot || bootfs_only) {
-    data_deps = [
-      ":netboot",
-      ":netboot-script",
-    ]
-  }
 }
 
 template("package_list") {
@@ -736,6 +729,7 @@ zbi("fuchsia") {
         path = "fuchsia.zbi"
         type = "zbi"
 
+        archive = true
         bootserver_pave = []
 
         # TODO(ZX-2069): we want to reduce the usage of mexec, but currently we
@@ -768,6 +762,7 @@ zbi("fuchsia") {
     if (bootfs_only) {
       images += [
         {
+          archive = true
           bootserver_netboot = [ "--boot" ]
           name = "fuchsia"
           path = "fuchsia.zbi"
@@ -830,6 +825,7 @@ if (custom_signing_script != "") {
     metadata = {
       images = [
         {
+          archive = true
           bootserver_pave = [ "--zircona" ]
           name = "zircon-a.signed"
           path = "$output_name.signed"
@@ -849,6 +845,7 @@ if (custom_signing_script != "") {
     metadata = {
       images = [
         {
+          archive = true
           bootserver_pave = [ "--zircona" ]
           name = "zircon-a.signed"
           path = "$output_name.vboot"
@@ -1168,6 +1165,7 @@ if (!bootfs_only) {
     metadata = {
       images = [
         {
+          archive = true
           bootserver_pave = [ "--fvm" ]
           name = "storage-sparse"
           path = rebased_output_name
@@ -1260,6 +1258,7 @@ if (!bootfs_only) {
     metadata = {
       images = [
         {
+          archive = enable_netboot
           bootserver_netboot = [ "--boot" ]
           name = "netboot"
           path = "netboot.zbi"
@@ -1278,7 +1277,6 @@ if (!bootfs_only) {
       ]
     }
   }
-  default_image_deps += [ ":netboot" ]
 } else {
   # The bootfs_only image is already a netboot'able image.
   group("netboot") {
@@ -1320,6 +1318,7 @@ if (target_cpu != "arm64" && !use_vboot) {
     metadata = {
       images = [
         {
+          archive = true
           bootserver_pave = [ "--bootloader" ]
           bootserver_pave_zedboot = [ "--bootloader" ]
           name = "efi"
@@ -1351,6 +1350,7 @@ if (target_cpu != "arm64" && !use_vboot) {
       metadata = {
         images = [
           {
+            archive = true
             bootserver_pave = [ "--bootloader" ]
             bootserver_pave_zedboot = [ "--bootloader" ]
             name = "efi"
@@ -1452,6 +1452,7 @@ paver_targets = [
     outputs = [ "$root_build_dir/netboot.sh" ]
     switch = "--netboot="
     extra_bootserver_arguments = ""
+    deps = [ ":netboot" ]
     metadata = {
       name = "netboot"
       path = "netboot.sh"
@@ -1529,9 +1530,11 @@ foreach(target, paver_targets) {
       ":default-images",
       ":flash_script",
       ":ids.txt",
-      ":netboot",
       "zedboot",
     ]
+    if (defined(target.deps)) {
+      deps += target.deps
+    }
     testonly = true
     outputs = target.outputs
     depfile = "${outputs[0]}.d"
@@ -2085,6 +2088,9 @@ group("images") {
     ":zedboot-script",
     "//build/images/zedboot",
   ]
+  if (enable_netboot) {
+    deps += [ ":netboot-script" ]
+  }
 }
 
 group("default-images") {
