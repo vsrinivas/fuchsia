@@ -8,6 +8,12 @@
 #include "aml-clk-blocks.h"
 #include "aml-g12a-blocks.h"
 
+namespace sm1_clk {
+constexpr uint32_t kHhiGp1PllCntl0    = 0x18;
+constexpr uint32_t kHhiSysCpuClkCntl5 = 0x87;
+constexpr uint32_t kHhiSysCpuClkCntl6 = 0x88;
+}  // sm1_clk
+
 static constexpr meson_clk_gate_t sm1_clk_gates[] = {
         // SYS CPU Clock gates.
     {.reg = kHhiSysCpuClkCntl1, .bit = 24},  // CLK_SYS_PLL_DIV16
@@ -91,7 +97,25 @@ static constexpr meson_clk_gate_t sm1_clk_gates[] = {
     {.reg = kHhiGclkMpeg2, .bit = 29},  // CLK_CSI_PHY
 };
 
-static_assert(sm1_clk::CLK_SM1_COUNT == countof(sm1_clk_gates),
+static_assert(sm1_clk::CLK_SM1_GATE_COUNT == countof(sm1_clk_gates),
               "sm1_clk_gates[] and CLK_SM1_COUNT count mismatch");
+
+static constexpr uint32_t kGenClkSelInputs[] = { 0, 5, 6, 7, 20, 21, 22, 23, 24, 25, 26, 27, 28 };
+static constexpr uint32_t kClk81Inputs[] = { 6, 5, 7 };
+static constexpr meson_clk_mux_t sm1_muxes[] = {
+    { .reg = kHhiGenClkCntl,              .mask = 0x1f, .shift = 12, .n_inputs = 13, .inputs = kGenClkSelInputs },   // CLK_GEN_CLK_SEL
+    { .reg = kHhiVipnanoqClkCntl,         .mask = 0x7,  .shift = 9,  .n_inputs = 8,  .inputs = nullptr },  // CLK_CTS_VIPNANOQ_CORE_CLK_MUX
+    { .reg = kHhiVipnanoqClkCntl,         .mask = 0x7,  .shift = 25, .n_inputs = 8,  .inputs = nullptr },  // CLK_CTS_VIPNANOQ_AXI_CLK_MUX
+    { .reg = sm1_clk::kHhiSysCpuClkCntl5, .mask = 0x3,  .shift = 0,  .n_inputs = 4,  .inputs = nullptr },  // CLK_DSU_PRE_SRC0
+    { .reg = sm1_clk::kHhiSysCpuClkCntl5, .mask = 0x3,  .shift = 16, .n_inputs = 4,  .inputs = nullptr },  // CLK_DSU_PRE_SRC1
+    { .reg = sm1_clk::kHhiSysCpuClkCntl5, .mask = 0x1,  .shift = 18, .n_inputs = 2,  .inputs = nullptr },  // CLK_DSU_PRE1
+    { .reg = sm1_clk::kHhiSysCpuClkCntl5, .mask = 0x1,  .shift = 10, .n_inputs = 2,  .inputs = nullptr },  // CLK_DSU_PRE_POST
+    { .reg = sm1_clk::kHhiSysCpuClkCntl5, .mask = 0x1,  .shift = 11, .n_inputs = 2,  .inputs = nullptr },  // CLK_DSU_PRE_CLK
+    { .reg = sm1_clk::kHhiSysCpuClkCntl6, .mask = 0x1,  .shift = 27, .n_inputs = 2,  .inputs = nullptr },  // CLK_DSU_CLK
+    { .reg = kHhiMpegClkCntl,             .mask = 0x7,  .shift = 12, .n_inputs = 3,  .inputs = kClk81Inputs },  // CLK_MPEG_CLK_SEL
+};
+
+static_assert(sm1_clk::CLK_SM1_MUX_COUNT == countof(sm1_muxes),
+              "sm1_clk_muxes and CLK_SM1_MUX_COUNT count mismatch");
 
 // clang-format off

@@ -84,6 +84,9 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
       gates_ = sm1_clk_gates;
       gate_count_ = countof(sm1_clk_gates);
 
+      muxes_ = sm1_muxes;
+      mux_count_ = countof(sm1_muxes);
+
       break;
     }
     default:
@@ -194,10 +197,10 @@ zx_status_t AmlClock::ClockImplEnable(uint32_t clk) {
       return ClkToggle(clkid, true);
     case aml_clk_common::aml_clk_type::kMesonPll:
       return ClkTogglePll(clkid, true);
+    default:
+    // Not a supported clock type?
+    return ZX_ERR_NOT_SUPPORTED;
   }
-
-  // Not a supported clock type?
-  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
@@ -210,10 +213,10 @@ zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
       return ClkToggle(clkid, false);
     case aml_clk_common::aml_clk_type::kMesonPll:
       return ClkTogglePll(clkid, false);
-  }
-
-  // Not a supported clock type?
-  return ZX_ERR_NOT_SUPPORTED;
+    default:
+    // Not a supported clock type?
+    return ZX_ERR_NOT_SUPPORTED;
+  };
 }
 
 zx_status_t AmlClock::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
@@ -286,14 +289,111 @@ zx_status_t AmlClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) 
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t AmlClock::IsSupportedMux(const uint32_t id, const uint16_t kSupportedMask) {
+  const uint16_t index = aml_clk_common::AmlClkIndex(id);
+  const uint16_t type = static_cast<uint16_t>(aml_clk_common::AmlClkType(id));
+
+  if ((type & kSupportedMask) == 0) {
+    zxlogf(ERROR, "%s: Unsupported mux type for operation, clkid = %u\n", __func__, id);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (!muxes_ || mux_count_ == 0) {
+    zxlogf(ERROR, "%s: Platform does not have mux support.\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (index >= mux_count_) {
+    zxlogf(ERROR, "%s: Mux index out of bounds, count = %lu, idx = %u\n",
+                  __func__, mux_count_, index);
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return ZX_OK;
+}
+
+
+zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
+  constexpr uint16_t kSupported = static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMux);
+  zx_status_t st = IsSupportedMux(id, kSupported);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  const uint16_t index = aml_clk_common::AmlClkIndex(id);
+
+  fbl::AutoLock al(&lock_);
+
+  const meson_clk_mux_t& mux = muxes_[index];
+
+  if (idx >= mux.n_inputs) {
+    zxlogf(ERROR, "%s: mux input index out of bounds, max = %u, idx = %u.\n",
+                  __func__, mux.n_inputs, idx);
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  uint32_t clkidx;
+  if (mux.inputs) {
+    clkidx = mux.inputs[idx];
+  } else {
+    clkidx = idx;
+  }
+
+  uint32_t val = hiu_mmio_.Read32(mux.reg);
+  val &= ~(mux.mask << mux.shift);
+  val |= (clkidx & mux.mask) << mux.shift;
+  hiu_mmio_.Write32(val, mux.reg);
+
+  return ZX_OK;
+}
 
 zx_status_t AmlClock::ClockImplGetNumInputs(uint32_t id, uint32_t* out_num_inputs) {
-  return ZX_ERR_NOT_SUPPORTED;
+  constexpr uint16_t kSupported =
+    (static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMux) |
+     static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMuxRo));
+
+  zx_status_t st = IsSupportedMux(id, kSupported);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  const uint16_t index = aml_clk_common::AmlClkIndex(id);
+
+  const meson_clk_mux_t& mux = muxes_[index];
+
+  *out_num_inputs = mux.n_inputs;
+
+  return ZX_OK;
 }
 
 zx_status_t AmlClock::ClockImplGetInput(uint32_t id, uint32_t* out_input) {
-  return ZX_ERR_NOT_SUPPORTED;
+  // Bitmask representing clock types that support this operation.
+  constexpr uint16_t kSupported =
+    (static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMux) |
+     static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMuxRo));
+
+  zx_status_t st = IsSupportedMux(id, kSupported);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  const uint16_t index = aml_clk_common::AmlClkIndex(id);
+
+  const meson_clk_mux_t& mux = muxes_[index];
+
+  const uint32_t result = (hiu_mmio_.Read32(mux.reg) >> mux.shift) & mux.mask;
+
+  if (mux.inputs) {
+    for (uint32_t i = 0; i < mux.n_inputs; i++) {
+      if (result == mux.inputs[i]) {
+        *out_input = i;
+        return ZX_OK;
+      }
+    }
+  }
+
+  *out_input = result;
+  return ZX_OK;
 }
 
 // Note: The clock index taken here are the index of clock

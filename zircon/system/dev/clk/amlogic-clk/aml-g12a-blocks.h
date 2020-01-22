@@ -80,6 +80,7 @@ constexpr uint32_t kHhiVidPllClkDiv          = (0x68 << 2);
 constexpr uint32_t kHhiDvalinClkCntl         = (0x6c << 2);
 constexpr uint32_t kHhiVpuClkcCntl           = (0x6D << 2);
 constexpr uint32_t kHhiVpuClkCntl            = (0x6F << 2);
+constexpr uint32_t kHhiVipnanoqClkCntl       = (0x72 << 2);
 constexpr uint32_t kHhiHdmiClkCntl           = (0x73 << 2);
 constexpr uint32_t kHhiEthClkCntl            = (0x76 << 2);
 constexpr uint32_t kHhiVdecClkCntl           = (0x78 << 2);

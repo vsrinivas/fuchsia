@@ -6,7 +6,12 @@
 
 namespace aml_clk_common {
 
-enum class aml_clk_type : uint16_t { kMesonGate = 0, kMesonPll };
+enum class aml_clk_type : uint16_t {
+  kMesonGate  = (1 << 0),
+  kMesonPll   = (1 << 1),
+  kMesonMux   = (1 << 2),
+  kMesonMuxRo = (1 << 3),
+};
 
 // Create a clock ID based on a type and an index
 constexpr uint32_t AmlClkId(const uint16_t index, const aml_clk_type type) {

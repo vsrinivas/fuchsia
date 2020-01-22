@@ -85,8 +85,20 @@ constexpr uint32_t CLK_CSI_HOST = AmlClkId(69, aml_clk_common::aml_clk_type::kMe
 constexpr uint32_t CLK_CSI_ADPAT = AmlClkId(70, aml_clk_common::aml_clk_type::kMesonGate);
 constexpr uint32_t CLK_TEMP_SENSOR = AmlClkId(71, aml_clk_common::aml_clk_type::kMesonGate);
 constexpr uint32_t CLK_CSI_PHY = AmlClkId(72, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_SM1_GATE_COUNT = 73;
 
-constexpr uint32_t CLK_SM1_COUNT = 73;
+// Muxes
+constexpr uint32_t CLK_GEN_CLK_SEL = AmlClkId(0, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_CTS_VIPNANOQ_CORE_CLK_MUX = AmlClkId(1, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_CTS_VIPNANOQ_AXI_CLK_MUX = AmlClkId(2, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_DSU_PRE_SRC0 = AmlClkId(3, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_DSU_PRE_SRC1 = AmlClkId(4, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_DSU_PRE1 = AmlClkId(5, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_DSU_PRE_POST = AmlClkId(6, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_DSU_PRE_CLK = AmlClkId(7, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_DSU_CLK = AmlClkId(8, aml_clk_common::aml_clk_type::kMesonMux);
+constexpr uint32_t CLK_MPEG_CLK_SEL = AmlClkId(9, aml_clk_common::aml_clk_type::kMesonMuxRo);
+constexpr uint32_t CLK_SM1_MUX_COUNT = 10;
 
 
 // kMesonPllClocks

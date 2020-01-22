@@ -73,6 +73,10 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   // Toggle enable bit for PLL clocks.
   zx_status_t ClkTogglePll(uint32_t clk, const bool enable);
 
+  // Checks the preconditions for SetInput, GetNumInputs and GetInput and
+  // returns ZX_OK if the preconditions are met.
+  zx_status_t IsSupportedMux(const uint32_t id, const uint16_t supported_mask);
+
   void InitHiu();
 
   // IO MMIO
@@ -83,6 +87,10 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   fbl::Mutex lock_;
   const meson_clk_gate_t* gates_ = nullptr;
   size_t gate_count_ = 0;
+
+  // Clock muxes.
+  const meson_clk_mux_t * muxes_ = nullptr;
+  size_t mux_count_ = 0;
 
   aml_hiu_dev_t hiudev_;
   aml_pll_dev_t plldev_[HIU_PLL_COUNT];
