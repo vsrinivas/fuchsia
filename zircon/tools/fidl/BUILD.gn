@@ -104,78 +104,74 @@ if (defined(zx)) {
     deps = [ ":fidl" ]
   }
 
-  action("fidlgen_llcpp") {
+  template("fidlgen_executable") {
     assert(current_os != "fuchsia")
-    gopath = rebase_path("//../garnet/go")
-    go = rebase_path("//../prebuilt/third_party/go/${host_platform}/bin/go")
-    if (current_os == "mac") {
-      goos = "darwin"
+    assert(defined(invoker.go_path))
+    assert(defined(invoker.go_package))
+
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
     } else {
-      goos = current_os
+      output_name = target_name
+    }
+    output_path = "${target_gen_dir}/${output_name}"
+    depfile_path = "${output_path}.d"
+
+    go_root = "$zx/../prebuilt/third_party/go/${host_platform}"
+    go_executable = "${go_root}/bin/go"
+    godepfile_executable =
+        "$zx/../prebuilt/tools/godepfile/${host_platform}/godepfile"
+
+    go_cache = "${root_build_dir}/gocache"
+
+    if (current_os == "mac") {
+      go_os = "darwin"
+    } else {
+      go_os = current_os
     }
     if (current_cpu == "x64") {
-      goarch = "amd64"
+      go_arch = "amd64"
     } else {
-      goarch = current_cpu
+      go_arch = current_cpu
     }
-    output_name = "$target_out_dir/fidlgen_llcpp"
-    script = "/usr/bin/env"
-    args = [
-      "GOPATH=$gopath",
-      "GOOS=$goos",
-      "GOARCH=$goarch",
-      go,
-      "build",
-      "-o",
-      rebase_path(output_name),
-      "fidl/compiler/llcpp_backend",
-    ]
 
-    # Taken from ./host_x64/exe.unstripped/fidlgen_llcpp.d in the Fuchsia build:
-    inputs = [
-      "$zx/../garnet/go/src/fidl/compiler/backend/common/names.go",
-      "$zx/../garnet/go/src/fidl/compiler/backend/common/strings.go",
-      "$zx/../garnet/go/src/fidl/compiler/backend/cpp/ir/ir.go",
-      "$zx/../garnet/go/src/fidl/compiler/backend/types/config.go",
-      "$zx/../garnet/go/src/fidl/compiler/backend/types/only_for_ordinal_migration.go",
-      "$zx/../garnet/go/src/fidl/compiler/backend/types/only_for_xunion_migration.go",
-      "$zx/../garnet/go/src/fidl/compiler/backend/types/types.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/generator.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/main.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/files/header.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/files/source.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/bits.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/const.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/enum.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/helpers.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/interface.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/reply_c_flavor.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/reply_caller_allocate.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/reply_in_place.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/send_event_c_flavor.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/send_event_caller_allocate.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/send_event_in_place.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/service.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/struct.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_event_handler.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_request_caller_allocate.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_request_in_place.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_request_managed.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/sync_server.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/table.tmpl.go",
-      "$zx/../garnet/go/src/fidl/compiler/llcpp_backend/templates/fragments/xunion.tmpl.go",
-    ]
-    outputs = [ output_name ]
+    action(target_name) {
+      script = "build_fidlgen_executable.sh"
+      # go_root, go_path, go_cache must be absolute.
+      args = [
+        rebase_path(go_executable, root_build_dir),
+        rebase_path(godepfile_executable, root_build_dir),
+        rebase_path(go_root),
+        rebase_path(invoker.go_path),
+        invoker.go_package,
+        go_os,
+        go_arch,
+        rebase_path(depfile_path, root_build_dir),
+        rebase_path(output_path, root_build_dir),
+        rebase_path(go_cache),
+      ]
+      depfile = depfile_path
+      inputs = [
+        go_executable,
+        godepfile_executable,
+      ]
+      outputs = [ output_path ]
 
-    # See host_tool_action().
-    metadata = {
-      # Dependencies come before the "--".
-      host_tool_rspfile = rebase_path(inputs, root_build_dir)
-      host_tool_rspfile += [ "--" ]
+      # See host_tool_action().
+      metadata = {
+        # Dependencies come before the "--".
+        host_tool_rspfile = rebase_path(inputs, root_build_dir)
+        host_tool_rspfile += [ "--" ]
 
-      # The command line to run comes after the "--".
-      host_tool_rspfile += [ rebase_path(output_name, root_build_dir) ]
+        # The command line to run comes after the "--".
+        host_tool_rspfile += [ rebase_path(output_path, root_build_dir) ]
+      }
     }
+  }
+
+  fidlgen_executable("fidlgen_llcpp") {
+    go_path = "$zx/../garnet/go"
+    go_package = "fidl/compiler/llcpp_backend"
   }
 } else {
   # TODO(BLD-353): Referenced by //garnet/public/lib/fidl/fuzz:compiler.
