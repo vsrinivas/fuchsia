@@ -38,7 +38,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:1033
+From //build/images/BUILD.gn:1030
 
 ### audio_core_trace_enabled
 Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
@@ -172,7 +172,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //garnet/lib/magma/gnbuild/magma.gni:47
+From //garnet/lib/magma/gnbuild/magma.gni:48
 
 ### board_kernel_cmdline_args
 List of kernel command line this board to bake into the boot image that are
@@ -248,7 +248,7 @@ with `sources` and `outputs` in the style of a copy() target:
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:476
+From //build/images/BUILD.gn:469
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -276,7 +276,7 @@ process.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:490
+From //build/images/BUILD.gn:483
 
 ### bootloader_prebuilt
 Prebuilt bootloader image to be included into update (OTA) package and
@@ -284,7 +284,7 @@ paving process.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:486
+From //build/images/BUILD.gn:479
 
 ### build_all_vp9_file_decoder_conformance_tests
 
@@ -319,7 +319,7 @@ Targets that will be built as mali vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:35
+From //garnet/lib/magma/gnbuild/magma.gni:36
 
 ### build_libvulkan_goldfish
 This is a list of targets that will be built as goldfish vulkan ICDs.
@@ -333,21 +333,21 @@ Targets that will be built as IMG vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:44
+From //garnet/lib/magma/gnbuild/magma.gni:45
 
 ### build_libvulkan_qcom_adreno
 Targets that will be built as qualcomm vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:41
+From //garnet/lib/magma/gnbuild/magma.gni:42
 
 ### build_libvulkan_vsl_gc
 Targets that will be built as verisilicon vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:38
+From //garnet/lib/magma/gnbuild/magma.gni:39
 
 ### build_sdk_archives
 Whether to build SDK tarballs.
@@ -715,7 +715,7 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:459
+From //build/images/BUILD.gn:452
 
 ### enable_api_diff
 Detect dart API changes
@@ -978,7 +978,7 @@ From //build/images/fvm.gni:32
 
 **Current value (from the default):** `"//third_party/glm"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:15
+From //garnet/lib/magma/gnbuild/magma.gni:16
 
 ### go_vet_enabled
   go_vet_enabled
@@ -1137,7 +1137,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:464
+From //build/images/BUILD.gn:457
 
 **Current value for `target_cpu = "x64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
@@ -1145,7 +1145,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:464
+From //build/images/BUILD.gn:457
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -1155,7 +1155,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:470
+From //build/images/BUILD.gn:463
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -1361,20 +1361,20 @@ automatically when the driver starts.
 
 **Current value (from the default):** `false`
 
-From //garnet/lib/magma/gnbuild/magma.gni:25
+From //garnet/lib/magma/gnbuild/magma.gni:26
 
 ### magma_enable_tracing
 Enable this to include fuchsia tracing capability
 
 **Current value (from the default):** `true`
 
-From //garnet/lib/magma/gnbuild/magma.gni:21
+From //garnet/lib/magma/gnbuild/magma.gni:22
 
 ### magma_python_path
 
 **Current value (from the default):** `"/b/s/w/ir/k/third_party/mako"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:18
+From //garnet/lib/magma/gnbuild/magma.gni:19
 
 ### max_blob_contents_size
 Maximum allowable contents for the /blob in a release mode build.
@@ -1536,11 +1536,17 @@ precommitted (which is not done by default).
 
 From //garnet/drivers/gpu/msd-arm-mali/src/BUILD.gn:23
 
+### msd_build_root
+
+**Current value (from the default):** `"//garnet/drivers/gpu"`
+
+From //garnet/lib/magma/gnbuild/magma.gni:14
+
 ### msd_intel_gen_build_root
 
 **Current value (from the default):** `"//garnet/drivers/gpu/msd-intel-gen"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:14
+From //garnet/lib/magma/gnbuild/magma.gni:15
 
 ### netcfg_autostart
 
@@ -1587,7 +1593,7 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From //garnet/lib/magma/gnbuild/magma.gni:27
+From //garnet/lib/magma/gnbuild/magma.gni:28
 
 ### prebuilt_libvulkan_goldfish_path
 
@@ -1600,7 +1606,7 @@ The path to a prebuilt libvulkan.so for an IMG GPU.
 
 **Current value (from the default):** `""`
 
-From //garnet/lib/magma/gnbuild/magma.gni:30
+From //garnet/lib/magma/gnbuild/magma.gni:31
 
 ### prototype_account_transfer
 Whether or not prototype account transfer is enabled.
@@ -1968,7 +1974,7 @@ build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
 TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/feddb958c89cf85be204e448342b5c090e0cdab8/infra/test_durations/default.json)" after the recipes start
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/bd24203e01f4074e275fe0d89a18f69dfaac589c/infra/test_durations/default.json)" after the recipes start
 setting this arg.
 
 **Current value (from the default):** `"//integration/infra/test_durations.json"`
@@ -2090,7 +2096,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:482
+From //build/images/BUILD.gn:475
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -2344,7 +2350,7 @@ From //build/images/BUILD.gn:43
 
 **Current value (from the default):** `"//zircon"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:16
+From //garnet/lib/magma/gnbuild/magma.gni:17
 
 ### zircon_compdb_filter
 Compilation database filter. Gets passed to --export-compile-commands=<filter>.
