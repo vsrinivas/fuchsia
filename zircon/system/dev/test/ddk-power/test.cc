@@ -1009,7 +1009,8 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
   ASSERT_FALSE(states_mapping[static_cast<uint8_t>(SystemPowerState::SYSTEM_POWER_STATE_REBOOT)]
                    .wakeup_enable);
 }
-TEST_F(PowerTestCase, SystemSuspend) {
+
+TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   // Add Capabilities
   DevicePowerStateInfo states[3];
   states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
@@ -1076,6 +1077,87 @@ TEST_F(PowerTestCase, SystemSuspend) {
   ASSERT_OK(call_status);
   ASSERT_EQ(suspend_reason_response->result.response().cur_suspend_reason,
             DEVICE_SUSPEND_REASON_REBOOT);
+
+  // Verify the parent'd DdkSuspend routine gets called.
+  auto parent_dev_suspend_response =
+      TestDevice::Call::GetCurrentDevicePowerState(zx::unowned(parent_device_handle));
+  ASSERT_OK(parent_dev_suspend_response.status());
+  call_status = ZX_OK;
+  if (parent_dev_suspend_response->result.is_err()) {
+    call_status = parent_dev_suspend_response->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(parent_dev_suspend_response->result.response().cur_state,
+            DevicePowerState::DEVICE_POWER_STATE_D3COLD);
+}
+
+TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
+  // Add Capabilities
+  DevicePowerStateInfo states[3];
+  states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D0;
+  states[0].is_supported = true;
+  states[0].restore_latency = 0;
+  states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D2;
+  states[1].is_supported = true;
+  states[1].restore_latency = 100;
+  states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+  states[2].is_supported = true;
+  states[2].restore_latency = 1000;
+  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+
+  ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
+  for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
+    mapping[i].dev_state = DevicePowerState::DEVICE_POWER_STATE_D2;
+    mapping[i].wakeup_enable = false;
+  }
+
+  auto update_result =
+      Controller::Call::UpdatePowerStateMapping(zx::unowned(child2_device_handle), mapping);
+  ASSERT_OK(update_result.status());
+  zx_status_t call_status = ZX_OK;
+  if (update_result->result.is_err()) {
+    call_status = update_result->result.err();
+  }
+  ASSERT_OK(call_status);
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  char service_name[100];
+  snprintf(service_name, sizeof(service_name), "svc/%s",
+           ::llcpp::fuchsia::device::manager::Administrator::Name);
+  ASSERT_OK(fdio_service_connect_at(devmgr.svc_root_dir().get(), service_name, remote.release()));
+  ASSERT_NE(devmgr.svc_root_dir().get(), ZX_HANDLE_INVALID);
+
+  auto suspend_result = Administrator::Call::Suspend(
+      zx::unowned(local), ::llcpp::fuchsia::device::manager::SUSPEND_FLAG_REBOOT_RECOVERY);
+  ASSERT_OK(suspend_result.status());
+  const auto &suspend_response = suspend_result.value();
+  ASSERT_OK(suspend_response.status);
+
+  // Verify the child's DdkSuspendNew routine gets called.
+  auto child_dev_suspend_response =
+      TestDevice::Call::GetCurrentDevicePowerState(zx::unowned(child2_device_handle));
+  ASSERT_OK(child_dev_suspend_response.status());
+  call_status = ZX_OK;
+  if (child_dev_suspend_response->result.is_err()) {
+    call_status = child_dev_suspend_response->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(child_dev_suspend_response->result.response().cur_state,
+            DevicePowerState::DEVICE_POWER_STATE_D2);
+
+  // Verify that the suspend reason is received correctly
+  auto suspend_reason_response =
+      TestDevice::Call::GetCurrentSuspendReason(zx::unowned(child2_device_handle));
+  ASSERT_OK(suspend_reason_response.status());
+  call_status = ZX_OK;
+  if (suspend_reason_response->result.is_err()) {
+    call_status = suspend_reason_response->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(suspend_reason_response->result.response().cur_suspend_reason,
+            DEVICE_SUSPEND_REASON_REBOOT_RECOVERY);
 
   // Verify the parent'd DdkSuspend routine gets called.
   auto parent_dev_suspend_response =

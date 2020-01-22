@@ -682,7 +682,7 @@ zx_status_t devhost_device_get_dev_power_state_from_mapping(
   // additional hints (ex: REBOOT/REBOOT_BOOTLOADER/REBOOT_RECOVERY/MEXEC).
   // For now, each of these flags are treated as an individual state.
   fuchsia_device_manager_SystemPowerState sys_state;
-  switch (flags & DEVICE_SUSPEND_REASON_MASK) {
+  switch (flags) {
     case DEVICE_SUSPEND_FLAG_REBOOT:
       sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT;
       break;
