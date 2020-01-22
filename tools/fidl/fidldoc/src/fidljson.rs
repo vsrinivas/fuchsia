@@ -8,7 +8,6 @@ use serde_json::Map;
 use serde_json::Value;
 
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
@@ -48,7 +47,7 @@ impl FidlJson {
                 eprintln!(
                     "Couldn't open file {path}: {reason}",
                     path = path.display(),
-                    reason = why.description()
+                    reason = why,
                 );
                 return Err(why);
             }

@@ -12,7 +12,6 @@ use fuchsia_zircon as zx;
 use futures::compat::Future01CompatExt;
 use futures::prelude::*;
 use hyper;
-use std::error::Error as stderr;
 
 fn version_to_str(version: hyper::Version) -> &'static str {
     match version {
@@ -106,7 +105,7 @@ fn to_error_response(error: hyper::Error) -> oldhttp::UrlResponse {
         url: None,
         error: Some(Box::new(oldhttp::HttpError {
             code: to_error_code(&error),
-            description: Some(error.description().to_string()),
+            description: Some(error.to_string()),
         })),
         status_line: None,
         headers: None,
