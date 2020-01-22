@@ -32,6 +32,28 @@ var _mStructWithNullableXUnion = _bindings.CreateLazyMarshaler(StructWithNullabl
 func (msg *StructWithNullableXUnion) Marshaler() _bindings.Marshaler {
 	return _mStructWithNullableXUnion
 }
+
+type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	Xu StrictBoundedXUnion`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{})
+
+func (msg *testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse) Marshaler() _bindings.Marshaler {
+	return _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse
+}
+
+type testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	Xu OlderSimpleUnion`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{})
+
+func (msg *testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) Marshaler() _bindings.Marshaler {
+	return _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
+}
 type I_olderSimpleUnionTag uint64
 const (
 	OlderSimpleUnion_unknownData = 0  // 0x00000000
@@ -338,28 +360,6 @@ const (
 	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal uint64 = 0x3959ff0900000000
 	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal uint64 = 0x5ecf85aadd137696
 )
-
-type testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"0"`
-	Xu StrictBoundedXUnion`fidl:"16" fidl_offset_v1:"0"`
-}
-
-var _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{})
-
-func (msg *testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse) Marshaler() _bindings.Marshaler {
-	return _mtestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse
-}
-
-type testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"0"`
-	Xu OlderSimpleUnion`fidl:"16" fidl_offset_v1:"0"`
-}
-
-var _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse = _bindings.CreateLazyMarshaler(testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{})
-
-func (msg *testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) Marshaler() _bindings.Marshaler {
-	return _mtestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
-}
 
 type TestProtocolInterface _bindings.ChannelProxy
 

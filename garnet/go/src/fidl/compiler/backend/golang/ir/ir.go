@@ -27,8 +27,6 @@ const (
 	TagSuffix              = "Tag"
 	WithCtxSuffix          = "WithCtx"
 
-	MessageHeaderSize = 16
-
 	SyscallZxPackage = "syscall/zx"
 	SyscallZxAlias   = "_zx"
 
@@ -311,8 +309,14 @@ type Method struct {
 	// Name is the name of the Method, including the interface name as a prefix.
 	Name string
 
-	// Request represents a goland struct containing the request parameters.
+	// HasRequest is true if this method has a request
+	HasRequest bool
+
+	// Request represents a golang struct containing the request parameters.
 	Request *Struct
+
+	// HasResponse is true if this method has a response
+	HasResponse bool
 
 	// Response represents an optional golang struct containing the response parameters.
 	Response *Struct
@@ -393,6 +397,11 @@ type compiler struct {
 	// libraryDeps that's actually being used. The purpose is to figure out which
 	// dependencies need to be imported.
 	usedLibraryDeps map[string]string
+
+	// requestResponseStructs is a mapping from ECI to Structs for all request/response
+	// structs (which are currently equivalent to all the anonymous structs). This is
+	// used to lookup typeshape info when constructing the Methods and their Parameters
+	requestResponseStructs map[types.EncodedCompoundIdentifier]Struct
 }
 
 // Contains the full set of reserved golang keywords, in addition to a set of
@@ -802,22 +811,6 @@ func (c *compiler) compileTable(val types.Table) Table {
 	}
 }
 
-func (c *compiler) compileParameter(p types.Parameter) StructMember {
-	ty, tag := c.compileType(p.Type)
-	// TODO(fxb/43783) this value is not used but needs to exist since the
-	// bindings will ignore the first element before looking for the bounds
-	tag.reverseOfBounds = append(tag.reverseOfBounds, p.FieldShapeV1.Offset)
-	// TODO(fxb/7704): Remove special handling of requests/responses.
-	offset := p.FieldShapeV1.Offset - MessageHeaderSize
-	return StructMember{
-		Type:        ty,
-		Name:        c.compileIdentifier(p.Name, true, ""),
-		PrivateName: c.compileIdentifier(p.Name, false, ""),
-		FidlTag:     tag.String(),
-		Offset:      offset,
-	}
-}
-
 func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
@@ -831,30 +824,24 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		EventExpectName: "Expect" + methodName,
 		IsEvent:         !val.HasRequest && val.HasResponse,
 		IsTransitional:  val.IsTransitional(),
+		HasRequest:      val.HasRequest,
+		HasResponse:     val.HasResponse,
 	}
-	if val.HasRequest {
-		req := Struct{
-			Name: c.compileCompoundIdentifier(ifaceName, false, methodName+"Request"),
-			// We want just the size of the parameter array as a struct, not
-			// including the message header size.
-			InlineSize: val.RequestTypeShapeV1.InlineSize - MessageHeaderSize,
+	if val.HasRequest && val.RequestPayload != "" {
+		requestStruct, ok := c.requestResponseStructs[val.RequestPayload]
+		if !ok {
+			log.Panic("Unknown request struct: ", val.RequestPayload)
 		}
-		for _, p := range val.Request {
-			req.Members = append(req.Members, c.compileParameter(p))
-		}
-		r.Request = &req
+		requestStruct.Name = c.compileCompoundIdentifier(ifaceName, false, methodName+"Request")
+		r.Request = &requestStruct
 	}
-	if val.HasResponse {
-		resp := Struct{
-			Name: c.compileCompoundIdentifier(ifaceName, false, methodName+"Response"),
-			// We want just the size of the parameter array as a struct, not
-			// including the message header size.
-			InlineSize: val.ResponseTypeShapeV1.InlineSize - MessageHeaderSize,
+	if val.HasResponse && val.ResponsePayload != "" {
+		responseStruct, ok := c.requestResponseStructs[val.ResponsePayload]
+		if !ok {
+			log.Panic("Unknown response struct: ", val.ResponsePayload)
 		}
-		for _, p := range val.Response {
-			resp.Members = append(resp.Members, c.compileParameter(p))
-		}
-		r.Response = &resp
+		responseStruct.Name = c.compileCompoundIdentifier(ifaceName, false, methodName+"Response")
+		r.Response = &responseStruct
 	}
 	return r
 }
@@ -923,10 +910,11 @@ func Compile(fidlData types.Root) Root {
 
 	// Instantiate a compiler context.
 	c := compiler{
-		decls:           fidlData.DeclsWithDependencies(),
-		library:         libraryName,
-		libraryDeps:     godeps,
-		usedLibraryDeps: make(map[string]string),
+		decls:                  fidlData.DeclsWithDependencies(),
+		library:                libraryName,
+		libraryDeps:            godeps,
+		usedLibraryDeps:        make(map[string]string),
+		requestResponseStructs: make(map[types.EncodedCompoundIdentifier]Struct),
 	}
 
 	// Compile fidlData into r.
@@ -944,11 +932,14 @@ func Compile(fidlData types.Root) Root {
 		r.Enums = append(r.Enums, c.compileEnum(v))
 	}
 	for _, v := range fidlData.Structs {
-		// TODO(7704) remove once anonymous structs are supported
 		if v.Anonymous {
-			continue
+			// these Structs still need to have their correct name (...Response or
+			// ...Request) generated, which occurs in compileMethod. Only then
+			// are they appended to r.Structs.
+			c.requestResponseStructs[v.Name] = c.compileStruct(v)
+		} else {
+			r.Structs = append(r.Structs, c.compileStruct(v))
 		}
-		r.Structs = append(r.Structs, c.compileStruct(v))
 	}
 	for _, v := range fidlData.Unions {
 		r.XUnions = append(r.XUnions, c.compileXUnion(types.ConvertUnionToXUnion(v)))
@@ -966,7 +957,16 @@ func Compile(fidlData types.Root) Root {
 		c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
 	}
 	for _, v := range fidlData.Interfaces {
-		r.Interfaces = append(r.Interfaces, c.compileInterface(v))
+		iface := c.compileInterface(v)
+		r.Interfaces = append(r.Interfaces, iface)
+		for _, method := range iface.Methods {
+			if method.Request != nil {
+				r.Structs = append(r.Structs, *method.Request)
+			}
+			if method.Response != nil {
+				r.Structs = append(r.Structs, *method.Response)
+			}
+		}
 	}
 	for path, alias := range c.usedLibraryDeps {
 		r.Libraries = append(r.Libraries, Library{

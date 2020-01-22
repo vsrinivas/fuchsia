@@ -15,19 +15,6 @@ const (
 {{- end }}
 )
 
-{{- range .Methods }}
-{{- if .Request }}
-{{- if len .Request.Members }}
-{{ template "StructDefinition" .Request }}
-{{- end }}
-{{- end }}
-{{- if .Response }}
-{{- if len .Response.Members }}
-{{ template "StructDefinition" .Response }}
-{{- end }}
-{{- end }}
-{{- end }}
-
 type {{ .ProxyName }} _bindings.{{ .ProxyType }}
 {{ range .Methods }}
 {{range .DocComments}}
@@ -46,15 +33,15 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end -}}
 	{{- end -}}
 	)
-	{{- if .Response -}}
-	{{- if len .Response.Members }} (
+	{{- if .HasResponse -}}
+	{{- if .Response }} (
 	{{- range .Response.Members }}{{ .Type }}, {{ end -}}
 		error)
 	{{- else }} error{{ end -}}
 	{{- else }} error{{ end }} {
 
+	{{- if .HasRequest }}
 	{{- if .Request }}
-	{{- if len .Request.Members }}
 	req_ := &{{ .Request.Name }}{
 		{{- range .Request.Members }}
 		{{ .Name }}: {{ .PrivateName }},
@@ -64,22 +51,22 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	var req_ _bindings.Message
 	{{- end }}
 	{{- end }}
+	{{- if .HasResponse }}
 	{{- if .Response }}
-	{{- if len .Response.Members }}
 	resp_ := &{{ .Response.Name }}{}
 	{{- else }}
 	var resp_ _bindings.Message
 	{{- end }}
 	{{- end }}
-	{{- if .Request }}
-		{{- if .Response }}
+	{{- if .HasRequest }}
+		{{- if .HasResponse }}
 	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .Ordinals.Write.Name }}, req_, resp_
 		{{- range $index, $ordinal := .Ordinals.Reads -}}, {{ $ordinal.Name }}{{- end -}})
 		{{- else }}
 	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, req_)
 		{{- end }}
 	{{- else }}
-		{{- if .Response }}
+		{{- if .HasResponse }}
 	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Recv(
 		{{- with $first_ordinal := index .Ordinals.Reads 0 -}}
 			{{- $first_ordinal.Name -}}
@@ -93,8 +80,12 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	err_ := nil
 		{{- end }}
 	{{- end }}
+	{{- if .HasResponse }}
 	{{- if .Response }}
 	return {{ range .Response.Members }}resp_.{{ .Name }}, {{ end }}err_
+	{{- else }}
+	return err_
+	{{- end }}
 	{{- else }}
 	return err_
 	{{- end }}
@@ -109,14 +100,18 @@ type {{ .WithCtxName }} interface {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
+	{{- if .HasRequest }}
 	{{- if .Request }}
 	{{ .Name }}(ctx_ _bindings.Context
 	{{- range .Request.Members -}}
 		, {{ .PrivateName }} {{ .Type }}
 	{{- end -}}
 	)
-	{{- if .Response -}}
-	{{- if len .Response.Members }} (
+	{{- else }}
+	{{ .Name }}(ctx_ _bindings.Context)
+	{{- end }}
+	{{- if .HasResponse -}}
+	{{- if .Response }} (
 	{{- range .Response.Members }}{{ .Type }}, {{ end -}}
 		error)
 	{{- else }} error{{ end -}}
@@ -136,8 +131,8 @@ func (_ *{{$transitionalBaseWithCtxName}}) {{ .Name }} (ctx_ _bindings.Context
 	, {{ .PrivateName }} {{ .Type }}
 {{- end -}}
 )
-{{- if .Response -}}
-	{{- if len .Response.Members }} (
+{{- if .HasResponse -}}
+	{{- if .Response }} (
 		{{- range .Response.Members }}{{ .Type }}, {{ end -}}
 			error)
 	{{- else -}}
@@ -160,6 +155,7 @@ type {{ .Name }} interface {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
+	{{- if .HasRequest }}
 	{{- if .Request }}
 	{{ .Name }}(
 	{{- range $index, $m := .Request.Members -}}
@@ -167,8 +163,11 @@ type {{ .Name }} interface {
 		{{ $m.PrivateName }} {{ $m.Type }}
 	{{- end -}}
 	)
-	{{- if .Response -}}
-	{{- if len .Response.Members }} (
+	{{- else }}
+	{{ .Name }}()
+	{{- end }}
+	{{- if .HasResponse -}}
+	{{- if .Response }} (
 	{{- range .Response.Members }}{{ .Type }}, {{ end -}}
 		error)
 	{{- else }} error{{ end -}}
@@ -183,15 +182,19 @@ type {{.TransitionalBaseName}} struct {}
 
 {{- range  $method := .Methods }}
 	{{- if $method.IsTransitional }}
-		{{- if $method.Request }}
+		{{- if $method.HasRequest }}
+			{{- if $method.Request }}
 			func (_ *{{$transitionalBaseName}}) {{ $method.Name }} (
 			{{- range $index, $m := $method.Request.Members -}}
 				{{- if $index -}}, {{- end -}}
 				{{ $m.PrivateName }} {{ $m.Type }}
 			{{- end -}}
 			)
-			{{- if $method.Response -}}
-				{{- if len $method.Response.Members }} (
+			{{- else }}
+			func (_ *{{$transitionalBaseName}}) {{ $method.Name }} ()
+			{{- end }}
+			{{- if $method.HasResponse -}}
+				{{- if $method.Response }} (
 					{{- range $method.Response.Members }}{{ .Type }}, {{ end -}}
 						error)
 				{{- else -}}
@@ -242,8 +245,8 @@ func (s_ *{{ .StubName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64,
 		{{- end }}
 	case {{ $ordinal.Name }}:
 	{{- end }}
+		{{- if .HasRequest }}
 		{{- if .Request }}
-		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
 		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
@@ -254,15 +257,17 @@ func (s_ *{{ .StubName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64,
 		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
 		{{- end -}}
 		err_ := s_.Impl.{{ .Name }}(
+		{{- if .HasRequest }}
 		{{- if .Request -}}
 		{{- range $index, $m := .Request.Members -}}
 		{{- if $index -}}, {{- end -}}
 		in_.{{ $m.Name }}
 		{{- end -}}
 		{{- end -}}
+		{{- end -}}
 		)
+		{{- if .HasResponse }}
 		{{- if .Response }}
-		{{- if len .Response.Members }}
 		out_ := {{ .Response.Name }}{}
 		{{- range .Response.Members }}
 		out_.{{ .Name }} = {{ .PrivateName }}
@@ -290,8 +295,8 @@ func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.M
 		{{- end }}
 	case {{ $ordinal.Name }}:
 	{{- end }}
+		{{- if .HasRequest }}
 		{{- if .Request }}
-		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
 		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
@@ -302,15 +307,17 @@ func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.M
 		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
 		{{- end -}}
 		err_ := s_.Impl.{{ .Name }}(
+		{{- if .HasRequest -}}
 		{{- if .Request -}}
 		{{- range $index, $m := .Request.Members -}}
 		{{- if $index -}}, {{- end -}}
 		in_.{{ $m.Name }}
 		{{- end -}}
 		{{- end -}}
+		{{- end -}}
 		)
+		{{- if .HasResponse }}
 		{{- if .Response }}
-		{{- if len .Response.Members }}
 		out_ := {{ .Response.Name }}{}
 		{{- range .Response.Members }}
 		out_.{{ .Name }} = {{ .PrivateName }}
@@ -347,14 +354,16 @@ type {{ .EventProxyName }} _bindings.{{ .ProxyType }}
 {{ range .Methods }}
 {{- if .IsEvent }}
 func (p *{{ $.EventProxyName }}) {{ .Name }}(
+	{{- if .Response -}}
 	{{- range $index, $m := .Response.Members -}}
 		{{- if $index -}}, {{- end -}}
 		{{ $m.PrivateName }} {{ $m.Type }}
 	{{- end -}}
+	{{- end -}}
 	) error {
 
+	{{- if .HasResponse }}
 	{{- if .Response }}
-	{{- if len .Response.Members }}
 	event_ := &{{ .Response.Name }}{
 		{{- range .Response.Members }}
 		{{ .Name }}: {{ .PrivateName }},

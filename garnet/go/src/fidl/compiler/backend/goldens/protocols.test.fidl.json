@@ -1571,6 +1571,8 @@
           "type": {
             "kind": "handle",
             "subtype": "socket",
+            "required_rights": 0,
+            "optional_rights": 4294967295,
             "nullable": false
           },
           "name": "a",
@@ -1610,6 +1612,8 @@
           "type": {
             "kind": "handle",
             "subtype": "socket",
+            "required_rights": 0,
+            "optional_rights": 4294967295,
             "nullable": false
           },
           "name": "b",

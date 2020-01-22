@@ -11,6 +11,50 @@ import (
 
 
 
+
+type parentGetChildResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	C ChildInterface`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _mparentGetChildResponse = _bindings.CreateLazyMarshaler(parentGetChildResponse{})
+
+func (msg *parentGetChildResponse) Marshaler() _bindings.Marshaler {
+	return _mparentGetChildResponse
+}
+
+type parentGetChildRequestResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	R ChildInterfaceRequest`fidl:"0,0" fidl_offset_v1:"0"`
+}
+
+var _mparentGetChildRequestResponse = _bindings.CreateLazyMarshaler(parentGetChildRequestResponse{})
+
+func (msg *parentGetChildRequestResponse) Marshaler() _bindings.Marshaler {
+	return _mparentGetChildRequestResponse
+}
+
+type parentTakeChildRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	C ChildInterface`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _mparentTakeChildRequest = _bindings.CreateLazyMarshaler(parentTakeChildRequest{})
+
+func (msg *parentTakeChildRequest) Marshaler() _bindings.Marshaler {
+	return _mparentTakeChildRequest
+}
+
+type parentTakeChildRequestRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	R ChildInterfaceRequest`fidl:"0,0" fidl_offset_v1:"0"`
+}
+
+var _mparentTakeChildRequestRequest = _bindings.CreateLazyMarshaler(parentTakeChildRequestRequest{})
+
+func (msg *parentTakeChildRequestRequest) Marshaler() _bindings.Marshaler {
+	return _mparentTakeChildRequestRequest
+}
 const (
 )
 
@@ -83,50 +127,6 @@ const (
 	ParentTakeChildRequestOrdinal uint64 = 0x5ec3867a00000000
 	ParentTakeChildRequestGenOrdinal uint64 = 0x6c4a70e2a2126637
 )
-
-type parentGetChildResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"0"`
-	C ChildInterface`fidl:"16" fidl_offset_v1:"0"`
-}
-
-var _mparentGetChildResponse = _bindings.CreateLazyMarshaler(parentGetChildResponse{})
-
-func (msg *parentGetChildResponse) Marshaler() _bindings.Marshaler {
-	return _mparentGetChildResponse
-}
-
-type parentGetChildRequestResponse struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"0"`
-	R ChildInterfaceRequest`fidl:"16,0" fidl_offset_v1:"0"`
-}
-
-var _mparentGetChildRequestResponse = _bindings.CreateLazyMarshaler(parentGetChildRequestResponse{})
-
-func (msg *parentGetChildRequestResponse) Marshaler() _bindings.Marshaler {
-	return _mparentGetChildRequestResponse
-}
-
-type parentTakeChildRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"0"`
-	C ChildInterface`fidl:"16" fidl_offset_v1:"0"`
-}
-
-var _mparentTakeChildRequest = _bindings.CreateLazyMarshaler(parentTakeChildRequest{})
-
-func (msg *parentTakeChildRequest) Marshaler() _bindings.Marshaler {
-	return _mparentTakeChildRequest
-}
-
-type parentTakeChildRequestRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"0"`
-	R ChildInterfaceRequest`fidl:"16,0" fidl_offset_v1:"0"`
-}
-
-var _mparentTakeChildRequestRequest = _bindings.CreateLazyMarshaler(parentTakeChildRequestRequest{})
-
-func (msg *parentTakeChildRequestRequest) Marshaler() _bindings.Marshaler {
-	return _mparentTakeChildRequestRequest
-}
 
 type ParentInterface _bindings.ChannelProxy
 
