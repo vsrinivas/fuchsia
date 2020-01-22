@@ -6,6 +6,7 @@ library fuchsia.identity.internal;
 
 using fuchsia.auth;
 using fuchsia.identity.account;
+using fuchsia.identity.authentication;
 using fuchsia.identity.external;
 using fuchsia.kms;
 
@@ -299,6 +300,17 @@ protocol AccountHandlerContext {
     GetOauthOpenIdConnect(string auth_provider_type,
                           request<fuchsia.identity.external.OauthOpenIdConnect> 
                           oauth_open_id_connect)
+        -> () error fuchsia.identity.account.Error;
+
+    /// Connects to a `StorageUnlockMechanism` implementation identified by its
+    /// auth mechanism ID, launching the associated Authenticator if necessary.
+    ///
+    /// `auth_mechanism_id` An identifier matching an authentication mechanism
+    ///                     configured by the account system.
+    /// `storage_unlock_mechanism` The server end of an `StorageUnlockMechanism` channel
+    GetStorageUnlockAuthMechanism(
+        fuchsia.identity.account.AuthMechanismId auth_mechanism_id,
+        request<fuchsia.identity.authentication.StorageUnlockMechanism> storage_unlock_mechanism)
         -> () error fuchsia.identity.account.Error;
 };
 

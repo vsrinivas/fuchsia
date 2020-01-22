@@ -5,6 +5,7 @@
 use anyhow::Error;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_auth::AuthProviderConfig;
+use fidl_fuchsia_identity_account::Error as ApiError;
 use fidl_fuchsia_identity_internal::{
     AccountHandlerContextRequest, AccountHandlerContextRequestStream,
 };
@@ -64,6 +65,9 @@ impl AccountHandlerContext {
                 responder,
             } => {
                 responder.send(&mut self.connect(&auth_provider_type, oauth_open_id_connect).await)
+            }
+            AccountHandlerContextRequest::GetStorageUnlockAuthMechanism { responder, .. } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))
             }
         }
     }

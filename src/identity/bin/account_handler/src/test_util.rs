@@ -9,7 +9,7 @@ use crate::common::AccountLifetime;
 use account_common::{LocalAccountId, LocalPersonaId};
 use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
 use fidl_fuchsia_auth::AppConfig;
-use fidl_fuchsia_identity_account::Error;
+use fidl_fuchsia_identity_account::Error as ApiError;
 use fidl_fuchsia_identity_internal::{
     AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerContextRequest,
     AccountHandlerContextRequestStream,
@@ -96,13 +96,16 @@ impl FakeAccountHandlerContext {
     async fn handle_request(&self, req: AccountHandlerContextRequest) -> Result<(), fidl::Error> {
         match req {
             AccountHandlerContextRequest::GetOauth { responder, .. } => {
-                responder.send(&mut Err(Error::Internal))
+                responder.send(&mut Err(ApiError::Internal))
             }
             AccountHandlerContextRequest::GetOpenIdConnect { responder, .. } => {
-                responder.send(&mut Err(Error::Internal))
+                responder.send(&mut Err(ApiError::Internal))
             }
             AccountHandlerContextRequest::GetOauthOpenIdConnect { responder, .. } => {
-                responder.send(&mut Err(Error::Internal))
+                responder.send(&mut Err(ApiError::Internal))
+            }
+            AccountHandlerContextRequest::GetStorageUnlockAuthMechanism { responder, .. } => {
+                responder.send(&mut Err(ApiError::Internal))
             }
         }
     }
@@ -136,7 +139,16 @@ mod tests {
         let (_, ap_server_end) = create_endpoints().expect("failed creating channel pair");
         assert_eq!(
             proxy.get_oauth("dummy_auth_provider", ap_server_end).await.unwrap(),
-            Err(Error::Internal)
+            Err(ApiError::Internal)
+        );
+        let (_, authenticator_server_end) =
+            create_endpoints().expect("failed creating channel pair");
+        assert_eq!(
+            proxy
+                .get_storage_unlock_auth_mechanism("dummy_authenticator", authenticator_server_end)
+                .await
+                .unwrap(),
+            Err(ApiError::Internal)
         );
     }
 }
