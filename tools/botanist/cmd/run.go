@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -46,16 +45,16 @@ type Target interface {
 	SSHKey() string
 
 	// Start starts the target.
-	Start(ctx context.Context, images []bootserver.Image, args []string) error
+	Start(context.Context, []bootserver.Image, []string) error
 
 	// Restart restarts the target.
-	Restart(ctx context.Context) error
+	Restart(context.Context) error
 
 	// Stop stops the target.
-	Stop(ctx context.Context) error
+	Stop(context.Context) error
 
 	// Wait waits for the target to finish running.
-	Wait(ctx context.Context) error
+	Wait(context.Context) error
 }
 
 // RunCommand is a Command implementation for booting a device and running a
@@ -75,12 +74,6 @@ type RunCommand struct {
 
 	// Timeout is the duration allowed for the command to finish execution.
 	timeout time.Duration
-
-	// CmdStdout is the file to which the command's stdout will be redirected.
-	cmdStdout string
-
-	// CmdStderr is the file to which the command's stderr will be redirected.
-	cmdStderr string
 
 	// SysloggerFile, if nonempty, is the file to where the system's logs will be written.
 	syslogFile string
@@ -121,8 +114,6 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&r.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.Var(&r.zirconArgs, "zircon-args", "kernel command-line arguments")
 	f.DurationVar(&r.timeout, "timeout", 10*time.Minute, "duration allowed for the command to finish execution.")
-	f.StringVar(&r.cmdStdout, "stdout", "", "file to redirect the command's stdout into; if unspecified, it will be redirected to the process' stdout")
-	f.StringVar(&r.cmdStderr, "stderr", "", "file to redirect the command's stderr into; if unspecified, it will be redirected to the process' stderr")
 	f.StringVar(&r.syslogFile, "syslog", "", "file to write the systems logs to")
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
@@ -132,260 +123,6 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 		defaultBlobURL = fmt.Sprintf("%s/blobs", r.repoURL)
 	}
 	f.StringVar(&r.blobURL, "blobs", defaultBlobURL, "URL at which to serve a package repository's blobs")
-}
-
-func (r *RunCommand) runCmd(ctx context.Context, args []string, t Target) error {
-	nodename := t.Nodename()
-	ip, err := t.IPv4Addr()
-	if err == nil {
-		logger.Infof(ctx, "IPv4 address of %s found: %s", nodename, ip)
-	} else {
-		logger.Errorf(ctx, "could not resolve IPv4 address of %s: %v", nodename, err)
-	}
-
-	env := append(
-		os.Environ(),
-		fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
-		fmt.Sprintf("FUCHSIA_IPV4_ADDR=%v", ip),
-		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", t.SSHKey()),
-	)
-
-	ctx, cancel := context.WithTimeout(ctx, r.timeout)
-	defer cancel()
-
-	stdout := os.Stdout
-	if r.cmdStdout != "" {
-		f, err := os.Create(r.cmdStdout)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		stdout = f
-	}
-	stderr := os.Stderr
-	if r.cmdStderr != "" {
-		f, err := os.Create(r.cmdStderr)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		stderr = f
-	}
-
-	runner := runner.SubprocessRunner{
-		Env: env,
-	}
-	if err := runner.Run(ctx, args, stdout, stderr); err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("command timed out after %v", r.timeout)
-		}
-		return err
-	}
-	return nil
-}
-
-func getIndexedFilename(filename string, index int) string {
-	ext := filepath.Ext(filename)
-	name := filename[:len(filename)-len(ext)]
-	return fmt.Sprintf("%s-%d%s", name, index, ext)
-}
-
-type targetSetup struct {
-	targets    []Target
-	syslogs    []*logWriter
-	serialLogs []*logWriter
-	err        error
-}
-
-type logWriter struct {
-	name   string
-	file   io.ReadWriteCloser
-	target Target
-}
-
-func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, targets []Target) *targetSetup {
-	var syslogs, serialLogs []*logWriter
-	errs := make(chan error, len(targets))
-	var wg sync.WaitGroup
-	var setupErr error
-
-	for i, t := range targets {
-		var s *os.File
-		var err error
-		if r.syslogFile != "" {
-			syslogFile := r.syslogFile
-			if len(targets) > 1 {
-				syslogFile = getIndexedFilename(r.syslogFile, i)
-			}
-			s, err = os.Create(syslogFile)
-			if err != nil {
-				setupErr = err
-				break
-			}
-			syslogs = append(syslogs, &logWriter{
-				name:   syslogFile,
-				file:   s,
-				target: t,
-			})
-		}
-
-		zirconArgs := r.zirconArgs
-		if t.Serial() != nil {
-			if r.serialLogFile != "" {
-				serialLogFile := r.serialLogFile
-				if len(targets) > 1 {
-					serialLogFile = getIndexedFilename(r.serialLogFile, i)
-				}
-				serialLog, err := os.Create(serialLogFile)
-				if err != nil {
-					setupErr = err
-					break
-				}
-				serialLogs = append(serialLogs, &logWriter{
-					name:   serialLogFile,
-					file:   serialLog,
-					target: t,
-				})
-
-				// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
-				// output file.  This should give us everything since Zedboot boot, and new messages should
-				// be written to directly to the serial port without needing to tail with `dlog -f`.
-				if _, err = io.WriteString(t.Serial(), "\ndlog\n"); err != nil {
-					logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
-				}
-
-				go func(t Target, serialLog io.ReadWriteCloser) {
-					for {
-						_, err := io.Copy(serialLog, t.Serial())
-						if err != nil && err != io.EOF {
-							logger.Errorf(ctx, "failed to write serial log: %v", err)
-							return
-						}
-					}
-				}(t, serialLog)
-				zirconArgs = append(zirconArgs, "kernel.bypass-debuglog=true")
-			}
-			// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
-			// arm64 devices should already be enabling kernel.serial at compile time.
-			zirconArgs = append(zirconArgs, "kernel.serial=legacy")
-		}
-
-		wg.Add(1)
-		go func(t Target, s *os.File, zirconArgs []string) {
-			defer wg.Done()
-			if err := t.Start(ctx, imgs, zirconArgs); err != nil {
-				errs <- err
-				return
-			}
-			nodename := t.Nodename()
-
-			if r.syslogFile != "" && s == nil {
-				errs <- fmt.Errorf("syslog is nil.")
-				return
-			}
-
-			// If having paved, SSH in and stream syslogs back to a file sink.
-			if !r.netboot && s != nil {
-				p, err := ioutil.ReadFile(t.SSHKey())
-				if err != nil {
-					errs <- err
-					return
-				}
-				config, err := sshutil.DefaultSSHConfig(p)
-				if err != nil {
-					errs <- err
-					return
-				}
-				client, err := sshutil.ConnectToNode(ctx, nodename, config)
-				if err != nil {
-					errs <- err
-					return
-				}
-				syslogger := syslog.NewSyslogger(client, config)
-				go func() {
-					defer syslogger.Close()
-					if err := syslogger.Stream(ctx, s, false); err != nil {
-						errs <- err
-					}
-				}()
-			}
-		}(t, s, zirconArgs)
-	}
-	// Wait for all targets to finish starting.
-	wg.Wait()
-	// We can close the channel on the receiver end since we wait for all target goroutines to finish.
-	close(errs)
-	err, ok := <-errs
-	if ok {
-		setupErr = err
-	}
-	return &targetSetup{
-		targets:    targets,
-		syslogs:    syslogs,
-		serialLogs: serialLogs,
-		err:        setupErr,
-	}
-}
-
-func (r *RunCommand) runCmdWithTargets(ctx context.Context, targetSetup *targetSetup, args []string) error {
-	for _, log := range targetSetup.syslogs {
-		defer log.file.Close()
-	}
-	for _, log := range targetSetup.serialLogs {
-		defer func(log *logWriter) {
-			if err := log.target.Serial().Close(); err == nil {
-				logger.Errorf(ctx, "serial output not closed yet.")
-			}
-			log.file.Close()
-		}(log)
-	}
-	for _, t := range targetSetup.targets {
-		defer func(t Target) {
-			logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
-			if err := t.Stop(ctx); err == target.ErrUnimplemented {
-				t.Restart(ctx)
-			}
-		}(t)
-	}
-
-	if targetSetup.err != nil {
-		return targetSetup.err
-	}
-
-	errs := make(chan error)
-
-	go func() {
-		// Target doesn't matter for multi-device host tests. Just use first one.
-		errs <- r.runCmd(ctx, args, targetSetup.targets[0])
-	}()
-
-	for _, t := range targetSetup.targets {
-		go func(t Target) {
-			if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented {
-				errs <- err
-			}
-		}(t)
-	}
-
-	select {
-	case err := <-errs:
-		return err
-	case <-ctx.Done():
-	}
-	return nil
-}
-
-func checkEmptyLogs(ctx context.Context, logs []*logWriter) error {
-	for _, log := range logs {
-		b, err := ioutil.ReadFile(log.name)
-		if err != nil {
-			return err
-		}
-		if len(b) == 0 {
-			return fmt.Errorf("log is empty.")
-		}
-	}
-	return nil
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -417,21 +154,159 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	var targets []Target
 	for _, obj := range objs {
-		t, err := DeriveTarget(ctx, obj, opts)
+		t, err := deriveTarget(ctx, obj, opts)
 		if err != nil {
 			return err
 		}
 		targets = append(targets, t)
 	}
+	if len(targets) == 0 {
+		return fmt.Errorf("no targets found")
+	}
+
+	// This is the primary target that a command will be run against and that
+	// logs will be streamed from.
+	t0 := targets[0]
+
+	errs := make(chan error)
+
+	serial := t0.Serial()
+	if serial != nil && r.serialLogFile != "" {
+		// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
+		// arm64 devices should already be enabling kernel.serial at compile time.
+		r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
+		// Force serial output to the console instead of buffering it.
+		r.zirconArgs = append(r.zirconArgs, "kernel.bypass-debuglog=true")
+
+		serialLog, err := os.Create(r.serialLogFile)
+		if err != nil {
+			return err
+		}
+		defer serialLog.Close()
+		go func() {
+			if _, err := io.Copy(serialLog, serial); err != nil {
+				errs <- fmt.Errorf("failed to write serial log: %v", err)
+			}
+		}()
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	targetSetup := r.setupTargets(ctx, imgs, targets)
-	if err := r.runCmdWithTargets(ctx, targetSetup, args); err != nil {
-		return err
+	// Defer asynchronously restarts of each target.
+	defer func() {
+		var wg sync.WaitGroup
+		for _, t := range targets {
+			wg.Add(1)
+			go func(t Target) {
+				defer wg.Done()
+				logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
+				if err := t.Stop(ctx); err == target.ErrUnimplemented {
+					t.Restart(ctx)
+				}
+			}(t)
+		}
+		wg.Wait()
+	}()
+
+	// We wait until targets have started before running the subcommand against the zeroth one.
+	var wg sync.WaitGroup
+	for _, t := range targets {
+		wg.Add(1)
+		go func(t Target) {
+			if err := t.Start(ctx, imgs, r.zirconArgs); err != nil {
+				wg.Done()
+				errs <- err
+				return
+			}
+			wg.Done()
+			if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented {
+				errs <- err
+			}
+		}(t)
 	}
-	return checkEmptyLogs(ctx, append(targetSetup.syslogs, targetSetup.serialLogs...))
+	go func() {
+		wg.Wait()
+		errs <- r.runAgainstTarget(ctx, t0, args)
+	}()
+
+	select {
+	case err := <-errs:
+		return err
+	case <-ctx.Done():
+	}
+	return nil
+}
+
+func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []string) error {
+	subprocessEnv := map[string]string{
+		"FUCHSIA_NODENAME": t.Nodename(),
+	}
+
+	// If |netboot| is true, then we assume that fuchsia is not provisioned
+	// with a netstack; in this case, do not try to establish a connection.
+	if !r.netboot {
+		p, err := ioutil.ReadFile(t.SSHKey())
+		if err != nil {
+			return err
+		}
+		config, err := sshutil.DefaultSSHConfig(p)
+		if err != nil {
+			return err
+		}
+		client, err := sshutil.ConnectToNode(ctx, t.Nodename(), config)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		subprocessEnv["FUCHSIA_SSH_KEY"] = t.SSHKey()
+
+		ip, err := t.IPv4Addr()
+		if err != nil {
+			logger.Errorf(ctx, "could not resolve IPv4 address of %s: %v", t.Nodename(), err)
+		} else if ip != nil {
+			logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ip)
+			subprocessEnv["FUCHSIA_IPV4_ADDR"] = ip.String()
+		}
+
+		if r.syslogFile != "" {
+			s, err := os.Create(r.syslogFile)
+			if err != nil {
+				return err
+			}
+			defer s.Close()
+			syslogger := syslog.NewSyslogger(client, config)
+			defer syslogger.Close()
+
+			go func() {
+				err := syslogger.Stream(ctx, s, false)
+				// TODO(fxbug.dev/43518): when 1.13 is available, spell this as
+				// `err != nil && errors.Is(err, context.Canceled) && errors.Is(err, context.DeadlineExceeded)`
+				if err != nil && ctx.Err() == nil {
+					logger.Errorf(ctx, "syslog streaming interrupted: %v", err)
+				}
+			}()
+		}
+	}
+
+	// Run the provided command against t0, adding |subprocessEnv| into
+	// its environment.
+	environ := os.Environ()
+	for k, v := range subprocessEnv {
+		environ = append(environ, fmt.Sprintf("%s=%s", k, v))
+	}
+	runner := runner.SubprocessRunner{
+		Env: environ,
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+
+	err := runner.Run(ctx, args, os.Stdout, os.Stderr)
+	if ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("command timed out after %v", r.timeout)
+	}
+	return err
 }
 
 func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -446,7 +321,7 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	return subcommands.ExitSuccess
 }
 
-func DeriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target, error) {
+func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target, error) {
 	type typed struct {
 		Type string `json:"type"`
 	}

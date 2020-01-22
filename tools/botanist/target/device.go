@@ -16,7 +16,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -28,6 +27,9 @@ import (
 const (
 	// The duration we allow for the netstack to come up when booting.
 	netstackTimeout = 90 * time.Second
+
+	// Command to dump the zircon debug log over serial.
+	dlogCmd = "\ndlog\n"
 )
 
 // DeviceConfig contains the static properties of a target device.
@@ -90,10 +92,11 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 	if config.Serial != "" {
 		s, err = serial.Open(config.Serial)
 		if err != nil {
-			// TODO(IN-????): This should be returned as an error, but we don't want to fail any
-			// test runs for misconfigured serial until it is actually required to complete certain
-			// tasks.
-			logger.Errorf(ctx, "unable to open %s: %v", config.Serial, err)
+			return nil, fmt.Errorf("unable to open %s: %v", config.Serial, err)
+		}
+		// Dump the existing serial debug log buffer.
+		if _, err := io.WriteString(s, dlogCmd); err != nil {
+			return nil, fmt.Errorf("failed to tail serial logs: %v", err)
 		}
 	}
 	addr, err := netutil.GetNodeAddress(ctx, config.Network.Nodename, false)
@@ -186,12 +189,12 @@ func (t *DeviceTarget) Restart(ctx context.Context) error {
 }
 
 // Stop stops the device.
-func (t *DeviceTarget) Stop(ctx context.Context) error {
+func (t *DeviceTarget) Stop(context.Context) error {
 	return ErrUnimplemented
 }
 
 // Wait waits for the device target to stop.
-func (t *DeviceTarget) Wait(ctx context.Context) error {
+func (t *DeviceTarget) Wait(context.Context) error {
 	return ErrUnimplemented
 }
 
