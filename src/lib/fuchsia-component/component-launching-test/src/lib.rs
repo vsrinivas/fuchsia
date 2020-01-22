@@ -5,10 +5,15 @@
 #![cfg(test)]
 
 use {
-    fuchsia_async as fasync,
+    anyhow::{Context, Error},
+    fidl::endpoints::ServiceMarker,
+    fidl_fidl_examples_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::{
         launch_with_options, launcher, App, AppBuilder, LaunchOptions, Stdio,
     },
+    fuchsia_component::server::ServiceFs,
+    fuchsia_zircon as zx,
+    futures::{StreamExt, TryFutureExt, TryStreamExt},
     std::{
         fs::{read_to_string, File},
         io::{Read, Write},
@@ -20,6 +25,8 @@ const DIR_CHECKER_CMX: &str =
     "fuchsia-pkg://fuchsia.com/component-launching-tests#meta/injected-directory-checker.cmx";
 const STDIO_WRITER_CMX: &str =
     "fuchsia-pkg://fuchsia.com/component-launching-tests#meta/stdio-writer.cmx";
+const ECHO_CHECKER_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/component-launching-tests#meta/echo-service-checker.cmx";
 
 fn make_temp_dir_with_file() -> TempDir {
     let tmp_dir = TempDir::new().expect("tempdir creation");
@@ -52,6 +59,14 @@ async fn assert_dir_checker_success_launch_options(launch_options: LaunchOptions
     let dir_checker =
         launch_with_options(&launcher, DIR_CHECKER_CMX.to_string(), None, launch_options)
             .expect("launch injected-directory-checker");
+    assert_app_success(dir_checker).await;
+}
+
+async fn assert_echo_checker_success_launch_options(launch_options: LaunchOptions) {
+    let launcher = launcher().expect("get launcher");
+    let dir_checker =
+        launch_with_options(&launcher, ECHO_CHECKER_CMX.to_string(), None, launch_options)
+            .expect("launch echo-service-checker");
     assert_app_success(dir_checker).await;
 }
 
@@ -110,6 +125,32 @@ async fn launch_options_add_handle_to_namespace() {
     );
 
     assert_dir_checker_success_launch_options(launch_options).await;
+}
+
+async fn serve_echo_stream(mut stream: fecho::EchoRequestStream) -> Result<(), Error> {
+    while let Some(fecho::EchoRequest::EchoString { value, responder }) = stream.try_next().await? {
+        responder.send(value.as_deref()).context("Error sending response")?;
+    }
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn launch_options_set_additional_services() {
+    let (client_chan, server_chan) = zx::Channel::create().unwrap();
+    let mut launch_options = LaunchOptions::new();
+    launch_options.set_additional_services(vec![fecho::EchoMarker::NAME.to_string()], client_chan);
+
+    let mut fs = ServiceFs::new();
+    fs.add_fidl_service_at(fecho::EchoMarker::NAME, |stream: fecho::EchoRequestStream| {
+        fasync::spawn(
+            serve_echo_stream(stream)
+                .unwrap_or_else(|e| panic!("Error while serving echo service: {}", e)),
+        );
+    });
+    fs.serve_connection(server_chan).unwrap();
+    fasync::spawn(fs.collect());
+
+    assert_echo_checker_success_launch_options(launch_options).await;
 }
 
 #[fasync::run_singlethreaded(test)]

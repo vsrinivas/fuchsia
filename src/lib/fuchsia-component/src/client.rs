@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerEventStream, ComponentControllerProxy,
-        FileDescriptor, FlatNamespace, LaunchInfo, LauncherMarker, LauncherProxy,
+        FileDescriptor, FlatNamespace, LaunchInfo, LauncherMarker, LauncherProxy, ServiceList,
         TerminationReason,
     },
     fuchsia_async as fasync,
@@ -159,12 +159,13 @@ pub fn launch(
 pub struct LaunchOptions {
     namespace: Option<Box<FlatNamespace>>,
     out: Option<Box<FileDescriptor>>,
+    additional_services: Option<Box<ServiceList>>,
 }
 
 impl LaunchOptions {
     /// Creates default launch options.
     pub fn new() -> LaunchOptions {
-        LaunchOptions { namespace: None, out: None }
+        LaunchOptions { namespace: None, out: None, additional_services: None }
     }
 
     /// Adds a new directory handle to the namespace for the new process.
@@ -183,8 +184,22 @@ impl LaunchOptions {
     }
 
     /// Sets the out handle.
-    pub fn set_out(&mut self, f: FileDescriptor) {
+    pub fn set_out(&mut self, f: FileDescriptor) -> &mut Self {
         self.out = Some(Box::new(f));
+        self
+    }
+
+    /// Set additional services to add the new component's namespace under /svc, in addition to
+    /// those coming from the environment. 'host_directory' should be a channel to the directory
+    /// hosting the services in 'names'. Subsequent calls will override previous calls.
+    pub fn set_additional_services(
+        &mut self,
+        names: Vec<String>,
+        host_directory: zx::Channel,
+    ) -> &mut Self {
+        let list = ServiceList { names, host_directory: Some(host_directory), provider: None };
+        self.additional_services = Some(Box::new(list));
+        self
     }
 }
 
@@ -205,7 +220,7 @@ pub fn launch_with_options(
         err: None,
         directory_request: Some(directory_server_chan),
         flat_namespace: options.namespace,
-        additional_services: None,
+        additional_services: options.additional_services,
     };
     launcher
         .create_component(&mut launch_info, Some(controller_server_end.into()))
