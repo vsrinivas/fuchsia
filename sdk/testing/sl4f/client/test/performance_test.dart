@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
-import 'dart:io' show File;
+import 'dart:io' show File, Directory;
 
 import 'package:mockito/mockito.dart';
+import 'package:path/path.dart' as path;
+import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
 import 'package:sl4f/sl4f.dart';
@@ -131,6 +133,63 @@ void main(List<String> args) {
     expect(capturedArgs[0], '-test_suite_name=test1');
     expect(capturedArgs[1], endsWith('test1-benchmark.fuchsiaperf.json'));
     expect(capturedArgs[2], endsWith('sample-trace.json'));
+  });
+
+  Directory createTempDir() {
+    final tempDir = Directory.systemTemp.createTempSync();
+    addTearDown(() {
+      tempDir.deleteSync(recursive: true);
+    });
+    return tempDir;
+  }
+
+  test('process trace 2', () async {
+    final metricsSpecs = [
+      MetricsSpec(name: 'test_metric_1'),
+      MetricsSpec(name: 'test_metric_2'),
+    ];
+    final metricsSpecSet =
+        MetricsSpecSet(testName: 'test_name', metricsSpecs: metricsSpecs);
+    final testMetricsRegistry = {
+      'test_metric_1': (Model model, MetricsSpec metricsSpec) => [
+            TestCaseResults('label_1', Unit.nanoseconds, [1.0])
+          ],
+      'test_metric_2': (Model model, MetricsSpec metricsSpec) => [
+            TestCaseResults('label_2', Unit.milliseconds, [2.0])
+          ]
+    };
+
+    final traceFile = File(path.join(createTempDir().path, 'sample-trace.json'))
+      ..createSync()
+      ..writeAsStringSync('''
+{
+  "traceEvents": [],
+  "systemTraceEvents": {
+    "type": "fuchsia",
+    "events": []
+  }
+}
+''');
+
+    final performance = Performance(mockSl4f, mockDump);
+    final resultsFile = await performance.processTrace2(
+        metricsSpecSet, traceFile,
+        registry: testMetricsRegistry);
+
+    final resultsFileContents = await resultsFile.readAsString();
+    final resultsObject = json.decode(resultsFileContents);
+
+    expect(resultsObject[0]['label'], equals('label_1'));
+    expect(resultsObject[0]['test_suite'], equals('test_name'));
+    expect(resultsObject[0]['unit'], equals('nanoseconds'));
+    expect(resultsObject[0]['values'], equals([1.0]));
+    expect(resultsObject[0]['split_first'], equals(false));
+
+    expect(resultsObject[1]['label'], equals('label_2'));
+    expect(resultsObject[1]['test_suite'], equals('test_name'));
+    expect(resultsObject[1]['unit'], equals('milliseconds'));
+    expect(resultsObject[1]['values'], equals([2.0]));
+    expect(resultsObject[1]['split_first'], equals(false));
   });
 
   test('convert results', () async {
