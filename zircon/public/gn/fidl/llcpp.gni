@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/host_tool_action.gni")
 import("$zx/public/gn/subtarget_aliases.gni")
 
 # This is the $fidl_support module for "low-level" C++ bindings.
@@ -13,20 +14,7 @@ fidl_support_templates = [
   {
     import = "$zx/public/gn/fidl/llcpp.gni"
     target = "fidl_llcpp_library"
-    fidlc = "llcpp"
-  },
-]
-
-# This tells fidl_library() what fidlc outputs fidl_llcpp_library() requires.
-fidl_support_fidlc = [
-  {
-    name = "llcpp"
-    files = [
-      {
-        switch = "--json"
-        path = "fidl.json"
-      },
-    ]
+    fidlc = "json"
   },
 ]
 
@@ -36,23 +24,53 @@ fidl_support_fidlc = [
 # See there for details.
 template("fidl_llcpp_library") {
   fidl_target = target_name
-  library_target = "$fidl_target.llcpp"
   not_needed(invoker, "*")
-  if (current_toolchain != default_toolchain) {
-    # TODO(BLD-441): For now the bindings have to be generated and
-    # checked into the source tree.  So this is just a normal vanilla
-    # C++ library, except that its sources live in the gen/llcpp/
-    # subdirectory of the fidl_library() target's source directory and
-    # the public headers live in gen/llcpp/include/.  The Fuchsia GN
-    # build has code in //TBD to regenerate these files and check that
-    # the copies in the source tree are up to date.
+
+  generator_target = "_fidl_llcpp_library.generate.$fidl_target"
+  generator_include_dir = "${invoker.fidlc_gen_dir}/include"
+  generator_header_file =
+      "$generator_include_dir/${invoker.fidl_path}/llcpp/fidl.h"
+  generator_source_file = "${invoker.fidlc_gen_dir}/fidl.cc"
+
+  fidlgen_outputs = [
+    generator_header_file,
+    generator_source_file,
+  ]
+
+  if (current_toolchain == default_toolchain) {
+    fidlc_outputs = invoker.fidlc_outputs
+    fidl_json = fidlc_outputs[0]
+    assert(fidlc_outputs == [ fidl_json ])
+
+    host_tool_action(generator_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      visibility = [ ":*" ]
+
+      tool = "$zx/tools/fidl:fidlgen_llcpp"
+
+      deps = invoker.fidlc_deps
+
+      inputs = [ fidl_json ]
+      outputs = fidlgen_outputs
+
+      args = [
+        "-json",
+        rebase_path(fidl_json, root_build_dir),
+        "-source",
+        rebase_path(generator_source_file, root_build_dir),
+        "-header",
+        rebase_path(generator_header_file, root_build_dir),
+      ]
+    }
+  } else {
+    library_target = "$fidl_target.llcpp"
 
     config("_fidl_llcpp_library.config.$library_target") {
       visibility = [
         ":$library_target.headers",
         ":$library_target.static",
       ]
-      include_dirs = [ "gen/llcpp/include" ]
+      include_dirs = [ generator_include_dir ]
     }
 
     library(library_target) {
@@ -63,15 +81,8 @@ template("fidl_llcpp_library") {
                              ])
 
       # Depend on the fidlc generation step and compile what it produces.
-      # TODO(BLD-441): It doesn't actually produce the sources to compile
-      # yet, so depend on the checked-in generated source file explicitly.
-      # When the generation is not directly here, this can just do:
-      #   sources = invoker.fidlc_outputs
-      # as done in c.gni.
-      deps = invoker.fidlc_deps
-      sources = [
-        "gen/llcpp/fidl.cc",
-      ]
+      deps = [ ":$generator_target($default_toolchain)" ]
+      sources = fidlgen_outputs
 
       # Users of the bindings library need the generated headers.
       public_configs = [ ":_fidl_llcpp_library.config.$library_target" ]
@@ -79,7 +90,7 @@ template("fidl_llcpp_library") {
       # The `.headers` subtarget of a library() only depends on its
       # public_deps.  But all users of the headers need to depend on the
       # generation step too, so put it in public_deps as well.
-      public_deps = invoker.fidlc_deps
+      public_deps = [ ":$generator_target($default_toolchain)" ]
 
       # The generated headers of a dependent fidl_library() will #include the
       # generated headers for its dependencies' bindings libraries, so those
@@ -99,14 +110,8 @@ template("fidl_llcpp_library") {
       deps += [
         ":$fidl_target.tables",
         "$zx/system/ulib/fidl:fidl-llcpp",
+        "$zx/system/ulib/fit",
       ]
-
-      # TODO(BLD-441): Get the metadata below into the dependency graph.
-      # Putting the metadata here directly would duplicate the information
-      # across different toolchains that build the library.  So instead,
-      # use a dummy group() in $default_toolchain as a single node to hold
-      # the metadata.
-      deps += [ ":${fidl_target}.llcpp($default_toolchain)" ]
     }
 
     # Things normally depend on "fidl/foo:llcpp" rather than
@@ -122,47 +127,6 @@ template("fidl_llcpp_library") {
         "llcpp.headers",
         "llcpp.static",
       ]
-    }
-  } else {
-    # TODO(BLD-441): This exists only for the deps above.  This generates
-    # metadata for the build_api_module("fidl_gen") at top-level that
-    # informs the //tools/fidlgen_llcpp_zircon scripts what generated sources
-    # need to be updated.
-    # This will go away when the bindings generation is done directly here.
-    group(library_target) {
-      fidlc_outputs = invoker.fidlc_outputs
-      assert(fidlc_outputs == [ fidlc_outputs[0] ])
-      metadata = {
-        fidl_gen = [
-          {
-            label = get_label_info(":$target_name", "label_no_toolchain")
-            fidl_sources = rebase_path(invoker.fidl_sources, root_build_dir)
-            name = invoker.fidl_name
-            target_gen_dir = rebase_path("gen/llcpp", root_build_dir)
-            json = rebase_path(fidlc_outputs[0], root_build_dir)
-            header = "$target_gen_dir/include/${invoker.fidl_path}/llcpp/fidl.h"
-            source = "$target_gen_dir/fidl.cc"
-            include_base = "$target_gen_dir/include"
-
-            # TODO(BLD-442): Could generate an individual response file
-            # here that could be used very simply to drive running fidlgen.
-            # Alternatively, give fidlgen as "JSON response file" feature:
-            # `fidlgen -json-args foo.json` reads a dictionary from the
-            # file.  Then we could write that JSON fragment right here in
-            # place of this args list.
-            args = [
-              "-json",
-              json,
-              "-include-base",
-              include_base,
-              "-header",
-              header,
-              "-source",
-              source,
-            ]
-          },
-        ]
-      }
     }
   }
 }

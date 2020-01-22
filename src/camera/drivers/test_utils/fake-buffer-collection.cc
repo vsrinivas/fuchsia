@@ -17,7 +17,6 @@
 #include <src/camera/drivers/isp/modules/dma-format.h>
 
 #include "fbl/algorithm.h"
-#include "zircon/system/fidl/fuchsia-sysmem/gen/llcpp/include/fuchsia/sysmem/llcpp/fidl.h"
 
 namespace camera {
 

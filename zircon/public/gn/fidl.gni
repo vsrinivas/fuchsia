@@ -88,6 +88,7 @@ import("$zx/public/gn/fidl/fidlc.gni")
 # default_overrides.
 fidl_support = [
   "$zx/public/gn/fidl/c.gni",
+  "$zx/public/gn/fidl/json.gni",
   "$zx/public/gn/fidl/llcpp.gni",
   "$zx/public/gn/fidl/tables.gni",
 ]
@@ -109,12 +110,16 @@ foreach(module, fidl_support) {
 _fidl_gen_fidlc = []
 _fidl_gen_templates = []
 foreach(gen, _fidl_generators) {
-  _fidl_gen_fidlc += gen.fidl_support_fidlc
-  _fidl_gen_fidlc -= gen.fidl_support_fidlc
-  _fidl_gen_fidlc += gen.fidl_support_fidlc
-  _fidl_gen_templates += gen.fidl_support_templates
-  _fidl_gen_templates -= gen.fidl_support_templates
-  _fidl_gen_templates += gen.fidl_support_templates
+  if (defined(gen.fidl_support_fidlc)) {
+    _fidl_gen_fidlc += gen.fidl_support_fidlc
+    _fidl_gen_fidlc -= gen.fidl_support_fidlc
+    _fidl_gen_fidlc += gen.fidl_support_fidlc
+  }
+  if (defined(gen.fidl_support_templates)) {
+    _fidl_gen_templates += gen.fidl_support_templates
+    _fidl_gen_templates -= gen.fidl_support_templates
+    _fidl_gen_templates += gen.fidl_support_templates
+  }
 }
 
 # Define a FIDL library and implicitly generate bindings targets.
@@ -286,12 +291,8 @@ template("fidl_library") {
     # fidlc() uses this file.
     generated_file(files_rspfile_target) {
       forward_variables_from(invoker, [ "testonly" ])
-      deps = [
-        ":$fidl_target",
-      ]
-      outputs = [
-        files_rspfile,
-      ]
+      deps = [ ":$fidl_target" ]
+      outputs = [ files_rspfile ]
       output_conversion = "list lines"
       data_keys = [ "fidl_rspfile" ]
     }
@@ -299,9 +300,7 @@ template("fidl_library") {
     fidlc(gen_target) {
       visibility = [ ":*" ]
       forward_variables_from(invoker, [ "testonly" ])
-      deps = [
-        ":$fidl_target",
-      ]
+      deps = [ ":$fidl_target" ]
       outputs = []
       args = []
       foreach(gen, gens) {

@@ -7,9 +7,8 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
 
+#include <fidl/test/simple/llcpp/fidl.h>
 #include <zxtest/zxtest.h>
-
-#include "generated/fidl_llcpp_simple.test.h"
 
 namespace {
 
