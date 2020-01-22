@@ -9,9 +9,6 @@
             "isolated-persistent-storage",
             "root-ssl-certificates"
         ],
-        "pkgfs": [
-            "packages"
-        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
