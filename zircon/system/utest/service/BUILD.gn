@@ -16,7 +16,7 @@ if (is_fuchsia) {
       "llcpp/server_test.cc",
     ]
     deps = [
-      ":fidl.service.test.llcpp",
+      ":fidl.service.test-llcpp",
       "$zx/system/ulib/async-loop:async-loop-cpp",
       "$zx/system/ulib/async-loop:async-loop-default",
       "$zx/system/ulib/fdio",
@@ -27,6 +27,18 @@ if (is_fuchsia) {
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zxtest",
     ]
+  }
+
+  # Manually generated LLCPP bindings.
+  source_set("fidl.service.test-llcpp") {
+    testonly = true
+    sources = [ "generated/fidl_llcpp_test.test.cc" ]
+    include_dirs = [ "generated" ]
+    deps = [
+      ":fidl.service.test.c",
+      "$zx/system/ulib/fidl:fidl-llcpp",
+    ]
+    public_deps = [ "$zx/system/ulib/fidl:fidl-llcpp.headers" ]
   }
 }
 

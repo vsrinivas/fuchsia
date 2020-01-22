@@ -2,31 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
 import("$zx/public/gn/fuzzer.gni")
 
-if (current_toolchain != default_toolchain) {
-  zx_test("fidl-async-test") {
-    sources = [
-      "llcpp_async_bind_test.cc",
-      "llcpp_bind_test.cc",
-      "llcpp_channel_transaction_test.cc",
-    ]
-    deps = [
-      ":fidl.test.simple.llcpp",
-      "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/async-loop:async-loop-cpp",
-      "$zx/system/ulib/async-loop:async-loop-default.static",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl:fidl-llcpp",
-      "$zx/system/ulib/fidl-async:fidl-async-cpp",
-      "$zx/system/ulib/sync",
-      "$zx/system/ulib/zxtest",
-    ]
-  }
-}
-
-fidl_library("fidl.test.simple") {
-  visibility = [ ":*" ]
-  sources = [ "simple.test.fidl" ]
+zx_test("fidl-async-test") {
+  sources = [
+    "generated/fidl_llcpp_simple.test.cc",
+    "generated/fidl_llcpp_tables_simple.test.c",
+    "llcpp_async_bind_test.cc",
+    "llcpp_bind_test.cc",
+    "llcpp_channel_transaction_test.cc",
+  ]
+  include_dirs = [ "generated" ]
+  deps = [
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl:fidl-llcpp",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zxtest",
+  ]
 }

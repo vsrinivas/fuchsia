@@ -33,9 +33,14 @@ the steps to use the bindings depend on where the consumer code is located:
     `"//sdk/fidl/fuchsia.math:fuchsia.math_llcpp"`, and the bindings code
     will be automatically generated as part of the build.
 *   **Code is inside `zircon/`:**
-    Add a GN dependency of the form: `"$zx/system/fidl/[library-name]:llcpp"`,
-    e.g. `"$zx/system/fidl/fuchsia-mem:llcpp"`, and the bindings code will be
-    automatically generated as part of the build.
+    Add a GN dependency of the form: `"$zx/system/fidl/[library-name]:llcpp"`.
+    Run a special [command](/tools/fidlgen_llcpp_zircon/README.md) which
+    extracts the set of FIDL libraries used through LLCPP in Zircon, and builds
+    and runs the code generator during the Fuchsia build phase. The generated
+    code is placed in a `gen` folder next to the corresponding FIDL definition,
+    and has to be checked into source control
+    ([example](/zircon/system/fidl/fuchsia-io/gen/llcpp)). Whenever the FIDL
+    library changes, re-run the command to update the checked in bindings.
 
 ## Preliminary Concepts
 

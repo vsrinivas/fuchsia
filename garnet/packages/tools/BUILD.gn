@@ -32,6 +32,7 @@ group("fidl_tools") {
   public_deps = [
     ":gidl",
     "//garnet/go/src/fidl",
+    "//tools/fidlgen_llcpp_zircon",
   ]
 }
 

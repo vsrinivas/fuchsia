@@ -137,7 +137,6 @@ if (defined(zx)) {
 
     action(target_name) {
       script = "build_fidlgen_executable.sh"
-
       # go_root, go_path, go_cache must be absolute.
       args = [
         rebase_path(go_executable, root_build_dir),

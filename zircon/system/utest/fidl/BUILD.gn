@@ -18,11 +18,16 @@ if (is_fuchsia) {
       "llcpp_views_tests.cc",
       "main.cc",
       "on_error_handle_tests.cc",
+
+      # Generated coding table for generated/extra_messages.fidl Cannot yet use
+      # the FIDL_LIBS directive, since FIDL Tables are not supported in the C
+      # generator.  See ./fidl/README.md for details.
+      "generated/extra_messages.c",
+      "generated/fidl_llcpp_llcpp.test.cc",
+      "generated/fidl_llcpp_tables_llcpp.test.c",
     ]
     include_dirs = [ "generated" ]
     public_deps = [
-      ":example.c",
-      ":fidl.test.coding.llcpp",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl",
@@ -56,7 +61,6 @@ if (is_fuchsia) {
     ]
     deps = [
       ":common",
-      ":example.c",
       ":fidl-handle-policy-test-app",
     ]
 
@@ -74,8 +78,8 @@ if (is_fuchsia) {
       "fidl_align_tests.cc",
       "transformer_tests.c",
     ]
+    include_dirs = [ "generated" ]
     deps = [
-      ":example.c",
       "$zx/system/ulib/fidl:fidl_base",
       "$zx/system/ulib/unittest",
     ]
@@ -88,13 +92,4 @@ fidl_library("example") {
     "$zx/system/utest/fidl-simple:*",
   ]
   sources = [ "transformer.test.fidl" ]
-}
-
-fidl_library("fidl.test.coding") {
-  visibility = [ ":*" ]
-  sources = [
-    "extra_messages.test.fidl",
-    "llcpp.test.fidl",
-    "messages.test.fidl",
-  ]
 }
