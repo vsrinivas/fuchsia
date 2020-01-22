@@ -253,7 +253,6 @@ aggregate_manifest("legacy-image") {
     ":driver.ssd1306",
     ":driver.syn-clk",
     ":driver.syn-dma",
-    ":driver.sysinfo",
     ":driver.sysmem",
     ":driver.tas5782",
     ":driver.tas5805",

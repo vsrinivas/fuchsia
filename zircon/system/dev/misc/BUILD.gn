@@ -7,7 +7,6 @@ group("misc") {
     "builtin",
     "cpu-trace",
     "ktrace",
-    "sysinfo",
     "test",
   ]
 

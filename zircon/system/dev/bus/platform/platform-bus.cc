@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -484,10 +483,8 @@ zx_status_t PlatformBus::Init() {
   // Read kernel driver.
   zx::vmo vmo;
   uint32_t length;
-  uint8_t interrupt_controller_type = fuchsia_sysinfo_InterruptControllerType_UNKNOWN;
 #if __x86_64__
   interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::InterruptControllerType::APIC;
-  interrupt_controller_type = fuchsia_sysinfo_InterruptControllerType_APIC;
 #else
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &vmo, &length);
   if (status != ZX_OK) {
@@ -495,7 +492,6 @@ zx_status_t PlatformBus::Init() {
   }
   if (vmo.is_valid()) {
     interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::InterruptControllerType::GIC_V2;
-    interrupt_controller_type = fuchsia_sysinfo_InterruptControllerType_GIC_V2;
   }
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &vmo, &length);
   if (status != ZX_OK) {
@@ -503,17 +499,8 @@ zx_status_t PlatformBus::Init() {
   }
   if (vmo.is_valid()) {
     interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::InterruptControllerType::GIC_V3;
-    interrupt_controller_type = fuchsia_sysinfo_InterruptControllerType_GIC_V3;
   }
 #endif
-  // Publish interrupt controller type to sysinfo driver
-  status = device_publish_metadata(parent(), "/dev/misc/sysinfo",
-                                   DEVICE_METADATA_INTERRUPT_CONTROLLER_TYPE,
-                                   &interrupt_controller_type, sizeof(interrupt_controller_type));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "device_publish_metadata(interrupt_controller_type) failed: %d\n", status);
-    return status;
-  }
 
   // Read platform ID.
   status = GetBootItem(ZBI_TYPE_PLATFORM_ID, 0, &vmo, &length);
@@ -531,13 +518,6 @@ zx_status_t PlatformBus::Init() {
     board_info_.vid = platform_id.vid;
     board_info_.pid = platform_id.pid;
     memcpy(board_info_.board_name, platform_id.board_name, sizeof(board_info_.board_name));
-    // Publish board name to sysinfo driver
-    status = device_publish_metadata(parent(), "/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME,
-                                     platform_id.board_name, sizeof(platform_id.board_name));
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
-      return status;
-    }
   } else {
 #if __x86_64__
     // For x86_64, we might not find the ZBI_TYPE_PLATFORM_ID, old bootloaders
@@ -546,15 +526,6 @@ zx_status_t PlatformBus::Init() {
     board_info_.vid = PDEV_VID_INTEL;
     board_info_.pid = PDEV_PID_X86;
     strncpy(board_info_.board_name, "x86_64", sizeof(board_info_.board_name));
-    // Publish board name to sysinfo driver
-    status = device_publish_metadata(parent(), "/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME,
-                                     "x86_64", sizeof("x86_64"));
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
-      return status;
-    }
-    // This is optionally set later by the board driver.
-    board_info_.board_revision = 0;
 #else
     zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found\n");
     return ZX_ERR_INTERNAL;
@@ -580,14 +551,6 @@ zx_status_t PlatformBus::Init() {
     }
   } else {
     zxlogf(ERROR, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found\n");
-  }
-
-  // Publish board revision to sysinfo driver
-  status = device_publish_metadata(parent(), "/dev/misc/sysinfo", DEVICE_METADATA_BOARD_REVISION,
-                                   &board_info_.board_revision, sizeof(board_info_.board_revision));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "device_publish_metadata(board_revision) failed: %d\n", status);
-    return status;
   }
 
   // Then we attach the platform-bus device below it.
