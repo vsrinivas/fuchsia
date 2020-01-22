@@ -133,6 +133,7 @@ enum             | value | type name | category
 `kTombstone`     | 10    | `TOMBSTONE`        | Value
 `kArrayValue`    | 11    | `ARRAY_VALUE`      | Value
 `kLinkValue`     | 12    | `LINK_VALUE`       | Value
+`kBoolValue`     | 13    | `BOOL_VALUE`       | Value
 
 * *Internal* - These types are provided for implementing block allocation, and
 they must be ignored by readers.
@@ -164,6 +165,7 @@ Each type interprets the payload differently, as follows:
 * [TOMBSTONE](#node)
 * [ARRAY\_VALUE](#array)
 * [LINK](#link)
+* [BOOL\_VALUE](#numeric)
 
 ## FREE {#free}
 
@@ -250,7 +252,7 @@ Index | Value
 2     | NODE "b", parent 1
 ```
 
-## \{INT,UINT,DOUBLE\}\_VALUE {#numeric}
+## \{INT,UINT,DOUBLE,BOOL\}\_VALUE {#numeric}
 
 ![Figure: Numeric type block](numericblock.png)
 
