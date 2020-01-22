@@ -4,24 +4,20 @@
 
 #include "ringbuffer.h"
 
-bool Ringbuffer::Overwrite32(uint32_t dwords_before_tail, uint32_t value) {
-  // The tail points past the last element in the ringbuffer, so 0 is an invalid offset.
-  if (dwords_before_tail == 0) {
-    return DRETF(false, "Cannot overwrite at zero offset from tail");
+bool Ringbuffer::IsOffsetPopulated(uint32_t offset) {
+  if (offset >= size()) {
+    return false;
   }
-  uint32_t offset_bytes = dwords_before_tail * sizeof(uint32_t);
-  uint32_t rb_bytes_stored = (tail() >= head())
-      ? tail() - head()
-      : size() - head() + tail();
+  return (head() <= tail()) ?
+    ((offset >= head()) && (offset < tail())) :
+    ((offset >= head()) || (offset < tail()));
+}
 
-  if (rb_bytes_stored < offset_bytes) {
-    return DRETF(false, "Invalid offset from tail 0x%x bytes, cur ringbuffer size 0x%x",
-                 offset_bytes, rb_bytes_stored);
+bool Ringbuffer::Overwrite32(uint32_t offset, uint32_t value) {
+  if (!IsOffsetPopulated(offset)) {
+    return DRETF(false, "Invalid rb offset %u, head %u tail %u", offset, head(), tail());
   }
-  uint32_t write_offset = SubtractOffset(offset_bytes);
-  DASSERT(write_offset < size());
-
-  vaddr()[write_offset >> 2] = value;
+  vaddr()[offset >> 2] = value;
   return true;
 }
 
@@ -29,4 +25,22 @@ uint32_t Ringbuffer::SubtractOffset(uint32_t offset_bytes) {
   return (tail() >= offset_bytes)
     ? tail() - offset_bytes
     : size() - offset_bytes + tail();
+}
+
+bool Ringbuffer::ReserveContiguous(uint32_t reserve_bytes) {
+  if (!HasSpace(reserve_bytes)) {
+    return DRETF(false, "Ringbuffer does not have space for %u bytes", reserve_bytes);
+  }
+  // If there are not at least |reserve_bytes| number of contiguous bytes,
+  // we will need to advance the tail to the start of the ringbuffer.
+  uint32_t bytes_until_end = size() - tail();
+  if (bytes_until_end < reserve_bytes) {
+    if (!HasSpace(reserve_bytes + bytes_until_end)) {
+      return DRETF(false, "Ringbuffer does not have contiguous space for %u bytes",
+                   reserve_bytes);
+    }
+    update_tail(0);
+    DASSERT(tail() != head());
+  }
+  return true;
 }

@@ -77,10 +77,9 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   // Adds a WAIT-LINK to the end of the ringbuffer.
   bool AddRingbufferWaitLink();
   // Modifies the last WAIT in the ringbuffer to link to |gpu_addr|.
-  // |num_new_rb_instructions| is the number of ringbuffer instructions that have been written
-  // since the last WAIT.
+  // |wait_link_offset| is the offset into the ringbuffer of the WAIT-LINK to replace.
   // |dest_prefetch| is the prefetch of the buffer we are linking to.
-  bool LinkRingbuffer(uint32_t num_new_rb_instructions, uint32_t gpu_addr, uint32_t dest_prefetch);
+  bool LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr, uint32_t dest_prefetch);
 
   // Writes a LINK command at the end of the given buffer.
   bool WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,

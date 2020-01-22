@@ -285,9 +285,8 @@ bool MsdVslDevice::StopRingbuffer() {
     return true;
   }
   // Overwrite the last WAIT with an END.
-  bool res =
-      ringbuffer_->Overwrite32(kWaitLinkDwords /* dwords_before_tail */, MiEnd::kCommandType);
-  if (!res) {
+  uint32_t prev_wait_link = ringbuffer_->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
+  if (!ringbuffer_->Overwrite32(prev_wait_link, MiEnd::kCommandType)) {
     return DRETF(false, "Failed to overwrite WAIT in ringbuffer");
   }
   return true;
@@ -439,21 +438,18 @@ bool MsdVslDevice::AddRingbufferWaitLink() {
   return true;
 }
 
-bool MsdVslDevice::LinkRingbuffer(uint32_t num_new_rb_instructions, uint32_t gpu_addr,
+bool MsdVslDevice::LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr,
                                   uint32_t dest_prefetch) {
-  // Replace the penultimate WAIT (before the newly added one) with a LINK to the command buffer.
-  // We need to calculate the offset from the current tail, skipping past the new commands
-  // we wrote into the ringbuffer and also the WAIT-LINK that we are modifying.
-  uint32_t prev_wait_offset_dwords =
-     (num_new_rb_instructions * kInstructionDwords) + kWaitLinkDwords;
-  DASSERT(prev_wait_offset_dwords > 0);
+  DASSERT(ringbuffer_->IsOffsetPopulated(wait_link_offset));
+  // We can assume the instruction was written as 8 contiguous bytes.
+  DASSERT(ringbuffer_->IsOffsetPopulated(wait_link_offset + sizeof(uint32_t)));
 
-  // prev_wait_offset_dwords is pointing to the beginning of the WAIT instruction.
+  // Replace the penultimate WAIT (before the newly added one) with a LINK to the command buffer.
   // We will first modify the second dword which specifies the address,
   // as the hardware may be executing at the address of the current WAIT.
-  ringbuffer_->Overwrite32(prev_wait_offset_dwords - 1 /* dwords_before_tail */, gpu_addr);
+  ringbuffer_->Overwrite32(wait_link_offset + sizeof(uint32_t), gpu_addr);
   magma::barriers::Barrier();
-  ringbuffer_->Overwrite32(prev_wait_offset_dwords, MiLink::kCommandType | dest_prefetch);
+  ringbuffer_->Overwrite32(wait_link_offset, MiLink::kCommandType | dest_prefetch);
   magma::barriers::Barrier();
   return true;
 }
@@ -520,6 +516,7 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
 
   // Number of new commands to be added to the ringbuffer - EVENT WAIT LINK.
   const uint16_t kRbPrefetch = 3;
+  uint32_t prev_wait_link = ringbuffer_->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
 
   if (buf) {
     // Write a LINK at the end of the command buffer that links back to the ringbuffer.
@@ -553,7 +550,7 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
 
   DLOG("Submitting buffer at gpu addr 0x%x", gpu_addr);
 
-  if (!LinkRingbuffer(kRbPrefetch, gpu_addr, *prefetch_out)) {
+  if (!LinkRingbuffer(prev_wait_link, gpu_addr, *prefetch_out)) {
     return DRETF(false, "Failed to link ringbuffer");
   }
   return true;

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/drivers/gpu/msd-vsl-gc/src/instructions.h"
 #include "garnet/drivers/gpu/msd-vsl-gc/src/msd_vsl_device.h"
 #include "gtest/gtest.h"
 #include "helper/platform_device_helper.h"
@@ -95,6 +96,7 @@ TEST_F(TestEvents, Write) {
   }
 
   for (unsigned int i = 0; i < 2; i++) {
+    uint32_t prev_wait_link = ringbuffer->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
     // We will link to the end of the ringbuffer, where we are adding new events.
     uint32_t rb_link_addr = rb_gpu_addr + ringbuffer->tail();
 
@@ -110,12 +112,12 @@ TEST_F(TestEvents, Write) {
 
     // Link the ringbuffer to the newly written events.
     uint32_t num_new_rb_instructions = MsdVslDevice::kNumEvents + 2;  // Add 2 for WAIT-LINK.
-    device_->LinkRingbuffer(num_new_rb_instructions, rb_link_addr,
+    device_->LinkRingbuffer(prev_wait_link, rb_link_addr,
                             num_new_rb_instructions /* prefetch */);
 
     constexpr uint64_t kTimeoutMs = 5000;
     for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
-      EXPECT_EQ(MAGMA_STATUS_OK, semaphores[j]->Wait(kTimeoutMs).get());
+      ASSERT_EQ(MAGMA_STATUS_OK, semaphores[j]->Wait(kTimeoutMs).get());
     }
   }
 
@@ -139,7 +141,7 @@ TEST_F(TestEvents, Submit) {
                                              event_id, semaphore->Clone(), &prefetch_out));
 
     constexpr uint64_t kTimeoutMs = 1000;
-    EXPECT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
+    ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
 
     ASSERT_TRUE(device_->FreeInterruptEvent(event_id));
   }

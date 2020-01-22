@@ -36,11 +36,59 @@ TEST_F(RingbufferTest, Map) {
   EXPECT_TRUE(ringbuffer->Map(address_space));
 }
 
-TEST_F(RingbufferTest, Overwrite32) {
+TEST_F(RingbufferTest, OffsetPopulatedEmpty) {
+  const uint32_t kRingbufferSize = 4096;
+  const uint32_t kStartOffset = 0;
+
+  auto ringbuffer = std::make_unique<Ringbuffer>(
+      MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), kStartOffset);
+  ASSERT_NE(ringbuffer, nullptr);
+
+  EXPECT_FALSE(ringbuffer->IsOffsetPopulated(0));
+  EXPECT_FALSE(ringbuffer->IsOffsetPopulated(4096));
+}
+
+TEST_F(RingbufferTest, OffsetPopulatedHeadBeforeTail) {
+  const uint32_t kRingbufferSize = 4096;
+  const uint32_t kStartOffset = 40;
+
+  auto ringbuffer = std::make_unique<Ringbuffer>(
+      MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), kStartOffset);
+  ASSERT_NE(ringbuffer, nullptr);
+
+  ringbuffer->update_tail(100);
+
+  EXPECT_TRUE(ringbuffer->IsOffsetPopulated(40));
+  EXPECT_TRUE(ringbuffer->IsOffsetPopulated(60));
+  EXPECT_TRUE(ringbuffer->IsOffsetPopulated(96));
+
+  EXPECT_FALSE(ringbuffer->IsOffsetPopulated(100));
+}
+
+TEST_F(RingbufferTest, OffsetPopulatedTailBeforeHead) {
+  const uint32_t kRingbufferSize = 4096;
+  const uint32_t kStartOffset = 4000;
+
+  auto ringbuffer = std::make_unique<Ringbuffer>(
+      MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), kStartOffset);
+  ASSERT_NE(ringbuffer, nullptr);
+
+  ringbuffer->update_tail(100);
+
+  EXPECT_TRUE(ringbuffer->IsOffsetPopulated(4000));
+  EXPECT_TRUE(ringbuffer->IsOffsetPopulated(4092));
+
+  EXPECT_FALSE(ringbuffer->IsOffsetPopulated(4096));
+
+  EXPECT_TRUE(ringbuffer->IsOffsetPopulated(0));
+  EXPECT_TRUE(ringbuffer->IsOffsetPopulated(96));
+
+  EXPECT_FALSE(ringbuffer->IsOffsetPopulated(100));
+}
+
+TEST_F(RingbufferTest, ReserveContiguous) {
   const uint32_t kRingbufferSize = magma::page_size();
-  // Start near the end of the ringbuffer so we can test wrapping around.
-  const uint32_t kStartOffset = magma::page_size() - (3 * sizeof(uint32_t));
-  const uint32_t kStartIndex = kStartOffset / sizeof(uint32_t);
+  const uint32_t kStartOffset = 0;
 
   auto ringbuffer = std::make_unique<Ringbuffer>(
       MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"), kStartOffset);
@@ -49,52 +97,52 @@ TEST_F(RingbufferTest, Overwrite32) {
   MockAddressSpaceOwner owner;
   std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner);
   ASSERT_NE(nullptr, address_space);
-
   EXPECT_TRUE(ringbuffer->Map(address_space));
 
-  // Should not be able to overwrite anything if ringbuffer is empty.
-  EXPECT_FALSE(ringbuffer->Overwrite32(0 /* dwords_before_tail */, 0));
-  EXPECT_FALSE(ringbuffer->Overwrite32(1 /* dwords_before_tail */, 0));
+  // Cannot request the same number of bytes as the ringbuffer size,
+  // as the ringbuffer holds 4 bytes less.
+  EXPECT_FALSE(ringbuffer->ReserveContiguous(kRingbufferSize));
+  // Request all the space available.
+  EXPECT_TRUE(
+      ringbuffer->ReserveContiguous(kRingbufferSize - sizeof(uint32_t) /* reserve_bytes */));
+  EXPECT_EQ(ringbuffer->tail(), 0u);  // Tail should stay the same until we write something.
 
-  // Write a few values to the ringbuffer but don't wrap around.
-  uint32_t num_values = 2;
-  for (unsigned int i = 0; i < num_values; i++) {
+  // Partially fill the ringbuffer, leaving |available_bytes| free.
+  const uint32_t available_bytes = 5 * sizeof(uint32_t);
+  const uint32_t bytes_written = kRingbufferSize - available_bytes - sizeof(uint32_t);
+  for (unsigned int i = 0; i < bytes_written / sizeof(uint32_t); i++) {
     ringbuffer->Write32(0xFFFFFFFF /* value */);
   }
-  // Overwrite the values we just wrote with the expected ringbuffer offset.
-  EXPECT_TRUE(ringbuffer->Overwrite32(1 /* dwords_before_tail */, kStartIndex + 1 /* value */));
-  EXPECT_TRUE(ringbuffer->Overwrite32(2 /* dwords_before_tail */, kStartIndex));
-  // Only wrote 2 values, cannot overwrite at index 3.
-  EXPECT_FALSE(ringbuffer->Overwrite32(3 /* dwords_before_tail */, 0));
+  EXPECT_EQ(ringbuffer->tail(), bytes_written);
 
-  // Fill the rest of the ringbuffer. The ringbuffer holds 1 less than the ringbuffer size.
-  uint32_t size_dwords = kRingbufferSize / sizeof(uint32_t);
-  num_values = size_dwords - num_values - 1;
-  for (unsigned int i = 0; i < num_values; i++) {
-    ringbuffer->Write32(0xFFFFFFFF /* value */);
-  }
-  EXPECT_EQ(ringbuffer->tail(), kStartOffset - sizeof(uint32_t));
+  // Ringbuffer state (# = occupied, x = unusable)
+  //
+  // Contents:  | ####################################### |               |x|
+  // Offset:    HEAD (0)                                  TAIL (4072)       END
 
-  // Replace the values we just wrote.
-  // The first value we wrote is at the last physical index of the ringbuffer.
-  EXPECT_TRUE(ringbuffer->Overwrite32(num_values /* dwords_before_tail */,
-                                      kStartIndex + 2 /* value */));
-  // Start overwriting values starting from the tail.
-  for (unsigned int i = 1; i < num_values; i++) {
-    uint32_t expected_index = kStartIndex - 1 - i;
-    EXPECT_TRUE(ringbuffer->Overwrite32(i /* dwords_before_tail */, expected_index /* value */));
-  }
+  // Request slightly more space than is available.
+  EXPECT_FALSE(ringbuffer->ReserveContiguous(available_bytes + sizeof(uint32_t)));
+  // Request all the space available.
+  EXPECT_TRUE(ringbuffer->ReserveContiguous(available_bytes));
+  EXPECT_EQ(ringbuffer->tail(), bytes_written);
 
-  // Verify all the values in the ringbuffer have been correctly replaced.
-  uint32_t* addr = vaddr(ringbuffer.get());
-  ASSERT_NE(addr, nullptr);
+  // Free up some space in the ringbuffer.
+  const uint32_t head_offset = 40;
+  ringbuffer->update_head(head_offset);
 
-  for (unsigned int i = 0; i < size_dwords; i++) {
-    // The index before the start index won't be written, as the ringbuffer can only store
-    // 1 less than the ringbuffer size.
-    uint32_t next_index = (i + 1) % size_dwords;
-    if (next_index != kStartIndex) {
-      EXPECT_EQ(addr[i], i);
-    }
-  }
+  // Ringbuffer state
+  //
+  // Contents:  |           |x| ######################### |               |
+  // Offset:    START         HEAD (40)                   TAIL (4072)     END
+
+  // As the head is no longer at 0, we can write an additional 4 bytes contiguously.
+  EXPECT_TRUE(ringbuffer->ReserveContiguous(available_bytes + sizeof(uint32_t)));
+  EXPECT_EQ(ringbuffer->tail(), bytes_written);
+
+  // There are enough bytes, but not contiguously.
+  EXPECT_FALSE(ringbuffer->ReserveContiguous(head_offset));
+
+  // This will reset the tail to get enough contiguous bytes.
+  EXPECT_TRUE(ringbuffer->ReserveContiguous(head_offset - sizeof(uint32_t)));
+  EXPECT_EQ(ringbuffer->tail(), 0u);
 }

@@ -54,6 +54,13 @@ class Ringbuffer : public InstructionWriter {
  protected:
   uint32_t* vaddr() { return vaddr_; }
 
+  void update_tail(uint32_t tail) {
+    DASSERT((tail & (sizeof(*vaddr_) - 1)) == 0);
+    DASSERT(tail < size_);
+    DLOG("updating tail 0x%x", tail);
+    tail_ = tail;
+  }
+
  private:
   std::shared_ptr<typename GpuMapping::BufferType> buffer_;
   std::unique_ptr<GpuMapping> gpu_mapping_;
