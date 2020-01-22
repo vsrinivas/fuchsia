@@ -7,10 +7,13 @@
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
 #include <memory>
+
+#include <fbl/mutex.h>
 
 #include "base.h"
 
@@ -30,17 +33,33 @@ class TestFidlClient {
     fbl::String manufacturer_name_;
     fbl::String monitor_name_;
     fbl::String monitor_serial_;
+
+    ::llcpp::fuchsia::hardware::display::ImageConfig image_config_;
   };
 
   TestFidlClient() {}
+  ~TestFidlClient();
 
   bool CreateChannel(zx_handle_t provider, bool is_vc);
-  bool Bind();
+  // Enable vsync for a display and wait for events using |dispatcher|.
+  bool Bind(async_dispatcher_t* dispatcher) TA_EXCL(mtx());
+  uint64_t display_id() const;
 
   fbl::Vector<Display> displays_;
-  std::unique_ptr<::llcpp::fuchsia::hardware::display::Controller::SyncClient> dc_;
+  std::unique_ptr<::llcpp::fuchsia::hardware::display::Controller::SyncClient> dc_
+      TA_GUARDED(mtx());
   zx::handle device_handle_;
-  bool has_ownership_;
+  bool has_ownership_ = false;
+  size_t vsync_count_ TA_GUARDED(mtx()) = 0;
+
+  fbl::Mutex* mtx() const { return &mtx_; }
+
+ private:
+  mutable fbl::Mutex mtx_;
+  async_dispatcher_t* dispatcher_ = nullptr;
+  void OnEventMsgAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
+                       const zx_packet_signal_t* signal) TA_EXCL(mtx());
+  async::WaitMethod<TestFidlClient, &TestFidlClient::OnEventMsgAsync> wait_events_{this};
 };
 
 }  // namespace display
