@@ -29,7 +29,7 @@ zx_test("fvm") {
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fvm/test:devices",
+    "$zx/system/ulib/fvm/test:fvm-devices",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/memfs",
@@ -43,7 +43,7 @@ zx_test("fvm") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/cksum",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
   ]
 }
 
@@ -53,7 +53,7 @@ zx_test("fvm-integration") {
   deps = [
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/fvm/test:devices",
+    "$zx/system/ulib/fvm/test:fvm-devices",
     "$zx/system/ulib/zxtest",
   ]
 }

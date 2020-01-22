@@ -29,9 +29,9 @@ zx_test("fvm-unit") {
   }
 }
 
-zx_library("devices") {
-  sdk = "source"
-  sdk_headers = [ "fvm/test/device-ref.h" ]
+zx_library("fvm-devices") {
+   sdk = "source"
+   sdk_headers = [ "fvm/test/device-ref.h" ]
   testonly = true
   sources = [ "device-ref.cc" ]
   public_deps = [

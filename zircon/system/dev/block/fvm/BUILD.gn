@@ -2,16 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("fvm") {
-  deps = [ ":shared" ]
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  deprecated_inhibit_driver_shlib_allowlist = true
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("fvm") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  deps = [
+    ":shared",
+    "//src/devices:driver",
+  ]
 }
 
 # Also used by test/.
 source_set("shared") {
   visibility = [ "./*" ]
+  defines = [ "_ALL_SOURCE" ]
   sources = [
     "fvm.c",
     "fvm.cc",
@@ -19,25 +38,28 @@ source_set("shared") {
     "vpartition.cc",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk.protocol.block",
-    "$zx/system/banjo/ddk.protocol.block.partition",
-    "$zx/system/banjo/ddk.protocol.block.volume",
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/gpt",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/uboringssl",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fvm",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/gpt",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/boringssl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.block",
+    "//zircon/system/banjo/ddk.protocol.block.partition",
+    "//zircon/system/banjo/ddk.protocol.block.volume",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
+    "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
   ]
+}
+
+migrated_manifest("fvm-manifest") {
+  deps = [ ":fvm" ]
 }

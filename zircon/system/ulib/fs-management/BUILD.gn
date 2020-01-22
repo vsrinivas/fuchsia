@@ -37,7 +37,7 @@ zx_library("fs-management") {
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 

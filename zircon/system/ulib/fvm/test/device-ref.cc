@@ -62,10 +62,6 @@ zx_status_t RebindBlockDevice(DeviceRef* device) {
   return status;
 }
 
-fidl::BytePart ToBytePart(fbl::Array<uint8_t>* message) {
-  return fidl::BytePart(message->data(), static_cast<uint32_t>(message->size()));
-}
-
 fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
   return fidl::VectorView<uint8_t>(const_cast<uint8_t*>(data.data()), data.size());
 }

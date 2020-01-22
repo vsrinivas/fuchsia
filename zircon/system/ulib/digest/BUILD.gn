@@ -5,9 +5,9 @@
 zx_library("digest") {
   sdk = "source"
   sdk_headers = [
+    "digest/digest.h",
     "digest/hash-list.h",
     "digest/merkle-tree.h",
-    "digest/digest.h",
     "digest/node-digest.h",
   ]
   host = true
@@ -21,6 +21,6 @@ zx_library("digest") {
 
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
   ]
 }

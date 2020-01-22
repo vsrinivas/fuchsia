@@ -23,7 +23,7 @@ zx_library("fvm") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/third_party/ulib/lz4",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
   ]
   public_deps = [
     # <fvm/fvm.h> has #include <digest/digest.h>.
