@@ -51,7 +51,7 @@ bool g_has_md_clear;
 bool g_md_clear_on_user_return;
 bool g_has_ibpb;
 bool g_should_ibpb_on_ctxt_switch;
-bool g_ras_fill_on_entry;
+bool g_ras_fill_on_ctxt_switch;
 bool g_has_enhanced_ibrs;
 bool g_enhanced_ibrs_enabled;
 bool g_amd_retpoline;
@@ -192,6 +192,7 @@ void x86_feature_init(void) {
     // See "Indirect Branch Control Extension" Revision 4.10.18, Extended Usage Models.
     g_has_enhanced_ibrs = x86_amd_cpu_has_ibrs_always_on(&cpuid);
   }
+  g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
   // TODO(fxb/33667, fxb/12150): Consider whether a process can opt-out of an IBPB on switch,
   // either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
   // not to attack the next process).
@@ -425,7 +426,7 @@ void x86_feature_debug(void) {
     printf("l1d_flush_on_vmentry ");
   if (g_should_ibpb_on_ctxt_switch)
     printf("ibpb_ctxt_switch ");
-  if (g_ras_fill_on_entry)
+  if (g_ras_fill_on_ctxt_switch)
     printf("ras_fill ");
   if (g_has_enhanced_ibrs)
     printf("enhanced_ibrs ");
@@ -947,22 +948,6 @@ void swapgs_bug_postfence(const CodePatchInfo* patch) {
     g_swapgs_bug_mitigated = true;
   } else {
     memset(patch->dest_addr, kNop, kSize);
-  }
-}
-
-extern "C" void x86_ras_fill_select(const CodePatchInfo* patch) {
-  const size_t kSize = 53;
-  DEBUG_ASSERT(patch->dest_size == kSize);
-
-  // TODO(fxb/33667): Consider whether Enhanced IBRS + SMEP + SMAP requires filling RAS.
-  // Copy the contents of x86_ras_fill to the kernel syscall / exception entry point,
-  // except for the final RET.
-  if (!g_disable_spec_mitigations) {
-     extern char x86_ras_fill_start;
-     extern char x86_ras_fill_end;
-     DEBUG_ASSERT(&x86_ras_fill_end - &x86_ras_fill_start == kSize);
-     memcpy(patch->dest_addr, (void*) x86_ras_fill, kSize);
-     g_ras_fill_on_entry = true;
   }
 }
 

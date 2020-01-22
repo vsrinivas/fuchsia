@@ -144,8 +144,6 @@ END_FUNCTION(x86_monitor)
 //
 //    Overwriting the RAS prevents those attacks.
 FUNCTION(x86_ras_fill)
-.global x86_ras_fill_start
-x86_ras_fill_start:
     pushq %rcx
     // Execute a loop of 32 calls; each call creates a return address stack
     // (RAS/RSB) entry pointing at the predicted return address, |trap|.
@@ -177,7 +175,5 @@ x86_ras_fill_start:
 
     addq $256, %rsp
     popq %rcx
-.global x86_ras_fill_end
-x86_ras_fill_end:
     ret
 END_FUNCTION(x86_ras_fill)

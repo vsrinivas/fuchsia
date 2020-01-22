@@ -104,16 +104,6 @@ FUNCTION_LABEL(interrupt_common)
 
     /* swap gs to kernel space */
     swapgs
-
-    /* Spectre V2: Overwrite the Return Address Stack to ensure its not poisoned/can't underflow */
-.Lmaybe_exception_ras_fill:
-    jmp   1f
-    .rept 51
-    nop
-    .endr
-    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_ras_fill_select, .Lmaybe_exception_ras_fill, 53)
-
-    .align 16
 1:
     /* Certain processors may speculative past a conditional swapgs, with a caller-controlled
      * GS_BASE register. This may allow callers to infer the contents of kernel offsets or data.

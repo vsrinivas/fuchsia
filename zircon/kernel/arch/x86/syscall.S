@@ -299,16 +299,6 @@ FUNCTION_LABEL(x86_syscall)
     push_value %r11 /* user RFLAGS */
     push_value %rcx /* user RIP */
 
-    /* Spectre V2: Overwrite the Return Address Stack to ensure its not poisoned/can't underflow */
-.Lmaybe_syscall_ras_fill:
-    jmp 1f
-    .rept 51
-    nop
-    .endr
-    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_ras_fill_select, .Lmaybe_syscall_ras_fill, 53)
-
-    .align 16
-1:
     // Any changes to the stack here need to be reflected in
     // pre_push and post_pop macros above to maintain alignment.
     // Verify the syscall is in range and jump to it.

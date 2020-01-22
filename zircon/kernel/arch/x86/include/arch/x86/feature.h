@@ -345,6 +345,11 @@ static inline bool x86_get_disable_spec_mitigations(void) {
   return g_disable_spec_mitigations;
 }
 
+static inline bool x86_cpu_should_ras_fill_on_ctxt_switch(void) {
+  extern bool g_ras_fill_on_ctxt_switch;
+  return g_ras_fill_on_ctxt_switch;
+}
+
 static inline bool x86_cpu_should_ibpb_on_ctxt_switch(void) {
   extern bool g_should_ibpb_on_ctxt_switch;
   return g_should_ibpb_on_ctxt_switch;

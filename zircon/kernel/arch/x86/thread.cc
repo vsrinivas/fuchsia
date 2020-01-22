@@ -93,6 +93,12 @@ void* arch_thread_get_blocked_fp(thread_t* t) {
 }
 
 __NO_SAFESTACK static void x86_aspace_context_switch(thread_t* oldthread, thread_t* newthread) {
+  // Spectre V2: Overwrite the Return Address Stack to ensure its not poisoned
+  // TODO(fxb/33667, fxb/12540): On CPUs without RSB Alternate, we can skip this fill when
+  // |oldthread| is a kernel thread.
+  if (likely(x86_cpu_should_ras_fill_on_ctxt_switch())) {
+    x86_ras_fill();
+  }
   auto* const percpu = x86_get_percpu();
   // Flush Indirect Branch Predictor State, if:
   // 1) We are switching from a user address space to another user address space OR

@@ -361,6 +361,8 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
           next_state->CountEntry();
         }
       }
+      // TODO(fxb/33667, fxb/12540): Spectre V2 (Skylake+ only): If we enter a deep sleep state,
+      // fill the RSB before RET-ing from this function.
       thread_preempt();
     }
   } else {
