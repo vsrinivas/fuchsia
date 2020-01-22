@@ -229,15 +229,22 @@ impl Bignum {
         unsafe { BN_num_bits(self.0.as_ptr()) as usize }
     }
 
-    pub fn to_vec(&self) -> Vec<u8> {
+    /// Converts this bignum into a vector of at least the given minimum bytes, padded with leading
+    /// zeroes if necessary.
+    pub fn to_left_padded_vec(&self, min_length: usize) -> Vec<u8> {
         let len = self.len();
-        let mut out = vec![0; len];
+        let padded_len = std::cmp::max(len, min_length);
+        let mut out = vec![0; padded_len];
         if len != 0 {
             unsafe {
-                BN_bn2bin(self.0.as_ptr(), &mut out[0] as *mut u8);
+                BN_bn2bin(self.0.as_ptr(), &mut out[padded_len - len] as *mut u8);
             }
         }
         out
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.to_left_padded_vec(0)
     }
 }
 
@@ -582,6 +589,13 @@ mod tests {
         assert_eq!(bn("100").to_vec(), vec![100]);
         assert_eq!(bn("0xff00").to_vec(), vec![0xff, 0x00]);
         assert_eq!(bn("0").to_vec(), vec![]);
+    }
+
+    #[test]
+    fn bignum_to_left_padded_vec() {
+        assert_eq!(bn("0xff00").to_left_padded_vec(1), vec![0xff, 0x00]);
+        assert_eq!(bn("0xff00").to_left_padded_vec(4), vec![0x00, 0x00, 0xff, 0x00]);
+        assert_eq!(bn("0").to_left_padded_vec(4), vec![0x00, 0x00, 0x00, 0x00]);
     }
 
     // RFC 5903 section 3.1

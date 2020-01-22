@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod boringssl;
+mod ecc;
 
 use {
     anyhow::Error,
