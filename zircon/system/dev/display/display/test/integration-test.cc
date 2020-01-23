@@ -20,20 +20,15 @@ namespace display {
 class IntegrationTest : public TestBase {};
 
 TEST_F(IntegrationTest, ClientsCanBail) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  loop.StartThread("test_thread", nullptr);
   TestFidlClient client;
-  ASSERT_TRUE(client.CreateChannel(ddk().FidlClient().get(), false));
-  ASSERT_TRUE(client.Bind(loop.dispatcher()));
-  loop.RunUntilIdle();
+  ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), false));
+  ASSERT_TRUE(client.Bind(dispatcher()));
 }
 
 TEST_F(IntegrationTest, MustUseUniqueEvenIDs) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  loop.StartThread("test_thread", nullptr);
   TestFidlClient client;
-  ASSERT_TRUE(client.CreateChannel(ddk().FidlClient().get(), false));
-  ASSERT_TRUE(client.Bind(loop.dispatcher()));
+  ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), false));
+  ASSERT_TRUE(client.Bind(dispatcher()));
   zx::event event_a, event_b, event_c;
   ASSERT_OK(zx::event::create(0, &event_a));
   ASSERT_OK(zx::event::create(0, &event_b));
