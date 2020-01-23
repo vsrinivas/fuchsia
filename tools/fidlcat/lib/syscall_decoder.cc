@@ -33,22 +33,6 @@ namespace fidlcat {
 
 constexpr int kBitsPerByte = 8;
 
-// Printer which allows us to print the infered data for handles.
-class FidlcatPrinter : public fidl_codec::PrettyPrinter {
- public:
-  FidlcatPrinter(SyscallDecoderDispatcher* dispatcher, std::ostream& os,
-                 const fidl_codec::Colors& colors, std::string_view line_header, int max_line_size,
-                 bool header_on_every_line, int tabulations = 0)
-      : PrettyPrinter(os, colors, line_header, max_line_size, header_on_every_line, tabulations),
-        dispatcher_(dispatcher) {}
-  void DisplayHandle(const zx_handle_info_t& handle) override {
-    dispatcher_->DisplayHandle(handle, colors(), os());
-  }
-
- private:
-  SyscallDecoderDispatcher* dispatcher_;
-};
-
 // Helper function to convert a vector of bytes to a T.
 template <typename T>
 T GetValueFromBytes(const std::vector<uint8_t>& bytes, size_t offset) {
