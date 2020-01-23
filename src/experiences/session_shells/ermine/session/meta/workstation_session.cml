@@ -1,0 +1,27 @@
+{
+    "program": {
+        "binary": "bin/workstation_session",
+    },
+    "use": [
+        {
+            "directory": "/dev/class/input-report",
+            "from": "realm",
+            "rights": [ "r*",]
+        },
+        {
+            "protocol": "/svc/fuchsia.sys.Launcher",
+        },
+        {
+            "protocol": "/svc/fuchsia.ui.input2.Keyboard",
+        },
+        {
+            "protocol": "/svc/fuchsia.ui.scenic.Scenic",
+        },
+        {
+            "protocol": "/svc/fuchsia.ui.input.ImeService",
+        },
+        {
+            "protocol": "/svc/fuchsia.logger.LogSink",
+        }
+    ],
+}

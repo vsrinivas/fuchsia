@@ -5,6 +5,7 @@
 group("ermine") {
   public_deps = [
     "login_shell:userpicker_base_shell",
+    "session:workstation_session",
     "shell",
     "shell:services_config",
   ]
