@@ -13,13 +13,9 @@ use {
     },
     fidl_fuchsia_hardware_pty::WindowSize,
     fidl_fuchsia_ui_input::KeyboardEvent,
-    fuchsia_async as fasync,
-    futures::{
-        channel::mpsc,
-        io::{AsyncReadExt, AsyncWriteExt},
-        select, FutureExt, StreamExt,
-    },
-    std::{cell::RefCell, fs::File, rc::Rc},
+    fuchsia_async as fasync, fuchsia_trace as ftrace,
+    futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
+    std::{cell::RefCell, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
     term_model::{
         ansi::Processor,
         config::Config,
@@ -27,32 +23,13 @@ use {
     },
 };
 
+#[cfg(test)]
+use cstr::cstr;
+
 const BYTE_BUFFER_MAX_SIZE: usize = 128;
-type ByteContainerBuffer = [u8; BYTE_BUFFER_MAX_SIZE];
 
-struct ByteContainer {
-    buffer: ByteContainerBuffer,
-    read_count: usize,
-}
-
-impl ByteContainer {
-    fn new(buffer: ByteContainerBuffer, read_count: usize) -> ByteContainer {
-        ByteContainer { buffer, read_count }
-    }
-
-    fn make_buffer() -> ByteContainerBuffer {
-        [0u8; BYTE_BUFFER_MAX_SIZE]
-    }
-}
-
-/// Messages which can be used to interact with the Pty.
-#[derive(Debug)]
-enum PtyOutgoingMessages {
-    /// A message which indicates that a String should be sent to the Pty.
-    SendInput(String),
-
-    /// Indicates that the logical size of the Pty should be updated.
-    Resize(Size),
+struct ResizeEvent {
+    window_size: WindowSize,
 }
 
 #[derive(Clone)]
@@ -83,19 +60,65 @@ impl AppContextWrapper {
     }
 }
 
+struct PtyContext {
+    resize_sender: mpsc::UnboundedSender<ResizeEvent>,
+    file: File,
+    resize_receiver: Option<mpsc::UnboundedReceiver<ResizeEvent>>,
+    test_buffer: Option<Vec<u8>>,
+}
+
+impl PtyContext {
+    fn from_pty(pty: &Pty) -> Result<PtyContext, Error> {
+        let (resize_sender, resize_receiver) = mpsc::unbounded();
+        let file = pty.try_clone_fd()?;
+        Ok(PtyContext {
+            resize_sender,
+            file,
+            resize_receiver: Some(resize_receiver),
+            test_buffer: None,
+        })
+    }
+
+    fn take_resize_receiver(&mut self) -> mpsc::UnboundedReceiver<ResizeEvent> {
+        self.resize_receiver.take().expect("attempting to take resize receiver")
+    }
+
+    #[cfg(test)]
+    fn allow_dual_write_for_test(&mut self) {
+        self.test_buffer = Some(vec![]);
+    }
+}
+
+impl Write for PtyContext {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, std::io::Error> {
+        if let Some(test_buffer) = self.test_buffer.as_mut() {
+            for b in buf {
+                test_buffer.push(*b);
+            }
+        }
+        self.file.write(buf)
+    }
+
+    fn flush(&mut self) -> Result<(), std::io::Error> {
+        self.file.flush()
+    }
+}
+
 pub struct TerminalViewAssistant {
     last_known_size: Size,
-    parser: Processor,
-    pty: Option<PtyWrapper>,
+    pty_context: Option<PtyContext>,
     terminal_scene: TerminalScene,
-    term: Term,
+    term: Rc<RefCell<Term>>,
     app_context: AppContextWrapper,
+    view_key: ViewKey,
+
+    /// If set, will use this command when spawning the pty, this is useful for tests.
+    spawn_command: Option<&'static CStr>,
 }
 
 impl TerminalViewAssistant {
     /// Creates a new instance of the TerminalViewAssistant.
-    pub fn new(app_context: &AppContext) -> TerminalViewAssistant {
-        let parser = Processor::new();
+    pub fn new(app_context: &AppContext, view_key: ViewKey) -> TerminalViewAssistant {
         let cell_size = Size::new(12.0, 22.0);
         let term = Term::new(
             &Config::default(),
@@ -113,21 +136,24 @@ impl TerminalViewAssistant {
 
         TerminalViewAssistant {
             last_known_size: Size::zero(),
-            parser,
-            pty: None,
-            term,
+            pty_context: None,
+            term: Rc::new(RefCell::new(term)),
             terminal_scene: TerminalScene::default(),
             app_context: AppContextWrapper {
                 app_context: Some(app_context.clone()),
                 test_sender: None,
             },
+            view_key,
+            spawn_command: None,
         }
     }
 
     #[cfg(test)]
     pub fn new_for_test() -> TerminalViewAssistant {
         let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context)
+        let mut view = Self::new(&app_context, 1);
+        view.spawn_command = Some(cstr!("/pkg/bin/sh"));
+        view
     }
 
     /// Checks if we need to perform a resize based on a new size.
@@ -143,22 +169,33 @@ impl TerminalViewAssistant {
             let floored_size = new_size.floor();
             let term_size = TerminalScene::calculate_term_size_from_size(&floored_size);
 
-            let last_size_info = self.term.size_info();
+            // we can safely call borrow_mut here because we are running the terminal
+            // in single threaded mode. If we do move to a multithreaded model we will
+            // get a compiler error since we are using spawn_local in our pty_loop.
+            let mut term = self.term.borrow_mut();
+            let last_size_info = term.size_info().clone();
+
             let cell_width = last_size_info.cell_width;
             let cell_height = last_size_info.cell_height;
             let padding_x = last_size_info.padding_x;
             let padding_y = last_size_info.padding_y;
 
-            self.term.resize(&SizeInfo {
+            let term_size_info = SizeInfo {
                 width: term_size.width,
                 height: term_size.height,
                 cell_width,
                 cell_height,
                 padding_x,
                 padding_y,
-            });
+            };
 
-            self.queue_outgoing_message(PtyOutgoingMessages::Resize(*logical_size))
+            term.resize(&term_size_info);
+            drop(term);
+
+            let window_size =
+                WindowSize { width: logical_size.width as u32, height: logical_size.height as u32 };
+
+            self.queue_resize_event(ResizeEvent { window_size })
                 .context("unable to queue outgoing pty message")?;
 
             self.last_known_size = floored_size;
@@ -169,28 +206,26 @@ impl TerminalViewAssistant {
     }
 
     /// Checks to see if the Pty has been spawned and if not it does so.
-    fn spawn_pty_if_needed(&mut self, logical_size: &Size, view_key: ViewKey) -> Result<(), Error> {
-        if self.pty.is_some() {
+    fn spawn_pty_loop(&mut self) -> Result<(), Error> {
+        if self.pty_context.is_some() {
             return Ok(());
         }
 
-        // need to have non zero size before we can spawn
-        if logical_size.width < 1.0 || logical_size.height < 1.0 {
-            return Ok(());
-        }
+        let mut pty = Pty::new()?;
+        let mut pty_context = PtyContext::from_pty(&pty)?;
+        let mut resize_receiver = pty_context.take_resize_receiver();
 
-        let mut pty_wrapper = PtyWrapper::new()?;
-        let pty_clone = pty_wrapper.pty.clone();
-
-        let window_size =
-            WindowSize { width: logical_size.width as u32, height: logical_size.height as u32 };
-
-        let mut pty_receiver = pty_wrapper.take_receiver();
         let app_context = self.app_context.clone();
+        let view_key = self.view_key;
 
+        let term_clone = self.term.clone();
+        let spawn_command = self.spawn_command.clone();
+
+        // We want spawn_local here to enforce the single threaded model. If we
+        // do move to multithreaded we will need to refactor the term parsing
+        // logic to account for thread safaty.
         fasync::spawn_local(async move {
-            let mut pty = pty_clone.borrow_mut();
-            pty.spawn(window_size).await.expect("failed to spawn pty");
+            pty.spawn(spawn_command).await.expect("unable to spawn pty");
 
             let fd = pty.try_clone_fd().expect("unable to clone pty read fd");
             let mut evented_fd = unsafe {
@@ -201,9 +236,10 @@ impl TerminalViewAssistant {
                 fasync::net::EventedFd::new(fd).expect("failed to create evented_fd for io_loop")
             };
 
-            drop(pty);
+            let mut write_fd = pty.try_clone_fd().expect("unable to clone pty write fd");
+            let mut parser = Processor::new();
 
-            let mut read_buf = ByteContainer::make_buffer();
+            let mut read_buf = [0u8; BYTE_BUFFER_MAX_SIZE];
             loop {
                 let mut read_fut = evented_fd.read(&mut read_buf).fuse();
                 select!(
@@ -215,41 +251,35 @@ impl TerminalViewAssistant {
                             );
                             0
                         });
-
+                        ftrace::duration!("terminal", "parse_bytes", "len" => read_count as u32);
+                        let mut term = term_clone.borrow_mut();
                         if read_count > 0 {
-                            app_context.queue_message(view_key, make_message(ByteContainer::new(read_buf, read_count)));
+                            for byte in &read_buf[0..read_count] {
+                                parser.advance(&mut *term, *byte, &mut write_fd);
+                            }
                             app_context.queue_message(view_key, make_message(ViewMessages::Update));
                         }
                     },
-                result = pty_receiver.next().fuse() => {
-                        let message = result.expect("failed to unwrap pty send event");
-                        match message {
-                            PtyOutgoingMessages::SendInput(string) => {
-                                evented_fd.write_all(string.as_bytes()).await.unwrap_or_else(|e| {
-                                    println!("failed to write character to pty: {}", e)
-                                });
-                            },
-                            PtyOutgoingMessages::Resize(size) => {
-                                let pty = pty_clone.borrow_mut();
-                                let window_size = WindowSize { width: size.width as u32, height: size.height as u32 };
-                                pty.resize(window_size).await.unwrap_or_else(|e: anyhow::Error| {
-                                    eprintln!("failed to send resize message to pty: {:?}", e)
-                                });
-                            }
-                        }
+                result = resize_receiver.next().fuse() => {
+                    if let Some(event) = result {
+                        pty.resize(event.window_size).await.unwrap_or_else(|e: anyhow::Error| {
+                            eprintln!("failed to send resize message to pty: {:?}", e)
+                        });
+                        app_context.queue_message(view_key, make_message(ViewMessages::Update));
                     }
-                )
+                }
+                );
             }
         });
 
-        self.pty = Some(pty_wrapper);
+        self.pty_context = Some(pty_context);
 
         Ok(())
     }
 
-    fn queue_outgoing_message(&mut self, message: PtyOutgoingMessages) -> Result<(), Error> {
-        if let Some(pty) = &mut self.pty {
-            pty.sender.unbounded_send(message).context("Unable queue pty message")?;
+    fn queue_resize_event(&mut self, event: ResizeEvent) -> Result<(), Error> {
+        if let Some(pty_context) = &mut self.pty_context {
+            pty_context.resize_sender.unbounded_send(event).context("Unable send resize event")?;
         }
 
         Ok(())
@@ -260,7 +290,14 @@ impl TerminalViewAssistant {
     // we cannot make. This allows us to call the method directly in the tests.
     fn handle_keyboard_event(&mut self, event: &KeyboardEvent) -> Result<(), Error> {
         if let Some(string) = get_input_sequence_for_key_event(event) {
-            self.queue_outgoing_message(PtyOutgoingMessages::SendInput(string))?;
+            // In practice these writes will contain a small amount of data
+            // so we can use a synchronous write. If that proves to not be the
+            // case we will need to refactor to have buffered writing.
+            if let Some(pty_context) = &mut self.pty_context {
+                pty_context
+                    .write_all(string.as_bytes())
+                    .unwrap_or_else(|e| println!("failed to write character to pty: {}", e));
+            }
         }
 
         Ok(())
@@ -273,14 +310,24 @@ impl ViewAssistant for TerminalViewAssistant {
     }
 
     fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        self.spawn_pty_if_needed(&context.logical_size, context.key)?;
+        ftrace::duration!("terminal", "TerminalViewAssistant:update");
+
+        // we need to call spawn in this update block because calling it in the
+        // setup method causes us to receive write events before the view is
+        // prepared to draw.
+        self.spawn_pty_loop()?;
         self.resize_if_needed(&context.size, &context.logical_size)?;
 
         // Tell the termnial scene to render the values
         let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
         let config = Config::default();
-        let iter =
-            self.term.renderable_cells(&config, None /* selection */, true /* focused */);
+        let term = self.term.borrow();
+
+        let iter = {
+            ftrace::duration!("terminal", "TerminalViewAssistant:update:renderable_cells");
+            term.renderable_cells(&config, None /* selection */, true /* focused */)
+        };
+
         self.terminal_scene.render(canvas, iter);
         Ok(())
     }
@@ -296,49 +343,18 @@ impl ViewAssistant for TerminalViewAssistant {
     fn initial_animation_mode(&mut self) -> AnimationMode {
         AnimationMode::None
     }
-
-    fn handle_message(&mut self, message: Message) {
-        if let Some(bytes_container) = message.downcast_ref::<ByteContainer>() {
-            for byte in &bytes_container.buffer[0..bytes_container.read_count] {
-                if let Some(pty) = &mut self.pty {
-                    self.parser.advance(&mut self.term, *byte, &mut pty.fd);
-                } else {
-                    self.parser.advance(&mut self.term, *byte, &mut ::std::io::sink());
-                }
-            }
-        }
-    }
-}
-
-struct PtyWrapper {
-    fd: File,
-    pty: Rc<RefCell<Pty>>,
-    sender: mpsc::UnboundedSender<PtyOutgoingMessages>,
-    receiver: Option<mpsc::UnboundedReceiver<PtyOutgoingMessages>>,
-}
-
-impl PtyWrapper {
-    fn new() -> Result<PtyWrapper, Error> {
-        let pty = Pty::new()?;
-        let (sender, receiver) = mpsc::unbounded();
-
-        Ok(PtyWrapper {
-            fd: pty.try_clone_fd()?,
-            pty: Rc::new(RefCell::new(pty)),
-            receiver: Some(receiver),
-            sender,
-        })
-    }
-
-    fn take_receiver(&mut self) -> mpsc::UnboundedReceiver<PtyOutgoingMessages> {
-        self.receiver.take().expect("attempting to call PtyWrapper::take_receiver twice")
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_ui_input::KeyboardEventPhase;
+    use {
+        super::*,
+        anyhow::anyhow,
+        fidl_fuchsia_ui_input::KeyboardEventPhase,
+        fuchsia_async::{DurationExt, Timer},
+        fuchsia_zircon::DurationNum,
+        futures::future::Either,
+    };
 
     #[test]
     fn can_create_view() {
@@ -385,7 +401,9 @@ mod tests {
         let new_size = Size::new(100.5, 100.9);
         view.resize_if_needed(&new_size, &Size::zero()).expect("call to resize failed");
 
-        let size_info = view.term.size_info();
+        let term = view.term.borrow();
+
+        let size_info = term.size_info();
         let expected_size = TerminalScene::calculate_term_size_from_size(&view.last_known_size);
 
         // we want to make sure that the values are floored and that they
@@ -406,44 +424,37 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn resize_message_queued_with_logical_size_when_resize_needed() -> Result<(), Error> {
-        let mut wrapper = PtyWrapper::new()?;
+        let pty = Pty::new()?;
+        let mut pty_context = PtyContext::from_pty(&pty)?;
         let mut view = TerminalViewAssistant::new_for_test();
-        let mut receiver = wrapper.take_receiver();
+        let mut receiver = pty_context.take_resize_receiver();
 
-        view.pty = Some(wrapper);
+        view.pty_context = Some(pty_context);
 
         view.resize_if_needed(&Size::new(100.0, 100.0), &Size::new(1000.0, 2000.0))
             .expect("call to resize failed");
 
-        let message = receiver.next().await.expect("failed to receive pty event");
-        match message {
-            PtyOutgoingMessages::Resize(size) => {
-                assert_eq!(size.width, 1000.0);
-                assert_eq!(size.height, 2000.0);
-            }
-            _ => assert!(false),
-        }
+        let event = receiver.next().await.expect("failed to receive pty event");
+        assert_eq!(event.window_size.width, 1000);
+        assert_eq!(event.window_size.height, 2000);
 
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn handle_keyboard_event_queues_characters() -> Result<(), Error> {
-        let mut wrapper = PtyWrapper::new()?;
+    async fn handle_keyboard_event_writes_characters() -> Result<(), Error> {
+        let pty = Pty::new()?;
+        let mut pty_context = PtyContext::from_pty(&pty)?;
         let mut view = TerminalViewAssistant::new_for_test();
-        let mut receiver = wrapper.take_receiver();
+        pty_context.allow_dual_write_for_test();
 
-        view.pty = Some(wrapper);
+        view.pty_context = Some(pty_context);
+
         let capital_a = 65;
         view.handle_keyboard_event(&make_keyboard_event(capital_a))?;
 
-        let message = receiver.next().await.expect("failed to receive pty event");
-        match message {
-            PtyOutgoingMessages::SendInput(c) => {
-                assert_eq!(c, "A");
-            }
-            _ => assert!(false),
-        }
+        let test_buffer = view.pty_context.as_mut().unwrap().test_buffer.take().unwrap();
+        assert_eq!(test_buffer, b"A");
 
         Ok(())
     }
@@ -451,82 +462,131 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn pty_is_spawned_on_first_request() -> Result<(), Error> {
         let mut view = TerminalViewAssistant::new_for_test();
-        view.spawn_pty_if_needed(&Size::new(100.0, 100.0), 1)?;
-        assert!(view.pty.is_some());
+        view.spawn_pty_loop()?;
+        assert!(view.pty_context.is_some());
 
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn pty_message_reads_trigger_call_to_redraw() -> Result<(), Error> {
-        use std::io::prelude::*;
+        let (view, mut receiver) = make_test_view_with_spawned_pty_loop().await?;
 
-        let (sender, mut receiver) = mpsc::unbounded();
-
-        let mut view = TerminalViewAssistant::new_for_test();
-        view.app_context.use_test_sender(sender);
-
-        let _ = view.spawn_pty_if_needed(&Size::new(100.0, 100.0), 1);
         let mut fd = view
-            .pty
+            .pty_context
             .as_ref()
-            .map(|pty| pty.fd.try_clone().expect("attempt to clone fd failed"))
+            .map(|ctx| ctx.file.try_clone().expect("attempt to clone fd failed"))
             .unwrap();
 
         fasync::spawn_local(async move {
             let _ = fd.write_all(b"ls");
         });
 
-        loop {
-            let result = receiver.next().fuse().await;
-            let message = result.expect("result should not be None");
-            if let Some(view_msg) = message.downcast_ref::<ViewMessages>() {
-                match view_msg {
-                    ViewMessages::Update => break,
-                }
-            }
-        }
+        // No redraw will trigger a timeout and failure
+        wait_until_update_received_or_timeout(&mut receiver)
+            .await
+            .context(":pty_message_reads_trigger_call_to_redraw after write")?;
 
         Ok(())
     }
 
-    #[test]
-    fn bytes_received_is_processed_by_term() {
-        let mut view = TerminalViewAssistant::new_for_test();
+    #[fasync::run_singlethreaded(test)]
+    async fn resize_message_triggers_call_to_redraw() -> Result<(), Error> {
+        let (mut view, mut receiver) = make_test_view_with_spawned_pty_loop().await?;
 
-        // make sure we have a big enough size that a single character does not wrap
-        let large_size = Size::new(1000.0, 1000.0);
-        let _ = view.resize_if_needed(&large_size, &large_size);
+        let window_size = WindowSize { width: 123, height: 123 };
 
-        let col_pos_before = view.term.cursor().point.col;
+        view.queue_resize_event(ResizeEvent { window_size })
+            .context("unable to queue outgoing pty message")?;
 
-        let mut buffer = ByteContainer::make_buffer();
-        buffer[0] = b'A';
+        // No redraw will trigger a timeout and failure
+        wait_until_update_received_or_timeout(&mut receiver)
+            .await
+            .context(":resize_message_triggers_call_to_redraw after queue event")?;
 
-        view.handle_message(make_message(ByteContainer::new(buffer, 2)));
-
-        let col_pos_after = view.term.cursor().point.col;
-        assert_eq!(col_pos_before + 1, col_pos_after);
+        Ok(())
     }
 
-    #[test]
-    fn bytes_received_is_processed_by_term_multiple_bytes() {
-        let mut view = TerminalViewAssistant::new_for_test();
+    #[fasync::run_singlethreaded(test)]
+    async fn bytes_written_are_processed_by_term() -> Result<(), Error> {
+        let (mut view, mut receiver) = make_test_view_with_spawned_pty_loop().await?;
 
         // make sure we have a big enough size that a single character does not wrap
         let large_size = Size::new(1000.0, 1000.0);
-        let _ = view.resize_if_needed(&large_size, &large_size);
+        view.resize_if_needed(&large_size, &large_size)?;
 
-        let col_pos_before = view.term.cursor().point.col;
+        // Resizing will cause an update so we need to wait for that before we write.
+        wait_until_update_received_or_timeout(&mut receiver)
+            .await
+            .context(":bytes_written_are_processed_by_term after resize_if_needed")?;
 
-        let mut buffer = ByteContainer::make_buffer();
-        buffer[0] = b'A';
-        buffer[1] = b'B';
+        let term = view.term.borrow();
 
-        view.handle_message(make_message(ByteContainer::new(buffer, 2)));
+        let col_pos_before = term.cursor().point.col;
+        drop(term);
 
-        let col_pos_after = view.term.cursor().point.col;
-        assert_eq!(col_pos_before + 2, col_pos_after);
+        let mut fd = view
+            .pty_context
+            .as_ref()
+            .map(|ctx| ctx.file.try_clone().expect("attempt to clone fd failed"))
+            .unwrap();
+
+        fasync::spawn_local(async move {
+            let _ = fd.write_all(b"A");
+        });
+
+        // Wait until we get a notice that the view is ready to redraw
+        wait_until_update_received_or_timeout(&mut receiver)
+            .await
+            .context(":bytes_written_are_processed_by_term after write")?;
+
+        let term = view.term.borrow();
+        let col_pos_after = term.cursor().point.col;
+        assert_eq!(col_pos_before + 1, col_pos_after);
+
+        Ok(())
+    }
+
+    async fn make_test_view_with_spawned_pty_loop(
+    ) -> Result<(TerminalViewAssistant, mpsc::UnboundedReceiver<Message>), Error> {
+        let (sender, mut receiver) = mpsc::unbounded();
+
+        let mut view = TerminalViewAssistant::new_for_test();
+        view.app_context.use_test_sender(sender);
+
+        let _ = view.spawn_pty_loop();
+
+        // Spawning the loop triggers a read and a redraw, we want to skip this
+        // so that we can check that our test event triggers the redraw.
+        wait_until_update_received_or_timeout(&mut receiver)
+            .await
+            .context("::make_test_view_with_spawned_pty_loop")?;
+
+        Ok((view, receiver))
+    }
+
+    async fn wait_until_update_received_or_timeout(
+        receiver: &mut mpsc::UnboundedReceiver<Message>,
+    ) -> Result<(), Error> {
+        loop {
+            let timeout = Timer::new(5000_i64.millis().after_now());
+            let either = futures::future::select(timeout, receiver.next().fuse());
+            let resolved = either.await;
+            match resolved {
+                Either::Left(_) => {
+                    return Err(anyhow!("wait_until_update_received timed out"));
+                }
+                Either::Right((result, _)) => {
+                    let message = result.expect("result should not be None");
+                    if let Some(view_msg) = message.downcast_ref::<ViewMessages>() {
+                        match view_msg {
+                            ViewMessages::Update => break,
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     fn make_keyboard_event(code_point: u32) -> KeyboardEvent {

@@ -18,7 +18,7 @@ impl TerminalAssistant {
     }
 
     #[cfg(test)]
-    pub fn new_for_test() -> TerminalAssistant {
+    fn new_for_test() -> TerminalAssistant {
         let app_context = AppContext::new_for_testing_purposes_only();
         Self::new(&app_context)
     }
@@ -29,8 +29,11 @@ impl AppAssistant for TerminalAssistant {
         Ok(())
     }
 
-    fn create_view_assistant_canvas(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(TerminalViewAssistant::new(&self.app_context)))
+    fn create_view_assistant_canvas(
+        &mut self,
+        view_key: ViewKey,
+    ) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(TerminalViewAssistant::new(&self.app_context, view_key)))
     }
 
     fn get_mode(&self) -> ViewMode {

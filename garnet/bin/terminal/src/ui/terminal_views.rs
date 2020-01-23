@@ -6,6 +6,7 @@ use {
     carnelian::{
         Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, Point, Rect, Size,
     },
+    fuchsia_trace as ftrace,
     term_model::term::RenderableCellsIter,
 };
 
@@ -23,6 +24,7 @@ impl BackgroundView {
     }
 
     pub fn render(&self, canvas: &mut Canvas<MappingPixelSink>) {
+        ftrace::duration!("terminal", "Views:BackgroundView:render");
         canvas.fill_rect(&self.frame, self.color);
     }
 }
@@ -55,6 +57,7 @@ impl GridView {
         canvas: &mut Canvas<MappingPixelSink>,
         cells: RenderableCellsIter<'a>,
     ) {
+        ftrace::duration!("terminal", "Views:GridView:render");
         let mut font_description = FontDescription { face: &self.font, size: 20, baseline: 18 };
 
         let size = self.cell_size;
@@ -86,6 +89,7 @@ impl Default for ScrollBar {
 
 impl ScrollBar {
     pub fn render(&self, _canvas: &mut Canvas<MappingPixelSink>) {
+        ftrace::duration!("terminal", "Views:ScrollBar:render");
         // no implementation for rendering the scroll bar yet (fxb/36784)
     }
 }

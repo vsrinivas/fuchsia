@@ -22,6 +22,7 @@
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.sys.Environment",
             "fuchsia.sys.index.FuzzySearch",
             "fuchsia.sys.Launcher",

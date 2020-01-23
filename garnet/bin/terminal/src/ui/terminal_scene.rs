@@ -6,6 +6,7 @@
 use {
     crate::ui::terminal_views::{BackgroundView, GridView, ScrollBar},
     carnelian::{Canvas, Color, MappingPixelSink, Rect, Size},
+    fuchsia_trace as ftrace,
     term_model::term::RenderableCellsIter,
 };
 
@@ -43,12 +44,14 @@ impl TerminalScene {
         canvas: &mut Canvas<MappingPixelSink>,
         cells: RenderableCellsIter<'a>,
     ) {
+        ftrace::duration!("terminal", "Scene:TerminalScene:render");
         self.background_view.render(canvas);
         self.grid_view.render(canvas, cells);
         self.scroll_bar.render(canvas);
     }
 
     pub fn update_size(&mut self, new_size: Size) {
+        ftrace::duration!("terminal", "Scene:TerminalScene:update_size");
         self.size = new_size;
         self.background_view.frame = Rect::from_size(new_size);
 
