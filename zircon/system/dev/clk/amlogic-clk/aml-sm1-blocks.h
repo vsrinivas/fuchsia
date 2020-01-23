@@ -67,25 +67,29 @@ static constexpr meson_clk_gate_t sm1_clk_gates[] = {
     {.reg = kHhiGclkMpeg2, .bit = 25},  // CLK_VPU_INTR
     {.reg = kHhiGclkMpeg2, .bit = 30},  // CLK_GIC
 
-    {.reg = kHhiGclk2Other, .bit = 1},   // CLK_VCLK2_VENCI0
-    {.reg = kHhiGclk2Other, .bit = 2},   // CLK_VCLK2_VENCI1
-    {.reg = kHhiGclk2Other, .bit = 3},   // CLK_VCLK2_VENCP0
-    {.reg = kHhiGclk2Other, .bit = 4},   // CLK_VCLK2_VENCP1
-    {.reg = kHhiGclk2Other, .bit = 5},   // CLK_VCLK2_VENCT0
-    {.reg = kHhiGclk2Other, .bit = 6},   // CLK_VCLK2_VENCT1
-    {.reg = kHhiGclk2Other, .bit = 7},   // CLK_VCLK2_OTHER
-    {.reg = kHhiGclk2Other, .bit = 8},   // CLK_VCLK2_ENCI
-    {.reg = kHhiGclk2Other, .bit = 9},   // CLK_VCLK2_ENCP
-    {.reg = kHhiGclk2Other, .bit = 10},  // CLK_DAC_CLK
-    {.reg = kHhiGclk2Other, .bit = 14},  // CLK_AOCLK_GATE
-    {.reg = kHhiGclk2Other, .bit = 16},  // CLK_IEC958_GATE
-    {.reg = kHhiGclk2Other, .bit = 20},  // CLK_ENC480P
-    {.reg = kHhiGclk2Other, .bit = 21},  // CLK_RNG1
-    {.reg = kHhiGclk2Other, .bit = 22},  // CLK_VCLK2_ENCT
-    {.reg = kHhiGclk2Other, .bit = 23},  // CLK_VCLK2_ENCL
-    {.reg = kHhiGclk2Other, .bit = 24},  // CLK_VCLK2_VENCLMMC
-    {.reg = kHhiGclk2Other, .bit = 25},  // CLK_VCLK2_VENCL
-    {.reg = kHhiGclk2Other, .bit = 26},  // CLK_VCLK2_OTHER1
+    {.reg = kHhiGclk2Other,   .bit = 1},   // CLK_VCLK2_VENCI0
+    {.reg = kHhiGclk2Other,   .bit = 2},   // CLK_VCLK2_VENCI1
+    {.reg = kHhiGclk2Other,   .bit = 3},   // CLK_VCLK2_VENCP0
+    {.reg = kHhiGclk2Other,   .bit = 4},   // CLK_VCLK2_VENCP1
+    {.reg = kHhiGclk2Other,   .bit = 5},   // CLK_VCLK2_VENCT0
+    {.reg = kHhiGclk2Other,   .bit = 6},   // CLK_VCLK2_VENCT1
+    {.reg = kHhiGclk2Other,   .bit = 7},   // CLK_VCLK2_OTHER
+    {.reg = kHhiGclk2Other,   .bit = 8},   // CLK_VCLK2_ENCI
+    {.reg = kHhiGclk2Other,   .bit = 9},   // CLK_VCLK2_ENCP
+    {.reg = kHhiGclk2Other,   .bit = 10},  // CLK_DAC_CLK
+    {.reg = kHhiGclk2Other,   .bit = 14},  // CLK_AOCLK_GATE
+    {.reg = kHhiGclk2Other,   .bit = 16},  // CLK_IEC958_GATE
+    {.reg = kHhiGclk2Other,   .bit = 20},  // CLK_ENC480P
+    {.reg = kHhiGclk2Other,   .bit = 21},  // CLK_RNG1
+    {.reg = kHhiGclk2Other,   .bit = 22},  // CLK_VCLK2_ENCT
+    {.reg = kHhiGclk2Other,   .bit = 23},  // CLK_VCLK2_ENCL
+    {.reg = kHhiGclk2Other,   .bit = 24},  // CLK_VCLK2_VENCLMMC
+    {.reg = kHhiGclk2Other,   .bit = 25},  // CLK_VCLK2_VENCL
+    {.reg = kHhiGclk2Other,   .bit = 26},  // CLK_VCLK2_OTHER1
+    {.reg = kHhiGclkSpMpeg,   .bit = 1},   // CLK_EFUSE
+    {.reg = kHhiMpegClkCntl,  .bit = 7},   // CLK_81
+    {.reg = kHhiXtalDivnCntl, .bit = 11},  // CLK_24M
+    {.reg = kHhiGenClkCntl,   .bit = 11},  // CLK_GEN_CLK
 
     // SM1 Specific Clock Gates.
     {.reg = kHhiGclkMpeg1, .bit = 18},  // CLK_CSI_DIG
