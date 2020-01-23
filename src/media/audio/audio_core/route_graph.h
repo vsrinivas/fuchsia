@@ -101,11 +101,25 @@ class RouteGraph {
     RoutingProfile profile;
   };
 
+  struct Target {
+    Target() {}
+
+    Target(AudioDevice* _device, std::shared_ptr<LoudnessTransform> _transform)
+        : device(_device), transform(_transform) {
+      FX_DCHECK(!!device == !!transform);
+    }
+
+    bool is_linkable() const { return device; }
+
+    AudioDevice* device = nullptr;
+    std::shared_ptr<LoudnessTransform> transform = nullptr;
+  };
+
   // Cached targets for linking renderers and capturers.
   struct Targets {
-    std::array<AudioDevice*, fuchsia::media::RENDER_USAGE_COUNT> render = {};
-    AudioDevice* loopback = nullptr;
-    AudioDevice* capture = nullptr;
+    std::array<Target, fuchsia::media::RENDER_USAGE_COUNT> render = {};
+    Target loopback;
+    Target capture;
   };
 
   // A command to unlink components of the graph.
@@ -118,6 +132,8 @@ class RouteGraph {
     bool capturers = false;
   };
 
+  const RoutingConfig::DeviceProfile& DeviceProfile(AudioDevice* device) const;
+
   void UpdateGraphForDeviceChange();
 
   // Calculate the new targets based on our routing policy and available devices.
@@ -127,7 +143,7 @@ class RouteGraph {
 
   void Unlink(UnlinkCommand unlink_command);
 
-  AudioDevice* OutputForUsage(const fuchsia::media::Usage& usage) const;
+  Target OutputForUsage(const fuchsia::media::Usage& usage) const;
 
   const RoutingConfig& routing_config_;
 
