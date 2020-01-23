@@ -22,6 +22,9 @@
         },
         {
             "protocol": "/svc/fuchsia.logger.LogSink",
-        }
+        },
+        {
+            "protocol": "/svc/fuchsia.ui.shortcut.Manager",
+        },
     ],
 }

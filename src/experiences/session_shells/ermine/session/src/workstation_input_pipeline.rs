@@ -6,12 +6,13 @@ use {
     crate::mouse_pointer_hack::*,
     crate::pointer_hack_server::PointerHackServer,
     crate::touch_pointer_hack::*,
-    fuchsia_async as fasync,
+    fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
     futures::StreamExt,
     input::{
         ime_handler::ImeHandler, input_device::InputDeviceBinding, input_handler::InputHandler,
         input_pipeline::InputPipeline, keyboard, mouse, mouse_handler, mouse_handler::MouseHandler,
-        touch, touch_handler::TouchHandler,
+        shortcut_handler::ShortcutHandler, touch, touch_handler::TouchHandler,
     },
     scene_management::{self, FlatSceneManager, SceneManager},
 };
@@ -73,11 +74,21 @@ async fn input_handlers(
     // Touch and mouse hack handlers are inserted first.
     add_touch_hack(&scene_manager, &pointer_hack_server, &mut handlers).await;
     add_mouse_hack(&scene_manager, &pointer_hack_server, &mut handlers).await;
+    // Shortcut needs to go before IME.
+    add_shortcut_handler(&mut handlers).await;
     add_ime(&scene_manager, &mut handlers).await;
     add_touch_handler(&scene_manager, &mut handlers).await;
     add_mouse_handler(scene_manager, &mut handlers).await;
 
     handlers
+}
+
+async fn add_shortcut_handler(handlers: &mut Vec<Box<dyn InputHandler>>) {
+    if let Ok(manager) = connect_to_service::<ui_shortcut::ManagerMarker>() {
+        if let Ok(shortcut_handler) = ShortcutHandler::new(manager) {
+            handlers.push(Box::new(shortcut_handler));
+        }
+    }
 }
 
 async fn add_ime(scene_manager: &FlatSceneManager, handlers: &mut Vec<Box<dyn InputHandler>>) {
