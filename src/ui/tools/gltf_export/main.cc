@@ -511,6 +511,8 @@ bool RawToPNG(size_t width, size_t height, const uint8_t *data, std::vector<uint
 
 std::string Base64Encode(const uint8_t *bytes, size_t size) {
   std::string encoded(modp_b64_encode_len(size), '\0');
-  modp_b64_encode(const_cast<char *>(encoded.data()), reinterpret_cast<const char *>(bytes), size);
+  size_t trim_begin = modp_b64_encode(const_cast<char *>(encoded.data()),
+                                      reinterpret_cast<const char *>(bytes), size);
+  encoded.erase(trim_begin, std::string::npos);
   return encoded;
 }
