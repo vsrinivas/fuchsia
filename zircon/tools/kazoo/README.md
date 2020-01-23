@@ -18,11 +18,7 @@ includes:
 - The attribute `[Transport="Syscall"]` must be applied to all protocols that are part of the
   syscall interface.
 
-- All .fidl files must be part of `library zz` or `library zx`. "zx" is currently used by
-  FIDL-proper to magically define the existing defintions of some basic types, e.g. `zx.status` that
-  are used by other FIDL files. Because of this "zz" is used for the new syscall definitions. In the
-  future, Kazoo will accept only `library zx`, and the automatically generated "zx" and the syscalls
-  in "zz" will be merged into "zx" that will all appear in source `.fidl` files.
+- All .fidl files must be part of `library zx`.
 
 - Type aliases used to impart meaning. `alias_workarounds.fidl` includes various aliases that expand
   to something similar to the correct type, however Kazoo treats these specially. For example,

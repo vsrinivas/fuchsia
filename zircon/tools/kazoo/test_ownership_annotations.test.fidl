@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zz;
-
-using zx;
+library zx;
 
 [Transport="Syscall"]
 protocol HandleOwnership {
@@ -12,6 +10,6 @@ protocol HandleOwnership {
     fun1([Release] vector<handle> in);
     fun2([Use] vector<handle> in) -> ([Use] vector<handle> out);
     fun3(vector<handle> in) -> ([Acquire] vector<handle> out);
-    fun4(handle in) -> (zx.status status, handle out);
-    fun5([Release] handle in) -> (zx.status status, [Use] handle out);
+    fun4(handle in) -> (status status, handle out);
+    fun5([Release] handle in) -> (status status, [Use] handle out);
 };

@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zz;
-
-using zx;
+library zx;
 
 [Transport="Syscall"]
 protocol Couple {
     /// This does a single thing.
     [internal]
-    DoThing(int32 an_input) -> (zx.status status);
+    DoThing(int32 an_input) -> (status status);
 
     /// Does great stuff.
-    GetStuff(int32 an_input, int32 input2) -> (zx.status status);
+    GetStuff(int32 an_input, int32 input2) -> (status status);
 };

@@ -261,6 +261,8 @@ typedef struct zx_iovec {
 } zx_iovec_t;
 
 // Maximum string length for kernel names (process name, thread name, etc)
+// TODO(fxb/7802): This must be manually kept in sync with zx_common.fidl.
+// Eventually (some of) this file will be generated from //syscalls/zircon/.
 #define ZX_MAX_NAME_LEN              ((size_t)32u)
 
 // Buffer size limits on the cprng syscalls
@@ -293,6 +295,8 @@ typedef struct zx_iovec {
 // Channel options and limits.
 #define ZX_CHANNEL_READ_MAY_DISCARD         ((uint32_t)1u)
 
+// TODO(fxb/7802): This must be manually kept in sync with zx_common.fidl.
+// Eventually (some of) this file will be generated from //syscalls/zircon/.
 #define ZX_CHANNEL_MAX_MSG_BYTES            ((uint32_t)65536u)
 #define ZX_CHANNEL_MAX_MSG_HANDLES          ((uint32_t)64u)
 
@@ -431,6 +435,8 @@ typedef struct zx_channel_call_args {
 // CPU masks specifying sets of CPUs.
 //
 // We currently are limited to systems with 512 CPUs or less.
+// TODO(fxb/7802): This must be manually kept in sync with zx_common.fidl.
+// Eventually (some of) this file will be generated from //syscalls/zircon/.
 #define ZX_CPU_SET_MAX_CPUS 512
 #define ZX_CPU_SET_BITS_PER_WORD 64
 

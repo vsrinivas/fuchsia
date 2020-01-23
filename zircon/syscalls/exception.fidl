@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/39732): This should be read as "library zx".
-library zz;
+library zx;
 
 [Transport = "Syscall"]
 protocol exception {

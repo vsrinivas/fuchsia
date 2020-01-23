@@ -32,13 +32,13 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     return true;
   }
   if (name == "mutable_vector_HandleDisposition_u32size") {
-    *type = Type(TypeVector(Type(library.TypeFromIdentifier("zz/HandleDisposition")),
+    *type = Type(TypeVector(Type(library.TypeFromIdentifier("zx/HandleDisposition")),
                             UseUint32ForVectorSizeTag{}),
                  Constness::kMutable);
     return true;
   }
   if (name == "mutable_vector_WaitItem") {
-    *type = Type(TypeVector(Type(library.TypeFromIdentifier("zz/WaitItem"))), Constness::kMutable);
+    *type = Type(TypeVector(Type(library.TypeFromIdentifier("zx/WaitItem"))), Constness::kMutable);
     return true;
   }
   if (name == "mutable_vector_handle_u32size") {
@@ -55,12 +55,12 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     return true;
   }
   if (name == "optional_PciBar") {
-    *type = Type(library.TypeFromIdentifier("zz/PciBar").type_data(), Constness::kUnspecified,
+    *type = Type(library.TypeFromIdentifier("zx/PciBar").type_data(), Constness::kUnspecified,
                  Optionality::kOutputOptional);
     return true;
   }
   if (name == "optional_PortPacket") {
-    *type = Type(library.TypeFromIdentifier("zz/PortPacket").type_data(), Constness::kUnspecified,
+    *type = Type(library.TypeFromIdentifier("zx/PortPacket").type_data(), Constness::kUnspecified,
                  Optionality::kOutputOptional);
     return true;
   }
@@ -87,7 +87,7 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
   }
   if (name == "vector_HandleInfo_u32size") {
     *type = Type(
-        TypeVector(Type(library.TypeFromIdentifier("zz/HandleInfo")), UseUint32ForVectorSizeTag{}),
+        TypeVector(Type(library.TypeFromIdentifier("zx/HandleInfo")), UseUint32ForVectorSizeTag{}),
         Constness::kConst);
     return true;
   }

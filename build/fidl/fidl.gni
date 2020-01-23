@@ -72,6 +72,11 @@ template("fidl") {
          "All FIDL dependencies are inherently " +
              "public, use 'public_deps' instead of 'deps'.")
 
+  additional_deps = []
+  if (target_name != "zx") {
+    additional_deps += [ "//zircon/syscalls:zx" ]
+  }
+
   # TODO(ZX-3365): Hack for - compat names during soft transition.
   # Remove whole conditional block when final conversion to . names is done.
   if (get_path_info("..", "dir") == "//zircon/public/fidl" &&
@@ -141,18 +146,30 @@ template("fidl") {
 
     fidl_dart(target_name) {
       forward_variables_from(invoker, "*")
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += additional_deps
     }
   } else if (current_toolchain == rust_toolchain) {
     import("//build/rust/fidl_rust.gni")
 
     fidl_rust(target_name) {
       forward_variables_from(invoker, "*")
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += additional_deps
     }
   } else if (current_toolchain == go_toolchain) {
     import("//build/go/fidl_go.gni")
 
     fidl_go(target_name) {
       forward_variables_from(invoker, "*")
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += additional_deps
     }
   } else {
     import("//build/c/fidl_c.gni")
@@ -195,8 +212,13 @@ template("fidl") {
       if (defined(invoker.excluded_checks)) {
         excluded_checks = invoker.excluded_checks
       }
+
       fidl_library(target_name) {
         forward_variables_from(invoker, "*")
+        if (!defined(public_deps)) {
+          public_deps = []
+        }
+        public_deps += additional_deps
       }
     }
 
@@ -221,6 +243,10 @@ template("fidl") {
 
     fidl_cpp(target_name) {
       forward_variables_from(invoker, "*")
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += additional_deps
       generators = [
         {
           fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
@@ -255,15 +281,27 @@ template("fidl") {
     # TODO(cramertj): remove pending TC-81.
     fidl_rust_library(target_name) {
       forward_variables_from(invoker, "*")
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += additional_deps
     }
 
     if (is_fuchsia) {
       fidl_c_client(target_name) {
         forward_variables_from(invoker, "*")
+        if (!defined(public_deps)) {
+          public_deps = []
+        }
+        public_deps += additional_deps
       }
 
       fidl_c_server(target_name) {
         forward_variables_from(invoker, "*")
+        if (!defined(public_deps)) {
+          public_deps = []
+        }
+        public_deps += additional_deps
       }
 
       group("${target_name}_c") {

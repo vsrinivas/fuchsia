@@ -31,7 +31,7 @@ bool ValidateTransport(const rapidjson::Value& interface) {
 }
 
 std::string StripLibraryName(const std::string& full_name) {
-  // "zx/" or "zz/".
+  // "zx/".
   constexpr size_t kPrefixLen = 3;
   return full_name.substr(kPrefixLen, full_name.size() - kPrefixLen);
 }
@@ -97,7 +97,7 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     // the front end (fidlc) and 2) we move various parts of zx.fidl from being built-in to fidlc to
     // actual source level fidl and shared between the syscall definitions and normal FIDL.
     const std::string full_name(type_alias->operator[]("name").GetString());
-    ZX_ASSERT(full_name.substr(0, 3) == "zx/" || full_name.substr(0, 3) == "zz/");
+    ZX_ASSERT(full_name.substr(0, 3) == "zx/");
     const std::string name = full_name.substr(3);
     if (name == "duration" || name == "Futex" || name == "koid" || name == "paddr" ||
         name == "rights" || name == "signals" || name == "status" || name == "time" ||
@@ -399,8 +399,8 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
   }
 
   library->name_ = document["name"].GetString();
-  if (library->name_ != "zz" && library->name_ != "zx") {
-    fprintf(stderr, "Library name wasn't zz or zx as expected.\n");
+  if (library->name_ != "zx") {
+    fprintf(stderr, "Library name wasn't zx as expected.\n");
     return false;
   }
 

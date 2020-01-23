@@ -4,8 +4,6 @@
 
 library zx;
 
-[Transport="Syscall"]
-protocol Single {
-    /// This does a single thing.
-    DoThing(int32 an_input) -> (status status);
-};
+using usize = uint64;
+
+using uintptr = uint64;

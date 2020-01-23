@@ -52,7 +52,8 @@ if (current_toolchain == default_toolchain) {
       "$zx/syscalls/vcpu.fidl",
       "$zx/syscalls/vmar.fidl",
       "$zx/syscalls/vmo.fidl",
-      "$zx/syscalls/zx.fidl",
+      "$zx/syscalls/zx_common.fidl",
+      "$zx/syscalls/zx_syscall.fidl",
     ]
     outputs = [ syscall_ir_json ]
     args = [

@@ -35,6 +35,7 @@ sdk://fidl/fuchsia.ui.input2
 sdk://fidl/fuchsia.ui.policy
 sdk://fidl/fuchsia.ui.views
 sdk://fidl/fuchsia.web
+sdk://fidl/zx
 sdk://tools/dart_kernel_compiler
 sdk://tools/fidlgen_dart
 sdk://tools/gen_snapshot

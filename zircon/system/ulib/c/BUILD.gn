@@ -154,7 +154,8 @@ zx_library("c") {
             "../../syscalls/vcpu.fidl",
             "../../syscalls/vmar.fidl",
             "../../syscalls/vmo.fidl",
-            "../../syscalls/zx.fidl",
+            "../../syscalls/zx_common.fidl",
+            "../../syscalls/zx_syscall.fidl",
           ]
         }
       },

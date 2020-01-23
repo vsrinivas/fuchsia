@@ -47,8 +47,8 @@ constexpr uint64_t kMaxPath = (2 * kMaxFilename) + 1;
 
 namespace internal {
 
-zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, ::fidl::StringView path,
-                              zx::channel remote) {
+zx_status_t DirectoryOpenFunc(::zx::unowned_channel dir, ::fidl::StringView path,
+                              ::zx::channel remote) {
   constexpr uint32_t flags =
       ::llcpp::fuchsia::io::OPEN_RIGHT_READABLE | ::llcpp::fuchsia::io::OPEN_RIGHT_WRITABLE;
   ::llcpp::fuchsia::io::Directory::ResultOf::Open result =
@@ -59,8 +59,8 @@ zx_status_t DirectoryOpenFunc(zx::unowned_channel dir, ::fidl::StringView path,
 
 }  // namespace internal
 
-zx_status_t OpenNamedServiceAt(zx::unowned_channel dir, fit::string_view service,
-                               fit::string_view instance, zx::channel remote) {
+zx_status_t OpenNamedServiceAt(::zx::unowned_channel dir, fit::string_view service,
+                               fit::string_view instance, ::zx::channel remote) {
   ::fidl::Array<char, kMaxPath> path_buffer;
   ::fidl::result<::fidl::StringView> path_result =
       ValidateAndJoinPath(&path_buffer, ::fidl::StringView(service), ::fidl::StringView(instance));

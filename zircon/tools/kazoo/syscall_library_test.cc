@@ -15,18 +15,18 @@ namespace {
 TEST(SyscallLibrary, LoaderSimpleEmpty) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_no_methods, &library));
-  EXPECT_EQ(library.name(), "zz");
+  EXPECT_EQ(library.name(), "zx");
   EXPECT_TRUE(library.syscalls().empty());
 }
 
 TEST(SyscallLibrary, LoaderSingleMethod) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_one_protocol_one_method, &library));
-  EXPECT_EQ(library.name(), "zz");
+  EXPECT_EQ(library.name(), "zx");
   ASSERT_EQ(library.syscalls().size(), 1u);
 
   const auto& sc = library.syscalls()[0];
-  EXPECT_EQ(sc->id(), "zz/Single");
+  EXPECT_EQ(sc->id(), "zx/Single");
   EXPECT_EQ(sc->original_name(), "DoThing");
   EXPECT_EQ(sc->category(), "single");
   EXPECT_EQ(sc->name(), "single_do_thing");
@@ -47,7 +47,7 @@ TEST(SyscallLibrary, LoaderSingleMethod) {
 TEST(SyscallLibrary, LoaderVectors) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_pointers_and_vectors, &library));
-  EXPECT_EQ(library.name(), "zz");
+  EXPECT_EQ(library.name(), "zx");
   ASSERT_EQ(library.syscalls().size(), 3u);
 
   const auto& sc0 = library.syscalls()[0];
@@ -73,7 +73,7 @@ TEST(SyscallLibrary, AttributeBasedFilter) {
   ASSERT_TRUE(
       SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library1));
   library1.FilterSyscalls(std::set<std::string>());
-  EXPECT_EQ(library1.name(), "zz");
+  EXPECT_EQ(library1.name(), "zx");
   ASSERT_EQ(library1.syscalls().size(), 8u);
   bool debug_found = false;
   for (const auto& sc : library1.syscalls()) {
@@ -89,7 +89,7 @@ TEST(SyscallLibrary, AttributeBasedFilter) {
       SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library2));
   std::set<std::string> exclude1{"testonly"};
   library2.FilterSyscalls(exclude1);
-  EXPECT_EQ(library2.name(), "zz");
+  EXPECT_EQ(library2.name(), "zx");
   ASSERT_EQ(library2.syscalls().size(), 7u);
   bool testonly_found = false;
   for (const auto& sc : library2.syscalls()) {
@@ -106,7 +106,7 @@ TEST(SyscallLibrary, AttributeBasedFilter) {
       SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library3));
   std::set<std::string> exclude2{"testonly", "noreturn"};
   library3.FilterSyscalls(exclude2);
-  EXPECT_EQ(library3.name(), "zz");
+  EXPECT_EQ(library3.name(), "zx");
   ASSERT_EQ(library3.syscalls().size(), 6u);
   bool stripped_found = false;
   for (const auto& sc : library3.syscalls()) {
