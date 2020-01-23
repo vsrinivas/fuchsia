@@ -97,43 +97,12 @@ TEST_F(ReaderInterpreterInputTest, BootMouse) {
   std::vector<uint8_t> report(mouse_report_bytes, mouse_report_bytes + sizeof(mouse_report));
 
   // Send the boot mouse report.
-  device->QueueDeviceReport(report);
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead(report, sizeof(mouse_report));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(last_report_.mouse);
   EXPECT_EQ(last_report_.mouse->rel_x, 50);
   EXPECT_EQ(last_report_.mouse->rel_y, 100);
-}
-
-TEST_F(ReaderInterpreterInputTest, BootMouseTimestamp) {
-  // Create the boot mouse report descriptor.
-  size_t desc_len;
-  const uint8_t* desc_data = get_boot_mouse_report_desc(&desc_len);
-  ASSERT_TRUE(desc_len > 0);
-  std::vector<uint8_t> report_descriptor(desc_data, desc_data + desc_len);
-
-  // Create the device.
-  fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor, HidDecoder::BootMode::MOUSE);
-  RunLoopUntilIdle();
-
-  // Create a single boot mouse report.
-  hid_boot_mouse_report_t mouse_report = {};
-  mouse_report.rel_x = 50;
-  mouse_report.rel_y = 100;
-  uint8_t* mouse_report_bytes = reinterpret_cast<uint8_t*>(&mouse_report);
-  std::vector<uint8_t> report(mouse_report_bytes, mouse_report_bytes + sizeof(mouse_report));
-
-  // Send the boot mouse report.
-  zx_time_t timestamp = 0xabc;
-  device->QueueDeviceReport(report, timestamp);
-  device->SignalDeviceRead();
-  RunLoopUntilIdle();
-
-  ASSERT_TRUE(last_report_.mouse);
-  EXPECT_EQ(last_report_.mouse->rel_x, 50);
-  EXPECT_EQ(last_report_.mouse->rel_y, 100);
-  EXPECT_EQ(last_report_.event_time, static_cast<unsigned long>(timestamp));
 }
 
 // Tests that InputReader reads multiple reports at once.
@@ -148,19 +117,14 @@ TEST_F(ReaderInterpreterInputTest, BootMouseMultiReports) {
   fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor, HidDecoder::BootMode::MOUSE);
   RunLoopUntilIdle();
 
-  hid_boot_mouse_report_t mouse_report = {};
-  mouse_report.rel_x = 50;
-  mouse_report.rel_y = 100;
-  uint8_t* mouse_report_bytes = reinterpret_cast<uint8_t*>(&mouse_report);
-  std::vector<uint8_t> report(mouse_report_bytes, mouse_report_bytes + sizeof(mouse_report));
-
   // Create multiple reports.
   const size_t kNumMouseReports = 5;
-  for (size_t i = 0; i < kNumMouseReports; i++) {
-    device->QueueDeviceReport(report);
-  }
-  device->SignalDeviceRead();
+  hid_boot_mouse_report_t mouse_reports[kNumMouseReports] = {};
+  uint8_t* mouse_report_bytes = reinterpret_cast<uint8_t*>(&mouse_reports);
+  std::vector<uint8_t> reports(mouse_report_bytes, mouse_report_bytes + sizeof(mouse_reports));
 
+  // Send the boot mouse report.
+  device->SetHidDecoderRead(reports, sizeof(mouse_reports));
   RunLoopUntilIdle();
 
   ASSERT_EQ(kNumMouseReports, static_cast<size_t>(report_count_));
@@ -180,37 +144,31 @@ TEST_F(ReaderInterpreterInputTest, BootKeyboard) {
 
   // A keyboard report is 8 bytes long, with bytes 3-8 containing HID usage
   // codes.
-  device->QueueDeviceReport({0, 0, HID_USAGE_KEY_A, 0, 0, 0, 0, 0});
-  device->SignalDeviceRead();
-  RunLoopUntilIdle();
+  device->SetHidDecoderRead({0, 0, HID_USAGE_KEY_A, 0, 0, 0, 0, 0}, 8);
 
+  RunLoopUntilIdle();
   EXPECT_EQ(1, report_count_);
   ASSERT_TRUE(last_report_.keyboard);
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_A}, last_report_.keyboard->pressed_keys);
 
-  device->QueueDeviceReport({0, 0, HID_USAGE_KEY_A, HID_USAGE_KEY_Z, 0, 0, 0, 0});
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead({0, 0, HID_USAGE_KEY_A, HID_USAGE_KEY_Z, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
-
   EXPECT_EQ(2, report_count_);
   EXPECT_EQ(std::multiset<uint32_t>({HID_USAGE_KEY_A, HID_USAGE_KEY_Z}),
             std::multiset<uint32_t>(last_report_.keyboard->pressed_keys.begin(),
                                     last_report_.keyboard->pressed_keys.end()));
 
-  device->QueueDeviceReport({0, 0, HID_USAGE_KEY_Z, 0, 0, 0, 0, 0});
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead({0, 0, HID_USAGE_KEY_Z, 0, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
-
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_Z}, last_report_.keyboard->pressed_keys);
 
   // expect that if the keyboard sends a rollover error, we keep the previous pressed keys
-  device->QueueDeviceReport({HID_USAGE_KEY_ERROR_ROLLOVER, 0, HID_USAGE_KEY_ERROR_ROLLOVER,
-                             HID_USAGE_KEY_ERROR_ROLLOVER, HID_USAGE_KEY_ERROR_ROLLOVER,
-                             HID_USAGE_KEY_ERROR_ROLLOVER, HID_USAGE_KEY_ERROR_ROLLOVER,
-                             HID_USAGE_KEY_ERROR_ROLLOVER});
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead(
+      {HID_USAGE_KEY_ERROR_ROLLOVER, 0, HID_USAGE_KEY_ERROR_ROLLOVER, HID_USAGE_KEY_ERROR_ROLLOVER,
+       HID_USAGE_KEY_ERROR_ROLLOVER, HID_USAGE_KEY_ERROR_ROLLOVER, HID_USAGE_KEY_ERROR_ROLLOVER,
+       HID_USAGE_KEY_ERROR_ROLLOVER},
+      8);
   RunLoopUntilIdle();
-
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_Z}, last_report_.keyboard->pressed_keys);
 }
 
@@ -235,8 +193,7 @@ TEST_F(ReaderInterpreterInputTest, EgalaxTouchScreen) {
   std::vector<uint8_t> report(touch_report_bytes, touch_report_bytes + sizeof(touch_report));
 
   // Send the touch report.
-  device->QueueDeviceReport(report);
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead(report, sizeof(touch_report));
   RunLoopUntilIdle();
 
   // Check that we saw one report, and that the data was sent out correctly.
@@ -278,8 +235,7 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchscreen) {
   std::vector<uint8_t> report(touch_report_bytes, touch_report_bytes + sizeof(touch_report));
 
   // Send the touch report.
-  device->QueueDeviceReport(report);
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead(report, sizeof(touch_report));
   RunLoopUntilIdle();
 
   // Check that we saw one report, and that the data was sent out correctly.
@@ -303,20 +259,27 @@ TEST_F(ReaderInterpreterInputTest, TouchscreenMultiReport) {
   fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
   RunLoopUntilIdle();
 
-  // Create a touch report.
-  std::vector<uint8_t> touch_report(sizeof(paradise_touch_t));
-  touch_report[0] = PARADISE_RPT_ID_TOUCH;
+  // Create a touch report, stylus report, touch report, stylus report.
+  const size_t kReportsSize = (2 * sizeof(paradise_touch_t)) + (2 * sizeof(paradise_stylus_t));
+  uint8_t reports_data[kReportsSize] = {};
+  uint8_t* report_index = reports_data;
+  *report_index = PARADISE_RPT_ID_TOUCH;
+  report_index += sizeof(paradise_touch_t);
 
-  // Create a stylus report.
-  std::vector<uint8_t> stylus_report(sizeof(paradise_stylus_t));
-  stylus_report[0] = PARADISE_RPT_ID_STYLUS;
+  *report_index = PARADISE_RPT_ID_STYLUS;
+  report_index += sizeof(paradise_stylus_t);
 
-  // Send Reports.
-  device->QueueDeviceReport(touch_report);
-  device->QueueDeviceReport(stylus_report);
-  device->QueueDeviceReport(touch_report);
-  device->QueueDeviceReport(stylus_report);
-  device->SignalDeviceRead();
+  *report_index = PARADISE_RPT_ID_TOUCH;
+  report_index += sizeof(paradise_touch_t);
+
+  *report_index = PARADISE_RPT_ID_STYLUS;
+  report_index += sizeof(paradise_stylus_t);
+  ASSERT_EQ(static_cast<size_t>(report_index - reports_data), kReportsSize);
+
+  std::vector<uint8_t> report(reports_data, report_index);
+
+  // Send the reports.
+  device->SetHidDecoderRead(report, report.size());
   RunLoopUntilIdle();
 
   // Check that we saw all of the reports.
@@ -346,8 +309,7 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
   std::vector<uint8_t> report(touch_report_bytes, touch_report_bytes + sizeof(touch_report));
 
   // Send the touch report.
-  device->QueueDeviceReport(report);
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead(report, sizeof(touch_report));
   RunLoopUntilIdle();
 
   // Check that we saw one report. Mice are relative so we shouldn't see
@@ -363,8 +325,7 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
   report = std::vector<uint8_t>(touch_report_bytes, touch_report_bytes + sizeof(touch_report));
 
   // Send the touch report.
-  device->QueueDeviceReport(report);
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead(report, sizeof(touch_report));
   RunLoopUntilIdle();
 
   ASSERT_EQ(2, report_count_);
@@ -393,8 +354,7 @@ TEST_F(ReaderInterpreterInputTest, SensorTest) {
   std::vector<uint8_t> report(report_data, report_data + sizeof(report_data));
 
   // Send the touch report.
-  device->QueueDeviceReport(report);
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead(report, sizeof(report_data));
   RunLoopUntilIdle();
 
   // Check that the report matches.
@@ -440,8 +400,7 @@ TEST_F(ReaderInterpreterInputTest, MediaButtonsTest) {
   report_data.reset = false;
   report_data.mute = false;
   report = std::vector<uint8_t>(report_data_ptr, report_data_ptr + sizeof(report_data));
-  device->QueueDeviceReport(report);
-  device->SignalDeviceRead();
+  device->SetHidDecoderRead(report, sizeof(report_data));
   RunLoopUntilIdle();
 
   // Check that the report matches.

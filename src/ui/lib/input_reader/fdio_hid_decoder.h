@@ -50,8 +50,7 @@ class FdioHidDecoder : public HidDecoder {
   // |HidDecoder|
   const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
-  zx_status_t Read(uint8_t* data, size_t data_size, size_t* report_size,
-                   zx_time_t* timestamp) override;
+  size_t Read(uint8_t* data, size_t data_size) override;
   // |HidDecoder|
   zx_status_t Send(ReportType type, uint8_t report_id, const std::vector<uint8_t>& report) override;
   // |HidDecoder|

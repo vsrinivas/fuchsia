@@ -56,6 +56,7 @@ InputInterpreter::~InputInterpreter() {
 }
 
 void InputInterpreter::DispatchReport(InputDevice* device) {
+  device->report->event_time = InputEventTimestampNow();
   device->report->trace_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("input", "hid_read_to_listener", device->report->trace_id);
   device->input_device->DispatchReport(CloneReport(*device->report));
@@ -88,8 +89,6 @@ bool InputInterpreter::Initialize() {
       }
       if (device.device->ParseReport(initial_input.data(), initial_input.size(),
                                      device.report.get())) {
-        // GetReport doesn't come with a timestamp, so we have to create our own.
-        device.report->event_time = InputEventTimestampNow();
         DispatchReport(&device);
       }
     }
@@ -130,24 +129,29 @@ void InputInterpreter::NotifyRegistry() {
 bool InputInterpreter::Read(bool discard) {
   TRACE_DURATION("input", "hid_read");
   std::array<uint8_t, fuchsia_hardware_input_MAX_REPORT_DATA> report_data;
-  while (true) {
-    zx_time_t time = 0;
-    size_t report_size;
-    zx_status_t status =
-        hid_decoder_->Read(report_data.data(), report_data.size(), &report_size, &time);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      return true;
-    } else if (status != ZX_OK) {
-      if (status != ZX_ERR_PEER_CLOSED) {
-        FXL_LOG(ERROR) << "Failed to read from input for " << name() << ": Error " << status;
-      }
-      return false;
-    }
 
+  size_t bytes_read = hid_decoder_->Read(report_data.data(), report_data.size());
+
+  if (bytes_read == 0) {
+    FXL_LOG(ERROR) << "Failed to read from input: " << bytes_read << " for " << name();
+    // TODO(cpu) check whether the device was actually closed or not.
+    return false;
+  }
+
+  size_t data_index = 0;
+  while (data_index < bytes_read) {
     TRACE_FLOW_END("input", "hid_report", CalculateTraceId(trace_id_, reports_read_));
     ++reports_read_;
 
-    uint8_t* report = report_data.data();
+    uint8_t* report = &report_data[data_index];
+    size_t report_size =
+        hid::GetReportSizeFromFirstByte(*hid_descriptor_, hid::kReportInput, report[0]);
+    if (report_size == 0) {
+      FXL_LOG(ERROR) << "input_reader: Unable to get Report Size from Id " << report[0] << " : "
+                     << name();
+      return false;
+    }
+
     hardcoded_.Read(report, report_size, discard);
 
     for (auto& device : devices_) {
@@ -155,11 +159,13 @@ bool InputInterpreter::Read(bool discard) {
         continue;
       }
       if (device.device->ParseReport(report, report_size, device.report.get()) && !discard) {
-        device.report->event_time = time;
         DispatchReport(&device);
       }
     }
+    data_index += report_size;
   }
+
+  return true;
 }
 
 Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {

@@ -59,10 +59,10 @@ class HidDecoder {
   // Reads the Report descriptor from the device.
   virtual const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) = 0;
 
-  // Reads a single report from a device. This API will never return partial reports
-  // so it must be given a buffer large enough to read the report.
-  virtual zx_status_t Read(uint8_t* data, size_t data_size, size_t* report_size,
-                           zx_time_t* timestamp) = 0;
+  // Reads up to |data_size| data of reports from the device. This API will never
+  // return partial reports, so it must be given a buffer large enough to read
+  // at least one report. This API may return multiple reports.
+  virtual size_t Read(uint8_t* data, size_t data_size) = 0;
 
   // Sends a single Report to the device. |type| must be either
   // OUTPUT or FEATURE.

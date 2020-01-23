@@ -34,27 +34,20 @@ zx::event MockHidDecoder::GetEvent() {
 HidDecoder::BootMode MockHidDecoder::ReadBootMode() const { return boot_mode_; }
 
 const std::vector<uint8_t>& MockHidDecoder::ReadReportDescriptor(int* bytes_read) {
-  FXL_CHECK(report_descriptor_.size() != 0);
-  *bytes_read = report_descriptor_.size();
-  return report_descriptor_;
+  FXL_CHECK(report_descriptor_.length != 0);
+  *bytes_read = report_descriptor_.length;
+  return report_descriptor_.data;
 }
 
-zx_status_t MockHidDecoder::Read(uint8_t* data, size_t data_size, size_t* report_size,
-                                 zx_time_t* timestamp) {
-  if (reports_.empty()) {
-    return ZX_ERR_SHOULD_WAIT;
-  }
-  if (data_size < reports_.front().first.size()) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
+size_t MockHidDecoder::Read(uint8_t* data, size_t data_size) {
+  FXL_CHECK(report_.length != 0);
+  FXL_CHECK(data_size > report_.length);
 
-  memcpy(data, reports_.front().first.data(), reports_.front().first.size());
-  *report_size = reports_.front().first.size();
-  *timestamp = reports_.front().second;
+  memcpy(data, report_.data.data(), report_.length);
 
+  int bytes_read = report_.length;
   ClearReport();
-
-  return ZX_OK;
+  return bytes_read;
 }
 
 zx_status_t MockHidDecoder::Send(ReportType type, uint8_t report_id,
@@ -67,25 +60,24 @@ std::vector<uint8_t> MockHidDecoder::GetLastOutputReport() { return last_output_
 
 zx_status_t MockHidDecoder::GetReport(ReportType type, uint8_t report_id,
                                       std::vector<uint8_t>* report) {
-  FXL_CHECK(!reports_.empty());
+  FXL_CHECK(report_.length != 0);
   // Copy the report data over
-  *report = reports_.front().first;
-
+  *report = report_.data;
   ClearReport();
   return ZX_OK;
 }
 
-void MockHidDecoder::QueueDeviceReport(std::vector<uint8_t> bytes) { reports_.push({bytes, 0}); }
-
-void MockHidDecoder::QueueDeviceReport(std::vector<uint8_t> bytes, zx_time_t timestamp) {
-  reports_.push({bytes, timestamp});
+void MockHidDecoder::SetHidDecoderRead(std::vector<uint8_t> bytes, int length) {
+  FXL_CHECK(report_.length == 0);
+  report_.data = std::move(bytes);
+  report_.length = length;
+  Signal();
 }
 
-void MockHidDecoder::SignalDeviceRead() { Signal(); }
-
-void MockHidDecoder::SetReportDescriptor(std::vector<uint8_t> bytes) {
-  FXL_CHECK(report_descriptor_.size() == 0);
-  report_descriptor_ = bytes;
+void MockHidDecoder::SetReportDescriptor(std::vector<uint8_t> bytes, int length) {
+  FXL_CHECK(report_descriptor_.length == 0);
+  report_descriptor_.data = std::move(bytes);
+  report_descriptor_.length = length;
 }
 
 void MockHidDecoder::SetBootMode(HidDecoder::BootMode boot_mode) { boot_mode_ = boot_mode; }
@@ -93,14 +85,14 @@ void MockHidDecoder::SetBootMode(HidDecoder::BootMode boot_mode) { boot_mode_ = 
 void MockHidDecoder::Close() {
   // Signalling while the device is not readable indicates that it should be
   // removed.
-  FXL_CHECK(reports_.size() == 0);
+  FXL_CHECK(report_.length == 0);
   Signal();
 }
 
 void MockHidDecoder::Signal() { FXL_CHECK(event_.signal(0, ZX_USER_SIGNAL_0) == ZX_OK); }
 
 void MockHidDecoder::ClearReport() {
-  reports_.pop();
+  report_.length = 0;
   FXL_CHECK(event_.signal(ZX_USER_SIGNAL_0, 0) == ZX_OK);
 }
 

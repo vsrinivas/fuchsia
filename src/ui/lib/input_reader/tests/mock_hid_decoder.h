@@ -8,8 +8,6 @@
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
 
-#include <queue>
-
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/input_reader/hid_decoder.h"
 
@@ -21,17 +19,21 @@ class MockHidDecoder : public HidDecoder {
  public:
   MockHidDecoder() : weak_ptr_factory_(this) {}
   MockHidDecoder(std::vector<uint8_t> report_descriptor) : weak_ptr_factory_(this) {
-    report_descriptor_ = report_descriptor;
+    report_descriptor_.data = report_descriptor;
+    report_descriptor_.length = report_descriptor.size();
   }
   MockHidDecoder(std::vector<uint8_t> report_descriptor, std::vector<uint8_t> initial_report)
       : weak_ptr_factory_(this) {
-    report_descriptor_ = report_descriptor;
-    reports_.push({initial_report, 0});
+    report_descriptor_.data = report_descriptor;
+    report_descriptor_.length = report_descriptor.size();
+    report_.data = initial_report;
+    report_.length = initial_report.size();
   }
   MockHidDecoder(std::vector<uint8_t> report_descriptor, BootMode boot_mode)
       : weak_ptr_factory_(this) {
     boot_mode_ = boot_mode;
-    report_descriptor_ = report_descriptor;
+    report_descriptor_.data = report_descriptor;
+    report_descriptor_.length = report_descriptor.size();
   }
   ~MockHidDecoder() override;
 
@@ -49,25 +51,21 @@ class MockHidDecoder : public HidDecoder {
   // |HidDecoder|
   const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
-  zx_status_t Read(uint8_t* data, size_t data_size, size_t* report_size,
-                   zx_time_t* timestamp) override;
+  size_t Read(uint8_t* data, size_t data_size) override;
   // |HidDecoder|
   zx_status_t Send(ReportType type, uint8_t report_id, const std::vector<uint8_t>& report) override;
   // |HidDecoder|
   zx_status_t GetReport(ReportType type, uint8_t report_id, std::vector<uint8_t>* report) override;
 
   // Emulates the Device sending a report, which will be read by |Read|.
-  void QueueDeviceReport(std::vector<uint8_t> bytes);
-  void QueueDeviceReport(std::vector<uint8_t> bytes, zx_time_t timestamp);
-  // Signals that the device can be read.
-  // Must be called after |QueueDevicereport| in order for |Read| to be called.
-  void SignalDeviceRead();
+  // There must not be a pending report that has not been |Read|.
+  void SetHidDecoderRead(std::vector<uint8_t> bytes, int length);
   // Returns a copy of the last output report sent to |MockHidDecoder|.
   std::vector<uint8_t> GetLastOutputReport();
   // Sets the report descripter, which will be read by
   // |ReadReportDescriptor|. This should only be called once at the beginning
   // of setting up |MockHidDecoder|.
-  void SetReportDescriptor(std::vector<uint8_t> bytes);
+  void SetReportDescriptor(std::vector<uint8_t> bytes, int length);
   // Sets the Boot Mode, which is read by |ReadBootMode|.
   void SetBootMode(HidDecoder::BootMode boot_mode);
   // Emulates removing the device. There must not be a pending report that has
@@ -75,12 +73,18 @@ class MockHidDecoder : public HidDecoder {
   void Close();
 
  private:
+  struct Report {
+    std::vector<uint8_t> data;
+    // This can be shorter than the length of the |data| vector.
+    size_t length;
+  };
+
   void Signal();
   void ClearReport();
 
   zx::event event_;
-  std::queue<std::pair<std::vector<uint8_t>, zx_time_t>> reports_;
-  std::vector<uint8_t> report_descriptor_;
+  Report report_ = {};
+  Report report_descriptor_ = {};
   std::vector<uint8_t> last_output_report_;
   HidDecoder::BootMode boot_mode_ = HidDecoder::BootMode::NONE;
 
