@@ -161,7 +161,10 @@ source_set("port") {
 
   sources = [ "linux_platform_port.cc" ]
 
-  deps = [ "..:port_header" ]
+  deps = [
+    "$magma_build_root/src/magma_util:macros",
+    "..:port_header",
+  ]
 }
 
 source_set("semaphore") {
