@@ -262,7 +262,7 @@ void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len, zx_time_t ti
     len -= consumed;
 
     for (auto& instance : hid->instance_list_) {
-      instance.WriteToFifo(rbuf, rlen);
+      instance.WriteToFifo(rbuf, rlen, time);
     }
 
     {

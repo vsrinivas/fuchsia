@@ -63,6 +63,13 @@ protocol Device {
     /// Get the maximum size of a single input report.
     GetMaxInputReportSize() -> (uint16 size);
 
+    /// Read one report out of the report FIFO. Only a single report will be
+    /// returned in this API. `time` is the time the report was created, from
+    /// the view of the monotonic clock.
+    /// If status is ZX_ERR_SHOULD_WAIT the client can wait on the event
+    /// from `GetReportsEvent`.
+    ReadReport() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data, zx.time time);
+
     /// Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     /// This is the interface that is supposed to be used for continuous polling.
     /// Multiple reports can be returned from this API at a time, it is up to the client
