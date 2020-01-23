@@ -23,9 +23,11 @@
 #include <array>
 #include <cstring>
 #include <memory>
+#include <string_view>
 
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
+#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
@@ -70,7 +72,7 @@ enum Platforms {
 };
 
 Platforms platform = UNKNOWN_PLATFORM;
-char board_name[sysinfo::SYSINFO_BOARD_NAME_LEN + 1];
+fbl::StringBuffer<sysinfo::SYSINFO_BOARD_NAME_LEN> board_name;
 
 Platforms GetPlatform();
 void Usage();
@@ -483,7 +485,8 @@ bool amlogic_capture_compare(void* capture_buf, void* actual_buf, size_t size, u
   uint32_t buffer_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888);
   uint32_t capture_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
   size_t buf_idx = 0;
-  if (strstr(board_name, "astro")) {
+  if (std::string_view(board_name.data(), board_name.size()).find("astro") !=
+      std::string_view::npos) {
     // For Astro only:
     // Ignore last column. Has junk (hardware bug)
     // Ignoring last column, means there is a shift by one pixel.
@@ -606,27 +609,29 @@ Platforms GetPlatform() {
     return UNKNOWN_PLATFORM;
   }
 
-  printf("Found board %s\n", result.value().name.data());
-  strncpy(board_name, result.value().name.data(), sysinfo::SYSINFO_BOARD_NAME_LEN);
-  board_name[sysinfo::SYSINFO_BOARD_NAME_LEN] = '\0';
+  board_name.Clear();
+  board_name.Append(result.value().name.data(), result.value().name.size());
 
-  if (!strcmp(result.value().name.data(), "pc") ||
-      !strcmp(result.value().name.data(), "chromebook-x64") ||
-      !strcmp(result.value().name.data(), "Eve") ||
-      strstr(result.value().name.data(), "Nocturne") || strstr(result.value().name.data(), "NUC")) {
+  printf("Found board %.*s\n", static_cast<int>(board_name.size()), result.value().name.data());
+
+  auto board_name_cmp = std::string_view(board_name.data(), board_name.size());
+  if (board_name_cmp == "pc" || board_name_cmp == "chromebook-x64" || board_name_cmp == "Eve" ||
+      board_name_cmp.find("Nocturne") != std::string_view::npos ||
+      board_name_cmp.find("NUC") != std::string_view::npos) {
     return INTEL_PLATFORM;
   }
-  if (strstr(result.value().name.data(), "astro") ||
-      strstr(result.value().name.data(), "sherlock") ||
-      strstr(result.value().name.data(), "vim2") || strstr(result.value().name.data(), "nelson")) {
+  if (board_name_cmp.find("astro") != std::string_view::npos ||
+      board_name_cmp.find("sherlock") != std::string_view::npos ||
+      board_name_cmp.find("vim2") != std::string_view::npos ||
+      board_name_cmp.find("nelson") != std::string_view::npos) {
     return AMLOGIC_PLATFORM;
   }
-  if (strstr(result.value().name.data(), "cleo") ||
-      strstr(result.value().name.data(), "mt8167s_ref")) {
+  if (board_name_cmp.find("cleo") != std::string_view::npos ||
+      board_name_cmp.find("mt8167s_ref") != std::string_view::npos) {
     return MEDIATEK_PLATFORM;
   }
-  if (strstr(result.value().name.data(), "qemu") ||
-      strstr(result.value().name.data(), "Standard PC (Q35 + ICH9, 2009)")) {
+  if (board_name_cmp.find("qemu") != std::string_view::npos ||
+      board_name_cmp.find("Standard PC (Q35 + ICH9, 2009)") != std::string_view::npos) {
     return QEMU_PLATFORM;
   }
   return UNKNOWN_PLATFORM;

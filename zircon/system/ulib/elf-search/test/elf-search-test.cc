@@ -198,7 +198,8 @@ TEST(ElfSearchTest, ForEachModule) {
         zx_koid_t vmo_koid = 0;
         ASSERT_NO_FATAL_FAILURES(GetKoid(mod.vmo, &vmo_koid));
         if (mod.name != "mod3") {
-          snprintf(name, sizeof(name), "<VMO#%" PRIu64 "=%s>", vmo_koid, mod.name.data());
+          snprintf(name, sizeof(name), "<VMO#%" PRIu64 "=%.*s>", vmo_koid,
+                   static_cast<int>(mod.name.size()), mod.name.data());
         } else {
           snprintf(name, sizeof(name), "%s", mod3_soname);
         }

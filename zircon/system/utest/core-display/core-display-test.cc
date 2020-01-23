@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string_view>
 
 #include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
@@ -152,8 +153,10 @@ void CoreDisplayTest::SetUp() {
     SetCaptureSupported(false);
     return;
   }
-  printf("Found board %s\n", result.value().name.data());
-  if (!strcmp(result.value().name.data(), "qemu")) {
+
+  auto board_name = std::string_view(result.value().name.data(), result.value().name.size());
+  printf("Found board %.*s\n", static_cast<int>(board_name.size()), board_name.data());
+  if (board_name != "qemu") {
     SetCaptureSupported(true);
   } else {
     SetCaptureSupported(false);

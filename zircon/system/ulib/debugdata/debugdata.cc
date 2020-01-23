@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fbl/auto_call.h>
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/debugdata/debugdata.h>
@@ -19,6 +15,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/status.h>
+
+#include <fbl/auto_call.h>
+#include <fbl/string.h>
+#include <fbl/unique_fd.h>
+#include <fbl/vector.h>
 
 namespace debugdata {
 
@@ -34,16 +35,16 @@ void DebugData::LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sy
   // When loading debug configuration file, we expect an absolute path.
   if (config_name[0] != '/') {
     // TODO(phosek): Use proper logging mechanism.
-    fprintf(stderr, "debugdata: error: LoadConfig: '%s' is not an absolute path\n",
-            config_name.data());
+    fprintf(stderr, "debugdata: error: LoadConfig: '%.*s' is not an absolute path\n",
+            static_cast<int>(config_name.size()), config_name.data());
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   fbl::unique_fd fd(openat(root_dir_fd_.get(), config_name.data(), O_RDONLY));
   if (!fd) {
-    fprintf(stderr, "debugdata: error: LoadConfig: failed to open '%s': %s\n", config_name.data(),
-            strerror(errno));
+    fprintf(stderr, "debugdata: error: LoadConfig: failed to open '%.*s': %s\n",
+            static_cast<int>(config_name.size()), config_name.data(), strerror(errno));
     completer.Close(ZX_ERR_NOT_FOUND);
     return;
   }
