@@ -20,18 +20,31 @@ func TestDownloadImagesToDir(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	var imgs []Image
-	for i := 0; i < 4; i++ {
+	numImages := 4
+	for i := 0; i < numImages; i++ {
 		imgs = append(imgs, Image{
 			Name:   fmt.Sprintf("image%d", i),
 			Reader: bytes.NewReader([]byte(fmt.Sprintf("content of image%d", i))),
+			Args:   []string{"--arg"},
 		})
 	}
+	// Add another image without Args. This image should not be downloaded.
+	imgs = append(imgs, Image{
+		Name:   "noArgsImage",
+		Reader: bytes.NewReader([]byte("content of noArgsImage")),
+	})
 	newImgs, closeFunc, err := downloadImagesToDir(tmpDir, imgs)
 	if err != nil {
 		t.Fatalf("failed to download image: %v", err)
 	}
 	defer closeFunc()
+	if len(newImgs) != numImages {
+		t.Errorf("unexpected number of images downloaded; expected: %d, actual: %d", numImages, len(newImgs))
+	}
 	for _, img := range newImgs {
+		if img.Name == "noArgsImage" {
+			t.Errorf("downloaded an image with no args")
+		}
 		content, err := ioutil.ReadFile(filepath.Join(tmpDir, img.Name))
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)

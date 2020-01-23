@@ -152,6 +152,8 @@ golib("golang.org/x/oauth2") {
     ":golang.org/x/net",
   ]
 }
+golib("golang.org/x/sync") {
+}
 golib("golang.org/x/sys") {
 }
 go_library("golang.org/x/text") {

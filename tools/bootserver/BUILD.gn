@@ -11,6 +11,7 @@ go_library("bootserver_lib") {
   deps = [
     "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:golang.org/x/crypto",
+    "//third_party/golibs:golang.org/x/sync",
     "//tools/build",
     "//tools/lib/iomisc",
     "//tools/lib/logger",

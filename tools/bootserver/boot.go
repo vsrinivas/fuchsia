@@ -23,6 +23,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -77,48 +78,42 @@ var transferOrder = map[string]int{
 }
 
 func downloadImagesToDir(dir string, imgs []Image) ([]Image, func() error, error) {
-	var newImgs []Image
 	// Copy each in a goroutine for efficiency's sake.
-	errs := make(chan error, len(imgs))
-	var mux sync.Mutex
-	var wg sync.WaitGroup
+	eg := errgroup.Group{}
+	mux := sync.Mutex{}
+	var newImgs []Image
 	for _, img := range imgs {
-		wg.Add(1)
-		go func(img Image) {
-			defer wg.Done()
-			if img.Reader != nil {
-				f, err := downloadAndOpenImage(filepath.Join(dir, img.Name), img)
-				if err != nil {
-					errs <- err
-					return
-				}
-				fi, err := f.Stat()
-				if err != nil {
-					f.Close()
-					errs <- err
-					return
-				}
-				mux.Lock()
-				newImgs = append(newImgs, Image{
-					Name:   img.Name,
-					Reader: f,
-					Size:   fi.Size(),
-					Args:   img.Args,
-				})
-				mux.Unlock()
+		if len(img.Args) == 0 || img.Reader == nil {
+			continue
+		}
+		img := img
+		eg.Go(func() error {
+			f, err := downloadAndOpenImage(filepath.Join(dir, img.Name), img)
+			if err != nil {
+				return err
 			}
-		}(img)
+			fi, err := f.Stat()
+			if err != nil {
+				f.Close()
+				return err
+			}
+			mux.Lock()
+			newImgs = append(newImgs, Image{
+				Name:   img.Name,
+				Reader: f,
+				Size:   fi.Size(),
+				Args:   img.Args,
+			})
+			mux.Unlock()
+			return nil
+		})
 	}
-	wg.Wait()
 
-	closeFunc := func() error { return closeImages(newImgs) }
-	select {
-	case err := <-errs:
+	if err := eg.Wait(); err != nil {
 		closeImages(newImgs)
-		return nil, closeFunc, err
-	default:
-		return newImgs, closeFunc, nil
+		return nil, noOpClose, err
 	}
+	return newImgs, func() error { return closeImages(newImgs) }, nil
 }
 
 func downloadAndOpenImage(dest string, img Image) (*os.File, error) {
@@ -151,11 +146,10 @@ func downloadAndOpenImage(dest string, img Image) (*os.File, error) {
 		f.Close()
 		return nil, fmt.Errorf("failed to copy image %q to %q: %v", img.Name, dest, err)
 	}
-	if err := f.Sync(); err != nil {
-		f.Close()
+	if err := f.Close(); err != nil {
 		return nil, err
 	}
-	return f, nil
+	return os.Open(dest)
 }
 
 // Boot prepares and boots a device at the given IP address.

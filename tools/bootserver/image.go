@@ -5,6 +5,7 @@
 package bootserver
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 )
 
 var (
@@ -99,15 +101,45 @@ type gcsReader struct {
 	index  int64
 }
 
+func getUncompressedReader(obj *storage.ObjectHandle) (io.ReadCloser, error) {
+	ctx := context.Background()
+	objAttrs, err := obj.Attrs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if objAttrs.ContentEncoding != "gzip" {
+		return obj.NewReader(ctx)
+	}
+	// TODO(https://github.com/googleapis/google-cloud-go/issues/1743): Use NewReader() once bug is fixed.
+	// Currently, ReadCompressed(true) only works with NewRangeReader with any negative offset.
+	// Setting the offset to -size should return the same range as offset 0.
+	offset := 0 - objAttrs.Size
+	r, err := obj.ReadCompressed(true).NewRangeReader(ctx, offset, -1)
+	if err != nil {
+		return nil, err
+	}
+	if r.Remain() != r.Size() {
+		return nil, fmt.Errorf("only retrieved reader for last %d bytes", r.Remain())
+	}
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get gzip reader: %v", err)
+	}
+	return struct {
+		io.Reader
+		io.Closer
+	}{gr, iomisc.MultiCloser(gr, r)}, nil
+}
+
 func (g *gcsReader) ReadAt(buf []byte, offset int64) (int, error) {
 	if g.reader == nil || offset < g.index {
 		g.Close()
-		r, err := g.obj.NewRangeReader(context.Background(), offset, -1)
+		r, err := getUncompressedReader(g.obj)
 		if err != nil {
 			return 0, err
 		}
 		g.reader = r
-		g.index = offset
+		g.index = 0
 	}
 	// If the offset is greater than the index of the reader, we need to read
 	// up until the requested offset. These bytes will be ignored as they only
@@ -150,7 +182,7 @@ func ImagesFromGCS(ctx context.Context, manifest *url.URL, bootMode Mode) ([]Ima
 	bkt := client.Bucket(bucket)
 	manifestGcsPath := strings.TrimLeft(manifest.Path, "/")
 	obj := bkt.Object(manifestGcsPath)
-	r, err := obj.NewReader(ctx)
+	r, err := getUncompressedReader(obj)
 	if err != nil {
 		return nil, closeFunc, fmt.Errorf("failed to get reader for manifest: %v", err)
 	}
