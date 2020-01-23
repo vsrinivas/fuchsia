@@ -1,0 +1,46 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// For internal Google use only.
+/// This API is not to be used within the Fuchsia tree.
+library fuchsia.castsetup;
+
+/// Specifies the required security for a client of the API.
+enum SecurityState : uint32 {
+    SECURITY_STATE_NONE = 0;
+    SECURITY_STATE_ENCRYPTED = 1;
+    SECURITY_STATE_TRUSTED = 2;
+};
+
+/// Registered API that handles an incoming request.
+protocol ApiRequestHandler {
+    /// Called to handle a request to this setup API. The request |data| is JSON.
+    /// The response |data| must be JSON.
+    HandleRequest(string:MAX? data) -> (uint32 response_code, string:MAX? data);
+};
+
+/// API operation mode to specify during registration.
+enum ApiMode : uint32 {
+    ACCEPTS_NO_DATA = 1;
+    ACCEPTS_DATA = 2;
+};
+
+/// Registry that hosts APIs on behalf of clients.
+[Discoverable]
+protocol ApiRegistry {
+    /// Registers an API that may accept incoming data.
+    ///
+    /// |path| identifies how to access the API. If multiple registrations occur with
+    /// the same path, then the last registration is bound, and the rest are unbound.
+    ///
+    /// |accepts_data| indicates whether this API should allow callers to provide
+    /// data in the form of a JSON string.
+    ///
+    /// |security_state| indicates what level of security the caller must
+    /// adhere to.
+    RegisterApi(string:1024 path,
+                ApiMode api_mode,
+                SecurityState security_state,
+                ApiRequestHandler api_handler);
+};
