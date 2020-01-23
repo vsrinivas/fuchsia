@@ -98,4 +98,8 @@ void x86_amd_init_percpu(void) {
   if (x86_cpu_should_mitigate_ssb()) {
     x86_amd_cpu_set_ssbd(&cpuid, &msr);
   }
+
+  if (x86_cpu_has_enhanced_ibrs()) {
+    x86_cpu_ibrs(&msr);
+  }
 }

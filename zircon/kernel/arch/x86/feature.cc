@@ -198,7 +198,10 @@ void x86_feature_init(void) {
   // not to attack the next process).
   // TODO(fxb/33667, fxb/12150): Should we have an individual knob for IBPB?
   g_should_ibpb_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false) && g_has_ibpb;
-
+  // Unconditionally enable Enhanced IBRS if it is supported, to comply with the architectural
+  // specification - Enhanced IBRS processors may not be retpoline-safe.
+  g_enhanced_ibrs_enabled = (x86_get_disable_spec_mitigations() == false) &&
+                            g_has_enhanced_ibrs;
   g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
                     gCmdline.GetBool("kernel.x86.spec_store_bypass_disable",
                                      /*default_value=*/false);
@@ -430,6 +433,8 @@ void x86_feature_debug(void) {
     printf("ras_fill ");
   if (g_has_enhanced_ibrs)
     printf("enhanced_ibrs ");
+  if (g_enhanced_ibrs_enabled)
+    printf("enhanced_ibrs_enabled ");
 #ifdef KERNEL_RETPOLINE
   printf("retpoline ");
   if (g_amd_retpoline)
@@ -934,6 +939,10 @@ extern "C" {
 
 void x86_cpu_ibpb(MsrAccess* msr) {
   msr->write_msr(/*msr_index=*/X86_MSR_IA32_PRED_CMD, /*value=*/1);
+}
+
+void x86_cpu_ibrs(MsrAccess* msr) {
+  msr->write_msr(/*msr_index=*/X86_MSR_IA32_SPEC_CTRL, /*value=*/X86_SPEC_CTRL_IBRS);
 }
 
 const uint8_t kNop = 0x90;

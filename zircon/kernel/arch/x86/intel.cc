@@ -224,6 +224,10 @@ void x86_intel_init_percpu(void) {
     x86_intel_cpu_set_ssbd(&cpuid, &msr);
   }
 
+  if (x86_cpu_has_enhanced_ibrs()) {
+    x86_cpu_ibrs(&msr);
+  }
+
   if (gCmdline.GetBool("cpu.hwp", true)) {
     x86_intel_hwp_init(&cpuid, &msr);
   }
