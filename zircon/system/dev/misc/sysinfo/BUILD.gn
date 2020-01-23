@@ -2,16 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("misc") {
+zx_driver("sysinfo") {
+  sources = [ "sysinfo.c" ]
   deps = [
-    "builtin",
-    "cpu-trace",
-    "ktrace",
-    "sysinfo",
-    "test",
+    "$zx/system/fidl/fuchsia-sysinfo:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/zircon",
   ]
-
-  if (current_cpu == "x64") {
-    deps += [ "tpm" ]
-  }
 }

@@ -140,12 +140,23 @@ zx_status_t X86::Bind() {
     board_name_actual = strlen(board_name) + 1;
   }
 
+  // Publish board name to sysinfo driver.
+  status = DdkPublishMetadata("/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME, board_name,
+                              board_name_actual);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "DdkPublishMetadata(board_name) failed: %d\n", status);
+  }
+
   constexpr uint32_t dummy_board_rev = 42;
+  status = DdkPublishMetadata("/dev/misc/sysinfo", DEVICE_METADATA_BOARD_REVISION, &dummy_board_rev,
+                              sizeof(dummy_board_rev));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "DdkPublishMetadata(board_revision) failed: %d\n", status);
+  }
 
   // Inform platform bus of our board name.
   pbus_board_info_t board_info = {};
   strlcpy(board_info.board_name, board_name, sizeof(board_info.board_name));
-  board_info.board_revision = dummy_board_rev;
   status = pbus_.SetBoardInfo(&board_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SetBoardInfo failed: %d\n", status);
