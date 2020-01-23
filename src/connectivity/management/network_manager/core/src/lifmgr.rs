@@ -333,7 +333,7 @@ impl LifIpAddr {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Default)]
+#[derive(Eq, PartialEq, Debug, Clone, Copy, Default)]
 /// Dynamic properties associated with the LIF.
 pub struct LIFProperties {
     /// Whether this interface's current address was acquired via DHCP. Corresponds to

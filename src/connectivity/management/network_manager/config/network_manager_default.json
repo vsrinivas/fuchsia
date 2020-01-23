@@ -8,7 +8,6 @@
                         "type": "IF_UPLINK"
                     },
                     "device_id": "wlanif-client",
-                    "oper_state": "UP",
                     "subinterfaces": [
                         {
                             "admin_state": "UP",
@@ -34,11 +33,40 @@
             {
                 "interface": {
                     "config": {
+                        "name": "wlan-ap",
+                        "type": "IF_ETHERNET"
+                    },
+                    "device_id": "wlanif-ap",
+                    "subinterfaces": [
+                        {
+                            "admin_state": "UP",
+                            "ipv4": {
+                                "addresses": [
+                                    {
+                                        "ip": "192.168.3.1",
+                                        "prefix_length": 24
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "ethernet": {
+                        "config": {
+                            "auto_negotiate": true,
+                            "duplex_mode": "FULL",
+                            "enable_flow_control": true,
+                            "port_speed": "SPEED_1G"
+                        }
+                    }
+                }
+            },
+            {
+                "interface": {
+                    "config": {
                         "name": "usb",
                         "type": "IF_UPLINK"
                     },
                     "device_id": "cdc-eth-function",
-                    "oper_state": "UP",
                     "subinterfaces": [
                         {
                             "admin_state": "UP",
@@ -68,7 +96,6 @@
                         "type": "IF_UPLINK"
                     },
                     "device_id": "usb-cdc-ecm",
-                    "oper_state": "UP",
                     "subinterfaces": [
                         {
                             "admin_state": "UP",
@@ -98,7 +125,6 @@
                         "type": "IF_UPLINK"
                     },
                     "device_id": "ax88179",
-                    "oper_state": "UP",
                     "subinterfaces": [
                         {
                             "admin_state": "UP",
@@ -127,7 +153,6 @@
                         "name": "lo0",
                         "type": "IF_LOOPBACK"
                     },
-                    "oper_state": "UP",
                     "subinterfaces": [
                         {
                             "admin_state": "UP",
@@ -151,6 +176,17 @@
                     ]
                 }
             }
-        ]
+        ],
+        "services": {
+            "dhcp_server": {
+                "enabled": true,
+                "dhcp_pool": {
+                    "start": "192.168.3.10",
+                    "end":  "192.168.3.254",
+                    "lease_time": "1d"
+                },
+                "interfaces": "wlan-ap"
+            }
+        }
     }
 }

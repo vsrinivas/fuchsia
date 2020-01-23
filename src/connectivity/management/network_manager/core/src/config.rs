@@ -636,9 +636,9 @@ impl Config {
 
     /// Returns `true` if the device id from the `topo_path` is an uplink.
     ///
-    /// An "uplink" is defined by having an [`InterfaceType::IfUplink`] and having a "subinterface"
-    /// definition.
-    pub fn device_id_is_a_wan_uplink(&self, topo_path: &str) -> bool {
+    /// An "uplink" is defined by having an [`InterfaceType::IfUplink`] and having
+    /// a "subinterface" definition.
+    pub fn device_id_is_an_uplink(&self, topo_path: &str) -> bool {
         self.get_interface_by_device_id(topo_path)
             .map(|intf| match intf.config.interface_type {
                 InterfaceType::IfUplink => return intf.subinterfaces.is_some(),
@@ -647,15 +647,26 @@ impl Config {
             .unwrap_or(false)
     }
 
-    /// Returns the name of the WAN interface.
-    pub fn get_wan_interface_name(&self, topo_path: &str) -> error::Result<String> {
-        if self.device_id_is_a_wan_uplink(topo_path) {
-            if let Some(intf) = self.get_interface_by_device_id(topo_path) {
-                return Ok(intf.config.name.clone());
-            }
+    /// Returns `true` if the device id from the `topo_path` is a downlink.
+    ///
+    /// A "downlink" is an L3 interface that is not configured as uplink. That is,
+    /// it's of type  `InterfaceType::IfEthernet`] and has at least one "subinterface".
+    pub fn device_id_is_a_downlink(&self, topo_path: &str) -> bool {
+        self.get_interface_by_device_id(topo_path)
+            .map(|intf| match intf.config.interface_type {
+                InterfaceType::IfEthernet => return intf.subinterfaces.is_some(),
+                _ => return false,
+            })
+            .unwrap_or(false)
+    }
+
+    /// Returns the name of the interface.
+    pub fn get_interface_name(&self, topo_path: &str) -> error::Result<String> {
+        if let Some(intf) = self.get_interface_by_device_id(topo_path) {
+            return Ok(intf.config.name.clone());
         }
         Err(error::NetworkManager::CONFIG(error::Config::NotFound {
-            msg: format!("Getting WAN interface name for {} failed.", topo_path),
+            msg: format!("Getting interface name for {} failed.", topo_path),
         }))
     }
 
@@ -730,14 +741,28 @@ impl Config {
         }
     }
 
+    /// Returns a LAN-specific [`lifmgr::LIFProperties`] based on the running configuration.
+    pub fn create_lan_properties(&self, topo_path: &str) -> error::Result<lifmgr::LIFProperties> {
+        let properties =
+            crate::lifmgr::LIFProperties { enabled: false, dhcp: false, address: None };
+        self.create_properties(topo_path, properties)
+    }
+
     /// Returns a WAN-specific [`lifmgr::LIFProperties`] based on the running configuration.
-    ///
-    /// Configures the WAN uplink's LIFProperties, initially discovers the interface that contains
-    /// matches the device ID from the topological path. Then sets the LIFProperties for the admin
-    /// state of the interface as well as configures the IP address.
     pub fn create_wan_properties(&self, topo_path: &str) -> error::Result<lifmgr::LIFProperties> {
-        let mut properties =
-            crate::lifmgr::LIFProperties { enabled: true, dhcp: false, address: None };
+        let properties = crate::lifmgr::LIFProperties { enabled: false, dhcp: true, address: None };
+        self.create_properties(topo_path, properties)
+    }
+
+    /// Discovers the interface that matches the device ID from the topological path and sets
+    /// LIFProperties for the admin state of the interface as well as configures the IP address.
+    /// Properties that are not explicitly specified in the configuration take the values indicated
+    /// in `properties`
+    fn create_properties(
+        &self,
+        topo_path: &str,
+        mut properties: lifmgr::LIFProperties,
+    ) -> error::Result<lifmgr::LIFProperties> {
         let intf = match self.get_interface_by_device_id(topo_path) {
             Some(x) => x,
             None => {
@@ -778,10 +803,7 @@ impl Config {
                     warn!("Admin state 'TESTING' is not supported; defaulting to 'Up'");
                     properties.enabled = true;
                 }
-                _ => {
-                    // Subinterface's are enabled by default.
-                    properties.enabled = true;
-                }
+                _ => {} // State not indicated, use the default passed in.
             }
         }
 
@@ -1079,11 +1101,36 @@ mod tests {
                     Interfaces {
                         interface: Interface {
                             config: InterfaceConfig {
-                                name: "wan".to_string(),
+                                name: "test_wan_no_admin_state".to_string(),
                                 interface_type: InterfaceType::IfUplink,
                             },
                             oper_state: None,
-                            device_id: Some("test_device_id".to_string()),
+                            device_id: Some("test_wan_no_admin_state_id".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            routed_vlan: None,
+                            switched_vlan: None,
+                            subinterfaces: Some(vec![Subinterface {
+                                admin_state: None,
+                                ipv4: Some(IpAddressConfig {
+                                    addresses: vec![IpAddress {
+                                        dhcp_client: None,
+                                        ip: Some("192.0.2.1".parse().unwrap()),
+                                        prefix_length: Some(24),
+                                    }],
+                                }),
+                                ipv6: None,
+                            }]),
+                        },
+                    },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_wan_up".to_string(),
+                                interface_type: InterfaceType::IfUplink,
+                            },
+                            oper_state: None,
+                            device_id: Some("test_wan_up_id".to_string()),
                             ethernet: None,
                             tcp_offload: None,
                             routed_vlan: None,
@@ -1092,9 +1139,9 @@ mod tests {
                                 admin_state: Some(AdminState::Up),
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
-                                        dhcp_client: Some(false),
-                                        ip: Some("127.0.0.1".parse().unwrap()),
-                                        prefix_length: Some(32),
+                                        dhcp_client: None,
+                                        ip: Some("192.0.2.1".parse().unwrap()),
+                                        prefix_length: Some(24),
                                     }],
                                 }),
                                 ipv6: None,
@@ -1143,6 +1190,146 @@ mod tests {
                                 trunk_vlans: None,
                             }),
                             routed_vlan: None,
+                        },
+                    },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_wan_down".to_string(),
+                                interface_type: InterfaceType::IfUplink,
+                            },
+                            oper_state: None,
+                            device_id: Some("test_wan_down_id".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            routed_vlan: None,
+                            switched_vlan: None,
+                            subinterfaces: Some(vec![Subinterface {
+                                admin_state: Some(AdminState::Down),
+                                ipv4: Some(IpAddressConfig {
+                                    addresses: vec![IpAddress {
+                                        dhcp_client: None,
+                                        ip: Some("192.0.2.1".parse().unwrap()),
+                                        prefix_length: Some(24),
+                                    }],
+                                }),
+                                ipv6: None,
+                            }]),
+                        },
+                    },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_wan_dhcp".to_string(),
+                                interface_type: InterfaceType::IfUplink,
+                            },
+                            oper_state: None,
+                            device_id: Some("test_wan_dhcp_id".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            routed_vlan: None,
+                            switched_vlan: None,
+                            subinterfaces: Some(vec![Subinterface {
+                                admin_state: Some(AdminState::Up),
+                                ipv4: Some(IpAddressConfig {
+                                    addresses: vec![IpAddress {
+                                        dhcp_client: Some(true),
+                                        ip: None,
+                                        prefix_length: None,
+                                    }],
+                                }),
+                                ipv6: None,
+                            }]),
+                        },
+                    },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_lan_no_admin_state".to_string(),
+                                interface_type: InterfaceType::IfEthernet,
+                            },
+                            oper_state: None,
+                            device_id: Some("test_lan_no_admin_state_id".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            routed_vlan: None,
+                            switched_vlan: None,
+                            subinterfaces: Some(vec![Subinterface {
+                                admin_state: None,
+                                ipv4: Some(IpAddressConfig {
+                                    addresses: vec![IpAddress {
+                                        dhcp_client: None,
+                                        ip: Some("192.0.2.1".parse().unwrap()),
+                                        prefix_length: Some(24),
+                                    }],
+                                }),
+                                ipv6: None,
+                            }]),
+                        },
+                    },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_lan_up".to_string(),
+                                interface_type: InterfaceType::IfEthernet,
+                            },
+                            oper_state: None,
+                            device_id: Some("test_lan_up_id".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            routed_vlan: None,
+                            switched_vlan: None,
+                            subinterfaces: Some(vec![Subinterface {
+                                admin_state: Some(AdminState::Up),
+                                ipv4: Some(IpAddressConfig {
+                                    addresses: vec![IpAddress {
+                                        dhcp_client: None,
+                                        ip: Some("192.0.2.1".parse().unwrap()),
+                                        prefix_length: Some(24),
+                                    }],
+                                }),
+                                ipv6: None,
+                            }]),
+                        },
+                    },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_lan_down".to_string(),
+                                interface_type: InterfaceType::IfEthernet,
+                            },
+                            oper_state: None,
+                            device_id: Some("test_lan_down_id".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            routed_vlan: None,
+                            switched_vlan: None,
+                            subinterfaces: Some(vec![Subinterface {
+                                admin_state: Some(AdminState::Down),
+                                ipv4: Some(IpAddressConfig {
+                                    addresses: vec![IpAddress {
+                                        dhcp_client: None,
+                                        ip: Some("192.0.2.1".parse().unwrap()),
+                                        prefix_length: Some(24),
+                                    }],
+                                }),
+                                ipv6: None,
+                            }]),
+                        },
+                    },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_lan_no_subint".to_string(),
+                                interface_type: InterfaceType::IfEthernet,
+                            },
+                            oper_state: None,
+                            device_id: Some("test_lan_no_subint_id".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            routed_vlan: None,
+                            switched_vlan: None,
+                            subinterfaces: None,
                         },
                     },
                 ]),
@@ -1594,10 +1781,10 @@ mod tests {
     fn test_get_interface_by_device_id() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.get_interface_by_device_id("/dev/sys/pci/test_device_id/ethernet") {
+        match test_config.get_interface_by_device_id("/dev/sys/pci/test_wan_up_id/ethernet") {
             Some(i) => {
-                let intfs = &build_full_config().device.interfaces.unwrap()[0];
-                assert_eq!(*i, intfs.interface);
+                let intfs = &build_full_config().device.interfaces.unwrap()[1];
+                assert_eq!(*i, intfs.interface, "Got {:?}, Want: {:?}", *i, intfs.interface);
             }
             None => panic!("Got unexpected 'None' option"),
         }
@@ -1609,16 +1796,41 @@ mod tests {
     }
 
     #[test]
-    fn test_device_id_is_a_wan_uplink() {
+    fn test_device_id_is_an_uplink() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.device_id_is_a_wan_uplink("/dev/sys/pci/test_device_id/ethernet") {
+        match test_config.device_id_is_an_uplink("/dev/sys/pci/test_wan_up_id/ethernet") {
             true => (),
             false => panic!("Got unexpected 'false' value"),
         }
 
-        match test_config.device_id_is_a_wan_uplink("does_not_exist") {
+        match test_config.device_id_is_an_uplink("does_not_exist") {
             true => panic!("Got unexpected 'false' value"),
+            false => (),
+        }
+
+        match test_config.device_id_is_an_uplink("/dev/sys/pci/test_lan_up_id/ethernet") {
+            true => panic!("Got unexpected 'false' value"),
+            false => (),
+        }
+    }
+
+    #[test]
+    fn test_device_id_is_a_downlink() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        match test_config.device_id_is_a_downlink("/dev/sys/pci/test_lan_up_id/ethernet") {
+            true => (),
+            false => panic!("Got unexpected 'true' value"),
+        }
+
+        match test_config.device_id_is_a_downlink("does_not_exist") {
+            true => panic!("Got unexpected 'false' value"),
+            false => (),
+        }
+
+        match test_config.device_id_is_a_downlink("/dev/sys/pci/test_wan_up_id/ethernet") {
+            true => panic!("Got unexpected 'true' value"),
             false => (),
         }
     }
@@ -1630,7 +1842,7 @@ mod tests {
         let v = test_config.get_vlans("routed_vlan");
         assert_eq!(v, vec![2]);
 
-        let v = test_config.get_vlans("test_device_id");
+        let v = test_config.get_vlans("test_wan_up_id");
         let empty_vec: Vec<u16> = Vec::new();
         assert_eq!(v, empty_vec);
     }
@@ -1723,35 +1935,105 @@ mod tests {
     fn test_create_wan_properties() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.create_wan_properties("test_device_id") {
-            Ok(p) => {
-                assert_eq!(p.enabled, true);
-                assert_eq!(p.dhcp, false);
-                assert_eq!(
-                    p.address,
-                    Some(lifmgr::LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
-                );
+        for (path, enabled, dhcp, address) in &[
+            (
+                "test_wan_no_admin_state_id",
+                false,
+                false,
+                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+            ),
+            (
+                "test_wan_down_id",
+                false,
+                false,
+                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+            ),
+            (
+                "test_wan_up_id",
+                true,
+                false,
+                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+            ),
+            ("test_wan_dhcp_id", true, true, None),
+        ] {
+            match test_config.create_wan_properties(path) {
+                Ok(p) => {
+                    assert_eq!(
+                        p.enabled, *enabled,
+                        "{} enabled: got {} want {}",
+                        path, p.enabled, enabled
+                    );
+                    assert_eq!(p.dhcp, *dhcp, "{} dhcp: got {} want {}", path, p.dhcp, dhcp);
+                    assert_eq!(
+                        p.address, *address,
+                        "{} address: got {:?} want {:?}",
+                        path, p.address, address
+                    );
+                }
+                Err(e) => panic!("{} Got unexpected result pair: {:?}", path, e),
             }
-            Err(e) => panic!("Got unexpected result: {:?}", e),
         }
     }
 
     #[test]
-    fn test_get_wan_interface_name() {
+    fn test_create_lan_properties() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
-        match test_config.get_wan_interface_name("") {
+        for (path, enabled, dhcp, address) in &[
+            (
+                "test_lan_no_admin_state_id",
+                false,
+                false,
+                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+            ),
+            (
+                "test_lan_down_id",
+                false,
+                false,
+                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+            ),
+            (
+                "test_lan_up_id",
+                true,
+                false,
+                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+            ),
+        ] {
+            match test_config.create_lan_properties(path) {
+                Ok(p) => {
+                    assert_eq!(
+                        &p.enabled, enabled,
+                        "{} enabled: got {} want {}",
+                        path, p.enabled, enabled
+                    );
+                    assert_eq!(&p.dhcp, dhcp, "{} dhcp: got {} want {}", path, p.dhcp, dhcp);
+                    assert_eq!(
+                        &p.address, address,
+                        "{} address: got {:?} want {:?}",
+                        path, p.address, address
+                    );
+                }
+                Err(e) => panic!("{} Got unexpected result: {:?}", path, e),
+            }
+        }
+    }
+
+    #[test]
+    fn test_get_interface_name() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        match test_config.get_interface_name("") {
             Err(error::NetworkManager::CONFIG(error::Config::NotFound { msg: _ })) => (),
             Err(e) => panic!("Got unexpected 'Err' result: {}", e),
             Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
         }
-        match test_config.get_wan_interface_name("bridge") {
+        match test_config.get_interface_name("bridge") {
             Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
             Err(error::NetworkManager::CONFIG(error::Config::NotFound { msg: _ })) => (),
             Err(e) => panic!("Got unexpected 'Err' result: {}", e),
         }
-        let expected_name = "wan".to_string();
-        match test_config.get_wan_interface_name("test_device_id") {
+        let expected_name = "test_wan_up".to_string();
+        match test_config.get_interface_name("test_wan_up_id") {
             Ok(r) => assert_eq!(r, expected_name),
             Err(e) => panic!("Got unexpected 'Err' result: {}", e),
         }

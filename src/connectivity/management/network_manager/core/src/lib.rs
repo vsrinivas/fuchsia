@@ -194,7 +194,7 @@ impl DeviceState {
 
     /// Configures a WAN uplink from the stored configuration.
     async fn configure_wan(&mut self, pid: PortId, topological_path: &str) -> error::Result<()> {
-        let wan_name = self.config.get_wan_interface_name(topological_path)?;
+        let wan_name = self.config.get_interface_name(topological_path)?;
         let properties = self.config.create_wan_properties(topological_path)?;
         let lif = self.create_lif(LIFType::WAN, wan_name, None, &[pid]).await?;
         self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_wan()).await?;
@@ -225,11 +225,20 @@ impl DeviceState {
         Ok(())
     }
 
-    /// TODO(cgibson): Implement me.
-    async fn configure_lan_port(&mut self, topological_path: &str) -> error::Result<()> {
-        Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
-            msg: format!("Adding unbridged LAN ports is not supported yet: {}", topological_path),
-        }))
+    async fn configure_lan(
+        &mut self,
+        pids: &[PortId],
+        topological_path: &str,
+    ) -> error::Result<()> {
+        let name = self.config.get_interface_name(topological_path)?;
+        let properties = self.config.create_lan_properties(topological_path)?;
+        let lif = self.create_lif(LIFType::LAN, name, None, pids).await?;
+        info!("LAN configured: pids: {:?} lif: {:?} properties: {:?} ", pids, lif, properties);
+        self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_lan()).await?;
+        for pid in pids {
+            self.hal.set_interface_state(*pid, true).await?
+        }
+        Ok(())
     }
 
     /// Applies configuration to the new port.
@@ -238,9 +247,13 @@ impl DeviceState {
         pid: PortId,
         topological_path: &str,
     ) -> error::Result<()> {
-        if self.config.device_id_is_a_wan_uplink(topological_path) {
+        if self.config.device_id_is_an_uplink(topological_path) {
             info!("Discovered a new uplink: {}", topological_path);
             return self.configure_wan(pid, topological_path).await;
+        }
+        if self.config.device_id_is_a_downlink(topological_path) {
+            info!("Discovered a new downlink: {}", topological_path);
+            return self.configure_lan(&[pid], topological_path).await;
         }
 
         // TODO(cgibson): Refactor this when we have the ability to add one port at a time the
@@ -257,8 +270,6 @@ impl DeviceState {
                 info!("Creating new bridge with LAN ports: {:?}", lans);
                 return self.configure_lan_bridge(&lans).await;
             }
-        } else {
-            self.configure_lan_port(topological_path).await?;
         }
         Ok(())
     }
