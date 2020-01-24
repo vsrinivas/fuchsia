@@ -208,7 +208,6 @@ if (current_cpu != "") {
       "fidl-simple",
       "fidl-utils",
       "fit",
-      "fs",
       "fs-bench",
       "fs-management",
       "fs-recovery",

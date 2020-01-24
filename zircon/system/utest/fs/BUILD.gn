@@ -2,7 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("fs") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("fs") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   test_group = "fs"
   sources = [
     "filesystems.cc",
@@ -62,38 +79,41 @@ zx_test("fs") {
   }
 
   deps = [
-    "$zx/system/fidl/fuchsia-cobalt:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/fidl/fuchsia-mem:c",
-    "$zx/system/fidl/fuchsia-minfs:c",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/block-client",
-    "$zx/system/ulib/cobalt-client",
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fs-management",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/gpt",
-    "$zx/system/ulib/memfs",
-    "$zx/system/ulib/minfs",
-    "$zx/system/ulib/ramdevice-client",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/trace",
-    "$zx/system/ulib/trace-engine",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/uboringssl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/block-client",
+    "//zircon/public/lib/boringssl",
+    "//zircon/public/lib/cobalt-client",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fs-management",
+    "//zircon/public/lib/fvm",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/gpt",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/minfs",
+    "//zircon/public/lib/ramdevice-client",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-engine",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-cobalt:c",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/fidl/fuchsia-mem:c",
+    "//zircon/system/fidl/fuchsia-minfs:c",
   ]
+}
+
+migrated_manifest("fs-manifest") {
+  deps = [ ":fs" ]
 }
