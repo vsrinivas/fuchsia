@@ -14,6 +14,7 @@ rustc_library("input") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
+    "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//src/graphics/lib/compute/mold",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
