@@ -70,14 +70,7 @@ class Breakpoint {
 
   const debug_ipc::BreakpointStats& stats() const { return stats_; }
 
-  // Sets the initial settings, or updates settings.
-  zx_status_t SetSettings(debug_ipc::BreakpointType, const debug_ipc::BreakpointSettings& settings);
-
-  debug_ipc::BreakpointType type() const { return type_; }
-
-  // The setter is used mostly for testing. Normal setting should go through
-  // SetSettings.
-  void set_type(debug_ipc::BreakpointType type) { type_ = type; }
+  zx_status_t SetSettings(const debug_ipc::BreakpointSettings& settings);
   const debug_ipc::BreakpointSettings& settings() const { return settings_; }
 
   // A breakpoint can be set to apply to a specific set of threads. A thread
@@ -101,7 +94,6 @@ class Breakpoint {
 
   ProcessDelegate* process_delegate_;  // Non-owning.
 
-  debug_ipc::BreakpointType type_ = debug_ipc::BreakpointType::kLast;
   debug_ipc::BreakpointSettings settings_;
 
   debug_ipc::BreakpointStats stats_;

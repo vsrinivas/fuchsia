@@ -79,6 +79,7 @@ TEST(Breakpoint, Registration) {
 
   debug_ipc::BreakpointSettings settings;
   settings.id = 1;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.locations.resize(1);
 
   constexpr zx_koid_t kProcess1 = 1;
@@ -90,7 +91,7 @@ TEST(Breakpoint, Registration) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp.SetSettings(settings));
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.register_calls());
   EXPECT_TRUE(delegate.unregister_calls().empty());
 
@@ -103,7 +104,7 @@ TEST(Breakpoint, Registration) {
   pr_settings.thread_koid = 0;
   pr_settings.address = kAddress2;
 
-  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp.SetSettings(settings));
   EXPECT_EQ(CallVector({CallPair{kProcess2, kAddress2}}), delegate.register_calls());
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.unregister_calls());
 
@@ -128,7 +129,7 @@ TEST(Breakpoint, Registration) {
   settings.locations.push_back(old_pr_settings);
   settings.locations.push_back(new_pr_settings);
 
-  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp.SetSettings(settings));
 
   EXPECT_EQ(CallVector({{kProcess1, kAddress1}, {kProcess3, kAddress3}}),
             delegate.register_calls());
@@ -142,6 +143,7 @@ TEST(Breakpoint, Destructor) {
 
   debug_ipc::BreakpointSettings settings;
   settings.id = 1;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.locations.resize(1);
 
   constexpr zx_koid_t kProcess1 = 1;
@@ -153,7 +155,7 @@ TEST(Breakpoint, Destructor) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}), delegate.register_calls());
   EXPECT_TRUE(delegate.unregister_calls().empty());
 
@@ -172,6 +174,7 @@ TEST(Breakpoint, HitCount) {
   constexpr uint32_t kBreakpointId = 12;
   debug_ipc::BreakpointSettings settings;
   settings.id = kBreakpointId;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.locations.resize(1);
 
   constexpr zx_koid_t kProcess1 = 1;
@@ -183,7 +186,7 @@ TEST(Breakpoint, HitCount) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
   delegate.Clear();
 
   EXPECT_EQ(kBreakpointId, bp->stats().id);
@@ -207,6 +210,7 @@ TEST(Breakpoint, OneShot) {
   constexpr uint32_t kBreakpointId = 12;
   debug_ipc::BreakpointSettings settings;
   settings.id = kBreakpointId;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.one_shot = true;
   settings.locations.resize(1);
 
@@ -219,7 +223,7 @@ TEST(Breakpoint, OneShot) {
   pr_settings.address = kAddress;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
+  ASSERT_EQ(ZX_OK, bp->SetSettings(settings));
   delegate.Clear();
 
   EXPECT_EQ(kBreakpointId, bp->stats().id);
@@ -247,10 +251,11 @@ TEST(Breakpoint, WatchpointLocations) {
   settings.locations.push_back(CreateLocation(kProcess1Koid, 0, kProcess1Range));
   settings.locations.push_back(CreateLocation(kProcess2Koid, 0, kProcess2Range));
 
-  ASSERT_ZX_EQ(breakpoint.SetSettings(debug_ipc::BreakpointType::kReadWrite, settings),
-               ZX_ERR_NOT_SUPPORTED);
+  settings.type = debug_ipc::BreakpointType::kReadWrite;
+  ASSERT_ZX_EQ(breakpoint.SetSettings(settings), ZX_ERR_NOT_SUPPORTED);
 
-  ASSERT_ZX_EQ(breakpoint.SetSettings(debug_ipc::BreakpointType::kWrite, settings), ZX_OK);
+  settings.type = debug_ipc::BreakpointType::kWrite;
+  ASSERT_ZX_EQ(breakpoint.SetSettings(settings), ZX_OK);
 
   EXPECT_EQ(
       process_delegate.wp_register_calls(),

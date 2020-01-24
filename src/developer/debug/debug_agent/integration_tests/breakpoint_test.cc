@@ -333,8 +333,8 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     location.address = module_function;
 
     debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
-    breakpoint_request.breakpoint_type = debug_ipc::BreakpointType::kHardware;
     breakpoint_request.breakpoint.id = kBreakpointId;
+    breakpoint_request.breakpoint.type = debug_ipc::BreakpointType::kHardware;
     breakpoint_request.breakpoint.one_shot = true;
     breakpoint_request.breakpoint.locations.push_back(location);
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;

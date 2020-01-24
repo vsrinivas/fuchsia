@@ -177,7 +177,9 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
   TestProcessDelegate process_delegate;
 
   Breakpoint main_breakpoint(&process_delegate);
-  main_breakpoint.set_type(debug_ipc::BreakpointType::kSoftware);
+  debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
+  main_breakpoint.SetSettings(settings);
 
   zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
@@ -217,7 +219,9 @@ TEST(ProcessBreakpoint, StepSingle) {
   TestProcessDelegate process_delegate;
 
   Breakpoint main_breakpoint(&process_delegate);
-  main_breakpoint.set_type(debug_ipc::BreakpointType::kSoftware);
+  debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
+  main_breakpoint.SetSettings(settings);
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
@@ -446,9 +450,11 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   Breakpoint main_breakpoint2(&process_delegate2);
   Breakpoint main_breakpoint3(&process_delegate3);
 
-  main_breakpoint1.set_type(debug_ipc::BreakpointType::kSoftware);
-  main_breakpoint2.set_type(debug_ipc::BreakpointType::kSoftware);
-  main_breakpoint3.set_type(debug_ipc::BreakpointType::kSoftware);
+  debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
+  main_breakpoint1.SetSettings(settings);
+  main_breakpoint2.SetSettings(settings);
+  main_breakpoint3.SetSettings(settings);
 
   constexpr zx_koid_t process_koid = 0x1234;
   const std::string process_name = "process";
@@ -794,6 +800,7 @@ TEST(ProcessBreakpoint, HitCount) {
   constexpr uint32_t kBreakpointId1 = 12;
   debug_ipc::BreakpointSettings settings;
   settings.id = kBreakpointId1;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.locations.resize(1);
 
   constexpr zx_koid_t kProcess1 = 1;
@@ -806,14 +813,13 @@ TEST(ProcessBreakpoint, HitCount) {
   // Create a ProcessBreakpoint referencing the two Breakpoint objects
   // (corresponds to two logical breakpoints at the same address).
   std::unique_ptr<Breakpoint> main_breakpoint1 = std::make_unique<Breakpoint>(&process_delegate);
-  zx_status_t status =
-      main_breakpoint1->SetSettings(debug_ipc::BreakpointType::kSoftware, settings);
+  zx_status_t status = main_breakpoint1->SetSettings(settings);
   ASSERT_EQ(ZX_OK, status);
 
   std::unique_ptr<Breakpoint> main_breakpoint2 = std::make_unique<Breakpoint>(&process_delegate);
   constexpr uint32_t kBreakpointId2 = 13;
   settings.id = kBreakpointId2;
-  status = main_breakpoint2->SetSettings(debug_ipc::BreakpointType::kSoftware, settings);
+  status = main_breakpoint2->SetSettings(settings);
   ASSERT_EQ(ZX_OK, status);
 
   // There should only be one address with a breakpoint.
@@ -912,8 +918,9 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   auto breakpoint1 = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings settings1 = {};
   settings1.id = kBreakpointId1;
+  settings1.type = debug_ipc::BreakpointType::kHardware;
   settings1.locations.push_back({kProcessId, kThreadId1, kAddress});
-  zx_status_t status = breakpoint1->SetSettings(debug_ipc::BreakpointType::kHardware, settings1);
+  zx_status_t status = breakpoint1->SetSettings(settings1);
   ASSERT_EQ(status, ZX_OK);
   // Should have installed the process breakpoint.
   ASSERT_EQ(process_delegate.bps().size(), 1u);
@@ -931,12 +938,13 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   auto breakpoint2 = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings settings2 = {};
   settings2.id = kBreakpointId2;
+  settings2.type = debug_ipc::BreakpointType::kHardware;
   settings2.locations.push_back({kProcessId, kThreadId2, kAddress});
   // This breakpoint has another location for another thread.
   // In practice, this should not happen, but it's important that no HW
   // breakpoint get installed if for the wrong location.
   settings2.locations.push_back({kProcessId, kThreadId3, kOtherAddress});
-  breakpoint2->SetSettings(debug_ipc::BreakpointType::kHardware, settings2);
+  breakpoint2->SetSettings(settings2);
   // Registering this breakpoint should create a new ProcessBreakpoint.
   ASSERT_EQ(process_delegate.bps().size(), 2u);
   auto& process_bp2 = (process_delegate.bps().begin()++)->second;
@@ -965,8 +973,9 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   auto sw_breakpoint = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings sw_settings = {};
   sw_settings.id = kSwBreakpointId;
+  sw_settings.type = debug_ipc::BreakpointType::kSoftware;
   sw_settings.locations.push_back({kProcessId, 0, kAddress});
-  sw_breakpoint->SetSettings(debug_ipc::BreakpointType::kSoftware, sw_settings);
+  sw_breakpoint->SetSettings(sw_settings);
   // Should have installed only a SW breakpoint.
   ASSERT_EQ(arch_provider->TotalBreakpointInstallCalls(), 3u);
   ASSERT_EQ(arch_provider->TotalBreakpointUninstallCalls(), 1u);

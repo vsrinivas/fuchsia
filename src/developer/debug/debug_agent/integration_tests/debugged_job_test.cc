@@ -363,8 +363,8 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   location.process_koid = process_koid;
   location.address = function_address;
   AddOrChangeBreakpointRequest breakpoint_request;
-  breakpoint_request.breakpoint_type = debug_ipc::BreakpointType::kSoftware;
   breakpoint_request.breakpoint.id = breakpoint_id;
+  breakpoint_request.breakpoint.type = debug_ipc::BreakpointType::kSoftware;
   breakpoint_request.breakpoint.locations.push_back(location);
   AddOrChangeBreakpointReply breakpoint_reply;
   remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);

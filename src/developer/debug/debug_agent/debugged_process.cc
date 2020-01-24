@@ -439,7 +439,7 @@ Watchpoint* DebuggedProcess::FindWatchpoint(const debug_ipc::AddressRange& range
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address) {
   LogRegisterBreakpoint(FROM_HERE, this, bp, address);
 
-  switch (bp->type()) {
+  switch (bp->settings().type) {
     case debug_ipc::BreakpointType::kSoftware:
       return RegisterSoftwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kHardware:
@@ -461,7 +461,7 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
   DEBUG_LOG(Process) << LogPreamble(this) << "Unregistering breakpoint " << bp->settings().id
                      << " (" << bp->settings().name << ").";
 
-  switch (bp->type()) {
+  switch (bp->settings().type) {
     case debug_ipc::BreakpointType::kSoftware:
       return UnregisterSoftwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kHardware:
@@ -480,9 +480,9 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
 
 zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
                                                 const debug_ipc::AddressRange& range) {
-  FXL_DCHECK(debug_ipc::IsWatchpointType(bp->type()))
+  FXL_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
       << "Breakpoint type must be kWatchpoint, got: "
-      << debug_ipc::BreakpointTypeToString(bp->type());
+      << debug_ipc::BreakpointTypeToString(bp->settings().type);
 
   // NOTE: Even though the watchpoint system can handle un-aligned ranges, there is no way for
   //       an exception to determine which byte access actually triggered the exception. This means
@@ -495,7 +495,8 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
 
   auto it = watchpoints_.find(range);
   if (it == watchpoints_.end()) {
-    auto watchpoint = std::make_unique<Watchpoint>(bp->type(), bp, this, arch_provider_, range);
+    auto watchpoint =
+        std::make_unique<Watchpoint>(bp->settings().type, bp, this, arch_provider_, range);
     if (zx_status_t status = watchpoint->Init(); status != ZX_OK)
       return status;
 
@@ -507,9 +508,9 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
 }
 
 void DebuggedProcess::UnregisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range) {
-  FXL_DCHECK(debug_ipc::IsWatchpointType(bp->type()))
+  FXL_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
       << "Breakpoint type must be kWatchpoint, got: "
-      << debug_ipc::BreakpointTypeToString(bp->type());
+      << debug_ipc::BreakpointTypeToString(bp->settings().type);
 
   auto it = watchpoints_.find(range);
   if (it == watchpoints_.end())

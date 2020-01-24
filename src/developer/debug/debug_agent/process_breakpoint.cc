@@ -38,7 +38,7 @@ zx_status_t ProcessBreakpoint::RegisterBreakpoint(Breakpoint* breakpoint) {
     return ZX_ERR_ALREADY_BOUND;
 
   // Should be the same type.
-  FXL_DCHECK(Type() == breakpoint->type());
+  FXL_DCHECK(Type() == breakpoint->settings().type);
 
   breakpoints_.push_back(breakpoint);
   // Check if we need to install/uninstall a breakpoint.
@@ -71,7 +71,7 @@ void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
   hit_breakpoints->clear();
   for (Breakpoint* breakpoint : breakpoints_) {
     // Only care for breakpoints that match the exception type.
-    if (!Breakpoint::DoesExceptionApply(breakpoint->type(), exception_type))
+    if (!Breakpoint::DoesExceptionApply(breakpoint->settings().type, exception_type))
       continue;
 
     breakpoint->OnHit();

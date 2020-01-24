@@ -267,6 +267,8 @@ struct BreakpointSettings {
   // a single process.
   uint32_t id = 0;
 
+  BreakpointType type = BreakpointType::kSoftware;
+
   // Name used to recognize a breakpoint. Useful for debugging purposes. Optional.
   std::string name;
 

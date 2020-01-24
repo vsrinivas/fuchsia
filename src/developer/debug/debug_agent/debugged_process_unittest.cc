@@ -122,8 +122,9 @@ debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_k
 debug_ipc::AddressRange SetLocation(Breakpoint* breakpoint, zx_koid_t koid,
                                     const debug_ipc::AddressRange& range) {
   debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kWrite;
   settings.locations.push_back(CreateLocation(koid, 0, range));
-  breakpoint->SetSettings(debug_ipc::BreakpointType::kWrite, settings);
+  breakpoint->SetSettings(settings);
 
   return range;
 }
@@ -144,11 +145,12 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   auto process = CreateProcess(kProcessKoid, kProcessName);
 
   debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress1));
   settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress2));
   settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress3));
   Breakpoint breakpoint(&process_delegate);
-  breakpoint.SetSettings(debug_ipc::BreakpointType::kSoftware, settings);
+  breakpoint.SetSettings(settings);
 
   ASSERT_ZX_EQ(process.RegisterBreakpoint(&breakpoint, kAddress1), ZX_OK);
 
@@ -178,8 +180,9 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   // Register a hardware breakpoint.
   Breakpoint hw_breakpoint(&process_delegate);
   debug_ipc::BreakpointSettings hw_settings;
+  hw_settings.type = debug_ipc::BreakpointType::kHardware;
   hw_settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddress4));
-  hw_breakpoint.SetSettings(debug_ipc::BreakpointType::kHardware, hw_settings);
+  hw_breakpoint.SetSettings(hw_settings);
 
   ASSERT_ZX_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress3), ZX_OK);
   ASSERT_ZX_EQ(process.RegisterBreakpoint(&hw_breakpoint, kAddress4), ZX_OK);
@@ -203,8 +206,9 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   // Add a watchpoint.
   Breakpoint wp_breakpoint(&process_delegate);
   debug_ipc::BreakpointSettings wp_settings;
+  wp_settings.type = debug_ipc::BreakpointType::kWrite;
   wp_settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddressRange1));
-  wp_breakpoint.SetSettings(debug_ipc::BreakpointType::kWrite, wp_settings);
+  wp_breakpoint.SetSettings(wp_settings);
 
   ASSERT_ZX_EQ(process.RegisterWatchpoint(&wp_breakpoint, kAddressRange1), ZX_OK);
   ASSERT_EQ(process.software_breakpoints().size(), 2u);

@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 22;
+constexpr uint32_t kProtocolVersion = 23;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -251,9 +251,6 @@ struct ReadMemoryReply {
 };
 
 struct AddOrChangeBreakpointRequest {
-  // What kind of request this is.
-  BreakpointType breakpoint_type = BreakpointType::kSoftware;
-
   BreakpointSettings breakpoint;
 };
 struct AddOrChangeBreakpointReply {

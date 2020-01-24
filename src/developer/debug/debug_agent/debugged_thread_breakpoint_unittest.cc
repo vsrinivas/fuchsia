@@ -323,8 +323,9 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
   auto breakpoint = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings settings = {};
   settings.id = kBreakpointId;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
   settings.locations.push_back(CreateLocation(proc_object->koid, 0, kAddress));
-  breakpoint->SetSettings(debug_ipc::BreakpointType::kSoftware, settings);
+  breakpoint->SetSettings(settings);
 
   process.AppendSofwareBreakpoint(breakpoint.get(), kAddress);
   context.arch_provider->AppendBreakpoint(kAddress);
@@ -381,8 +382,9 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
   auto breakpoint = std::make_unique<Breakpoint>(&process_delegate);
   debug_ipc::BreakpointSettings settings = {};
   settings.id = kBreakpointId;
+  settings.type = debug_ipc::BreakpointType::kHardware;
   settings.locations.push_back(CreateLocation(proc_object->koid, 0, kAddress));
-  breakpoint->SetSettings(debug_ipc::BreakpointType::kHardware, settings);
+  breakpoint->SetSettings(settings);
 
   process.AppendHardwareBreakpoint(breakpoint.get(), kAddress, context.arch_provider);
 
@@ -439,8 +441,9 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   constexpr uint32_t kBreakpointId = 1000;
   debug_ipc::BreakpointSettings settings = {};
   settings.id = kBreakpointId;
+  settings.type = debug_ipc::BreakpointType::kWrite;
   settings.locations.push_back(CreateLocation(proc_object->koid, 0, kRange));
-  breakpoint.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
+  breakpoint.SetSettings(settings);
 
   process.AppendWatchpoint(&breakpoint, kRange, context.arch_provider);
 

@@ -106,10 +106,11 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   MockProcessDelegate process_delegate;
 
   debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kWrite;
   settings.locations.push_back(CreateLocation(process, thread1, kAddressRange));
 
   Breakpoint breakpoint1(&process_delegate);
-  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
+  breakpoint1.SetSettings(settings);
 
   Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
                         kAddressRange);
@@ -163,12 +164,13 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   // Registering the breakpoint should only add one more install.
 
   debug_ipc::BreakpointSettings settings2;
+  settings2.type = debug_ipc::BreakpointType::kWrite;
   settings2.locations.push_back(CreateLocation(process, thread2, kAddressRange));
   debug_ipc::AddressRange address_range2(kAddressRange.begin(), kAddressRange.end() + 8);
   settings2.locations.push_back(CreateLocation(process, thread3, address_range2));
 
   Breakpoint breakpoint2(&process_delegate);
-  breakpoint2.SetSettings(debug_ipc::BreakpointType::kWrite, settings2);
+  breakpoint2.SetSettings(settings2);
 
   ASSERT_EQ(watchpoint.RegisterBreakpoint(&breakpoint2), ZX_OK);
   ASSERT_EQ(watchpoint.breakpoints().size(), 2u);
@@ -196,7 +198,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   // Add a location to the already bound breakpoint.
 
   settings2.locations.push_back(CreateLocation(process, thread3, kAddressRange));
-  breakpoint2.SetSettings(debug_ipc::BreakpointType::kWrite, settings2);
+  breakpoint2.SetSettings(settings2);
 
   // Updating should've only installed for the third thread.
 
@@ -218,10 +220,11 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   // Create a breakpoint that spans all locations.
 
   debug_ipc::BreakpointSettings settings3;
+  settings3.type = debug_ipc::BreakpointType::kWrite;
   settings3.locations.push_back(CreateLocation(process, nullptr, kAddressRange));
 
   Breakpoint breakpoint3(&process_delegate);
-  breakpoint3.SetSettings(debug_ipc::BreakpointType::kWrite, settings3);
+  breakpoint3.SetSettings(settings3);
 
   // Registering the breakpoint should add a breakpoint for all threads, but only updating the ones
   // that are not currently installed.
@@ -291,10 +294,11 @@ TEST(Watchpoint, InstalledRanges) {
   MockProcessDelegate process_delegate;
 
   debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kWrite;
   settings.locations.push_back(CreateLocation(process, thread1, kAddressRange));
 
   Breakpoint breakpoint1(&process_delegate);
-  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
+  breakpoint1.SetSettings(settings);
 
   Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
                         kAddressRange);
@@ -341,10 +345,11 @@ TEST(Watchpoint, MatchesException) {
   MockProcessDelegate process_delegate;
 
   debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kWrite;
   settings.locations.push_back(CreateLocation(process, thread1, kAddressRange));
 
   Breakpoint breakpoint1(&process_delegate);
-  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
+  breakpoint1.SetSettings(settings);
 
   Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
                         kAddressRange);
@@ -406,7 +411,8 @@ TEST(Watchpoint, DifferentTypes) {
 
   {
     Breakpoint breakpoint1(&process_delegate);
-    breakpoint1.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
+    settings.type = debug_ipc::BreakpointType::kWrite;
+    breakpoint1.SetSettings(settings);
 
     Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
                           kAddressRange);
@@ -424,7 +430,8 @@ TEST(Watchpoint, DifferentTypes) {
 
   {
     Breakpoint breakpoint1(&process_delegate);
-    breakpoint1.SetSettings(debug_ipc::BreakpointType::kReadWrite, settings);
+    settings.type = debug_ipc::BreakpointType::kReadWrite;
+    breakpoint1.SetSettings(settings);
 
     Watchpoint watchpoint(debug_ipc::BreakpointType::kReadWrite, &breakpoint1, &process,
                           arch_provider, kAddressRange);

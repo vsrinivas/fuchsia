@@ -49,7 +49,7 @@ zx_status_t SoftwareBreakpoint::Update() {
   // threads are targeted.
   int sw_bp_count = 0;
   for (Breakpoint* bp : breakpoints()) {
-    if (bp->type() == debug_ipc::BreakpointType::kSoftware)
+    if (bp->settings().type == debug_ipc::BreakpointType::kSoftware)
       sw_bp_count++;
   }
 

@@ -110,10 +110,8 @@ Breakpoint::~Breakpoint() {
     process_delegate_->UnregisterBreakpoint(this, loc.first, loc.second);
 }
 
-zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
-                                    const debug_ipc::BreakpointSettings& settings) {
-  FXL_DCHECK(type != debug_ipc::BreakpointType::kLast);
-  type_ = type;
+zx_status_t Breakpoint::SetSettings(const debug_ipc::BreakpointSettings& settings) {
+  FXL_DCHECK(settings.type != debug_ipc::BreakpointType::kLast);
   settings_ = settings;
   LogSetSettings(FROM_HERE, this);
 
@@ -122,7 +120,7 @@ zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
   // added in the future).
   stats_.id = settings_.id;
 
-  switch (type) {
+  switch (settings_.type) {
     case debug_ipc::BreakpointType::kSoftware:
     case debug_ipc::BreakpointType::kHardware:
       return SetBreakpointLocations(settings);
@@ -135,7 +133,7 @@ zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
       break;
   }
 
-  FXL_NOTREACHED() << "Invalid breakpoint type: " << static_cast<int>(type);
+  FXL_NOTREACHED() << "Invalid breakpoint type: " << static_cast<int>(settings_.type);
   return ZX_ERR_INVALID_ARGS;
 }
 

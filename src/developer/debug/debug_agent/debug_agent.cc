@@ -368,7 +368,7 @@ void DebugAgent::OnWriteRegisters(const debug_ipc::WriteRegistersRequest& reques
 
 void DebugAgent::OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& request,
                                          debug_ipc::AddOrChangeBreakpointReply* reply) {
-  switch (request.breakpoint_type) {
+  switch (request.breakpoint.type) {
     case debug_ipc::BreakpointType::kSoftware:
     case debug_ipc::BreakpointType::kHardware:
     case debug_ipc::BreakpointType::kReadWrite:
@@ -378,7 +378,7 @@ void DebugAgent::OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointR
       break;
   }
 
-  FXL_NOTREACHED() << "Invalid Breakpoint Type: " << static_cast<int>(request.breakpoint_type);
+  FXL_NOTREACHED() << "Invalid Breakpoint Type: " << static_cast<int>(request.breakpoint.type);
 }
 
 void DebugAgent::OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
@@ -469,7 +469,7 @@ void DebugAgent::SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& 
                 .first;
   }
 
-  reply->status = found->second.SetSettings(request.breakpoint_type, request.breakpoint);
+  reply->status = found->second.SetSettings(request.breakpoint);
 }
 
 zx_status_t DebugAgent::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,

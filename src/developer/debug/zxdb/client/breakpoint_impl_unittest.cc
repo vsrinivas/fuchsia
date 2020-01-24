@@ -268,7 +268,7 @@ TEST_F(BreakpointImplTest, Watchpoint) {
   // Check the message was sent.
   ASSERT_EQ(1u, sink().adds.size());
   debug_ipc::AddOrChangeBreakpointRequest& out = sink().adds[0];
-  EXPECT_EQ(out.breakpoint_type, debug_ipc::BreakpointType::kWrite);
+  EXPECT_EQ(out.breakpoint.type, debug_ipc::BreakpointType::kWrite);
   EXPECT_FALSE(out.breakpoint.one_shot);
   EXPECT_EQ(debug_ipc::Stop::kAll, out.breakpoint.stop);
 

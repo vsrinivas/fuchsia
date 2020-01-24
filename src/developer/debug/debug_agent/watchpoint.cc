@@ -55,7 +55,7 @@ std::set<zx_koid_t> ThreadsTargeted(const Watchpoint& watchpoint) {
   bool all_threads = false;
   for (Breakpoint* bp : watchpoint.breakpoints()) {
     // We only care about breakpoint that cover our case.
-    if (!Breakpoint::DoesExceptionApply(watchpoint.Type(), bp->type()))
+    if (!Breakpoint::DoesExceptionApply(watchpoint.Type(), bp->settings().type))
       continue;
 
     for (auto& location : bp->settings().locations) {

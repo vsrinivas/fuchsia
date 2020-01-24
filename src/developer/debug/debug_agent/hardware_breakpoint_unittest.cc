@@ -85,10 +85,11 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   MockProcessDelegate process_delegate;
 
   debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kHardware;
   settings.locations.push_back(CreateLocation(process, thread1, kAddress));
 
   Breakpoint breakpoint1(&process_delegate);
-  breakpoint1.SetSettings(debug_ipc::BreakpointType::kHardware, settings);
+  breakpoint1.SetSettings(settings);
 
   HardwareBreakpoint hw_breakpoint(&breakpoint1, &process, kAddress, arch_provider);
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 1u);
@@ -140,10 +141,11 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   // Registering the breakpoint should only add one more install
 
   debug_ipc::BreakpointSettings settings2;
+  settings2.type = debug_ipc::BreakpointType::kHardware;
   settings2.locations.push_back(CreateLocation(process, thread2, kAddress));
 
   Breakpoint breakpoint2(&process_delegate);
-  breakpoint2.SetSettings(debug_ipc::BreakpointType::kHardware, settings2);
+  breakpoint2.SetSettings(settings2);
 
   ASSERT_EQ(hw_breakpoint.RegisterBreakpoint(&breakpoint2), ZX_OK);
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 2u);
@@ -171,7 +173,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 
   settings2.locations.push_back(CreateLocation(process, thread2, kAddress + 0x8000));
   settings2.locations.push_back(CreateLocation(process, thread3, kAddress));
-  breakpoint2.SetSettings(debug_ipc::BreakpointType::kHardware, settings2);
+  breakpoint2.SetSettings(settings2);
 
   // Updating should've only installed for the third thread.
 
@@ -192,10 +194,11 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   // Create a breakpoint that spans all locations.
 
   debug_ipc::BreakpointSettings settings3;
+  settings3.type = debug_ipc::BreakpointType::kHardware;
   settings3.locations.push_back(CreateLocation(process, nullptr, kAddress));
 
   Breakpoint breakpoint3(&process_delegate);
-  breakpoint3.SetSettings(debug_ipc::BreakpointType::kHardware, settings3);
+  breakpoint3.SetSettings(settings3);
 
   // Registering the breakpoint should add a breakpoint for all threads, but only updating the ones
   // that are not currently installed.
@@ -263,8 +266,9 @@ TEST(HardwareBreakpoint, StepSimple) {
   Breakpoint main_breakpoint(&process_delegate);
 
   debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kHardware;
   settings.locations.push_back(CreateLocation(process, nullptr, kAddress));  // All threads.
-  main_breakpoint.SetSettings(debug_ipc::BreakpointType::kHardware, settings);
+  main_breakpoint.SetSettings(settings);
 
   // The step over strategy is as follows:
   // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
@@ -333,8 +337,9 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   Breakpoint main_breakpoint(&process_delegate);
 
   debug_ipc::BreakpointSettings settings;
+  settings.type = debug_ipc::BreakpointType::kHardware;
   settings.locations.push_back(CreateLocation(process, nullptr, kAddress));  // All threads.
-  main_breakpoint.SetSettings(debug_ipc::BreakpointType::kHardware, settings);
+  main_breakpoint.SetSettings(settings);
 
   // The step over strategy is as follows:
   // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.

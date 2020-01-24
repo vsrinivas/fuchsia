@@ -60,7 +60,7 @@ std::set<zx_koid_t> HWThreadsTargeted(const ProcessBreakpoint& pb) {
   bool all_threads = false;
   for (Breakpoint* bp : pb.breakpoints()) {
     // We only care about hardware breakpoints.
-    if (bp->type() != debug_ipc::BreakpointType::kHardware)
+    if (bp->settings().type != debug_ipc::BreakpointType::kHardware)
       continue;
 
     for (auto& location : bp->settings().locations) {
