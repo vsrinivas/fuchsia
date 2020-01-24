@@ -38,7 +38,10 @@ config("compiler") {
   cflags_objcc = [ "-fvisibility-inlines-hidden" ]
   ldflags = []
   defines = []
-  configs = [ ":toolchain_version_stamp" ]
+  configs = [
+    ":toolchain_version_stamp",
+    ":rust_panic_cfg",
+  ]
 
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:compiler" ]
@@ -85,10 +88,7 @@ config("toolchain_version_stamp") {
     rustc_version = read_file(
             "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version",
             "json")
-    rustflags = [
-      "--cfg",
-      "__rust_toolchain=\"${rustc_version.instance_id}\"",
-    ]
+    rustflags = [ "--cfg=__rust_toolchain=\"${rustc_version.instance_id}\"" ]
   }
 }
 
@@ -371,6 +371,12 @@ config("no-shadow-call-stack") {
   if (current_cpu == "arm64") {
     cflags = [ "-fsanitize=no-shadow-call-stack" ]
   }
+}
+
+# Defines a Rust cfg flag with the value of the rust_panic build arg.
+# Useful for changing behavior of code based on panic behavior.
+config("rust_panic_cfg") {
+  rustflags = [ "--cfg=rust_panic=\"${rust_panic}\"" ]
 }
 
 config("temporarily_disable_ubsan_do_not_use") {

@@ -50,6 +50,11 @@ declare_args() {
 assert(rust_panic == "unwind" || rust_panic == "abort",
        "rust_panic was neither 'unwind' nor 'panic'")
 
+# Always use panic=unwind on host, or proc macros won't work.
+if (!is_fuchsia) {
+  rust_panic = "unwind"
+}
+
 _sysroot = sysroot
 sysroot_deps = []
 
