@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/diag_tool_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
     }
 }

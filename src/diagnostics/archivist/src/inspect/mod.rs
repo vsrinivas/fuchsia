@@ -18,9 +18,10 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::reader::{
         snapshot::{Snapshot, SnapshotTree},
-        NodeHierarchy, PartialNodeHierarchy,
+        PartialNodeHierarchy,
     },
     fuchsia_inspect::trie,
+    fuchsia_inspect_node_hierarchy::{self, InspectHierarchyMatcher, NodeHierarchy},
     fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::future::{join_all, BoxFuture},
     futures::{FutureExt, TryFutureExt, TryStreamExt},
@@ -28,7 +29,6 @@ use {
     inspect_formatter::{self, DeprecatedHierarchyFormatter, HierarchyData},
     io_util,
     parking_lot::{Mutex, RwLock},
-    regex::{Regex, RegexSet},
     selectors,
     std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
@@ -251,57 +251,6 @@ impl DataCollector for InspectDataCollector {
             self.populate_data_map(&inspect_proxy).await
         }
         .boxed()
-    }
-}
-
-#[derive(Clone)]
-pub struct InspectHierarchyMatcher {
-    /// RegexSet encoding all the node path selectors for
-    /// inspect hierarchies under this component's out directory.
-    component_node_selector: RegexSet,
-    /// Vector of Regexes corresponding to the node path selectors
-    /// in the regex set.
-    /// Note: Order of Regexes matters here, this vector must be aligned
-    /// with the vector used to construct component_node_selector since
-    /// conponent_node_selector.matches() returns a vector of ints used to
-    /// find all the relevant property selectors corresponding to the matching
-    /// node selectors.
-    node_property_selectors: Vec<Regex>,
-}
-
-impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
-    type Error = anyhow::Error;
-
-    fn try_from(selectors: &Vec<Arc<Selector>>) -> Result<Self, Error> {
-        let node_path_regexes = selectors
-            .iter()
-            .map(|selector| match &selector.tree_selector.node_path {
-                Some(node_path) => selectors::convert_path_selector_to_regex(node_path),
-                None => unreachable!("Selectors are required to specify a node path."),
-            })
-            .collect::<Result<Vec<Regex>, Error>>()?;
-
-        let node_path_regex_set = RegexSet::new(
-            &node_path_regexes
-                .iter()
-                .map(|selector_regex| selector_regex.as_str())
-                .collect::<Vec<&str>>(),
-        )?;
-
-        let property_regexes = selectors
-            .iter()
-            .map(|selector| match &selector.tree_selector.target_properties {
-                Some(target_property) => {
-                    selectors::convert_property_selector_to_regex(target_property)
-                }
-                None => unreachable!("Selectors are required to specify a node path."),
-            })
-            .collect::<Result<Vec<Regex>, Error>>()?;
-
-        Ok(InspectHierarchyMatcher {
-            component_node_selector: node_path_regex_set,
-            node_property_selectors: property_regexes,
-        })
     }
 }
 
@@ -529,55 +478,6 @@ impl ReaderServer {
         }
     }
 
-    /// Parses an inspect Snapshot into a node hierarchy, and iterates over the
-    /// hierarchy creating a copy with selector filters applied.
-    fn filter_inspect_snapshot(
-        root_node: NodeHierarchy,
-        path_selectors: &RegexSet,
-        property_selectors: &Vec<Regex>,
-    ) -> Result<Option<NodeHierarchy>, Error> {
-        let mut new_root = NodeHierarchy::new_root();
-        let mut properties_selected = 0;
-
-        for (node_path, property) in root_node.property_iter() {
-            let mut formatted_node_path = node_path
-                .iter()
-                .map(|s| selectors::sanitize_string_for_selectors(s))
-                .collect::<Vec<String>>()
-                .join("/");
-            // We must append a "/" because the absolute monikers end in slash and
-            // hierarchy node paths don't, but we want to reuse the regex logic.
-            formatted_node_path.push('/');
-            let matching_indices: Vec<usize> =
-                path_selectors.matches(&formatted_node_path).into_iter().collect();
-            let mut property_regex_strings: Vec<&str> = Vec::new();
-
-            // TODO(4601): We only need to recompile the property selector regex
-            // if our iteration brings us to a new node.
-            for property_index in matching_indices {
-                let property_selector: &Regex = &property_selectors[property_index];
-                property_regex_strings.push(property_selector.as_str());
-            }
-
-            let property_regex_set = RegexSet::new(property_regex_strings)?;
-
-            if property_regex_set.is_match(property.name()) {
-                // TODO(4601): We can keep track of the prefix string identifying
-                // the "curr_node" and only insert from root if our iteration has
-                // brought us to a new node higher up the hierarchy. Right now, we
-                // insert from root for every new property.
-                new_root.add(node_path, property.clone());
-                properties_selected = properties_selected + 1;
-            }
-        }
-
-        if properties_selected > 0 {
-            Ok(Some(new_root))
-        } else {
-            Ok(None)
-        }
-    }
-
     fn filter_single_components_snapshots(
         sanitized_moniker: String,
         snapshots: Vec<ReadSnapshot>,
@@ -588,10 +488,9 @@ impl ReaderServer {
             Some(static_matcher) => snapshots
                 .into_iter()
                 .filter_map(|snapshot| match convert_snapshot_to_node_hierarchy(snapshot) {
-                    Ok(node_hierarchy) => ReaderServer::filter_inspect_snapshot(
+                    Ok(node_hierarchy) => fuchsia_inspect_node_hierarchy::filter_inspect_snapshot(
                         node_hierarchy,
-                        &static_matcher.component_node_selector,
-                        &static_matcher.node_property_selectors,
+                        &static_matcher,
                     )
                     .unwrap_or(None),
                     Err(e) => {
@@ -629,10 +528,9 @@ impl ReaderServer {
                 Some(Some(dynamic_matcher)) => statically_filtered_hierarchies
                     .into_iter()
                     .filter_map(|hierarchy| {
-                        ReaderServer::filter_inspect_snapshot(
+                        fuchsia_inspect_node_hierarchy::filter_inspect_snapshot(
                             hierarchy,
-                            &dynamic_matcher.component_node_selector,
-                            &dynamic_matcher.node_property_selectors,
+                            &dynamic_matcher,
                         )
                         .unwrap_or(None)
                     })

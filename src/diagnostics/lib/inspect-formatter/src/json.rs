@@ -54,6 +54,8 @@ impl HierarchyDeserializer for JsonNodeHierarchySerializer {
     // The Json Formatter deserializes JSON Strings encoding a single node hierarchy.
     type Object = String;
 
+    // TODO(4601): Should this be parsing the outer schema, which includes the envelope of
+    // moniker and metadata? Right now it assumes its receiving only the payload as the string.
     fn deserialize(data_format: String) -> Result<NodeHierarchy, Error> {
         let root_node: serde_json::Value = serde_json::from_str(&data_format)?;
         deserialize_json(root_node)

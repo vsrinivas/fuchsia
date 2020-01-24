@@ -17,8 +17,10 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/connectivity/overnet/lib/hoist",
+    "//src/diagnostics/lib/inspect-formatter",
     "//src/diagnostics/lib/selectors",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:clap",
@@ -31,6 +33,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:termion",
     "//third_party/rust_crates:thiserror",
   ]

@@ -30,6 +30,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/inspect/rust/fuchsia-inspect-contrib",
+    "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
     "//src/lib/storage/fuchsia-watch",
     "//src/lib/storage/pseudo-fs-mt",
     "//src/lib/zircon/rust:fuchsia-zircon",

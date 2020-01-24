@@ -4,12 +4,17 @@
 
 use {
     crate::trie::*,
+    anyhow::Error,
     core::marker::PhantomData,
+    fidl_fuchsia_diagnostics::Selector,
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::bounds::Bounded,
+    regex::{Regex, RegexSet},
     std::{
         collections::HashMap,
+        convert::TryFrom,
         ops::{Add, AddAssign, MulAssign},
+        sync::Arc,
     },
 };
 
@@ -434,9 +439,141 @@ impl Property {
     }
 }
 
+/// Wrapper for the tools needed to filter a single NodeHierarchy based on selectors
+/// known to be applicable to it.
+///
+/// `component_node_selector` is a RegexSet of all path
+///     selectors on a hierarchy.
+///
+/// `node_property_selectors` is a vector of Regexs that match single named properties
+///     on a NodeHierarchy. NOTE: Their order is aligned with the vector of Regexes that created
+///     the component_node_selector RegexSet, since each property selector is associated with
+///     a particular node path selector.
+#[derive(Clone)]
+pub struct InspectHierarchyMatcher {
+    /// RegexSet encoding all the node path selectors for
+    /// inspect hierarchies under this component's out directory.
+    pub component_node_selector: RegexSet,
+    /// Vector of Regexes corresponding to the node path selectors
+    /// in the regex set.
+    /// Note: Order of Regexes matters here, this vector must be aligned
+    /// with the vector used to construct component_node_selector since
+    /// conponent_node_selector.matches() returns a vector of ints used to
+    /// find all the relevant property selectors corresponding to the matching
+    /// node selectors.
+    pub node_property_selectors: Vec<Regex>,
+}
+
+impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
+    type Error = anyhow::Error;
+
+    fn try_from(selectors: &Vec<Arc<Selector>>) -> Result<Self, Error> {
+        let node_path_regexes = selectors
+            .iter()
+            .map(|selector| match &selector.tree_selector.node_path {
+                Some(node_path) => selectors::convert_path_selector_to_regex(node_path),
+                None => unreachable!("Selectors are required to specify a node path."),
+            })
+            .collect::<Result<Vec<Regex>, Error>>()?;
+
+        let node_path_regex_set = RegexSet::new(
+            &node_path_regexes
+                .iter()
+                .map(|selector_regex| selector_regex.as_str())
+                .collect::<Vec<&str>>(),
+        )?;
+
+        let property_regexes = selectors
+            .iter()
+            .map(|selector| match &selector.tree_selector.target_properties {
+                Some(target_property) => {
+                    selectors::convert_property_selector_to_regex(target_property)
+                }
+                None => unreachable!("Selectors are required to specify a node path."),
+            })
+            .collect::<Result<Vec<Regex>, Error>>()?;
+
+        Ok(InspectHierarchyMatcher {
+            component_node_selector: node_path_regex_set,
+            node_property_selectors: property_regexes,
+        })
+    }
+}
+
+// Filters a node hierarchy using a set of path selectors and their asscoaited property
+// selectors.
+//
+// - If the return type is Ok(Some()) that implies that the filter encountered no errors AND
+//    a meaningful tree remained at the end.
+// - If the return type is Ok(None) that implies that the filter encountered no errors AND
+//    the tree was filtered to be empty at the end.
+// - If the return type is Error that implies the filter encountered errors.
+pub fn filter_inspect_snapshot(
+    root_node: NodeHierarchy,
+    hierarchy_matcher: &InspectHierarchyMatcher,
+) -> Result<Option<NodeHierarchy>, Error> {
+    let mut properties_selected = 0;
+
+    let mut new_root = NodeHierarchy::new(root_node.name.clone(), vec![], vec![]);
+
+    let mut working_node_path: Option<String> = None;
+    let mut working_property_regex_set: Option<RegexSet> = None;
+
+    for (node_path, property) in root_node.property_iter() {
+        let mut formatted_node_path = node_path
+            .iter()
+            .map(|s| selectors::sanitize_string_for_selectors(s))
+            .collect::<Vec<String>>()
+            .join("/");
+        // We must append a "/" because the absolute monikers end in slash and
+        // hierarchy node paths don't, but we want to reuse the regex logic.
+        formatted_node_path.push('/');
+
+        let property_regex_set: &RegexSet = match &working_node_path {
+            Some(working_path) if *working_path == formatted_node_path => {
+                working_property_regex_set.as_ref().unwrap()
+            }
+            _ => {
+                let property_regex_strings = hierarchy_matcher
+                    .component_node_selector
+                    .matches(&formatted_node_path)
+                    .into_iter()
+                    .map(|property_index| {
+                        let property_selector: &Regex =
+                            &hierarchy_matcher.node_property_selectors[property_index];
+                        property_selector.as_str()
+                    })
+                    .collect::<Vec<&str>>();
+
+                let property_regex_set = RegexSet::new(property_regex_strings)?;
+                working_node_path = Some(formatted_node_path);
+                working_property_regex_set = Some(property_regex_set);
+                working_property_regex_set.as_ref().unwrap()
+            }
+        };
+
+        if property_regex_set.is_match(property.name()) {
+            // TODO(4601): We can keep track of the prefix string identifying
+            // the "curr_node" and only insert from root if our iteration has
+            // brought us to a new node higher up the hierarchy. Right now, we
+            // insert from root for every new property.
+            new_root.add(node_path, property.clone());
+            properties_selected = properties_selected + 1;
+        }
+    }
+
+    if properties_selected > 0 {
+        Ok(Some(new_root))
+    } else {
+        Ok(None)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use selectors;
+    use std::convert::TryInto;
 
     #[test]
     fn test_node_hierarchy_iteration() {
@@ -697,5 +834,58 @@ mod tests {
         assert_eq!(buckets[3], ArrayBucket { floor: 8, upper: 32, count: 3 });
         assert_eq!(buckets[4], ArrayBucket { floor: 32, upper: 128, count: 4 });
         assert_eq!(buckets[5], ArrayBucket { floor: 128, upper: i64::max_value(), count: 5 });
+    }
+
+    #[test]
+    fn test_filter_hierarchy() {
+        let hierarchy = NodeHierarchy::new(
+            "root",
+            vec![
+                Property::String("x".to_string(), "foo".to_string()),
+                Property::Uint("c".to_string(), 3),
+                Property::Int("z".to_string(), -4),
+            ],
+            vec![
+                NodeHierarchy::new(
+                    "foo",
+                    vec![
+                        Property::Int("11".to_string(), -4),
+                        Property::Bytes("123".to_string(), "foo".bytes().into_iter().collect()),
+                        Property::Double("0".to_string(), 8.1),
+                    ],
+                    vec![],
+                ),
+                NodeHierarchy::new("bar", vec![], vec![]),
+            ],
+        );
+
+        let test_selectors = vec!["*:root/foo:11", "*:root:z"];
+        let parsed_test_selectors = test_selectors
+            .into_iter()
+            .map(|selector_string| {
+                Arc::new(
+                    selectors::parse_selector(selector_string)
+                        .expect("All test selectors are valid and parsable."),
+                )
+            })
+            .collect::<Vec<Arc<Selector>>>();
+        let hierarchy_matcher: InspectHierarchyMatcher =
+            (&parsed_test_selectors).try_into().unwrap();
+
+        let mut filtered_hierarchy = filter_inspect_snapshot(hierarchy, &hierarchy_matcher)
+            .expect("filtered hierarchy should succeed.")
+            .expect("There should be an actual resulting hierarchy.");
+        filtered_hierarchy.sort();
+
+        assert_eq!(
+            filtered_hierarchy,
+            NodeHierarchy::new(
+                "root",
+                vec![Property::Int("z".to_string(), -4),],
+                vec![
+                    NodeHierarchy::new("foo", vec![Property::Int("11".to_string(), -4),], vec![],),
+                ],
+            )
+        );
     }
 }

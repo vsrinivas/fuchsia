@@ -1,33 +1,37 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // // Use of this source code is governed by a BSD-style license that can be
 // // found in the LICENSE file.
-
-#![allow(dead_code)]
-use anyhow::{format_err, Error};
-//use termion;
-use difference::{
-    self,
-    Difference::{Add, Rem, Same},
+use {
+    anyhow::{format_err, Error},
+    difference::{
+        self,
+        Difference::{Add, Rem, Same},
+    },
+    fidl_fuchsia_diagnostics::Selector,
+    fuchsia_inspect_node_hierarchy::{self, InspectHierarchyMatcher, NodeHierarchy},
+    inspect_formatter::{
+        json::{JsonNodeHierarchySerializer, RawJsonNodeHierarchySerializer},
+        HierarchyDeserializer, HierarchySerializer,
+    },
+    regex::Regex,
+    selectors,
+    std::cmp::{max, min},
+    std::convert::TryInto,
+    std::fs::read_to_string,
+    std::io::{stdin, stdout, Write},
+    std::path::PathBuf,
+    std::sync::Arc,
+    structopt::StructOpt,
+    termion::{
+        cursor,
+        event::{Event, Key},
+        input::TermRead,
+        raw::IntoRawMode,
+    },
 };
-use selectors;
-use std::io::{stdin, stdout, Write};
-use structopt::StructOpt;
-use termion::cursor;
-use termion::event::{Event, Key};
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
 
-use fidl_fuchsia_diagnostics::Selector;
-use regex::Regex;
-use std::cmp::{max, min};
-use std::fs::read_to_string;
-use std::path::PathBuf;
-use std::sync::Arc;
-
-use lazy_static::lazy_static;
-
-#[allow(unused_imports)]
-use hoist;
+static JSON_MONIKER_KEY: &str = "path";
+static JSON_PAYLOAD_KEY: &str = "contents";
 
 #[derive(Debug, StructOpt)]
 struct Options {
@@ -42,7 +46,11 @@ struct Options {
 enum Command {
     #[structopt(name = "generate")]
     Generate {
-        #[structopt(short, help = "Generate selectors for only this component")]
+        #[structopt(
+            short,
+            name = "component",
+            help = "Generate selectors for only this component"
+        )]
         component_name: Option<String>,
         #[structopt(help = "The output file to generate")]
         selector_file: String,
@@ -174,69 +182,109 @@ fn parse_path_to_moniker(path: &str) -> Vec<String> {
         .collect()
 }
 
-fn escape_path_segment(segment: &str) -> String {
-    lazy_static! {
-        static ref REGEX: Regex = Regex::new("([:/])").unwrap();
-    }
+fn filter_json_schema_by_selectors(
+    mut value: serde_json::Value,
+    selector_vec: &Vec<Arc<Selector>>,
+) -> Option<serde_json::Value> {
+    let moniker_string_opt = value[JSON_MONIKER_KEY].as_str();
+    let deserialized_hierarchy =
+        RawJsonNodeHierarchySerializer::deserialize(value[JSON_PAYLOAD_KEY].clone());
 
-    REGEX.replace_all(segment, r"\$1").into_owned()
-}
+    match (moniker_string_opt, deserialized_hierarchy) {
+        (Some(moniker_path), Ok(hierarchy)) => {
+            let moniker = parse_path_to_moniker(moniker_path);
 
-fn join_and_escape_path(path: &Vec<impl AsRef<str>>) -> String {
-    path.iter().map(|v| escape_path_segment(v.as_ref())).collect::<Vec<_>>().join("/")
-}
+            match selectors::match_component_moniker_against_selectors(&moniker, &selector_vec) {
+                Ok(matched_selectors) => {
+                    if matched_selectors.is_empty() {
+                        return None;
+                    }
 
-fn filter_data_to_lines(selector_file: &str, data: &serde_json::Value) -> Result<Vec<Line>, Error> {
-    let mut filtered_data = data.clone();
+                    let inspect_matcher: InspectHierarchyMatcher =
+                        (&matched_selectors).try_into().unwrap();
 
-    let selector_vec: Vec<_> = selectors::parse_selector_file(&PathBuf::from(selector_file))?
-        .into_iter()
-        .map(|s| Arc::new(s))
-        .collect();
-
-    fn inner_filter_object(
-        data: serde_json::Value,
-        _selectors: &Vec<Arc<Selector>>,
-        _path: &str,
-    ) -> serde_json::Value {
-        data
-    }
-
-    if let serde_json::Value::Array(arr) = filtered_data {
-        filtered_data = serde_json::Value::Array(
-            arr.into_iter()
-                .filter_map(|mut value| {
-                    if let serde_json::Value::Object(map) = &mut value {
-                        if let Some(serde_json::Value::String(val)) = map.get("path") {
-                            let selectors = selectors::match_component_moniker_against_selectors(
-                                &parse_path_to_moniker(&val),
-                                &selector_vec,
-                            )
-                            .unwrap();
-
-                            if selectors.len() > 0 {
-                                let contents =
-                                    map.remove("contents").unwrap_or(serde_json::Value::Null);
-                                map.insert(
-                                    "contents".to_string(),
-                                    inner_filter_object(contents, &selectors, ""),
-                                );
-                                return Some(value);
-                            } else {
-                                return None;
-                            }
+                    match fuchsia_inspect_node_hierarchy::filter_inspect_snapshot(
+                        hierarchy,
+                        &inspect_matcher,
+                    ) {
+                        Ok(Some(filtered)) => {
+                            let serialized_hierarchy =
+                                RawJsonNodeHierarchySerializer::serialize(filtered);
+                            value[JSON_PAYLOAD_KEY] = serialized_hierarchy;
+                            Some(value)
+                        }
+                        Ok(None) => {
+                            // Ok(None) implies the tree was fully filtered. This means that
+                            // it genuinely should not be included in the output.
+                            None
+                        }
+                        Err(e) => {
+                            value[JSON_PAYLOAD_KEY] = serde_json::json!(format!(
+                                "Filtering the hierarchy of {}, an error occurred: {:?}",
+                                moniker_path, e
+                            ));
+                            Some(value)
                         }
                     }
-                    None
-                })
-                .collect(),
-        );
+                }
+                Err(e) => {
+                    value[JSON_PAYLOAD_KEY] = serde_json::json!(format!(
+                        "Evaulating selectors for {} met an unexpected error condition: {:?}",
+                        moniker_path, e
+                    ));
+                    Some(value)
+                }
+            }
+        }
+        (potential_errorful_moniker, potential_errorful_hierarchy) => {
+            let mut errorful_report = String::new();
+            if potential_errorful_moniker.is_none() {
+                errorful_report.push_str(
+                    "The moniker entry in the provided schema was missing or an incorrect type. \n",
+                );
+            }
 
-        //    if let serde_json::Value::Object(map) = &mut value {
+            if potential_errorful_hierarchy.is_err() {
+                errorful_report.push_str(&format!(
+                    "The hierarchy entry was missing or failed to deserialize: {:?}",
+                    potential_errorful_hierarchy
+                        .err()
+                        .expect("We've already verified that the deserialization failed.")
+                ))
+            }
+            value[JSON_PAYLOAD_KEY] = serde_json::json!(errorful_report);
+            Some(value)
+        }
     }
+}
+
+/// Consumes a file containing Inspect selectors and applies them to an array of node hierarchies
+/// which had previously been serialized to their json schema.
+///
+/// Returns a vector of Line printed diffs between the unfiltered and filtered hierarchies,
+/// or an Error.
+fn filter_data_to_lines(selector_file: &str, data: &serde_json::Value) -> Result<Vec<Line>, Error> {
+    let selector_vec: Vec<Arc<Selector>> =
+        selectors::parse_selector_file(&PathBuf::from(selector_file))?
+            .into_iter()
+            .map(Arc::new)
+            .collect();
+
+    let arr: Vec<serde_json::Value> = match data {
+        serde_json::Value::Array(arr) => arr.clone(),
+        _ => return Err(format_err!("Input Inspect JSON must be an array.")),
+    };
+
+    let filtered_node_hierarchies: Vec<serde_json::Value> = arr
+        .into_iter()
+        .filter_map(|value| filter_json_schema_by_selectors(value, &selector_vec))
+        .collect();
+
+    // TODO(43937): Move inspect formatting utilities to the hierarchy library.
+    let filtered_collection_array = serde_json::Value::Array(filtered_node_hierarchies);
 
     let orig_str = serde_json::to_string_pretty(&data).unwrap();
-    let new_str = serde_json::to_string_pretty(&filtered_data).unwrap();
+    let new_str = serde_json::to_string_pretty(&filtered_collection_array).unwrap();
 
     let cs = difference::Changeset::new(&orig_str, &new_str, "\n");
 
@@ -260,59 +308,62 @@ fn generate_selectors<'a>(
         _ => return Err(format_err!("Input Inspect JSON must be an array.")),
     };
 
-    struct MatchedComponent<'a> {
+    struct MatchedHierarchy {
         moniker: Vec<String>,
-        contents: &'a serde_json::Value,
+        hierarchy: NodeHierarchy,
     }
 
-    let matching_hierarchies: Vec<_> = arr
+    let matching_hierarchies: Vec<MatchedHierarchy> = arr
         .iter()
         .filter_map(|value| {
-            let moniker = parse_path_to_moniker(value["path"].as_str().unwrap_or(""));
-            match (component_name.as_ref(), moniker.last()) {
-                // User wanted only matching components.
-                (Some(expected), Some(actual)) => {
-                    if expected == actual {
-                        Some(MatchedComponent { moniker, contents: &value["contents"] })
-                    } else {
-                        None
-                    }
-                }
-                // User wanted any components.
-                (_, Some(_)) => Some(MatchedComponent { moniker, contents: &value["contents"] }),
-                // No component was found.
-                _ => None,
+            let moniker = parse_path_to_moniker(value[JSON_MONIKER_KEY].as_str().unwrap_or(""));
+
+            let component_name_matches = component_name.is_none()
+                || component_name.as_ref().unwrap()
+                    == moniker
+                        .last()
+                        .expect("Monikers in provided data dumps are required to be non-empty.");
+
+            if component_name_matches {
+                let hierarchy =
+                    JsonNodeHierarchySerializer::deserialize(value[JSON_PAYLOAD_KEY].to_string())
+                        .unwrap();
+                Some(MatchedHierarchy { moniker, hierarchy: hierarchy })
+            } else {
+                None
             }
         })
         .collect();
 
     let mut output: Vec<String> = vec![];
 
-    for component in &matching_hierarchies {
-        // Work consists of tuples of (path, Value).
-        let mut work_stack = vec![(Vec::<&str>::new(), component.contents)];
-        while let Some(maybe_obj) = work_stack.pop() {
-            if let (path, Some(obj)) = (maybe_obj.0, maybe_obj.1.as_object()) {
-                for (name, val) in obj.iter() {
-                    if val.is_object() {
-                        let mut p2 = path.clone();
-                        p2.push(name);
-                        work_stack.push((p2, val));
-                    } else if !val.is_null() {
-                        output.push(
-                            format!(
-                                "{}:{}:{}",
-                                join_and_escape_path(&component.moniker),
-                                join_and_escape_path(&path),
-                                escape_path_segment(&name),
-                            )
-                            .to_owned(),
-                        );
-                    }
-                }
-            }
+    for matching_hierarchy in matching_hierarchies {
+        let sanitized_moniker = matching_hierarchy
+            .moniker
+            .iter()
+            .map(|s| selectors::sanitize_string_for_selectors(s))
+            .collect::<Vec<String>>()
+            .join("/");
+
+        for (node_path, property) in matching_hierarchy.hierarchy.property_iter() {
+            let formatted_node_path = node_path
+                .iter()
+                .map(|s| selectors::sanitize_string_for_selectors(s))
+                .collect::<Vec<String>>()
+                .join("/");
+            let sanitized_property = selectors::sanitize_string_for_selectors(property.name());
+            output.push(format!(
+                "{}:{}:{}",
+                sanitized_moniker.clone(),
+                formatted_node_path,
+                sanitized_property
+            ));
         }
     }
+
+    // NodeHierarchy has an intentionally non-deterministic iteration order, but for client
+    // facing tools we'll want to sort the outputs.
+    output.sort();
 
     Ok(output.join("\n"))
 }
@@ -324,7 +375,9 @@ fn interactive_apply(data: &serde_json::Value, selector_file: &str) -> Result<()
     let mut output = Output::new(filter_data_to_lines(&selector_file, &data)?);
 
     write!(stdout, "{}{}{}", cursor::Restore, cursor::Hide, termion::clear::All).unwrap();
+
     output.refresh(&mut stdout);
+
     stdout.flush().unwrap();
 
     for c in stdin.events() {
@@ -333,6 +386,11 @@ fn interactive_apply(data: &serde_json::Value, selector_file: &str) -> Result<()
             Event::Key(Key::Char('q')) => break,
             Event::Key(Key::Char('h')) => output.set_filter_removed(!output.filter_removed),
             Event::Key(Key::Char('r')) => {
+                output.set_lines(vec![Line::new("Refreshing filtered hierarchies...")]);
+                write!(stdout, "{}", termion::clear::All).unwrap();
+                output.refresh(&mut stdout);
+                stdout.flush().unwrap();
+
                 output.set_lines(filter_data_to_lines(&selector_file, &data)?)
             }
             Event::Key(Key::Up) => {
@@ -391,6 +449,7 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile;
 
     #[test]
     fn parse_path_to_moniker_test() {
@@ -405,11 +464,126 @@ mod tests {
     }
 
     #[test]
-    fn join_and_escape_path_test() {
-        assert_eq!(join_and_escape_path(&vec!["abcd"]), r"abcd");
+    fn generate_selectors_test() {
+        let json_dump = get_json_dump();
+
+        eprintln!("json dump: {}", json_dump);
+        let named_selector_string =
+            generate_selectors(&json_dump, Some("account_manager.cmx".to_string()))
+                .expect("Generating selectors with matching name should succeed.");
+
+        let expected_named_selector_string = "account_manager.cmx:root/accounts:active
+account_manager.cmx:root/accounts:total
+account_manager.cmx:root/auth_providers:types
+account_manager.cmx:root/listeners:active
+account_manager.cmx:root/listeners:events
+account_manager.cmx:root/listeners:total_opened";
+
+        assert_eq!(named_selector_string, expected_named_selector_string);
+
         assert_eq!(
-            join_and_escape_path(&vec!["sys", "test", "ab:cd:ef", "ab/cd/ef"]),
-            r"sys/test/ab\:cd\:ef/ab\/cd\/ef"
+            generate_selectors(&json_dump, Some("bloop.cmx".to_string()))
+                .expect("Generating selectors with unmatching name should succeed"),
+            ""
         );
+
+        assert_eq!(
+            generate_selectors(&json_dump, None)
+                .expect("Generating selectors with no name should succeed"),
+            expected_named_selector_string
+        );
+    }
+
+    fn setup_and_run_selector_filtering(
+        selector_string: &str,
+        source_hierarchy: serde_json::Value,
+        golden_json: serde_json::Value,
+    ) {
+        let mut selector_path =
+            tempfile::NamedTempFile::new().expect("Creating tmp selector file should succeed.");
+
+        selector_path
+            .write_all(selector_string.as_bytes())
+            .expect("writing selectors to file should be fine...");
+
+        let filtered_data_string =
+            filter_data_to_lines(&selector_path.path().to_string_lossy(), &source_hierarchy)
+                .expect("filtering hierarchy should have succeeded.")
+                .into_iter()
+                .filter(|line| !line.removed)
+                .fold(String::new(), |mut acc, line| {
+                    acc.push_str(&line.value);
+                    acc
+                });
+        let filtered_json_value: serde_json::Value = serde_json::from_str(&filtered_data_string)
+            .expect(&format!(
+                "Resultant json dump should be parsable json: {}",
+                filtered_data_string
+            ));
+
+        assert_eq!(filtered_json_value, golden_json);
+    }
+
+    #[test]
+    fn filter_data_to_lines_test() {
+        let full_tree_selector = "account_manager.cmx:root/accounts:active
+account_manager.cmx:root/accounts:total
+account_manager.cmx:root/auth_providers:types
+account_manager.cmx:root/listeners:active
+account_manager.cmx:root/listeners:events
+account_manager.cmx:root/listeners:total_opened";
+
+        setup_and_run_selector_filtering(full_tree_selector, get_json_dump(), get_json_dump());
+
+        let single_value_selector = "account_manager.cmx:root/accounts:active";
+
+        setup_and_run_selector_filtering(
+            single_value_selector,
+            get_json_dump(),
+            get_single_value_json(),
+        );
+    }
+
+    fn get_json_dump() -> serde_json::Value {
+        serde_json::json!(
+            [
+                {
+                    "contents": {
+                        "root": {
+                            "accounts": {
+                                "active": 0,
+                                "total": 0
+                            },
+                            "auth_providers": {
+                                "types": "google"
+                            },
+                            "listeners": {
+                                "active": 1,
+                                "events": 0,
+                                "total_opened": 1
+                            }
+                        }
+                    },
+                    "path": "/hub/c/account_manager.cmx/25181/out/diagnostics/root.inspect"
+                }
+            ]
+        )
+    }
+
+    fn get_single_value_json() -> serde_json::Value {
+        serde_json::json!(
+            [
+                {
+                    "contents": {
+                        "root": {
+                            "accounts": {
+                                "active": 0
+                            }
+                        }
+                    },
+                    "path": "/hub/c/account_manager.cmx/25181/out/diagnostics/root.inspect"
+                }
+            ]
+        )
     }
 }
