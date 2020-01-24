@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -7,47 +7,45 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_test("driver") {
-  name = "system_update_checker_integration_test"
+  name = "omaha_client_integration_test"
   edition = "2018"
 
   deps = [
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
-    "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:tempfile",
     "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]
 }
 
-test_package("system-update-checker-integration-tests") {
+test_package("omaha-client-integration-tests") {
   deps = [
     ":driver",
-    "//src/sys/pkg/bin/system-update-checker:bin",
+    "//src/sys/pkg/bin/omaha-client:bin",
   ]
 
   binaries = [
     {
-      name = "system_update_checker"
-      dest = "system-update-checker"
+      name = "omaha_client_service"
+      dest = "omaha-client-service"
     },
   ]
 
   meta = [
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/system-update-checker/meta/system-update-checker-for-integration-test.cmx")
-      dest = "system-update-checker-for-integration-test.cmx"
+              "//src/sys/pkg/bin/omaha-client/meta/omaha-client-service.cmx")
+      dest = "omaha-client-service.cmx"
     },
   ]
 
   tests = [
     {
-      name = "system_update_checker_integration_test"
-      dest = "system-update-checker-integration-test"
+      name = "omaha_client_integration_test"
+      dest = "omaha-client-integration-test"
       environments = basic_envs
     },
   ]
@@ -55,5 +53,5 @@ test_package("system-update-checker-integration-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":system-update-checker-integration-tests" ]
+  public_deps = [ ":omaha-client-integration-tests" ]
 }

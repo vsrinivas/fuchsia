@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,7 +8,6 @@ use {
         BootManagerRequest, BootManagerRequestStream, PaverRequest, PaverRequestStream,
     },
     fidl_fuchsia_update::{ManagerMarker, ManagerProxy, ManagerState},
-    fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
@@ -17,39 +16,25 @@ use {
     fuchsia_zircon::Status,
     futures::{channel::mpsc, prelude::*},
     parking_lot::Mutex,
-    std::{fs::File, sync::Arc},
-    tempfile::TempDir,
+    std::sync::Arc,
 };
 
-const SYSTEM_UPDATE_CHECKER_CMX: &str = "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-for-integration-test.cmx";
-
-struct Mounts {
-    misc_ota: TempDir,
-}
+const OMAHA_CLIENT_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service.cmx";
 
 struct Proxies {
     paver: Arc<MockPaver>,
-    channel_provider: ProviderProxy,
     update_manager: ManagerProxy,
-}
-
-impl Mounts {
-    fn new() -> Self {
-        Self { misc_ota: tempfile::tempdir().expect("/tmp to exist") }
-    }
 }
 
 struct TestEnv {
     _env: NestedEnvironment,
-    _mounts: Mounts,
     proxies: Proxies,
-    _system_update_checker: App,
+    _omaha_client: App,
 }
 
 impl TestEnv {
     fn new(paver: MockPaver) -> Self {
-        let mounts = Mounts::new();
-
         let mut fs = ServiceFs::new();
 
         let paver = Arc::new(paver);
@@ -60,32 +45,23 @@ impl TestEnv {
         });
 
         let env = fs
-            .create_salted_nested_environment("system-update-checker_integration_test_env")
+            .create_salted_nested_environment("omaha_client_integration_test_env")
             .expect("nested environment to create successfully");
         fasync::spawn(fs.collect());
 
-        let system_update_checker = AppBuilder::new(SYSTEM_UPDATE_CHECKER_CMX)
-            .add_dir_to_namespace(
-                "/misc/ota".to_string(),
-                File::open(mounts.misc_ota.path()).expect("/misc/ota tempdir to open"),
-            )
-            .expect("/misc/ota to mount")
+        let omaha_client = AppBuilder::new(OMAHA_CLIENT_CMX)
             .spawn(env.launcher())
-            .expect("system_update_checker to launch");
+            .expect("omaha_client to launch");
 
         Self {
             _env: env,
-            _mounts: mounts,
             proxies: Proxies {
                 paver,
-                channel_provider: system_update_checker
-                    .connect_to_service::<ProviderMarker>()
-                    .expect("connect to channel provider"),
-                update_manager: system_update_checker
+                update_manager: omaha_client
                     .connect_to_service::<ManagerMarker>()
                     .expect("connect to update manager"),
             },
-            _system_update_checker: system_update_checker,
+            _omaha_client: omaha_client,
         }
     }
 }
@@ -140,7 +116,7 @@ impl MockPaver {
 }
 
 #[fasync::run_singlethreaded(test)]
-// Test will hang if system-update-checker does not call paver service
+// Test will hang if omaha-client does not call paver service
 async fn test_calls_paver_service() {
     let env = TestEnv::new(MockPaver::new(Status::OK));
 
@@ -150,22 +126,7 @@ async fn test_calls_paver_service() {
 }
 
 #[fasync::run_singlethreaded(test)]
-// Test will hang if system-update-checker does not call paver service
-async fn test_channel_provider_get_current_works_after_paver_service_fails() {
-    let env = TestEnv::new(MockPaver::new(Status::INTERNAL));
-
-    let mut set_active_configuration_healthy_was_called =
-        env.proxies.paver.set_active_configuration_healthy_was_called.lock();
-    set_active_configuration_healthy_was_called.next().await;
-
-    assert_eq!(
-        env.proxies.channel_provider.get_current().await.expect("get_current"),
-        "".to_string()
-    );
-}
-
-#[fasync::run_singlethreaded(test)]
-// Test will hang if system-update-checker does not call paver service
+// Test will hang if omaha-client does not call paver service
 async fn test_update_manager_get_state_works_after_paver_service_fails() {
     let env = TestEnv::new(MockPaver::new(Status::INTERNAL));
 

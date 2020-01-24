@@ -17,6 +17,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
+            "fuchsia.paver.Paver",
             "fuchsia.posix.socket.Provider",
             "fuchsia.stash.Store",
             "fuchsia.sys.Launcher"

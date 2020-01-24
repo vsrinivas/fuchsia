@@ -6,7 +6,7 @@ use anyhow::{Context as _, Error};
 use fuchsia_component::server::ServiceFs;
 use futures::{lock::Mutex, prelude::*};
 use http_request::FuchsiaHyperHttpRequest;
-use log::info;
+use log::{error, info};
 use omaha_client::state_machine::StateMachine;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -89,12 +89,22 @@ fn main() -> Result<(), Error> {
 
         // `.boxed_local()` was added to workaround stack overflow when we have too many levels of
         // nested async functions. Remove them when the generator optimization lands.
-        future::join3(
+        future::join4(
             fidl.start(fs, schedule_node, protocol_state_node, last_results_node).boxed_local(),
             StateMachine::start(state_machine_ref).boxed_local(),
             cobalt_fut,
+            check_and_set_system_health().boxed_local(),
         )
         .await;
         Ok(())
     })
+}
+
+async fn check_and_set_system_health() {
+    if let Err(err) = system_health_check::check_system_health().await {
+        error!("error during system health check: {}", err);
+        return;
+    }
+    info!("Marking current slot as good...");
+    system_health_check::set_active_configuration_healthy().await;
 }

@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "amberctl:tests",
+    "omaha-client:tests",
     "pkg-cache:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",
