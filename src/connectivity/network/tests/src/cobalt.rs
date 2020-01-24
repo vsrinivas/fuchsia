@@ -179,7 +179,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
 
     assert_eq!(
         // https://github.com/rust-lang/rust/issues/57009
-        1i64,
+        0i64,
         events_with_id(&events_post_final_drop, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
@@ -198,30 +198,58 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         "sockets destroyed. events:\n{}\n",
         display_events(&events_post_final_drop)
     );
-    // We expect only the server-side to be closed at this point.
-    // The client-side TCP connection would not be closed as yet, because we do
-    // not want to wait for TCP TIME-WAIT interval in this test.
-    // TODO(gvisor.dev/issue/1400) There is currently no way the client can avoid
-    // getting into time-wait on close.
+
     let tcp_connections_established_events = events_with_id(
         &events_post_final_drop,
         networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
     );
     assert_eq!(tcp_connections_established_events.len(), 1);
-
-    // TODO(http://gvisor.dev/issue/1579): restore to 1 if upstream's behavior changes
+    // TODO(gvisor.dev/issue/1579) Check against the new counter that tracks
+    // all connected TCP connections.
     assert_eq!(tcp_connections_established_events[0].count, 0);
+
     let tcp_connections_closed_events = events_with_id(
         &events_post_final_drop,
         networking_metrics::TCP_CONNECTIONS_CLOSED_METRIC_ID,
     );
     assert_eq!(tcp_connections_closed_events.len(), 1);
-    assert_eq!(tcp_connections_closed_events[0].count, 1);
+    // TODO(gvisor.dev/issue/1400) There is currently no way the client can
+    // avoid getting into time-wait on close. This means that there is no
+    // reliable way to ensure that the connections are indeed closed at this
+    // point. The TCP TIME-WAIT timeout, TCP FIN-WAIT2 timeout and the
+    // cobalt-event polling interval are all 60sec, which can make the equality
+    // assertions flaky resulting in following probable values for
+    // tcp_connections_closed_events[0].count:
+    // 0 : when fin-wait2 timeout fires at client because the test waited for
+    //     60sec before closing the server socket. This causes the client
+    //     connection to get closed (logged in events_post_first_drop).
+    //     In this state, the FIN-ACK sent by the server results in a RST from
+    //     the remote as the connection is purged at the client-side.
+    //     This causes the server connection to get reset which is not accounted
+    //     for by this counter. The above race, results in no new close events
+    //     logged in events_post_final_drop and hence a value of 0.
+    // 1 : when time-wait timeout fires after the cobalt-event poll interval
+    //     accounting for only server connection close.
+    // 2 : when time-wait timeout fires before the cobalt-event poll interval
+    //     accounting for both server and client close.
+    //
+    // Once the fix for gvisor.dev/issue/1400 is in place, we can set the linger
+    // timeout to zero, which would reset the connection instead of getting into
+    // time-wait or fin-wait2. Then, the asserts below can be updated to account
+    // for all closed connections with an equality check of 2.
+    assert!(
+        tcp_connections_closed_events[0].count >= 0 && tcp_connections_closed_events[0].count <= 2
+    );
+
     let tcp_connections_reset_events = events_with_id(
         &events_post_final_drop,
         networking_metrics::TCP_CONNECTIONS_RESET_METRIC_ID,
     );
-    assert_eq!(tcp_connections_reset_events[0].count, 0);
+    // TODO(gvisor.dev/issue/1400) restore to equality check based on how the
+    // reset of client and server connections are accounted for in gvisor.dev/issue/1400.
+    assert!(
+        tcp_connections_reset_events[0].count == 0 || tcp_connections_reset_events[0].count == 1
+    );
     let tcp_connections_timed_out_events = events_with_id(
         &events_post_final_drop,
         networking_metrics::TCP_CONNECTIONS_TIMED_OUT_METRIC_ID,

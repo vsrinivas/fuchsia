@@ -96,7 +96,7 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
-	var socketCountMax, lastCreated, lastDestroyed uint64
+	var lastCreated, lastDestroyed uint64
 	var lastTcpConnectionsClosed, lastTcpConnectionsReset, lastTcpConnectionsTimedOut uint64
 	previousTime := time.Now()
 
@@ -106,9 +106,6 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 		case <-ctx.Done():
 			return ctx.Err()
 		case ts := <-ticker.C:
-			if sockets := stats.SocketCount.Value(); sockets > socketCountMax {
-				socketCountMax = sockets
-			}
 			created := stats.SocketsCreated.Value()
 			destroyed := stats.SocketsDestroyed.Value()
 			tcpConnectionsClosed := stats.TCP.EstablishedClosed.Value()
@@ -121,7 +118,7 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 			events := []cobalt.CobaltEvent{
 				{
 					MetricId: networking_metrics.SocketCountMaxMetricId,
-					Payload:  eventCount(period, socketCountMax),
+					Payload:  eventCount(period, stats.SocketCount.Value()),
 				},
 				{
 					MetricId: networking_metrics.SocketsCreatedMetricId,
@@ -191,7 +188,6 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 				)
 			}
 			cobaltLogger.LogCobaltEvents(events)
-			socketCountMax = stats.SocketCount.Value()
 			lastCreated = created
 			lastDestroyed = destroyed
 			lastTcpConnectionsClosed = tcpConnectionsClosed
