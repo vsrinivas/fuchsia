@@ -4,21 +4,22 @@
 
 use anyhow::{format_err, Error};
 use fidl_fuchsia_auth::Status::{self as TokenManagerStatus, *};
-use fidl_fuchsia_identity_account::Error as ApiError;
+use fidl_fuchsia_identity_account::Error as AccountApiError;
+use fidl_fuchsia_identity_authentication::Error as AuthenticationApiError;
 use thiserror::Error;
 
 /// An extension trait to simplify conversion of results based on general errors to
 /// AccountManagerErrors.
 pub trait ResultExt<T, E> {
-    /// Wraps the error in a non-fatal `AccountManagerError` with the supplied `ApiError`.
-    fn account_manager_error(self, api_error: ApiError) -> Result<T, AccountManagerError>;
+    /// Wraps the error in a non-fatal `AccountManagerError` with the supplied `AccountApiError`.
+    fn account_manager_error(self, api_error: AccountApiError) -> Result<T, AccountManagerError>;
 }
 
 impl<T, E> ResultExt<T, E> for Result<T, E>
 where
     E: Into<Error> + Send + Sync + Sized,
 {
-    fn account_manager_error(self, api_error: ApiError) -> Result<T, AccountManagerError> {
+    fn account_manager_error(self, api_error: AccountApiError) -> Result<T, AccountManagerError> {
         self.map_err(|err| AccountManagerError::new(api_error).with_cause(err))
     }
 }
@@ -30,7 +31,7 @@ where
 #[error("AccountManager error, returning {:?}. ({:?})", api_error, cause)]
 pub struct AccountManagerError {
     /// The most appropriate `fuchsia.identity.account.Error` to describe this problem.
-    pub api_error: ApiError,
+    pub api_error: AccountApiError,
     /// Whether this error should be considered fatal, i.e. whether it should
     /// terminate processing of all requests on the current channel.
     pub fatal: bool,
@@ -40,7 +41,7 @@ pub struct AccountManagerError {
 
 impl AccountManagerError {
     /// Constructs a new non-fatal error based on the supplied `fuchsia.identity.account.Error`.
-    pub fn new(api_error: ApiError) -> Self {
+    pub fn new(api_error: AccountApiError) -> Self {
         AccountManagerError { api_error, fatal: false, cause: None }
     }
 
@@ -53,12 +54,12 @@ impl AccountManagerError {
 
 impl From<fidl::Error> for AccountManagerError {
     fn from(error: fidl::Error) -> Self {
-        AccountManagerError::new(ApiError::Resource).with_cause(error)
+        AccountManagerError::new(AccountApiError::Resource).with_cause(error)
     }
 }
 
-impl From<ApiError> for AccountManagerError {
-    fn from(api_error: ApiError) -> Self {
+impl From<AccountApiError> for AccountManagerError {
+    fn from(api_error: AccountApiError) -> Self {
         AccountManagerError::new(api_error)
     }
 }
@@ -67,19 +68,19 @@ impl From<TokenManagerStatus> for AccountManagerError {
     fn from(token_manager_status: TokenManagerStatus) -> Self {
         AccountManagerError {
             api_error: match token_manager_status {
-                Ok => ApiError::Internal, // Invalid conversion
-                InternalError => ApiError::Internal,
-                InvalidAuthContext => ApiError::InvalidRequest,
-                InvalidRequest => ApiError::InvalidRequest,
-                IoError => ApiError::Resource,
-                NetworkError => ApiError::Network,
+                Ok => AccountApiError::Internal, // Invalid conversion
+                InternalError => AccountApiError::Internal,
+                InvalidAuthContext => AccountApiError::InvalidRequest,
+                InvalidRequest => AccountApiError::InvalidRequest,
+                IoError => AccountApiError::Resource,
+                NetworkError => AccountApiError::Network,
 
                 AuthProviderServiceUnavailable
                 | AuthProviderServerError
                 | UserNotFound
                 | ReauthRequired
                 | UserCancelled
-                | UnknownError => ApiError::Unknown,
+                | UnknownError => AccountApiError::Unknown,
             },
             fatal: false,
             cause: Some(format_err!("Token manager error: {:?}", token_manager_status)),
@@ -87,8 +88,28 @@ impl From<TokenManagerStatus> for AccountManagerError {
     }
 }
 
-impl Into<ApiError> for AccountManagerError {
-    fn into(self) -> ApiError {
+impl From<AuthenticationApiError> for AccountManagerError {
+    fn from(authentication_error: AuthenticationApiError) -> Self {
+        AccountManagerError {
+            api_error: match authentication_error {
+                AuthenticationApiError::Internal => AccountApiError::Internal,
+                AuthenticationApiError::InvalidAuthContext => AccountApiError::InvalidRequest,
+                AuthenticationApiError::InvalidRequest => AccountApiError::InvalidRequest,
+                AuthenticationApiError::Resource => AccountApiError::Resource,
+                AuthenticationApiError::UnsupportedOperation => AccountApiError::UnsupportedOperation,
+
+                AuthenticationApiError::InvalidDataFormat
+                | AuthenticationApiError::Aborted // TODO(dnordstrom): Needs a non-generic error
+                | AuthenticationApiError::Unknown => AccountApiError::Unknown,
+            },
+            fatal: false,
+            cause: Some(format_err!("Authenticator error: {:?}", authentication_error)),
+        }
+    }
+}
+
+impl Into<AccountApiError> for AccountManagerError {
+    fn into(self) -> AccountApiError {
         self.api_error.clone()
     }
 }
@@ -98,7 +119,7 @@ mod tests {
     use super::*;
     use anyhow::format_err;
 
-    const TEST_API_ERROR: ApiError = ApiError::Unknown;
+    const TEST_API_ERROR: AccountApiError = AccountApiError::Unknown;
 
     fn create_test_error() -> Error {
         format_err!("Test error")
@@ -117,13 +138,12 @@ mod tests {
     #[test]
     fn test_from_fidl_error() {
         let error: AccountManagerError = fidl::Error::UnexpectedSyncResponse.into();
-        assert_eq!(error.api_error, ApiError::Resource);
+        assert_eq!(error.api_error, AccountApiError::Resource);
         assert!(!error.fatal);
         assert_eq!(
             format!("{:?}", error.cause.unwrap().downcast::<fidl::Error>().unwrap()),
             format!("{:?}", fidl::Error::UnexpectedSyncResponse),
         );
-
     }
 
     #[test]
@@ -135,9 +155,18 @@ mod tests {
     }
 
     #[test]
+    fn test_from_authentication_error() {
+        let error: AccountManagerError = AuthenticationApiError::InvalidAuthContext.into();
+        let expected_cause = format_err!("Authenticator error: InvalidAuthContext");
+        assert_eq!(error.api_error, AccountApiError::InvalidRequest);
+        assert!(!error.fatal);
+        assert_eq!(format!("{:?}", error.cause.unwrap()), format!("{:?}", expected_cause));
+    }
+
+    #[test]
     fn test_to_identity_error() {
         let manager_error = AccountManagerError::new(TEST_API_ERROR);
-        let error: ApiError = manager_error.into();
+        let error: AccountApiError = manager_error.into();
         assert_eq!(error, TEST_API_ERROR);
     }
 
