@@ -95,7 +95,7 @@ class Frontend(object):
         if self._directory:
             yield self._directory
         elif self._archive:
-            temp_dir = tempfile.mkdtemp(prefix='fuchsia-bazel')
+            temp_dir = tempfile.mkdtemp(prefix='fuchsia-sdk-archive')
             # Extract the tarball into the temporary directory.
             # This is vastly more efficient than accessing files one by one via
             # the tarfile API.
