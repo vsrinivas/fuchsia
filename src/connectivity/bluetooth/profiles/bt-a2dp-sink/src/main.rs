@@ -36,6 +36,7 @@ mod codec;
 mod connected_peers;
 mod hanging_get;
 mod inspect_types;
+mod latm;
 mod peer;
 mod player;
 
