@@ -226,7 +226,6 @@ if (current_cpu != "") {
       "runtests-utils",
       "service:test",
       "stdio",
-      "thread-safe-deleter",
       "timers",
       "trace",
       "usb",
