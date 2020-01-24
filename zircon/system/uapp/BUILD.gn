@@ -31,7 +31,6 @@ group("uapp") {
     "kstress",
     "ktrace",
     "loadgen",
-    "lsblk",
     "lsdev",
     "lspwr",
     "lsusb",
