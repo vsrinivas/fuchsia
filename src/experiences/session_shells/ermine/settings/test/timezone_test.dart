@@ -9,6 +9,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:settings/settings.dart';
 
+const List<TimeZoneInfo> timeZones = [
+  TimeZoneInfo(zoneId: 'Test/A'),
+  TimeZoneInfo(zoneId: 'Test/B'),
+];
+
 void main() {
   MockIntlProxy intlSettingsProxy;
   MockIntlProxyController intlSettingsProxyController;
@@ -25,7 +30,9 @@ void main() {
               timeZoneId: TimeZoneId(id: 'Foo'),
             )));
 
-    TimeZone timeZone = TimeZone(intlSettingsService: intlSettingsProxy);
+    TimeZone timeZone = TimeZone(
+        intlSettingsService: intlSettingsProxy,
+        timeZonesProvider: () => Future.value(timeZones));
     final spec = await timeZone.getSpec();
     expect(spec.groups.first.values.first.text.text == 'Foo', true);
 
@@ -41,7 +48,9 @@ void main() {
       ));
     });
 
-    TimeZone timeZone = TimeZone(intlSettingsService: intlSettingsProxy);
+    TimeZone timeZone = TimeZone(
+        intlSettingsService: intlSettingsProxy,
+        timeZonesProvider: () => Future.value(timeZones));
     final specA = await timeZone.getSpec();
     expect(specA.groups.first.values.first.text.text, 'tz1');
 

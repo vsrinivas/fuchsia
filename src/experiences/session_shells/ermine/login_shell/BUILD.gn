@@ -21,8 +21,8 @@ flutter_app("userpicker_base_shell") {
   manifest = "pubspec.yaml"
 
   sources = [
-    "authentication_overlay_model.dart",
     "authentication_overlay.dart",
+    "authentication_overlay_model.dart",
     "authentication_ui_context_impl.dart",
     "base_model.dart",
     "base_shell_model.dart",
