@@ -33,7 +33,6 @@
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 
-#include "cobalt-client/cpp/collector.h"
 #include "fshost-boot-args.h"
 #include "lib/async/cpp/task.h"
 #include "metrics.h"
@@ -41,12 +40,6 @@
 #define ZXDEBUG 0
 
 namespace devmgr {
-
-cobalt_client::CollectorOptions FsManager::CollectorOptions() {
-  cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::GeneralAvailability();
-  options.project_id = 3676913920;
-  return options;
-}
 
 FsManager::FsManager(FsHostMetrics metrics)
     : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),

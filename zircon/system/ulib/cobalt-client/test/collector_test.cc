@@ -2,21 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cobalt-client/cpp/collector.h>
-
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 #include <array>
-#include <cstdint>
-#include <string_view>
 #include <thread>
 
-#include <cobalt-client/cpp/collector_internal.h>
+#include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
-#include <cobalt-client/cpp/metric_options.h>
 #include <cobalt-client/cpp/types_internal.h>
 #include <zxtest/zxtest.h>
 
@@ -106,40 +100,12 @@ class StallingFlushable final : public internal::FlushInterface {
 // Default Params for Collector Options.
 constexpr uint32_t kProjectId = 1234;
 
-TEST(CollectorOptionsTest, DebugSetsCorrectReleaseStage) {
-  CollectorOptions options = CollectorOptions::Debug();
-  ASSERT_EQ(static_cast<uint32_t>(ReleaseStage::kDebug), options.release_stage);
+TEST(CollectorTest, CreateIsSuccessfull) {
+  ASSERT_NO_DEATH([] { Collector collector(kProjectId); });
 }
 
-TEST(CollectorOptionsTest, FishfoodSetsCorrectReleaseStage) {
-  CollectorOptions options = CollectorOptions::Fishfood();
-  ASSERT_EQ(static_cast<uint32_t>(ReleaseStage::kFishfood), options.release_stage);
-}
-
-TEST(CollectorOptionsTest, DogfoodSetsCorrectReleaseStage) {
-  CollectorOptions options = CollectorOptions::Dogfood();
-  ASSERT_EQ(static_cast<uint32_t>(ReleaseStage::kDogfood), options.release_stage);
-}
-
-TEST(CollectorOptionsTest, GeneralAvailabilitySetsCorrectReleaseStage) {
-  CollectorOptions options = CollectorOptions::GeneralAvailability();
-  ASSERT_EQ(static_cast<uint32_t>(ReleaseStage::kGa), options.release_stage);
-}
-
-TEST(CollectorTest, CreateFromOptionsIsSuccessfull) {
-  ASSERT_NO_DEATH([] {
-    CollectorOptions options = CollectorOptions::Debug();
-    options.project_id = kProjectId;
-    Collector collector(options);
-  });
-}
-
-TEST(CollectorTest, CreateFromInvalidOptionsTriggersAssert) {
-  ASSERT_DEATH([] {
-    CollectorOptions options = CollectorOptions::Debug();
-    options.project_id = 0;
-    Collector collector(options);
-  });
+TEST(CollectorTest, CreateFromInvalidIdTriggersAssert) {
+  ASSERT_DEATH([] { Collector collector(0); });
 }
 
 TEST(CollectorTest, FlushFlushEachSubscriptor) {

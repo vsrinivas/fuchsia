@@ -5,7 +5,6 @@
 #include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
@@ -14,19 +13,17 @@
 
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::cobalt::LoggerFactory;
-using fuchsia::cobalt::ProjectProfile;
-using fuchsia::cobalt::ReleaseStage;
 using fuchsia::cobalt::Status;
 
 namespace cobalt {
 
-BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id,
-                                           ProjectProfile profile)
-    : dispatcher_(dispatcher), project_id_(project_id), profile_(std::move(profile)) {}
+BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id)
+    : dispatcher_(dispatcher), project_id_(project_id) {
+  FXL_CHECK(project_id_ > 0) << "Must define a project_id greater than 0.";
+}
 
 BaseCobaltLoggerImpl::~BaseCobaltLoggerImpl() {
   if (!events_in_transit_.empty() || !events_to_send_.empty()) {
@@ -108,16 +105,6 @@ void BaseCobaltLoggerImpl::LogEvent(std::unique_ptr<BaseEvent> event) {
                   [event = std::move(event), this]() mutable { this->LogEvent(std::move(event)); });
 }
 
-ProjectProfile BaseCobaltLoggerImpl::CloneProjectProfile() {
-  ProjectProfile cloned_profile;
-  FXL_CHECK(profile_.config.vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-                                          &cloned_profile.config.vmo) == ZX_OK)
-      << "Could not clone config VMO";
-  cloned_profile.config.size = profile_.config.size;
-
-  return cloned_profile;
-}
-
 void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
   logger_factory_ = ConnectToLoggerFactory();
   logger_factory_.set_error_handler([](zx_status_t status) {
@@ -128,13 +115,8 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
     return;
   }
 
-  if (project_id_ == 0) {
-    logger_factory_->CreateLogger(CloneProjectProfile(), logger_.NewRequest(),
-                                  CreateLoggerCallback("CreateLogger"));
-  } else {
-    logger_factory_->CreateLoggerFromProjectId(project_id_, logger_.NewRequest(),
-                                               CreateLoggerCallback("CreateLoggerFromProjectId"));
-  }
+  logger_factory_->CreateLoggerFromProjectId(project_id_, logger_.NewRequest(),
+                                             CreateLoggerCallback("CreateLoggerFromProjectId"));
 }
 
 std::function<void(fuchsia::cobalt::Status)> BaseCobaltLoggerImpl::CreateLoggerCallback(
@@ -251,15 +233,8 @@ fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
 
 CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                   ProjectProfile profile)
-    : BaseCobaltLoggerImpl(dispatcher, 0, std::move(profile)), services_(services) {
-  ConnectToCobaltApplication();
-}
-
-CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
-                                   std::shared_ptr<sys::ServiceDirectory> services,
                                    uint32_t project_id)
-    : BaseCobaltLoggerImpl(dispatcher, project_id, ProjectProfile()), services_(services) {
+    : BaseCobaltLoggerImpl(dispatcher, project_id), services_(services) {
   ConnectToCobaltApplication();
 }
 

@@ -260,8 +260,7 @@ class CobaltEvents : public BaseEvent {
 
 class BaseCobaltLoggerImpl : public CobaltLogger {
  public:
-  BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id,
-                       fuchsia::cobalt::ProjectProfile profile);
+  BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id);
   ~BaseCobaltLoggerImpl() override;
   void LogEvent(uint32_t metric_id, uint32_t event_code) override;
   void LogEventCount(uint32_t metric_id, uint32_t event_code, const std::string& component,
@@ -287,7 +286,6 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
   virtual fidl::InterfacePtr<fuchsia::cobalt::LoggerFactory> ConnectToLoggerFactory() = 0;
 
  private:
-  fuchsia::cobalt::ProjectProfile CloneProjectProfile();
   std::function<void(fuchsia::cobalt::Status)> CreateLoggerCallback(const std::string& method_name);
   void OnConnectionError();
   void LogEventOnMainThread(std::unique_ptr<BaseEvent> event);
@@ -305,14 +303,8 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
   // server is ready.
   bool logger_ready_ = false;
 
-  // This object is in one of two modes depending on which constructor was used.
-  //
-  // Mode 1: |project_id_| is non-zero. In this case |profile_| is ignored, and when connecting to Cobalt we use CreateLoggerFromProjectId().
-  //
-  // Mode 2: |project_id_| is zero. In this case |profile_| should have been set,
-  // and when connecting to Cobalt we use CreateLogger().
+  // project ID to use when connecting to Cobalt with CreateLoggerFromProjectId().
   const uint32_t project_id_;
-  const fuchsia::cobalt::ProjectProfile profile_;
 
   std::set<std::unique_ptr<BaseEvent>> events_to_send_;
   std::set<std::unique_ptr<BaseEvent>> events_in_transit_;
@@ -322,11 +314,6 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
 
 class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
  public:
-  // Use this version of the constructor in order to connect to the Cobalt
-  // application via CreateLogger().
-  CobaltLoggerImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                   fuchsia::cobalt::ProjectProfile profile);
-
   // Use this version of the constructor in order to connect to the Cobalt
   // application via CreateLoggerFromProjectId().
   CobaltLoggerImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,

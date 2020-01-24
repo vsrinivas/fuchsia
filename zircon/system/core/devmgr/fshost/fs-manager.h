@@ -39,9 +39,6 @@ class FsManager {
   static zx_status_t Create(loader_service_t* loader_svc, zx::channel dir_request,
                             FsHostMetrics metrics, std::unique_ptr<FsManager>* out);
 
-  // Set of options for logging FsHost metrics with cobalt service.
-  static cobalt_client::CollectorOptions CollectorOptions();
-
   ~FsManager();
 
   // TODO(fxb/39588): delete this

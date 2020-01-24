@@ -31,9 +31,6 @@ struct CobaltOptions {
 
   // Used to acquire a logger instance.
   uint32_t project_id;
-
-  // Which release stage to use for persisting metrics.
-  ReleaseStage release_stage;
 };
 
 // Logger implementation that pushes data to cobalt.

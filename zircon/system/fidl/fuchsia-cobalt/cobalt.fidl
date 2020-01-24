@@ -4,8 +4,6 @@
 
 library fuchsia.cobalt;
 
-using fuchsia.mem;
-
 // Cobalt is the Fuchsia service used to log, collect and analyze metrics.
 // The two main pillars of Cobalt are protecting user privacy and providing
 // high-quality, aggregate metrics to serve system and component software
@@ -78,68 +76,11 @@ enum Status : int32 {
     INTERNAL_ERROR = -1;
 };
 
-// The release stage of a client's project is used to decide which
-// metrics are allowed to be collected.
-enum ReleaseStage : int32 {
-    // Only metrics targetting GA releases will be sent to the server.
-    GA = 0;
-
-    // Metrics targetting DOGFOOD and GA will be sent to the server.
-    DOGFOOD = 10;
-
-    // Metrics targetting FISHFOOD, DOGFOOD and GA will be sent to the server.
-    FISHFOOD = 20;
-
-    // All metrics will be sent to the server.
-    DEBUG = 99;
-};
-
-// A ProjectProfile is used to describe the client's Cobalt project
-struct ProjectProfile {
-    // The `config` Buffer contains the bytes of a serialized Cobalt config
-    // proto message. This specifies registered Metric and Report definitions
-    // for a single project.
-    fuchsia.mem.Buffer config;
-
-    // [Deprecated; This value is ignored]
-    ReleaseStage release_stage;
-};
-
 [Discoverable, Layout = "Simple"]
 // LoggerFactory creates Loggers.
 protocol LoggerFactory {
-    // Creates a Logger for the given ProjectProfile.
-    //
-    // `profile` A ProjectProfile describing the Cobalt project that the
-    // returned Logger is for.
-    //
-    // `status` Returns OK on success or INVALID_ARGUMENTS if the project
-    // profile does not contain a valid Cobalt config with only a single
-    // project_id.
-    CreateLogger(ProjectProfile profile, request<Logger> logger)
-        -> (Status status);
-
-    // Creates a LoggerSimple for the given ProjectProfile.
-    //
-    // `profile` A ProjectProfile describing the Cobalt project that the
-    // returned Logger is for.
-    //
-    // `status` Returns OK on success or INVALID_ARGUMENTS if the project
-    // profile does not contain a valid Cobalt config with only a single
-    // project_id.
-    CreateLoggerSimple(ProjectProfile profile, request<LoggerSimple> logger)
-        -> (Status status);
-
     // Creates a Logger for the project with the given ID, using the state of
     // the metrics registry that is bundled with Cobalt.
-    //
-    // WARNING: This version of CreateLogger does not allow the client to
-    // provide Cobalt with an updated version of the metrics registry. Therefore
-    // only metrics that were already registered at the time Cobalt was built
-    // may be used. This method may be appropriate in the case where it is known
-    // that new versions of the calling package will only be installed along
-    // with new versions of Cobalt. For other cases consider the method
-    // CreateLogger() above.
     //
     // `project_id` The ID of the client's Cobalt project.
     //
@@ -152,14 +93,6 @@ protocol LoggerFactory {
 
     // Creates a LoggerSimple for the project with the given ID, using the
     // state of the metrics registry that is bundled with Cobalt.
-    //
-    // WARNING: This version of CreateLoggerSimple does not allow the client to
-    // provide Cobalt with an updated version of the metrics registry. Therefore
-    // only metrics that were already registered at the time Cobalt was built
-    // may be used. This method may be appropriate in the case where it is known
-    // that new versions of the calling package will only be installed along
-    // with new versions of Cobalt. For other cases consider the method
-    // CreateLoggerSimple() above.
     //
     // `project_id` The ID of the client's Cobalt project.
     //

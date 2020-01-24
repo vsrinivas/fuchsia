@@ -2912,18 +2912,6 @@ void LoggerSimple::SetTransactionHeaderFor::LogIntHistogramResponse(const ::fidl
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kLoggerFactory_CreateLogger_Ordinal = 0x5f08858100000000lu;
-[[maybe_unused]]
-constexpr uint64_t kLoggerFactory_CreateLogger_GenOrdinal = 0x2a6a220ee3111ab0lu;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kLoggerFactory_CreateLoggerSimple_Ordinal = 0x5f07c39f00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kLoggerFactory_CreateLoggerSimple_GenOrdinal = 0x5aa6be2e24fa92f8lu;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLoggerFromProjectId_Ordinal = 0x2b04487500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLoggerFromProjectId_GenOrdinal = 0x44ee41845029c9celu;
@@ -2937,134 +2925,6 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFr
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdResponseTable;
 
 }  // namespace
-template <>
-LoggerFactory::ResultOf::CreateLogger_Impl<LoggerFactory::CreateLoggerResponse>::CreateLogger_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, CreateLoggerRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<CreateLoggerRequest*>(_write_bytes);
-  _request.profile = std::move(profile);
-  _request.logger = std::move(logger);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateLoggerRequest));
-  ::fidl::DecodedMessage<CreateLoggerRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      LoggerFactory::InPlace::CreateLogger(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-LoggerFactory::ResultOf::CreateLogger LoggerFactory::SyncClient::CreateLogger(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
-    return ResultOf::CreateLogger(::zx::unowned_channel(this->channel_), std::move(profile), std::move(logger));
-}
-
-LoggerFactory::ResultOf::CreateLogger LoggerFactory::Call::CreateLogger(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
-  return ResultOf::CreateLogger(std::move(_client_end), std::move(profile), std::move(logger));
-}
-
-template <>
-LoggerFactory::UnownedResultOf::CreateLogger_Impl<LoggerFactory::CreateLoggerResponse>::CreateLogger_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < CreateLoggerRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<CreateLoggerResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  memset(_request_buffer.data(), 0, CreateLoggerRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<CreateLoggerRequest*>(_request_buffer.data());
-  _request.profile = std::move(profile);
-  _request.logger = std::move(logger);
-  _request_buffer.set_actual(sizeof(CreateLoggerRequest));
-  ::fidl::DecodedMessage<CreateLoggerRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      LoggerFactory::InPlace::CreateLogger(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-LoggerFactory::UnownedResultOf::CreateLogger LoggerFactory::SyncClient::CreateLogger(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLogger(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
-}
-
-LoggerFactory::UnownedResultOf::CreateLogger LoggerFactory::Call::CreateLogger(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLogger(std::move(_client_end), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<LoggerFactory::CreateLoggerResponse> LoggerFactory::InPlace::CreateLogger(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerRequest> params, ::fidl::BytePart response_buffer) {
-  LoggerFactory::SetTransactionHeaderFor::CreateLoggerRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoggerFactory::CreateLoggerResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<CreateLoggerRequest, CreateLoggerResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoggerFactory::CreateLoggerResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-LoggerFactory::ResultOf::CreateLoggerSimple_Impl<LoggerFactory::CreateLoggerSimpleResponse>::CreateLoggerSimple_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerSimpleRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, CreateLoggerSimpleRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<CreateLoggerSimpleRequest*>(_write_bytes);
-  _request.profile = std::move(profile);
-  _request.logger = std::move(logger);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateLoggerSimpleRequest));
-  ::fidl::DecodedMessage<CreateLoggerSimpleRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      LoggerFactory::InPlace::CreateLoggerSimple(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-LoggerFactory::ResultOf::CreateLoggerSimple LoggerFactory::SyncClient::CreateLoggerSimple(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
-    return ResultOf::CreateLoggerSimple(::zx::unowned_channel(this->channel_), std::move(profile), std::move(logger));
-}
-
-LoggerFactory::ResultOf::CreateLoggerSimple LoggerFactory::Call::CreateLoggerSimple(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
-  return ResultOf::CreateLoggerSimple(std::move(_client_end), std::move(profile), std::move(logger));
-}
-
-template <>
-LoggerFactory::UnownedResultOf::CreateLoggerSimple_Impl<LoggerFactory::CreateLoggerSimpleResponse>::CreateLoggerSimple_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < CreateLoggerSimpleRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<CreateLoggerSimpleResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  memset(_request_buffer.data(), 0, CreateLoggerSimpleRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<CreateLoggerSimpleRequest*>(_request_buffer.data());
-  _request.profile = std::move(profile);
-  _request.logger = std::move(logger);
-  _request_buffer.set_actual(sizeof(CreateLoggerSimpleRequest));
-  ::fidl::DecodedMessage<CreateLoggerSimpleRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      LoggerFactory::InPlace::CreateLoggerSimple(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-LoggerFactory::UnownedResultOf::CreateLoggerSimple LoggerFactory::SyncClient::CreateLoggerSimple(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLoggerSimple(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
-}
-
-LoggerFactory::UnownedResultOf::CreateLoggerSimple LoggerFactory::Call::CreateLoggerSimple(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLoggerSimple(std::move(_client_end), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleResponse> LoggerFactory::InPlace::CreateLoggerSimple(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleRequest> params, ::fidl::BytePart response_buffer) {
-  LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<CreateLoggerSimpleRequest, CreateLoggerSimpleResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
 template <>
 LoggerFactory::ResultOf::CreateLoggerFromProjectId_Impl<LoggerFactory::CreateLoggerFromProjectIdResponse>::CreateLoggerFromProjectId_Impl(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerFromProjectIdRequest, ::fidl::MessageDirection::kSending>();
@@ -3207,32 +3067,6 @@ bool LoggerFactory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
     return true;
   }
   switch (hdr->ordinal) {
-    case kLoggerFactory_CreateLogger_Ordinal:
-    case kLoggerFactory_CreateLogger_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<CreateLoggerRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->CreateLogger(std::move(message->profile), std::move(message->logger),
-          Interface::CreateLoggerCompleter::Sync(txn));
-      return true;
-    }
-    case kLoggerFactory_CreateLoggerSimple_Ordinal:
-    case kLoggerFactory_CreateLoggerSimple_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<CreateLoggerSimpleRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->CreateLoggerSimple(std::move(message->profile), std::move(message->logger),
-          Interface::CreateLoggerSimpleCompleter::Sync(txn));
-      return true;
-    }
     case kLoggerFactory_CreateLoggerFromProjectId_Ordinal:
     case kLoggerFactory_CreateLoggerFromProjectId_GenOrdinal:
     {
@@ -3272,78 +3106,6 @@ bool LoggerFactory::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
     txn->Close(ZX_ERR_NOT_SUPPORTED);
   }
   return found;
-}
-
-
-void LoggerFactory::Interface::CreateLoggerCompleterBase::Reply(::llcpp::fuchsia::cobalt::Status status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<CreateLoggerResponse*>(_write_bytes);
-  LoggerFactory::SetTransactionHeaderFor::CreateLoggerResponse(
-      ::fidl::DecodedMessage<CreateLoggerResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              CreateLoggerResponse::PrimarySize,
-              CreateLoggerResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateLoggerResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<CreateLoggerResponse>(std::move(_response_bytes)));
-}
-
-void LoggerFactory::Interface::CreateLoggerCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status) {
-  if (_buffer.capacity() < CreateLoggerResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<CreateLoggerResponse*>(_buffer.data());
-  LoggerFactory::SetTransactionHeaderFor::CreateLoggerResponse(
-      ::fidl::DecodedMessage<CreateLoggerResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              CreateLoggerResponse::PrimarySize,
-              CreateLoggerResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(CreateLoggerResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<CreateLoggerResponse>(std::move(_buffer)));
-}
-
-void LoggerFactory::Interface::CreateLoggerCompleterBase::Reply(::fidl::DecodedMessage<CreateLoggerResponse> params) {
-  LoggerFactory::SetTransactionHeaderFor::CreateLoggerResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void LoggerFactory::Interface::CreateLoggerSimpleCompleterBase::Reply(::llcpp::fuchsia::cobalt::Status status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerSimpleResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<CreateLoggerSimpleResponse*>(_write_bytes);
-  LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleResponse(
-      ::fidl::DecodedMessage<CreateLoggerSimpleResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              CreateLoggerSimpleResponse::PrimarySize,
-              CreateLoggerSimpleResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CreateLoggerSimpleResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<CreateLoggerSimpleResponse>(std::move(_response_bytes)));
-}
-
-void LoggerFactory::Interface::CreateLoggerSimpleCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status) {
-  if (_buffer.capacity() < CreateLoggerSimpleResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<CreateLoggerSimpleResponse*>(_buffer.data());
-  LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleResponse(
-      ::fidl::DecodedMessage<CreateLoggerSimpleResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              CreateLoggerSimpleResponse::PrimarySize,
-              CreateLoggerSimpleResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(CreateLoggerSimpleResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<CreateLoggerSimpleResponse>(std::move(_buffer)));
-}
-
-void LoggerFactory::Interface::CreateLoggerSimpleCompleterBase::Reply(::fidl::DecodedMessage<CreateLoggerSimpleResponse> params) {
-  LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleResponse(params);
-  CompleterBase::SendReply(std::move(params));
 }
 
 
@@ -3419,24 +3181,6 @@ void LoggerFactory::Interface::CreateLoggerSimpleFromProjectIdCompleterBase::Rep
 }
 
 
-
-void LoggerFactory::SetTransactionHeaderFor::CreateLoggerRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLogger_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-}
-void LoggerFactory::SetTransactionHeaderFor::CreateLoggerResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLogger_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-}
-
-void LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimple_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-}
-void LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimple_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-}
 
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerFromProjectIdRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerFromProjectIdRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerFromProjectId_GenOrdinal);

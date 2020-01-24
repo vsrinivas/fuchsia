@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cobalt-client/cpp/collector.h>
-
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
-#include <cstring>
 #include <utility>
 
+#include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/collector_internal.h>
 #include <cobalt-client/cpp/types_internal.h>
 
@@ -19,25 +17,23 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
-  ZX_ASSERT_MSG(options.project_id > 0, "Must define a project_id greater than 0.");
+internal::CobaltOptions MakeCobaltOptions(uint32_t project_id) {
+  ZX_ASSERT_MSG(project_id > 0, "Must define a project_id greater than 0.");
   internal::CobaltOptions cobalt_options;
-  cobalt_options.project_id = options.project_id;
+  cobalt_options.project_id = project_id;
   cobalt_options.service_connect = [](const char* service_path,
                                       zx::channel service) -> zx_status_t {
     return fdio_service_connect(service_path, service.release());
   };
   cobalt_options.service_path = "/svc/";
   cobalt_options.service_path.append(CobaltLogger::GetServiceName());
-  cobalt_options.release_stage = static_cast<internal::ReleaseStage>(options.release_stage);
   return cobalt_options;
 }
 }  // namespace
 }  // namespace internal
 
-Collector::Collector(CollectorOptions options)
-    : logger_(std::make_unique<internal::CobaltLogger>(
-          internal::MakeCobaltOptions(std::move(options)))) {
+Collector::Collector(uint32_t project_id)
+    : logger_(std::make_unique<internal::CobaltLogger>(internal::MakeCobaltOptions(project_id))) {
   flushing_.store(false);
 }
 
@@ -82,30 +78,6 @@ void Collector::Subscribe(internal::FlushInterface* flushable) {
   ZX_ASSERT_MSG(flushables_.find(flushable) == flushables_.end(),
                 "Subscribing same flushable multiple times.");
   flushables_.insert(flushable);
-}
-
-CollectorOptions CollectorOptions::GeneralAvailability() {
-  CollectorOptions options;
-  options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kGa);
-  return options;
-}
-
-CollectorOptions CollectorOptions::Dogfood() {
-  CollectorOptions options;
-  options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kDogfood);
-  return options;
-}
-
-CollectorOptions CollectorOptions::Fishfood() {
-  CollectorOptions options;
-  options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kFishfood);
-  return options;
-}
-
-CollectorOptions CollectorOptions::Debug() {
-  CollectorOptions options;
-  options.release_stage = static_cast<uint32_t>(internal::ReleaseStage::kDebug);
-  return options;
 }
 
 }  // namespace cobalt_client

@@ -20,14 +20,6 @@ namespace internal {
 // on the behaviour of any of these classes.
 // A value pair which represents a bucket index and the count for such index.
 using HistogramBucket = ::llcpp::fuchsia::cobalt::HistogramBucket;
-using ReleaseStageType = std::underlying_type<::llcpp::fuchsia::cobalt::ReleaseStage>::type;
-
-enum class ReleaseStage : ReleaseStageType {
-  kGa = static_cast<ReleaseStageType>(::llcpp::fuchsia::cobalt::ReleaseStage::GA),
-  kDogfood = static_cast<ReleaseStageType>(::llcpp::fuchsia::cobalt::ReleaseStage::DOGFOOD),
-  kFishfood = static_cast<ReleaseStageType>(::llcpp::fuchsia::cobalt::ReleaseStage::FISHFOOD),
-  kDebug = static_cast<ReleaseStageType>(::llcpp::fuchsia::cobalt::ReleaseStage::DEBUG),
-};
 
 static_assert(::llcpp::fuchsia::cobalt::MAX_EVENT_CODE_COUNT == MetricOptions::kMaxEventCodes);
 

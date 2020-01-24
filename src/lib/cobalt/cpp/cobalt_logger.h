@@ -292,65 +292,8 @@ class CobaltLogger {
 // |services| A shared pointer to the ServiceDirectory that provides access to the
 // services received by the component using this CobaltLogger.
 //
-// |registry_path| The path to the registry file for the Cobalt project
-// associated with the new Logger. This is a binary file containing the compiled
-// definitions of the metrics and reports defined for the project. Usually this
-// file is generated via the |cobalt_config| target in your BUILD file and
-// included in your package via a |resources| clause in your |package|
-// definition.
-//
-// |release_stage| Optional specification of the current release stage of the
-// project associated with the new Logger. This determines which of the defined
-// metrics are permitted to be collected. The default value of GA (Generally
-// Available) permits only metrics tagged as GA.
-//
-// Use this version of NewCobaltLogger*() when the version of the Cobalt
-// registry that was bundled with the Cobalt service itself may not contain the
-// latest versions of the metric and report definitions to be used by the
-// returned CobaltLogger. This method allows the caller to provide updated
-// versions of those definitions.
-std::unique_ptr<CobaltLogger> NewCobaltLogger(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const std::string& registry_path,
-    fuchsia::cobalt::ReleaseStage release_stage = fuchsia::cobalt::ReleaseStage::GA);
-
-// Returns a CobaltLogger initialized with the provided parameters.
-//
-// |dispatcher| A pointer to an async_dispatcher_t to be used for all
-// asynchronous operations.
-//
-// |services| A shared pointer to the ServiceDirectory that provides access to the
-// services received by the component using this CobaltLogger.
-//
-// |profile| A ProjectProfile that contains (among other data) a VMO containing
-// the compiled metric and report definitions to be used by the returned
-// CobaltLogger.
-//
-// Use this version of NewCobaltLogger*() when the version of the Cobalt
-// registry that was bundled with the Cobalt service itself may not contain the
-// latest versions of the metric and report definitions to be used by the
-// returned CobaltLogger. This method allows the caller to provide updated
-// versions of those definitions.
-std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
-                                              std::shared_ptr<sys::ServiceDirectory> services,
-                                              fuchsia::cobalt::ProjectProfile profile);
-
-// Returns a CobaltLogger initialized with the provided parameters.
-//
-// |dispatcher| A pointer to an async_dispatcher_t to be used for all
-// asynchronous operations.
-//
-// |services| A shared pointer to the ServiceDirectory that provides access to the
-// services received by the component using this CobaltLogger.
-//
 // |project_id| The ID of the Cobalt project to be associated with the
 // returned CobaltLogger.
-//
-// Use this version of NewCobaltLogger*() when the version of the Cobalt
-// registry that was bundled with the Cobalt service itself contains the latest
-// versions of the metric and report definitions to be used by the returned
-// CobaltLogger. The |project_id| should be the ID of one of the projects in
-// that bundled registry.
 std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectId(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     uint32_t project_id);

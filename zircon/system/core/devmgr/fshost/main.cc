@@ -38,8 +38,11 @@
 namespace devmgr {
 namespace {
 
+// local_storage project ID as defined in cobalt-analytics projects.yaml.
+constexpr uint32_t kCobaltProjectId = 3676913920;
+
 FsHostMetrics MakeMetrics() {
-  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(FsManager::CollectorOptions()));
+  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(kCobaltProjectId));
 }
 
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;

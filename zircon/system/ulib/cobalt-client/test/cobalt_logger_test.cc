@@ -41,16 +41,6 @@ using EventData = ::llcpp::fuchsia::cobalt::EventPayload;
 // Fake Implementation for fuchsia::cobalt::LoggerFactory.
 class FakeLoggerFactoryService : public ::llcpp::fuchsia::cobalt::LoggerFactory::Interface {
  public:
-  void CreateLogger(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger,
-                    CreateLoggerCompleter::Sync completer) final {
-    ZX_PANIC("Not Implemented.");
-  }
-
-  void CreateLoggerSimple(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger,
-                          CreateLoggerSimpleCompleter::Sync completer) final {
-    ZX_PANIC("Not Implemented.");
-  }
-
   void CreateLoggerFromProjectId(uint32_t project_id, ::zx::channel logger,
                                  CreateLoggerFromProjectIdCompleter::Sync completer) final {
     completer.Reply(create_logger_handler_(project_id, std::move(logger)));

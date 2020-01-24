@@ -20,32 +20,9 @@
 
 namespace cobalt_client {
 
-// Defines the options for initializing the Collector.
-struct CollectorOptions {
-  // Returns a |Collector| whose data will be logged for GA release stage.
-  static CollectorOptions GeneralAvailability();
-
-  // Returns a |Collector| whose data will be logged for Dogfood release stage.
-  static CollectorOptions Dogfood();
-
-  // Returns a |Collector| whose data will be logged for Fishfood release stage.
-  static CollectorOptions Fishfood();
-
-  // Returns a |Collector| whose data will be logged for Debug release stage.
-  static CollectorOptions Debug();
-
-  // The ID used to register the project with cobalt. This will be used to route the metrics
-  // to the right project.
-  uint32_t project_id;
-
-  // This is set internally by factory functions.
-  internal::ReleaseStageType release_stage = 0;
-};
-
 // This class acts as a peer for instantiating Histograms and Counters. All
 // objects instantiated through this class act as a view, which means that
-// their lifetime is coupled to this object's lifetime. This class does require
-// the number of different configurations on construction.
+// their lifetime is coupled to this object's lifetime.
 //
 // The Sink provides an API for persisting the supported data types. This is
 // exposed to simplify testing.
@@ -54,7 +31,9 @@ struct CollectorOptions {
 // This class is thread-compatible.
 class Collector {
  public:
-  explicit Collector(CollectorOptions options);
+  // The ID used to register the project with cobalt. This will be used to route the
+  // metrics to the right project.
+  explicit Collector(uint32_t project_id);
   Collector(std::unique_ptr<internal::Logger> logger);
   Collector(const Collector&) = delete;
   Collector(Collector&&) = delete;

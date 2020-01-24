@@ -20,11 +20,6 @@ Classes in this module are categorized in two groups:
 
 These are reflected within the MetricOptions for Counter and HistogramOptions for Histograms. The HistogramOptions, provide mechanisms for defining the properties of the histogram suchs as Linear or Exponential, and the parameters used by the respective types.
 
- ## Collector Options
-The Collector options require the user to provide a project_name. The project name is also defined in your cobalt project. 
-
-Factory functions provided for the CollectorOptions, define the release stage of the project logging data, such as Debug, Dogfood, etc.
-
 ## Persisting Data
 The Collector does a best effort to persist the data into the Cobalt Service(the service might not be up). It is suggested a retry mechanic on a dispatcher thread to prevent blocking until success, which might never happpen(Cobalt Service never came up).
 

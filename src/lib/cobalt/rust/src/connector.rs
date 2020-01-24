@@ -8,15 +8,11 @@
 use {
     crate::sender::CobaltSender,
     anyhow::{format_err, Context as _, Error},
-    fdio, fidl,
-    fidl_fuchsia_cobalt::{
-        CobaltEvent, LoggerFactoryMarker, LoggerProxy, ProjectProfile, ReleaseStage, Status,
-    },
-    fidl_fuchsia_mem as fuchsia_mem,
+    fidl,
+    fidl_fuchsia_cobalt::{CobaltEvent, LoggerFactoryMarker, LoggerProxy, Status},
     fuchsia_component::client::connect_to_service,
     futures::{channel::mpsc, prelude::*},
     log::error,
-    std::{borrow::Cow, fs::File, io::Seek},
 };
 
 /// Determines how to connect to the Cobalt FIDL service.
@@ -25,22 +21,12 @@ pub enum ConnectionType {
     /// Connecting with ProjectId relies on the Cobalt FIDL service's internal copy of the metrics
     /// registry.
     ProjectId(u32),
-
-    /// Connecting with ConfigPath provides the Cobalt FIDL service with your own copy of the
-    /// metrics registry. This can be useful if your module will be updated out-of-band from the
-    /// Cobalt FIDL service.
-    ConfigPath(Cow<'static, str>),
 }
 
 impl ConnectionType {
     /// Constructs a `ConnectionType::ProjectId(_)`
     pub fn project_id(project_id: u32) -> Self {
         ConnectionType::ProjectId(project_id)
-    }
-
-    /// Constructs a `ConnectionType::ConfigPath(_)`
-    pub fn config_path<S: Into<Cow<'static, str>>>(s: S) -> Self {
-        ConnectionType::ConfigPath(s.into())
     }
 }
 
@@ -50,10 +36,6 @@ pub struct CobaltConnector {
     /// The size of the `mpsc::channel` to use when sending `CobaltEvent`s from the main thread to
     /// the worker thread.
     pub buffer_size: usize,
-
-    /// The release stage of this client's software. Determines which metrics are collected by this
-    /// instance of the Cobalt FIDL service. Defaults to `ReleaseStage::Ga` (the most restrictive)
-    pub release_stage: ReleaseStage,
 }
 
 /// At the time of this writing, all clients are using a buffer size of 100, so we've set this as
@@ -66,7 +48,7 @@ pub const DEFAULT_BUFFER_SIZE: usize = 100;
 
 impl Default for CobaltConnector {
     fn default() -> Self {
-        Self { buffer_size: DEFAULT_BUFFER_SIZE, release_stage: ReleaseStage::Ga }
+        Self { buffer_size: DEFAULT_BUFFER_SIZE }
     }
 }
 
@@ -110,21 +92,6 @@ impl CobaltConnector {
         let res = match connection_type {
             ConnectionType::ProjectId(project_id) => {
                 logger_factory.create_logger_from_project_id(project_id, server_end).await
-            }
-
-            ConnectionType::ConfigPath(config_path) => {
-                let mut cobalt_config = File::open(config_path.as_ref())?;
-                let vmo = fdio::get_vmo_copy_from_file(&cobalt_config)?;
-                let size = cobalt_config.seek(std::io::SeekFrom::End(0))?;
-
-                let config = fuchsia_mem::Buffer { vmo, size };
-
-                logger_factory
-                    .create_logger(
-                        &mut ProjectProfile { config, release_stage: self.release_stage },
-                        server_end,
-                    )
-                    .await
             }
         };
 

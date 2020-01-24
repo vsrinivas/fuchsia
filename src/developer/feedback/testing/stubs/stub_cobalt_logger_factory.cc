@@ -14,7 +14,6 @@
 
 namespace feedback {
 
-using fuchsia::cobalt::ReleaseStage;
 using fuchsia::cobalt::Status;
 using CreateLoggerFromProjectIdCallback =
     fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback;

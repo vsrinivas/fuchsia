@@ -85,8 +85,6 @@ class BlobfsMetrics {
   // Returns the underlying collector of cobalt metrics.
   cobalt_client::Collector* mutable_collector() { return cobalt_metrics_.mutable_collector(); }
 
-  static cobalt_client::CollectorOptions GetBlobfsOptions();
-
   // Flushes the metrics to the cobalt client and schedules itself to flush again.
   void ScheduleMetricFlush();
 
@@ -140,9 +138,11 @@ class BlobfsMetrics {
   inspect::Node& root_ = inspector_.GetRoot();
   fs_metrics::Histograms histograms_ = fs_metrics::Histograms(&root_);
 
+  // local_storage project ID as defined in cobalt-analytics projects.yaml.
+  static constexpr uint32_t kCobaltProjectId = 3676913920;
   // Cobalt metrics.
   fs_metrics::Metrics cobalt_metrics_ =
-      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(GetBlobfsOptions()), "blobfs");
+      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(kCobaltProjectId), "blobfs");
 
   // Loop for flushing the collector periodically.
   async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);

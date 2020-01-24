@@ -17,8 +17,6 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
-#include <fuchsia/mem/llcpp/fidl.h>
-
 namespace llcpp {
 
 namespace fuchsia {
@@ -38,15 +36,6 @@ enum class Status : int32_t {
 class Controller;
 class LoggerBase;
 class LoggerSimple;
-enum class ReleaseStage : int32_t {
-  GA = 0u,
-  DOGFOOD = 10u,
-  FISHFOOD = 20u,
-  DEBUG = 99u,
-};
-
-
-struct ProjectProfile;
 class LoggerFactory;
 struct HistogramBucket;
 struct Experiment;
@@ -2717,25 +2706,6 @@ class LoggerSimple final {
   };
 };
 
-extern "C" const fidl_type_t v1_fuchsia_cobalt_ProjectProfileTable;
-
-struct ProjectProfile {
-  static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ProjectProfileTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
-
-  ::llcpp::fuchsia::mem::Buffer config = {};
-
-  ::llcpp::fuchsia::cobalt::ReleaseStage release_stage = {};
-};
-
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequestTable;
@@ -2745,76 +2715,6 @@ class LoggerFactory final {
   LoggerFactory() = delete;
  public:
   static constexpr char Name[] = "fuchsia.cobalt.LoggerFactory";
-
-  struct CreateLoggerResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::cobalt::Status status;
-
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct CreateLoggerRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::cobalt::ProjectProfile profile;
-    ::zx::channel logger;
-
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 48;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = CreateLoggerResponse;
-  };
-
-  struct CreateLoggerSimpleResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::cobalt::Status status;
-
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct CreateLoggerSimpleRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::cobalt::ProjectProfile profile;
-    ::zx::channel logger;
-
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 48;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = CreateLoggerSimpleResponse;
-  };
 
   struct CreateLoggerFromProjectIdResponse final {
     FIDL_ALIGNDECL
@@ -2892,38 +2792,6 @@ class LoggerFactory final {
     ResultOf() = delete;
    private:
     template <typename ResponseType>
-    class CreateLogger_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      CreateLogger_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
-      ~CreateLogger_Impl() = default;
-      CreateLogger_Impl(CreateLogger_Impl&& other) = default;
-      CreateLogger_Impl& operator=(CreateLogger_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class CreateLoggerSimple_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      CreateLoggerSimple_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
-      ~CreateLoggerSimple_Impl() = default;
-      CreateLoggerSimple_Impl(CreateLoggerSimple_Impl&& other) = default;
-      CreateLoggerSimple_Impl& operator=(CreateLoggerSimple_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class CreateLoggerFromProjectId_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -2957,8 +2825,6 @@ class LoggerFactory final {
     };
 
    public:
-    using CreateLogger = CreateLogger_Impl<CreateLoggerResponse>;
-    using CreateLoggerSimple = CreateLoggerSimple_Impl<CreateLoggerSimpleResponse>;
     using CreateLoggerFromProjectId = CreateLoggerFromProjectId_Impl<CreateLoggerFromProjectIdResponse>;
     using CreateLoggerSimpleFromProjectId = CreateLoggerSimpleFromProjectId_Impl<CreateLoggerSimpleFromProjectIdResponse>;
   };
@@ -2968,38 +2834,6 @@ class LoggerFactory final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
    private:
-    template <typename ResponseType>
-    class CreateLogger_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      CreateLogger_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
-      ~CreateLogger_Impl() = default;
-      CreateLogger_Impl(CreateLogger_Impl&& other) = default;
-      CreateLogger_Impl& operator=(CreateLogger_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class CreateLoggerSimple_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      CreateLoggerSimple_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
-      ~CreateLoggerSimple_Impl() = default;
-      CreateLoggerSimple_Impl(CreateLoggerSimple_Impl&& other) = default;
-      CreateLoggerSimple_Impl& operator=(CreateLoggerSimple_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
     template <typename ResponseType>
     class CreateLoggerFromProjectId_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
@@ -3034,8 +2868,6 @@ class LoggerFactory final {
     };
 
    public:
-    using CreateLogger = CreateLogger_Impl<CreateLoggerResponse>;
-    using CreateLoggerSimple = CreateLoggerSimple_Impl<CreateLoggerSimpleResponse>;
     using CreateLoggerFromProjectId = CreateLoggerFromProjectId_Impl<CreateLoggerFromProjectIdResponse>;
     using CreateLoggerSimpleFromProjectId = CreateLoggerSimpleFromProjectId_Impl<CreateLoggerSimpleFromProjectIdResponse>;
   };
@@ -3050,18 +2882,6 @@ class LoggerFactory final {
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
-
-    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::CreateLogger CreateLogger(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::CreateLogger CreateLogger(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
-
-    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::CreateLoggerSimple CreateLoggerSimple(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::CreateLoggerSimple CreateLoggerSimple(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CreateLoggerFromProjectId CreateLoggerFromProjectId(uint32_t project_id, ::zx::channel logger);
@@ -3084,18 +2904,6 @@ class LoggerFactory final {
     Call() = delete;
    public:
 
-    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLogger CreateLogger(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLogger CreateLogger(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
-
-    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLoggerSimple CreateLoggerSimple(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLoggerSimple CreateLoggerSimple(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
-
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CreateLoggerFromProjectId CreateLoggerFromProjectId(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
 
@@ -3116,10 +2924,6 @@ class LoggerFactory final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<CreateLoggerResponse> CreateLogger(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<CreateLoggerSimpleResponse> CreateLoggerSimple(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleRequest> params, ::fidl::BytePart response_buffer);
-
     static ::fidl::DecodeResult<CreateLoggerFromProjectIdResponse> CreateLoggerFromProjectId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectIdRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<CreateLoggerSimpleFromProjectIdResponse> CreateLoggerSimpleFromProjectId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectIdRequest> params, ::fidl::BytePart response_buffer);
@@ -3133,34 +2937,6 @@ class LoggerFactory final {
     virtual ~Interface() = default;
     using _Outer = LoggerFactory;
     using _Base = ::fidl::CompleterBase;
-
-    class CreateLoggerCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::DecodedMessage<CreateLoggerResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using CreateLoggerCompleter = ::fidl::Completer<CreateLoggerCompleterBase>;
-
-    virtual void CreateLogger(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, CreateLoggerCompleter::Sync _completer) = 0;
-
-    class CreateLoggerSimpleCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::DecodedMessage<CreateLoggerSimpleResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using CreateLoggerSimpleCompleter = ::fidl::Completer<CreateLoggerSimpleCompleterBase>;
-
-    virtual void CreateLoggerSimple(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, CreateLoggerSimpleCompleter::Sync _completer) = 0;
 
     class CreateLoggerFromProjectIdCompleterBase : public _Base {
      public:
@@ -3215,10 +2991,6 @@ class LoggerFactory final {
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
    public:
-    static void CreateLoggerRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerRequest>& _msg);
-    static void CreateLoggerResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerResponse>& _msg);
-    static void CreateLoggerSimpleRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleRequest>& _msg);
-    static void CreateLoggerSimpleResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleResponse>& _msg);
     static void CreateLoggerFromProjectIdRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerFromProjectIdRequest>& _msg);
     static void CreateLoggerFromProjectIdResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerFromProjectIdResponse>& _msg);
     static void CreateLoggerSimpleFromProjectIdRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleFromProjectIdRequest>& _msg);
@@ -5181,47 +4953,6 @@ struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerSimple::LogIntHistogramResp
 static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerSimple::LogIntHistogramResponse)
     == ::llcpp::fuchsia::cobalt::LoggerSimple::LogIntHistogramResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerSimple::LogIntHistogramResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::ProjectProfile> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::cobalt::ProjectProfile>);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::ProjectProfile, config) == 0);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::ProjectProfile, release_stage) == 16);
-static_assert(sizeof(::llcpp::fuchsia::cobalt::ProjectProfile) == ::llcpp::fuchsia::cobalt::ProjectProfile::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerRequest)
-    == ::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerRequest, profile) == 16);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerRequest, logger) == 40);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerResponse)
-    == ::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleRequest)
-    == ::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleRequest, profile) == 16);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleRequest, logger) == 40);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleResponse)
-    == ::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdRequest> : public std::true_type {};

@@ -32,17 +32,6 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       fidl::InterfaceRequest<LoggerInterface> request,
       fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
 
-  // Attempts to extract a CobaltRegistry containing a single project from
-  // |profile| and uses this to construct a LoggerImpl. Binds this to |request|
-  // and stores the binding in |binding_set|. |callback| will be invoked with
-  // OK upon success or an error status otherwise. |LoggerInterface| should be
-  // Logger or LoggerSimple.
-  template <typename LoggerInterface, typename Callback>
-  void CreateAndBindLogger(
-      fuchsia::cobalt::ProjectProfile profile, fidl::InterfaceRequest<LoggerInterface> request,
-      Callback callback,
-      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
-
   // Extracts the Cobalt 1.0 project with the given |project_id| from the global CobaltRegistry, if
   // there is such a project in the registry, and uses this to construct a LoggerImpl. Binds this to
   // |request| and stores the binding in |binding_set|. |callback| will be invoked with OK upon
@@ -51,14 +40,6 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateAndBindLoggerFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
       fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
-
-  void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
-                    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                    CreateLoggerCallback callback);
-
-  void CreateLoggerSimple(fuchsia::cobalt::ProjectProfile profile,
-                          fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-                          CreateLoggerSimpleCallback callback);
 
   void CreateLoggerFromProjectId(uint32_t project_id,
                                  fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,

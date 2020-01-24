@@ -22,7 +22,7 @@
 namespace cobalt {
 namespace {
 
-constexpr char kFakeCobaltConfig[] = "FakeConfig";
+constexpr uint32_t kProjectId = 1234;
 constexpr int32_t kFakeCobaltMetricId = 2;
 
 bool Equals(const OccurrenceEvent* e1, const OccurrenceEvent* e2) {
@@ -251,21 +251,6 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
   FakeLoggerFactoryImpl() {}
 
-  void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
-                    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                    CreateLoggerCallback callback) override {
-    received_project_id_ = 0;
-    logger_.reset(new FakeLoggerImpl());
-    logger_bindings_.AddBinding(logger_.get(), std::move(request));
-    callback(fuchsia::cobalt::Status::OK);
-  }
-
-  void CreateLoggerSimple(fuchsia::cobalt::ProjectProfile profile,
-                          fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-                          CreateLoggerSimpleCallback callback) override {
-    callback(fuchsia::cobalt::Status::OK);
-  }
-
   void CreateLoggerFromProjectId(uint32_t project_id,
                                  fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                                  CreateLoggerFromProjectIdCallback callback) override {
@@ -303,14 +288,6 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
 
   CobaltLogger* cobalt_logger() { return cobalt_logger_.get(); }
 
-  fuchsia::cobalt::ProjectProfile CreateProjectProfile() {
-    fsl::SizedVmo fake_cobalt_config;
-    FXL_CHECK(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
-    fuchsia::cobalt::ProjectProfile profile;
-    profile.config = std::move(fake_cobalt_config).ToTransport();
-    return profile;
-  }
-
  private:
   virtual void SetUp() override {
     factory_impl_.reset(new FakeLoggerFactoryImpl());
@@ -327,8 +304,8 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
           launcher_request_ = std::move(request);
         });
 
-    cobalt_logger_ = NewCobaltLogger(async_get_default_dispatcher(), service_directory(),
-                                     CreateProjectProfile());
+    cobalt_logger_ = NewCobaltLoggerFromProjectId(async_get_default_dispatcher(),
+                                                  service_directory(), kProjectId);
     RunLoopUntilIdle();
   }
 
@@ -343,18 +320,14 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(CobaltLoggerTest, InitializeCobalt) {
-  EXPECT_NE(cobalt_logger(), nullptr);
-  EXPECT_EQ(0u, logger_factory()->received_project_id());
-  NewCobaltLoggerFromProjectId(async_get_default_dispatcher(), service_directory(), 1234);
-  RunLoopUntilIdle();
-  EXPECT_EQ(1234u, logger_factory()->received_project_id());
+  // Cobalt Logger was initialized in the SetUp.
+  EXPECT_EQ(kProjectId, logger_factory()->received_project_id());
 }
 
 TEST_F(CobaltLoggerTest, LogMultipleEvent_BeforeCreateLoggerCallbackExecutes) {
   constexpr size_t num_events = 5u;
 
-  CobaltLoggerImpl cobalt_logger(async_get_default_dispatcher(), service_directory(),
-                                 CreateProjectProfile());
+  CobaltLoggerImpl cobalt_logger(async_get_default_dispatcher(), service_directory(), kProjectId);
   OccurrenceEvent event(kFakeCobaltMetricId, 123);
 
   // Send multiple events before the FakeLoggerImpl is ready.
