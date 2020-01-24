@@ -214,7 +214,6 @@ if (current_cpu != "") {
       "fs-recovery",
       "fs-test-utils",
       "fvm",
-      "hid",
       "kcounter",
       "kernel-cmdline:test",
       "log",
