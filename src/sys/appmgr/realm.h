@@ -20,8 +20,8 @@
 
 #include <fs/synchronous_vfs.h>
 
-#include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/loader/package_loader.h"
+#include "src/lib/cmx/runtime.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/macros.h"

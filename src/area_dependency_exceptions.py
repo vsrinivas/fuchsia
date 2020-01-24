@@ -24,7 +24,6 @@ exceptions = {
         '//src/connectivity/network/testing/netemul/lib/',
     ],
     '//src/connectivity/network/testing/netemul': [
-        '//garnet/lib/cmx:cmx',
         '//garnet/lib/process:process',
     ],
     '//src/connectivity/overnet': [

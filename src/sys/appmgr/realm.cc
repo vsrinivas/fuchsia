@@ -25,10 +25,10 @@
 
 #include <trace/event.h>
 
-#include "garnet/lib/cmx/cmx.h"
-#include "garnet/lib/cmx/program.h"
-#include "garnet/lib/cmx/runtime.h"
-#include "garnet/lib/cmx/sandbox.h"
+#include "src/lib/cmx/cmx.h"
+#include "src/lib/cmx/program.h"
+#include "src/lib/cmx/runtime.h"
+#include "src/lib/cmx/sandbox.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"

@@ -12,7 +12,7 @@
 
 #include <vector>
 
-#include "garnet/lib/cmx/sandbox.h"
+#include "src/lib/cmx/sandbox.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/sys/appmgr/realm.h"

@@ -19,7 +19,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/cmx",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.media",
@@ -30,6 +29,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/cpp",
+    "//src/lib/cmx",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",

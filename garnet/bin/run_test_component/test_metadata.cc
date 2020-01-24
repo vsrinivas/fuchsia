@@ -22,7 +22,7 @@
 
 #include <unordered_set>
 
-#include "garnet/lib/cmx/cmx.h"
+#include "src/lib/cmx/cmx.h"
 #include "src/lib/fxl/strings/substitute.h"
 
 namespace run {

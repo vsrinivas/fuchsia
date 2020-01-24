@@ -8,7 +8,7 @@
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 
-#include "garnet/lib/cmx/cmx.h"
+#include "src/lib/cmx/cmx.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"

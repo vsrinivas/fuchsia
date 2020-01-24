@@ -54,7 +54,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/cmx",
     "//garnet/lib/loader",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
@@ -62,6 +61,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff",
+    "//src/lib/cmx",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
