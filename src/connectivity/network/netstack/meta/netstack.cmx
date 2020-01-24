@@ -4,11 +4,12 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.NameProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.cobalt.LoggerFactory"
+            "fuchsia.stash.SecureStore"
         ]
     }
 }

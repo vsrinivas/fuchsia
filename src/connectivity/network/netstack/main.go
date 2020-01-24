@@ -6,6 +6,8 @@ package netstack
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"log"
@@ -33,8 +35,10 @@ import (
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/posix/socket"
+	"fidl/fuchsia/stash"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -43,6 +47,16 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/icmp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
+)
+
+const (
+	// stashStoreIdentificationName is the name used to identify this (netstack)
+	// component to the fuchsia.stash.SecureStore service.
+	stashStoreIdentificationName = "netstack-stash"
+
+	// opaqueIIDSecretKeyName is the name of the key used to access the secret key
+	// for opaque IIDs from the secure stash store.
+	opaqueIIDSecretKeyName = "opaque-iid-secret-key"
 )
 
 type bindingSetCounterStat struct {
@@ -90,6 +104,11 @@ func Main() {
 	log.SetOutput(&syslog.Writer{Logger: l})
 	log.SetFlags(log.Lshortfile)
 
+	secretKeyForOpaqueIID, err := getSecretKeyForOpaqueIID(appCtx)
+	if err != nil {
+		panic(fmt.Sprintf("failed to get secret key for opaque IIDs: %s", err))
+	}
+
 	ndpDisp := newNDPDispatcher()
 
 	stk := tcpipstack.New(tcpipstack.Options{
@@ -117,6 +136,18 @@ func Main() {
 		// to support custom protocols through structured FIDL APIs in the future, so
 		// disable raw sockets to prevent them from accidentally becoming load-bearing.
 		RawFactory: nil,
+		OpaqueIIDOpts: tcpipstack.OpaqueInterfaceIdentifierOptions{
+			NICNameFromID: func(nicID tcpip.NICID, nicName string) string {
+				// As of writing, Netstack creates NICs with names so we return the name
+				// the NIC was created with. Just in case, we have a default NIC name
+				// format for NICs that were not created with a name.
+				if nicName != "" {
+					return nicName
+				}
+				return fmt.Sprintf("opaqueIIDNIC%d", nicID)
+			},
+			SecretKey: secretKeyForOpaqueIID,
+		},
 	})
 	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
 		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
@@ -320,6 +351,113 @@ func Main() {
 		}()
 	}
 	wg.Wait()
+}
+
+// newSecretKeyForOpaqueIID returns a new secret key for opaque IID generation.
+func newSecretKeyForOpaqueIID() ([]byte, error) {
+	var secretKeyBuf [header.OpaqueIIDSecretKeyMinBytes]byte
+	secretKey := secretKeyBuf[:]
+	n, err := rand.Read(secretKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to populate a new secret key for opaque IIDs: %s", err)
+	}
+	if n != header.OpaqueIIDSecretKeyMinBytes {
+		return nil, fmt.Errorf("failed to populate a new secret key for opaque IIDs: got rand.Read(_) = %d, want = %d", n, header.OpaqueIIDSecretKeyMinBytes)
+	}
+	return secretKey, nil
+}
+
+// getSecretKeyForOpaqueIID gets a secret key for opaque IID generation from the
+// secure stash store service, or attempts to create one. If the stash service
+// is unavailable, a temporary secret key will be returned.
+func getSecretKeyForOpaqueIID(appCtx *appcontext.Context) ([]byte, error) {
+	syslog.VLogf(syslog.DebugVerbosity, "getting or creating secret key for opaque IID from secure stash store")
+
+	// Connect to the secure stash store service.
+	storeReq, store, err := stash.NewSecureStoreInterfaceRequest()
+	if err != nil {
+		syslog.Errorf("could not create the request to connect to the %s service: %s", stash.SecureStoreName, err)
+		return newSecretKeyForOpaqueIID()
+	}
+	defer store.Close()
+	appCtx.ConnectToEnvService(storeReq)
+
+	// Use our secure stash.
+	if err := store.Identify(stashStoreIdentificationName); err != nil {
+		syslog.Errorf("failed to identify as %s to the secure stash store: %s", stashStoreIdentificationName, err)
+		return newSecretKeyForOpaqueIID()
+	}
+	storeAccessorReq, storeAccessor, err := stash.NewStoreAccessorInterfaceRequest()
+	if err != nil {
+		syslog.Errorf("could not create the secure stash store accessor request: %s", err)
+		return newSecretKeyForOpaqueIID()
+	}
+	defer storeAccessor.Close()
+	if err := store.CreateAccessor(false /* readOnly */, storeAccessorReq); err != nil {
+		syslog.Errorf("failed to create accessor to the secure stash store: %s", err)
+		return newSecretKeyForOpaqueIID()
+	}
+
+	// Attempt to get the existing secret key.
+	opaqueIIDSecretKeyValue, err := storeAccessor.GetValue(opaqueIIDSecretKeyName)
+	if err != nil {
+		syslog.Errorf("failed to get opaque IID secret key from secure stash store: %s", err)
+		return newSecretKeyForOpaqueIID()
+	}
+
+	// If a key exists, make sure it is valid before returning it.
+	//
+	// The value should be stored as a base64 encoded string.
+	//
+	// We use a string because stash.Value.Bytesval uses a fuchsia.mem.Buffer
+	// which uses a VMO (which uses memory in page size increments). This is
+	// wasteful as the key only uses 16 bytes. We base64 encode the string
+	// because stash.Value.Stringval expects an ascii string; the store returns an
+	// error when flushing the store with a stash.Value.Stringval of raw bytes.
+	if opaqueIIDSecretKeyValue != nil && opaqueIIDSecretKeyValue.Which() == stash.ValueStringval {
+		syslog.VLogf(syslog.DebugVerbosity, "found a secret key for opaque IIDs in the secure stash store")
+
+		if secretKey, err := base64.StdEncoding.DecodeString(opaqueIIDSecretKeyValue.Stringval); err != nil {
+			syslog.Errorf("failed to decode the secret key string: %s", err)
+		} else if l := len(secretKey); l != header.OpaqueIIDSecretKeyMinBytes {
+			syslog.Errorf("invalid secret key for opaque IIDs; got length = %d, want = %d", l, header.OpaqueIIDSecretKeyMinBytes)
+		} else {
+			syslog.VLogf(syslog.DebugVerbosity, "using existing secret key for opaque IIDs")
+			return secretKey, nil
+		}
+	}
+
+	// Generate a new secret key as we either do not have one or the one we have
+	// is invalid.
+	syslog.VLogf(syslog.DebugVerbosity, "generating a new secret key for opaque IIDs")
+	secretKey, err := newSecretKeyForOpaqueIID()
+	if err != nil {
+		return nil, err
+	}
+
+	// Store the newly generated key to the secure stash store as a base64
+	// encoded string.
+	if err := storeAccessor.SetValue(opaqueIIDSecretKeyName, stash.ValueWithStringval(base64.StdEncoding.EncodeToString(secretKey))); err != nil {
+		syslog.Errorf("failed to set newly created secret key for opaque IID to secure stash store: %s", err)
+		return secretKey, nil
+	}
+	flushResp, err := storeAccessor.Flush()
+	if err != nil {
+		syslog.Errorf("failed to flush secure stash store with updated secret key for opaque IID: %s", err)
+		return secretKey, nil
+	}
+	switch w := flushResp.Which(); w {
+	case stash.StoreAccessorFlushResultErr:
+		syslog.Errorf("got error response when flushing secure stash store with updated secret key for opaque IID: %s", flushResp.Err)
+		return secretKey, nil
+
+	case stash.StoreAccessorFlushResultResponse:
+		syslog.VLogf(syslog.DebugVerbosity, "saved newly generated secret key for opaque IIDs to secure stash store")
+		return secretKey, nil
+
+	default:
+		panic(fmt.Sprintf("unexpected store accessor flush result type: %d", w))
+	}
 }
 
 func connectCobaltLogger(ctx *appcontext.Context) (*cobalt.LoggerInterface, error) {

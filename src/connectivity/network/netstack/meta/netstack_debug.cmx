@@ -12,7 +12,8 @@
             "fuchsia.device.NameProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider"
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.stash.SecureStore"
         ]
     }
 }

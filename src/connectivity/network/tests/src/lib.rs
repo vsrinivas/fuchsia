@@ -8,8 +8,11 @@ use anyhow::Context as _;
 use std::convert::TryInto;
 
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
+use futures::stream::StreamExt;
 
-type Result = std::result::Result<(), anyhow::Error>;
+const SECURE_STASH_URL: &str = "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx";
+
+type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
 // TODO(gongt) Use an attribute macro to reduce the boilerplate of running the
 // same test for both N2 and N3.
@@ -182,6 +185,157 @@ where
     let netstack_proxy =
         connect_to_service::<S>(&managed_environment).context("failed to connect to netstack")?;
     async_fn(netstack_proxy, device).await
+}
+
+/// Launches a new netstack with the endpoint and returns the IPv6 addresses
+/// initially assigned to it.
+///
+/// If `run_netstack_and_get_ipv6_addrs_for_endpoint` returns successfully, it
+/// is guaranteed that the launched netstack has been terminated. Note, if
+/// `run_netstack_and_get_ipv6_addrs_for_endpoint` does not return successfully,
+/// the launched netstack will still be terminated, but no guarantees are made
+/// about when that will happen.
+async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
+    endpoint: &fidl_fuchsia_netemul_network::EndpointProxy,
+    launcher: &fidl_fuchsia_sys::LauncherProxy,
+    name: String,
+) -> Result<Vec<fidl_fuchsia_net::Subnet>> {
+    let device = endpoint.get_ethernet_device().await.context("failed to get ethernet device")?;
+    // Launch the netstack service.
+    let (dir, dir_server) = fuchsia_zircon::Channel::create()?;
+    let (component_controller, component_controller_server) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_sys::ComponentControllerMarker>()
+            .context("failed to create launcher proxy")?;
+    let () = launcher.create_component(
+        &mut fidl_fuchsia_sys::LaunchInfo {
+            url: N::URL.to_string(),
+            arguments: None,
+            out: None,
+            err: None,
+            directory_request: Some(dir_server),
+            flat_namespace: None,
+            additional_services: None,
+        },
+        Some(component_controller_server),
+    )?;
+
+    // Connect to the netstack service.
+    let (netstack, server) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_netstack::NetstackMarker>()
+            .context("failed to create netstack proxy")?;
+    let () = fdio::service_connect_at(
+        &dir,
+        <fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+        server.into_channel(),
+    ).context("failed to connect to netstack")?;
+
+    // Add the device and get its interface state from netstack.
+    let id = netstack
+        .add_ethernet_device(
+            &name,
+            &mut fidl_fuchsia_netstack::InterfaceConfig {
+                name: name.to_string(),
+                filepath: "/fake/filepath/for_test".to_string(),
+                metric: 0,
+                ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
+            },
+            device,
+        )
+        .await
+        .context("failed to add ethernet device")?;
+    let interface = netstack
+        .get_interfaces2()
+        .await
+        .context("failed to get interfaces")?
+        .into_iter()
+        .find(|interface| interface.id == id)
+        .ok_or(anyhow::format_err!("failed to find added ethernet device"))?;
+
+    // Kill the netstack.
+    //
+    // Note, simply dropping `component_controller` would also kill the netstack
+    // but we explicitly kill it and wait for the terminated event before
+    // proceeding.
+    let () = component_controller.kill()?;
+    let mut event_stream = component_controller.take_event_stream();
+    while let Some(event) = event_stream.next().await {
+        match event? {
+            fidl_fuchsia_sys::ComponentControllerEvent::OnTerminated { .. } => break,
+            fidl_fuchsia_sys::ComponentControllerEvent::OnDirectoryReady {} => {}
+        }
+    }
+
+    Ok(interface.ipv6addrs)
+}
+
+/// Test that across netstack runs, a device will initially be assigned the same
+/// IPv6 addresses.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn consistent_initial_ipv6_addrs() -> Result {
+    let name = "consistent_initial_ipv6_addrs";
+
+    // Create the environment the netstacks will be created in.
+    let sandbox = fuchsia_component::client::connect_to_service::<
+        fidl_fuchsia_netemul_sandbox::SandboxMarker,
+    >()
+    .context("failed to connect to sandbox")?;
+    let network_context = get_network_context(&sandbox).context("failed to get network context")?;
+    let endpoint_manager =
+        get_endpoint_manager(&network_context).context("failed to get endpoint manager")?;
+    let endpoint =
+        create_endpoint(name, &endpoint_manager).await.context("failed to create endpoint")?;
+    let (env, server) = fidl::endpoints::create_proxy::<
+        fidl_fuchsia_netemul_environment::ManagedEnvironmentMarker,
+    >()
+    .context("failed to create managed environment proxy")?;
+    let () = sandbox
+        .create_environment(
+            server,
+            fidl_fuchsia_netemul_environment::EnvironmentOptions {
+                name: Some(name.to_string()),
+                // We need the fuchsia.stash.SecureStore becuase that is where
+                // Netstack2 stores its secret key for opaque IID generation.
+                //
+                // Without this service, we may not get consistent IPv6
+                // addresses across netstack runs.
+                services: Some(vec![
+                            fidl_fuchsia_netemul_environment::LaunchService {
+                                name: <fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME.to_string(),
+                                url: SECURE_STASH_URL.to_string(),
+                                arguments: None,
+                            },
+                ]),
+                devices: None,
+                inherit_parent_launch_services: None,
+                logger_options: Some(fidl_fuchsia_netemul_environment::LoggerOptions {
+                    enabled: Some(true),
+                    klogs_enabled: None,
+                    filter_options: None,
+                    syslog_output: Some(true),
+                }),
+            },
+        )
+        .context("failed to create environment")?;
+    let (launcher, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_sys::LauncherMarker>()
+        .context("failed to create launcher proxy")?;
+    let () = env.get_launcher(server)?;
+
+    // Make sure netstack uses the same addresses across runs for a device.
+    let first_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
+        &endpoint,
+        &launcher,
+        name.to_string(),
+    )
+    .await?;
+    let second_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
+        &endpoint,
+        &launcher,
+        name.to_string(),
+    )
+    .await?;
+    assert_eq!(first_run_addrs, second_run_addrs);
+
+    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

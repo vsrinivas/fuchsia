@@ -115,6 +115,7 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
     "//sdk/fidl/fuchsia.net.stack($go_toolchain)",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
+    "//sdk/fidl/fuchsia.stash($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component/go/src/app",
     "//third_party/golibs:github.com/google/btree",
