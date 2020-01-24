@@ -37,26 +37,41 @@ class TestFidlClient {
     ::llcpp::fuchsia::hardware::display::ImageConfig image_config_;
   };
 
-  TestFidlClient() {}
+  TestFidlClient(::llcpp::fuchsia::sysmem::Allocator::SyncClient* sysmem) : sysmem_(sysmem) {}
   ~TestFidlClient();
 
   bool CreateChannel(zx_handle_t provider, bool is_vc);
   // Enable vsync for a display and wait for events using |dispatcher|.
   bool Bind(async_dispatcher_t* dispatcher) TA_EXCL(mtx());
+  zx_status_t ImportImageWithSysmem(
+      const ::llcpp::fuchsia::hardware::display::ImageConfig& image_config, uint64_t* image_id)
+      TA_EXCL(mtx());
+  zx_status_t PresentImage();
   uint64_t display_id() const;
 
   fbl::Vector<Display> displays_;
   std::unique_ptr<::llcpp::fuchsia::hardware::display::Controller::SyncClient> dc_
       TA_GUARDED(mtx());
+  ::llcpp::fuchsia::sysmem::Allocator::SyncClient* sysmem_;
   zx::handle device_handle_;
   bool has_ownership_ = false;
-  size_t vsync_count_ TA_GUARDED(mtx()) = 0;
+  uint64_t image_id_ = 0;
+  uint64_t layer_id_ = 0;
 
+  uint64_t vsync_count() const {
+    fbl::AutoLock lock(mtx());
+    return vsync_count_;
+  }
   fbl::Mutex* mtx() const { return &mtx_; }
 
  private:
   mutable fbl::Mutex mtx_;
   async_dispatcher_t* dispatcher_ = nullptr;
+  uint64_t vsync_count_ TA_GUARDED(mtx()) = 0;
+
+  zx_status_t ImportImageWithSysmemLocked(
+      const ::llcpp::fuchsia::hardware::display::ImageConfig& image_config, uint64_t* image_id)
+      TA_REQ(mtx());
   void OnEventMsgAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
                        const zx_packet_signal_t* signal) TA_EXCL(mtx());
   async::WaitMethod<TestFidlClient, &TestFidlClient::OnEventMsgAsync> wait_events_{this};
