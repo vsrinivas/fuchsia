@@ -2,20 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("clock") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("clock") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "clock.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-rtc:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/system/fidl/fuchsia-hardware-rtc:c",
   ]
 }
 
-zx_executable("clkctl") {
+executable("clkctl") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "clkctl.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-clock:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/system/fidl/fuchsia-hardware-clock:c",
   ]
+}
+
+migrated_manifest("clock-manifest") {
+  deps = [ ":clock" ]
+}
+
+migrated_manifest("clkctl-manifest") {
+  deps = [ ":clkctl" ]
 }

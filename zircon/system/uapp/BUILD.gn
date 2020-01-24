@@ -10,8 +10,6 @@ group("uapp") {
     "blktest",
     "blobfs",
     "blobfs-load-generator",
-    "clock",
-    "clock:clkctl",
     "disk-inspect",
     "disk-pave",
     "display-test",
