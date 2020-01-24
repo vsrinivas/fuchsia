@@ -6,7 +6,7 @@
 #### CATEGORY=Run, inspect and debug
 ### start fuchsia in an emulator
 
-## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [--audio] [--headless] [--software-gpu] [--debugger]
+## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [-k <authorized_keys_file>] [--audio] [--headless] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -c <text> add item to kernel command line
 ##   -ds <size> extends the fvm image size to <size> bytes. Default is twice the original size
@@ -21,6 +21,7 @@
 ##   -X <directory> location of grpcwebproxy, defaults to looking in prebuilt/third_party/grpcwebproxy
 ##   -w <size> window size, default is 1280x800
 ##   -s <cpus> number of cpus, 1 for uniprocessor, default is 4
+##   -k <authorized_keys_file> SSH authorized keys file, otherwise defaults to //.ssh/authorized_keys
 ##   --audio run with audio hardware added to the virtual machine
 ##   --headless run in headless mode
 ##   --software-gpu run without host GPU acceleration
@@ -50,6 +51,7 @@ HTTP=0
 GRPCWEBPROXY_DIR=""
 CMDLINE=""
 SMP=4
+AUTHORIZED_KEYS="${FUCHSIA_DIR}/.ssh/authorized_keys"
 IMAGE_SIZE=
 EXPERIMENT_ARM64=false
 
@@ -136,6 +138,10 @@ while [[ $# -ge 1 ]]; do
   -s)
     shift
     SMP="$1"
+    ;;
+  -k)
+    shift
+    AUTHORIZED_KEYS="$1"
     ;;
   --audio)
     AUDIO=1
@@ -324,7 +330,7 @@ trap 'rm -Rf "${img_dir}" ; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_
 
 KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 fx-zbi -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
-  --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
+  --entry "data/ssh/authorized_keys=${AUTHORIZED_KEYS}"
 
 if [[ -n "$IMAGE_FVM_RAW" ]]; then
   fvmimg="${img_dir}/fvm.blk"
