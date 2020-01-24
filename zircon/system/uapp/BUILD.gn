@@ -16,7 +16,6 @@ group("uapp") {
     "driverctl",
     "fs-fsck",
     "fs-mount",
-    "fs-umount",
     "fvm-check",
     "hid",
     "hidsensor",
