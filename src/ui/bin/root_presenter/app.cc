@@ -353,16 +353,26 @@ void App::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
         case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
           auto& evt = event.gfx().view_disconnected();
 
-          size_t idx = 0;
-          for (idx = 0; idx < presentations_.size(); ++idx) {
+          FXL_LOG(INFO) << "ViewHolder " << evt.view_holder_id << " disconnected, "
+                        << presentations_.size() << " presentations currently active.";
+
+          // When ReplacePresentationWith() is called, there is a race between the release of the
+          // root presenter's ViewHolder, and the release of the child Presentation's View. if the
+          // ViewHolder is released first, then the child will receive a kViewDisconnected message.
+          // If the child is released first, then we will receive a kViewDisconnected message.
+          // However, since we have already removed the Presentation from |presentations_|, this
+          // message will fail to find an associated Presentation object. Failing to find a
+          // presentation that matches the view holder ID is not a bug, it is just a sign that this
+          // safe race condition occurred.
+          for (size_t idx = 0; idx < presentations_.size(); ++idx) {
             if (evt.view_holder_id == presentations_[idx]->view_holder().id()) {
+              FXL_LOG(INFO)
+                  << "Root presenter: Content view terminated, shutting down presentation " << idx;
+              ShutdownPresentation(idx);
               break;
             }
           }
-          FXL_DCHECK(idx != presentations_.size());
 
-          FXL_LOG(INFO) << "Root presenter: Content view terminated.";
-          ShutdownPresentation(idx);
           break;
         }
         default: {
