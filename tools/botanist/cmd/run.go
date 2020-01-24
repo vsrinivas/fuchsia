@@ -263,7 +263,6 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, 
 						}
 					}
 				}(t, serialLog)
-				zirconArgs = append(zirconArgs, "kernel.bypass-debuglog=true")
 			}
 			// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
 			// arm64 devices should already be enabling kernel.serial at compile time.
