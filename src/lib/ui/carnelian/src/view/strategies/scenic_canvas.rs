@@ -19,7 +19,10 @@ use fidl_fuchsia_images::{ImagePipe2Marker, ImagePipe2Proxy};
 use fidl_fuchsia_sysmem::ImageFormat2;
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, OnSignals};
-use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet};
+use fuchsia_framebuffer::{
+    sysmem::{minimum_row_bytes, BufferCollectionAllocator},
+    FrameSet,
+};
 use fuchsia_scenic::{ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time};
 use futures::channel::mpsc::UnboundedSender;
@@ -51,7 +54,9 @@ impl Plumber {
         let image_pipe_token = buffer_allocator.duplicate_token().await?;
         image_pipe_client.add_buffer_collection(collection_id, image_pipe_token)?;
         let buffers = buffer_allocator.allocate_buffers().await?;
-        let buffer_size = size.width * size.height * 4;
+        let linear_stride_bytes =
+            minimum_row_bytes(buffers.settings.image_format_constraints, size.width)?;
+        let buffer_size = linear_stride_bytes * size.height;
         let mut canvases: Canvases = Canvases::new();
         let mut index = 0;
         let mut image_ids = BTreeSet::new();
@@ -73,7 +78,7 @@ impl Plumber {
             let canvas = RefCell::new(Canvas::new(
                 IntSize::new(size.width as i32, size.height as i32),
                 MappingPixelSink::new(&Arc::new(mapping)),
-                size.width * 4,
+                linear_stride_bytes,
                 4,
                 image_id,
                 index as u32,
