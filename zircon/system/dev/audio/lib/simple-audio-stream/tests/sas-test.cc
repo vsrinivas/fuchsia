@@ -278,11 +278,11 @@ TEST(SimpleAudioTest, GetIds) {
   channel_client->SetStreamChannel(std::move(channel_wrap->channel));
 
   audio_stream_cmd_get_unique_id_resp_t id = {};
-  channel_client->GetUniqueId(&id);
+  ASSERT_OK(channel_client->GetUniqueId(&id));
   audio_stream_unique_id_t mic = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
   ASSERT_BYTES_EQ(id.unique_id.data, mic.data, strlen(reinterpret_cast<char*>(mic.data)) + 1);
   audio_stream_cmd_get_string_resp_t str = {};
-  channel_client->GetString(AUDIO_STREAM_STR_ID_MANUFACTURER, &str);
+  ASSERT_OK(channel_client->GetString(AUDIO_STREAM_STR_ID_MANUFACTURER, &str));
   ASSERT_BYTES_EQ(str.str, "Bike Sheds, Inc.", strlen("Bike Sheds, Inc.") + 1);
 }
 

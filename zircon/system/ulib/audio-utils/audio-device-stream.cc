@@ -33,7 +33,6 @@
 namespace audio {
 namespace utils {
 
-static constexpr zx::duration CALL_TIMEOUT = zx::msec(500);
 template <typename ReqType, typename RespType>
 zx_status_t DoCallImpl(const zx::channel& channel, const ReqType& req, RespType* resp,
                        zx::handle* resp_handle_out, uint32_t* resp_len_out = nullptr) {
@@ -52,7 +51,7 @@ zx_status_t DoCallImpl(const zx::channel& channel, const ReqType& req, RespType*
 
   uint32_t bytes, handles;
 
-  zx_status_t status = channel.call(0, zx::deadline_after(CALL_TIMEOUT), &args, &bytes, &handles);
+  zx_status_t status = channel.call(0, zx::time(ZX_TIME_INFINITE), &args, &bytes, &handles);
   if (status != ZX_OK) {
     printf("Cmd failure (cmd %04x, res %d)\n", req.hdr.cmd, status);
     return status;
@@ -192,7 +191,7 @@ zx_status_t AudioDeviceStream::GetSupportedFormats(
 
     zx_signals_t pending_sig;
     res = stream_ch_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                              zx::deadline_after(CALL_TIMEOUT), &pending_sig);
+                              zx::time(ZX_TIME_INFINITE), &pending_sig);
     if (res != ZX_OK) {
       printf("Failed to wait for next response after processing %u/%u formats (res %d)\n",
              processed_formats, expected_formats, res);
