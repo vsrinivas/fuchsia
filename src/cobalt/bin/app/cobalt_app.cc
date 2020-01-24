@@ -122,6 +122,15 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
   cobalt_service_ = std::make_unique<CobaltService>(std::move(cfg));
 
+  // When we start Cobalt, we have no idea what the current state of user consent is. Starting with
+  // DO_NOT_UPLOAD will allow us to collect metrics while the system is booting, before we get an
+  // updated policy from the UserConsentWatcher.
+  //
+  // If we started with DO_NOT_COLLECT, we could possibly miss early boot metrics entirely, and if
+  // we started with COLLECT_AND_UPLOAD, we could possibly violate the user's chosen
+  // DataCollectionPolicy by uploading metrics when they have opted out.
+  cobalt_service_->SetDataCollectionPolicy(CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD);
+
   auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
                 << std::put_time(std::localtime(&current_time), "%F %T %z");
@@ -150,6 +159,13 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
       system_data_updater_bindings_.GetHandler(system_data_updater_impl_.get()));
 
   controller_impl_ = std::make_unique<CobaltControllerImpl>(dispatcher, cobalt_service_.get());
+
+  user_consent_watcher_ = std::make_unique<UserConsentWatcher>(
+      dispatcher, context_->svc(), [this](const CobaltService::DataCollectionPolicy& new_policy) {
+        cobalt_service_->SetDataCollectionPolicy(new_policy);
+      });
+
+  user_consent_watcher_->StartWatching();
 
   // Add other bindings.
   context_->outgoing()->AddPublicService(controller_bindings_.GetHandler(controller_impl_.get()));

@@ -15,6 +15,7 @@
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.posix.socket.Provider",
             "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.settings.Privacy",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.time.Utc",
             "fuchsia.tracing.provider.Registry"

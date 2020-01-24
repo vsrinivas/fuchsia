@@ -44,11 +44,14 @@ source_set("lib") {
     "system_data_updater_impl.h",
     "timer_manager.cc",
     "timer_manager.h",
+    "user_consent_watcher.cc",
+    "user_consent_watcher.h",
     "utils.cc",
     "utils.h",
   ]
 
   public_deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:clock",
     "//src/cobalt/bin/utils:fuchsia_http_client",
@@ -165,6 +168,7 @@ executable("cobalt_app_unittests") {
     "logger_impl_test.cc",
     "system_data_updater_impl_test.cc",
     "timer_manager_test.cc",
+    "user_consent_watcher_test.cc",
   ]
 
   deps = [
