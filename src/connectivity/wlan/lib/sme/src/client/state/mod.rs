@@ -833,15 +833,12 @@ fn send_mlme_assoc_req(
     protection_ie: &Option<ProtectionIe>,
     mlme_sink: &MlmeSink,
 ) {
-    type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
-    type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
-
-    assert_eq_size!(ie::HtCapabilities, HtCapArray);
+    assert_eq_size!(ie::HtCapabilities, [u8; fidl_mlme::HT_CAP_LEN as usize]);
     let ht_cap = capabilities.map_or(None, |c| {
         c.0.ht_cap.map(|h| fidl_mlme::HtCapabilities { bytes: h.as_bytes().try_into().unwrap() })
     });
 
-    assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
+    assert_eq_size!(ie::VhtCapabilities, [u8; fidl_mlme::VHT_CAP_LEN as usize]);
     let vht_cap = capabilities.map_or(None, |c| {
         c.0.vht_cap.map(|v| fidl_mlme::VhtCapabilities { bytes: v.as_bytes().try_into().unwrap() })
     });

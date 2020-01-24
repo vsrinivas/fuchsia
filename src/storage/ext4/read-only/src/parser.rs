@@ -52,7 +52,7 @@ use {
 };
 
 // Assuming/ensuring that we are on a 64bit system where u64 == usize.
-assert_eq_size!(check_usize_is_u64; u64, usize);
+assert_eq_size!(u64, usize);
 
 pub struct Parser<T: Reader> {
     reader: Arc<T>,

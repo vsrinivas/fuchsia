@@ -983,6 +983,11 @@
             "package_name": "splines"
         },
         {
+            "crate_name": "static_assertions",
+            "crate_type": "lib",
+            "package_name": "static_assertions"
+        },
+        {
             "crate_name": "structopt",
             "crate_type": "lib",
             "package_name": "structopt"

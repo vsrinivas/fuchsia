@@ -62,8 +62,9 @@ pub struct ElfIdent {
     pub pad: [u8; 7],   // e_ident[EI_PAD]
 }
 
+#[allow(unused)]
 const EI_NIDENT: usize = 16;
-assert_eq_size!(check_ident_size; ElfIdent, [u8; EI_NIDENT]);
+assert_eq_size!(ElfIdent, [u8; EI_NIDENT]);
 
 #[derive(FromPrimitive, Eq, PartialEq)]
 #[repr(u8)]

@@ -1,8 +1,19 @@
 //! [![Banner](https://raw.githubusercontent.com/nvzqz/static-assertions-rs/assets/Banner.png)](https://github.com/nvzqz/static-assertions-rs)
 //!
-//! Compile-time assertions to ensure that invariants are met.
+//! <div align="center">
+//!     <a href="https://crates.io/crates/static_assertions">
+//!         <img src="https://img.shields.io/crates/d/static_assertions.svg" alt="Downloads">
+//!     </a>
+//!     <a href="https://travis-ci.org/nvzqz/static-assertions-rs">
+//!         <img src="https://travis-ci.org/nvzqz/static-assertions-rs.svg?branch=master" alt="Build Status">
+//!     </a>
+//!     <img src="https://img.shields.io/badge/rustc-^1.37.0-blue.svg" alt="rustc ^1.37.0">
+//!     <br><br>
+//! </div>
 //!
-//! _All_ assertions within this crate are performed at [compile-time]. This
+//! Assertions to ensure correct assumptions about constants, types, and more.
+//!
+//! _All_ checks provided by this crate are performed at [compile-time]. This
 //! allows for finding errors quickly and early when it comes to ensuring
 //! certain features or aspects of a codebase. These macros are especially
 //! important when exposing a public API that requires types to be the same size
@@ -15,7 +26,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! static_assertions = "0.3.1"
+//! static_assertions = "1.1.0"
 //! ```
 //!
 //! and this to your crate root (`main.rs` or `lib.rs`):
@@ -26,77 +37,24 @@
 //! # fn main() {}
 //! ```
 //!
+//! When using [Rust 2018 edition][2018], the following shorthand can help if
+//! having `#[macro_use]` is undesirable.
+//!
+//! ```edition2018
+//! extern crate static_assertions as sa;
+//!
+//! sa::const_assert!(true);
+//! ```
+//!
 //! # Examples
 //!
 //! Very thorough examples are provided in the docs for
 //! [each individual macro](#macros). Failure case examples are also documented.
 //!
-//! # Limitations
-//!
-//! Due to implementation details, some macros can only be used normally from
-//! within the context of a function. To use these macros in other contexts, a
-//! unique label must be provided.
-//!
-//! ```compile_fail
-//! # #[macro_use] extern crate static_assertions;
-//! # fn main() {}
-//! // error: expected item after attributes
-//! const_assert!(true == true);
-//! ```
-//!
-//! This can be fixed via:
-//!
-#![cfg_attr(feature = "nightly", doc = "```ignore")]
-#![cfg_attr(not(feature = "nightly"), doc = "```")]
-//! # #[macro_use] extern crate static_assertions;
-//! # fn main() {}
-//! const_assert!(label; true == true);
-//! ```
-//!
-//! This can be followed at [issue #1][issue1].
-//!
-//! ## Labeling Limitation Fix
-//!
-//!  The labeling workaround is **not
-//! necessary** (and is <span style="color:red">r<strong>emoved</strong></span>)
-//! when compiling on nightly Rust with the `nightly` feature flag enabled. This
-//! can be done by having the following in your project's [`Cargo.toml`]:
-//!
-//! ```toml
-//! [dependencies.static_assertions]
-//! version  = "0.3.1"
-//! features = ["nightly"]
-//! ```
-//!
-//! To compile with nightly Rust, run the following in your
-//! [shell](https://en.wikipedia.org/wiki/Shell_(computing)) or
-//! [command prompt](https://en.wikipedia.org/wiki/Command_Prompt) of choice:
-//!
-//! ```sh
-//! rustup install nightly
-//! cargo +nightly build
-//! ```
-//!
-//! Notice that this also requires enabling the
-//! [`underscore_const_names`](https://github.com/rust-lang/rust/issues/54912)
-//! nightly Rust feature:
-//!
-#![cfg_attr(feature = "nightly", doc = "```")]
-#![cfg_attr(not(feature = "nightly"), doc = "```ignore")]
-//! #![feature(underscore_const_names)]
-//! # #[macro_use] extern crate static_assertions;
-//!
-//! const_assert!(true != false);
-//!
-//! fn main() {
-//!     const_assert!(false != true);
-//! }
-//! ```
-//!
 //! # Changes
 //!
 //! See [`CHANGELOG.md`](https://github.com/nvzqz/static-assertions-rs/blob/master/CHANGELOG.md)
-//! for a complete list of what has changed from one version to another.
+//! for an exhaustive list of what has changed from one version to another.
 //!
 //! # Donate
 //!
@@ -112,12 +70,13 @@
 //!     <img src="https://buymecoffee.intm.org/img/button-paypal-white.png" alt="Buy me a coffee" height="35">
 //! </a>
 //!
-//! [issue1]: https://github.com/nvzqz/static-assertions-rs/issues/1
+//! [Rust 1.37]: https://blog.rust-lang.org/2019/08/15/Rust-1.37.0.html
+//! [2018]: https://blog.rust-lang.org/2018/12/06/Rust-1.31-and-rust-2018.html#rust-2018
 //! [crate]: https://crates.io/crates/static_assertions
 //! [compile-time]: https://en.wikipedia.org/wiki/Compile_time
 //! [`Cargo.toml`]: https://doc.rust-lang.org/cargo/reference/manifest.html
 
-#![doc(html_root_url = "https://docs.rs/static_assertions/0.3.1")]
+#![doc(html_root_url = "https://docs.rs/static_assertions/1.1.0")]
 #![doc(html_logo_url = "https://raw.githubusercontent.com/nvzqz/static-assertions-rs/assets/Icon.png")]
 
 #![no_std]
@@ -128,8 +87,11 @@
 pub extern crate core as _core;
 
 mod assert_cfg;
+mod assert_eq_align;
 mod assert_eq_size;
 mod assert_fields;
 mod assert_impl;
 mod assert_obj_safe;
+mod assert_trait;
+mod assert_type;
 mod const_assert;

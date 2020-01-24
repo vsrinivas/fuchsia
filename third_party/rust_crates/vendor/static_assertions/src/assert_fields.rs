@@ -5,8 +5,7 @@
 /// One common use case is when types have fields defined multiple times as a
 /// result of `#[cfg]`. This can be an issue when exposing a public API.
 ///
-#[cfg_attr(feature = "nightly", doc = "```ignore")]
-#[cfg_attr(not(feature = "nightly"), doc = "```")]
+/// ```
 /// # #[macro_use] extern crate static_assertions;
 /// pub struct Ty {
 ///     #[cfg(windows)]
@@ -20,64 +19,54 @@
 ///     pub val2: usize,
 /// }
 ///
-/// // Requires a unique label in module scope
-/// assert_fields!(windows; Ty, val1);
+/// // Always have `val2` regardless of OS
+/// assert_fields!(Ty: val2);
+/// ```
 ///
-/// fn main() {
-///     // Always have `val2` regardless of OS
-///     assert_fields!(Ty, val2);
+/// This macro even works with `enum` variants:
+///
+/// ```
+/// # #[macro_use] extern crate static_assertions; fn main() {}
+/// enum Data {
+///     Val {
+///         id: i32,
+///         name: String,
+///         bytes: [u8; 128],
+///     },
+///     Ptr(*const u8),
 /// }
+///
+/// assert_fields!(Data::Val: id, bytes);
 /// ```
 ///
-/// The [labeling limitation](index.html#limitations) is not necessary if
-/// compiling on nightly Rust with the `nightly` feature enabled:
-///
-#[cfg_attr(feature = "nightly", doc = "```")]
-#[cfg_attr(not(feature = "nightly"), doc = "```ignore")]
-/// #![feature(underscore_const_names)]
-/// # #[macro_use] extern crate static_assertions;
-///
-/// use std::ops::Range;
-///
-/// assert_fields!(Range<u32>, start, end);
-/// ```
-///
-/// Range does not have a field named `middle`:
+/// The following example fails to compile because [`Range`] does not have a field named `middle`:
 ///
 /// ```compile_fail
-/// # #[macro_use] extern crate static_assertions;
-/// # fn main() {
-/// # use std::ops::Range;
-/// assert_fields!(Range<u32>, middle);
-/// # }
+/// # #[macro_use] extern crate static_assertions; fn main() {}
+/// use std::ops::Range;
+///
+/// assert_fields!(Range<u32>: middle);
 /// ```
-#[macro_export(local_inner_macros)]
+///
+/// [`Range`]: https://doc.rust-lang.org/std/ops/struct.Range.html
+#[macro_export]
 macro_rules! assert_fields {
-    ($($xs:tt)+) => { _assert_fields!($($xs)+); };
-}
-
-#[doc(hidden)]
-#[cfg(feature = "nightly")]
-#[macro_export(local_inner_macros)]
-macro_rules! _assert_fields {
-    ($t:path, $($f:ident),+) => {
+    ($t:ident::$v:ident: $($f:ident),+) => {
         #[allow(unknown_lints, unneeded_field_pattern)]
-        const _: fn() -> () = || {
-            $(let $t { $f: _, .. };)+
+        const _: fn() = || {
+            #[allow(dead_code, unreachable_patterns)]
+            fn assert(value: $t) {
+                match value {
+                    $($t::$v { $f: _, .. } => {},)+
+                    _ => {}
+                }
+            }
         };
     };
-}
-
-#[doc(hidden)]
-#[cfg(not(feature = "nightly"))]
-#[macro_export(local_inner_macros)]
-macro_rules! _assert_fields {
-    ($t:path, $($f:ident),+) => {
+    ($t:path: $($f:ident),+) => {
         #[allow(unknown_lints, unneeded_field_pattern)]
-        { $(let $t { $f: _, .. };)+ }
-    };
-    ($label:ident; $($xs:tt)+) => {
-        #[allow(dead_code, non_snake_case)]
-        fn $label() { assert_fields!($($xs)+); }
+        const _: fn() = || {
+            $(let $t { $f: _, .. };)+
+        };
     };
 }

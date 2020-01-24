@@ -72,7 +72,7 @@ pub struct ExtentHeader {
 }
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-assert_eq_size!(extent_header_size; ExtentHeader, [u8; 12]);
+assert_eq_size!(ExtentHeader, [u8; 12]);
 
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]
@@ -87,7 +87,7 @@ pub struct ExtentIndex {
 }
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-assert_eq_size!(extent_index_size; ExtentIndex, [u8; 12]);
+assert_eq_size!(ExtentIndex, [u8; 12]);
 
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]
@@ -103,7 +103,7 @@ pub struct Extent {
 }
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-assert_eq_size!(extent_size; Extent, [u8; 12]);
+assert_eq_size!(Extent, [u8; 12]);
 
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]
@@ -124,7 +124,7 @@ pub struct DirEntry2 {
 }
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-assert_eq_size!(dir_entry_2_size; DirEntry2, [u8; 263]);
+assert_eq_size!(DirEntry2, [u8; 263]);
 
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]
@@ -315,7 +315,7 @@ pub struct SuperBlock {
 }
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-assert_eq_size!(super_block_size; SuperBlock, [u8; 1024]);
+assert_eq_size!(SuperBlock, [u8; 1024]);
 
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]
@@ -347,7 +347,7 @@ pub struct BlockGroupDesc32 {
 }
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-assert_eq_size!(block_group_desc_32_size; BlockGroupDesc32, [u8; 32]);
+assert_eq_size!(BlockGroupDesc32, [u8; 32]);
 
 // TODO(vfcc): There are more fields in BlockGroupDesc if the filesystem is 64bit.
 // Uncomment this when we add support.
@@ -369,7 +369,7 @@ assert_eq_size!(block_group_desc_32_size; BlockGroupDesc32, [u8; 32]);
 // }
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-// assert_eq_size!(block_group_desc_64_size; BlockGroupDesc64, [u8; 64]);
+// assert_eq_size!(BlockGroupDesc64, [u8; 64]);
 
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]
@@ -422,7 +422,7 @@ pub struct INode {
 }
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-assert_eq_size!(inode_size; INode, [u8; 128]);
+assert_eq_size!(INode, [u8; 128]);
 
 // TODO(vfcc): There are more fields in the INode table, but they depend on
 // e2di_extra_isize.
