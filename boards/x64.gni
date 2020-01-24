@@ -9,6 +9,7 @@ board_name = "pc"
 board_package_labels = [
   # Include all drivers for now.
   "//garnet/packages/prod:drivers",
+  "//src/hwinfo:default_board_config",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 

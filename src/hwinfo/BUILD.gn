@@ -48,6 +48,11 @@ hwinfo_config_validate("hwinfo_default_board_config_validate") {
   config = "default_board_config.json"
 }
 
+hwinfo_config("default_board_config") {
+  type = "board"
+  config = rebase_path("default_board_config.json")
+}
+
 config_data("hwinfo_default_config") {
   for_pkg = "hwinfo"
 
