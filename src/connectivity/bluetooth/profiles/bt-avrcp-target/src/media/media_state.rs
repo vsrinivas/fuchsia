@@ -11,7 +11,7 @@ use {
 
 use crate::media::media_types::{
     avrcp_repeat_mode_to_media, avrcp_shuffle_mode_to_media, media_repeat_mode_to_avrcp,
-    media_shuffle_mode_to_avrcp, MediaInfo, Notification, ValidPlayStatus,
+    media_shuffle_mode_to_avrcp, MediaInfo, Notification, PlaybackRate, ValidPlayStatus,
     ValidPlayerApplicationSettings,
 };
 
@@ -134,6 +134,7 @@ pub(crate) struct SessionInfo {
     play_status: ValidPlayStatus,
     player_application_settings: ValidPlayerApplicationSettings,
     media_info: MediaInfo,
+    playback_rate: PlaybackRate,
 }
 
 impl SessionInfo {
@@ -144,6 +145,7 @@ impl SessionInfo {
                 None, None, None, None,
             ),
             media_info: Default::default(),
+            playback_rate: Default::default(),
         }
     }
 
@@ -153,6 +155,10 @@ impl SessionInfo {
 
     pub fn get_media_info(&self) -> &MediaInfo {
         &self.media_info
+    }
+
+    pub fn get_playback_rate(&self) -> &PlaybackRate {
+        &self.playback_rate
     }
 
     /// If no `attribute_ids` are provided, return all of the current player
@@ -192,10 +198,9 @@ impl SessionInfo {
         Ok(settings)
     }
 
-    /// Get the current status for a given notification `event_id`.
-    /// For a supported `event_id`, this method will return a `Notification` with
-    /// only the `event_id` field set.
-    /// An error will be returned for unsupported `event_id`.
+    /// Returns a `Notification` containing the currently set notification value specified
+    /// by `event_id`.
+    /// If an unsupported id is provided, an error is returned.
     // TODO(1216): Add VolumeChanged to supported events when scoped.
     pub fn get_notification_value(
         &self,
@@ -240,13 +245,14 @@ impl SessionInfo {
 
     /// Updates the state for the session.
     /// If `player_info` is provided, the play_status, player_application_settings,
-    /// and media_info will be updated.
+    /// playback rate, and media_info will be updated.
     pub fn update_session_info(
         &mut self,
         player_info: Option<fidl_media::PlayerStatus>,
         metadata: Option<fidl_media_types::Metadata>,
     ) {
         if let Some(info) = player_info {
+            info.timeline_function.map(|f| self.playback_rate.update_playback_rate(f));
             self.play_status.update_play_status(
                 info.duration,
                 info.timeline_function,
@@ -256,6 +262,19 @@ impl SessionInfo {
                 .update_player_application_settings(info.repeat_mode, info.shuffle_on);
             self.media_info.update_media_info(info.duration, metadata);
         }
+    }
+}
+
+impl From<SessionInfo> for Notification {
+    fn from(src: SessionInfo) -> Notification {
+        let mut notification = Notification::default();
+        notification.status = Some(src.play_status.get_playback_status());
+        notification.application_settings = Some(
+            src.get_player_application_settings(vec![]).expect("Should get application settings."),
+        );
+        notification.track_id = Some(src.media_info.get_track_id());
+        notification.pos = Some(src.play_status.get_playback_position());
+        notification
     }
 }
 
@@ -475,6 +494,67 @@ pub(crate) mod tests {
         let unsupported_ids = vec![fidl_avrcp::PlayerApplicationSettingAttributeId::Equalizer];
         let settings = media_state.session_info().get_player_application_settings(unsupported_ids);
         assert!(settings.is_err());
+    }
+
+    #[test]
+    /// Test that retrieving a notification value correctly gets the current state.
+    /// 1) Query with an unsupported `event_id`.
+    /// 2) Query with a supported Event ID, with default state.
+    /// 3) Query with all supported Event IDs.
+    fn test_get_notification_value() {
+        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(555555555));
+        let (session_proxy, _) =
+            create_proxy::<SessionControlMarker>().expect("Couldn't create fidl proxy.");
+        let mut media_state = MediaState::new(session_proxy);
+
+        // 1. Unsupported ID.
+        let unsupported_id = fidl_avrcp::NotificationEvent::BattStatusChanged;
+        let res = media_state.session_info().get_notification_value(&unsupported_id);
+        assert!(res.is_err());
+
+        // 2. Supported ID, `media_state` contains default values.
+        let res = media_state
+            .session_info()
+            .get_notification_value(&fidl_avrcp::NotificationEvent::PlaybackStatusChanged);
+        let res = res.expect("Result should be returned");
+        assert_eq!(res.status, Some(fidl_avrcp::PlaybackStatus::Stopped));
+
+        // 3. All supported notification events.
+        exec.set_fake_time(fasync::Time::from_nanos(555555555));
+        let mut info = fidl_media::SessionInfoDelta::new_empty();
+        info.metadata = Some(create_metadata());
+        info.player_status = Some(create_player_status());
+        media_state.update_session_info(info);
+
+        let expected_play_status = fidl_avrcp::PlaybackStatus::Playing;
+        let expected_pas = ValidPlayerApplicationSettings::new(
+            None,
+            Some(fidl_avrcp::RepeatStatusMode::Off),
+            Some(fidl_avrcp::ShuffleMode::AllTrackShuffle),
+            None,
+        );
+        // Supported = PAS, Playback, Track, TrackPos
+        let valid_events = vec![
+            fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged,
+            fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
+            fidl_avrcp::NotificationEvent::TrackChanged,
+        ];
+        let expected_values: Vec<Notification> = vec![
+            Notification::new(None, None, None, Some(expected_pas), None, None, None),
+            Notification::new(Some(expected_play_status), None, None, None, None, None, None),
+            Notification::new(None, Some(0), None, None, None, None, None),
+        ];
+
+        for (event_id, expected_v) in valid_events.iter().zip(expected_values.iter()) {
+            assert_eq!(
+                media_state
+                    .session_info()
+                    .get_notification_value(event_id)
+                    .expect("The notification value should exist in the map"),
+                expected_v.clone()
+            );
+        }
     }
 
     #[fasync::run_singlethreaded]

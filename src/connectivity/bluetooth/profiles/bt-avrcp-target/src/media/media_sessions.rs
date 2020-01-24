@@ -11,9 +11,11 @@ use {
         DiscoveryMarker, DiscoveryProxy, SessionControlProxy, SessionInfoDelta,
         SessionsWatcherRequest, SessionsWatcherRequestStream, WatchOptions,
     },
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{fx_log_warn, fx_vlog},
-    futures::{Future, TryStreamExt},
+    fuchsia_zircon::DurationNum,
+    futures::{future, Future, TryStreamExt},
     parking_lot::RwLock,
     std::collections::HashMap,
     std::sync::Arc,
@@ -72,6 +74,7 @@ impl MediaSessions {
         self.inner.read().get_supported_notification_events()
     }
 
+    /// Registers the notification and spawns a timeout task if needed.
     pub fn register_notification(
         &self,
         event_id: fidl_avrcp::NotificationEvent,
@@ -79,8 +82,21 @@ impl MediaSessions {
         pos_change_interval: u32,
         responder: fidl_avrcp::TargetHandlerWatchNotificationResponder,
     ) -> Result<(), fidl::Error> {
-        let mut write = self.inner.write();
-        write.register_notification(event_id, current, pos_change_interval, responder)
+        let timeout = {
+            let mut write = self.inner.write();
+            write.register_notification(event_id, current, pos_change_interval, responder)?
+        };
+
+        // If the `register_notification` call returned a timeout, spawn a task to
+        // update any outstanding notifications at the deadline.
+        if let Some(deadline) = timeout {
+            let media_sessions = self.clone();
+            let update_fut = future::pending().on_timeout(deadline, move || {
+                media_sessions.inner.write().update_notification_responders();
+            });
+            fasync::spawn(update_fut);
+        }
+        Ok(())
     }
 
     pub(crate) async fn watch_media_sessions(
@@ -154,12 +170,12 @@ impl MediaSessionsInner {
         self.active_session_id.as_ref().and_then(|id| self.map.get(id).cloned())
     }
 
-    /// TODO(41703): Add TRACK_POS_CHANGED when implemented.
     pub fn get_supported_notification_events(&self) -> Vec<fidl_avrcp::NotificationEvent> {
         vec![
             fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged,
             fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
             fidl_avrcp::NotificationEvent::TrackChanged,
+            fidl_avrcp::NotificationEvent::TrackPosChanged,
         ]
     }
 
@@ -203,26 +219,25 @@ impl MediaSessionsInner {
 
     /// If an active session is present, update any outstanding notifications by
     /// checking if notification values have changed.
-    /// TODO(41703): Take pos_change_interval into account when updating TRACK_POS_CHANGED.
     pub fn update_notification_responders(&mut self) {
         let state = if let Some(state) = self.get_active_session() {
             state.clone()
         } else {
             return;
         };
+        let curr_value: Notification = state.session_info().into();
 
         self.notifications = self
             .notifications
             .drain()
             .map(|(event_id, queue)| {
-                let curr_value = state.session_info().get_notification_value(&event_id);
                 (
                     event_id,
                     queue
                         .into_iter()
                         .filter_map(|notif_data| {
                             notif_data
-                                .update_responder(&event_id, curr_value.clone())
+                                .update_responder(&event_id, Ok(curr_value.clone()))
                                 .unwrap_or(None)
                         })
                         .collect(),
@@ -260,23 +275,66 @@ impl MediaSessionsInner {
     }
 
     /// Given a notification `event_id`:
-    /// 1) insert it into the notifications map.
+    /// 1) Insert it into the notifications map.
     /// 2) If the queue for `event_id` is full, evict the oldest responder and respond
     /// with the current value.
     /// 3) Update any outstanding notification responders with any changes in state.
+    /// 4) Return the (optional) notification response deadline.
     pub fn register_notification(
         &mut self,
         event_id: fidl_avrcp::NotificationEvent,
         current: Notification,
         pos_change_interval: u32,
         responder: fidl_avrcp::TargetHandlerWatchNotificationResponder,
-    ) -> Result<(), fidl::Error> {
+    ) -> Result<Option<fasync::Time>, fidl::Error> {
         // If the `event_id` is not supported, reject the registration.
         if !self.get_supported_notification_events().contains(&event_id) {
-            return responder.send(&mut Err(fidl_avrcp::TargetAvcError::RejectedInvalidParameter));
+            responder.send(&mut Err(fidl_avrcp::TargetAvcError::RejectedInvalidParameter))?;
+            return Ok(None);
         }
 
-        let data = NotificationData::new(current, pos_change_interval, responder);
+        // If there is no current media session, reject the registration.
+        //
+        // For the TrackPosChanged event id, ignore the input parameter `current`
+        // and use current local values.
+        // The response timeout (nanos) will be the scaled (nonezero) `pos_change_interval`
+        // duration after the current time.
+        // For all other event_ids, use the provided `current` parameter, and
+        // the `response_timeout` is not needed.
+        let active_session = match self.get_active_session() {
+            None => {
+                responder.send(&mut Err(fidl_avrcp::TargetAvcError::RejectedNoAvailablePlayers))?;
+                return Ok(None);
+            }
+            Some(session) => session,
+        };
+        let (current_values, response_timeout) = match (event_id, pos_change_interval) {
+            (fidl_avrcp::NotificationEvent::TrackPosChanged, 0) => {
+                responder.send(&mut Err(fidl_avrcp::TargetAvcError::RejectedInvalidParameter))?;
+                return Ok(None);
+            }
+            (fidl_avrcp::NotificationEvent::TrackPosChanged, interval) => {
+                let current_values = active_session.session_info().into();
+                let response_timeout = active_session
+                    .session_info()
+                    .get_playback_rate()
+                    .reference_deadline((interval as i64).seconds());
+                (current_values, response_timeout)
+            }
+            (_, _) => (current, None),
+        };
+
+        // Given the response timeout (nanos), the deadline is the `response_timeout`
+        // amount of time after now.
+        let response_deadline = response_timeout.map(|t| fasync::Time::after(t));
+
+        let data = NotificationData::new(
+            event_id,
+            current_values,
+            pos_change_interval,
+            response_deadline,
+            responder,
+        );
 
         let _evicted = self
             .notifications
@@ -291,7 +349,7 @@ impl MediaSessionsInner {
         // Update outstanding responders with potentially new session data.
         self.update_notification_responders();
 
-        Ok(())
+        Ok(response_deadline)
     }
 }
 
@@ -310,13 +368,13 @@ fn create_session_control_proxy(
 pub(crate) mod tests {
     use super::*;
     use crate::media::media_state::tests::{create_metadata, create_player_status};
-    use crate::media::media_types::{ValidPlayStatus, ValidPlayerApplicationSettings};
+    use crate::media::media_types::ValidPlayStatus;
     use crate::tests::generate_empty_watch_notification;
 
     use fidl::encoding::Decodable as FidlDecodable;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_bluetooth_avrcp::TargetHandlerMarker;
-    use fidl_fuchsia_media_sessions2::{self as fidl_media, SessionControlMarker};
+    use fidl_fuchsia_media_sessions2 as fidl_media;
     use fuchsia_async as fasync;
     use futures::future::join_all;
 
@@ -340,71 +398,6 @@ pub(crate) mod tests {
         sessions
     }
 
-    #[test]
-    /// Test that retrieving a notification value correctly gets the current state.
-    /// 1) Query with an unsupported `event_id`.
-    /// 2) Query with a supported Event ID, with default state.
-    /// 3) Query with all supported Event IDs.
-    fn test_get_notification_value() {
-        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
-        exec.set_fake_time(fasync::Time::from_nanos(555555555));
-        let media_sessions = MediaSessionsInner::new();
-        let (session_proxy, _) =
-            create_proxy::<SessionControlMarker>().expect("Couldn't create fidl proxy.");
-        let mut media_state = MediaState::new(session_proxy);
-
-        // 1. Unsupported ID.
-        let unsupported_id = fidl_avrcp::NotificationEvent::BattStatusChanged;
-        let res = media_state.session_info().get_notification_value(&unsupported_id);
-        assert!(res.is_err());
-
-        // 2. Supported ID, `media_state` contains default values.
-        let res = media_state
-            .session_info()
-            .get_notification_value(&fidl_avrcp::NotificationEvent::PlaybackStatusChanged);
-        assert_eq!(
-            res.expect("Result should be returned").status,
-            Some(fidl_avrcp::PlaybackStatus::Stopped)
-        );
-        let res = media_state
-            .session_info()
-            .get_notification_value(&fidl_avrcp::NotificationEvent::TrackChanged);
-        assert_eq!(res.expect("Result should be returned").track_id, Some(std::u64::MAX));
-
-        // 3.
-        exec.set_fake_time(fasync::Time::from_nanos(555555555));
-        let mut info = fidl_media::SessionInfoDelta::new_empty();
-        info.metadata = Some(create_metadata());
-        info.player_status = Some(create_player_status());
-        media_state.update_session_info(info);
-
-        let expected_play_status = fidl_avrcp::PlaybackStatus::Playing;
-        let expected_pas = ValidPlayerApplicationSettings::new(
-            None,
-            Some(fidl_avrcp::RepeatStatusMode::Off),
-            Some(fidl_avrcp::ShuffleMode::AllTrackShuffle),
-            None,
-        );
-        // Supported = PAS, Playback, Track, TrackPos
-        let valid_events = media_sessions.get_supported_notification_events();
-        let expected_values: Vec<Notification> = vec![
-            Notification::new(None, None, None, Some(expected_pas), None, None, None),
-            Notification::new(Some(expected_play_status), None, None, None, None, None, None),
-            Notification::new(None, Some(0), None, None, None, None, None),
-            Notification::new(None, None, Some(55), None, None, None, None),
-        ];
-
-        for (event_id, expected_v) in valid_events.iter().zip(expected_values.iter()) {
-            assert_eq!(
-                media_state
-                    .session_info()
-                    .get_notification_value(&event_id)
-                    .expect("The notification value should exist in the map"),
-                expected_v.clone()
-            );
-        }
-    }
-
     #[fasync::run_singlethreaded]
     #[test]
     /// Normal case of registering a supported notification.
@@ -413,18 +406,27 @@ pub(crate) mod tests {
     /// Since there are no state updates, it should stay there until the variable goes
     /// out of program scope.
     async fn test_register_notification_supported() -> Result<(), Error> {
+        let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()
+            .expect("Couldn't create discovery service endpoints.");
         let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Couldn't create proxy and stream");
+        let disc_clone = discovery.clone();
 
         let (result_fut, responder) =
             generate_empty_watch_notification(&mut proxy, &mut stream).await?;
 
         {
             let supported_id = fidl_avrcp::NotificationEvent::TrackChanged;
-            let mut inner = MediaSessionsInner::new();
-            let current = fidl_avrcp::Notification::new_empty();
+            // Create an active session.
+            let id = 1234;
+            let mut inner = create_session(disc_clone.clone(), id, true);
+
+            let current = fidl_avrcp::Notification {
+                track_id: Some(std::u64::MAX),
+                ..fidl_avrcp::Notification::new_empty()
+            };
             let res = inner.register_notification(supported_id, current.into(), 0, responder);
-            assert_eq!(Ok(()), res.map_err(|e| e.to_string()));
+            assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
             assert!(inner.notifications.contains_key(&supported_id));
             assert_eq!(
                 1,
@@ -437,11 +439,96 @@ pub(crate) mod tests {
         }
 
         // Drop is impl'd for NotificationData, so when `inner` is dropped when
-        // `handle_n_watch_notifications` returns, the current value (which is empty),
-        // will be returned.
+        // `handle_n_watch_notifications` returns, the current value will be returned.
         assert_eq!(
-            Ok(Ok(fidl_avrcp::Notification::new_empty())),
+            Ok(Ok(fidl_avrcp::Notification {
+                track_id: Some(std::u64::MAX),
+                ..fidl_avrcp::Notification::new_empty()
+            })),
             result_fut.await.map_err(|e| format!("{:?}", e))
+        );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    /// Test the insertion of a TrackPosChangedNotification.
+    /// It should be successfully inserted, and a timeout duration should be returned.
+    async fn test_register_notification_track_pos_changed() -> Result<(), Error> {
+        let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()
+            .expect("Couldn't create discovery service endpoints.");
+        let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Couldn't create proxy and stream");
+        let disc_clone = discovery.clone();
+
+        let (result_fut, responder) =
+            generate_empty_watch_notification(&mut proxy, &mut stream).await?;
+
+        {
+            // Create an active session.
+            let id = 1234;
+            let mut inner = create_session(disc_clone.clone(), id, true);
+
+            // Because this is TrackPosChanged, the given `current` data should be ignored.
+            let ignored_current = fidl_avrcp::Notification {
+                pos: Some(1234),
+                ..fidl_avrcp::Notification::new_empty()
+            };
+            let supported_id = fidl_avrcp::NotificationEvent::TrackPosChanged;
+            // Register the TrackPosChanged with an interval of 2 seconds.
+            let res =
+                inner.register_notification(supported_id, ignored_current.into(), 2, responder);
+            // Even though we provide a pos_change_interval of 2, playback is currently stopped,
+            // so there is no deadline returned from `register_notification(..)`.
+            assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
+            assert!(inner.notifications.contains_key(&supported_id));
+            assert_eq!(
+                1,
+                inner
+                    .notifications
+                    .get(&supported_id)
+                    .expect("Notification should be registered for this ID")
+                    .len()
+            );
+        }
+
+        // `watch_notification` should return the current value stored because no
+        // state has changed.
+        assert_eq!(
+            Ok(Ok(fidl_avrcp::Notification {
+                pos: Some(std::u32::MAX),
+                ..fidl_avrcp::Notification::new_empty()
+            })),
+            result_fut.await.map_err(|e| format!("{:?}", e))
+        );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    /// Test the insertion of a supported notification, but no active session.
+    /// Upon insertion, the supported notification should be rejected and sent over
+    /// the responder.
+    async fn test_register_notification_no_active_session() -> Result<(), Error> {
+        let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Couldn't create proxy and stream");
+
+        let (result_fut, responder) =
+            generate_empty_watch_notification(&mut proxy, &mut stream).await?;
+
+        {
+            // Create state with no active session.
+            let mut inner = MediaSessionsInner::new();
+
+            let current = fidl_avrcp::Notification::new_empty();
+            let event_id = fidl_avrcp::NotificationEvent::PlaybackStatusChanged;
+            let res = inner.register_notification(event_id, current.into(), 0, responder);
+            assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
+        }
+
+        assert_eq!(
+            Err("RejectedNoAvailablePlayers".to_string()),
+            result_fut.await.expect("Fidl call should work").map_err(|e| format!("{:?}", e))
         );
         Ok(())
     }
@@ -463,7 +550,7 @@ pub(crate) mod tests {
             let unsupported_id = fidl_avrcp::NotificationEvent::BattStatusChanged;
             let current = fidl_avrcp::Notification::new_empty();
             let res = inner.register_notification(unsupported_id, current.into(), 0, responder);
-            assert_eq!(Ok(()), res.map_err(|e| e.to_string()));
+            assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
         }
 
         assert_eq!(
@@ -544,7 +631,7 @@ pub(crate) mod tests {
                 ..fidl_avrcp::Notification::new_empty()
             };
             let res = sessions.register_notification(supported_id, current.into(), 0, responder);
-            assert_eq!(Ok(()), res.map_err(|e| e.to_string()));
+            assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
             assert_eq!(
                 1,
                 sessions
@@ -590,8 +677,8 @@ pub(crate) mod tests {
         let id = 1234;
         let mut sessions = create_session(discovery, id, true);
 
-        // Create 3 WatchNotification responders.
-        let n: usize = 3;
+        // Create 4 WatchNotification responders.
+        let n: usize = 4;
         let mut responders = vec![];
         let mut proxied_futs = vec![];
 
@@ -628,12 +715,16 @@ pub(crate) mod tests {
                             ..fidl_avrcp::Notification::new_empty()
                         }
                     }
+                    fidl_avrcp::NotificationEvent::TrackPosChanged => fidl_avrcp::Notification {
+                        pos: Some(std::u32::MAX),
+                        ..fidl_avrcp::Notification::new_empty()
+                    },
                     _ => fidl_avrcp::Notification::new_empty(),
                 };
                 // Register the notification event with responder.
                 let res =
-                    sessions.register_notification(event_id, current_val.into(), 0, responder);
-                assert_eq!(Ok(()), res.map_err(|e| e.to_string()));
+                    sessions.register_notification(event_id, current_val.into(), 10, responder);
+                assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
                 assert_eq!(
                     1,
                     sessions
@@ -682,7 +773,12 @@ pub(crate) mod tests {
             .into_iter()
             .map(|e1| e1.expect("FIDL call should work").map_err(|e| format!("{:?}", e)))
             .collect();
-        assert_eq!(expected, response);
+        let mut response_inner = response.expect("n FIDL calls should work");
+
+        // Since we aren't using fake time, just ensure the TrackPosChanged result exists.
+        let track_pos_response = response_inner.pop().expect("Notification should exist");
+        assert!(track_pos_response.pos.is_some());
+        assert_eq!(expected, Ok(response_inner));
 
         Ok(())
     }
@@ -695,7 +791,11 @@ pub(crate) mod tests {
         let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Couldn't create proxy and stream");
 
-        let mut sessions = MediaSessionsInner::new();
+        // Create a new active session with default state.
+        let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()
+            .expect("Discovery service should be able to be created");
+        let id = 1234;
+        let mut sessions = create_session(discovery, id, true);
 
         // Create 3 WatchNotification responders.
         let n: usize = 3;
@@ -742,7 +842,7 @@ pub(crate) mod tests {
                 // Register the notification event with responder.
                 let res =
                     sessions.register_notification(event_id, current_val.into(), 0, responder);
-                assert_eq!(Ok(()), res.map_err(|e| e.to_string()));
+                assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
                 assert_eq!(
                     exp_size,
                     sessions

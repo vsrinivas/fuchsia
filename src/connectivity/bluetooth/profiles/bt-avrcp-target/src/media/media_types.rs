@@ -6,7 +6,7 @@ use {
     fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, MediaAttributes, PlayStatus},
     fidl_fuchsia_media::{self as fidl_media_types, Metadata, TimelineFunction},
-    fidl_fuchsia_media_sessions2::{self as fidl_media},
+    fidl_fuchsia_media_sessions2 as fidl_media,
     fidl_table_validation::ValidFidlTable,
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_warn, fx_vlog},
@@ -142,6 +142,51 @@ impl ValidPlayStatus {
             .and_then(|f| media_timeline_fn_to_position(f, fasync::Time::now().into_nanos()));
         self.playback_status =
             player_state.and_then(|state| media_player_state_to_playback_status(state));
+    }
+}
+
+/// The time, in nanos, that a notification must be resolved by.
+pub type NotificationTimeout = zx::Duration;
+
+/// The current playback rate of media.
+#[derive(Debug, Clone)]
+pub struct PlaybackRate(u32, u32);
+
+impl PlaybackRate {
+    pub(crate) fn update_playback_rate(&mut self, timeline_fn: TimelineFunction) {
+        self.0 = timeline_fn.subject_delta;
+        self.1 = timeline_fn.reference_delta;
+    }
+
+    /// Returns the playback rate.
+    fn rate(&self) -> f64 {
+        self.0 as f64 / self.1 as f64
+    }
+
+    /// Given a duration in playback time, returns the equal duration in reference time
+    /// (usually monotonic clock duration).
+    ///
+    /// For example, if the current playback rate = 3/2 (i.e fast-forward),
+    /// and the `change_nanos` is 5e9 nanos (i.e 5 seconds), the scaled deadline is
+    /// current_time + pos_change_interval * (1 / playback_rate).
+    ///
+    /// If the current playback rate is stopped (i.e 0), `None` is returned as
+    /// there is no response deadline.
+    pub(crate) fn reference_deadline(&self, change: zx::Duration) -> Option<NotificationTimeout> {
+        let rate = self.rate();
+        if rate == 0.0 {
+            return None;
+        }
+
+        let timeout = ((change.into_nanos() as f64) * (1.0 / rate)) as i64;
+        Some(zx::Duration::from_nanos(timeout))
+    }
+}
+
+impl Default for PlaybackRate {
+    /// The default playback rate is stopped (i.e 0).
+    fn default() -> Self {
+        Self(0, 1)
     }
 }
 
@@ -406,6 +451,35 @@ impl Notification {
     ) -> Self {
         Self { status, track_id, pos, application_settings, player_id, volume, device_connected }
     }
+
+    /// Returns a `Notification` with only the field specified by å`event_id` set.
+    /// If `event_id` is not supported, the default empty `Notification` will be
+    /// returned.
+    pub fn only_event(&self, event_id: &fidl_avrcp::NotificationEvent) -> Self {
+        let mut res = Notification::default();
+        match event_id {
+            fidl_avrcp::NotificationEvent::PlaybackStatusChanged => {
+                res.status = self.status;
+            }
+            fidl_avrcp::NotificationEvent::TrackChanged => {
+                res.track_id = self.track_id;
+            }
+            fidl_avrcp::NotificationEvent::TrackPosChanged => {
+                res.pos = self.pos;
+            }
+            fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged => {
+                res.application_settings = self.application_settings.clone();
+            }
+            fidl_avrcp::NotificationEvent::AddressedPlayerChanged => {
+                res.player_id = self.player_id;
+            }
+            fidl_avrcp::NotificationEvent::VolumeChanged => {
+                res.volume = self.volume;
+            }
+            _ => fx_log_warn!("Event id {:?} is not supported for Notification.", event_id),
+        }
+        res
+    }
 }
 
 impl From<fidl_avrcp::Notification> for Notification {
@@ -446,6 +520,56 @@ mod tests {
         fidl_fuchsia_media::{self as fidl_media_types},
         fidl_fuchsia_media_sessions2::{self as fidl_media},
     };
+
+    #[test]
+    /// Tests correctness of updating and getting the playback rate from the PlaybackRate.
+    fn test_playback_rate() {
+        let mut pbr = PlaybackRate::default();
+        assert_eq!(0.0, pbr.rate());
+
+        let timeline_fn = TimelineFunction {
+            subject_delta: 10,
+            reference_delta: 5,
+            ..TimelineFunction::new_empty()
+        };
+        pbr.update_playback_rate(timeline_fn);
+        assert_eq!(2.0, pbr.rate());
+
+        let timeline_fn = TimelineFunction {
+            subject_delta: 4,
+            reference_delta: 10,
+            ..TimelineFunction::new_empty()
+        };
+        pbr.update_playback_rate(timeline_fn);
+        assert_eq!(0.4, pbr.rate());
+    }
+
+    #[test]
+    /// Tests correctness of calculating the response deadline given a playback rate.
+    fn test_playback_rate_reference_deadline() {
+        // Fast forward,
+        let pbr = PlaybackRate(10, 4);
+        let deadline = pbr.reference_deadline(zx::Duration::from_nanos(1000000000));
+        let expected = zx::Duration::from_nanos(400000000);
+        assert_eq!(Some(expected), deadline);
+
+        // Normal playback,
+        let pbr = PlaybackRate(1, 1);
+        let deadline = pbr.reference_deadline(zx::Duration::from_nanos(5000000000));
+        let expected = zx::Duration::from_nanos(5000000000);
+        assert_eq!(Some(expected), deadline);
+
+        // Slowing down.
+        let pbr = PlaybackRate(3, 4);
+        let deadline = pbr.reference_deadline(zx::Duration::from_nanos(9000000));
+        let expected = zx::Duration::from_nanos(12000000);
+        assert_eq!(Some(expected), deadline);
+
+        // Stopped playback - no deadline.
+        let pbr = PlaybackRate(0, 4);
+        let deadline = pbr.reference_deadline(zx::Duration::from_nanos(900000000));
+        assert_eq!(None, deadline);
+    }
 
     #[test]
     /// Tests correctness of updating the `playing_time` field in MediaInfo.
@@ -769,5 +893,34 @@ mod tests {
             media_player_state_to_playback_status(state),
             Some(fidl_avrcp::PlaybackStatus::Error)
         );
+    }
+
+    #[test]
+    /// Tests getting only a specific event_id of a `Notification` success.
+    fn test_notification_only_event_encoding() {
+        let notif = Notification::new(
+            Some(fidl_avrcp::PlaybackStatus::Paused),
+            Some(1000),
+            Some(99),
+            None,
+            None,
+            None,
+            None,
+        );
+
+        // Supported event_id.
+        let event_id = fidl_avrcp::NotificationEvent::TrackPosChanged;
+        let expected = Notification::new(None, None, Some(99), None, None, None, None);
+        assert_eq!(expected, notif.only_event(&event_id));
+
+        // Supported event_id, volume is None.
+        let event_id = fidl_avrcp::NotificationEvent::VolumeChanged;
+        let expected = Notification::default();
+        assert_eq!(expected, notif.only_event(&event_id));
+
+        // Unsupported event_id.
+        let event_id = fidl_avrcp::NotificationEvent::BattStatusChanged;
+        let expected = Notification::default();
+        assert_eq!(expected, notif.only_event(&event_id));
     }
 }

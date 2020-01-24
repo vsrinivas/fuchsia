@@ -225,6 +225,8 @@ async fn handle_discovery_requests(mut stream: DiscoveryRequestStream) {
 /// This test simulates end-to-end behavior of the AVRCP Target component. It tests a
 /// fake client (usually AVRCP component) sending procedures and verifies the results.
 fn test_media_and_avrcp_listener() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["avrcp-tg-test"]).expect("Unable to initialize logger");
+    fuchsia_syslog::set_verbosity(1);
     let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
     exec.set_fake_time(fasync::Time::from_nanos(555555555));
 
@@ -266,6 +268,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
                 NotificationEvent::PlayerApplicationSettingChanged,
                 NotificationEvent::PlaybackStatusChanged,
                 NotificationEvent::TrackChanged,
+                NotificationEvent::TrackPosChanged,
             ]),
             res
         );
@@ -369,7 +372,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
             Notification { track_id: Some(std::u64::MAX), ..Notification::new_empty() },
             0,
         );
-        // This should not complete until we send the state update
+        // This should not complete until we send the state update.
         assert_eq!(Poll::Pending, futures::poll!(&mut watch).map_err(|e| format!("{}", e)));
 
         // Update the state with a changed track_id.
@@ -387,9 +390,27 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
             Poll::Ready(Ok(Ok(expected))),
             futures::poll!(&mut watch).map_err(|e| format!("{}", e))
         );
+
+        // Test the special case TrackPosChanged event.
+        target_proxy
+            .watch_notification(NotificationEvent::TrackPosChanged, Notification::new_empty(), 1)
+            .await
     };
 
     pin_mut!(test_fut);
-    let _ = exec.run_until_stalled(&mut test_fut);
+    // We expect the future to not complete yet because system time is currently fixed.
+    let r0 = exec.run_until_stalled(&mut test_fut).map_err(|e| format!("{}", e));
+    assert_eq!(Poll::Pending, r0);
+
+    // Fast forward time by 10 seconds (555555555 + 1e10).
+    exec.set_fake_time(fasync::Time::from_nanos(10555555555));
+    exec.wake_expired_timers();
+    let r1 = exec.run_until_stalled(&mut test_fut).map_err(|e| format!("{}", e));
+
+    // The current track position is returned.
+    // We expect the future to finish, now that the time has advanced by 10 seconds.
+    let expected = Notification { pos: Some(55), ..Notification::new_empty() };
+    assert_eq!(Poll::Ready(Ok(Ok(expected))), r1);
+
     Ok(())
 }

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp},
+    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, fuchsia_async as fasync,
     fuchsia_syslog::fx_log_warn,
 };
 
@@ -21,21 +21,33 @@ pub(crate) const MAX_NOTIFICATION_EVENT_QUEUE_SIZE: usize = 64;
 /// The data stored for an outstanding notification.
 #[derive(Debug)]
 pub(crate) struct NotificationData {
+    /// The event_id of the notification.
+    event_id: fidl_avrcp::NotificationEvent,
     /// The current value of the notification when the client subscribed.
     current_value: Notification,
     /// The position change interval of the notification, for `TRACK_POS_CHANGED`.
     pos_change_interval: u32,
+    /// The time when we expect to reply automatically to the responder.
+    expected_response_time: Option<fasync::Time>,
     /// The FIDL responder to send the reply when the notification value changes.
     responder: Option<fidl_avrcp::TargetHandlerWatchNotificationResponder>,
 }
 
 impl NotificationData {
     pub fn new(
+        event_id: fidl_avrcp::NotificationEvent,
         current_value: Notification,
         pos_change_interval: u32,
+        expected_response_time: Option<fasync::Time>,
         responder: fidl_avrcp::TargetHandlerWatchNotificationResponder,
     ) -> Self {
-        Self { current_value: current_value, pos_change_interval, responder: Some(responder) }
+        Self {
+            event_id,
+            current_value,
+            pos_change_interval,
+            expected_response_time,
+            responder: Some(responder),
+        }
     }
 
     fn send(
@@ -61,7 +73,7 @@ impl NotificationData {
         let response = if let Ok(val) = updated_val {
             // If an invalid `event_id` is provided, send RejectedInvalidParameter as per AVRCP 1.6.
             match self.notification_value_changed(event_id, &val) {
-                Ok(true) => Ok(val),
+                Ok(true) => Ok(val.only_event(event_id)),
                 Ok(false) => return Ok(Some(self)),
                 Err(_) => Err(fidl_avrcp::TargetAvcError::RejectedInvalidParameter),
             }
@@ -92,7 +104,11 @@ impl NotificationData {
                 Ok(self.current_value.track_id != new_value.track_id)
             }
             fidl_avrcp::NotificationEvent::TrackPosChanged => {
-                Ok(self.current_value.pos != new_value.pos)
+                let flag = self.current_value.pos != new_value.pos
+                    || self.current_value.status != new_value.status
+                    || self.current_value.track_id != new_value.track_id
+                    || self.expected_response_time.map_or(false, |t| fasync::Time::now() >= t);
+                Ok(flag)
             }
             _ => {
                 fx_log_warn!(
@@ -105,11 +121,11 @@ impl NotificationData {
     }
 }
 
-/// `NotificationData` is no longer in use. Send the current_value
-/// back over the responder before dropping.
+/// `NotificationData` is no longer in use. Send the current value back over
+/// the responder before dropping.
 impl Drop for NotificationData {
     fn drop(&mut self) {
-        let curr_value = self.current_value.clone();
+        let curr_value = self.current_value.clone().only_event(&self.event_id);
         if let Err(e) = self.send(Ok(curr_value)) {
             fx_log_warn!("Error in dropping the responder: {}", e);
         }
@@ -137,28 +153,42 @@ mod tests {
         let (result_fut, responder) =
             generate_empty_watch_notification(&mut proxy, &mut stream).await?;
         {
-            let mut prev_value = Notification::default();
-            prev_value.status = Some(fidl_avrcp::PlaybackStatus::Stopped);
-            prev_value.track_id = Some(999);
-            prev_value.pos = Some(12345);
-            prev_value.application_settings = Some(ValidPlayerApplicationSettings::new(
+            let prev_value = Notification::new(
+                Some(fidl_avrcp::PlaybackStatus::Stopped),
+                Some(999),
+                Some(12345),
+                Some(ValidPlayerApplicationSettings::new(
+                    None,
+                    Some(fidl_avrcp::RepeatStatusMode::GroupRepeat),
+                    None,
+                    Some(fidl_avrcp::ScanMode::Off),
+                )),
                 None,
-                Some(fidl_avrcp::RepeatStatusMode::GroupRepeat),
                 None,
-                Some(fidl_avrcp::ScanMode::Off),
-            ));
-            let data = NotificationData::new(prev_value, 0, responder);
+                None,
+            );
+            let data = NotificationData::new(
+                fidl_avrcp::NotificationEvent::TrackChanged,
+                prev_value,
+                0,
+                None,
+                responder,
+            );
 
-            let mut curr_value = Notification::default();
-            curr_value.status = Some(fidl_avrcp::PlaybackStatus::Playing);
-            curr_value.track_id = Some(800);
-            curr_value.pos = Some(12345);
-            curr_value.application_settings = Some(ValidPlayerApplicationSettings::new(
+            let curr_value = Notification::new(
+                Some(fidl_avrcp::PlaybackStatus::Playing),
+                Some(800),
+                Some(12345),
+                Some(ValidPlayerApplicationSettings::new(
+                    None,
+                    Some(fidl_avrcp::RepeatStatusMode::GroupRepeat),
+                    None,
+                    Some(fidl_avrcp::ScanMode::Off),
+                )),
                 None,
-                Some(fidl_avrcp::RepeatStatusMode::GroupRepeat),
-                Some(fidl_avrcp::ShuffleMode::Off),
-                Some(fidl_avrcp::ScanMode::Off),
-            ));
+                None,
+                None,
+            );
 
             let res1 = data.notification_value_changed(
                 &fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
@@ -176,13 +206,13 @@ mod tests {
                 &fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged,
                 &curr_value,
             );
-            assert_eq!(res3.unwrap(), true);
+            assert_eq!(res3.unwrap(), false);
 
             let res4 = data.notification_value_changed(
                 &fidl_avrcp::NotificationEvent::TrackPosChanged,
                 &curr_value,
             );
-            assert_eq!(res4.unwrap(), false);
+            assert_eq!(res4.unwrap(), true);
 
             let res5 = data.notification_value_changed(
                 &fidl_avrcp::NotificationEvent::SystemStatusChanged,
@@ -208,7 +238,13 @@ mod tests {
         {
             // Create the data with responder.
             let curr_value = Notification::default();
-            let data = NotificationData::new(curr_value, 0, responder);
+            let data = NotificationData::new(
+                fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
+                curr_value,
+                0,
+                None,
+                responder,
+            );
 
             // Send an update over the responder with a changed value. Should succeed.
             let changed_value = Notification {
@@ -250,7 +286,13 @@ mod tests {
         {
             // Create the data with responder.
             let curr_value = Notification::default();
-            let data = NotificationData::new(curr_value, 0, responder);
+            let data = NotificationData::new(
+                fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
+                curr_value,
+                0,
+                None,
+                responder,
+            );
 
             // Send an update over the responder with the same value.
             // Should return Some(Self).
@@ -289,7 +331,13 @@ mod tests {
         {
             // Create the data with responder.
             let curr_value = Notification::default();
-            let data = NotificationData::new(curr_value, 0, responder);
+            let data = NotificationData::new(
+                fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
+                curr_value,
+                0,
+                None,
+                responder,
+            );
 
             // Send an update over the responder with an error value.
             // Should successfully send over the responder, and consume it.
