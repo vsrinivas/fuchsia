@@ -78,6 +78,7 @@ test("driver_host_test") {
     "core-test.cc",
     "device-api-test.cc",
     "device-controller-connection-test.cc",
+    "device-controller-integration-test.cc",
     "proxy-iostate-test.cc",
   ]
 
@@ -91,15 +92,20 @@ test("driver_host_test") {
   ]
 }
 
+devmgr_manifest("devmgr-manifest") {
+}
+
 test_package("driver_host_tests") {
-  deps = [ ":driver_host_test" ]
+  deps = [  ":devmgr-manifest",
+            ":driver_host_test",
+         ]
 
   binaries = [
     {
       name = "driver_host_test"
     },
   ]
-
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
   tests = [
     {
       name = "driver_host_test"

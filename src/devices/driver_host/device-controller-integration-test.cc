@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/test/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
@@ -87,6 +87,9 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
 TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
+  args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+  args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+  args.driver_search_paths.push_back("/boot/driver");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -96,13 +99,23 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
-  zx_status_t call_status;
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
-  ASSERT_OK(call_status);
 
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                               ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+  ASSERT_OK(call_status);
+  call_status = ZX_OK;
+  auto resp2 = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                                ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp2.status());
+  if (resp2->result.is_err()) {
+    call_status = resp2->result.err();
+  }
+  ASSERT_OK(resp2.status());
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
@@ -121,8 +134,12 @@ TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
   zx_status_t call_status = ZX_OK;
-  status = fuchsia_device_ControllerRebind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(zx::unowned(dev_channel),
+                                                                 ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
   ASSERT_OK(call_status);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
@@ -153,12 +170,15 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
   status = fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address());
   ASSERT_OK(status);
 
-  zx_status_t call_status = ZX_OK;
   // Do not open the child. Otherwise rebind will be stuck.
-  status = fuchsia_device_ControllerRebind(parent_channel.get(), "", 0, &call_status);
-  ASSERT_OK(status);
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(zx::unowned(parent_channel),
+                                                                 ::fidl::StringView("", 0));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
   ASSERT_OK(call_status);
-
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
@@ -187,11 +207,16 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
 
-  zx_status_t call_status = ZX_OK;
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", "/boot/driver", "devhost-test-child.so");
   // Do not open the child. Otherwise rebind will be stuck.
-  ASSERT_OK(fuchsia_device_ControllerRebind(parent_channel.get(), libpath, len, &call_status));
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(zx::unowned(parent_channel),
+                                                                 ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
   ASSERT_OK(call_status);
 
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
@@ -214,14 +239,25 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
-  zx_status_t call_status;
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
+
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                               ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
   ASSERT_OK(call_status);
 
+  call_status = ZX_OK;
   len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
+  auto resp2 = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                                ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp2.status());
+  if (resp2->result.is_err()) {
+    call_status = resp2->result.err();
+  }
+  ASSERT_OK(resp2.status());
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
@@ -245,9 +281,13 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kPassDriverName);
-  zx_status_t call_status;
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                               ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
   ASSERT_OK(call_status);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
@@ -272,9 +312,13 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
   zx_status_t call_status;
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
-  ASSERT_EQ(ZX_ERR_BAD_STATE, call_status);
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                               ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+  ASSERT_EQ(call_status, ZX_ERR_BAD_STATE);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
 }
@@ -298,11 +342,14 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
-  zx_status_t call_status;
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
-  ASSERT_EQ(ZX_ERR_BAD_STATE, call_status);
-
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                               ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+  ASSERT_EQ(call_status, ZX_ERR_BAD_STATE);
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
 }
 
@@ -319,9 +366,13 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
-  zx_status_t call_status;
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                               ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
   ASSERT_OK(call_status);
 
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
@@ -347,12 +398,14 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
 
   char libpath[PATH_MAX];
   int len = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, kFailDriverName);
-  zx_status_t call_status;
-  status = fuchsia_device_ControllerBind(dev_channel.get(), libpath, len, &call_status);
-  ASSERT_OK(status);
+  zx_status_t call_status = ZX_OK;
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned(dev_channel),
+                                                               ::fidl::StringView(libpath, len));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
   ASSERT_OK(call_status);
-
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
 }
-
 }  // namespace

@@ -3,7 +3,16 @@
         "binary": "test/driver_host_test"
     },
     "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
         "features": [],
-        "services": []
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.exception.Handler"
+        ]
     }
 }
