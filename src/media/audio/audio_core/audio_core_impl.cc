@@ -29,7 +29,7 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
                              CommandLineOptions options)
     : threading_model_(*threading_model),
       device_settings_persistence_(threading_model),
-      device_manager_(threading_model, &route_graph_, &device_settings_persistence_),
+      device_manager_(threading_model, &route_graph_, &device_settings_persistence_, &link_matrix_),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
       audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
       route_graph_(ProcessConfig::instance().routing_config(), &link_matrix_),
@@ -54,8 +54,8 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
   zx_status_t res = device_manager_.Init();
   FX_DCHECK(res == ZX_OK);
 
-  route_graph_.SetThrottleOutput(threading_model,
-                                 ThrottleOutput::Create(threading_model, &device_manager_));
+  route_graph_.SetThrottleOutput(
+      threading_model, ThrottleOutput::Create(threading_model, &device_manager_, &link_matrix_));
 
   // Set up our audio policy.
   LoadDefaults();

@@ -20,8 +20,9 @@ namespace media::audio {
 
 static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 
-AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
-    : AudioDevice(Type::Output, threading_model, registry) {
+AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+                         LinkMatrix* link_matrix)
+    : AudioDevice(Type::Output, threading_model, registry, link_matrix) {
   next_sched_time_ = async::Now(mix_domain().dispatcher());
   next_sched_time_known_ = true;
 }

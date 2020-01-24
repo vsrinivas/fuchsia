@@ -35,7 +35,8 @@ class SystemGainMuteProvider;
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
   AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
-                     AudioDeviceSettingsPersistence* device_settings_persistence);
+                     AudioDeviceSettingsPersistence* device_settings_persistence,
+                     LinkMatrix* link_matrix);
   ~AudioDeviceManager();
 
   ThreadingModel& threading_model() { return threading_model_; }
@@ -133,6 +134,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
 
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;
+
+  LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

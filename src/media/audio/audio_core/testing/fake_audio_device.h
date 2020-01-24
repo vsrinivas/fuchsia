@@ -14,8 +14,9 @@ namespace media::audio::testing {
 
 class FakeAudioDevice : public AudioDevice {
  public:
-  FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry)
-      : AudioDevice(type, threading_model, registry) {}
+  FakeAudioDevice(AudioDevice::Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
+                  LinkMatrix* link_matrix)
+      : AudioDevice(type, threading_model, registry, link_matrix) {}
 
   bool driver_info_fetched() { return driver_info_fetched_; }
   bool driver_config_complete() { return driver_config_complete_; }
@@ -51,23 +52,25 @@ class FakeAudioDevice : public AudioDevice {
 class FakeAudioInput : public FakeAudioDevice {
  public:
   static std::shared_ptr<FakeAudioInput> Create(ThreadingModel* threading_model,
-                                                DeviceRegistry* registry) {
-    return std::make_shared<FakeAudioInput>(threading_model, registry);
+                                                DeviceRegistry* registry, LinkMatrix* link_matrix) {
+    return std::make_shared<FakeAudioInput>(threading_model, registry, link_matrix);
   }
 
-  FakeAudioInput(ThreadingModel* threading_model, DeviceRegistry* registry)
-      : FakeAudioDevice(Type::Input, threading_model, registry) {}
+  FakeAudioInput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix)
+      : FakeAudioDevice(Type::Input, threading_model, registry, link_matrix) {}
 };
 
 class FakeAudioOutput : public FakeAudioDevice {
  public:
   static std::shared_ptr<FakeAudioOutput> Create(ThreadingModel* threading_model,
-                                                 DeviceRegistry* registry) {
-    return std::make_shared<FakeAudioOutput>(threading_model, registry);
+                                                 DeviceRegistry* registry,
+                                                 LinkMatrix* link_matrix) {
+    return std::make_shared<FakeAudioOutput>(threading_model, registry, link_matrix);
   }
 
-  FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
-      : FakeAudioDevice(Type::Output, threading_model, registry) {}
+  FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+                  LinkMatrix* link_matrix)
+      : FakeAudioDevice(Type::Output, threading_model, registry, link_matrix) {}
 
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
 

@@ -17,13 +17,13 @@ constexpr zx::duration kMaxFenceDistance = kMinFenceDistance + zx::msec(20);
 
 // static
 std::shared_ptr<AudioInput> AudioInput::Create(zx::channel channel, ThreadingModel* threading_model,
-                                               DeviceRegistry* registry) {
-  return std::make_shared<AudioInput>(std::move(channel), threading_model, registry);
+                                               DeviceRegistry* registry, LinkMatrix* link_matrix) {
+  return std::make_shared<AudioInput>(std::move(channel), threading_model, registry, link_matrix);
 }
 
 AudioInput::AudioInput(zx::channel channel, ThreadingModel* threading_model,
-                       DeviceRegistry* registry)
-    : AudioDevice(Type::Input, threading_model, registry),
+                       DeviceRegistry* registry, LinkMatrix* link_matrix)
+    : AudioDevice(Type::Input, threading_model, registry, link_matrix),
       initial_stream_channel_(std::move(channel)) {}
 
 zx_status_t AudioInput::Init() {

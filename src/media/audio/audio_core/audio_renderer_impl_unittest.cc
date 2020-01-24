@@ -58,8 +58,9 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
     auto process_config = ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
     config_handle_ = ProcessConfig::set_instance(process_config);
 
-    route_graph_.SetThrottleOutput(&threading_model(),
-                                   ThrottleOutput::Create(&threading_model(), &device_registry_));
+    route_graph_.SetThrottleOutput(
+        &threading_model(),
+        ThrottleOutput::Create(&threading_model(), &device_registry_, &link_matrix_));
     renderer_ = AudioRendererImpl::Create(fidl_renderer_.NewRequest(), dispatcher(), &route_graph_,
                                           &admin_, vmar_, &volume_manager_, &link_matrix_);
     EXPECT_NE(renderer_.get(), nullptr);
@@ -127,7 +128,8 @@ constexpr int64_t kInvalidLeadTimeNs = -1;
 
 // Validate that MinLeadTime is provided to AudioRenderer clients accurately
 TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
-  auto fake_output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
+  auto fake_output =
+      testing::FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
 
   // We must set our output's lead time, before linking it, before calling SetPcmStreamType().
   fake_output->SetMinLeadTime(kMinLeadTime);
@@ -152,7 +154,8 @@ TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
 }
 
 TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
-  auto fake_output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
+  auto fake_output =
+      testing::FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
 
   auto* renderer_raw = renderer_.get();
   route_graph_.AddRenderer(std::move(renderer_));
@@ -193,7 +196,8 @@ TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
       vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
       ZX_OK);
 
-  auto output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   route_graph_.AddOutput(output.get());
   RunLoopUntilIdle();
 
@@ -208,7 +212,8 @@ TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
 }
 
 TEST_F(AudioRendererImplTest, ReportsPlayAndPauseToPolicy) {
-  auto output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
+  auto output =
+      testing::FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   route_graph_.AddOutput(output.get());
   RunLoopUntilIdle();
 

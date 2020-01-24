@@ -33,14 +33,16 @@ constexpr float kDefaultDeviceGain = 0.;
 }  // namespace
 
 AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model,
-                         DeviceRegistry* registry)
+                         DeviceRegistry* registry, LinkMatrix* link_matrix)
     : AudioObject(type),
       device_registry_(*registry),
       threading_model_(*threading_model),
       mix_domain_(threading_model->AcquireMixDomain()),
-      driver_(new AudioDriver(this)) {
+      driver_(new AudioDriver(this)),
+      link_matrix_(*link_matrix) {
   FX_DCHECK(registry);
   FX_DCHECK((type == Type::Input) || (type == Type::Output));
+  FX_DCHECK(link_matrix);
 }
 
 AudioDevice::~AudioDevice() = default;

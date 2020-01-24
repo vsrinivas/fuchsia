@@ -23,13 +23,16 @@
 namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
-                                       AudioDeviceSettingsPersistence* device_settings_persistence)
+                                       AudioDeviceSettingsPersistence* device_settings_persistence,
+                                       LinkMatrix* link_matrix)
     : threading_model_(*threading_model),
       route_graph_(*route_graph),
-      device_settings_persistence_(*device_settings_persistence) {
+      device_settings_persistence_(*device_settings_persistence),
+      link_matrix_(*link_matrix) {
   FX_DCHECK(route_graph);
   FX_DCHECK(device_settings_persistence);
   FX_DCHECK(threading_model);
+  FX_DCHECK(link_matrix);
 }
 
 AudioDeviceManager::~AudioDeviceManager() {
@@ -388,9 +391,11 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;
   if (is_input) {
-    new_device = AudioInput::Create(std::move(device_channel), &threading_model(), this);
+    new_device =
+        AudioInput::Create(std::move(device_channel), &threading_model(), this, &link_matrix_);
   } else {
-    new_device = DriverOutput::Create(std::move(device_channel), &threading_model(), this);
+    new_device =
+        DriverOutput::Create(std::move(device_channel), &threading_model(), this, &link_matrix_);
   }
 
   if (new_device == nullptr) {

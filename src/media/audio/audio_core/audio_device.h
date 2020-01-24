@@ -19,6 +19,7 @@
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/device_registry.h"
+#include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/wakeup_event.h"
 
@@ -84,7 +85,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   fit::promise<void> Shutdown();
 
  protected:
-  AudioDevice(Type type, ThreadingModel* threading_model, DeviceRegistry* registry);
+  AudioDevice(Type type, ThreadingModel* threading_model, DeviceRegistry* registry,
+              LinkMatrix* link_matrix);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -235,6 +237,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   std::atomic<bool> shutting_down_{false};
   volatile bool shut_down_ = false;
   volatile bool activated_ = false;
+
+  [[maybe_unused]] LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

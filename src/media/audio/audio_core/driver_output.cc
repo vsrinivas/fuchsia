@@ -41,13 +41,15 @@ constexpr const char* kWavFileExtension = ".wav";
 
 std::shared_ptr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
                                                   ThreadingModel* threading_model,
-                                                  DeviceRegistry* registry) {
-  return std::make_shared<DriverOutput>(threading_model, registry, std::move(stream_channel));
+                                                  DeviceRegistry* registry,
+                                                  LinkMatrix* link_matrix) {
+  return std::make_shared<DriverOutput>(threading_model, registry, std::move(stream_channel),
+                                        link_matrix);
 }
 
 DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                           zx::channel initial_stream_channel)
-    : AudioOutput(threading_model, registry),
+                           zx::channel initial_stream_channel, LinkMatrix* link_matrix)
+    : AudioOutput(threading_model, registry, link_matrix),
       initial_stream_channel_(std::move(initial_stream_channel)) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }

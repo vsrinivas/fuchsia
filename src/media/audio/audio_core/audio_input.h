@@ -18,9 +18,10 @@ class AudioDeviceManager;
 class AudioInput : public AudioDevice {
  public:
   static std::shared_ptr<AudioInput> Create(zx::channel channel, ThreadingModel* threading_model,
-                                            DeviceRegistry* registry);
+                                            DeviceRegistry* registry, LinkMatrix* link_matrix);
 
-  AudioInput(zx::channel channel, ThreadingModel* threading_model, DeviceRegistry* registry);
+  AudioInput(zx::channel channel, ThreadingModel* threading_model, DeviceRegistry* registry,
+             LinkMatrix* link_matrix);
 
   ~AudioInput() override = default;
 

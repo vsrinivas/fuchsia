@@ -22,12 +22,12 @@ static constexpr zx::duration TRIM_PERIOD = zx::msec(10);
 class ThrottleOutput : public AudioOutput {
  public:
   static std::shared_ptr<AudioOutput> Create(ThreadingModel* threading_model,
-                                             DeviceRegistry* registry) {
-    return std::make_shared<ThrottleOutput>(threading_model, registry);
+                                             DeviceRegistry* registry, LinkMatrix* link_matrix) {
+    return std::make_shared<ThrottleOutput>(threading_model, registry, link_matrix);
   }
 
-  ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
-      : AudioOutput(threading_model, registry) {
+  ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix)
+      : AudioOutput(threading_model, registry, link_matrix) {
     // This is just some placeholder format that we can use to instantiate a mix
     // stage for us. Since we never return a value from |StartMixJob|, we'll only
     // ever trim on this mix stage, so the format here is not particularly

@@ -14,8 +14,9 @@ namespace {
 
 class TestAudioOutput : public AudioOutput {
  public:
-  TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
-      : AudioOutput(threading_model, registry) {}
+  TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+                  LinkMatrix* link_matrix)
+      : AudioOutput(threading_model, registry, link_matrix) {}
 
   using AudioOutput::SetNextSchedTime;
   void SetupMixTask(const Format& format, uint32_t max_frames,
@@ -64,10 +65,11 @@ class TestAudioOutput : public AudioOutput {
 
 class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
+  LinkMatrix link_matrix_;
   testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   std::shared_ptr<TestAudioOutput> audio_output_ =
-      std::make_shared<TestAudioOutput>(&threading_model(), &device_registry_);
+      std::make_shared<TestAudioOutput>(&threading_model(), &device_registry_, &link_matrix_);
 };
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {

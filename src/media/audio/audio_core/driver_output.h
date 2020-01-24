@@ -25,10 +25,10 @@ class DriverOutput : public AudioOutput {
   static constexpr zx::duration kDefaultHighWaterNsec = zx::msec(60);
 
   static std::shared_ptr<AudioOutput> Create(zx::channel channel, ThreadingModel* threading_model,
-                                             DeviceRegistry* registry);
+                                             DeviceRegistry* registry, LinkMatrix* link_matrix);
 
   DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-               zx::channel initial_stream_channel);
+               zx::channel initial_stream_channel, LinkMatrix* link_matrix);
 
   ~DriverOutput();
 

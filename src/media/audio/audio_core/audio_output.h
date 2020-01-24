@@ -31,7 +31,7 @@ class AudioOutput : public AudioDevice {
  protected:
   friend class AudioOutputTest;
 
-  AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry);
+  AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix);
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 

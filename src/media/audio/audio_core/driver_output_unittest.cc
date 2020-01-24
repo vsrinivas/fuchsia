@@ -40,7 +40,8 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     ASSERT_NE(driver_, nullptr);
     driver_->Start();
 
-    output_ = DriverOutput::Create(std::move(c2), &threading_model(), &device_registry_);
+    output_ =
+        DriverOutput::Create(std::move(c2), &threading_model(), &device_registry_, &link_matrix_);
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(kRingBufferSizeBytes);
@@ -78,6 +79,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     }});
   }
 
+  LinkMatrix link_matrix_;
   testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   std::unique_ptr<testing::FakeAudioDriver> driver_;

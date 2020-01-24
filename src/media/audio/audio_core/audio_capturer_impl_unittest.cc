@@ -54,8 +54,9 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
     auto process_config = ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
     config_handle_ = ProcessConfig::set_instance(process_config);
 
-    route_graph_.SetThrottleOutput(&threading_model(),
-                                   ThrottleOutput::Create(&threading_model(), &device_registry_));
+    route_graph_.SetThrottleOutput(
+        &threading_model(),
+        ThrottleOutput::Create(&threading_model(), &device_registry_, &link_matrix_));
     auto capturer = AudioCapturerImpl::Create(
         /*loopback=*/false, fidl_capturer_.NewRequest(), &threading_model(), &route_graph_, &admin_,
         &volume_manager_, &link_matrix_);
@@ -120,7 +121,8 @@ TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
 
   zx::channel c1, c2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
-  auto input = AudioInput::Create(zx::channel(), &threading_model(), &device_registry_);
+  auto input =
+      AudioInput::Create(zx::channel(), &threading_model(), &device_registry_, &link_matrix_);
   auto fake_driver =
       testing::FakeAudioDriver(std::move(c1), threading_model().FidlDomain().dispatcher());
 
