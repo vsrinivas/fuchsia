@@ -30,7 +30,7 @@ use crate::{
 
 use super::{
     IntoErrno, IpSockAddrExt, SockAddr, SocketEventInner, SocketWorkerProperties,
-    ZXSIO_SIGNAL_INCOMING,
+    ZXSIO_SIGNAL_INCOMING, ZXSIO_SIGNAL_OUTGOING,
 };
 
 /// Limits the number of messages that can be queued for an application to be
@@ -227,6 +227,14 @@ impl UdpSocketWorker {
         properties: SocketWorkerProperties,
     ) -> Result<Self, libc::c_int> {
         let (local_event, peer_event) = zx::EventPair::create().map_err(|_| libc::ENOBUFS)?;
+        // signal peer that OUTGOING is available.
+        // TODO(brunodalbo): We're currently not enforcing any sort of
+        // flow-control for outgoing UDP datagrams. That'll get fixed once we
+        // limit the number of in flight datagrams per socket (i.e. application
+        // buffers).
+        if let Err(e) = local_event.signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_OUTGOING) {
+            error!("UDP socket failed to signal peer: {:?}", e);
+        }
         Ok(Self {
             events,
             inner: match ip_version {
@@ -669,6 +677,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
                 remove_udp_conn(&mut event_loop.ctx, conn_id);
             }
         }
+        self.info.state = SocketState::Unbound
     }
 
     fn receive_datagram(&mut self, addr: I::Addr, port: u16, body: &[u8]) -> Result<(), Error> {
@@ -1005,15 +1014,15 @@ mod tests {
         );
         assert_eq!(
             alice_events
-                .wait_handle(zx::Signals::EVENTPAIR_SIGNALED, zx::Time::from_nanos(0))
-                .expect_err("Alice events should not be signaled"),
+                .wait_handle(ZXSIO_SIGNAL_INCOMING, zx::Time::from_nanos(0))
+                .expect_err("Alice incoming event should not be signaled"),
             zx::Status::TIMED_OUT
         );
 
         // Setup Bob as a client, bound to REMOTE_ADDR:300
         println!("Configuring bob...");
         let bob = t.get(1);
-        let (bob_socket, _bob_events) = get_socket_and_event::<A>(bob).await;
+        let (bob_socket, bob_events) = get_socket_and_event::<A>(bob).await;
         let sockaddr = A::create(A::REMOTE_ADDR, 300);
         let () = bob
             .run_future(bob_socket.bind(&mut sockaddr.into_iter()))
@@ -1056,6 +1065,12 @@ mod tests {
                 .expect("bob getpeername suceeds"),
             want_addr.as_bytes().to_vec()
         );
+
+        // We don't care which signals are on, only that SIGNAL_OUTGOING is, we
+        // can ignore the return value.
+        let _signals = bob_events
+            .wait_handle(ZXSIO_SIGNAL_OUTGOING, zx::Time::from_nanos(0))
+            .expect("Bob outgoing event should be signaled");
 
         // Send datagram from Bob's socket.
         println!("Writing datagram to bob");

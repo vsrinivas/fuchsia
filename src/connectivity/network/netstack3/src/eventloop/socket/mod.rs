@@ -29,6 +29,7 @@ use crate::eventloop::{Event, EventLoop};
 // TODO(brunodalbo) Come back to this, see if we can have those definitions in a
 // public header from FDIO somehow so we don't need to redefine.
 const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;
+const ZXSIO_SIGNAL_OUTGOING: zx::Signals = zx::Signals::USER_1;
 
 #[derive(Debug)]
 enum SocketEventInner {
