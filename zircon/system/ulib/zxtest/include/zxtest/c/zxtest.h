@@ -197,14 +197,15 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 
 #define _RETURN_IF_FATAL_1        \
   do {                            \
+    unittest_fails();             \
     if (_ZXTEST_ABORT_IF_ERROR) { \
-      unittest_returns_early();   \
       return;                     \
     }                             \
   } while (0)
 
 #define _RETURN_IF_FATAL_0 \
   do {                     \
+    unittest_fails();      \
   } while (0)
 
 #define _RETURN_IF_FATAL(fatal) _RETURN_IF_FATAL_##fatal

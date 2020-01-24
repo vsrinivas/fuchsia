@@ -86,11 +86,10 @@ static inline const char* unittest_get_message() { return "<no message>"; }
 #endif
 
 // This function will help terminate the static analyzer when it reaches
-// an assertion failure site which returns from test case function. The bugs
-// discovered by the static analyzer will be suppressed as they are expected
-// by the test cases.
+// an assertion failure site. The bugs discovered by the static analyzer will
+// be suppressed as they are expected by the test cases.
 __ANALYZER_CREATE_SINK
-static inline void unittest_returns_early(void) {}
+static inline void unittest_fails(void) {}
 
 __BEGIN_CDECLS
 
@@ -360,10 +359,13 @@ void unittest_cancel_timeout(void);
 
 #define RET_FALSE             \
   do {                        \
-    unittest_returns_early(); \
+    unittest_fails();         \
     return false;             \
   } while (0)
-#define DONOT_RET
+#define DONOT_RET             \
+  do {                        \
+    unittest_fails();         \
+  } while (0)
 
 #define UT_CMP(op, lhs, rhs, lhs_str, rhs_str, ret, ...)                                     \
   do {                                                                                       \

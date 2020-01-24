@@ -67,6 +67,12 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+// This function will help terminate the static analyzer when it reaches
+// an assertion failure site. The bugs discovered by the static analyzer will
+// be suppressed as they are expected by the test cases.
+__ANALYZER_CREATE_SINK
+static inline void unittest_fails(void) {}
+
 /*
  * Printf dedicated to the unittest library
  * the default output is the printf
@@ -116,6 +122,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            "%s (%ld), "                                                            \
                            "actual %s (%ld)\n",                                                    \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
+      unittest_fails();                                                                            \
       if (term)                                                                                    \
         return false;                                                                              \
       else                                                                                         \
@@ -132,6 +139,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            "%s (%ld), %s"                                                          \
                            " to differ, but they are the same %ld\n",                              \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
+      unittest_fails();                                                                            \
       if (term)                                                                                    \
         return false;                                                                              \
       else                                                                                         \
@@ -148,6 +156,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            "%s (%ld) to be"                                                        \
                            " less-than-or-equal-to actual %s (%ld)\n",                             \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
+      unittest_fails();                                                                            \
       if (term)                                                                                    \
         return false;                                                                              \
       else                                                                                         \
@@ -164,6 +173,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            "%s (%ld) to be"                                                        \
                            " less-than actual %s (%ld)\n",                                         \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
+      unittest_fails();                                                                            \
       if (term)                                                                                    \
         return false;                                                                              \
       else                                                                                         \
@@ -180,6 +190,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            "%s (%ld) to be"                                                        \
                            " greater-than-or-equal-to actual %s (%ld)\n",                          \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
+      unittest_fails();                                                                            \
       if (term)                                                                                    \
         return false;                                                                              \
       else                                                                                         \
@@ -196,6 +207,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
                            "%s (%ld) to be"                                                        \
                            " greater-than actual %s (%ld)\n",                                      \
                            unittest_get_msg(__VA_ARGS__), #expected, (long)_e, #actual, (long)_a); \
+      unittest_fails();                                                                            \
       if (term)                                                                                    \
         return false;                                                                              \
       else                                                                                         \
@@ -206,6 +218,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
 #define UTCHECK_TRUE(actual, term, ...)                                                \
   if (!(actual)) {                                                                     \
     UNITTEST_FAIL_TRACEF("%s: %s is false\n", unittest_get_msg(__VA_ARGS__), #actual); \
+    unittest_fails();                                                                  \
     if (term)                                                                          \
       return false;                                                                    \
     else                                                                               \
@@ -215,6 +228,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
 #define UTCHECK_FALSE(actual, term, ...)                                              \
   if (actual) {                                                                       \
     UNITTEST_FAIL_TRACEF("%s: %s is true\n", unittest_get_msg(__VA_ARGS__), #actual); \
+    unittest_fails();                                                                 \
     if (term)                                                                         \
       return false;                                                                   \
     else                                                                              \
@@ -224,6 +238,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
 #define UTCHECK_NULL(actual, term, ...)                                                    \
   if (actual != NULL) {                                                                    \
     UNITTEST_FAIL_TRACEF("%s: %s is non-null!\n", unittest_get_msg(__VA_ARGS__), #actual); \
+    unittest_fails();                                                                      \
     if (term)                                                                              \
       return false;                                                                        \
     else                                                                                   \
@@ -233,6 +248,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
 #define UTCHECK_NONNULL(actual, term, ...)                                             \
   if (actual == NULL) {                                                                \
     UNITTEST_FAIL_TRACEF("%s: %s is null!\n", unittest_get_msg(__VA_ARGS__), #actual); \
+    unittest_fails();                                                                  \
     if (term)                                                                          \
       return false;                                                                    \
     else                                                                               \
@@ -243,6 +259,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
   if (!unittest_expect_bytes((expected), #expected, (actual), #actual, (length),           \
                              unittest_get_msg(__VA_ARGS__), __PRETTY_FUNCTION__, __LINE__, \
                              true)) {                                                      \
+    unittest_fails();                                                                      \
     if (term)                                                                              \
       return false;                                                                        \
     else                                                                                   \
@@ -253,6 +270,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
   if (!unittest_expect_bytes((expected), #expected, (actual), #actual, (length),           \
                              unittest_get_msg(__VA_ARGS__), __PRETTY_FUNCTION__, __LINE__, \
                              false)) {                                                     \
+    unittest_fails();                                                                      \
     if (term)                                                                              \
       return false;                                                                        \
     else                                                                                   \

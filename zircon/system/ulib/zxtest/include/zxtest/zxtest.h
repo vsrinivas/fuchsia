@@ -8,11 +8,10 @@
 #include <zircon/compiler.h>
 
 // This function will help terminate the static analyzer when it reaches
-// an assertion failure site which returns from test case function. The bugs
-// discovered by the static analyzer will be suppressed as they are expected
-// by the test cases.
+// an assertion failure site. The bugs discovered by the static analyzer will
+// be suppressed as they are expected by the test cases.
 __ANALYZER_CREATE_SINK
-static inline void unittest_returns_early(void) {}
+static inline void unittest_fails(void) {}
 
 // Select the right implementation.
 #ifdef __cplusplus

@@ -65,14 +65,15 @@
 // Pre-processor magic to allow EXPECT_ macros not enforce a return type on helper functions.
 #define _RETURN_IF_FATAL_true     \
   do {                            \
+    unittest_fails();             \
     if (_ZXTEST_ABORT_IF_ERROR) { \
-      unittest_returns_early();   \
       return;                     \
     }                             \
   } while (0)
 
 #define _RETURN_IF_FATAL_false \
   do {                         \
+    unittest_fails();          \
   } while (0)
 
 #define _RETURN_IF_FATAL(fatal) _RETURN_IF_FATAL_##fatal
