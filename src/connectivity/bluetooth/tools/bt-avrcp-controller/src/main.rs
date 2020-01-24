@@ -219,15 +219,18 @@ async fn set_volume<'a>(
     args: &'a [&'a str],
     controller: &'a ControllerProxy,
 ) -> Result<String, Error> {
-    let volume;
-    if let Ok(val) = args[0].parse::<u8>() {
+    if args.len() != 1 {
+        return Ok(format!("usage: {}", Cmd::SetVolume.cmd_help()));
+    }
+
+    let volume = if let Ok(val) = args[0].parse::<u8>() {
         if val > 127 {
             return Ok(format!("invalid volume range {}", args[0]));
         }
-        volume = val;
+        val
     } else {
         return Ok(format!("unable to parse volume {}", args[0]));
-    }
+    };
 
     match controller.set_absolute_volume(volume).await? {
         Ok(set_volume) => Ok(format!("Volume set to: {:?}", set_volume)),
@@ -459,6 +462,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl::endpoints::create_proxy;
 
     #[test]
     fn test_raw_packet_parsing_01() {
@@ -557,5 +561,21 @@ mod tests {
         let ids = vec!["1", "2", "5"];
         let result = parse_pas_ids(ids);
         assert!(result.is_err());
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    /// Tests a set_volume command with no input args does not result in error.
+    /// Instead, a help message should be returned.
+    async fn test_set_volume_no_args() {
+        let (proxy, _stream) = create_proxy::<ControllerMarker>().expect("Creation should work");
+        let args = [];
+
+        let res = set_volume(&args, &proxy).await;
+        assert_eq!(
+            Ok("usage: set-volume <volume> -- send a set absolute volume command (0-127)"
+                .to_string()),
+            res.map_err(|e| format!("{:?}", e))
+        );
     }
 }
