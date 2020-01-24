@@ -26,6 +26,7 @@ struct StackTestInfo {
   const void* tp;
   const void* unsafe_start;
   const void* unsafe_ptr;
+  const void* unsafe_end;
   const void* scs_ptr;
 };
 
@@ -52,6 +53,7 @@ void* DoStackTest(void* arg) {
 #if __has_feature(safe_stack)
   info->unsafe_start = __builtin___get_unsafe_stack_start();
   info->unsafe_ptr = __builtin___get_unsafe_stack_ptr();
+  info->unsafe_end = __builtin___get_unsafe_stack_top();
 #endif
 
 #if __has_feature(shadow_call_stack)
@@ -101,6 +103,12 @@ void CheckThreadStackInfo(StackTestInfo* info) {
     EXPECT_EQ(PageOf(info->unsafe_start), PageOf(info->unsafe_ptr),
               "reported unsafe start and ptr not nearby");
   }
+
+  EXPECT_LE(info->unsafe_start, info->unsafe_ptr,
+            "unsafe ptr is out of bounds");
+
+  EXPECT_LE(info->unsafe_ptr, info->unsafe_end,
+            "unsafe ptr is out of bounds");
 
   EXPECT_EQ(PageOf(info->unsafe_stack), PageOf(info->unsafe_ptr),
             "unsafe stack and reported ptr not nearby");
