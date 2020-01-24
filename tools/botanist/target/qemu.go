@@ -16,16 +16,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
-	"github.com/creack/pty"
-
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
-	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
-	"go.fuchsia.dev/fuchsia/tools/lib/ring"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 )
 
@@ -89,40 +84,15 @@ type QEMUTarget struct {
 	opts    Options
 	c       chan error
 	process *os.Process
-	serial  io.ReadWriteCloser
-	pts     *os.File
 }
 
 // NewQEMUTarget returns a new QEMU target with a given configuration.
-func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
-	// We can run QEMU 'in a terminal' by creating a pseudoterminal slave and
-	// attaching it as the process' std(in|out|err) streams. Running it in a
-	// terminal - and redirecting serial to stdio - allows us to use the
-	// associated pseudoterminal master as the 'serial device' for the
-	// instance.
-	ptm, pts, err := pty.Open()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ptm/pts pair: %v", err)
-	}
-
-	// We should be streaming serial's output to stdout even if nothing is
-	// actively reading from it.
-	stdoutBuf := ring.NewBuffer(botanist.SerialLogBufferSize)
-	go io.Copy(io.MultiWriter(stdoutBuf, os.Stdout), ptm)
-	serial := struct {
-		io.Reader
-		io.WriteCloser
-	}{stdoutBuf, ptm}
-
-	// TODO(joshuaseaton): Figure out how to manage ownership of pts so that it
-	// may be closed.
+func NewQEMUTarget(config QEMUConfig, opts Options) *QEMUTarget {
 	return &QEMUTarget{
 		config: config,
 		opts:   opts,
 		c:      make(chan error),
-		serial: serial,
-		pts:    pts,
-	}, nil
+	}
 }
 
 // Nodename returns the name of the target node.
@@ -137,28 +107,26 @@ func (t *QEMUTarget) IPv4Addr() (net.IP, error) {
 
 // Serial returns the serial device associated with the target for serial i/o.
 func (t *QEMUTarget) Serial() io.ReadWriteCloser {
-	return t.serial
+	return nil
 }
 
-// SSHKey returns the private SSH key path associated with a previously embedded authorized key.
+// SSHKey returns the private SSH key path associated with the authorized key to be pavet.
 func (t *QEMUTarget) SSHKey() string {
 	return t.opts.SSHKey
 }
 
 // Start starts the QEMU target.
-func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) (err error) {
-	// We create a working directory for the QEMU process below, but cannot
-	// clean it up until we error or until the process finishes. The former is
-	// handled in this block, while the latter is handled in a goroutine below.
-	var workdir string
-	go func() {
-		if workdir != "" && err != nil {
-			os.RemoveAll(workdir)
-		}
-	}()
-
+func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
 	if t.process != nil {
 		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
+	}
+
+	// The QEMU command needs to be invoked within an empty directory, as QEMU
+	// will attempt to pick up files from its working directory, one notable
+	// culprit being multiboot.bin.  This can result in strange behavior.
+	workdir, err := ioutil.TempDir("", "qemu-working-dir")
+	if err != nil {
+		return err
 	}
 
 	qemuTarget, ok := qemuTargetMapping[t.config.Target]
@@ -191,13 +159,6 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if zirconA.Reader == nil {
 		return fmt.Errorf("could not find zircon-a")
 	}
-	// The QEMU command needs to be invoked within an emptm directory, as QEMU
-	// will attempt to pick up files from its working directory, one notable
-	// culprit being multiboot.bin.  This can result in strange behavior.
-	workdir, err = ioutil.TempDir("", "qemu-working-dir")
-	if err != nil {
-		return err
-	}
 
 	if err := copyImagesToDir(workdir, &qemuKernel, &zirconA, &storageFull); err != nil {
 		return err
@@ -211,22 +172,22 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		})
 	}
 	if t.config.MinFS != nil {
-		if _, err = os.Stat(t.config.MinFS.Image); err != nil {
+		if _, err := os.Stat(t.config.MinFS.Image); err != nil {
 			return fmt.Errorf("could not find minfs image %q: %v", t.config.MinFS.Image, err)
 		}
-		minfsPath, err := filepath.Abs(t.config.MinFS.Image)
+		file, err := filepath.Abs(t.config.MinFS.Image)
 		if err != nil {
 			return err
 		}
 		// Swarming hard-links Isolate downloads with a cache and the very same
 		// cached minfs image will be used across multiple tasks. To ensure
 		// that it remains blank, we must break its link.
-		if err := overwriteFileWithCopy(minfsPath); err != nil {
+		if err := overwriteFileWithCopy(file); err != nil {
 			return err
 		}
 		drives = append(drives, qemu.Drive{
 			ID:   "testdisk",
-			File: minfsPath,
+			File: file,
 			Addr: t.config.MinFS.PCIAddress,
 		})
 	}
@@ -276,26 +237,24 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		Path:   invocation[0],
 		Args:   invocation,
 		Dir:    workdir,
-		Stdin:  t.pts,
-		Stdout: t.pts,
-		Stderr: t.pts,
-		SysProcAttr: &syscall.SysProcAttr{
-			Setctty: true,
-			Setsid:  true,
-			Ctty:    int(t.pts.Fd()),
-		},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
 	}
 	log.Printf("QEMU invocation:\n%s", strings.Join(invocation, " "))
 
 	if err := cmd.Start(); err != nil {
+		os.RemoveAll(workdir)
 		return fmt.Errorf("failed to start: %v", err)
 	}
 	t.process = cmd.Process
 
+	// Ensure that the working directory when QEMU finishes whether the Wait
+	// method is invoked or not.
 	go func() {
 		t.c <- qemu.CheckExitCode(cmd.Wait())
 		os.RemoveAll(workdir)
 	}()
+
 	return nil
 }
 
