@@ -2,7 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("minfs-micro-benchmark") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("minfs-micro-benchmark") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   test_group = "fs"
   sources = [
     "block-device-utils.cc",
@@ -10,36 +27,39 @@ zx_test("minfs-micro-benchmark") {
     "minfs-tests.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/fidl/fuchsia-minfs:c",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fs-management",
-    "$zx/system/ulib/fs-test-utils",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/gpt",
-    "$zx/system/ulib/memfs",
-    "$zx/system/ulib/memfs:memfs-cpp",
-    "$zx/system/ulib/minfs",
-    "$zx/system/ulib/perftest",
-    "$zx/system/ulib/storage-metrics",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/trace",
-    "$zx/system/ulib/trace-engine",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fs-management",
+    "//zircon/public/lib/fs-test-utils",
+    "//zircon/public/lib/fvm",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/gpt",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/memfs-cpp",
+    "//zircon/public/lib/minfs",
+    "//zircon/public/lib/perftest",
+    "//zircon/public/lib/storage-metrics",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-engine",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/fidl/fuchsia-minfs:c",
   ]
+}
+
+migrated_manifest("minfs-micro-benchmark-manifest") {
+  deps = [ ":minfs-micro-benchmark" ]
 }

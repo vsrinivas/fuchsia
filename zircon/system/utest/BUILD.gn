@@ -220,7 +220,6 @@ if (current_cpu != "") {
       "log",
       "logger",
       "mexec",
-      "minfs-micro-benchmark",
       "noop-fuzzer",
       "platform-bus",
       "policy",

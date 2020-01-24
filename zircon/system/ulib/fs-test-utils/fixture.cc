@@ -58,10 +58,6 @@ constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
 constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
                                      0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
-zx_status_t ToStatus(ssize_t result) {
-  return result < 0 ? static_cast<zx_status_t>(result) : ZX_OK;
-}
-
 zx_status_t MountMemFs(async::Loop* loop) {
   zx_status_t result = ZX_OK;
   result = loop->StartThread(kMemFsThreadName);
