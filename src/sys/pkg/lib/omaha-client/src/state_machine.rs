@@ -6,17 +6,22 @@ use crate::{
     clock,
     common::{App, AppSet, CheckOptions},
     configuration::Config,
-    http_request::{HttpRequest, StubHttpRequest},
-    installer::{stub::StubInstaller, Installer, Plan},
-    metrics::{Metrics, MetricsReporter, StubMetricsReporter, UpdateCheckFailureReason},
-    policy::{CheckDecision, PolicyEngine, StubPolicyEngine, UpdateDecision},
+    http_request::HttpRequest,
+    installer::{Installer, Plan},
+    metrics::{Metrics, MetricsReporter, UpdateCheckFailureReason},
+    policy::{CheckDecision, PolicyEngine, UpdateDecision},
     protocol::{
         self,
         request::{Event, EventErrorCode, EventResult, EventType, InstallSource},
         response::{parse_json_response, OmahaStatus, Response},
     },
     request_builder::{self, RequestBuilder, RequestParams},
-    storage::{MemStorage, Storage},
+    storage::Storage,
+};
+#[cfg(test)]
+use crate::{
+    http_request::StubHttpRequest, installer::stub::StubInstaller, metrics::StubMetricsReporter,
+    policy::StubPolicyEngine, storage::StubStorage,
 };
 use chrono::{DateTime, Utc};
 use futures::{compat::Stream01CompatExt, lock::Mutex, prelude::*};
@@ -799,6 +804,7 @@ where
     }
 }
 
+#[cfg(test)]
 impl
     StateMachine<
         StubPolicyEngine,
@@ -806,7 +812,7 @@ impl
         StubInstaller,
         StubTimer,
         StubMetricsReporter,
-        MemStorage,
+        StubStorage,
     >
 {
     /// Create a new StateMachine with stub implementations.
@@ -818,7 +824,7 @@ impl
             config,
             StubTimer,
             StubMetricsReporter,
-            Rc::new(Mutex::new(MemStorage::new())),
+            Rc::new(Mutex::new(StubStorage)),
             app_set,
         )
         .await
@@ -845,6 +851,7 @@ mod tests {
         metrics::{MockMetricsReporter, StubMetricsReporter},
         policy::{MockPolicyEngine, StubPolicyEngine},
         protocol::Cohort,
+        storage::MemStorage,
     };
     use futures::executor::{block_on, LocalPool};
     use futures::future::LocalBoxFuture;
@@ -931,7 +938,7 @@ mod tests {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -968,7 +975,7 @@ mod tests {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -993,7 +1000,7 @@ mod tests {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1042,7 +1049,7 @@ mod tests {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1091,7 +1098,7 @@ mod tests {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1140,7 +1147,7 @@ mod tests {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1188,7 +1195,7 @@ mod tests {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1230,7 +1237,7 @@ mod tests {
             &config,
             timer,
             StubMetricsReporter,
-            Rc::new(Mutex::new(MemStorage::new())),
+            Rc::new(Mutex::new(StubStorage)),
             make_test_app_set(),
         ));
         let state_machine = Rc::new(RefCell::new(state_machine));
@@ -1288,7 +1295,7 @@ mod tests {
             &config,
             timer,
             StubMetricsReporter,
-            Rc::new(Mutex::new(MemStorage::new())),
+            Rc::new(Mutex::new(StubStorage)),
             make_test_app_set(),
         ));
         let state_machine = Rc::new(RefCell::new(state_machine));
@@ -1353,7 +1360,7 @@ mod tests {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1480,7 +1487,7 @@ mod tests {
                 &config,
                 StubTimer,
                 MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1505,7 +1512,7 @@ mod tests {
                 &config,
                 MockTimer::new(),
                 MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1532,7 +1539,7 @@ mod tests {
                 &config,
                 timer,
                 MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1555,7 +1562,7 @@ mod tests {
                 &config,
                 StubTimer,
                 MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1579,7 +1586,7 @@ mod tests {
                 &config,
                 StubTimer,
                 MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1596,7 +1603,17 @@ mod tests {
     fn test_persist_last_update_time() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                StubMetricsReporter,
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
             state_machine.start_update_check(CheckOptions::default()).await;
 
             let storage = state_machine.storage_ref.lock().await;
@@ -1611,7 +1628,17 @@ mod tests {
             // TODO: update this test to have a mocked http response with server dictated poll
             // interval when out code support parsing it from the response.
             let config = config_generator();
-            let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                StubMetricsReporter,
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
             state_machine.start_update_check(CheckOptions::default()).await;
 
             let storage = state_machine.storage_ref.lock().await;
@@ -1624,7 +1651,17 @@ mod tests {
     fn test_persist_app() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                StubMetricsReporter,
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
             state_machine.start_update_check(CheckOptions::default()).await;
 
             let storage = state_machine.storage_ref.lock().await;
@@ -1838,7 +1875,7 @@ mod tests {
                 &config,
                 StubTimer,
                 MockMetricsReporter::new(false),
-                Rc::new(Mutex::new(MemStorage::new())),
+                Rc::new(Mutex::new(StubStorage)),
                 make_test_app_set(),
             )
             .await;
@@ -1857,7 +1894,17 @@ mod tests {
     fn test_record_update_first_seen_time() {
         block_on(async {
             let config = config_generator();
-            let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                StubTimer,
+                StubMetricsReporter,
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
 
             let now = time::i64_to_time(123456789);
             assert_eq!(state_machine.record_update_first_seen_time("id", now).await, now);

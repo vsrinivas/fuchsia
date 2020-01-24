@@ -45,7 +45,7 @@ fn main() -> Result<(), Error> {
 
         let http = FuchsiaHyperHttpRequest::new();
         let installer = temp_installer::FuchsiaInstaller::new()?;
-        let stash = storage::Stash::new("omaha-client").await?;
+        let stash = storage::Stash::new("omaha-client").await;
         let stash_ref = Rc::new(Mutex::new(stash));
         let state_machine = StateMachine::new(
             policy::FuchsiaPolicyEngine,

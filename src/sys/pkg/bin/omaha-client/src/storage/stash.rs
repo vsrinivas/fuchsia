@@ -20,11 +20,14 @@ type Result<T> = std::result::Result<T, StashError>;
 
 #[derive(Debug, Error)]
 pub enum StashError {
-    #[error("generic error: {}", 0)]
+    #[error("generic error: {0}")]
     Failure(anyhow::Error),
 
-    #[error("FIDL error: {}", 0)]
+    #[error("FIDL error: {0}")]
     FIDL(fidl::Error),
+
+    #[error("Stash not available")]
+    NotAvailable,
 }
 
 impl From<fidl::Error> for StashError {
@@ -40,7 +43,7 @@ impl From<anyhow::Error> for StashError {
 }
 
 pub struct Stash {
-    proxy: StoreAccessorProxy,
+    proxy: Option<StoreAccessorProxy>,
 }
 
 impl Stash {
@@ -48,23 +51,31 @@ impl Stash {
     ///
     /// The |identity| param provides a namespace for the client.  Each unique client identity has
     /// its own private namespace.
-    pub async fn new(identity: &str) -> Result<Self> {
+    pub async fn new(identity: &str) -> Self {
+        let proxy = Self::new_proxy(identity).await;
+        if let Err(e) = &proxy {
+            error!("Failed to connect to stash: {}", e);
+        }
+        Stash { proxy: proxy.ok() }
+    }
+
+    async fn new_proxy(identity: &str) -> Result<StoreAccessorProxy> {
         let stash_svc = fuchsia_component::client::connect_to_service::<StoreMarker>()?;
         stash_svc.identify(identity)?;
 
         let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;
         stash_svc.create_accessor(false, server_end)?;
-        Ok(Stash { proxy })
+        Ok(proxy)
     }
 
     #[cfg(test)]
     fn new_mock() -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
         let (proxy, server_end) = create_proxy::<StoreAccessorMarker>().unwrap();
-        (Stash { proxy }, server_end.into_stream().unwrap())
+        (Stash { proxy: Some(proxy) }, server_end.into_stream().unwrap())
     }
 
     async fn get_value<'a>(&'a self, key: &'a str) -> Option<Box<Value>> {
-        let result = self.proxy.get_value(key).await;
+        let result = self.proxy.as_ref()?.get_value(key).await;
         match result {
             Ok(opt_value) => opt_value,
             Err(e) => {
@@ -78,7 +89,8 @@ impl Stash {
     /// a synchronous Error in case the channel is closed.  Any errors in storing the values happen
     /// during the call to commit().
     fn set_value<'a>(&'a self, key: &'a str, mut value: Value) -> Result<()> {
-        match self.proxy.set_value(key, &mut value) {
+        let proxy = self.proxy.as_ref().ok_or(StashError::NotAvailable)?;
+        match proxy.set_value(key, &mut value) {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("Unable to write to stash for key: {}; {}", key, e);
@@ -143,23 +155,29 @@ impl Storage for Stash {
     }
 
     fn remove<'a>(&'a mut self, key: &'a str) -> BoxFuture<'_, Result<()>> {
-        future::ready(match self.proxy.delete_value(key) {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                error!("Unable to write to stash for key: {}; {}", key, e);
-                Err(e.into())
-            }
+        future::ready(match &self.proxy {
+            Some(proxy) => match proxy.delete_value(key) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    error!("Unable to write to stash for key: {}; {}", key, e);
+                    Err(e.into())
+                }
+            },
+            None => Err(StashError::NotAvailable),
         })
         .boxed()
     }
 
     fn commit(&mut self) -> BoxFuture<'_, Result<()>> {
-        future::ready(match self.proxy.commit() {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                error!("Unable to commit changes to stash! {}", e);
-                Err(e.into())
-            }
+        future::ready(match &self.proxy {
+            Some(proxy) => match proxy.commit() {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    error!("Unable to commit changes to stash! {}", e);
+                    Err(e.into())
+                }
+            },
+            None => Err(StashError::NotAvailable),
         })
         .boxed()
     }
@@ -174,31 +192,31 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_get_remove_string() {
-        let mut storage = Stash::new("test_set_get_remove_string").await.unwrap();
+        let mut storage = Stash::new("test_set_get_remove_string").await;
         do_test_set_get_remove_string(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_get_remove_int() {
-        let mut storage = Stash::new("test_set_get_remove_int").await.unwrap();
+        let mut storage = Stash::new("test_set_get_remove_int").await;
         do_test_set_get_remove_int(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_get_remove_bool() {
-        let mut storage = Stash::new("test_set_get_remove_bool").await.unwrap();
+        let mut storage = Stash::new("test_set_get_remove_bool").await;
         do_test_set_get_remove_bool(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_return_none_for_wrong_value_type() {
-        let mut storage = Stash::new("test_return_none_for_wrong_value_type").await.unwrap();
+        let mut storage = Stash::new("test_return_none_for_wrong_value_type").await;
         do_return_none_for_wrong_value_type(&mut storage).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ensure_no_error_remove_nonexistent_key() {
-        let mut storage = Stash::new("test_ensure_no_error_remove_nonexistent_key").await.unwrap();
+        let mut storage = Stash::new("test_ensure_no_error_remove_nonexistent_key").await;
         do_ensure_no_error_remove_nonexistent_key(&mut storage).await;
     }
 

@@ -7,6 +7,11 @@ use futures::future::BoxFuture;
 mod memory;
 pub use memory::MemStorage;
 
+#[cfg(test)]
+mod stub;
+#[cfg(test)]
+pub use stub::StubStorage;
+
 /// The Storage trait is used to access typed key=value storage, for persisting protocol state and
 /// other data between runs of the update check process.
 ///
