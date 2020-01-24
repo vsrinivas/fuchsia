@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/boot_log_checker/metrics_registry.cb.h"
+#include "src/developer/feedback/utils/metrics_registry.cb.h"
 #include "src/developer/feedback/utils/promise.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"

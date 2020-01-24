@@ -4,7 +4,6 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
-import("//third_party/cobalt/metrics_registry.gni")
 
 package("boot_log_checker") {
   deps = [ ":main" ]
@@ -54,7 +53,7 @@ source_set("src") {
   ]
 
   deps = [
-    ":metrics_registry",
+    "//src/developer/feedback/utils:metrics_registry",
     "//src/developer/feedback/utils:promise",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -62,15 +61,6 @@ source_set("src") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
-}
-
-metrics_registry("metrics_registry") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 4228153068
-  namespace = "cobalt_registry"
-  generate_cc = true
-  generate_binarypb = false
 }
 
 config_data("config") {

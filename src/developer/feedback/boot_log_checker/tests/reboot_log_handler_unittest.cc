@@ -14,7 +14,6 @@
 #include <optional>
 #include <vector>
 
-#include "src/developer/feedback/boot_log_checker/metrics_registry.cb.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_network_reachability_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
@@ -22,6 +21,7 @@
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/cobalt.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -36,15 +36,12 @@ constexpr fit::result_state kError = fit::result_state::error;
 constexpr fit::result_state kOk = fit::result_state::ok;
 constexpr fit::result_state kPending = fit::result_state::pending;
 
-constexpr uint32_t kKernelPanic = cobalt_registry::RebootMetricDimensionReason::KernelPanic;
-constexpr uint32_t kOom = cobalt_registry::RebootMetricDimensionReason::Oom;
-
 struct TestParam {
   std::string test_name;
   std::string input_reboot_log;
   std::string output_crash_signature;
   std::optional<zx::duration> output_uptime;
-  uint32_t output_cobalt_event_code;
+  RebootReason output_cobalt_event_code;
 };
 
 class RebootLogHandlerTest : public UnitTestFixture,
@@ -116,42 +113,42 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogHandlerTest,
                                  "ZIRCON KERNEL PANIC\n\nUPTIME (ms)\n74715002",
                                  "fuchsia-kernel-panic",
                                  zx::msec(74715002),
-                                 kKernelPanic,
+                                 RebootReason::kKernelPanic,
                              },
                              {
                                  "KernelPanicCrashLogNoUptime",
                                  "ZIRCON KERNEL PANIC",
                                  "fuchsia-kernel-panic",
                                  std::nullopt,
-                                 kKernelPanic,
+                                 RebootReason::kKernelPanic,
                              },
                              {
                                  "KernelPanicCrashLogWrongUptime",
                                  "ZIRCON KERNEL PANIC\n\nUNRECOGNIZED",
                                  "fuchsia-kernel-panic",
                                  std::nullopt,
-                                 kKernelPanic,
+                                 RebootReason::kKernelPanic,
                              },
                              {
                                  "OutOfMemoryLog",
                                  "ZIRCON OOM\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-oom",
                                  zx::msec(65487494),
-                                 kOom,
+                                 RebootReason::kOOM,
                              },
                              {
                                  "OutOfMemoryLogNoUptime",
                                  "ZIRCON OOM",
                                  "fuchsia-oom",
                                  std::nullopt,
-                                 kOom,
+                                 RebootReason::kOOM,
                              },
                              {
                                  "UnrecognizedCrashTypeInRebootLog",
                                  "UNRECOGNIZED CRASH TYPE",
                                  "fuchsia-kernel-panic",
                                  std::nullopt,
-                                 kKernelPanic,
+                                 RebootReason::kKernelPanic,
                              },
                          })),
                          [](const testing::TestParamInfo<TestParam>& info) {
@@ -172,8 +169,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), param.input_reboot_log.c_str());
   EXPECT_EQ(crash_reporter_->uptime(), param.output_uptime);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(cobalt_registry::kRebootMetricId,
-                                                              param.output_cobalt_event_code)));
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(param.output_cobalt_event_code)));
 }
 
 TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {
