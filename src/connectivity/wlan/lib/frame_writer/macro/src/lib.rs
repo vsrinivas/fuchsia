@@ -92,6 +92,21 @@ use proc_macro_hack::proc_macro_hack;
 /// `Some(_)` if the condition was met. If the condition was not met, `None` will be used.
 /// If an else-brach was defined both branches must return an `Option<V>` value.
 ///
+/// ## Emit IE offset
+/// One can emit the offset at which a particular IE is written at.
+/// ```
+/// let mut offset = 0;
+/// let (buf, bytes_written) = write_frame!(buf_provider, {
+///     ...
+///     ies: {
+///         ssid: ssid,
+///         supported_rates: &rates,
+///         offset @ extended_supported_rates: {/* continue rates */},
+///     },
+///     ...
+/// });
+/// ```
+///
 /// # Payload
 /// An arbitrary payload can be written to the end of the buffer. The payload's type must be a slice
 /// of a compatible type.
@@ -125,7 +140,7 @@ use proc_macro_hack::proc_macro_hack;
 ///     ies: {
 ///         ssid: ssid,
 ///         supported_rates: &rates,
-///         extended_supported_rates: {/* continue rates */},
+///         offset @ extended_supported_rates: {/* continue rates */},
 ///         ht_cap?: if band_info.ht_supported {
 ///             band_info.ht_caps.into()
 ///         },

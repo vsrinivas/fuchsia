@@ -75,6 +75,33 @@ mod tests {
     }
 
     #[test]
+    fn write_emit_offset_buf_provider() {
+        let buffer_provider = BufferProvider;
+        let mut offset = 0;
+        write_frame!(buffer_provider, {
+            ies: {
+                supported_rates: &[1u8, 2, 3, 4, 5, 6, 7, 8],
+                offset @ extended_supported_rates: &[1u8, 2, 3, 4]
+            }
+        })
+        .expect("frame construction failed");
+        assert_eq!(offset, 10);
+    }
+
+    #[test]
+    fn write_emit_offset_buf() {
+        let mut offset = 0;
+        write_frame_with_buf!(vec![0u8; 20], {
+            ies: {
+                supported_rates: &[1u8, 2, 3, 4, 5, 6, 7, 8],
+                offset @ extended_supported_rates: &[1u8, 2, 3, 4]
+            }
+        })
+        .expect("frame construction failed");
+        assert_eq!(offset, 10);
+    }
+
+    #[test]
     fn write_buf() {
         let (mut buf, bytes_written) = write_frame_with_buf!(vec![0u8; 10], {
             ies: { ssid: &b"foobar"[..] }

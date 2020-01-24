@@ -42,6 +42,7 @@ pub enum Ie {
 pub struct IeDefinition {
     pub name: Ident,
     pub type_: Ie,
+    pub emit_offset: Option<Ident>,
     value: Expr,
     optional: bool,
 }
@@ -173,7 +174,7 @@ impl BufferWrite for IeDefinition {
     }
 
     fn gen_write_to_buf_tokens(&self) -> Result<proc_macro2::TokenStream> {
-        Ok(match self.type_ {
+        let write_to_buf_tokens = match self.type_ {
             Ie::Ssid => apply_on!(ssid, &self.value, ie::write_ssid(&mut w, &ssid)?),
             Ie::Rates => quote!(
                 let rates_writer = ie::RatesWriter::try_new(&rates[..])?;
@@ -221,7 +222,16 @@ impl BufferWrite for IeDefinition {
             Ie::Wpa1 => {
                 apply_on!(wpa1, self.optional, &self.value, ie::write_wpa1_ie(&mut w, &wpa1)?)
             }
-        })
+        };
+
+        let emit_offset = match &self.emit_offset {
+            None => quote!(),
+            Some(ident) => quote!(#ident = w.bytes_written();),
+        };
+        Ok(quote!(
+            #emit_offset
+            #write_to_buf_tokens
+        ))
     }
 
     fn gen_var_declaration_tokens(&self) -> Result<proc_macro2::TokenStream> {
@@ -241,6 +251,12 @@ impl BufferWrite for IeDefinition {
 
 impl Parse for IeDefinition {
     fn parse(input: ParseStream) -> Result<Self> {
+        let mut emit_offset = None;
+        if input.peek2(Token![@]) {
+            emit_offset = Some(input.parse::<Ident>()?);
+            input.parse::<Token![@]>()?;
+        }
+
         let name = input.parse::<Ident>()?;
 
         let optional = input.peek(Token![?]);
@@ -248,8 +264,8 @@ impl Parse for IeDefinition {
             input.parse::<Token![?]>()?;
         }
         input.parse::<Token![:]>()?;
-
         let value = input.parse::<Expr>()?;
+
         match value {
             Expr::Block(_)
             | Expr::Call(_)
@@ -309,6 +325,6 @@ impl Parse for IeDefinition {
             IE_WPA1 => Ie::Wpa1,
             unknown => return Err(Error::new(name.span(), format!("unknown IE: '{}'", unknown))),
         };
-        Ok(IeDefinition { name, value, type_, optional })
+        Ok(IeDefinition { name, value, type_, optional, emit_offset })
     }
 }

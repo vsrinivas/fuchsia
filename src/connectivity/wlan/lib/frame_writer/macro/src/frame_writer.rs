@@ -172,6 +172,7 @@ fn process_write_definitions(
     let mut declare_var_tokens = quote!();
     let mut write_to_buf_tokens = quote!();
     let mut frame_len_tokens = quote!(let mut frame_len = 0;);
+
     for x in write_defs {
         let tokens = unwrap_or_bail!(x.gen_write_to_buf_tokens());
         write_to_buf_tokens = quote!(#write_to_buf_tokens #tokens);
