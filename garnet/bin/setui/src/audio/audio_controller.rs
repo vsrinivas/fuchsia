@@ -11,7 +11,7 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
     fidl_fuchsia_ui_input::MediaButtonsEvent,
-    fuchsia_async as fasync, fuchsia_component as component,
+    fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     futures::StreamExt,
@@ -119,7 +119,8 @@ pub fn spawn_audio_controller(
                         SettingRequest::SetVolume(volume) => {
                             // Connect to the SoundPlayer the first time a volume event occurs.
                             if sound_player_connection.is_none() {
-                                sound_player_connection = connect_to_sound_player();
+                                sound_player_connection =
+                                    connect_to_sound_player(&service_context_handle).await;
                             }
 
                             if check_and_bind_volume_controls(
@@ -133,18 +134,21 @@ pub fn spawn_audio_controller(
                                 continue;
                             };
 
-                            // TODO(fxb/43075): Test that the sounds are played on volume change and
-                            // not played on mute change once the earcons is moved into its own
-                            // service.
-                            play_media_volume_sound(
-                                sound_player_connection.clone(),
-                                &volume,
-                                &stream_volume_controls,
-                                &mut sound_player_added_files,
-                            )
-                            .await;
-
+                            let last_media_user_volume =
+                                volume_on_stream(AudioStreamType::Media, &stream_volume_controls);
                             update_volume_stream(&volume, &mut stream_volume_controls).await;
+                            let new_media_user_volume =
+                                volume_on_stream(AudioStreamType::Media, &stream_volume_controls);
+
+                            if last_media_user_volume != new_media_user_volume {
+                                play_media_volume_sound(
+                                    sound_player_connection.clone(),
+                                    new_media_user_volume,
+                                    &mut sound_player_added_files,
+                                )
+                                .await;
+                            }
+
                             stored_value.streams =
                                 get_streams_array_from_map(&stream_volume_controls);
                             persist_audio_info(stored_value.clone(), storage.clone()).await;
@@ -192,61 +196,59 @@ pub fn spawn_audio_controller(
     audio_handler_tx
 }
 
+// Retrieve the user volume on the specified stream, given the currently stored streams.
+fn volume_on_stream(
+    stream_type: AudioStreamType,
+    stored_streams: &HashMap<AudioStreamType, StreamVolumeControl>,
+) -> Option<f32> {
+    match stored_streams.get(&stream_type) {
+        Some(stream) => Some(stream.stored_stream.user_volume_level),
+        None => {
+            fx_log_err!("Could not find {:?} stream", stream_type);
+            return None;
+        }
+    }
+}
+
 // Play the earcons sound given the changed volume streams.
 async fn play_media_volume_sound(
     sound_player_connection: Option<PlayerProxy>,
-    volume: &Vec<AudioStream>,
-    stored_streams: &HashMap<AudioStreamType, StreamVolumeControl>,
+    volume_level: Option<f32>,
     mut sound_player_added_files: &mut HashSet<&str>,
 ) {
-    if let Some(sound_player_proxy) = sound_player_connection.clone() {
-        let media_stream = volume.iter().find(|x| x.stream_type == AudioStreamType::Media);
-        if let Some(stream) = media_stream {
-            let media_volume_stream = match stored_streams.get(&AudioStreamType::Media) {
-                Some(stream) => stream,
-                None => {
-                    fx_log_err!("Could not find media stream");
-                    return;
-                }
-            };
-            let last_media_user_volume = media_volume_stream.stored_stream.user_volume_level;
-
-            // If volume didn't change, don't play the sound.
-            if stream.user_volume_level == last_media_user_volume {
-                return;
-            };
-            let volume_level = stream.user_volume_level;
-            if volume_level >= 1.0 {
-                play_sound(
-                    &sound_player_proxy,
-                    VOLUME_MAX_FILE_PATH,
-                    0,
-                    &mut sound_player_added_files,
-                )
+    if let (Some(sound_player_proxy), Some(volume_level)) =
+        (sound_player_connection.clone(), volume_level)
+    {
+        if volume_level >= 1.0 {
+            play_sound(&sound_player_proxy, VOLUME_MAX_FILE_PATH, 0, &mut sound_player_added_files)
                 .await
                 .ok();
-            } else if volume_level > 0.0 {
-                play_sound(
-                    &sound_player_proxy,
-                    VOLUME_CHANGED_FILE_PATH,
-                    1,
-                    &mut sound_player_added_files,
-                )
-                .await
-                .ok();
-            }
+        } else if volume_level > 0.0 {
+            play_sound(
+                &sound_player_proxy,
+                VOLUME_CHANGED_FILE_PATH,
+                1,
+                &mut sound_player_added_files,
+            )
+            .await
+            .ok();
         }
     }
 }
 
 // Establish a connection to the sound player and return the proxy representing the service.
-fn connect_to_sound_player() -> Option<PlayerProxy> {
-    match component::client::connect_to_service::<PlayerMarker>()
+async fn connect_to_sound_player(
+    service_context_handle: &ServiceContextHandle,
+) -> Option<PlayerProxy> {
+    match service_context_handle
+        .lock()
+        .await
+        .connect::<PlayerMarker>()
         .context("Connecting to fuchsia.media.sounds.Player")
     {
         Ok(result) => Some(result),
         Err(e) => {
-            fx_log_err!("[earcons] Failed to connect to fuchsia.media.sounds.Player: {}", e);
+            fx_log_err!("Failed to connect to fuchsia.media.sounds.Player: {}", e);
             None
         }
     }

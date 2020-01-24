@@ -12,6 +12,7 @@
         ],
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.media.sounds.Player",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

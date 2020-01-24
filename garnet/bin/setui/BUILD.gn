@@ -90,6 +90,8 @@ config_data("tests_config") {
     "src/tests/testdata/audio_config_data.json",
     "src/tests/testdata/fake_config_data.json",
     "src/tests/testdata/fake_invalid_config_data.json",
+    "src/tests/testdata/volume-changed.wav",
+    "src/tests/testdata/volume-max.wav",
   ]
 }
 
