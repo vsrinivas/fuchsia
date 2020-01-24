@@ -8,6 +8,11 @@ using fuchsia.io;
 using fuchsia.mem;
 using zx;
 
+enum OutOfBoundsDirection {
+    BELOW = 1;
+    ABOVE = 2;
+};
+
 struct Success {
 };
 
@@ -121,11 +126,22 @@ struct ReaderReadError {
     uint64 position;
 };
 
+/// Use `InvalidAddress` instead.
+[Deprecated]
 struct ReaderOutOfBounds {
     /// Byte position in filesystem image.
     uint64 position;
     /// Size of image.
     uint64 size;
+};
+
+struct InvalidAddress {
+    /// Byte position in filesystem image.
+    uint64 position;
+    /// Direction of out of bounds.
+    OutOfBoundsDirection direction;
+    /// Boundary that was exceeded.
+    uint64 bound;
 };
 
 /// Sub-result of an [`Ext4Server.MountVmo`] call denoting the actual error
@@ -152,9 +168,11 @@ xunion ParseError {
     17: BadFile bad_file;
     18: BadDirectory bad_directory;
     19: ReaderReadError reader_read_error;
+    [Deprecated]
     20: ReaderOutOfBounds reader_out_of_bounds;
     21: RequiredFeatureIncompat required_feature_incompat;
     22: BannedFeatureIncompat banned_feature_incompat;
+    23: InvalidAddress invalid_address;
 };
 
 /// Result of an [`Ext4Server.MountVmo`] call.

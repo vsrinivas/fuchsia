@@ -36,8 +36,9 @@ use {
     crate::{
         readers::Reader,
         structs::{
-            BlockGroupDesc32, DirEntry2, EntryType, Extent, ExtentHeader, INode, ParseToStruct,
-            ParsingError, SuperBlock, FIRST_BG_PADDING, ROOT_INODE_NUM,
+            BlockGroupDesc32, DirEntry2, EntryType, Extent, ExtentHeader, INode,
+            InvalidAddressErrorType, ParseToStruct, ParsingError, SuperBlock, FIRST_BG_PADDING,
+            MIN_EXT4_SIZE, ROOT_INODE_NUM,
         },
     },
     fuchsia_vfs_pseudo_fs_mt::{
@@ -103,7 +104,13 @@ impl<T: 'static + Reader> Parser<T> {
 
     /// Reads full raw data from a given block number.
     fn block(&mut self, block_number: u64) -> Result<Box<[u8]>, ParsingError> {
-        //TODO(vfcc): Better error handling.
+        if block_number == 0 {
+            return Err(ParsingError::InvalidAddress(
+                InvalidAddressErrorType::Lower,
+                0,
+                FIRST_BG_PADDING,
+            ));
+        }
         let block_size = self.block_size()?;
         let address = (block_number as usize)
             .checked_mul(block_size)
@@ -122,10 +129,7 @@ impl<T: 'static + Reader> Parser<T> {
             // INode number 0 is not allowed per ext4 spec.
             return Err(ParsingError::InvalidInode(inode_number));
         }
-        //TODO(vfcc): Check calculation bounds.
         let sb = self.super_block()?;
-        let inode_table_offset = (inode_number - 1) as usize % sb.e2fs_ipg.get() as usize
-            * sb.e2fs_inode_size.get() as usize;
         let block_size = self.block_size()?;
 
         // The first Block Group starts with:
@@ -138,11 +142,15 @@ impl<T: 'static + Reader> Parser<T> {
         //
         // A 1024 byte block size means the padding takes block 0 and the Super Block takes
         // block 1. This means the Block Group Descriptors start in block 2.
-        let mut bg_descriptor_offset = block_size;
-        let size_of_start_of_fs = FIRST_BG_PADDING + size_of::<SuperBlock>();
-        if block_size <= size_of_start_of_fs {
-            bg_descriptor_offset = block_size * 2;
-        }
+        let bg_descriptor_offset = if block_size >= MIN_EXT4_SIZE {
+            // Padding and Super Block both fit in the first block, so offset to the next
+            // block.
+            block_size
+        } else {
+            // Block size is less than 2048. The only valid block size smaller than 2048 is 1024.
+            // Padding and Super Block take one block each, so offset to the third block.
+            block_size * 2
+        };
 
         // TODO(vfcc): Only checking the first block group.
         // There are potentially N block groups.
@@ -152,7 +160,18 @@ impl<T: 'static + Reader> Parser<T> {
             ParsingError::InvalidBlockGroupDesc(block_size),
         )?;
 
+        // Offset could really be anywhere, and the Reader will enforce reading within the
+        // filesystem size. Not much can be checked here.
+        let inode_table_offset = (inode_number - 1) as usize % sb.e2fs_ipg.get() as usize
+            * sb.e2fs_inode_size.get() as usize;
         let inode_addr = (bgd.ext2bgd_i_tables.get() as usize * block_size) + inode_table_offset;
+        if inode_addr < MIN_EXT4_SIZE {
+            return Err(ParsingError::InvalidAddress(
+                InvalidAddressErrorType::Lower,
+                inode_addr,
+                MIN_EXT4_SIZE,
+            ));
+        }
 
         INode::parse_offset(
             self.reader.clone(),
@@ -212,8 +231,16 @@ impl<T: 'static + Reader> Parser<T> {
         match root_extent.eh_depth.get() {
             0 => {
                 let offset = size_of::<ExtentHeader>();
+                let e_offset = offset + size_of::<ExtentHeader>();
+                if e_offset > inode.e2di_blocks.len() {
+                    return Err(ParsingError::InvalidAddress(
+                        InvalidAddressErrorType::Upper,
+                        e_offset,
+                        inode.e2di_blocks.len(),
+                    ));
+                }
                 let e = Extent::to_struct_ref(
-                    &(inode.e2di_blocks)[offset..offset * 2],
+                    &(inode.e2di_blocks)[offset..e_offset],
                     ParsingError::InvalidExtent(offset),
                 )?;
 
@@ -308,10 +335,18 @@ impl<T: 'static + Reader> Parser<T> {
         match root_extent.eh_depth.get() {
             0 => {
                 for i in 0..entry_count {
-                    let offset = size_of::<ExtentHeader>() + (size_of::<Extent>() * i as usize);
+                    let offset: usize =
+                        size_of::<ExtentHeader>() + (size_of::<Extent>() * i as usize);
+                    let e_offset = offset + size_of::<Extent>();
+                    if e_offset > inode.e2di_blocks.len() {
+                        return Err(ParsingError::InvalidAddress(
+                            InvalidAddressErrorType::Upper,
+                            e_offset,
+                            inode.e2di_blocks.len(),
+                        ));
+                    }
                     let e = Extent::to_struct_ref(
-                        // TODO(vfcc): Bounds check this and the other location.
-                        &(inode.e2di_blocks)[offset..offset + size_of::<Extent>()],
+                        &(inode.e2di_blocks)[offset..e_offset],
                         ParsingError::InvalidExtent(offset),
                     )?;
 

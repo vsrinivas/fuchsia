@@ -5,16 +5,16 @@
 use {
     anyhow::{Context as _, Error},
     ext4_parser::{construct_fs, ConstructFsError},
-    ext4_read_only::{readers::ReaderError, structs::ParsingError},
+    ext4_read_only::structs::{InvalidAddressErrorType, ParsingError},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{
         BadDirectory, BadEntryType, BadFile, BannedFeatureIncompat, BlockNumberOutOfBounds,
-        BlockSizeInvalid, DirEntry2NonUtf8, ExtentUnexpectedLength, Incompatible,
+        BlockSizeInvalid, DirEntry2NonUtf8, ExtentUnexpectedLength, Incompatible, InvalidAddress,
         InvalidBlockGroupDesc, InvalidDirEntry2, InvalidExtent, InvalidExtentHeader,
         InvalidExtentHeaderMagic, InvalidINode, InvalidInputPath, InvalidSuperBlock,
-        InvalidSuperBlockMagic, MountVmoResult, ParseError, PathNotFound, ReaderOutOfBounds,
+        InvalidSuperBlockMagic, MountVmoResult, OutOfBoundsDirection, ParseError, PathNotFound,
         ReaderReadError, RequiredFeatureIncompat, Server_Request, Server_RequestStream,
         ServiceRequest, Success,
     },
@@ -116,17 +116,20 @@ fn construct_fs_error_to_mount_vmo_result(source: ConstructFsError) -> MountVmoR
                 ParsingError::BadDirectory(path) => {
                     ParseError::BadDirectory(BadDirectory { path: path })
                 }
-                ParsingError::SourceError(source) => match source {
-                    ReaderError::Read(pos) => {
-                        ParseError::ReaderReadError(ReaderReadError { position: pos as u64 })
+                ParsingError::SourceReadError(pos) => {
+                    ParseError::ReaderReadError(ReaderReadError { position: pos as u64 })
+                }
+                ParsingError::InvalidAddress(direction, pos, bound) => {
+                    let mut dir = OutOfBoundsDirection::Below;
+                    if direction == InvalidAddressErrorType::Upper {
+                        dir = OutOfBoundsDirection::Above
                     }
-                    ReaderError::OutOfBounds(pos, size) => {
-                        ParseError::ReaderOutOfBounds(ReaderOutOfBounds {
-                            position: pos as u64,
-                            size: size as u64,
-                        })
-                    }
-                },
+                    ParseError::InvalidAddress(InvalidAddress {
+                        position: pos as u64,
+                        direction: dir,
+                        bound: bound as u64,
+                    })
+                }
             };
             MountVmoResult::ParseError(result)
         }

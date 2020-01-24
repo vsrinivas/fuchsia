@@ -35,13 +35,13 @@
 use {
     crate::readers::{Reader, ReaderError},
     byteorder::LittleEndian,
-    std::{collections::HashMap, mem::size_of, str, sync::Arc},
+    std::{collections::HashMap, fmt, mem::size_of, str, sync::Arc},
     thiserror::Error,
     zerocopy::{FromBytes, LayoutVerified, Unaligned, U16, U32, U64},
 };
 
 // Block Group 0 Padding
-pub const FIRST_BG_PADDING: usize = 0x400;
+pub const FIRST_BG_PADDING: usize = 1024;
 // INode number of root directory '/'.
 pub const ROOT_INODE_NUM: u32 = 2;
 // EXT 2/3/4 magic number.
@@ -443,6 +443,21 @@ assert_eq_size!(INode, [u8; 128]);
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
 // assert_eq_size!(INodeExtra, [u8; 160]);
 
+#[derive(Debug, PartialEq)]
+pub enum InvalidAddressErrorType {
+    Lower,
+    Upper,
+}
+
+impl fmt::Display for InvalidAddressErrorType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            InvalidAddressErrorType::Lower => write!(f, "lower"),
+            InvalidAddressErrorType::Upper => write!(f, "upper"),
+        }
+    }
+}
+
 #[derive(Error, Debug, PartialEq)]
 pub enum ParsingError {
     #[error("Unable to parse Super Block at 0x{:X}", _0)]
@@ -494,13 +509,21 @@ pub enum ParsingError {
     #[error("Bad directory at {}", _0)]
     BadDirectory(String),
 
-    #[error("Reader failed: {}", _0)]
-    SourceError(ReaderError),
+    #[error("Attempted to access at 0x{:X} when the {} bound is 0x{:X}", _1, _0, _2)]
+    InvalidAddress(InvalidAddressErrorType, usize, usize),
+
+    #[error("Reader failed to read at 0x{:X}", _0)]
+    SourceReadError(usize),
 }
 
 impl From<ReaderError> for ParsingError {
     fn from(err: ReaderError) -> ParsingError {
-        ParsingError::SourceError(err)
+        match err {
+            ReaderError::Read(addr) => ParsingError::SourceReadError(addr),
+            ReaderError::OutOfBounds(addr, max) => {
+                ParsingError::InvalidAddress(InvalidAddressErrorType::Upper, addr, max)
+            }
+        }
     }
 }
 
@@ -604,6 +627,13 @@ pub trait ParseToStruct: FromBytes + Unaligned + Sized {
     }
 
     fn read_from_offset(reader: Arc<dyn Reader>, offset: usize) -> Result<Box<[u8]>, ParsingError> {
+        if offset < FIRST_BG_PADDING {
+            return Err(ParsingError::InvalidAddress(
+                InvalidAddressErrorType::Lower,
+                offset,
+                FIRST_BG_PADDING,
+            ));
+        }
         let mut data = vec![0u8; size_of::<Self>()];
         reader.read(offset, data.as_mut_slice())?;
         Ok(data.into_boxed_slice())
@@ -659,14 +689,19 @@ impl SuperBlock {
 
     /// Reported block size.
     ///
-    /// Realistically, would not exceed 64KiB. Let's arbitrarily cap at `usize` as this is
-    /// usually the relevant datatype used during processing.
+    /// Per spec, the only valid block sizes are 1KiB, 2KiB, 4KiB, and 64KiB. We will only
+    /// permit these values.
     ///
-    /// We are currently enforcing `usize` to be `u64`, so the cap is unsigned 64bit.
+    /// Returning as `usize` for ease of use in calculations.
     pub fn block_size(&self) -> Result<usize, ParsingError> {
-        2usize
+        let bs = 2usize
             .checked_pow(self.e2fs_log_bsize.get() + 10)
-            .ok_or(ParsingError::BlockSizeInvalid(self.e2fs_log_bsize.get()))
+            .ok_or(ParsingError::BlockSizeInvalid(self.e2fs_log_bsize.get()))?;
+        if bs == 1024 || bs == 2048 || bs == 4096 || bs == 65536 {
+            Ok(bs)
+        } else {
+            Err(ParsingError::BlockSizeInvalid(self.e2fs_log_bsize.get()))
+        }
     }
 
     fn feature_check(&self) -> Result<(), ParsingError> {
@@ -689,7 +724,8 @@ impl INode {
     /// Read `e2di_blocks` and return the root Extent Header.
     pub fn root_extent_header(&self) -> Result<&ExtentHeader, ParsingError> {
         let eh = ExtentHeader::to_struct_ref(
-            // TODO(vfcc): Check the bounds here.
+            // Bounds here are known and static on a field that is defined to be much larger
+            // than an `ExtentHeader`.
             &(self.e2di_blocks)[0..size_of::<ExtentHeader>()],
             ParsingError::InvalidExtentHeader,
         )?;
@@ -875,15 +911,38 @@ mod test {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let reader = Arc::new(VecReader::new(data));
         let sb = SuperBlock::parse(reader).expect("Parsed Super Block");
-        assert!(sb.check_magic().is_ok());
         // Block size of the 1file.img is 1KiB.
         assert_eq!(sb.block_size().unwrap(), FIRST_BG_PADDING);
+
+        // Validate magic number.
+        assert!(sb.check_magic().is_ok());
 
         let mut sb = SuperBlock::default();
         assert!(sb.check_magic().is_err());
 
         sb.e2fs_magic = LEU16::new(SB_MAGIC);
         assert!(sb.check_magic().is_ok());
+
+        // Validate block size.
+        sb.e2fs_log_bsize = LEU32::new(0); // 1KiB
+        assert!(sb.block_size().is_ok());
+        sb.e2fs_log_bsize = LEU32::new(1); // 2KiB
+        assert!(sb.block_size().is_ok());
+        sb.e2fs_log_bsize = LEU32::new(2); // 4KiB
+        assert!(sb.block_size().is_ok());
+        sb.e2fs_log_bsize = LEU32::new(6); // 64KiB
+        assert!(sb.block_size().is_ok());
+
+        // Others are disallowed, checking values neighboring valid ones.
+        sb.e2fs_log_bsize = LEU32::new(3);
+        assert!(sb.block_size().is_err());
+        sb.e2fs_log_bsize = LEU32::new(5);
+        assert!(sb.block_size().is_err());
+        sb.e2fs_log_bsize = LEU32::new(7);
+        assert!(sb.block_size().is_err());
+        // How exhaustive do we get?
+        sb.e2fs_log_bsize = LEU32::new(20);
+        assert!(sb.block_size().is_err());
     }
 
     /// Covers ParseToStruct::parse_offset.
