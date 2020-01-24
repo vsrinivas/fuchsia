@@ -13,7 +13,6 @@ group("uapp") {
     "disk-inspect",
     "disk-pave",
     "display-test",
-    "driverctl",
     "fs-fsck",
     "fs-mount",
     "fvm-check",
