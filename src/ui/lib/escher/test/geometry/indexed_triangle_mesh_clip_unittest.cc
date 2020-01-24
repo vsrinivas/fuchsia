@@ -67,6 +67,24 @@ TEST(IndexedTriangleMeshClip, OneTriangle2d) {
   }
 }
 
+TEST(IndexedTriangleMeshClip, OneTriangle2dManyPlanes) {
+  IndexedTriangleMesh2d<nullptr_t, vec2> mesh{.indices = {0, 1, 2},
+                                              .positions = {vec2(0, 0), vec2(1, 0), vec2(0, 3)},
+                                              .attributes2 = {vec2(0, 0), vec2(1, 0), vec2(0, 1)}};
+
+  // Use many planes to repeatedly clip the triangle in a way that generates a mesh
+  // with more vertices than the original mesh.
+  std::vector<plane2> planes = {plane2(vec2(-1, 0), -0.5f),  plane2(vec2(-1, 0), -0.49f),
+                                plane2(vec2(-1, 0), -0.48f), plane2(vec2(-1, 0), -0.47f),
+                                plane2(vec2(-1, 0), -0.46f), plane2(vec2(-1, 0), -0.45f),
+                                plane2(vec2(-1, 0), -0.44f), plane2(vec2(-1, 0), -0.43f)};
+
+  auto result = IndexedTriangleMeshClip(mesh, planes);
+  auto& output_mesh = result.first;
+  EXPECT_EQ(output_mesh.indices.size(), 27U);
+  EXPECT_EQ(output_mesh.positions.size(), 11U);
+}
+
 // Helper function that returns a list of planes that tightly bounds the
 // standard test mesh.
 std::vector<plane2> GetStandardTestMeshBoundingPlanes2d() {
