@@ -43,10 +43,12 @@ impl Model {
     ) -> Result<Vec<Arc<Realm>>, ModelError> {
         // Resolve the component and find the runner to use.
         let component = realm.resolver_registry.resolve(&realm.component_url).await?;
+        let resolved_url = component.resolved_url.ok_or(ModelError::ComponentInvalid)?;
+        let package = component.package;
+
         let (decl, live_child_descriptors) = {
-            // The `ComponentDecl` must always be resolved by `resolve_decl` as that
-            // can trigger a `ResolveInstance` event.
-            Realm::resolve_decl(&realm).await?;
+            Realm::populate_decl(&realm, component.decl.ok_or(ModelError::ComponentInvalid)?)
+                .await?;
             let state = realm.lock_state().await;
             let state = state.as_ref().unwrap();
             let decl = state.decl().clone();
@@ -82,14 +84,8 @@ impl Model {
         }
 
         // Generate the Runtime which will be set in the Execution.
-        let (pending_runtime, start_info, controller_server) = self
-            .make_execution_runtime(
-                &realm.abs_moniker,
-                component.resolved_url.ok_or(ModelError::ComponentInvalid)?,
-                component.package,
-                &decl,
-            )
-            .await?;
+        let (pending_runtime, start_info, controller_server) =
+            self.make_execution_runtime(&realm.abs_moniker, resolved_url, package, &decl).await?;
 
         // Invoke the BeforeStart hook outside of lock, passing it a Runtime reference. Note that
         // this could race with the component being started first in some other task. In that case,

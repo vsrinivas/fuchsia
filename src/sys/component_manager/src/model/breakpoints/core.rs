@@ -145,6 +145,9 @@ impl Hook for BreakpointSystemFactoryInner {
                         let key = Some(event.target_moniker.clone());
                         let mut breakpoint_system_registry =
                             self.breakpoint_system_registry.lock().await;
+                        // It is currently assumed that a component instance's declaration
+                        // is resolved only once. Someday, this may no longer be true if individual
+                        // components can be updated.
                         assert!(!breakpoint_system_registry.contains_key(&key));
                         let breakpoint_system = self.create(key.clone()).await;
                         breakpoint_system_registry.insert(key, breakpoint_system);

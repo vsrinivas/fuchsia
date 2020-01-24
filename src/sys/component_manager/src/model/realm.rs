@@ -119,27 +119,36 @@ impl Realm {
         let is_resolved = { realm.lock_state().await.is_some() };
         if !is_resolved {
             let component = realm.resolver_registry.resolve(&realm.component_url).await?;
-            let decl: ComponentDecl = component
-                .decl
-                .unwrap()
-                .try_into()
-                .map_err(|e| ModelError::manifest_invalid(realm.component_url.clone(), e))?;
-            let new_realm_state = {
-                let mut state = realm.lock_state().await;
-                if state.is_none() {
-                    *state = Some(RealmState::new(realm, &decl).await?);
-                    true
-                } else {
-                    false
-                }
-            };
-            // Only dispatch the `ResolveInstance` event if a `RealmState` was installed
-            // in this call.
-            if new_realm_state {
-                let event =
-                    Event::new(realm.abs_moniker.clone(), EventPayload::ResolveInstance { decl });
-                realm.hooks.dispatch(&event).await?;
+            Realm::populate_decl(realm, component.decl.ok_or(ModelError::ComponentInvalid)?)
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// Populates the component declaration of this realm's Instance using the provided
+    /// `component_decl  if not already populated.
+    pub async fn populate_decl(
+        realm: &Arc<Self>,
+        component_decl: fsys::ComponentDecl,
+    ) -> Result<(), ModelError> {
+        let decl: ComponentDecl = component_decl
+            .try_into()
+            .map_err(|e| ModelError::manifest_invalid(realm.component_url.clone(), e))?;
+        let new_realm_state = {
+            let mut state = realm.lock_state().await;
+            if state.is_none() {
+                *state = Some(RealmState::new(realm, &decl).await?);
+                true
+            } else {
+                false
             }
+        };
+        // Only dispatch the `ResolveInstance` event if a `RealmState` was installed
+        // in this call.
+        if new_realm_state {
+            let event =
+                Event::new(realm.abs_moniker.clone(), EventPayload::ResolveInstance { decl });
+            realm.hooks.dispatch(&event).await?;
         }
         Ok(())
     }
