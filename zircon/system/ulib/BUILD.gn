@@ -127,6 +127,7 @@ group("ulib") {
     "service:service-llcpp",
     "simplehid",
     "smbios",
+    "spi",
     "statusor",
     "storage-metrics",
     "storage/buffer",

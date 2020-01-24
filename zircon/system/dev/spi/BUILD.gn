@@ -5,6 +5,5 @@
 group("spi") {
   deps = [
     "aml-spi",
-    "spi",
   ]
 }

@@ -93,7 +93,6 @@ if (current_cpu != "") {
       "$zx/system/dev/serial/serial/test",
       "$zx/system/dev/serial/uart16550:uart16550-test",
       "$zx/system/dev/shareddma/syn-dma:syn-dhub-test",
-      "$zx/system/dev/spi/spi:spi-test",
       "$zx/system/dev/sysmem/sysmem:sysmem-unittest",
       "$zx/system/dev/tee/optee:test",
       "$zx/system/dev/test",
