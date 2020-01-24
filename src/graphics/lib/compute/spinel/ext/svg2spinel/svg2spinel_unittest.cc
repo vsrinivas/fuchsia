@@ -121,3 +121,101 @@ TEST_F(Svg2SpinelTest, polyline)
   spn_svg_rasters_release(svg.get(), context_, rasters);
   spn_svg_paths_release(svg.get(), context_, paths);
 }
+
+//
+//
+//
+
+TEST_F(Svg2SpinelTest, skewX)
+{
+  char const doc[] = { "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+                       "<rect width=\"16\" height=\"16\" transform=\"skewX(45)\"/>\n"
+                       "</svg>\n" };
+
+  // expect skewX transform
+  spn_transform_t const skewX = { 1.0f, 1.0f, 0.0f,  // shx = tan(45º) = 1
+                                  0.0f, 1.0f, 0.0f,  //
+                                  0.0f, 0.0f };
+
+  ScopedSvg svg = ScopedSvg::parseString(doc);
+  ASSERT_TRUE(svg.get());
+
+  // create paths
+  spn_path_t * paths = spn_svg_paths_decode(svg.get(), path_builder_);
+  ASSERT_TRUE(paths);
+
+  // create transform stack
+  transform_stack * ts = transform_stack_create(32);
+  transform_stack_push_identity(ts);
+
+  // decode rasters
+  spn_raster_t * rasters = spn_svg_rasters_decode(svg.get(), raster_builder_, paths, ts);
+  ASSERT_TRUE(rasters);
+
+  // inspect transform
+  ASSERT_TRUE(rasters);
+  {
+    const auto & rasters = mock_context()->rasters();
+    ASSERT_EQ(rasters.size(), 1u);
+
+    const auto & raster = rasters[0][0];
+    EXPECT_SPN_TRANSFORM_EQ(raster.transform,skewX);
+  }
+
+  transform_stack_release(ts);
+
+  spn_svg_rasters_release(svg.get(), context_, rasters);
+
+  spn_svg_paths_release(svg.get(), context_, paths);
+}
+
+//
+//
+//
+
+TEST_F(Svg2SpinelTest, skewY)
+{
+  char const doc[] = { "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+                       "<rect width=\"16\" height=\"16\" transform=\"skewY(45)\"/>\n"
+                       "</svg>\n" };
+
+  // expect skewY transform
+  spn_transform_t const skewX = { 1.0f, 0.0f, 0.0f,  //
+                                  1.0f, 1.0f, 0.0f,  // shy = tan(45º) = 1
+                                  0.0f, 0.0f };
+
+  ScopedSvg svg = ScopedSvg::parseString(doc);
+  ASSERT_TRUE(svg.get());
+
+  // create paths
+  spn_path_t * paths = spn_svg_paths_decode(svg.get(), path_builder_);
+  ASSERT_TRUE(paths);
+
+  // create transform stack
+  transform_stack * ts = transform_stack_create(32);
+  transform_stack_push_identity(ts);
+
+  // decode rasters
+  spn_raster_t * rasters = spn_svg_rasters_decode(svg.get(), raster_builder_, paths, ts);
+  ASSERT_TRUE(rasters);
+
+  // inspect transform
+  ASSERT_TRUE(rasters);
+  {
+    const auto & rasters = mock_context()->rasters();
+    ASSERT_EQ(rasters.size(), 1u);
+
+    const auto & raster = rasters[0][0];
+    EXPECT_SPN_TRANSFORM_EQ(raster.transform,skewX);
+  }
+
+  transform_stack_release(ts);
+
+  spn_svg_rasters_release(svg.get(), context_, rasters);
+
+  spn_svg_paths_release(svg.get(), context_, paths);
+}
+
+//
+//
+//

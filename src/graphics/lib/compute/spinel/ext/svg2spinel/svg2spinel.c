@@ -399,12 +399,12 @@ spn_svg_rasters_decode(struct svg const * const       svg,
             break;
 
           case SVG_RASTER_CMD_TRANSFORM_SKEW_X:
-            transform_stack_push_skew_x(ts, cmd->skew_x.d);
+            transform_stack_push_skew_x(ts, cmd->skew_x.d * (float)(M_PI / 180.0));
             transform_stack_concat(ts);
             break;
 
           case SVG_RASTER_CMD_TRANSFORM_SKEW_Y:
-            transform_stack_push_skew_y(ts, cmd->skew_y.d);
+            transform_stack_push_skew_y(ts, cmd->skew_y.d * (float)(M_PI / 180.0));
             transform_stack_concat(ts);
             break;
 
