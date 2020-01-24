@@ -83,6 +83,13 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 		return err
 	}
 
+// Note that if the FIDL library defines no protocols, this will produce an empty file.
+	sourceFile, err := os.Create(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
 	if len(fidl.Interfaces) > 0 {
 		mthdCount := 0
 		for _, iface := range fidl.Interfaces {
@@ -91,12 +98,6 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 		if mthdCount == 0 {
 			return fmt.Errorf("No non-empty interfaces in FIDL library: %s", string(fidl.Name))
 		}
-
-		sourceFile, err := os.Create(sourcePath)
-		if err != nil {
-			return err
-		}
-		defer sourceFile.Close()
 
 		if err := gen.GenerateSource(sourceFile, tree); err != nil {
 			return err
