@@ -244,6 +244,16 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       // "aml-thermal/thermal",
       // "sys/platform/05:03:1e/cpu",
       "aml-secure-mem/aml-securemem",
+      "class/pwm/000",
+      "class/pwm/001",
+      "class/pwm/002",
+      "class/pwm/003",
+      "class/pwm/004",
+      "class/pwm/005",
+      "class/pwm/006",
+      "class/pwm/007",
+      "class/pwm/008",
+      "class/pwm/009",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

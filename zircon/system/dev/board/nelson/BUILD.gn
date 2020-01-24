@@ -17,6 +17,7 @@ zx_driver("nelson") {
     "nelson-i2c.cc",
     "nelson-light.cc",
     "nelson-mali.cc",
+    "nelson-pwm.cc",
     "nelson-sdio.cc",
     "nelson-securemem.cc",
     "nelson-spi.cc",
