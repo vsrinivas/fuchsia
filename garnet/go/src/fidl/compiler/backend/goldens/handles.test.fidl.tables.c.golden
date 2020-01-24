@@ -4,13 +4,19 @@
 
 // Forward declarations for old <-> V1 mappings
 
+extern const fidl_type_t test_name_SomeProtocolSomeMethodRequestTable;
 extern const fidl_type_t test_name_HandlesTable;
+extern const fidl_type_t v1_test_name_SomeProtocolSomeMethodRequestTable;
 extern const fidl_type_t v1_test_name_HandlesTable;
 
 // Coding tables for old wire format.
 
 extern const fidl_type_t test_name_HandlesTable;
 
+
+extern const fidl_type_t test_name_SomeProtocolSomeMethodRequestTable;
+static const struct FidlStructField Fields39test_name_SomeProtocolSomeMethodRequest[] = {};
+const fidl_type_t test_name_SomeProtocolSomeMethodRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39test_name_SomeProtocolSomeMethodRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/SomeProtocolSomeMethodRequest", .alt_type=&v1_test_name_SomeProtocolSomeMethodRequestTable}}};
 
 static const fidl_type_t HandlehandlenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .nullable=kFidlNullability_Nonnullable}}};
 
@@ -64,6 +70,10 @@ static const fidl_type_t HandlevmarnonnullableTable = {.type_tag=kFidlTypeHandle
 
 static const fidl_type_t HandlevmononnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .nullable=kFidlNullability_Nonnullable}}};
 
+static const fidl_type_t Protocol22test_name_SomeProtocolnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+
+static const fidl_type_t Request22test_name_SomeProtocolnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+
 
 static const struct FidlStructField Fields17test_name_Handles[] = {
     /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=0u, .padding=0u},
@@ -91,14 +101,20 @@ static const struct FidlStructField Fields17test_name_Handles[] = {
     /*FidlStructField*/{.type=&HandletimernonnullableTable, .offset=88u, .padding=0u},
     /*FidlStructField*/{.type=&HandlevcpunonnullableTable, .offset=92u, .padding=0u},
     /*FidlStructField*/{.type=&HandlevmarnonnullableTable, .offset=96u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlevmononnullableTable, .offset=100u, .padding=0u}
+    /*FidlStructField*/{.type=&HandlevmononnullableTable, .offset=100u, .padding=0u},
+    /*FidlStructField*/{.type=&Protocol22test_name_SomeProtocolnonnullableTable, .offset=104u, .padding=0u},
+    /*FidlStructField*/{.type=&Request22test_name_SomeProtocolnonnullableTable, .offset=108u, .padding=0u}
 };
-const fidl_type_t test_name_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields17test_name_Handles, .field_count=26u, .size=104u, .max_out_of_line=0u, .contains_union=false, .name="test.name/Handles", .alt_type=&v1_test_name_HandlesTable}}};
+const fidl_type_t test_name_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields17test_name_Handles, .field_count=28u, .size=112u, .max_out_of_line=0u, .contains_union=false, .name="test.name/Handles", .alt_type=&v1_test_name_HandlesTable}}};
 
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_test_name_HandlesTable;
 
+
+extern const fidl_type_t v1_test_name_SomeProtocolSomeMethodRequestTable;
+static const struct FidlStructField Fields42v1_test_name_SomeProtocolSomeMethodRequest[] = {};
+const fidl_type_t v1_test_name_SomeProtocolSomeMethodRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields42v1_test_name_SomeProtocolSomeMethodRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/SomeProtocolSomeMethodRequest", .alt_type=&test_name_SomeProtocolSomeMethodRequestTable}}};
 
 static const fidl_type_t v1_HandlehandlenonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_NONE, .nullable=kFidlNullability_Nonnullable}}};
 
@@ -152,6 +168,10 @@ static const fidl_type_t v1_HandlevmarnonnullableTable = {.type_tag=kFidlTypeHan
 
 static const fidl_type_t v1_HandlevmononnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .nullable=kFidlNullability_Nonnullable}}};
 
+static const fidl_type_t v1_Protocol25v1_test_name_SomeProtocolnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+
+static const fidl_type_t v1_Request25v1_test_name_SomeProtocolnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+
 
 static const struct FidlStructField Fields20v1_test_name_Handles[] = {
     /*FidlStructField*/{.type=&v1_HandlehandlenonnullableTable, .offset=0u, .padding=0u},
@@ -179,7 +199,9 @@ static const struct FidlStructField Fields20v1_test_name_Handles[] = {
     /*FidlStructField*/{.type=&v1_HandletimernonnullableTable, .offset=88u, .padding=0u},
     /*FidlStructField*/{.type=&v1_HandlevcpunonnullableTable, .offset=92u, .padding=0u},
     /*FidlStructField*/{.type=&v1_HandlevmarnonnullableTable, .offset=96u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlevmononnullableTable, .offset=100u, .padding=0u}
+    /*FidlStructField*/{.type=&v1_HandlevmononnullableTable, .offset=100u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Protocol25v1_test_name_SomeProtocolnonnullableTable, .offset=104u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Request25v1_test_name_SomeProtocolnonnullableTable, .offset=108u, .padding=0u}
 };
-const fidl_type_t v1_test_name_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20v1_test_name_Handles, .field_count=26u, .size=104u, .max_out_of_line=0u, .contains_union=false, .name="test.name/Handles", .alt_type=&test_name_HandlesTable}}};
+const fidl_type_t v1_test_name_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20v1_test_name_Handles, .field_count=28u, .size=112u, .max_out_of_line=0u, .contains_union=false, .name="test.name/Handles", .alt_type=&test_name_HandlesTable}}};
 

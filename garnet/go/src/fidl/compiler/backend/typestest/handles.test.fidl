@@ -1,5 +1,9 @@
 library test.name;
 
+protocol SomeProtocol {
+    SomeMethod();
+};
+
 struct Handles {
     handle plain_handle;
 
@@ -28,4 +32,7 @@ struct Handles {
     handle<vcpu> vcpu_handle;
     handle<vmar> vmar_handle;
     handle<vmo> vmo_handle;
+
+    SomeProtocol some_protocol;
+    request<SomeProtocol> request_some_protocol;
 };

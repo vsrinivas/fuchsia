@@ -8,7 +8,160 @@
 namespace test {
 namespace name {
 
+#ifdef __Fuchsia__
+
+class SomeProtocol;
+using SomeProtocolPtr = ::fidl::InterfacePtr<SomeProtocol>;
+class SomeProtocol_Proxy;
+class SomeProtocol_Stub;
+class SomeProtocol_EventSender;
+class SomeProtocol_Sync;
+using SomeProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SomeProtocol>;
+class SomeProtocol_SyncProxy;
+namespace internal {
+constexpr uint64_t kSomeProtocol_SomeMethod_Ordinal = 0x1a5a7f0e00000000lu;
+constexpr uint64_t kSomeProtocol_SomeMethod_GenOrdinal = 0x770a27eb8815af1elu;
+
+}  // namespace
+#endif // __Fuchsia__
 class Handles;
+#ifdef __Fuchsia__
+
+class SomeProtocol {
+ public:
+  using Proxy_ = SomeProtocol_Proxy;
+  using Stub_ = SomeProtocol_Stub;
+  using EventSender_ = SomeProtocol_EventSender;
+  using Sync_ = SomeProtocol_Sync;
+  virtual ~SomeProtocol();
+      
+  virtual void SomeMethod() = 0;
+};
+
+class SomeProtocol_RequestEncoder {
+ public:
+  static ::fidl::Message SomeMethod(::fidl::Encoder* _encoder) {
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    return _encoder->GetMessage();
+  }
+};
+
+class SomeProtocol_RequestDecoder {
+ public:
+  SomeProtocol_RequestDecoder() = default;
+  virtual ~SomeProtocol_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kSomeProtocol_SomeMethod_Ordinal:
+      case internal::kSomeProtocol_SomeMethod_GenOrdinal:
+      {
+        SomeMethod();
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void SomeMethod() = 0;
+};
+
+class SomeProtocol_ResponseEncoder {
+ public:
+};
+
+class SomeProtocol_ResponseDecoder {
+ public:
+  SomeProtocol_ResponseDecoder() = default;
+  virtual ~SomeProtocol_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+};
+
+class SomeProtocol_EventSender {
+ public:
+  virtual ~SomeProtocol_EventSender();
+};
+
+class SomeProtocol_Sync {
+ public:
+  using Proxy_ = SomeProtocol_SyncProxy;
+  virtual ~SomeProtocol_Sync();
+  virtual zx_status_t SomeMethod() = 0;
+};
+
+class SomeProtocol_Proxy final : public ::fidl::internal::Proxy, public SomeProtocol {
+ public:
+  explicit SomeProtocol_Proxy(::fidl::internal::ProxyController* controller);
+  ~SomeProtocol_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void SomeMethod() override;
+
+ private:
+  SomeProtocol_Proxy(const SomeProtocol_Proxy&) = delete;
+  SomeProtocol_Proxy& operator=(const SomeProtocol_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class SomeProtocol_Stub final : public ::fidl::internal::Stub, public SomeProtocol_EventSender {
+ public:
+  typedef class ::test::name::SomeProtocol SomeProtocol_clazz;
+  explicit SomeProtocol_Stub(SomeProtocol_clazz* impl);
+  ~SomeProtocol_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  SomeProtocol_clazz* impl_;
+};
+
+class SomeProtocol_SyncProxy : public SomeProtocol_Sync {
+ public:
+  explicit SomeProtocol_SyncProxy(::zx::channel channel);
+  ~SomeProtocol_SyncProxy() override;
+  zx_status_t SomeMethod() override;
+
+  private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<SomeProtocol>;
+};
+#endif // __Fuchsia__
 
 class Handles final {
  public:
@@ -65,6 +218,10 @@ class Handles final {
   ::zx::vmar vmar_handle{};
   
   ::zx::vmo vmo_handle{};
+  
+  ::fidl::InterfaceHandle<class SomeProtocol> some_protocol{};
+  
+  ::fidl::InterfaceRequest<SomeProtocol> request_some_protocol{};
 
   static inline ::std::unique_ptr<Handles> New() { return ::std::make_unique<Handles>(); }
 
@@ -85,7 +242,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::Handles>
-    : public EncodableCodingTraits<::test::name::Handles, 104> {};
+    : public EncodableCodingTraits<::test::name::Handles, 112> {};
 
 inline zx_status_t Clone(const ::test::name::Handles& value,
                          ::test::name::Handles* result) {
@@ -171,6 +328,12 @@ struct Equality<::test::name::Handles> {
       return false;
     }
     if (!::fidl::Equals(_lhs.vmo_handle, _rhs.vmo_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.some_protocol, _rhs.some_protocol)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.request_some_protocol, _rhs.request_some_protocol)) {
       return false;
     }
     return true;

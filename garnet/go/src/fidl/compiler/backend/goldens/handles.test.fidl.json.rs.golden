@@ -51,6 +51,8 @@ pub struct Handles {
   pub vcpu_handle: fidl::Vcpu,
   pub vmar_handle: fidl::Vmar,
   pub vmo_handle: fidl::Vmo,
+  pub some_protocol: fidl::endpoints::ClientEnd<SomeProtocolMarker>,
+  pub request_some_protocol: fidl::endpoints::ServerEnd<SomeProtocolMarker>,
 }
 
 fidl_struct! {
@@ -160,7 +162,359 @@ fidl_struct! {
       ty: fidl::Vmo,
       offset_v1: 100,
     },
+    some_protocol {
+      ty: fidl::endpoints::ClientEnd<SomeProtocolMarker>,
+      offset_v1: 104,
+    },
+    request_some_protocol {
+      ty: fidl::endpoints::ServerEnd<SomeProtocolMarker>,
+      offset_v1: 108,
+    },
   ],
-  size_v1: 104,
+  size_v1: 112,
   align_v1: 4,
 }
+
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct SomeProtocolMarker;
+
+impl fidl::endpoints::ServiceMarker for SomeProtocolMarker {
+	type Proxy = SomeProtocolProxy;
+	type RequestStream = SomeProtocolRequestStream;
+	const DEBUG_NAME: &'static str = "(anonymous) SomeProtocol";
+}
+
+pub trait SomeProtocolProxyInterface: Send + Sync {
+	fn some_method(&self,
+	)-> Result<(), fidl::Error>;
+}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct SomeProtocolSynchronousProxy {
+	client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl SomeProtocolSynchronousProxy {
+	pub fn new(channel: ::fidl::Channel) -> Self {
+		Self { client: fidl::client::sync::Client::new(channel) }
+	}
+
+	pub fn into_channel(self) -> ::fidl::Channel {
+		self.client.into_channel()
+	}
+	pub fn some_method(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
+				0x770a27eb8815af1e,
+			)}
+}
+
+#[derive(Debug, Clone)]
+pub struct SomeProtocolProxy {
+	client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for SomeProtocolProxy {
+	type Service = SomeProtocolMarker;
+	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+		Self::new(inner)
+	}
+}
+
+impl ::std::ops::Deref for SomeProtocolProxy {
+	type Target = fidl::client::Client;
+
+	fn deref(&self) -> &Self::Target {
+		&self.client
+	}
+}
+
+impl SomeProtocolProxy {
+	/// Create a new Proxy for SomeProtocol
+	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+		Self { client: fidl::client::Client::new(channel) }
+	}
+
+	/// Attempt to convert the Proxy back into a channel.
+	///
+	/// This will only succeed if there are no active clones of this Proxy
+	/// and no currently-alive EventStream or response futures that came from
+	/// this Proxy.
+	pub fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+		self.client.into_channel().map_err(|client| Self { client })
+	}
+
+	/// Get a Stream of events from the remote end of the SomeProtocol interface
+	pub fn take_event_stream(&self) -> SomeProtocolEventStream {
+		SomeProtocolEventStream {
+			event_receiver: self.client.take_event_receiver(),
+		}
+	}
+	pub fn some_method(&self,
+	)-> Result<(), fidl::Error> {
+		SomeProtocolProxyInterface::some_method(self,
+		)
+	}
+}
+
+impl SomeProtocolProxyInterface for SomeProtocolProxy {
+	fn some_method(&self,
+	)-> Result<(), fidl::Error> {
+		self.client.send(&mut (), 0x770a27eb8815af1e)
+	}}
+
+pub struct SomeProtocolEventStream {
+	event_receiver: fidl::client::EventReceiver,
+}
+
+impl ::std::marker::Unpin for SomeProtocolEventStream {}
+
+impl futures::stream::FusedStream for SomeProtocolEventStream {
+	fn is_terminated(&self) -> bool {
+		self.event_receiver.is_terminated()
+	}
+}
+
+impl futures::Stream for SomeProtocolEventStream {
+	type Item = Result<SomeProtocolEvent, fidl::Error>;
+
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
+		-> std::task::Poll<Option<Self::Item>>
+	{
+		let mut buf = match futures::ready!(
+			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
+		) {
+			Some(buf) => buf,
+			None => return std::task::Poll::Ready(None),
+		};
+		let (bytes, _handles) = buf.split_mut();
+		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		std::task::Poll::Ready(Some(match tx_header.ordinal() {
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: tx_header.ordinal(),
+				service_name: <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			})
+		}))
+	}
+}
+
+#[derive(Debug)]
+pub enum SomeProtocolEvent {
+	
+	}
+
+impl SomeProtocolEvent {
+}
+
+/// A type which can be used to send responses and events into a borrowed channel.
+///
+/// Note: this should only be used when the channel must be temporarily
+/// borrowed. For a typical sending of events, use the send_ methods
+/// on the ControlHandle types, which can be acquired through a
+/// RequestStream or Responder type.
+#[deprecated(note = "Use SomeProtocolRequestStream / Responder instead")]
+pub struct SomeProtocolServerSender<'a> {
+	// Some protocols don't define events which would render this channel unused.
+	#[allow(unused)]
+	channel: &'a ::fidl::Channel,
+}
+
+impl <'a> SomeProtocolServerSender<'a> {
+	pub fn new(channel: &'a ::fidl::Channel) -> Self {
+		Self { channel }
+	}
+}
+
+/// A Stream of incoming requests for SomeProtocol
+pub struct SomeProtocolRequestStream {
+	inner: ::std::sync::Arc<fidl::ServeInner>,
+	is_terminated: bool,
+}
+
+impl ::std::marker::Unpin for SomeProtocolRequestStream {}
+
+impl futures::stream::FusedStream for SomeProtocolRequestStream {
+	fn is_terminated(&self) -> bool {
+		self.is_terminated
+	}
+}
+
+impl fidl::endpoints::RequestStream for SomeProtocolRequestStream {
+	type Service = SomeProtocolMarker;
+
+	/// Consume a channel to make a SomeProtocolRequestStream
+	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+		Self {
+			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
+			is_terminated: false,
+		}
+	}
+
+	/// ControlHandle for the remote connection
+	type ControlHandle = SomeProtocolControlHandle;
+
+	/// ControlHandle for the remote connection
+	fn control_handle(&self) -> Self::ControlHandle {
+		SomeProtocolControlHandle { inner: self.inner.clone() }
+	}
+
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
+	}
+
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
+		-> Self
+	{
+		Self { inner, is_terminated }
+	}
+}
+
+impl futures::Stream for SomeProtocolRequestStream {
+	type Item = Result<SomeProtocolRequest, fidl::Error>;
+
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
+		-> std::task::Poll<Option<Self::Item>>
+	{
+		let this = &mut *self;
+		if this.inner.poll_shutdown(cx) {
+			this.is_terminated = true;
+			return std::task::Poll::Ready(None);
+		}
+		if this.is_terminated {
+			panic!("polled SomeProtocolRequestStream after completion");
+		}
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(cx, bytes, handles) {
+				std::task::Poll::Ready(Ok(())) => {},
+				std::task::Poll::Pending => return std::task::Poll::Pending,
+				std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return std::task::Poll::Ready(None);
+				}
+				std::task::Poll::Ready(Err(e)) => return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+			}
+
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+			if !header.is_compatible() {
+				return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(header.magic_number()))));
+			}
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			std::task::Poll::Ready(Some(match header.ordinal() {
+				0x1a5a7f0e00000000 | 0x770a27eb8815af1e => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+					let control_handle = SomeProtocolControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(SomeProtocolRequest::SomeMethod {control_handle,})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal(),
+					service_name: <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+				}),
+			}))
+		})
+	}
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use SomeProtocolRequest instead")]
+pub enum SomeProtocolRequestMessage {
+	SomeMethod {
+		},
+}
+
+impl SomeProtocolRequestMessage {
+	pub fn decode(bytes: &[u8], _handles: &mut [fidl::Handle]) -> Result<SomeProtocolRequestMessage, fidl::Error> {
+		let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		match header.ordinal() {
+			0x1a5a7f0e00000000 | 0x770a27eb8815af1e => {
+				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
+				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+
+				Ok(SomeProtocolRequestMessage::SomeMethod {})
+			}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: header.ordinal(),
+				service_name: <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			}),
+		}
+	}
+
+
+}
+#[derive(Debug)]
+pub enum SomeProtocolRequest {
+	SomeMethod {
+		control_handle: SomeProtocolControlHandle,},
+}
+
+impl SomeProtocolRequest {
+	#[allow(irrefutable_let_patterns)]
+	pub fn into_some_method(self) -> Option<(SomeProtocolControlHandle
+	)> {
+		if let SomeProtocolRequest::SomeMethod {control_handle,
+		} = self {
+			Some((control_handle))
+		} else {
+			None
+		}
+	}
+	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                SomeProtocolRequest::SomeMethod{..} => "some_method",
+          }
+        }
+}
+
+pub struct SomeProtocolEncoder;
+
+impl SomeProtocolEncoder {
+	pub fn encode_some_method_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader::new(0,0x770a27eb8815af1e);
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
+
+#[derive(Debug, Clone)]
+pub struct SomeProtocolControlHandle {
+	inner: ::std::sync::Arc<fidl::ServeInner>,
+}
+
+impl ::std::ops::Deref for SomeProtocolControlHandle {
+	type Target = ::std::sync::Arc<fidl::ServeInner>;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
+}
+
+impl SomeProtocolControlHandle {
+	pub fn shutdown(&self) {
+		self.inner.shutdown()
+	}
+
+	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+		self.inner.shutdown_with_epitaph(status)
+	}}
+
+/* beginning of response types */

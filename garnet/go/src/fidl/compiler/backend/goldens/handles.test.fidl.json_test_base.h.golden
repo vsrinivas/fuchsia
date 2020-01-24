@@ -6,6 +6,16 @@
 namespace test {
 namespace name {
 namespace testing {
+
+class SomeProtocol_TestBase : public SomeProtocol {
+  public:
+  virtual ~SomeProtocol_TestBase() { }
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void SomeMethod() override {
+    NotImplemented_("SomeMethod");
+  }
+
+};
 }  // namespace testing
 }  // namespace name
 }  // namespace test

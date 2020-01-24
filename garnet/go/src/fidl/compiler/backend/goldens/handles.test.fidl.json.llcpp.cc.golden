@@ -8,6 +8,106 @@ namespace llcpp {
 namespace test {
 namespace name {
 
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kSomeProtocol_SomeMethod_Ordinal = 0x1a5a7f0e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kSomeProtocol_SomeMethod_GenOrdinal = 0x770a27eb8815af1elu;
+extern "C" const fidl_type_t v1_test_name_SomeProtocolSomeMethodRequestTable;
+extern "C" const fidl_type_t v1_test_name_SomeProtocolSomeMethodResponseTable;
+
+}  // namespace
+
+SomeProtocol::ResultOf::SomeMethod_Impl::SomeMethod_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SomeMethodRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, SomeMethodRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SomeMethodRequest));
+  ::fidl::DecodedMessage<SomeMethodRequest> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      SomeProtocol::InPlace::SomeMethod(std::move(_client_end)));
+}
+
+SomeProtocol::ResultOf::SomeMethod SomeProtocol::SyncClient::SomeMethod() {
+    return ResultOf::SomeMethod(::zx::unowned_channel(this->channel_));
+}
+
+SomeProtocol::ResultOf::SomeMethod SomeProtocol::Call::SomeMethod(::zx::unowned_channel _client_end) {
+  return ResultOf::SomeMethod(std::move(_client_end));
+}
+
+::fidl::internal::StatusAndError SomeProtocol::InPlace::SomeMethod(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _write_num_bytes = sizeof(SomeMethodRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<SomeMethodRequest> params(std::move(_request_buffer));
+  SomeProtocol::SetTransactionHeaderFor::SomeMethodRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
+bool SomeProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
+  switch (hdr->ordinal) {
+    case kSomeProtocol_SomeMethod_Ordinal:
+    case kSomeProtocol_SomeMethod_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<SomeMethodRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->SomeMethod(
+          Interface::SomeMethodCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool SomeProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+
+void SomeProtocol::SetTransactionHeaderFor::SomeMethodRequest(const ::fidl::DecodedMessage<SomeProtocol::SomeMethodRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSomeProtocol_SomeMethod_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp

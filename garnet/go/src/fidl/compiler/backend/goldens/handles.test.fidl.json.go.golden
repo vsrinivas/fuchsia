@@ -13,7 +13,7 @@ import (
 
 
 type Handles struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"104" fidl_alignment_v1:"4"`
+	_ struct{} `fidl:"s" fidl_size_v1:"112" fidl_alignment_v1:"4"`
 	PlainHandle _zx.Handle`fidl:"0,0" fidl_offset_v1:"0"`
 	BtiHandle _zx.Handle`fidl:"4,0" fidl_offset_v1:"4"`
 	ChannelHandle _zx.Channel`fidl:"8,0" fidl_offset_v1:"8"`
@@ -40,6 +40,8 @@ type Handles struct {
 	VcpuHandle _zx.Handle`fidl:"92,0" fidl_offset_v1:"92"`
 	VmarHandle _zx.VMAR`fidl:"96,0" fidl_offset_v1:"96"`
 	VmoHandle _zx.VMO`fidl:"100,0" fidl_offset_v1:"100"`
+	SomeProtocol SomeProtocolInterface`fidl:"104" fidl_offset_v1:"104"`
+	RequestSomeProtocol SomeProtocolInterfaceRequest`fidl:"108,0" fidl_offset_v1:"108"`
 }
 
 var _mHandles = _bindings.CreateLazyMarshaler(Handles{})
@@ -47,3 +49,85 @@ var _mHandles = _bindings.CreateLazyMarshaler(Handles{})
 func (msg *Handles) Marshaler() _bindings.Marshaler {
 	return _mHandles
 }
+const (
+	SomeProtocolSomeMethodOrdinal uint64 = 0x1a5a7f0e00000000
+	SomeProtocolSomeMethodGenOrdinal uint64 = 0x770a27eb8815af1e
+)
+
+type SomeProtocolInterface _bindings.ChannelProxy
+
+
+func (p *SomeProtocolInterface) SomeMethod() error {
+	var req_ _bindings.Message
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(SomeProtocolSomeMethodGenOrdinal, req_)
+	return err_
+}
+
+
+type SomeProtocolWithCtx interface {
+	SomeMethod(ctx_ _bindings.Context) error
+}
+
+
+
+type SomeProtocolWithCtxTransitionalBase struct {}
+
+
+
+
+type SomeProtocol interface {
+	SomeMethod() error
+}
+
+type SomeProtocolTransitionalBase struct {}
+
+
+type SomeProtocolInterfaceRequest _bindings.InterfaceRequest
+
+func NewSomeProtocolInterfaceRequest() (SomeProtocolInterfaceRequest, *SomeProtocolInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return SomeProtocolInterfaceRequest(req), (*SomeProtocolInterface)(cli), err
+}
+
+type SomeProtocolStub struct {
+	Impl SomeProtocol
+}
+
+func (s_ *SomeProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case SomeProtocolSomeMethodOrdinal:
+		fallthrough
+	case SomeProtocolSomeMethodGenOrdinal:
+		err_ := s_.Impl.SomeMethod()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *SomeProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case SomeProtocolSomeMethodOrdinal:
+		fallthrough
+	case SomeProtocolSomeMethodGenOrdinal:
+		err_ := s_.Impl.SomeMethod()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+type SomeProtocolService struct {
+	_bindings.BindingSet
+}
+
+func (s *SomeProtocolService) Add(impl SomeProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&SomeProtocolStub{Impl: impl}, c, onError)
+}
+
+func (s *SomeProtocolService) EventProxyFor(key _bindings.BindingKey) (*SomeProtocolEventProxy, bool) {
+	pxy, err := s.BindingSet.ProxyFor(key)
+	return (*SomeProtocolEventProxy)(pxy), err
+}
+
+type SomeProtocolEventProxy _bindings.ChannelProxy
+
+
+

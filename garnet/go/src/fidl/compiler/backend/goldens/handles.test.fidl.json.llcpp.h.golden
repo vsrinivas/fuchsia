@@ -47,14 +47,146 @@ namespace llcpp {
 namespace test {
 namespace name {
 
+class SomeProtocol;
 struct Handles;
+
+extern "C" const fidl_type_t v1_test_name_SomeProtocolSomeMethodRequestTable;
+extern "C" const fidl_type_t v1_test_name_SomeProtocolSomeMethodResponseTable;
+class SomeProtocol final {
+  SomeProtocol() = delete;
+ public:
+
+  using SomeMethodRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    class SomeMethod_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      SomeMethod_Impl(::zx::unowned_channel _client_end);
+      ~SomeMethod_Impl() = default;
+      SomeMethod_Impl(SomeMethod_Impl&& other) = default;
+      SomeMethod_Impl& operator=(SomeMethod_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+
+   public:
+    using SomeMethod = SomeMethod_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    class SomeMethod_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      SomeMethod_Impl(::zx::unowned_channel _client_end);
+      ~SomeMethod_Impl() = default;
+      SomeMethod_Impl(SomeMethod_Impl&& other) = default;
+      SomeMethod_Impl& operator=(SomeMethod_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+
+   public:
+    using SomeMethod = SomeMethod_Impl;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SomeMethod SomeMethod();
+
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SomeMethod SomeMethod(::zx::unowned_channel _client_end);
+
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    static ::fidl::internal::StatusAndError SomeMethod(::zx::unowned_channel _client_end);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = SomeProtocol;
+    using _Base = ::fidl::CompleterBase;
+
+    using SomeMethodCompleter = ::fidl::Completer<>;
+
+    virtual void SomeMethod(SomeMethodCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void SomeMethodRequest(const ::fidl::DecodedMessage<SomeProtocol::SomeMethodRequest>& _msg);
+  };
+};
 
 extern "C" const fidl_type_t v1_test_name_HandlesTable;
 
 struct Handles {
   static constexpr const fidl_type_t* Type = &v1_test_name_HandlesTable;
-  static constexpr uint32_t MaxNumHandles = 26;
-  static constexpr uint32_t PrimarySize = 104;
+  static constexpr uint32_t MaxNumHandles = 28;
+  static constexpr uint32_t PrimarySize = 112;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
@@ -110,6 +242,10 @@ struct Handles {
   ::zx::vmar vmar_handle = {};
 
   ::zx::vmo vmo_handle = {};
+
+  ::zx::channel some_protocol = {};
+
+  ::zx::channel request_some_protocol = {};
 };
 
 }  // namespace name
@@ -147,6 +283,8 @@ static_assert(offsetof(::llcpp::test::name::Handles, timer_handle) == 88);
 static_assert(offsetof(::llcpp::test::name::Handles, vcpu_handle) == 92);
 static_assert(offsetof(::llcpp::test::name::Handles, vmar_handle) == 96);
 static_assert(offsetof(::llcpp::test::name::Handles, vmo_handle) == 100);
+static_assert(offsetof(::llcpp::test::name::Handles, some_protocol) == 104);
+static_assert(offsetof(::llcpp::test::name::Handles, request_some_protocol) == 108);
 static_assert(sizeof(::llcpp::test::name::Handles) == ::llcpp::test::name::Handles::PrimarySize);
 
 }  // namespace fidl

@@ -31,6 +31,8 @@ test_name_HandlesInLine {
        vcpu_handle flags[fidl_handle_presence, int32]
        vmar_handle flags[fidl_handle_presence, int32]
        vmo_handle flags[fidl_handle_presence, int32]
+       some_protocol flags[fidl_handle_presence, int32]
+       request_some_protocol flags[fidl_handle_presence, int32]
 } [packed]
 test_name_HandlesOutOfLine {
        void void
@@ -62,5 +64,22 @@ test_name_HandlesHandles {
        vcpu_handle zx_vcpu
        vmar_handle zx_vmar
        vmo_handle zx_vmo
+       some_protocol zx_chan_test_name_SomeProtocol_client
+       request_some_protocol zx_chan_test_name_SomeProtocol_server
 } [packed]
+
+
+test_name_SomeProtocolSomeMethodRequest {
+       hdr fidl_message_header[1898969890996355072]
+} [packed]
+test_name_SomeProtocolSomeMethodRequestHandles {
+       void void
+} [packed]
+
+resource zx_chan_test_name_SomeProtocol_client[zx_chan]
+resource zx_chan_test_name_SomeProtocol_server[zx_chan]
+
+zx_channel_create$test_name_SomeProtocol(options const[0], out0 ptr[out, zx_chan_test_name_SomeProtocol_client], out1 ptr[out, zx_chan_test_name_SomeProtocol_server])
+fdio_service_connect$test_name_SomeProtocol(path ptr[in, string["/svc/"]], handle zx_chan_test_name_SomeProtocol_server)
+zx_channel_write$test_name_SomeProtocolSomeMethod(handle zx_chan_test_name_SomeProtocol_client, options const[0], bytes ptr[in, test_name_SomeProtocolSomeMethodRequest], num_bytes bytesize[bytes], handles ptr[in, test_name_SomeProtocolSomeMethodRequestHandles], num_handles bytesize[handles])
 

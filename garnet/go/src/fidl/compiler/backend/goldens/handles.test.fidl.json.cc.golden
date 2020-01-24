@@ -6,6 +6,122 @@
 namespace test {
 namespace name {
 
+#ifdef __Fuchsia__
+namespace {
+
+extern "C" const fidl_type_t v1_test_name_SomeProtocolSomeMethodRequestTable;
+
+}  // namespace
+
+SomeProtocol::~SomeProtocol() = default;
+
+const fidl_type_t* SomeProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    case internal::kSomeProtocol_SomeMethod_Ordinal:
+    case internal::kSomeProtocol_SomeMethod_GenOrdinal:
+      *out_needs_response = false;
+      return &v1_test_name_SomeProtocolSomeMethodRequestTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* SomeProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    default:
+      return nullptr;
+  }
+}
+
+SomeProtocol_EventSender::~SomeProtocol_EventSender() = default;
+
+SomeProtocol_Sync::~SomeProtocol_Sync() = default;
+
+SomeProtocol_Proxy::SomeProtocol_Proxy(::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+SomeProtocol_Proxy::~SomeProtocol_Proxy() = default;
+
+zx_status_t SomeProtocol_Proxy::Dispatch_(::fidl::Message message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+
+void SomeProtocol_Proxy::SomeMethod() {
+  ::fidl::Encoder _encoder(internal::kSomeProtocol_SomeMethod_GenOrdinal);
+  controller_->Send(&v1_test_name_SomeProtocolSomeMethodRequestTable, SomeProtocol_RequestEncoder::SomeMethod(&_encoder), nullptr);
+}
+
+SomeProtocol_Stub::SomeProtocol_Stub(SomeProtocol_clazz* impl) : impl_(impl) {
+  (void)impl_;
+}
+
+SomeProtocol_Stub::~SomeProtocol_Stub() = default;
+
+namespace {
+
+}  // namespace
+
+zx_status_t SomeProtocol_Stub::Dispatch_(
+    ::fidl::Message message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type = SomeProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case internal::kSomeProtocol_SomeMethod_Ordinal:
+    case internal::kSomeProtocol_SomeMethod_GenOrdinal:
+    {
+      impl_->SomeMethod();
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+SomeProtocol_SyncProxy::SomeProtocol_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+SomeProtocol_SyncProxy::~SomeProtocol_SyncProxy() = default;
+
+zx_status_t SomeProtocol_SyncProxy::SomeMethod() {
+  ::fidl::Encoder _encoder(internal::kSomeProtocol_SomeMethod_GenOrdinal);
+  return proxy_.Send(&v1_test_name_SomeProtocolSomeMethodRequestTable, SomeProtocol_RequestEncoder::SomeMethod(&_encoder));
+}
+
+#endif // __Fuchsia__
+
 extern "C" const fidl_type_t v1_test_name_HandlesTable;
 const fidl_type_t* Handles::FidlType = &v1_test_name_HandlesTable;
 
@@ -36,6 +152,8 @@ void Handles::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   ::fidl::Encode(_encoder, &vcpu_handle, _offset + 92);
   ::fidl::Encode(_encoder, &vmar_handle, _offset + 96);
   ::fidl::Encode(_encoder, &vmo_handle, _offset + 100);
+  ::fidl::Encode(_encoder, &some_protocol, _offset + 104);
+  ::fidl::Encode(_encoder, &request_some_protocol, _offset + 108);
 }
 
 void Handles::Decode(::fidl::Decoder* _decoder, Handles* value, size_t _offset) {
@@ -65,6 +183,8 @@ void Handles::Decode(::fidl::Decoder* _decoder, Handles* value, size_t _offset) 
   ::fidl::Decode(_decoder, &value->vcpu_handle, _offset + 92);
   ::fidl::Decode(_decoder, &value->vmar_handle, _offset + 96);
   ::fidl::Decode(_decoder, &value->vmo_handle, _offset + 100);
+  ::fidl::Decode(_decoder, &value->some_protocol, _offset + 104);
+  ::fidl::Decode(_decoder, &value->request_some_protocol, _offset + 108);
 }
 
 zx_status_t Handles::Clone(Handles* _result) const {
@@ -144,6 +264,12 @@ zx_status_t Handles::Clone(Handles* _result) const {
   if (_status != ZX_OK)
     return _status;
   _status = ::fidl::Clone(vmo_handle, &_result->vmo_handle);
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(some_protocol, &_result->some_protocol);
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(request_some_protocol, &_result->request_some_protocol);
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;
