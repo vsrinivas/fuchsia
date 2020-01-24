@@ -165,6 +165,7 @@ pub fn launch_process(
     test_path: &CStr,
     process_name: &CString,
     arguments: &[&CStr],
+    environ: Option<&[&CStr]>,
 ) -> Result<(Process, LoggerStream), Error> {
     const STDOUT: u16 = 1;
     const STDERR: u16 = 2;
@@ -191,7 +192,7 @@ pub fn launch_process(
         fdio::SpawnOptions::CLONE_ALL,
         &test_path,
         arguments,
-        None,
+        environ,
         &mut actions[..],
     )
     .map_err(|(s, m)| FdioError::ProcessCreation(s, m))?;

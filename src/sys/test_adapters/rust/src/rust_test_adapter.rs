@@ -12,12 +12,11 @@ use {
     lazy_static::lazy_static,
     regex::Regex,
     serde_derive::Deserialize,
-    serde_json as json,
-    std::{
-        ffi::{CStr, CString},
-        str::from_utf8,
-    },
+    std::{ffi::CString, str::from_utf8},
 };
+
+#[cfg(rust_panic = "unwind")]
+use {serde_json as json, std::ffi::CStr};
 
 lazy_static! {
     pub static ref DASH_Z: CString = CString::new("-Z").unwrap();
@@ -188,7 +187,8 @@ impl RustTestAdapter {
         let (process, logger) = test_adapter_lib::launch_process(
             &self.c_test_path,
             &self.c_test_file_name,
-            &[&self.c_test_file_name, &DASH_Z, &USTABLE_OPTIONS, &LIST],
+            &[&self.c_test_path, &DASH_Z, &USTABLE_OPTIONS, &LIST],
+            None,
         )?;
 
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
@@ -203,7 +203,7 @@ impl RustTestAdapter {
             // TODO(anmittal): Add a error logger to API before porting this to runner so that we
             // can display test stdout logs.
             fx_log_err!("Failed getting list of tests:\n{}", output);
-            return Err(format_err!("Can't get list of tests. check logs"));
+            return Err(format_err!("Can't get list of tests.\noutput: {}", output));
         }
 
         let output =
@@ -212,7 +212,7 @@ impl RustTestAdapter {
             from_utf8(&output).context("Failed to convert logs from utf-8")?.to_string();
 
         let mut test_names = vec![];
-        let regex = Regex::new(r"tests::(.*): test").unwrap();
+        let regex = Regex::new(r"(.*): test").unwrap();
 
         for test in test_list.split("\n") {
             if let Some(capture) = regex.captures(test) {
@@ -226,18 +226,23 @@ impl RustTestAdapter {
     }
 
     /// Launches a process that actually runs the test and parses the resulting json output.
-    async fn run_test(&self, name: &String) -> Result<ftest::Outcome, Error> {
-        let c_test_name = CString::new(name.as_str()).unwrap();
-        let mut args: Vec<&CStr> = vec![&self.c_test_file_name, &c_test_name];
+    #[cfg(rust_panic = "unwind")]
+    async fn run_test(&self, name: &str) -> Result<ftest::Outcome, Error> {
+        let c_test_name = CString::new(name).unwrap();
+        let mut args: Vec<&CStr> = vec![&self.c_test_path, &c_test_name];
 
         let mut c_args: Vec<CString> = vec![];
         c_args.extend(self.test_info.test_args.iter().map(|arg| CString::new(&arg[..]).unwrap()));
         args.extend(c_args.iter().map(|arg| arg.as_ref()));
         args.extend_from_slice(&[&DASH_Z, &USTABLE_OPTIONS, &JSON_FORMAT, &NO_CAPTURE]);
 
-        let (process, logger) =
-            test_adapter_lib::launch_process(&self.c_test_path, &self.c_test_file_name, &args[..])
-                .context("Failed to launch test process")?;
+        let (process, logger) = test_adapter_lib::launch_process(
+            &self.c_test_path,
+            &self.c_test_file_name,
+            &args[..],
+            None,
+        )
+        .context("Failed to launch test process")?;
 
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
             .await
@@ -280,6 +285,45 @@ impl RustTestAdapter {
         }
 
         Err(format_err!("Received unknown repsonse from Rust test runner: {}", json))
+    }
+
+    /// Launches a process that actually runs the test and parses the resulting json output.
+    #[cfg(rust_panic = "abort")]
+    async fn run_test(&self, name: &str) -> Result<ftest::Outcome, Error> {
+        // Exit codes used by Rust's libtest runner.
+        const TR_OK: i64 = 50;
+        const TR_FAILED: i64 = 51;
+
+        let args = [self.c_test_path.as_c_str()];
+
+        let test_invoke = CString::new(format!("__RUST_TEST_INVOKE={}", name))?;
+        let environ = [test_invoke.as_c_str()];
+
+        let (process, logger) = test_adapter_lib::launch_process(
+            &self.c_test_path,
+            &self.c_test_file_name,
+            &args,
+            Some(&environ),
+        )
+        .context("Failed to launch test process")?;
+
+        let output = logger.try_concat().await.context("Failed to gather test output")?;
+        let output = from_utf8(&output).context("Could not convert logs from UTF-8")?;
+
+        fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
+            .await
+            .context("Error waiting for test process to exit")?;
+        let process_info = process.info().context("Error getting info from process")?;
+
+        match process_info.return_code {
+            TR_OK => Ok(ftest::Outcome { status: Some(ftest::Status::Passed) }),
+            TR_FAILED => Ok(ftest::Outcome { status: Some(ftest::Status::Failed) }),
+            other => Err(format_err!(
+                "Received unexpected exit code {} from test process\noutput: {}",
+                other,
+                output
+            )),
+        }
     }
 
     fn _check_process_return_code(process: &zx::Process) -> Result<(), Error> {
@@ -348,10 +392,10 @@ mod tests {
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
 
         let mut expected_tests = vec![
-            String::from("simple_test_one"),
-            String::from("simple_test_two"),
-            String::from("simple_test_three"),
-            String::from("simple_test_four"),
+            String::from("tests::simple_test_one"),
+            String::from("tests::simple_test_two"),
+            String::from("tests::simple_test_three"),
+            String::from("tests::simple_test_four"),
         ];
 
         expected_tests.sort();
@@ -367,7 +411,7 @@ mod tests {
             TestInfo { test_path: String::from("/pkg/bin/test_outcomes"), test_args: vec![] };
 
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
-        let test_name = String::from("passing_test");
+        let test_name = String::from("tests::a_passing_test");
         let outcome = adapter.run_test(&test_name).await.expect("Failed to run test");
 
         assert_eq!(ftest::Outcome { status: Some(ftest::Status::Passed) }, outcome);
@@ -379,7 +423,7 @@ mod tests {
             TestInfo { test_path: String::from("/pkg/bin/test_outcomes"), test_args: vec![] };
 
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
-        let test_name = String::from("failing_test");
+        let test_name = String::from("tests::b_failing_test");
         let outcome = adapter.run_test(&test_name).await.expect("Failed to run test");
 
         assert_eq!(ftest::Outcome { status: Some(ftest::Status::Failed) }, outcome);
@@ -393,9 +437,9 @@ mod tests {
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
 
         let test_names = vec![
-            String::from("a_passing_test"),
-            String::from("b_failing_test"),
-            String::from("c_passing_test"),
+            String::from("tests::a_passing_test"),
+            String::from("tests::b_failing_test"),
+            String::from("tests::c_passing_test"),
         ];
 
         let (run_listener_client, run_listener) =
@@ -411,19 +455,19 @@ mod tests {
         run_option.expect("Failed running tests");
 
         let expected_results = vec![
-            ListenerEvent::StartTest(String::from("a_passing_test")),
+            ListenerEvent::StartTest(String::from("tests::a_passing_test")),
             ListenerEvent::FinishTest(
-                String::from("a_passing_test"),
+                String::from("tests::a_passing_test"),
                 ftest::Outcome { status: Some(ftest::Status::Passed) },
             ),
-            ListenerEvent::StartTest(String::from("b_failing_test")),
+            ListenerEvent::StartTest(String::from("tests::b_failing_test")),
             ListenerEvent::FinishTest(
-                String::from("b_failing_test"),
+                String::from("tests::b_failing_test"),
                 ftest::Outcome { status: Some(ftest::Status::Failed) },
             ),
-            ListenerEvent::StartTest(String::from("c_passing_test")),
+            ListenerEvent::StartTest(String::from("tests::c_passing_test")),
             ListenerEvent::FinishTest(
-                String::from("c_passing_test"),
+                String::from("tests::c_passing_test"),
                 ftest::Outcome { status: Some(ftest::Status::Passed) },
             ),
         ];

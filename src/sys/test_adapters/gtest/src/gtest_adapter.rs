@@ -176,6 +176,7 @@ impl GTestAdapter {
                     &CString::new(format!("--gtest_filter={}", test))?,
                     &CString::new(format!("--gtest_output=json:{}", test_result_file))?,
                 ],
+                None,
             )?;
 
             let (test_logger, log_client) =
@@ -276,6 +277,7 @@ impl GTestAdapter {
                 &CString::new("--gtest_list_tests")?,
                 &CString::new(format!("--gtest_output=json:{}", test_list_file))?,
             ],
+            None,
         )?;
 
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
