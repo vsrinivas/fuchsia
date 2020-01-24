@@ -9,6 +9,7 @@
 
 unlinted_libraries = [
   "fuchsia.cobalt",
+  "fuchsia.device.devhost.test",
   "fuchsia.device.manager",
   "fuchsia.device.manager.test",
   "fuchsia.hardware.block.partition",

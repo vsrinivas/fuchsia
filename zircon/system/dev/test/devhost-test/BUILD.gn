@@ -2,54 +2,97 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-fidl_library("fuchsia.device.devhost.test") {
-  visibility = [ ":*" ]
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/fidl/fidl.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+fidl("fuchsia.device.devhost.test") {
+  #visibility = [ ":*" ]
   sources = [ "test.fidl" ]
 }
 
-if (current_toolchain != default_toolchain) {
-  zx_driver("devhost-test") {
-    sources = [ "test-driver.cc" ]
-    deps = [
-      ":fuchsia.device.devhost.test.llcpp",
-      "$zx/system/ulib/ddk",
-      "$zx/system/ulib/ddktl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-    ]
+driver_module("devhost-test") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "test-driver.cc" ]
+  deps = [
+    ":fuchsia.device.devhost.test_llcpp",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fdio",
+  ]
 
-    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-    # Tests fail when using #"$zx/system/ulib/fdio:static",
-    deprecated_inhibit_driver_shlib_allowlist = true
-  }
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  # Tests fail when using #"//zircon/public/lib/fdio:static",
+  #deprecated_inhibit_driver_shlib_allowlist = true
+}
 
-  zx_driver("devhost-test-manual") {
-    sources = [ "test-driver-manual-bind.cc" ]
-    deps = [
-      ":fuchsia.device.devhost.test.llcpp",
-      "$zx/system/ulib/ddk",
-      "$zx/system/ulib/ddktl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-    ]
+driver_module("devhost-test-manual") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "test-driver-manual-bind.cc" ]
+  deps = [
+    ":fuchsia.device.devhost.test_llcpp",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fdio",
+  ]
 
-    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-    # Tests fail when using #"$zx/system/ulib/fdio:static",
-    deprecated_inhibit_driver_shlib_allowlist = true
-  }
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  # Tests fail when using #"//zircon/public/lib/fdio:static",
+  #deprecated_inhibit_driver_shlib_allowlist = true
+}
 
-  zx_driver("devhost-test-child") {
-    sources = [ "test-driver-child.cc" ]
-    deps = [
-      "$zx/system/ulib/ddk",
-      "$zx/system/ulib/ddktl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-    ]
+driver_module("devhost-test-child") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "test-driver-child.cc" ]
+  deps = [
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fdio",
+  ]
 
-    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-    deprecated_inhibit_driver_shlib_allowlist = true
-  }
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  #deprecated_inhibit_driver_shlib_allowlist = true
+}
+
+migrated_manifest("devhost-test-manifest") {
+  deps = [
+    ":devhost-test",
+  ]
+}
+
+migrated_manifest("devhost-test-manual-manifest") {
+  deps = [
+    ":devhost-test-manual",
+  ]
+}
+
+migrated_manifest("devhost-test-child-manifest") {
+  deps = [
+    ":devhost-test-child",
+  ]
 }
