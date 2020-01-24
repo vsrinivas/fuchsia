@@ -1,0 +1,12 @@
+{
+    "program": {
+        "data": "data/scroll_flutter"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}
