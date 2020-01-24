@@ -466,14 +466,8 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   if (info->pending_layer_change) {
     bool done;
     if (handle_count != info->vsync_layer_count) {
-      if (handles != nullptr && handle_count == 0) {
-        // Buggy display driver
-        zxlogf(TRACE, "Buggy display driver sent handles array with 0 count\n");
-        done = true;
-      } else {
-        // There's an unexpected number of layers, so wait until the next vsync.
-        done = false;
-      }
+      // There's an unexpected number of layers, so wait until the next vsync.
+      done = false;
     } else if (list_is_empty(&info->images)) {
       // If the images list is empty, then we can't have any pending layers and
       // the change is done when there are no handles being displayed.

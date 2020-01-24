@@ -285,7 +285,7 @@ void Controller::HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp) {
     }
   }
 
-  if (id != INVALID_DISPLAY_ID && handle_count) {
+  if (id != INVALID_DISPLAY_ID) {
     dc_intf_.OnDisplayVsync(id, timestamp, handles, handle_count);
   }
 }
