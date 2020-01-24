@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_RAWNAND_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_RAWNAND_H_
+
 static constexpr uint32_t P_NAND_CMD = (0x00);
 static constexpr uint32_t P_NAND_CFG = (0x04);
 static constexpr uint32_t P_NAND_DADR = (0x08);
@@ -82,3 +85,5 @@ static constexpr uint32_t AML_ECC_BCH_SHORT = 8;
 
 static constexpr uint32_t AML_WRITE_PAGE_TIMEOUT = 50;
 static constexpr uint32_t AML_ERASE_BLOCK_TIMEOUT = 400;
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_RAWNAND_H_

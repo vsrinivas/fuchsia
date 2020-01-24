@@ -9,7 +9,10 @@ group("test") {
 
 zx_test("aml-rawnand-unittest") {
   include_dirs = [ ".." ]
-  sources = [ "aml-rawnand-test.cc" ]
+  sources = [
+    "../aml-rawnand.cc",
+    "aml-rawnand-test.cc",
+  ]
   deps = [
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
