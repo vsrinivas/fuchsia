@@ -153,7 +153,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/intel-hda:test",
       "$zx/system/ulib/io-scheduler:io-scheduler-test",
       "$zx/system/ulib/kernel-mexec:kernel-mexec-test",
-      "$zx/system/ulib/launchpad/test",
       "$zx/system/ulib/lazy_init:lazy_init-test",
       "$zx/system/ulib/ldmsg/test",
       "$zx/system/ulib/libzbi/test",
