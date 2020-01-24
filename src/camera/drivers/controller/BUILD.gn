@@ -45,6 +45,7 @@ source_set("controller-source") {
     "controller-device.cc",
     "controller-protocol.cc",
     "gdc_node.cc",
+    "ge2d_node.cc",
     "graph_utils.cc",
     "input_node.cc",
     "memory_allocation.cc",

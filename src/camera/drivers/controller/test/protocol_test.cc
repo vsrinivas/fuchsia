@@ -361,30 +361,43 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto result = SetupStream(kVideoConfig, stream_type, stream);
     ASSERT_EQ(ZX_OK, result.error());
 
+    fuchsia::camera2::StreamPtr stream_video;
+    auto video_result = SetupStream(kVideoConfig, kStreamTypeVideo, stream_video);
+    ASSERT_EQ(ZX_OK, video_result.error());
+
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
     auto gdc2_node = static_cast<GdcNode*>(gdc1_node->child_nodes().at(0).get());
     auto output_node = static_cast<OutputNode*>(gdc2_node->child_nodes().at(0).get());
+    auto ge2d_node = static_cast<Ge2dNode*>(gdc1_node->child_nodes().at(1).get());
+    auto output_node_video = static_cast<OutputNode*>(ge2d_node->child_nodes().at(0).get());
 
     // Check if all nodes were created appropriately.
     EXPECT_EQ(NodeType::kGdc, gdc1_node->type());
     EXPECT_EQ(NodeType::kGdc, gdc2_node->type());
+    EXPECT_EQ(NodeType::kGe2d, ge2d_node->type());
     EXPECT_EQ(NodeType::kInputStream, fr_head_node->type());
     EXPECT_EQ(NodeType::kOutputStream, output_node->type());
+    EXPECT_EQ(NodeType::kOutputStream, output_node_video->type());
 
     // Validate the configured streams for all nodes.
-    EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type}));
-    EXPECT_TRUE(HasAllStreams(gdc1_node->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type, kStreamTypeVideo}));
+    EXPECT_TRUE(HasAllStreams(gdc1_node->configured_streams(), {stream_type, kStreamTypeVideo}));
     EXPECT_TRUE(HasAllStreams(gdc2_node->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(ge2d_node->configured_streams(), {kStreamTypeVideo}));
     EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(output_node_video->configured_streams(), {kStreamTypeVideo}));
 
     EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type, kStreamTypeVideo}));
     EXPECT_TRUE(HasAllStreams(gdc1_node->supported_streams(), {stream_type, kStreamTypeVideo}));
     EXPECT_TRUE(HasAllStreams(gdc2_node->supported_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(ge2d_node->supported_streams(), {kStreamTypeVideo}));
     EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(output_node_video->supported_streams(), {kStreamTypeVideo}));
 
     // Check if client_stream is valid.
     EXPECT_NE(nullptr, output_node->client_stream());
+    EXPECT_NE(nullptr, output_node_video->client_stream());
   }
 
   void TestShutdownPathAfterStreamingOn() {

@@ -14,6 +14,7 @@
 #include "fbl/macros.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
 #include "src/camera/drivers/controller/gdc_node.h"
+#include "src/camera/drivers/controller/ge2d_node.h"
 #include "src/camera/drivers/controller/input_node.h"
 #include "src/camera/drivers/controller/output_node.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"

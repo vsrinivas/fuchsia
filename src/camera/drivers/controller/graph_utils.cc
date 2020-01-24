@@ -40,23 +40,14 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     return fit::ok(std::move(info->output_buffers));
   }
 
-  // The controller will  need to allocate memory using sysmem.
-  // TODO(braval): Add support for the case of two consumer nodes, which will be needed for the
-  // video conferencing config.
-  if (producer_graph_node) {
-    // The controller already has allocated an output buffer for this producer,
-    // so we just need to use that buffer
-    auto status = fidl::Clone(producer_graph_node->output_buffer_collection(), &buffers);
-    if (status != ZX_OK) {
-      FX_LOGST(ERROR, kTag) << "Failed to allocate shared memory";
-      return fit::error(status);
-    }
-    return fit::ok(std::move(buffers));
-  }
-
+  // The controller will need to allocate memory using sysmem.
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  for (const auto& node : producer.child_nodes) {
+    if (node.type != kOutputStream) {
+      constraints.push_back(node.input_constraints);
+    }
+  }
   constraints.push_back(producer.output_constraints);
-  constraints.push_back(consumer->input_constraints);
 
   auto status = memory_allocator.AllocateSharedMemory(constraints, &buffers);
   if (status != ZX_OK) {

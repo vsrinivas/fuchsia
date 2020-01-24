@@ -39,7 +39,7 @@ class GdcNode : public ProcessNode {
           fuchsia::camera2::CameraStreamType current_stream_type,
           std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
           fuchsia::camera2::FrameRate frame_rate)
-      : ProcessNode(gdc, NodeType::kGdc, parent_node, output_image_formats,
+      : ProcessNode(NodeType::kGdc, parent_node, output_image_formats,
                     std::move(output_buffer_collection), current_stream_type, supported_streams,
                     dispatcher, frame_rate),
         gdc_(gdc),

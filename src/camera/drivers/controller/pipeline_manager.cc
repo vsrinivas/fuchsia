@@ -43,7 +43,14 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     }
     // GE2D
     case NodeType::kGe2d: {
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
+      auto ge2d_result = camera::Ge2dNode::CreateGe2dNode(
+          memory_allocator_, dispatcher_, device_, ge2d_, info, parent_node, *next_node_internal);
+      if (ge2d_result.is_error()) {
+        FX_PLOGST(ERROR, kTag, ge2d_result.error()) << "Failed to configure GE2D Node";
+        // TODO(braval): Handle already configured nodes
+        return fit::error(ge2d_result.error());
+      }
+      return CreateGraph(info, *next_node_internal, ge2d_result.value());
     }
     // Output Node
     case NodeType::kOutputStream: {

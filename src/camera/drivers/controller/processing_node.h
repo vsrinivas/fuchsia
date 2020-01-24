@@ -61,7 +61,7 @@ class ProcessNode {
     configured_streams_.push_back(current_stream_type);
   }
 
-  ProcessNode(const ddk::GdcProtocolClient& gdc, NodeType type, ProcessNode* parent_node,
+  ProcessNode(NodeType type, ProcessNode* parent_node,
               std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               fuchsia::camera2::CameraStreamType current_stream_type,
@@ -76,7 +76,7 @@ class ProcessNode {
         enabled_(false),
         supported_streams_(supported_streams),
         in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
-    ZX_ASSERT(type == NodeType::kGdc);
+    ZX_ASSERT(type == NodeType::kGdc || type == NodeType::kGe2d);
     configured_streams_.push_back(current_stream_type);
   }
 
