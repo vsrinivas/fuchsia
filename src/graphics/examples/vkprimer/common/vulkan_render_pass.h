@@ -12,8 +12,8 @@
 
 class VulkanRenderPass {
  public:
-  VulkanRenderPass(std::shared_ptr<VulkanLogicalDevice> device,
-                   const vk::Format &swapchain_image_format);
+  VulkanRenderPass(std::shared_ptr<VulkanLogicalDevice> device, const vk::Format &image_format,
+                   bool offscreen);
 
   bool Init();
   const vk::UniqueRenderPass &render_pass() const { return render_pass_; }
@@ -23,7 +23,8 @@ class VulkanRenderPass {
 
   bool initialized_;
   std::shared_ptr<VulkanLogicalDevice> device_;
-  const vk::Format swapchain_image_format_;
+  const vk::Format image_format_;
+  bool offscreen_;
   vk::UniqueRenderPass render_pass_;
 };
 

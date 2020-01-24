@@ -9,14 +9,14 @@
 
 #include "src/lib/fxl/macros.h"
 #include "vulkan_logical_device.h"
-#include "vulkan_swapchain.h"
 
 #include <vulkan/vulkan.hpp>
 
 class VulkanFramebuffer {
  public:
-  VulkanFramebuffer(std::shared_ptr<VulkanLogicalDevice> device,
-                    std::shared_ptr<VulkanSwapchain> swap_chain, const vk::RenderPass &render_pass);
+  VulkanFramebuffer(std::shared_ptr<VulkanLogicalDevice> device, const vk::Extent2D &extent,
+                    const vk::RenderPass &render_pass,
+                    const std::vector<vk::ImageView> &image_views);
   bool Init();
   const std::vector<vk::UniqueFramebuffer> &framebuffers() const;
 
@@ -25,7 +25,8 @@ class VulkanFramebuffer {
 
   bool initialized_;
   std::shared_ptr<VulkanLogicalDevice> device_;
-  std::shared_ptr<VulkanSwapchain> swap_chain_;
+  vk::Extent2D extent_;
+  std::vector<vk::ImageView> image_views_;
   std::unique_ptr<vk::RenderPass> render_pass_;
   std::vector<vk::UniqueFramebuffer> framebuffers_;
 };

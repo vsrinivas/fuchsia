@@ -44,6 +44,10 @@ bool FindMatchingProperties(const std::vector<const char *> &desired_props, Sear
 bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
                                std::vector<uint32_t> *queue_family_indices);
 
+// Find physical device memory property index for |properties|.
+int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_type_bits,
+                    const vk::MemoryPropertyFlags &properties);
+
 }  // namespace vkp
 
 #endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_UTILS_H_

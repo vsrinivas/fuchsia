@@ -1,5 +1,8 @@
 {
     "program": {
+        "args": [
+            "-offscreen"
+        ],
         "binary": "bin/app"
     },
     "sandbox": {

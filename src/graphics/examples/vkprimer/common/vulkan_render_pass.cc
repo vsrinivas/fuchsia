@@ -7,8 +7,8 @@
 #include "utils.h"
 
 VulkanRenderPass::VulkanRenderPass(std::shared_ptr<VulkanLogicalDevice> device,
-                                   const vk::Format &swapchain_image_format)
-    : initialized_(false), device_(device), swapchain_image_format_(swapchain_image_format) {}
+                                   const vk::Format &image_format, bool offscreen)
+    : initialized_(false), device_(device), image_format_(image_format), offscreen_(offscreen) {}
 
 bool VulkanRenderPass::Init() {
   if (initialized_) {
@@ -16,8 +16,12 @@ bool VulkanRenderPass::Init() {
   }
 
   vk::AttachmentDescription color_attachment;
-  color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-  color_attachment.format = swapchain_image_format_;
+  if (offscreen_) {
+    color_attachment.finalLayout = vk::ImageLayout::eTransferSrcOptimal;
+  } else {
+    color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+  }
+  color_attachment.format = image_format_;
   color_attachment.initialLayout = vk::ImageLayout::eUndefined;
   color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
   color_attachment.samples = vk::SampleCountFlagBits::e1;

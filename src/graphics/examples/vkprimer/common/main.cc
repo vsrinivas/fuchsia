@@ -29,16 +29,21 @@
 #include <GLFW/glfw3.h>
 #endif
 
-#define OFFSCREEN 0
+static bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
+                      const VulkanSwapchain& swap_chain,
+                      const VulkanCommandBuffers& command_buffers);
 
-bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
-               const VulkanSwapchain& swap_chain, const VulkanCommandBuffers& command_buffers);
+static bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
+                               const VulkanCommandBuffers& command_buffers);
 
 void glfwErrorCallback(int error, const char* description) {
   fprintf(stderr, "glfwErrorCallback: %d : %s\n", error, description);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+  const bool offscreen = (argc == 2 && !strcmp(argv[1], "-offscreen"));
+  printf("Is Offscreen: %s\n", offscreen ? "yes" : "no");
+
   // INSTANCE
   const bool kEnableValidation = true;
   auto instance = std::make_shared<VulkanInstance>();
@@ -79,59 +84,81 @@ int main() {
   }
 
   // PHYSICAL DEVICE
-  VulkanPhysicalDevice physical_device(instance, surface->surface());
-  if (!physical_device.Init()) {
+  auto physical_device = std::make_shared<VulkanPhysicalDevice>(instance, surface->surface());
+  if (!physical_device->Init()) {
     RTN_MSG(1, "Phys Device Initialization Failed.\n");
   }
 
   // LOGICAL DEVICE
   auto logical_device = std::make_shared<VulkanLogicalDevice>(
-      physical_device.phys_device(), surface->surface(), kEnableValidation);
+      physical_device->phys_device(), surface->surface(), kEnableValidation);
   if (!logical_device->Init()) {
     RTN_MSG(1, "Logical Device Initialization Failed.\n");
   }
 
-#if OFFSCREEN
-  auto offscreen_image_view = std::make_shared<VulkanImageView>(logical_device);
-#else
-  // SWAP CHAIN
-  auto swap_chain =
-      std::make_shared<VulkanSwapchain>(physical_device.phys_device(), logical_device, surface);
-  if (!swap_chain->Init()) {
-    RTN_MSG(1, "Swap Chain Initialization Failed.\n");
+  vk::Format image_format;
+  vk::Extent2D extent;
+  std::shared_ptr<VulkanSwapchain> swap_chain;
+
+  // The number of image views added in either the offscreen or onscreen logic blocks
+  // below controls the number of framebuffers, command buffers, fences and signalling
+  // semaphores created subsequently.
+  std::vector<vk::ImageView> image_views;
+  std::shared_ptr<VulkanImageView> offscreen_image_view;
+  if (offscreen) {
+    // IMAGE VIEW
+    offscreen_image_view = std::make_shared<VulkanImageView>(logical_device, physical_device);
+    if (!offscreen_image_view->Init()) {
+      RTN_MSG(1, "Image View Initialization Failed.\n");
+    }
+    image_format = offscreen_image_view->format();
+    extent = offscreen_image_view->extent();
+    image_views.emplace_back(*(offscreen_image_view->view()));
+  } else {
+    // SWAP CHAIN
+    swap_chain =
+        std::make_shared<VulkanSwapchain>(physical_device->phys_device(), logical_device, surface);
+    if (!swap_chain->Init()) {
+      RTN_MSG(1, "Swap Chain Initialization Failed.\n");
+    }
+    image_format = swap_chain->image_format();
+    extent = swap_chain->extent();
+    const auto& swap_chain_image_views = swap_chain->image_views();
+    for (auto& view : swap_chain_image_views) {
+      image_views.emplace_back(*view);
+    }
   }
-#endif
 
   // RENDER PASS
-  auto render_pass = std::make_shared<VulkanRenderPass>(logical_device, swap_chain->image_format());
+  auto render_pass = std::make_shared<VulkanRenderPass>(logical_device, image_format, offscreen);
   if (!render_pass->Init()) {
     RTN_MSG(1, "Render Pass Initialization Failed.\n");
   }
 
   // GRAPHICS PIPELINE
   auto graphics_pipeline =
-      std::make_unique<VulkanGraphicsPipeline>(logical_device, swap_chain->extent(), render_pass);
+      std::make_unique<VulkanGraphicsPipeline>(logical_device, extent, render_pass);
   if (!graphics_pipeline->Init()) {
     RTN_MSG(1, "Graphics Pipeline Initialization Failed.\n");
   }
 
   // FRAMEBUFFER
-  auto framebuffer =
-      std::make_unique<VulkanFramebuffer>(logical_device, swap_chain, *render_pass->render_pass());
+  auto framebuffer = std::make_unique<VulkanFramebuffer>(logical_device, extent,
+                                                         *render_pass->render_pass(), image_views);
   if (!framebuffer->Init()) {
     RTN_MSG(1, "Framebuffer Initialization Failed.\n");
   }
 
   // COMMAND POOL
   auto command_pool = std::make_shared<VulkanCommandPool>(
-      logical_device, physical_device.phys_device(), surface->surface());
+      logical_device, physical_device->phys_device(), surface->surface());
   if (!command_pool->Init()) {
     RTN_MSG(1, "Command Pool Initialization Failed.\n");
   }
 
   // COMMAND BUFFER
   auto command_buffers = std::make_unique<VulkanCommandBuffers>(
-      logical_device, command_pool, *framebuffer, swap_chain->extent(), *render_pass->render_pass(),
+      logical_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
       *graphics_pipeline->graphics_pipeline());
   if (!command_buffers->Init()) {
     RTN_MSG(1, "Command Buffer Initialization Failed.\n");
@@ -146,10 +173,18 @@ int main() {
 #if USE_GLFW
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
-    DrawFrame(*logical_device, *sync, *swap_chain, *command_buffers);
+    if (offscreen) {
+      DrawOffscreenFrame(*logical_device, *sync, *command_buffers);
+    } else {
+      DrawFrame(*logical_device, *sync, *swap_chain, *command_buffers);
+    }
   }
 #else
-  DrawFrame(*logical_device, *sync, *swap_chain, *command_buffers);
+  if (offscreen) {
+    DrawOffscreenFrame(*logical_device, *sync, *command_buffers);
+  } else {
+    DrawFrame(*logical_device, *sync, *swap_chain, *command_buffers);
+  }
   sleep(3);
 #endif
   logical_device->device()->waitIdle();
@@ -216,6 +251,32 @@ bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync
   present_info.pImageIndices = &image_index;
 
   logical_device.queue().presentKHR(&present_info);
+
+  current_frame = (current_frame + 1) % sync.max_frames_in_flight();
+
+  return true;
+}
+
+bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
+                        const VulkanCommandBuffers& command_buffers) {
+  static int current_frame = 0;
+
+  const vk::Device& device = *logical_device.device();
+  const vk::Fence& fence = *(sync.in_flight_fences()[0]);
+
+  // Wait for any outstanding command buffers to be processed.
+  device.waitForFences({fence}, VK_TRUE, std::numeric_limits<uint64_t>::max());
+  device.resetFences({fence});
+
+  vk::CommandBuffer command_buffer = *(command_buffers.command_buffers()[0]);
+
+  vk::SubmitInfo submit_info;
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &command_buffer;
+
+  if (logical_device.queue().submit(1, &submit_info, fence) != vk::Result::eSuccess) {
+    RTN_MSG(false, "Failed to submit draw command buffer.\n");
+  }
 
   current_frame = (current_frame + 1) % sync.max_frames_in_flight();
 

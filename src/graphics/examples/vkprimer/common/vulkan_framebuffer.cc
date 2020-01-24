@@ -7,9 +7,9 @@
 #include "utils.h"
 
 VulkanFramebuffer::VulkanFramebuffer(std::shared_ptr<VulkanLogicalDevice> device,
-                                     std::shared_ptr<VulkanSwapchain> swap_chain,
-                                     const vk::RenderPass &render_pass)
-    : initialized_(false), device_(device), swap_chain_(swap_chain) {
+                                     const vk::Extent2D &extent, const vk::RenderPass &render_pass,
+                                     const std::vector<vk::ImageView> &image_views)
+    : initialized_(false), device_(device), extent_(extent), image_views_(image_views) {
   render_pass_ = std::make_unique<vk::RenderPass>(render_pass);
 }
 
@@ -18,16 +18,14 @@ bool VulkanFramebuffer::Init() {
     RTN_MSG(false, "VulkanFramebuffer is already initialized.\n");
   }
 
-  vk::Extent2D extent = swap_chain_->extent();
-  const std::vector<vk::UniqueImageView> &swap_chain_image_views = swap_chain_->image_views();
   vk::FramebufferCreateInfo info;
   info.attachmentCount = 1;
-  info.layers = 1;
   info.renderPass = *render_pass_;
-  info.width = extent.width;
-  info.height = extent.height;
-  for (const auto &image_view : swap_chain_image_views) {
-    info.setPAttachments(&(*image_view));
+  info.width = extent_.width;
+  info.height = extent_.height;
+  info.layers = 1;
+  for (const auto &image_view : image_views_) {
+    info.setPAttachments(&image_view);
     auto rv = device_->device()->createFramebufferUnique(info);
     if (vk::Result::eSuccess != rv.result) {
       RTN_MSG(false, "VK Error: 0x%x - Failed to create framebuffer.\n", rv.result);
