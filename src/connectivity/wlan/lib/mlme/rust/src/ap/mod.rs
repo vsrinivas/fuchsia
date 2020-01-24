@@ -9,8 +9,8 @@ mod remote_client;
 
 use {
     crate::{
-        buffer::BufferProvider,
-        device::Device,
+        buffer::{BufferProvider, InBuf},
+        device::{Device, TxFlags},
         error::Error,
         logger,
         timer::{EventId, Scheduler, Timer},
@@ -29,6 +29,13 @@ use {
 use context::*;
 use infra_bss::*;
 use remote_client::*;
+
+#[derive(Debug)]
+struct BufferedFrame {
+    in_buf: InBuf,
+    bytes_written: usize,
+    tx_flags: TxFlags,
+}
 
 /// Rejection reasons for why a frame was not proceessed.
 #[derive(Debug)]
@@ -167,6 +174,7 @@ impl Ap {
             &mut self.ctx,
             req.ssid.clone(),
             TimeUnit(req.beacon_period),
+            req.dtim_period,
             CapabilityInfo(req.cap),
             req.rates,
             req.channel,
@@ -242,7 +250,16 @@ impl Ap {
             }
         };
 
-        if let Err(e) = bss.handle_eth_frame(&mut self.ctx, frame) {
+        let mac::EthernetFrame { hdr, body } =
+            match mac::EthernetFrame::parse(frame).ok_or_else(|| Rejection::FrameMalformed) {
+                Ok(eth_frame) => eth_frame,
+                Err(e) => {
+                    error!("failed to parse Ethernet frame: {}", e);
+                    return;
+                }
+            };
+
+        if let Err(e) = bss.handle_eth_frame(&mut self.ctx, *hdr, body) {
             log!(e.log_level(), "failed to handle Ethernet frame: {}", e)
         }
     }
@@ -345,6 +362,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -413,6 +431,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -443,6 +462,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -496,6 +516,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -536,6 +557,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -606,6 +628,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -655,6 +678,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -683,6 +707,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -766,6 +791,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -806,6 +832,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -883,6 +910,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -921,6 +949,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -972,6 +1001,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -1030,6 +1060,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -1079,6 +1110,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,
@@ -1127,6 +1159,7 @@ mod tests {
                 &mut ap.ctx,
                 b"coolnet".to_vec(),
                 TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
                 CapabilityInfo(0),
                 vec![0b11111000],
                 1,

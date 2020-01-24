@@ -58,6 +58,7 @@ impl TrafficIndicationMap {
         // back, so the range of n1..n2 is always non-decreasing.
         let n1 = self.n1();
         let n2 = self.n2();
+
         // IEEE Std 802.11-2016, 9.4.2.6: In the event that all bits other than bit 0 in the traffic
         // indication virtual bitmap are 0, the Partial Virtual Bitmap field is encoded as a single
         // octet equal to 0, [...].

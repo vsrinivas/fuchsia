@@ -5,9 +5,9 @@
 use {
     crate::{
         ap::{
-            frame_writer::BeaconOffloadParams,
+            frame_writer::{self, BeaconOffloadParams},
             remote_client::{ClientRejection, RemoteClient},
-            Context, Rejection, TimedEvent,
+            BufferedFrame, Context, Rejection, TimedEvent,
         },
         buffer::{InBuf, OutBuf},
         device::TxFlags,
@@ -21,10 +21,10 @@ use {
     banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
     log::error,
-    std::collections::HashMap,
+    std::collections::{HashMap, VecDeque},
     wlan_common::{
         ie,
-        mac::{self, CapabilityInfo, MacAddr},
+        mac::{self, is_multicast, CapabilityInfo, EthernetIIHdr, MacAddr},
         tim, TimeUnit,
     },
     zerocopy::ByteSlice,
@@ -34,10 +34,14 @@ pub struct InfraBss {
     pub ssid: Vec<u8>,
     pub rsne: Option<Vec<u8>>,
     pub beacon_interval: TimeUnit,
+    pub dtim_period: u8,
     pub capabilities: CapabilityInfo,
     pub rates: Vec<u8>,
     pub channel: u8,
     pub clients: HashMap<MacAddr, RemoteClient>,
+
+    group_buffered: VecDeque<BufferedFrame>,
+    dtim_count: u8,
 }
 
 fn get_client_mut(
@@ -62,6 +66,7 @@ impl InfraBss {
         ctx: &mut Context,
         ssid: Vec<u8>,
         beacon_interval: TimeUnit,
+        dtim_period: u8,
         capabilities: CapabilityInfo,
         rates: Vec<u8>,
         channel: u8,
@@ -71,10 +76,14 @@ impl InfraBss {
             ssid,
             rsne,
             beacon_interval,
+            dtim_period,
             rates,
             capabilities,
             channel,
             clients: HashMap::new(),
+
+            group_buffered: VecDeque::new(),
+            dtim_count: 0,
         };
 
         ctx.device
@@ -234,11 +243,10 @@ impl InfraBss {
             &self.rates,
             self.channel,
             ie::TimHeader {
-                // TODO(41759): Handle DTIM and group traffic.
-                dtim_count: 0,
-                dtim_period: 0,
+                dtim_count: self.dtim_count,
+                dtim_period: self.dtim_period,
                 bmp_ctrl: ie::BitmapControl(0)
-                    .with_group_traffic(false)
+                    .with_group_traffic(!self.group_buffered.is_empty())
                     .with_offset(pvb_offset),
             },
             pvb_bitmap,
@@ -428,9 +436,52 @@ impl InfraBss {
         Ok(())
     }
 
-    pub fn handle_eth_frame(&mut self, ctx: &mut Context, frame: &[u8]) -> Result<(), Rejection> {
-        let mac::EthernetFrame { hdr, body } =
-            mac::EthernetFrame::parse(frame).ok_or_else(|| Rejection::FrameMalformed)?;
+    pub fn handle_multicast_eth_frame(
+        &mut self,
+        ctx: &mut Context,
+        hdr: EthernetIIHdr,
+        body: &[u8],
+    ) -> Result<(), Rejection> {
+        let (in_buf, bytes_written) = ctx
+            .make_data_frame(
+                hdr.da,
+                hdr.sa,
+                self.rsne.is_some(),
+                false, // TODO(37891): Support QoS.
+                hdr.ether_type.to_native(),
+                body,
+            )
+            .map_err(|e| Rejection::Client(hdr.da, ClientRejection::WlanSendError(e)))?;
+        let tx_flags = TxFlags::NONE;
+
+        if !self.clients.values().any(|client| client.dozing()) {
+            ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags).map_err(
+                |s| {
+                    Rejection::Client(
+                        hdr.da,
+                        ClientRejection::WlanSendError(Error::Status(
+                            format!("error sending multicast data frame"),
+                            s,
+                        )),
+                    )
+                },
+            )?;
+        } else {
+            self.group_buffered.push_back(BufferedFrame { in_buf, bytes_written, tx_flags });
+        }
+
+        Ok(())
+    }
+
+    pub fn handle_eth_frame(
+        &mut self,
+        ctx: &mut Context,
+        hdr: EthernetIIHdr,
+        body: &[u8],
+    ) -> Result<(), Rejection> {
+        if is_multicast(hdr.da) {
+            return self.handle_multicast_eth_frame(ctx, hdr, body);
+        }
 
         // Handle the frame, pretending that the client is an unauthenticated client if we don't
         // know about it.
@@ -468,11 +519,28 @@ impl InfraBss {
         let (in_buf, bytes_written, _) = self.make_beacon_frame(ctx)?;
         ctx.device
             .configure_beacon(OutBuf::from(in_buf, bytes_written))
-            .map_err(|s| Error::Status(format!("failed to enable beaconing"), s))?;
+            .map_err(|s| Error::Status(format!("failed to configure beaconing"), s))?;
         Ok(())
     }
 
-    pub fn handle_bcn_tx_complete_indication(&mut self, _ctx: &mut Context) -> Result<(), Error> {
+    pub fn handle_bcn_tx_complete_indication(&mut self, ctx: &mut Context) -> Result<(), Error> {
+        if self.dtim_count > 0 {
+            self.dtim_count -= 1;
+            return Ok(());
+        }
+
+        self.dtim_count = self.dtim_period;
+
+        let mut buffered = self.group_buffered.drain(..).peekable();
+        while let Some(BufferedFrame { mut in_buf, bytes_written, tx_flags }) = buffered.next() {
+            if buffered.peek().is_some() {
+                frame_writer::set_more_data(&mut in_buf.as_mut_slice()[..bytes_written])?;
+            }
+            ctx.device
+                .send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags)
+                .map_err(|s| Error::Status(format!("error sending buffered frame on wake"), s))?;
+        }
+
         Ok(())
     }
 
@@ -510,29 +578,18 @@ mod tests {
         },
         wlan_common::{
             assert_variant,
+            big_endian::BigEndianU16,
             mac::{Bssid, CapabilityInfo},
             test_utils::fake_frames::fake_wpa2_rsne,
         },
     };
 
-    const CLIENT_ADDR: MacAddr = [1u8; 6];
+    const CLIENT_ADDR: MacAddr = [4u8; 6];
     const BSSID: Bssid = Bssid([2u8; 6]);
-    const CLIENT_ADDR2: MacAddr = [3u8; 6];
+    const CLIENT_ADDR2: MacAddr = [6u8; 6];
 
     fn make_context(device: Device, scheduler: Scheduler) -> Context {
         Context::new(device, FakeBufferProvider::new(), Timer::<TimedEvent>::new(scheduler), BSSID)
-    }
-
-    fn make_eth_frame(
-        dst_addr: MacAddr,
-        src_addr: MacAddr,
-        protocol_id: u16,
-        body: &[u8],
-    ) -> Vec<u8> {
-        let mut buf = vec![];
-        crate::write_eth_frame(&mut buf, dst_addr, src_addr, protocol_id, body)
-            .expect("writing to vec always succeeds");
-        buf
     }
 
     #[test]
@@ -544,6 +601,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0).with_ess(true),
             vec![0b11111000],
             1,
@@ -572,7 +630,7 @@ mod tests {
             0, 5, 1, 2, 3, 4, 5, // SSID
             1, 1, 0b11111000, // Basic rates
             3, 1, 1, // DSSS parameter set
-            5, 4, 0, 0, 0, 0, // TIM
+            5, 4, 0, 2, 0, 0, // TIM
         ];
 
         assert_eq!(
@@ -590,6 +648,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -609,6 +668,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -633,7 +693,7 @@ mod tests {
                 // Mgmt header
                 0b10110000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -654,6 +714,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -685,6 +746,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -709,7 +771,7 @@ mod tests {
                 // Mgmt header
                 0b11000000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -730,6 +792,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -757,7 +820,7 @@ mod tests {
                 // Mgmt header
                 0b00010000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -783,6 +846,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0).with_short_preamble(true).with_ess(true),
             vec![0b11111000],
             1,
@@ -810,7 +874,7 @@ mod tests {
                 // Mgmt header
                 0b00010000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -836,6 +900,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -860,7 +925,7 @@ mod tests {
                 // Mgmt header
                 0b10100000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -879,6 +944,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -916,6 +982,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -941,7 +1008,7 @@ mod tests {
                 // Header
                 0b00001000, 0b00000010, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -963,6 +1030,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1014,6 +1082,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1078,6 +1147,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1122,6 +1192,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1166,6 +1237,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1207,6 +1279,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1247,6 +1320,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1301,8 +1375,8 @@ mod tests {
         assert_eq!(
             &fake_device.eth_queue[0][..],
             &[
-                3, 3, 3, 3, 3, 3, // dest
-                1, 1, 1, 1, 1, 1, // src
+                6, 6, 6, 6, 6, 6, // dest
+                4, 4, 4, 4, 4, 4, // src
                 0x12, 0x34, // ether_type
                 // Data
                 1, 2, 3, 4, 5,
@@ -1319,6 +1393,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1365,6 +1440,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1407,7 +1483,7 @@ mod tests {
             // Mgmt header
             0b10100000, 0, // Frame Control
             0, 0, // Duration
-            1, 1, 1, 1, 1, 1, // addr1
+            4, 4, 4, 4, 4, 4, // addr1
             2, 2, 2, 2, 2, 2, // addr2
             2, 2, 2, 2, 2, 2, // addr3
             0x30, 0, // Sequence Control
@@ -1436,6 +1512,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1479,7 +1556,7 @@ mod tests {
                 // Mgmt header
                 0b11000000, 0b00000000, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -1498,6 +1575,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1552,7 +1630,7 @@ mod tests {
                 // Mgmt header
                 0b10100000, 0b00000000, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x20, 0, // Sequence Control
@@ -1571,6 +1649,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1598,7 +1677,12 @@ mod tests {
 
         bss.handle_eth_frame(
             &mut ctx,
-            &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]),
+            EthernetIIHdr {
+                da: CLIENT_ADDR,
+                sa: CLIENT_ADDR2,
+                ether_type: BigEndianU16::from_native(0x1234),
+            },
+            &[1, 2, 3, 4, 5][..],
         )
         .expect("expected OK");
 
@@ -1609,9 +1693,9 @@ mod tests {
                 // Mgmt header
                 0b00001000, 0b00000010, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
-                3, 3, 3, 3, 3, 3, // addr3
+                6, 6, 6, 6, 6, 6, // addr3
                 0x30, 0, // Sequence Control
                 0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
                 0, 0, 0, // OUI
@@ -1631,6 +1715,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1641,7 +1726,12 @@ mod tests {
         assert_variant!(
             bss.handle_eth_frame(
                 &mut ctx,
-                &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
+                EthernetIIHdr {
+                    da: CLIENT_ADDR,
+                    sa: CLIENT_ADDR2,
+                    ether_type: BigEndianU16::from_native(0x1234)
+                },
+                &[1, 2, 3, 4, 5][..],
             )
             .expect_err("expected error"),
             Rejection::Client(_, ClientRejection::NotAssociated)
@@ -1659,6 +1749,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1687,7 +1778,12 @@ mod tests {
         assert_variant!(
             bss.handle_eth_frame(
                 &mut ctx,
-                &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
+                EthernetIIHdr {
+                    da: CLIENT_ADDR,
+                    sa: CLIENT_ADDR2,
+                    ether_type: BigEndianU16::from_native(0x1234)
+                },
+                &[1, 2, 3, 4, 5][..],
             )
             .expect_err("expected error"),
             Rejection::Client(_, ClientRejection::ControlledPortClosed)
@@ -1703,6 +1799,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1734,7 +1831,12 @@ mod tests {
 
         bss.handle_eth_frame(
             &mut ctx,
-            &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]),
+            EthernetIIHdr {
+                da: CLIENT_ADDR,
+                sa: CLIENT_ADDR2,
+                ether_type: BigEndianU16::from_native(0x1234),
+            },
+            &[1, 2, 3, 4, 5][..],
         )
         .expect("expected OK");
 
@@ -1745,9 +1847,9 @@ mod tests {
                 // Mgmt header
                 0b00001000, 0b01000010, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
-                3, 3, 3, 3, 3, 3, // addr3
+                6, 6, 6, 6, 6, 6, // addr3
                 0x30, 0, // Sequence Control
                 0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
                 0, 0, 0, // OUI
@@ -1767,6 +1869,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1816,6 +1919,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -1849,6 +1953,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             mac::CapabilityInfo(33),
             vec![248],
             1,
@@ -1865,7 +1970,7 @@ mod tests {
                 // Mgmt header
                 0b01010000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -1892,6 +1997,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(33),
             vec![0b11111000],
             1,
@@ -1925,6 +2031,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(33),
             vec![0b11111000],
             1,
@@ -1957,7 +2064,7 @@ mod tests {
                 // Mgmt header
                 0b01010000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -1983,6 +2090,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(33),
             vec![0b11111000],
             1,
@@ -2013,7 +2121,7 @@ mod tests {
                 // Mgmt header
                 0b01010000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -2039,6 +2147,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(33),
             vec![0b11111000],
             1,
@@ -2075,6 +2184,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -2102,7 +2212,12 @@ mod tests {
 
         bss.handle_eth_frame(
             &mut ctx,
-            &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]),
+            EthernetIIHdr {
+                da: CLIENT_ADDR,
+                sa: CLIENT_ADDR2,
+                ether_type: BigEndianU16::from_native(0x1234),
+            },
+            &[1, 2, 3, 4, 5][..],
         )
         .expect("expected OK");
 
@@ -2121,6 +2236,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -2143,6 +2259,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
             CapabilityInfo(0),
             vec![0b11111000],
             1,
@@ -2170,14 +2287,18 @@ mod tests {
 
         bss.handle_eth_frame(
             &mut ctx,
-            &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]),
+            EthernetIIHdr {
+                da: CLIENT_ADDR,
+                sa: CLIENT_ADDR2,
+                ether_type: BigEndianU16::from_native(0x1234),
+            },
+            &[1, 2, 3, 4, 5][..],
         )
         .expect("expected OK");
 
         bss.handle_pre_tbtt_hw_indication(&mut ctx)
             .expect("expected handle pre-TBTT hw indication OK");
-
-        let (bcn, _, _) = fake_device.bcn_cfg.expect("expected beacon configuration");
+        let (bcn, _, _) = fake_device.bcn_cfg.as_ref().expect("expected beacon configuration");
         assert_eq!(
             &bcn[..],
             &[
@@ -2196,7 +2317,209 @@ mod tests {
                 0, 7, 99, 111, 111, 108, 110, 101, 116, // SSID
                 1, 1, 248, // Supported rates
                 3, 1, 1, // DSSS parameter set
-                5, 4, 0, 0, 0, 2, // TIM
+                5, 4, 0, 2, 0, 2, // TIM
+            ][..],
+        );
+        bss.handle_bcn_tx_complete_indication(&mut ctx)
+            .expect("expected handle bcn tx complete hw indication OK");
+
+        bss.handle_pre_tbtt_hw_indication(&mut ctx)
+            .expect("expected handle pre-TBTT hw indication OK");
+        let (bcn, _, _) = fake_device.bcn_cfg.as_ref().expect("expected beacon configuration");
+        assert_eq!(
+            &bcn[..],
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                0, 0, // Capabilities
+                // IEs:
+                0, 7, 99, 111, 111, 108, 110, 101, 116, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                5, 4, 2, 2, 0, 2, // TIM
+            ][..],
+        );
+        bss.handle_bcn_tx_complete_indication(&mut ctx)
+            .expect("expected handle bcn tx complete hw indication OK");
+
+        bss.handle_pre_tbtt_hw_indication(&mut ctx)
+            .expect("expected handle pre-TBTT hw indication OK");
+        let (bcn, _, _) = fake_device.bcn_cfg.as_ref().expect("expected beacon configuration");
+        assert_eq!(
+            &bcn[..],
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                0, 0, // Capabilities
+                // IEs:
+                0, 7, 99, 111, 111, 108, 110, 101, 116, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                5, 4, 1, 2, 0, 2, // TIM
+            ][..],
+        );
+        bss.handle_bcn_tx_complete_indication(&mut ctx)
+            .expect("expected handle bcn tx complete hw indication OK");
+
+        bss.handle_pre_tbtt_hw_indication(&mut ctx)
+            .expect("expected handle pre-TBTT hw indication OK");
+        let (bcn, _, _) = fake_device.bcn_cfg.as_ref().expect("expected beacon configuration");
+        assert_eq!(
+            &bcn[..],
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                0, 0, // Capabilities
+                // IEs:
+                0, 7, 99, 111, 111, 108, 110, 101, 116, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                5, 4, 0, 2, 0, 2, // TIM
+            ][..],
+        );
+        bss.handle_bcn_tx_complete_indication(&mut ctx)
+            .expect("expected handle bcn tx complete hw indication OK");
+    }
+
+    #[test]
+    fn handle_pre_tbtt_hw_indication_has_group_traffic() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
+            CapabilityInfo(0),
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok");
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
+        client
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .expect("expected OK");
+        client
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                false,
+                1,
+                mac::CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::Success,
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            )
+            .expect("expected OK");
+        client.set_power_state(&mut ctx, mac::PowerState::DOZE).expect("expect doze OK");
+
+        bss.handle_eth_frame(
+            &mut ctx,
+            EthernetIIHdr {
+                da: [1u8; 6],
+                sa: CLIENT_ADDR2,
+                ether_type: BigEndianU16::from_native(0x1234),
+            },
+            &[1, 2, 3, 4, 5][..],
+        )
+        .expect("expected OK");
+
+        bss.handle_pre_tbtt_hw_indication(&mut ctx)
+            .expect("expected handle pre-TBTT hw indication OK");
+        let (bcn, _, _) = fake_device.bcn_cfg.as_ref().expect("expected beacon configuration");
+        assert_eq!(
+            &bcn[..],
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                0, 0, // Capabilities
+                // IEs:
+                0, 7, 99, 111, 111, 108, 110, 101, 116, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                5, 4, 0, 2, 1, 0, // TIM
+            ][..],
+        );
+        fake_device.wlan_queue.clear();
+        bss.handle_bcn_tx_complete_indication(&mut ctx)
+            .expect("expected handle bcn tx complete hw indication OK");
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b00001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                6, 6, 6, 6, 6, 6, // addr3
+                0x10, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                1, 2, 3, 4, 5,
+            ][..]
+        );
+
+        bss.handle_pre_tbtt_hw_indication(&mut ctx)
+            .expect("expected handle pre-TBTT hw indication OK");
+        let (bcn, _, _) = fake_device.bcn_cfg.as_ref().expect("expected beacon configuration");
+        assert_eq!(
+            &bcn[..],
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                0, 0, // Capabilities
+                // IEs:
+                0, 7, 99, 111, 111, 108, 110, 101, 116, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                5, 4, 2, 2, 0, 0, // TIM
             ][..],
         );
     }

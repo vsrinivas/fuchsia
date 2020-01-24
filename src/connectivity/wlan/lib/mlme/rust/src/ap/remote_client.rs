@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        ap::{frame_writer, Context, TimedEvent},
+        ap::{frame_writer, BufferedFrame, Context, TimedEvent},
         buffer::{InBuf, OutBuf},
         device::TxFlags,
         error::Error,
@@ -33,13 +33,6 @@ use {
 const BSS_MAX_IDLE_PERIOD: u16 = 90;
 
 #[derive(Debug)]
-struct Buffered {
-    in_buf: InBuf,
-    bytes_written: usize,
-    tx_flags: TxFlags,
-}
-
-#[derive(Debug)]
 enum PowerSaveState {
     /// The device is awake.
     Awake,
@@ -47,7 +40,7 @@ enum PowerSaveState {
     /// The device is dozing.
     Dozing {
         /// Buffered frames that will be sent once the device wakes up.
-        buffered: VecDeque<Buffered>,
+        buffered: VecDeque<BufferedFrame>,
     },
 }
 
@@ -185,6 +178,13 @@ impl RemoteClient {
             State::Associated { ps_state: PowerSaveState::Dozing { buffered }, .. } => {
                 !buffered.is_empty()
             }
+            _ => false,
+        }
+    }
+
+    pub fn dozing(&self) -> bool {
+        match self.state.as_ref() {
+            State::Associated { ps_state: PowerSaveState::Dozing { .. }, .. } => true,
             _ => false,
         }
     }
@@ -660,7 +660,7 @@ impl RemoteClient {
         match self.state.as_mut() {
             State::Associated { ps_state, .. } => match ps_state {
                 PowerSaveState::Dozing { buffered } => {
-                    let Buffered { mut in_buf, bytes_written, tx_flags } =
+                    let BufferedFrame { mut in_buf, bytes_written, tx_flags } =
                         match buffered.pop_front() {
                             Some(buffered) => buffered,
                             None => {
@@ -731,7 +731,9 @@ impl RemoteClient {
                     PowerSaveState::Dozing { buffered } => buffered.into_iter().peekable(),
                 };
 
-                while let Some(Buffered { mut in_buf, bytes_written, tx_flags }) = buffered.next() {
+                while let Some(BufferedFrame { mut in_buf, bytes_written, tx_flags }) =
+                    buffered.next()
+                {
                     if buffered.peek().is_some() {
                         // We need to mark all except the last of these frames' frame control fields
                         // with More Data, as per IEEE Std 802.11-2016, 11.2.3.2: The Power
@@ -1037,7 +1039,7 @@ impl RemoteClient {
                     ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags)
                 }
                 PowerSaveState::Dozing { buffered } => {
-                    buffered.push_back(Buffered { in_buf, bytes_written, tx_flags });
+                    buffered.push_back(BufferedFrame { in_buf, bytes_written, tx_flags });
                     Ok(())
                 }
             },
