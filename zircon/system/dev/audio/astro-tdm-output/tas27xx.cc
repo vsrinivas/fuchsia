@@ -80,8 +80,7 @@ zx_status_t Tas27xx::Init() {
   if (status != ZX_OK)
     return status;
 
-  // Initial gain -6db.
-  SetGain(-6);
+  SetGain(0);
 
   return ZX_OK;
 }
