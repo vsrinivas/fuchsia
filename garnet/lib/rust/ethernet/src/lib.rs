@@ -27,6 +27,8 @@ use std::task::Poll;
 mod buffer;
 mod ethernet_sys;
 
+pub use buffer::RxBuffer;
+
 bitflags! {
     /// Status flags describing the result of queueing a packet to an Ethernet device.
     #[repr(transparent)]

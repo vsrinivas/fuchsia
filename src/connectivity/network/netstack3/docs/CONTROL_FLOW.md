@@ -2,12 +2,11 @@
 
 This document describes how control flow works in the netstack.
 
-Control flow in the netstack is event-driven. The netstack runs in a single
-thread, which runs the event loop. The event loop blocks waiting for an event.
-When an event occurs, control passes to the code responsible for processing that
-event. That code is responsible for processing the event in its entirety,
-including updating any state and emitting any other events in response to the
-incoming event.
+Control flow in the netstack is event-driven. The netstack defines various
+"workers", each responsible for consuming a specific type of event and observing
+the event's source directly. That worker is responsible for processing the event
+in its entirety, including updating any state and emitting any other events in
+response to the incoming event.
 
 There are three types of events in the system:
 - Incoming packets from the network
@@ -23,12 +22,12 @@ The netstack may emit three types of events:
 - Installing timers
 
 Once an event has been fully processed, the code responsible for its processing
-returns, and the event loop goes back to blocking for a future event.
+returns, and the worker goes back to blocking for a future event.
 
 Consider the following example of an event being handled:
 1. The netstack receives an Ethernet frame from the Ethernet driver. This causes
-   the event loop to become unblocked.
-2. The event loop executes the function responsible for processing incoming
+   the Ethernet worker loop to become unblocked.
+2. The Ethernet worker executes the function responsible for processing incoming
    Ethernet frames.
 3. This function parses the frame, and discovers that it contains an IPv4
    packet. It passes control to the function responsible for processing incoming
@@ -48,25 +47,27 @@ Consider the following example of an event being handled:
 6. This function is done, so it returns. None of the parent functions (the one
    for processing incoming IPv4 packets or the one for processing incoming
    Ethernet frames) have any more work to do, so they return as well.
-7. The event loop returns to its steady state of waiting for further events to
+7. The Ethernet worker returns to its steady state of waiting for further events to
    process.
 
 This control flow design has a number of advantages:
-- Since it is entirely single-threaded, there's no need for synchronization
-  of any common data structures.
 - Since each event results in a single function call, the flow of control
   within the core of the netstack is easy to follow, and follows normal
   function call flow. There's no indirect flow, for example in the form
   of scheduling and later executing callbacks or other event processing.
-- Since data is never shared between threads, the design is quite
-  cache-friendly.
 - From a development perspective, the simplicity of control flow makes it easy
   to iterate and add features without having to think carefully about which
   logic is performed on which threads, having to do complex refactors to
   reorganize how logic is assigned to threads, etc.
 
-Of course, being single-threaded has its downsides as well. For a discussion of
-those, see [`IMPROVEMENTS.md`](./IMPROVEMENTS.md#single-threaded-execution).
-While a single-threaded architecture is the rgith one for us during early
+Currently, all workers use a shared common core state to operate, which is kept
+behind a futures-aware mutex. Thread contention is not a problem in the current
+state because the stack is single threaded. Future expansions are planned to
+split core state into smaller states owned by each worker to decrease the
+surface for contention and allow a multi-threaded approach, see
+[`IMPROVEMENTS.md`](./IMPROVEMENTS.md#single-threaded-execution) for more on
+this topic.
+
+While a single-threaded architecture is the right one for us during early
 development, we will likely move away from it eventually as we focus more on
 performance.

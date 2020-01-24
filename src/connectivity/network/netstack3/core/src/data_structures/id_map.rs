@@ -148,19 +148,19 @@ impl<T> IdMapEntry<T> {
 /// returning the assigned `id`. `insert` can be used for assigning a specific
 /// `id` to an object, and returns the previous object at that `id` if any.
 #[cfg_attr(test, derive(Clone))]
-pub(crate) struct IdMap<T> {
+pub struct IdMap<T> {
     freelist: Option<FreeList>,
     data: Vec<IdMapEntry<T>>,
 }
 
 impl<T> IdMap<T> {
     /// Creates a new empty [`IdMap`].
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self { freelist: None, data: Vec::new() }
     }
 
     /// Returns `true` if there are no items in [`IdMap`].
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         // Because of `compress`, our map is empty if and only if the underlying
         // vector is empty. If the underlying vector is not empty but our map is
         // empty, it must be the case where the underlying vector contains
@@ -171,13 +171,13 @@ impl<T> IdMap<T> {
 
     /// Returns a reference to the item indexed by `key`, or `None` if the `key`
     /// doesn't exist.
-    pub(crate) fn get(&self, key: Key) -> Option<&T> {
+    pub fn get(&self, key: Key) -> Option<&T> {
         self.data.get(key).and_then(|v| v.as_ref())
     }
 
     /// Returns a mutable reference to the item indexed by `key`, or `None` if
     /// the `key` doesn't exist.
-    pub(crate) fn get_mut(&mut self, key: Key) -> Option<&mut T> {
+    pub fn get_mut(&mut self, key: Key) -> Option<&mut T> {
         self.data.get_mut(key).and_then(|v| v.as_mut())
     }
 
@@ -187,7 +187,7 @@ impl<T> IdMap<T> {
     ///
     /// Note: the worst case complexity of `remove` is O(key) if the backing
     /// data structure of the [`IdMap`] is too sparse.
-    pub(crate) fn remove(&mut self, key: Key) -> Option<T> {
+    pub fn remove(&mut self, key: Key) -> Option<T> {
         let r = self.remove_inner(key);
         if r.is_some() {
             self.compress();
@@ -219,7 +219,7 @@ impl<T> IdMap<T> {
     ///
     /// Note: The worst case complexity of `insert` is O(key) if `key` is larger
     /// than the number of items currently held by the [`IdMap`].
-    pub(crate) fn insert(&mut self, key: Key, item: T) -> Option<T> {
+    pub fn insert(&mut self, key: Key, item: T) -> Option<T> {
         if key < self.data.len() {
             if self.data[key].is_free() {
                 self.freelist_unlink(key);
@@ -278,7 +278,7 @@ impl<T> IdMap<T> {
     /// Note: The worst case complexity of `push` is O(n) where n is the number
     /// of items held by the [`IdMap`]. This can happen if the internal
     /// structure gets fragmented.
-    pub(crate) fn push(&mut self, item: T) -> Key {
+    pub fn push(&mut self, item: T) -> Key {
         if let Some(FreeList { head, .. }) = self.freelist.as_mut() {
             let ret = *head;
             let old =
@@ -324,19 +324,19 @@ impl<T> IdMap<T> {
     }
 
     /// Creates an iterator over the containing items and their associated keys.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = (Key, &T)> {
+    pub fn iter(&self) -> impl Iterator<Item = (Key, &T)> {
         self.data.iter().enumerate().filter_map(|(k, v)| v.as_ref().map(|t| (k, t)))
     }
 
     /// Creates a mutable iterator over the containing items and their
     /// associated keys.
-    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = (Key, &mut T)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Key, &mut T)> {
         self.data.iter_mut().enumerate().filter_map(|(k, v)| v.as_mut().map(|t| (k, t)))
     }
 
     /// Gets the given key's corresponding entry in the map for in-place
     /// manipulation.
-    pub(crate) fn entry(&mut self, key: usize) -> Entry<'_, usize, T> {
+    pub fn entry(&mut self, key: usize) -> Entry<'_, usize, T> {
         if key < self.data.len() && self.data[key].is_allocated() {
             Entry::Occupied(OccupiedEntry { key, id_map: self })
         } else {
@@ -354,7 +354,7 @@ impl<T> IdMap<T> {
     /// WARNING: The mutation will only occur when the returned iterator is
     /// executed. Simply calling `update_retain` and then discarding the return
     /// value will do nothing!
-    pub(crate) fn update_retain<'a, F: 'a + FnMut(&mut T) -> bool>(
+    pub fn update_retain<'a, F: 'a + FnMut(&mut T) -> bool>(
         &'a mut self,
         mut f: F,
     ) -> impl 'a + Iterator<Item = (Key, T)>

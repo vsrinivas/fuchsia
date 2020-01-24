@@ -26,7 +26,7 @@ impl From<InvalidSubnetError> for fidl_net_stack::Error {
 /// by implementing [`CoreCompatible`] for `F`.
 ///
 /// This trait is meant only to be implemented for types in `netstack3_core`.
-pub trait FidlCompatible<F>: Sized {
+pub(crate) trait FidlCompatible<F>: Sized {
     type FromError;
     type IntoError;
 
@@ -39,7 +39,7 @@ pub trait FidlCompatible<F>: Sized {
 /// This trait offers the convenient symmetrical for [`FidlCompatible`] and is
 /// automatically implemented for all types for which a [`FidlCompatible`]
 /// conversion is implemented.
-pub trait CoreCompatible<C>: Sized {
+pub(crate) trait CoreCompatible<C>: Sized {
     type FromError;
     type IntoError;
 
@@ -48,7 +48,7 @@ pub trait CoreCompatible<C>: Sized {
 }
 
 /// Utility trait for infallible FIDL conversion.
-pub trait FromFidlExt<F>: FidlCompatible<F, FromError = Never> {
+pub(crate) trait FromFidlExt<F>: FidlCompatible<F, FromError = Never> {
     fn from_fidl(fidl: F) -> Self {
         match Self::try_from_fidl(fidl) {
             Ok(slf) => slf,
@@ -58,7 +58,7 @@ pub trait FromFidlExt<F>: FidlCompatible<F, FromError = Never> {
 }
 
 /// Utility trait for infallible FIDL conversion.
-pub trait IntoFidlExt<F>: FidlCompatible<F, IntoError = Never> {
+pub(crate) trait IntoFidlExt<F>: FidlCompatible<F, IntoError = Never> {
     fn into_fidl(self) -> F {
         match self.try_into_fidl() {
             Ok(fidl) => fidl,
@@ -68,7 +68,7 @@ pub trait IntoFidlExt<F>: FidlCompatible<F, IntoError = Never> {
 }
 
 /// Utility trait for infallible Core conversion.
-pub trait FromCoreExt<C>: CoreCompatible<C, FromError = Never> {
+pub(crate) trait FromCoreExt<C>: CoreCompatible<C, FromError = Never> {
     fn from_core(core: C) -> Self {
         match Self::try_from_core(core) {
             Ok(slf) => slf,
@@ -78,7 +78,7 @@ pub trait FromCoreExt<C>: CoreCompatible<C, FromError = Never> {
 }
 
 /// Utility trait for infallible Core conversion.
-pub trait IntoCoreExt<C>: CoreCompatible<C, IntoError = Never> {
+pub(crate) trait IntoCoreExt<C>: CoreCompatible<C, IntoError = Never> {
     fn into_core(self) -> C {
         match self.try_into_core() {
             Ok(core) => core,
@@ -221,7 +221,7 @@ impl FidlCompatible<fidl_net::Subnet> for SubnetEither {
 ///
 /// `ConversionContext` is used by conversion functions in
 /// [`ContextFidlCompatible`] and [`ContextCoreCompatible`].
-pub trait ConversionContext {
+pub(crate) trait ConversionContext {
     /// Converts a binding identifier (exposed in FIDL as `u64`) to a core
     /// identifier `DeviceId`.
     ///
@@ -242,7 +242,7 @@ pub trait ConversionContext {
 /// by implementing [`ContextCoreCompatible`] for `F`.
 ///
 /// This trait is meant only to be implemented for types in `netstack3_core`.
-pub trait ContextFidlCompatible<F>: Sized {
+pub(crate) trait ContextFidlCompatible<F>: Sized {
     type FromError;
     type IntoError;
 
@@ -259,7 +259,7 @@ pub trait ContextFidlCompatible<F>: Sized {
 /// This trait offers the convenient symmetrical for [`ContextFidlCompatible`]
 /// and is automatically implemented for all types for which a
 /// [`ContextFidlCompatible`] conversion is implemented.
-pub trait ContextCoreCompatible<T>: Sized {
+pub(crate) trait ContextCoreCompatible<T>: Sized {
     type FromError;
     type IntoError;
 
@@ -414,8 +414,7 @@ mod tests {
     use net_types::ip::{Ipv4Addr, Ipv6Addr};
 
     use super::*;
-    use crate::eventloop::EventLoop;
-    use netstack3_core::StackStateBuilder;
+    use crate::bindings::Netstack;
 
     struct FakeConversionContext {
         binding: u64,
@@ -426,10 +425,13 @@ mod tests {
         fn new() -> Self {
             // we need a valid context to be able to create DeviceIds, so
             // we just create it, get the device id and then destroy everything
-            let (snd, rcv) = futures::channel::mpsc::unbounded();
-            let mut evt_loop = EventLoop::new_with_channels(StackStateBuilder::default(), snd, rcv);
-            let core =
-                evt_loop.ctx.state_mut().add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
+            let netstack = Netstack::new();
+            let core = netstack
+                .ctx
+                .try_lock()
+                .unwrap()
+                .state_mut()
+                .add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
             Self { binding: 1, core }
         }
     }

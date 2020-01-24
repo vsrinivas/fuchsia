@@ -30,6 +30,7 @@ fn fifo_entry(offset: u32, length: u16) -> FifoEntry {
     FifoEntry { offset, length, flags: 0, cookie: 0 }
 }
 
+/// A buffer received on the rx path.
 pub struct RxBuffer {
     data: SharedBuffer,
     offset: usize,
@@ -37,10 +38,12 @@ pub struct RxBuffer {
 }
 
 impl RxBuffer {
+    /// The length of the data in this buffer, in bytes.
     pub fn len(&self) -> usize {
         self.data.len()
     }
 
+    /// Reads the contents of this buffer into `dst`.
     pub fn read(&self, dst: &mut [u8]) -> usize {
         self.data.read(dst)
     }

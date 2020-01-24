@@ -5,106 +5,150 @@
 //! As the only discoverable service of fuchsia.net.icmp, the Provider service facilitates the
 //! creation of ICMP sockets.
 
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::channel::mpsc;
-use log::{error, trace};
+use futures::{channel::mpsc, TryFutureExt, TryStreamExt};
+use log::{debug, error, trace};
 use rand::RngCore;
 
 use net_types::ip::{IpAddr, Ipv4, Ipv6};
 use net_types::SpecifiedAddr;
 
-use fidl_fuchsia_net_icmp::{EchoSocketConfig, EchoSocketRequestStream, ProviderRequest};
+use fidl_fuchsia_net_icmp::{
+    EchoSocketConfig, EchoSocketRequestStream, ProviderRequest, ProviderRequestStream,
+};
 
-use netstack3_core::{Context, EventDispatcher};
+use netstack3_core::EventDispatcher;
 
-use crate::eventloop::icmp::echo::EchoSocketWorker;
-use crate::eventloop::icmp::RX_BUFFER_SIZE;
-use crate::eventloop::util::CoreCompatible;
-use crate::eventloop::{EchoSocket, EventLoop, EventLoopInner, IpExt};
+use super::{
+    echo::EchoSocketWorker, EchoSocket, IcmpEchoSockets, IcmpStackContext, IpExt, RX_BUFFER_SIZE,
+};
 
-/// Handle a [`fidl_fuchsia_net_icmp::ProviderRequest`], which is used for opening ICMP sockets.
-pub fn handle_request(event_loop: &mut EventLoop, req: ProviderRequest) -> Result<(), fidl::Error> {
-    match req {
-        ProviderRequest::OpenEchoSocket { config, socket, control_handle: _ } => {
-            let (stream, handle) = socket.into_stream_and_control_handle()?;
-            match open_echo_socket(&mut event_loop.ctx, config, stream) {
-                Ok(()) => handle.send_on_open_(zx::Status::OK.into_raw()),
-                Err(status) => handle.send_on_open_(status.into_raw()),
+use crate::bindings::{
+    context::InnerValue, util::CoreCompatible, LockedStackContext, StackContext,
+};
+
+pub(crate) struct IcmpProviderWorker<C: StackContext> {
+    ctx: C,
+}
+
+impl<C> IcmpProviderWorker<C>
+where
+    C: IcmpStackContext,
+    C::Dispatcher: InnerValue<IcmpEchoSockets>,
+{
+    fn new(ctx: C) -> Self {
+        Self { ctx }
+    }
+
+    pub(crate) fn spawn(ctx: C, mut rs: ProviderRequestStream) {
+        fasync::spawn(
+            async move {
+                let worker = Self::new(ctx);
+                while let Some(req) = rs.try_next().await? {
+                    worker.handle_request(req).await?;
+                }
+                Ok(())
+            }
+            .unwrap_or_else(|e: fidl::Error| {
+                debug!("IcmpProviderWorker finished with error {:?}", e)
+            }),
+        );
+    }
+
+    /// Handle a [`fidl_fuchsia_net_icmp::ProviderRequest`], which is used for opening ICMP sockets.
+    async fn handle_request(&self, req: ProviderRequest) -> Result<(), fidl::Error> {
+        match req {
+            ProviderRequest::OpenEchoSocket { config, socket, control_handle: _ } => {
+                let (stream, handle) = socket.into_stream_and_control_handle()?;
+                handle.send_on_open_(
+                    self.open_echo_socket(config, stream)
+                        .await
+                        .err()
+                        .unwrap_or(zx::Status::OK)
+                        .into_raw(),
+                )
             }
         }
     }
-}
 
-fn open_echo_socket(
-    ctx: &mut Context<EventLoopInner>,
-    config: EchoSocketConfig,
-    stream: EchoSocketRequestStream,
-) -> Result<(), zx::Status> {
-    trace!("Opening ICMP Echo socket: {:?}", config);
+    async fn open_echo_socket(
+        &self,
+        config: EchoSocketConfig,
+        stream: EchoSocketRequestStream,
+    ) -> Result<(), zx::Status> {
+        trace!("Opening ICMP Echo socket: {:?}", config);
 
-    let remote: SpecifiedAddr<IpAddr> = config
-        .remote
-        .ok_or(zx::Status::INVALID_ARGS)?
-        .try_into_core()
-        .map_err(|_| zx::Status::INVALID_ARGS)?;
+        let remote: SpecifiedAddr<IpAddr> = config
+            .remote
+            .ok_or(zx::Status::INVALID_ARGS)?
+            .try_into_core()
+            .map_err(|_| zx::Status::INVALID_ARGS)?;
 
-    let local: Option<SpecifiedAddr<IpAddr>> = match config.local {
-        Some(l) => Some(l.try_into_core().map_err(|_| zx::Status::INVALID_ARGS)?),
-        None => None,
-    };
+        let local: Option<SpecifiedAddr<IpAddr>> = match config.local {
+            Some(l) => Some(l.try_into_core().map_err(|_| zx::Status::INVALID_ARGS)?),
+            None => None,
+        };
 
-    use net_types::ip::IpAddr::{V4, V6};
-    match local {
-        Some(local) => match (local.into(), remote.into()) {
-            (V4(local), V4(remote)) => {
-                connect_echo_socket::<Ipv4>(ctx, stream, Some(local), remote)
-            }
-            (V6(local), V6(remote)) => {
-                connect_echo_socket::<Ipv6>(ctx, stream, Some(local), remote)
-            }
-            _ => Err(zx::Status::INVALID_ARGS),
-        },
-        None => match remote.into() {
-            V4(remote) => connect_echo_socket::<Ipv4>(ctx, stream, None, remote),
-            V6(remote) => connect_echo_socket::<Ipv6>(ctx, stream, None, remote),
-        },
-    }
-}
+        use net_types::ip::IpAddr::{V4, V6};
 
-fn connect_echo_socket<I: IpExt>(
-    ctx: &mut Context<EventLoopInner>,
-    stream: EchoSocketRequestStream,
-    local: Option<SpecifiedAddr<I::Addr>>,
-    remote: SpecifiedAddr<I::Addr>,
-) -> Result<(), zx::Status> {
-    // TODO(fxb/36212): Generate icmp_ids without relying on an RNG. This line
-    // of code does not handle conflicts very well, requiring the client to
-    // continuously create sockets until it succeeds.
-    let icmp_id = ctx.dispatcher_mut().rng().next_u32() as u16;
-    connect_echo_socket_inner::<I>(ctx, stream, local, remote, icmp_id)
-}
-
-fn connect_echo_socket_inner<I: IpExt>(
-    ctx: &mut Context<EventLoopInner>,
-    stream: EchoSocketRequestStream,
-    local: Option<SpecifiedAddr<I::Addr>>,
-    remote: SpecifiedAddr<I::Addr>,
-    icmp_id: u16,
-) -> Result<(), zx::Status> {
-    match I::new_icmp_connection(ctx, local, remote, icmp_id) {
-        Ok(conn) => {
-            let (reply_tx, reply_rx) = mpsc::channel(RX_BUFFER_SIZE);
-            let worker = EchoSocketWorker::new(stream, reply_rx, conn.into(), icmp_id);
-            worker.spawn(ctx.dispatcher().event_send.clone());
-            trace!("Spawned ICMP Echo socket worker");
-
-            let socket = EchoSocket { reply_tx };
-            I::get_icmp_echo_sockets(ctx.dispatcher_mut()).insert(conn, socket);
-            Ok(())
+        let ctx = self.ctx.lock().await;
+        match local {
+            Some(local) => match (local.into(), remote.into()) {
+                (V4(local), V4(remote)) => {
+                    self.connect_echo_socket::<Ipv4>(ctx, stream, Some(local), remote)
+                }
+                (V6(local), V6(remote)) => {
+                    self.connect_echo_socket::<Ipv6>(ctx, stream, Some(local), remote)
+                }
+                _ => Err(zx::Status::INVALID_ARGS),
+            },
+            None => match remote.into() {
+                V4(remote) => self.connect_echo_socket::<Ipv4>(ctx, stream, None, remote),
+                V6(remote) => self.connect_echo_socket::<Ipv6>(ctx, stream, None, remote),
+            },
         }
-        Err(e) => {
-            error!("Cannot create ICMP connection: {:?}", e);
-            Err(zx::Status::ALREADY_EXISTS)
+    }
+
+    fn connect_echo_socket<I: IpExt>(
+        &self,
+        mut ctx: LockedStackContext<'_, C>,
+        stream: EchoSocketRequestStream,
+        local: Option<SpecifiedAddr<I::Addr>>,
+        remote: SpecifiedAddr<I::Addr>,
+    ) -> Result<(), zx::Status> {
+        // TODO(fxb/36212): Generate icmp_ids without relying on an RNG. This line
+        // of code does not handle conflicts very well, requiring the client to
+        // continuously create sockets until it succeeds.
+        let icmp_id = ctx.dispatcher_mut().rng().next_u32() as u16;
+        self.connect_echo_socket_inner::<I>(ctx, stream, local, remote, icmp_id)
+    }
+
+    fn connect_echo_socket_inner<I: IpExt>(
+        &self,
+        mut ctx: LockedStackContext<'_, C>,
+        stream: EchoSocketRequestStream,
+        local: Option<SpecifiedAddr<I::Addr>>,
+        remote: SpecifiedAddr<I::Addr>,
+        icmp_id: u16,
+    ) -> Result<(), zx::Status> {
+        match I::new_icmp_connection::<C>(&mut ctx, local, remote, icmp_id) {
+            Ok(conn) => {
+                let (reply_tx, reply_rx) = mpsc::channel(RX_BUFFER_SIZE);
+
+                EchoSocketWorker::new(self.ctx.clone(), reply_rx, conn.into(), icmp_id)
+                    .spawn(stream);
+
+                trace!("Spawned ICMP Echo socket worker");
+
+                let socket = EchoSocket { reply_tx };
+                I::get_icmp_echo_sockets(ctx.dispatcher_mut()).insert(conn, socket);
+                Ok(())
+            }
+            Err(e) => {
+                error!("Cannot create ICMP connection: {:?}", e);
+                Err(zx::Status::ALREADY_EXISTS)
+            }
         }
     }
 }
@@ -123,8 +167,8 @@ mod test {
     use net_types::ip::{AddrSubnetEither, Ipv4, Ipv4Addr};
     use net_types::{SpecifiedAddr, Witness};
 
-    use super::connect_echo_socket_inner;
-    use crate::eventloop::integration_tests::{
+    use crate::bindings::icmp::IcmpProviderWorker;
+    use crate::bindings::integration_tests::{
         new_ipv4_addr_subnet, new_ipv6_addr_subnet, StackSetupBuilder, TestSetup, TestSetupBuilder,
     };
 
@@ -241,7 +285,7 @@ mod test {
 
         // Wait for the ICMP echo socket to open
         loop {
-            match t.run_until(event_stream.next()).await.unwrap().unwrap().unwrap() {
+            match event_stream.next().await.unwrap().unwrap() {
                 EchoSocketEvent::OnOpen_ { s } => {
                     let status = zx::Status::from_raw(s);
                     debug!("ICMP Echo socket opened with status: {}", status);
@@ -254,13 +298,13 @@ mod test {
         (t, socket)
     }
 
-    async fn send_echoes(mut t: TestSetup, socket: EchoSocketProxy, payload: Vec<u8>) {
+    async fn send_echoes(socket: EchoSocketProxy, payload: Vec<u8>) {
         for sequence_num in 1u16..=4 {
             debug!("Sending ping seq {} to socket {:?}", sequence_num, socket);
             let mut req = EchoPacket { sequence_num, payload: payload.to_owned() };
             socket.send_request(&mut req).unwrap();
 
-            let packet = t.run_until(socket.watch()).await.unwrap().unwrap().unwrap();
+            let packet = socket.watch().await.unwrap().unwrap();
             debug!("Received packet: {:?}", packet);
             assert_eq!(packet.sequence_num, sequence_num);
             assert_eq!(packet.payload, payload);
@@ -269,28 +313,30 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv4() {
-        let (t, socket) = open_icmp_echo_socket::<TestIpv4Addr, TestIpv4Addr>(zx::Status::OK).await;
-        send_echoes(t, socket, vec![1, 2, 3, 4, 5, 6]).await;
+        let (_t, socket) =
+            open_icmp_echo_socket::<TestIpv4Addr, TestIpv4Addr>(zx::Status::OK).await;
+        send_echoes(socket, vec![1, 2, 3, 4, 5, 6]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv6() {
-        let (t, socket) = open_icmp_echo_socket::<TestIpv6Addr, TestIpv6Addr>(zx::Status::OK).await;
-        send_echoes(t, socket, vec![1, 2, 3, 4, 5, 6]).await;
+        let (_t, socket) =
+            open_icmp_echo_socket::<TestIpv6Addr, TestIpv6Addr>(zx::Status::OK).await;
+        send_echoes(socket, vec![1, 2, 3, 4, 5, 6]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv4_no_local_ip() {
-        let (t, socket) =
+        let (_t, socket) =
             open_icmp_echo_socket::<TestNoIpv4Addr, TestIpv4Addr>(zx::Status::OK).await;
-        send_echoes(t, socket, vec![1, 2, 3, 4, 5, 6]).await;
+        send_echoes(socket, vec![1, 2, 3, 4, 5, 6]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv6_no_local_ip() {
-        let (t, socket) =
+        let (_t, socket) =
             open_icmp_echo_socket::<TestNoIpv6Addr, TestIpv6Addr>(zx::Status::OK).await;
-        send_echoes(t, socket, vec![1, 2, 3, 4, 5, 6]).await;
+        send_echoes(socket, vec![1, 2, 3, 4, 5, 6]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -358,10 +404,13 @@ mod test {
 
         let (_, socket_server) = fidl::endpoints::create_endpoints::<EchoSocketMarker>().unwrap();
         let request_stream = socket_server.into_stream().unwrap();
+        // create a SocketProviderWorker without actually serving a request
+        // stream.
+        let provider = IcmpProviderWorker::new(t.clone_ctx(ALICE));
 
         assert_eq!(
-            connect_echo_socket_inner::<Ipv4>(
-                &mut t.event_loop(ALICE).ctx,
+            provider.connect_echo_socket_inner::<Ipv4>(
+                t.ctx(ALICE).await,
                 request_stream,
                 local,
                 remote,
@@ -375,8 +424,8 @@ mod test {
         let request_stream = socket_server.into_stream().unwrap();
 
         assert_eq!(
-            connect_echo_socket_inner::<Ipv4>(
-                &mut t.event_loop(ALICE).ctx,
+            provider.connect_echo_socket_inner::<Ipv4>(
+                t.ctx(ALICE).await,
                 request_stream,
                 local,
                 remote,

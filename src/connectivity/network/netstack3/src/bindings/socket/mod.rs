@@ -14,6 +14,7 @@ use fidl::endpoints::{ClientEnd, RequestStream};
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
+use futures::{TryFutureExt, TryStreamExt};
 use log::debug;
 use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{SpecifiedAddr, Witness};
@@ -22,7 +23,7 @@ use netstack3_core::{
 };
 use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned, U16, U32};
 
-use crate::eventloop::{Event, EventLoop};
+use super::{context::InnerValue, StackContext};
 
 // Socket constants defined in FDIO in
 // `//zircon/system/ulib/fdio/private-socket.h`
@@ -30,39 +31,6 @@ use crate::eventloop::{Event, EventLoop};
 // public header from FDIO somehow so we don't need to redefine.
 const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;
 const ZXSIO_SIGNAL_OUTGOING: zx::Signals = zx::Signals::USER_1;
-
-#[derive(Debug)]
-enum SocketEventInner {
-    Udp(udp::UdpSocketEvent),
-}
-
-impl From<SocketEventInner> for Event {
-    fn from(t: SocketEventInner) -> Self {
-        Event::SocketEvent(SocketEvent { inner: t })
-    }
-}
-
-/// An event on a socket.
-///
-/// Upon receiving a `SocketEvent`, [`EventLoop`] calls
-/// [`SocketEvent::handle_event`] with a mutable reference to the `EventLoop` so
-/// that the `SocketEvent` can be handled in a provided context. `SocketEvent`s
-/// can be either data or control plane and are handled by the transport layer
-/// associated with them.
-#[derive(Debug)]
-pub struct SocketEvent {
-    inner: SocketEventInner,
-}
-
-impl SocketEvent {
-    /// Handles this `SocketEvent` on the provided `event_loop`
-    /// context.
-    pub fn handle_event(self, event_loop: &mut EventLoop) {
-        match self.inner {
-            SocketEventInner::Udp(req) => req.handle_event(event_loop),
-        }
-    }
-}
 
 /// Supported transport protocols.
 #[derive(Debug)]
@@ -77,32 +45,6 @@ struct SocketWorkerProperties {
     nonblock: bool,
 }
 
-/// Helper to spawn a socket worker for the given `transport`.
-///
-/// The created worker will serve the appropriate FIDL protocol over `channel`
-/// and send [`Event::SocketEvent`] variants to the `event_loop`'s main mpsc
-/// channel.
-fn spawn_worker(
-    event_loop: &mut EventLoop,
-    net_proto: IpVersion,
-    transport: TransProto,
-    channel: fasync::Channel,
-    properties: SocketWorkerProperties,
-) -> Result<(), libc::c_int> {
-    match transport {
-        TransProto::Udp => udp::UdpSocketWorker::new(
-            net_proto,
-            psocket::DatagramSocketRequestStream::from_channel(channel),
-            properties,
-        )
-        .and_then(|w| {
-            w.spawn(event_loop.clone_event_sender());
-            Ok(())
-        }),
-        _ => Err(libc::EAFNOSUPPORT),
-    }
-}
-
 fn get_domain_ip_version<T>(v: T) -> Option<IpVersion>
 where
     i32: TryFrom<T>,
@@ -114,43 +56,118 @@ where
     }
 }
 
-/// Handles a `fuchsia.posix.socket.Provider` FIDL request in `req`.
-pub(crate) fn handle_fidl_socket_provider_request(
-    event_loop: &mut EventLoop,
-    req: psocket::ProviderRequest,
-) {
-    match req {
-        psocket::ProviderRequest::Socket { .. } => {}
-        psocket::ProviderRequest::Socket2 { domain, type_, protocol: _, responder } => {
-            let nonblock = i32::from(type_) & libc::SOCK_NONBLOCK != 0;
-            let type_ = i32::from(type_) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
+pub(crate) trait SocketStackDispatcher:
+    InnerValue<udp::UdpSocketCollection>
+    + netstack3_core::UdpEventDispatcher<Ipv4>
+    + netstack3_core::UdpEventDispatcher<Ipv6>
+{
+}
+impl<T> SocketStackDispatcher for T where
+    T: InnerValue<udp::UdpSocketCollection>
+        + netstack3_core::UdpEventDispatcher<Ipv4>
+        + netstack3_core::UdpEventDispatcher<Ipv6>
+{
+}
 
-            let mut result = (|| {
-                let net_proto = get_domain_ip_version(domain).ok_or(libc::EAFNOSUPPORT)?;
-                let trans_proto = match i32::from(type_) {
-                    libc::SOCK_DGRAM => TransProto::Udp,
-                    libc::SOCK_STREAM => TransProto::Tcp,
-                    _ => {
-                        return Err(libc::EAFNOSUPPORT);
-                    }
-                };
+pub(crate) trait SocketStackContext:
+    StackContext + udp::UdpStackContext<Ipv4> + udp::UdpStackContext<Ipv6>
+where
+    <Self as StackContext>::Dispatcher: SocketStackDispatcher,
+{
+}
+impl<T> SocketStackContext for T
+where
+    T: StackContext + udp::UdpStackContext<Ipv4> + udp::UdpStackContext<Ipv6>,
+    T::Dispatcher: SocketStackDispatcher,
+{
+}
 
-                if let Ok((c0, c1)) = zx::Channel::create() {
-                    spawn_worker(
-                        event_loop,
-                        net_proto,
-                        trans_proto,
-                        // we can safely unwrap here because we just created
-                        // this channel above.
-                        fasync::Channel::from_channel(c0).unwrap(),
-                        SocketWorkerProperties { nonblock },
-                    )
-                    .map(|()| ClientEnd::new(c1))
-                } else {
-                    Err(libc::ENOBUFS)
+pub(crate) struct SocketProviderWorker<C> {
+    ctx: C,
+}
+
+impl<C> SocketProviderWorker<C>
+where
+    C: SocketStackContext,
+    C::Dispatcher: SocketStackDispatcher,
+{
+    pub(crate) fn spawn(ctx: C, mut rs: psocket::ProviderRequestStream) {
+        fasync::spawn(
+            async move {
+                let worker = SocketProviderWorker { ctx };
+                while let Some(req) = rs.try_next().await? {
+                    worker.handle_fidl_socket_provider_request(req).await;
                 }
-            })();
-            responder_send!(responder, &mut result);
+                Ok(())
+            }
+            .unwrap_or_else(|e: anyhow::Error| {
+                debug!("SocketProviderWorker finished with error {:?}", e)
+            }),
+        )
+    }
+
+    /// Spawns a socket worker for the given `transport`.
+    ///
+    /// The created worker will serve the appropriate FIDL protocol over `channel`
+    /// and send [`Event::SocketEvent`] variants to the `event_loop`'s main mpsc
+    /// channel.
+    fn spawn_worker(
+        &self,
+        net_proto: IpVersion,
+        transport: TransProto,
+        channel: fasync::Channel,
+        properties: SocketWorkerProperties,
+    ) -> Result<(), libc::c_int> {
+        match transport {
+            TransProto::Udp => udp::spawn_worker(
+                net_proto,
+                self.ctx.clone(),
+                psocket::DatagramSocketRequestStream::from_channel(channel),
+                properties,
+            ),
+            _ => Err(libc::EAFNOSUPPORT),
+        }
+    }
+
+    /// Handles a `fuchsia.posix.socket.Provider` FIDL request in `req`.
+    async fn handle_fidl_socket_provider_request(&self, req: psocket::ProviderRequest) {
+        match req {
+            psocket::ProviderRequest::Socket { .. } => {}
+            psocket::ProviderRequest::Socket2 { domain, type_, protocol: _, responder } => {
+                responder_send!(responder, &mut self.socket(domain, type_));
+            }
+        }
+    }
+
+    fn socket(
+        &self,
+        domain: i16,
+        sock_type: i16,
+    ) -> Result<ClientEnd<psocket::BaseSocketMarker>, libc::c_int> {
+        let nonblock = i32::from(sock_type) & libc::SOCK_NONBLOCK != 0;
+        let sock_type = i32::from(sock_type) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
+
+        let net_proto = get_domain_ip_version(domain).ok_or(libc::EAFNOSUPPORT)?;
+        let trans_proto = match sock_type {
+            libc::SOCK_DGRAM => TransProto::Udp,
+            libc::SOCK_STREAM => TransProto::Tcp,
+            _ => {
+                return Err(libc::EAFNOSUPPORT);
+            }
+        };
+
+        if let Ok((c0, c1)) = zx::Channel::create() {
+            self.spawn_worker(
+                net_proto,
+                trans_proto,
+                // we can safely unwrap here because we just created
+                // this channel above.
+                fasync::Channel::from_channel(c0).unwrap(),
+                SocketWorkerProperties { nonblock },
+            )
+            .map(|()| ClientEnd::<psocket::BaseSocketMarker>::new(c1))
+        } else {
+            Err(libc::ENOBUFS)
         }
     }
 }

@@ -11,11 +11,9 @@
 // new one's name has been changed back to `packet`.
 extern crate packet_new as packet;
 
-mod devices;
-mod eventloop;
-mod fidl_worker;
+mod bindings;
 
-use crate::eventloop::EventLoop;
+use bindings::Netstack;
 
 fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init()?;
@@ -24,6 +22,6 @@ fn main() -> Result<(), anyhow::Error> {
 
     let mut executor = fuchsia_async::Executor::new()?;
 
-    let eventloop = EventLoop::new();
-    executor.run_singlethreaded(eventloop.run())
+    let eventloop = Netstack::new();
+    executor.run_singlethreaded(eventloop.serve())
 }

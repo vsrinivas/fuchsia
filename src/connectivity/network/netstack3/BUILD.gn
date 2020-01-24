@@ -35,6 +35,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
@@ -46,7 +47,6 @@ rustc_binary("bin") {
   test_deps = [
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
-    "//third_party/rust_crates:pin-utils",
   ]
 }
 

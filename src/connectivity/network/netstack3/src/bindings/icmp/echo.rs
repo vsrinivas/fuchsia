@@ -9,7 +9,7 @@ use futures::{select, StreamExt};
 use log::{error, trace};
 use std::collections::VecDeque;
 use std::fmt;
-use std::sync::{Arc, Mutex};
+use std::ops::DerefMut;
 use thiserror::Error;
 
 use fuchsia_async as fasync;
@@ -20,109 +20,51 @@ use fidl_fuchsia_net_icmp::{
     EchoSocketWatchResult,
 };
 
-use net_types::ip::{Ip, Ipv4, Ipv6};
-use netstack3_core::icmp as core_icmp;
-use netstack3_core::icmp::IcmpConnId;
+use net_types::ip::{Ipv4, Ipv6};
+use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
 use netstack3_core::{BufferDispatcher, Context};
-use packet_new::{Buf, BufferMut};
+use packet::{Buf, BufferMut};
 
-use crate::eventloop::icmp::RX_BUFFER_SIZE;
-use crate::eventloop::{Event, EventLoop};
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum InnerIcmpConnId<V4 = IcmpConnId<Ipv4>, V6 = IcmpConnId<Ipv6>> {
-    V4(V4),
-    V6(V6),
-}
-
-impl<I: IpExt> From<IcmpConnId<I>> for InnerIcmpConnId {
-    fn from(id: IcmpConnId<I>) -> InnerIcmpConnId {
-        I::icmp_conn_id_to_dynamic(id)
-    }
-}
-
-/// An `Ip` extension trait that lets us write more generic code.
-///
-/// `IpExt` provides generic functionality backed by version-specific
-/// implementations, allowing most code to be written agnostic to IP version.
-pub trait IpExt: Ip {
-    /// Convert a statically-typed ICMP connection ID to a dynamically-typed
-    /// one.
-    ///
-    /// Callers should not call this directly, and should instead call
-    /// `ConnId::from` or `ConnId::into`.
-    fn icmp_conn_id_to_dynamic(id: IcmpConnId<Self>) -> InnerIcmpConnId;
-}
-
-impl IpExt for Ipv4 {
-    fn icmp_conn_id_to_dynamic(id: IcmpConnId<Ipv4>) -> InnerIcmpConnId {
-        InnerIcmpConnId::V4(id)
-    }
-}
-
-impl IpExt for Ipv6 {
-    fn icmp_conn_id_to_dynamic(id: IcmpConnId<Ipv6>) -> InnerIcmpConnId {
-        InnerIcmpConnId::V6(id)
-    }
-}
-
-/// A request event for an [`EchoSocketWorker`].
-#[derive(Debug)]
-pub struct Request {
-    worker: Arc<
-        Mutex<EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnId<Ipv6>>>,
-    >,
-    request: EchoSocketRequest,
-}
-
-impl Request {
-    /// Handles this [`EchoSocketRequest`] with the provided `EventLoop` context.
-    pub fn handle_request(self, event_loop: &mut EventLoop) {
-        self.worker.lock().unwrap().handle_request(event_loop, self.request);
-    }
-}
+use super::{IcmpEchoSockets, IcmpStackContext, InnerIcmpConnId, RX_BUFFER_SIZE};
+use crate::bindings::{context::InnerValue, StackContext};
 
 /// Worker for handling requests from a [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
-pub struct EchoSocketWorker {
-    stream: EchoSocketRequestStream,
+pub(crate) struct EchoSocketWorker<C: StackContext> {
+    ctx: C,
     reply_rx: mpsc::Receiver<EchoPacket>,
-    inner: Arc<
-        Mutex<EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnId<Ipv6>>>,
-    >,
+    inner: EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnId<Ipv6>>,
 }
 
-impl EchoSocketWorker {
+impl<C> EchoSocketWorker<C>
+where
+    C: IcmpStackContext,
+    C::Dispatcher: InnerValue<IcmpEchoSockets>,
+{
     /// Create a new EchoSocketWorker, a wrapper around a background worker that
     /// handles requests from a
     /// [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
-    pub(super) fn new(
-        stream: EchoSocketRequestStream,
+    pub(crate) fn new(
+        ctx: C,
         reply_rx: mpsc::Receiver<EchoPacket>,
         conn: InnerIcmpConnId,
         icmp_id: u16,
-    ) -> EchoSocketWorker {
+    ) -> Self {
         EchoSocketWorker {
-            stream,
+            ctx,
             reply_rx,
-            inner: Arc::new(Mutex::new(EchoSocketWorkerInner::new(conn, icmp_id, RX_BUFFER_SIZE))),
+            inner: EchoSocketWorkerInner::new(conn, icmp_id, RX_BUFFER_SIZE),
         }
     }
 
     /// Spawn a background worker to handle requests from a
     /// [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
-    pub fn spawn(mut self, sender: mpsc::UnboundedSender<Event>) {
-        fasync::spawn_local(async move {
+    pub(crate) fn spawn(mut self, mut stream: EchoSocketRequestStream) {
+        fasync::spawn(async move {
             loop {
                 select! {
-                    evt = self.stream.next() => {
+                    evt = stream.next() => {
                         if let Some(Ok(e)) = evt {
-                            let evt = Event::FidlEchoSocketEvent(Request {
-                                worker: Arc::clone(&self.inner),
-                                request: e,
-                            });
-                            if let Err(e) = sender.unbounded_send(evt) {
-                                error!("Failed to send echo socket event: {:?}", e);
-                            }
+                            self.inner.handle_request(&self.ctx, e).await;
                         } else {
                             // Client has closed the request stream.
                             return;
@@ -130,14 +72,7 @@ impl EchoSocketWorker {
                     },
                     reply = self.reply_rx.next() => {
                         if let Some(r) = reply {
-                            let mut worker = match self.inner.lock() {
-                                Ok(w) => w,
-                                Err(e) => {
-                                    error!("Mutex has been poisoned: {:?}", e);
-                                    return;
-                                }
-                            };
-                            if let Err(e) = worker.handle_reply(r) {
+                            if let Err(e) = self.inner.handle_reply(r) {
                                 error!("Failed to handle reply: {:?}", e);
                             }
                         } else {
@@ -231,14 +166,17 @@ impl<R: Responder, CV4: fmt::Debug, CV6: fmt::Debug> EchoSocketWorkerInner<R, CV
 impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnId<Ipv6>> {
     /// Handle a `fidl_fuchsia_net_icmp::EchoSocketRequest`, which is used for sending ICMP echo
     /// requests and receiving ICMP echo replies.
-    fn handle_request(&mut self, event_loop: &mut EventLoop, req: EchoSocketRequest) {
+    async fn handle_request<C>(&mut self, ctx: &C, req: EchoSocketRequest)
+    where
+        C::Dispatcher: InnerValue<IcmpEchoSockets>,
+        C: IcmpStackContext,
+    {
         match req {
-            EchoSocketRequest::SendRequest { mut request, .. } => {
-                let len = request.payload.len();
-                self.send_request(
-                    &mut event_loop.ctx,
+            EchoSocketRequest::SendRequest { request, .. } => {
+                self.send_request::<Buf<Vec<u8>>, _>(
+                    ctx.lock().await.deref_mut(),
                     request.sequence_num,
-                    Buf::new(&mut request.payload.as_mut_slice()[..len], ..),
+                    Buf::new(request.payload, ..),
                 );
             }
             EchoSocketRequest::Watch { responder } => {

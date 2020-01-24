@@ -2,27 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::num::NonZeroU16;
+use std::ops::DerefMut;
+use std::sync::{Arc, Once};
+
 use anyhow::{format_err, Context as _, Error};
 use fidl::encoding::Decodable;
+use fidl_fuchsia_net as fidl_net;
+use fidl_fuchsia_net_icmp as fidl_icmp;
+use fidl_fuchsia_net_stack::{self as fidl_net_stack, AdministrativeStatus, PhysicalStatus};
 use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use futures::{future, Future};
-use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
-use net_types::{SpecifiedAddr, Witness};
-use netstack3_core::icmp as core_icmp;
-use netstack3_core::EntryDest;
-use packet::Buf;
-use pin_utils::pin_mut;
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::sync::{Arc, Mutex, Once};
+use futures::{lock::Mutex, Future, StreamExt};
+use log::debug;
+use net_types::{
+    ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither},
+    SpecifiedAddr, Witness,
+};
+use netstack3_core::{
+    error::NoRouteError,
+    icmp::{
+        self as core_icmp, BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt,
+    },
+    Context, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher,
+    IpLayerEventDispatcher, StackStateBuilder, TimerId, TransportLayerEventDispatcher,
+};
+use packet::{Buf, BufferMut, Serializer};
 
-use super::*;
-use crate::eventloop::icmp::echo::InnerIcmpConnId;
-use crate::eventloop::util::{FidlCompatible, IntoFidlExt};
+use crate::bindings::{
+    context::{FromOuterValue, GuardContext, InnerValue, LockableContext},
+    devices::DeviceInfo,
+    icmp::InnerIcmpConnId,
+    util::{ContextFidlCompatible, ConversionContext, FidlCompatible, IntoFidlExt},
+    BindingsDispatcher, LockedStackContext, StackContext, StackDispatcher,
+};
 
 /// log::Log implementation that uses stdout.
 ///
@@ -46,7 +64,7 @@ static LOGGER: Logger = Logger;
 static LOGGER_ONCE: Once = Once::new();
 
 /// Install a logger for tests.
-fn set_logger_for_test() {
+pub(crate) fn set_logger_for_test() {
     // log::set_logger will panic if called multiple times; using a Once makes
     // set_logger_for_test idempotent
     LOGGER_ONCE.call_once(|| {
@@ -55,134 +73,277 @@ fn set_logger_for_test() {
     })
 }
 
-#[derive(Debug)]
-pub enum TestEvent {
-    DeviceStatusChanged { id: u64, status: EthernetStatus },
-    IcmpEchoReply { conn: InnerIcmpConnId, seq_num: u16, data: Vec<u8> },
+/// A dispatcher that can be used for tests with the ability to optionally
+/// intercept events to use as signals during testing.
+///
+/// `TestDispatcher` implements [`StackDispatcher`] and keeps an internal
+/// [`BindingsDispatcherState`]. All the traits that are needed to have a
+/// correct [`EventDispatcher`] are re-implemented by it so any events can be
+/// short circuited into internal event watchers as opposed to routing into the
+/// internal [`BindingsDispatcherState]`.
+pub(crate) struct TestDispatcher {
+    disp: BindingsDispatcher,
+    /// A oneshot signal that is hit whenever changes to interface status occur
+    /// and it is set.
+    status_changed_signal: Option<futures::channel::oneshot::Sender<()>>,
+    /// An optional interceptor for all ICMP responses.
+    /// If it is set, ICMP responses will be directed to the provided channel
+    /// instead of flowing through the ICMP sockets module.
+    pub(crate) icmp_responses:
+        Option<futures::channel::mpsc::UnboundedSender<(InnerIcmpConnId, u16, Vec<u8>)>>,
 }
 
-#[derive(Default)]
-struct TestData {
-    device_status_cache: HashMap<u64, EthernetStatus>,
+impl TestDispatcher {
+    fn new() -> Self {
+        Self { disp: BindingsDispatcher::new(), status_changed_signal: None, icmp_responses: None }
+    }
 }
 
-pub struct TestStack {
-    event_loop: EventLoop,
-    event_sender: mpsc::UnboundedSender<Event>,
-    test_events: Arc<Mutex<Option<mpsc::UnboundedSender<TestEvent>>>>,
-    data: Arc<Mutex<TestData>>,
+impl StackDispatcher for TestDispatcher {
+    fn device_status_changed(&mut self, id: u64) {
+        if let Some(s) = self.status_changed_signal.take() {
+            s.send(()).unwrap();
+        }
+        // we can always send that forward to the real dispatcher, no need to
+        // short-circuit it.
+        self.disp.device_status_changed(id);
+    }
+}
+
+impl<T> InnerValue<T> for TestDispatcher
+where
+    T: FromOuterValue<BindingsDispatcher>,
+{
+    fn inner(&self) -> &T {
+        T::from_outer(&self.disp)
+    }
+
+    fn inner_mut(&mut self) -> &mut T {
+        T::from_outer_mut(&mut self.disp)
+    }
+}
+
+impl<I: crate::bindings::socket::udp::UdpSocketIpExt> netstack3_core::UdpEventDispatcher<I>
+    for TestDispatcher
+{
+    fn receive_udp_from_conn(
+        &mut self,
+        conn: netstack3_core::UdpConnId<I>,
+        src_ip: I::Addr,
+        src_port: NonZeroU16,
+        body: &[u8],
+    ) {
+        self.disp.receive_udp_from_conn(conn, src_ip, src_port, body)
+    }
+
+    /// Receive a UDP packet for a listener.
+    fn receive_udp_from_listen(
+        &mut self,
+        listener: netstack3_core::UdpListenerId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        src_port: Option<NonZeroU16>,
+        body: &[u8],
+    ) {
+        self.disp.receive_udp_from_listen(listener, src_ip, dst_ip, src_port, body)
+    }
+}
+
+impl EventDispatcher for TestDispatcher {
+    type Instant = <BindingsDispatcher as EventDispatcher>::Instant;
+    fn now(&self) -> Self::Instant {
+        self.disp.now()
+    }
+
+    fn schedule_timeout_instant(
+        &mut self,
+        time: Self::Instant,
+        id: TimerId,
+    ) -> Option<Self::Instant> {
+        self.disp.schedule_timeout_instant(time, id)
+    }
+
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant> {
+        self.disp.cancel_timeout(id)
+    }
+
+    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+        self.disp.cancel_timeouts_with(f)
+    }
+
+    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
+        self.disp.scheduled_instant(id)
+    }
+
+    type Rng = <BindingsDispatcher as EventDispatcher>::Rng;
+
+    fn rng(&mut self) -> &mut Self::Rng {
+        self.disp.rng()
+    }
+}
+
+impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestDispatcher {
+    fn send_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        device: DeviceId,
+        frame: S,
+    ) -> Result<(), S> {
+        self.disp.send_frame(device, frame)
+    }
+}
+
+impl TransportLayerEventDispatcher<Ipv4> for TestDispatcher {}
+impl TransportLayerEventDispatcher<Ipv6> for TestDispatcher {}
+
+impl<I: IcmpIpExt> IcmpEventDispatcher<I> for TestDispatcher {
+    fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
+        IcmpEventDispatcher::<I>::receive_icmp_error(&mut self.disp, conn, seq_num, err)
+    }
+
+    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: NoRouteError) {
+        self.disp.close_icmp_connection(conn, err)
+    }
+}
+
+impl<I, B> BufferIcmpEventDispatcher<I, B> for TestDispatcher
+where
+    I: crate::bindings::icmp::IpExt,
+    B: BufferMut,
+{
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<I>, seq_num: u16, data: B) {
+        if let Some(ch) = self.icmp_responses.as_mut() {
+            let () = ch
+                .unbounded_send((conn.into(), seq_num, data.as_ref().to_owned()))
+                .expect("Failed to send on icmp_responses channel");
+        } else {
+            self.disp.receive_icmp_echo_reply(conn, seq_num, data)
+        }
+    }
+}
+
+impl<B: BufferMut> IpLayerEventDispatcher<B> for TestDispatcher {}
+
+/// A netstack context for testing.
+/// `TestContext` replaces [`crate::bindings::Netstack`] for testing. It
+/// implements [`StackContext`] appropriately, using [`TestDispatcher`] as its
+/// Event Dispatcher to allow for special inspection for certain tests.
+pub(crate) struct TestContext {
+    ctx: Arc<Mutex<Context<TestDispatcher>>>,
+}
+
+impl TestContext {
+    fn new(builder: StackStateBuilder) -> Self {
+        Self { ctx: Arc::new(Mutex::new(Context::new(builder.build(), TestDispatcher::new()))) }
+    }
+}
+
+impl Clone for TestContext {
+    fn clone(&self) -> Self {
+        Self { ctx: Arc::clone(&self.ctx) }
+    }
+}
+
+impl GuardContext<Context<TestDispatcher>> for TestContext {
+    type Guard = Context<TestDispatcher>;
+}
+
+impl AsRef<Mutex<Context<TestDispatcher>>> for TestContext {
+    fn as_ref(&self) -> &Mutex<Context<TestDispatcher>> {
+        self.ctx.as_ref()
+    }
+}
+
+impl StackContext for TestContext {
+    type Dispatcher = TestDispatcher;
+}
+
+/// A holder for a [`TestContext`].
+/// `TestStack` is obtained from [`TestSetupBuilder`] and offers utility methods
+/// to connect to the FIDL APIs served by [`TestContext`], as well as keeps
+/// track of configured interfaces during the setup procedure.
+pub(crate) struct TestStack {
+    ctx: TestContext,
     endpoint_ids: HashMap<String, u64>,
 }
 
 impl TestStack {
-    fn get_endpoint_id(&self, index: usize) -> u64 {
-        self.get_named_endpoint_id(test_ep_name(index))
-    }
-
-    fn get_named_endpoint_id(&self, name: impl Into<String>) -> u64 {
-        *self.endpoint_ids.get(&name.into()).unwrap()
-    }
-
-    fn connect_stack(&self) -> Result<fidl_fuchsia_net_stack::StackProxy, Error> {
+    /// Connects to the `fuchsia.net.stack.Stack` service.
+    pub(crate) fn connect_stack(&self) -> Result<fidl_fuchsia_net_stack::StackProxy, Error> {
         let (stack, rs) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_stack::StackMarker>()?;
-        let events =
-            self.event_sender.clone().sink_map_err(|e| panic!("event sender error: {}", e));
-        fasync::spawn_local(
-            rs.map_ok(Event::FidlStackEvent).map_err(|_| ()).forward(events).map(|_| ()),
-        );
+        crate::bindings::stack_fidl_worker::StackFidlWorker::spawn(self.ctx.clone(), rs);
         Ok(stack)
     }
 
-    pub fn connect_socket_provider(
+    /// Connects to the `fuchsia.posix.socket.Provider` service.
+    pub(crate) fn connect_socket_provider(
         &self,
     ) -> Result<fidl_fuchsia_posix_socket::ProviderProxy, Error> {
         let (stack, rs) = fidl::endpoints::create_proxy_and_stream::<
             fidl_fuchsia_posix_socket::ProviderMarker,
         >()?;
-        let events =
-            self.event_sender.clone().sink_map_err(|e| panic!("event sender error: {}", e));
-        fasync::spawn_local(
-            rs.map_ok(Event::FidlSocketProviderEvent).map_err(|_| ()).forward(events).map(|_| ()),
-        );
+        crate::bindings::socket::SocketProviderWorker::spawn(self.ctx.clone(), rs);
         Ok(stack)
     }
 
-    pub fn connect_icmp_provider(&self) -> Result<fidl_icmp::ProviderProxy, Error> {
+    /// Connects to the `fuchsia.net.icmp.Provider` service.
+    pub(crate) fn connect_icmp_provider(&self) -> Result<fidl_icmp::ProviderProxy, Error> {
         let (provider, rs) =
             fidl::endpoints::create_proxy_and_stream::<fidl_icmp::ProviderMarker>()?;
-        let events =
-            self.event_sender.clone().sink_map_err(|e| panic!("event sender error: {}", e));
-        fasync::spawn_local(
-            rs.map_ok(Event::FidlIcmpProviderEvent).map_err(|_| ()).forward(events).map(|_| ()),
-        );
+        crate::bindings::icmp::IcmpProviderWorker::spawn(self.ctx.clone(), rs);
         Ok(provider)
     }
 
-    pub async fn wait_for_interface_online(&mut self, if_id: u64) {
-        let check_online = |status: &EthernetStatus| status.contains(EthernetStatus::ONLINE);
+    /// Waits for interface with given `if_id` to come online.
+    pub(crate) async fn wait_for_interface_online(&mut self, if_id: u64) {
+        let check_online = |status: &DeviceInfo| status.phy_up();
         self.wait_for_interface_status(if_id, check_online).await;
     }
 
-    async fn wait_for_interface_offline(&mut self, if_id: u64) {
-        let check_offline = |status: &EthernetStatus| !status.contains(EthernetStatus::ONLINE);
+    /// Waits for interface with given `if_id` to go offline.
+    pub(crate) async fn wait_for_interface_offline(&mut self, if_id: u64) {
+        let check_offline = |status: &DeviceInfo| !status.phy_up();
         self.wait_for_interface_status(if_id, check_offline).await;
     }
 
-    async fn wait_for_interface_status<F: Fn(&EthernetStatus) -> bool>(
+    async fn wait_for_interface_status<F: Fn(&DeviceInfo) -> bool>(
         &mut self,
         if_id: u64,
         check_status: F,
     ) {
-        if let Some(status) = self.data.lock().unwrap().device_status_cache.get(&if_id) {
-            if check_status(&status) {
-                // already has expected status
-                return;
-            }
-        }
-
-        // install event listener and wait for event:
-        let (snd, rcv) = mpsc::unbounded();
-        self.set_event_listener(snd);
-
-        let rcv = rcv.filter_map(|e| {
-            future::ready(match e {
-                TestEvent::DeviceStatusChanged { id, status } => {
-                    if if_id == id && check_status(&status) {
-                        Some(())
-                    } else {
-                        None
-                    }
+        loop {
+            let signal = {
+                let mut ctx = self.ctx.lock().await;
+                if check_status(
+                    ctx.dispatcher()
+                        .get_device_info(if_id)
+                        .expect("Wait for interface status on unknown device"),
+                ) {
+                    return;
                 }
-                _ => None,
-            })
-        });
-        pin_mut!(rcv);
-        let () = self
-            .event_loop
-            .run_until(rcv.next())
-            .await
-            .expect("Wait for interface signal")
-            .unwrap();
-
-        // the cache should have the status entry now:
-        assert!(check_status(&self.data.lock().unwrap().device_status_cache.get(&if_id).unwrap()));
-
-        self.clear_event_listener();
+                let (sender, receiver) = futures::channel::oneshot::channel();
+                ctx.dispatcher_mut().status_changed_signal = Some(sender);
+                receiver
+            };
+            let () = signal.await.expect("Stream ended before it was signalled");
+        }
     }
 
-    /// Test events will be sent to the receiver end of `chan`.
-    fn set_event_listener(&mut self, chan: mpsc::UnboundedSender<TestEvent>) {
-        *self.test_events.lock().unwrap() = Some(chan);
+    /// Gets an installed interface identifier from the configuration endpoint
+    /// `index`.
+    pub(crate) fn get_endpoint_id(&self, index: usize) -> u64 {
+        self.get_named_endpoint_id(test_ep_name(index))
     }
 
-    /// Remove test event listener, if installed.
-    fn clear_event_listener(&mut self) {
-        *self.test_events.lock().unwrap() = None;
+    /// Gets an installed interface identifier from the configuration endpoint
+    /// `name`.
+    pub(crate) fn get_named_endpoint_id(&self, name: impl Into<String>) -> u64 {
+        *self.endpoint_ids.get(&name.into()).unwrap()
     }
 
-    fn new() -> Self {
-        // Create a new EventLoop with Duplicate Address Detection disabled for tests.
+    /// Creates a new `TestStack`.
+    pub(crate) fn new() -> Self {
+        // Create a new TestStack with Duplicate Address Detection disabled for tests.
         //
         // TODO(fxb/36238): Remove this code when an event is dispatched when Duplicate Address
         // Detection finishes or when an IPv6 address has been assigned. Without such events, tests
@@ -193,119 +354,59 @@ impl TestStack {
         config.set_dup_addr_detect_transmits(None);
         config.set_max_router_solicitations(None);
         builder.device_builder().set_default_ndp_configs(config);
-
-        let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();
-        let mut event_loop = EventLoop::new_with_channels(builder, event_sender.clone(), evt_rcv);
-
-        let (test_sender, mut test_receiver) = futures::channel::mpsc::unbounded();
-        event_loop.ctx.dispatcher_mut().test_events = Some(test_sender);
-        let data = Arc::new(Mutex::new(TestData::default()));
-        let data_clone = Arc::clone(&data);
-        let test_events = Arc::<Mutex<Option<mpsc::UnboundedSender<TestEvent>>>>::default();
-        let test_events_clone = Arc::clone(&test_events);
-
-        // There are some test events that we always want to be observing,
-        // such as the DeviceStatusChanged event for example.
-        // We set the event loop to always send test events into this
-        // test_receiver which runs all the time. After doing whatever we must
-        // with the intercepted event, we just forward it to whatever sender
-        // is installed in TestStack.test_events (if any).
-        fasync::spawn_local(async move {
-            loop {
-                let evt = if let Some(evt) = test_receiver.next().await {
-                    evt
-                } else {
-                    break;
-                };
-
-                match &evt {
-                    TestEvent::DeviceStatusChanged { id, status } => {
-                        data.lock().unwrap().device_status_cache.insert(*id, *status);
-                    }
-                    _ => {}
-                }
-                // pass event along if any listeners are installed:
-                if let Some(evts) = test_events.lock().unwrap().as_mut() {
-                    evts.unbounded_send(evt).expect("Failed to forward TestEvent");
-                }
-            }
-        });
-        TestStack {
-            event_loop,
-            event_sender,
-            data: data_clone,
-            test_events: test_events_clone,
-            endpoint_ids: HashMap::new(),
-        }
+        let ctx = TestContext::new(builder);
+        TestStack { ctx, endpoint_ids: HashMap::new() }
     }
 
-    /// Runs the test stack until the future `fut` completes.
-    pub async fn run_future<F: Future>(&mut self, fut: F) -> F::Output {
-        pin_mut!(fut);
-        self.event_loop.run_until(fut).await.expect("Stack execution failed")
+    /// Helper function to invoke a closure that provides a locked
+    /// [`Context<TestDispatcher>`] provided by this `TestStack`.
+    pub(crate) async fn with_ctx<R, F: FnOnce(&mut Context<TestDispatcher>) -> R>(
+        &mut self,
+        f: F,
+    ) -> R {
+        let mut ctx = self.ctx.lock().await;
+        f(ctx.deref_mut())
+    }
+
+    /// Acquire a lock on this `TestStack`'s context.
+    pub(crate) fn ctx(&self) -> impl Future<Output = LockedStackContext<TestContext>> {
+        self.ctx.lock()
     }
 }
 
-pub struct TestSetup {
-    sandbox: sandbox::SandboxProxy,
+/// A test setup that than contain multiple stack instances networked together.
+pub(crate) struct TestSetup {
+    // Let connection to sandbox be made lazily, so a netemul sandbox is not
+    // created for tests that don't need it.
+    sandbox: Option<sandbox::SandboxProxy>,
     nets: Option<fidl::endpoints::ClientEnd<net::SetupHandleMarker>>,
     stacks: Vec<TestStack>,
 }
 
 impl TestSetup {
-    pub fn get(&mut self, i: usize) -> &mut TestStack {
+    /// Gets the [`TestStack`] at index `i`.
+    pub(crate) fn get(&mut self, i: usize) -> &mut TestStack {
         &mut self.stacks[i]
     }
 
-    pub fn event_loop(&mut self, i: usize) -> &mut EventLoop {
-        &mut self.get(i).event_loop
+    /// Clones the [`TestContext`] at index `i`.
+    pub(crate) fn clone_ctx(&self, i: usize) -> TestContext {
+        self.stacks[i].ctx.clone()
     }
 
-    fn ctx(&mut self, i: usize) -> &mut Context<EventLoopInner> {
-        &mut self.get(i).event_loop.ctx
+    /// Acquires a lock on the [`TestContext`] at index `i`.
+    pub(crate) async fn ctx(&mut self, i: usize) -> LockedStackContext<'_, TestContext> {
+        self.get(i).ctx.lock().await
     }
 
-    /// Runs all stacks in `TestSetup` until the future `fut` completes.
-    pub async fn run_until<V>(&mut self, fut: impl Future<Output = V> + Unpin) -> Result<V, Error> {
-        // Create senders so we can signal each event loop to stop running
-        let (end_senders, stacks): (Vec<_>, Vec<_>) = self
-            .stacks
-            .iter_mut()
-            .map(|s| {
-                let (snd, rcv) = mpsc::unbounded::<()>();
-                (snd, (rcv, s))
-            })
-            .unzip();
-        // let all stacks run concurrently:
-        let stacks_fut = futures::stream::iter(stacks).for_each_concurrent(
-            None,
-            |(mut rcv, stack)| async move {
-                stack.event_loop.run_until(rcv.next()).await.expect("Stack loop run error");
-            },
-        );
-        pin_mut!(stacks_fut);
-
-        // run both futures, but the receiver must end first:
-        match future::select(fut, stacks_fut).await {
-            future::Either::Left((result, other)) => {
-                // finish all other tasks:
-                for snd in end_senders.into_iter() {
-                    snd.unbounded_send(()).unwrap();
-                }
-                let () = other.await;
-                Ok(result)
-            }
-            _ => panic!("stacks can't finish before hitting end_senders"),
-        }
-    }
     async fn get_endpoint<'a>(
-        &'a self,
+        &'a mut self,
         ep_name: &'a str,
     ) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>, Error>
     {
         let (net_ctx, net_ctx_server) =
             fidl::endpoints::create_proxy::<net::NetworkContextMarker>()?;
-        self.sandbox.get_network_context(net_ctx_server)?;
+        self.sandbox().get_network_context(net_ctx_server)?;
         let (epm, epm_server) = fidl::endpoints::create_proxy::<net::EndpointManagerMarker>()?;
         net_ctx.get_endpoint_manager(epm_server)?;
         let ep = match epm.get_endpoint(ep_name).await? {
@@ -318,10 +419,15 @@ impl TestSetup {
         Ok(ep.get_ethernet_device().await?)
     }
 
-    async fn set_endpoint_link_up(&mut self, ep_name: &str, up: bool) -> Result<(), Error> {
+    /// Changes a named endpoint `ep_name` link status to `up`.
+    pub(crate) async fn set_endpoint_link_up(
+        &mut self,
+        ep_name: &str,
+        up: bool,
+    ) -> Result<(), Error> {
         let (net_ctx, net_ctx_server) =
             fidl::endpoints::create_proxy::<net::NetworkContextMarker>()?;
-        self.sandbox.get_network_context(net_ctx_server)?;
+        self.sandbox().get_network_context(net_ctx_server)?;
         let (epm, epm_server) = fidl::endpoints::create_proxy::<net::EndpointManagerMarker>()?;
         net_ctx.get_endpoint_manager(epm_server)?;
         if let Some(ep) = epm.get_endpoint(ep_name).await? {
@@ -332,16 +438,23 @@ impl TestSetup {
         }
     }
 
+    /// Creates a new empty `TestSetup`.
     fn new() -> Result<Self, Error> {
         set_logger_for_test();
-        let sandbox = client::connect_to_service::<sandbox::SandboxMarker>()?;
-        Ok(Self { sandbox, nets: None, stacks: Vec::new() })
+        Ok(Self { sandbox: None, nets: None, stacks: Vec::new() })
     }
 
-    fn get_network_context(&self) -> Result<net::NetworkContextProxy, Error> {
+    fn sandbox(&mut self) -> &sandbox::SandboxProxy {
+        self.sandbox.get_or_insert_with(|| {
+            client::connect_to_service::<sandbox::SandboxMarker>()
+                .expect("Failed to connect to sandbox service")
+        })
+    }
+
+    fn get_network_context(&mut self) -> Result<net::NetworkContextProxy, Error> {
         let (net_ctx, net_ctx_server) =
             fidl::endpoints::create_proxy::<net::NetworkContextMarker>()?;
-        self.sandbox.get_network_context(net_ctx_server)?;
+        self.sandbox().get_network_context(net_ctx_server)?;
         Ok(net_ctx)
     }
 
@@ -370,18 +483,25 @@ impl TestSetup {
     }
 }
 
-pub fn test_ep_name(i: usize) -> String {
+/// Helper function to retrieve the internal name of an endpoint specified only
+/// by an index `i`.
+pub(crate) fn test_ep_name(i: usize) -> String {
     format!("test-ep{}", i)
 }
 
-pub struct TestSetupBuilder {
+fn new_endpoint_setup(name: String) -> net::EndpointSetup {
+    net::EndpointSetup { config: None, link_up: true, name }
+}
+
+/// A builder structure for [`TestSetup`].
+pub(crate) struct TestSetupBuilder {
     endpoints: Vec<String>,
     stacks: Vec<StackSetupBuilder>,
 }
 
 impl TestSetupBuilder {
     /// Creates an empty `SetupBuilder`.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { endpoints: Vec::new(), stacks: Vec::new() }
     }
 
@@ -390,33 +510,33 @@ impl TestSetupBuilder {
     ///
     /// Multiple calls to `add_endpoint` will result in the creation of multiple
     /// endpoints with sequential indices.
-    pub fn add_endpoint(self) -> Self {
+    pub(crate) fn add_endpoint(self) -> Self {
         let id = self.endpoints.len() + 1;
         self.add_named_endpoint(test_ep_name(id))
     }
 
     /// Ads an endpoint with a given `name`.
-    pub fn add_named_endpoint(mut self, name: impl Into<String>) -> Self {
+    pub(crate) fn add_named_endpoint(mut self, name: impl Into<String>) -> Self {
         self.endpoints.push(name.into());
         self
     }
 
     /// Adds a stack to create upon building. Stack configuration is provided
     /// by [`StackSetupBuilder`].
-    pub fn add_stack(mut self, stack: StackSetupBuilder) -> Self {
+    pub(crate) fn add_stack(mut self, stack: StackSetupBuilder) -> Self {
         self.stacks.push(stack);
         self
     }
 
     /// Adds an empty stack to create upon building. An empty stack contains
     /// no endpoints.
-    pub fn add_empty_stack(mut self) -> Self {
+    pub(crate) fn add_empty_stack(mut self) -> Self {
         self.stacks.push(StackSetupBuilder::new());
         self
     }
 
     /// Attempts to build a [`TestSetup`] with the provided configuration.
-    pub async fn build(self) -> Result<TestSetup, Error> {
+    pub(crate) async fn build(self) -> Result<TestSetup, Error> {
         let mut setup = TestSetup::new()?;
         if !self.endpoints.is_empty() {
             let () = setup.configure_network(self.endpoints.into_iter()).await?;
@@ -431,13 +551,13 @@ impl TestSetupBuilder {
                 // get the endpoint from the sandbox config:
                 let endpoint = setup.get_endpoint(&ep_name).await?;
                 let cli = stack.connect_stack()?;
-                let if_id = stack.run_future(add_stack_endpoint(&cli, endpoint)).await?;
+                let if_id = add_stack_endpoint(&cli, endpoint).await?;
                 // We'll ALWAYS await for the newly created interface to come up
                 // online before returning, so users of `TestSetupBuilder` can
                 // be 100% sure of the state once the setup is done.
                 stack.wait_for_interface_online(if_id).await;
                 if let Some(addr) = addr {
-                    stack.run_future(configure_endpoint_address(&cli, if_id, addr)).await?;
+                    configure_endpoint_address(&cli, if_id, addr).await?;
                 }
 
                 stack.endpoint_ids.insert(ep_name, if_id);
@@ -480,7 +600,7 @@ pub struct StackSetupBuilder {
 
 impl StackSetupBuilder {
     /// Creates a new empty stack (no endpoints) configuration.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { endpoints: Vec::new() }
     }
 
@@ -492,7 +612,7 @@ impl StackSetupBuilder {
 
     /// Adds named endpoint `name` with optional address configuration `address`
     /// to the builder.
-    pub fn add_named_endpoint(
+    pub(crate) fn add_named_endpoint(
         mut self,
         name: impl Into<String>,
         address: Option<AddrSubnetEither>,
@@ -544,10 +664,6 @@ async fn configure_endpoint_address(
     Ok(())
 }
 
-fn new_endpoint_setup(name: String) -> net::EndpointSetup {
-    net::EndpointSetup { config: None, link_up: true, name }
-}
-
 #[fasync::run_singlethreaded(test)]
 async fn test_ping() {
     const ALICE_IP: [u8; 4] = [192, 168, 0, 1];
@@ -573,7 +689,7 @@ async fn test_ping() {
     debug!("creating icmp connection");
     // create icmp connection on alice:
     let conn_id = core_icmp::new_icmpv4_connection(
-        t.ctx(0),
+        t.ctx(0).await.deref_mut(),
         Some(SpecifiedAddr::new(ALICE_IP.into()).unwrap()),
         SpecifiedAddr::new(BOB_IP.into()).unwrap(),
         ICMP_ID,
@@ -582,24 +698,16 @@ async fn test_ping() {
 
     let ping_bod = [1, 2, 3, 4, 5, 6];
 
-    let (sender, recv) = mpsc::unbounded();
+    let (sender, mut recv) = futures::channel::mpsc::unbounded();
 
-    t.get(0).set_event_listener(sender);
-
-    let recv = recv.filter_map(|f| {
-        future::ready(match f {
-            TestEvent::IcmpEchoReply { conn, seq_num, data } => Some((conn, seq_num, data)),
-            _ => None,
-        })
-    });
-    pin_mut!(recv);
+    t.ctx(0).await.dispatcher_mut().icmp_responses = Some(sender);
 
     // alice will ping bob 4 times:
     for seq in 1..=4 {
         debug!("sending ping seq {}", seq);
         // send ping request:
         core_icmp::send_icmpv4_echo_request(
-            t.ctx(0),
+            t.ctx(0).await.deref_mut(),
             conn_id,
             seq,
             Buf::new(ping_bod.to_vec(), ..),
@@ -607,7 +715,7 @@ async fn test_ping() {
         .unwrap();
 
         // wait until the response comes along:
-        let (rsp_id, rsp_seq, rsp_bod) = t.run_until(recv.next()).await.unwrap().unwrap();
+        let (rsp_id, rsp_seq, rsp_bod) = recv.next().await.unwrap();
         debug!("Received ping seq {}", rsp_seq);
         // validate seq and body:
         assert_eq!(rsp_id, conn_id.into());
@@ -622,31 +730,33 @@ async fn test_add_remove_interface() {
     let ep = t.get_endpoint("test-ep1").await.unwrap();
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
-    let if_id = test_stack
-        .run_future(stack.add_ethernet_interface("fake_topo_path", ep))
+    let if_id = stack
+        .add_ethernet_interface("fake_topo_path", ep)
         .await
         .squash_result()
         .expect("Add interface succeeds");
     // check that the created ID matches the one saved in the event loop state:
-    let dev_info =
-        test_stack.event_loop.ctx.dispatcher().get_device_info(if_id).expect("Get device client");
-    assert_eq!(dev_info.path(), "fake_topo_path");
+
+    assert_eq!(
+        test_stack
+            .ctx
+            .lock()
+            .await
+            .dispatcher()
+            .get_device_info(if_id)
+            .expect("Get device client")
+            .path(),
+        "fake_topo_path"
+    );
 
     // remove the interface:
-    let () = test_stack
-        .run_future(stack.del_ethernet_interface(if_id))
-        .await
-        .squash_result()
-        .expect("Remove interface");
+    let () = stack.del_ethernet_interface(if_id).await.squash_result().expect("Remove interface");
     // ensure the interface disappeared from records:
-    assert!(test_stack.event_loop.ctx.dispatcher().get_device_info(if_id).is_none());
+    assert!(test_stack.ctx.lock().await.dispatcher().get_device_info(if_id).is_none());
 
     // if we try to remove it again, NotFound should be returned:
-    let res = test_stack
-        .run_future(stack.del_ethernet_interface(if_id))
-        .await
-        .unwrap()
-        .expect_err("Failed to remove twice");
+    let res =
+        stack.del_ethernet_interface(if_id).await.unwrap().expect_err("Failed to remove twice");
     assert_eq!(res, fidl_net_stack::Error::NotFound);
 }
 
@@ -663,20 +773,15 @@ async fn test_ethernet_link_up_down() {
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
 
-    t.get(0).wait_for_interface_online(if_id).await;
+    let () = t.get(0).wait_for_interface_online(if_id).await;
 
     // Get the interface info to confirm status indicators are correct.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been added to the core.
-    assert!(t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active());
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active());
 
     // Setting the link down should disable the interface and remove it from
     // the core. The AdministrativeStatus should remain unchanged.
@@ -684,38 +789,24 @@ async fn test_ethernet_link_up_down() {
     t.get(0).wait_for_interface_offline(if_id).await;
 
     // Get the interface info to confirm that it is disabled.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been removed from the core.
-    assert!(
-        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
-    );
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
 
     // Setting the link down again should cause no effect on the device state,
     // and should be handled gracefully.
     assert!(t.set_endpoint_link_up(&ep_name, false).await.is_ok());
 
     // Get the interface info to confirm that it is disabled.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been removed from the core.
-    assert!(
-        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
-    );
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
 
     // Setting the link up should reenable the interface and add it to
     // the core.
@@ -723,41 +814,36 @@ async fn test_ethernet_link_up_down() {
     t.get(0).wait_for_interface_online(if_id).await;
 
     // Get the interface info to confirm that it is reenabled.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been added to the core.
-    assert!(t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active());
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active());
 
     // Setting the link up again should cause no effect on the device state,
     // and should be handled gracefully.
     assert!(t.set_endpoint_link_up(&ep_name, true).await.is_ok());
 
     // Get the interface info to confirm that there have been no changes.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been added to the core.
-    let device_info = t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap();
-    assert!(device_info.is_active());
+    let core_id = t
+        .get(0)
+        .with_ctx(|ctx| {
+            let device_info = ctx.dispatcher().get_device_info(if_id).unwrap();
+            assert!(device_info.is_active());
+            device_info.core_id().unwrap()
+        })
+        .await;
 
     // call directly into core to prove that the device was correctly
     // initialized (core will panic if we try to use the device and initialize
     // hasn't been called)
-    let core_id = device_info.core_id().unwrap();
-    netstack3_core::receive_frame(&mut t.get(0).event_loop.ctx, core_id, Buf::new(&mut [], ..));
+    netstack3_core::receive_frame(t.ctx(0).await.deref_mut(), core_id, Buf::new(&mut [], ..));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -775,7 +861,7 @@ async fn test_list_interfaces() {
     // check that we can list when no interfaces exist:
     // TODO(brunodalbo) this test may require tunning when we expose the
     //  loopback interface over FIDL
-    let ifs = t.get(0).run_future(stack.list_interfaces()).await.expect("List interfaces");
+    let ifs = stack.list_interfaces().await.expect("List interfaces");
     assert!(ifs.is_empty());
 
     let mut if_props = HashMap::new();
@@ -787,9 +873,8 @@ async fn test_list_interfaces() {
         let mut if_ip = new_ipv4_addr_subnet([192, 168, 0, i as u8], 24).into_fidl();
 
         let ep = t.get_endpoint(&ep_name).await.unwrap();
-        let if_id = t
-            .get(0)
-            .run_future(stack.add_ethernet_interface("fake_topo_path", ep))
+        let if_id = stack
+            .add_ethernet_interface("fake_topo_path", ep)
             .await
             .squash_result()
             .expect("Add interface succeeds");
@@ -798,18 +883,15 @@ async fn test_list_interfaces() {
         // offline interfaces, because they're removed from core. This wait can
         // be removed once we allow that.
         t.get(0).wait_for_interface_online(if_id).await;
-        let () = t
-            .get(0)
-            .run_future(stack.add_interface_address(if_id, &mut if_ip))
+        let () = stack
+            .add_interface_address(if_id, &mut if_ip)
             .await
             .squash_result()
             .expect("Add interface address succeeds");
         if_props.insert(if_id, (ep_info, vec![if_ip]));
-        t.get(0).wait_for_interface_online(i as u64).await;
     }
 
-    let test_stack = t.get(0);
-    let ifs = test_stack.run_future(stack.list_interfaces()).await.expect("List interfaces");
+    let ifs = stack.list_interfaces().await.expect("List interfaces");
     assert_eq!(ifs.len(), 3);
     // check that what we served over FIDL is correct:
     for ifc in ifs.iter() {
@@ -844,11 +926,7 @@ async fn test_get_interface_info() {
     test_stack.wait_for_interface_online(1).await;
 
     // get the interface info:
-    let if_info = test_stack
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(&if_info.properties.topopath, "fake_topo_path");
     assert_eq!(if_info.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
     assert_eq!(if_info.properties.mtu, ep_info.mtu);
@@ -858,11 +936,7 @@ async fn test_get_interface_info() {
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // check that we get the correct error for a non-existing interface id:
-    let err = test_stack
-        .run_future(stack.get_interface_info(12345))
-        .await
-        .unwrap()
-        .expect_err("Get interface info fails");
+    let err = stack.get_interface_info(12345).await.unwrap().expect_err("Get interface info fails");
     assert_eq!(err, fidl_net_stack::Error::NotFound);
 }
 
@@ -879,62 +953,44 @@ async fn test_disable_enable_interface() {
     let if_id = test_stack.get_endpoint_id(1);
 
     // Get the interface info to confirm that it is enabled.
-    let if_info = test_stack
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Disable the interface and test again, physical_status should be
     // unchanged.
-    let () = test_stack
-        .run_future(stack.disable_interface(if_id))
-        .await
-        .squash_result()
-        .expect("Disable interface succeeds");
+    let () =
+        stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
 
-    let if_info = test_stack
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Ensure that the device has been removed from the core.
     assert!(
-        test_stack.event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
+        test_stack.ctx().await.dispatcher().get_device_info(if_id).unwrap().is_active() == false
     );
 
     // Enable the interface and test again.
-    let () = test_stack
-        .run_future(stack.enable_interface(if_id))
-        .await
-        .squash_result()
-        .expect("Enable interface succeeds");
+    let () =
+        stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
 
-    let if_info = test_stack
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Ensure that the device has been added to the core.
-    assert!(test_stack.event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active());
+    assert!(test_stack.ctx().await.dispatcher().get_device_info(if_id).unwrap().is_active());
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
-        test_stack.run_future(stack.enable_interface(12345)).await.unwrap().unwrap_err(),
+        stack.enable_interface(12345).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
     );
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
-        test_stack.run_future(stack.disable_interface(12345)).await.unwrap().unwrap_err(),
+        stack.disable_interface(12345).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
     );
 }
@@ -955,37 +1011,21 @@ async fn test_phy_admin_interface_state_interaction() {
     t.get(0).wait_for_interface_online(if_id).await;
 
     // Get the interface info to confirm that it is enabled.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Disable the interface and test again, physical_status should be
     // unchanged.
-    let () = t
-        .get(0)
-        .run_future(stack.disable_interface(if_id))
-        .await
-        .squash_result()
-        .expect("Disable interface succeeds");
+    let () =
+        stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
 
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Ensure that the device has been removed from the core.
-    assert!(
-        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
-    );
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
 
     // Setting the link down now that the interface is already down should only
     // change the cached state. Both phy and admin should be down now.
@@ -993,105 +1033,60 @@ async fn test_phy_admin_interface_state_interaction() {
     t.get(0).wait_for_interface_offline(if_id).await;
 
     // Get the interface info to confirm that it is disabled.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
 
     // Ensure that the device is still removed from the core.
-    assert!(
-        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
-    );
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
 
     // Enable the interface and test again, only cached status should be changed
     // and core state should still be disabled.
-    let () = t
-        .get(0)
-        .run_future(stack.enable_interface(if_id))
-        .await
-        .squash_result()
-        .expect("Enable interface succeeds");
+    let () =
+        stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
 
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
 
     // Ensure that the device is still removed from the core.
-    assert!(
-        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
-    );
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
 
     // Disable the interface and test again, both should be down now.
-    let () = t
-        .get(0)
-        .run_future(stack.disable_interface(if_id))
-        .await
-        .squash_result()
-        .expect("Disable interface succeeds");
+    let () =
+        stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
 
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
 
     // Ensure that the device is still removed from the core.
-    assert!(
-        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
-    );
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
 
     // Setting the link up should only affect cached state
     assert!(t.set_endpoint_link_up(&ep_name, true).await.is_ok());
     t.get(0).wait_for_interface_online(if_id).await;
 
     // Get the interface info to confirm that it is reenabled.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Ensure that the device is still removed from the core.
-    assert!(
-        t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active() == false
-    );
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
 
     // Finally, setting admin status up should update the cached state and
     // re-add the device to the core.
-    let () = t
-        .get(0)
-        .run_future(stack.enable_interface(if_id))
-        .await
-        .squash_result()
-        .expect("Enable interface succeeds");
+    let () =
+        stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
 
     // Get the interface info to confirm that it is reenabled.
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
-        .await
-        .unwrap()
-        .expect("Get interface info");
+    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been added to the core.
-    assert!(t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active());
+    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active());
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1108,48 +1103,42 @@ async fn test_add_del_interface_address() {
     let mut addr = new_ipv4_addr_subnet([192, 168, 0, 1], 24).into_fidl();
 
     // The first IP address added should succeed.
-    let () = t
-        .get(0)
-        .run_future(stack.add_interface_address(if_id, &mut addr))
+    let () = stack
+        .add_interface_address(if_id, &mut addr)
         .await
         .squash_result()
         .expect("Add interface address should succeed");
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
+    let if_info = stack
+        .get_interface_info(if_id)
         .await
         .squash_result()
         .expect("Get interface info should succeed");
     assert!(if_info.properties.addresses.contains(&addr));
 
     // Adding the same IP address again should fail with already exists.
-    let err = t
-        .get(0)
-        .run_future(stack.add_interface_address(if_id, &mut addr))
+    let err = stack
+        .add_interface_address(if_id, &mut addr)
         .await
         .expect("Add interface address FIDL call should succeed")
         .expect_err("Adding same address should fail");
     assert_eq!(err, fidl_net_stack::Error::AlreadyExists);
 
     // Deleting an IP address that exists should succeed.
-    let () = t
-        .get(0)
-        .run_future(stack.del_interface_address(if_id, &mut addr))
+    let () = stack
+        .del_interface_address(if_id, &mut addr)
         .await
         .squash_result()
         .expect("Delete interface address succeeds");
-    let if_info = t
-        .get(0)
-        .run_future(stack.get_interface_info(if_id))
+    let if_info = stack
+        .get_interface_info(if_id)
         .await
         .squash_result()
         .expect("Get interface info should succeed");
     assert!(!if_info.properties.addresses.contains(&addr));
 
     // Deleting an IP address that doesn't exist should fail with not found.
-    let err = t
-        .get(0)
-        .run_future(stack.del_interface_address(if_id, &mut addr))
+    let err = stack
+        .del_interface_address(if_id, &mut addr)
         .await
         .expect("Delete interface address FIDL call should succeed")
         .expect_err("Deleting non-existent address should fail");
@@ -1185,13 +1174,13 @@ async fn test_add_device_routes() {
         destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
     };
 
-    let () = test_stack
-        .run_future(stack.add_forwarding_entry(&mut fwd_entry1))
+    let () = stack
+        .add_forwarding_entry(&mut fwd_entry1)
         .await
         .squash_result()
         .expect("Add forwarding entry succeeds");
-    let () = test_stack
-        .run_future(stack.add_forwarding_entry(&mut fwd_entry2))
+    let () = stack
+        .add_forwarding_entry(&mut fwd_entry2)
         .await
         .squash_result()
         .expect("Add forwarding entry succeeds");
@@ -1206,11 +1195,7 @@ async fn test_add_device_routes() {
         destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
     };
     assert_eq!(
-        test_stack
-            .run_future(stack.add_forwarding_entry(&mut bad_entry))
-            .await
-            .unwrap()
-            .unwrap_err(),
+        stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::AlreadyExists
     );
     // an entry with an invalid subnet should fail with Invalidargs:
@@ -1222,11 +1207,7 @@ async fn test_add_device_routes() {
         destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
     };
     assert_eq!(
-        test_stack
-            .run_future(stack.add_forwarding_entry(&mut bad_entry))
-            .await
-            .unwrap()
-            .unwrap_err(),
+        stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::InvalidArgs
     );
     // an entry with a bad devidce id should fail with NotFound:
@@ -1238,11 +1219,7 @@ async fn test_add_device_routes() {
         destination: fidl_net_stack::ForwardingDestination::DeviceId(10),
     };
     assert_eq!(
-        test_stack
-            .run_future(stack.add_forwarding_entry(&mut bad_entry))
-            .await
-            .unwrap()
-            .unwrap_err(),
+        stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
     );
 }
@@ -1265,7 +1242,7 @@ async fn test_list_del_routes() {
     let route1 = EntryEither::new(
         SubnetEither::new(Ipv4Addr::from([192, 168, 0, 0]).into(), 24).unwrap(),
         EntryDest::Local {
-            device: test_stack.event_loop.ctx.dispatcher().get_core_id(if_id).unwrap(),
+            device: test_stack.ctx().await.dispatcher().get_core_id(if_id).unwrap(),
         },
     )
     .unwrap();
@@ -1277,61 +1254,64 @@ async fn test_list_del_routes() {
     )
     .unwrap();
 
-    // add a couple of routes directly into core:
-    netstack3_core::add_route(&mut test_stack.event_loop.ctx, route1).unwrap();
-    netstack3_core::add_route(&mut test_stack.event_loop.ctx, route2).unwrap();
-
-    let routes = test_stack
-        .run_future(stack.get_forwarding_table())
-        .await
-        .expect("Can get forwarding table");
-    assert_eq!(routes.len(), 2);
-    let routes: Vec<_> = routes
-        .into_iter()
-        .map(|e| {
-            EntryEither::try_from_fidl_with_ctx(test_stack.event_loop.ctx.dispatcher(), e).unwrap()
+    let () = test_stack
+        .with_ctx(|ctx| {
+            // add a couple of routes directly into core:
+            netstack3_core::add_route(ctx, route1).unwrap();
+            netstack3_core::add_route(ctx, route2).unwrap();
         })
-        .collect();
+        .await;
+
+    let routes = stack.get_forwarding_table().await.expect("Can get forwarding table");
+    assert_eq!(routes.len(), 2);
+    let routes: Vec<_> = test_stack
+        .with_ctx(|ctx| {
+            routes
+                .into_iter()
+                .map(|e| EntryEither::try_from_fidl_with_ctx(ctx.dispatcher(), e).unwrap())
+                .collect()
+        })
+        .await;
     assert!(routes.iter().any(|e| e == &route1));
     assert!(routes.iter().any(|e| e == &route2));
 
     // delete route1:
     let mut fidl = route1.into_subnet_dest().0.into_fidl();
-    let () = test_stack
-        .run_future(stack.del_forwarding_entry(&mut fidl))
+    let () = stack
+        .del_forwarding_entry(&mut fidl)
         .await
         .squash_result()
         .expect("can delete device forwarding entry");
     // can't delete again:
     let mut fidl = route1.into_subnet_dest().0.into_fidl();
     assert_eq!(
-        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap_err(),
+        stack.del_forwarding_entry(&mut fidl).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
     );
 
     // check that route was deleted (should've disappeared from core)
     let all_routes: Vec<_> =
-        netstack3_core::get_all_routes(&mut test_stack.event_loop.ctx).collect();
+        netstack3_core::get_all_routes(test_stack.ctx().await.deref_mut()).collect();
     assert!(!all_routes.iter().any(|e| e == &route1));
     assert!(all_routes.iter().any(|e| e == &route2));
 
     // delete route2:
     let mut fidl = route2.into_subnet_dest().0.into_fidl();
-    let () = test_stack
-        .run_future(stack.del_forwarding_entry(&mut fidl))
+    let () = stack
+        .del_forwarding_entry(&mut fidl)
         .await
         .squash_result()
         .expect("can delete next-hop forwarding entry");
     // can't delete again:
     let mut fidl = route2.into_subnet_dest().0.into_fidl();
     assert_eq!(
-        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap_err(),
+        stack.del_forwarding_entry(&mut fidl).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
     );
 
     // check that both routes were deleted (should've disappeared from core)
     let all_routes: Vec<_> =
-        netstack3_core::get_all_routes(&mut test_stack.event_loop.ctx).collect();
+        netstack3_core::get_all_routes(test_stack.ctx().await.deref_mut()).collect();
     assert!(!all_routes.iter().any(|e| e == &route1));
     assert!(!all_routes.iter().any(|e| e == &route2));
 }
@@ -1352,8 +1332,8 @@ async fn test_add_remote_routes() {
         )),
     };
 
-    let () = test_stack
-        .run_future(stack.add_forwarding_entry(&mut fwd_entry))
+    let () = stack
+        .add_forwarding_entry(&mut fwd_entry)
         .await
         .squash_result()
         .expect("Add forwarding entry succeeds");
@@ -1370,29 +1350,7 @@ async fn test_add_remote_routes() {
         )),
     };
     assert_eq!(
-        test_stack
-            .run_future(stack.add_forwarding_entry(&mut bad_entry))
-            .await
-            .unwrap()
-            .unwrap_err(),
+        stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::AlreadyExists
     );
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_main_loop() {
-    let (event_sender, evt_rcv) = futures::channel::mpsc::unbounded();
-    let event_loop =
-        EventLoop::new_with_channels(StackStateBuilder::default(), event_sender.clone(), evt_rcv);
-    fasync::spawn_local(
-        event_loop.run().unwrap_or_else(|e| panic!("Event loop failed with error {:?}", e)),
-    );
-    let (stack, rs) =
-        fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_stack::StackMarker>().unwrap();
-    let events = event_sender.clone().sink_map_err(|e| panic!("event sender error: {}", e));
-    fasync::spawn_local(
-        rs.map_ok(Event::FidlStackEvent).map_err(|_| ()).forward(events).map(|_| ()),
-    );
-
-    assert_eq!(stack.list_interfaces().await.unwrap().len(), 0);
 }
