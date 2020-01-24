@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
 
+#include "src/lib/fxl/logging.h"
+
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
 using fuchsia::ui::scenic::internal::GraphLink;
@@ -16,6 +18,8 @@ LinkSystem::LinkSystem(const std::shared_ptr<TopologySystem>& topology_system)
 
 LinkSystem::ChildLink LinkSystem::CreateChildLink(
     ContentLinkToken token, fidl::InterfaceRequest<ContentLink> content_link) {
+  FXL_DCHECK(token.value.is_valid());
+
   auto impl = std::make_shared<GraphLinkImpl>();
   TransformHandle link_handle = link_graph_.CreateTransform();
 
@@ -46,6 +50,8 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 
 LinkSystem::ParentLink LinkSystem::CreateParentLink(GraphLinkToken token,
                                                     fidl::InterfaceRequest<GraphLink> graph_link) {
+  FXL_DCHECK(token.value.is_valid());
+
   auto impl = std::make_shared<ContentLinkImpl>();
   TransformHandle link_handle = link_graph_.CreateTransform();
 

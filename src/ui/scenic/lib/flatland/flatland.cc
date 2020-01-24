@@ -74,6 +74,16 @@ void Flatland::Present(PresentCallback callback) {
 }
 
 void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLink> graph_link) {
+  // Attempting to link with an invalid token will never succeed, so its better to fail early and
+  // immediately close the link connection.
+  if (!token.value.is_valid()) {
+    pending_operations_.push_back([](){
+      FXL_LOG(ERROR) << "LinkToParent failed, GraphLinkToken was invalid";
+      return false;
+    });
+    return;
+  }
+
   FXL_DCHECK(link_system_);
 
   // This portion of the method is not feed forward. This makes it possible for clients to receive
@@ -252,6 +262,18 @@ void Flatland::SetRootTransform(TransformId transform_id) {
 
 void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties properties,
                           fidl::InterfaceRequest<ContentLink> content_link) {
+  // Attempting to link with an invalid token will never succeed, so its better to fail early and
+  // immediately close the link connection.
+  if (!token.value.is_valid()) {
+    pending_operations_.push_back([](){
+      FXL_LOG(ERROR) << "CreateLink failed, ContentLinkToken was invalid";
+      return false;
+    });
+    return;
+  }
+
+  FXL_DCHECK(link_system_);
+
   // We can initialize the link importer immediately, since no state changes actually occur before
   // the feed-forward portion of this method.
   LinkSystem::ChildLink link =

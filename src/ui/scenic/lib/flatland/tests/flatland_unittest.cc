@@ -475,6 +475,21 @@ TEST_F(FlatlandTest, GraphLinkUnbindsOnParentDeath) {
   EXPECT_FALSE(graph_link.is_bound());
 }
 
+TEST_F(FlatlandTest, GraphLinkUnbindsImmediatelyWithInvalidToken) {
+  Flatland flatland = CreateFlatland();
+
+  GraphLinkToken child_token;
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+
+  // The link will be unbound even before Present() is called.
+  RunLoopUntilIdle();
+  EXPECT_FALSE(graph_link.is_bound());
+
+  PRESENT(flatland, false);
+}
+
 TEST_F(FlatlandTest, GraphUnlinkFailsWithoutLink) {
   Flatland flatland = CreateFlatland();
 
@@ -575,6 +590,23 @@ TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(content_link.is_bound());
+}
+
+TEST_F(FlatlandTest, ContentLinkUnbindsImmediatelyWithInvalidToken) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  flatland.CreateLink(kLinkId1, std::move(parent_token), {}, content_link.NewRequest());
+
+  // The link will be unbound even before Present() is called.
+  RunLoopUntilIdle();
+  EXPECT_FALSE(content_link.is_bound());
+
+  PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, ContentLinkIdIsZero) {
