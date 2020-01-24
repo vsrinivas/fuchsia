@@ -173,7 +173,7 @@ and provides it access to the capabilities that it requires.
 
 [Every component runs for a reason](#accountability). The component framework
 only starts a component instance when it has work to do, such as when
-another component requests to use its the instance's capabilities.
+another component requests to use its instance's capabilities.
 
 Once started, a component instance continues to run until it is stopped.
 
