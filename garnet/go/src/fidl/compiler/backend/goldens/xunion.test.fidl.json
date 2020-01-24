@@ -130,9 +130,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "generated",
-        "line": 2,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+        "line": 39,
+        "column": 55
       },
       "anonymous": true,
       "members": [
@@ -168,9 +168,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix3",
       "location": {
-        "filename": "generated",
-        "line": 4,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
+        "line": 40,
+        "column": 57
       },
       "anonymous": true,
       "members": [

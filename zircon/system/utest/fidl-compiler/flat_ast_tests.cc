@@ -27,7 +27,7 @@ static bool implicit_assumptions() {
 }
 
 static bool compare_handles() {
-  Name name_not_important(nullptr, "ignore");
+  auto name_not_important = Name::CreateIntrinsic("ignore");
   HandleType nonnullable_channel(name_not_important, HandleSubtype::kChannel, nullptr,
                                  Nullability::kNonnullable);
   HandleType nullable_channel(name_not_important, HandleSubtype::kChannel, nullptr,

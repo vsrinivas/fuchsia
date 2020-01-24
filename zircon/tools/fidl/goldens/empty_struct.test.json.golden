@@ -181,9 +181,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "generated",
-        "line": 1,
-        "column": 1
+        "filename": "empty_struct.test.fidl",
+        "line": 7,
+        "column": 9
       },
       "anonymous": true,
       "members": [
@@ -219,9 +219,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "generated",
-        "line": 2,
-        "column": 1
+        "filename": "empty_struct.test.fidl",
+        "line": 8,
+        "column": 15
       },
       "anonymous": true,
       "members": [
@@ -257,9 +257,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix2",
       "location": {
-        "filename": "generated",
-        "line": 3,
-        "column": 1
+        "filename": "empty_struct.test.fidl",
+        "line": 9,
+        "column": 19
       },
       "anonymous": true,
       "members": [
@@ -295,9 +295,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix3",
       "location": {
-        "filename": "generated",
-        "line": 4,
-        "column": 1
+        "filename": "empty_struct.test.fidl",
+        "line": 9,
+        "column": 32
       },
       "anonymous": true,
       "members": [

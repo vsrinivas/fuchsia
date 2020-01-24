@@ -203,9 +203,9 @@
     {
       "name": "example/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "generated",
-        "line": 1,
-        "column": 1
+        "filename": "example.test.fidl",
+        "line": 24,
+        "column": 11
       },
       "anonymous": true,
       "members": [

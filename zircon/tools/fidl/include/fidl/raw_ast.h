@@ -431,7 +431,12 @@ class ProtocolMethod : public SourceElement {
         identifier(std::move(identifier)),
         maybe_request(std::move(maybe_request)),
         maybe_response(std::move(maybe_response)),
-        maybe_error_ctor(std::move(maybe_error_ctor)) {}
+        maybe_error_ctor(std::move(maybe_error_ctor)) {
+    // `maybe_response` must exist if `maybe_error_ctor` is exists.
+    if (maybe_error_ctor) {
+      assert(maybe_response);
+    }
+  }
 
   void Accept(TreeVisitor* visitor) const;
 

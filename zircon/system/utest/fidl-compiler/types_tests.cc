@@ -15,9 +15,7 @@ bool CheckPrimitiveType(const Library* library, Typespace* typespace, const char
                         types::PrimitiveSubtype subtype) {
   ASSERT_NONNULL(typespace);
 
-  std::string owned_name = std::string(name);
-
-  auto the_type_name = Name(library, owned_name);
+  auto the_type_name = Name::CreateDerived(library, SourceSpan(), std::string(name));
   const Type* the_type;
   ASSERT_TRUE(typespace->Create(the_type_name, nullptr /* maybe_arg_type */,
                                 std::optional<types::HandleSubtype>(), nullptr /* handle_rights */,

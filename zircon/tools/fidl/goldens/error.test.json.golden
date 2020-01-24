@@ -64,7 +64,7 @@
               "name": "result",
               "location": {
                 "filename": "generated",
-                "line": 6,
+                "line": 3,
                 "column": 1
               },
               "field_shape_v1": {
@@ -94,9 +94,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "generated",
-        "line": 1,
-        "column": 1
+        "filename": "error.test.fidl",
+        "line": 4,
+        "column": 8
       },
       "anonymous": true,
       "members": [
@@ -131,9 +131,9 @@
     {
       "name": "fidl.test.json/Example_foo_Response",
       "location": {
-        "filename": "generated",
-        "line": 2,
-        "column": 1
+        "filename": "error.test.fidl",
+        "line": 4,
+        "column": 22
       },
       "anonymous": false,
       "members": [
@@ -168,9 +168,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "generated",
-        "line": 7,
-        "column": 1
+        "filename": "error.test.fidl",
+        "line": 4,
+        "column": 22
       },
       "anonymous": true,
       "members": [
@@ -183,7 +183,7 @@
           "name": "result",
           "location": {
             "filename": "generated",
-            "line": 6,
+            "line": 3,
             "column": 1
           },
           "field_shape_v1": {
@@ -209,9 +209,9 @@
     {
       "name": "fidl.test.json/Example_foo_Result",
       "location": {
-        "filename": "generated",
-        "line": 3,
-        "column": 1
+        "filename": "error.test.fidl",
+        "line": 4,
+        "column": 22
       },
       "maybe_attributes": [
         {
@@ -231,7 +231,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 4,
+            "line": 1,
             "column": 1
           }
         },
@@ -245,7 +245,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 5,
+            "line": 2,
             "column": 1
           }
         }

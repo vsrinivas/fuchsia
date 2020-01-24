@@ -23,7 +23,7 @@ class CodedTypesGenerator {
   const flat::Library* library() const { return library_; }
   const std::vector<std::unique_ptr<coded::Type>>& coded_types() const { return coded_types_; }
 
-  const coded::Type* CodedTypeFor(const flat::Name* name) const {
+  const coded::Type* CodedTypeFor(flat::Name::Key name) const {
     auto it = named_coded_types_.find(name);
     return it != named_coded_types_.end() ? it->second.get() : nullptr;
   }
@@ -75,8 +75,7 @@ class CodedTypesGenerator {
   TypeMap<flat::IdentifierType, coded::StructPointerType> struct_type_map_;
   TypeMap<flat::IdentifierType, coded::UnionPointerType> union_type_map_;
 
-  std::map<const flat::Name*, std::unique_ptr<coded::Type>, flat::PtrCompare<flat::Name>>
-      named_coded_types_;
+  std::map<flat::Name::Key, std::unique_ptr<coded::Type>> named_coded_types_;
   std::vector<std::unique_ptr<coded::Type>> coded_types_;
 };
 

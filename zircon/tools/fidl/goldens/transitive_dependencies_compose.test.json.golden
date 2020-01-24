@@ -92,9 +92,9 @@
     {
       "name": "bottom/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "generated",
-        "line": 2,
-        "column": 1
+        "filename": "bottom.test.fidl",
+        "line": 9,
+        "column": 17
       },
       "anonymous": true,
       "members": [

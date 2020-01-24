@@ -167,9 +167,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "generated",
-        "line": 1,
-        "column": 1
+        "filename": "inheritance_with_recursive_decl.test.fidl",
+        "line": 5,
+        "column": 10
       },
       "anonymous": true,
       "members": [
@@ -205,9 +205,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "generated",
-        "line": 2,
-        "column": 1
+        "filename": "inheritance_with_recursive_decl.test.fidl",
+        "line": 10,
+        "column": 11
       },
       "anonymous": true,
       "members": [
@@ -243,9 +243,9 @@
     {
       "name": "fidl.test.json/SomeLongAnonymousPrefix0",
       "location": {
-        "filename": "generated",
-        "line": 1,
-        "column": 1
+        "filename": "inheritance_with_recursive_decl.test.fidl",
+        "line": 5,
+        "column": 10
       },
       "anonymous": true,
       "members": [

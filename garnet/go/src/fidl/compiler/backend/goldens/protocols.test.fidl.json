@@ -449,7 +449,7 @@
               "name": "result",
               "location": {
                 "filename": "generated",
-                "line": 18,
+                "line": 3,
                 "column": 1
               },
               "field_shape_v1": {
@@ -503,7 +503,7 @@
               "name": "result",
               "location": {
                 "filename": "generated",
-                "line": 25,
+                "line": 6,
                 "column": 1
               },
               "field_shape_v1": {
@@ -557,7 +557,7 @@
               "name": "result",
               "location": {
                 "filename": "generated",
-                "line": 32,
+                "line": 9,
                 "column": 1
               },
               "field_shape_v1": {
@@ -881,9 +881,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix4",
       "location": {
-        "filename": "generated",
-        "line": 5,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 6,
+        "column": 32
       },
       "anonymous": true,
       "members": [
@@ -918,9 +918,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix5",
       "location": {
-        "filename": "generated",
-        "line": 6,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 7,
+        "column": 26
       },
       "anonymous": true,
       "members": [
@@ -955,9 +955,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix6",
       "location": {
-        "filename": "generated",
-        "line": 7,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 8,
+        "column": 29
       },
       "anonymous": true,
       "members": [
@@ -992,9 +992,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix8",
       "location": {
-        "filename": "generated",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 9,
-        "column": 1
+        "column": 28
       },
       "anonymous": true,
       "members": [
@@ -1029,9 +1029,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix9",
       "location": {
-        "filename": "generated",
-        "line": 10,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 9,
+        "column": 44
       },
       "anonymous": true,
       "members": [
@@ -1066,9 +1066,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix11",
       "location": {
-        "filename": "generated",
-        "line": 12,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 11,
+        "column": 22
       },
       "anonymous": true,
       "members": [
@@ -1103,9 +1103,9 @@
     {
       "name": "test.name/WithErrorSyntax_ResponseAsStruct_Response",
       "location": {
-        "filename": "generated",
-        "line": 14,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 20,
+        "column": 27
       },
       "anonymous": false,
       "members": [
@@ -1172,9 +1172,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix13",
       "location": {
-        "filename": "generated",
-        "line": 19,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 20,
+        "column": 27
       },
       "anonymous": true,
       "members": [
@@ -1187,7 +1187,7 @@
           "name": "result",
           "location": {
             "filename": "generated",
-            "line": 18,
+            "line": 3,
             "column": 1
           },
           "field_shape_v1": {
@@ -1210,9 +1210,9 @@
     {
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
       "location": {
-        "filename": "generated",
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
         "line": 21,
-        "column": 1
+        "column": 27
       },
       "anonymous": false,
       "members": [],
@@ -1230,9 +1230,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix15",
       "location": {
-        "filename": "generated",
-        "line": 26,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 21,
+        "column": 27
       },
       "anonymous": true,
       "members": [
@@ -1245,7 +1245,7 @@
           "name": "result",
           "location": {
             "filename": "generated",
-            "line": 25,
+            "line": 6,
             "column": 1
           },
           "field_shape_v1": {
@@ -1268,9 +1268,9 @@
     {
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
       "location": {
-        "filename": "generated",
-        "line": 28,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 22,
+        "column": 22
       },
       "anonymous": false,
       "members": [],
@@ -1288,9 +1288,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix17",
       "location": {
-        "filename": "generated",
-        "line": 33,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 22,
+        "column": 22
       },
       "anonymous": true,
       "members": [
@@ -1303,7 +1303,7 @@
           "name": "result",
           "location": {
             "filename": "generated",
-            "line": 32,
+            "line": 9,
             "column": 1
           },
           "field_shape_v1": {
@@ -1326,9 +1326,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix18",
       "location": {
-        "filename": "generated",
-        "line": 34,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 27,
+        "column": 12
       },
       "anonymous": true,
       "members": [
@@ -1379,9 +1379,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix19",
       "location": {
-        "filename": "generated",
-        "line": 35,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 28,
+        "column": 14
       },
       "anonymous": true,
       "members": [
@@ -1432,9 +1432,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix20",
       "location": {
-        "filename": "generated",
-        "line": 36,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 29,
+        "column": 12
       },
       "anonymous": true,
       "members": [
@@ -1485,9 +1485,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix21",
       "location": {
-        "filename": "generated",
-        "line": 37,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 29,
+        "column": 34
       },
       "anonymous": true,
       "members": [
@@ -1522,9 +1522,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix22",
       "location": {
-        "filename": "generated",
-        "line": 38,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 30,
+        "column": 17
       },
       "anonymous": true,
       "members": [
@@ -1561,9 +1561,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix23",
       "location": {
-        "filename": "generated",
-        "line": 39,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 30,
+        "column": 39
       },
       "anonymous": true,
       "members": [
@@ -1603,9 +1603,9 @@
     {
       "name": "test.name/WithErrorSyntax_ResponseAsStruct_Result",
       "location": {
-        "filename": "generated",
-        "line": 15,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 20,
+        "column": 27
       },
       "maybe_attributes": [
         {
@@ -1625,7 +1625,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 16,
+            "line": 1,
             "column": 1
           }
         },
@@ -1639,7 +1639,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 17,
+            "line": 2,
             "column": 1
           }
         }
@@ -1659,9 +1659,9 @@
     {
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Result",
       "location": {
-        "filename": "generated",
-        "line": 22,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 21,
+        "column": 27
       },
       "maybe_attributes": [
         {
@@ -1681,7 +1681,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 23,
+            "line": 4,
             "column": 1
           }
         },
@@ -1695,7 +1695,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 24,
+            "line": 5,
             "column": 1
           }
         }
@@ -1715,9 +1715,9 @@
     {
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Result",
       "location": {
-        "filename": "generated",
-        "line": 29,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocols.test.fidl",
+        "line": 22,
+        "column": 22
       },
       "maybe_attributes": [
         {
@@ -1737,7 +1737,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 30,
+            "line": 7,
             "column": 1
           }
         },
@@ -1752,7 +1752,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 31,
+            "line": 8,
             "column": 1
           }
         }

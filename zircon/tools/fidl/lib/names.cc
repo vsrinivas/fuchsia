@@ -32,7 +32,7 @@ std::string FormatName(const flat::Name& name, std::string_view library_separato
     compiled_name += LibraryName(name.library(), library_separator);
     compiled_name += name_separator;
   }
-  compiled_name += name.name_full();
+  compiled_name += name.full_name();
   return compiled_name;
 }
 

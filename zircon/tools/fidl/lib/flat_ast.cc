@@ -159,7 +159,7 @@ std::string_view Decl::GetAttribute(std::string_view name) const {
   return std::string_view();
 }
 
-std::string Decl::GetName() const { return std::string(name.name_part()); }
+std::string Decl::GetName() const { return std::string(name.decl_name()); }
 
 const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
     {"fuchsia.io", "NodeInfo"},
@@ -196,11 +196,11 @@ bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error
       auto identifier_type = static_cast<const IdentifierType*>(type);
       if (identifier_type->type_decl->kind == Decl::Kind::kUnion) {
         auto union_name = std::make_pair<const std::string&, const std::string_view&>(
-            LibraryName(identifier_type->name.library(), "."), identifier_type->name.name_part());
+            LibraryName(identifier_type->name.library(), "."), identifier_type->name.decl_name());
         if (allowed_simple_unions.find(union_name) == allowed_simple_unions.end()) {
           // Any unions not in the allow-list are treated as non-simple.
           std::string message("union '");
-          message.append(identifier_type->name.name_part());
+          message.append(identifier_type->name.decl_name());
           message.append("' is not allowed to be simple");
           error_reporter->ReportError(identifier_type->name.span(), message);
           return false;
@@ -276,7 +276,7 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
   auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
     std::string message("unknown type ");
-    message.append(name.name_full());
+    message.append(name.full_name());
     error_reporter_->ReportError(name.span(), message);
     return false;
   }
@@ -289,14 +289,14 @@ void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
 }
 
 const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
-  Name global_name(nullptr, std::string(name.name_part()));
-  auto iter1 = templates_.find(&global_name);
-  if (iter1 != templates_.end())
-    return iter1->second.get();
+  auto global_name = Name::Key(nullptr, name.decl_name());
+  if (auto iter = templates_.find(global_name); iter != templates_.end()) {
+    return iter->second.get();
+  }
 
-  auto iter2 = templates_.find(&name);
-  if (iter2 != templates_.end())
-    return iter2->second.get();
+  if (auto iter = templates_.find(name); iter != templates_.end()) {
+    return iter->second.get();
+  }
 
   return nullptr;
 }
@@ -313,7 +313,7 @@ class PrimitiveTypeTemplate : public TypeTemplate {
  public:
   PrimitiveTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter,
                         const std::string& name, types::PrimitiveSubtype subtype)
-      : TypeTemplate(Name(nullptr, name), typespace, error_reporter), subtype_(subtype) {}
+      : TypeTemplate(Name::CreateIntrinsic(name), typespace, error_reporter), subtype_(subtype) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype,
@@ -341,7 +341,8 @@ class PrimitiveTypeTemplate : public TypeTemplate {
 class BytesTypeTemplate final : public TypeTemplate {
  public:
   BytesTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter), uint8_type_(kUint8Type) {}
+      : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, error_reporter),
+        uint8_type_(kUint8Type) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype,
@@ -362,7 +363,7 @@ class BytesTypeTemplate final : public TypeTemplate {
 
  private:
   // TODO(FIDL-389): Remove when canonicalizing types.
-  const Name kUint8TypeName = Name(nullptr, "uint8");
+  const Name kUint8TypeName = Name::CreateIntrinsic("uint8");
   const PrimitiveType kUint8Type = PrimitiveType(kUint8TypeName, types::PrimitiveSubtype::kUint8);
 
   const PrimitiveType uint8_type_;
@@ -372,7 +373,7 @@ class BytesTypeTemplate final : public TypeTemplate {
 class ArrayTypeTemplate final : public TypeTemplate {
  public:
   ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter) {}
+      : TypeTemplate(Name::CreateIntrinsic("array"), typespace, error_reporter) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype,
@@ -399,7 +400,7 @@ class ArrayTypeTemplate final : public TypeTemplate {
 class VectorTypeTemplate final : public TypeTemplate {
  public:
   VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter) {}
+      : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, error_reporter) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype,
@@ -425,7 +426,7 @@ class VectorTypeTemplate final : public TypeTemplate {
 class StringTypeTemplate final : public TypeTemplate {
  public:
   StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter) {}
+      : TypeTemplate(Name::CreateIntrinsic("string"), typespace, error_reporter) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype,
@@ -451,7 +452,7 @@ class StringTypeTemplate final : public TypeTemplate {
 class HandleTypeTemplate final : public TypeTemplate {
  public:
   HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {
+      : TypeTemplate(Name::CreateIntrinsic("handle"), typespace, error_reporter) {
     same_rights = std::make_unique<Constant>(Constant::Kind::kSynthesized, SourceSpan());
     same_rights->ResolveTo(std::make_unique<NumericConstantValue<uint32_t>>(kHandleSameRights));
   }
@@ -481,7 +482,7 @@ class HandleTypeTemplate final : public TypeTemplate {
 class RequestTypeTemplate final : public TypeTemplate {
  public:
   RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-      : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter) {}
+      : TypeTemplate(Name::CreateIntrinsic("request"), typespace, error_reporter) {}
 
   bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype,
@@ -642,7 +643,7 @@ Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
   Typespace root_typespace(error_reporter);
 
   auto add_template = [&](std::unique_ptr<TypeTemplate> type_template) {
-    auto name = type_template->name();
+    const Name& name = type_template->name();
     root_typespace.templates_.emplace(name, std::move(type_template));
   };
 
@@ -666,13 +667,13 @@ Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
   add_primitive("float64", types::PrimitiveSubtype::kFloat64);
 
   // TODO(FIDL-483): Remove when there is generalized support.
-  const static auto kByteName = Name(nullptr, "byte");
-  const static auto kBytesName = Name(nullptr, "bytes");
+  const static auto kByteName = Name::CreateIntrinsic("byte");
+  const static auto kBytesName = Name::CreateIntrinsic("bytes");
   root_typespace.templates_.emplace(
-      &kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, error_reporter, "uint8",
-                                                          types::PrimitiveSubtype::kUint8));
+      kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, error_reporter, "uint8",
+                                                         types::PrimitiveSubtype::kUint8));
   root_typespace.templates_.emplace(
-      &kBytesName, std::make_unique<BytesTypeTemplate>(&root_typespace, error_reporter));
+      kBytesName, std::make_unique<BytesTypeTemplate>(&root_typespace, error_reporter));
 
   add_template(std::make_unique<ArrayTypeTemplate>(&root_typespace, error_reporter));
   add_template(std::make_unique<VectorTypeTemplate>(&root_typespace, error_reporter));
@@ -1247,18 +1248,15 @@ SourceSpan Library::GeneratedSimpleName(const std::string& name) {
   return generated_source_file_.AddLine(name);
 }
 
-Name Library::NextAnonymousName() {
+std::string Library::NextAnonymousName() {
   // TODO(FIDL-596): Improve anonymous name generation. We want to be
   // specific about how these names are generated once they appear in the
   // JSON IR, and are exposed to the backends.
   std::ostringstream data;
   data << "SomeLongAnonymousPrefix";
   data << anon_counter_++;
-  return Name(this, GeneratedSimpleName(data.str()));
-}
 
-Name Library::DerivedName(const std::vector<std::string_view>& components) {
-  return Name(this, GeneratedSimpleName(StringJoin(components, "_")));
+  return data.str();
 }
 
 std::optional<Name> Library::CompileCompoundIdentifier(
@@ -1270,7 +1268,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   // First try resolving the identifier in the library.
   if (components.size() == 1) {
-    return Name(this, decl_name);
+    return Name::CreateSourced(this, decl_name);
   }
 
   std::vector<std::string_view> library_name;
@@ -1281,7 +1279,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
   auto filename = compound_identifier->span().source_file().filename();
   Library* dep_library = nullptr;
   if (dependencies_.LookupAndUse(filename, library_name, &dep_library)) {
-    return Name(dep_library, decl_name);
+    return Name::CreateSourced(dep_library, decl_name);
   }
 
   // If the identifier is not found in the library it might refer to a
@@ -1290,7 +1288,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
   SourceSpan member_decl_name = components.rbegin()[1]->span();
 
   if (components.size() == 2) {
-    return Name(this, member_decl_name, std::string(member_name.data()));
+    return Name::CreateSourced(this, member_decl_name, std::string(member_name.data()));
   }
 
   std::vector<std::string_view> member_library_name(library_name);
@@ -1298,7 +1296,8 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   Library* member_dep_library = nullptr;
   if (dependencies_.LookupAndUse(filename, member_library_name, &member_dep_library)) {
-    return Name(member_dep_library, member_decl_name, std::string(member_name.data()));
+    return Name::CreateSourced(member_dep_library, member_decl_name,
+                               std::string(member_name.data()));
   }
 
   std::string message("Unknown dependent library ");
@@ -1360,21 +1359,21 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
       break;
   }  // switch
 
-  const Name* name = &decl_ptr->name;
+  const Name& name = decl_ptr->name;
   auto iter = declarations_.emplace(name, decl_ptr);
   if (!iter.second) {
     std::string message = "Name collision: ";
-    message.append(name->name_part());
-    return Fail(*name, message);
+    message.append(name.decl_name());
+    return Fail(name, message);
   }
-  if (name->span()) {
-    if (dependencies_.Contains(name->span()->source_file().filename(), {name->span()->data()})) {
+  if (name.span()) {
+    if (dependencies_.Contains(name.span()->source_file().filename(), {name.span()->data()})) {
       std::string message = "Declaration name '";
-      message.append(name->name_full());
+      message.append(name.full_name());
       message.append(
           "' conflicts with a library import; consider using the "
           "'as' keyword to import the library under a different name.");
-      return Fail(*name, message);
+      return Fail(name, message);
     }
   }
 
@@ -1388,17 +1387,15 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kXUnion:
     case Decl::Kind::kProtocol: {
       auto type_decl = static_cast<TypeDecl*>(decl_ptr);
-      auto type_template = std::make_unique<TypeDeclTypeTemplate>(
-          Name(name->library(), std::string(name->name_part())), typespace_, error_reporter_, this,
-          type_decl);
+      auto type_template = std::make_unique<TypeDeclTypeTemplate>(name, typespace_, error_reporter_,
+                                                                  this, type_decl);
       typespace_->AddTemplate(std::move(type_template));
       break;
     }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
       auto type_alias_template = std::make_unique<TypeAliasTypeTemplate>(
-          Name(name->library(), std::string(name->name_part())), typespace_, error_reporter_, this,
-          type_alias_decl);
+          name, typespace_, error_reporter_, this, type_alias_decl);
       typespace_->AddTemplate(std::move(type_alias_template));
       break;
     }
@@ -1532,7 +1529,7 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
   assert(using_directive->maybe_type_ctor);
 
   auto span = using_directive->using_path->components[0]->span();
-  auto alias_name = Name(this, span);
+  auto alias_name = Name::CreateSourced(this, span);
   std::unique_ptr<TypeConstructor> partial_type_ctor_;
   if (!ConsumeTypeConstructor(std::move(using_directive->maybe_type_ctor), span,
                               &partial_type_ctor_))
@@ -1565,14 +1562,15 @@ bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
   }
 
   return RegisterDecl(std::make_unique<Bits>(
-      std::move(bits_declaration->attributes), Name(this, bits_declaration->identifier->span()),
-      std::move(type_ctor), std::move(members), bits_declaration->strictness));
+      std::move(bits_declaration->attributes),
+      Name::CreateSourced(this, bits_declaration->identifier->span()), std::move(type_ctor),
+      std::move(members), bits_declaration->strictness));
 }
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
   auto attributes = std::move(const_declaration->attributes);
   auto span = const_declaration->identifier->span();
-  auto name = Name(this, span);
+  auto name = Name::CreateSourced(this, span);
   std::unique_ptr<TypeConstructor> type_ctor;
   if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), span, &type_ctor))
     return false;
@@ -1608,12 +1606,14 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
   }
 
   return RegisterDecl(std::make_unique<Enum>(
-      std::move(enum_declaration->attributes), Name(this, enum_declaration->identifier->span()),
-      std::move(type_ctor), std::move(members), enum_declaration->strictness));
+      std::move(enum_declaration->attributes),
+      Name::CreateSourced(this, enum_declaration->identifier->span()), std::move(type_ctor),
+      std::move(members), enum_declaration->strictness));
 }
 
-bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod* method,
-                                 Struct* in_response, Struct** out_response) {
+bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
+                                 raw::ProtocolMethod* method, Struct* in_response,
+                                 Struct** out_response) {
   // Compile the error type.
   auto error_span = method->maybe_error_ctor->span();
   std::unique_ptr<TypeConstructor> error_type_ctor;
@@ -1622,8 +1622,13 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
 
   // Make the Result union containing the response struct and the
   // error type.
-  SourceSpan method_name = method->identifier->span();
-  Name result_name = DerivedName({protocol_name.name_part(), method_name.data(), "Result"});
+  SourceSpan method_name_span = method->identifier->span();
+
+  // TODO(fxb/8027): Join spans of response and error constructor for `result_name`.
+  auto result_name = Name::CreateDerived(
+      this, response_span,
+      StringJoin({protocol_name.decl_name(), method_name_span.data(), "Result"}, "_"));
+
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
   Union::Member response_member{
       std::make_unique<raw::Ordinal32>(sourceElement, 1),  // success case explicitly has ordinal 1
@@ -1651,8 +1656,10 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
   response_members.push_back(
       Struct::Member(IdentifierTypeForDecl(result_decl, types::Nullability::kNonnullable),
                      GeneratedSimpleName("result"), nullptr, nullptr));
-  auto struct_decl = std::make_unique<Struct>(nullptr /* attributes */, NextAnonymousName(),
-                                              std::move(response_members), true);
+
+  auto struct_decl = std::make_unique<Struct>(
+      nullptr /* attributes */, Name::CreateDerived(this, response_span, NextAnonymousName()),
+      std::move(response_members), true);
   auto struct_decl_ptr = struct_decl.get();
   if (!RegisterDecl(std::move(struct_decl)))
     return false;
@@ -1663,7 +1670,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
 bool Library::ConsumeProtocolDeclaration(
     std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
   auto attributes = std::move(protocol_declaration->attributes);
-  auto name = Name(this, protocol_declaration->identifier->span());
+  auto name = Name::CreateSourced(this, protocol_declaration->identifier->span());
 
   std::set<Name> composed_protocols;
   for (auto& composed_protocol : protocol_declaration->composed_protocols) {
@@ -1678,35 +1685,38 @@ bool Library::ConsumeProtocolDeclaration(
   std::vector<Protocol::Method> methods;
   for (auto& method : protocol_declaration->methods) {
     auto generated_ordinal32 = std::make_unique<raw::Ordinal32>(
-        fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *method));
+        fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.decl_name(), *method));
     auto generated_ordinal64 = std::make_unique<raw::Ordinal64>(
-        fidl::ordinals::GetGeneratedOrdinal64(library_name_, name.name_part(), *method));
+        fidl::ordinals::GetGeneratedOrdinal64(library_name_, name.decl_name(), *method));
     auto attributes = std::move(method->attributes);
     SourceSpan method_name = method->identifier->span();
 
     Struct* maybe_request = nullptr;
     if (method->maybe_request != nullptr) {
-      Name request_name = NextAnonymousName();
+      auto request_span = method->maybe_request->span();
+      auto request_name = Name::CreateDerived(this, request_span, NextAnonymousName());
       if (!ConsumeParameterList(std::move(request_name), std::move(method->maybe_request), true,
                                 &maybe_request))
         return false;
     }
 
-    bool has_error = (method->maybe_error_ctor != nullptr);
-
     Struct* maybe_response = nullptr;
     if (method->maybe_response != nullptr) {
-      Name response_name = has_error
-                               ? DerivedName({name.name_part(), method_name.data(), "Response"})
-                               : NextAnonymousName();
+      const bool has_error = (method->maybe_error_ctor != nullptr);
+
+      SourceSpan response_span = method->maybe_response->span();
+      Name response_name = Name::CreateDerived(
+          this, response_span,
+          has_error ? StringJoin({name.decl_name(), method_name.data(), "Response"}, "_")
+                    : NextAnonymousName());
       if (!ConsumeParameterList(std::move(response_name), std::move(method->maybe_response),
                                 !has_error, &maybe_response))
         return false;
-    }
 
-    if (has_error) {
-      if (!CreateMethodResult(name, method.get(), maybe_response, &maybe_response))
-        return false;
+      if (has_error) {
+        if (!CreateMethodResult(name, response_span, method.get(), maybe_response, &maybe_response))
+          return false;
+      }
     }
 
     assert(maybe_request != nullptr || maybe_response != nullptr);
@@ -1722,9 +1732,8 @@ bool Library::ConsumeProtocolDeclaration(
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl,
                                                                 types::Nullability nullability) {
   return std::make_unique<TypeConstructor>(
-      Name(decl->name.library(), std::string(decl->name.name_part())), nullptr /* maybe_arg_type */,
-      std::optional<types::HandleSubtype>(), nullptr /* handle_rights */, nullptr /* maybe_size */,
-      nullability);
+      decl->name, nullptr /* maybe_arg_type */, std::optional<types::HandleSubtype>(),
+      nullptr /* handle_rights */, nullptr /* maybe_size */, nullability);
 }
 
 bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
@@ -1750,7 +1759,7 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
 
 bool Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
   auto attributes = std::move(service_decl->attributes);
-  auto name = Name(this, service_decl->identifier->span());
+  auto name = Name::CreateSourced(this, service_decl->identifier->span());
 
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
@@ -1768,7 +1777,7 @@ bool Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
   auto attributes = std::move(struct_declaration->attributes);
-  auto name = Name(this, struct_declaration->identifier->span());
+  auto name = Name::CreateSourced(this, struct_declaration->identifier->span());
 
   std::vector<Struct::Member> members;
   for (auto& member : struct_declaration->members) {
@@ -1792,7 +1801,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 
 bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
   auto attributes = std::move(table_declaration->attributes);
-  auto name = Name(this, table_declaration->identifier->span());
+  auto name = Name::CreateSourced(this, table_declaration->identifier->span());
 
   std::vector<Table::Member> members;
   for (auto& member : table_declaration->members) {
@@ -1827,7 +1836,7 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
 }
 
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
-  auto name = Name(this, union_declaration->identifier->span());
+  auto name = Name::CreateSourced(this, union_declaration->identifier->span());
 
   assert(!union_declaration->members.empty() && "unions must have at least one member");
   std::vector<Union::Member> members;
@@ -1863,11 +1872,11 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 }
 
 bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
-  auto name = Name(this, xunion_declaration->identifier->span());
+  auto name = Name::CreateSourced(this, xunion_declaration->identifier->span());
 
   assert(!xunion_declaration->members.empty() && "unions must have at least one member");
   auto xunion_name =
-      std::pair<std::string, std::string_view>(LibraryName(this, "."), name.name_part());
+      std::pair<std::string, std::string_view>(LibraryName(this, "."), name.decl_name());
   std::vector<XUnion::Member> members;
   for (auto& member : xunion_declaration->members) {
     auto explicit_ordinal = std::move(member->ordinal);
@@ -1878,7 +1887,7 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
     if (member->maybe_used) {
       auto span = member->maybe_used->identifier->span();
       auto hashed_ordinal = std::make_unique<raw::Ordinal32>(
-          fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
+          fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.decl_name(), *member));
       if (hashed_ordinal->value <= kXunionOrdinalCutoff) {
         return Fail(member->span(),
                     "hashed ordinal is <= 512, and conflicts with explicit ordinal space, try "
@@ -2112,7 +2121,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   assert(TypeCanBeConst(type) &&
          "Compiler bug: resolving identifier constant to non-const-able type!");
 
-  auto decl = LookupDeclByName(identifier_constant->name.memberless_name());
+  auto decl = LookupDeclByName(identifier_constant->name.memberless_key());
   if (!decl)
     return false;
 
@@ -2207,8 +2216,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         std::ostringstream msg;
         msg << "mismatched named type assignment: cannot define a constant or default value of "
                "type "
-            << decl->name.name_full() << " using a value of type "
-            << identifier_type->type_decl->name.name_full();
+            << decl->name.full_name() << " using a value of type "
+            << identifier_type->type_decl->name.full_name();
         return Fail(msg.str());
       }
       if (!const_val->Convert(ConstantValuePrimitiveKind(primitive_type->subtype), &resolved_val))
@@ -2459,8 +2468,8 @@ bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
 
-Decl* Library::LookupDeclByName(const Name& name) const {
-  auto iter = declarations_.find(&name);
+Decl* Library::LookupDeclByName(Name::Key name) const {
+  auto iter = declarations_.find(name);
   if (iter == declarations_.end()) {
     return nullptr;
   }
@@ -2483,10 +2492,10 @@ bool Library::AddConstantDependencies(const Constant* constant, std::set<Decl*>*
   switch (constant->kind) {
     case Constant::Kind::kIdentifier: {
       auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
-      auto decl = LookupDeclByName(identifier->name.memberless_name());
+      auto decl = LookupDeclByName(identifier->name.memberless_key());
       if (decl == nullptr) {
         std::string message("Unable to find the constant named: ");
-        message += identifier->name.name_full();
+        message += identifier->name.full_name();
         return Fail(identifier->name, message.data());
       }
       out_edges->insert(decl);
@@ -2528,7 +2537,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
   auto maybe_add_decl = [this, &edges](const TypeConstructor* type_ctor) {
     for (;;) {
       const auto& name = type_ctor->name;
-      if (name.name_part() == "request") {
+      if (name.decl_name() == "request") {
         return;
       } else if (type_ctor->maybe_arg_type_ctor) {
         type_ctor = type_ctor->maybe_arg_type_ctor.get();
@@ -2664,7 +2673,7 @@ struct CmpDeclInLibrary {
     if (a_library != b_library) {
       return NameFlatName(a->name) < NameFlatName(b->name);
     } else {
-      return a->name.name_part() < b->name.name_part();
+      return a->name.decl_name() < b->name.decl_name();
     }
   }
 };
@@ -3094,7 +3103,7 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       // protocols.
       if (!decl) {
         std::string message("unknown type ");
-        message.append(name.name_full());
+        message.append(name.full_name());
         return Fail(name, message);
       }
       if (decl->kind != Decl::Kind::kProtocol)
@@ -3409,7 +3418,7 @@ bool Library::ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size
   if (!ResolveConstant(size_constant, &kSizeType)) {
     if (size_constant->kind == Constant::Kind::kIdentifier) {
       auto name = static_cast<IdentifierConstant*>(size_constant)->name;
-      if (name.library() == this && name.name_part() == "MAX" && !name.member_name()) {
+      if (name.library() == this && name.decl_name() == "MAX" && !name.member_name()) {
         size_constant->ResolveTo(std::make_unique<Size>(Size::Max()));
       }
     }
@@ -3529,8 +3538,9 @@ const std::set<Library*>& Library::dependencies() const { return dependencies_.d
 
 std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
   return std::make_unique<TypeConstructor>(
-      Name(nullptr, "uint32"), nullptr /* maybe_arg_type */, std::optional<types::HandleSubtype>(),
-      nullptr /* handle_rights */, nullptr /* maybe_size */, types::Nullability::kNonnullable);
+      Name::CreateIntrinsic("uint32"), nullptr /* maybe_arg_type */,
+      std::optional<types::HandleSubtype>(), nullptr /* handle_rights */, nullptr /* maybe_size */,
+      types::Nullability::kNonnullable);
 }
 
 }  // namespace flat

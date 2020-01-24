@@ -33,7 +33,7 @@ protocol Example {
   auto result_identifier =
       static_cast<const fidl::flat::IdentifierType*>(response_member->type_ctor->type);
   const fidl::flat::Union* result_union =
-      library.LookupUnion(std::string(result_identifier->name.name_part()));
+      library.LookupUnion(std::string(result_identifier->name.decl_name()));
   ASSERT_NOT_NULL(result_union);
   ASSERT_NOT_NULL(result_union->attributes);
   ASSERT_TRUE(result_union->attributes->HasAttribute("Result"));

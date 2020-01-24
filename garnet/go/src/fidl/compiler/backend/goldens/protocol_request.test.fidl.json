@@ -225,9 +225,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "generated",
-        "line": 2,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+        "line": 7,
+        "column": 19
       },
       "anonymous": true,
       "members": [
@@ -263,9 +263,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix3",
       "location": {
-        "filename": "generated",
-        "line": 4,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+        "line": 8,
+        "column": 26
       },
       "anonymous": true,
       "members": [
@@ -301,9 +301,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix4",
       "location": {
-        "filename": "generated",
-        "line": 5,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+        "line": 9,
+        "column": 14
       },
       "anonymous": true,
       "members": [
@@ -339,9 +339,9 @@
     {
       "name": "test.name/SomeLongAnonymousPrefix5",
       "location": {
-        "filename": "generated",
-        "line": 6,
-        "column": 1
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/protocol_request.test.fidl",
+        "line": 10,
+        "column": 21
       },
       "anonymous": true,
       "members": [

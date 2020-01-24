@@ -484,7 +484,7 @@ void TablesGenerator::GenerateForward(const coded::XUnionType& xunion_type) {
 void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
   // Generate forward declarations of coding tables for named declarations.
   for (const auto& decl : coded_types_generator->library()->declaration_order_) {
-    auto coded_type = coded_types_generator->CodedTypeFor(&decl->name);
+    auto coded_type = coded_types_generator->CodedTypeFor(decl->name);
     if (!coded_type)
       continue;
     switch (coded_type->kind) {
@@ -520,7 +520,7 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
 
   // Generate pointer coding tables necessary for nullable types.
   for (const auto& decl : coded_types_generator->library()->declaration_order_) {
-    auto coded_type = coded_types_generator->CodedTypeFor(&decl->name);
+    auto coded_type = coded_types_generator->CodedTypeFor(decl->name);
     if (!coded_type)
       continue;
     switch (coded_type->kind) {
@@ -610,7 +610,7 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
     if (decl->name.library() != coded_types_generator->library())
       continue;
 
-    auto coded_type = coded_types_generator->CodedTypeFor(&decl->name);
+    auto coded_type = coded_types_generator->CodedTypeFor(decl->name);
     if (!coded_type)
       continue;
     switch (coded_type->kind) {

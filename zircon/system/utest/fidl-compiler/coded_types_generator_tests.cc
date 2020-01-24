@@ -79,8 +79,8 @@ struct Vectors {
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
-  auto name_some_struct = fidl::flat::Name(library.library(), "SomeStruct");
-  auto type_some_struct = gen.CodedTypeFor(&name_some_struct);
+  auto name_some_struct = fidl::flat::Name::Key(library.library(), "SomeStruct");
+  auto type_some_struct = gen.CodedTypeFor(name_some_struct);
   ASSERT_NONNULL(type_some_struct);
   ASSERT_STR_EQ("example_SomeStruct", type_some_struct->coded_name.c_str());
   ASSERT_TRUE(type_some_struct->coding_needed);
@@ -244,8 +244,8 @@ xunion MyXUnion {
   auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
-  auto name = fidl::flat::Name(library.library(), "MyXUnion");
-  auto type = gen.CodedTypeFor(&name);
+  auto name = fidl::flat::Name::Key(library.library(), "MyXUnion");
+  auto type = gen.CodedTypeFor(name);
   ASSERT_NONNULL(type);
   ASSERT_STR_EQ("example_MyXUnion", type->coded_name.c_str());
   ASSERT_TRUE(type->coding_needed);
@@ -337,8 +337,8 @@ struct WithString {
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
-  auto name_with_string = fidl::flat::Name(library.library(), "WithString");
-  auto type_with_string = gen.CodedTypeFor(&name_with_string);
+  auto name_with_string = fidl::flat::Name::Key(library.library(), "WithString");
+  auto type_with_string = gen.CodedTypeFor(name_with_string);
   auto type_with_string_struct = static_cast<const fidl::coded::StructType*>(type_with_string);
   ASSERT_EQ(40, type_with_string_struct->size);
   ASSERT_EQ(0xFFFFFFFF, type_with_string_struct->max_out_of_line);
@@ -388,8 +388,8 @@ struct Complex {
   EXPECT_STR_EQ("int16", type3->coded_name.c_str());
   EXPECT_FALSE(type3->coding_needed);
 
-  auto name_bool_and_int32 = fidl::flat::Name(library.library(), "BoolAndInt32");
-  auto type_bool_and_int32 = gen.CodedTypeFor(&name_bool_and_int32);
+  auto name_bool_and_int32 = fidl::flat::Name::Key(library.library(), "BoolAndInt32");
+  auto type_bool_and_int32 = gen.CodedTypeFor(name_bool_and_int32);
   ASSERT_NONNULL(type_bool_and_int32);
   ASSERT_STR_EQ("example_BoolAndInt32", type_bool_and_int32->coded_name.c_str());
   auto type_bool_and_int32_struct =
@@ -402,8 +402,8 @@ struct Complex {
   EXPECT_EQ(type_bool_and_int32_struct->fields[1].offset, 4);
   EXPECT_EQ(type_bool_and_int32_struct->fields[1].padding, 0);
 
-  auto name_complex = fidl::flat::Name(library.library(), "Complex");
-  auto type_complex = gen.CodedTypeFor(&name_complex);
+  auto name_complex = fidl::flat::Name::Key(library.library(), "Complex");
+  auto type_complex = gen.CodedTypeFor(name_complex);
   ASSERT_NONNULL(type_complex);
   ASSERT_STR_EQ("example_Complex", type_complex->coded_name.c_str());
   auto type_complex_struct = static_cast<const fidl::coded::StructType*>(type_complex);
@@ -532,8 +532,8 @@ table MyTable {
       static_cast<const fidl::coded::PrimitiveType*>(type3_array->element_type);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type3_array_element_type->subtype);
 
-  auto name_table = fidl::flat::Name(library.library(), "MyTable");
-  auto type_table = gen.CodedTypeFor(&name_table);
+  auto name_table = fidl::flat::Name::Key(library.library(), "MyTable");
+  auto type_table = gen.CodedTypeFor(name_table);
   ASSERT_NONNULL(type_table);
   ASSERT_STR_EQ("example_MyTable", type_table->coded_name.c_str());
   ASSERT_TRUE(type_table->coding_needed);
@@ -572,8 +572,8 @@ bits MyBits : uint8 {
   gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
   ASSERT_EQ(0, gen.coded_types().size());
-  auto name_bits = fidl::flat::Name(library.library(), "MyBits");
-  auto type_bits = gen.CodedTypeFor(&name_bits);
+  auto name_bits = fidl::flat::Name::Key(library.library(), "MyBits");
+  auto type_bits = gen.CodedTypeFor(name_bits);
   ASSERT_NONNULL(type_bits);
   ASSERT_STR_EQ("example_MyBits", type_bits->coded_name.c_str());
   ASSERT_TRUE(type_bits->coding_needed);
@@ -604,8 +604,8 @@ enum MyEnum : uint16 {
   ASSERT_EQ(0, gen.coded_types().size());
 
   ASSERT_EQ(0, gen.coded_types().size());
-  auto name_enum = fidl::flat::Name(library.library(), "MyEnum");
-  auto type_enum = gen.CodedTypeFor(&name_enum);
+  auto name_enum = fidl::flat::Name::Key(library.library(), "MyEnum");
+  auto type_enum = gen.CodedTypeFor(name_enum);
   ASSERT_NONNULL(type_enum);
   ASSERT_STR_EQ("example_MyEnum", type_enum->coded_name.c_str());
   ASSERT_TRUE(type_enum->coding_needed);
@@ -639,8 +639,8 @@ union MyUnion {
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kOld);
 
-  auto name = fidl::flat::Name(library.library(), "MyUnion");
-  auto type = gen.CodedTypeFor(&name);
+  auto name = fidl::flat::Name::Key(library.library(), "MyUnion");
+  auto type = gen.CodedTypeFor(name);
   ASSERT_NONNULL(type);
   ASSERT_STR_EQ("example_MyUnion", type->coded_name.c_str());
   ASSERT_TRUE(type->coding_needed);
@@ -695,8 +695,8 @@ struct MyStruct {
 
     ASSERT_NE(0, gen.coded_types().size());
 
-    auto name_struct = fidl::flat::Name(library.library(), "MyStruct");
-    auto coded_type = gen.CodedTypeFor(&name_struct);
+    auto name_struct = fidl::flat::Name::Key(library.library(), "MyStruct");
+    auto coded_type = gen.CodedTypeFor(name_struct);
     ASSERT_NONNULL(coded_type);
     ASSERT_EQ(fidl::coded::Type::Kind::kStruct, coded_type->kind);
     auto coded_struct_type = static_cast<const fidl::coded::StructType*>(coded_type);
@@ -758,8 +758,8 @@ protocol MyProtocol {
 
     ASSERT_NE(0, gen.coded_types().size());
 
-    auto name_protocol = fidl::flat::Name(library.library(), "MyProtocol");
-    auto coded_type = gen.CodedTypeFor(&name_protocol);
+    auto name_protocol = fidl::flat::Name::Key(library.library(), "MyProtocol");
+    auto coded_type = gen.CodedTypeFor(name_protocol);
     ASSERT_NONNULL(coded_type);
     ASSERT_EQ(fidl::coded::Type::Kind::kProtocol, coded_type->kind);
     auto coded_protocol_type = static_cast<const fidl::coded::ProtocolType*>(coded_type);

@@ -91,9 +91,9 @@
     {
       "name": "middle/SomeLongAnonymousPrefix1",
       "location": {
-        "filename": "generated",
-        "line": 2,
-        "column": 1
+        "filename": "middle.test.fidl",
+        "line": 7,
+        "column": 17
       },
       "anonymous": true,
       "members": [

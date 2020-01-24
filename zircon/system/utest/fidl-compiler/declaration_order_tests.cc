@@ -17,7 +17,7 @@
 
 #include "test_library.h"
 
-#define DECL_NAME(D) static_cast<const std::string>(D->name.name_part()).c_str()
+#define DECL_NAME(D) static_cast<const std::string>(D->name.decl_name()).c_str()
 
 #define ASSERT_DECL_NAME(D, N) ASSERT_STR_EQ(N, DECL_NAME(D));
 
