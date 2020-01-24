@@ -2,7 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Development"
+- title: "Overview"
   path: /docs/development/README.md
 - heading: "Set up"
 - title: "Get source code"
@@ -57,7 +57,7 @@ toc:
 - title: "Publish prebuilt packages"
   section:
   - include: /docs/development/prebuilt_packages/_toc.yaml
-- heading: "Guides"
+- heading: "Others"
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml
