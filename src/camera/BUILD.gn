@@ -213,7 +213,7 @@ test_package("camera_tests") {
     {
       name = "device_watcher_test"
       manifest = "//src/camera/bin/device_watcher/test/test.cmx"
-      environments = basic_envs
+      environments = [ sherlock_env ]
     },
 
     # Put additional camera tests here

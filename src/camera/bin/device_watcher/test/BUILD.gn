@@ -15,5 +15,6 @@ executable("test") {
     "//src/camera/bin/device_watcher",
     "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/testing/loop_fixture",
+    "//zircon/public/lib/fs",
   ]
 }
