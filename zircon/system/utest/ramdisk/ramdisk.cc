@@ -201,7 +201,7 @@ bool RamdiskStatsTest(void) {
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
   ASSERT_EQ(
@@ -701,7 +701,7 @@ bool RamdiskTestFifoBasic(void) {
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
   ASSERT_EQ(
@@ -774,7 +774,7 @@ bool RamdiskTestFifoNoGroup(void) {
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
   ASSERT_EQ(
@@ -849,7 +849,7 @@ bool RamdiskTestFifoNoGroup(void) {
 typedef struct {
   uint64_t vmo_size;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   std::unique_ptr<uint8_t[]> buf;
 } TestVmoObject;
 
@@ -1460,7 +1460,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
   ASSERT_EQ(vmo.write(buf.get(), 0, vmo_size), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
   ASSERT_EQ(
@@ -1622,7 +1622,7 @@ bool RamdiskTestFifoSleepDeferred(void) {
   ASSERT_EQ(vmo.write(buf.get(), 0, kVmoSize), ZX_OK);
 
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
   ASSERT_EQ(

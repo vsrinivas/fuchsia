@@ -85,7 +85,7 @@ class Server {
   // operations are in-flight.
   void InQueueDrainer();
 
-  zx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
+  zx_status_t FindVmoIdLocked(vmoid_t* out) TA_REQ(server_lock_);
 
   fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
   block_info_t info_;

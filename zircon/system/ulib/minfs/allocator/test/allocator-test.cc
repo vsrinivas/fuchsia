@@ -27,7 +27,7 @@ class FakeStorage : public AllocatorStorage {
   ~FakeStorage() {}
 
 #ifdef __Fuchsia__
-  zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* vmoid) final {
+  zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* vmoid) final {
     return ZX_OK;
   }
 #endif

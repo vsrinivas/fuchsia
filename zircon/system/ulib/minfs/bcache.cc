@@ -62,7 +62,7 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
 }
 
 zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx_status_t status = device()->BlockAttachVmo(vmo, &vmoid);
   *out = vmoid.id;
   return status;

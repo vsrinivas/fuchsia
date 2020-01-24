@@ -129,7 +129,7 @@ class Partition final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    ::llcpp::fuchsia::hardware::block::VmoID* vmoid;
+    ::llcpp::fuchsia::hardware::block::VmoId* vmoid;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -780,8 +780,8 @@ class Partition final {
 
     class AttachVmoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid);
-      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::VmoId* vmoid);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::VmoId* vmoid);
       void Reply(::fidl::DecodedMessage<AttachVmoResponse> params);
 
      protected:

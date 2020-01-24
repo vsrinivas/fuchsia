@@ -66,11 +66,11 @@ struct BlockStats {
 // A client-identifier to a VMO.
 // This value may be utilized by clients to refer to a VMO which is being held
 // by a block device server.
-struct VmoID {
+struct VmoId {
     uint16 id;
 };
 
-// Dummy value reserved for "invalid" VmoID. Will never be allocated by the server,
+// Dummy value reserved for "invalid" VmoId. Will never be allocated by the server,
 // and may be utilized as a local value for an unallocated ID.
 const uint16 VMOID_INVALID = 0;
 
@@ -89,7 +89,7 @@ protocol Block {
     GetFifo() -> (zx.status status, handle<fifo>? fifo);
 
     // Attaches a VMO to the currently running FIFO server.
-    AttachVmo(handle<vmo> vmo) -> (zx.status status, VmoID? vmoid);
+    AttachVmo(handle<vmo> vmo) -> (zx.status status, VmoId? vmoid);
 
     // Shuts down the fifo server, waiting for it to be ready to be started again.
     //

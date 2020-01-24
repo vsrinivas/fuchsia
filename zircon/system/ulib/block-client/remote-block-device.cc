@@ -100,7 +100,7 @@ zx_status_t RemoteBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* ou
 }
 
 zx_status_t RemoteBlockDevice::BlockAttachVmo(const zx::vmo& vmo,
-                                              fuchsia_hardware_block_VmoID* out_vmoid) {
+                                              fuchsia_hardware_block_VmoId* out_vmoid) {
   zx::vmo xfer_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
   if (status != ZX_OK) {

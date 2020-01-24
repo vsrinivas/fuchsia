@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fvm/client.h>
-
 #include <block-client/cpp/block-device.h>
+#include <fvm/client.h>
 #include <zxtest/zxtest.h>
 
 namespace fvm {
@@ -27,7 +26,7 @@ class MockDeviceBase : public BlockDevice {
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t BlockAttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* out_vmoid) final {
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* out_vmoid) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final {

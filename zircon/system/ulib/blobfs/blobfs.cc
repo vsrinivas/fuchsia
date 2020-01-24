@@ -512,7 +512,7 @@ zx_status_t Blobfs::RunOperation(const storage::Operation& operation,
 groupid_t Blobfs::BlockGroupID() { return group_registry_.GroupID(); }
 
 zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx_status_t status = Device()->BlockAttachVmo(vmo, &vmoid);
   if (status != ZX_OK) {
     return status;

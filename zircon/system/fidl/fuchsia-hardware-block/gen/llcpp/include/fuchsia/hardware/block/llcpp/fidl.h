@@ -28,7 +28,7 @@ namespace hardware {
 namespace block {
 
 struct BlockStats;
-struct VmoID;
+struct VmoId;
 class Ftl;
 class Block;
 struct BlockInfo;
@@ -56,10 +56,10 @@ struct BlockStats {
   ::llcpp::fuchsia::storage::metrics::CallStat barrier_after = {};
 };
 
-extern "C" const fidl_type_t v1_fuchsia_hardware_block_VmoIDTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_VmoIdTable;
 
-struct VmoID {
-  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_VmoIDTable;
+struct VmoId {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_VmoIdTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
@@ -335,7 +335,7 @@ class Block final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
-    ::llcpp::fuchsia::hardware::block::VmoID* vmoid;
+    ::llcpp::fuchsia::hardware::block::VmoId* vmoid;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockAttachVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
@@ -788,8 +788,8 @@ class Block final {
 
     class AttachVmoCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid);
-      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid);
+      void Reply(int32_t status, ::llcpp::fuchsia::hardware::block::VmoId* vmoid);
+      void Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::VmoId* vmoid);
       void Reply(::fidl::DecodedMessage<AttachVmoResponse> params);
 
      protected:
@@ -918,10 +918,10 @@ static_assert(offsetof(::llcpp::fuchsia::hardware::block::BlockStats, barrier_af
 static_assert(sizeof(::llcpp::fuchsia::hardware::block::BlockStats) == ::llcpp::fuchsia::hardware::block::BlockStats::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::block::VmoID> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::block::VmoID>);
-static_assert(offsetof(::llcpp::fuchsia::hardware::block::VmoID, id) == 0);
-static_assert(sizeof(::llcpp::fuchsia::hardware::block::VmoID) == ::llcpp::fuchsia::hardware::block::VmoID::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::hardware::block::VmoId> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::block::VmoId>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::VmoId, id) == 0);
+static_assert(sizeof(::llcpp::fuchsia::hardware::block::VmoId) == ::llcpp::fuchsia::hardware::block::VmoId::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::block::Ftl::FormatResponse> : public std::true_type {};

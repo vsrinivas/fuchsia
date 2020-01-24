@@ -157,7 +157,7 @@ zx_status_t Server::Read(block_fifo_request_t* requests, size_t* count) {
   }
 }
 
-zx_status_t Server::FindVmoIDLocked(vmoid_t* out) {
+zx_status_t Server::FindVmoIdLocked(vmoid_t* out) {
   for (vmoid_t i = last_id_; i < std::numeric_limits<vmoid_t>::max(); i++) {
     if (!tree_.find(i).IsValid()) {
       *out = i;
@@ -179,7 +179,7 @@ zx_status_t Server::AttachVmo(zx::vmo vmo, vmoid_t* out) {
   zx_status_t status;
   vmoid_t id;
   fbl::AutoLock server_lock(&server_lock_);
-  if ((status = FindVmoIDLocked(&id)) != ZX_OK) {
+  if ((status = FindVmoIdLocked(&id)) != ZX_OK) {
     return status;
   }
 

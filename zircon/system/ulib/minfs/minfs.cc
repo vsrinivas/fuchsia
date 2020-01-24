@@ -1272,7 +1272,7 @@ zx_status_t Minfs::InitializeUnjournalledWriteback() {
 }
 
 zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out_vmo, size_t blocks,
-                                 fuchsia_hardware_block_VmoID* out_vmoid) {
+                                 fuchsia_hardware_block_VmoId* out_vmoid) {
   zx_status_t status = zx::vmo::create(blocks * kMinfsBlockSize, 0, out_vmo);
   if (status != ZX_OK) {
     return status;
@@ -1298,7 +1298,7 @@ zx_status_t ReadWriteDataHelper(uint32_t opcode, fs::TransactionHandler* transac
   }
 
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx_status_t status = CreateAndRegisterVmo(device, &vmo, 1, &vmoid);
   if (status != ZX_OK) {
     return status;

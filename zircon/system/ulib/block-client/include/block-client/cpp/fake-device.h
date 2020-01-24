@@ -78,7 +78,7 @@ class FakeBlockDevice : public BlockDevice {
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) override;
   zx_status_t ReadBlock(uint64_t block_num, uint64_t fs_block_size, void* block) const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override;
-  zx_status_t BlockAttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoID* out_vmoid) final;
+  zx_status_t BlockAttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* out_vmoid) final;
 
  protected:
   // Resizes the block device to be at least |new_size| bytes.

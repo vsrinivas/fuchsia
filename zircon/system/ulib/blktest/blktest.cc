@@ -205,7 +205,7 @@ bool blkdev_test_fifo_basic(void) {
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   ASSERT_EQ(
       fuchsia_hardware_block_BlockAttachVmo(channel->get(), xfer_vmo.release(), &status, &vmoid),
       ZX_OK);
@@ -279,7 +279,7 @@ bool blkdev_test_fifo_whole_disk(void) {
   // Send a handle to the vmo to the block device, get a vmoid which identifies it
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   ASSERT_EQ(
       fuchsia_hardware_block_BlockAttachVmo(channel->get(), xfer_vmo.release(), &status, &vmoid),
       ZX_OK);
@@ -320,7 +320,7 @@ bool blkdev_test_fifo_whole_disk(void) {
 typedef struct {
   uint64_t vmo_size;
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   std::unique_ptr<uint8_t[]> buf;
 } test_vmo_object_t;
 

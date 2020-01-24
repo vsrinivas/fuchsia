@@ -813,7 +813,7 @@ void Block::Interface::GetFifoCompleterBase::Reply(::fidl::DecodedMessage<GetFif
 }
 
 
-void Block::Interface::AttachVmoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid) {
+void Block::Interface::AttachVmoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::hardware::block::VmoId* vmoid) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AttachVmoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   AttachVmoResponse _response = {};
@@ -833,7 +833,7 @@ void Block::Interface::AttachVmoCompleterBase::Reply(int32_t status, ::llcpp::fu
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void Block::Interface::AttachVmoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::VmoID* vmoid) {
+void Block::Interface::AttachVmoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::llcpp::fuchsia::hardware::block::VmoId* vmoid) {
   if (_buffer.capacity() < AttachVmoResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;

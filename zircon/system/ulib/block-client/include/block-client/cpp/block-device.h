@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include <block-client/cpp/client.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
+
+#include <block-client/cpp/client.h>
 
 namespace block_client {
 
@@ -32,7 +33,7 @@ class BlockDevice {
   // Block IPC.
   virtual zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;
   virtual zx_status_t BlockAttachVmo(const zx::vmo& vmo,
-                                     fuchsia_hardware_block_VmoID* out_vmoid) = 0;
+                                     fuchsia_hardware_block_VmoId* out_vmoid) = 0;
 
   // Volume IPC.
   //

@@ -306,7 +306,7 @@ class VmoBuf {
 
     fzl::UnownedFdioCaller disk_connection(client->fd());
     zx::unowned_channel channel(disk_connection.borrow_channel());
-    fuchsia_hardware_block_VmoID vmoid;
+    fuchsia_hardware_block_VmoId vmoid;
     zx_status_t status;
     ASSERT_EQ(
         fuchsia_hardware_block_BlockAttachVmo(channel->get(), xfer_vmo.release(), &status, &vmoid),
@@ -332,13 +332,13 @@ class VmoBuf {
   friend VmoClient;
 
   VmoBuf(fbl::RefPtr<VmoClient> client, zx::vmo vmo, std::unique_ptr<uint8_t[]> buf,
-         fuchsia_hardware_block_VmoID vmoid)
+         fuchsia_hardware_block_VmoId vmoid)
       : client_(std::move(client)), vmo_(std::move(vmo)), buf_(std::move(buf)), vmoid_(vmoid) {}
 
   fbl::RefPtr<VmoClient> client_;
   zx::vmo vmo_;
   std::unique_ptr<uint8_t[]> buf_;
-  fuchsia_hardware_block_VmoID vmoid_;
+  fuchsia_hardware_block_VmoId vmoid_;
 };
 
 void VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {

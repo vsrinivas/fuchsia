@@ -4,22 +4,22 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <block-client/client.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
-#include <ramdevice-client/ramdisk.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <block-client/client.h>
+#include <ramdevice-client/ramdisk.h>
 
 static uint64_t number(const char* str) {
   char* end;
@@ -129,7 +129,7 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
     return ZX_TIME_INFINITE;
   }
 
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   io_status = fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status, &vmoid);
   if (io_status != ZX_OK || status != ZX_OK) {
     fprintf(stderr, "error: cannot attach vmo for '%s'\n", dev);

@@ -449,7 +449,7 @@ zx_status_t BlockDevice::FidlBlockGetFifo(fidl_txn_t* txn) {
 }
 
 zx_status_t BlockDevice::FidlBlockAttachVmo(zx_handle_t vmo, fidl_txn_t* txn) {
-  fuchsia_hardware_block_VmoID vmoid = {fuchsia_hardware_block_VMOID_INVALID};
+  fuchsia_hardware_block_VmoId vmoid = {fuchsia_hardware_block_VMOID_INVALID};
   zx_status_t status = manager_.AttachVmo(zx::vmo(vmo), &vmoid.id);
   return fuchsia_hardware_block_BlockAttachVmo_reply(txn, status, &vmoid);
 }

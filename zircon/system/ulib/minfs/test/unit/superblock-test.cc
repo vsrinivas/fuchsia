@@ -4,13 +4,12 @@
 
 // Tests minfs backup superblock behavior.
 
-#include <minfs/superblock.h>
-
 #include <lib/cksum.h>
 #include <unistd.h>
 
 #include <block-client/cpp/fake-device.h>
 #include <minfs/fsck.h>
+#include <minfs/superblock.h>
 #include <zxtest/zxtest.h>
 
 #include "minfs-private.h"
@@ -59,7 +58,7 @@ class MockTransactionHandler : public fs::TransactionHandler {
 };
 
 void CreateAndRegisterVmo(block_client::BlockDevice* device, size_t blocks, zx::vmo* vmo,
-                          fuchsia_hardware_block_VmoID* vmoid) {
+                          fuchsia_hardware_block_VmoId* vmoid) {
   fuchsia_hardware_block_BlockInfo info = {};
   ASSERT_OK(device->BlockGetInfo(&info));
   ASSERT_OK(zx::vmo::create(blocks * info.block_size, 0, vmo));
@@ -129,7 +128,7 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
 
   zx::vmo vmo;
   block_fifo_request_t request[2];
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(block, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(block, kMinfsBlockSize, kMinfsBlockSize));
@@ -208,7 +207,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   // Write superblock and backup to disk.
   block_fifo_request_t request[2];
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
@@ -252,7 +251,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   // Write superblock and backup to disk.
   block_fifo_request_t request[2];
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));
@@ -288,7 +287,7 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   // Write corrupted superblock and backup to disk.
   block_fifo_request_t request[2];
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   ASSERT_NO_FAILURES(CreateAndRegisterVmo(&device, 2, &vmo, &vmoid));
   ASSERT_OK(vmo.write(&info, 0, kMinfsBlockSize));
   ASSERT_OK(vmo.write(&backup, kMinfsBlockSize, kMinfsBlockSize));

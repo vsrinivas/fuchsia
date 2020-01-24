@@ -121,7 +121,7 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
     return status;
   }
 
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   status = device->BlockAttachVmo(vmo, &vmoid);
   if (status != ZX_OK) {
     return status;

@@ -471,8 +471,8 @@ class VnodeMinfs : public fs::Vnode,
   // TODO(fxb/42096).
   std::unique_ptr<fzl::ResizeableVmoMapper> vmo_indirect_;
 
-  fuchsia_hardware_block_VmoID vmoid_{};
-  fuchsia_hardware_block_VmoID vmoid_indirect_{};
+  fuchsia_hardware_block_VmoId vmoid_{};
+  fuchsia_hardware_block_VmoId vmoid_indirect_{};
 
   fs::WatcherContainer watcher_{};
 #endif

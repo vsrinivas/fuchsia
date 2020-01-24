@@ -62,7 +62,7 @@ zx_status_t InspectorTransactionHandler::RunOperation(const storage::Operation& 
 }
 
 zx_status_t InspectorTransactionHandler::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   zx_status_t status = device_->BlockAttachVmo(vmo, &vmoid);
   *out = vmoid.id;
   return status;

@@ -137,21 +137,21 @@ bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume:
 
   crypto::digest::Algorithm digest;
   switch (version) {
-  case Volume::kAES256_XTS_SHA256:
+    case Volume::kAES256_XTS_SHA256:
       digest = crypto::digest::kSHA256;
       break;
-  default:
+    default:
       digest = crypto::digest::kUninitialized;
       break;
   }
 
-    size_t digest_len;
+  size_t digest_len;
   zx_status_t rc;
   key_.Clear();
-    if ((rc = crypto::digest::GetDigestLen(digest, &digest_len)) != ZX_OK ||
+  if ((rc = crypto::digest::GetDigestLen(digest, &digest_len)) != ZX_OK ||
       (rc = key_.Generate(digest_len)) != ZX_OK) {
-        return rc;
-    }
+    return rc;
+  }
 
   END_HELPER;
 }
@@ -195,7 +195,8 @@ bool TestDevice::Rebind() {
     // itself.
     fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
     ASSERT_NONNULL(io);
-    zx_status_t call_status = ZX_OK;;
+    zx_status_t call_status = ZX_OK;
+    ;
     auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(
         zx::unowned_channel(fdio_unsafe_borrow_channel(io)),
         ::fidl::StringView(kFvmDriver, strlen(kFvmDriver)));
@@ -475,7 +476,7 @@ bool TestDevice::Connect() {
   ASSERT_OK(zx::vmo::create(size(), 0, &vmo_));
   zx::vmo xfer_vmo;
   ASSERT_EQ(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   ASSERT_OK(fuchsia_hardware_block_BlockAttachVmo(zxcrypt_channel()->get(), xfer_vmo.release(),
                                                   &status, &vmoid));
   ASSERT_OK(status);

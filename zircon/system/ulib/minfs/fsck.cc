@@ -775,7 +775,7 @@ zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transacti
 #endif
 #ifdef __Fuchsia__
   zx::vmo vmo;
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   const size_t kVmoBlocks = 1;
   zx_status_t status = CreateAndRegisterVmo(device, &vmo, kVmoBlocks, &vmoid);
   if (status != ZX_OK) {
@@ -967,7 +967,7 @@ zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, 
   }
   fs::ReadTxn read_transaction(transaction_handler);
 #ifdef __Fuchsia__
-  fuchsia_hardware_block_VmoID map_vmoid;
+  fuchsia_hardware_block_VmoId map_vmoid;
   status = device->BlockAttachVmo(bitmap.StorageUnsafe()->GetVmo(), &map_vmoid);
   if (status != ZX_OK) {
     return status;

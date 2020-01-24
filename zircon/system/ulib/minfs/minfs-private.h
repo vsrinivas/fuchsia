@@ -444,7 +444,7 @@ class Minfs :
 #ifdef __Fuchsia__
 // Create and register a VMO for writes.
 zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out_vmo, size_t blocks,
-                                 fuchsia_hardware_block_VmoID* out_vmoid);
+                                 fuchsia_hardware_block_VmoId* out_vmoid);
 
 // Writes |bytes| bytes of |data| to disk at block |block_num|. |bytes| must not exceed
 // kMinfsBlockSize. If |bytes| < kMinfsBlockSize, kMinfsBlockSize bytes will still be

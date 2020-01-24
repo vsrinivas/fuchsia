@@ -2,25 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
-
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/fdio.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/xorshiftrand.h>
-#include <perftest/results.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+#include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <atomic>
+
+#include <perftest/results.h>
 
 static uint64_t number(const char* str) {
   char* end;
@@ -70,7 +71,7 @@ typedef struct {
   zx_handle_t vmo;
   zx_handle_t fifo;
   reqid_t reqid;
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   size_t bufsz;
   fuchsia_hardware_block_BlockInfo info;
 } blkdev_t;

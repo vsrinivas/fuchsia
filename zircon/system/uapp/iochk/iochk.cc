@@ -201,7 +201,7 @@ class BlockChecker : public Checker {
       return status;
     }
 
-    fuchsia_hardware_block_VmoID vmoid;
+    fuchsia_hardware_block_VmoId vmoid;
     zx_status_t io_status = fuchsia_hardware_block_BlockAttachVmo(caller.borrow_channel(),
                                                                   dup.release(), &status, &vmoid);
     if (io_status != ZX_OK || status != ZX_OK) {

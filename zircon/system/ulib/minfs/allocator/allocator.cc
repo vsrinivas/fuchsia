@@ -22,7 +22,7 @@ Allocator::~Allocator() {
 
 zx_status_t Allocator::LoadStorage(fs::ReadTxn* txn) {
   AutoLock lock(&lock_);
-  fuchsia_hardware_block_VmoID map_vmoid;
+  fuchsia_hardware_block_VmoId map_vmoid;
   zx_status_t status = storage_->AttachVmo(map_.StorageUnsafe()->GetVmo(), &map_vmoid);
   if (status != ZX_OK) {
     return status;

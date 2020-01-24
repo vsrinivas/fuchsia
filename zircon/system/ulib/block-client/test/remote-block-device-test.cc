@@ -107,7 +107,7 @@ class MockBlockDevice {
   }
 
   zx_status_t BlockAttachVmo(zx_handle_t vmo, fidl_txn_t* txn) {
-    fuchsia_hardware_block_VmoID vmoid = {kGoldenVmoid};
+    fuchsia_hardware_block_VmoId vmoid = {kGoldenVmoid};
     return fuchsia_hardware_block_BlockAttachVmo_reply(txn, ZX_OK, &vmoid);
   }
 
@@ -176,7 +176,7 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
-  fuchsia_hardware_block_VmoID vmoid;
+  fuchsia_hardware_block_VmoId vmoid;
   ASSERT_OK(device->BlockAttachVmo(vmo, &vmoid));
   ASSERT_EQ(kGoldenVmoid, vmoid.id);
 
