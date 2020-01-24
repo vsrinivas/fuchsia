@@ -90,91 +90,12 @@ pub struct KeyboardBinding {
     device_descriptor: KeyboardDeviceDescriptor,
 }
 
-#[async_trait]
-impl input_device::InputDeviceBinding for KeyboardBinding {
-    fn input_event_sender(&self) -> Sender<input_device::InputEvent> {
-        self.event_sender.clone()
-    }
-
-    fn input_event_stream(&mut self) -> &mut Receiver<input_device::InputEvent> {
-        return &mut self.event_receiver;
-    }
-
-    fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Keyboard(self.device_descriptor.clone())
-    }
-
-    fn process_reports(
-        report: InputReport,
-        previous_report: Option<InputReport>,
-        device_descriptor: &input_device::InputDeviceDescriptor,
-        input_event_sender: &mut Sender<input_device::InputEvent>,
-    ) -> Option<InputReport> {
-        let new_keys = match KeyboardBinding::parse_pressed_keys(&report) {
-            Some(keys) => keys,
-            None => {
-                // It's OK for the report to contain an empty vector of keys, but it's not OK for
-                // the report to not have the appropriate fields set.
-                //
-                // In this case the report is treated as malformed, and the previous report is not
-                // updated.
-                fx_log_err!("Failed to parse keyboard keys: {:?}", report);
-                return previous_report;
-            }
-        };
-
-        // For the previous keys it's OK to not be able to parse the keys, since an empty vector is
-        // a sensible default (this is what happens when there is no previous report).
-        let previous_keys: Vec<Key> = previous_report
-            .as_ref()
-            .and_then(|unwrapped_report| KeyboardBinding::parse_pressed_keys(&unwrapped_report))
-            .unwrap_or_default();
-
-        KeyboardBinding::send_key_events(
-            &new_keys,
-            &previous_keys,
-            device_descriptor.clone(),
-            input_event_sender.clone(),
-        );
-
-        Some(report)
-    }
-
-    async fn any_input_device() -> Result<InputDeviceProxy, Error>
-    where
-        Self: Sized,
-    {
-        let mut devices = Self::all_devices().await?;
-        devices.pop().ok_or(format_err!("Couldn't find a default keyboard."))
-    }
-
-    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>
-    where
-        Self: Sized,
-    {
-        input_device::all_devices(input_device::InputDeviceType::Keyboard).await
-    }
-
-    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
-        match device.get_descriptor().await?.keyboard {
-            Some(fidl_fuchsia_input_report::KeyboardDescriptor {
-                input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys }),
-                output: _,
-            }) => {
-                let (event_sender, event_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-                Ok(KeyboardBinding {
-                    event_sender,
-                    event_receiver,
-                    device_descriptor: KeyboardDeviceDescriptor { keys: keys.unwrap_or_default() },
-                })
-            }
-            device_descriptor => Err(format_err!(
-                "Keyboard Device Descriptor failed to parse: \n {:?}",
-                device_descriptor
-            )),
-        }
-    }
+/// Retrieves a list of proxies to all keyboard devices.
+///
+/// # Errors
+/// If no keyboard devices exist.
+pub async fn all_keyboard_devices() -> Result<Vec<InputDeviceProxy>, Error> {
+    input_device::all_devices(input_device::InputDeviceType::Keyboard).await
 }
 
 /// Returns a vector of [`KeyboardBindings`] for all currently connected keyboards.
@@ -182,12 +103,11 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
 /// # Errors
 /// If there was an error binding to any keyboard.
 pub async fn all_keyboard_bindings() -> Result<Vec<KeyboardBinding>, Error> {
-    let device_proxies = input_device::all_devices(input_device::InputDeviceType::Keyboard).await?;
+    let device_proxies = all_keyboard_devices().await?;
     let mut device_bindings: Vec<KeyboardBinding> = vec![];
 
     for device_proxy in device_proxies {
-        let device_binding: KeyboardBinding =
-            input_device::InputDeviceBinding::new(device_proxy).await?;
+        let device_binding: KeyboardBinding = KeyboardBinding::new(device_proxy).await?;
         device_bindings.push(device_binding);
     }
 
@@ -215,7 +135,62 @@ pub async fn all_keyboard_events() -> Result<Receiver<input_device::InputEvent>,
     Ok(event_receiver)
 }
 
+/// Retrieves a proxy to the first available keyboard input device.
+///
+/// # Errors
+/// If no keyboard device exists.
+pub async fn any_keyboard_device() -> Result<InputDeviceProxy, Error> {
+    let mut devices = all_keyboard_devices().await?;
+    devices.pop().ok_or(format_err!("Couldn't find a default keyboard."))
+}
+
+/// Returns a [`KeyboardBinding`] to the first avaialble keyboard input device.
+///
+/// # Errors
+/// If no keyboard device exists.
+pub async fn any_keyboard_binding() -> Result<KeyboardBinding, Error> {
+    let device_proxy = any_keyboard_device().await?;
+    KeyboardBinding::new(device_proxy).await
+}
+
+#[async_trait]
+impl input_device::InputDeviceBinding for KeyboardBinding {
+    fn input_event_sender(&self) -> Sender<input_device::InputEvent> {
+        self.event_sender.clone()
+    }
+
+    fn input_event_stream(&mut self) -> &mut Receiver<input_device::InputEvent> {
+        return &mut self.event_receiver;
+    }
+
+    fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Keyboard(self.device_descriptor.clone())
+    }
+}
+
 impl KeyboardBinding {
+    /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
+    ///
+    /// The binding will start listening for input reports immediately, and they
+    /// can be read from [`input_event_stream()`].
+    ///
+    /// # Parameters
+    /// `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
+    ///
+    /// # Errors
+    /// If there was an error binding to the proxy.
+    pub async fn new(device_proxy: InputDeviceProxy) -> Result<Self, Error> {
+        let device_binding = Self::bind_device(&device_proxy).await?;
+        input_device::initialize_report_stream(
+            device_proxy,
+            device_binding.get_device_descriptor(),
+            device_binding.input_event_sender(),
+            Self::process_reports,
+        );
+
+        Ok(device_binding)
+    }
+
     /// Converts a vector of keyboard keys to the appropriate [`Modifiers`] bitflags.
     ///
     /// For example, if `keys` contains `Key::LeftAlt`, the bitflags will contain
@@ -251,6 +226,87 @@ impl KeyboardBinding {
             return None;
         }
         Some(modifiers)
+    }
+
+    /// Binds the provided input device to a new instance of `Self`.
+    ///
+    /// # Parameters
+    /// - `device`: The device to use to initalize the binding.
+    ///
+    /// # Errors
+    /// If the device descriptor could not be retrieved, or the descriptor could
+    /// not be parsed correctly.
+    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
+        match device.get_descriptor().await?.keyboard {
+            Some(fidl_fuchsia_input_report::KeyboardDescriptor {
+                input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys }),
+                output: _,
+            }) => {
+                let (event_sender, event_receiver) =
+                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+                Ok(KeyboardBinding {
+                    event_sender,
+                    event_receiver,
+                    device_descriptor: KeyboardDeviceDescriptor { keys: keys.unwrap_or_default() },
+                })
+            }
+            device_descriptor => Err(format_err!(
+                "Keyboard Device Descriptor failed to parse: \n {:?}",
+                device_descriptor
+            )),
+        }
+    }
+
+    /// Parses an [`InputReport`] into one or more [`InputEvent`]s.
+    ///
+    /// The [`InputEvent`]s are sent to the device binding owner via [`sender`].
+    ///
+    /// # Parameters
+    /// `report`: The incoming [`InputReport`].
+    /// `previous_report`: The previous [`InputReport`] seen for the same device. This can be
+    ///                    used to determine, for example, which keys are no longer present in
+    ///                    a keyboard report to generate key released events. If `None`, no
+    ///                    previous report was found.
+    /// `device_descriptor`: The descriptor for the input device generating the input reports.
+    /// `input_event_sender`: The sender for the device binding's input event stream.
+    ///
+    /// # Returns
+    /// An [`InputReport`] which will be passed to the next call to [`process_reports`], as
+    /// [`previous_report`]. If `None`, the next call's [`previous_report`] will be `None`.
+    fn process_reports(
+        report: InputReport,
+        previous_report: Option<InputReport>,
+        device_descriptor: &input_device::InputDeviceDescriptor,
+        input_event_sender: &mut Sender<input_device::InputEvent>,
+    ) -> Option<InputReport> {
+        let new_keys = match KeyboardBinding::parse_pressed_keys(&report) {
+            Some(keys) => keys,
+            None => {
+                // It's OK for the report to contain an empty vector of keys, but it's not OK for
+                // the report to not have the appropriate fields set.
+                //
+                // In this case the report is treated as malformed, and the previous report is not
+                // updated.
+                fx_log_err!("Failed to parse keyboard keys: {:?}", report);
+                return previous_report;
+            }
+        };
+
+        // For the previous keys it's OK to not be able to parse the keys, since an empty vector is
+        // a sensible default (this is what happens when there is no previous report).
+        let previous_keys: Vec<Key> = previous_report
+            .as_ref()
+            .and_then(|unwrapped_report| KeyboardBinding::parse_pressed_keys(&unwrapped_report))
+            .unwrap_or_default();
+
+        KeyboardBinding::send_key_events(
+            &new_keys,
+            &previous_keys,
+            device_descriptor.clone(),
+            input_event_sender.clone(),
+        );
+
+        Some(report)
     }
 
     /// Parses the currently pressed keys from an input report.

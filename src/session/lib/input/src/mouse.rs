@@ -80,6 +80,69 @@ pub struct MouseDeviceDescriptor {
     pub device_id: u32,
 }
 
+/// Retrieves a list of proxies to all mouse devices.
+///
+/// # Errors
+/// If no mouse devices exist.
+pub async fn all_mouse_devices() -> Result<Vec<InputDeviceProxy>, Error> {
+    input_device::all_devices(input_device::InputDeviceType::Mouse).await
+}
+
+/// Returns a vector of [`MouseBindings`] for all currently connected mice.
+///
+/// # Errors
+/// If there was an error binding to any mouse.
+pub async fn all_mouse_bindings() -> Result<Vec<MouseBinding>, Error> {
+    let device_proxies = all_mouse_devices().await?;
+    let mut device_bindings: Vec<MouseBinding> = vec![];
+
+    for device_proxy in device_proxies {
+        let device_binding: MouseBinding = MouseBinding::new(device_proxy).await?;
+        device_bindings.push(device_binding);
+    }
+
+    Ok(device_bindings)
+}
+
+/// Returns a stream of InputEvents from all mouse devices.
+///
+/// # Errors
+/// If there was an error binding to any mouse.
+pub async fn all_mouse_events() -> Result<Receiver<input_device::InputEvent>, Error> {
+    let bindings = all_mouse_bindings().await?;
+    let (event_sender, event_receiver) =
+        futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+
+    for mut mouse in bindings {
+        let mut sender = event_sender.clone();
+        fasync::spawn(async move {
+            while let Some(input_event) = mouse.input_event_stream().next().await {
+                let _ = sender.try_send(input_event);
+            }
+        });
+    }
+
+    Ok(event_receiver)
+}
+
+/// Retrieves a proxy to the first available mouse input device.
+///
+/// # Errors
+/// If no mouse device exists.
+pub async fn any_mouse_device() -> Result<InputDeviceProxy, Error> {
+    let mut devices = all_mouse_devices().await?;
+    devices.pop().ok_or(format_err!("Couldn't find a default mouse."))
+}
+
+/// Returns a [`MouseBinding`] to the first avaialble mouse input device.
+///
+/// # Errors
+/// If no mouse device exists.
+pub async fn any_mouse_binding() -> Result<MouseBinding, Error> {
+    let device_proxy = any_mouse_device().await?;
+    MouseBinding::new(device_proxy).await
+}
+
 #[async_trait]
 impl input_device::InputDeviceBinding for MouseBinding {
     fn input_event_sender(&self) -> Sender<input_device::InputEvent> {
@@ -93,7 +156,72 @@ impl input_device::InputDeviceBinding for MouseBinding {
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
         input_device::InputDeviceDescriptor::Mouse(self.device_descriptor.clone())
     }
+}
 
+impl MouseBinding {
+    /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
+    ///
+    /// The binding will start listening for input reports immediately, and they
+    /// can be read from [`input_event_stream()`].
+    ///
+    /// # Parameters
+    /// `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
+    ///
+    /// # Errors
+    /// If there was an error binding to the proxy.
+    async fn new(device_proxy: InputDeviceProxy) -> Result<Self, Error> {
+        let device_binding = Self::bind_device(&device_proxy).await?;
+        input_device::initialize_report_stream(
+            device_proxy,
+            device_binding.get_device_descriptor(),
+            device_binding.input_event_sender(),
+            Self::process_reports,
+        );
+
+        Ok(device_binding)
+    }
+
+    /// Binds the provided input device to a new instance of `Self`.
+    ///
+    /// # Parameters
+    /// - `device`: The device to use to initalize the binding.
+    ///
+    /// # Errors
+    /// If the device descriptor could not be retrieved, or the descriptor could
+    /// not be parsed correctly.
+    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
+        let device_descriptor: fidl_input_report::DeviceDescriptor =
+            device.get_descriptor().await?;
+        match device_descriptor.mouse {
+            Some(_) => {
+                let (event_sender, event_receiver) =
+                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+
+                let device_id = 0;
+                let device_descriptor: MouseDeviceDescriptor = MouseDeviceDescriptor { device_id };
+
+                Ok(MouseBinding { event_sender, event_receiver, device_descriptor })
+            }
+            descriptor => Err(format_err!("Mouse Descriptor failed to parse: \n {:?}", descriptor)),
+        }
+    }
+
+    /// Parses an [`InputReport`] into one or more [`InputEvent`]s.
+    ///
+    /// The [`InputEvent`]s are sent to the device binding owner via [`sender`].
+    ///
+    /// # Parameters
+    /// `report`: The incoming [`InputReport`].
+    /// `previous_report`: The previous [`InputReport`] seen for the same device. This can be
+    ///                    used to determine, for example, which keys are no longer present in
+    ///                    a keyboard report to generate key released events. If `None`, no
+    ///                    previous report was found.
+    /// `device_descriptor`: The descriptor for the input device generating the input reports.
+    /// `input_event_sender`: The sender for the device binding's input event stream.
+    ///
+    /// # Returns
+    /// An [`InputReport`] which will be passed to the next call to [`process_reports`], as
+    /// [`previous_report`]. If `None`, the next call's [`previous_report`] will be `None`.
     fn process_reports(
         report: InputReport,
         previous_report: Option<InputReport>,
@@ -144,38 +272,6 @@ impl input_device::InputDeviceBinding for MouseBinding {
         );
 
         Some(report)
-    }
-
-    async fn any_input_device() -> Result<InputDeviceProxy, Error>
-    where
-        Self: Sized,
-    {
-        let mut devices = Self::all_devices().await?;
-        devices.pop().ok_or(format_err!("Couldn't find a default mouse."))
-    }
-
-    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>
-    where
-        Self: Sized,
-    {
-        input_device::all_devices(input_device::InputDeviceType::Mouse).await
-    }
-
-    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
-        let device_descriptor: fidl_input_report::DeviceDescriptor =
-            device.get_descriptor().await?;
-        match device_descriptor.mouse {
-            Some(_) => {
-                let (event_sender, event_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-
-                let device_id = 0;
-                let device_descriptor: MouseDeviceDescriptor = MouseDeviceDescriptor { device_id };
-
-                Ok(MouseBinding { event_sender, event_receiver, device_descriptor })
-            }
-            descriptor => Err(format_err!("Mouse Descriptor failed to parse: \n {:?}", descriptor)),
-        }
     }
 }
 
@@ -270,44 +366,6 @@ fn buttons_from_optional_report(
             None => None,
         })
         .unwrap_or_default()
-}
-
-/// Returns a vector of [`MouseBindings`] for all currently connected mice.
-///
-/// # Errors
-/// If there was an error binding to any mouse.
-pub async fn all_mouse_bindings() -> Result<Vec<MouseBinding>, Error> {
-    let device_proxies = input_device::all_devices(input_device::InputDeviceType::Mouse).await?;
-    let mut device_bindings: Vec<MouseBinding> = vec![];
-
-    for device_proxy in device_proxies {
-        let device_binding: MouseBinding =
-            input_device::InputDeviceBinding::new(device_proxy).await?;
-        device_bindings.push(device_binding);
-    }
-
-    Ok(device_bindings)
-}
-
-/// Returns a stream of InputEvents from all mouse devices.
-///
-/// # Errors
-/// If there was an error binding to any mouse.
-pub async fn all_mouse_events() -> Result<Receiver<input_device::InputEvent>, Error> {
-    let bindings = all_mouse_bindings().await?;
-    let (event_sender, event_receiver) =
-        futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-
-    for mut mouse in bindings {
-        let mut sender = event_sender.clone();
-        fasync::spawn(async move {
-            while let Some(input_event) = mouse.input_event_stream().next().await {
-                let _ = sender.try_send(input_event);
-            }
-        });
-    }
-
-    Ok(event_receiver)
 }
 
 #[cfg(test)]

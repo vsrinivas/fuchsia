@@ -5,9 +5,7 @@
 use {
     crate::input_device,
     crate::keyboard,
-    anyhow::{format_err, Error},
     async_trait::async_trait,
-    fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     futures::channel::mpsc::{Receiver, Sender},
 };
 
@@ -32,24 +30,6 @@ impl FakeInputDeviceBinding {
 
 #[async_trait]
 impl input_device::InputDeviceBinding for FakeInputDeviceBinding {
-    async fn any_input_device() -> Result<InputDeviceProxy, Error>
-    where
-        Self: Sized,
-    {
-        Err(format_err!("Not implemented."))
-    }
-
-    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>
-    where
-        Self: Sized,
-    {
-        Err(format_err!("Not implemented."))
-    }
-
-    async fn bind_device(_device: &InputDeviceProxy) -> Result<Self, Error> {
-        Err(format_err!("Not implemented."))
-    }
-
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
         input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
             keys: vec![],
@@ -62,25 +42,5 @@ impl input_device::InputDeviceBinding for FakeInputDeviceBinding {
 
     fn input_event_sender(&self) -> Sender<input_device::InputEvent> {
         self.event_sender.clone()
-    }
-
-    fn process_reports(
-        _report: InputReport,
-        _previous_report: Option<InputReport>,
-        _device_descriptor: &input_device::InputDeviceDescriptor,
-        _input_event_sender: &mut Sender<input_device::InputEvent>,
-    ) -> Option<InputReport> {
-        None
-    }
-
-    async fn any_device() -> Result<Self, Error> {
-        Err(format_err!("Not implemented."))
-    }
-
-    async fn new(_device_proxy: InputDeviceProxy) -> Result<Self, Error> {
-        Err(format_err!("Not implemented."))
-    }
-
-    fn initialize_report_stream(&self, _device_proxy: fidl_fuchsia_input_report::InputDeviceProxy) {
     }
 }

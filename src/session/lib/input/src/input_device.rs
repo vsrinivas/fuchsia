@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Context, Error},
     async_trait::async_trait,
     fdio,
-    fidl_fuchsia_input_report::{InputDeviceMarker, InputDeviceProxy, InputReport},
+    fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::channel::mpsc::{Receiver, Sender},
     std::{
@@ -18,6 +18,9 @@ use {
 
 /// The buffer size for the stream that InputEvents are sent over.
 pub const INPUT_EVENT_BUFFER_SIZE: usize = 15;
+
+/// The path to the input-report directory.
+static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
 
 /// An [`InputEvent`] holds information about an input event and the device that produced the event.
 #[derive(Clone, Debug, PartialEq)]
@@ -60,6 +63,13 @@ pub enum InputDeviceDescriptor {
     Touch(touch::TouchDeviceDescriptor),
 }
 
+#[derive(Clone, Copy)]
+pub enum InputDeviceType {
+    Keyboard,
+    Mouse,
+    Touch,
+}
+
 /// An [`InputDeviceBinding`] represents a binding to an input device (e.g., a mouse).
 ///
 /// [`InputDeviceBinding`]s expose information about the bound device. For example, a
@@ -79,47 +89,6 @@ pub enum InputDeviceDescriptor {
 /// ```
 #[async_trait]
 pub trait InputDeviceBinding: Send {
-    /// Retrieves a proxy to the default input device of type `Self`.
-    ///
-    /// For example, [`MouseBinding`] finds the first available input device
-    /// which is a mouse and returns a proxy to it.
-    ///
-    /// This allows [`InputDeviceBinding::new`] to have a default implementation
-    /// that reduces the boiler plate in each trait-implementer.
-    ///
-    /// # Errors
-    /// If no default device exists.
-    async fn any_input_device() -> Result<InputDeviceProxy, Error>
-    where
-        Self: Sized;
-
-    /// Retrieves a list of proxies to all devices of type `Self`.
-    ///
-    /// # Errors
-    /// If no devices of the correct type exist.
-    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>
-    where
-        Self: Sized;
-
-    /// Binds the provided input device to a new instance of `Self`.
-    ///
-    /// Trait-implementers are expected to get the device descriptor and make
-    /// sure it is of the correct type. For example, a [`MouseBinding`] would
-    /// verify that the device has a mouse descriptor.
-    ///
-    /// The [`MouseBinding`] then uses the device's mouse descriptor to
-    /// initialize its fields (e.g., the range of possible x values).
-    ///
-    /// # Parameters
-    /// - `device`: The device to use to initalize the binding.
-    ///
-    /// # Errors
-    /// If the device descriptor could not be retrieved, or the descriptor could
-    /// not be parsed correctly.
-    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error>
-    where
-        Self: Sized;
-
     /// Returns information about the input device.
     fn get_device_descriptor(&self) -> InputDeviceDescriptor;
 
@@ -128,104 +97,54 @@ pub trait InputDeviceBinding: Send {
 
     /// Returns the input event stream's sender.
     fn input_event_sender(&self) -> Sender<InputEvent>;
+}
 
-    /// Parses an [`InputReport`] into one or more [`InputEvent`]s.
-    ///
-    /// The [`InputEvent`]s are sent to the device binding owner via [`sender`].
-    ///
-    /// # Parameters
-    /// `report`: The incoming [`InputReport`].
-    /// `previous_report`: The previous [`InputReport`] seen for the same device. This can be
-    ///                    used to determine, for example, which keys are no longer present in
-    ///                    a keyboard report to generate key released events. If `None`, no
-    ///                    previous report was found.
-    /// `device_descriptor`: The descriptor for the input device generating the input reports.
-    /// `input_event_sender`: The sender for the device binding's input event stream.
-    ///
-    /// # Returns
-    /// An [`InputReport`] which will be passed to the next call to [`process_reports`], as
-    /// [`previous_report`]. If `None`, the next call's [`previous_report`] will be `None`.
-    fn process_reports(
-        report: InputReport,
-        previous_report: Option<InputReport>,
-        device_descriptor: &InputDeviceDescriptor,
-        input_event_sender: &mut Sender<InputEvent>,
-    ) -> Option<InputReport>
-    where
-        Self: Sized;
-
-    /// Creates a new [`InputDeviceBinding`] for the input type's default input device.
-    ///
-    /// The binding will start listening for input reports immediately, and they
-    /// can be read from [`input_event_stream()`].
-    ///
-    /// # Errors
-    /// If there was an error finding or binding to the default input device.
-    async fn any_device() -> Result<Self, Error>
-    where
-        Self: Sized,
-    {
-        let device_proxy: InputDeviceProxy = Self::any_input_device().await?;
-        let device_binding = Self::bind_device(&device_proxy).await?;
-        device_binding.initialize_report_stream(device_proxy);
-
-        Ok(device_binding)
-    }
-
-    /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
-    ///
-    /// The binding will start listening for input reports immediately, and they
-    /// can be read from [`input_event_stream()`].
-    ///
-    /// # Parameters
-    /// `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
-    ///
-    /// # Errors
-    /// If there was an error binding to the proxy.
-    async fn new(device_proxy: InputDeviceProxy) -> Result<Self, Error>
-    where
-        Self: Sized,
-    {
-        let device_binding = Self::bind_device(&device_proxy).await?;
-        device_binding.initialize_report_stream(device_proxy);
-
-        Ok(device_binding)
-    }
-
-    /// Initializes the input report stream for the bound device.
-    ///
-    /// Spawns a future which awaits input reports from the device and forwards them to
-    /// clients via [`input_event_sender()`]. The reports are observed via
-    /// [`input_event_stream()`].
-    ///
-    /// # Parameters
-    /// - `device_proxy`: The device proxy which is used to get input reports.
-    fn initialize_report_stream(&self, device_proxy: fidl_fuchsia_input_report::InputDeviceProxy)
-    where
-        Self: Sized,
-    {
-        let mut event_sender = self.input_event_sender();
-        let descriptor = self.get_device_descriptor();
-        fasync::spawn(async move {
-            let mut previous_report: Option<InputReport> = None;
-            if let Ok((_status, event)) = device_proxy.get_reports_event().await {
-                if let Ok(_) = fasync::OnSignals::new(&event, zx::Signals::USER_0).await {
-                    while let Ok(input_reports) = device_proxy.get_reports().await {
-                        for report in input_reports {
-                            previous_report = Self::process_reports(
-                                report,
-                                previous_report,
-                                &descriptor,
-                                &mut event_sender,
-                            );
-                        }
+/// Initializes the input report stream for the device bound to `device_proxy`.
+///
+/// Spawns a future which awaits input reports from the device and forwards them to
+/// clients via `event_sender`.
+///
+/// # Parameters
+/// - `device_proxy`: The device proxy which is used to get input reports.
+/// - `device_descriptor`: The descriptor of the device bound to `device_proxy`.
+/// - `event_sender`: The channel to send InputEvents to.
+/// - `process_reports`: A function that generates InputEvent(s) from an InputReport and the
+///                      InputReport that precedes it. Each type of input device defines how it
+///                      processes InputReports.
+pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
+    device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
+    device_descriptor: InputDeviceDescriptor,
+    mut event_sender: Sender<InputEvent>,
+    mut process_reports: InputDeviceProcessReportsFn,
+) where
+    InputDeviceProcessReportsFn: 'static
+        + Send
+        + FnMut(
+            InputReport,
+            Option<InputReport>,
+            &InputDeviceDescriptor,
+            &mut Sender<InputEvent>,
+        ) -> Option<InputReport>,
+{
+    fasync::spawn(async move {
+        let mut previous_report: Option<InputReport> = None;
+        if let Ok((_status, event)) = device_proxy.get_reports_event().await {
+            if let Ok(_) = fasync::OnSignals::new(&event, zx::Signals::USER_0).await {
+                while let Ok(input_reports) = device_proxy.get_reports().await {
+                    for report in input_reports {
+                        previous_report = process_reports(
+                            report,
+                            previous_report,
+                            &device_descriptor,
+                            &mut event_sender,
+                        );
                     }
                 }
             }
-            // TODO(lindkvist): Add signaling for when this loop exits, since it means the device
-            // binding is no longer functional.
-        });
-    }
+        }
+        // TODO(lindkvist): Add signaling for when this loop exits, since it means the device
+        // binding is no longer functional.
+    });
 }
 
 /// Returns true if the device type of `input_device` matches `device_type`.
@@ -278,16 +197,6 @@ pub async fn all_devices(
 
     Ok(devices)
 }
-
-#[derive(Clone, Copy)]
-pub enum InputDeviceType {
-    Keyboard,
-    Mouse,
-    Touch,
-}
-
-/// The path to the input-report directory.
-static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
 
 /// Returns a proxy to the InputDevice in `entry` if it exists.
 ///
