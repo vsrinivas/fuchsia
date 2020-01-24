@@ -35,14 +35,21 @@ class FakeGdc {
                           size_t /*output_image_format_table_count*/,
                           uint32_t /*output_image_format_index*/,
                           const gdc_config_info* /*config_vmo_list*/, size_t /*config_vmo_count*/,
-                          const hw_accel_frame_callback_t* /* frame_callback */,
+                          const hw_accel_frame_callback_t* frame_callback,
                           const hw_accel_res_change_callback_t* /* res_callback */,
                           const hw_accel_remove_task_callback_t* remove_task_callback,
                           uint32_t* /*out_task_index*/) {
     remove_task_callback_ = remove_task_callback;
+    frame_callback_ = frame_callback;
     return ZX_OK;
   }
-  zx_status_t GdcProcessFrame(uint32_t /*task_index*/, uint32_t /*input_buffer_index*/) {
+  zx_status_t GdcProcessFrame(uint32_t /*task_index*/, uint32_t input_buffer_index) {
+    frame_available_info info = {
+        .buffer_id = input_buffer_index,
+        .metadata.input_buffer_index = input_buffer_index,
+        .frame_status = FRAME_STATUS_OK,
+    };
+    frame_callback_->frame_ready(frame_callback_->ctx, &info);
     return ZX_OK;
   }
   void GdcRemoveTask(uint32_t task_index) {
@@ -86,6 +93,7 @@ class FakeGdc {
   gdc_protocol_t gdc_protocol_ = {};
   gdc_protocol_ops_t gdc_protocol_ops_ = {};
   const hw_accel_remove_task_callback_t* remove_task_callback_;
+  const hw_accel_frame_callback_t* frame_callback_;
   bool frame_released_ = false;
 };
 

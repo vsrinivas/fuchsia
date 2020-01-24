@@ -78,10 +78,12 @@ void InputNode::OnReadyToProcess(const frame_available_info_t* info) {
 
 void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
   if (!shutdown_requested_) {
-    if (enabled_) {
-      ProcessNode::OnFrameAvailable(info);
-    } else {
+    UpdateFrameCounterForAllChildren();
+
+    if (NeedToDropFrame()) {
       isp_stream_protocol_->ReleaseFrame(info->buffer_id);
+    } else {
+      ProcessNode::OnFrameAvailable(info);
     }
   }
 }

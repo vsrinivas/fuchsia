@@ -65,7 +65,7 @@ class InputNode : public ProcessNode {
   void OnReleaseFrame(uint32_t buffer_index) override;
 
   // Notifies that a frame is done processing by this node.
-  virtual void OnFrameAvailable(const frame_available_info_t* info) override;
+  void OnFrameAvailable(const frame_available_info_t* info) override;
 
   // Shuts down the stream with ISP.
   void OnShutdown(fit::function<void(void)> shutdown_callback) override;
@@ -80,7 +80,7 @@ class InputNode : public ProcessNode {
   // Notifies when a new frame is available from the ISP.
   static void OnIspFrameAvailable(void* ctx, const frame_available_info_t* info) {
     frame_available_info_t local_info = *info;
-    static_cast<ProcessNode*>(ctx)->OnReadyToProcess(&local_info);
+    static_cast<InputNode*>(ctx)->OnReadyToProcess(&local_info);
   }
 
   // ISP stream type.

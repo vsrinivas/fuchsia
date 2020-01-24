@@ -562,7 +562,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
             },
     };
 
-    EXPECT_NO_FATAL_FAILURE(fr_head_node->OnFrameAvailable(&frame_info));
+    for (uint32_t i = 0; i < kNumBuffers; i++) {
+      frame_info.buffer_id = i;
+      EXPECT_NO_FATAL_FAILURE(fr_head_node->OnReadyToProcess(&frame_info));
+    }
 
     while (!frame_received) {
       RunLoopUntilIdle();
@@ -571,12 +574,14 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(frame_received);
 
     EXPECT_EQ(fr_head_node->get_in_use_buffer_count(0), 0u);
-    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(frame_info.buffer_id), 1u);
+    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(1), 0u);
+    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(2), 1u);
+    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(3), 0u);
 
-    stream->ReleaseFrame(frame_info.buffer_id);
+    stream->ReleaseFrame(2);
     RunLoopUntilIdle();
 
-    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(frame_info.buffer_id), 0u);
+    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(2), 0u);
     stream->Stop();
   }
 
@@ -674,6 +679,81 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(ds_ml_output_node->enabled());
   }
 
+  void TestMultipleFrameRates() {
+    auto fr_stream_type = kStreamTypeFR | kStreamTypeML;
+    auto ds_stream_type = kStreamTypeMonitoring;
+    fuchsia::camera2::StreamPtr fr_stream;
+    auto fr_result = SetupStream(kMonitorConfig, fr_stream_type, fr_stream);
+    ASSERT_EQ(ZX_OK, fr_result.error());
+
+    fuchsia::camera2::StreamPtr ds_stream;
+    auto ds_result = SetupStream(kMonitorConfig, ds_stream_type, ds_stream);
+    ASSERT_EQ(ZX_OK, ds_result.error());
+
+    bool fr_stream_alive = true;
+    fr_stream.set_error_handler([&](zx_status_t status) { fr_stream_alive = false; });
+
+    bool fr_frame_received = false;
+    uint32_t fr_frame_index = 0;
+    fr_stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
+      fr_frame_received = true;
+      fr_frame_index = info.buffer_id;
+    };
+
+    bool ds_stream_alive = true;
+    ds_stream.set_error_handler([&](zx_status_t status) { ds_stream_alive = false; });
+
+    bool ds_frame_received = false;
+    uint32_t ds_frame_index = 0;
+    uint32_t ds_frame_count = 0;
+    ds_stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
+      ds_frame_received = true;
+      ds_frame_index = info.buffer_id;
+      ds_frame_count++;
+    };
+
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto ds_head_node = pipeline_manager_->downscaled_resolution_stream();
+
+    // Start streaming.
+    fr_stream->Start();
+    ds_stream->Start();
+
+    RunLoopUntilIdle();
+
+    // Invoke OnFrameAvailable() for the ISP node. Buffer index = 1.
+    frame_available_info_t frame_info = {
+        .frame_status = FRAME_STATUS_OK,
+        .buffer_id = 0,
+        .metadata =
+            {
+                .timestamp = static_cast<uint64_t>(zx_clock_get_monotonic()),
+                .image_format_index = 0,
+                .input_buffer_index = 0,
+            },
+    };
+
+    for (uint32_t i = 0; i < kNumBuffers; i++) {
+      frame_info.buffer_id = i;
+      EXPECT_NO_FATAL_FAILURE(fr_head_node->OnReadyToProcess(&frame_info));
+      EXPECT_NO_FATAL_FAILURE(ds_head_node->OnReadyToProcess(&frame_info));
+    }
+
+    while (!fr_frame_received) {
+      RunLoopUntilIdle();
+    }
+
+    EXPECT_EQ(fr_frame_index, 2u);
+
+    while (ds_frame_count != kNumBuffers) {
+      RunLoopUntilIdle();
+    }
+
+    // Check if all frames are recieved.
+    EXPECT_EQ(ds_frame_index, 4u);
+    EXPECT_EQ(ds_frame_count, 5u);
+  }
+
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
   FakeGe2d fake_ge2d_;
@@ -733,6 +813,8 @@ TEST_F(ControllerProtocolTest, TestGdcNode) { TestGdcNode(); }
 TEST_F(ControllerProtocolTest, TestReleaseAfterStopStreaming) { TestReleaseAfterStopStreaming(); }
 
 TEST_F(ControllerProtocolTest, TestEnabledDisableStreaming) { TestEnabledDisableStreaming(); }
+
+TEST_F(ControllerProtocolTest, TestMultipleFrameRates) { TestMultipleFrameRates(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

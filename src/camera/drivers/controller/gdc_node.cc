@@ -141,10 +141,13 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 void GdcNode::OnFrameAvailable(const frame_available_info_t* info) {
   // Once shutdown is requested no calls should be made to the driver.
   if (!shutdown_requested_) {
-    if (enabled_) {
-      ProcessNode::OnFrameAvailable(info);
-    } else {
+    UpdateFrameCounterForAllChildren();
+
+    if (NeedToDropFrame()) {
+      parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
       gdc_.ReleaseFrame(task_index_, info->buffer_id);
+    } else {
+      ProcessNode::OnFrameAvailable(info);
     }
   }
 }
@@ -169,7 +172,7 @@ void GdcNode::OnReadyToProcess(const frame_available_info_t* info) {
     } else {
       // Since streaming is disabled the incoming frame is released
       // so it gets added back to the pool.
-      gdc_.ReleaseFrame(task_index_, buffer_index);
+      parent_node_->OnReleaseFrame(buffer_index);
     }
     fbl::AutoLock guard(&event_queue_lock_);
     event_queue_.pop();

@@ -106,6 +106,12 @@ class ProcessNode {
 
   void set_enabled(bool enabled) { enabled_ = enabled; }
 
+  // Updates the frame counter for all child nodes.
+  void UpdateFrameCounterForAllChildren();
+
+  // Decides if we need to drop the frame.
+  bool NeedToDropFrame();
+
   NodeType type() { return type_; }
 
   std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats() {
@@ -117,6 +123,16 @@ class ProcessNode {
   }
 
   ProcessNode* parent_node() { return parent_node_; }
+
+  uint32_t output_fps() const {
+    ZX_ASSERT_MSG(output_frame_rate_.frames_per_sec_numerator %
+                          output_frame_rate_.frames_per_sec_denominator ==
+                      0,
+                  "Unsupported Frame Rate");
+
+    return output_frame_rate_.frames_per_sec_numerator /
+           output_frame_rate_.frames_per_sec_denominator;
+  }
 
   std::vector<fuchsia::camera2::CameraStreamType>& configured_streams() {
     return configured_streams_;
@@ -139,8 +155,14 @@ class ProcessNode {
   void AddChildNodeInfo(std::unique_ptr<ProcessNode> child_node) {
     child_nodes_.push_back(std::move(child_node));
   }
+
   // Curent state of the node.
-  bool enabled() { return enabled_; }
+  bool enabled() const { return enabled_; }
+
+  uint32_t current_frame_count() const { return current_frame_count_; }
+
+  void AddToCurrentFrameCount(uint32_t frame_count) { current_frame_count_ += frame_count; }
+  void SubtractFromCurrentFrameCount(uint32_t frame_count) { current_frame_count_ -= frame_count; }
 
  protected:
   bool AllChildNodesDisabled();
@@ -159,6 +181,10 @@ class ProcessNode {
   fbl::Mutex event_queue_lock_;
   // The output frame rate for this node.
   fuchsia::camera2::FrameRate output_frame_rate_;
+  // Current frame counter. This is in terms of no. of output frames
+  // worth of input recieved.
+  // current_frame_count = (no. of input frames generated * output_frame_rate)
+  uint32_t current_frame_count_ = 0;
   // Type of node.
   NodeType type_;
   // List of all the children for this node.
