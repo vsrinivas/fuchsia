@@ -198,7 +198,6 @@ if (current_cpu != "") {
       "channel-fatal",
       "chromeos-disk-setup",
       "core",
-      "devfs",
       "device-enumeration",
       "dlfcn",
       "driver-test",
