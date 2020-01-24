@@ -65,6 +65,7 @@ fn main() {
                         | fio2::Operations::Traverse
                         | fio2::Operations::ModifyDirectory,
                 ),
+                subdir: Some("blob".to_string()),
             }),
         ];
         let offers = vec![

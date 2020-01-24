@@ -257,7 +257,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "uses".
         if let Some(uses) = self.decl.uses.as_ref() {
-            self.validate_uses_decl(uses);
+            self.validate_use_decls(uses);
         }
 
         // Validate "exposes".
@@ -283,7 +283,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_uses_decl(&mut self, uses: &[fsys::UseDecl]) {
+    fn validate_use_decls(&mut self, uses: &[fsys::UseDecl]) {
         // Validate individual fields.
         for use_ in uses.iter() {
             self.validate_use_decl(&use_);
@@ -328,6 +328,14 @@ impl<'a> ValidationContext<'a> {
                 );
                 if u.rights.is_none() {
                     self.errors.push(Error::missing_field("UseDirectoryDecl", "rights"));
+                }
+                if let Some(subdir) = u.subdir.as_ref() {
+                    check_relative_path(
+                        Some(subdir),
+                        "UseDirectoryDecl",
+                        "subdir",
+                        &mut self.errors,
+                    );
                 }
             }
             fsys::UseDecl::Storage(u) => match u.type_ {
@@ -530,6 +538,15 @@ impl<'a> ValidationContext<'a> {
                     }
                     _ => {}
                 }
+
+                if let Some(subdir) = e.subdir.as_ref() {
+                    check_relative_path(
+                        Some(subdir),
+                        "ExposeDirectoryDecl",
+                        "subdir",
+                        &mut self.errors,
+                    );
+                }
             }
             fsys::ExposeDecl::Runner(e) => {
                 self.validate_expose_runner_fields(
@@ -676,6 +693,14 @@ impl<'a> ValidationContext<'a> {
                         }
                     }
                     _ => {}
+                }
+                if let Some(subdir) = o.subdir.as_ref() {
+                    check_relative_path(
+                        Some(subdir),
+                        "OfferDirectoryDecl",
+                        "subdir",
+                        &mut self.errors,
+                    );
                 }
             }
             fsys::OfferDecl::Storage(o) => {
@@ -1027,6 +1052,39 @@ fn check_path(
     start_err_len == errors.len()
 }
 
+fn check_relative_path(
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+) -> bool {
+    let start_err_len = errors.len();
+    check_presence_and_length(MAX_PATH_LENGTH, prop, decl_type, keyword, errors);
+    if let Some(path) = prop {
+        // Relative paths must be nonempty
+        if path.is_empty() {
+            errors.push(Error::invalid_field(decl_type, keyword));
+            return false;
+        }
+        // Relative paths cannot start with `/`
+        if path.starts_with('/') {
+            errors.push(Error::invalid_field(decl_type, keyword));
+            return false;
+        }
+        // Relative paths cannot have two `/`s in a row
+        if path.contains("//") {
+            errors.push(Error::invalid_field(decl_type, keyword));
+            return false;
+        }
+        // Relative paths cannot end with `/`
+        if path.ends_with('/') {
+            errors.push(Error::invalid_field(decl_type, keyword));
+            return false;
+        }
+    }
+    start_err_len == errors.len()
+}
+
 fn check_name(
     prop: Option<&String>,
     decl_type: &str,
@@ -1369,6 +1427,7 @@ mod tests {
                         source_path: None,
                         target_path: None,
                         rights: None,
+                        subdir: None,
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         type_: None,
@@ -1419,6 +1478,7 @@ mod tests {
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: Some("/foo".to_string()),
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         type_: Some(StorageType::Cache),
@@ -1441,6 +1501,7 @@ mod tests {
                 Error::invalid_field("UseDirectoryDecl", "source"),
                 Error::invalid_field("UseDirectoryDecl", "source_path"),
                 Error::invalid_field("UseDirectoryDecl", "target_path"),
+                Error::invalid_field("UseDirectoryDecl", "subdir"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
             ])),
@@ -1481,6 +1542,7 @@ mod tests {
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         type_: Some(StorageType::Cache),
@@ -1527,6 +1589,7 @@ mod tests {
                         target_path: None,
                         target: None,
                         rights: None,
+                        subdir: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: None,
@@ -1587,6 +1650,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1617,6 +1681,7 @@ mod tests {
                         target_path: Some("/data/b".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
                         rights: None,
+                        subdir: None,
                     })
                 ]);
                 decl
@@ -1656,6 +1721,7 @@ mod tests {
                         target_path: Some("/".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: Some("/foo".to_string()),
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1679,6 +1745,7 @@ mod tests {
                 Error::invalid_character_in_field("ExposeDirectoryDecl", "source.child.name", '^'),
                 Error::invalid_field("ExposeDirectoryDecl", "source_path"),
                 Error::invalid_field("ExposeDirectoryDecl", "target_path"),
+                Error::invalid_field("ExposeDirectoryDecl", "subdir"),
                 Error::invalid_character_in_field("ExposeRunnerDecl", "source.child.name", '^'),
                 Error::invalid_character_in_field("ExposeRunnerDecl", "source_name", '/'),
                 Error::invalid_character_in_field("ExposeRunnerDecl", "target_name", '!'),
@@ -1706,6 +1773,7 @@ mod tests {
                         target_path: Some("/f".to_string()),
                         target: Some(Ref::Collection(CollectionRef {name: "z".to_string()})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
@@ -1713,6 +1781,7 @@ mod tests {
                         target_path: Some("/h".to_string()),
                         target: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
@@ -1767,6 +1836,7 @@ mod tests {
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         target: Some(Ref::Realm(RealmRef {})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1826,6 +1896,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1861,6 +1932,7 @@ mod tests {
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -1874,6 +1946,7 @@ mod tests {
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -1954,6 +2027,7 @@ mod tests {
                         target: None,
                         target_path: None,
                         rights: None,
+                        subdir: None,
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: None,
@@ -2057,6 +2131,7 @@ mod tests {
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef {})),
@@ -2068,6 +2143,7 @@ mod tests {
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
@@ -2143,6 +2219,7 @@ mod tests {
                     )),
                     target_path: Some("/data".to_string()),
                     rights: None,
+                    subdir: None,
                 })]);
                 decl
             },
@@ -2197,6 +2274,7 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
@@ -2235,6 +2313,83 @@ mod tests {
                 Error::extraneous_field("OfferStorageDecl", "target.child.collection"),
                 Error::extraneous_field("OfferRunnerDecl", "source.child.collection"),
                 Error::extraneous_field("OfferRunnerDecl", "target.child.collection"),
+            ])),
+        },
+        test_validate_offers_invalid_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("foo/".to_string()),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        target_path: Some("/".to_string()),
+                    }),
+                    OfferDecl::Protocol(OfferProtocolDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("foo/".to_string()),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        target_path: Some("/".to_string()),
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        source_path: Some("foo/".to_string()),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        target_path: Some("/".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: Some("/foo".to_string()),
+                    }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("/path".to_string()),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "%bad".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some("elf!".to_string()),
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_character_in_field("OfferServiceDecl", "source.child.name", '^'),
+                Error::invalid_field("OfferServiceDecl", "source_path"),
+                Error::invalid_character_in_field("OfferServiceDecl", "target.child.name", '^'),
+                Error::invalid_field("OfferServiceDecl", "target_path"),
+                Error::invalid_character_in_field("OfferProtocolDecl", "source.child.name", '^'),
+                Error::invalid_field("OfferProtocolDecl", "source_path"),
+                Error::invalid_character_in_field("OfferProtocolDecl", "target.child.name", '^'),
+                Error::invalid_field("OfferProtocolDecl", "target_path"),
+                Error::invalid_character_in_field("OfferDirectoryDecl", "source.child.name", '^'),
+                Error::invalid_field("OfferDirectoryDecl", "source_path"),
+                Error::invalid_character_in_field("OfferDirectoryDecl", "target.child.name", '^'),
+                Error::invalid_field("OfferDirectoryDecl", "target_path"),
+                Error::invalid_field("OfferDirectoryDecl", "subdir"),
+                Error::invalid_character_in_field("OfferRunnerDecl", "source.child.name", '^'),
+                Error::invalid_character_in_field("OfferRunnerDecl", "source_name", '/'),
+                Error::invalid_character_in_field("OfferRunnerDecl", "target.child.name", '%'),
+                Error::invalid_character_in_field("OfferRunnerDecl", "target_name", '!'),
             ])),
         },
         test_validate_offers_target_equals_source => {
@@ -2283,6 +2438,7 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2395,6 +2551,7 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                 ]);
                 decl.storage = Some(vec![
@@ -2463,6 +2620,7 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2480,6 +2638,7 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2572,6 +2731,7 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2581,6 +2741,7 @@ mod tests {
                         )),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),

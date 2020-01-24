@@ -8,6 +8,7 @@ use {
     std::collections::HashMap,
     std::convert::{From, TryFrom, TryInto},
     std::fmt,
+    std::path::PathBuf,
     thiserror::Error,
 };
 
@@ -429,6 +430,7 @@ fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
                       rights: fio2::Operations,
+                      subdir: Option<PathBuf>,
                   });
 fidl_into_struct!(UseRunnerDecl, UseRunnerDecl, fsys::UseRunnerDecl,
                   fsys::UseRunnerDecl,
@@ -452,6 +454,7 @@ fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirector
                       target: ExposeTarget,
                       target_path: CapabilityPath,
                       rights: Option<fio2::Operations>,
+                      subdir: Option<PathBuf>,
                   });
 fidl_into_struct!(ExposeRunnerDecl, ExposeRunnerDecl, fsys::ExposeRunnerDecl,
                   fsys::ExposeRunnerDecl,
@@ -485,6 +488,7 @@ fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDe
                       target: OfferTarget,
                       target_path: CapabilityPath,
                       rights: Option<fio2::Operations>,
+                      subdir: Option<PathBuf>,
                   });
 fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
                   fsys::OfferRunnerDecl,
@@ -539,6 +543,10 @@ pub struct CapabilityPath {
 impl CapabilityPath {
     pub fn to_string(&self) -> String {
         format!("{}", self)
+    }
+
+    pub fn to_path_buf(&self) -> PathBuf {
+        PathBuf::from(self.to_string())
     }
 
     /// Splits the path according to "/", ignoring empty path components
@@ -655,6 +663,18 @@ impl FidlIntoNative<CapabilityPath> for Option<String> {
 impl NativeIntoFidl<Option<String>> for CapabilityPath {
     fn native_into_fidl(self) -> Option<String> {
         Some(self.to_string())
+    }
+}
+
+impl FidlIntoNative<Option<PathBuf>> for Option<String> {
+    fn fidl_into_native(self) -> Option<PathBuf> {
+        self.map(|p| PathBuf::from(p))
+    }
+}
+
+impl NativeIntoFidl<Option<String>> for Option<PathBuf> {
+    fn native_into_fidl(self) -> Option<String> {
+        self.map(|p| p.to_str().expect("invalid utf8").to_string())
     }
 }
 
@@ -1340,6 +1360,7 @@ mod tests {
                        source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
                        rights: Some(fio2::Operations::Connect),
+                       subdir: Some("foo/bar".to_string()),
                    }),
                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
                        type_: Some(fsys::StorageType::Cache),
@@ -1372,6 +1393,7 @@ mod tests {
                        target_path: Some("/data".to_string()),
                        target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                        rights: Some(fio2::Operations::Connect),
+                       subdir: Some("foo/bar".to_string()),
                    }),
                    fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1421,6 +1443,7 @@ mod tests {
                        )),
                        target_path: Some("/data".to_string()),
                        rights: Some(fio2::Operations::Connect),
+                       subdir: None,
                    }),
                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                        type_: Some(fsys::StorageType::Cache),
@@ -1534,6 +1557,7 @@ mod tests {
                             source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
                             rights: fio2::Operations::Connect,
+                            subdir: Some("foo/bar".into()),
                         }),
                         UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())),
                         UseDecl::Storage(UseStorageDecl::Meta),
@@ -1554,6 +1578,7 @@ mod tests {
                             target_path: "/data".try_into().unwrap(),
                             target: ExposeTarget::Framework,
                             rights: Some(fio2::Operations::Connect),
+                            subdir: Some("foo/bar".into()),
                         }),
                         ExposeDecl::Runner(ExposeRunnerDecl {
                             source: ExposeSource::Child("netstack".to_string()),
@@ -1589,6 +1614,7 @@ mod tests {
                             target: OfferTarget::Collection("modular".to_string()),
                             target_path: "/data".try_into().unwrap(),
                             rights: Some(fio2::Operations::Connect),
+                            subdir: None,
                         }),
                         OfferDecl::Storage(OfferStorageDecl::Cache(
                             OfferStorage {

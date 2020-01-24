@@ -227,6 +227,7 @@ mod tests {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                     rights: fio2::Operations::Connect,
+                    subdir: None,
                 }),
                 UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -292,6 +293,7 @@ mod tests {
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(fio2::Operations::Connect),
+                    subdir: None,
                 }),
                 ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
@@ -299,6 +301,7 @@ mod tests {
                     target_path: CapabilityPath::try_from("/in/data/bar").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(fio2::Operations::Connect),
+                    subdir: None,
                 }),
                 ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,

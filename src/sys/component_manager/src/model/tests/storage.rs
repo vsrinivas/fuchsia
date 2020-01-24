@@ -175,6 +175,7 @@ async fn storage_from_parent_dir_from_grandparent() {
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
+                    subdir: None,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -376,6 +377,7 @@ async fn storage_from_parent_dir_from_sibling() {
                     target_path: "/minfs".try_into().unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(fio2::Operations::Connect),
+                    subdir: None,
                 }))
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
@@ -425,6 +427,7 @@ async fn use_in_collection_from_parent() {
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
+                    subdir: None,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -720,6 +723,7 @@ async fn storage_multiple_types() {
                     target_path: "/minfs".try_into().unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(fio2::Operations::Connect),
+                    subdir: None,
                 }))
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
@@ -870,6 +874,7 @@ async fn directories_are_not_storage() {
                     target_path: "/data".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
+                    subdir: None,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -972,6 +977,7 @@ async fn dir_offered_from_nonexecutable() {
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
+                    subdir: None,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)

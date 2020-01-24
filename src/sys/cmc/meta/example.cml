@@ -30,6 +30,7 @@
       "from": "self",
       "to": "framework",
       "rights": ["rw*"],
+      "subdir": "blob",
     },
   ],
   "offer": [

@@ -13,6 +13,12 @@
       "minLength": 1,
       "maxLength": 1024
     },
+    "relative-path-clause": {
+      "type": "string",
+      "pattern": "^[^/]+(/[^/]+)*$",
+      "minLength": 1,
+      "maxLength": 1024
+    },
     "path-clause-multiple": {
       "type": "array",
       "items": {
@@ -256,6 +262,18 @@
                 "write_bytes"
               ]
             ]
+          },
+          "subdir": {
+            "title": "Used directory subdirectory",
+            "description": "An optional relative subdirectory to use instead of the root",
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-path-clause"
+              }
+            ],
+            "examples": [
+              "data/assets"
+            ]
           }
         }
       }
@@ -402,6 +420,18 @@
                 "read_bytes",
                 "write_bytes"
               ]
+            ]
+          },
+          "subdir": {
+            "title": "Exposed directory subdirectory",
+            "description": "An optional relative subdirectory to expose instead of the root",
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-path-clause"
+              }
+            ],
+            "examples": [
+              "data/assets"
             ]
           }
         }
@@ -580,6 +610,18 @@
                 "read_bytes",
                 "write_bytes"
               ]
+            ]
+          },
+          "subdir": {
+            "title": "Offered directory subdirectory",
+            "description": "An optional relative subdirectory to offer instead of the root",
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-path-clause"
+              }
+            ],
+            "examples": [
+              "data/assets"
             ]
           }
         }

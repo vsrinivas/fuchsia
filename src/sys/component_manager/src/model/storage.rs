@@ -325,6 +325,7 @@ mod tests {
                         target_path: "/data".try_into().unwrap(),
                         target: ExposeTarget::Realm,
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }))
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
@@ -448,6 +449,7 @@ mod tests {
                         target_path: "/data".try_into().unwrap(),
                         target: ExposeTarget::Realm,
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }))
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),

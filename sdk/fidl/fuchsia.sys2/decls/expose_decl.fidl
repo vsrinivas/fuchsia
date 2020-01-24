@@ -87,6 +87,9 @@ table ExposeDirectoryDecl {
 
     /// The rights to expose this directory with, required iff `source == self`.
     5: fuchsia.io2.Rights rights;
+
+    /// The subdirectory of this directory to expose instead of the root. Optional.
+    6: string:MAX_PATH_LENGTH subdir;
 };
 
 /// Declares a runner exposed to a component's containing realm, such as a

@@ -221,6 +221,7 @@ async fn use_from_parent() {
                     target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
@@ -246,6 +247,7 @@ async fn use_from_parent() {
                     source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -299,6 +301,7 @@ async fn use_from_grandparent() {
                     target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
@@ -319,6 +322,7 @@ async fn use_from_grandparent() {
                     target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
@@ -338,6 +342,7 @@ async fn use_from_grandparent() {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -447,6 +452,7 @@ async fn use_from_sibling_no_root() {
                     target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("d".to_string()),
@@ -467,6 +473,7 @@ async fn use_from_sibling_no_root() {
                     source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -485,6 +492,7 @@ async fn use_from_sibling_no_root() {
                     target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
@@ -528,6 +536,7 @@ async fn use_from_sibling_root() {
                     target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
@@ -549,6 +558,7 @@ async fn use_from_sibling_root() {
                     target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
@@ -567,6 +577,7 @@ async fn use_from_sibling_root() {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -612,6 +623,7 @@ async fn use_from_niece() {
                     target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
@@ -633,6 +645,7 @@ async fn use_from_niece() {
                     target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Child("d".to_string()),
@@ -652,6 +665,7 @@ async fn use_from_niece() {
                     source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -670,6 +684,7 @@ async fn use_from_niece() {
                     target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
@@ -724,6 +739,7 @@ async fn use_kitchen_sink() {
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
@@ -739,6 +755,7 @@ async fn use_kitchen_sink() {
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target: OfferTarget::Child("e".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
@@ -752,6 +769,7 @@ async fn use_kitchen_sink() {
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .add_lazy_child("d")
                 .add_lazy_child("e")
@@ -767,6 +785,7 @@ async fn use_kitchen_sink() {
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target: OfferTarget::Child("f".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("g".to_string()),
@@ -788,6 +807,7 @@ async fn use_kitchen_sink() {
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
@@ -800,6 +820,7 @@ async fn use_kitchen_sink() {
                     source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -817,6 +838,7 @@ async fn use_kitchen_sink() {
                     source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -891,6 +913,7 @@ async fn use_from_component_manager_namespace() {
                 source_path: CapabilityPath::try_from("/use_from_cm_namespace/data/foo").unwrap(),
                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                 rights: fio2::Operations::Connect,
+                    subdir: None,
             }))
             .use_(UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Realm,
@@ -937,6 +960,7 @@ async fn offer_from_component_manager_namespace() {
                     target_path: CapabilityPath::try_from("/foo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
@@ -957,6 +981,7 @@ async fn offer_from_component_manager_namespace() {
                     source_path: CapabilityPath::try_from("/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -1005,6 +1030,7 @@ async fn use_not_offered() {
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -1048,6 +1074,7 @@ async fn use_offer_source_not_exposed() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1069,6 +1096,7 @@ async fn use_offer_source_not_exposed() {
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -1121,6 +1149,7 @@ async fn use_offer_source_not_offered() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1140,6 +1169,7 @@ async fn use_offer_source_not_offered() {
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -1191,6 +1221,7 @@ async fn use_from_expose() {
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -1210,6 +1241,7 @@ async fn use_from_expose() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1253,6 +1285,7 @@ async fn use_from_expose_to_framework() {
                     target_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
@@ -1274,6 +1307,7 @@ async fn use_from_expose_to_framework() {
                     target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                     target: ExposeTarget::Framework,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
@@ -1292,6 +1326,7 @@ async fn use_from_expose_to_framework() {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -1335,6 +1370,7 @@ async fn offer_from_non_executable() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1354,6 +1390,7 @@ async fn offer_from_non_executable() {
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -1398,6 +1435,7 @@ async fn use_in_collection() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
@@ -1423,6 +1461,7 @@ async fn use_in_collection() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: OfferTarget::Collection("coll".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1442,6 +1481,7 @@ async fn use_in_collection() {
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
@@ -1512,6 +1552,7 @@ async fn use_in_collection_not_offered() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
@@ -1543,6 +1584,7 @@ async fn use_in_collection_not_offered() {
                     source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
+                    subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
@@ -1748,6 +1790,7 @@ async fn expose_from_self_and_child() {
                     target_path: CapabilityPath::try_from("/data/bar/hippo").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Child("c".to_string()),
@@ -1768,6 +1811,7 @@ async fn expose_from_self_and_child() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
@@ -1831,6 +1875,7 @@ async fn use_not_exposed() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,

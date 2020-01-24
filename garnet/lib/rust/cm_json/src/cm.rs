@@ -56,6 +56,10 @@ pub struct Name(String);
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct Path(String);
 
+/// A relative filesystem path.
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+pub struct RelativePath(String);
+
 /// A component URL. The URL is validated, but represented as a string to avoid
 /// normalization and retain the original representation.
 #[derive(Serialize, Clone, Debug)]
@@ -217,6 +221,8 @@ pub struct UseDirectory {
     pub target_path: Path,
     /// Used rights for the directory.
     pub rights: Rights,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subdir: Option<RelativePath>,
 }
 
 /// Used storage capability. See [`UseStorageDecl`].
@@ -296,6 +302,8 @@ pub struct ExposeDirectory {
     pub target: ExposeTarget,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rights: Option<Rights>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subdir: Option<RelativePath>,
 }
 
 /// Exposed runner capability. See [`ExposeRunnerDecl`].
@@ -327,13 +335,9 @@ pub enum Offer {
 /// [`OfferServiceDecl`]: ../../fidl_fuchsia_sys2/struct.OfferServiceDecl.html
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferService {
-    /// Offered capability source component.
     pub source: Ref,
-    /// Offered capability source path.
     pub source_path: Path,
-    /// Offered capability target.
     pub target: Ref,
-    /// Offered capability target path.
     pub target_path: Path,
 }
 
@@ -342,13 +346,9 @@ pub struct OfferService {
 /// [`OfferProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.OfferProtocolDecl.html
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferProtocol {
-    /// Offered capability source component.
     pub source: Ref,
-    /// Offered capability source path.
     pub source_path: Path,
-    /// Offered capability target.
     pub target: Ref,
-    /// Offered capability target path.
     pub target_path: Path,
 }
 
@@ -357,17 +357,14 @@ pub struct OfferProtocol {
 /// [`OfferDirectoryDecl`]: ../../fidl_fuchsia_sys2/struct.OfferDirectoryDecl.html
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferDirectory {
-    /// Offered capability source component.
     pub source: Ref,
-    /// Offered capability source path.
     pub source_path: Path,
-    /// Offered capability target.
     pub target: Ref,
-    /// Offered capability target path.
     pub target_path: Path,
-    /// Offered rights on the directory, optional if not offered from self.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rights: Option<Rights>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subdir: Option<RelativePath>,
 }
 
 /// Offered storage capability. See [`OfferStorageDecl`].
@@ -386,13 +383,9 @@ pub struct OfferStorage {
 /// [`OfferRunnerDecl`]: ../../fidl_fuchsia_sys2/struct.OfferRunnerDecl.html
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferRunner {
-    /// Offered runner source component.
     pub source: Ref,
-    /// Offered runner source name.
     pub source_name: Name,
-    /// Offered runner target.
     pub target: Ref,
-    /// Offered runner target name.
     pub target_name: Name,
 }
 
@@ -402,11 +395,8 @@ pub struct OfferRunner {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum StorageType {
-    /// Mutable storage the component may store its state in.
     Data,
-    /// Identical to the `Data` storage type, but subject to eviction.
     Cache,
-    /// Storage in which the framework can store metadata for the component instance.
     Meta,
 }
 
@@ -416,18 +406,12 @@ pub enum StorageType {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum Ref {
-    /// Component's containing realm (parent component).
     Realm(RealmRef),
-    /// Component itself.
     #[serde(rename = "self")]
     Self_(SelfRef),
-    /// Component's child.
     Child(ChildRef),
-    /// Component's collection.
     Collection(CollectionRef),
-    /// Component's storage section.
     Storage(StorageRef),
-    /// Component framework.
     Framework(FrameworkRef),
 }
 
@@ -604,7 +588,7 @@ impl<'de> de::Deserialize<'de> for Path {
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str(
-                    "a non-empty string no more than 1024 characters \
+                    "a non-empty path no more than 1024 characters \
                      in length, with a leading `/`, and containing no \
                      empty path segments",
                 )
@@ -629,6 +613,71 @@ impl<'de> de::Deserialize<'de> for Path {
             }
         }
         deserializer.deserialize_string(PathVisitor)
+    }
+}
+
+impl RelativePath {
+    /// Creates a `RelativePath` from a `String`, returning an `Err` if the string fails
+    /// validation. The string must be non-empty, no more than 1024 characters in length, not start
+    /// with a `/`, and contain no empty path segments.
+    pub fn new(path: String) -> Result<Self, PathValidationError> {
+        if path.is_empty() || path.len() > 1024 {
+            return Err(PathValidationError::InvalidLength);
+        }
+        if !path.split('/').all(|part| !part.is_empty()) {
+            return Err(PathValidationError::MalformedPath);
+        }
+        return Ok(Self(path));
+    }
+
+    pub fn value(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl Into<String> for RelativePath {
+    fn into(self) -> String {
+        self.0
+    }
+}
+
+impl<'de> de::Deserialize<'de> for RelativePath {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct RelativePathVisitor;
+
+        impl<'de> de::Visitor<'de> for RelativePathVisitor {
+            type Value = RelativePath;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(
+                    "a non-empty path no more than 1024 characters \
+                     in length, not starting with `/`, and containing no \
+                     empty path segments",
+                )
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                RelativePath::new(s.to_owned()).map_err(|err| {
+                    let msg = match err {
+                        PathValidationError::InvalidLength => {
+                            "a non-empty path no more than 1024 characters in \
+                             length"
+                        }
+                        PathValidationError::MalformedPath => {
+                            "a path with no leading `/` and non-empty segments"
+                        }
+                    };
+                    E::invalid_value(de::Unexpected::Str(s), &msg)
+                })
+            }
+        }
+        deserializer.deserialize_string(RelativePathVisitor)
     }
 }
 
@@ -903,6 +952,24 @@ mod tests {
         expect_err!(Path, "/foo/");
         expect_err!(Path, "/foo//bar");
         expect_err!(Path, &format!("/{}", repeat("x").take(1024).collect::<String>()));
+    }
+
+    #[test]
+    fn test_valid_relative_path() {
+        expect_ok!(RelativePath, "foo");
+        expect_ok!(RelativePath, "foo/bar");
+        expect_ok!(RelativePath, &format!("{}", repeat("x").take(1024).collect::<String>()));
+    }
+
+    #[test]
+    fn test_invalid_relative_path() {
+        expect_err!(RelativePath, "");
+        expect_err!(RelativePath, "/");
+        expect_err!(RelativePath, "/foo");
+        expect_err!(RelativePath, "foo/");
+        expect_err!(RelativePath, "/foo/");
+        expect_err!(RelativePath, "foo//bar");
+        expect_err!(RelativePath, &format!("{}", repeat("x").take(1025).collect::<String>()));
     }
 
     #[test]

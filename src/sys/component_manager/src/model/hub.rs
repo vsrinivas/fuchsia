@@ -917,6 +917,7 @@ mod tests {
                         source_path: CapabilityPath::try_from("/hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        subdir: None,
                     })],
                     ..default_component_decl()
                 },
@@ -1005,6 +1006,7 @@ mod tests {
                             source_path: CapabilityPath::try_from("/hub/exec").unwrap(),
                             target_path: CapabilityPath::try_from("/hub").unwrap(),
                             rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                            subdir: None,
                         }),
                         UseDecl::Protocol(UseProtocolDecl {
                             source: UseSource::Realm,
@@ -1016,6 +1018,7 @@ mod tests {
                             source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                             rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                            subdir: None,
                         }),
                     ],
                     ..default_component_decl()
@@ -1072,6 +1075,7 @@ mod tests {
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                             target: ExposeTarget::Realm,
                             rights: Some(fio2::Operations::Connect),
+                            subdir: None,
                         }),
                     ],
                     ..default_component_decl()

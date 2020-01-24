@@ -79,6 +79,9 @@ table UseDirectoryDecl {
 
     /// The rights required by the component to use this directory.
     4: fuchsia.io2.Rights rights;
+
+    /// The subdirectory of this directory to use instead of the root. Optional.
+    5: string:MAX_PATH_LENGTH subdir;
 };
 
 /// Declares storage used by a component, which was offered to the component's

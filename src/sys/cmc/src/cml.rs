@@ -287,6 +287,7 @@ pub struct Use {
     pub from: Option<Ref>,
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
+    pub subdir: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -299,6 +300,7 @@ pub struct Expose {
     pub r#as: Option<String>,
     pub to: Option<Ref>,
     pub rights: Option<Vec<String>>,
+    pub subdir: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -312,6 +314,7 @@ pub struct Offer {
     pub to: Vec<Ref>,
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
+    pub subdir: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]

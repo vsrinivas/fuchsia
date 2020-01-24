@@ -87,6 +87,9 @@ table OfferDirectoryDecl {
 
     /// The rights this directory should be offered with, required iff `source == self`.
     5: fuchsia.io2.Rights rights;
+
+    /// The subdirectory of this directory to offer instead of the root. Optional.
+    6: string:MAX_PATH_LENGTH subdir;
 };
 
 /// Declares a storage capability offered by a component to one of its children,

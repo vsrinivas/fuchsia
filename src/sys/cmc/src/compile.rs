@@ -121,11 +121,13 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             let source = extract_use_source(use_)?;
             let target_id = one_target_capability_id(use_, use_)?;
             let rights = extract_use_rights(use_)?;
+            let subdir = extract_use_subdir(use_)?;
             out_uses.push(cm::Use::Directory(cm::UseDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
                 rights,
+                subdir,
             }));
         } else if let Some(p) = use_.storage() {
             let target_path = match all_target_capability_ids(use_, use_) {
@@ -189,12 +191,14 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
         } else if let Some(p) = expose.directory() {
             let target_id = one_target_capability_id(expose, expose)?;
             let rights = extract_expose_rights(expose)?;
+            let subdir = extract_expose_subdir(expose)?;
             out_exposes.push(cm::Expose::Directory(cm::ExposeDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
                 target,
                 rights,
+                subdir,
             }))
         } else if let Some(p) = expose.runner() {
             let target_id = one_target_capability_id(expose, expose)?;
@@ -261,6 +265,7 @@ fn translate_offer(
                     target,
                     target_path: cm::Path::new(target_id)?,
                     rights: extract_offer_rights(offer)?,
+                    subdir: extract_offer_subdir(offer)?,
                 }));
             }
         } else if let Some(p) = offer.storage() {
@@ -388,6 +393,33 @@ fn extract_use_rights(in_obj: &cml::Use) -> Result<cm::Rights, Error> {
         },
         None => Err(Error::internal("No use rights provided but required for used directories")),
     }
+}
+
+fn extract_use_subdir(in_obj: &cml::Use) -> Result<Option<cm::RelativePath>, Error> {
+    in_obj
+        .subdir
+        .as_ref()
+        .map(|s| cm::RelativePath::new(s.clone()))
+        .transpose()
+        .map_err(|e| Error::internal(format!("invalid \"subdir\" for \"use\": {}", e)))
+}
+
+fn extract_expose_subdir(in_obj: &cml::Expose) -> Result<Option<cm::RelativePath>, Error> {
+    in_obj
+        .subdir
+        .as_ref()
+        .map(|s| cm::RelativePath::new(s.clone()))
+        .transpose()
+        .map_err(|e| Error::internal(format!("invalid \"subdir\" for \"expose\": {}", e)))
+}
+
+fn extract_offer_subdir(in_obj: &cml::Offer) -> Result<Option<cm::RelativePath>, Error> {
+    in_obj
+        .subdir
+        .as_ref()
+        .map(|s| cm::RelativePath::new(s.clone()))
+        .transpose()
+        .map_err(|e| Error::internal(format!("invalid \"subdir\" for \"offer\": {}", e)))
 }
 
 fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<cm::Rights>, Error> {
@@ -637,7 +669,12 @@ mod tests {
                     { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": "/svc/fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "directory": "/data/assets", "rights" : ["read_bytes"]},
-                    { "directory": "/data/config", "from": "realm", "rights": ["read_bytes"]},
+                    {
+                        "directory": "/data/config",
+                        "from": "realm",
+                        "rights": ["read_bytes"],
+                        "subdir": "fonts",
+                    },
                     { "storage": "meta" },
                     { "storage": "cache", "as": "/tmp" },
                     { "runner": "elf" },
@@ -703,7 +740,8 @@ mod tests {
                 "target_path": "/data/config",
                 "rights": [
                     "read_bytes"
-                ]
+                ],
+                "subdir": "fonts"
             }
         },
         {
@@ -750,7 +788,13 @@ mod tests {
                         "from": "self",
                         "to": "realm"
                     },
-                    { "directory": "/volumes/blobfs", "from": "self", "to": "framework", "rights": ["r*"]},
+                    {
+                        "directory": "/volumes/blobfs",
+                        "from": "self",
+                        "to": "framework",
+                        "rights": ["r*"],
+                        "subdir": "blob",
+                    },
                     { "directory": "/hub", "from": "framework" },
                     { "runner": "web", "from": "self" },
                     { "runner": "web", "from": "#logger", "to": "realm", "as": "web-rename" }
@@ -822,7 +866,8 @@ mod tests {
                     "traverse",
                     "read_bytes",
                     "get_attributes"
-                ]
+                ],
+                "subdir": "blob"
             }
         },
         {
@@ -910,7 +955,8 @@ mod tests {
                         "directory": "/data/assets",
                         "from": "realm",
                         "to": [ "#modular" ],
-                        "as": "/data"
+                        "as": "/data",
+                        "subdir": "index/file",
                     },
                     {
                         "directory": "/hub",
@@ -1081,7 +1127,8 @@ mod tests {
                         "name": "modular"
                     }
                 },
-                "target_path": "/data"
+                "target_path": "/data",
+                "subdir": "index/file"
             }
         },
         {

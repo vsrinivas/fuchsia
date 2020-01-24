@@ -130,6 +130,7 @@ impl CmInto<fsys::UseDirectoryDecl> for cm::UseDirectory {
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
             rights: self.rights.into(),
+            subdir: self.subdir.map(|s| s.into()),
         })
     }
 }
@@ -182,6 +183,7 @@ impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
                 Some(rights) => rights.into(),
                 None => None,
             },
+            subdir: self.subdir.map(|s| s.into()),
         })
     }
 }
@@ -230,6 +232,7 @@ impl CmInto<fsys::OfferDirectoryDecl> for cm::OfferDirectory {
                 Some(rights) => rights.into(),
                 None => None,
             },
+            subdir: self.subdir.map(|s| s.into()),
         })
     }
 }
@@ -640,7 +643,8 @@ mod tests {
                             },
                             "source_path": "/pkg",
                             "target_path": "/pkg",
-                            "rights": ["connect", "read_bytes"]
+                            "rights": ["connect", "read_bytes"],
+                            "subdir": "config/data"
                         }
                     },
                     {
@@ -683,12 +687,14 @@ mod tests {
                         source_path: Some("/data/assets".to_string()),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect | fio2::Operations::WriteBytes),
+                        subdir: None,
                     }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_path: Some("/pkg".to_string()),
                         target_path: Some("/pkg".to_string()),
                         rights: Some(fio2::Operations::Connect | fio2::Operations::ReadBytes),
+                        subdir: Some("config/data".to_string()),
                     }),
                     fsys::UseDecl::Storage(fsys::UseStorageDecl {
                         type_: Some(fsys::StorageType::Cache),
@@ -752,6 +758,20 @@ mod tests {
                         }
                     },
                     {
+                        "directory": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "source_path": "/data",
+                            "target_path": "/data",
+                            "target": "realm",
+                            "rights": ["connect"],
+                            "subdir": "logs"
+                        }
+                    },
+                    {
                         "runner": {
                             "source": {
                                 "child": {
@@ -804,6 +824,18 @@ mod tests {
                         target_path: Some("/volumes/blobfs".to_string()),
                         target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                    }),
+                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
+                        source_path: Some("/data".to_string()),
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        target_path: Some("/data".to_string()),
+                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: Some("logs".to_string()),
                     }),
                     fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
                         source_name: Some("elf".to_string()),
@@ -857,7 +889,8 @@ mod tests {
                                 }
                             },
                             "target_path": "/data/config",
-                            "rights": ["connect"]
+                            "rights": ["connect"],
+                            "subdir": "fonts"
                         }
                     },
                     {
@@ -1046,6 +1079,7 @@ mod tests {
                         )),
                         target_path: Some("/data/realm_assets".to_string()),
                         rights: None,
+                        subdir: None,
                     }),
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -1057,6 +1091,7 @@ mod tests {
                         )),
                         target_path: Some("/data/config".to_string()),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: Some("fonts".to_string()),
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -1450,6 +1485,7 @@ mod tests {
                         target_path: Some("/volumes/blobfs".to_string()),
                         target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         rights: Some(fio2::Operations::Connect),
+                        subdir: None,
                     }),
                 ];
                 let offers = vec![

@@ -696,6 +696,7 @@ mod tests {
                     "directory": "/data/config",
                     "from": "realm",
                     "rights": ["rx*"],
+                    "subdir": "fonts/all",
                   },
                   { "storage": "data", "as": "/example" },
                   { "storage": "cache", "as": "/tmp" },
@@ -775,6 +776,19 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/protocol")),
         },
+        test_cml_use_bad_subdir => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/data/config",
+                    "from": "realm",
+                    "rights": [ "r*" ],
+                    "subdir": "/",
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
+        },
 
         // expose
         test_cml_expose => {
@@ -793,7 +807,12 @@ mod tests {
                         "protocol": ["/svc/B", "/svc/C"],
                         "from": "self",
                     },
-                    { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
+                    {
+                        "directory": "/volumes/blobfs",
+                        "from": "self",
+                        "rights": ["r*"],
+                        "subdir": "blob",
+                    },
                     { "directory": "/hub", "from": "framework" },
                     { "runner": "elf", "from": "#logger",  }
                 ],
@@ -906,6 +925,19 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/protocol")),
         },
+        test_cml_expose_bad_subdir => {
+            input = json!({
+                "expose": [
+                    {
+                        "directory": "/volumes/blobfs",
+                        "from": "self",
+                        "rights": ["r*"],
+                        "subdir": "/",
+                    },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/subdir")),
+        },
 
         // offer
         test_cml_offer => {
@@ -943,6 +975,7 @@ mod tests {
                     },
                     {
                         "directory": "/data/index",
+                        "subdir": "files",
                         "from": "realm",
                         "to": [ "#modular" ]
                     },
@@ -971,7 +1004,7 @@ mod tests {
                     {
                         "name": "echo_server",
                         "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
-                    }
+                    },
                 ],
                 "collections": [
                     {
@@ -984,7 +1017,7 @@ mod tests {
                         "name": "minfs",
                         "from": "realm",
                         "path": "/minfs",
-                    }
+                    },
                 ]
             }),
             result = Ok(()),
@@ -1274,6 +1307,25 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate("\"as\" field can only be specified when one `protocol` is supplied.")),
+        },
+        test_cml_offer_bad_subdir => {
+            input = json!({
+                "offer": [
+                    {
+                        "directory": "/data/index",
+                        "subdir": "/",
+                        "from": "realm",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/subdir")),
         },
 
         // children
@@ -1751,6 +1803,78 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/service")),
         },
+        test_cml_relative_path => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo",
+                    "rights": ["r*"],
+                    "subdir": "?!@#$%/Bar",
+                  },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_relative_path_invalid_empty => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo",
+                    "rights": ["r*"],
+                    "subdir": "",
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MinLength condition is not met at /use/0/subdir, Pattern condition is not met at /use/0/subdir")),
+        },
+        test_cml_relative_path_invalid_root => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo",
+                    "rights": ["r*"],
+                    "subdir": "/",
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
+        },
+        test_cml_relative_path_invalid_absolute => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo",
+                    "rights": ["r*"],
+                    "subdir": "/bar",
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
+        },
+        test_cml_relative_path_invalid_trailing => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo",
+                    "rights": ["r*"],
+                    "subdir": "bar/",
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
+        },
+        test_cml_relative_path_too_long => {
+            input = json!({
+                "use": [
+                  {
+                    "directory": "/foo",
+                    "rights": ["r*"],
+                    "subdir": format!("{}", "a".repeat(1025)),
+                  },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /use/0/subdir")),
+        },
         test_cml_relative_ref_too_long => {
             input = json!({
                 "expose": [
@@ -2154,6 +2278,7 @@ mod tests {
             to: vec![],
             r#as: None,
             rights: None,
+            subdir: None,
         }
     }
 
