@@ -10,10 +10,10 @@
 #include <limits.h>
 #include <zircon/syscalls.h>
 
+#include <fidl/test/coding/llcpp/fidl.h>
 #include <unittest/unittest.h>
 
 #include "fidl_coded_types.h"
-#include "generated/fidl_llcpp_llcpp.test.h"
 
 namespace {
 

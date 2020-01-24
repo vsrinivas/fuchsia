@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/llcpp/dirent/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
@@ -17,7 +15,6 @@
 #include <lib/zx/time.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
-#include <zxtest/zxtest.h>
 
 #include <atomic>
 #include <cstdlib>
@@ -25,8 +22,11 @@
 #include <memory>
 #include <utility>
 
+#include <fidl/test/llcpp/dirent/c/fidl.h>
+#include <zxtest/zxtest.h>
+
 // Interface under test.
-#include "generated/fidl_llcpp_dirent.h"
+#include <fidl/test/llcpp/dirent/llcpp/fidl.h>
 
 // Namespace shorthand for bindings generated code
 namespace gen = ::llcpp::fidl::test::llcpp::dirent;
@@ -66,7 +66,8 @@ namespace manual_server {
 
 class Server {
  public:
-  Server(zx::channel chan) : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  Server(zx::channel chan)
+      : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   zx_status_t Start() {
     zx_status_t status = loop_.StartThread("llcpp_manual_server");
@@ -228,7 +229,8 @@ namespace llcpp_server {
 
 class ServerBase : public gen::DirEntTestInterface::Interface {
  public:
-  ServerBase(zx::channel chan) : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  ServerBase(zx::channel chan)
+      : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   zx_status_t Start() {
     zx_status_t status = loop_.StartThread("llcpp_bindings_server");
@@ -513,9 +515,7 @@ void CallerAllocateCountNumDirectories() {
     fidl::Buffer<gen::DirEntTestInterface::CountNumDirectoriesRequest> request_buffer;
     fidl::Buffer<gen::DirEntTestInterface::CountNumDirectoriesResponse> response_buffer;
     auto result = client.CountNumDirectories(
-        request_buffer.view(),
-        fidl::VectorView<gen::DirEnt>{dirents},
-        response_buffer.view());
+        request_buffer.view(), fidl::VectorView<gen::DirEnt>{dirents}, response_buffer.view());
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
@@ -753,8 +753,7 @@ TEST(DirentServerTest, CFlavorSendOnDirents) {
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   auto status = gen::DirEntTestInterface::SendOnDirentsEvent(
-      zx::unowned_channel(server_chan),
-      fidl::VectorView<gen::DirEnt>{dirents});
+      zx::unowned_channel(server_chan), fidl::VectorView<gen::DirEnt>{dirents});
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
@@ -771,8 +770,7 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   auto buffer = std::make_unique<fidl::Buffer<gen::DirEntTestInterface::OnDirentsResponse>>();
   auto status = gen::DirEntTestInterface::SendOnDirentsEvent(
-      zx::unowned_channel(server_chan), buffer->view(),
-      fidl::VectorView<gen::DirEnt>{dirents});
+      zx::unowned_channel(server_chan), buffer->view(), fidl::VectorView<gen::DirEnt>{dirents});
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }

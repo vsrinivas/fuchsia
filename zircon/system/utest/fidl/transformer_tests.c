@@ -6,11 +6,21 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <example/c/fidl.h>
 #include <unittest/unittest.h>
 
-#include "generated/transformer_tables.test.h"
 #include "zircon/errors.h"
 #include "zircon/types.h"
+
+// Extra tables not mentioned in the C bindings header but used in these tests.
+extern const fidl_type_t v1_example_Sandwich6Table;
+extern const fidl_type_t example_Sandwich6Table;
+extern const fidl_type_t example_Sandwich1Table;
+extern const fidl_type_t v1_example_Regression5Table;
+extern const fidl_type_t example_Regression5Table;
+extern const fidl_type_t v1_example_Regression6Table;
+extern const fidl_type_t example_Regression6Table;
+extern const fidl_type_t v1_example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestTable;
 
 #define ASSERT_TRUE_NOMSG(x) ASSERT_TRUE(x, "")
 

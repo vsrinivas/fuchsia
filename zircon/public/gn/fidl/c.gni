@@ -58,6 +58,10 @@ template("fidl_c_library") {
     }
 
     library(library_target) {
+      # The library won't actually compile on host but the headers can be used
+      # and are used in some unit tests.
+      host = true
+
       forward_variables_from(invoker,
                              [
                                "visibility",

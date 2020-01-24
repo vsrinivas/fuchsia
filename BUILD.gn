@@ -453,7 +453,6 @@ build_api_module("zircon") {
 group("default") {
   testonly = true
   deps = [
-    ":build_time_checks",
     "//build:tests",
     "//build/images:packages",
     "//build/unification/tests:host-metadata",
@@ -486,11 +485,6 @@ group("additional_universe_packages") {
   testonly = true
   visibility = [ "//build/images:universe_packages" ]
   public_deps = universe_package_labels
-}
-
-group("build_time_checks") {
-  testonly = true
-  deps = [ "//tools/fidlgen_llcpp_zircon:validate" ]
 }
 
 group("recovery_image") {
