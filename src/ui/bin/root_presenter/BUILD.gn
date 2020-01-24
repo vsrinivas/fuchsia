@@ -53,8 +53,12 @@ executable("bin") {
 
 source_set("lib") {
   sources = [
+    "activity_notifier.cc",
+    "activity_notifier.h",
     "app.cc",
     "app.h",
+    "media_buttons_handler.cc",
+    "media_buttons_handler.h",
     "perspective_demo_mode.cc",
     "perspective_demo_mode.h",
     "presentation.cc",
@@ -85,13 +89,12 @@ source_set("lib") {
   ]
 
   deps = [
-    ":activity_notifier",
     ":color_transform",
     ":displays",
     ":factory_reset_manager",
-    ":media_buttons_handler",
     ":renderer_params",
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input2",
@@ -126,42 +129,6 @@ source_set("displays") {
   ]
 }
 
-source_set("activity_notifier") {
-  sources = [
-    "activity_notifier.cc",
-    "activity_notifier.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.activity",
-    "//sdk/fidl/fuchsia.ui.input",
-  ]
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/lib/ui/input",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-  ]
-}
-
-source_set("media_buttons_handler") {
-  sources = [
-    "media_buttons_handler.cc",
-    "media_buttons_handler.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.policy",
-  ]
-  deps = [
-    ":activity_notifier",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/ui/input",
-  ]
-}
-
 source_set("renderer_params") {
   sources = [
     "renderer_params.cc",
@@ -181,13 +148,13 @@ source_set("factory_reset_manager") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.ui",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
   ]
