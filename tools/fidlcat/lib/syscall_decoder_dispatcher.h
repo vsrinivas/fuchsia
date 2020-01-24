@@ -8,6 +8,7 @@
 #include <zircon/system/public/zircon/errors.h>
 #include <zircon/system/public/zircon/types.h>
 
+#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -1854,7 +1855,7 @@ inline void DisplayValue<uint8_t>(SyscallDecoderDispatcher* /*dispatcher*/,
       break;
     case SyscallType::kUint8Hexa: {
       std::vector<char> buffer(sizeof(uint8_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%02x", value);
+      snprintf(buffer.data(), buffer.size(), "%02" PRIx8, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
@@ -1905,7 +1906,7 @@ inline void DisplayValue<uint16_t>(SyscallDecoderDispatcher* /*dispatcher*/,
       break;
     case SyscallType::kUint16Hexa: {
       std::vector<char> buffer(sizeof(uint16_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%04x", value);
+      snprintf(buffer.data(), buffer.size(), "%04" PRIx16, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
@@ -1956,7 +1957,7 @@ inline void DisplayValue<uint32_t>(SyscallDecoderDispatcher* dispatcher,
       break;
     case SyscallType::kUint32Hexa: {
       std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%08x", value);
+      snprintf(buffer.data(), buffer.size(), "%08" PRIx32, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
@@ -2200,14 +2201,14 @@ inline void DisplayValue<uint64_t>(SyscallDecoderDispatcher* /*dispatcher*/,
       break;
     case SyscallType::kUint64Hexa: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
 #ifndef __MACH__
     case SyscallType::kGpAddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
@@ -2225,20 +2226,20 @@ inline void DisplayValue<uint64_t>(SyscallDecoderDispatcher* /*dispatcher*/,
       break;
     case SyscallType::kPaddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
 #ifndef __MACH__
     case SyscallType::kUintptr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
     case SyscallType::kVaddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
@@ -2283,7 +2284,7 @@ inline void DisplayValue<uintptr_t>(SyscallDecoderDispatcher* /*dispatcher*/,
   switch (type) {
     case SyscallType::kGpAddr: {
       std::vector<char> buffer(sizeof(uintptr_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
@@ -2292,19 +2293,19 @@ inline void DisplayValue<uintptr_t>(SyscallDecoderDispatcher* /*dispatcher*/,
       break;
     case SyscallType::kPaddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
     case SyscallType::kUintptr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
     case SyscallType::kVaddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIxPTR, value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
@@ -2322,9 +2323,9 @@ inline void DisplayValue<zx_uint128_t>(SyscallDecoderDispatcher* /*dispatcher*/,
   switch (type) {
     case SyscallType::kUint128Hexa: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016lx", value.low);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value.low);
       os << colors.blue << "{ low = " << buffer.data();
-      snprintf(buffer.data(), buffer.size(), "%016lx", value.high);
+      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value.high);
       os << ", high = " << buffer.data() << " }" << colors.reset;
       break;
     }
