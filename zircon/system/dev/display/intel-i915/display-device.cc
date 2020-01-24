@@ -276,8 +276,8 @@ void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync complet
   }
 
   FidlBacklight::Device_GetStateNormalized_Result result;
+  FidlBacklight::Device_GetStateNormalized_Response response{.state = state};
   if (status == ZX_OK) {
-    FidlBacklight::Device_GetStateNormalized_Response response{.state = state};
     result.set_response(&response);
   } else {
     result.set_err(&status);
