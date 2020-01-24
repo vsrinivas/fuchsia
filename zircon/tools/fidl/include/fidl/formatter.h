@@ -6,6 +6,7 @@
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FORMATTER_H_
 
 #include <memory>
+#include <optional>
 #include <regex>
 #include <sstream>
 
@@ -128,6 +129,8 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
   }
 
   virtual void OnParameterList(std::unique_ptr<ParameterList> const& element) override {
+    has_encountered_param_list_start_ = false;
+    is_param_list_first_param_on_same_line_ = std::nullopt;
     ScopedBool method(is_param_decl_);
     TreeVisitor::OnParameterList(element);
   }
@@ -273,8 +276,16 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
   // After closing a parameter attribute, we restore the protocol alignment.
   int protocol_method_alignment_size_backup = -1;
 
+  bool has_encountered_param_list_start_;
+  // After encountering the opening parenthesis of a `ParameterList`, this denotes whether the first
+  // param is on the same line.
+  std::optional<bool> is_param_list_first_param_on_same_line_;
+
   // When we complete a node and know the next thing needs to be whitespace
   bool ws_required_next_ = false;
+
+  // When we complete a node and the next thing cannot have whitespace
+  bool no_ws_next_ = false;
 
   // Remove all leading whitespace (regardless of whether it is part of the
   // beginning / end of a line).
@@ -327,7 +338,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     // No non-' ' or '\n' whitespace
     // One ws token before / after every ws-requiring character
     // No non-newline ws before / after characters that don't want it.
-    void RegularizeSpaces(bool& ws_required_next);
+    void RegularizeSpaces(bool& ws_required_next, bool& no_ws_next);
 
     // Precondition: By now, everything should have had its leading ws
     // stripped, and } characters are the first things on their own lines.
@@ -379,7 +390,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     seg.RemoveTrailingWSOnLine();
     seg.RemoveLeadingWSOnLine();
     seg.RemoveExtraBlankLines(blank_line_respecting_node_);
-    seg.RegularizeSpaces(ws_required_next_);
+    seg.RegularizeSpaces(ws_required_next_, no_ws_next_);
     seg.InsertRequiredNewlines(blank_line_requiring_node_);
     seg.Indent(current_nesting_);
     if (remove_leading_ws_) {

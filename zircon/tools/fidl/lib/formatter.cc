@@ -183,13 +183,18 @@ int FormattingTreeVisitor::Segment::EraseMultipleSpacesAt(int pos, int leave_thi
 //  - One ws token before / after every ws-requiring character
 //  - No non-newline ws before / after characters that don't want it.
 //  - "->" operators are never at the end of the line.
-void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
-  bool last_char_required_ws = false;
+void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next, bool& no_ws_next) {
+  assert(!(ws_required_next && no_ws_next));
 
-  // Check if this is still true from the last node.
-  if (ws_required_next) {
+  bool last_char_required_ws = false;
+  bool last_char_no_ws = false;
+
+  if (ws_required_next && (output_.empty() || !utils::IsWhitespace(output_[0]))) {
+    // The current string does not begin with the required whitespace, so insert it.
     output_.insert(0, " ");
     ws_required_next = false;
+  } else if (no_ws_next) {
+    EraseMultipleSpacesAt(0, 0);
   }
 
   for (int i = 0; i < static_cast<int>(output_.size()); i++) {
@@ -255,12 +260,14 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
       if (!utils::IsWhitespace(output_[i])) {
         last_char_required_ws = false;
       }
+      last_char_no_ws = NoWSAfterChar(output_[i]);
     }
   }
   ws_required_next = last_char_required_ws;
+  no_ws_next = last_char_no_ws;
 }
 
-// Rules are mostly obvious, but see TrackMethodProtocolAlignment below.
+// Rules are mostly obvious, but see TrackProtocolMethodAlignment below.
 // Precondition: By now, everything should have had its leading ws
 // stripped, and } characters are the first things on their own lines.
 void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
@@ -327,43 +334,53 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
 //  - If there is a parameter attribute, +1 indent past the beginning of '['
 void FormattingTreeVisitor::TrackProtocolMethodAlignment(const std::string& str) {
   static std::locale c_locale("C");
-  if (protocol_method_alignment_) {
-    for (int i = 0; i < static_cast<int>(str.size()); i++) {
-      MaybeWindPastComment(str, i);
+  if (!protocol_method_alignment_) {
+    return;
+  }
 
-      char ch = str[i];
-      if (ch == '\n') {
-        distance_from_last_newline_ = 0;
-      } else {
-        distance_from_last_newline_++;
+  for (int i = 0; i < static_cast<int>(str.size()); i++) {
+    MaybeWindPastComment(str, i);
+
+    char ch = str[i];
+    if (ch == '\n') {
+      if (has_encountered_param_list_start_ &&
+          !is_param_list_first_param_on_same_line_.has_value()) {
+        // The first parameter of the parameter list has not been encountered before a newline
+        // character; thus, the first parameter is not on the same line.
+        is_param_list_first_param_on_same_line_ = false;
       }
+      distance_from_last_newline_ = 0;
+    } else {
+      distance_from_last_newline_++;
+    }
 
-      // This figures out if we are supposed to align to the '(' or the
-      // method name.
-      if (ch == '(') {
-        bool align_on_oparen = false;
-        for (int j = i + 1; j < static_cast<int>(str.size()); j++) {
-          MaybeWindPastComment(str, j);
-          if (str[j] == '\n')
-            break;
-          if (!utils::IsWhitespaceNoNewline(str[j]))
-            align_on_oparen = true;
-        }
-        if (align_on_oparen) {
-          protocol_method_alignment_size_ = distance_from_last_newline_;
-        }
+    // This figures out if we are supposed to align to the '(' or the
+    // method name.
+    if (ch == '(') {
+      has_encountered_param_list_start_ = true;
+    }
+
+    // Alignment for attributes.
+    if (ch == '[') {
+      if (has_encountered_param_list_start_ &&
+          !is_param_list_first_param_on_same_line_.has_value()) {
+        is_param_list_first_param_on_same_line_ = true;
+        protocol_method_alignment_size_ = distance_from_last_newline_ - 1;
       }
+      protocol_method_alignment_size_backup = protocol_method_alignment_size_;
+      protocol_method_alignment_size_ = distance_from_last_newline_;
+    }
 
-      // Alignment for attributes.
-      if (ch == '[') {
-        protocol_method_alignment_size_backup = protocol_method_alignment_size_;
-        protocol_method_alignment_size_ = distance_from_last_newline_;
-      }
-
-      if (isalpha(ch, c_locale) && protocol_method_alignment_size_ == -1) {
+    if (isalpha(ch, c_locale)) {
+      if (protocol_method_alignment_size_ == -1) {
         // This should be the method identifier.
         offset_of_first_id_ = protocol_method_alignment_size_ =
             distance_from_last_newline_ + kIndentSpaces - 1;
+      } else if (has_encountered_param_list_start_ &&
+                 !is_param_list_first_param_on_same_line_.has_value()) {
+        // This is the first element of the parameter list and its on the same line.
+        is_param_list_first_param_on_same_line_ = true;
+        protocol_method_alignment_size_ = distance_from_last_newline_ - 1;
       }
     }
   }

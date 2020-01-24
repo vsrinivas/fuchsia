@@ -132,7 +132,7 @@ protocol PCol
         int32 x) -> (int y);
 
     Gavrok // ( heh heh ->
-        ( // ( An annoying comment.
+        (// ( An annoying comment.
         int a, int b) -> ();
 
     -> Goo(int32 p, string:32 s);

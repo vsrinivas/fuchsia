@@ -692,6 +692,10 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
   ASTScope scope(this);
   std::vector<std::unique_ptr<raw::Parameter>> parameter_list;
 
+  ConsumeToken(OfKind(Token::Kind::kLeftParen));
+  if (!Ok())
+    return Fail();
+
   if (Peek().kind() != Token::Kind::kRightParen) {
     auto parameter = ParseParameter();
     parameter_list.emplace_back(std::move(parameter));
@@ -707,6 +711,10 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
     }
   }
 
+  ConsumeToken(OfKind(Token::Kind::kRightParen));
+  if (!Ok())
+    return Fail();
+
   return std::make_unique<raw::ParameterList>(scope.GetSourceElement(), std::move(parameter_list));
 }
 
@@ -721,15 +729,12 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
     return Fail();
 
   auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
-    ConsumeToken(OfKind(Token::Kind::kLeftParen));
     if (!Ok())
       return false;
     *params_out = ParseParameterList();
     if (!Ok())
       return false;
-    ConsumeToken(OfKind(Token::Kind::kRightParen));
-    if (!Ok())
-      return false;
+
     return true;
   };
 
@@ -756,13 +761,7 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
     std::unique_ptr<raw::Identifier> method_name) {
   auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
-    ConsumeToken(OfKind(Token::Kind::kLeftParen));
-    if (!Ok())
-      return false;
     *params_out = ParseParameterList();
-    if (!Ok())
-      return false;
-    ConsumeToken(OfKind(Token::Kind::kRightParen));
     if (!Ok())
       return false;
     return true;
