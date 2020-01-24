@@ -58,22 +58,22 @@ std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
     AudioCoreImpl* owner) {
   return std::unique_ptr<AudioCapturerImpl>(new AudioCapturerImpl(
       loopback, std::move(audio_capturer_request), &owner->threading_model(), &owner->route_graph(),
-      &owner->audio_admin(), &owner->volume_manager()));
+      &owner->audio_admin(), &owner->volume_manager(), &owner->link_matrix()));
 }
 
 std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
-    StreamVolumeManager* volume_manager) {
+    StreamVolumeManager* volume_manager, LinkMatrix* link_matrix) {
   return std::unique_ptr<AudioCapturerImpl>(
       new AudioCapturerImpl(loopback, std::move(audio_capturer_request), threading_model,
-                            route_graph, admin, volume_manager));
+                            route_graph, admin, volume_manager, link_matrix));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
-    StreamVolumeManager* volume_manager)
+    StreamVolumeManager* volume_manager, LinkMatrix* link_matrix)
     : AudioObject(Type::AudioCapturer),
       binding_(this, std::move(audio_capturer_request)),
       threading_model_(*threading_model),
@@ -87,10 +87,12 @@ AudioCapturerImpl::AudioCapturerImpl(
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false),
       overflow_count_(0u),
-      partial_overflow_count_(0u) {
+      partial_overflow_count_(0u),
+      link_matrix_(*link_matrix) {
   FX_DCHECK(route_graph);
   FX_DCHECK(admin);
   FX_DCHECK(mix_domain_);
+  FX_DCHECK(link_matrix);
   REP(AddingCapturer(*this));
 
   volume_manager_.AddStream(this);

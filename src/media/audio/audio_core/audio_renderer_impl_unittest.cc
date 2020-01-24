@@ -41,7 +41,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   AudioRendererImplTest()
       : admin_(&gain_adjustment_, dispatcher(), &policy_action_reporter_),
         volume_manager_(dispatcher()),
-        route_graph_(routing_config_),
+        route_graph_(routing_config_, &link_matrix_),
         vmar_(fzl::VmarManager::Create(kAudioRendererUnittestVmarSize, nullptr,
                                        kAudioRendererUnittestVmarFlags)) {
     fzl::VmoMapper vmo_mapper;
@@ -61,7 +61,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
     route_graph_.SetThrottleOutput(&threading_model(),
                                    ThrottleOutput::Create(&threading_model(), &device_registry_));
     renderer_ = AudioRendererImpl::Create(fidl_renderer_.NewRequest(), dispatcher(), &route_graph_,
-                                          &admin_, vmar_, &volume_manager_);
+                                          &admin_, vmar_, &volume_manager_, &link_matrix_);
     EXPECT_NE(renderer_.get(), nullptr);
   }
 
@@ -105,6 +105,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   testing::StubDeviceRegistry device_registry_;
   StreamVolumeManager volume_manager_;
   RoutingConfig routing_config_;
+  LinkMatrix link_matrix_;
   RouteGraph route_graph_;
 
   fuchsia::media::AudioRendererPtr fidl_renderer_;

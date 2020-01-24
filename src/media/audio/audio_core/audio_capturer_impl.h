@@ -21,6 +21,7 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/route_graph.h"
@@ -46,7 +47,7 @@ class AudioCapturerImpl : public AudioObject,
   static std::unique_ptr<AudioCapturerImpl> Create(
       bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
-      StreamVolumeManager* volume_manager);
+      StreamVolumeManager* volume_manager, LinkMatrix* link_matrix);
 
   ~AudioCapturerImpl() override;
 
@@ -160,7 +161,7 @@ class AudioCapturerImpl : public AudioObject,
   AudioCapturerImpl(bool loopback,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
                     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
-                    StreamVolumeManager* volume_manager);
+                    StreamVolumeManager* volume_manager, LinkMatrix* link_matrix);
 
   // AudioCapturer FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;
@@ -314,6 +315,8 @@ class AudioCapturerImpl : public AudioObject,
         : object(_object), mixer(std::move(_mixer)) {}
   };
   std::vector<MixerHolder> mixers_;
+
+  [[maybe_unused]] LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

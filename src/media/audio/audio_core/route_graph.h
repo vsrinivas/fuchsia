@@ -16,6 +16,7 @@
 
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/routing_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
@@ -39,7 +40,9 @@ struct RoutingProfile {
 // Loopback capturers are routed to the most recently plugged output which supports loopback.
 class RouteGraph {
  public:
-  RouteGraph(const RoutingConfig& routing_config);
+  // Constructs a graph from the given config and link matrix. Each parameter must outlive the
+  // RouteGraph.
+  RouteGraph(const RoutingConfig& routing_config, LinkMatrix* link_matrix);
 
   ~RouteGraph();
 
@@ -144,6 +147,8 @@ class RouteGraph {
   void Unlink(UnlinkCommand unlink_command);
 
   Target OutputForUsage(const fuchsia::media::Usage& usage) const;
+
+  [[maybe_unused]] LinkMatrix& link_matrix_;
 
   const RoutingConfig& routing_config_;
 

@@ -24,9 +24,11 @@ constexpr zx::duration kPaddingForPlayNoReplyWithRefTime = zx::msec(10);
 std::unique_ptr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
-    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager) {
-  return std::unique_ptr<AudioRendererImpl>(new AudioRendererImpl(
-      std::move(audio_renderer_request), dispatcher, route_graph, admin, vmar, volume_manager));
+    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager,
+    LinkMatrix* link_matrix) {
+  return std::unique_ptr<AudioRendererImpl>(
+      new AudioRendererImpl(std::move(audio_renderer_request), dispatcher, route_graph, admin, vmar,
+                            volume_manager, link_matrix));
 }
 
 std::unique_ptr<AudioRendererImpl> AudioRendererImpl::Create(
@@ -34,13 +36,15 @@ std::unique_ptr<AudioRendererImpl> AudioRendererImpl::Create(
     AudioCoreImpl* owner) {
   return Create(std::move(audio_renderer_request),
                 owner->threading_model().FidlDomain().dispatcher(), &owner->route_graph(),
-                &owner->audio_admin(), owner->vmar(), &owner->volume_manager());
+                &owner->audio_admin(), owner->vmar(), &owner->volume_manager(),
+                &owner->link_matrix());
 }
 
 AudioRendererImpl::AudioRendererImpl(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
-    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager)
+    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager,
+    LinkMatrix* link_matrix)
     : AudioObject(Type::AudioRenderer),
       dispatcher_(dispatcher),
       route_graph_(*route_graph),
@@ -49,10 +53,12 @@ AudioRendererImpl::AudioRendererImpl(
       volume_manager_(*volume_manager),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
-      reference_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()) {
+      reference_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()),
+      link_matrix_(*link_matrix) {
   TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
   FX_DCHECK(admin);
   FX_DCHECK(route_graph);
+  FX_DCHECK(link_matrix);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 

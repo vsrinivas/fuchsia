@@ -109,7 +109,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
   RouteGraphTest() : RouteGraphTest(kConfigNoPolicy) {}
 
   RouteGraphTest(const RoutingConfig& routing_config)
-      : under_test_(routing_config),
+      : under_test_(routing_config, &link_matrix_),
         throttle_output_(ThrottleOutput::Create(&threading_model(), &device_registry_)) {
     Logging::Init(-media::audio::SPEW, {"route_graph_test"});
     under_test_.SetThrottleOutput(&threading_model(), throttle_output_);
@@ -138,6 +138,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
 
   testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
+  LinkMatrix link_matrix_;
   RouteGraph under_test_;
   std::shared_ptr<AudioOutput> throttle_output_;
 };

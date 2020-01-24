@@ -18,6 +18,7 @@
 
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/format.h"
+#include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
@@ -41,7 +42,8 @@ class AudioRendererImpl : public AudioObject,
   static std::unique_ptr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
       async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
-      fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
+      fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager,
+      LinkMatrix* link_matrix);
   static std::unique_ptr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
       AudioCoreImpl* owner);
@@ -121,7 +123,8 @@ class AudioRendererImpl : public AudioObject,
 
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
                     async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
-                    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
+                    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager,
+                    LinkMatrix* link_matrix);
 
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
@@ -183,6 +186,8 @@ class AudioRendererImpl : public AudioObject,
   std::unordered_map<const AudioObject*, std::shared_ptr<PacketQueue>> packet_queues_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
+
+  [[maybe_unused]] LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

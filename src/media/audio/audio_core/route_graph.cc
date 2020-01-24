@@ -20,7 +20,10 @@ std::array<fuchsia::media::AudioRenderUsage, fuchsia::media::RENDER_USAGE_COUNT>
 
 }  // namespace
 
-RouteGraph::RouteGraph(const RoutingConfig& routing_config) : routing_config_(routing_config) {
+RouteGraph::RouteGraph(const RoutingConfig& routing_config, LinkMatrix* link_matrix)
+    : link_matrix_(*link_matrix), routing_config_(routing_config) {
+  FX_DCHECK(link_matrix);
+
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND) == 0);
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA) == 1);
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION) == 2);

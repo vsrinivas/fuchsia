@@ -32,7 +32,7 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
       device_manager_(threading_model, &route_graph_, &device_settings_persistence_),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
       audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
-      route_graph_(ProcessConfig::instance().routing_config()),
+      route_graph_(ProcessConfig::instance().routing_config(), &link_matrix_),
       component_context_(std::move(component_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {

@@ -39,7 +39,7 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
   AudioCapturerImplTest()
       : admin_(&gain_adjustment_, dispatcher(), &policy_action_reporter_),
         volume_manager_(dispatcher()),
-        route_graph_(routing_config_) {
+        route_graph_(routing_config_, &link_matrix_) {
     fzl::VmoMapper vmo_mapper;
     FX_CHECK(vmo_mapper.CreateAndMap(kAudioCapturerUnittestVmarSize,
                                      /*flags=*/0, nullptr, &vmo_) == ZX_OK);
@@ -58,7 +58,7 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
                                    ThrottleOutput::Create(&threading_model(), &device_registry_));
     auto capturer = AudioCapturerImpl::Create(
         /*loopback=*/false, fidl_capturer_.NewRequest(), &threading_model(), &route_graph_, &admin_,
-        &volume_manager_);
+        &volume_manager_, &link_matrix_);
     capturer_ = capturer.get();
     EXPECT_NE(capturer_, nullptr);
 
@@ -84,6 +84,7 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
   testing::StubDeviceRegistry device_registry_;
   RoutingConfig routing_config_;
   StreamVolumeManager volume_manager_;
+  LinkMatrix link_matrix_;
   RouteGraph route_graph_;
 
   AudioCapturerImpl* capturer_;
