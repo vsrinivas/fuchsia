@@ -66,7 +66,6 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter,
                const ExperimentalFlags& experimental_flags)
     : lexer_(lexer), error_reporter_(error_reporter), experimental_flags_(experimental_flags) {
   handle_subtype_table_ = {
-      {"none", types::HandleSubtype::kHandle},
       {"bti", types::HandleSubtype::kBti},
       {"channel", types::HandleSubtype::kChannel},
       {"debuglog", types::HandleSubtype::kLog},
@@ -451,8 +450,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
     return Fail();
   std::unique_ptr<raw::TypeConstructor> maybe_arg_type_ctor;
   std::optional<types::HandleSubtype> handle_subtype;
-  std::unique_ptr<raw::Constant> handle_required_rights;
-  std::unique_ptr<raw::Constant> handle_optional_rights;
+  std::unique_ptr<raw::Constant> handle_rights;
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     if (!Ok())
       return Fail();
@@ -466,10 +464,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
         return Fail();
       if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kEnableHandleRights)) {
         if (MaybeConsumeToken(OfKind(Token::Kind::kComma))) {
-          handle_required_rights = ParseConstant();
-          if (MaybeConsumeToken(OfKind(Token::Kind::kComma))) {
-            handle_optional_rights = ParseConstant();
-          }
+          handle_rights = ParseConstant();
         }
       }
     } else {
@@ -498,8 +493,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
 
   return std::make_unique<raw::TypeConstructor>(
       scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
-      handle_subtype, std::move(handle_required_rights), std::move(handle_optional_rights),
-      std::move(maybe_size), nullability);
+      handle_subtype, std::move(handle_rights), std::move(maybe_size), nullability);
 }
 
 std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {

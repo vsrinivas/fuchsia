@@ -22,7 +22,7 @@
       "name": "fidl.test.handles/Handles",
       "location": {
         "filename": "handles.test.fidl",
-        "line": 11,
+        "line": 10,
         "column": 8
       },
       "anonymous": false,
@@ -31,14 +31,13 @@
           "type": {
             "kind": "handle",
             "subtype": "handle",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "plain_handle",
           "location": {
             "filename": "handles.test.fidl",
-            "line": 12,
+            "line": 11,
             "column": 12
           },
           "field_shape_v1": {
@@ -49,16 +48,15 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "handle",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "subtype": "vmo",
+            "rights": 2147483648,
             "nullable": false
           },
-          "name": "plain_handle_explicit",
+          "name": "subtype_handle",
           "location": {
             "filename": "handles.test.fidl",
-            "line": 13,
-            "column": 18
+            "line": 12,
+            "column": 17
           },
           "field_shape_v1": {
             "offset": 4,
@@ -68,16 +66,15 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "handle",
-            "required_rights": 1,
-            "optional_rights": 0,
+            "subtype": "vmo",
+            "rights": 1,
             "nullable": false
           },
-          "name": "plain_handle_only_required_rights",
+          "name": "rights_handle",
           "location": {
             "filename": "handles.test.fidl",
-            "line": 14,
-            "column": 21
+            "line": 13,
+            "column": 20
           },
           "field_shape_v1": {
             "offset": 8,
@@ -88,15 +85,19 @@
           "type": {
             "kind": "handle",
             "subtype": "handle",
-            "required_rights": 1,
-            "optional_rights": 2,
+            "rights": 2147483648,
             "nullable": false
           },
-          "name": "plain_handle_required_and_optional_rights",
+          "experimental_maybe_from_type_alias": {
+            "name": "fidl.test.handles/aliased_plain_handle",
+            "args": [],
+            "nullable": false
+          },
+          "name": "aliased_plain_handle_field",
           "location": {
             "filename": "handles.test.fidl",
             "line": 15,
-            "column": 24
+            "column": 26
           },
           "field_shape_v1": {
             "offset": 12,
@@ -106,16 +107,20 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "vmo",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "subtype": "handle",
+            "rights": 2147483648,
             "nullable": false
           },
-          "name": "no_rights_for_migration",
+          "experimental_maybe_from_type_alias": {
+            "name": "fidl.test.handles/aliased_subtype_handle",
+            "args": [],
+            "nullable": false
+          },
+          "name": "aliased_subtype_handle_field",
           "location": {
             "filename": "handles.test.fidl",
-            "line": 17,
-            "column": 17
+            "line": 16,
+            "column": 28
           },
           "field_shape_v1": {
             "offset": 16,
@@ -125,134 +130,23 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "vmo",
-            "required_rights": 1,
-            "optional_rights": 0,
+            "subtype": "handle",
+            "rights": 1,
             "nullable": false
           },
-          "name": "only_required_rights",
+          "experimental_maybe_from_type_alias": {
+            "name": "fidl.test.handles/aliased_rights_handle",
+            "args": [],
+            "nullable": false
+          },
+          "name": "aliased_rights_handle_field",
           "location": {
             "filename": "handles.test.fidl",
-            "line": 18,
-            "column": 20
+            "line": 17,
+            "column": 27
           },
           "field_shape_v1": {
             "offset": 20,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "handle",
-            "subtype": "vmo",
-            "required_rights": 1,
-            "optional_rights": 2,
-            "nullable": false
-          },
-          "name": "required_and_optional_rights",
-          "location": {
-            "filename": "handles.test.fidl",
-            "line": 19,
-            "column": 23
-          },
-          "field_shape_v1": {
-            "offset": 24,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "handle",
-            "subtype": "handle",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
-            "nullable": false
-          },
-          "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.handles/aliased_handle_plain",
-            "args": [],
-            "nullable": false
-          },
-          "name": "aliased_plain",
-          "location": {
-            "filename": "handles.test.fidl",
-            "line": 21,
-            "column": 26
-          },
-          "field_shape_v1": {
-            "offset": 28,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "handle",
-            "subtype": "handle",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
-            "nullable": false
-          },
-          "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.handles/aliased_handle_subtype",
-            "args": [],
-            "nullable": false
-          },
-          "name": "aliased_subtype",
-          "location": {
-            "filename": "handles.test.fidl",
-            "line": 22,
-            "column": 28
-          },
-          "field_shape_v1": {
-            "offset": 32,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "handle",
-            "subtype": "handle",
-            "required_rights": 1,
-            "optional_rights": 0,
-            "nullable": false
-          },
-          "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.handles/aliased_handle_only_required_rights",
-            "args": [],
-            "nullable": false
-          },
-          "name": "aliased_only_required_rights",
-          "location": {
-            "filename": "handles.test.fidl",
-            "line": 23,
-            "column": 41
-          },
-          "field_shape_v1": {
-            "offset": 36,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "handle",
-            "subtype": "handle",
-            "required_rights": 1,
-            "optional_rights": 2,
-            "nullable": false
-          },
-          "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.handles/aliased_handle_required_and_optional_rights",
-            "args": [],
-            "nullable": false
-          },
-          "name": "aliased_required_and_optional_rights",
-          "location": {
-            "filename": "handles.test.fidl",
-            "line": 24,
-            "column": 49
-          },
-          "field_shape_v1": {
-            "offset": 40,
             "padding": 0
           }
         },
@@ -265,11 +159,11 @@
           "name": "some_protocol",
           "location": {
             "filename": "handles.test.fidl",
-            "line": 26,
+            "line": 19,
             "column": 18
           },
           "field_shape_v1": {
-            "offset": 44,
+            "offset": 24,
             "padding": 0
           }
         },
@@ -282,20 +176,20 @@
           "name": "request_some_protocol",
           "location": {
             "filename": "handles.test.fidl",
-            "line": 27,
+            "line": 20,
             "column": 27
           },
           "field_shape_v1": {
-            "offset": 48,
+            "offset": 28,
             "padding": 0
           }
         }
       ],
       "type_shape_v1": {
-        "inline_size": 52,
+        "inline_size": 32,
         "alignment": 4,
         "depth": 0,
-        "max_handles": 13,
+        "max_handles": 8,
         "max_out_of_line": 0,
         "has_padding": false,
         "has_flexible_envelope": false,
@@ -308,7 +202,7 @@
   "xunion_declarations": [],
   "type_alias_declarations": [
     {
-      "name": "fidl.test.handles/aliased_handle_plain",
+      "name": "fidl.test.handles/aliased_plain_handle",
       "location": {
         "filename": "handles.test.fidl",
         "line": 6,
@@ -321,7 +215,7 @@
       }
     },
     {
-      "name": "fidl.test.handles/aliased_handle_subtype",
+      "name": "fidl.test.handles/aliased_subtype_handle",
       "location": {
         "filename": "handles.test.fidl",
         "line": 7,
@@ -335,7 +229,7 @@
       }
     },
     {
-      "name": "fidl.test.handles/aliased_handle_only_required_rights",
+      "name": "fidl.test.handles/aliased_rights_handle",
       "location": {
         "filename": "handles.test.fidl",
         "line": 8,
@@ -346,7 +240,7 @@
         "args": [],
         "nullable": false,
         "maybe_handle_subtype": "vmo",
-        "required_rights": {
+        "handle_rights": {
           "kind": "literal",
           "value": "1",
           "expression": "1",
@@ -354,59 +248,23 @@
             "kind": "numeric",
             "value": "1",
             "expression": "1"
-          }
-        }
-      }
-    },
-    {
-      "name": "fidl.test.handles/aliased_handle_required_and_optional_rights",
-      "location": {
-        "filename": "handles.test.fidl",
-        "line": 9,
-        "column": 7
-      },
-      "partial_type_ctor": {
-        "name": "handle",
-        "args": [],
-        "nullable": false,
-        "maybe_handle_subtype": "vmo",
-        "required_rights": {
-          "kind": "literal",
-          "value": "1",
-          "expression": "1",
-          "literal": {
-            "kind": "numeric",
-            "value": "1",
-            "expression": "1"
-          }
-        },
-        "optional_rights": {
-          "kind": "literal",
-          "value": "2",
-          "expression": "2",
-          "literal": {
-            "kind": "numeric",
-            "value": "2",
-            "expression": "2"
           }
         }
       }
     }
   ],
   "declaration_order": [
-    "fidl.test.handles/aliased_handle_subtype",
-    "fidl.test.handles/aliased_handle_required_and_optional_rights",
-    "fidl.test.handles/aliased_handle_plain",
-    "fidl.test.handles/aliased_handle_only_required_rights",
+    "fidl.test.handles/aliased_subtype_handle",
+    "fidl.test.handles/aliased_rights_handle",
+    "fidl.test.handles/aliased_plain_handle",
     "fidl.test.handles/Handles",
     "fidl.test.handles/SomeProtocol"
   ],
   "declarations": {
     "fidl.test.handles/SomeProtocol": "interface",
     "fidl.test.handles/Handles": "struct",
-    "fidl.test.handles/aliased_handle_plain": "type_alias",
-    "fidl.test.handles/aliased_handle_subtype": "type_alias",
-    "fidl.test.handles/aliased_handle_only_required_rights": "type_alias",
-    "fidl.test.handles/aliased_handle_required_and_optional_rights": "type_alias"
+    "fidl.test.handles/aliased_plain_handle": "type_alias",
+    "fidl.test.handles/aliased_subtype_handle": "type_alias",
+    "fidl.test.handles/aliased_rights_handle": "type_alias"
   }
 }

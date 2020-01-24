@@ -16,39 +16,7 @@
 
 namespace {
 
-bool required_and_optional_rights_test() {
-  BEGIN_TEST;
-
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
-
-  TestLibrary library(R"FIDL(
-library example;
-
-struct MyStruct {
-    handle<vmo, 1, 2> h;
-};
-)FIDL",
-                      std::move(experimental_flags));
-
-  EXPECT_TRUE(library.Compile());
-
-  auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
-
-  ASSERT_EQ(h_type_ctor->handle_subtype.value(), fidl::types::HandleSubtype::kVmo);
-  ASSERT_EQ(static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
-                h_type_ctor->handle_required_rights->Value())
-                .value,
-            1);
-  ASSERT_EQ(static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
-                h_type_ctor->handle_optional_rights->Value())
-                .value,
-            2);
-
-  END_TEST;
-}
-
-bool only_required_rights_test() {
+bool handle_rights_test() {
   BEGIN_TEST;
 
   fidl::ExperimentalFlags experimental_flags;
@@ -69,10 +37,9 @@ struct MyStruct {
 
   ASSERT_EQ(h_type_ctor->handle_subtype.value(), fidl::types::HandleSubtype::kVmo);
   ASSERT_EQ(static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
-                h_type_ctor->handle_required_rights->Value())
+                h_type_ctor->handle_rights->Value())
                 .value,
             1);
-  ASSERT_NULL(h_type_ctor->handle_optional_rights);
 
   END_TEST;
 }
@@ -97,8 +64,7 @@ struct MyStruct {
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
   ASSERT_EQ(h_type_ctor->handle_subtype.value(), fidl::types::HandleSubtype::kVmo);
-  ASSERT_NULL(h_type_ctor->handle_required_rights);
-  ASSERT_NULL(h_type_ctor->handle_optional_rights);
+  ASSERT_NULL(h_type_ctor->handle_rights);
 
   END_TEST;
 }
@@ -123,14 +89,7 @@ struct MyStruct {
   auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
 
   EXPECT_FALSE(h_type_ctor->handle_subtype.has_value());
-  ASSERT_EQ(static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
-                h_type_ctor->handle_required_rights->Value())
-                .value,
-            0);
-  ASSERT_EQ(static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
-                h_type_ctor->handle_optional_rights->Value())
-                .value,
-            0xffffffff);
+  ASSERT_NULL(h_type_ctor->handle_rights);
 
   END_TEST;
 }
@@ -138,8 +97,7 @@ struct MyStruct {
 }  // namespace
 
 BEGIN_TEST_CASE(handle_tests)
-RUN_TEST(required_and_optional_rights_test)
-RUN_TEST(only_required_rights_test)
-// RUN_TEST(no_handle_rights_test)
-// RUN_TEST(plain_handle_test)
+RUN_TEST(handle_rights_test)
+RUN_TEST(no_handle_rights_test)
+RUN_TEST(plain_handle_test)
 END_TEST_CASE(handle_tests)

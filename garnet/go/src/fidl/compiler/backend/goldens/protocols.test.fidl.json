@@ -813,8 +813,7 @@
               "type": {
                 "kind": "handle",
                 "subtype": "socket",
-                "required_rights": 0,
-                "optional_rights": 4294967295,
+                "rights": 2147483648,
                 "nullable": false
               },
               "name": "a",
@@ -846,8 +845,7 @@
               "type": {
                 "kind": "handle",
                 "subtype": "socket",
-                "required_rights": 0,
-                "optional_rights": 4294967295,
+                "rights": 2147483648,
                 "nullable": false
               },
               "name": "b",
@@ -1534,8 +1532,7 @@
           "type": {
             "kind": "handle",
             "subtype": "socket",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "a",
@@ -1574,8 +1571,7 @@
           "type": {
             "kind": "handle",
             "subtype": "socket",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "b",

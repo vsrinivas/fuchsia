@@ -152,13 +152,8 @@ library example;
 
 struct Handles {
     handle plain_handle;
-    handle<none> plain_handle_explicit;
-    handle<none, 1> plain_handle_only_required_rights;
-    handle<none, 1, 2> plain_handle_required_and_optional_rights;
-
-    handle<vmo> no_rights_for_migration;
-    handle<vmo, 1> only_required_rights;
-    handle<vmo, 1, 2> required_and_optional_rights;
+    handle<vmo> subtype_handle;
+    handle<vmo, 1> rights_handle;
 };
 )FIDL",
                       std::move(experimental_flags));

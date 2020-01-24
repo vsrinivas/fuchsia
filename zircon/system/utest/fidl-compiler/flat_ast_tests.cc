@@ -28,13 +28,13 @@ static bool implicit_assumptions() {
 
 static bool compare_handles() {
   Name name_not_important(nullptr, "ignore");
-  HandleType nonnullable_channel(name_not_important, HandleSubtype::kChannel, nullptr, nullptr,
+  HandleType nonnullable_channel(name_not_important, HandleSubtype::kChannel, nullptr,
                                  Nullability::kNonnullable);
-  HandleType nullable_channel(name_not_important, HandleSubtype::kChannel, nullptr, nullptr,
+  HandleType nullable_channel(name_not_important, HandleSubtype::kChannel, nullptr,
                               Nullability::kNullable);
-  HandleType nonnullable_event(name_not_important, HandleSubtype::kEvent, nullptr, nullptr,
+  HandleType nonnullable_event(name_not_important, HandleSubtype::kEvent, nullptr,
                                Nullability::kNonnullable);
-  HandleType nullable_event(name_not_important, HandleSubtype::kEvent, nullptr, nullptr,
+  HandleType nullable_event(name_not_important, HandleSubtype::kEvent, nullptr,
                             Nullability::kNullable);
 
   // Comparison is nullability, then type.

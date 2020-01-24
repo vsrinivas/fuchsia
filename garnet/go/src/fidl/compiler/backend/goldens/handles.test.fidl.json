@@ -56,8 +56,7 @@
           "type": {
             "kind": "handle",
             "subtype": "handle",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "plain_handle",
@@ -75,8 +74,7 @@
           "type": {
             "kind": "handle",
             "subtype": "bti",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "bti_handle",
@@ -94,8 +92,7 @@
           "type": {
             "kind": "handle",
             "subtype": "channel",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "channel_handle",
@@ -113,8 +110,7 @@
           "type": {
             "kind": "handle",
             "subtype": "debuglog",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "debuglog_handle",
@@ -132,8 +128,7 @@
           "type": {
             "kind": "handle",
             "subtype": "event",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "event_handle",
@@ -151,8 +146,7 @@
           "type": {
             "kind": "handle",
             "subtype": "eventpair",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "eventpair_handle",
@@ -170,8 +164,7 @@
           "type": {
             "kind": "handle",
             "subtype": "exception",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "exception_handle",
@@ -189,8 +182,7 @@
           "type": {
             "kind": "handle",
             "subtype": "fifo",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "fifo_handle",
@@ -208,8 +200,7 @@
           "type": {
             "kind": "handle",
             "subtype": "guest",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "guest_handle",
@@ -227,8 +218,7 @@
           "type": {
             "kind": "handle",
             "subtype": "interrupt",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "interrupt_handle",
@@ -246,8 +236,7 @@
           "type": {
             "kind": "handle",
             "subtype": "iommu",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "iommu_handle",
@@ -265,8 +254,7 @@
           "type": {
             "kind": "handle",
             "subtype": "job",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "job_handle",
@@ -284,8 +272,7 @@
           "type": {
             "kind": "handle",
             "subtype": "pager",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "pager_handle",
@@ -303,8 +290,7 @@
           "type": {
             "kind": "handle",
             "subtype": "pcidevice",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "pcidevice_handle",
@@ -322,8 +308,7 @@
           "type": {
             "kind": "handle",
             "subtype": "pmt",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "pmt_handle",
@@ -341,8 +326,7 @@
           "type": {
             "kind": "handle",
             "subtype": "port",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "port_handle",
@@ -360,8 +344,7 @@
           "type": {
             "kind": "handle",
             "subtype": "process",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "process_handle",
@@ -379,8 +362,7 @@
           "type": {
             "kind": "handle",
             "subtype": "profile",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "profile_handle",
@@ -398,8 +380,7 @@
           "type": {
             "kind": "handle",
             "subtype": "resource",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "resource_handle",
@@ -417,8 +398,7 @@
           "type": {
             "kind": "handle",
             "subtype": "socket",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "socket_handle",
@@ -436,8 +416,7 @@
           "type": {
             "kind": "handle",
             "subtype": "suspendtoken",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "suspendtoken_handle",
@@ -455,8 +434,7 @@
           "type": {
             "kind": "handle",
             "subtype": "thread",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "thread_handle",
@@ -474,8 +452,7 @@
           "type": {
             "kind": "handle",
             "subtype": "timer",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "timer_handle",
@@ -493,8 +470,7 @@
           "type": {
             "kind": "handle",
             "subtype": "vcpu",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "vcpu_handle",
@@ -512,8 +488,7 @@
           "type": {
             "kind": "handle",
             "subtype": "vmar",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "vmar_handle",
@@ -531,8 +506,7 @@
           "type": {
             "kind": "handle",
             "subtype": "vmo",
-            "required_rights": 0,
-            "optional_rights": 4294967295,
+            "rights": 2147483648,
             "nullable": false
           },
           "name": "vmo_handle",
