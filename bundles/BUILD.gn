@@ -33,7 +33,6 @@ group("tests") {
   public_deps = [
     "//examples:tests",
     "//garnet/packages/tests:all",
-    "//peridot:tests",
     "//src:host_tests",
     "//src:tests",
     "//tools:tests",
@@ -46,7 +45,6 @@ group("kitchen_sink") {
   public_deps = [
     ":tests",
     "//garnet/packages:kitchen_sink",
-    "//peridot/packages:all",
     "//src/connectivity/telephony",
     "//src/media/audio/bundles:virtual_audio_driver",
     "//src/media/bundles:services",

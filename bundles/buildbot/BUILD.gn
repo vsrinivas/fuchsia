@@ -22,7 +22,6 @@ group("core") {
     "//examples",
     "//examples:tests",
     "//garnet/packages:all",
-    "//peridot/packages:all",
     "//src:host_tests",
     "//src:tests",
     "//src/media/audio/bundles:virtual_audio_driver",

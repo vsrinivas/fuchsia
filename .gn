@@ -35,7 +35,6 @@ default_args = {
 check_targets = [
   "//examples/*",
   "//garnet/*",
-  "//peridot/*",
   "//sdk/*",
   "//src/*",
   "//tools/*",

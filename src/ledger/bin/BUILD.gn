@@ -6,7 +6,10 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 
-visibility = [ "//src/ledger/*" ]
+visibility = [
+  "//src/ledger/*",
+  "//src/modular/*",
+]
 
 package("bin") {
   package_name = "ledger"

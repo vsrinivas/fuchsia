@@ -9,7 +9,6 @@ import sys
 # TODO(abarth): Base these paths on the sdk_dirs variable in gn.
 _SDK_DIRS = [
     "garnet/public/",
-    "peridot/public/",
     "topaz/public/",
 ]
 

@@ -70,3 +70,15 @@ executable("basemgr_launcher_test") {
 hermetic_tests_package("basemgr_launcher_tests") {
   deps = [ ":basemgr_launcher_test" ]
 }
+
+group("tests") {
+  testonly = true
+
+  # basemgr_launcher_test requires framework and tools packages to be available.
+  public_deps = [
+    ":basemgr_launcher_tests",
+    "//src/modular/bundles:framework",
+    "//src/modular/bundles:testing",
+    "//src/modular/bundles:tools",
+  ]
+}

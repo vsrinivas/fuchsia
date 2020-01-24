@@ -9,7 +9,6 @@ declare_args() {
   # In the future, we'll search a pre-built SDK as well.
   sdk_dirs = [
     "//garnet/public",
-    "//peridot/public",
     "//topaz/public",
   ]
 }

@@ -945,8 +945,6 @@ template("package") {
         "//build/packages/*",
         "//bundles/*",
         "//garnet/packages/*",
-        "//peridot/packages/*",
-        "//peridot:*",
         "//src/modular/bundles/*",
         "//topaz/packages/*",
         "//vendor/*",
