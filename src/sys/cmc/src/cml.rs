@@ -190,6 +190,7 @@ pub struct Document {
     pub storage: Option<Vec<Storage>>,
     pub facets: Option<Map<String, Value>>,
     pub runners: Option<Vec<Runner>>,
+    pub environments: Option<Vec<Environment>>,
 }
 
 impl Document {
@@ -232,6 +233,14 @@ impl Document {
             vec![]
         }
     }
+
+    pub fn all_environment_names(&self) -> Vec<&Name> {
+        if let Some(environments) = self.environments.as_ref() {
+            environments.iter().map(|s| &s.name).collect()
+        } else {
+            vec![]
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -248,6 +257,24 @@ impl<T: Clone> OneOrMany<T> {
             OneOrMany::Many(xs) => return xs.to_vec(),
         }
     }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum EnvironmentExtends {
+    Realm,
+    None,
+}
+
+/// An Environment defines properties which affect the behavior of components within a realm, such
+/// as its resolver.
+#[derive(Deserialize, Debug)]
+pub struct Environment {
+    /// This name is used to reference the environment assigned to the component's children
+    pub name: Name,
+    // Whether the environment state should extend its realm, or start with empty property set.
+    // When not set, its value is assumed to be EnvironmentExtends::None.
+    pub extends: Option<EnvironmentExtends>,
 }
 
 #[derive(Deserialize, Debug)]

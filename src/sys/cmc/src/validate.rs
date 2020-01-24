@@ -232,11 +232,14 @@ impl<'a> ValidationContext<'a> {
             self.document.all_storage_names().into_iter().zip(iter::repeat("storage"));
         let all_runner_names =
             self.document.all_runner_names().into_iter().zip(iter::repeat("runners"));
+        let all_environment_names =
+            self.document.all_environment_names().into_iter().zip(iter::repeat("environments"));
         ensure_no_duplicates(
             all_children_names
                 .chain(all_collection_names)
                 .chain(all_storage_names)
-                .chain(all_runner_names),
+                .chain(all_runner_names)
+                .chain(all_environment_names),
         )?;
 
         // Populate the sets of children and collections.
@@ -1510,6 +1513,45 @@ mod tests {
             result = Err(Error::validate("\"runner\" source \"#missing\" does not appear in \"children\"")),
         },
 
+        // environments
+        test_cml_environments => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env_a",
+                    },
+                    {
+                        "name": "my_env_b",
+                        "extends": "realm",
+                    },
+                    {
+                        "name": "my_env_c",
+                        "extends": "none",
+                    },
+                ],
+            }),
+            result = Ok(()),
+        },
+        test_cml_environment_invalid_extends => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "some_made_up_string",
+                    },
+                ],
+            }),
+            result = Err(Error::Parse("Couldn't read input as struct: unknown variant `some_made_up_string`, expected `realm` or `none`".to_string())),
+        },
+        test_cml_environment_missing_props => {
+            input = json!({
+                "environments": [ {} ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, concat!(
+                "This property is required at /environments/0/name",
+            ))),
+        },
+
         // facets
         test_cml_facets => {
             input = json!({
@@ -1862,6 +1904,22 @@ mod tests {
                 ]
            }),
            result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"runners\" and once in \"children\"")),
+        },
+        test_cml_duplicate_identifiers_environments => {
+            input = json!({
+                "children": [
+                     {
+                         "name": "logger",
+                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                     }
+                ],
+                "environments": [
+                     {
+                         "name": "logger",
+                     }
+                 ]
+            }),
+            result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"environments\" and once in \"children\"")),
         },
     }
 

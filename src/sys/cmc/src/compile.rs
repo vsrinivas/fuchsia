@@ -65,35 +65,20 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
 
 fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     let mut out = cm::Document::default();
-    if let Some(program) = document.program.as_ref() {
-        out.program = Some(program.clone());
-    }
-    if let Some(r#use) = document.r#use.as_ref() {
-        out.uses = Some(translate_use(r#use)?);
-    }
-    if let Some(expose) = document.expose.as_ref() {
-        out.exposes = Some(translate_expose(expose)?);
-    }
+    out.program = document.program.as_ref().cloned();
+    out.uses = document.r#use.as_ref().map(translate_use).transpose()?;
+    out.exposes = document.expose.as_ref().map(translate_expose).transpose()?;
     if let Some(offer) = document.offer.as_ref() {
         let all_children = document.all_children_names().into_iter().collect();
         let all_collections = document.all_collection_names().into_iter().collect();
         out.offers = Some(translate_offer(offer, &all_children, &all_collections)?);
     }
-    if let Some(children) = document.children.as_ref() {
-        out.children = Some(translate_children(children)?);
-    }
-    if let Some(collections) = document.collections.as_ref() {
-        out.collections = Some(translate_collections(collections)?);
-    }
-    if let Some(storage) = document.storage.as_ref() {
-        out.storage = Some(translate_storage(storage)?);
-    }
-    if let Some(facets) = document.facets.as_ref() {
-        out.facets = Some(facets.clone());
-    }
-    if let Some(runners) = document.runners.as_ref() {
-        out.runners = Some(translate_runners(runners)?);
-    }
+    out.children = document.children.as_ref().map(translate_children).transpose()?;
+    out.collections = document.collections.as_ref().map(translate_collections).transpose()?;
+    out.storage = document.storage.as_ref().map(translate_storage).transpose()?;
+    out.facets = document.facets.as_ref().cloned();
+    out.runners = document.runners.as_ref().map(translate_runners).transpose()?;
+    out.environments = document.environments.as_ref().map(translate_environments).transpose()?;
     Ok(out)
 }
 
@@ -227,7 +212,6 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
 }
 
 /// `offer` rules route multiple capabilities from one source to multiple targets.
-/// TODO(vardhan): Teach `offer` to route multiple `services`.
 fn translate_offer(
     offer_in: &Vec<cml::Offer>,
     all_children: &HashSet<&cml::Name>,
@@ -366,6 +350,22 @@ fn translate_runners(runners_in: &Vec<cml::Runner>) -> Result<Vec<cm::Runner>, E
                 name: cm::Name::new(runner.name.to_string())?,
                 source_path: cm::Path::new(runner.path.clone())?,
                 source: extract_offer_source(runner)?,
+            })
+        })
+        .collect()
+}
+
+fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Environment>, Error> {
+    envs_in
+        .iter()
+        .map(|env| {
+            Ok(cm::Environment {
+                name: cm::Name::new(env.name.to_string())?,
+                extends: match env.extends {
+                    Some(cml::EnvironmentExtends::Realm) => cm::EnvironmentExtends::Realm,
+                    Some(cml::EnvironmentExtends::None) => cm::EnvironmentExtends::None,
+                    None => cm::EnvironmentExtends::None,
+                },
             })
         })
         .collect()
@@ -641,7 +641,7 @@ mod tests {
                     { "storage": "meta" },
                     { "storage": "cache", "as": "/tmp" },
                     { "runner": "elf" },
-                    { "runner": "web" }
+                    { "runner": "web" },
                 ],
             }),
             output = r#"{
@@ -1339,6 +1339,31 @@ mod tests {
     ]
 }"#,
         },
+        test_compile_environment => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "myenv",
+                    },
+                    {
+                        "name": "myenv2",
+                        "extends": "realm",
+                    }
+                ],
+            }),
+            output = r#"{
+    "environments": [
+        {
+            "name": "myenv",
+            "extends": "none"
+        },
+        {
+            "name": "myenv2",
+            "extends": "realm"
+        }
+    ]
+}"#,
+        },
 
         test_compile_all_sections => {
             input = json!({
@@ -1390,6 +1415,12 @@ mod tests {
                         "name": "myrunner",
                         "path": "/runner",
                         "from": "self",
+                    }
+                ],
+                "environments": [
+                    {
+                        "name": "myenv",
+                        "extends": "realm"
                     }
                 ],
             }),
@@ -1549,6 +1580,12 @@ mod tests {
                 "self": {}
             },
             "source_path": "/runner"
+        }
+    ],
+    "environments": [
+        {
+            "name": "myenv",
+            "extends": "realm"
         }
     ]
 }"#,

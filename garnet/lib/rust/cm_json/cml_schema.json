@@ -642,6 +642,55 @@
         }
       }
     },
+    "environments": {
+      "type": "array",
+      "title": "Environments",
+      "description": "An Environment defines properties which affect the behavior of components within a realm, such as its resolver.",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "title": "Environment name",
+            "description": "The environment's name. This name is used to reference the environment assigned to the component's children.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
+            "examples": [
+              "clean_env",
+              "ephemeral_pkg_env"
+            ]
+          },
+          "extend": {
+            "title": "Environment's initial state",
+            "description": "Whether the environment state should extend its realm, or start with empty property set. Optional (by default, empty)",
+            "pattern": "^(realm|none)$",
+            "type": "string",
+            "oneOf": [
+              {
+                "required": [
+                  "realm"
+                ]
+              },
+              {
+                "required": [
+                  "none"
+                ]
+              }
+            ],
+            "examples": [
+              "realm",
+              "none"
+            ]
+          }
+        }
+      }
+    },
     "children": {
       "type": "array",
       "title": "Child components",

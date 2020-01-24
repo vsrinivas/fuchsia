@@ -42,6 +42,9 @@ pub struct Document {
     /// Runner capability declarations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runners: Option<Vec<Runner>>,
+    // Environment declarations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environments: Option<Vec<Environment>>,
 }
 
 /// A name that can refer to a component, collection, or other entity in the
@@ -136,6 +139,25 @@ pub struct Runner {
     pub name: Name,
     pub source: Ref,
     pub source_path: Path,
+}
+
+/// An environment's initial state.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum EnvironmentExtends {
+    // The environment's initial properties are inherited from its realm.
+    Realm,
+    // The environment does not have any initial properties.
+    None,
+}
+
+/// An environment capability. See [`EnvironmentDecl`].
+///
+/// [`EnvironmentDecl`]: ../../fidl_fuchsia_sys2/struct.EnvironmentDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Environment {
+    pub name: Name,
+    pub extends: EnvironmentExtends,
 }
 
 /// Used capability. See [`UseDecl`].
