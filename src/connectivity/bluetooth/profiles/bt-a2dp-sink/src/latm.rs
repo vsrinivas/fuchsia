@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO remove when this is hooked up
-#![allow(dead_code)]
-
 /*!
 
 Provides a parser and de-payloader for the Low-overhead Audio Transport Multiplex (LATM) format.

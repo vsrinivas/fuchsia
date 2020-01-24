@@ -11,7 +11,7 @@ use {
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl_fuchsia_bluetooth_bredr::*,
-    fidl_fuchsia_media::{AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC},
+    fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC},
     fuchsia_async as fasync,
     fuchsia_bluetooth::inspect::DebugExt,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
@@ -244,7 +244,7 @@ impl Streams {
                 },
             ],
         )?;
-        s.insert(aac_stream, AUDIO_ENCODING_AACLATM.to_string());
+        s.insert(aac_stream, AUDIO_ENCODING_AAC.to_string());
 
         s.construct_inspect_data(inspect);
         Ok(s)
@@ -597,7 +597,7 @@ mod tests {
 
         let id = s.local_id().clone();
         let information = s.information();
-        let encoding = AUDIO_ENCODING_AACLATM.to_string();
+        let encoding = AUDIO_ENCODING_AAC.to_string();
 
         assert_matches!(streams.get_endpoint(&id), None);
 

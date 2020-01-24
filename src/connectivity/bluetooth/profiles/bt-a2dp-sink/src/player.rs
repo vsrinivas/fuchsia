@@ -20,6 +20,7 @@ use {
 
 use crate::codec::CodecExtra;
 use crate::hanging_get::HangingGetStream;
+use crate::latm::AudioMuxElement;
 use crate::DEFAULT_SAMPLE_RATE;
 
 const DEFAULT_BUFFER_LEN: usize = 65536;
@@ -286,7 +287,14 @@ impl Player {
                     offset += len;
                 }
                 CodecExtra::Aac(_) => {
-                    self.send_frame(&payload[offset..])?;
+                    let audio_mux_element = AudioMuxElement::try_from_bytes(&payload[offset..])?;
+
+                    if let Some(frame) = audio_mux_element.get_payload(0) {
+                        self.send_frame(frame)?;
+                    } else {
+                        return Err(format_err!("No payload found"));
+                    }
+
                     offset = payload.len();
                 }
                 _ => return Err(format_err!("Unrecognized codec!")),
@@ -302,41 +310,23 @@ impl Player {
 
     /// Push an encoded media frame into the buffer and signal that it's there to media.
     fn send_frame(&mut self, frame: &[u8]) -> Result<(), Error> {
-        let mut full_frame_len = frame.len();
-
-        // add room for LOAS header
-        if let CodecExtra::Aac(_) = self.codec_extra {
-            full_frame_len += 3;
-        }
-
-        if full_frame_len > self.buffer_len {
+        if frame.len() > self.buffer_len {
             self.stream_sink.end_of_stream()?;
             return Err(format_err!("frame is too large for buffer"));
         }
-        if self.current_offset + full_frame_len > self.buffer_len {
+
+        if self.current_offset + frame.len() > self.buffer_len {
             self.current_offset = 0;
         }
 
         let start_offset = self.current_offset;
-
-        if let CodecExtra::Aac(_) = self.codec_extra {
-            // Prepend LOAS sync word and mux length so mediaplayer decoder can handle it
-            let loas_syncword = [
-                0x56_u8,
-                0xe0_u8 | ((frame.len() >> 8) as u8 & 0xff_u8),
-                frame.len() as u8 & 0xff_u8,
-            ];
-
-            self.buffer.write(&loas_syncword, self.current_offset as u64)?;
-            self.current_offset += loas_syncword.len();
-        }
 
         self.buffer.write(frame, self.current_offset as u64)?;
         let mut packet = StreamPacket {
             pts: NO_TIMESTAMP,
             payload_buffer_id: 0,
             payload_offset: start_offset as u64,
-            payload_size: full_frame_len as u64,
+            payload_size: frame.len() as u64,
             buffer_config: 0,
             flags: self.next_packet_flags,
             stream_segment_id: 0,
@@ -640,8 +630,15 @@ mod tests {
 
         assert_matches!(player_req, AudioConsumerRequest::Start { .. });
 
-        // raw rtp header with sequence number of 1
-        let mut raw = [128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5];
+        // raw rtp header with sequence number of 1 followed by 1 aac AudioMuxElement with 0's for
+        // payload
+        const AUDIO_MUX_LENGTH: usize = 928;
+        let rtp: &[u8] = &[128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0];
+        let aac_header: &[u8] = &[71, 252, 0, 0, 176, 144, 128, 3, 0, 255, 255, 255, 150];
+        let raw: &mut [u8] = &mut [0; RtpHeader::LENGTH + AUDIO_MUX_LENGTH];
+
+        raw[0..RtpHeader::LENGTH].copy_from_slice(rtp);
+        raw[RtpHeader::LENGTH..(RtpHeader::LENGTH + aac_header.len())].copy_from_slice(aac_header);
 
         let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
         // should not have a discontinuity yet
@@ -657,6 +654,44 @@ mod tests {
         raw[3] = 8;
         let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
         assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, STREAM_PACKET_FLAG_DISCONTINUITY);
+    }
+
+    #[test]
+    /// Test that parsing works when pushing an AAC packet
+    fn test_aac_parsing() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
+        let (mut player, mut sink_request_stream, mut player_request_stream, _) =
+            setup_player(&mut exec, CodecExtra::Aac([0; 6]));
+
+        player.play().expect("player plays");
+
+        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
+        let player_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected player req message but got {:?}", x),
+        };
+
+        assert_matches!(player_req, AudioConsumerRequest::Start { .. });
+
+        // raw rtp header with sequence number of 1 followed by 1 aac AudioMuxElement with 0's for
+        // payload
+        const AUDIO_MUX_LENGTH: usize = 928;
+        let rtp: &[u8] = &[128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0];
+        let aac_header: &[u8] = &[71, 252, 0, 0, 176, 144, 128, 3, 0, 255, 255, 255, 150];
+        let raw: &mut [u8] = &mut [0; RtpHeader::LENGTH + AUDIO_MUX_LENGTH];
+
+        raw[0..RtpHeader::LENGTH].copy_from_slice(rtp);
+        raw[RtpHeader::LENGTH..(RtpHeader::LENGTH + aac_header.len())].copy_from_slice(aac_header);
+
+        push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
+
+        // corrupt AudioMuxElement
+        raw[RtpHeader::LENGTH + 1] = 0xff;
+
+        let push_fut = player.push_payload(raw);
+        pin_mut!(push_fut);
+        exec.run_singlethreaded(&mut push_fut).expect_err("fail to write corrupted payload");
     }
 
     #[test]

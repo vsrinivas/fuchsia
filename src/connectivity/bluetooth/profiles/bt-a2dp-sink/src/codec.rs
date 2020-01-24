@@ -1,6 +1,6 @@
 use bt_a2dp::media_types::*;
 use bt_avdtp as avdtp;
-use fidl_fuchsia_media::{AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC};
+use fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC};
 use fuchsia_syslog::fx_log_warn;
 use std::convert::{TryFrom, TryInto};
 
@@ -85,7 +85,7 @@ impl CodecExtra {
     pub fn stream_type(&self) -> &str {
         match self {
             Self::Sbc(_) => AUDIO_ENCODING_SBC,
-            Self::Aac(_) => AUDIO_ENCODING_AACLATM,
+            Self::Aac(_) => AUDIO_ENCODING_AAC,
             Self::Unknown => "Unknown",
         }
     }
