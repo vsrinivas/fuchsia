@@ -17,12 +17,12 @@ void main() {
   test('test_parsing', () async {
     const String testYaml = '''
 ---
-- display:
-    title: Display
-    component: display_settings
-- accessibility:
-    title: Accessibility
-    component: accessibility_settings
+- wifi:
+    title: Wi-Fi
+    component: wifi_settings
+- bluetooth:
+    title: Bluetooth
+    component: bluetooth_settings
 ...
 ''';
 
@@ -37,10 +37,10 @@ void main() {
       entryMap[entry.id] = entry;
     }
 
-    expect(entryMap.containsKey('display'), true);
-    expect(entryMap.containsKey('accessibility'), true);
+    expect(entryMap.containsKey('wifi'), true);
+    expect(entryMap.containsKey('bluetooth'), true);
 
-    expect(entryMap['display'].route, '/display');
-    expect(entryMap['accessibility'].route, '/accessibility');
+    expect(entryMap['wifi'].route, '/wifi');
+    expect(entryMap['bluetooth'].route, '/bluetooth');
   });
 }
