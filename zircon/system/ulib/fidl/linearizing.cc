@@ -82,6 +82,13 @@ class FidlLinearizer final
 
   Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
                       uint32_t inline_size, Position* out_position) {
+    // This will be mandatory in the future with LLCPP builders. Asserting now to ease the
+    // migration.
+    // TODO(fxb/42059) Remove this assertion after switching objects to tracking_ptr.
+    assert(((reinterpret_cast<uintptr_t>(object_ptr_ptr) & 0x1) == 0) &&
+           "LLCPP pointers must have least significant bit of 0. "
+           "Please use at least 2-byte alignment.");
+
     uint32_t new_offset;
     if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
       SetError("out-of-line offset overflow trying to linearize");
