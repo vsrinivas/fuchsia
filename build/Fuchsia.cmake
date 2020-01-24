@@ -2,48 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Need support for CMAKE_C_COMPILER_TARGET
-cmake_minimum_required(VERSION 3.0)
+# The following variables should be defined before including this file:
+#
+#  FUCHSIA_SYSTEM_PROCESSOR: Host processor name, using Clang conventions.
+#
+#  FUCHSIA_COMPILER_TARGET: Target compiler triple for generated
+#    binaries, using GCC/Clang/llvm conventions.
+#
+#  FUCHSIA_SYSROOT: Location of Fuchsia sysroot to use.
 
-set(CMAKE_SYSTEM_NAME Fuchsia)
-
-set(CMAKE_SYSROOT ${FUCHSIA_SYSROOT})
-
-if(NOT DEFINED FUCHSIA_TOOLCHAIN)
-  string(TOLOWER ${CMAKE_HOST_SYSTEM_PROCESSOR} HOST_SYSTEM_PROCESSOR)
-  if(HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
-    set(HOST_SYSTEM_PROCESSOR "x64")
-  elseif(HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
-    set(HOST_SYSTEM_PROCESSOR "arm64")
-  endif()
-  string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} HOST_SYSTEM_NAME)
-  if(HOST_SYSTEM_NAME STREQUAL "darwin")
-    set(HOST_SYSTEM_NAME "mac")
-  endif()
-  set(FUCHSIA_TOOLCHAIN "${CMAKE_CURRENT_LIST_DIR}/../prebuilt/third_party/clang/${HOST_SYSTEM_NAME}-${HOST_SYSTEM_PROCESSOR}")
-endif()
+# Assumes this is under ${FUCHSIA_SOURCE_DIR}/build/
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/ToolchainCommon.cmake)
+get_filename_component(FUCHSIA_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../ ABSOLUTE)
 
 if(NOT DEFINED FUCHSIA_COMPILER_TARGET)
-  set(FUCHSIA_COMPILER_TARGET "${FUCHSIA_SYSTEM_PROCESSOR}-fuchsia")
+  message(FATAL_ERROR "FUCHSIA_COMPILER_TARGET should be set when including this file!")
 endif()
 
-set(CMAKE_C_COMPILER "${FUCHSIA_TOOLCHAIN}/bin/clang")
-set(CMAKE_C_COMPILER_TARGET ${FUCHSIA_COMPILER_TARGET} CACHE STRING "")
-set(CMAKE_CXX_COMPILER "${FUCHSIA_TOOLCHAIN}/bin/clang++")
-set(CMAKE_CXX_COMPILER_TARGET ${FUCHSIA_COMPILER_TARGET} CACHE STRING "")
-set(CMAKE_ASM_COMPILER "${FUCHSIA_TOOLCHAIN}/bin/clang")
-set(CMAKE_ASM_COMPILER_TARGET ${FUCHSIA_COMPILER_TARGET} CACHE STRING "")
+if(NOT DEFINED FUCHSIA_SYSTEM_PROCESSOR)
+  message(FATAL_ERROR "FUCHSIA_SYSTEM_PROCESSOR should be set when including this file!")
+endif()
 
-set(CMAKE_LINKER "${FUCHSIA_TOOLCHAIN}/bin/ld.lld" CACHE PATH "")
-set(CMAKE_AR "${FUCHSIA_TOOLCHAIN}/bin/llvm-ar" CACHE PATH "")
-set(CMAKE_RANLIB "${FUCHSIA_TOOLCHAIN}/bin/llvm-ranlib" CACHE PATH "")
-set(CMAKE_NM "${FUCHSIA_TOOLCHAIN}/bin/llvm-nm" CACHE PATH "")
-set(CMAKE_OBJCOPY "${FUCHSIA_TOOLCHAIN}/bin/llvm-objcopy" CACHE PATH "")
-set(CMAKE_OBJDUMP "${FUCHSIA_TOOLCHAIN}/bin/llvm-objdump" CACHE PATH "")
-set(CMAKE_STRIP "${FUCHSIA_TOOLCHAIN}/bin/llvm-strip" CACHE PATH "")
+if(NOT DEFINED FUCHSIA_SYSROOT)
+  message(FATAL_ERROR "FUCHSIA_SYSROOT should be set when including this file!")
+endif()
 
-set(CMAKE_FIND_ROOT_PATH ${FUCHSIA_SYSROOT})
-
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+setup_toolchain_variables(
+  FUCHSIA_SOURCE_DIR "${FUCHSIA_SOURCE_DIR}"
+  CLANG_COMPILER_TARGET "${FUCHSIA_COMPILER_TARGET}"
+  SYSROOT "${FUCHSIA_SYSROOT}"
+  TARGET_SYSTEM_NAME "Fuchsia"
+  TARGET_SYSTEM_PROCESSOR "${FUCHSIA_SYSTEM_PROCESSOR}"
+  TARGET_SYSTEM_VERSION "1.0")
