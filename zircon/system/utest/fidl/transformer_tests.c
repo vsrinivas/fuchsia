@@ -31,7 +31,7 @@ bool cmp_payload(const uint8_t* actual, size_t actual_size, const uint8_t* expec
 }
 
 // This is a non-static global variable since it's also used by message_tests.cc.
-const uint8_t sandwich1_case1_v1[] = {
+alignas(FIDL_ALIGNMENT) const uint8_t sandwich1_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich1.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich1.before (padding)
 
@@ -50,7 +50,7 @@ const uint8_t sandwich1_case1_v1[] = {
 };
 
 // This is a non-static global variable since it's also used by message_tests.cc.
-const uint8_t sandwich1_case1_old[] = {
+alignas(FIDL_ALIGNMENT) const uint8_t sandwich1_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich1.before
 
     0x02, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e. Sandwich1.the_union
@@ -59,7 +59,7 @@ const uint8_t sandwich1_case1_old[] = {
     0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
 };
 
-static const uint8_t sandwich1_case1_with_hdr_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich1_case1_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -82,7 +82,7 @@ static const uint8_t sandwich1_case1_with_hdr_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-static const uint8_t sandwich1_case1_with_hdr_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich1_case1_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -96,7 +96,7 @@ static const uint8_t sandwich1_case1_with_hdr_old[] = {
     0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
 };
 
-static const uint8_t sandwich4_with_hdr_case1_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich4_with_hdr_case1_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // Fake transaction header  0x00
     0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -125,7 +125,7 @@ static const uint8_t sandwich4_with_hdr_case1_v1[] = {
     0xbc, 0xbd, 0xbe, 0xbf,  // UnionSize36Alignment4.data [cont.]
 };
 
-static const uint8_t sandwich4_with_hdr_case1_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich4_with_hdr_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Fake transaction header  0x00
     0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -148,7 +148,7 @@ static const uint8_t sandwich4_with_hdr_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
 };
 
-static const uint8_t sandwich5_case1_with_hdr_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich5_case1_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -178,7 +178,7 @@ static const uint8_t sandwich5_case1_with_hdr_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionOfUnion.UnionSize8Aligned4.data (padding)
 };
 
-static const uint8_t sandwich5_case1_with_hdr_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich5_case1_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -201,7 +201,7 @@ static const uint8_t sandwich5_case1_with_hdr_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.after (padding)
 };
 
-static const uint8_t sandwich5_case2_with_hdr_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich5_case2_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -233,7 +233,7 @@ static const uint8_t sandwich5_case2_with_hdr_v1[] = {
     0xac, 0xad, 0xae, 0xaf,  // UnionOfUnion.UnionSize24Alignment8.data [cont.]
 };
 
-static const uint8_t sandwich5_case2_with_hdr_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich5_case2_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -256,7 +256,7 @@ static const uint8_t sandwich5_case2_with_hdr_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.after (padding)
 };
 
-static const uint8_t sandwich6_case5_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich6_case5_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -281,7 +281,7 @@ static const uint8_t sandwich6_case5_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // vector<handle>.data (padding)
 };
 
-static const uint8_t sandwich6_case5_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich6_case5_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -301,7 +301,7 @@ static const uint8_t sandwich6_case5_old[] = {
     0x00, 0x00, 0x00, 0x00,  // vector<handle>.data (padding)
 };
 
-static const uint8_t sandwich7_case1_with_hdr_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich7_case1_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -329,7 +329,7 @@ static const uint8_t sandwich7_case1_with_hdr_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-static const uint8_t sandwich7_case1_with_hdr_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich7_case1_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -348,7 +348,7 @@ static const uint8_t sandwich7_case1_with_hdr_old[] = {
     0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
 };
 
-static const uint8_t sandwich7_case2_with_hdr_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich7_case2_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -362,7 +362,7 @@ static const uint8_t sandwich7_case2_with_hdr_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
 };
 
-static const uint8_t sandwich7_case2_with_hdr_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t sandwich7_case2_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -376,7 +376,7 @@ static const uint8_t sandwich7_case2_with_hdr_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
 };
 
-static const uint8_t regression5_old_and_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t regression5_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // f1 (uint8) + padding
     0x2F, 0x30, 0x31, 0x32,  // f2 (uint32 enum)
     0x08, 0x00, 0x15, 0x16,  // f3 (uint8 enum) + padding + f4 (uint16)
@@ -387,7 +387,7 @@ static const uint8_t regression5_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // padding
 };
 
-static const uint8_t regression6_old_and_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t regression6_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // f1 (uint8) + padding
     0x30, 0x00, 0x00, 0x03,  // f2 (uint32 enum)
     0x08, 0x00, 0x15, 0x16,  // f3 (uint8 enum) + padding + f4 (uint16)
@@ -398,7 +398,7 @@ static const uint8_t regression6_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // padding
 };
 
-static const uint8_t mixed_fields_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t mixed_fields_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -437,7 +437,7 @@ static const uint8_t mixed_fields_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-static const uint8_t mixed_fields_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t mixed_fields_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -461,7 +461,7 @@ static const uint8_t mixed_fields_old[] = {
 };
 
 // This is a non-static global variable since it's also used by message_tests.cc.
-const uint8_t simpletablearraystruct_v1_and_old[] = {
+alignas(FIDL_ALIGNMENT) const uint8_t simpletablearraystruct_v1_and_old[] = {
     0x01, 0x00, 0x00, 0x00,  // 0x00
     0x00, 0x00, 0x00, 0x00,  //
     0xFF, 0xFF, 0xFF, 0xFF,  //
@@ -484,7 +484,7 @@ const uint8_t simpletablearraystruct_v1_and_old[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-static const uint8_t stringunionstructwrapperresponse_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t stringunionstructwrapperresponse_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // 0x00
     0x01, 0x00, 0x00, 0x01,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -511,7 +511,7 @@ static const uint8_t stringunionstructwrapperresponse_v1[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-static const uint8_t stringunionstructwrapperresponse_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t stringunionstructwrapperresponse_old[] = {
     0x00, 0x00, 0x00, 0x00,  // 0x00
     0x01, 0x00, 0x00, 0x01,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -534,7 +534,7 @@ static const uint8_t stringunionstructwrapperresponse_old[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-static const uint8_t launcher_create_component_request_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t launcher_create_component_request_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01,  // 0x00 tx header
     0x00, 0x00, 0x00, 0x00, 0x65, 0x29, 0x3F, 0x0D,  //
     0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 0x10 string url
@@ -566,7 +566,7 @@ static const uint8_t launcher_create_component_request_v1[] = {
     0x2E, 0x63, 0x6D, 0x78, 0x00, 0x00, 0x00, 0x00,  // 0xe0
 };
 
-static const uint8_t launcher_create_component_request_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t launcher_create_component_request_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01,  // 0x00
     0x00, 0x00, 0x00, 0x00, 0x65, 0x29, 0x3F, 0x0D,  //
     0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 0x10
@@ -598,7 +598,7 @@ static const uint8_t launcher_create_component_request_old[] = {
     0x2E, 0x63, 0x6D, 0x78, 0x00, 0x00, 0x00, 0x00,  // 0xe0
 };
 
-static const uint8_t regression9_response_v1[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t regression9_response_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // txn header
     0x01, 0x00, 0x00, 0x01,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -649,7 +649,7 @@ static const uint8_t regression9_response_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // padding
 };
 
-static const uint8_t regression9_response_old[] = {
+alignas(FIDL_ALIGNMENT) static const uint8_t regression9_response_old[] = {
     0x01, 0x00, 0x00, 0x00,  // header
     0x01, 0x00, 0x00, 0x01,  //
     0x00, 0x00, 0x00, 0x00,  //
