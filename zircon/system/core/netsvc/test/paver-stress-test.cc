@@ -4,6 +4,18 @@
 
 #include "test/paver-test-common.h"
 
+void update_timeouts() {}
+bool netbootloader() { return false; }
+bool all_features() { return true; }
+const char* nodename() { return "test"; }
+void netboot_run_cmd(const char* cmd) {}
+
+void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
+               const ip6_addr_t* saddr, uint16_t sport) {}
+
+void netifc_recv(void* data, size_t len) {}
+bool netifc_send_pending() { return false; }
+
 // We attempt to write more data than we have memory to ensure we are not keeping the file in memory
 // the entire time.
 TEST_F(PaverTest, WriteFvmManyLargeWrites) {
