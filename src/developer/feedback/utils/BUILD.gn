@@ -96,6 +96,26 @@ source_set("time") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+source_set("utc_time_provider") {
+  sources = [
+    "utc_time_provider.cc",
+    "utc_time_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/timekeeper:system",
+    "//src/sys/timekeeper:fuchsia.time",
+  ]
+
+  deps = [
+    ":time",
+    "//src/lib/syslog/cpp",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
 metrics_registry("metrics_registry") {
   # This must match the ID of our Cobalt project as specified in:
   # third_party/cobalt_config/projects.yaml

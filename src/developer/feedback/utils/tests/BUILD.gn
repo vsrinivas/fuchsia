@@ -27,6 +27,9 @@ test_package("feedback_utils_tests") {
     {
       name = "time_unittest"
     },
+    {
+      name = "utc_time_provider_unittest"
+    },
   ]
 
   resources = [
@@ -43,6 +46,7 @@ test_package("feedback_utils_tests") {
     ":inspect_node_manager_unittest",
     ":promise_unittest",
     ":time_unittest",
+    ":utc_time_provider_unittest",
   ]
 }
 
@@ -122,6 +126,25 @@ executable("time_unittest") {
     "//src/developer/feedback/utils:time",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("utc_time_provider_unittest") {
+  testonly = true
+
+  sources = [
+    "stub_utc.cc",
+    "stub_utc.h",
+    "utc_time_provider_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/timekeeper:testing",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/utils:utc_time_provider",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 }
