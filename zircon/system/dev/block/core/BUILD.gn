@@ -58,6 +58,7 @@ test("core-unittest") {
 
 source_set("shared") {
   visibility = [ "./*" ]
+  defines = [ "_ALL_SOURCE" ]
   sources = [
     "block-device.cc",
     "iobuffer.cc",

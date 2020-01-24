@@ -42,7 +42,7 @@ zx_status_t Manager::StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* o
   }
   server_ = server;
   SetState(ThreadState::Running);
-  if (thrd_create(&thread_, &RunServer, this) != thrd_success) {
+  if (thrd_create_with_name(&thread_, &RunServer, this, "block_server") != thrd_success) {
     FreeServer();
     return ZX_ERR_NO_MEMORY;
   }
