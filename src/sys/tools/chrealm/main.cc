@@ -9,8 +9,8 @@
 #include <cstdio>
 #include <string>
 
-#include "garnet/lib/chrealm/chrealm.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/sys/lib/chrealm/chrealm.h"
 
 static void PrintUsage() {
   fprintf(stderr,

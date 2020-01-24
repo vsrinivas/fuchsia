@@ -10,9 +10,9 @@ import("//build/testing/environments.gni")
 source_set("lib") {
   sources = [ "service.cc" ]
   public_deps = [
-    "//garnet/lib/chrealm",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/sys/lib/chrealm",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",

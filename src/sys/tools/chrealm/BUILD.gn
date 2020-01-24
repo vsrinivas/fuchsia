@@ -10,8 +10,8 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//garnet/lib/chrealm",
     "//src/lib/fxl",
+    "//src/sys/lib/chrealm",
   ]
 }
 

@@ -25,11 +25,11 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/lib/chrealm/chrealm.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/sys/lib/chrealm/chrealm.h"
 
 const auto kSshdPath = "/pkg/bin/sshd";
 const char* kSshdArgv[] = {kSshdPath, "-ie", "-f", "/config/data/sshd_config", nullptr};
