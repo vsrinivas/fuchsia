@@ -9,14 +9,23 @@
 #include "gtest/gtest.h"
 #include "root_resource.h"
 
+class TaskTreeForTesting : public ::harvester::TaskTree {
+ public:
+  std::map<zx_koid_t, zx_handle_t> KoidsToHandles() {
+    return koids_to_handles_;
+  }
+
+  void ClearForTesting() { Clear(); }
+};
+
 class TaskTreeTest : public ::testing::Test {
  public:
   void SetUp() override {}
 
-  harvester::TaskTree& tree() { return task_tree_; }
+  TaskTreeForTesting& tree() { return task_tree_; }
 
  private:
-  harvester::TaskTree task_tree_;
+  TaskTreeForTesting task_tree_;
 };
 
 TEST_F(TaskTreeTest, Test) {
@@ -37,28 +46,25 @@ TEST_F(TaskTreeTest, Test) {
 
   for (const auto& entry : tree().Jobs()) {
     EXPECT_NE(ZX_HANDLE_INVALID, entry.handle);
-    EXPECT_NE(0U, entry.koid);
-    if (entry.parent_koid == 0U) {
-      // Each tree will have a single root with a parent_koid of zero.
+    if (entry.koid == 0U) {
       found_root = true;
     } else {
-      // This job' parent should be in the set.
+      // This job's parent should be in the set.
       EXPECT_NE(koids.end(), koids.find(entry.parent_koid));
-      // No other object will have a zero parent koid.
-      EXPECT_NE(0U, entry.parent_koid);
+      EXPECT_NE(entry.koid, entry.parent_koid);
     }
-    EXPECT_NE(entry.koid, entry.parent_koid);
 
     EXPECT_EQ(koids.end(), koids.find(entry.koid));
     koids.emplace(entry.koid);
   }
 
+  EXPECT_TRUE(found_root);
+
   for (const auto& entry : tree().Processes()) {
     EXPECT_NE(ZX_HANDLE_INVALID, entry.handle);
     EXPECT_NE(0U, entry.koid);
-    EXPECT_NE(0U, entry.parent_koid);
     EXPECT_NE(entry.koid, entry.parent_koid);
-    // This process' parent should be in the set.
+    // This process's parent should be in the set.
     EXPECT_NE(koids.end(), koids.find(entry.parent_koid));
 
     EXPECT_EQ(koids.end(), koids.find(entry.koid));
@@ -80,9 +86,19 @@ TEST_F(TaskTreeTest, Test) {
   size_t total_entries = tree().Jobs().size() + tree().Processes().size() +
                          tree().Threads().size();
   EXPECT_EQ(total_entries, koids.size());
+  EXPECT_EQ(total_entries, tree().KoidsToHandles().size());
 
-  tree().Clear();
+  // Our koid should appear somewhere in the list.
+  zx_info_handle_basic_t info;
+  zx_status_t status = zx_object_get_info(
+      zx_process_self(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+      /*actual=*/nullptr, /*avail=*/nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_NE(koids.end(), koids.find(info.koid));
+
+  tree().ClearForTesting();
   EXPECT_EQ(0U, tree().Jobs().size());
   EXPECT_EQ(0U, tree().Processes().size());
   EXPECT_EQ(0U, tree().Threads().size());
+  EXPECT_EQ(0U, tree().KoidsToHandles().size());
 }

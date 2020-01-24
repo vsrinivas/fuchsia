@@ -5,15 +5,11 @@
 #ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_TASK_TREE_H_
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_TASK_TREE_H_
 
-#include <zircon/status.h>
-
-#include <task-utils/walker.h>
-
 #include "gather_category.h"
 
 namespace harvester {
 
-class TaskTree final : public TaskEnumerator {
+class TaskTree {
  public:
   struct Task {
     Task(zx_handle_t handle, zx_koid_t koid, zx_koid_t parent_koid)
@@ -25,58 +21,55 @@ class TaskTree final : public TaskEnumerator {
 
   TaskTree() = default;
 
-  ~TaskTree() override { Clear(); }
+  ~TaskTree() { Clear(); }
 
-  // Collect a new set of tasks (jobs/processes/threads). Note that this will
-  // clear out any prior task information.
+  // Creates and stores handles to all tasks (threads, processes, and jobs)
+  // descending from the root job. The first call to GatherJobs creates
+  // a handle for each existing task. Subsequent calls create handles for
+  // all new tasks, drawing from its cache of handles for existing tasks.
   void Gather();
-
-  // Clear all jobs/processes/threads information. Note that this is called by
-  // Gather() and the destructor (i.e. no need for a separate call to Clear()
-  // for those cases).
-  void Clear();
 
   // Accessors to immutable lists of jobs/processes/threads.
   const std::vector<Task>& Jobs() const { return jobs_; }
   const std::vector<Task>& Processes() const { return processes_; }
   const std::vector<Task>& Threads() const { return threads_; }
 
- private:
+ protected:
   std::vector<Task> jobs_;
   std::vector<Task> processes_;
   std::vector<Task> threads_;
+  std::map<zx_koid_t, zx_handle_t> koids_to_handles_;
+  std::map<zx_koid_t, zx_handle_t> stale_koids_to_handles_;
 
-  // |TaskEnumerator| Callback for a job.
-  zx_status_t OnJob(int /*depth*/, zx_handle_t job, zx_koid_t koid,
-                    zx_koid_t parent_koid) override {
-    zx_handle_t handle;
-    zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &handle);
-    jobs_.emplace_back(handle, koid, parent_koid);
-    return ZX_OK;
-  }
+  // Clears all jobs/processes/threads information.
+  void Clear();
 
-  // |TaskEnumerator| Callback for a process.
-  zx_status_t OnProcess(int /*depth*/, zx_handle_t process, zx_koid_t koid,
-                        zx_koid_t parent_koid) override {
-    zx_handle_t handle;
-    zx_handle_duplicate(process, ZX_RIGHT_SAME_RIGHTS, &handle);
-    processes_.emplace_back(handle, koid, parent_koid);
-    return ZX_OK;
-  }
+  // Fills |child_koids| with the child koids of |parent|.
+  zx_status_t GatherChildKoids(zx_handle_t parent, zx_koid_t parent_koid,
+                               int children_kind, const char* kind_name,
+                               std::vector<zx_koid_t>& child_koids);
 
-  // |TaskEnumerator| Callback for a thread.
-  zx_status_t OnThread(int /*depth*/, zx_handle_t thread, zx_koid_t koid,
-                       zx_koid_t parent_koid) override {
-    zx_handle_t handle;
-    zx_handle_duplicate(thread, ZX_RIGHT_SAME_RIGHTS, &handle);
-    threads_.emplace_back(handle, koid, parent_koid);
-    return ZX_OK;
-  }
+  // Fills |child_handle| with a handle to |child_koid|, either from a cache or
+  // newly-created.
+  zx_status_t GetHandleForChildKoid(zx_koid_t child_koid, zx_handle_t parent,
+                                    zx_koid_t parent_koid,
+                                    zx_handle_t* child_handle);
 
-  // |TaskEnumerator| Enable On*() calls.
-  bool has_on_job() const final { return true; }
-  bool has_on_process() const final { return true; }
-  bool has_on_thread() const final { return true; }
+  // Creates and stores handles to all threads belonging to |parent_process|.
+  zx_status_t GatherThreadsForProcess(zx_handle_t parent_process,
+                                      zx_koid_t parent_process_koid);
+
+  // Creates and stores handles to all processes belonging to |parent_job|.
+  zx_status_t GatherProcessesForJob(zx_handle_t parent_job,
+                                    zx_koid_t parent_job_koid);
+
+  // Creates and stores handles to all processes and jobs belonging to
+  // |parent_job|.
+  zx_status_t GatherProcessesAndJobsForJob(zx_handle_t parent_job,
+                                           zx_koid_t parent_job_koid);
+
+  // Update the collection of known tasks (jobs/processes/threads).
+  zx_status_t GatherJobs();
 };
 
 }  // namespace harvester
