@@ -41,7 +41,7 @@ class RechannelEffect : public EffectBase {
 
   RechannelEffect(uint32_t frame_rate)
       : EffectBase(Effect::Rechannel, frame_rate, kNumChannelsIn, kNumChannelsOut, kLatencyFrames,
-                   kLatencyFrames) {
+                   kOutputBufferSizeFrames) {
     output_buffer_ = std::make_unique<float[]>(kOutputBufferSizeFrames);
   }
 

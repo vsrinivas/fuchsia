@@ -96,7 +96,7 @@ TEST_F(DelayEffectTest, GetParameters) {
   EXPECT_EQ(effect_params.channels_in, kTestChans);
   EXPECT_EQ(effect_params.channels_out, kTestChans);
   EXPECT_TRUE(effect_params.signal_latency_frames == DelayEffect::kLatencyFrames);
-  EXPECT_TRUE(effect_params.suggested_frames_per_buffer == DelayEffect::kLatencyFrames);
+  EXPECT_TRUE(effect_params.max_frames_per_buffer == DelayEffect::kLatencyFrames);
 
   // Verify null struct*
   EXPECT_NE(effect.GetParameters(nullptr), ZX_OK);
@@ -118,7 +118,7 @@ TEST_F(RechannelEffectTest, GetParameters) {
   EXPECT_TRUE(effect_params.channels_in == RechannelEffect::kNumChannelsIn);
   EXPECT_TRUE(effect_params.channels_out == RechannelEffect::kNumChannelsOut);
   EXPECT_TRUE(effect_params.signal_latency_frames == RechannelEffect::kLatencyFrames);
-  EXPECT_TRUE(effect_params.suggested_frames_per_buffer == RechannelEffect::kLatencyFrames);
+  EXPECT_TRUE(effect_params.max_frames_per_buffer == RechannelEffect::kOutputBufferSizeFrames);
 }
 
 // Tests the get_parameters ABI, and that the effect behaves as expected.
@@ -136,7 +136,7 @@ TEST_F(SwapEffectTest, GetParameters) {
   EXPECT_EQ(effect_params.channels_in, kTestChans);
   EXPECT_EQ(effect_params.channels_out, kTestChans);
   EXPECT_TRUE(effect_params.signal_latency_frames == SwapEffect::kLatencyFrames);
-  EXPECT_TRUE(effect_params.suggested_frames_per_buffer == SwapEffect::kLatencyFrames);
+  EXPECT_TRUE(effect_params.max_frames_per_buffer == SwapEffect::kLatencyFrames);
 }
 
 TEST_F(SwapEffectTest, UpdateConfiguration) {

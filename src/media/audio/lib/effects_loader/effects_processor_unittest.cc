@@ -21,6 +21,7 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
 
@@ -69,6 +70,7 @@ TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
   Effect single_channel_effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
@@ -100,24 +102,28 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
             test_effects()->add_effect({{"increment_by_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                         FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                         TEST_EFFECTS_ACTION_ADD,
                                         1.0}));
   ASSERT_EQ(ZX_OK,
             test_effects()->add_effect({{"increment_by_2.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                         FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                         TEST_EFFECTS_ACTION_ADD,
                                         2.0}));
   ASSERT_EQ(ZX_OK,
             test_effects()->add_effect({{"assign_to_12.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                         FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                         TEST_EFFECTS_ACTION_ASSIGN,
                                         12.0}));
   ASSERT_EQ(ZX_OK,
             test_effects()->add_effect({{"increment_by_4.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                         FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                         TEST_EFFECTS_ACTION_ADD,
                                         4.0}));
 
@@ -199,22 +205,26 @@ TEST_F(EffectsProcessorTest, ReportBlockSize) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_3", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                3,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ADD,
                                                1.0}));
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_5", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                5,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ADD,
                                                2.0}));
   ASSERT_EQ(ZX_OK,
             test_effects()->add_effect({{"block_size_any", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                         FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                         TEST_EFFECTS_ACTION_ASSIGN,
                                         12.0}));
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_1", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ADD,
                                                4.0}));
 
@@ -247,6 +257,79 @@ TEST_F(EffectsProcessorTest, ReportBlockSize) {
   ASSERT_TRUE(effect4);
   processor.AddEffect(std::move(effect4));
   EXPECT_EQ(15u, processor.block_size());
+}
+
+TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"max_buffer_1024", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        1024,
+                                        TEST_EFFECTS_ACTION_ADD,
+                                        1.0}));
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"max_buffer_512", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        512,
+                                        TEST_EFFECTS_ACTION_ADD,
+                                        1.0}));
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"max_buffer_256", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        256,
+                                        TEST_EFFECTS_ACTION_ADD,
+                                        1.0}));
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"max_buffer_128", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        128,
+                                        TEST_EFFECTS_ACTION_ADD,
+                                        1.0}));
+
+  // Needed to use |CreateEffectByName| since the effect names are cached at loader creation time.
+  RecreateLoader();
+
+  // Create processor and verify default block_size.
+  EffectsProcessor processor;
+  EXPECT_EQ(0u, processor.max_batch_size());
+
+  // Add an effect and observe a change in buffer size.
+  {
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    processor.AddEffect(std::move(effect));
+    EXPECT_EQ(1024u, processor.max_batch_size());
+  }
+  {
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_512", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    processor.AddEffect(std::move(effect));
+    EXPECT_EQ(512u, processor.max_batch_size());
+  }
+  {
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_256", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    processor.AddEffect(std::move(effect));
+    EXPECT_EQ(256u, processor.max_batch_size());
+  }
+  {
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_128", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    processor.AddEffect(std::move(effect));
+    EXPECT_EQ(128u, processor.max_batch_size());
+  }
+
+  // Add a final effect with an increasing max block size to verify we don't increase the reported
+  // buffer size.
+  {
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    processor.AddEffect(std::move(effect));
+    EXPECT_EQ(128u, processor.max_batch_size());
+  }
 }
 
 }  // namespace

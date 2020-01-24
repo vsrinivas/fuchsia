@@ -79,7 +79,7 @@ bool passthrough_get_parameters(fuchsia_audio_effects_handle_t effects_handle,
   effect_params->channels_out = effect->channels_;
   effect_params->block_size_frames = FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY;
   effect_params->signal_latency_frames = 0;
-  effect_params->suggested_frames_per_buffer = 0;
+  effect_params->max_frames_per_buffer = 0;
 
   return true;
 }

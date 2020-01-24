@@ -72,7 +72,7 @@ bool EffectBase::GetParameters(fuchsia_audio_effects_parameters* effect_params) 
   effect_params->channels_out = channels_out_;
 
   effect_params->signal_latency_frames = frames_latency_;
-  effect_params->suggested_frames_per_buffer = suggested_buff_frames_;
+  effect_params->max_frames_per_buffer = max_buff_frames_;
 
   return true;
 }

@@ -47,6 +47,7 @@ TEST_F(EffectsLoaderTest, GetNumEffects) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
   EXPECT_EQ(1u, effects_loader()->GetNumEffects());
@@ -55,6 +56,7 @@ TEST_F(EffectsLoaderTest, GetNumEffects) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_2.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                2.0}));
   EXPECT_EQ(2u, effects_loader()->GetNumEffects());
@@ -66,6 +68,7 @@ TEST_F(EffectsLoaderTest, GetEffectInfoNullInfoPointer) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
 
@@ -84,6 +87,7 @@ TEST_F(EffectsLoaderTest, CreateEffectByEffectId) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
   {
@@ -111,6 +115,7 @@ TEST_F(EffectsLoaderTest, CreateEffectByName) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
   // The fixture creates the loader by default. Since the loader caches the set of effects at
@@ -134,6 +139,7 @@ TEST_F(EffectsLoaderTest, CreateEffectByNameInvalidName) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
   // The fixture creates the loader by default. Since the loader caches the set of effects at

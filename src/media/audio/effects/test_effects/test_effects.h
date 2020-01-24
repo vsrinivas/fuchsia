@@ -25,6 +25,7 @@ enum EffectAction {
 typedef struct {
   fuchsia_audio_effects_description description;
   uint32_t block_size_frames;
+  uint32_t max_batch_size;
   EffectAction action;
   float value;
 } test_effect_spec;

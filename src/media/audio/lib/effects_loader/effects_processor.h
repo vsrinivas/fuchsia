@@ -63,6 +63,12 @@ class EffectsProcessor {
   // provide frames in multiples of |block_size()|.
   [[nodiscard]] uint32_t block_size() const { return block_size_; }
 
+  // Returns the maximum buffer size the processor is prepared to handle with a single call to
+  // |ProcessInPlace| or |Process|.
+  //
+  // Returns 0 if the plugin can handle arbitrary buffer sizes.
+  [[nodiscard]] uint32_t max_batch_size() const { return max_batch_size_; }
+
   [[nodiscard]] auto begin() { return effects_chain_.begin(); }
   [[nodiscard]] auto end() { return effects_chain_.end(); }
   [[nodiscard]] auto cbegin() const { return effects_chain_.cbegin(); }
@@ -80,6 +86,7 @@ class EffectsProcessor {
   uint32_t channels_in_ = 0;
   uint32_t channels_out_ = 0;
   uint32_t block_size_ = 1;
+  uint32_t max_batch_size_ = 0;
 };
 
 }  // namespace media::audio

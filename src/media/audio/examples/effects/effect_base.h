@@ -29,13 +29,13 @@ class EffectBase {
                             uint16_t channels_out, std::string_view config);
 
   EffectBase(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
-             uint32_t frames_latency, uint32_t suggested_buff_frames)
+             uint32_t frames_latency, uint32_t max_buff_frames)
       : effect_id_(effect_id),
         frame_rate_(frame_rate),
         channels_in_(channels_in),
         channels_out_(channels_out),
         frames_latency_(frames_latency),
-        suggested_buff_frames_(suggested_buff_frames) {}
+        max_buff_frames_(max_buff_frames) {}
 
   virtual ~EffectBase() = default;
 
@@ -54,7 +54,7 @@ class EffectBase {
   uint16_t channels_in_;
   uint16_t channels_out_;
   uint32_t frames_latency_;
-  uint32_t suggested_buff_frames_;
+  uint32_t max_buff_frames_;
 };
 
 }  // namespace media::audio_effects_example

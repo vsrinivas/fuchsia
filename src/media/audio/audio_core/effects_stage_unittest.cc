@@ -58,6 +58,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   ASSERT_EQ(ZX_OK, test_effects_->add_effect({{"add_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                               FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                              FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                               TEST_EFFECTS_ACTION_ADD,
                                               1.0}));
 
@@ -94,6 +95,7 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
   ASSERT_EQ(ZX_OK, test_effects_->add_effect({{"add_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                               kBlockSize,
+                                              FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
                                               TEST_EFFECTS_ACTION_ADD,
                                               1.0}));
 

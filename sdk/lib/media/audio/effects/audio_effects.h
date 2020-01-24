@@ -24,6 +24,7 @@ const uint16_t FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN = std::numeric_limits<u
 const uint16_t FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX = 256;
 
 const uint32_t FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY = 0;
+const uint32_t FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY = 0;
 
 const size_t FUCHSIA_AUDIO_EFFECTS_MAX_NAME_LENGTH = 255;
 
@@ -41,10 +42,14 @@ typedef struct {
   // |process_inplace| will be called with buffers containing multiples of |block_size_frames|
   // frames.
   //
-  // Use 0 to indicate any alignment is acceptable.
+  // Use |FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY| to indicate any alignment is acceptable.
   uint32_t block_size_frames;
   uint32_t signal_latency_frames;
-  uint32_t suggested_frames_per_buffer;
+  // The maximum number of frames the effect can handle with a single call to |process| or
+  // |process_inplace|.
+  //
+  // Use |FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY| to indicate any frame count is acceptable.
+  uint32_t max_frames_per_buffer;
 } fuchsia_audio_effects_parameters;
 
 typedef struct {

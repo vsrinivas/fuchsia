@@ -39,6 +39,11 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
     block_size_ = ComputeMinBlockSize(block_size_, params.block_size_frames);
   }
 
+  if (params.max_frames_per_buffer != FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY &&
+      (max_batch_size_ == 0 || params.max_frames_per_buffer < max_batch_size_)) {
+    max_batch_size_ = params.max_frames_per_buffer;
+  }
+
   if (effects_chain_.empty()) {
     // This is the first effect; the processors input channels will be whatever this effect
     // accepts.
