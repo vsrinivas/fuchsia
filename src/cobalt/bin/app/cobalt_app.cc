@@ -94,7 +94,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
       .release_stage = configuration_data_.GetReleaseStage(),
 
       .file_system = std::make_unique<PosixFileSystem>(),
-      .use_memory_observation_store = false,
+      .use_memory_observation_store = use_memory_observation_store,
       .max_bytes_per_event = fuchsia::cobalt::MAX_BYTES_PER_EVENT,
       .max_bytes_per_envelope = kMaxBytesPerEnvelope,
       .max_bytes_total = max_bytes_per_observation_store,
