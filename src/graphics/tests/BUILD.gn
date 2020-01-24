@@ -10,10 +10,18 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":vulkan-tests",
-    "benchmark",
+    ":hw_tests",
     "goldfish_benchmark",
     "goldfish_test",
+  ]
+}
+
+group("hw_tests") {
+  testonly = true
+
+  deps = [
+    ":vulkan-tests",
+    "benchmark",
     "vkvalidation:test-vk-validation",
   ]
 }
