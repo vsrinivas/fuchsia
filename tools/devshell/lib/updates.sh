@@ -7,7 +7,7 @@ function check-for-amber-server {
   if [[ -z "$(pgrep -f 'pm serve .*/amber-files')" ]]; then
     fx-error "It looks like serve-updates is not running."
     fx-error "You probably need to start \"fx serve\""
-    return -1
+    return 1
   fi
 
   # Warn if it is using the wrong repository.

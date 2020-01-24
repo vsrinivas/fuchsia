@@ -55,7 +55,7 @@ function main {
     shift
   esac
 
-  check-for-amber-server || return -1
+  check-for-amber-server || return 1
 
   if is-in-base "${target}"; then
     fx-warn "As ${target} is in 'base'. An OTA will follow."

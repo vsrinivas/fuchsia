@@ -29,7 +29,7 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  check-for-amber-server || return -1
+  check-for-amber-server || return 1
 
   # Note: the following command continues to run as the system goes into
   # reboot, so we lose SSH connection before it "completes". As such the

@@ -41,7 +41,7 @@ function main {
 
   fx-command-run build "${args[@]}"
 
-  check-for-amber-server || return -1
+  check-for-amber-server || return 1
 
   fx-command-run push-package "${targets[@]}"
 }

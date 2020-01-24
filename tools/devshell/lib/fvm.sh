@@ -36,7 +36,7 @@ function fx-fvm-extend-image {
     echo "done"
   else
     fx-error "Could not extend fvm, unable to stat fvm image"
-    return -1
+    return 1
   fi
   return 0
 }

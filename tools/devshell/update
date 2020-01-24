@@ -25,7 +25,7 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  check-for-amber-server || return -1
+  check-for-amber-server || return 1
 
   for pkg in $(cat "${FUCHSIA_BUILD_DIR}/cache_packages.list"); do
     buf=$(fx-command-run shell pkgctl resolve "fuchsia-pkg://fuchsia.com/${pkg}" 2>&1)
