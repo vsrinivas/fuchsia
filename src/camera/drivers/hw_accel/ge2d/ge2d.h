@@ -111,12 +111,18 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   amlogic_canvas_protocol_t canvas() const { return canvas_; }
 
  protected:
-  enum Ge2dOp { GE2D_OP_SETOUTPUTRES, GE2D_OP_SETINPUTOUTPUTRES, GE2D_OP_FRAME };
+  enum Ge2dOp {
+    GE2D_OP_SETOUTPUTRES,
+    GE2D_OP_SETINPUTOUTPUTRES,
+    GE2D_OP_FRAME,
+    GE2D_OP_SETCROPRECT
+  };
 
   struct TaskInfo {
     Ge2dOp op;
     Ge2dTask* task;
     uint32_t index;
+    rect_t crop_rect;
   };
 
   zx::port port_;
@@ -132,6 +138,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   void InitializeScalingCoefficients();
   void InitializeScaler(uint32_t input_width, uint32_t input_height, uint32_t output_width,
                         uint32_t output_height);
+  void ProcessSetCropRect(TaskInfo& info);
   void ProcessTask(TaskInfo& info);
   void ProcessChangeResolution(TaskInfo& info);
   void ProcessFrame(TaskInfo& info);

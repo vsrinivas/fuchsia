@@ -82,7 +82,7 @@ class Ge2dDeviceTest : public zxtest::Test {
     frame_callback_.ctx = this;
   }
 
-  void SetFrameCallback(fit::callback<void(const frame_available_info* info)> callback) {
+  void SetFrameCallback(fit::function<void(const frame_available_info* info)> callback) {
     client_frame_callback_ = std::move(callback);
   }
 
@@ -95,7 +95,7 @@ class Ge2dDeviceTest : public zxtest::Test {
   hw_accel_res_change_callback_t res_callback_;
   hw_accel_remove_task_callback_t remove_task_callback_;
 
-  fit::callback<void(const frame_available_info* info)> client_frame_callback_;
+  fit::function<void(const frame_available_info* info)> client_frame_callback_;
   buffer_collection_info_2_t input_buffer_collection_;
   buffer_collection_info_2_t output_buffer_collection_;
   image_format_2_t output_image_format_table_[kImageFormatTableSize];
@@ -516,6 +516,44 @@ TEST_F(Ge2dDeviceTest, Scale2x) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Test using SetCropRect.
+TEST_F(Ge2dDeviceTest, ChangeScale) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteScalingDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[0]);
+
+  resize_info_.crop.x = 0;
+  resize_info_.crop.y = kHeight / 4;
+  resize_info_.crop.width = kWidth / 2;
+  resize_info_.crop.height = kHeight / 4;
+
+  rect_t new_crop_rect = {.x = 0, .y = 0, .width = kWidth, .height = kHeight};
+  uint32_t frame_count = 0;
+  SetFrameCallback([this, new_crop_rect, &frame_count](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    resize_info_.crop = new_crop_rect;
+    if (++frame_count == 2)
+      sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 2,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  g_ge2d_device->Ge2dSetCropRect(resize_task, &new_crop_rect);
   status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
   EXPECT_OK(status);
 

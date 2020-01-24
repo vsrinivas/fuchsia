@@ -200,7 +200,27 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
   return ZX_OK;
 }
 
-void Ge2dDevice::Ge2dSetCropRect(uint32_t task_index, const rect_t* crop) {}
+void Ge2dDevice::Ge2dSetCropRect(uint32_t task_index, const rect_t* crop) {
+  // Find the entry in hashmap.
+  auto task_entry = task_map_.find(task_index);
+  if (task_entry == task_map_.end()) {
+    return;
+  }
+
+  if (task_entry->second->Ge2dTaskType() != Ge2dTask::GE2D_RESIZE)
+    return;
+
+  TaskInfo info;
+  info.op = GE2D_OP_SETCROPRECT;
+  info.task = task_entry->second.get();
+  info.index = 0;
+  info.crop_rect = *crop;
+
+  // Put the task on queue.
+  fbl::AutoLock lock(&lock_);
+  processing_queue_.push_front(info);
+  frame_processing_signal_.Signal();
+}
 
 void Ge2dDevice::InitializeScalingCoefficients() {
   // 33x4 FIR coefficients to use. First takes 100% of pixel[1], while the last takes 50% of
@@ -229,10 +249,14 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     case GE2D_OP_SETOUTPUTRES:
     case GE2D_OP_SETINPUTOUTPUTRES:
       return ProcessChangeResolution(info);
+    case GE2D_OP_SETCROPRECT:
+      return ProcessSetCropRect(info);
     case GE2D_OP_FRAME:
       return ProcessFrame(info);
   }
 }
+
+void Ge2dDevice::ProcessSetCropRect(TaskInfo& info) { info.task->SetCropRect(info.crop_rect); }
 
 void Ge2dDevice::ProcessChangeResolution(TaskInfo& info) {
   auto task = info.task;

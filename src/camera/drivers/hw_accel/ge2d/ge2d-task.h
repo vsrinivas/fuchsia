@@ -114,6 +114,8 @@ class Ge2dTask : public generictask::GenericTask {
 
   resize_info_t resize_info() const { return res_info_; }
 
+  void SetCropRect(const rect_t& rect) { res_info_.crop = rect; }
+
  private:
   zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
                    const buffer_collection_info_2_t* output_buffer_collection,
