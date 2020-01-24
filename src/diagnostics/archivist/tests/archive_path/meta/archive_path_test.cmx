@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/archive_path_test"
+    },
+    "sandbox": {
+        "features": [
+            "hub",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

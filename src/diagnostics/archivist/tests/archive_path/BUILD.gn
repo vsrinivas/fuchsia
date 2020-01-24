@@ -1,0 +1,57 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("archive_path_test") {
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:glob",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:regex",
+  ]
+}
+
+test_package("archive_path_tests") {
+  deps = [
+    ":archive_path_test",
+    "//src/diagnostics/archivist:bin",
+    "//src/diagnostics/iquery:bin",
+    "//src/diagnostics/iquery/test/example_component:iquery_example_component",
+  ]
+
+  binaries = [
+    {
+      name = "archivist"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/archive_path_test_archivist.cmx"
+      dest = "archive_path_test_archivist.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "archive_path_test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":archive_path_tests" ]
+}

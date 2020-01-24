@@ -49,7 +49,8 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     diagnostics::serve(&mut fs)?;
 
-    if let Some(archive_path) = &archivist_configuration.archive_path {
+    let writer = if let Some(archive_path) = &archivist_configuration.archive_path {
+        let writer = archive::ArchiveWriter::open(archive_path)?;
         fs.add_remote(
             "archive",
             io_util::open_directory_in_namespace(
@@ -57,7 +58,10 @@ fn main() -> Result<(), Error> {
                 io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
             )?,
         );
-    }
+        Some(writer)
+    } else {
+        None
+    };
 
     // The Inspect Repository offered to the ALL_ACCESS pipeline. This repository is unique
     // in that it has no statically configured selectors, meaning all diagnostics data is visible.
@@ -69,8 +73,11 @@ fn main() -> Result<(), Error> {
     }
 
     let num_threads = archivist_configuration.num_threads;
-    let archivist_state =
-        archive::ArchivistState::new(archivist_configuration, all_inspect_repository.clone())?;
+    let archivist_state = archive::ArchivistState::new(
+        archivist_configuration,
+        all_inspect_repository.clone(),
+        writer,
+    )?;
 
     let log_manager2 = log_manager.clone();
     let log_manager3 = log_manager.clone();

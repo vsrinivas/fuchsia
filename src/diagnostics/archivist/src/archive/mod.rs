@@ -591,13 +591,8 @@ impl ArchivistState {
     pub fn new(
         configuration: configs::Config,
         inspect_repository: Arc<RwLock<inspect::InspectDataRepository>>,
+        writer: Option<ArchiveWriter>,
     ) -> Result<Self, Error> {
-        let writer = if let Some(archive_path) = &configuration.archive_path {
-            Some(ArchiveWriter::open(archive_path)?)
-        } else {
-            None
-        };
-
         let mut log_node = BoundedListNode::new(
             diagnostics::root().create_child("events"),
             INSPECT_LOG_WINDOW_SIZE,

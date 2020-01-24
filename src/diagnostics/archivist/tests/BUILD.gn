@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "archive_path:tests",
     "data_stats:tests",
     "logger:tests",
     "unified_reader:tests",
