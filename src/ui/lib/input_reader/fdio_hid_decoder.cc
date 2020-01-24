@@ -102,15 +102,15 @@ const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(int* bytes_read
   return report_descriptor_;
 }
 
-size_t FdioHidDecoder::Read(uint8_t* data, size_t data_size) {
-  size_t size;
+zx_status_t FdioHidDecoder::Read(uint8_t* data, size_t data_size, size_t* report_size,
+                                 zx_time_t* timestamp) {
   zx_status_t call_status;
-  zx_status_t status = fuchsia_hardware_input_DeviceGetReports(
-      caller_.borrow_channel(), &call_status, data, data_size, &size);
-  if ((call_status != ZX_OK) || (status != ZX_OK)) {
-    return 0;
+  zx_status_t status = fuchsia_hardware_input_DeviceReadReport(
+      caller_.borrow_channel(), &call_status, data, data_size, report_size, timestamp);
+  if (status != ZX_OK) {
+    return status;
   }
-  return size;
+  return call_status;
 }
 
 zx_status_t FdioHidDecoder::Send(ReportType type, uint8_t report_id,
