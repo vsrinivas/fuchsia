@@ -136,6 +136,21 @@ pub fn get_default_time_zone() -> Result<String, common::Error> {
     String::try_from(&uchar)
 }
 
+/// Implements `ucal_getTZDataVersion`
+pub fn get_tz_data_version() -> Result<String, common::Error> {
+    let mut status = common::Error::OK_CODE;
+
+    let tz_data_version = unsafe {
+        let raw_cstring = versioned_function!(ucal_getTZDataVersion)(&mut status);
+        common::Error::ok_or_warning(status)?;
+        ffi::CStr::from_ptr(raw_cstring)
+            .to_string_lossy()
+            .into_owned()
+    };
+
+    Ok(tz_data_version)
+}
+
 /// Gets the current date and time, in milliseconds since the Epoch.
 ///
 /// Implements `ucal_getNow`.
@@ -145,8 +160,7 @@ pub fn get_now() -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use rust_icu_uenum as uenum;
+    use {super::*, regex::Regex, rust_icu_uenum as uenum};
 
     #[test]
     fn test_open_time_zones() {
@@ -196,5 +210,12 @@ mod tests {
             super::get_default_time_zone().expect("time zone obtained"),
             "America/Adak",
         );
+    }
+
+    #[test]
+    fn test_get_tz_data_version() {
+        let re = Regex::new(r"^[0-9][0-9][0-9][0-9][a-z]$").expect("valid regex");
+        let tz_version = super::get_tz_data_version().expect("get_tz_data_version works");
+        assert!(re.is_match(&tz_version));
     }
 }

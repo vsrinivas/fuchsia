@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "rust_icu_udata"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["Google Inc."]
 description = "Native bindings to the ICU4C library from Unicode.\n\nudata.h\n"
 readme = "README.md"
@@ -27,11 +27,11 @@ version = "0.4.6"
 version = "0.1.5"
 
 [dependencies.rust_icu_common]
-version = "0.0.4"
+version = "0.0.5"
 default-features = false
 
 [dependencies.rust_icu_sys]
-version = "0.0.4"
+version = "0.0.5"
 default-features = false
 
 [features]
