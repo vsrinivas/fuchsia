@@ -28,7 +28,6 @@ group("dev") {
     "power",
     "pwm",
     "rtc",
-    "sample",
     "scpi",
     "securemem",
     "serial",
