@@ -20,7 +20,7 @@ zx_library("inspector") {
   ]
   public_deps = [ "$zx/system/ulib/zircon:headers" ]
   deps = [
-    "$zx/system/ulib/backtrace-request:utils",
+    "$zx/system/ulib/backtrace-request:backtrace-request-utils",
     "$zx/system/ulib/elf-search",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/pretty",

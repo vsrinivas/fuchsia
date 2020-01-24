@@ -11,7 +11,7 @@ zx_library("backtrace-request") {
 
 # Internal library to request, detect, and clean up backtrace requests.
 # This is a superset of the SDK backtrace-request library.
-zx_library("utils") {
+zx_library("backtrace-request-utils") {
   sdk = "source"
   sdk_headers = [
     "lib/backtrace-request/backtrace-request.h",

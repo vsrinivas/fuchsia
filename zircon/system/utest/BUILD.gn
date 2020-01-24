@@ -111,7 +111,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/async-loop/test",
       "$zx/system/ulib/async-testing/test",
       "$zx/system/ulib/async/test",
-      "$zx/system/ulib/backtrace-request/test",
       "$zx/system/ulib/bitmap/test",
       "$zx/system/ulib/blobfs/test",
       "$zx/system/ulib/block-client/test",

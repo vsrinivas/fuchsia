@@ -30,6 +30,7 @@ group("ulib") {
     "audio-proto-utils",
     "audio-utils",
     "backtrace-request",
+    "backtrace-request:backtrace-request-utils",
     "bitmap",
     "blktest",
     "blobfs",
