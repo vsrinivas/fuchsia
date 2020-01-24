@@ -20,6 +20,8 @@
 #include <iomanip>
 #include <ostream>
 
+#include "src/lib/fidl_codec/status.h"
+
 namespace fidlcat {
 
 #define BtiPermNameCase(name)      \
@@ -507,64 +509,7 @@ void SocketShutdownOptionsName(uint32_t options, std::ostream& os) {
   SocketShutdownOptionsNameCase(ZX_SOCKET_SHUTDOWN_READ);
 }
 
-#define StatusNameCase(name) \
-  case name:                 \
-    os << #name;             \
-    return
-
-void StatusName(zx_status_t status, std::ostream& os) {
-  switch (status) {
-    StatusNameCase(ZX_OK);
-    StatusNameCase(ZX_ERR_INTERNAL);
-    StatusNameCase(ZX_ERR_NOT_SUPPORTED);
-    StatusNameCase(ZX_ERR_NO_RESOURCES);
-    StatusNameCase(ZX_ERR_NO_MEMORY);
-    StatusNameCase(ZX_ERR_INTERNAL_INTR_RETRY);
-    StatusNameCase(ZX_ERR_INVALID_ARGS);
-    StatusNameCase(ZX_ERR_BAD_HANDLE);
-    StatusNameCase(ZX_ERR_WRONG_TYPE);
-    StatusNameCase(ZX_ERR_BAD_SYSCALL);
-    StatusNameCase(ZX_ERR_OUT_OF_RANGE);
-    StatusNameCase(ZX_ERR_BUFFER_TOO_SMALL);
-    StatusNameCase(ZX_ERR_BAD_STATE);
-    StatusNameCase(ZX_ERR_TIMED_OUT);
-    StatusNameCase(ZX_ERR_SHOULD_WAIT);
-    StatusNameCase(ZX_ERR_CANCELED);
-    StatusNameCase(ZX_ERR_PEER_CLOSED);
-    StatusNameCase(ZX_ERR_NOT_FOUND);
-    StatusNameCase(ZX_ERR_ALREADY_EXISTS);
-    StatusNameCase(ZX_ERR_ALREADY_BOUND);
-    StatusNameCase(ZX_ERR_UNAVAILABLE);
-    StatusNameCase(ZX_ERR_ACCESS_DENIED);
-    StatusNameCase(ZX_ERR_IO);
-    StatusNameCase(ZX_ERR_IO_REFUSED);
-    StatusNameCase(ZX_ERR_IO_DATA_INTEGRITY);
-    StatusNameCase(ZX_ERR_IO_DATA_LOSS);
-    StatusNameCase(ZX_ERR_IO_NOT_PRESENT);
-    StatusNameCase(ZX_ERR_IO_OVERRUN);
-    StatusNameCase(ZX_ERR_IO_MISSED_DEADLINE);
-    StatusNameCase(ZX_ERR_IO_INVALID);
-    StatusNameCase(ZX_ERR_BAD_PATH);
-    StatusNameCase(ZX_ERR_NOT_DIR);
-    StatusNameCase(ZX_ERR_NOT_FILE);
-    StatusNameCase(ZX_ERR_FILE_BIG);
-    StatusNameCase(ZX_ERR_NO_SPACE);
-    StatusNameCase(ZX_ERR_NOT_EMPTY);
-    StatusNameCase(ZX_ERR_STOP);
-    StatusNameCase(ZX_ERR_NEXT);
-    StatusNameCase(ZX_ERR_ASYNC);
-    StatusNameCase(ZX_ERR_PROTOCOL_NOT_SUPPORTED);
-    StatusNameCase(ZX_ERR_ADDRESS_UNREACHABLE);
-    StatusNameCase(ZX_ERR_ADDRESS_IN_USE);
-    StatusNameCase(ZX_ERR_NOT_CONNECTED);
-    StatusNameCase(ZX_ERR_CONNECTION_REFUSED);
-    StatusNameCase(ZX_ERR_CONNECTION_RESET);
-    StatusNameCase(ZX_ERR_CONNECTION_ABORTED);
-    default:
-      os << "status=" << status;
-      return;
-  }
-}
+void StatusName(zx_status_t status, std::ostream& os) { os << fidl_codec::StatusName(status); }
 
 void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostream& os) {
   if (status == ZX_OK) {
@@ -572,8 +517,7 @@ void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostre
   } else {
     os << colors.red;
   }
-  StatusName(status, os);
-  os << colors.reset;
+  os << fidl_codec::StatusName(status) << colors.reset;
 }
 
 #define SystemEventTypeNameCase(name) \

@@ -42,40 +42,59 @@ class MessageDecoderTest : public ::testing::Test {
     decoder_ = std::make_unique<MessageDecoderDispatcher>(loader_, display_options_);
   }
 
+  // Intercepts the caller's method call on a FIDL InterfacePtr and returns the bytes
+  // sent over the channel.
+  template <class T>
+  fidl::Message InvokeAndIntercept(std::function<void(fidl::InterfacePtr<T>&)> invoker) {
+    fidl::Message message = buffer_.CreateEmptyMessage();
+    InterceptRequest<T>(message, invoker);
+    return message;
+  }
+
+  // Simulates a server sending an epitaph and returns the bytes sent over the channel.
+  fidl::Message InvokeAndReceiveEpitaph(zx_status_t epitaph) {
+    fidl::Message message = buffer_.CreateEmptyMessage();
+    // The protocol doesn't matter, no methods are actually called.
+    InterceptEpitaphResponse<FidlCodecTestInterface>(message, epitaph);
+    return message;
+  }
+
+  // Asserts that the decoded and FIDL message matches the expected display output.
+  // `syscall_type` interprets the FIDL message as received or sent.
+  void AssertDecoded(const fidl::Message& message, SyscallFidlType syscall_type,
+                     const char* expected) {
+    std::unique_ptr<zx_handle_info_t[]> handle_infos;
+    if (message.handles().size() > 0) {
+      handle_infos = std::make_unique<zx_handle_info_t[]>(message.handles().size());
+      for (uint32_t i = 0; i < message.handles().size(); ++i) {
+        handle_infos[i].handle = message.handles().data()[i];
+        handle_infos[i].type = ZX_OBJ_TYPE_NONE;
+        handle_infos[i].rights = 0;
+      }
+    }
+    std::stringstream result;
+    decoder()->DecodeMessage(process_koid(), ZX_HANDLE_INVALID, message.bytes().data(),
+                             message.bytes().size(), handle_infos.get(), message.handles().size(),
+                             syscall_type, result);
+    ASSERT_EQ(result.str(), expected) << "expected = " << expected << " actual = " << result.str();
+  }
+
   MessageDecoderDispatcher* decoder() const { return decoder_.get(); }
   uint64_t process_koid() const { return process_koid_; }
-  std::stringstream& result() { return result_; }
 
  private:
+  fidl::MessageBuffer buffer_;
   LibraryLoader* loader_;
   std::unique_ptr<MessageDecoderDispatcher> decoder_;
   DisplayOptions display_options_;
   uint64_t process_koid_ = kProcessKoid;
-  std::stringstream result_;
 };
 
-#define TEST_DECODE_MESSAGE(_interface, _iface, _expected, ...)                              \
-  do {                                                                                       \
-    fidl::MessageBuffer buffer;                                                              \
-    fidl::Message message = buffer.CreateEmptyMessage();                                     \
-    zx_handle_t handle = ZX_HANDLE_INVALID;                                                  \
-    InterceptRequest<_interface>(                                                            \
-        message, [&](fidl::InterfacePtr<_interface>& ptr) { ptr->_iface(__VA_ARGS__); });    \
-    zx_handle_info_t* handle_infos = nullptr;                                                \
-    if (message.handles().size() > 0) {                                                      \
-      handle_infos = new zx_handle_info_t[message.handles().size()];                         \
-      for (uint32_t i = 0; i < message.handles().size(); ++i) {                              \
-        handle_infos[i].handle = message.handles().data()[i];                                \
-        handle_infos[i].type = ZX_OBJ_TYPE_NONE;                                             \
-        handle_infos[i].rights = 0;                                                          \
-      }                                                                                      \
-    }                                                                                        \
-    decoder()->DecodeMessage(process_koid(), handle, message.bytes().data(),                 \
-                             message.bytes().size(), handle_infos, message.handles().size(), \
-                             SyscallFidlType::kOutputMessage, result());                     \
-    delete[] handle_infos;                                                                   \
-    ASSERT_EQ(result().str(), _expected)                                                     \
-        << "expected = " << _expected << " actual = " << result().str();                     \
+#define TEST_DECODE_MESSAGE(_interface, _iface, _expected, ...)                  \
+  do {                                                                           \
+    auto message = InvokeAndIntercept<_interface>(                               \
+        [&](fidl::InterfacePtr<_interface>& ptr) { ptr->_iface(__VA_ARGS__); }); \
+    AssertDecoded(message, SyscallFidlType::kOutputMessage, _expected);          \
   } while (0)
 
 TEST_F(MessageDecoderTest, TestEmptyLaunched) {
@@ -120,6 +139,26 @@ TEST_F(MessageDecoderTest, TestEchoAttached) {
                       "    response: string = \"Hello World\"\n"
                       "  }\n",
                       "Hello World", [](const ::fidl::StringPtr&) {});
+}
+
+TEST_F(MessageDecoderTest, TestEpitaphReceived) {
+  auto message = InvokeAndReceiveEpitaph(ZX_ERR_UNAVAILABLE);
+  AssertDecoded(message, SyscallFidlType::kInputMessage, "received epitaph ZX_ERR_UNAVAILABLE\n");
+}
+
+TEST_F(MessageDecoderTest, TestUnknownEpitaphReceived) {
+  auto message = InvokeAndReceiveEpitaph(1990);
+  AssertDecoded(message, SyscallFidlType::kInputMessage, "received epitaph status=1990\n");
+}
+
+TEST_F(MessageDecoderTest, TestEpitaphSent) {
+  auto message = InvokeAndReceiveEpitaph(ZX_ERR_INTERNAL);
+  AssertDecoded(message, SyscallFidlType::kOutputMessage, "sent epitaph ZX_ERR_INTERNAL\n");
+}
+
+TEST_F(MessageDecoderTest, TestUnknownEpitaphSent) {
+  auto message = InvokeAndReceiveEpitaph(1990);
+  AssertDecoded(message, SyscallFidlType::kOutputMessage, "sent epitaph status=1990\n");
 }
 
 }  // namespace fidl_codec

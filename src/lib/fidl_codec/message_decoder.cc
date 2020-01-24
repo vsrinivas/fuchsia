@@ -9,6 +9,7 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/status.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_parser.h"
 #include "src/lib/fidl_codec/wire_types.h"
@@ -36,6 +37,26 @@ bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_
     return false;
   }
   header_ = reinterpret_cast<const fidl_message_header_t*>(bytes);
+
+  // Handle the epitaph header explicitly.
+  if (header_->ordinal == kFidlOrdinalEpitaph) {
+    if (num_bytes < sizeof(fidl_epitaph)) {
+      os << line_header << std::string(tabs * kTabSize, ' ') << "not enough data for epitaph\n";
+      return false;
+    }
+    switch (type) {
+      case SyscallFidlType::kOutputRequest:
+      case SyscallFidlType::kOutputMessage:
+        message_direction_ = "sent ";
+        break;
+      case SyscallFidlType::kInputResponse:
+      case SyscallFidlType::kInputMessage:
+        message_direction_ = "received ";
+        break;
+    }
+    return true;
+  }
+
   const std::vector<const InterfaceMethod*>* methods =
       dispatcher->loader()->GetByOrdinal(header_->ordinal);
   if (methods == nullptr || methods->empty()) {
@@ -100,6 +121,14 @@ bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_
 
 bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int columns, std::ostream& os,
                              std::string_view line_header, int tabs) {
+  if (header_->ordinal == kFidlOrdinalEpitaph) {
+    auto epitaph = reinterpret_cast<const fidl_epitaph_t*>(header_);
+    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    printer << WhiteOnMagenta << message_direction_ << "epitaph" << ResetColor << ' ' << Red
+            << StatusName(epitaph->error) << ResetColor << "\n";
+    return true;
+  }
+
   if (direction_ == Direction::kUnknown) {
     if (matched_request_ || matched_response_) {
       os << line_header << std::string(tabs * kTabSize, ' ') << colors.red

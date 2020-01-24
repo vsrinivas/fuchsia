@@ -7,6 +7,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
+#include "sdk/lib/fidl/cpp/binding.h"
 #include "src/lib/fidl_codec/library_loader.h"
 
 namespace fidl_codec {
@@ -72,6 +73,25 @@ void InterceptRequest(fidl::Message& message, std::function<void(fidl::Interface
   EXPECT_EQ(ZX_OK, ptr.Bind(std::move(h1)));
 
   invoke(ptr);
+
+  loop.RunUntilIdle();
+
+  EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
+}
+
+// This creates two channels and sends an `epitaph` on one, and reads the resulting
+// bytes from the other into `message`.
+template <class T>
+void InterceptEpitaphResponse(fidl::Message& message, zx_status_t epitaph) {
+  AsyncLoopForTest loop;
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+  // Create a Binding so that we can call Close. The implementation pointer is
+  // not needed, since no actual method calls are being invoked.
+  fidl::Binding<T> binding(nullptr, fidl::InterfaceRequest<T>(std::move(h1)));
+  binding.Close(epitaph);
 
   loop.RunUntilIdle();
 
