@@ -12,7 +12,6 @@ fidl("fuchsia.web") {
   ]
 
   sdk_category = "partner"
-
   sources = [
     "constants.fidl",
     "context.fidl",
@@ -26,6 +25,7 @@ fidl("fuchsia.web") {
   public_deps = [
     "//sdk/fidl/fuchsia.media.sessions2",
     "//sdk/fidl/fuchsia.net.http",
+    "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.views",
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-mem",

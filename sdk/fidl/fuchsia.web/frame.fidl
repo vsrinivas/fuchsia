@@ -6,6 +6,7 @@ library fuchsia.web;
 
 using fuchsia.media.sessions2;
 using fuchsia.mem;
+using fuchsia.ui.gfx;
 using fuchsia.ui.views;
 
 // TODO(fxb/29926): Consider using [`fuchsia.logger.LogLevelFilter`] if possible.
@@ -219,6 +220,13 @@ protocol Frame {
     /// should call this method before [`fuchsia.web.Frame/GetNavigationController`].
     [Transitional]
     SetMediaSessionId(uint64 session_id);
+
+    /// Overrides the dimensions reported to web content. The devicePixelRatio reported to
+    /// web content will be adjusted in response to changes in the pixel size of the View,
+    /// rather than changing the size reported to the content. Call with null |web_dips| to
+    /// remove any prior forced content dimensions.
+    [Transitional]
+    ForceContentDimensions(fuchsia.ui.gfx.vec2? web_dips);
 };
 
 table WebMessage {
