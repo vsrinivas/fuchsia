@@ -88,6 +88,7 @@ group("ulib") {
     "hid",
     "hid-parser",
     "hwreg",
+    "id_allocator",
     "image-format",
     "image-format:image-format-llcpp",
     "inet6",
