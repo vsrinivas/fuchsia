@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zx;
+library zz;
+
+using zx;
 
 // Mirrors alias_workarounds[.test].fidl. We don't want to pull real syscalls
 // into the test data, so these are copied here. The structs and basic types
@@ -14,6 +16,11 @@ struct HandleInfo {};
 struct PciBar {};
 struct PortPacket {};
 struct WaitItem {};
+using koid = uint64;
+using paddr = uint64;
+using signals = uint32;
+using time = int64;
+using usize = uint64;
 
 using charptr = uint64;
 using const_futexptr = int32;
@@ -59,7 +66,7 @@ protocol Aliases {
              vector_void o,
              vector_void_u32size p,
              voidptr q) ->
-        (status status,
+        (zx.status status,
          optional_PciBar r,
          optional_PortPacket s,
          optional_koid t,

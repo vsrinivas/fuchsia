@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zx;
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
 
 // TODO(cja): This makes some assumptions that anything in an arch's PIO region
 // is going to be defined as a base address and size. This will need to be

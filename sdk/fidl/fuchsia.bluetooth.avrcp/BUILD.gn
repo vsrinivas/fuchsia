@@ -15,8 +15,4 @@ fidl("fuchsia.bluetooth.avrcp") {
     "target.fidl",
     "types.fidl",
   ]
-
-  public_deps = [
-    "//zircon/syscalls:zx",
-  ]
 }

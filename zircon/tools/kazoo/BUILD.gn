@@ -114,8 +114,6 @@ if (defined(zx)) {
       rebase_path("$target_gen_dir") + "/{{source_name_part}}.json",
       "--files",
       "{{source}}",
-      rebase_path("$zx/syscalls/zx_common.fidl"),
-      rebase_path("$zx/syscalls/zx_syscall.fidl"),
     ]
 
     outputs = [ "$target_gen_dir/{{source_name_part}}.json" ]

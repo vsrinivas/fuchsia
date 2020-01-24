@@ -194,12 +194,6 @@ template("fidl_library") {
 
   # Collect the dependencies on other FIDL libraries, and canonicalize them.
   fidl_library_deps = []
-
-  if (target_name != "zx") {
-    fidl_library_deps +=
-        [ get_label_info("$zx/syscalls:zx", "label_no_toolchain") ]
-  }
-
   if (defined(invoker.public_deps)) {
     foreach(label, invoker.public_deps) {
       assert(get_label_info(label, "toolchain") == current_toolchain,
@@ -254,12 +248,6 @@ template("fidl_library") {
                                "visibility",
                                "testonly",
                              ])
-      if (target_name != "zx") {
-        if (!defined(public_deps)) {
-          public_deps = []
-        }
-        public_deps += [ "$zx/syscalls:zx" ]
-      }
       if (defined(visibility)) {
         visibility += [ ":$files_rspfile_target" ]
       }

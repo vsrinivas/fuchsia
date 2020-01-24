@@ -2,9 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zx;
+library zz;
+
+using zx;
 
 using mutable_vector_void = vector<byte>;
+using ticks = int64;
+using time = int64;
+using uintptr = uint64;
+using usize = uint64;
 using voidptr = uint64;
 
 [Transport="Syscall"]
@@ -12,7 +18,7 @@ protocol Rust {
     // Simple out ptr.
     SimpleCase() -> (time time);
 
-    MultipleInHandles(vector<handle> handles) -> (status status);
+    MultipleInHandles(vector<handle> handles) -> (zx.status status);
 
     // noreturn handled properly.
     [noreturn]
@@ -27,10 +33,10 @@ protocol Rust {
             uint64 offset,
             uint64 size,
             mutable_vector_void buffer) ->
-        (status status);
+        (zx.status status);
 
     // |input| treated const
-    ConstInput(vector<byte> input) -> (status status);
+    ConstInput(vector<byte> input) -> (zx.status status);
 
     VariousBasicTypeNames(bool a,
                           byte b,

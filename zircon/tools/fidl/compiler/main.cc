@@ -21,6 +21,7 @@
 #include <fidl/json_generator.h>
 #include <fidl/json_schema.h>
 #include <fidl/lexer.h>
+#include <fidl/library_zx.h>
 #include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
@@ -340,6 +341,10 @@ int main(int argc, char* argv[]) {
 
   // Prepare source files.
   std::vector<fidl::SourceManager> source_managers;
+  source_managers.push_back(fidl::SourceManager());
+  std::string library_zx_data = fidl::LibraryZX::kData;
+  source_managers.back().AddSourceFile(
+      std::make_unique<fidl::SourceFile>(fidl::LibraryZX::kFilename, std::move(library_zx_data)));
   source_managers.push_back(fidl::SourceManager());
   while (args->Remaining()) {
     std::string arg = args->Claim();

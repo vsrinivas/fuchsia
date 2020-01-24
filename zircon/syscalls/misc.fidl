@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library zx;
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
 
 // TODO(scottmg): These syscalls don't match the general naming convention of
 // zx_something_name(), they're just zx_name(), so NoProtocolPrefix tells the
