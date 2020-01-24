@@ -69,9 +69,6 @@
     },
     "sandbox": {
         "features": [],
-        "pkgfs": [
-            "packages"
-        ],
         "services": [
             "fuchsia.device.NameProvider",
             "fuchsia.net.NameLookup",
