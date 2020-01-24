@@ -193,8 +193,8 @@ const std::string& GetBoardName() {
 
     char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
     size_t actual_size;
-    zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(channel.get(), &status, board_name,
-                                                                 sizeof(board_name), &actual_size);
+    zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(
+        channel.get(), &status, board_name, sizeof(board_name), &actual_size);
     ZX_ASSERT(fidl_status == ZX_OK);
     ZX_ASSERT(status == ZX_OK);
     board_name[actual_size] = '\0';
@@ -2401,6 +2401,85 @@ extern "C" bool test_sysmem_default_attributes(void) {
   END_TEST;
 }
 
+// Perform a sync IPC to ensure the server is still alive.
+static bool VerifyServerAlive(const zx::channel& allocator_client) {
+  zx::channel token_client;
+  zx::channel token_server;
+  zx_status_t status = zx::channel::create(0, &token_client, &token_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                            token_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+  // Ensure server is still alive.
+  status = fuchsia_sysmem_BufferCollectionTokenSync(token_client.get());
+  EXPECT_EQ(status, ZX_OK, "");
+  return true;
+}
+
+// Check that the server validates how many image format constraints there are.
+extern "C" bool test_sysmem_too_many_formats(void) {
+  BEGIN_TEST;
+
+  zx_status_t status;
+  zx::channel allocator_client;
+  status = connect_to_sysmem_driver(&allocator_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client;
+  zx::channel token_server;
+  status = zx::channel::create(0, &token_client, &token_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                            token_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  status = zx::channel::create(0, &collection_client, &collection_server);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator_client.get(), token_client.release(), collection_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints->min_buffer_count_for_camping = 1;
+  constraints->has_buffer_memory_constraints = false;
+  constraints->image_format_constraints_count = 100;
+  for (uint32_t i = 0; i < 32; i++) {
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+        constraints->image_format_constraints[i];
+    image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0] = fuchsia_sysmem_ColorSpace{
+        .type = fuchsia_sysmem_ColorSpaceType_REC709,
+    };
+    image_constraints.required_max_coded_width = 512;
+    image_constraints.required_max_coded_height = 1024;
+  }
+
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                         constraints.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client.get(), &allocation_status, buffer_collection_info.get());
+  EXPECT_NE(status, ZX_OK, "");
+
+  if (!VerifyServerAlive(allocator_client))
+    return false;
+
+  END_TEST;
+}
+
 // TODO(dustingreen): Add tests to cover more failure cases.
 
 // clang-format off
@@ -2429,5 +2508,6 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_cpu_usage_and_inaccessible_domain_supported_succeeds)
     RUN_TEST(test_sysmem_allocated_buffer_zero_in_ram)
     RUN_TEST(test_sysmem_default_attributes)
+    RUN_TEST(test_sysmem_too_many_formats)
 END_TEST_CASE(sysmem_tests)
 // clang-format on

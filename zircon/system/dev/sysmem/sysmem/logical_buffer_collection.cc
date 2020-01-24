@@ -684,6 +684,11 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
     LogError("min_buffer_count > max_buffer_count");
     return false;
   }
+  if (constraints->image_format_constraints_count >
+      countof(constraints->image_format_constraints)) {
+    LogError("image_format_constraints_count %d > 32", constraints->image_format_constraints_count);
+    return false;
+  }
   if (!is_aggregated) {
     // At least one usage bit must be specified by any participant that
     // specifies constraints.  The "none" usage bit can be set by a participant
