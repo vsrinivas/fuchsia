@@ -2,11 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("i2c") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("i2c") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-i2c:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/system/fidl/fuchsia-hardware-i2c:c",
   ]
+}
+
+migrated_manifest("i2c-manifest") {
+  deps = [ ":i2c" ]
 }
