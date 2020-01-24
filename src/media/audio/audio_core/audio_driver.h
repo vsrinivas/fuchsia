@@ -209,8 +209,8 @@ class AudioDriver {
     return ring_buffer_;
   };
 
-  const TimelineFunction& clock_mono_to_ring_pos_bytes() const FXL_NO_THREAD_SAFETY_ANALYSIS {
-    return clock_mono_to_ring_pos_bytes_;
+  TimelineFunction clock_mono_to_ring_pos_bytes() const FXL_NO_THREAD_SAFETY_ANALYSIS {
+    return clock_mono_to_ring_pos_bytes_->get().first;
   }
   void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal)
@@ -259,9 +259,8 @@ class AudioDriver {
   // allowing AudioCapturer clients to snapshot ring-buffer state during mix/resample operations.
   mutable std::mutex ring_buffer_state_lock_;
   std::shared_ptr<RingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
-  TimelineFunction clock_mono_to_ring_pos_bytes_ FXL_GUARDED_BY(ring_buffer_state_lock_);
   uint32_t end_fence_to_start_fence_frames_ FXL_GUARDED_BY(ring_buffer_state_lock_) = 0;
-  GenerationId ring_buffer_state_gen_ FXL_GUARDED_BY(ring_buffer_state_lock_);
+  fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_ring_pos_bytes_;
 
   // Plug detection state.
   bool pd_enabled_ = false;

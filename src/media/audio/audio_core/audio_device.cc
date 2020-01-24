@@ -223,7 +223,7 @@ const std::shared_ptr<RingBuffer>& AudioDevice::driver_ring_buffer() const {
   return driver_->ring_buffer();
 };
 
-const TimelineFunction& AudioDevice::device_reference_clock_to_ring_pos_bytes() const {
+TimelineFunction AudioDevice::device_reference_clock_to_ring_pos_bytes() const {
   return driver_->clock_mono_to_ring_pos_bytes();
 };
 

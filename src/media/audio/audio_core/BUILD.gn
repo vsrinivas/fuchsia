@@ -233,6 +233,7 @@ executable("unittest_bin") {
     "process_config_loader_unittest.cc",
     "process_config_unittest.cc",
     "reporter_unittest.cc",
+    "ring_buffer_unittest.cc",
     "route_graph_unittest.cc",
     "routing_config_unittest.cc",
     "stream_volume_manager_unittest.cc",

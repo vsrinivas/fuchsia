@@ -445,7 +445,7 @@ void DriverOutput::OnDriverStartComplete() {
   uint32_t bytes_per_frame = format->bytes_per_frame();
   int64_t offset = static_cast<int64_t>(1) - bytes_per_frame;
   const TimelineFunction bytes_to_frames(0, offset, 1, bytes_per_frame);
-  const TimelineFunction& t_bytes = device_reference_clock_to_ring_pos_bytes();
+  TimelineFunction t_bytes = device_reference_clock_to_ring_pos_bytes();
 
   clock_monotonic_to_output_frame_ = TimelineFunction::Compose(bytes_to_frames, t_bytes);
   clock_monotonic_to_output_frame_generation_.Next();

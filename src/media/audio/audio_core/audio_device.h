@@ -189,7 +189,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   const std::shared_ptr<RingBuffer>& driver_ring_buffer() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  const TimelineFunction& device_reference_clock_to_ring_pos_bytes() const
+  TimelineFunction device_reference_clock_to_ring_pos_bytes() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   ExecutionDomain& mix_domain() const { return *mix_domain_; }
