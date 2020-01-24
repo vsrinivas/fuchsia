@@ -332,5 +332,62 @@ TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
   }
 }
 
+TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect(
+                       {{"max_buffer_1024_any_align", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                        1024,
+                        TEST_EFFECTS_ACTION_ADD,
+                        1.0}));
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"any_buffer_300_align", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        300,
+                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
+                                        TEST_EFFECTS_ACTION_ADD,
+                                        1.0}));
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect(
+                       {{"max_buffer_800_any_align", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                        800,
+                        TEST_EFFECTS_ACTION_ADD,
+                        1.0}));
+
+  // Needed to use |CreateEffectByName| since the effect names are cached at loader creation time.
+  RecreateLoader();
+
+  // Create processor and verify default block_size.
+  EffectsProcessor processor;
+  EXPECT_EQ(0u, processor.max_batch_size());
+  EXPECT_EQ(1u, processor.block_size());
+
+  {
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024_any_align", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    processor.AddEffect(std::move(effect));
+    EXPECT_EQ(1024u, processor.max_batch_size());
+    EXPECT_EQ(1u, processor.block_size());
+  }
+
+  // Adding an effect with 300 alignment should drop our max buffer size from 1024 -> 900.
+  {
+    Effect effect = effects_loader()->CreateEffectByName("any_buffer_300_align", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    processor.AddEffect(std::move(effect));
+    EXPECT_EQ(900u, processor.max_batch_size());
+    EXPECT_EQ(300u, processor.block_size());
+  }
+  // Adding an effect with max buffer of 800 should drop aggregate max buffer to 600.
+  {
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_800_any_align", 1, 1, 1, {});
+    ASSERT_TRUE(effect);
+    processor.AddEffect(std::move(effect));
+    EXPECT_EQ(600u, processor.max_batch_size());
+    EXPECT_EQ(300u, processor.block_size());
+  }
+}
+
 }  // namespace
 }  // namespace media::audio

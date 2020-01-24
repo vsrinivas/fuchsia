@@ -15,6 +15,11 @@ namespace {
 
 uint32_t ComputeMinBlockSize(uint32_t a, uint32_t b) { return std::lcm(a, b); }
 
+uint32_t ComputeMaxFramesPerBuffer(uint32_t max_frames_per_buffer, uint32_t block_size) {
+  // Align max batch size to work with our block size.
+  return max_frames_per_buffer - (max_frames_per_buffer % block_size);
+}
+
 }  // namespace
 
 // Insert an effect instance at the end of the chain.
@@ -37,11 +42,15 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
   if (params.block_size_frames != FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY &&
       params.block_size_frames != block_size_) {
     block_size_ = ComputeMinBlockSize(block_size_, params.block_size_frames);
+    if (max_batch_size_ != 0) {
+      // Recompute our max batch size to be block aligned.
+      max_batch_size_ = ComputeMaxFramesPerBuffer(max_batch_size_, block_size_);
+    }
   }
 
   if (params.max_frames_per_buffer != FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY &&
       (max_batch_size_ == 0 || params.max_frames_per_buffer < max_batch_size_)) {
-    max_batch_size_ = params.max_frames_per_buffer;
+    max_batch_size_ = ComputeMaxFramesPerBuffer(params.max_frames_per_buffer, block_size_);
   }
 
   if (effects_chain_.empty()) {
