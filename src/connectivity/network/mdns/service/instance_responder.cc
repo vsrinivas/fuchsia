@@ -39,7 +39,7 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
   switch (question.type_) {
     case DnsType::kPtr:
       if (MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
-        GetAndSendPublication(true, subtype, reply_address);
+        MaybeGetAndSendPublication(subtype, reply_address);
       } else if (question.name_.dotted_string_ == MdnsNames::kAnyServiceFullName) {
         SendAnyServiceResponse(reply_address);
       }
@@ -47,13 +47,13 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
     case DnsType::kSrv:
     case DnsType::kTxt:
       if (question.name_.dotted_string_ == instance_full_name_) {
-        GetAndSendPublication(true, "", reply_address);
+        MaybeGetAndSendPublication("", reply_address);
       }
       break;
     case DnsType::kAny:
       if (question.name_.dotted_string_ == instance_full_name_ ||
           MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
-        GetAndSendPublication(true, subtype, reply_address);
+        MaybeGetAndSendPublication(subtype, reply_address);
       }
       break;
     default:
@@ -134,19 +134,61 @@ void InstanceResponder::SendAnyServiceResponse(const ReplyAddress& reply_address
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
-void InstanceResponder::GetAndSendPublication(bool query, const std::string& subtype,
-                                              const ReplyAddress& reply_address) const {
+void InstanceResponder::MaybeGetAndSendPublication(const std::string& subtype,
+                                                   const ReplyAddress& reply_address) {
   if (publisher_ == nullptr) {
     return;
   }
 
-  publisher_->GetPublication(query, subtype,
-                             [this, subtype, reply_address = reply_address](
-                                 std::unique_ptr<Mdns::Publication> publication) {
-                               if (publication) {
-                                 SendPublication(*publication, subtype, reply_address);
-                               }
-                             });
+  // We only throttle multicast sends.
+  if (reply_address.socket_address() == addresses().v4_multicast()) {
+    zx::time throttle_state = kThrottleStateIdle;
+    auto iter = throttle_state_by_subtype_.find(subtype);
+    if (iter != throttle_state_by_subtype_.end()) {
+      throttle_state = iter->second;
+    }
+
+    if (throttle_state == kThrottleStatePending) {
+      // The send is already happening.
+      return;
+    }
+
+    // We're either going to send now or schedule a send. In either case, a send is pending.
+    throttle_state_by_subtype_[subtype] = kThrottleStatePending;
+
+    if (throttle_state + kMinMulticastInterval > now()) {
+      // A multicast publication of this subtype was sent less than a second ago, and no send is
+      // currently scheduled. We need to schedule a multicast send for one second after the
+      // previous one.
+      PostTaskForTime(
+          [this, subtype, reply_address]() { GetAndSendPublication(true, subtype, reply_address); },
+          throttle_state + kMinMulticastInterval);
+      return;
+    }
+  }
+
+  GetAndSendPublication(true, subtype, reply_address);
+}
+
+void InstanceResponder::GetAndSendPublication(bool query, const std::string& subtype,
+                                              const ReplyAddress& reply_address) {
+  if (publisher_ == nullptr) {
+    return;
+  }
+
+  publisher_->GetPublication(
+      query, subtype,
+      [this, query, subtype, reply_address](std::unique_ptr<Mdns::Publication> publication) {
+        if (publication) {
+          SendPublication(*publication, subtype, reply_address);
+          if (query && reply_address.socket_address() == addresses().v4_multicast()) {
+            throttle_state_by_subtype_[subtype] = now();
+            // Remove the entry from |throttle_state_by_subtype_| later to prevent the map from
+            // growing indefinitely.
+            PostTaskForTime([this, subtype]() { IdleCheck(subtype); }, now() + kIdleCheckInterval);
+          }
+        }
+      });
 }
 
 void InstanceResponder::SendPublication(const Mdns::Publication& publication,
@@ -196,6 +238,13 @@ void InstanceResponder::SendGoodbye() const {
   publication.txt_ttl_seconds_ = 0;
 
   SendPublication(publication, "", addresses().multicast_reply());
+}
+
+void InstanceResponder::IdleCheck(const std::string& subtype) {
+  auto iter = throttle_state_by_subtype_.find(subtype);
+  if (iter != throttle_state_by_subtype_.end() && iter->second + kMinMulticastInterval < now()) {
+    throttle_state_by_subtype_.erase(iter);
+  }
 }
 
 }  // namespace mdns

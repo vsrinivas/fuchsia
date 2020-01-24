@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "src/connectivity/network/mdns/service/mdns.h"
@@ -48,6 +49,10 @@ class InstanceResponder : public MdnsAgent {
  private:
   static constexpr zx::duration kInitialAnnouncementInterval = zx::sec(1);
   static constexpr zx::duration kMaxAnnouncementInterval = zx::sec(4);
+  static constexpr zx::duration kMinMulticastInterval = zx::sec(1);
+  static constexpr zx::duration kIdleCheckInterval = zx::sec(60);
+  static constexpr zx::time kThrottleStateIdle = zx::time::infinite_past();
+  static constexpr zx::time kThrottleStatePending = zx::time::infinite();
 
   // Sends an announcement and schedules the next announcement, as appropriate.
   void SendAnnouncement();
@@ -55,10 +60,14 @@ class InstanceResponder : public MdnsAgent {
   // Sends a reply to a query for any service.
   void SendAnyServiceResponse(const ReplyAddress& reply_address);
 
+  // Calls |GetAndSendPublication| with |query| set to true after first determining if the send
+  // should be throttled.
+  void MaybeGetAndSendPublication(const std::string& subtype, const ReplyAddress& reply_address);
+
   // Gets an |Mdns::Publication| from |mdns_responder_| and, if not null, sends
   // it. An empty |subtype| indicates no subtype.
   void GetAndSendPublication(bool query, const std::string& subtype,
-                             const ReplyAddress& reply_address) const;
+                             const ReplyAddress& reply_address);
 
   // Sends a publication. An empty |subtype| indicates no subtype.
   void SendPublication(const Mdns::Publication& publication, const std::string& subtype,
@@ -72,6 +81,9 @@ class InstanceResponder : public MdnsAgent {
   // no longer published.
   void SendGoodbye() const;
 
+  // Frees resources associated with |subtype| if they're no longer required.
+  void IdleCheck(const std::string& subtype);
+
   std::string host_full_name_;
   std::string service_name_;
   std::string instance_name_;
@@ -79,6 +91,7 @@ class InstanceResponder : public MdnsAgent {
   Mdns::Publisher* publisher_;
   std::vector<std::string> subtypes_;
   zx::duration announcement_interval_ = kInitialAnnouncementInterval;
+  std::unordered_map<std::string, zx::time> throttle_state_by_subtype_;
 
  public:
   // Disallow copy, assign and move.

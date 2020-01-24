@@ -103,7 +103,6 @@ source_set("source_set") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/lib/inet",
     "//src/lib/json_parser",
     "//src/lib/syslog/cpp",
@@ -122,9 +121,12 @@ test("tests") {
   output_name = "mdns_tests"
 
   sources = [
+    "test/agent_test.cc",
+    "test/agent_test.h",
     "test/config_test.cc",
     "test/dns_names_test.cc",
     "test/dns_reading_test.cc",
+    "test/instance_responder_test.cc",
     "test/interface_transceiver_test.cc",
   ]
 
