@@ -311,6 +311,8 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 			NIC:  info.NICID,
 		},
 	}
+
+	var sendEP tcpip.Endpoint
 	switch info.State {
 	case initSelecting:
 		bindAddress.Addr = header.IPv4Broadcast
@@ -322,14 +324,38 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 				PrefixLen: 0,
 			},
 		}
-		if err := c.stack.AddProtocolAddress(info.NICID, protocolAddress); err != nil {
-			panic(fmt.Sprintf("AddProtocolAddress(%d, %s): %s", info.NICID, protocolAddress.AddressWithPrefix, err))
+		// The IPv4 unspecified/any address should never be used as a primary
+		// endpoint.
+		if err := c.stack.AddProtocolAddressWithOptions(info.NICID, protocolAddress, stack.NeverPrimaryEndpoint); err != nil {
+			panic(fmt.Sprintf("AddProtocolAddressWithOptions(%d, %+v, NeverPrimaryEndpoint): %s", info.NICID, protocolAddress, err))
 		}
 		defer func() {
 			if err := c.stack.RemoveAddress(info.NICID, protocolAddress.AddressWithPrefix.Address); err != nil {
 				panic(fmt.Sprintf("RemoveAddress(%d, %s): %s", info.NICID, protocolAddress.AddressWithPrefix.Address, err))
 			}
 		}()
+
+		// Create a dedicated endpoint for writes with an unspecified source address
+		// so it can explicitly bind to the IPv4 unspecified address. We do this so
+		// ep (the endpoint we receive on) can bind to the IPv4 broadcast address
+		// which is where replies will be sent in response to packets sent from this
+		// endpoint. The write endpoint needs to explicitly bind to the unspecified
+		// address because it is marked as NeverPrimaryEndpoint and will not be used
+		// unless explicitly bound to.
+		var err *tcpip.Error
+		sendEP, err = c.stack.NewEndpoint(header.UDPProtocolNumber, header.IPv4ProtocolNumber, &waiter.Queue{})
+		if err != nil {
+			return Config{}, fmt.Errorf("stack.NewEndpoint(%d, %d, _): %s", header.UDPProtocolNumber, header.IPv4ProtocolNumber, err)
+		}
+		defer sendEP.Close()
+		if err := sendEP.SetSockOpt(tcpip.BindToDeviceOption(info.NICID)); err != nil {
+			return Config{}, fmt.Errorf("send ep SetSockOpt(BindToDeviceOption(%d)): %s", info.NICID, err)
+		}
+		sendBindAddress := bindAddress
+		sendBindAddress.Addr = header.IPv4Any
+		if err := sendEP.Bind(sendBindAddress); err != nil {
+			return Config{}, fmt.Errorf("send ep Bind(%+v): %s", sendBindAddress, err)
+		}
 
 	case renewing:
 		writeOpts.To.Addr = info.Server
@@ -342,14 +368,20 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 		return Config{}, fmt.Errorf("stack.NewEndpoint(): %s", err)
 	}
 	defer ep.Close()
+
+	// If we don't have a dedicated send endpoint, use ep.
+	if sendEP == nil {
+		sendEP = ep
+	}
+
 	// BindToDevice allows us to have multiple DHCP clients listening to the same
 	// IP address and port at the same time so long as the nic is unique.
 	if err := ep.SetSockOpt(tcpip.BindToDeviceOption(info.NICID)); err != nil {
-		return Config{}, fmt.Errorf("SetSockOpt(ReusePortOption): %s", err)
+		return Config{}, fmt.Errorf("SetSockOpt(BindToDeviceOption(%d)): %s", info.NICID, err)
 	}
 	if writeOpts.To.Addr == header.IPv4Broadcast {
-		if err := ep.SetSockOpt(tcpip.BroadcastOption(1)); err != nil {
-			return Config{}, fmt.Errorf("SetSockOpt(BroadcastOption): %s", err)
+		if err := sendEP.SetSockOpt(tcpip.BroadcastOption(1)); err != nil {
+			return Config{}, fmt.Errorf("SetSockOpt(BroadcastOption(1)): %s", err)
 		}
 	}
 	if err := ep.Bind(bindAddress); err != nil {
@@ -387,7 +419,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 			if err := c.send(
 				ctx,
 				info,
-				ep,
+				sendEP,
 				discOpts,
 				writeOpts,
 				xid[:],
@@ -472,7 +504,7 @@ retransmitRequest:
 		if err := c.send(
 			ctx,
 			info,
-			ep,
+			sendEP,
 			reqOpts,
 			writeOpts,
 			xid[:],

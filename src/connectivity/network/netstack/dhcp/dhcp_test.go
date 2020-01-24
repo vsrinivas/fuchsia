@@ -28,6 +28,9 @@ const (
 	testNICID  = tcpip.NICID(1)
 	serverAddr = tcpip.Address("\xc0\xa8\x03\x01")
 
+	linkAddr1 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
+	linkAddr2 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x53")
+
 	defaultAcquireTimeout = 1000 * time.Millisecond
 	defaulBackoffTime     = 100 * time.Millisecond
 	defaultResendTime     = 400 * time.Millisecond
@@ -78,6 +81,45 @@ func createTestStackWithChannel(t *testing.T, addresses []tcpip.Address) (*stack
 	return s, ch
 }
 
+// TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP tests that the IPv4
+// unspecified address is not a primary address when doing DHCP.
+func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
+	const incrementalTimeout = 100 * time.Millisecond
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s, e := createTestStackWithChannel(t, nil)
+	c := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+
+	// errs is for reporting the success or failure out of the goroutine.
+	errs := make(chan error, 1)
+
+	go func() {
+		info := c.Info()
+		_, err := c.acquire(ctx, &info)
+		errs <- err
+	}()
+
+	select {
+	case err := <-errs:
+		t.Fatalf("c.acquire(_, _): %s", err)
+	case <-time.After(defaultAcquireTimeout):
+		t.Fatal("timed out waiting for a DHCP packet to be sent")
+	case <-e.C:
+	}
+
+	nicInfo, ok := s.NICInfo()[testNICID]
+	if !ok {
+		t.Fatalf("stack.NICInfo()[%d]: %s", testNICID, tcpip.ErrUnknownNICID)
+	}
+	for _, p := range nicInfo.ProtocolAddresses {
+		if p.Protocol == header.IPv4ProtocolNumber && p.AddressWithPrefix.Address == header.IPv4Any {
+			t.Fatal("got unexpected IPv4 unspecified address")
+		}
+	}
+}
+
 // TestSimultaneousDHCPClients makes two clients that are trying to get DHCP
 // addresses at the same time.
 func TestSimultaneousDHCPClients(t *testing.T) {
@@ -105,8 +147,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		clientNICID := tcpip.NICID(i + 1)
 		clientLinkEP := addChannelToStack(t, nil, clientNICID, clientStack)
 		clientLinkEPs = append(clientLinkEPs, clientLinkEP)
-		const clientLinkAddr = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-		c := NewClient(clientStack, clientNICID, clientLinkAddr, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+		c := NewClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 		info := c.Info()
 		go func() {
 			// Packets from the clients get sent to the server.
@@ -199,8 +240,7 @@ func TestDHCP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c0 := NewClient(s, testNICID, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+	c0 := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 	info := c0.Info()
 	{
 		{
@@ -232,8 +272,7 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		const clientLinkAddr1 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x53")
-		c1 := NewClient(s, testNICID, clientLinkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+		c1 := NewClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 		info := c1.Info()
 		cfg, err := c1.acquire(ctx, &info)
 		if err != nil {
@@ -354,8 +393,7 @@ func TestDelayRetransmission(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-			c0 := NewClient(clientStack, testNICID, clientLinkAddr0, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
+			c0 := NewClient(clientStack, testNICID, linkAddr1, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
 			info := c0.Info()
 			ctx, cancel = context.WithTimeout(ctx, tc.acquisition)
 			defer cancel()
@@ -501,8 +539,7 @@ func TestStateTransition(t *testing.T) {
 				addrCh <- curAddr
 			}
 
-			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-			c := NewClient(clientStack, testNICID, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, acquiredFunc)
+			c := NewClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, acquiredFunc)
 
 			c.Run(ctx)
 
@@ -660,8 +697,7 @@ func TestTwoServers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c := NewClient(s, testNICID, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+	c := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 	info := c.Info()
 	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatal(err)
