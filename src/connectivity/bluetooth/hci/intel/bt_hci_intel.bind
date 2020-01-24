@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using deprecated.usb;
+using deprecated.bluetooth;
+
+deprecated.BIND_PROTOCOL == deprecated.bluetooth.BIND_PROTOCOL.TRANSPORT;
+deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.INTEL;
+accept deprecated.BIND_USB_PID {
+  0x07dc, // Intel 7260
+  0x0a2a, // Intel 7265
+  0x0aa7, // Sandy Peak (3168)
+  // Devices below use the "secure" method
+  0x0025, // Thunder Peak (9160/9260)
+  0x0a2b, // Snowfield Peak (8260)
+  0x0aaa, // Jefferson Peak (9460/9560)
+}
