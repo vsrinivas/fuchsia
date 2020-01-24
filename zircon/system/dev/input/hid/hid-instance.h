@@ -21,6 +21,7 @@
 #include <ddktl/protocol/hiddevice.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+#include <fbl/ring_buffer.h>
 
 #include "hid-fifo.h"
 
@@ -65,19 +66,24 @@ class HidInstance : public HidInstanceDeviceType,
   void SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
                  SetReportCompleter::Sync _completer) override;
   void SetTraceId(uint32_t id, SetTraceIdCompleter::Sync _completer) override;
+  void ReadReport(ReadReportCompleter::Sync completer) override;
 
   void CloseInstance();
-  void WriteToFifo(const uint8_t* report, size_t report_len);
+  void WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time);
 
  private:
   void SetReadable();
   void ClearReadable();
+  zx_status_t ReadReportFromFifo(uint8_t* buf, size_t buf_size, zx_time_t* time,
+                                 size_t* report_size) __TA_REQUIRES(fifo_lock_);
   HidDevice* base_ = nullptr;
 
   uint32_t flags_ = 0;
 
   fbl::Mutex fifo_lock_;
   zx_hid_fifo_t fifo_ __TA_GUARDED(fifo_lock_) = {};
+  static const size_t kMaxNumReports = 50;
+  fbl::RingBuffer<zx_time_t, kMaxNumReports> timestamps_ __TA_GUARDED(fifo_lock_);
 
   zx::event fifo_event_;
 

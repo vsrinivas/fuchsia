@@ -44,98 +44,124 @@ void HidInstance::ClearReadable() {
 
 zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
   TRACE_DURATION("input", "HID Read Instance");
-  zx_status_t status = ZX_OK;
 
   if (flags_ & kHidFlagsDead) {
     return ZX_ERR_PEER_CLOSED;
   }
 
-  size_t left;
-  size_t xfer;
-  uint8_t rpt_id;
+  zx_status_t status = ZX_OK;
+  size_t buf_index = 0;
+  zx_time_t time;
 
-  fbl::AutoLock lock(&fifo_lock_);
-  ssize_t r = zx_hid_fifo_peek(&fifo_, &rpt_id);
-  if (r < 1) {
-    // fifo is empty
+  {
+    fbl::AutoLock lock(&fifo_lock_);
+    while (status == ZX_OK) {
+      size_t report_size;
+      status = ReadReportFromFifo(static_cast<uint8_t*>(buf) + buf_index, count - buf_index, &time,
+                                  &report_size);
+      if (status == ZX_OK) {
+        buf_index += report_size;
+      }
+    }
+  }
+
+  if ((buf_index > 0) && ((status == ZX_ERR_BUFFER_TOO_SMALL) || (status == ZX_ERR_SHOULD_WAIT))) {
+    status = ZX_OK;
+  }
+  *actual = buf_index;
+  return status;
+}
+
+zx_status_t HidInstance::ReadReportFromFifo(uint8_t* buf, size_t buf_size, zx_time_t* time,
+                                            size_t* report_size) {
+  uint8_t rpt_id;
+  if (zx_hid_fifo_peek(&fifo_, &rpt_id) <= 0) {
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
+  size_t xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
   if (xfer == 0) {
     zxlogf(ERROR, "error reading hid device: unknown report id (%u)!\n", rpt_id);
     return ZX_ERR_BAD_STATE;
   }
 
-  if (xfer > count) {
-    zxlogf(SPEW, "next report: %zd, read count: %zd\n", xfer, count);
+  // Check if we have enough room left in the buffer.
+  if (xfer > buf_size) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  r = zx_hid_fifo_read(&fifo_, buf, xfer);
-  left = zx_hid_fifo_size(&fifo_);
+  ssize_t rpt_size = zx_hid_fifo_read(&fifo_, buf, xfer);
+  if (rpt_size <= 0) {
+    // Something went wrong. The fifo should always contain full reports in it.
+    return ZX_ERR_INTERNAL;
+  }
+
+  size_t left = zx_hid_fifo_size(&fifo_);
   if (left == 0) {
     ClearReadable();
   }
-  if (r > 0) {
-    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_sent_));
-    ++reports_sent_;
-    *actual = r;
-    r = ZX_OK;
-  } else if (r == 0) {
-    status = ZX_ERR_SHOULD_WAIT;
+
+  *report_size = rpt_size;
+
+  *time = timestamps_.front();
+  timestamps_.pop();
+
+  reports_sent_ += 1;
+  TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_sent_));
+
+  return ZX_OK;
+}
+
+void HidInstance::ReadReport(ReadReportCompleter::Sync completer) {
+  TRACE_DURATION("input", "HID ReadReport Instance", "bytes_in_fifo", zx_hid_fifo_size(&fifo_));
+
+  if (flags_ & kHidFlagsDead) {
+    completer.Close(ZX_ERR_BAD_STATE);
+    return;
   }
-  return status;
+
+  std::array<uint8_t, ::llcpp::fuchsia::hardware::input::MAX_REPORT_DATA> buf;
+  zx_time_t time = 0;
+  size_t report_size = 0;
+  zx_status_t status;
+
+  {
+    fbl::AutoLock lock(&fifo_lock_);
+    status = ReadReportFromFifo(buf.data(), buf.size(), &time, &report_size);
+  }
+
+  ::fidl::VectorView<uint8_t> buf_view(buf.data(), report_size);
+  completer.Reply(status, buf_view, time);
 }
 
 void HidInstance::GetReports(GetReportsCompleter::Sync completer) {
   TRACE_DURATION("input", "HID GetReports Instance", "bytes_in_fifo", zx_hid_fifo_size(&fifo_));
 
   if (flags_ & kHidFlagsDead) {
-    ::fidl::VectorView<uint8_t> buf_view(nullptr, 0);
-    completer.Reply(ZX_ERR_PEER_CLOSED, buf_view);
+    completer.Close(ZX_ERR_BAD_STATE);
     return;
   }
 
-  uint8_t buf[::llcpp::fuchsia::hardware::input::MAX_REPORT_DATA];
+  std::array<uint8_t, ::llcpp::fuchsia::hardware::input::MAX_REPORT_DATA> buf;
   size_t buf_index = 0;
   zx_status_t status = ZX_OK;
+  zx_time_t time;
 
-  fbl::AutoLock lock(&fifo_lock_);
-  uint8_t rpt_id;
-  size_t local_reports_read = 0;
-  while (zx_hid_fifo_peek(&fifo_, &rpt_id) > 0) {
-    size_t xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
-    if (xfer == 0) {
-      zxlogf(ERROR, "error reading hid device: unknown report id (%u)!\n", rpt_id);
-      status = ZX_ERR_BAD_STATE;
-      break;
-    }
-
-    // Check if we have enough room left in the buffer.
-    if (xfer + buf_index > sizeof(buf)) {
-      // Only an error if we haven't read any reports yet.
-      if (buf_index == 0) {
-        status = ZX_ERR_INTERNAL;
+  {
+    fbl::AutoLock lock(&fifo_lock_);
+    while (status == ZX_OK) {
+      size_t report_size;
+      status =
+          ReadReportFromFifo(buf.data() + buf_index, buf.size() - buf_index, &time, &report_size);
+      if (status == ZX_OK) {
+        buf_index += report_size;
       }
-      break;
     }
-
-    ssize_t rpt_size = zx_hid_fifo_read(&fifo_, buf + buf_index, xfer);
-    size_t left = zx_hid_fifo_size(&fifo_);
-    if (left == 0) {
-      ClearReadable();
-    }
-
-    if (rpt_size <= 0) {
-      // Something went wrong. The fifo should always contain full reports in it.
-      status = ZX_ERR_INTERNAL;
-      break;
-    }
-    ++local_reports_read;
-    buf_index += rpt_size;
   }
-  lock.release();
+
+  if ((buf_index > 0) && ((status == ZX_ERR_BUFFER_TOO_SMALL) || (status == ZX_ERR_SHOULD_WAIT))) {
+    status = ZX_OK;
+  }
 
   if (status != ZX_OK) {
     ::fidl::VectorView<uint8_t> buf_view(nullptr, 0);
@@ -143,15 +169,7 @@ void HidInstance::GetReports(GetReportsCompleter::Sync completer) {
     return;
   }
 
-  if (buf_index == 0) {
-    status = ZX_ERR_SHOULD_WAIT;
-  }
-
-  while (local_reports_read--) {
-    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_sent_));
-    reports_sent_ += 1;
-  }
-  ::fidl::VectorView<uint8_t> buf_view(buf, buf_index);
+  ::fidl::VectorView<uint8_t> buf_view(buf.data(), buf_index);
   completer.Reply(status, buf_view);
 }
 
@@ -263,24 +281,32 @@ void HidInstance::CloseInstance() {
   SetReadable();
 }
 
-void HidInstance::WriteToFifo(const uint8_t* report, size_t report_len) {
+void HidInstance::WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time) {
   fbl::AutoLock lock(&fifo_lock_);
 
-  bool was_empty = zx_hid_fifo_size(&fifo_) == 0;
-  ssize_t wrote = zx_hid_fifo_write(&fifo_, report, report_len);
+  if (timestamps_.full()) {
+    flags_ |= kHidFlagsWriteFailed;
+    return;
+  }
 
+  bool was_empty = zx_hid_fifo_size(&fifo_) == 0;
+
+  ssize_t wrote = zx_hid_fifo_write(&fifo_, report, report_len);
   if (wrote <= 0) {
     if (!(flags_ & kHidFlagsWriteFailed)) {
       zxlogf(ERROR, "%s: could not write to hid fifo (ret=%zd)\n", base_->GetName(), wrote);
       flags_ |= kHidFlagsWriteFailed;
     }
-  } else {
-    TRACE_FLOW_BEGIN("input", "hid_report", hid_report_trace_id(trace_id_, reports_written_));
-    ++reports_written_;
-    flags_ &= ~kHidFlagsWriteFailed;
-    if (was_empty) {
-      SetReadable();
-    }
+    return;
+  }
+
+  timestamps_.push(time);
+
+  TRACE_FLOW_BEGIN("input", "hid_report", hid_report_trace_id(trace_id_, reports_written_));
+  ++reports_written_;
+  flags_ &= ~kHidFlagsWriteFailed;
+  if (was_empty) {
+    SetReadable();
   }
 }
 

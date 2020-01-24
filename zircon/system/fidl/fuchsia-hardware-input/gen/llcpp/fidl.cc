@@ -60,6 +60,12 @@ constexpr uint64_t kDevice_GetMaxInputReportSize_GenOrdinal = 0x1c794da7454e1b4e
 extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetMaxInputReportSizeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kDevice_ReadReport_Ordinal = 0xa3e6ebf00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_ReadReport_GenOrdinal = 0x69871e1e2b75e46flu;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceReadReportRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceReadReportResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kDevice_GetReports_Ordinal = 0x172821a100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetReports_GenOrdinal = 0x620f664991c7c95dlu;
@@ -583,6 +589,67 @@ Device::UnownedResultOf::GetMaxInputReportSize Device::Call::GetMaxInputReportSi
 }
 
 template <>
+Device::ResultOf::ReadReport_Impl<Device::ReadReportResponse>::ReadReport_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadReportRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ReadReportRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadReportRequest));
+  ::fidl::DecodedMessage<ReadReportRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Device::InPlace::ReadReport(std::move(_client_end), Super::response_buffer()));
+}
+
+Device::ResultOf::ReadReport Device::SyncClient::ReadReport() {
+    return ResultOf::ReadReport(::zx::unowned_channel(this->channel_));
+}
+
+Device::ResultOf::ReadReport Device::Call::ReadReport(::zx::unowned_channel _client_end) {
+  return ResultOf::ReadReport(std::move(_client_end));
+}
+
+template <>
+Device::UnownedResultOf::ReadReport_Impl<Device::ReadReportResponse>::ReadReport_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ReadReportRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, ReadReportRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(ReadReportRequest));
+  ::fidl::DecodedMessage<ReadReportRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Device::InPlace::ReadReport(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Device::UnownedResultOf::ReadReport Device::SyncClient::ReadReport(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ReadReport(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Device::UnownedResultOf::ReadReport Device::Call::ReadReport(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ReadReport(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Device::ReadReportResponse> Device::InPlace::ReadReport(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(ReadReportRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<ReadReportRequest> params(std::move(_request_buffer));
+  Device::SetTransactionHeaderFor::ReadReportRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::ReadReportResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<ReadReportRequest, ReadReportResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::ReadReportResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
 Device::ResultOf::GetReports_Impl<Device::GetReportsResponse>::GetReports_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -1013,6 +1080,18 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
           Interface::GetMaxInputReportSizeCompleter::Sync(txn));
       return true;
     }
+    case kDevice_ReadReport_Ordinal:
+    case kDevice_ReadReport_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<ReadReportRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->ReadReport(
+          Interface::ReadReportCompleter::Sync(txn));
+      return true;
+    }
     case kDevice_GetReports_Ordinal:
     case kDevice_GetReports_GenOrdinal:
     {
@@ -1401,6 +1480,56 @@ void Device::Interface::GetMaxInputReportSizeCompleterBase::Reply(::fidl::Decode
 }
 
 
+void Device::Interface::ReadReportCompleterBase::Reply(int32_t status, ::fidl::VectorView<uint8_t> data, int64_t time) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadReportResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  ReadReportResponse _response = {};
+  Device::SetTransactionHeaderFor::ReadReportResponse(
+      ::fidl::DecodedMessage<ReadReportResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ReadReportResponse::PrimarySize,
+              ReadReportResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _response.data = std::move(data);
+  _response.time = std::move(time);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void Device::Interface::ReadReportCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::VectorView<uint8_t> data, int64_t time) {
+  if (_buffer.capacity() < ReadReportResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  ReadReportResponse _response = {};
+  Device::SetTransactionHeaderFor::ReadReportResponse(
+      ::fidl::DecodedMessage<ReadReportResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ReadReportResponse::PrimarySize,
+              ReadReportResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _response.data = std::move(data);
+  _response.time = std::move(time);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void Device::Interface::ReadReportCompleterBase::Reply(::fidl::DecodedMessage<ReadReportResponse> params) {
+  Device::SetTransactionHeaderFor::ReadReportResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 void Device::Interface::GetReportsCompleterBase::Reply(int32_t status, ::fidl::VectorView<uint8_t> data) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetReportsResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
@@ -1641,6 +1770,15 @@ void Device::SetTransactionHeaderFor::GetMaxInputReportSizeRequest(const ::fidl:
 }
 void Device::SetTransactionHeaderFor::GetMaxInputReportSizeResponse(const ::fidl::DecodedMessage<Device::GetMaxInputReportSizeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetMaxInputReportSize_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void Device::SetTransactionHeaderFor::ReadReportRequest(const ::fidl::DecodedMessage<Device::ReadReportRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_ReadReport_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void Device::SetTransactionHeaderFor::ReadReportResponse(const ::fidl::DecodedMessage<Device::ReadReportResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_ReadReport_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
