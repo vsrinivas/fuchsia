@@ -129,6 +129,9 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   int FrameProcessingThread();
   int JoinThread() { return thrd_join(processing_thread_, nullptr); }
 
+  void InitializeScalingCoefficients();
+  void InitializeScaler(uint32_t input_width, uint32_t input_height, uint32_t output_width,
+                        uint32_t output_height);
   void ProcessTask(TaskInfo& info);
   void ProcessChangeResolution(TaskInfo& info);
   void ProcessFrame(TaskInfo& info);

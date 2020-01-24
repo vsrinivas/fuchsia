@@ -117,6 +117,16 @@ class GenCtrl3 : public hwreg::RegisterBase<GenCtrl3, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GenCtrl3>(0xe8 * 4); };
 };
 
+class Src1DefColor : public hwreg::RegisterBase<Src1DefColor, uint32_t> {
+ public:
+  DEF_FIELD(31, 24, y_or_r);
+  DEF_FIELD(23, 16, cb_or_g);
+  DEF_FIELD(15, 8, cr_or_b);
+  DEF_FIELD(7, 0, alpha);
+
+  static auto Get() { return hwreg::RegisterAddr<Src1DefColor>(0xa6 * 4); };
+};
+
 class Src1ClipXStartEnd : public hwreg::RegisterBase<Src1ClipXStartEnd, uint32_t> {
  public:
   DEF_BIT(31, start_extra);
@@ -204,6 +214,77 @@ class Src2DstCanvas : public hwreg::RegisterBase<Src2DstCanvas, uint32_t> {
   DEF_FIELD(7, 0, dst1);
 
   static auto Get() { return hwreg::RegisterAddr<Src2DstCanvas>(0xb8 * 4); };
+};
+
+class VscStartPhaseStep : public hwreg::RegisterBase<VscStartPhaseStep, uint32_t> {
+ public:
+  DEF_FIELD(28, 0, phase_step);
+
+  static auto Get() { return hwreg::RegisterAddr<VscStartPhaseStep>(0xb9 * 4); };
+};
+
+class VscIniCtrl : public hwreg::RegisterBase<VscIniCtrl, uint32_t> {
+ public:
+  DEF_FIELD(30, 29, vertical_repeat_p0);
+  DEF_FIELD(23, 0, vertical_initial_phase);
+
+  static auto Get() { return hwreg::RegisterAddr<VscIniCtrl>(0xbb * 4); };
+};
+
+class HscStartPhaseStep : public hwreg::RegisterBase<HscStartPhaseStep, uint32_t> {
+ public:
+  DEF_FIELD(28, 0, phase_step);
+
+  static auto Get() { return hwreg::RegisterAddr<HscStartPhaseStep>(0xbc * 4); };
+};
+
+class HscPhaseSlope : public hwreg::RegisterBase<HscPhaseSlope, uint32_t> {
+ public:
+  DEF_FIELD(24, 0, slope);
+
+  static auto Get() { return hwreg::RegisterAddr<HscPhaseSlope>(0xbd * 4); };
+};
+
+class HscIniCtrl : public hwreg::RegisterBase<HscIniCtrl, uint32_t> {
+ public:
+  DEF_FIELD(30, 29, horizontal_repeat_p0);
+  DEF_FIELD(28, 24, horizontal_advance_num_upper);  // Not documented in datasheet
+  DEF_FIELD(23, 0, horizontal_initial_phase);
+
+  static auto Get() { return hwreg::RegisterAddr<HscIniCtrl>(0xbe * 4); };
+};
+
+class HscAdvCtrl : public hwreg::RegisterBase<HscAdvCtrl, uint32_t> {
+ public:
+  DEF_FIELD(31, 24, advance_num);
+  DEF_FIELD(23, 0, advance_phase);
+  static auto Get() { return hwreg::RegisterAddr<HscAdvCtrl>(0xbf * 4); };
+};
+
+class ScMiscCtrl : public hwreg::RegisterBase<ScMiscCtrl, uint32_t> {
+ public:
+  DEF_BIT(28, hsc_div_en);
+  DEF_FIELD(27, 15, hsc_dividing_length);
+  DEF_BIT(14, pre_hsc_enable);
+  DEF_BIT(13, pre_vsc_enable);
+  DEF_BIT(12, vsc_enable);
+  DEF_BIT(11, hsc_enable);
+  DEF_BIT(9, hsc_rpt_ctrl);
+  DEF_BIT(8, vsc_rpt_ctrl);
+
+  static auto Get() { return hwreg::RegisterAddr<ScMiscCtrl>(0xc0 * 4); };
+};
+
+class ScaleCoefIdx : public hwreg::RegisterBase<ScaleCoefIdx, uint32_t> {
+ public:
+  DEF_BIT(8, horizontal);
+
+  static auto Get() { return hwreg::RegisterAddr<ScaleCoefIdx>(0xd4 * 4); };
+};
+
+class ScaleCoef : public hwreg::RegisterBase<ScaleCoef, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<ScaleCoef>(0xd5 * 4); };
 };
 
 }  // namespace ge2d

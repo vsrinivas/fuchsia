@@ -5,6 +5,7 @@
 #include "ge2d-on-device-test.h"
 
 #include <lib/fit/function.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sync/completion.h>
 
@@ -100,6 +101,7 @@ class Ge2dDeviceTest : public zxtest::Test {
   image_format_2_t output_image_format_table_[kImageFormatTableSize];
   sync_completion_t completion_;
   resize_info_t resize_info_;
+  uint32_t input_format_index_ = 0;
 };
 
 void WriteDataToVmo(zx_handle_t vmo, const image_format_2_t& format) {
@@ -117,21 +119,86 @@ void WriteDataToVmo(zx_handle_t vmo, const image_format_2_t& format) {
   ASSERT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0));
 }
 
-// Compare a rectangular region of |vmo_a| with a rectangular region of the same size of |vmo_b|.
-void CheckSubPlaneEqual(zx_handle_t vmo_a, zx_handle_t vmo_b, uint32_t offset_a, uint32_t offset_b,
-                        uint32_t stride_a, uint32_t stride_b, uint32_t width, uint32_t height,
-                        const char* error_type) {
-  std::vector<uint8_t> row_data_a(width);
-  std::vector<uint8_t> row_data_b(width);
+// Write out data without large jumps so it's easier to do a comparison using a
+// tolerance.
+void WriteScalingDataToVmo(zx_handle_t vmo, const image_format_2_t& format) {
+  std::vector<uint8_t> input_data(format.coded_width);
+  // Write to both Y and UV planes in this loop.
+  for (uint32_t y = 0; y < format.coded_height * 3 / 2; y++) {
+    for (uint32_t x = 0; x < format.coded_width; ++x) {
+      // Multiply by 2 so we can see interpolated values in the output.
+      uint32_t start_val = 2 * x + 4 * y;
+      // Ensure U and V values are very different, because we don't want to mix
+      // them up.
+      if (y >= format.coded_height && ((x & 1) == 1)) {
+        start_val += 63;
+      }
+      // Limit result to [0..255]
+      constexpr uint32_t kMaxPlus1 = 256;
+      // Output should go 0-255,255-0,0-255 etc. This is a smooth function so there aren't large
+      // jumps in output that could cause pixels near the jump to be outside the tolerance.
+      start_val %= kMaxPlus1 * 2;
+      if (start_val >= kMaxPlus1)
+        start_val = (kMaxPlus1 * 2 - 1) - start_val;
+      input_data[x] = start_val;
+    }
+    ASSERT_OK(zx_vmo_write(vmo, input_data.data(), y * format.bytes_per_row, format.coded_width));
+  }
+  uint32_t size = format.bytes_per_row * format.coded_height * 3 / 2;
+  ASSERT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0));
+}
+
+float lerp(float x, float y, float a) { return x + (y - x) * a; }
+
+template <typename T>
+float BilinearInterp(T load, float x, float y) {
+  x = std::max(0.0f, x);
+  y = std::max(0.0f, y);
+  int low_x = x;
+  int low_y = y;
+  // If the input is on a pixel center then read from that both times, to avoid
+  // reading out of bounds.
+  int upper_x = low_x == x ? low_x : low_x + 1;
+  int upper_y = low_y == y ? low_y : low_y + 1;
+  float a_0_0 = load(low_x, low_y);
+  float a_0_1 = load(low_x, upper_y);
+  float a_1_0 = load(upper_x, low_y);
+  float a_1_1 = load(upper_x, upper_y);
+  float row_1 = lerp(a_0_0, a_1_0, x - low_x);
+  float row_2 = lerp(a_0_1, a_1_1, x - low_x);
+  return lerp(row_1, row_2, y - low_y);
+}
+
+// Compare a rectangular region of |addr_a| with a rectangular region of |addr_b|.
+void CheckSubPlaneEqual(void* addr_a, void* addr_b, uint32_t offset_a, uint32_t offset_b,
+                        uint32_t stride_a, uint32_t stride_b, uint32_t width,
+                        uint32_t bytes_per_pixel, uint32_t height, float x_scale, float y_scale,
+                        float tolerance, const char* error_type) {
   uint32_t error_count = 0;
+  uint8_t* region_start_a = reinterpret_cast<uint8_t*>(addr_a) + offset_a;
+  uint8_t* region_start_b = reinterpret_cast<uint8_t*>(addr_b) + offset_b;
   for (uint32_t y = 0; y < height; y++) {
-    ASSERT_OK(zx_vmo_read(vmo_a, row_data_a.data(), stride_a * y + offset_a, width));
-    ASSERT_OK(zx_vmo_read(vmo_b, row_data_b.data(), stride_b * y + offset_b, width));
-    for (uint32_t x = 0; x < width; x++) {
-      EXPECT_EQ(row_data_a[x], row_data_b[x], "%s at (%d, %d)", error_type, x, y);
-      if (row_data_a[x] != row_data_b[x]) {
-        if (++error_count >= 10)
-          return;
+    for (uint32_t x = 0; x < width / bytes_per_pixel; x++) {
+      uint8_t output_value[4] = {};
+      memcpy(&output_value, region_start_b + stride_b * y + x * bytes_per_pixel, bytes_per_pixel);
+      constexpr float kHalfPixel = 0.5f;
+      // Add and subtract half a pixel to try to account for the pixel center
+      // location.
+      float input_y = ((y + kHalfPixel) * y_scale - kHalfPixel);
+      float input_x = ((x + kHalfPixel) * x_scale - kHalfPixel);
+      for (uint32_t c = 0; c < bytes_per_pixel; c++) {
+        float input_value = BilinearInterp(
+            [&](uint32_t x, uint32_t y) {
+              return (region_start_a + stride_a * y + x * bytes_per_pixel)[c];
+            },
+            input_x, input_y);
+        EXPECT_GE(tolerance, std::abs(output_value[c] - input_value),
+                  "%s component %d input %f vs output %d at output (%d, %d), input (%f, %f)",
+                  error_type, c, input_value, output_value[c], x, y, input_x, input_y);
+        if (tolerance < std::abs(output_value[c] - input_value)) {
+          if (++error_count >= 10)
+            return;
+        }
       }
     }
   }
@@ -146,26 +213,60 @@ void CacheInvalidateVmo(zx_handle_t vmo) {
 void CheckEqual(zx_handle_t vmo_a, zx_handle_t vmo_b, const image_format_2_t& format) {
   CacheInvalidateVmo(vmo_a);
   CacheInvalidateVmo(vmo_b);
-  CheckSubPlaneEqual(vmo_a, vmo_b, 0, 0, format.bytes_per_row, format.bytes_per_row,
-                     format.coded_width, format.coded_height, "Y");
+  fzl::VmoMapper mapper_a;
+  ASSERT_OK(mapper_a.Map(*zx::unowned_vmo(vmo_a), 0, 0, ZX_VM_PERM_READ));
+  fzl::VmoMapper mapper_b;
+  ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
+  CheckSubPlaneEqual(mapper_a.start(), mapper_b.start(), 0, 0, format.bytes_per_row,
+                     format.bytes_per_row, format.coded_width, 1, format.coded_height, 1.0f, 1.0f,
+                     0, "Y");
   uint32_t uv_offset = format.bytes_per_row * format.coded_height;
-  CheckSubPlaneEqual(vmo_a, vmo_b, uv_offset, uv_offset, format.bytes_per_row, format.bytes_per_row,
-                     format.coded_width, format.coded_height / 2, "UV");
+  CheckSubPlaneEqual(mapper_a.start(), mapper_b.start(), uv_offset, uv_offset, format.bytes_per_row,
+                     format.bytes_per_row, format.coded_width, 2, format.coded_height / 2, 1.0f,
+                     1.0f, 0, "UV");
 }
 
 void Ge2dDeviceTest::CompareCroppedOutput(const frame_available_info* info) {
   fprintf(stderr, "Got frame_ready, id %d\n", info->buffer_id);
   zx_handle_t vmo_a = input_buffer_collection_.buffers[0].vmo;
   zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
-  image_format_2_t input_format = output_image_format_table_[0];
-  image_format_2_t output_format = output_image_format_table_[1];
+  image_format_2_t input_format = output_image_format_table_[input_format_index_];
+  image_format_2_t output_format = output_image_format_table_[info->metadata.image_format_index];
 
   CacheInvalidateVmo(vmo_a);
   CacheInvalidateVmo(vmo_b);
+
+  fzl::VmoMapper mapper_a;
+  ASSERT_OK(mapper_a.Map(*zx::unowned_vmo(vmo_a), 0, 0, ZX_VM_PERM_READ));
+  fzl::VmoMapper mapper_b;
+  ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
+
   uint32_t a_start_offset = input_format.bytes_per_row * resize_info_.crop.y + resize_info_.crop.x;
-  CheckSubPlaneEqual(vmo_a, vmo_b, a_start_offset, 0, input_format.bytes_per_row,
-                     output_format.bytes_per_row, output_format.coded_width,
-                     output_format.coded_height, "Y");
+  float width_scale = static_cast<float>(resize_info_.crop.width) / output_format.coded_width;
+  float height_scale = static_cast<float>(resize_info_.crop.height) / output_format.coded_height;
+  float tolerance = 0;
+  // Account for rounding and other minor issues.
+  if (width_scale != 1.0f || height_scale != 1.0f)
+    tolerance += 0.7;
+  // Pre-scaler may cause minor changes.
+  if (width_scale > 2.0f)
+    tolerance += 1;
+  if (height_scale > 2.0f)
+    tolerance += 2;
+  uint32_t height_to_check = output_format.coded_height;
+  if (height_scale < 1.0f) {
+    // Last row may be blended with default color, due to the fact that its pixel center
+    // location is greater than the largest input pixel center location.
+    height_to_check--;
+  }
+  uint32_t width_to_check = output_format.coded_height;
+  if (width_scale < 1.0f) {
+    // Same as height above.
+    width_to_check--;
+  }
+  CheckSubPlaneEqual(mapper_a.start(), mapper_b.start(), a_start_offset, 0,
+                     input_format.bytes_per_row, output_format.bytes_per_row, width_to_check, 1,
+                     height_to_check, width_scale, height_scale, tolerance, "Y");
   // When scaling is a disabled we currently repeat the input U and V data instead of
   // interpolating, so the output UV should just be a shifted version of the input.
   uint32_t a_uv_offset = input_format.bytes_per_row * input_format.coded_height;
@@ -173,9 +274,16 @@ void Ge2dDeviceTest::CompareCroppedOutput(const frame_available_info* info) {
                                input_format.bytes_per_row * (resize_info_.crop.y / 2) +
                                (resize_info_.crop.x / 2) * 2;
   uint32_t b_uv_offset = output_format.bytes_per_row * output_format.coded_height;
-  CheckSubPlaneEqual(vmo_a, vmo_b, a_uv_start_offset, b_uv_offset, input_format.bytes_per_row,
-                     output_format.bytes_per_row, output_format.coded_width,
-                     output_format.coded_height / 2, "UV");
+
+  // Because subsampling reduces the precision of everything, we need to
+  // increase the tolerance here.
+  if (tolerance > 0)
+    tolerance = tolerance * 2 + 1;
+  if (width_scale < 1.0f || height_scale < 1.0f)
+    tolerance += 2.0f;
+  CheckSubPlaneEqual(mapper_a.start(), mapper_b.start(), a_uv_start_offset, b_uv_offset,
+                     input_format.bytes_per_row, output_format.bytes_per_row, width_to_check, 2,
+                     height_to_check / 2, width_scale, height_scale, tolerance, "UV");
 }
 
 TEST_F(Ge2dDeviceTest, SameSize) {
@@ -254,6 +362,157 @@ TEST_F(Ge2dDeviceTest, CropOddOffset) {
   zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
       &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
       &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 1,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Scale width down to 50%, but don't scale height.
+TEST_F(Ge2dDeviceTest, Scale) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteScalingDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[0]);
+
+  resize_info_.crop.x = 0;
+  resize_info_.crop.y = 0;
+  resize_info_.crop.width = kWidth;
+  resize_info_.crop.height = kHeight / 2;
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 1,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Scale width down to 25%, but don't scale height.
+TEST_F(Ge2dDeviceTest, ScaleQuarter) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteScalingDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[0]);
+
+  resize_info_.crop.x = 0;
+  resize_info_.crop.y = 0;
+  resize_info_.crop.width = kWidth;
+  resize_info_.crop.height = kHeight / 4;
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 2,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Scale height down to 25%, but don't scale width.
+TEST_F(Ge2dDeviceTest, ScaleHeightQuarter) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteScalingDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[0]);
+
+  resize_info_.crop.x = 0;
+  resize_info_.crop.y = 0;
+  resize_info_.crop.width = kWidth / 4;
+  resize_info_.crop.height = kHeight;
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 2,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Scale width down to 33%, but don't scale height.
+TEST_F(Ge2dDeviceTest, ScaleThird) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteScalingDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[0]);
+
+  resize_info_.crop.x = 0;
+  resize_info_.crop.y = 0;
+  resize_info_.crop.width = kWidth / 4 * 3;
+  resize_info_.crop.height = kHeight / 4;
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 2,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Scale width and height to 2x.
+TEST_F(Ge2dDeviceTest, Scale2x) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteScalingDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[1]);
+
+  resize_info_.crop.x = 0;
+  resize_info_.crop.y = 0;
+  resize_info_.crop.width = kWidth / 2;
+  resize_info_.crop.height = kHeight / 2;
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    sync_completion_signal(&completion_);
+  });
+
+  input_format_index_ = 1;
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[1], output_image_format_table_, kImageFormatTableSize, 0,
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 

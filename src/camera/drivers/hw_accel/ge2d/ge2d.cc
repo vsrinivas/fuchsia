@@ -202,6 +202,28 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
 
 void Ge2dDevice::Ge2dSetCropRect(uint32_t task_index, const rect_t* crop) {}
 
+void Ge2dDevice::InitializeScalingCoefficients() {
+  // 33x4 FIR coefficients to use. First takes 100% of pixel[1], while the last takes 50% of
+  // pixel[1] and pixel[2].
+  constexpr uint32_t kBilinearCoefficients[] = {
+      0x00800000, 0x007e0200, 0x007c0400, 0x007a0600, 0x00780800, 0x00760a00, 0x00740c00,
+      0x00720e00, 0x00701000, 0x006e1200, 0x006c1400, 0x006a1600, 0x00681800, 0x00661a00,
+      0x00641c00, 0x00621e00, 0x00602000, 0x005e2200, 0x005c2400, 0x005a2600, 0x00582800,
+      0x00562a00, 0x00542c00, 0x00522e00, 0x00503000, 0x004e3200, 0x004c3400, 0x004a3600,
+      0x00483800, 0x00463a00, 0x00443c00, 0x00423e00, 0x00404000};
+
+  // Vertical scaler autoincrementing write
+  ScaleCoefIdx::Get().FromValue(0).WriteTo(&ge2d_mmio_);
+  for (uint32_t value : kBilinearCoefficients) {
+    ScaleCoef::Get().FromValue(value).WriteTo(&ge2d_mmio_);
+  }
+  // Horizontal scaler autoincrementing write
+  ScaleCoefIdx::Get().FromValue(0).set_horizontal(1).WriteTo(&ge2d_mmio_);
+  for (uint32_t value : kBilinearCoefficients) {
+    ScaleCoef::Get().FromValue(value).WriteTo(&ge2d_mmio_);
+  }
+}
+
 void Ge2dDevice::ProcessTask(TaskInfo& info) {
   switch (info.op) {
     case GE2D_OP_SETOUTPUTRES:
@@ -226,6 +248,118 @@ void Ge2dDevice::ProcessChangeResolution(TaskInfo& info) {
   f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
   f_info.metadata.image_format_index = task->output_format_index();
   return task->ResolutionChangeCallback(&f_info);
+}
+
+// Floors.
+static uint32_t ConvertToFixedPoint24(double input) {
+  return static_cast<uint32_t>((1 << 24) * input);
+}
+
+static void CalculateInitialPhase(uint32_t input_dim, uint32_t output_dim, uint32_t* phase_out,
+                                  uint32_t* repeat_out) {
+  // Linux uses a multiplied-by-10 fixed-point, but this seems simpler and more precise.
+  double rate_ratio = static_cast<double>(output_dim) / input_dim;
+  if (rate_ratio == 1.0) {
+    *phase_out = 0;
+    *repeat_out = 0;
+  } else {
+    // We subtract 0.5 here because the pixel value itself is at phase 0, not 0.5.
+    double pixel_initial_phase = 0.5 / rate_ratio - 0.5;
+    // We need to decide how to fill in the FIR filter initially.
+    if (pixel_initial_phase >= 0) {
+      // When scaling down the first output pixel center is after the first input pixel center, so
+      // we set repeat = 1 so the inputs looks like (image[0], image[0], image[1], image[2]) and we
+      // interpolate between image[0] and image[1].
+      *repeat_out = 1;
+    } else {
+      // When scaling up the first output pixel center is before the first input pixel center, so we
+      // set repeat = 2 and the input looks like (image[0], image[0], image[0], image[1]) so the
+      // first output must be image[0] (due to the bilinear filter coefficients we're using).
+      *repeat_out = 2;
+      // Increase initial phase by 1 to compensate.
+      pixel_initial_phase++;
+    }
+    *phase_out = ConvertToFixedPoint24(pixel_initial_phase);
+  }
+}
+
+void Ge2dDevice::InitializeScaler(uint32_t input_width, uint32_t input_height,
+                                  uint32_t output_width, uint32_t output_height) {
+  bool horizontal_scaling = (input_width != output_width);
+  bool vertical_scaling = (input_height != output_height);
+  InitializeScalingCoefficients();
+  bool use_preh_scaler = input_width > output_width * 2;
+  bool use_prev_scaler = input_height > output_height * 2;
+
+  // Prescaler seems to divide size by 2.
+  uint32_t scaler_input_width = use_preh_scaler ? ((input_width + 1) / 2) : input_width;
+  uint32_t scaler_input_height = use_prev_scaler ? ((input_height + 1) / 2) : input_height;
+
+  // The scaler starts at an initial phase value, and for every output pixel increments it by a
+  // step.  Integer values (in 5.24 fixed-point) are the input pixel values themselves (starting at
+  // 0). The scaler is a polyphase scaler, so the phase picks the FIR coefficients to use (from the
+  // table above). For bilinear filtering, a phase of 0 takes all its input from pixel[1], and 1
+  // would take it all from pixel[2].
+
+  constexpr uint32_t kFixedPoint = 24;
+  uint32_t hsc_phase_step =
+      ConvertToFixedPoint24(static_cast<double>(scaler_input_width) / output_width);
+  uint32_t vsc_phase_step =
+      ConvertToFixedPoint24(static_cast<double>(scaler_input_height) / output_height);
+
+  // Horizontal scaler dividing provides more efficiency (somehow). It seems like it allows
+  // calculating phases at larger blocks.
+  // The dividing length is roughly 124 * (output_width / input_width).
+  uint32_t hsc_dividing_length = ConvertToFixedPoint24(124) / hsc_phase_step;
+  uint32_t hsc_rounded_step = hsc_dividing_length * hsc_phase_step;
+  uint32_t hsc_advance_num = hsc_rounded_step >> kFixedPoint;
+  uint32_t hsc_advance_phase = hsc_rounded_step & ((1 << kFixedPoint) - 1);
+
+  uint32_t horizontal_initial_phase, horizontal_repeat;
+  uint32_t vertical_initial_phase, vertical_repeat;
+  // The linux driver uses |input_width| and |input_height| here, but that seems incorrect.
+  CalculateInitialPhase(scaler_input_width, output_width, &horizontal_initial_phase,
+                        &horizontal_repeat);
+  CalculateInitialPhase(scaler_input_height, output_height, &vertical_initial_phase,
+                        &vertical_repeat);
+
+  ScMiscCtrl::Get()
+      .ReadFrom(&ge2d_mmio_)
+      .set_hsc_div_en(horizontal_scaling)
+      .set_hsc_dividing_length(hsc_dividing_length)
+      .set_pre_hsc_enable(use_preh_scaler)
+      .set_pre_vsc_enable(use_prev_scaler)
+      .set_vsc_enable(vertical_scaling)
+      .set_hsc_enable(horizontal_scaling)
+      .set_hsc_rpt_ctrl(1)
+      .set_vsc_rpt_ctrl(1)
+      .WriteTo(&ge2d_mmio_);
+
+  HscStartPhaseStep::Get().FromValue(0).set_phase_step(hsc_phase_step).WriteTo(&ge2d_mmio_);
+  HscAdvCtrl::Get()
+      .FromValue(0)
+      .set_advance_num(hsc_advance_num & 0xff)
+      .set_advance_phase(hsc_advance_phase)
+      .WriteTo(&ge2d_mmio_);
+
+  // We clamp the initial phases, because that's what the hardware
+  // supports. This can mess up scaling down to <= 1/3, though the prescaler can
+  // help reduce how often that's a problem. The linux driver wraps these
+  // values, which seems worse.
+  HscIniCtrl::Get()
+      .FromValue(0)
+      .set_horizontal_repeat_p0(horizontal_repeat)
+      .set_horizontal_advance_num_upper(hsc_advance_num >> 8)
+      .set_horizontal_initial_phase(std::min(horizontal_initial_phase, 0xffffffu))
+      .WriteTo(&ge2d_mmio_);
+
+  VscStartPhaseStep::Get().FromValue(0).set_phase_step(vsc_phase_step).WriteTo(&ge2d_mmio_);
+  VscIniCtrl::Get()
+      .FromValue(0)
+      .set_vertical_repeat_p0(vertical_repeat)
+      .set_vertical_initial_phase(std::min(vertical_initial_phase, 0xffffffu))
+      .WriteTo(&ge2d_mmio_);
+  // Leave horizontal and vertical phase slopes set to 0.
 }
 
 void Ge2dDevice::ProcessFrame(TaskInfo& info) {
@@ -269,6 +403,9 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
   uint32_t input_y_start = resize_info.crop.y;
   uint32_t input_y_end = resize_info.crop.y + resize_info.crop.height - 1;
 
+  InitializeScaler(resize_info.crop.width, resize_info.crop.height, output_format.coded_width,
+                   output_format.coded_height);
+
   // Assume NV12 input and output for now. DST1 gets Y and DST2 gets CbCr.
   GenCtrl0::Get()
       .FromValue(0)
@@ -284,6 +421,7 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
       .set_src1_little_endian(0)  // endianness conversion happens in canvas
       .set_src1_color_map(GenCtrl2::kColorMap24NV12)
       .set_src1_format(GenCtrl2::kFormat24Bit)
+      .set_src1_color_expand_mode(1)
       .WriteTo(&ge2d_mmio_);
 
   Src1ClipXStartEnd::Get()
