@@ -13,8 +13,6 @@ source_set("factory_protocol") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/camera/lib/stream_utils",
-    "//src/camera/test/isp_tester:fuchsia.camera.test",
-    "//src/lib/files",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -22,8 +20,11 @@ source_set("factory_protocol") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.factory.camera",
+    "//src/camera/test/isp_tester:fuchsia.camera.test",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/system/fidl/fuchsia-hardware-camera",
   ]
 }

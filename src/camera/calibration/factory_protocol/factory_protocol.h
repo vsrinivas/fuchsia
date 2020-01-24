@@ -5,13 +5,12 @@
 #ifndef SRC_CAMERA_CALIBRATION_FACTORY_PROTOCOL_FACTORY_PROTOCOL_H_
 #define SRC_CAMERA_CALIBRATION_FACTORY_PROTOCOL_FACTORY_PROTOCOL_H_
 
+#include <fuchsia/camera/test/cpp/fidl.h>
 #include <fuchsia/camera2/cpp/fidl.h>
+#include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/factory/camera/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-
-#include <fbl/unique_fd.h>
+#include <fuchsia/hardware/camera/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 
 #include "src/camera/lib/stream_utils/image_io_util.h"
 
@@ -23,13 +22,17 @@ namespace camera {
 class FactoryProtocol : public fuchsia::camera2::Stream_EventSender,
                         fuchsia::factory::camera::CameraFactory {
  public:
-  FactoryProtocol() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
-  ~FactoryProtocol() override { StopStream(); }
+  explicit FactoryProtocol(async_dispatcher_t* dispatcher)
+      : binding_(this), dispatcher_(dispatcher) {}
+  ~FactoryProtocol() override { Shutdown(ZX_ERR_STOP); }
 
   // Factory method that creates a FactoryProtocol and connects it to the ISP Tester Driver.
+  // Args:
+  //   |channel|: The channel to bind.
   // Returns:
   //  A FactoryProtocol object which acts as an interface to the factory calibrations API.
-  static std::unique_ptr<FactoryProtocol> Create();
+  static std::unique_ptr<FactoryProtocol> Create(zx::channel channel,
+                                                 async_dispatcher_t* dispatcher);
 
   // Binds a channel to the ISP Tester driver, creates a new Stream from the driver, and
   // instantiates an ImageWriterUtil to track the Stream's buffers.
@@ -38,7 +41,11 @@ class FactoryProtocol : public fuchsia::camera2::Stream_EventSender,
   zx_status_t ConnectToStream();
 
   // Stop the Stream if it is running. Otherwise do nothing.
-  void StopStream();
+  void Shutdown(zx_status_t status);
+
+  // Getters
+  bool frames_received() const { return frames_received_; }
+  bool streaming() const { return streaming_; }
 
  private:
   // |fuchsia::camera2::Stream|
@@ -54,12 +61,15 @@ class FactoryProtocol : public fuchsia::camera2::Stream_EventSender,
   void WriteCalibrationData(fuchsia::mem::Buffer calibration_data, std::string file_path,
                             WriteCalibrationDataCallback callback) override;
 
-  fbl::unique_fd isp_fd_;
-  async::Loop loop_;
-  fuchsia::camera2::StreamPtr stream_;
+  fidl::Binding<fuchsia::factory::camera::CameraFactory> binding_;
+  fuchsia::camera2::hal::ControllerSyncPtr controller_;
+  fuchsia::camera::test::IspTesterSyncPtr isp_tester_;
+  async_dispatcher_t* dispatcher_;
   std::unique_ptr<ImageIOUtil> image_io_util_;
-
+  fuchsia::camera2::StreamPtr stream_;
   bool streaming_ = false;
+  bool frames_received_ = false;
+  bool write_allowed_ = true;
 };
 
 }  // namespace camera

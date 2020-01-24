@@ -5,89 +5,112 @@
 #include "src/camera/calibration/factory_protocol/factory_protocol.h"
 
 #include <fcntl.h>
-#include <fuchsia/camera/test/cpp/fidl.h>
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 
-#include "src/lib/files/file.h"
-#include "src/lib/syslog/cpp/logger.h"
+#include <fbl/unique_fd.h>
+#include <src/lib/files/file.h>
+#include <src/lib/syslog/cpp/logger.h>
 
 namespace camera {
 
-static constexpr const char* kDevicePath = "/dev/class/isp-device-test/000";
+constexpr auto kTag = "factory_protocol";
+
+static constexpr const char* kIspDevicePath = "/dev/class/isp-device-test/000";
 static constexpr const char* kDirPath = "/calibration";
 
-std::unique_ptr<FactoryProtocol> FactoryProtocol::Create() {
-  auto factory_impl = std::make_unique<FactoryProtocol>();
+std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
+                                                         async_dispatcher_t* dispatcher) {
+  auto factory_impl = std::make_unique<FactoryProtocol>(dispatcher);
+  factory_impl->binding_.set_error_handler(
+      [&factory_impl](zx_status_t status) { factory_impl->Shutdown(status); });
 
-  int result = open(kDevicePath, O_RDONLY);
-  if (result < 0) {
-    FX_LOGS(ERROR) << "Error opening " << kDevicePath;
-    return nullptr;
-  }
-  factory_impl->isp_fd_.reset(result);
-
-  zx_status_t status = factory_impl->loop_.RunUntilIdle();
+  zx_status_t status = factory_impl->binding_.Bind(std::move(channel), factory_impl->dispatcher_);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failure to start loop.";
+    FX_PLOGST(ERROR, kTag, status);
     return nullptr;
   }
+
+  // Connect to the isp-tester device.
+  int result = open(kIspDevicePath, O_RDONLY);
+  if (result < 0) {
+    FX_LOGST(ERROR, kTag) << "Error opening " << kIspDevicePath;
+    return nullptr;
+  }
+  fbl::unique_fd isp_fd_(result);
+
+  zx::channel isp_tester_channel;
+  status = fdio_get_service_handle(isp_fd_.get(), isp_tester_channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FX_PLOGST(ERROR, kTag, status) << "Failed to get service handle";
+    return nullptr;
+  }
+  factory_impl->isp_tester_.Bind(std::move(isp_tester_channel));
 
   return factory_impl;
 }
 
 zx_status_t FactoryProtocol::ConnectToStream() {
-  // Get a channel to the tester device.
-  zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(isp_fd_.get(), channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to get service handle";
-    return status;
-  }
-
-  // Bind the tester interface and create a stream.
-  fuchsia::camera::test::IspTesterSyncPtr tester;
-  tester.Bind(std::move(channel));
   fuchsia::sysmem::ImageFormat_2 format;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-  auto request = stream_.NewRequest(loop_.dispatcher());
-  status = tester->CreateStream(std::move(request), &buffers, &format);
+
+  auto request = stream_.NewRequest(dispatcher_);
+  zx_status_t status = isp_tester_->CreateStream(std::move(request), &buffers, &format);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to create stream";
+    FX_PLOGST(ERROR, kTag, status) << "Failed to create stream";
     return status;
   }
   image_io_util_ = ImageIOUtil::Create(&buffers, kDirPath);
 
-  stream_.set_error_handler([this](zx_status_t status) {
+  stream_.set_error_handler([&](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Stream disconnected";
-    loop_.Quit();
+    Shutdown(status);
   });
-  stream_.events().OnFrameAvailable = fit::bind_member(this, &FactoryProtocol::OnFrameAvailable);
+  stream_.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
+    OnFrameAvailable(std::move(info));
+    frames_received_ = true;
+  };
   stream_->Start();
   streaming_ = true;
 
   return ZX_OK;
 };
 
-void FactoryProtocol::StopStream() {
+void FactoryProtocol::Shutdown(zx_status_t status) {
+  // Close the connection if it's open.
+  if (binding_.is_bound()) {
+    binding_.Close(status);
+  }
+
+  // Stop streaming if it's started.
   if (streaming_) {
     stream_->Stop();
     streaming_ = false;
   }
 }
 
+// |fuchsia::camera2::Stream|
+
 void FactoryProtocol::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
-    FX_LOGS(ERROR) << "Received OnFrameAvailable with error event";
+    FX_LOGST(ERROR, kTag) << "Received OnFrameAvailable with error event";
     return;
   }
-  zx_status_t status = image_io_util_->WriteImageData(info.buffer_id);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to write to disk";
-    return;
+
+  // Only allow a single write.
+  if (write_allowed_) {
+    zx_status_t status = image_io_util_->WriteImageData(info.buffer_id);
+    if (status != ZX_OK) {
+      FX_PLOGST(ERROR, kTag, status) << "Failed to write to disk";
+      return;
+    }
+    write_allowed_ = false;
   }
+
   stream_->ReleaseFrame(info.buffer_id);
 }
+
+// |fuchsia::factory::camera::CameraFactory|
 
 void FactoryProtocol::DetectCamera(DetectCameraCallback callback) { FX_NOTIMPLEMENTED(); }
 
