@@ -42,6 +42,15 @@ const char* ClientSettings::Breakpoint::kType_Hardware = "execute";
 const char* ClientSettings::Breakpoint::kType_ReadWrite = "read-write";
 const char* ClientSettings::Breakpoint::kType_Write = "write";
 
+const char* ClientSettings::Breakpoint::kSize = "size";
+const char* ClientSettings::Breakpoint::kSizeDescription =
+    R"(  Byte size for hardware breakpoints.
+
+  Hardware "write" and "read-write" breakpoints can be set on a range of
+  addresses. The supported ranges are architecture-specific, but sizes of 1, 2,
+  4 and 8 bytes should be supported. The address will need to be aligned
+  to an even multiple of its size.)";
+
 const char* ClientSettings::Breakpoint::kStopMode = "stop";
 const char* ClientSettings::Breakpoint::kStopModeDescription =
     R"(  What to stop when this breakpoint is hit. Possible values are:
@@ -82,6 +91,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
       ClientSettings::Breakpoint::kType_Software,
       {ClientSettings::Breakpoint::kType_Software, ClientSettings::Breakpoint::kType_Hardware,
        ClientSettings::Breakpoint::kType_ReadWrite, ClientSettings::Breakpoint::kType_Write});
+  schema->AddInt(ClientSettings::Breakpoint::kSize, ClientSettings::Breakpoint::kSizeDescription);
   schema->AddString(
       ClientSettings::Breakpoint::kStopMode, ClientSettings::Breakpoint::kStopModeDescription,
       ClientSettings::Breakpoint::kStopMode_All,
@@ -108,6 +118,8 @@ SettingValue Breakpoint::Settings::GetStorageValue(const std::string& key) const
     return SettingValue(settings.one_shot);
   } else if (key == ClientSettings::Breakpoint::kType) {
     return SettingValue(BreakpointSettings::TypeToString(settings.type));
+  } else if (key == ClientSettings::Breakpoint::kSize) {
+    return SettingValue(static_cast<int>(settings.byte_size));
   }
   FXL_NOTREACHED();
   return SettingValue();
@@ -134,6 +146,8 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
         BreakpointSettings::StringToType(value.get_string());
     FXL_DCHECK(type);  // Schema should have validated the input.
     settings.type = *type;
+  } else if (key == ClientSettings::Breakpoint::kSize) {
+    settings.byte_size = value.get_int();
   } else {
     FXL_NOTREACHED();
   }

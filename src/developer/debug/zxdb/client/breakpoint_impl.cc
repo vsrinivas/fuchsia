@@ -267,22 +267,11 @@ void BreakpointImpl::SendBackendAddOrChange() {
           addition.thread_koid = thread->GetKoid();
       }
 
-      switch (settings_.type) {
-        case BreakpointSettings::Type::kSoftware:
-        case BreakpointSettings::Type::kHardware: {
-          addition.address = pair.second.address();
-          break;
-        }
-        case BreakpointSettings::Type::kReadWrite:
-        case BreakpointSettings::Type::kWrite: {
-          // TODO(bug 44196): This should have a way for the user to specify the size.
-          uint64_t address = pair.second.address();
-          addition.address_range = {address, address + 4};
-          break;
-        }
-        case BreakpointSettings::Type::kLast:
-          FXL_NOTREACHED();
-          break;
+      if (BreakpointSettings::TypeHasSize(settings_.type)) {
+        uint64_t address = pair.second.address();
+        addition.address_range = {address, address + settings_.byte_size};
+      } else {
+        addition.address = pair.second.address();
       }
       request.breakpoint.locations.push_back(addition);
     }

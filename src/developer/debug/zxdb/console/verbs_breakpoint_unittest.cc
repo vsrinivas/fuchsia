@@ -77,6 +77,25 @@ TEST_F(VerbsBreakpointTest, Break) {
       event.output.AsString());
 }
 
+TEST_F(VerbsBreakpointTest, WriteBreakpoint) {
+  // Creates a specifically-sized write breakpoint at a manual address.
+  console().ProcessInputLine("break -s 8 -t write 0x1234");
+
+  // Validate the set request. It will have a 0 address but the range will be set.
+  ASSERT_TRUE(breakpoint_remote_api()->last_request);
+  ASSERT_EQ(1u, breakpoint_remote_api()->last_request->breakpoint.locations.size());
+  EXPECT_EQ(0u, breakpoint_remote_api()->last_request->breakpoint.locations[0].address);
+  EXPECT_EQ(0x1234u,
+            breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.begin());
+  EXPECT_EQ(8u,
+            breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.size());
+
+  // The breakpoint info should be immediately printed even though the backend has not replied.
+  auto event = console().GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("Created Breakpoint 1 type=write size=8 @ 0x1234\n", event.output.AsString());
+}
+
 // This is a more end-to-end-type test that tests that breakpoints that hit backend errors issue
 // the proper notification and those notifications are caught and printed out on the screen.
 TEST_F(VerbsBreakpointTest, TransportError) {

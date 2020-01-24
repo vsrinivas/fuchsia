@@ -70,4 +70,7 @@ std::optional<BreakpointSettings::Type> BreakpointSettings::StringToType(std::st
   return std::nullopt;
 }
 
+// static
+bool BreakpointSettings::TypeHasSize(Type t) { return t == Type::kReadWrite || t == Type::kWrite; }
+
 }  // namespace zxdb

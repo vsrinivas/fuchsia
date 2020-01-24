@@ -269,7 +269,7 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
   BreakpointSettings settings = breakpoint->GetSettings();
 
   OutputBuffer result("Breakpoint ");
-  result.Append(Syntax::kSpecial, fxl::StringPrintf("%d ", context->IdForBreakpoint(breakpoint)));
+  result.Append(Syntax::kSpecial, std::to_string(context->IdForBreakpoint(breakpoint)) + " ");
 
   // Most breakpoints are simple global software breakpoints. To keep things easier to follow,
   // only show values that aren't the default.
@@ -289,9 +289,15 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
     result.Append(std::string("=") + BoolToString(settings.enabled) + " ");
   }
 
+  // Include type only for non-software (the normal ones) breakpoints.
   if (settings.type != BreakpointSettings::Type::kSoftware) {
     result.Append(Syntax::kVariable, ClientSettings::Breakpoint::kType);
     result.Append(std::string("=") + BreakpointSettings::TypeToString(settings.type) + " ");
+  }
+
+  if (BreakpointSettings::TypeHasSize(settings.type)) {
+    result.Append(Syntax::kVariable, ClientSettings::Breakpoint::kSize);
+    result.Append("=" + std::to_string(settings.byte_size) + " ");
   }
 
   if (settings.one_shot) {

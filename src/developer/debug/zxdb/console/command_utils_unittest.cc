@@ -210,14 +210,15 @@ TEST(CommandUtils, FormatBreakpoint) {
 
   // Set all the options to non-defaults.
   settings.type = BreakpointSettings::Type::kWrite;
+  settings.byte_size = 4;
   settings.enabled = false;
   settings.scope = ExecutionScope(session.system().GetTargets()[0]);
   settings.stop_mode = BreakpointSettings::StopMode::kThread;
   settings.one_shot = true;
   breakpoint.SetSettings(settings);
   EXPECT_EQ(
-      "Breakpoint 1 scope=\"pr 1\" stop=thread enabled=false type=write one-shot=true (2 addrs) @ "
-      "foo.cc:21\n",
+      "Breakpoint 1 scope=\"pr 1\" stop=thread enabled=false type=write size=4 one-shot=true (2 "
+      "addrs) @ foo.cc:21\n",
       FormatBreakpoint(&context, &breakpoint, false).AsString());
 
   system_observer->WillDestroyBreakpoint(&breakpoint);

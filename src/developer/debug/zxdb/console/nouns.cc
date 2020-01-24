@@ -212,12 +212,12 @@ void ListFilters(ConsoleContext* context, JobContext* job) {
     else
       row.emplace_back();
 
-    row.push_back(fxl::StringPrintf("%d", id));
+    row.push_back(std::to_string(id));
     row.push_back(filter->pattern());
 
     if (filter->job()) {
       auto job_id = context->IdForJobContext(filter->job());
-      row.push_back(fxl::StringPrintf("%d", job_id));
+      row.push_back(std::to_string(job_id));
     } else {
       row.push_back("*");
     }
@@ -328,9 +328,9 @@ void ListThreads(ConsoleContext* context, Process* process) {
     else
       row.emplace_back();
 
-    row.push_back(fxl::StringPrintf("%d", pair.first));
+    row.push_back(std::to_string(pair.first));
     row.push_back(ThreadStateToString(pair.second->GetState(), pair.second->GetBlockedReason()));
-    row.push_back(fxl::StringPrintf("%" PRIu64, pair.second->GetKoid()));
+    row.push_back(std::to_string(pair.second->GetKoid()));
     row.push_back(pair.second->GetName());
   }
 
@@ -579,6 +579,16 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     return;
   }
 
+  // The size is normally not applicable since most breakpoints are software. Hide the size for
+  // clarity unless there is a hardware breakpoint.
+  bool include_size = false;
+  for (const auto& bp : breakpoints) {
+    if (BreakpointSettings::TypeHasSize(bp->GetSettings().type)) {
+      include_size = true;
+      break;
+    }
+  }
+
   int active_breakpoint_id = context->GetActiveBreakpointId();
 
   // Sort by ID.
@@ -599,16 +609,23 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     BreakpointSettings settings = pair.second->GetSettings();
     auto matched_locs = pair.second->GetLocations();
 
-    row.push_back(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d", pair.first)));
+    row.push_back(OutputBuffer(Syntax::kSpecial, std::to_string(pair.first)));
     row.emplace_back(ExecutionScopeToString(context, settings.scope));
     row.emplace_back(BreakpointSettings::StopModeToString(settings.stop_mode));
     row.emplace_back(BoolToString(settings.enabled));
     row.emplace_back(BreakpointSettings::TypeToString(settings.type));
 
+    if (include_size) {
+      if (BreakpointSettings::TypeHasSize(settings.type))
+        row.emplace_back(std::to_string(settings.byte_size));
+      else
+        row.emplace_back(Syntax::kComment, "n/a");
+    }
+
     if (matched_locs.empty())
       row.emplace_back(Syntax::kWarning, "pending");
     else
-      row.emplace_back(fxl::StringPrintf("%zu", matched_locs.size()));
+      row.emplace_back(std::to_string(matched_locs.size()));
 
     row.push_back(FormatInputLocations(settings.locations));
 
@@ -630,15 +647,19 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     }
   }
 
+  std::vector<ColSpec> col_specs{ColSpec(Align::kLeft),
+                                 ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
+                                 ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kScope),
+                                 ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kStopMode),
+                                 ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kEnabled),
+                                 ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kType)};
+  if (include_size)
+    col_specs.emplace_back(Align::kRight, 0, ClientSettings::Breakpoint::kSize);
+  col_specs.emplace_back(Align::kRight, 0, "#addrs");
+  col_specs.emplace_back(Align::kLeft, 0, ClientSettings::Breakpoint::kLocation);
+
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kScope),
-               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kStopMode),
-               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kEnabled),
-               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kType),
-               ColSpec(Align::kRight, 0, "#addrs"),
-               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kLocation)},
-              rows, &out);
+  FormatTable(col_specs, rows, &out);
   Console::get()->Output(out);
 }
 
@@ -738,7 +759,7 @@ void ListSymbolServers(ConsoleContext* context) {
     else
       row.emplace_back();
 
-    row.emplace_back(fxl::StringPrintf("%d", id));
+    row.emplace_back(std::to_string(id));
     row.emplace_back(server->name());
     row.emplace_back(SymbolServerStateToColorString(server->state()));
 

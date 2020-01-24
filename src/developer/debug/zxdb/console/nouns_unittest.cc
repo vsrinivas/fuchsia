@@ -61,6 +61,23 @@ TEST_F(NounsTest, BreakpointList) {
       " 1 global all  false   software pending Foo\n",
       event.output.AsString());
 
+  // Add a non-software breakpoint to see the size.
+  Breakpoint* write_bp = session().system().CreateNewBreakpoint();
+  BreakpointSettings write_settings;
+  write_settings.type = BreakpointSettings::Type::kWrite;
+  write_settings.byte_size = 4;
+  write_settings.locations.emplace_back(0x12345678);
+  write_bp->SetSettings(write_settings);
+
+  console.ProcessInputLine(kListBreakpointsLine);
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ(
+      " # scope  stop enabled type     size  #addrs location\n"
+      " 1 global all  false   software  n/a pending Foo\n"
+      " 2 global all  true    write       4 pending 0x12345678\n",
+      event.output.AsString());
+
   // Currently we don't test printing breakpoint locations since that requires
   // injecting a mock process with mock symbols. If we add infrastructure for
   // other noun tests to do this such that this can be easily written, we

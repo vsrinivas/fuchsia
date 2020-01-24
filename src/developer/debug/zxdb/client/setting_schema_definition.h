@@ -77,6 +77,9 @@ struct ClientSettings {
     static const char* kType;
     static const char* kTypeDescription;
 
+    static const char* kSize;
+    static const char* kSizeDescription;
+
     // Possible values for kType.
     static const char* kType_Software;
     static const char* kType_Hardware;

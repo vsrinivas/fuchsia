@@ -42,10 +42,14 @@ struct BreakpointSettings {
   static const char* TypeToString(Type);
   static std::optional<Type> StringToType(std::string_view);
 
+  // Returns whether the given breakpoint type supports a byte_size.
+  static bool TypeHasSize(Type);
+
   // What kind of breakpoint implementation to use.
   Type type = Type::kSoftware;
 
-  // Size in bytes for hardware breakpoints. Ignored for type == kSoftware.
+  // Size in bytes for hardware breakpoints. Used only for read and read-write breakpoints. See
+  // TypeHasSize() above.
   uint32_t byte_size = 0;
 
   // Name that the creator of the breakpoint can set for easier debugging. Optional.

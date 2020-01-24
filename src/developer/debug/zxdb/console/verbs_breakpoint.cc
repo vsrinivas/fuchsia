@@ -24,10 +24,11 @@ namespace zxdb {
 
 namespace {
 
-constexpr int kStopSwitch = 1;
-constexpr int kDisabledSwitch = 2;
-constexpr int kTypeSwitch = 3;
-constexpr int kOneShotSwitch = 4;
+constexpr int kSizeSwitch = 1;
+constexpr int kStopSwitch = 2;
+constexpr int kDisabledSwitch = 3;
+constexpr int kTypeSwitch = 4;
+constexpr int kOneShotSwitch = 5;
 
 // Validates that the current command has a breakpoint associated with it and no additional
 // arguments. Used for enable/disable/clear that do one thing to a breakpoint
@@ -105,8 +106,15 @@ Options
       Creates a one-shot breakpoint. One-shot breakpoints are automatically
       deleted after they are hit once.
 
+  --size=<byte-size>
+  -s <byte-size>
+      Size in bytes for hardware write and read-write breakpoints. This will
+      default to 4 if unspecified. Not valid for hardware or software execution
+      breakpoints. The address will need to be aligned to an even multiple of
+      its size.
+
   --stop=[ all | process | thread | none ]
-  -s [ all | process | thread | none ]
+  -p [ all | process | thread | none ]
       Controls what execution is stopped when the breakpoint is hit. By
       default all threads of all debugged process will be stopped ("all") when
       a breakpoint is hit. But it's possible to only stop the threads of the
@@ -254,21 +262,24 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
   }
 
   // Type.
-  auto break_type = debug_ipc::BreakpointType::kSoftware;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
   if (cmd.HasSwitch(kTypeSwitch)) {
-    std::string type_str = cmd.GetSwitchValue(kTypeSwitch);
-    if (type_str == "s" || type_str == "software") {
-      break_type = debug_ipc::BreakpointType::kSoftware;
-    } else if (type_str == "h" || type_str == "hardware") {
-      break_type = debug_ipc::BreakpointType::kHardware;
-    } else if (type_str == "w" || type_str == "watchpoint") {
-      // TODO: Plumb in kRead/kReadWrite.
-      break_type = debug_ipc::BreakpointType::kWrite;
-    } else {
-      return Err(fxl::StringPrintf("Unknown breakpoint type: %s", type_str.data()));
-    }
+    if (auto opt_type = BreakpointSettings::StringToType(cmd.GetSwitchValue(kTypeSwitch)))
+      settings.type = *opt_type;
+    else
+      return Err("Unknown breakpoint type.");
   }
-  settings.type = break_type;
+
+  // Size.
+  if (cmd.HasSwitch(kSizeSwitch)) {
+    if (!BreakpointSettings::TypeHasSize(settings.type))
+      return Err("Breakpoint size is only supported for write and read-write breakpoints.");
+    if (Err err = StringToUint32(cmd.GetSwitchValue(kSizeSwitch), &settings.byte_size);
+        err.has_error())
+      return err;
+  } else if (BreakpointSettings::TypeHasSize(settings.type)) {
+    settings.byte_size = 4;  // Default size.
+  }
 
   // Scope.
   settings.scope = ExecutionScopeForCommand(cmd);
@@ -490,13 +501,15 @@ Err DoDisable(ConsoleContext* context, const Command& cmd) {
 void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord disabled_switch(kDisabledSwitch, false, "disabled", 'd');
   SwitchRecord one_shot_switch(kOneShotSwitch, false, ClientSettings::Breakpoint::kOneShot, 'o');
-  SwitchRecord stop_switch(kStopSwitch, true, ClientSettings::Breakpoint::kStopMode, 's');
+  SwitchRecord size_switch(kSizeSwitch, true, ClientSettings::Breakpoint::kSize, 's');
+  SwitchRecord stop_switch(kStopSwitch, true, ClientSettings::Breakpoint::kStopMode, 'p');
   SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
 
   VerbRecord break_record(&DoBreak, &CompleteInputLocation, {"break", "b"}, kBreakShortHelp,
                           kBreakHelp, CommandGroup::kBreakpoint);
   break_record.switches.push_back(disabled_switch);
   break_record.switches.push_back(one_shot_switch);
+  break_record.switches.push_back(size_switch);
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
   (*verbs)[Verb::kBreak] = std::move(break_record);
