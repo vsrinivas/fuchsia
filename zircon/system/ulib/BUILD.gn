@@ -138,6 +138,7 @@ group("ulib") {
     "sysmem-connector",
     "task-utils",
     "tee-client-api",
+    "test-exceptions",
     "test-utils",
     "tftp",
     "thread-safe-deleter",

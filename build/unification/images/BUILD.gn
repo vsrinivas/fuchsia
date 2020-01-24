@@ -740,6 +740,7 @@ aggregate_manifest("legacy-aux") {
     "sysconfig-sync-client-c",
     "syslog",
     "tee-client-api",
+    "test-exceptions",
     "trace-engine",
     "trace-provider-so",
     "unittest",
