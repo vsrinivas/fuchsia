@@ -21,7 +21,6 @@ group("dev") {
     "gpu",
     "light",
     "light-sensor",
-    "misc",
     "mlg",
     "nand",
     "pci",
