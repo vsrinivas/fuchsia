@@ -10,8 +10,8 @@
       {
         "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
         "display_usage": "near",
-        "screen_height": 50,
-        "screen_width": 100
+        "screen_height": 50.0,
+        "screen_width": 100.0
       }
     ],
     "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"

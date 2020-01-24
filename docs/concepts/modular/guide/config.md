@@ -22,8 +22,8 @@ modular_config() target in the product's base packages.
       {
         "url": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
         "display_usage": "near",
-        "screen_height": 50,
-        "screen_width": 100
+        "screen_height": 50.0,
+        "screen_width": 100.0
       }
     ]
   },
