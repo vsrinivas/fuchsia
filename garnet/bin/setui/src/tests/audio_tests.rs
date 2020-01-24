@@ -17,7 +17,12 @@ use {
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::SoundPlayerService,
-    fidl_fuchsia_media::AudioRenderUsage,
+    crate::tests::fakes::usage_reporter_service::UsageReporterService,
+    fidl_fuchsia_media::{
+        AudioRenderUsage, Usage,
+        UsageState::{Ducked, Muted, Unadjusted},
+        UsageStateDucked, UsageStateMuted, UsageStateUnadjusted,
+    },
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
@@ -64,7 +69,10 @@ const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings
 const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
     source: Some(AudioStreamSettingSource::User),
-    user_volume: Some(Volume { level: Some(MAX_VOLUME_LEVEL), muted: Some(CHANGED_VOLUME_UNMUTED) }),
+    user_volume: Some(Volume {
+        level: Some(MAX_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_UNMUTED),
+    }),
 };
 
 fn get_default_stream(stream_type: AudioStreamType) -> AudioStream {
@@ -115,6 +123,7 @@ fn create_services() -> (
     Arc<RwLock<AudioCoreService>>,
     Arc<RwLock<InputDeviceRegistryService>>,
     Arc<RwLock<SoundPlayerService>>,
+    Arc<RwLock<UsageReporterService>>,
 ) {
     let service_registry = ServiceRegistry::create();
     let audio_core_service_handle = Arc::new(RwLock::new(AudioCoreService::new()));
@@ -127,18 +136,27 @@ fn create_services() -> (
     let sound_player_service_handle = Arc::new(RwLock::new(SoundPlayerService::new()));
     service_registry.write().register_service(sound_player_service_handle.clone());
 
+    let usage_reporter_service_handle = Arc::new(RwLock::new(UsageReporterService::new()));
+    service_registry.write().register_service(usage_reporter_service_handle.clone());
+
     return (
         service_registry,
         audio_core_service_handle,
         input_device_registry_service_handle,
         sound_player_service_handle,
+        usage_reporter_service_handle,
     );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio() {
-    let (service_registry, audio_core_service_handle, _input_service_handle, _sound_player_handle) =
-        create_services();
+    let (
+        service_registry,
+        audio_core_service_handle,
+        _input_service_handle,
+        _sound_player_handle,
+        _usage_reporter_handle,
+    ) = create_services();
 
     let storage_factory = Box::new(InMemoryStorageFactory::create());
     let store = create_storage(&storage_factory).await;
@@ -188,8 +206,13 @@ async fn test_audio() {
 // Test to ensure mic input change events are received.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio_input() {
-    let (service_registry, _audio_core_service_handle, input_service_handle, _sound_player_handle) =
-        create_services();
+    let (
+        service_registry,
+        _audio_core_service_handle,
+        input_service_handle,
+        _sound_player_handle,
+        _usage_reporter_handle,
+    ) = create_services();
 
     let mut fs = ServiceFs::new();
 
@@ -224,8 +247,13 @@ async fn test_audio_input() {
 // with the correct ids.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sounds() {
-    let (service_registry, _audio_core_service_handle, _input_service_handle, sound_player_handle) =
-        create_services();
+    let (
+        service_registry,
+        _audio_core_service_handle,
+        _input_service_handle,
+        sound_player_handle,
+        _usage_reporter_handle,
+    ) = create_services();
 
     let mut fs = ServiceFs::new();
 
@@ -255,6 +283,88 @@ async fn test_sounds() {
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
+    assert!(sound_player_handle.read().id_exists(0));
+    assert_eq!(sound_player_handle.read().get_mapping(0), Some(AudioRenderUsage::Media));
+}
+
+// Test to ensure that when another higher priority stream is playing,
+// the earcons sounds don't play.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_earcons_with_active_stream() {
+    let (
+        service_registry,
+        _audio_core_service_handle,
+        _input_service_handle,
+        sound_player_handle,
+        usage_reporter_handle,
+    ) = create_services();
+
+    let mut fs = ServiceFs::new();
+
+    assert!(create_environment(
+        fs.root_dir(),
+        [SettingType::Audio].iter().cloned().collect(),
+        vec![],
+        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
+        Box::new(InMemoryStorageFactory::create()),
+    )
+    .await
+    .unwrap()
+    .is_ok());
+
+    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+    fasync::spawn(fs.collect());
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
+    assert!(sound_player_handle.read().id_exists(1));
+    assert_eq!(sound_player_handle.read().get_mapping(1), Some(AudioRenderUsage::Media));
+
+    usage_reporter_handle
+        .read()
+        .set_usage_state(
+            Usage::RenderUsage(AudioRenderUsage::Background {}),
+            Muted(UsageStateMuted {}),
+        )
+        .await;
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
+
+    // With the background stream muted, the sound should not have played.
+    assert!(!sound_player_handle.read().id_exists(0));
+    assert_ne!(sound_player_handle.read().get_mapping(0), Some(AudioRenderUsage::Media));
+
+    usage_reporter_handle
+        .read()
+        .set_usage_state(
+            Usage::RenderUsage(AudioRenderUsage::Background {}),
+            Ducked(UsageStateDucked {}),
+        )
+        .await;
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+
+    // With the background stream ducked, the sound should not have played.
+    assert!(!sound_player_handle.read().id_exists(0));
+    assert_ne!(sound_player_handle.read().get_mapping(0), Some(AudioRenderUsage::Media));
+
+    usage_reporter_handle
+        .read()
+        .set_usage_state(
+            Usage::RenderUsage(AudioRenderUsage::Background {}),
+            Unadjusted(UsageStateUnadjusted {}),
+        )
+        .await;
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+
+    // With the background stream unadjusted, the sound should have played.
     assert!(sound_player_handle.read().id_exists(0));
     assert_eq!(sound_player_handle.read().get_mapping(0), Some(AudioRenderUsage::Media));
 }
@@ -329,8 +439,13 @@ async fn test_audio_info_copy() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_persisted_values_applied_at_start() {
-    let (service_registry, audio_core_service_handle, _input_service_handle, _sound_player_handle) =
-        create_services();
+    let (
+        service_registry,
+        audio_core_service_handle,
+        _input_service_handle,
+        _sound_player_handle,
+        _usage_reporter_handle,
+    ) = create_services();
 
     let storage_factory = Box::new(InMemoryStorageFactory::create());
     let store = create_storage(&storage_factory).await;

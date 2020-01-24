@@ -8,16 +8,27 @@ use {
     crate::registry::device_storage::DeviceStorage,
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Context as _, Error},
+    fidl::endpoints::create_request_stream,
+    fidl_fuchsia_media::{
+        AudioRenderUsage,
+        Usage::RenderUsage,
+        UsageReporterMarker,
+        UsageState::{Ducked, Muted},
+        UsageWatcherRequest::OnStateChanged,
+    },
     fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::lock::Mutex,
     futures::StreamExt,
     parking_lot::RwLock,
     std::collections::{HashMap, HashSet},
-    std::sync::Arc,
+    std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 fn get_streams_array_from_map(
@@ -49,6 +60,7 @@ pub fn spawn_audio_controller(
     let mic_mute_state =
         Arc::<RwLock<bool>>::new(RwLock::new(default_audio_settings.input.mic_mute));
 
+    let priority_stream_playing = Arc::new(AtomicBool::new(false));
     let input_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
     let audio_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
 
@@ -79,6 +91,17 @@ pub fn spawn_audio_controller(
                 }
             }
         }
+    });
+
+    let priority_stream_playing_clone = priority_stream_playing.clone();
+    let service_context_handle_clone = service_context_handle.clone();
+    fasync::spawn(async move {
+        match watch_background_usage(&service_context_handle_clone, priority_stream_playing_clone)
+            .await
+        {
+            Ok(_) => {}
+            Err(err) => fx_log_err!("Failed while watching background usage: {}", err),
+        };
     });
 
     let input_service_connected_clone = input_service_connected.clone();
@@ -143,6 +166,7 @@ pub fn spawn_audio_controller(
                             if last_media_user_volume != new_media_user_volume {
                                 play_media_volume_sound(
                                     sound_player_connection.clone(),
+                                    priority_stream_playing.clone(),
                                     new_media_user_volume,
                                     &mut sound_player_added_files,
                                 )
@@ -196,6 +220,44 @@ pub fn spawn_audio_controller(
     audio_handler_tx
 }
 
+// We should not play earcons over a higher priority stream. In order to figure out whether there
+// is a more high-priority stream playing, we watch the BACKGROUND audio usage. If it is muted or
+// ducked, we should not play the earcons.
+// TODO (fxb/44381): Remove this when it is no longer necessary to check the background usage.
+async fn watch_background_usage(
+    service_context_handle: &ServiceContextHandle,
+    priority_stream_playing: Arc<AtomicBool>,
+) -> Result<(), Error> {
+    let usage_reporter_proxy =
+        service_context_handle.lock().await.connect::<UsageReporterMarker>()?;
+
+    // Create channel for usage reporter watch results.
+    let (watcher_client, mut watcher_requests) = create_request_stream()?;
+
+    // Watch for changes in usage.
+    usage_reporter_proxy.watch(&mut RenderUsage(AudioRenderUsage::Background), watcher_client)?;
+
+    // Handle changes in the usage, update state.
+    while let Some(event) = watcher_requests.next().await {
+        match event {
+            Ok(OnStateChanged { usage: _usage, state, responder }) => {
+                responder.send()?;
+                priority_stream_playing.store(
+                    match state {
+                        Muted(_) | Ducked(_) => true,
+                        _ => false,
+                    },
+                    Ordering::SeqCst,
+                );
+            }
+            Err(e) => {
+                return Err(format_err!("Error watching AudioRender usage events: {}", e));
+            }
+        }
+    }
+    Ok(())
+}
+
 // Retrieve the user volume on the specified stream, given the currently stored streams.
 fn volume_on_stream(
     stream_type: AudioStreamType,
@@ -213,12 +275,18 @@ fn volume_on_stream(
 // Play the earcons sound given the changed volume streams.
 async fn play_media_volume_sound(
     sound_player_connection: Option<PlayerProxy>,
+    priority_stream_playing: Arc<AtomicBool>,
     volume_level: Option<f32>,
     mut sound_player_added_files: &mut HashSet<&str>,
 ) {
     if let (Some(sound_player_proxy), Some(volume_level)) =
         (sound_player_connection.clone(), volume_level)
     {
+        if priority_stream_playing.load(Ordering::SeqCst) {
+            fx_log_info!("Detected a stream already playing, not playing earcons sound");
+            return;
+        }
+
         if volume_level >= 1.0 {
             play_sound(&sound_player_proxy, VOLUME_MAX_FILE_PATH, 0, &mut sound_player_added_files)
                 .await

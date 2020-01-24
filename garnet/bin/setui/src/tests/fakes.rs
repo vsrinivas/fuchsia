@@ -9,3 +9,4 @@ pub mod device_settings_service;
 pub mod input_device_registry_service;
 pub mod service_registry;
 pub mod sound_player_service;
+pub mod usage_reporter_service;

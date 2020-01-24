@@ -29,6 +29,7 @@
                 "/svc/fuchsia.devicesettings.DeviceSettingsManager",
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.media.AudioCore",
+                "/svc/fuchsia.media.UsageReporter",
                 "/svc/fuchsia.media.audio.VolumeControl",
                 "/svc/fuchsia.media.sounds.Player",
                 "/svc/fuchsia.net.Connectivity",
