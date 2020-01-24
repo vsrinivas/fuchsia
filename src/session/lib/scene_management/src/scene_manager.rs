@@ -88,7 +88,7 @@ pub trait SceneManager: Sized {
         cursor_shape.set_shape(&cursor_rect);
         cursor_shape.set_material(&image.material);
 
-        self.set_cursor_shape(&cursor_shape);
+        self.set_cursor_shape(cursor_shape);
         Ok(())
     }
 
@@ -100,7 +100,7 @@ pub trait SceneManager: Sized {
     /// # Notes
     /// Due to a current limitation in the `Scenic` api this should only be called once and must be
     /// called *before* `set_cursor_location`.
-    fn set_cursor_shape(&mut self, shape: &scenic::ShapeNode);
+    fn set_cursor_shape(&mut self, shape: scenic::ShapeNode);
 
     /// Creates a default cursor shape for use with the client hasn't created a custom cursor
     ///

@@ -14,7 +14,6 @@ async fn main() -> Result<(), Error> {
     let x = scene_manager.display_metrics.width_in_pips() / 2.0;
     let y = scene_manager.display_metrics.height_in_pips() / 2.0;
     scene_manager.set_cursor_location(x, y);
-
     scene_manager.present();
 
     loop {}

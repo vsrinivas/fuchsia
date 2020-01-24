@@ -630,6 +630,10 @@ impl ContainerNode {
         self.enqueue(cmd::add_child(self.id(), node.id()));
     }
 
+    pub fn remove_child(&self, node: &Node) {
+        self.enqueue(cmd::detach(node.id()));
+    }
+
     pub fn add_part(&self, node: &Node) {
         self.enqueue(cmd::add_part(self.id(), node.id()));
     }
@@ -902,6 +906,22 @@ mod tests {
         };
     }
 
+    /// Tests that the incoming command it the type we expect.
+    macro_rules! test_command_type {
+        (
+            command: $command:expr,
+            command_type: $command_type:ident
+        ) => {
+            match $command {
+                fidl_fuchsia_ui_scenic::Command::Gfx(gfx_command) => match gfx_command {
+                    fidl_fuchsia_ui_gfx::Command::$command_type(_) => true,
+                    _ => false,
+                },
+                _ => false,
+            }
+        };
+    }
+
     /// Verifies that a new resource is created for a layer.
     #[fasync::run_singlethreaded(test)]
     async fn test_add_layer() {
@@ -1020,5 +1040,73 @@ mod tests {
             session_server: session_server,
             resource_type: DisplayCompositor
         );
+    }
+
+    /// Verifies that adding a child to a node creates the correct command
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_child() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        let _ = session.lock();
+        let parent_node = EntityNode::new(session.clone());
+        let child_node = EntityNode::new(session.clone());
+        parent_node.add_child(&child_node);
+
+        fasync::spawn(async move {
+            let fut = session.lock().present(0);
+            let _ = fut.await;
+        });
+
+        let mut commands = vec![];
+
+        if let Some(session_request) = session_server.try_next().await.unwrap() {
+            if let fidl_fuchsia_ui_scenic::SessionRequest::Enqueue { mut cmds, .. } =
+                session_request
+            {
+                commands.append(&mut cmds);
+            }
+        }
+
+        assert!(test_command_type!(command: &commands[0], command_type: CreateResource));
+        assert!(test_command_type!(command: &commands[1], command_type: CreateResource));
+        assert!(test_command_type!(command: &commands[2], command_type: AddChild));
+    }
+
+    /// Verifies that removing a child from a node creates the correct command.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_remove_child() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        let _ = session.lock();
+        let parent_node = EntityNode::new(session.clone());
+        let child_node = EntityNode::new(session.clone());
+        parent_node.add_child(&child_node);
+        parent_node.remove_child(&child_node);
+
+        fasync::spawn(async move {
+            let fut = session.lock().present(0);
+            let _ = fut.await;
+        });
+
+        let mut commands = vec![];
+
+        if let Some(session_request) = session_server.try_next().await.unwrap() {
+            if let fidl_fuchsia_ui_scenic::SessionRequest::Enqueue { mut cmds, .. } =
+                session_request
+            {
+                commands.append(&mut cmds);
+            }
+        }
+
+        assert!(test_command_type!(command: &commands[0], command_type: CreateResource));
+        assert!(test_command_type!(command: &commands[1], command_type: CreateResource));
+        assert!(test_command_type!(command: &commands[2], command_type: AddChild));
+        assert!(test_command_type!(command: &commands[3], command_type: Detach));
     }
 }

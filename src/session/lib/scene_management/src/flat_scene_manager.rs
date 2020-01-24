@@ -40,6 +40,9 @@ pub struct FlatSceneManager {
     /// The node for the cursor. It is optional in case a scene doesn't render a cursor.
     cursor_node: Option<scenic::EntityNode>,
 
+    /// The shapenode for the cursor. It is optional in case a scene doesn't render a cursor.
+    cursor_shape: Option<scenic::ShapeNode>,
+
     /// The resources used to construct the scene. If these are dropped, they will be removed
     /// from Scenic, so they must be kept alive for the lifetime of `FlatSceneManager`.
     _resources: ScenicResources,
@@ -118,6 +121,7 @@ impl SceneManager for FlatSceneManager {
             views: vec![],
             display_metrics,
             cursor_node: None,
+            cursor_shape: None,
         })
     }
 
@@ -141,17 +145,23 @@ impl SceneManager for FlatSceneManager {
     fn set_cursor_location(&mut self, x: f32, y: f32) {
         if self.cursor_node.is_none() {
             // We don't already have a cursor node so let's make one with the default cursor
-            self.set_cursor_shape(&self.get_default_cursor());
+            self.set_cursor_shape(self.get_default_cursor());
         }
 
         self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
         self.present();
     }
 
-    fn set_cursor_shape(&mut self, shape: &scenic::ShapeNode) {
-        // TODO(fxb/44217) The 'Scenic` api doesn't currently support removing of children from an
-        // `EntityNode` so if this is called multiple times the shapes will just stack on each other.
-        self.cursor_node().add_child(shape);
+    fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
+        if !self.cursor_shape.is_none() {
+            let current_shape = self.cursor_shape.as_ref().unwrap();
+            let node = self.cursor_node.as_ref().unwrap();
+            node.remove_child(current_shape);
+        }
+
+        self.cursor_node().add_child(&shape);
+        self.cursor_shape = Some(shape);
+
         self.present();
     }
 
