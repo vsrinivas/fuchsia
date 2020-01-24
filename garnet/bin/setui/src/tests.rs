@@ -1,6 +1,7 @@
 mod accessibility_tests;
 mod agent_tests;
 mod audio_tests;
+mod conduit_tests;
 mod device_tests;
 mod display_tests;
 mod do_not_disturb_tests;

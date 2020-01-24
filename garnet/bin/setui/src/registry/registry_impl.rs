@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::conduit::base::{ConduitData, ConduitHandle, ConduitSender};
 use crate::registry::base::{Command, Registry, State};
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingResponseResult,
@@ -11,8 +12,8 @@ use crate::switchboard::base::{
 use anyhow::{format_err, Context as _, Error};
 use fuchsia_async as fasync;
 
-use futures::channel::mpsc::UnboundedReceiver;
 use futures::channel::mpsc::UnboundedSender;
+use futures::executor::block_on;
 use futures::stream::StreamExt;
 use futures::TryFutureExt;
 use parking_lot::RwLock;
@@ -22,9 +23,7 @@ use std::sync::Arc;
 pub struct RegistryImpl {
     /// A mapping of setting types to senders, used to relay new commands.
     command_sender_map: HashMap<SettingType, UnboundedSender<Command>>,
-    /// Used to send messages back to the source producing messages on the
-    /// receiver provided at construction.
-    event_sender: UnboundedSender<SettingEvent>,
+    conduit_sender: ConduitSender,
     /// A sender handed as part of State::Listen to allow entities to provide
     /// back updates.
     /// TODO(SU-334): Investigate restricting the setting type a sender may
@@ -37,18 +36,17 @@ pub struct RegistryImpl {
 impl RegistryImpl {
     /// Returns a handle to a RegistryImpl which is listening to SettingAction from the
     /// provided receiver and will send responses/updates on the given sender.
-    pub fn create(
-        sender: UnboundedSender<SettingEvent>,
-        mut receiver: UnboundedReceiver<SettingAction>,
-    ) -> Arc<RwLock<RegistryImpl>> {
+    pub fn create(conduit: ConduitHandle) -> Arc<RwLock<RegistryImpl>> {
         let (notification_tx, mut notification_rx) =
             futures::channel::mpsc::unbounded::<SettingType>();
+
+        let (conduit_tx, mut conduit_rx) = block_on(conduit.lock()).create_waypoint();
 
         // We must create handle here rather than return back the value as we
         // reference the registry in the async tasks below.
         let registry = Arc::new(RwLock::new(Self {
             command_sender_map: HashMap::new(),
-            event_sender: sender,
+            conduit_sender: conduit_tx,
             notification_sender: notification_tx,
             active_listeners: vec![],
         }));
@@ -59,8 +57,10 @@ impl RegistryImpl {
             let registry_clone = registry.clone();
             fasync::spawn(
                 async move {
-                    while let Some(action) = receiver.next().await {
-                        registry_clone.write().process_action(action);
+                    while let Some(conduit_data) = conduit_rx.next().await {
+                        if let ConduitData::Action(action) = conduit_data {
+                            registry_clone.write().process_action(action);
+                        }
                     }
                     Ok(())
                 }
@@ -135,7 +135,7 @@ impl RegistryImpl {
     fn notify(&self, setting_type: SettingType) {
         // Only return updates for types actively listened on.
         if self.active_listeners.contains(&setting_type) {
-            self.event_sender.unbounded_send(SettingEvent::Changed(setting_type)).ok();
+            self.conduit_sender.send(ConduitData::Event(SettingEvent::Changed(setting_type)));
         }
     }
 
@@ -146,28 +146,27 @@ impl RegistryImpl {
         let candidate = self.command_sender_map.get(&setting_type);
         match candidate {
             None => {
-                self.event_sender
-                    .unbounded_send(SettingEvent::Response(
-                        id,
-                        Err(format_err!("no handler for requested type")),
-                    ))
-                    .ok();
+                self.conduit_sender.send(ConduitData::Event(SettingEvent::Response(
+                    id,
+                    Err(format_err!("no handler for requested type")),
+                )));
             }
             Some(command_sender) => {
                 let (responder, receiver) =
                     futures::channel::oneshot::channel::<SettingResponseResult>();
-                let sender_clone = self.event_sender.clone();
-                let error_sender_clone = self.event_sender.clone();
+                let sender_clone = self.conduit_sender.clone();
+                let error_sender_clone = self.conduit_sender.clone();
                 fasync::spawn(
                     async move {
                         let response =
                             receiver.await.context("getting response from controller")?;
-                        sender_clone.unbounded_send(SettingEvent::Response(id, response)).ok();
+                        sender_clone.send(ConduitData::Event(SettingEvent::Response(id, response)));
 
                         Ok(())
                     }
                     .unwrap_or_else(move |e: anyhow::Error| {
-                        error_sender_clone.unbounded_send(SettingEvent::Response(id, Err(e))).ok();
+                        error_sender_clone
+                            .send(ConduitData::Event(SettingEvent::Response(id, Err(e))));
                     }),
                 );
 
@@ -197,12 +196,14 @@ impl Registry for RegistryImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::conduit::base::Conduit;
+    use crate::conduit::conduit_impl::ConduitImpl;
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
-        let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
-        let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<SettingEvent>();
-        let registry = RegistryImpl::create(event_tx, action_rx);
+        let conduit_handle = ConduitImpl::create();
+        let (conduit_sender, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
+        let registry = RegistryImpl::create(conduit_handle.clone());
         let setting_type = SettingType::Unknown;
 
         let (handler_tx, mut handler_rx) = futures::channel::mpsc::unbounded::<Command>();
@@ -211,13 +212,11 @@ mod tests {
 
         // Send a listen state and make sure sink is notified.
         {
-            assert!(action_tx
-                .unbounded_send(SettingAction {
-                    id: 1,
-                    setting_type: setting_type,
-                    data: SettingActionData::Listen(1)
-                })
-                .is_ok());
+            conduit_sender.send(ConduitData::Action(SettingAction {
+                id: 1,
+                setting_type: setting_type,
+                data: SettingActionData::Listen(1),
+            }));
 
             let command = handler_rx.next().await.unwrap();
 
@@ -225,8 +224,8 @@ mod tests {
                 Command::ChangeState(State::Listen(notifier)) => {
                     // Send back notification and make sure it is received.
                     assert!(notifier.unbounded_send(setting_type).is_ok());
-                    match event_rx.next().await.unwrap() {
-                        SettingEvent::Changed(changed_type) => {
+                    match conduit_receiver.next().await.unwrap() {
+                        ConduitData::Event(SettingEvent::Changed(changed_type)) => {
                             assert_eq!(changed_type, setting_type);
                         }
                         _ => {
@@ -242,13 +241,11 @@ mod tests {
 
         // Send an end listen state and make sure sink is notified.
         {
-            assert!(action_tx
-                .unbounded_send(SettingAction {
-                    id: 1,
-                    setting_type: setting_type,
-                    data: SettingActionData::Listen(0)
-                })
-                .is_ok());
+            conduit_sender.send(ConduitData::Action(SettingAction {
+                id: 1,
+                setting_type: setting_type,
+                data: SettingActionData::Listen(0),
+            }));
 
             match handler_rx.next().await.unwrap() {
                 Command::ChangeState(State::EndListen) => {
@@ -263,9 +260,9 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
-        let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
-        let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<SettingEvent>();
-        let registry = RegistryImpl::create(event_tx, action_rx);
+        let conduit_handle = ConduitImpl::create();
+        let (conduit_sender, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
+        let registry = RegistryImpl::create(conduit_handle.clone());
         let setting_type = SettingType::Unknown;
         let request_id = 42;
 
@@ -274,13 +271,11 @@ mod tests {
         assert!(registry.write().register(setting_type, handler_tx).is_ok());
 
         // Send initial request.
-        assert!(action_tx
-            .unbounded_send(SettingAction {
-                id: request_id,
-                setting_type: setting_type,
-                data: SettingActionData::Request(SettingRequest::Get)
-            })
-            .is_ok());
+        conduit_sender.send(ConduitData::Action(SettingAction {
+            id: request_id,
+            setting_type: setting_type,
+            data: SettingActionData::Request(SettingRequest::Get),
+        }));
 
         let command = handler_rx.next().await.unwrap();
 
@@ -291,8 +286,8 @@ mod tests {
                 assert!(responder.send(Ok(None)).is_ok());
 
                 // verify response matches
-                match event_rx.next().await.unwrap() {
-                    SettingEvent::Response(response_id, response) => {
+                match conduit_receiver.next().await.unwrap() {
+                    ConduitData::Event(SettingEvent::Response(response_id, response)) => {
                         assert_eq!(request_id, response_id);
                         assert!(response.is_ok());
                         assert_eq!(None, response.unwrap());

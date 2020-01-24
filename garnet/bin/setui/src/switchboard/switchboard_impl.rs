@@ -1,13 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
+use crate::conduit::base::{ConduitData, ConduitHandle, ConduitSender};
 use crate::switchboard::base::*;
 
 use anyhow::{format_err, Error};
 
 use futures::channel::mpsc::UnboundedSender;
-
+use futures::executor::block_on;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -82,7 +82,7 @@ pub struct SwitchboardImpl {
     /// Next available action id.
     next_action_id: u64,
     /// Acquired during construction and used internally to send input.
-    action_sender: UnboundedSender<SettingAction>,
+    conduit_sender: ConduitSender,
     /// Acquired during construction - passed during listen to allow callback
     /// for canceling listen.
     listen_cancellation_sender: UnboundedSender<ListenSessionInfo>,
@@ -95,17 +95,16 @@ pub struct SwitchboardImpl {
 impl SwitchboardImpl {
     /// Creates a new SwitchboardImpl, which will return the instance along with
     /// a sender to provide events in response to the actions sent.
-    pub fn create(
-        action_sender: UnboundedSender<SettingAction>,
-    ) -> (Arc<Mutex<SwitchboardImpl>>, UnboundedSender<SettingEvent>) {
-        let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<SettingEvent>();
+    pub fn create(conduit: ConduitHandle) -> Arc<Mutex<SwitchboardImpl>> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<ListenSessionInfo>();
+
+        let (conduit_sender, mut conduit_receiver) = block_on(conduit.lock()).create_waypoint();
 
         let switchboard = Arc::new(Mutex::new(Self {
             next_session_id: 0,
             next_action_id: 0,
-            action_sender: action_sender,
+            conduit_sender: conduit_sender,
             listen_cancellation_sender: cancel_listen_tx,
             request_responders: HashMap::new(),
             listeners: HashMap::new(),
@@ -114,8 +113,10 @@ impl SwitchboardImpl {
         {
             let switchboard_clone = switchboard.clone();
             fasync::spawn(async move {
-                while let Some(event) = event_rx.next().await {
-                    switchboard_clone.lock().await.process_event(event);
+                while let Some(conduit_data) = conduit_receiver.next().await {
+                    if let ConduitData::Event(event) = conduit_data {
+                        switchboard_clone.lock().await.process_event(event);
+                    }
                 }
             });
         }
@@ -129,7 +130,7 @@ impl SwitchboardImpl {
             });
         }
 
-        return (switchboard, event_tx);
+        return switchboard;
     }
 
     pub fn get_next_action_id(&mut self) -> u64 {
@@ -160,13 +161,11 @@ impl SwitchboardImpl {
                 session_infos.remove(i);
 
                 // Send updated listening size.
-                self.action_sender
-                    .unbounded_send(SettingAction {
-                        id: action_id,
-                        setting_type: session_info.setting_type,
-                        data: SettingActionData::Listen(session_infos.len() as u64),
-                    })
-                    .ok();
+                self.conduit_sender.send(ConduitData::Action(SettingAction {
+                    id: action_id,
+                    setting_type: session_info.setting_type,
+                    data: SettingActionData::Listen(session_infos.len() as u64),
+                }));
             }
         }
     }
@@ -197,11 +196,11 @@ impl Switchboard for SwitchboardImpl {
         let action_id = self.get_next_action_id();
         self.request_responders.insert(action_id, callback);
 
-        self.action_sender.unbounded_send(SettingAction {
+        self.conduit_sender.send(ConduitData::Action(SettingAction {
             id: action_id,
             setting_type,
             data: SettingActionData::Request(request),
-        })?;
+        }));
 
         return Ok(());
     }
@@ -227,12 +226,11 @@ impl Switchboard for SwitchboardImpl {
             self.next_session_id += 1;
 
             listeners.push(info.clone());
-
-            self.action_sender.unbounded_send(SettingAction {
+            self.conduit_sender.send(ConduitData::Action(SettingAction {
                 id: action_id,
                 setting_type,
                 data: SettingActionData::Listen(listeners.len() as u64),
-            })?;
+            }));
 
             return Ok(Box::new(ListenSessionImpl::new(
                 info,
@@ -247,11 +245,31 @@ impl Switchboard for SwitchboardImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::conduit::base::{Conduit, ConduitReceiver};
+    use crate::conduit::conduit_impl::ConduitImpl;
+
+    async fn retrieve_and_verify_action(
+        receiver: &mut ConduitReceiver,
+        setting_type: SettingType,
+        setting_data: SettingActionData,
+    ) -> SettingAction {
+        let action_data = receiver.next().await.unwrap();
+
+        if let ConduitData::Action(received_action) = action_data {
+            assert_eq!(setting_type, received_action.setting_type);
+            assert_eq!(setting_data, received_action.data);
+            return received_action;
+        } else {
+            panic!("expected ConduitData::Action");
+        }
+    }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
-        let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
-        let (switchboard, event_tx) = SwitchboardImpl::create(action_tx);
+        let conduit_handle = ConduitImpl::create();
+        let switchboard = SwitchboardImpl::create(conduit_handle.clone());
+        // Downstream waypoint
+        let (conduit_sender, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
         let (response_tx, response_rx) =
             futures::channel::oneshot::channel::<SettingResponseResult>();
 
@@ -263,17 +281,14 @@ mod tests {
             .is_ok());
 
         // Ensure request is received.
-        let action = action_rx.next().await.unwrap();
+        let action = retrieve_and_verify_action(
+            &mut conduit_receiver,
+            SettingType::Unknown,
+            SettingActionData::Request(SettingRequest::Get),
+        )
+        .await;
 
-        assert_eq!(SettingType::Unknown, action.setting_type);
-        if let SettingActionData::Request(request) = action.data {
-            assert_eq!(request, SettingRequest::Get);
-        } else {
-            panic!("unexpected output type");
-        }
-
-        // Send response
-        assert!(event_tx.unbounded_send(SettingEvent::Response(action.id, Ok(None))).is_ok());
+        conduit_sender.send(ConduitData::Event(SettingEvent::Response(action.id, Ok(None))));
 
         // Ensure response is received.
         let response = response_rx.await.unwrap();
@@ -282,8 +297,9 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
-        let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
-        let (switchboard, _event_tx) = SwitchboardImpl::create(action_tx);
+        let conduit_handle = ConduitImpl::create();
+        let switchboard = SwitchboardImpl::create(conduit_handle.clone());
+        let (_, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
         let setting_type = SettingType::Unknown;
 
         // Register first listener and verify count.
@@ -296,12 +312,12 @@ mod tests {
         );
 
         assert!(listen_result.is_ok());
-        {
-            let action = action_rx.next().await.unwrap();
-
-            assert_eq!(action.setting_type, setting_type);
-            assert_eq!(action.data, SettingActionData::Listen(1));
-        }
+        let _ = retrieve_and_verify_action(
+            &mut conduit_receiver,
+            setting_type,
+            SettingActionData::Listen(1),
+        )
+        .await;
 
         // Unregister and verify count.
         if let Ok(mut listen_session) = listen_result {
@@ -310,60 +326,57 @@ mod tests {
             panic!("should have a session");
         }
 
-        {
-            let action = action_rx.next().await.unwrap();
-
-            assert_eq!(action.setting_type, setting_type);
-            assert_eq!(action.data, SettingActionData::Listen(0));
-        }
+        let _ = retrieve_and_verify_action(
+            &mut conduit_receiver,
+            setting_type,
+            SettingActionData::Listen(0),
+        )
+        .await;
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
-        let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
-        let (switchboard, event_tx) = SwitchboardImpl::create(action_tx);
+        let conduit_handle = ConduitImpl::create();
+        let switchboard = SwitchboardImpl::create(conduit_handle.clone());
+        let (conduit_sender, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
         let setting_type = SettingType::Unknown;
 
         // Register first listener and verify count.
         let (notify_tx1, mut notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
-        assert!(switchboard
-            .lock()
-            .await
-            .listen(
-                setting_type,
-                Arc::new(move |setting_type| {
-                    notify_tx1.unbounded_send(setting_type).ok();
-                })
-            )
-            .is_ok());
-        {
-            let action = action_rx.next().await.unwrap();
+        let result_1 = switchboard.lock().await.listen(
+            setting_type,
+            Arc::new(move |setting_type| {
+                notify_tx1.unbounded_send(setting_type).ok();
+            }),
+        );
+        assert!(result_1.is_ok());
 
-            assert_eq!(action.setting_type, setting_type);
-            assert_eq!(action.data, SettingActionData::Listen(1));
-        }
+        let _ = retrieve_and_verify_action(
+            &mut conduit_receiver,
+            setting_type,
+            SettingActionData::Listen(1),
+        )
+        .await;
 
         // Register second listener and verify count
         let (notify_tx2, mut notify_rx2) = futures::channel::mpsc::unbounded::<SettingType>();
-        assert!(switchboard
-            .lock()
-            .await
-            .listen(
-                setting_type,
-                Arc::new(move |setting_type| {
-                    notify_tx2.unbounded_send(setting_type).ok();
-                })
-            )
-            .is_ok());
-        {
-            let action = action_rx.next().await.unwrap();
+        let result_2 = switchboard.lock().await.listen(
+            setting_type,
+            Arc::new(move |setting_type| {
+                notify_tx2.unbounded_send(setting_type).ok();
+            }),
+        );
+        assert!(result_2.is_ok());
 
-            assert_eq!(action.setting_type, setting_type);
-            assert_eq!(action.data, SettingActionData::Listen(2));
-        }
+        let _ = retrieve_and_verify_action(
+            &mut conduit_receiver,
+            setting_type,
+            SettingActionData::Listen(2),
+        )
+        .await;
 
         // Send notification
-        assert!(event_tx.unbounded_send(SettingEvent::Changed(setting_type)).is_ok());
+        conduit_sender.send(ConduitData::Event(SettingEvent::Changed(setting_type)));
 
         // Ensure both listeners receive notifications.
         {

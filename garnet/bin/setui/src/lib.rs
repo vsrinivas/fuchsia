@@ -10,6 +10,7 @@ use {
     crate::agent::base::{AgentHandle, Authority, Lifespan},
     crate::audio::spawn_audio_controller,
     crate::audio::spawn_audio_fidl_handler,
+    crate::conduit::conduit_impl::ConduitImpl,
     crate::device::spawn_device_controller,
     crate::device::spawn_device_fidl_handler,
     crate::display::spawn_display_controller,
@@ -28,7 +29,7 @@ use {
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     crate::setup::spawn_setup_fidl_handler,
-    crate::switchboard::base::{SettingAction, SettingType},
+    crate::switchboard::base::SettingType,
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     crate::system::spawn_setui_fidl_handler,
     crate::system::spawn_system_controller,
@@ -59,6 +60,7 @@ mod setup;
 mod system;
 
 pub mod agent;
+pub mod conduit;
 pub mod config;
 pub mod registry;
 pub mod service_context;
@@ -76,17 +78,18 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     service_context_handle: ServiceContextHandle,
     storage_factory: Box<T>,
 ) -> Receiver<Result<(), Error>> {
-    let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
     let unboxed_storage_factory = &storage_factory;
+
+    let conduit_handle = ConduitImpl::create();
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
-    let (switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
+    let switchboard_handle = SwitchboardImpl::create(conduit_handle.clone());
 
     let mut agent_authority = AuthorityImpl::new();
 
     // Creates registry, used to register handlers for setting types.
-    let registry_handle = RegistryImpl::create(event_tx, action_rx);
+    let registry_handle = RegistryImpl::create(conduit_handle.clone());
 
     registry_handle
         .write()

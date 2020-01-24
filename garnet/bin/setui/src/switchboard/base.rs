@@ -235,6 +235,7 @@ pub enum SettingResponse {
 /// Description of an action request on a setting. This wraps a
 /// SettingActionData, providing destination details (setting type) along with
 /// callback information (action id).
+#[derive(PartialEq, Debug, Clone)]
 pub struct SettingAction {
     pub id: u64,
     pub setting_type: SettingType,
@@ -243,7 +244,7 @@ pub struct SettingAction {
 
 /// The types of actions. Note that specific request types should be enumerated
 /// in the SettingRequest enum.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum SettingActionData {
     /// The listening state has changed for the particular setting. The provided
     /// value indicates the number of active listeners. 0 indicates there are
