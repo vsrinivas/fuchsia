@@ -124,8 +124,11 @@ async fn battery_manager_watcher(
     while let Some(fpower::BatteryInfoWatcherRequest::OnChangeBatteryInfo { info, responder }) =
         stream.try_next().await.context("error running battery manager info watcher")?
     {
-        let level = info.level_percent.unwrap().round() as u8;
-        state.set_level(level)?;
+        if let Some(level) = info.level_percent {
+            let level = level.round() as u8;
+            state.set_level(level)?;
+        }
+
         // acknowledge watch notification
         responder.send()?;
     }
