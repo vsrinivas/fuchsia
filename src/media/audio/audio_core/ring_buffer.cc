@@ -114,8 +114,7 @@ std::optional<Stream::Buffer> RingBuffer::LockBuffer(zx::time now, int64_t frame
   if (last_frame_local < first_frame_local) {
     last_frame_local = frames();
   }
-  return {Stream::Buffer(FractionalFrames<int64_t>(first_absolute_frame),
-                         FractionalFrames<uint32_t>(last_frame_local - first_frame_local),
+  return {Stream::Buffer(first_absolute_frame, last_frame_local - first_frame_local,
                          virt() + (first_frame_local * format().bytes_per_frame()), true)};
 }
 

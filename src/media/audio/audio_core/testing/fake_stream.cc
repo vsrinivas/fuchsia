@@ -17,8 +17,7 @@ FakeStream::FakeStream(const Format& format, size_t max_buffer_size) : Stream(fo
 std::optional<Stream::Buffer> FakeStream::LockBuffer(zx::time now, int64_t frame,
                                                      uint32_t frame_count) {
   FX_CHECK(frame_count * format().bytes_per_frame() < buffer_size_);
-  return {Stream::Buffer(FractionalFrames<int64_t>(frame), FractionalFrames<uint32_t>(frame_count),
-                         buffer_.get(), true)};
+  return {Stream::Buffer(frame, frame_count, buffer_.get(), true)};
 }
 
 Stream::TimelineFunctionSnapshot FakeStream::ReferenceClockToFractionalFrames() const {

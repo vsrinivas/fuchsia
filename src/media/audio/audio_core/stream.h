@@ -33,6 +33,9 @@ class Stream {
   // without forcing AudioRenderers to wait to queue new data if a mix operation is in progress.
   class Buffer {
    public:
+    Buffer(int64_t start, uint32_t length, void* payload, bool is_continuous)
+        : Buffer(FractionalFrames<int64_t>(start), FractionalFrames<uint32_t>(length), payload,
+                 is_continuous) {}
     Buffer(FractionalFrames<int64_t> start, FractionalFrames<uint32_t> length, void* payload,
            bool is_continuous)
         : payload_(payload), start_(start), length_(length), is_continuous_(is_continuous) {}

@@ -74,8 +74,7 @@ std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
       sizeof(cur_mix_job_.buf[0]) * cur_mix_job_.buf_frames * format().channels();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, now);
-  return {Stream::Buffer(FractionalFrames<int64_t>(frame), FractionalFrames<uint32_t>(frame_count),
-                         cur_mix_job_.buf, true)};
+  return {Stream::Buffer(frame, frame_count, cur_mix_job_.buf, true)};
 }
 void MixStage::UnlockBuffer(bool release_buffer) {
   TRACE_DURATION("audio", "MixStage::UnlockBuffer");
