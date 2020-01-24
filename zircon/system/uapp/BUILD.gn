@@ -17,7 +17,6 @@ group("uapp") {
     "display-test",
     "driverctl",
     "fs-fsck",
-    "fs-mkfs",
     "fs-mount",
     "fs-umount",
     "fvm-check",
