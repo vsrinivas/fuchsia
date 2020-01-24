@@ -5,7 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.sysinfo,SysInfo"
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }
