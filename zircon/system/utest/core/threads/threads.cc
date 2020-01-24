@@ -1201,10 +1201,16 @@ static bool TestReadingFpRegisterState() {
                              reinterpret_cast<uintptr_t>(&spin_address)));
 
   zx_thread_state_fp_regs_t regs;
-  ASSERT_EQ(
-      zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs)),
-      ZX_OK);
+  zx_status_t status =
+      zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
+#if defined(__x86_64__)
+  ASSERT_EQ(status, ZX_OK);
   ASSERT_TRUE(fp_regs_expect_eq(regs, fp_regs_expected));
+#elif defined(__aarch64__)
+  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+#else
+#error unsupported platform
+#endif
 
   END_TEST;
 }
@@ -1387,13 +1393,21 @@ static bool TestWritingFpRegisterState() {
   // so that the MMX state is available to write.
   zx_thread_state_fp_regs_t regs_to_set;
   fp_regs_fill_test_values(&regs_to_set);
-  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_FP_REGS, &regs_to_set,
-                                  sizeof(regs_to_set)),
-            ZX_OK);
+
+  zx_status_t status = zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_FP_REGS,
+                                             &regs_to_set, sizeof(regs_to_set));
+
+#if defined(__x86_64__)
+  ASSERT_EQ(status, ZX_OK);
 
   zx_thread_state_fp_regs_t regs;
   ASSERT_TRUE(setup.DoSave(&save_fp_regs_and_exit_thread, &regs));
   EXPECT_TRUE(fp_regs_expect_eq(regs_to_set, regs));
+#elif defined(__aarch64__)
+  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+#else
+#error unsupported platform
+#endif
 
   END_TEST;
 }

@@ -118,14 +118,12 @@ zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_
 
 zx_status_t arch_get_fp_regs(thread_t* thread, zx_thread_state_fp_regs* out) {
   // There are no ARM fp regs.
-  (void)out;
-  return ZX_OK;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in) {
   // There are no ARM fp regs.
-  (void)in;
-  return ZX_OK;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* out) {
@@ -228,26 +226,22 @@ zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_re
 }
 
 zx_status_t arch_get_x86_register_fs(thread_t thread, uint64_t* out) {
-  // There are no FS register on ARM.
-  (void)out;
+  // There is no FS register on ARM.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t arch_set_x86_register_fs(thread_t* thread, const uint64_t* in) {
-  // There are no FS register on ARM.
-  (void)in;
+  // There is no FS register on ARM.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t arch_get_x86_register_gs(thread_t* thread, uint64_t* out) {
-  // There are no GS register on ARM.
-  (void)out;
+  // There is no GS register on ARM.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t arch_set_x86_register_gs(thread_t* thread, const uint64_t* in) {
-  // There are no GS register on ARM.
-  (void)in;
+  // There is no GS register on ARM.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
