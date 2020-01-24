@@ -130,15 +130,19 @@ TEST(ConfigTest, InternalVideoConferenceConfiguration) {
   auto input_node = video_config.streams_info.at(0);
   ASSERT_EQ(input_node.child_nodes.size(), 1u);
   auto gdc1_node = input_node.child_nodes[0];
-  ASSERT_EQ(gdc1_node.child_nodes.size(), 1u);
+  auto ge2d_node = gdc1_node.child_nodes[1];
+  ASSERT_EQ(gdc1_node.child_nodes.size(), 2u);
   auto gdc2_node = gdc1_node.child_nodes[0];
   ASSERT_EQ(gdc2_node.child_nodes.size(), 1u);
   auto output_ml_node = gdc2_node.child_nodes[0];
+  auto output_video_node = ge2d_node.child_nodes[0];
 
   EXPECT_EQ(NodeType::kInputStream, input_node.type);
   EXPECT_EQ(NodeType::kGdc, gdc1_node.type);
   EXPECT_EQ(NodeType::kGdc, gdc2_node.type);
+  EXPECT_EQ(NodeType::kGe2d, ge2d_node.type);
   EXPECT_EQ(NodeType::kOutputStream, output_ml_node.type);
+  EXPECT_EQ(NodeType::kOutputStream, output_video_node.type);
 }
 
 }  // namespace

@@ -42,7 +42,7 @@ static fuchsia::camera2::hal::StreamConfig MLVideoFRConfig() {
  ******************************************
  */
 
-__UNUSED static std::vector<fuchsia::sysmem::ImageFormat_2> VideoImageFormats() {
+static std::vector<fuchsia::sysmem::ImageFormat_2> VideoImageFormats() {
   return {
       StreamConstraints::MakeImageFormat(kVideoWidth, kVideoHeight, kFramePixelFormat),
       StreamConstraints::MakeImageFormat(kVideoWidth1, kVideoHeight1, kFramePixelFormat),
@@ -50,7 +50,6 @@ __UNUSED static std::vector<fuchsia::sysmem::ImageFormat_2> VideoImageFormats() 
   };
 }
 
-#if 0
 static fuchsia::camera2::hal::StreamConfig VideoConfig() {
   StreamConstraints stream(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   stream.AddImageFormat(kVideoWidth, kVideoHeight, kFramePixelFormat);
@@ -62,7 +61,6 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig() {
   stream.set_buffer_count_for_camping(kVideoMinBufferForCamping);
   return stream.ConvertToStreamConfig();
 };
-#endif
 
 /*****************************
  *  EXTERNAL CONFIGURATIONS  *
@@ -72,10 +70,7 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig() {
 fuchsia::camera2::hal::Config VideoConferencingConfig() {
   fuchsia::camera2::hal::Config config;
   config.stream_configs.push_back(MLVideoFRConfig());
-  // TODO(braval) : Enable this only when we support Video Conferencing stream.
-#if 0
   config.stream_configs.push_back(VideoConfig());
-#endif
   return config;
 }
 
@@ -95,6 +90,19 @@ static InternalConfigNode OutputMLFR() {
   };
 }
 
+static InternalConfigNode OutputVideoConferencing() {
+  return {
+      .type = kOutputStream,
+      .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .supported_streams =
+          {
+
+              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+          },
+  };
+}
+
 fuchsia::sysmem::BufferCollectionConstraints GdcVideo2Constraints() {
   StreamConstraints stream_constraints;
   stream_constraints.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
@@ -107,7 +115,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo2Constraints() {
 static InternalConfigNode GdcVideo2() {
   return {
       .type = kGdc,
-      .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
+      .output_frame_rate.frames_per_sec_numerator = kMlFRFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
@@ -133,6 +141,50 @@ static InternalConfigNode GdcVideo2() {
   };
 }
 
+fuchsia::sysmem::BufferCollectionConstraints Ge2dConstraints() {
+  StreamConstraints stream_constraints;
+  stream_constraints.set_bytes_per_row_divisor(kGe2dBytesPerRowDivisor);
+  stream_constraints.set_contiguous(true);
+  stream_constraints.AddImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat);
+  stream_constraints.set_buffer_count_for_camping(kVideoMinBufferForCamping);
+  return stream_constraints.MakeBufferCollectionConstraints();
+}
+
+static InternalConfigNode Ge2d() {
+  return {
+      .type = kGe2d,
+      .output_frame_rate.frames_per_sec_numerator = kVideoFrameRate,
+      .output_frame_rate.frames_per_sec_denominator = 1,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+          },
+      .child_nodes =
+          {
+              {
+                  OutputVideoConferencing(),
+              },
+          },
+      .ge2d_info.config_type = Ge2DConfig::GE2D_RESIZE,
+      .ge2d_info.resize =
+          {
+              .crop =
+                  {
+                      .x = 0,
+                      .y = 0,
+                      .width = kGdcFRWidth,
+                      .height = kGdcFRHeight,
+                  },
+              .output_rotation = GE2D_ROTATION_ROTATION_0,
+          },
+      .input_constraints = Ge2dConstraints(),
+      // This node doesn't need |output_constraints| because next node is Output node so
+      // there is no need to create internal buffers.
+      .output_constraints = InvalidConstraints(),
+      .image_formats = VideoImageFormats(),
+  };
+}
+
 fuchsia::sysmem::BufferCollectionConstraints GdcVideo1InputConstraints() {
   StreamConstraints stream_constraints;
   stream_constraints.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
@@ -153,7 +205,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo1OutputConstraints() {
 
 static std::vector<fuchsia::sysmem::ImageFormat_2> GdcVideo1ImageFormats() {
   return {
-      StreamConstraints::MakeImageFormat(kIspFRWidth, kIspFRHeight, kFramePixelFormat),
+      StreamConstraints::MakeImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat),
   };
 }
 
@@ -173,6 +225,9 @@ static InternalConfigNode GdcVideo1() {
           {
               {
                   GdcVideo2(),
+              },
+              {
+                  Ge2d(),
               },
           },
       .gdc_info.config_type =

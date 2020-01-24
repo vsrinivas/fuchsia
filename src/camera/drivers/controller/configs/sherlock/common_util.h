@@ -11,6 +11,7 @@ namespace camera {
 
 namespace {
 constexpr uint32_t kGdcBytesPerRowDivisor = 16;
+constexpr uint32_t kGe2dBytesPerRowDivisor = 32;
 constexpr uint32_t kIspBytesPerRowDivisor = 128;
 }  // namespace
 
