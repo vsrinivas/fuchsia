@@ -79,6 +79,10 @@ void ProcessLimboManager::AddToLimbo(ProcessException process_exception) {
 
   limbo_[process_exception.info().process_koid] = std::move(process_exception);
 
+  NotifyLimboChanged();
+}
+
+void ProcessLimboManager::NotifyLimboChanged() {
   // Notify the handlers of the new list of processes in limbo.
   PruneStaleHandlers(&handlers_);
   for (auto& handler : handlers_) {
@@ -251,11 +255,14 @@ void ProcessLimboHandler::RetrieveException(zx_koid_t process_koid, RetrieveExce
   if (it == limbo.end()) {
     FX_LOGS(WARNING) << "Could not find process " << process_koid << " in limbo.";
     cb(fit::error(ZX_ERR_NOT_FOUND));
-  } else {
-    auto res = fit::ok(std::move(it->second));
-    limbo.erase(it);
-    cb(std::move(res));
+    return;
   }
+
+  auto res = fit::ok(std::move(it->second));
+  limbo.erase(it);
+  cb(std::move(res));
+
+  limbo_manager_->NotifyLimboChanged();
 }
 
 void ProcessLimboHandler::ReleaseProcess(zx_koid_t process_koid, ReleaseProcessCallback cb) {
@@ -270,7 +277,9 @@ void ProcessLimboHandler::ReleaseProcess(zx_koid_t process_koid, ReleaseProcessC
   }
 
   limbo.erase(it);
-  return cb(fit::ok());
+  cb(fit::ok());
+
+  limbo_manager_->NotifyLimboChanged();
 }
 
 void ProcessLimboHandler::GetFilters(GetFiltersCallback cb) {

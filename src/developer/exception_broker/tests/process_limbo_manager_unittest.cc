@@ -208,6 +208,16 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
   }
 
   {
+    // Watching for the exception should not call.
+    bool watch_called = false;
+    ProcessLimbo_WatchProcessesWaitingOnException_Result watch_result;
+    handler->WatchProcessesWaitingOnException(
+        [&watch_called, &watch_result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
+          watch_called = true;
+          watch_result = std::move(res);
+        });
+    ASSERT_FALSE(watch_called);
+
     // Getting an actual exception should work.
     bool called = false;
     ProcessLimbo_RetrieveException_Result result = {};
@@ -222,6 +232,13 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
 
     // There should be one less exception.
     ASSERT_EQ(limbo_manager.limbo().size(), 2u);
+
+    // We should've received a notification for the watch.
+    ASSERT_TRUE(watch_called);
+    ASSERT_TRUE(watch_result.is_response()) << zx_status_get_string(watch_result.err());
+    ASSERT_EQ(watch_result.response().exception_list.size(), 2u);
+    ValidateException(excps[1], watch_result.response().exception_list[0]);
+    ValidateException(excps[2], watch_result.response().exception_list[1]);
   }
 
   {
@@ -238,6 +255,16 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
   }
 
   {
+    // Watching for the exception should not call.
+    bool watch_called = false;
+    ProcessLimbo_WatchProcessesWaitingOnException_Result watch_result;
+    handler->WatchProcessesWaitingOnException(
+        [&watch_called, &watch_result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
+          watch_called = true;
+          watch_result = std::move(res);
+        });
+    ASSERT_FALSE(watch_called);
+
     // Asking for the other process should work.
     bool called = false;
     ProcessLimbo_RetrieveException_Result result = {};
@@ -252,9 +279,25 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
 
     // There should be one less exception.
     ASSERT_EQ(limbo_manager.limbo().size(), 1u);
+
+    // We should've received a notification for the watch.
+    ASSERT_TRUE(watch_called);
+    ASSERT_TRUE(watch_result.is_response()) << zx_status_get_string(watch_result.err());
+    ASSERT_EQ(watch_result.response().exception_list.size(), 1u);
+    ValidateException(excps[1], watch_result.response().exception_list[0]);
   }
 
   {
+    // Watching for the exception should not call.
+    bool watch_called = false;
+    ProcessLimbo_WatchProcessesWaitingOnException_Result watch_result;
+    handler->WatchProcessesWaitingOnException(
+        [&watch_called, &watch_result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
+          watch_called = true;
+          watch_result = std::move(res);
+        });
+    ASSERT_FALSE(watch_called);
+
     // Getting the last one should work.
     bool called = false;
     ProcessLimbo_ReleaseProcess_Result release_result = {};
@@ -268,6 +311,11 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
 
     // There should be one less exception.
     ASSERT_EQ(limbo_manager.limbo().size(), 0u);
+
+    // We should've received a notification for the watch.
+    ASSERT_TRUE(watch_called);
+    ASSERT_TRUE(watch_result.is_response()) << zx_status_get_string(watch_result.err());
+    ASSERT_EQ(watch_result.response().exception_list.size(), 0u);
   }
 
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process

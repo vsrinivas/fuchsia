@@ -122,19 +122,21 @@ void LimboProvider::WatchLimbo() {
         if (result.is_err()) {
           FXL_LOG(ERROR) << "Got error waiting on limbo: " << zx_status_get_string(result.err());
         } else {
+          // We need to figure out which exceptions remain.
+
           // Add the exceptions to the limbo.
           std::vector<fuchsia::exception::ProcessExceptionMetadata> new_exceptions;
+          std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata> new_limbo;
           for (auto& exception : result.response().exception_list) {
+            // We check to see if it's currently on the limbo. If it wasn't, it is a new exception.
             zx_koid_t process_koid = exception.info().process_koid;
-
-            auto [it, inserted] = limbo_.insert({process_koid, std::move(exception)});
-
-            // Only track new processes if we're going to inform it through a callback.
-            if (on_enter_limbo_ && inserted)
-              new_exceptions.push_back(DuplicateException(it->second));
+            if (auto it = limbo_.find(process_koid); it == limbo_.end())
+              new_exceptions.push_back(DuplicateException(exception));
+            new_limbo.insert({process_koid, std::move(exception)});
           }
 
-          if (on_enter_limbo_)
+          limbo_ = std::move(new_limbo);
+          if (!new_exceptions.empty() && on_enter_limbo_)
             on_enter_limbo_(std::move(new_exceptions));
         }
 

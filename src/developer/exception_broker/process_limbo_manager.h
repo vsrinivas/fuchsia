@@ -26,6 +26,9 @@ class ProcessLimboManager {
 
   void AddToLimbo(ProcessException);
 
+  // Notify all handlers that limbo changed.
+  void NotifyLimboChanged();
+
   void AddHandler(fxl::WeakPtr<ProcessLimboHandler> handler);
 
   // Returns true if there was a change of state.
@@ -83,7 +86,7 @@ class ProcessLimboHandler : public ProcessLimbo {
 
   void ActiveStateChanged(bool state);
 
-  // Called when a process goes into limbo (ProcessLimboManager::AddToLimbo).
+  // Called when a process goes in or out of limbo (ProcessLimboManager::AddToLimbo).
   void LimboChanged(std::vector<ProcessExceptionMetadata> processes);
 
   // fuchsia.exception.ProcessLimbo implementation.
