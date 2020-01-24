@@ -21,7 +21,6 @@
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
-#include "src/cobalt/bin/app/user_consent_watcher.h"
 #include "src/cobalt/bin/utils/clock.h"
 #include "src/lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
@@ -110,8 +109,6 @@ class CobaltApp {
 
   // Cobalt uses internal_logger_ to log events about Cobalt.
   std::unique_ptr<logger::Logger> internal_logger_;
-
-  std::unique_ptr<UserConsentWatcher> user_consent_watcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
 };
