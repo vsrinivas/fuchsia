@@ -62,7 +62,7 @@ zx_status_t Worker::Start(Device* device, const DdkVolume& volume, zx::port&& po
 
   port_ = std::move(port);
 
-  if (thrd_create(&thrd_, WorkerRun, this) != thrd_success) {
+  if (thrd_create_with_name(&thrd_, WorkerRun, this, "zxcrypt_worker") != thrd_success) {
     zxlogf(ERROR, "failed to start thread\n");
     return ZX_ERR_INTERNAL;
   }
