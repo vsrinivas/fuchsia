@@ -1548,7 +1548,7 @@ extern "C" bool test_sysmem_contiguous_system_ram_is_recycled(void) {
   // is not ashamed to be relying on that.
   uint64_t total_bytes_to_allocate = zx_system_get_physmem() * 2;
   uint64_t total_bytes_allocated = 0;
-  constexpr uint64_t kBytesToAllocatePerPass = 16 * 1024 * 1024;
+  constexpr uint64_t kBytesToAllocatePerPass = 4 * 1024 * 1024;
   zx::time deadline_time = zx::deadline_after(zx::sec(10));
   while (total_bytes_allocated < total_bytes_to_allocate) {
     if (zx::clock::get_monotonic() > deadline_time) {
