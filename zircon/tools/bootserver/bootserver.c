@@ -48,7 +48,7 @@
     fprintf(stderr, "%s [%s] %s\n", date_string(), appname, logline); \
   } while (false)
 
-#define RETRY_DELAY_SEC 20
+#define RETRY_DELAY_SEC 1
 
 char* appname;
 int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
