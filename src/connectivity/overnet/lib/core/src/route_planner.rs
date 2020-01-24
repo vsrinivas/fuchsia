@@ -2,30 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::labels::{NodeId, NodeLinkId};
-use anyhow::Error;
-use std::collections::{BTreeMap, BinaryHeap};
-use std::time::Duration;
-
-/// Describes a node in the overnet mesh
-#[derive(Debug)]
-pub struct NodeDescription {
-    /// Services exposed by this node.
-    pub services: Vec<String>,
-}
-
-impl Default for NodeDescription {
-    fn default() -> Self {
-        NodeDescription { services: Vec::new() }
-    }
-}
+use crate::{
+    future_help::log_errors,
+    labels::{NodeId, NodeLinkId},
+    router::Router,
+    runtime::{maybe_wait_until, spawn},
+};
+use anyhow::{bail, format_err, Error};
+use futures::{prelude::*, select};
+use std::{
+    collections::{btree_map, BTreeMap, BinaryHeap},
+    rc::{Rc, Weak},
+    time::{Duration, Instant},
+};
 
 /// Collects all information about a node in one place
 #[derive(Debug)]
 struct Node {
     links: BTreeMap<NodeLinkId, Link>,
-    desc: NodeDescription,
-    established: bool,
 }
 
 /// During pathfinding, collects the shortest path so far to a node
@@ -36,7 +30,7 @@ struct NodeProgress {
 }
 
 /// Describes the state of a link
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LinkDescription {
     /// Current round trip time estimate for this link
     pub round_trip_time: Duration,
@@ -53,64 +47,16 @@ pub struct Link {
     pub desc: LinkDescription,
 }
 
-/// Notification of a new version of the node table being available.
-pub trait NodeStateCallback {
-    /// Called when the node state version is different to the one supplied at the initiation of
-    /// monitoring.
-    fn trigger(&mut self, new_version: u64, node_table: &NodeTable) -> Result<(), Error>;
-}
-
-/// Tracks the current version of the node table, and callbacks that would like to be informed when
-/// that changes.
-struct VersionTracker {
-    version: u64,
-    pending_callbacks: Vec<Box<dyn NodeStateCallback>>,
-    triggered_callbacks: Vec<Box<dyn NodeStateCallback>>,
-}
-
-impl VersionTracker {
-    /// New version tracker with an initial non-zero version stamp.
-    fn new() -> Self {
-        Self { pending_callbacks: Vec::new(), triggered_callbacks: Vec::new(), version: 1 }
-    }
-
-    /// Query for a new version (given the last version seen).
-    /// Trigger on the next flush if last_version == self.version.
-    fn post_query(&mut self, last_version: u64, cb: Box<dyn NodeStateCallback>) {
-        if last_version < self.version {
-            self.triggered_callbacks.push(cb);
-        } else {
-            self.pending_callbacks.push(cb);
-        }
-    }
-
-    /// Move to the next version.
-    fn incr_version(&mut self) {
-        self.version += 1;
-        self.triggered_callbacks.extend(self.pending_callbacks.drain(..));
-    }
-
-    /// Returns the current version and the (now flushed) triggered callbacks
-    fn take_triggered_callbacks(&mut self) -> (u64, Vec<Box<dyn NodeStateCallback>>) {
-        let callbacks = std::mem::replace(&mut self.triggered_callbacks, Vec::new());
-        (self.version, callbacks)
-    }
-}
-
 /// Table of all nodes (and links between them) known to an instance
-pub struct NodeTable {
+struct NodeTable {
     root_node: NodeId,
     nodes: BTreeMap<NodeId, Node>,
-    version_tracker: VersionTracker,
 }
 
 impl NodeTable {
     /// Create a new node table rooted at `root_node`
     pub fn new(root_node: NodeId) -> NodeTable {
-        let mut table =
-            NodeTable { root_node, nodes: BTreeMap::new(), version_tracker: VersionTracker::new() };
-        table.get_or_create_node_mut(root_node).established = true;
-        table
+        NodeTable { root_node, nodes: BTreeMap::new() }
     }
 
     /// Convert the node table to a string representing a directed graph for graphviz visualization
@@ -129,78 +75,8 @@ impl NodeTable {
         s
     }
 
-    /// Query for a new version (given the last version seen).
-    /// Trigger on the next flush if `last_version` == the current version.
-    pub fn post_query(&mut self, last_version: u64, cb: Box<dyn NodeStateCallback>) {
-        self.version_tracker.post_query(last_version, cb);
-    }
-
-    /// Execute any completed version watch callbacks.
-    pub fn trigger_callbacks(&mut self) {
-        let (version, callbacks) = self.version_tracker.take_triggered_callbacks();
-        for mut cb in callbacks {
-            if let Err(e) = cb.trigger(version, &self) {
-                log::warn!("Node state callback failed: {:?}", e);
-            }
-        }
-    }
-
     fn get_or_create_node_mut(&mut self, node_id: NodeId) -> &mut Node {
-        let version_tracker = &mut self.version_tracker;
-        let mut was_new = false;
-        let node = self.nodes.entry(node_id).or_insert_with(|| {
-            version_tracker.incr_version();
-            was_new = true;
-            Node { links: BTreeMap::new(), desc: NodeDescription::default(), established: false }
-        });
-        node
-    }
-
-    /// Collates and returns all services available
-    pub fn nodes(&self) -> impl Iterator<Item = NodeId> + '_ {
-        self.nodes.iter().map(|(id, _)| *id)
-    }
-
-    /// Return the services supplied by some `node_id`
-    pub fn node_services(&self, node_id: NodeId) -> &[String] {
-        self.nodes.get(&node_id).map(|node| node.desc.services.as_slice()).unwrap_or(&[])
-    }
-
-    /// Returns all links from a single node
-    pub fn node_links(
-        &self,
-        node_id: NodeId,
-    ) -> Option<impl Iterator<Item = (&NodeLinkId, &Link)> + '_> {
-        self.nodes.get(&node_id).map(|node| node.links.iter())
-    }
-
-    /// Update a single node
-    pub fn update_node(&mut self, node_id: NodeId, desc: NodeDescription) {
-        let node = self.get_or_create_node_mut(node_id);
-        node.desc = desc;
-        self.version_tracker.incr_version();
-        log::trace!("{}", self.digraph_string());
-    }
-
-    /// Is a connection established to some node?
-    pub fn is_established(&self, node_id: NodeId) -> bool {
-        self.nodes.get(&node_id).map_or(false, |node| node.established)
-    }
-
-    /// Mark a node as being established
-    pub fn mark_established(&mut self, node_id: NodeId) {
-        log::info!("{:?} mark node established: {:?}", self.root_node, node_id);
-        let node = self.get_or_create_node_mut(node_id);
-        if node.established {
-            return;
-        }
-        node.established = true;
-        self.version_tracker.incr_version();
-    }
-
-    /// Mention that a node exists
-    pub fn mention_node(&mut self, node_id: NodeId) {
-        self.get_or_create_node_mut(node_id);
+        self.nodes.entry(node_id).or_insert_with(|| Node { links: BTreeMap::new() })
     }
 
     /// Update a single link on a node.
@@ -210,7 +86,7 @@ impl NodeTable {
         to: NodeId,
         link_id: NodeLinkId,
         desc: LinkDescription,
-    ) {
+    ) -> Result<(), Error> {
         log::trace!(
             "update_link: from:{:?} to:{:?} link_id:{:?} desc:{:?}",
             from,
@@ -218,10 +94,34 @@ impl NodeTable {
             link_id,
             desc
         );
-        assert_ne!(from, to);
+        if from == to {
+            bail!("Circular link seen");
+        }
         self.get_or_create_node_mut(to);
         self.get_or_create_node_mut(from).links.insert(link_id, Link { to, desc });
         log::trace!("{}", self.digraph_string());
+        Ok(())
+    }
+
+    pub fn update_links(
+        &mut self,
+        from: NodeId,
+        links: Vec<(NodeId, NodeLinkId, LinkDescription)>,
+    ) -> Result<(), Error> {
+        self.get_or_create_node_mut(from).links.clear();
+        for (to, link_id, desc) in links.into_iter() {
+            self.update_link(from, to, link_id, desc)?;
+        }
+        Ok(())
+    }
+
+    pub fn remove_link(&mut self, from: NodeId, to: NodeId, link_id: NodeLinkId) {
+        match self.get_or_create_node_mut(from).links.entry(link_id) {
+            btree_map::Entry::Occupied(o) if o.get().to == to => {
+                o.remove();
+            }
+            _ => (),
+        }
     }
 
     /// Build a routing table for our node based on current link data
@@ -283,6 +183,104 @@ impl NodeTable {
     }
 }
 
+#[derive(Debug)]
+pub enum RoutingUpdate {
+    UpdateLocalLinkStatus {
+        to_node_id: NodeId,
+        link_id: NodeLinkId,
+        description: Option<LinkDescription>,
+    },
+    UpdateRemoteLinkStatus {
+        from_node_id: NodeId,
+        status: Vec<(NodeId, NodeLinkId, LinkDescription)>,
+    },
+}
+
+pub(crate) type RoutingUpdateSender = futures::channel::mpsc::Sender<RoutingUpdate>;
+pub(crate) type RoutingUpdateReceiver = futures::channel::mpsc::Receiver<RoutingUpdate>;
+
+pub fn routing_update_channel() -> (RoutingUpdateSender, RoutingUpdateReceiver) {
+    futures::channel::mpsc::channel(1)
+}
+
+#[derive(Debug)]
+enum Action {
+    Apply(RoutingUpdate),
+    UpdateRoutes,
+    Quit,
+}
+
+pub(crate) fn spawn_route_planner(router: Rc<Router>, mut updates: RoutingUpdateReceiver) {
+    let mut node_table = NodeTable::new(router.node_id());
+    let router = Rc::downgrade(&router);
+    spawn(log_errors(
+        async move {
+            let mut next_route_table_update = None;
+            loop {
+                let action = select! {
+                    x = updates.next().fuse() => match x {
+                        Some(x) => Action::Apply(x),
+                        None => Action::Quit,
+                    },
+                    _ = maybe_wait_until(next_route_table_update).fuse() => Action::UpdateRoutes
+                };
+                log::trace!("Routing update: {:?}", action);
+                match action {
+                    Action::Quit => return Ok(()),
+                    Action::Apply(update) => {
+                        match update {
+                            RoutingUpdate::UpdateLocalLinkStatus {
+                                to_node_id,
+                                link_id,
+                                description: Some(description),
+                            } => {
+                                if let Err(e) = node_table.update_link(
+                                    node_table.root_node,
+                                    to_node_id,
+                                    link_id,
+                                    description,
+                                ) {
+                                    log::warn!("Update link failed: {:?}", e);
+                                    continue;
+                                }
+                            }
+                            RoutingUpdate::UpdateLocalLinkStatus {
+                                to_node_id,
+                                link_id,
+                                description: None,
+                            } => {
+                                node_table.remove_link(node_table.root_node, to_node_id, link_id);
+                            }
+                            RoutingUpdate::UpdateRemoteLinkStatus { from_node_id, status } => {
+                                if from_node_id == node_table.root_node {
+                                    log::warn!("Attempt to update own node id links as remote");
+                                    continue;
+                                }
+                                if let Err(e) = node_table.update_links(from_node_id, status) {
+                                    log::warn!("Update links failed: {:?}", e);
+                                    continue;
+                                }
+                            }
+                        }
+                        if next_route_table_update.is_none() {
+                            next_route_table_update =
+                                Some(Instant::now() + Duration::from_millis(100));
+                        }
+                    }
+                    Action::UpdateRoutes => {
+                        next_route_table_update = None;
+                        Weak::upgrade(&router)
+                            .ok_or_else(|| format_err!("Router shut down"))?
+                            .update_routes(node_table.build_routes())
+                            .await?;
+                    }
+                }
+            }
+        },
+        "Failed planning routes",
+    ));
+}
+
 #[cfg(test)]
 mod test {
 
@@ -303,12 +301,14 @@ mod test {
         let mut node_table = NodeTable::new(1.into());
 
         for (from, to, link_id, rtt) in links {
-            node_table.update_link(
-                (*from).into(),
-                (*to).into(),
-                (*link_id).into(),
-                LinkDescription { round_trip_time: Duration::from_millis(*rtt) },
-            );
+            node_table
+                .update_link(
+                    (*from).into(),
+                    (*to).into(),
+                    (*link_id).into(),
+                    LinkDescription { round_trip_time: Duration::from_millis(*rtt) },
+                )
+                .unwrap();
         }
 
         node_table
@@ -366,17 +366,5 @@ mod test {
             ],
             &[(2, 1), (3, 1)]
         ));
-    }
-
-    #[test]
-    fn test_services() {
-        let mut node_table = NodeTable::new(1.into());
-        node_table.update_node(
-            2.into(),
-            NodeDescription { services: vec!["hello".to_string()], ..Default::default() },
-        );
-        assert_eq!(node_table.nodes().collect::<Vec<NodeId>>().as_slice(), [1.into(), 2.into()]);
-        assert_eq!(node_table.node_services(2.into()), ["hello".to_string()]);
-        assert_eq!(node_table.node_services(3.into()), Vec::<String>::new().as_slice());
     }
 }

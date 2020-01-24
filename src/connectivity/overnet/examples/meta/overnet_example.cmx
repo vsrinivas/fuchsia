@@ -4,7 +4,7 @@
    },
    "sandbox": {
        "services": [
-           "fuchsia.overnet.Overnet",
+           "fuchsia.overnet.ServiceConsumer",
            "fuchsia.overnet.ServicePublisher"
        ]
    }

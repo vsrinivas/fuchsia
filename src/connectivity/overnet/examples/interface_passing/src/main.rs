@@ -164,10 +164,6 @@ async fn async_main() -> Result<(), Error> {
     }
 }
 
-fn main() {
-    hoist::run(async move {
-        if let Err(e) = async_main().await {
-            eprintln!("Error: {}", e)
-        }
-    })
+fn main() -> Result<(), Error> {
+    hoist::run(async_main())
 }

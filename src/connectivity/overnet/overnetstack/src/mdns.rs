@@ -38,7 +38,8 @@ async fn connect_to_proxy(
     }
 }
 
-async fn publish_inner(node_id: NodeId, port: u16) -> Result<(), Error> {
+/// Run main loop to publish a udp socket to mdns.
+pub async fn publish(node_id: NodeId, port: u16) -> Result<(), Error> {
     let (server, proxy) = zx::Channel::create()?;
     let server = fasync::Channel::from_channel(server)?;
     let mut stream = PublicationResponder_RequestStream::from_channel(server);
@@ -83,13 +84,6 @@ async fn publish_inner(node_id: NodeId, port: u16) -> Result<(), Error> {
     Ok(())
 }
 
-/// Run main loop to publish a udp socket to mdns.
-pub async fn publish(node_id: NodeId, port: u16) {
-    if let Err(e) = publish_inner(node_id, port).await {
-        log::warn!("mdns-publish-loop failed: {:?}", e);
-    }
-}
-
 fn convert_ipv6_buffer(in_arr: [u8; 16]) -> [u16; 8] {
     let mut out_arr: [u16; 8] = [0; 8];
 
@@ -121,7 +115,10 @@ fn endpoint_to_socket(ep: fidl_fuchsia_net::Endpoint) -> std::net::SocketAddr {
     std::net::SocketAddr::new(fuchsia_to_rust_ipaddr(ep.addr), ep.port)
 }
 
-async fn subscribe_inner() -> Result<(), Error> {
+/// Run main loop to look for overnet mdns advertisements and add them to the mesh.
+pub async fn subscribe(
+    mut found: futures::channel::mpsc::Sender<(std::net::SocketAddr, NodeId)>,
+) -> Result<(), Error> {
     let (server, proxy) = zx::Channel::create()?;
     let server = fasync::Channel::from_channel(server)?;
     let mut stream = ServiceSubscriberRequestStream::from_channel(server);
@@ -138,20 +135,32 @@ async fn subscribe_inner() -> Result<(), Error> {
             ServiceSubscriberRequest::OnInstanceDiscovered { instance, responder } => {
                 log::info!("Discovered: {:?}", instance);
                 for endpoint in instance.endpoints.into_iter() {
-                    crate::register_udp(
-                        endpoint_to_socket(endpoint),
-                        instance.instance.parse::<u64>()?.into(),
-                    )?;
+                    if found
+                        .send((
+                            endpoint_to_socket(endpoint),
+                            instance.instance.parse::<u64>()?.into(),
+                        ))
+                        .await
+                        .is_err()
+                    {
+                        break;
+                    }
                 }
                 responder.send()?;
             }
             ServiceSubscriberRequest::OnInstanceChanged { instance, responder } => {
                 log::info!("Changed: {:?}", instance);
                 for endpoint in instance.endpoints.into_iter() {
-                    crate::register_udp(
-                        endpoint_to_socket(endpoint),
-                        instance.instance.parse::<u64>()?.into(),
-                    )?;
+                    if found
+                        .send((
+                            endpoint_to_socket(endpoint),
+                            instance.instance.parse::<u64>()?.into(),
+                        ))
+                        .await
+                        .is_err()
+                    {
+                        break;
+                    }
                 }
                 responder.send()?;
             }
@@ -165,11 +174,4 @@ async fn subscribe_inner() -> Result<(), Error> {
     log::info!("Mdns subscriber finishes");
 
     Ok(())
-}
-
-/// Run main loop to look for overnet mdns advertisements and add them to the mesh.
-pub async fn subscribe() {
-    if let Err(e) = subscribe_inner().await {
-        log::warn!("mdns-subscribe failed: {:?}", e);
-    }
 }

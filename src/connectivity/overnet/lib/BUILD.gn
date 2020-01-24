@@ -8,7 +8,6 @@ group("lib") {
     "core",
     "hoist",
     "integration_tests",
-    "salt_slab",
   ]
 }
 
@@ -18,6 +17,5 @@ group("tests") {
     "core:tests",
     "hoist:tests",
     "integration_tests:tests",
-    "salt_slab:tests",
   ]
 }

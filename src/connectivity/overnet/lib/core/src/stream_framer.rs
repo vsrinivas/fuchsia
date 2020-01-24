@@ -20,9 +20,7 @@ impl StreamFramer {
 
     /// Queue a send to the remote end.
     pub fn queue_send(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        if bytes.len() == 0 {
-            return Ok(());
-        }
+        anyhow::ensure!(bytes.len() != 0, "Empty packet queued");
         if bytes.len() > (std::u16::MAX as usize) + 1 {
             return Err(anyhow::format_err!(
                 "Packet length ({}) too long for stream framing",

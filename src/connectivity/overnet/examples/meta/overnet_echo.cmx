@@ -9,7 +9,8 @@
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Subscriber",
             "fuchsia.netemul.sync.SyncManager",
-            "fuchsia.overnet.Overnet"
+            "fuchsia.overnet.ServiceConsumer",
+            "fuchsia.overnet.ServicePublisher"
         ]
     }
 }

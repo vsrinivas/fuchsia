@@ -9,7 +9,7 @@ const uint64 MAX_SERVICE_NAME_LENGTH = 255;
 
 /// Peer-to-peer protocol between two Overnet nodes.
 /// Client quic connections send this xunion to servers over quic stream 0.
-xunion PeerMessage {
+strict xunion PeerMessage {
     /// Request to create a channel to a service exported by this peer.
     1: ConnectToService connect_to_service;
     /// Update this peers description on the server.
@@ -30,7 +30,7 @@ table ConfigResponse {
 
 /// Reply messages for PeerMessage, where appropriate.
 /// The ConfigResponse message must have been sent already.
-xunion PeerReply {
+strict xunion PeerReply {
     /// Acknowledge an UpdateLinkStatus message
     1: Empty update_link_status_ack;
 };

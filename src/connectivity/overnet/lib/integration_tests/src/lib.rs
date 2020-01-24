@@ -10,17 +10,13 @@ mod echo;
 use {
     anyhow::Error,
     fidl::endpoints::ClientEnd,
-    fidl::Handle,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
     futures::prelude::*,
-    overnet_core::{LinkId, Node, NodeId, NodeOptions, NodeRuntime, RouterTime, SendHandle},
+    overnet_core::{log_errors, spawn, NodeId, Router, RouterOptions},
     parking_lot::Mutex,
     std::collections::VecDeque,
     std::sync::Arc,
 };
-
-#[cfg(target_os = "fuchsia")]
-use {fuchsia_zircon as zx, zx::AsHandleRef};
 
 pub use fidl_fuchsia_overnet::MeshControllerProxyInterface;
 pub use fidl_fuchsia_overnet::ServiceConsumerProxyInterface;
@@ -43,15 +39,10 @@ pub struct Overnet {
 }
 
 impl Overnet {
-    /// Create a new instance that uses `spawner` to dispatch work
-    pub fn new(spawner: TestSpawner) -> Result<Arc<Overnet>, Error> {
+    /// Create a new instance
+    pub fn new() -> Result<Arc<Overnet>, Error> {
         let (tx, rx) = futures::channel::mpsc::unbounded();
-        let overnet_spawner = spawner.clone();
-        spawner.spawn_local(async move {
-            if let Err(e) = run_overnet(overnet_spawner, rx).await {
-                log::warn!("Main loop failed: {:?}", e);
-            }
-        })?;
+        spawn(log_errors(run_overnet(rx), "Main loop failed"));
         let tx = Mutex::new(tx);
         Ok(Arc::new(Overnet { tx }))
     }
@@ -82,119 +73,20 @@ impl Overnet {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-struct Time(std::time::Instant);
-
-impl RouterTime for Time {
-    type Duration = std::time::Duration;
-
-    fn now() -> Self {
-        Time(std::time::Instant::now())
-    }
-
-    fn after(t: Self, dt: Self::Duration) -> Self {
-        Time(t.0 + dt)
-    }
-}
-
-struct OvernetRuntime {
-    spawner: TestSpawner,
-}
-
-impl NodeRuntime for OvernetRuntime {
-    type Time = Time;
-    type LinkId = ();
-    const IMPLEMENTATION: fidl_fuchsia_overnet_protocol::Implementation =
-        fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate;
-
-    #[cfg(target_os = "fuchsia")]
-    fn handle_type(hdl: &Handle) -> Result<SendHandle, Error> {
-        match hdl.basic_info()?.object_type {
-            zx::ObjectType::CHANNEL => Ok(SendHandle::Channel),
-            _ => {
-                return Err(anyhow::format_err!(
-                    "Handle type not proxyable {:?}",
-                    hdl.basic_info()?.object_type
-                ))
-            }
-        }
-    }
-
-    #[cfg(not(target_os = "fuchsia"))]
-    fn handle_type(hdl: &Handle) -> Result<SendHandle, Error> {
-        Ok(match hdl.handle_type() {
-            fidl::FidlHdlType::Channel => SendHandle::Channel,
-            fidl::FidlHdlType::Socket => unimplemented!(),
-            fidl::FidlHdlType::Invalid => return Err(anyhow::format_err!("Invalid handle")),
-        })
-    }
-
-    fn spawn_local<F>(&mut self, future: F)
-    where
-        F: Future<Output = ()> + 'static,
-    {
-        self.spawner.spawn_local(future).expect("Failed to spawn future");
-    }
-
-    fn at(&mut self, t: Time, f: impl FnOnce() + 'static) {
-        let (tx, rx) = futures::channel::oneshot::channel();
-        std::thread::spawn(move || {
-            let now = Time::now();
-            if now < t {
-                std::thread::sleep(t.0 - now.0);
-            }
-            let _ = tx.send(());
-        });
-        self.spawn_local(async move {
-            let _ = rx.await;
-            f();
-        })
-    }
-
-    fn router_link_id(&self, _id: Self::LinkId) -> LinkId<overnet_core::PhysLinkId<()>> {
-        unreachable!()
-    }
-
-    fn send_on_link(&mut self, _id: Self::LinkId, _packet: &mut [u8]) -> Result<(), Error> {
-        unreachable!()
-    }
-}
-
-async fn run_list_peers_inner(
-    node: Node<OvernetRuntime>,
-    responder: futures::channel::oneshot::Sender<Vec<Peer>>,
-) -> Result<(), Error> {
-    let peers = node.list_peers().await?;
-    if let Err(_) = responder.send(peers) {
-        println!("List peers stopped listening");
-    }
-    Ok(())
-}
-
-async fn run_list_peers(
-    node: Node<OvernetRuntime>,
-    responder: futures::channel::oneshot::Sender<Vec<Peer>>,
-) {
-    if let Err(e) = run_list_peers_inner(node, responder).await {
-        println!("List peers gets error: {:?}", e);
-    }
-}
-
 async fn run_overnet(
-    spawner: TestSpawner,
     mut rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>,
 ) -> Result<(), Error> {
-    let node_options = NodeOptions::new();
+    let options = RouterOptions::new();
     #[cfg(not(target_os = "fuchsia"))]
-    let node_options = node_options
+    let options = options
         .set_quic_server_key_file(hoist::hard_coded_server_key()?)
         .set_quic_server_cert_file(hoist::hard_coded_server_cert()?);
     #[cfg(target_os = "fuchsia")]
-    let node_options = node_options
+    let options = options
         .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()))
         .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string()));
 
-    let node = Node::new(OvernetRuntime { spawner: spawner.clone() }, node_options)?;
+    let node = Router::new(options)?;
 
     // Run application loop
     loop {
@@ -203,16 +95,16 @@ async fn run_overnet(
         let r = match cmd {
             None => return Ok(()),
             Some(OvernetCommand::ListPeers(sender)) => {
-                spawner
-                    .spawn_local(run_list_peers(node.clone(), sender))
-                    .expect("Failed to spawn list peers worker");
-                Ok(())
+                node.list_peers(Box::new(|peers| {
+                    let _ = sender.send(peers);
+                }))
+                .await
             }
             Some(OvernetCommand::RegisterService(service_name, provider)) => {
-                node.register_service(service_name, provider)
+                node.register_service(service_name, provider).await
             }
             Some(OvernetCommand::ConnectToService(node_id, service_name, channel)) => {
-                node.connect_to_service(node_id, &service_name, channel)
+                node.connect_to_service(node_id, &service_name, channel).await
             }
             Some(OvernetCommand::AttachSocketLink(socket, options)) => {
                 node.attach_socket_link(socket, options)
@@ -310,7 +202,6 @@ async fn copy_with_mutator(
 /// Connect two test overnet instances, with mutating functions between the stream socket connecting
 /// them - to test recovery mechanisms.
 pub fn connect_with_mutator(
-    spawner: TestSpawner,
     a: &Arc<Overnet>,
     b: &Arc<Overnet>,
     mutator_ab: Box<dyn FnMut(Vec<u8>) -> Vec<u8>>,
@@ -325,8 +216,8 @@ pub fn connect_with_mutator(
     let (brx, btx) = fidl::AsyncSocket::from_socket(b1)?.split();
     a.attach_socket_link(a1, opt())?;
     b.attach_socket_link(b2, opt())?;
-    spawner.spawn_local(async move { copy_with_mutator(brx, atx, mutator_ab).await })?;
-    spawner.spawn_local(async move { copy_with_mutator(arx, btx, mutator_ba).await })?;
+    spawn(copy_with_mutator(brx, atx, mutator_ab));
+    spawn(copy_with_mutator(arx, btx, mutator_ba));
     Ok(())
 }
 
@@ -341,7 +232,6 @@ pub fn connect(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
 }
 
 pub fn connect_with_interspersed_log_messages(
-    spawner: TestSpawner,
     a: &Arc<Overnet>,
     b: &Arc<Overnet>,
 ) -> Result<(), Error> {
@@ -403,7 +293,7 @@ pub fn connect_with_interspersed_log_messages(
             bytes
         }
     };
-    connect_with_mutator(spawner, a, b, Box::new(|v| v), Box::new(mutator), || {
+    connect_with_mutator(a, b, Box::new(|v| v), Box::new(mutator), || {
         fidl_fuchsia_overnet::SocketLinkOptions {
             bytes_per_second: Some(1000),
             ..fidl_fuchsia_overnet::SocketLinkOptions::empty()
@@ -440,23 +330,11 @@ mod fuchsia_runner {
     use fuchsia_async as fasync;
     use futures::prelude::*;
 
-    #[derive(Clone)]
-    pub struct TestSpawner;
-    impl TestSpawner {
-        pub fn spawn_local(&self, f: impl Future<Output = ()> + 'static) -> Result<(), Error> {
-            fasync::spawn_local(f);
-            Ok(())
-        }
-    }
-
-    pub fn run_async_test<F, Fut>(f: F) -> Result<(), Error>
+    pub fn run_async_test<Fut>(f: Fut) -> Result<(), Error>
     where
-        F: 'static + Send + FnOnce(TestSpawner) -> Fut,
-        Fut: Future<Output = Result<(), Error>> + 'static,
+        Fut: Future<Output = Result<(), Error>> + 'static + Send,
     {
-        crate::run_async_test_wrapper(|| {
-            fasync::Executor::new()?.run_singlethreaded(f(TestSpawner))
-        })
+        crate::run_async_test_wrapper(|| fasync::Executor::new()?.run_singlethreaded(f))
     }
 }
 
@@ -464,25 +342,17 @@ mod fuchsia_runner {
 mod not_fuchsia_runner {
     use anyhow::Error;
     use futures::prelude::*;
-    use futures::task::LocalSpawnExt;
 
-    #[derive(Clone)]
-    pub struct TestSpawner(futures::executor::LocalSpawner);
-    impl TestSpawner {
-        pub fn spawn_local(&self, f: impl Future<Output = ()> + 'static) -> Result<(), Error> {
-            self.0.spawn_local(f)?;
-            Ok(())
-        }
-    }
-
-    pub fn run_async_test<F, Fut>(f: F) -> Result<(), Error>
+    pub fn run_async_test<Fut>(f: Fut) -> Result<(), Error>
     where
-        F: 'static + Send + FnOnce(TestSpawner) -> Fut,
-        Fut: Future<Output = Result<(), Error>> + 'static,
+        Fut: Future<Output = Result<(), Error>> + 'static + Send,
     {
         crate::run_async_test_wrapper(|| {
-            let mut p = futures::executor::LocalPool::new();
-            p.run_until(f(TestSpawner(p.spawner())))
+            use tokio::runtime::current_thread;
+            current_thread::Runtime::new()
+                .unwrap()
+                .block_on(f.unit_error().boxed_local().compat())
+                .unwrap()
         })
     }
 }

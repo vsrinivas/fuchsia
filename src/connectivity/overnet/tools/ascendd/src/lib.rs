@@ -3,189 +3,13 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fidl::Handle;
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
 use futures::prelude::*;
-use overnet_core::{
-    LinkId, Node, NodeOptions, NodeRuntime, RouterTime, SendHandle, StreamDeframer, StreamFramer,
-};
-use salt_slab::{SaltSlab, SaltedID};
-use std::cell::RefCell;
+use overnet_core::{log_errors, spawn, Router, RouterOptions, StreamDeframer, StreamFramer};
+use std::rc::Rc;
 use tokio::io::AsyncRead;
-use tokio::runtime::current_thread;
 
-thread_local! {
-    // Always access via with_app_mut
-    static APP: RefCell<App> = RefCell::new(App::new());
-}
-
-fn with_app_mut<R>(f: impl FnOnce(&mut App) -> R) -> R {
-    APP.with(|rcapp| f(&mut rcapp.borrow_mut()))
-}
-
-struct AscenddRuntime;
-
-#[derive(Clone, Copy, Debug)]
-enum PhysLinkId {
-    UnixLink(SaltedID<UnixLink>),
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-struct Time(std::time::Instant);
-
-impl RouterTime for Time {
-    type Duration = std::time::Duration;
-
-    fn now() -> Self {
-        Time(std::time::Instant::now())
-    }
-
-    fn after(t: Self, dt: Self::Duration) -> Self {
-        Time(t.0 + dt)
-    }
-}
-
-impl NodeRuntime for AscenddRuntime {
-    type Time = Time;
-    type LinkId = PhysLinkId;
-    const IMPLEMENTATION: fidl_fuchsia_overnet_protocol::Implementation =
-        fidl_fuchsia_overnet_protocol::Implementation::Ascendd;
-
-    fn handle_type(_hdl: &Handle) -> Result<SendHandle, Error> {
-        unimplemented!();
-    }
-
-    fn spawn_local<F>(&mut self, future: F)
-    where
-        F: Future<Output = ()> + 'static,
-    {
-        spawn_local(future);
-    }
-
-    fn at(&mut self, t: Time, f: impl FnOnce() + 'static) {
-        spawn_local(async move {
-            futures::compat::Compat01As03::new(tokio::timer::Delay::new(t.0)).await.unwrap();
-            f();
-        })
-    }
-
-    fn router_link_id(&self, id: Self::LinkId) -> LinkId<overnet_core::PhysLinkId<PhysLinkId>> {
-        with_app_mut(|app| match id {
-            PhysLinkId::UnixLink(id) => {
-                app.unix_links.get(id).map(|link| link.router_id).unwrap_or(LinkId::invalid())
-            }
-        })
-    }
-
-    fn send_on_link(&mut self, id: Self::LinkId, packet: &mut [u8]) -> Result<(), Error> {
-        with_app_mut(|app| {
-            match id {
-                PhysLinkId::UnixLink(id) => {
-                    let link = app
-                        .unix_links
-                        .get_mut(id)
-                        .ok_or_else(|| anyhow::format_err!("No such link {:?}", id))?;
-                    link.framer.queue_send(packet)?;
-                    if let Some(tx) = link.state.become_writing() {
-                        start_writes(id, tx, link.framer.take_sends());
-                    }
-                }
-            }
-            Ok(())
-        })
-    }
-}
-
-#[derive(Debug)]
-enum UnixLinkState {
-    Idle(tokio::io::WriteHalf<tokio::net::UnixStream>),
-    Writing,
-}
-
-impl UnixLinkState {
-    fn become_writing(&mut self) -> Option<tokio::io::WriteHalf<tokio::net::UnixStream>> {
-        match std::mem::replace(self, Self::Writing) {
-            UnixLinkState::Idle(w) => Some(w),
-            UnixLinkState::Writing => None,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct UnixLink {
-    state: UnixLinkState,
-    framer: StreamFramer,
-    router_id: LinkId<overnet_core::PhysLinkId<PhysLinkId>>,
-    connection_label: Option<String>,
-}
-
-struct App {
-    node: Node<AscenddRuntime>,
-    unix_links: SaltSlab<UnixLink>,
-}
-
-impl App {
-    fn new() -> Self {
-        App {
-            node: Node::new(
-                AscenddRuntime,
-                NodeOptions::new()
-                    .set_quic_server_key_file(hoist::hard_coded_server_key().unwrap())
-                    .set_quic_server_cert_file(hoist::hard_coded_server_cert().unwrap()),
-            )
-            .unwrap(),
-            unix_links: SaltSlab::new(),
-        }
-    }
-}
-
-fn spawn_local<F>(future: F)
-where
-    F: Future<Output = ()> + 'static,
-{
-    current_thread::spawn(future.unit_error().boxed_local().compat());
-}
-
-fn start_writes(
-    id: SaltedID<UnixLink>,
-    tx: tokio::io::WriteHalf<tokio::net::UnixStream>,
-    bytes: Vec<u8>,
-) {
-    if bytes.len() == 0 {
-        with_app_mut(|app| {
-            if let Some(link) = app.unix_links.get_mut(id) {
-                link.state = UnixLinkState::Idle(tx);
-            }
-        });
-        return;
-    }
-    let wr = tokio::io::write_all(tx, bytes);
-    let wr = futures::compat::Compat01As03::new(wr);
-    spawn_local(finish_writes(id, wr));
-}
-
-async fn finish_writes(
-    id: SaltedID<UnixLink>,
-    wr: impl Future<
-        Output = Result<(tokio::io::WriteHalf<tokio::net::UnixStream>, Vec<u8>), std::io::Error>,
-    >,
-) {
-    match wr.await {
-        Ok((tx, _)) => {
-            let bytes = with_app_mut(|app| {
-                if let Some(link) = app.unix_links.get_mut(id) {
-                    link.framer.take_sends()
-                } else {
-                    vec![]
-                }
-            });
-            start_writes(id, tx, bytes);
-        }
-        Err(e) => log::warn!("Write failed: {}", e),
-    }
-}
-
-async fn read_incoming_inner(
+async fn read_incoming(
     stream: tokio::io::ReadHalf<tokio::net::UnixStream>,
     mut chan: futures::channel::mpsc::Sender<Vec<u8>>,
 ) -> Result<(), Error> {
@@ -208,26 +32,18 @@ async fn read_incoming_inner(
     }
 }
 
-async fn read_incoming(
-    stream: tokio::io::ReadHalf<tokio::net::UnixStream>,
-    chan: futures::channel::mpsc::Sender<Vec<u8>>,
-) {
-    if let Err(e) = read_incoming_inner(stream, chan).await {
-        log::warn!("Error reading: {}", e);
-    }
-}
-
-async fn process_incoming_inner(
+async fn process_incoming(
+    node: Rc<Router>,
     mut rx_frames: futures::channel::mpsc::Receiver<Vec<u8>>,
     tx_bytes: tokio::io::WriteHalf<tokio::net::UnixStream>,
 ) -> Result<(), Error> {
-    let node_id = with_app_mut(|app| app.node.id().0);
+    let node_id = node.node_id();
 
     // Send first frame
     let mut framer = StreamFramer::new();
     let mut greeting = StreamSocketGreeting {
         magic_string: Some(hoist::ASCENDD_SERVER_CONNECTION_STRING.to_string()),
-        node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node_id }),
+        node_id: Some(node_id.into()),
         connection_label: Some("ascendd".to_string()),
     };
     let mut bytes = Vec::new();
@@ -269,44 +85,32 @@ async fn process_incoming_inner(
     };
 
     // Register our new link!
-    let (router_id, phys_id) = with_app_mut(|app| {
-        let id = app.unix_links.insert(UnixLink {
-            state: UnixLinkState::Idle(tx_bytes),
-            router_id: LinkId::invalid(),
-            framer,
-            connection_label: greeting.connection_label,
-        });
-        match app.node.new_link(node_id.into(), PhysLinkId::UnixLink(id)) {
-            Err(e) => {
-                app.unix_links.remove(id);
-                anyhow::bail!(e);
+    let link_receiver = node.new_link(node_id.into()).await?;
+    let link_sender = link_receiver.clone();
+    spawn(log_errors(
+        async move {
+            let mut tx_bytes = Some(tx_bytes);
+            let mut buf = [0u8; 4096];
+            while let Some(n) = link_sender.next_send(&mut buf).await? {
+                framer.queue_send(&buf[..n])?;
+                let wr = tokio::io::write_all(tx_bytes.take().unwrap(), framer.take_sends());
+                let wr = futures::compat::Compat01As03::new(wr).map_err(|e| -> Error { e.into() });
+                let (t, _) = wr.await?;
+                tx_bytes = Some(t);
             }
-            Ok(x) => {
-                app.unix_links.get_mut(id).unwrap().router_id = x;
-                Ok((x, id))
-            }
-        }
-    })?;
+            Ok(())
+        },
+        "Writing to Ascendd socket failed",
+    ));
 
     // Supply node with incoming frames
     while let Some(mut frame) = rx_frames.next().await {
-        with_app_mut(|app| app.node.queue_recv(router_id, frame.as_mut()));
+        if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
+            log::trace!("Failed handling packet: {:?}", err);
+        }
     }
-
-    with_app_mut(|app| {
-        app.unix_links.remove(phys_id);
-    });
 
     Ok(())
-}
-
-async fn process_incoming(
-    rx: futures::channel::mpsc::Receiver<Vec<u8>>,
-    tx_bytes: tokio::io::WriteHalf<tokio::net::UnixStream>,
-) {
-    if let Err(e) = process_incoming_inner(rx, tx_bytes).await {
-        log::warn!("Error processing incoming frame: {}", e);
-    }
 }
 
 pub async fn run_ascendd(sockpath: String) -> Result<(), Error> {
@@ -318,12 +122,25 @@ pub async fn run_ascendd(sockpath: String) -> Result<(), Error> {
     let mut incoming = futures::compat::Compat01As03::new(incoming);
     log::info!("ascendd listening to socket {}", sockpath);
 
+    let node = Router::new(
+        RouterOptions::new()
+            .set_quic_server_key_file(hoist::hard_coded_server_key().unwrap())
+            .set_quic_server_cert_file(hoist::hard_coded_server_cert().unwrap())
+            .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::Ascendd),
+    )?;
+
     while let Some(stream) = incoming.next().await {
         let stream = stream?;
         let (rx_bytes, tx_bytes) = stream.split();
-        let (tx_frames, rx_frames) = futures::channel::mpsc::channel(8);
-        spawn_local(read_incoming(rx_bytes, tx_frames));
-        spawn_local(process_incoming(rx_frames, tx_bytes));
+        let (tx_frames, rx_frames) = futures::channel::mpsc::channel(1);
+        spawn(log_errors(
+            read_incoming(rx_bytes, tx_frames),
+            "Failed reading bytes from Ascendd socket",
+        ));
+        spawn(log_errors(
+            process_incoming(node.clone(), rx_frames, tx_bytes),
+            "Failed processing Ascendd socket",
+        ));
     }
 
     Ok(())

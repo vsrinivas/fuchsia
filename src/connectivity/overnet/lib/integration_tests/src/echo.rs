@@ -8,7 +8,7 @@
 #![cfg(test)]
 
 use {
-    crate::{Overnet, TestSpawner},
+    crate::Overnet,
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_examples_echo as echo,
@@ -17,6 +17,7 @@ use {
         ServicePublisherProxyInterface,
     },
     futures::prelude::*,
+    overnet_core::spawn,
     std::sync::Arc,
 };
 
@@ -25,21 +26,21 @@ use {
 
 #[test]
 fn simple() -> Result<(), Error> {
-    crate::run_async_test(|spawner| async move {
-        let client = Overnet::new(spawner.clone())?;
-        let server = Overnet::new(spawner.clone())?;
+    crate::run_async_test(async move {
+        let client = Overnet::new()?;
+        let server = Overnet::new()?;
         crate::connect(&client, &server)?;
-        run_echo_test(spawner, client, server, Some("HELLO INTEGRATION TEST WORLD")).await
+        run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
     })
 }
 
 #[test]
 fn interspersed_log_messages() -> Result<(), Error> {
-    crate::run_async_test(|spawner| async move {
-        let client = Overnet::new(spawner.clone())?;
-        let server = Overnet::new(spawner.clone())?;
-        crate::connect_with_interspersed_log_messages(spawner.clone(), &client, &server)?;
-        run_echo_test(spawner, client, server, Some("HELLO INTEGRATION TEST WORLD")).await
+    crate::run_async_test(async move {
+        let client = Overnet::new()?;
+        let server = Overnet::new()?;
+        crate::connect_with_interspersed_log_messages(&client, &server)?;
+        run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
     })
 }
 
@@ -87,7 +88,7 @@ async fn next_request(
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
-async fn exec_server(spawner: TestSpawner, overnet: Arc<Overnet>) -> Result<(), Error> {
+async fn exec_server(overnet: Arc<Overnet>) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
@@ -103,7 +104,7 @@ async fn exec_server(spawner: TestSpawner, overnet: Arc<Overnet>) -> Result<(), 
         log::trace!("Received service request for service");
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        spawner.spawn_local(
+        spawn(
             async move {
                 let mut stream = echo::EchoRequestStream::from_channel(chan);
                 while let Some(echo::EchoRequest::EchoString { value, responder }) =
@@ -117,8 +118,8 @@ async fn exec_server(spawner: TestSpawner, overnet: Arc<Overnet>) -> Result<(), 
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: anyhow::Error| log::trace!("{:?}", e)),
-        )?;
+            .unwrap_or_else(|e: Error| log::trace!("{:?}", e)),
+        );
     }
     Ok(())
 }
@@ -127,12 +128,10 @@ async fn exec_server(spawner: TestSpawner, overnet: Arc<Overnet>) -> Result<(), 
 // Test driver
 
 async fn run_echo_test(
-    spawner: TestSpawner,
     client: Arc<Overnet>,
     server: Arc<Overnet>,
     text: Option<&str>,
 ) -> Result<(), Error> {
-    let server_spawner = spawner.clone();
-    spawner.spawn_local(async move { exec_server(server_spawner, server).await.unwrap() })?;
+    spawn(async move { exec_server(server).await.unwrap() });
     exec_client(client, text).await
 }

@@ -19,382 +19,50 @@
 // on our behalf).
 
 use crate::{
-    coding::{decode_fidl, FrameHeader, FrameType, FRAME_HEADER_LENGTH},
-    labels::{NodeId, NodeLinkId, RoutingLabel, MAX_ROUTING_LABEL_LENGTH},
-    node_table::{LinkDescription, NodeDescription},
-    ping_tracker::{PingTracker, PingTrackerResult, PongTracker},
+    diagnostics_service::spawn_diagostic_service_request_handler,
+    future_help::{Observable, Observer},
+    labels::{Endpoint, NodeId, NodeLinkId},
+    link::{Link, LinkStatus},
+    link_status_updater::spawn_link_status_updater,
+    peer::Peer,
+    route_planner::{
+        routing_update_channel, spawn_route_planner, RoutingUpdate, RoutingUpdateSender,
+    },
+    runtime::spawn,
+    service_map::{ListablePeer, ServiceMap},
+    socket_link::spawn_socket_link,
 };
-use anyhow::{Context as _, Error};
-use fidl_fuchsia_overnet_protocol::{
-    ChannelHandle, ConfigRequest, ConfigResponse, ConnectToService, ConnectToServiceOptions,
-    LinkDiagnosticInfo, LinkMetrics, LinkStatus, PeerConnectionDiagnosticInfo, PeerDescription,
-    PeerMessage, PeerReply, UpdateLinkStatus, ZirconChannelMessage, ZirconHandle,
-};
+use anyhow::{bail, format_err, Context as _, Error};
+use fidl::{endpoints::ClientEnd, Channel};
+use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderMarker};
+use fidl_fuchsia_overnet_protocol::{LinkDiagnosticInfo, PeerConnectionDiagnosticInfo};
+use futures::{lock::Mutex, prelude::*};
 use rand::Rng;
-use salt_slab::{SaltSlab, SaltedID, ShadowSlab};
 use std::{
-    collections::{btree_map, BTreeMap, BTreeSet, BinaryHeap},
-    convert::TryInto,
-    fmt::Debug,
+    collections::{BTreeMap, HashMap},
     path::Path,
-    time::Instant,
+    rc::{Rc, Weak},
+    sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
 };
-
-/// Designates one peer in the router
-pub type PeerId<LinkData> = SaltedID<Peer<LinkData>>;
-/// Designates one link in the router
-pub type LinkId<LinkData> = SaltedID<Link<LinkData>>;
-/// Designates one stream in the router
-pub type StreamId<LinkData> = SaltedID<Stream<LinkData>>;
-
-/// Describes the current time for a router.
-pub trait RouterTime: PartialEq + PartialOrd + Ord + Clone + Copy {
-    /// Representation of the distance between two times.
-    type Duration: From<std::time::Duration>;
-
-    /// Return the current time.
-    fn now() -> Self;
-    /// Return the time after some duration.
-    fn after(time: Self, duration: Self::Duration) -> Self;
-}
-
-impl RouterTime for Instant {
-    type Duration = std::time::Duration;
-
-    fn now() -> Self {
-        Instant::now()
-    }
-
-    fn after(time: Self, duration: Self::Duration) -> Self {
-        time + duration
-    }
-}
-
-#[derive(Debug)]
-enum PeerLinkStatusUpdateState {
-    Unscheduled,
-    Sent,
-    SentOutdated,
-}
-
-struct PeerConn(Box<quiche::Connection>);
-
-#[derive(Debug)]
-struct PeerConnDebug<'a> {
-    trace_id: &'a str,
-    application_proto: &'a [u8],
-    is_established: bool,
-    is_resumed: bool,
-    is_closed: bool,
-    stats: quiche::Stats,
-}
-
-impl std::fmt::Debug for PeerConn {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        PeerConnDebug {
-            trace_id: self.0.trace_id(),
-            application_proto: self.0.application_proto(),
-            is_established: self.0.is_established(),
-            is_resumed: self.0.is_resumed(),
-            is_closed: self.0.is_closed(),
-            stats: self.0.stats(),
-        }
-        .fmt(fmt)
-    }
-}
-
-#[derive(Debug)]
-struct Config {}
-
-impl Config {
-    fn negotiate(_request: ConfigRequest) -> (Self, ConfigResponse) {
-        (Config {}, ConfigResponse {})
-    }
-
-    fn from_response(_response: ConfigResponse) -> Self {
-        Config {}
-    }
-}
-
-/// Describes a peer to this router.
-/// For each peer we manage a quic connection and a set of streams over that quic connection.
-/// For each node in the mesh we keep two peers: one client oriented, one server oriented (using
-/// quic's notion of client/server).
-/// ConnectToService requests travel from the client -> server, and all subsequent streams are
-/// created on that connection.
-/// See Router for a description of LinkData.
-#[derive(Debug)]
-pub struct Peer<LinkData: Copy + Debug> {
-    /// The quic connection between ourselves and this peer.
-    conn: PeerConn,
-    /// The stream id of the connection stream for this peer.
-    connection_stream_id: StreamId<LinkData>,
-    /// The next stream index to create for an outgoing stream.
-    next_stream: u64,
-    /// The node associated with this peer.
-    node_id: NodeId,
-    /// Is this client or server oriented?
-    is_client: bool,
-    /// Are there writes pending on this peer (for the next flush_writes).
-    pending_writes: bool,
-    /// Are there reads pending on this peer (for the next flush_reads).
-    pending_reads: bool,
-    /// Should we check for an updated timeout for this peer?
-    check_timeout: bool,
-    /// Is this peer still establishing a link?
-    establishing: bool,
-    /// Configuration for this peer
-    config: Option<Config>,
-    /// We keep a timeout generation so we can avoid calling conn.on_timeout for irrelevant
-    /// timeout requests, without having to do a deletion in the timer data structure.
-    timeout_generation: u64,
-    /// A list of packets to forward on next writing flush.
-    forward: Vec<(RoutingLabel, Vec<u8>)>,
-    /// A map of quic stream index to overnet stream id for this peer.
-    streams: BTreeMap<u64, StreamId<LinkData>>,
-    /// If known, a link that will likely be able to forward packets to this peers node_id.
-    current_link: Option<LinkId<LinkData>>,
-    /// State of link status updates for this peer (only for client)
-    link_status_update_state: Option<PeerLinkStatusUpdateState>,
-    // Stats, per PeerConnectionDiagnosticsInfo
-    messages_sent: u64,
-    bytes_sent: u64,
-    connect_to_service_sends: u64,
-    connect_to_service_send_bytes: u64,
-    update_node_description_sends: u64,
-    update_node_description_send_bytes: u64,
-    update_link_status_sends: u64,
-    update_link_status_send_bytes: u64,
-    update_link_status_ack_sends: u64,
-    update_link_status_ack_send_bytes: u64,
-}
-
-/// Was a given stream index initiated by this end of a quic connection?
-fn is_local_quic_stream_index(stream_index: u64, is_client: bool) -> bool {
-    (stream_index & 1) == (!is_client as u64)
-}
-
-/// Describes a stream from this node to some peer.
-#[derive(Debug)]
-pub struct Stream<LinkData: Copy + Debug> {
-    /// The peer that terminates this stream.
-    peer_id: PeerId<LinkData>,
-    /// The quic stream id associated with this stream (The reverse map of Peer.streams)
-    id: u64,
-    /// The current parse state for this stream
-    read_state: ReadState,
-}
-
-/// Helper to swizzle a u64 into the wire format for zircon handles
-fn zircon_stream_id(id: u64) -> fidl_fuchsia_overnet_protocol::StreamId {
-    fidl_fuchsia_overnet_protocol::StreamId { id }
-}
-
-/// Designates the kind of stream for a read state (what kind of callback should be made
-/// when a datagram completes!)
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum StreamType {
-    PeerClientEnd(PeerState),
-    PeerServerEnd(PeerState),
-    Channel,
-    // TODO(ctiller): Socket,
-}
-
-impl StreamType {
-    // Next stream type in a stream state machine
-    fn next(&self) -> StreamType {
-        use StreamType::*;
-        match self {
-            Channel => Channel,
-            PeerClientEnd(st) => PeerClientEnd(st.next()),
-            PeerServerEnd(st) => PeerServerEnd(st.next()),
-        }
-    }
-}
-
-/// Substate of StreamType indicating how far through the client handshake we are
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum PeerState {
-    Initial,
-    Config,
-    Ready,
-}
-
-impl PeerState {
-    // Next state after a successfully interpreted datagram
-    fn next(&self) -> PeerState {
-        use PeerState::*;
-        match self {
-            Initial => Config,
-            Config => Ready,
-            Ready => Ready,
-        }
-    }
-}
-
-/// Tracks incoming bytes as they're coalesced back into datagrams
-#[derive(Debug)]
-enum ReadState {
-    /// Stream is not bound to any object: we don't know what parsers to apply to its
-    /// bytes yet, so we just buffer them up.
-    Unbound { incoming: Vec<u8> },
-    /// Stream type is known, but we don't yet know the length of the next datagram.
-    Initial { incoming: Vec<u8>, stream_type: StreamType },
-    /// Stream type is known, and the length of the next datagram has been parsed.
-    /// We do not yet know all the bytes for said datagram however.
-    Datagram { hdr: FrameHeader, incoming: Vec<u8>, stream_type: StreamType },
-    /// Stream has finished successfully.
-    FinishedOk,
-    /// Stream completed with an error.
-    /// TODO(ctiller): record the error?
-    FinishedWithError,
-    /// Only used during updating - to mark that the state update is in progress.
-    Invalid,
-}
-
-impl ReadState {
-    /// Create a new read state for a stream of a known type.
-    fn new_bound(stream_type: StreamType) -> ReadState {
-        // Check legality
-        match stream_type {
-            StreamType::Channel => (),
-            StreamType::PeerClientEnd(_) => unreachable!(),
-            StreamType::PeerServerEnd(_) => unreachable!(),
-        }
-        ReadState::Initial { incoming: Vec::new(), stream_type }
-    }
-
-    fn new_peer(client_end: bool) -> ReadState {
-        ReadState::Datagram {
-            hdr: FrameHeader { frame_type: FrameType::Data, length: 4 },
-            incoming: Vec::new(),
-            stream_type: if client_end {
-                StreamType::PeerClientEnd(PeerState::Initial)
-            } else {
-                StreamType::PeerServerEnd(PeerState::Initial)
-            },
-        }
-    }
-
-    /// Create a new read state for a stream of an unknown type.
-    fn new_unbound() -> ReadState {
-        ReadState::Unbound { incoming: Vec::new() }
-    }
-
-    /// Begin updating a read state.
-    fn take(&mut self) -> ReadState {
-        std::mem::replace(self, ReadState::Invalid)
-    }
-
-    /// Upon receiving some bytes, update state and return the new one.
-    fn recv<Got>(self, bytes: &mut [u8], mut got: Got) -> ReadState
-    where
-        Got: FnMut(StreamType, Option<(FrameType, &mut [u8])>) -> Result<(), Error>,
-    {
-        if bytes.len() == 0 {
-            return self;
-        }
-
-        log::trace!("recv bytes: state={:?} bytes={:?}", self, bytes);
-
-        match self {
-            ReadState::Unbound { mut incoming } => {
-                incoming.extend_from_slice(bytes);
-                ReadState::Unbound { incoming }
-            }
-            ReadState::Initial { mut incoming, stream_type } => {
-                // TODO(ctiller): consider specializing the fast path
-                // if incoming.len() == 0 && bytes.len() > 4 {}
-                incoming.extend_from_slice(bytes);
-                if incoming.len() >= FRAME_HEADER_LENGTH {
-                    match FrameHeader::from_bytes(incoming.as_slice()) {
-                        Ok(hdr) => ReadState::Datagram { hdr, incoming: vec![], stream_type }
-                            .recv(&mut incoming[FRAME_HEADER_LENGTH..], got),
-                        Err(e) => {
-                            log::warn!("Error reading stream: {:?}", e);
-                            got(stream_type, None).unwrap();
-                            ReadState::FinishedWithError
-                        }
-                    }
-                } else {
-                    ReadState::Initial { incoming, stream_type }
-                }
-            }
-            ReadState::Datagram { mut incoming, hdr, stream_type } => {
-                incoming.extend_from_slice(bytes);
-                if incoming.len() >= hdr.length as usize {
-                    match got(stream_type, Some((hdr.frame_type, &mut incoming[..hdr.length]))) {
-                        Ok(_) => {
-                            ReadState::Initial { incoming: vec![], stream_type: stream_type.next() }
-                                .recv(&mut incoming[hdr.length..], got)
-                        }
-                        Err(e) => {
-                            log::warn!("Error reading stream: {:?}", e);
-                            got(stream_type, None).unwrap();
-                            ReadState::FinishedWithError
-                        }
-                    }
-                } else {
-                    ReadState::Datagram { incoming, hdr, stream_type }
-                }
-            }
-            ReadState::FinishedOk => ReadState::FinishedWithError,
-            ReadState::FinishedWithError => ReadState::FinishedWithError,
-            ReadState::Invalid => unreachable!(),
-        }
-    }
-
-    /// Go from unbound -> bound when the stream type is known.
-    fn bind<Got>(self, stream_type: StreamType, got: Got) -> ReadState
-    where
-        Got: FnMut(StreamType, Option<(FrameType, &mut [u8])>) -> Result<(), Error>,
-    {
-        match self {
-            ReadState::Unbound { mut incoming } => {
-                ReadState::Initial { incoming: Vec::new(), stream_type }.recv(&mut incoming, got)
-            }
-            ReadState::Invalid => unreachable!(),
-            _ => ReadState::FinishedWithError,
-        }
-    }
-
-    /// Mark the stream as finished.
-    fn finished<Got>(self, mut got: Got) -> Self
-    where
-        Got: FnMut(),
-    {
-        match self {
-            ReadState::Initial { incoming, stream_type: _ } => {
-                got();
-                // If we didn't receive all bytes, this is an error.
-                if incoming.is_empty() {
-                    ReadState::FinishedOk
-                } else {
-                    ReadState::FinishedWithError
-                }
-            }
-            ReadState::FinishedOk => ReadState::FinishedOk,
-            ReadState::FinishedWithError => ReadState::FinishedWithError,
-            ReadState::Invalid => unreachable!(),
-            _ => {
-                got();
-                ReadState::FinishedWithError
-            }
-        }
-    }
-}
 
 /// Configuration object for creating a router.
 pub struct RouterOptions {
     node_id: Option<NodeId>,
-    quic_server_key_file: Option<Box<dyn AsRef<Path>>>,
-    quic_server_cert_file: Option<Box<dyn AsRef<Path>>>,
+    pub(crate) quic_server_key_file: Option<Box<dyn AsRef<Path>>>,
+    pub(crate) quic_server_cert_file: Option<Box<dyn AsRef<Path>>>,
+    diagnostics: Option<fidl_fuchsia_overnet_protocol::Implementation>,
 }
 
 impl RouterOptions {
     /// Create with defaults.
     pub fn new() -> Self {
-        RouterOptions { node_id: None, quic_server_key_file: None, quic_server_cert_file: None }
+        RouterOptions {
+            node_id: None,
+            quic_server_key_file: None,
+            quic_server_cert_file: None,
+            diagnostics: None,
+        }
     }
 
     /// Request a specific node id (if unset, one will be generated).
@@ -414,364 +82,257 @@ impl RouterOptions {
         self.quic_server_cert_file = Some(pem_file);
         self
     }
-}
 
-/// During flush_recvs, defines the set of callbacks that may be made to notify the containing
-/// application of updates received.
-pub trait MessageReceiver<LinkData: Copy + Debug> {
-    /// The type of handle this receiver deals with. Usually this is fidl::Handle, but for
-    /// some tests it's convenient to vary this.
-    type Handle;
-
-    /// A connection request for some channel has been made.
-    /// The new stream is `stream_id`, and the service requested is `service_name`.
-    fn connect_channel<'a>(
-        &mut self,
-        stream_id: StreamId<LinkData>,
-        service_name: &'a str,
-        connection_info: fidl_fuchsia_overnet::ConnectionInfo,
-    ) -> Result<(), Error>;
-    /// A new channel stream is created at `stream_id`.
-    fn bind_channel(&mut self, stream_id: StreamId<LinkData>) -> Result<Self::Handle, Error>;
-    /// A channel stream `stream_id` received a datagram with `bytes` and `handles`.
-    fn channel_recv(
-        &mut self,
-        stream_id: StreamId<LinkData>,
-        bytes: &mut Vec<u8>,
-        handles: &mut Vec<Self::Handle>,
-    ) -> Result<(), Error>;
-    /// A node `node_id` has updated its description to `desc`.
-    fn update_node(&mut self, node_id: NodeId, desc: NodeDescription);
-    /// A control channel has been established to node `node_id`
-    fn established_connection(&mut self, node_id: NodeId);
-    /// Gossip about a link from `from` to `to` with id `link_id` has been received.
-    /// This gossip is about version `version`, and updates the links description to
-    /// `desc`.
-    fn update_link(&mut self, from: NodeId, to: NodeId, link_id: NodeLinkId, desc: LinkDescription);
-    /// A stream `stream_id` has been closed.
-    fn close(&mut self, stream_id: StreamId<LinkData>);
-}
-
-/// When sending a datagram on a channel, contains information needed to establish streams
-/// for any handles being sent.
-pub enum SendHandle {
-    /// A handle of type channel is being sent.
-    Channel,
-}
-
-/// Router-relevant state of a link.
-/// This type is parameterized by `LinkData` which is an application defined type that
-/// lets it look up the link implementation quickly.
-#[derive(Debug)]
-pub struct Link<LinkData: Copy + Debug> {
-    /// The node on the other end of this link.
-    peer: NodeId,
-    /// The externally visible id for this link
-    id: NodeLinkId,
-    /// Track pings for this link
-    ping_tracker: PingTracker,
-    /// Track pongs for this link
-    pong_tracker: PongTracker,
-    /// The application data required to lookup this link.
-    link_data: LinkData,
-    /// Timeout generation for ping_tracker
-    timeout_generation: u64,
-    sent_packets: u64,
-    sent_bytes: u64,
-    received_packets: u64,
-    received_bytes: u64,
-    pings_sent: u64,
-    packets_forwarded: u64,
-}
-
-impl<LinkData: Copy + Debug> Link<LinkData> {
-    fn make_desc(&self) -> Option<LinkDescription> {
-        self.ping_tracker
-            .round_trip_time()
-            .map(|round_trip_time| LinkDescription { round_trip_time })
-    }
-
-    fn make_status(&self) -> Option<LinkStatus> {
-        self.make_desc().map(|desc| {
-            let round_trip_time = desc.round_trip_time.as_micros();
-            LinkStatus {
-                local_id: self.id.0,
-                to: self.peer.into(),
-                metrics: LinkMetrics {
-                    round_trip_time: Some(if round_trip_time > std::u64::MAX as u128 {
-                        std::u64::MAX
-                    } else {
-                        round_trip_time as u64
-                    }),
-                },
-            }
-        })
+    /// Enable diagnostics with a selected `implementation`.
+    pub fn export_diagnostics(
+        mut self,
+        implementation: fidl_fuchsia_overnet_protocol::Implementation,
+    ) -> Self {
+        self.diagnostics = Some(implementation);
+        self
     }
 }
 
-/// Records a timeout request at some time for some object.
-/// The last tuple element is a generation counter so we can detect expired timeouts.
-#[derive(Clone, Copy, PartialEq, Eq, Ord)]
-struct Timeout<Time: RouterTime, T>(Time, T, u64);
-
-/// Sort time ascending.
-impl<Time: RouterTime, T: Ord> PartialOrd for Timeout<Time, T> {
-    fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.0.cmp(&rhs.0).reverse().then(self.1.cmp(&rhs.1)))
-    }
-}
-
-/// The part of Router that deals only with streams and peers (but not links).
-/// Separated to make satisfying the borrow checker a little more tractable without having to
-/// write monster functions.
-struct Endpoints<LinkData: Copy + Debug, Time: RouterTime> {
-    /// Node id of this router.
+/// Router maintains global state for one node_id.
+/// `LinkData` is a token identifying a link for layers above Router.
+/// `Time` is a representation of time for the Router, to assist injecting different platforms
+/// schemes.
+pub struct Router {
+    /// Our node id
     node_id: NodeId,
-    /// All peers.
-    peers: SaltSlab<Peer<LinkData>>,
-    /// All streams.
-    streams: SaltSlab<Stream<LinkData>>,
-    /// Mapping of node id -> client oriented peer id.
-    node_to_client_peer: BTreeMap<NodeId, PeerId<LinkData>>,
-    /// Mapping of node id -> server oriented peer id.
-    node_to_server_peer: BTreeMap<NodeId, PeerId<LinkData>>,
-    /// Peers waiting to be written (has pending_writes==true).
-    write_peers: BinaryHeap<PeerId<LinkData>>,
-    /// Peers waiting to be read (has pending_reads==true).
-    read_peers: BinaryHeap<PeerId<LinkData>>,
-    /// Peers that need their timeouts checked (having check_timeout==true).
-    check_timeouts: BinaryHeap<PeerId<LinkData>>,
-    /// Client oriented peer connections that have become established.
-    newly_established_clients: BinaryHeap<NodeId>,
-    /// Client oriented peer connections that need to send initial node descriptions to.
-    need_to_send_node_description_clients: BinaryHeap<StreamId<LinkData>>,
-    /// Peers that we've heard about recently.
-    recently_mentioned_peers: Vec<(NodeId, Option<LinkId<LinkData>>)>,
-    /// Timeouts to get to at some point.
-    queued_timeouts: BinaryHeap<Timeout<Time, PeerId<LinkData>>>,
-    /// Link status updates waiting to be sent
-    link_status_updates: BinaryHeap<StreamId<LinkData>>,
-    /// Link status updates waiting to be acked
-    ack_link_status_updates: BinaryHeap<StreamId<LinkData>>,
-    /// ConfigResponse messages waiting to be written
-    config_response_needed: BTreeMap<StreamId<LinkData>, ConfigResponse>,
-    /// Configuration of the connection is complete (server has responded)
-    config_completed: BinaryHeap<PeerId<LinkData>>,
-    /// The last timestamp we saw.
-    now: Time,
-    /// The current description of our node id, formatted into a serialized description packet
-    /// so we can quickly send it at need.
-    node_desc_packet: Vec<u8>,
+    /// Factory for local link id's (the next id to be assigned).
+    next_node_link_id: AtomicU64,
     /// The servers private key file for this node.
     server_key_file: Box<dyn AsRef<Path>>,
     /// The servers private cert file for this node.
     server_cert_file: Box<dyn AsRef<Path>>,
+    /// All peers.
+    peers: Mutex<BTreeMap<(NodeId, Endpoint), Rc<Peer>>>,
+    links: Mutex<HashMap<NodeLinkId, Weak<Link>>>,
+    link_state_changed_observable: Observable<()>,
+    link_state_observable: Observable<Vec<LinkStatus>>,
+    service_map: ServiceMap,
+    routing_update_sender: RoutingUpdateSender,
+    list_peers_observer: Mutex<Option<Observer<Vec<ListablePeer>>>>,
 }
 
-impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
-    /// Update the routing table for `dest` to use `link_id`.
-    fn adjust_route(&mut self, dest: NodeId, link_id: LinkId<LinkData>) -> Result<(), Error> {
-        log::trace!("ADJUST_ROUTE: {:?} via {:?}", dest, link_id);
+/// Generate a new random node id
+pub fn generate_node_id() -> NodeId {
+    rand::thread_rng().gen::<u64>().into()
+}
 
-        let server_peer_id = self.server_peer_id(dest);
-        log::trace!("  server_peer_id = {:?}", server_peer_id);
-        if let Some(peer_id) = server_peer_id {
-            let peer = self.peers.get_mut(peer_id).unwrap();
-            if peer.current_link.is_none() && !peer.pending_writes {
-                log::trace!("Mark writable: {:?}", peer_id);
-                peer.pending_writes = true;
-                self.write_peers.push(peer_id);
-            }
-            peer.current_link = Some(link_id);
+impl Router {
+    /// New with some set of options
+    pub fn new(options: RouterOptions) -> Result<Rc<Self>, Error> {
+        let node_id = options.node_id.unwrap_or_else(generate_node_id);
+        let server_cert_file = options
+            .quic_server_cert_file
+            .ok_or_else(|| anyhow::format_err!("No server cert file"))?;
+        if !server_cert_file.as_ref().as_ref().exists() {
+            anyhow::bail!(
+                "Server cert file does not exist: {}",
+                server_cert_file.as_ref().as_ref().display()
+            );
         }
-        let peer_id = self.client_peer_id(dest, Some(link_id))?;
-        let peer = self.peers.get_mut(peer_id).unwrap();
-        log::trace!("  client_peer_id = {:?}", peer_id);
-        peer.current_link = Some(link_id);
-        Ok(())
+        let server_key_file = options
+            .quic_server_key_file
+            .ok_or_else(|| anyhow::format_err!("No server key file"))?;
+        if !server_key_file.as_ref().as_ref().exists() {
+            anyhow::bail!(
+                "Server key file does not exist: {}",
+                server_key_file.as_ref().as_ref().display()
+            );
+        }
+        let (routing_update_sender, routing_update_receiver) = routing_update_channel();
+        let service_map = ServiceMap::new(node_id);
+        let list_peers_observer = Mutex::new(Some(service_map.new_list_peers_observer()));
+        let router = Rc::new(Router {
+            node_id,
+            next_node_link_id: 1.into(),
+            server_cert_file,
+            server_key_file,
+            routing_update_sender,
+            link_state_changed_observable: Observable::new(()),
+            link_state_observable: Observable::new(Vec::new()),
+            service_map,
+            links: Mutex::new(HashMap::new()),
+            peers: Mutex::new(BTreeMap::new()),
+            list_peers_observer,
+        });
+
+        spawn_route_planner(router.clone(), routing_update_receiver);
+        spawn_link_status_updater(&router, router.link_state_changed_observable.new_observer());
+        // Spawn a future to service diagnostic requests
+        if let Some(implementation) = options.diagnostics {
+            spawn_diagostic_service_request_handler(router.clone(), implementation);
+        }
+        Ok(router)
+    }
+
+    /// Create a new link to some node, returning a `LinkId` describing it.
+    pub async fn new_link(self: &Rc<Self>, peer_node_id: NodeId) -> Result<Rc<Link>, Error> {
+        let node_link_id = self.next_node_link_id.fetch_add(1, Ordering::Relaxed).into();
+        let link = Link::new(peer_node_id, node_link_id, &self).await?;
+        let routing_update_sender = self.routing_update_sender.clone();
+        // Spawn a task to move link status to the
+        spawn(link.new_description_observer().for_each(move |description| {
+            let mut routing_update_sender = routing_update_sender.clone();
+            async move {
+                if let Err(e) = routing_update_sender
+                    .send(RoutingUpdate::UpdateLocalLinkStatus {
+                        to_node_id: peer_node_id,
+                        link_id: node_link_id,
+                        description,
+                    })
+                    .await
+                {
+                    log::warn!("Failed publishing local link state: {:?}", e);
+                }
+            }
+        }));
+        Ok(link)
+    }
+
+    /// Accessor for the node id of this router.
+    pub fn node_id(&self) -> NodeId {
+        self.node_id
+    }
+
+    pub(crate) fn service_map(&self) -> &ServiceMap {
+        &self.service_map
     }
 
     /// Create a new stream to advertised service `service` on remote node id `node`.
-    fn new_stream(&mut self, node: NodeId, service: &str) -> Result<StreamId<LinkData>, Error> {
-        assert_ne!(node, self.node_id);
-        let peer_id = self.client_peer_id(node, None)?;
-        let peer = self.peers.get_mut(peer_id).unwrap();
-        let id = peer
-            .next_stream
-            .checked_shl(2)
-            .ok_or_else(|| anyhow::format_err!("Too many streams"))?;
-        peer.next_stream += 1;
-        let connection_stream_id = peer.connection_stream_id;
-        let stream_id = self.streams.insert(Stream {
-            peer_id,
-            id,
-            read_state: ReadState::new_bound(StreamType::Channel),
-        });
-        peer.streams.insert(id, stream_id);
-        let err = fidl::encoding::with_tls_encoded(
-            &mut PeerMessage::ConnectToService(ConnectToService {
-                service_name: service.to_string(),
-                stream_id: id,
-                options: ConnectToServiceOptions {},
-            }),
-            |mut bytes: &mut Vec<u8>, handles: &mut Vec<fidl::Handle>| {
-                if handles.len() > 0 {
-                    return Err(anyhow::format_err!("Expected no handles"));
-                }
-                self.queue_send_bytes(
-                    connection_stream_id,
-                    Some(FrameType::Data),
-                    &mut bytes,
-                    false,
-                    |peer, messages, bytes| {
-                        peer.connect_to_service_sends += messages;
-                        peer.connect_to_service_send_bytes += bytes;
-                    },
-                )
-            },
-        );
-        match err {
-            Ok(()) => Ok(stream_id),
-            Err(e) => {
-                if let Some(peer) = self.peers.get_mut(peer_id) {
-                    peer.streams.remove(&id);
-                }
-                self.streams.remove(stream_id);
-                Err(e)
-            }
-        }
-    }
-
-    /// Regenerate our description packet and send it to all peers.
-    fn publish_node_description(&mut self, services: Vec<String>) -> Result<(), Error> {
-        self.node_desc_packet = make_desc_packet(services)?;
-        let stream_ids: Vec<StreamId<LinkData>> = self
-            .peers
-            .iter_mut()
-            .map(|(_peer_id, peer)| peer)
-            .filter(|peer| peer.is_client && peer.conn.0.is_established())
-            .map(|peer| peer.connection_stream_id)
-            .collect();
-        for stream_id in stream_ids {
-            let mut desc = self.node_desc_packet.clone();
-            if let Err(e) = self.queue_send_bytes(
-                stream_id,
-                Some(FrameType::Data),
-                &mut desc,
-                false,
-                |peer, messages, bytes| {
-                    peer.update_node_description_sends += messages;
-                    peer.update_node_description_send_bytes += bytes;
-                },
-            ) {
-                log::warn!("Failed to send datagram: {:?}", e);
-            }
-        }
-        Ok(())
-    }
-
-    /// Send a datagram on a channel type stream.
-    fn queue_send_channel_message(
-        &mut self,
-        stream_id: StreamId<LinkData>,
-        bytes: Vec<u8>,
-        handles: Vec<SendHandle>,
-        update_stats: impl Fn(&mut Peer<LinkData>, u64, u64),
-    ) -> Result<Vec<StreamId<LinkData>>, Error> {
-        let stream = self
-            .streams
-            .get(stream_id)
-            .ok_or_else(|| anyhow::format_err!("Stream not found {:?}", stream_id))?;
-        let peer_id = stream.peer_id;
-        let peer = self
-            .peers
-            .get_mut(peer_id)
-            .ok_or_else(|| anyhow::format_err!("Peer not found {:?}", peer_id))?;
-        let streams = &mut self.streams;
-        let (handles, stream_ids): (Vec<_>, Vec<_>) = handles
-            .into_iter()
-            .map(|h| {
-                let id = peer.next_stream << 2;
-                peer.next_stream += 1;
-                let (send, stream_type) = match h {
-                    SendHandle::Channel => (
-                        ZirconHandle::Channel(ChannelHandle { stream_id: zircon_stream_id(id) }),
-                        StreamType::Channel,
-                    ),
-                };
-                let stream_id = streams.insert(Stream {
-                    peer_id,
-                    id,
-                    read_state: ReadState::new_bound(stream_type),
-                });
-                peer.streams.insert(id, stream_id);
-                (send, stream_id)
-            })
-            .unzip();
-        fidl::encoding::with_tls_encoded(
-            &mut ZirconChannelMessage { bytes, handles },
-            |bytes, handles| {
-                if handles.len() != 0 {
-                    return Err(anyhow::format_err!("Unexpected handles in encoding"));
-                }
-                self.queue_send_bytes(stream_id, Some(FrameType::Data), bytes, false, update_stats)
-            },
-        )?;
-        Ok(stream_ids)
-    }
-
-    /// Send a datagram on a stream.
-    fn queue_send_bytes(
-        &mut self,
-        stream_id: StreamId<LinkData>,
-        frame_type: Option<FrameType>,
-        bytes: &mut [u8],
-        fin: bool,
-        update_stats: impl Fn(&mut Peer<LinkData>, u64, u64),
+    pub async fn connect_to_service(
+        self: &Rc<Self>,
+        node_id: NodeId,
+        service_name: &str,
+        chan: Channel,
     ) -> Result<(), Error> {
+        let is_local = node_id == self.node_id;
         log::trace!(
-            "{:?} queue_send: stream_id={:?} frame={:?} fin={:?}",
-            self.node_id,
-            stream_id,
-            bytes,
-            fin
+            "Request connect_to_service '{}' on {:?}{}",
+            service_name,
+            node_id,
+            if is_local { " [local]" } else { " [remote]" }
         );
-        let stream = self
-            .streams
-            .get(stream_id)
-            .ok_or_else(|| anyhow::format_err!("Stream not found {:?}", stream_id))?;
-        log::trace!("  peer_id={:?} stream_index={}", stream.peer_id, stream.id);
-        let peer_id = stream.peer_id;
-        let peer = self
-            .peers
-            .get_mut(peer_id)
-            .ok_or_else(|| anyhow::format_err!("Peer not found {:?}", peer_id))?;
-        log::trace!("  node_id={:?}", peer.node_id);
-        if let Some(frame_type) = frame_type {
-            let frame_len = bytes.len();
-            assert!(frame_len <= 0xffff_ffff);
-            let header = FrameHeader { frame_type, length: frame_len }.to_bytes()?;
-            peer.conn
-                .0
-                .stream_send(stream.id, &header, false)
-                .with_context(|| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
-            update_stats(peer, 1u64, header.len() as u64);
+        if is_local {
+            self.service_map()
+                .connect(service_name, chan, ConnectionInfo { peer: Some(node_id.into()) })
+                .await
+        } else {
+            self.client_peer(node_id, &Weak::new())
+                .await
+                .with_context(|| {
+                    format_err!(
+                        "Fetching client peer for new stream to {:?} for service {:?}",
+                        node_id,
+                        service_name,
+                    )
+                })?
+                .new_stream(service_name, chan)
+                .await
         }
-        peer.conn
-            .0
-            .stream_send(stream.id, bytes, fin)
-            .with_context(|| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
-        update_stats(peer, 0u64, bytes.len() as u64);
-        if !peer.pending_writes {
-            log::trace!("Mark writable: {:?}", stream.peer_id);
-            peer.pending_writes = true;
-            self.write_peers.push(stream.peer_id);
-        }
-        if !peer.check_timeout {
-            peer.check_timeout = true;
-            self.check_timeouts.push(stream.peer_id);
-        }
+    }
+
+    /// Implementation of RegisterService fidl method.
+    pub async fn register_service(
+        &self,
+        service_name: String,
+        provider: ClientEnd<ServiceProviderMarker>,
+    ) -> Result<(), Error> {
+        self.service_map().register_service(service_name, Box::new(provider.into_proxy()?)).await;
         Ok(())
+    }
+
+    /// Implementation of ListPeers fidl method.
+    pub async fn list_peers(
+        self: &Rc<Self>,
+        sink: Box<dyn FnOnce(Vec<fidl_fuchsia_overnet::Peer>)>,
+    ) -> Result<(), Error> {
+        let mut obs = self
+            .list_peers_observer
+            .lock()
+            .await
+            .take()
+            .ok_or_else(|| anyhow::format_err!("Already listing peers"))?;
+        let router = self.clone();
+        spawn(async move {
+            if let Some(r) = obs.next().await {
+                *router.list_peers_observer.lock().await = Some(obs);
+                sink(r.into_iter().map(|p| p.into()).collect());
+            } else {
+                *router.list_peers_observer.lock().await = Some(obs);
+            }
+        });
+        Ok(())
+    }
+
+    /// Implementation of AttachToSocket fidl method.
+    pub fn attach_socket_link(
+        self: &Rc<Self>,
+        socket: fidl::Socket,
+        options: fidl_fuchsia_overnet::SocketLinkOptions,
+    ) -> Result<(), Error> {
+        let duration_per_byte = if let Some(n) = options.bytes_per_second {
+            Some(std::cmp::max(
+                Duration::from_micros(10),
+                Duration::from_secs(1)
+                    .checked_div(n)
+                    .ok_or_else(|| anyhow::format_err!("Division failed: 1 second / {}", n))?,
+            ))
+        } else {
+            None
+        };
+        spawn_socket_link(
+            self.clone(),
+            self.node_id,
+            options.connection_label,
+            socket,
+            duration_per_byte,
+        );
+        Ok(())
+    }
+
+    /// Diagnostic information for links
+    pub(crate) async fn link_diagnostics(&self) -> Vec<LinkDiagnosticInfo> {
+        self.links
+            .lock()
+            .await
+            .iter()
+            .filter_map(|(_, link)| Weak::upgrade(link).map(|link| link.diagnostic_info()))
+            .collect()
+    }
+
+    pub(crate) async fn add_link(&self, link: &Rc<Link>) {
+        self.links.lock().await.insert(link.id(), Rc::downgrade(link));
+        self.schedule_link_status_update();
+    }
+
+    pub(crate) fn schedule_link_status_update(&self) {
+        self.link_state_changed_observable.push(());
+    }
+
+    pub(crate) async fn publish_new_link_status(&self) {
+        let mut status = Vec::new();
+        let mut dead = Vec::new();
+        let mut links = self.links.lock().await;
+        for (id, link) in links.iter() {
+            if let Some(link) = Weak::upgrade(link) {
+                link.make_status().map(|s| status.push(s));
+            } else {
+                dead.push(*id);
+            }
+        }
+        for id in dead {
+            links.remove(&id);
+        }
+        self.link_state_observable.push(status);
+    }
+
+    /// Diagnostic information for peer connections
+    pub(crate) async fn peer_diagnostics(&self) -> Vec<PeerConnectionDiagnosticInfo> {
+        self.peers.lock().await.iter().map(|(_, peer)| peer.diagnostics(self.node_id)).collect()
     }
 
     fn server_config(&self) -> Result<quiche::Config, Error> {
@@ -782,13 +343,13 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             .as_ref()
             .as_ref()
             .to_str()
-            .ok_or_else(|| anyhow::format_err!("Cannot convert path to string"))?;
+            .ok_or_else(|| format_err!("Cannot convert path to string"))?;
         let key_file = self
             .server_key_file
             .as_ref()
             .as_ref()
             .to_str()
-            .ok_or_else(|| anyhow::format_err!("Cannot convert path to string"))?;
+            .ok_or_else(|| format_err!("Cannot convert path to string"))?;
         config
             .load_cert_chain_from_pem_file(cert_file)
             .context(format!("Loading server certificate '{}'", cert_file))?;
@@ -821,1451 +382,115 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
         Ok(config)
     }
 
-    /// Receive a packet from some link.
-    fn queue_recv(
-        &mut self,
-        link_id: LinkId<LinkData>,
-        routing_label: RoutingLabel,
-        packet: &mut [u8],
-    ) -> Result<(), Error> {
-        let (peer_id, forward) = match (routing_label.to_client, routing_label.dst == self.node_id)
-        {
-            (false, true) => {
-                let hdr = quiche::Header::from_slice(packet, quiche::MAX_CONN_ID_LEN)
-                    .context("Decoding quic header")?;
-
-                if hdr.ty == quiche::Type::VersionNegotiation {
-                    return Err(anyhow::format_err!("Version negotiation invalid on the server"));
-                }
-
-                // If we're asked for a server connection, we should create a client connection
-                self.ensure_client_peer_id(routing_label.src, Some(link_id))?;
-
-                if let Some(server_peer_id) = self.server_peer_id(routing_label.src) {
-                    (server_peer_id, false)
-                } else if hdr.ty == quiche::Type::Initial {
-                    let mut config = self.server_config()?;
-                    let scid: Vec<u8> = rand::thread_rng()
-                        .sample_iter(&rand::distributions::Standard)
-                        .take(quiche::MAX_CONN_ID_LEN)
-                        .collect();
-                    let conn = PeerConn(
-                        quiche::accept(&scid, None, &mut config)
-                            .context("Creating quic server connection")?,
-                    );
-                    let connection_stream_id = self.streams.insert(Stream {
-                        peer_id: PeerId::invalid(),
-                        id: 0,
-                        read_state: ReadState::new_peer(false),
-                    });
-                    let mut streams = BTreeMap::new();
-                    streams.insert(0, connection_stream_id);
-                    let peer_id = self.peers.insert(Peer {
-                        conn,
-                        next_stream: 1,
-                        node_id: routing_label.src,
-                        current_link: Some(link_id),
-                        is_client: false,
-                        pending_reads: false,
-                        pending_writes: true,
-                        check_timeout: false,
-                        establishing: true,
-                        timeout_generation: 0,
-                        forward: Vec::new(),
-                        streams,
-                        connection_stream_id,
-                        link_status_update_state: None,
-                        messages_sent: 0,
-                        bytes_sent: 0,
-                        connect_to_service_sends: 0,
-                        connect_to_service_send_bytes: 0,
-                        update_node_description_sends: 0,
-                        update_node_description_send_bytes: 0,
-                        update_link_status_sends: 0,
-                        update_link_status_send_bytes: 0,
-                        update_link_status_ack_sends: 0,
-                        update_link_status_ack_send_bytes: 0,
-                        config: None,
-                    });
-                    self.streams.get_mut(connection_stream_id).unwrap().peer_id = peer_id;
-                    self.node_to_server_peer.insert(routing_label.src, peer_id);
-                    self.write_peers.push(peer_id);
-                    (peer_id, false)
-                } else {
-                    return Err(anyhow::format_err!(
-                        "No server for link {:?}, and not an Initial packet",
-                        link_id
-                    ));
-                }
-            }
-            (true, true) => (self.client_peer_id(routing_label.src, Some(link_id))?, false),
-            (false, false) => {
-                // If we're asked to forward a packet, we should have client connections to each end
-                self.ensure_client_peer_id(routing_label.src, Some(link_id))?;
-                self.ensure_client_peer_id(routing_label.dst, None)?;
-                let peer_id = self.server_peer_id(routing_label.dst).ok_or_else(|| {
-                    anyhow::format_err!("Node server peer not found for {:?}", routing_label.dst)
-                })?;
-                (peer_id, true)
-            }
-            (true, false) => {
-                let peer_id = self.client_peer_id(routing_label.dst, Some(link_id))?;
-                (peer_id, true)
-            }
-        };
-
-        // Guaranteed correct ID by peer_index above.
-        let peer = self.peers.get_mut(peer_id).unwrap();
-        if forward {
-            log::trace!("FORWARD: {:?}", routing_label);
-            peer.forward.push((routing_label, packet.to_vec()));
-        } else {
-            peer.conn.0.recv(packet).context("Receiving packet on quic connection")?;
-            if !peer.pending_reads {
-                log::trace!("{:?} Mark readable: {:?}", self.node_id, peer_id);
-                peer.pending_reads = true;
-                self.read_peers.push(peer_id);
-            }
-            if peer.establishing && peer.conn.0.is_established() {
-                peer.establishing = false;
-                if peer.is_client {
-                    self.need_to_send_node_description_clients.push(peer.connection_stream_id);
-                }
-            }
+    pub(crate) async fn send_routing_update(&self, routing_update: RoutingUpdate) {
+        if let Err(e) = self.routing_update_sender.clone().send(routing_update).await {
+            log::warn!("Routing update send failed: {:?}", e);
         }
-        if !peer.pending_writes {
-            log::trace!("{:?} Mark writable: {:?}", self.node_id, peer_id);
-            peer.pending_writes = true;
-            self.write_peers.push(peer_id);
-        }
-        if !peer.check_timeout {
-            peer.check_timeout = true;
-            self.check_timeouts.push(peer_id);
-        }
-
-        Ok(())
-    }
-
-    /// Process all received packets and make callbacks depending on what was contained in them.
-    fn flush_recvs<Got>(&mut self, got: &mut Got)
-    where
-        Got: MessageReceiver<LinkData>,
-    {
-        let mut buf = [0_u8; MAX_RECV_LEN];
-
-        while let Some(peer_id) = self.read_peers.pop() {
-            if let Err(e) = self.recv_from_peer_id(peer_id, &mut buf, got) {
-                log::warn!("Error receiving packet: {:?}", e);
-                unimplemented!();
-            }
-        }
-
-        while let Some(node_id) = self.newly_established_clients.pop() {
-            got.established_connection(node_id);
-        }
-    }
-
-    /// Helper for flush_recvs to process incoming packets from one peer.
-    fn recv_from_peer_id<Got>(
-        &mut self,
-        peer_id: PeerId<LinkData>,
-        buf: &mut [u8],
-        got: &mut Got,
-    ) -> Result<(), Error>
-    where
-        Got: MessageReceiver<LinkData>,
-    {
-        log::trace!("{:?} flush_recvs {:?}", self.node_id, peer_id);
-        let mut peer = self
-            .peers
-            .get_mut(peer_id)
-            .ok_or_else(|| anyhow::format_err!("Peer not found {:?}", peer_id))?;
-        assert!(peer.pending_reads);
-        peer.pending_reads = false;
-        // TODO(ctiller): We currently copy out the readable streams here just to satisfy the
-        // bounds checker. Find a way to avoid this wasteful allocation.
-        let readable: Vec<u64> = peer.conn.0.readable().collect();
-        for stream_index in readable {
-            log::trace!("{:?}   stream {} is readable", self.node_id, stream_index);
-            let mut stream_id = peer.streams.get(&stream_index).copied();
-            if stream_id.is_none() {
-                if !is_local_quic_stream_index(stream_index, peer.is_client) {
-                    stream_id = Some(self.streams.insert(Stream {
-                        peer_id,
-                        id: stream_index,
-                        read_state: ReadState::new_unbound(),
-                    }));
-                    peer.streams.insert(stream_index, stream_id.unwrap());
-                } else {
-                    // Getting here means a stream originating from this Overnet node was created
-                    // without the creation of a peer stream: this is a bug, and this branch should
-                    // never be reached.
-                    unreachable!();
-                }
-            }
-            let mut rs = self
-                .streams
-                .get_mut(stream_id.unwrap())
-                .ok_or_else(|| anyhow::format_err!("Stream not found {:?}", stream_id))?
-                .read_state
-                .take();
-            let remove = loop {
-                match peer.conn.0.stream_recv(stream_index, buf) {
-                    Ok((n, fin)) => {
-                        let mut recv_message_context = RecvMessageContext {
-                            node_id: self.node_id,
-                            got,
-                            peer_id,
-                            peer: &mut peer,
-                            stream_id: stream_id.unwrap(),
-                            stream_index,
-                            streams: &mut self.streams,
-                            recently_mentioned_peers: &mut self.recently_mentioned_peers,
-                            link_status_updates: &mut self.link_status_updates,
-                            ack_link_status_updates: &mut self.ack_link_status_updates,
-                            config_response_needed: &mut self.config_response_needed,
-                            config_completed: &mut self.config_completed,
-                            newly_established_clients: &mut self.newly_established_clients,
-                        };
-                        rs = rs.recv(
-                            &mut buf[..n],
-                            |stream_type: StreamType, message: Option<(FrameType, &mut [u8])>| {
-                                recv_message_context.recv(stream_type, message)
-                            },
-                        );
-                        if fin {
-                            rs = rs.finished(|| {
-                                recv_message_context.got.close(recv_message_context.stream_id)
-                            });
-                        }
-                    }
-                    Err(quiche::Error::Done) => break false,
-                    _ => unimplemented!(),
-                }
-            };
-            self.streams
-                .get_mut(stream_id.unwrap())
-                .ok_or_else(|| anyhow::format_err!("Stream not found {:?}", stream_id))?
-                .read_state = rs;
-            if remove {
-                unimplemented!();
-            }
-        }
-        Ok(())
     }
 
     /// Ensure that a client peer id exists for a given `node_id`
     /// If the client peer needs to be created, `link_id_hint` will be used as an interim hint
     /// as to the best route *to* this node, until a full routing update can be performed.
-    fn ensure_client_peer_id(
-        &mut self,
+    pub(crate) async fn ensure_client_peer(
+        self: &Rc<Self>,
         node_id: NodeId,
-        link_id_hint: Option<LinkId<LinkData>>,
+        link_hint: &Weak<Link>,
     ) -> Result<(), Error> {
-        self.client_peer_id(node_id, link_id_hint).map(|_| ())
+        if node_id == self.node_id {
+            return Ok(());
+        }
+        self.client_peer(node_id, link_hint).await.map(|_| ())
     }
 
     /// Map a node id to the client peer id. Since we can always create a client peer, this will
     /// attempt to initiate a connection if there is no current connection.
     /// If the client peer needs to be created, `link_id_hint` will be used as an interim hint
     /// as to the best route *to* this node, until a full routing update can be performed.
-    fn client_peer_id(
-        &mut self,
+    pub(crate) async fn client_peer(
+        self: &Rc<Self>,
         node_id: NodeId,
-        link_id_hint: Option<LinkId<LinkData>>,
-    ) -> Result<PeerId<LinkData>, Error> {
-        if let Some(peer_id) = self.node_to_client_peer.get(&node_id) {
-            log::trace!("Existing client: {:?}", node_id);
-            return Ok(*peer_id);
+        link_hint: &Weak<Link>,
+    ) -> Result<Rc<Peer>, Error> {
+        if node_id == self.node_id {
+            bail!("Trying to create loopback client peer");
         }
-
-        log::trace!("New client: {:?}", node_id);
+        let key = (node_id, Endpoint::Client);
+        let mut peers = self.peers.lock().await;
+        if let Some(p) = peers.get(&key) {
+            return Ok(p.clone());
+        }
 
         let mut config = self.client_config()?;
         let scid: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
-        let conn = PeerConn(
-            quiche::connect(None, &scid, &mut config).context("creating quic client connection")?,
-        );
-        let connection_stream_id = self.streams.insert(Stream {
-            peer_id: PeerId::invalid(),
-            id: 0,
-            read_state: ReadState::new_peer(true),
-        });
-        let mut streams = BTreeMap::new();
-        streams.insert(0, connection_stream_id);
-        let peer_id = self.peers.insert(Peer {
-            conn,
-            next_stream: 1,
+        let p = Peer::new_client(
             node_id,
-            current_link: link_id_hint,
-            is_client: true,
-            pending_reads: false,
-            pending_writes: true,
-            check_timeout: false,
-            establishing: true,
-            timeout_generation: 0,
-            forward: Vec::new(),
-            streams,
-            connection_stream_id,
-            link_status_update_state: Some(PeerLinkStatusUpdateState::Sent),
-            messages_sent: 0,
-            bytes_sent: 0,
-            connect_to_service_sends: 0,
-            connect_to_service_send_bytes: 0,
-            update_node_description_sends: 0,
-            update_node_description_send_bytes: 0,
-            update_link_status_sends: 0,
-            update_link_status_send_bytes: 0,
-            update_link_status_ack_sends: 0,
-            update_link_status_ack_send_bytes: 0,
-            config: None,
-        });
-        self.streams.get_mut(connection_stream_id).unwrap().peer_id = peer_id;
-        self.node_to_client_peer.insert(node_id, peer_id);
-        self.write_peers.push(peer_id);
-        Ok(peer_id)
+            quiche::connect(None, &scid, &mut config).context("creating quic client connection")?,
+            link_hint,
+            self.link_state_observable.new_observer(),
+            self.service_map.new_local_service_observer(),
+        )
+        .context("creating client peer")?;
+        peers.insert(key, p.clone());
+        Ok(p)
     }
 
     /// Retrieve an existing server peer id for some node id.
-    fn server_peer_id(&mut self, node_id: NodeId) -> Option<PeerId<LinkData>> {
-        self.node_to_server_peer.get(&node_id).copied()
-    }
-
-    /// Update timers.
-    fn update_time(&mut self, tm: Time) {
-        self.now = tm;
-        while let Some(Timeout(when, peer_id, timeout_generation)) = self.queued_timeouts.pop() {
-            if tm < when {
-                self.queued_timeouts.push(Timeout(when, peer_id, timeout_generation));
-                break;
-            }
-            if let Some(peer) = self.peers.get_mut(peer_id) {
-                if peer.timeout_generation != timeout_generation {
-                    continue;
-                }
-                log::trace!(
-                    "{:?} expire peer timeout {:?} gen={}",
-                    self.node_id,
-                    peer_id,
-                    timeout_generation
-                );
-                peer.conn.0.on_timeout();
-                if !peer.check_timeout {
-                    peer.check_timeout = true;
-                    self.check_timeouts.push(peer_id);
-                }
-                if !peer.pending_writes {
-                    peer.pending_writes = true;
-                    self.write_peers.push(peer_id);
-                }
-                if peer.establishing && peer.conn.0.is_established() {
-                    peer.establishing = false;
-                    if peer.is_client {
-                        self.need_to_send_node_description_clients.push(peer.connection_stream_id);
-                    }
-                }
-            }
+    pub(crate) async fn server_peer(
+        self: &Rc<Self>,
+        node_id: NodeId,
+        is_initial_packet: bool,
+        link_hint: &Weak<Link>,
+    ) -> Result<Option<Rc<Peer>>, Error> {
+        if node_id == self.node_id {
+            bail!("Trying to create loopback server peer");
         }
-    }
-
-    /// Calculate when the next timeout should be triggered.
-    fn next_timeout(&mut self) -> Option<Time> {
-        while let Some(peer_id) = self.check_timeouts.pop() {
-            if let Some(peer) = self.peers.get_mut(peer_id) {
-                assert!(peer.check_timeout);
-                peer.check_timeout = false;
-                peer.timeout_generation += 1;
-                if let Some(duration) = peer.conn.0.timeout() {
-                    let when = Time::after(self.now, duration.into());
-                    log::trace!(
-                        "{:?} queue timeout in {:?} in {:?} [gen={}]",
-                        self.node_id,
-                        peer_id,
-                        duration,
-                        peer.timeout_generation
-                    );
-                    self.queued_timeouts.push(Timeout(when, peer_id, peer.timeout_generation));
-                }
-            }
-        }
-        self.queued_timeouts.peek().map(|Timeout(when, _, _)| *when)
-    }
-}
-
-/// Maximum length of a received packet from quic.
-const MAX_RECV_LEN: usize = 1500;
-
-/// Helper to receive one message.
-/// Borrows of all relevant data structures from Endpoints (but only them).
-struct RecvMessageContext<'a, Got, LinkData: Copy + Debug> {
-    node_id: NodeId,
-    got: &'a mut Got,
-    peer_id: PeerId<LinkData>,
-    peer: &'a mut Peer<LinkData>,
-    stream_index: u64,
-    stream_id: StreamId<LinkData>,
-    streams: &'a mut SaltSlab<Stream<LinkData>>,
-    recently_mentioned_peers: &'a mut Vec<(NodeId, Option<LinkId<LinkData>>)>,
-    link_status_updates: &'a mut BinaryHeap<StreamId<LinkData>>,
-    ack_link_status_updates: &'a mut BinaryHeap<StreamId<LinkData>>,
-    config_response_needed: &'a mut BTreeMap<StreamId<LinkData>, ConfigResponse>,
-    config_completed: &'a mut BinaryHeap<PeerId<LinkData>>,
-    newly_established_clients: &'a mut BinaryHeap<NodeId>,
-}
-
-impl<'a, Got, LinkData: Copy + Debug> RecvMessageContext<'a, Got, LinkData>
-where
-    Got: MessageReceiver<LinkData>,
-{
-    /// Receive a datagram, parse it, and dispatch it to the right methods.
-    /// message==None => end of stream.
-    fn recv(
-        &mut self,
-        stream_type: StreamType,
-        message: Option<(FrameType, &mut [u8])>,
-    ) -> Result<(), Error> {
-        log::trace!(
-            "{:?} Peer {:?} {:?} stream {:?} type {:?} index {} gets {:?}",
-            self.node_id,
-            self.peer_id,
-            self.peer.node_id,
-            self.stream_id,
-            stream_type,
-            self.stream_index,
-            message
-        );
-
-        match (stream_type, message) {
-            (StreamType::PeerClientEnd(_), None) => {
-                return Err(anyhow::format_err!("Peer control stream closed on client"))
-            }
-            (StreamType::PeerServerEnd(_), None) => {
-                return Err(anyhow::format_err!("Peer control stream closed on server"))
-            }
-            (_, None) => {
-                self.got.close(self.stream_id);
-                Ok(())
-            }
-            (StreamType::Channel, Some((FrameType::Data, bytes))) => {
-                let mut msg = decode_fidl::<ZirconChannelMessage>(bytes)?;
-                let mut handles = Vec::new();
-                for unbound in msg.handles.into_iter() {
-                    let bound = match unbound {
-                        ZirconHandle::Channel(ChannelHandle { stream_id: stream_index }) => self
-                            .bind_stream(
-                                StreamType::Channel,
-                                stream_index.id,
-                                |stream_id, got| got.bind_channel(stream_id),
-                            )?,
-                        ZirconHandle::Socket(_) => unimplemented!(),
-                    };
-                    handles.push(bound);
-                }
-                self.got.channel_recv(self.stream_id, &mut msg.bytes, &mut handles)
-            }
-            (StreamType::PeerServerEnd(PeerState::Initial), Some((FrameType::Data, bytes))) => {
-                assert_eq!(bytes.len(), 4);
-                if bytes[3] != fidl::encoding::MAGIC_NUMBER_INITIAL {
-                    anyhow::bail!(
-                        "Invalid fidl magic number: {} vs {}",
-                        bytes[3],
-                        fidl::encoding::MAGIC_NUMBER_INITIAL
-                    );
-                }
-                if bytes[0] != 0 || bytes[1] != 0 || bytes[2] != 0 {
-                    return Err(anyhow::format_err!("Expected all zeros for flags"));
-                }
-                Ok(())
-            }
-            (StreamType::PeerClientEnd(PeerState::Initial), Some((FrameType::Data, bytes))) => {
-                assert_eq!(bytes.len(), 4);
-                if bytes[3] != fidl::encoding::MAGIC_NUMBER_INITIAL {
-                    anyhow::bail!(
-                        "Invalid fidl magic number: {} vs {}",
-                        bytes[3],
-                        fidl::encoding::MAGIC_NUMBER_INITIAL
-                    );
-                }
-                if bytes[0] != 0 || bytes[1] != 0 || bytes[2] != 0 {
-                    return Err(anyhow::format_err!("Expected all zeros for flags"));
-                }
-                Ok(())
-            }
-            (StreamType::PeerServerEnd(PeerState::Config), Some((FrameType::Data, bytes))) => {
-                let msg = decode_fidl::<ConfigRequest>(bytes).context("Decoding ConfigRequest")?;
-                log::trace!("{:?} Got config request: {:?}", self.node_id, msg);
-                let (config, response) = Config::negotiate(msg);
-                self.peer.config = Some(config);
-                self.config_response_needed.insert(self.stream_id, response);
-                Ok(())
-            }
-            (StreamType::PeerClientEnd(PeerState::Config), Some((FrameType::Data, bytes))) => {
-                let msg =
-                    decode_fidl::<ConfigResponse>(bytes).context("Decoding ConfigResponse")?;
-                log::trace!("{:?} Got config reply: {:?}", self.node_id, msg);
-                self.peer.config = Some(Config::from_response(msg));
-                self.config_completed.push(self.peer_id);
-                self.newly_established_clients.push(self.peer.node_id);
-                Ok(())
-            }
-            (StreamType::PeerServerEnd(PeerState::Ready), Some((FrameType::Data, bytes))) => {
-                let msg = decode_fidl::<PeerMessage>(bytes).context("Decoding PeerMessage")?;
-                log::trace!("{:?} Got peer message: {:?}", self.node_id, msg);
-                match msg {
-                    PeerMessage::ConnectToService(ConnectToService {
-                        service_name: service,
-                        stream_id: new_stream_index,
-                        options: _,
-                    }) => {
-                        log::trace!(
-                            "Log new connection request: peer {:?} new_stream_index {:?} service: {}",
-                            self.peer_id,
-                            new_stream_index,
-                            service
-                        );
-                        let peer_node_id = self.peer.node_id;
-                        self.bind_stream(StreamType::Channel, new_stream_index, |stream_id, got| {
-                            got.connect_channel(
-                                stream_id,
-                                &service,
-                                fidl_fuchsia_overnet::ConnectionInfo {
-                                    peer: Some(peer_node_id.into()),
-                                },
-                            )
-                        })
-                    }
-                    PeerMessage::UpdateNodeDescription(PeerDescription { services }) => {
-                        self.got.update_node(
-                            self.peer.node_id,
-                            NodeDescription { services: services.unwrap_or(vec![]) },
-                        );
-                        Ok(())
-                    }
-                    PeerMessage::UpdateLinkStatus(UpdateLinkStatus { link_status }) => {
-                        self.ack_link_status_updates.push(self.stream_id);
-                        for LinkStatus { to, local_id, metrics, .. } in link_status {
-                            let to: NodeId = to.id.into();
-                            self.recently_mentioned_peers.push((to, self.peer.current_link));
-                            self.got.update_link(
-                                self.peer.node_id,
-                                to,
-                                local_id.into(),
-                                LinkDescription {
-                                    round_trip_time: std::time::Duration::from_micros(
-                                        metrics.round_trip_time.unwrap_or(std::u64::MAX),
-                                    ),
-                                },
-                            );
-                        }
-                        Ok(())
-                    }
-                    x => {
-                        return Err(anyhow::format_err!("Unknown variant: {:?}", x));
-                    }
-                }
-            }
-            (StreamType::PeerClientEnd(PeerState::Ready), Some((FrameType::Data, bytes))) => {
-                let msg = decode_fidl::<PeerReply>(bytes).context("Decoding PeerReply")?;
-                log::trace!("{:?} Got peer reply: {:?}", self.node_id, msg);
-                match msg {
-                    PeerReply::UpdateLinkStatusAck { .. } => {
-                        let new_status = match self.peer.link_status_update_state {
-                            Some(PeerLinkStatusUpdateState::Unscheduled) => {
-                                return Err(anyhow::format_err!("Unexpected unscheduled status"))
-                            }
-                            Some(PeerLinkStatusUpdateState::Sent) => {
-                                Some(PeerLinkStatusUpdateState::Unscheduled)
-                            }
-                            Some(PeerLinkStatusUpdateState::SentOutdated) => {
-                                self.link_status_updates.push(self.stream_id);
-                                Some(PeerLinkStatusUpdateState::Sent)
-                            }
-                            None => unreachable!(),
-                        };
-                        self.peer.link_status_update_state = new_status;
-                        Ok(())
-                    }
-                    x => {
-                        return Err(anyhow::format_err!("Unknown variant: {:?}", x));
-                    }
-                }
-            }
-        }
-    }
-
-    /// Bind a new stream that was received in some packet.
-    fn bind_stream<R>(
-        &mut self,
-        stream_type: StreamType,
-        stream_index: u64,
-        mut app_bind: impl FnMut(StreamId<LinkData>, &mut Got) -> Result<R, Error>,
-    ) -> Result<R, Error> {
-        if stream_index == 0 {
-            return Err(anyhow::format_err!("Cannot connect stream 0"));
-        }
-        let bind_stream_id = match self.peer.streams.entry(stream_index) {
-            btree_map::Entry::Occupied(stream_id) => *stream_id.get(),
-            btree_map::Entry::Vacant(v) => {
-                let stream_id = *v.insert(self.streams.insert(Stream {
-                    peer_id: self.peer_id,
-                    id: stream_index,
-                    read_state: ReadState::new_bound(stream_type),
-                }));
-                log::trace!("Bind stream stream_index={} no current read_state", stream_index);
-                // early return
-                return app_bind(stream_id, self.got);
-            }
-        };
-        let result = app_bind(bind_stream_id, self.got)?;
-        let mut rs = self
-            .streams
-            .get_mut(bind_stream_id)
-            .ok_or_else(|| anyhow::format_err!("Stream not found for bind {:?}", bind_stream_id))?
-            .read_state
-            .take();
-        log::trace!("Bind stream stream_index={} read_state={:?}", stream_index, rs);
-        let mut recv_message_context = RecvMessageContext {
-            node_id: self.node_id,
-            got: self.got,
-            peer_id: self.peer_id,
-            peer: self.peer,
-            stream_id: bind_stream_id,
-            stream_index,
-            streams: self.streams,
-            recently_mentioned_peers: self.recently_mentioned_peers,
-            link_status_updates: self.link_status_updates,
-            ack_link_status_updates: self.ack_link_status_updates,
-            config_response_needed: self.config_response_needed,
-            config_completed: self.config_completed,
-            newly_established_clients: self.newly_established_clients,
-        };
-        rs = rs.bind(
-            stream_type,
-            |stream_type: StreamType, message: Option<(FrameType, &mut [u8])>| {
-                recv_message_context.recv(stream_type, message)
-            },
-        );
-        self.streams
-            .get_mut(bind_stream_id)
-            .ok_or_else(|| anyhow::format_err!("Stream not found for bind {:?}", bind_stream_id))?
-            .read_state = rs;
-        Ok(result)
-    }
-}
-
-struct Links<LinkData: Copy + Debug, Time: RouterTime> {
-    /// Node id of the router
-    node_id: NodeId,
-    /// All known links
-    links: SaltSlab<Link<LinkData>>,
-    /// Queues of things that need to happen to links
-    queues: LinkQueues<LinkData, Time>,
-}
-
-struct LinkQueues<LinkData: Copy + Debug, Time: RouterTime> {
-    /// Links that need pings
-    ping_links: BinaryHeap<LinkId<LinkData>>,
-    /// Links that need pongs
-    pong_links: BinaryHeap<LinkId<LinkData>>,
-    /// Timeouts that are pending
-    queued_timeouts: BinaryHeap<Timeout<Time, LinkId<LinkData>>>,
-    /// Are there link updates to send out?
-    send_link_updates: bool,
-    /// Which links were updated locally?
-    link_updates: BTreeSet<LinkId<LinkData>>,
-}
-
-impl<LinkData: Copy + Debug, Time: RouterTime> LinkQueues<LinkData, Time> {
-    /// Handle a PingTrackerResult
-    fn handle_ping_tracker_result(
-        &mut self,
-        link_id: LinkId<LinkData>,
-        link: &mut Link<LinkData>,
-        ptres: PingTrackerResult,
-    ) {
-        log::trace!("HANDLE_PTRES: link_id:{:?} ptres:{:?}", link_id, ptres);
-        if ptres.sched_send {
-            self.ping_links.push(link_id);
-        }
-        if let Some(dt) = ptres.sched_timeout {
-            link.timeout_generation += 1;
-            self.queued_timeouts.push(Timeout(
-                Time::after(Time::now(), dt.into()),
-                link_id,
-                link.timeout_generation,
-            ));
-        }
-        if ptres.new_round_trip_time {
-            self.link_updates.insert(link_id);
-            self.send_link_updates = true;
-        }
-    }
-}
-
-impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
-    fn recv_packet<'a>(
-        &mut self,
-        link_id: LinkId<LinkData>,
-        packet: &'a mut [u8],
-    ) -> Result<(RoutingLabel, &'a mut [u8]), Error> {
-        let link =
-            self.links.get_mut(link_id).ok_or_else(|| anyhow::format_err!("Link not found"))?;
-        log::trace!(
-            "Decode routing label from id={:?}[peer={:?}, id={:?}, up={:?}]",
-            link_id,
-            link.peer,
-            link.id,
-            link.link_data
-        );
-        link.received_packets += 1;
-        link.received_bytes += packet.len() as u64;
-        let (routing_label, packet_length) = RoutingLabel::decode(link.peer, self.node_id, packet)?;
-        log::trace!(
-            "{:?} routing_label={:?} packet_length={} src_len={}",
-            self.node_id,
-            routing_label,
-            packet_length,
-            packet.len()
-        );
-        let packet = &mut packet[..packet_length];
-
-        if let Some(ping) = routing_label.ping {
-            if link.pong_tracker.got_ping(ping) {
-                self.queues.pong_links.push(link_id);
-            }
+        let mut peers = self.peers.lock().await;
+        let key = (node_id, Endpoint::Server);
+        if let Some(p) = peers.get(&key) {
+            return Ok(Some(p.clone()));
         }
 
-        if let Some(pong) = routing_label.pong {
-            let r = link.ping_tracker.got_pong(Instant::now(), pong);
-            self.queues.handle_ping_tracker_result(link_id, link, r);
+        if !is_initial_packet {
+            return Ok(None);
         }
 
-        Ok((routing_label, packet))
-    }
-
-    /// Flush outstanding packets to links, via `send_to`
-    fn flush_sends<SendTo>(&mut self, mut send_to: SendTo, buf: &mut [u8])
-    where
-        SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
-    {
-        while let Some(link_id) = self.queues.pong_links.pop() {
-            if let Err(e) = self.pong_link(&mut send_to, link_id, buf) {
-                log::trace!("Pong link failed: {:?}", e);
-            }
-        }
-
-        while let Some(link_id) = self.queues.ping_links.pop() {
-            if let Err(e) = self.ping_link(&mut send_to, link_id, buf) {
-                log::trace!("Ping link failed: {:?}", e);
-            }
-        }
-    }
-
-    /// Flush pongs that haven't yet been sent by flush_sends_to_peer
-    fn pong_link<SendTo>(
-        &mut self,
-        send_to: &mut SendTo,
-        link_id: LinkId<LinkData>,
-        buf: &mut [u8],
-    ) -> Result<(), Error>
-    where
-        SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
-    {
-        let link = self
-            .links
-            .get_mut(link_id)
-            .ok_or_else(|| anyhow::format_err!("Link {:?} expired before pong", link_id))?;
-        let src = self.node_id;
-        let dst = link.peer;
-        if let Some(id) = link.pong_tracker.maybe_send_pong() {
-            let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), false);
-            self.queues.handle_ping_tracker_result(link_id, link, r);
-            if ping.is_some() {
-                link.pings_sent += 1;
-            }
-            let len = RoutingLabel {
-                src,
-                dst,
-                ping,
-                pong: Some(id),
-                to_client: false,
-                debug_token: crate::labels::new_debug_token(),
-            }
-            .encode_for_link(src, dst, &mut buf[..])?;
-            link.sent_packets += 1;
-            link.sent_bytes += len as u64;
-            send_to(&link.link_data, &mut buf[..len])?;
-        }
-        Ok(())
-    }
-
-    /// Flush pings that haven't yet been sent by flush_sends_to_peer NOR ping_link
-    fn ping_link<SendTo>(
-        &mut self,
-        send_to: &mut SendTo,
-        link_id: LinkId<LinkData>,
-        buf: &mut [u8],
-    ) -> Result<(), Error>
-    where
-        SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
-    {
-        let link = self
-            .links
-            .get_mut(link_id)
-            .ok_or_else(|| anyhow::format_err!("Link {:?} expired before pong", link_id))?;
-        let src = self.node_id;
-        let dst = link.peer;
-        let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), true);
-        self.queues.handle_ping_tracker_result(link_id, link, r);
-        if ping.is_some() {
-            let len = RoutingLabel {
-                src,
-                dst,
-                ping,
-                pong: link.pong_tracker.maybe_send_pong(),
-                to_client: false,
-                debug_token: crate::labels::new_debug_token(),
-            }
-            .encode_for_link(src, dst, &mut buf[..])?;
-            link.sent_packets += 1;
-            link.sent_bytes += len as u64;
-            link.pings_sent += 1;
-            send_to(&link.link_data, &mut buf[..len])?;
-        }
-        Ok(())
-    }
-
-    /// Update timers.
-    fn update_time(&mut self, tm: Time) {
-        while let Some(Timeout(when, link_id, timeout_generation)) =
-            self.queues.queued_timeouts.pop()
-        {
-            if tm < when {
-                self.queues.queued_timeouts.push(Timeout(when, link_id, timeout_generation));
-                break;
-            }
-            if let Some(link) = self.links.get_mut(link_id) {
-                if link.timeout_generation != timeout_generation {
-                    continue;
-                }
-                log::trace!(
-                    "{:?} expire link timeout {:?} gen={}",
-                    self.node_id,
-                    link_id,
-                    timeout_generation
-                );
-                let r = link.ping_tracker.on_timeout(Instant::now());
-                self.queues.handle_ping_tracker_result(link_id, link, r);
-            }
-        }
-    }
-}
-
-/// Router maintains global state for one node_id.
-/// `LinkData` is a token identifying a link for layers above Router.
-/// `Time` is a representation of time for the Router, to assist injecting different platforms
-/// schemes.
-pub struct Router<LinkData: Copy + Debug, Time: RouterTime> {
-    /// Our node id
-    node_id: NodeId,
-    /// Endpoint data-structure
-    endpoints: Endpoints<LinkData, Time>,
-    /// Links data-structure
-    links: Links<LinkData, Time>,
-    /// Ack link status frame
-    ack_link_status_frame: Vec<u8>,
-}
-
-fn make_desc_packet(services: Vec<String>) -> Result<Vec<u8>, Error> {
-    fidl::encoding::with_tls_encoded(
-        &mut PeerMessage::UpdateNodeDescription(PeerDescription { services: Some(services) }),
-        |bytes, handles| {
-            if handles.len() != 0 {
-                return Err(anyhow::format_err!("Unexpected handles in encoding"));
-            }
-            Ok(bytes.clone())
-        },
-    )
-}
-
-/// Generate a new random node id
-pub fn generate_node_id() -> NodeId {
-    rand::thread_rng().gen::<u64>().into()
-}
-
-impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
-    /// New with some set of options
-    pub fn new_with_options(options: RouterOptions) -> Result<Self, Error> {
-        let node_id = options.node_id.unwrap_or_else(generate_node_id);
-        let mut ack_link_status_frame = Vec::new();
-        fidl::encoding::Encoder::encode(
-            &mut ack_link_status_frame,
-            &mut Vec::new(),
-            &mut PeerReply::UpdateLinkStatusAck(fidl_fuchsia_overnet_protocol::Empty {}),
-        )?;
-        let server_cert_file = options
-            .quic_server_cert_file
-            .ok_or_else(|| anyhow::format_err!("No server cert file"))?;
-        if !server_cert_file.as_ref().as_ref().exists() {
-            anyhow::bail!(
-                "Server cert file does not exist: {}",
-                server_cert_file.as_ref().as_ref().display()
-            );
-        }
-        let server_key_file = options
-            .quic_server_key_file
-            .ok_or_else(|| anyhow::format_err!("No server key file"))?;
-        if !server_key_file.as_ref().as_ref().exists() {
-            anyhow::bail!(
-                "Server key file does not exist: {}",
-                server_key_file.as_ref().as_ref().display()
-            );
-        }
-        Ok(Router {
+        let mut config = self.server_config()?;
+        let scid: Vec<u8> = rand::thread_rng()
+            .sample_iter(&rand::distributions::Standard)
+            .take(quiche::MAX_CONN_ID_LEN)
+            .collect();
+        let p = Peer::new_server(
             node_id,
-            endpoints: Endpoints {
-                node_id,
-                peers: SaltSlab::new(),
-                streams: SaltSlab::new(),
-                node_to_client_peer: BTreeMap::new(),
-                node_to_server_peer: BTreeMap::new(),
-                write_peers: BinaryHeap::new(),
-                read_peers: BinaryHeap::new(),
-                check_timeouts: BinaryHeap::new(),
-                queued_timeouts: BinaryHeap::new(),
-                newly_established_clients: BinaryHeap::new(),
-                need_to_send_node_description_clients: BinaryHeap::new(),
-                recently_mentioned_peers: Vec::new(),
-                node_desc_packet: make_desc_packet(vec![]).unwrap(),
-                now: Time::now(),
-                server_cert_file,
-                server_key_file,
-                link_status_updates: BinaryHeap::new(),
-                ack_link_status_updates: BinaryHeap::new(),
-                config_response_needed: BTreeMap::new(),
-                config_completed: BinaryHeap::new(),
-            },
-            links: Links {
-                node_id,
-                links: SaltSlab::new(),
-                queues: LinkQueues {
-                    ping_links: BinaryHeap::new(),
-                    pong_links: BinaryHeap::new(),
-                    queued_timeouts: BinaryHeap::new(),
-                    send_link_updates: false,
-                    link_updates: BTreeSet::new(),
-                },
-            },
-            ack_link_status_frame,
-        })
-    }
-
-    /// Return the key for the SaltSlab representing streams
-    pub fn shadow_streams<T>(&self) -> ShadowSlab<Stream<LinkData>, T> {
-        self.endpoints.streams.shadow()
-    }
-
-    /// Create a new link to some node, returning a `LinkId` describing it.
-    pub fn new_link(
-        &mut self,
-        peer: NodeId,
-        node_link_id: NodeLinkId,
-        link_data: LinkData,
-    ) -> Result<LinkId<LinkData>, Error> {
-        let (ping_tracker, ptres) = PingTracker::new();
-        let link_id = self.links.links.insert(Link {
-            peer,
-            id: node_link_id,
-            link_data,
-            ping_tracker,
-            pong_tracker: PongTracker::new(),
-            timeout_generation: 1,
-            sent_packets: 0,
-            sent_bytes: 0,
-            received_bytes: 0,
-            received_packets: 0,
-            pings_sent: 0,
-            packets_forwarded: 0,
-        });
-        log::trace!(
-            "new_link: id={:?} peer={:?} node_link_id={:?} link_data={:?}",
-            link_id,
-            peer,
-            node_link_id,
-            link_data
-        );
-        let client_peer = self.endpoints.client_peer_id(peer, Some(link_id))?;
-        let server_peer = self.endpoints.server_peer_id(peer);
-        self.links.queues.handle_ping_tracker_result(
-            link_id,
-            self.links.links.get_mut(link_id).unwrap(),
-            ptres,
-        );
-        if let Some(peer) = self.endpoints.peers.get_mut(client_peer) {
-            if peer.current_link.is_none() {
-                peer.current_link = Some(link_id);
-                if !peer.pending_writes {
-                    log::trace!("{:?} Mark writable: {:?}", self.node_id, client_peer);
-                    peer.pending_writes = true;
-                    self.endpoints.write_peers.push(client_peer);
-                }
-            }
-        }
-        if let Some(server_peer) = server_peer {
-            if let Some(peer) = self.endpoints.peers.get_mut(server_peer) {
-                if peer.current_link.is_none() {
-                    peer.current_link = Some(link_id);
-                    if !peer.pending_writes {
-                        log::trace!("{:?} Mark writable: {:?}", self.node_id, server_peer);
-                        peer.pending_writes = true;
-                        self.endpoints.write_peers.push(server_peer);
-                    }
-                }
-            }
-        }
-        log::trace!("LINK TABLE: {:?}", self.links.links);
-        Ok(link_id)
-    }
-
-    /// Accessor for the node id of this router.
-    pub fn node_id(&self) -> NodeId {
-        self.node_id
-    }
-
-    /// Drop a link that is no longer needed.
-    pub fn drop_link(&mut self, link_id: LinkId<LinkData>) {
-        self.links.links.remove(link_id);
-    }
-
-    /// Create a new stream to advertised service `service` on remote node id `node`.
-    pub fn new_stream(&mut self, node: NodeId, service: &str) -> Result<StreamId<LinkData>, Error> {
-        self.endpoints.new_stream(node, service)
-    }
-
-    /// Update the routing table for `dest` to use `link_id`.
-    pub fn adjust_route(&mut self, dest: NodeId, link_id: LinkId<LinkData>) -> Result<(), Error> {
-        self.endpoints.adjust_route(dest, link_id)
-    }
-
-    /// Regenerate our description packet and send it to all peers.
-    pub fn publish_node_description(&mut self, services: Vec<String>) -> Result<(), Error> {
-        self.endpoints.publish_node_description(services)
-    }
-
-    /// Send a datagram on a channel type stream.
-    pub fn queue_send_channel_message(
-        &mut self,
-        stream_id: StreamId<LinkData>,
-        bytes: Vec<u8>,
-        handles: Vec<SendHandle>,
-    ) -> Result<Vec<StreamId<LinkData>>, Error> {
-        self.endpoints.queue_send_channel_message(
-            stream_id,
-            bytes,
-            handles,
-            |peer, messages, bytes| {
-                peer.messages_sent += messages;
-                peer.bytes_sent += bytes;
-            },
+            quiche::accept(&scid, None, &mut config).context("Creating quic server connection")?,
+            link_hint,
+            &self,
         )
+        .context("creating server peer")?;
+        assert!(peers.insert(key, p.clone()).is_none());
+        Ok(Some(p))
     }
 
-    /// Receive a packet from some link.
-    pub fn queue_recv(&mut self, link_id: LinkId<LinkData>, packet: &mut [u8]) {
-        if packet.len() < 1 {
-            return;
+    pub(crate) async fn update_routes(
+        self: &Rc<Self>,
+        routes: impl Iterator<Item = (NodeId, NodeLinkId)>,
+    ) -> Result<(), Error> {
+        let links = self.links.lock().await;
+        let dummy = Weak::new();
+        for (node_id, link_id) in routes {
+            let link = links.get(&link_id).unwrap_or(&dummy);
+            if let Some(peer) = self.server_peer(node_id, false, &Weak::new()).await? {
+                peer.update_link(link.clone()).await;
+            }
+            self.client_peer(node_id, &link)
+                .await
+                .with_context(|| format_err!("Adjusting route to link {:?}", link_id))?
+                .update_link(link.clone())
+                .await;
         }
-
-        match self.links.recv_packet(link_id, packet) {
-            Ok((routing_label, packet)) => {
-                if packet.len() > 0 {
-                    if let Err(e) = self.endpoints.queue_recv(link_id, routing_label, packet) {
-                        log::trace!("Error receiving packet from link {:?}: {:?}", link_id, e);
-                    }
-                }
-            }
-            Err(e) => {
-                log::warn!("Error routing packet from link {:?}: {:?}", link_id, e);
-            }
-        }
-    }
-
-    /// Flush outstanding packets destined to one peer to links, via `send_to`
-    fn flush_sends_to_peer<SendTo>(
-        &mut self,
-        send_to: &mut SendTo,
-        peer_id: PeerId<LinkData>,
-        buf: &mut [u8],
-    ) -> Result<(), Error>
-    where
-        SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
-    {
-        let buf_len = buf.len();
-        log::trace!("{:?} flush_sends {:?}", self.node_id, peer_id);
-        let peer = self
-            .endpoints
-            .peers
-            .get_mut(peer_id)
-            .ok_or_else(|| anyhow::format_err!("Peer {:?} not found for sending", peer_id))?;
-        assert!(peer.pending_writes);
-        peer.pending_writes = false;
-        let current_link = peer.current_link.ok_or_else(|| {
-            anyhow::format_err!(
-                "No current link for peer {:?}; node={:?} client={}",
-                peer_id,
-                peer.node_id,
-                peer.is_client
-            )
-        })?;
-        let link = self.links.links.get_mut(current_link).ok_or_else(|| {
-            anyhow::format_err!("Current link {:?} for peer {:?} not found", current_link, peer_id)
-        })?;
-        let peer_node_id = peer.node_id;
-        let link_dst_id = link.peer;
-        let is_peer_client = peer.is_client;
-        let src_node_id = self.node_id;
-        for forward in peer.forward.drain(..) {
-            let mut packet = forward.1;
-            forward.0.encode_for_link(src_node_id, link_dst_id, &mut packet)?;
-            link.sent_packets += 1;
-            link.sent_bytes += packet.len() as u64;
-            link.packets_forwarded += 1;
-            send_to(&link.link_data, packet.as_mut_slice())?;
-        }
-        loop {
-            match peer.conn.0.send(&mut buf[..buf_len - MAX_ROUTING_LABEL_LENGTH]) {
-                Ok(n) => {
-                    let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), false);
-                    if ping.is_some() {
-                        link.pings_sent += 1;
-                    }
-                    self.links.queues.handle_ping_tracker_result(current_link, link, r);
-                    let rl = RoutingLabel {
-                        src: src_node_id,
-                        dst: peer_node_id,
-                        ping,
-                        pong: link.pong_tracker.maybe_send_pong(),
-                        to_client: !is_peer_client,
-                        debug_token: crate::labels::new_debug_token(),
-                    };
-                    log::trace!("outgoing routing label {:?}", rl);
-                    let suffix_len = rl.encode_for_link(src_node_id, link_dst_id, &mut buf[n..])?;
-                    if !peer.check_timeout {
-                        peer.check_timeout = true;
-                        self.endpoints.check_timeouts.push(peer_id);
-                    }
-                    if peer.establishing && peer.conn.0.is_established() {
-                        peer.establishing = false;
-                        if peer.is_client {
-                            self.endpoints
-                                .need_to_send_node_description_clients
-                                .push(peer.connection_stream_id);
-                        }
-                    }
-                    log::trace!(
-                        "send on link: {:?}[peer={:?}, id={:?}, up={:?}]",
-                        current_link,
-                        link.peer,
-                        link.id,
-                        link.link_data
-                    );
-                    let packet_len = n + suffix_len;
-                    link.sent_packets += 1;
-                    link.sent_bytes += packet_len as u64;
-                    send_to(&link.link_data, &mut buf[..packet_len])?;
-                }
-                Err(quiche::Error::Done) => {
-                    if peer.establishing && peer.conn.0.is_established() {
-                        peer.establishing = false;
-                        if peer.is_client {
-                            self.endpoints
-                                .need_to_send_node_description_clients
-                                .push(peer.connection_stream_id);
-                        }
-                    }
-                    log::trace!("{:?} sends done {:?}", self.node_id, peer_id);
-                    return Ok(());
-                }
-                _ => unimplemented!(),
-            }
-        }
-    }
-
-    /// Flush outstanding packets to links, via `send_to`
-    pub fn flush_sends<SendTo>(&mut self, mut send_to: SendTo)
-    where
-        SendTo: FnMut(&LinkData, &mut [u8]) -> Result<(), Error>,
-    {
-        self.flush_internal_sends();
-
-        const MAX_LEN: usize = 1500;
-        let mut buf = [0_u8; MAX_LEN];
-
-        while let Some(peer_id) = self.endpoints.write_peers.pop() {
-            if let Err(e) = self.flush_sends_to_peer(&mut send_to, peer_id, &mut buf) {
-                log::trace!("Send to peer failed: {:?}", e);
-                if let Some(peer) = self.endpoints.peers.get_mut(peer_id) {
-                    if let Some(link_id) = peer.current_link.take() {
-                        self.drop_link(link_id);
-                    }
-                }
-            }
-        }
-
-        self.links.flush_sends(&mut send_to, &mut buf);
-    }
-
-    /// Write out any sends that have been queued by us (avoids some borrow checker problems).
-    fn flush_internal_sends(&mut self) {
-        while let Some((peer, link_id_hint)) = self.endpoints.recently_mentioned_peers.pop() {
-            if let Err(e) = self.endpoints.ensure_client_peer_id(peer, link_id_hint) {
-                log::warn!("Failed ensuring recently seen peer id has a client endpoint: {}", e);
-            }
-        }
-
-        for (stream_id, mut response) in
-            std::mem::replace(&mut self.endpoints.config_response_needed, BTreeMap::new())
-        {
-            let result = self.endpoints.queue_send_bytes(
-                stream_id,
-                None,
-                &mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL],
-                false,
-                |_, _, _| {},
-            );
-            if let Err(e) = result {
-                log::warn!("Failed to send fidl flags to {:?}: {:?}", stream_id, e);
-                continue;
-            }
-            let result = fidl::encoding::with_tls_encoded(
-                &mut response,
-                |mut bytes: &mut Vec<u8>, handles: &mut Vec<fidl::Handle>| {
-                    if handles.len() > 0 {
-                        return Err(anyhow::format_err!("Expected no handles"));
-                    }
-                    self.endpoints.queue_send_bytes(
-                        stream_id,
-                        Some(FrameType::Data),
-                        &mut bytes,
-                        false,
-                        |_, _, _| {},
-                    )
-                },
-            );
-            if let Err(e) = result {
-                log::warn!("Failed to send config response to {:?}: {:?}", stream_id, e);
-            }
-        }
-
-        while let Some(stream_id) = self.endpoints.need_to_send_node_description_clients.pop() {
-            let result = self.endpoints.queue_send_bytes(
-                stream_id,
-                None,
-                &mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL],
-                false,
-                |_, _, _| {},
-            );
-            if let Err(e) = result {
-                log::warn!("Failed to send fidl flags to {:?}: {:?}", stream_id, e);
-                continue;
-            }
-            let mut config = ConfigRequest {};
-            let result = fidl::encoding::with_tls_encoded(
-                &mut config,
-                |mut bytes: &mut Vec<u8>, handles: &mut Vec<fidl::Handle>| {
-                    if handles.len() > 0 {
-                        return Err(anyhow::format_err!("Expected no handles"));
-                    }
-                    self.endpoints.queue_send_bytes(
-                        stream_id,
-                        Some(FrameType::Data),
-                        &mut bytes,
-                        false,
-                        |_, _, _| {},
-                    )
-                },
-            );
-            if let Err(e) = result {
-                log::warn!("Failed to send config request to {:?}: {:?}", stream_id, e);
-            }
-            let result = self.endpoints.queue_send_bytes(
-                stream_id,
-                Some(FrameType::Data),
-                &mut self.endpoints.node_desc_packet.clone(),
-                false,
-                |peer, messages, bytes| {
-                    peer.update_node_description_sends += messages;
-                    peer.update_node_description_send_bytes += bytes;
-                },
-            );
-            if let Err(e) = result {
-                log::warn!("Failed to send initial update to {:?}: {:?}", stream_id, e);
-                continue;
-            }
-            self.endpoints.link_status_updates.push(stream_id);
-        }
-
-        if self.links.queues.send_link_updates {
-            self.links.queues.send_link_updates = false;
-            for (_peer_id, peer) in self.endpoints.peers.iter_mut() {
-                let new_status = match peer.link_status_update_state {
-                    Some(PeerLinkStatusUpdateState::Unscheduled) => {
-                        self.endpoints.link_status_updates.push(peer.connection_stream_id);
-                        Some(PeerLinkStatusUpdateState::Sent)
-                    }
-                    Some(PeerLinkStatusUpdateState::Sent) => {
-                        Some(PeerLinkStatusUpdateState::SentOutdated)
-                    }
-                    Some(PeerLinkStatusUpdateState::SentOutdated) => {
-                        Some(PeerLinkStatusUpdateState::SentOutdated)
-                    }
-                    None => None,
-                };
-                peer.link_status_update_state = new_status;
-            }
-        }
-
-        while let Some(stream_id) = self.endpoints.ack_link_status_updates.pop() {
-            if let Err(e) = self.endpoints.queue_send_bytes(
-                stream_id,
-                Some(FrameType::Data),
-                &mut self.ack_link_status_frame.clone(),
-                false,
-                |peer, messages, bytes| {
-                    peer.update_link_status_ack_sends += messages;
-                    peer.update_link_status_ack_send_bytes += bytes;
-                },
-            ) {
-                log::warn!("Failed to ack link state update from {:?}: {:?}", stream_id, e);
-            }
-        }
-
-        if !self.endpoints.link_status_updates.is_empty() {
-            let mut status = PeerMessage::UpdateLinkStatus(UpdateLinkStatus {
-                link_status: self
-                    .links
-                    .links
-                    .iter()
-                    .filter_map(|(_, link)| link.make_status())
-                    .collect(),
-            });
-            fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-                if let Err(e) = fidl::encoding::Encoder::encode(bytes, handles, &mut status) {
-                    log::warn!("{}", e);
-                    return;
-                }
-                let mut last_sent = None;
-                while let Some(stream_id) = self.endpoints.link_status_updates.pop() {
-                    if last_sent == Some(stream_id) {
-                        continue;
-                    }
-                    last_sent = Some(stream_id);
-                    if let Err(e) = self.endpoints.queue_send_bytes(
-                        stream_id,
-                        Some(FrameType::Data),
-                        &mut bytes.clone(),
-                        false,
-                        |peer, messages, bytes| {
-                            peer.update_link_status_sends += messages;
-                            peer.update_link_status_send_bytes += bytes;
-                        },
-                    ) {
-                        log::warn!("Failed to send link status update to {:?}: {:?}", stream_id, e);
-                    }
-                }
-            });
-        }
-    }
-
-    /// Process all received packets and make callbacks depending on what was contained in them.
-    pub fn flush_recvs<Got>(&mut self, got: &mut Got)
-    where
-        Got: MessageReceiver<LinkData>,
-    {
-        self.endpoints.flush_recvs(got);
-
-        // Will be drained in flush_internal_sends
-        for link_id in self.links.queues.link_updates.iter() {
-            if let Some(link) = self.links.links.get(*link_id) {
-                if let Some(desc) = link.make_desc() {
-                    got.update_link(self.node_id, link.peer, link.id, desc);
-                }
-            }
-        }
-    }
-
-    /// Update timers.
-    pub fn update_time(&mut self, tm: Time) {
-        self.links.update_time(tm);
-        self.endpoints.update_time(tm)
-    }
-
-    /// Calculate when the next timeout should be triggered.
-    pub fn next_timeout(&mut self) -> Option<Time> {
-        self.endpoints.next_timeout()
-    }
-
-    /// Diagnostic information for links
-    pub fn link_diagnostics(&self) -> Vec<LinkDiagnosticInfo> {
-        self.links
-            .links
-            .iter()
-            .map(|(_, link)| LinkDiagnosticInfo {
-                source: Some(self.node_id.into()),
-                destination: Some(link.peer.into()),
-                source_local_id: Some(link.id.0),
-                sent_packets: Some(link.sent_packets),
-                received_packets: Some(link.received_packets),
-                sent_bytes: Some(link.sent_bytes),
-                received_bytes: Some(link.received_bytes),
-                pings_sent: Some(link.pings_sent),
-                packets_forwarded: Some(link.packets_forwarded),
-                round_trip_time_microseconds: link
-                    .ping_tracker
-                    .round_trip_time()
-                    .map(|rtt| rtt.as_micros().try_into().unwrap_or(std::u64::MAX)),
-            })
-            .collect()
-    }
-
-    /// Diagnostic information for peer connections
-    pub fn peer_diagnostics(&self) -> Vec<PeerConnectionDiagnosticInfo> {
-        self.endpoints
-            .peers
-            .iter()
-            .map(|(_, peer)| {
-                let conn = &peer.conn.0;
-                let stats = conn.stats();
-                PeerConnectionDiagnosticInfo {
-                    source: Some(self.node_id.into()),
-                    destination: Some(peer.node_id.into()),
-                    is_client: Some(peer.is_client),
-                    is_established: Some(conn.is_established()),
-                    received_packets: Some(stats.recv as u64),
-                    sent_packets: Some(stats.sent as u64),
-                    lost_packets: Some(stats.lost as u64),
-                    messages_sent: Some(peer.messages_sent),
-                    bytes_sent: Some(peer.bytes_sent),
-                    connect_to_service_sends: Some(peer.connect_to_service_sends),
-                    connect_to_service_send_bytes: Some(peer.connect_to_service_send_bytes),
-                    update_node_description_sends: Some(peer.update_node_description_sends),
-                    update_node_description_send_bytes: Some(
-                        peer.update_node_description_send_bytes,
-                    ),
-                    update_link_status_sends: Some(peer.update_link_status_sends),
-                    update_link_status_send_bytes: Some(peer.update_link_status_send_bytes),
-                    update_link_status_ack_sends: Some(peer.update_link_status_ack_sends),
-                    update_link_status_ack_send_bytes: Some(peer.update_link_status_ack_send_bytes),
-                    round_trip_time_microseconds: Some(
-                        stats.rtt.as_micros().try_into().unwrap_or(std::u64::MAX),
-                    ),
-                    congestion_window_bytes: Some(stats.cwnd as u64),
-                }
-            })
-            .collect()
+        Ok(())
     }
 }
 
@@ -2321,11 +546,21 @@ pub mod test_util {
     static LOGGER: Logger = Logger;
     static START: Once = Once::new();
 
-    pub fn init() {
+    fn init() {
         START.call_once(|| {
             log::set_logger(&LOGGER).unwrap();
             log::set_max_level(MAX_LOG_LEVEL);
         })
+    }
+
+    pub fn run<F, Fut>(f: F)
+    where
+        F: 'static + Send + FnOnce() -> Fut,
+        Fut: Future<Output = ()> + 'static,
+    {
+        const TEST_TIMEOUT_MS: u32 = 60_000;
+        init();
+        timebomb::timeout_ms(move || crate::runtime::run(f()), TEST_TIMEOUT_MS)
     }
 
     #[cfg(not(target_os = "fuchsia"))]
@@ -2357,335 +592,236 @@ pub mod test_util {
 #[cfg(test)]
 mod tests {
 
-    const TEST_TIMEOUT_MS: u32 = 60_000;
-
     use super::test_util::*;
     use super::*;
-    use timebomb::timeout_ms;
-
-    #[derive(Debug)]
-    enum IncomingMessage<'a> {
-        ConnectService(u8, StreamId<u8>, &'a str, fidl_fuchsia_overnet::ConnectionInfo),
-        BindChannel(u8, StreamId<u8>),
-        ChannelRecv(u8, StreamId<u8>, &'a [u8]),
-        UpdateNode(u8, NodeId, NodeDescription),
-        Close(u8, StreamId<u8>),
-    }
+    use crate::future_help::log_errors;
+    use crate::runtime::{spawn, wait_until};
+    use futures::{executor::block_on, select};
+    use std::time::{Duration, Instant};
 
     #[test]
     fn no_op() {
-        init();
-        Router::<u8, Instant>::new_with_options(test_router_options()).unwrap();
-        assert_eq!(
-            Router::<u8, Instant>::new_with_options(test_router_options().set_node_id(1.into()))
-                .unwrap()
-                .node_id
-                .0,
-            1
-        );
+        run(|| async move {
+            Router::new(test_router_options()).unwrap();
+            assert_eq!(
+                Router::new(test_router_options().set_node_id(1.into()),).unwrap().node_id.0,
+                1
+            );
+        })
     }
 
     struct TwoNode {
-        router1: Router<u8, Instant>,
-        router2: Router<u8, Instant>,
-        link1: LinkId<u8>,
-        link2: LinkId<u8>,
+        router1: Rc<Router>,
+        router2: Rc<Router>,
     }
 
-    /// Return true if there's a client oriented established connection to `dest`.
-    fn connected_to<LinkData: Copy + Debug, Time: RouterTime>(
-        router: &Router<LinkData, Time>,
-        dest: NodeId,
-    ) -> bool {
-        if let Some(peer_id) = router.endpoints.node_to_client_peer.get(&dest) {
-            let peer = router.endpoints.peers.get(*peer_id).unwrap();
-            peer.config.is_some()
-        } else {
-            false
+    fn forward(sender: Rc<Link>, receiver: Rc<Link>) {
+        spawn(log_errors(
+            async move {
+                let mut frame = [0u8; 2048];
+                while let Some(n) = sender.next_send(&mut frame).await? {
+                    receiver.received_packet(&mut frame[..n]).await?;
+                }
+                Ok(())
+            },
+            "forwarder failed",
+        ));
+    }
+
+    async fn register_test_service(
+        router: &Rc<Router>,
+        service: &str,
+    ) -> futures::channel::oneshot::Receiver<(NodeId, Channel)> {
+        use std::sync::Mutex;
+        let (send, recv) = futures::channel::oneshot::channel();
+        struct TestService(Mutex<Option<futures::channel::oneshot::Sender<(NodeId, Channel)>>>);
+        impl fidl_fuchsia_overnet::ServiceProviderProxyInterface for TestService {
+            fn connect_to_service(
+                &self,
+                chan: fidl::Channel,
+                connection_info: fidl_fuchsia_overnet::ConnectionInfo,
+            ) -> std::result::Result<(), fidl::Error> {
+                self.0
+                    .lock()
+                    .unwrap()
+                    .take()
+                    .unwrap()
+                    .send((connection_info.peer.unwrap().id.into(), chan))
+                    .unwrap();
+                Ok(())
+            }
         }
+        router
+            .service_map()
+            .register_service(service.to_string(), Box::new(TestService(Mutex::new(Some(send)))))
+            .await;
+        recv
     }
 
     impl TwoNode {
-        fn new() -> Self {
-            let mut router1 = Router::new_with_options(test_router_options()).unwrap();
-            let mut router2 = Router::new_with_options(test_router_options()).unwrap();
-            let link1 = router1.new_link(router2.node_id, 123.into(), 1).unwrap();
-            let link2 = router2.new_link(router1.node_id, 456.into(), 2).unwrap();
-            router1.adjust_route(router2.node_id, link1).unwrap();
-            router2.adjust_route(router1.node_id, link2).unwrap();
+        async fn new() -> Self {
+            let router1 = Router::new(test_router_options()).unwrap();
+            let router2 = Router::new(test_router_options()).unwrap();
+            let link1 = router1.new_link(router2.node_id).await.unwrap();
+            let link2 = router2.new_link(router1.node_id).await.unwrap();
+            forward(link1.clone(), link2.clone());
+            forward(link2, link1);
 
-            TwoNode { router1, router2, link1, link2 }
-        }
-
-        fn step<OnIncoming>(&mut self, mut on_incoming: OnIncoming)
-        where
-            OnIncoming: FnMut(IncomingMessage<'_>) -> Result<(), Error>,
-        {
-            let router1 = &mut self.router1;
-            let router2 = &mut self.router2;
-            let link1 = self.link1;
-            let link2 = self.link2;
-            let now = Instant::now();
-            router1.update_time(now);
-            router2.update_time(now);
-            struct R<'a, In>(u8, &'a mut In);
-            impl<'a, In> MessageReceiver<u8> for R<'a, In>
-            where
-                In: FnMut(IncomingMessage<'_>) -> Result<(), Error>,
-            {
-                type Handle = ();
-                fn connect_channel(
-                    &mut self,
-                    stream_id: StreamId<u8>,
-                    service_name: &str,
-                    connection_info: fidl_fuchsia_overnet::ConnectionInfo,
-                ) -> Result<(), Error> {
-                    (self.1)(IncomingMessage::ConnectService(
-                        self.0,
-                        stream_id,
-                        service_name,
-                        connection_info,
-                    ))
-                }
-                fn bind_channel(&mut self, stream_id: StreamId<u8>) -> Result<(), Error> {
-                    (self.1)(IncomingMessage::BindChannel(self.0, stream_id))
-                }
-                fn channel_recv(
-                    &mut self,
-                    stream_id: StreamId<u8>,
-                    bytes: &mut Vec<u8>,
-                    handles: &mut Vec<()>,
-                ) -> Result<(), Error> {
-                    assert!(handles.len() == 0);
-                    (self.1)(IncomingMessage::ChannelRecv(self.0, stream_id, bytes.as_slice()))
-                }
-                fn update_node(&mut self, node_id: NodeId, desc: NodeDescription) {
-                    (self.1)(IncomingMessage::UpdateNode(self.0, node_id, desc)).unwrap();
-                }
-                fn update_link(
-                    &mut self,
-                    _from: NodeId,
-                    _to: NodeId,
-                    _link_id: NodeLinkId,
-                    _desc: LinkDescription,
-                ) {
-                }
-                fn close(&mut self, stream_id: StreamId<u8>) {
-                    (self.1)(IncomingMessage::Close(self.0, stream_id)).unwrap();
-                }
-                fn established_connection(&mut self, _node_id: NodeId) {}
-            }
-            router1.flush_recvs(&mut R(1, &mut on_incoming));
-            router2.flush_recvs(&mut R(2, &mut on_incoming));
-            router1.flush_sends(|link, data| {
-                assert_eq!(*link, 1);
-                router2.queue_recv(link2, data);
-                Ok(())
-            });
-            router2.flush_sends(|link, data| {
-                assert_eq!(*link, 2);
-                router1.queue_recv(link1, data);
-                Ok(())
-            });
-            router1.next_timeout();
-            router2.next_timeout();
+            TwoNode { router1, router2 }
         }
     }
 
     #[test]
-    fn connect() {
-        init();
-        timeout_ms(
-            || {
-                let mut env = TwoNode::new();
-                while !connected_to(&env.router1, env.router2.node_id) {
-                    env.step(|frame| match frame {
-                        IncomingMessage::UpdateNode(_, _, _) => Ok(()),
-                        _ => unimplemented!(),
-                    });
-                }
-            },
-            TEST_TIMEOUT_MS,
-        );
+    fn no_op_env() {
+        run(|| async move {
+            TwoNode::new().await;
+        })
     }
 
     #[test]
     fn create_stream() {
-        init();
-        timeout_ms(
-            || {
-                let mut env = TwoNode::new();
-                while !connected_to(&env.router1, env.router2.node_id) {
-                    env.step(|frame| match frame {
-                        IncomingMessage::UpdateNode(_, _, _) => Ok(()),
-                        _ => unimplemented!(),
-                    });
-                }
-                let _stream1 = env.router1.new_stream(env.router2.node_id, "hello world").unwrap();
-                let mut stream2: Option<StreamId<u8>> = None;
-                let router1_node_id = env.router1.node_id;
-                while stream2 == None {
-                    env.step(|frame| {
-                        Ok(match frame {
-                            IncomingMessage::UpdateNode(_, _, _) => (),
-                            IncomingMessage::ConnectService(
-                                2,
-                                id,
-                                "hello world",
-                                fidl_fuchsia_overnet::ConnectionInfo {
-                                    peer:
-                                        Some(fidl_fuchsia_overnet_protocol::NodeId { id: peer_id }),
-                                },
-                            ) => {
-                                assert_eq!(router1_node_id, peer_id.into());
-                                stream2 = Some(id);
-                            }
-                            x => {
-                                panic!("{:?}", x);
-                            }
-                        })
-                    });
-                }
-            },
-            TEST_TIMEOUT_MS,
-        );
+        run(|| async move {
+            let env = TwoNode::new().await;
+            let (_, p) = fidl::Channel::create().unwrap();
+            let s = register_test_service(&env.router2, "hello world").await;
+            env.router1.connect_to_service(env.router2.node_id, "hello world", p).await.unwrap();
+            let (node_id, _) = s.await.unwrap();
+            assert_eq!(node_id, env.router1.node_id);
+        })
     }
 
     #[test]
     fn send_datagram_immediately() {
-        init();
-        timeout_ms(
-            || {
-                let mut env = TwoNode::new();
-                while !connected_to(&env.router1, env.router2.node_id) {
-                    env.step(|frame| match frame {
-                        IncomingMessage::UpdateNode(_, _, _) => Ok(()),
-                        _ => unimplemented!(),
-                    });
-                }
-                let stream1 = env.router1.new_stream(env.router2.node_id, "hello world").unwrap();
-                env.router1
-                    .queue_send_channel_message(stream1, vec![1, 2, 3, 4, 5], vec![])
-                    .unwrap();
-                let mut stream2 = None;
-                let mut got_packet = false;
-                let router1_node_id = env.router1.node_id;
-                while !got_packet {
-                    env.step(|frame| {
-                        Ok(match (stream2.is_none(), got_packet, frame) {
-                            (_, _, IncomingMessage::UpdateNode(_, _, _)) => (),
-                            (
-                                true,
-                                false,
-                                IncomingMessage::ConnectService(
-                                    2,
-                                    id,
-                                    "hello world",
-                                    fidl_fuchsia_overnet::ConnectionInfo {
-                                        peer: Some(fidl_fuchsia_overnet_protocol::NodeId { id: peer_id }),
-                                    },
-                                ),
-                            ) => {
-                                assert_eq!(router1_node_id, peer_id.into());
-                                stream2 = Some(id);
-                            }
-                            (
-                                false,
-                                false,
-                                IncomingMessage::ChannelRecv(2, id, &[1, 2, 3, 4, 5]),
-                            ) => {
-                                assert_eq!(id, stream2.unwrap());
-                                got_packet = true;
-                            }
-                            x => {
-                                panic!("{:?}", x);
-                            }
-                        })
-                    });
-                }
-            },
-            TEST_TIMEOUT_MS,
-        );
+        run(|| async move {
+            let env = TwoNode::new().await;
+            let (c, p) = fidl::Channel::create().unwrap();
+            let s = register_test_service(&env.router2, "hello world").await;
+            env.router1.connect_to_service(env.router2.node_id, "hello world", p).await.unwrap();
+            let (node_id, s) = s.await.unwrap();
+            assert_eq!(node_id, env.router1.node_id);
+            let c = fidl::AsyncChannel::from_channel(c).unwrap();
+            let s = fidl::AsyncChannel::from_channel(s).unwrap();
+            c.write(&[1, 2, 3, 4, 5], &mut Vec::new()).unwrap();
+            let mut buf = fidl::MessageBuf::new();
+            s.recv_msg(&mut buf).await.unwrap();
+            assert_eq!(buf.n_handles(), 0);
+            assert_eq!(buf.bytes(), &[1, 2, 3, 4, 5]);
+        })
     }
 
     #[test]
     fn ping_pong() {
-        init();
-        timeout_ms(
-            || {
-                let mut env = TwoNode::new();
-                while !connected_to(&env.router1, env.router2.node_id) {
-                    env.step(|frame| match frame {
-                        IncomingMessage::UpdateNode(_, _, _) => Ok(()),
-                        _ => unimplemented!(),
-                    });
+        run(|| async move {
+            let env = TwoNode::new().await;
+            let (c, p) = fidl::Channel::create().unwrap();
+            let s = register_test_service(&env.router2, "hello world").await;
+            env.router1.connect_to_service(env.router2.node_id, "hello world", p).await.unwrap();
+            let (node_id, s) = s.await.unwrap();
+            assert_eq!(node_id, env.router1.node_id);
+
+            let c = fidl::AsyncChannel::from_channel(c).unwrap();
+            let s = fidl::AsyncChannel::from_channel(s).unwrap();
+
+            println!("send ping");
+            c.write(&[1, 2, 3, 4, 5], &mut Vec::new()).unwrap();
+            println!("receive ping");
+            let mut buf = fidl::MessageBuf::new();
+            s.recv_msg(&mut buf).await.unwrap();
+            assert_eq!(buf.n_handles(), 0);
+            assert_eq!(buf.bytes(), &[1, 2, 3, 4, 5]);
+
+            println!("send pong");
+            s.write(&[9, 8, 7, 6, 5, 4, 3, 2, 1], &mut Vec::new()).unwrap();
+            println!("receive pong");
+            let mut buf = fidl::MessageBuf::new();
+            c.recv_msg(&mut buf).await.unwrap();
+            assert_eq!(buf.n_handles(), 0);
+            assert_eq!(buf.bytes(), &[9, 8, 7, 6, 5, 4, 3, 2, 1]);
+        })
+    }
+
+    async fn assert_avail(r: &mut futures::channel::mpsc::Receiver<()>, mut n: usize) {
+        while n > 0 {
+            r.next().await.unwrap();
+            n -= 1;
+        }
+        select! {
+            _ = r.next().fuse() => panic!("Unexpected output"),
+            _ = wait_until(Instant::now() + Duration::from_secs(1)).fuse() => ()
+        }
+    }
+
+    #[test]
+    fn concurrent_list_peer_calls_will_error() {
+        run(|| async move {
+            let n = Router::new(test_router_options()).unwrap();
+            let (tx, mut rx) = futures::channel::mpsc::channel(1);
+            let mut c1 = tx.clone();
+            let mut c2 = tx.clone();
+            let mut c3 = tx.clone();
+            assert_avail(&mut rx, 0).await;
+            n.list_peers(Box::new(move |_| block_on(c1.send(())).unwrap())).await.unwrap();
+            assert_avail(&mut rx, 1).await;
+            n.list_peers(Box::new(move |_| block_on(c2.send(())).unwrap())).await.unwrap();
+            assert_avail(&mut rx, 0).await;
+            n.list_peers(Box::new(move |_| block_on(c3.send(())).unwrap()))
+                .await
+                .expect_err("Concurrent list peers should fail");
+            assert_avail(&mut rx, 0).await;
+        })
+    }
+
+    #[test]
+    #[cfg(not(target_os = "fuchsia"))]
+    fn initial_greeting_packet() {
+        use crate::coding::decode_fidl;
+        use crate::stream_framer::StreamDeframer;
+        use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
+        run(|| async move {
+            let n = Router::new(test_router_options()).unwrap();
+            let node_id = n.node_id();
+            let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
+            let mut c = fidl::AsyncSocket::from_socket(c).unwrap();
+            n.attach_socket_link(
+                s,
+                fidl_fuchsia_overnet::SocketLinkOptions {
+                    connection_label: Some("test".to_string()),
+                    bytes_per_second: None,
+                },
+            )
+            .unwrap();
+
+            let mut deframer = StreamDeframer::new();
+            let mut buf = [0u8; 1024];
+            let mut greeting_bytes = loop {
+                let n = c.read(&mut buf).await.unwrap();
+                deframer.queue_recv(&buf[..n]);
+                if let Some(greeting) = deframer.next_incoming_frame() {
+                    break greeting;
                 }
-                let stream1 = env.router1.new_stream(env.router2.node_id, "hello world").unwrap();
-                env.router1
-                    .queue_send_channel_message(stream1, vec![1, 2, 3, 4, 5], vec![])
-                    .unwrap();
-                let mut stream2 = None;
-                let mut got_ping = false;
-                let mut sent_pong = false;
-                let mut got_pong = false;
-                let router1_node_id = env.router1.node_id;
-                while !got_pong {
-                    if got_ping && !sent_pong {
-                        env.router2
-                            .queue_send_channel_message(
-                                stream2.unwrap(),
-                                vec![9, 8, 7, 6, 5, 4, 3, 2, 1],
-                                vec![],
-                            )
-                            .unwrap();
-                        sent_pong = true;
-                    }
-                    env.step(|frame| {
-                        Ok(match (stream2.is_none(), got_ping, sent_pong, got_pong, frame) {
-                            (_, _, _, _, IncomingMessage::UpdateNode(_, _, _)) => (),
-                            (
-                                true,
-                                false,
-                                false,
-                                false,
-                                IncomingMessage::ConnectService(
-                                    2,
-                                    id,
-                                    "hello world",
-                                    fidl_fuchsia_overnet::ConnectionInfo {
-                                        peer: Some(fidl_fuchsia_overnet_protocol::NodeId { id: peer_id }),
-                                    },
-                                ),
-                            ) => {
-                                assert_eq!(router1_node_id, peer_id.into());
-                                stream2 = Some(id);
-                            }
-                            (
-                                false,
-                                false,
-                                false,
-                                false,
-                                IncomingMessage::ChannelRecv(2, id, &[1, 2, 3, 4, 5]),
-                            ) => {
-                                assert_eq!(id, stream2.unwrap());
-                                got_ping = true;
-                            }
-                            (
-                                false,
-                                true,
-                                true,
-                                false,
-                                IncomingMessage::ChannelRecv(1, id, &[9, 8, 7, 6, 5, 4, 3, 2, 1]),
-                            ) => {
-                                assert_eq!(id, stream1);
-                                got_pong = true;
-                            }
-                            _ => unreachable!(),
-                        })
-                    });
-                }
-            },
-            TEST_TIMEOUT_MS,
-        );
+            };
+            let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut()).unwrap();
+            assert_eq!(greeting.magic_string, Some("OVERNET SOCKET LINK".to_string()));
+            assert_eq!(greeting.node_id, Some(node_id.into()));
+            assert_eq!(greeting.connection_label, Some("test".to_string()));
+        })
+    }
+
+    #[test]
+    #[cfg(not(target_os = "fuchsia"))]
+    fn attach_with_zero_bytes_per_second() {
+        run(|| async move {
+            let n = Router::new(test_router_options()).unwrap();
+            let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
+            n.attach_socket_link(
+                s,
+                fidl_fuchsia_overnet::SocketLinkOptions {
+                    connection_label: Some("test".to_string()),
+                    bytes_per_second: Some(0),
+                },
+            )
+            .expect_err("bytes_per_second == 0 should fail");
+            drop(c);
+        })
     }
 }

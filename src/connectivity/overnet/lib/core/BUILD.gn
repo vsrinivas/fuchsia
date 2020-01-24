@@ -14,7 +14,6 @@ rustc_library("core") {
   deps = [
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
-    "//src/connectivity/overnet/lib/salt_slab",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
@@ -28,7 +27,10 @@ rustc_library("core") {
     "//third_party/rust_crates/transitional/quiche",
   ]
   if (!is_fuchsia) {
-    deps += [ "//third_party/rust_crates:tempfile" ]
+    deps += [
+      "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:tokio",
+    ]
   }
   non_rust_deps = [ "//third_party/boringssl" ]
 }

@@ -151,6 +151,7 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
 // main
 
 async fn async_main() -> Result<(), Error> {
+    std::env::set_var("RUST_BACKTRACE", "full");
     let app: OvernetEcho = argh::from_env();
 
     match app.subcommand {
@@ -158,15 +159,12 @@ async fn async_main() -> Result<(), Error> {
         Subcommand::Client(c) => {
             let r = exec_client(c.text).await;
             log::trace!("finished client");
+            eprintln!("{:?}", r);
             r
         }
     }
 }
 
-fn main() {
-    hoist::run(async move {
-        if let Err(e) = async_main().await {
-            log::trace!("Error: {}", e)
-        }
-    })
+fn main() -> Result<(), Error> {
+    hoist::run(async_main())
 }

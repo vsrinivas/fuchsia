@@ -5,21 +5,15 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{bail, format_err, Context as _, Error},
     fidl::endpoints::ClientEnd,
-    fidl::Handle,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
     fuchsia_zircon_status as zx_status,
     futures::prelude::*,
-    overnet_core::{
-        LinkId, Node, NodeId, NodeOptions, NodeRuntime, RouterTime, SendHandle, StreamDeframer,
-        StreamFramer,
-    },
+    overnet_core::{log_errors, Link, NodeId, Router, RouterOptions, StreamDeframer, StreamFramer},
     parking_lot::Mutex,
-    std::cell::RefCell,
-    std::rc::Rc,
-    std::sync::Arc,
+    std::{rc::Rc, sync::Arc},
     tokio::{io::AsyncRead, runtime::current_thread},
 };
 
@@ -30,6 +24,8 @@ pub use fidl_fuchsia_overnet::ServicePublisherProxyInterface;
 pub const ASCENDD_CLIENT_CONNECTION_STRING: &str = "Lift me";
 pub const ASCENDD_SERVER_CONNECTION_STRING: &str = "Yessir";
 pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
+
+pub use overnet_core::run;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Overnet <-> API bindings
@@ -75,138 +71,7 @@ impl Overnet {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 struct Time(std::time::Instant);
 
-impl RouterTime for Time {
-    type Duration = std::time::Duration;
-
-    fn now() -> Self {
-        Time(std::time::Instant::now())
-    }
-
-    fn after(t: Self, dt: Self::Duration) -> Self {
-        Time(t.0 + dt)
-    }
-}
-
-enum WriteState {
-    Idle { link: tokio::io::WriteHalf<tokio::net::UnixStream> },
-    Writing,
-}
-
-impl WriteState {
-    fn become_writing(&mut self) -> Option<tokio::io::WriteHalf<tokio::net::UnixStream>> {
-        match std::mem::replace(self, WriteState::Writing) {
-            WriteState::Writing => None,
-            WriteState::Idle { link } => Some(link),
-        }
-    }
-}
-
-struct Writer {
-    write_state: WriteState,
-    framer: StreamFramer,
-}
-
-struct OvernetRuntime {
-    writer: Rc<RefCell<Writer>>,
-    router_link_id: LinkId<overnet_core::PhysLinkId<()>>,
-}
-
-fn spawn_local(future: impl Future<Output = ()> + 'static) {
-    current_thread::spawn(future.unit_error().boxed_local().compat());
-}
-
-impl NodeRuntime for OvernetRuntime {
-    type Time = Time;
-    type LinkId = ();
-    const IMPLEMENTATION: fidl_fuchsia_overnet_protocol::Implementation =
-        fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate;
-
-    fn handle_type(hdl: &Handle) -> Result<SendHandle, Error> {
-        Ok(match hdl.handle_type() {
-            fidl::FidlHdlType::Channel => SendHandle::Channel,
-            fidl::FidlHdlType::Socket => unimplemented!(),
-            fidl::FidlHdlType::Invalid => return Err(format_err!("Invalid handle")),
-        })
-    }
-
-    fn spawn_local<F>(&mut self, future: F)
-    where
-        F: Future<Output = ()> + 'static,
-    {
-        spawn_local(future)
-    }
-
-    fn at(&mut self, t: Time, f: impl FnOnce() + 'static) {
-        spawn_local(async move {
-            futures::compat::Compat01As03::new(tokio::timer::Delay::new(t.0)).await.unwrap();
-            f();
-        })
-    }
-
-    fn router_link_id(&self, _id: Self::LinkId) -> LinkId<overnet_core::PhysLinkId<()>> {
-        self.router_link_id
-    }
-
-    fn send_on_link(&mut self, _id: Self::LinkId, packet: &mut [u8]) -> Result<(), Error> {
-        let mut writer = self.writer.borrow_mut();
-        writer.framer.queue_send(packet)?;
-        if let Some(tx) = writer.write_state.become_writing() {
-            start_writes(self.writer.clone(), tx, writer.framer.take_sends());
-        }
-        Ok(())
-    }
-}
-
-fn start_writes(
-    writer: Rc<RefCell<Writer>>,
-    tx: tokio::io::WriteHalf<tokio::net::UnixStream>,
-    bytes: Vec<u8>,
-) {
-    if bytes.len() == 0 {
-        writer.borrow_mut().write_state = WriteState::Idle { link: tx };
-        return;
-    }
-    let wr = tokio::io::write_all(tx, bytes);
-    let wr = futures::compat::Compat01As03::new(wr);
-    spawn_local(finish_writes(writer, wr));
-}
-
-async fn finish_writes(
-    writer: Rc<RefCell<Writer>>,
-    wr: impl Future<
-        Output = Result<(tokio::io::WriteHalf<tokio::net::UnixStream>, Vec<u8>), std::io::Error>,
-    >,
-) {
-    match wr.await {
-        Ok((tx, _)) => {
-            let bytes = writer.borrow_mut().framer.take_sends();
-            start_writes(writer, tx, bytes);
-        }
-        Err(e) => log::warn!("Write failed: {}", e),
-    }
-}
-
-async fn run_list_peers_inner(
-    node: Node<OvernetRuntime>,
-    responder: futures::channel::oneshot::Sender<Vec<Peer>>,
-) -> Result<(), Error> {
-    let peers = node.list_peers().await?;
-    if let Err(_) = responder.send(peers) {
-        println!("List peers stopped listening");
-    }
-    Ok(())
-}
-
-async fn run_list_peers(
-    node: Node<OvernetRuntime>,
-    responder: futures::channel::oneshot::Sender<Vec<Peer>>,
-) {
-    if let Err(e) = run_list_peers_inner(node, responder).await {
-        println!("List peers gets error: {:?}", e);
-    }
-}
-
-async fn read_incoming_inner(
+async fn read_incoming(
     stream: tokio::io::ReadHalf<tokio::net::UnixStream>,
     mut chan: futures::channel::mpsc::Sender<Vec<u8>>,
 ) -> Result<(), Error> {
@@ -229,34 +94,22 @@ async fn read_incoming_inner(
     }
 }
 
-async fn read_incoming(
-    stream: tokio::io::ReadHalf<tokio::net::UnixStream>,
-    chan: futures::channel::mpsc::Sender<Vec<u8>>,
-) {
-    if let Err(e) = read_incoming_inner(stream, chan).await {
-        log::warn!("Error reading: {}", e);
-    }
-}
-
-async fn process_incoming_inner(
-    node: Node<OvernetRuntime>,
-    mut rx_frames: futures::channel::mpsc::Receiver<Vec<u8>>,
-    link_id: LinkId<overnet_core::PhysLinkId<()>>,
+async fn write_outgoing(
+    tx_bytes: tokio::io::WriteHalf<tokio::net::UnixStream>,
+    link_sender: Rc<Link>,
+    mut framer: StreamFramer,
 ) -> Result<(), Error> {
-    while let Some(mut frame) = rx_frames.next().await {
-        node.queue_recv(link_id, frame.as_mut());
+    let mut frame = [0u8; 2048];
+    let mut tx_bytes = Some(tx_bytes);
+    while let Some(n) = link_sender.next_send(&mut frame).await? {
+        framer.queue_send(&mut frame[..n])?;
+        let out = framer.take_sends();
+        let wr = tokio::io::write_all(tx_bytes.take().unwrap(), out.as_slice());
+        let wr = futures::compat::Compat01As03::new(wr).map_err(|e| -> Error { e.into() });
+        let (t, _) = wr.await?;
+        tx_bytes = Some(t);
     }
     Ok(())
-}
-
-async fn process_incoming(
-    node: Node<OvernetRuntime>,
-    rx_frames: futures::channel::mpsc::Receiver<Vec<u8>>,
-    link_id: LinkId<overnet_core::PhysLinkId<()>>,
-) {
-    if let Err(e) = process_incoming_inner(node, rx_frames, link_id).await {
-        log::warn!("Error processing incoming frames: {}", e);
-    }
 }
 
 /// Retry a future until it succeeds or retries run out.
@@ -283,7 +136,7 @@ where
     f().await
 }
 
-async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
+async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
     let node_id = overnet_core::generate_node_id();
     log::trace!("Hoist node id:  {}", node_id.0);
 
@@ -298,7 +151,7 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
     let (rx_bytes, tx_bytes) = uds.split();
     let (tx_frames, mut rx_frames) = futures::channel::mpsc::channel(8);
 
-    spawn_local(read_incoming(rx_bytes, tx_frames));
+    spawn(log_errors(read_incoming(rx_bytes, tx_frames), "Error reading"));
 
     // Send first frame
     let mut framer = StreamFramer::new();
@@ -319,7 +172,7 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
     log::trace!("Wait for greeting & first frame write");
     let first_frame = rx_frames
         .next()
-        .map(|r| r.ok_or_else(|| anyhow::format_err!("Stream closed before greeting received")));
+        .map(|r| r.ok_or_else(|| format_err!("Stream closed before greeting received")));
     let (mut frame, (tx_bytes, _)) = futures::try_join!(first_frame, wr)?;
 
     let mut greeting = StreamSocketGreeting::empty();
@@ -331,47 +184,42 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
 
     log::trace!("Got greeting: {:?}", greeting);
     let ascendd_node_id = match greeting {
-        StreamSocketGreeting { magic_string: None, .. } => {
-            return Err(anyhow::format_err!(
-                "Required magic string '{}' not present in greeting",
-                ASCENDD_SERVER_CONNECTION_STRING
-            ))
-        }
+        StreamSocketGreeting { magic_string: None, .. } => bail!(
+            "Required magic string '{}' not present in greeting",
+            ASCENDD_SERVER_CONNECTION_STRING
+        ),
         StreamSocketGreeting { magic_string: Some(ref x), .. }
             if x != ASCENDD_SERVER_CONNECTION_STRING =>
         {
-            return Err(anyhow::format_err!(
+            bail!(
                 "Expected magic string '{}' in greeting, got '{}'",
                 ASCENDD_SERVER_CONNECTION_STRING,
                 x
-            ));
+            )
         }
-        StreamSocketGreeting { node_id: None, .. } => {
-            return Err(format_err!("No node id in greeting"))
-        }
+        StreamSocketGreeting { node_id: None, .. } => bail!("No node id in greeting"),
         StreamSocketGreeting { node_id: Some(n), .. } => n.id,
     };
 
-    let mut node = Node::new(
-        OvernetRuntime {
-            writer: Rc::new(RefCell::new(Writer {
-                write_state: WriteState::Idle { link: tx_bytes },
-                framer,
-            })),
-            router_link_id: LinkId::invalid(),
-        },
-        NodeOptions::new()
+    let node = Router::new(
+        RouterOptions::new()
+            .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
             .set_node_id(node_id)
             .set_quic_server_key_file(hard_coded_server_key()?)
             .set_quic_server_cert_file(hard_coded_server_cert()?),
     )?;
-    let ascendd_link_id = node.new_link(ascendd_node_id.into(), ())?;
-    node.with_runtime_mut(|rt| rt.router_link_id = ascendd_link_id);
+    let link = node.new_link(ascendd_node_id.into()).await?;
 
-    spawn_local(process_incoming(node.clone(), rx_frames, ascendd_link_id));
+    let link_receiver = link.clone();
+    spawn(async move {
+        while let Some(mut frame) = rx_frames.next().await {
+            if let Err(e) = link_receiver.received_packet(frame.as_mut_slice()).await {
+                log::warn!("Error receiving packet: {}", e);
+            }
+        }
+    });
 
-    // Tooling behaves much more as expected if we await a connection to ascendd
-    node.clone().require_connection(ascendd_node_id.into()).await?;
+    spawn(log_errors(write_outgoing(tx_bytes, link, framer), "Error writing"));
 
     Ok(node)
 }
@@ -390,14 +238,16 @@ async fn run_overnet_inner(
         let r = match cmd {
             None => return Ok(()),
             Some(OvernetCommand::ListPeers(sender)) => {
-                spawn_local(run_list_peers(node.clone(), sender));
-                Ok(())
+                node.list_peers(Box::new(|peers| {
+                    let _ = sender.send(peers);
+                }))
+                .await
             }
             Some(OvernetCommand::RegisterService(service_name, provider)) => {
-                node.register_service(service_name, provider)
+                node.register_service(service_name, provider).await
             }
             Some(OvernetCommand::ConnectToService(node_id, service_name, channel)) => {
-                node.connect_to_service(node_id, &service_name, channel)
+                node.connect_to_service(node_id, &service_name, channel).await
             }
             Some(OvernetCommand::AttachSocketLink(socket, options)) => {
                 node.attach_socket_link(socket, options)
@@ -501,14 +351,6 @@ pub fn connect_as_mesh_controller() -> Result<impl MeshControllerProxyInterface,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Executor implementation
-
-pub fn run(future: impl Future<Output = ()> + 'static) {
-    crate::logger::init().unwrap();
-    current_thread::Runtime::new()
-        .unwrap()
-        .block_on(future.unit_error().boxed_local().compat())
-        .unwrap();
-}
 
 pub fn spawn<F>(future: F)
 where
