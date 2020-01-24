@@ -15,11 +15,12 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+
+#include "src/graphics/drivers/misc/goldfish_control/goldfish_control-bind.h"
 
 namespace goldfish {
 namespace {
@@ -545,8 +546,6 @@ static constexpr zx_driver_ops_t goldfish_control_driver_ops = []() -> zx_driver
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(goldfish_control, goldfish_control_driver_ops, "zircon",
-                    "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
-ZIRCON_DRIVER_END(goldfish_control)
-    // clang-format on
+ZIRCON_DRIVER(goldfish_control, goldfish_control_driver_ops, "zircon", "0.1");
+
+// clang-format on
