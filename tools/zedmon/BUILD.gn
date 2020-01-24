@@ -1,0 +1,18 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+
+go_library("fake_zedmon_lib") {
+  name = "fake_zedmon"
+  source_dir = "fake_zedmon"
+  sources = [ "fake_zedmon.go" ]
+}
+
+go_binary("fake_zedmon_bin") {
+  output_name = "fake_zedmon"
+  gopackage = "fake_zedmon"
+  deps = [ ":fake_zedmon_lib" ]
+}

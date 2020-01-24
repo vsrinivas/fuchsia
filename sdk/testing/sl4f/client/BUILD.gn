@@ -99,7 +99,7 @@ copy("runtime_deps") {
 
   outputs = [ "$_data_dir/{{source_file_part}}" ]
 
-  deps = [ "//garnet/bin/traceutil:fake_zedmon_bin" ]
+  deps = [ "//tools/zedmon:fake_zedmon_bin" ]
 
   metadata = {
     test_runtime_deps = [ "$_data_dir/fake_zedmon" ]

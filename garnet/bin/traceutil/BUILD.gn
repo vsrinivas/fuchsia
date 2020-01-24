@@ -36,23 +36,9 @@ go_library("zedmon") {
   source_dir = "zedmon"
 }
 
-go_library("fake_zedmon_lib") {
-  name = "fake_zedmon"
-  source_dir = "zedmon/fake_zedmon"
-  sources = [ "fake_zedmon.go" ]
-}
-
-# TODO(claridge): Move this to a more central location now that it is used
-# outside of traceutil.
-go_binary("fake_zedmon_bin") {
-  output_name = "fake_zedmon"
-  gopackage = "fake_zedmon"
-  deps = [ ":fake_zedmon_lib" ]
-}
-
 go_test("zedmon_test") {
   gopackages =
       [ "fuchsia.googlesource.com/fuchsia/garnet/bin/traceutil/zedmon" ]
   deps = [ ":lib" ]
-  non_go_deps = [ ":fake_zedmon_bin" ]
+  non_go_deps = [ "//tools/zedmon:fake_zedmon_bin" ]
 }
