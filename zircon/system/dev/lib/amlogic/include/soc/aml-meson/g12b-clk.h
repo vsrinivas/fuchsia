@@ -8,25 +8,27 @@
 
 namespace g12b_clk {
 
+using clk_type = ::aml_clk_common::aml_clk_type;
+
 // SYS CPU CLK
-constexpr uint32_t G12B_CLK_SYS_PLL_DIV16 = AmlClkId(0, aml_clk_common::aml_clk_type::kMesonGate);
-constexpr uint32_t G12B_CLK_SYS_CPU_CLK_DIV16 = AmlClkId(1, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t G12B_CLK_SYS_PLL_DIV16 = AmlClkId(0, clk_type::kMesonGate);
+constexpr uint32_t G12B_CLK_SYS_CPU_CLK_DIV16 = AmlClkId(1, clk_type::kMesonGate);
 
 // GPIO 24MHz
-constexpr uint32_t G12B_CLK_CAM_INCK_24M = AmlClkId(2, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t G12B_CLK_CAM_INCK_24M = AmlClkId(2, clk_type::kMesonGate);
 
 // SYS CPUB CLK
-constexpr uint32_t G12B_CLK_SYS_PLLB_DIV16 = AmlClkId(3, aml_clk_common::aml_clk_type::kMesonGate);
-constexpr uint32_t G12B_CLK_SYS_CPUB_CLK_DIV16 = AmlClkId(4, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t G12B_CLK_SYS_PLLB_DIV16 = AmlClkId(3, clk_type::kMesonGate);
+constexpr uint32_t G12B_CLK_SYS_CPUB_CLK_DIV16 = AmlClkId(4, clk_type::kMesonGate);
 
 // NB: This must be the last entry
 constexpr uint32_t CLK_G12B_COUNT = 5;
 
 // kMesonPllClocks
-constexpr uint32_t CLK_GP0_PLL  = AmlClkId(GP0_PLL,  aml_clk_common::aml_clk_type::kMesonPll);
-constexpr uint32_t CLK_PCIE_PLL = AmlClkId(PCIE_PLL, aml_clk_common::aml_clk_type::kMesonPll);
-constexpr uint32_t CLK_HIFI_PLL = AmlClkId(HIFI_PLL, aml_clk_common::aml_clk_type::kMesonPll);
-constexpr uint32_t CLK_SYS_PLL  = AmlClkId(SYS_PLL,  aml_clk_common::aml_clk_type::kMesonPll);
-constexpr uint32_t CLK_SYS1_PLL = AmlClkId(SYS1_PLL, aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_GP0_PLL  = AmlClkId(GP0_PLL,  clk_type::kMesonPll);
+constexpr uint32_t CLK_PCIE_PLL = AmlClkId(PCIE_PLL, clk_type::kMesonPll);
+constexpr uint32_t CLK_HIFI_PLL = AmlClkId(HIFI_PLL, clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS_PLL  = AmlClkId(SYS_PLL,  clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS1_PLL = AmlClkId(SYS1_PLL, clk_type::kMesonPll);
 
 }  // namespace g12b_clk
