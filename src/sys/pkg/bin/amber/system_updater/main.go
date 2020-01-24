@@ -16,6 +16,7 @@ import (
 
 	"app/context"
 	devmgr "fidl/fuchsia/device/manager"
+	"fidl/fuchsia/space"
 	"syslog"
 
 	"metrics"
@@ -30,13 +31,15 @@ var (
 	reboot        bool
 )
 
-func run() (err error) {
+func run(ctx *context.Context) (err error) {
 	metrics.Log(metrics.OtaStart{
 		Initiator: initiator,
 		Target:    targetVersion,
 		When:      startTime,
 	})
 	phase := metrics.PhaseEndToEnd
+
+	GcPackages(ctx)
 
 	var queryFreeSpace func() int64
 
@@ -89,13 +92,13 @@ func run() (err error) {
 		}
 	}()
 
-	resolver, err := ConnectToPackageResolver()
+	resolver, err := ConnectToPackageResolver(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to update service: %s", err)
 	}
 	defer resolver.Close()
 
-	dataSink, bootManager, err := ConnectToPaver()
+	dataSink, bootManager, err := ConnectToPaver(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to paver service: %s", err)
 	}
@@ -203,6 +206,23 @@ func SendReboot() {
 	}
 }
 
+func GcPackages(ctx *context.Context) {
+	req, pxy, err := space.NewManagerInterfaceRequest()
+	if err != nil {
+		syslog.Errorf("Error creating space Manager request: %s", err)
+		return
+	}
+	ctx.ConnectToEnvService(req)
+	res, err := pxy.Gc()
+	if err != nil {
+		syslog.Errorf("Error collecting garbage: %s", err)
+	}
+	if res.Which() == space.ManagerGcResultErr {
+		syslog.Errorf("Error collecting garbage: %s", res.Err)
+	}
+	pxy.Close()
+}
+
 type InitiatorValue struct {
 	initiator *metrics.Initiator
 }
@@ -241,7 +261,7 @@ func Main() {
 
 	startTime = time.Unix(0, *start)
 
-	if err := run(); err != nil {
+	if err := run(ctx); err != nil {
 		syslog.Fatalf("%s", err)
 	}
 }

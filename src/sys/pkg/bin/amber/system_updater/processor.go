@@ -32,8 +32,7 @@ type Package struct {
 	merkle  string
 }
 
-func ConnectToPackageResolver() (*pkg.PackageResolverInterface, error) {
-	context := context.CreateFromStartupInfo()
+func ConnectToPackageResolver(context *context.Context) (*pkg.PackageResolverInterface, error) {
 	req, pxy, err := pkg.NewPackageResolverInterfaceRequest()
 
 	if err != nil {
@@ -45,8 +44,7 @@ func ConnectToPackageResolver() (*pkg.PackageResolverInterface, error) {
 	return pxy, nil
 }
 
-func ConnectToPaver() (*paver.DataSinkInterface, *paver.BootManagerInterface, error) {
-	context := context.CreateFromStartupInfo()
+func ConnectToPaver(context *context.Context) (*paver.DataSinkInterface, *paver.BootManagerInterface, error) {
 	req, pxy, err := paver.NewPaverInterfaceRequest()
 
 	if err != nil {

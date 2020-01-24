@@ -16,6 +16,7 @@ go_library("lib") {
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.amber($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
+    "//sdk/fidl/fuchsia.space($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component/go/src/app",
     "//src/sys/pkg/bin/amber:metrics_lib",

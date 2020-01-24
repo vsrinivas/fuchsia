@@ -4,15 +4,11 @@
 
 use crate::errors::Error as ErrorKind;
 use anyhow::{Context as _, Error};
-use fidl_fuchsia_io;
 use fidl_fuchsia_sys::{LauncherMarker, LauncherProxy};
-use fuchsia_async::{
-    self as fasync,
-    futures::{future::BoxFuture, FutureExt},
-};
+use fuchsia_async::futures::{future::BoxFuture, FutureExt};
 use fuchsia_component::client::{connect_to_service, launch};
 use fuchsia_merkle::Hash;
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
+use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 
 #[cfg(test)]
@@ -48,7 +44,6 @@ pub async fn apply_system_update(
     apply_system_update_impl(
         current_system_image,
         latest_system_image,
-        &RealServiceConnector,
         &mut component_runner,
         initiator,
         &RealTimeSource,
@@ -175,15 +170,11 @@ fn get_system_updater_resource_url(
 async fn apply_system_update_impl<'a>(
     current_system_image: Hash,
     latest_system_image: Hash,
-    service_connector: &'a impl ServiceConnector,
     component_runner: &'a mut impl ComponentRunner,
     initiator: Initiator,
     time_source: &'a impl TimeSource,
     file_system: &'a impl FileSystem,
 ) -> Result<(), anyhow::Error> {
-    if let Err(err) = pkgfs_gc(service_connector).await {
-        fx_log_err!("failed to garbage collect pkgfs, will still attempt system update: {}", err);
-    }
     fx_log_info!("starting system_updater");
     let fut = component_runner.run_until_exit(
         get_system_updater_resource_url(file_system)?,
@@ -198,65 +189,14 @@ async fn apply_system_update_impl<'a>(
     Err(ErrorKind::SystemUpdaterFinished)?
 }
 
-async fn pkgfs_gc(service_connector: &impl ServiceConnector) -> Result<(), Error> {
-    fx_log_info!("triggering pkgfs GC");
-    let (dir_end, dir_server_end) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()
-            .context(ErrorKind::PkgfsGc)?;
-    service_connector
-        .service_connect("/pkgfs/ctl", dir_server_end.into_channel())
-        .context(ErrorKind::PkgfsGc)?;
-    let dir_proxy = fidl_fuchsia_io::DirectoryProxy::new(
-        fasync::Channel::from_channel(dir_end.into_channel()).context(ErrorKind::PkgfsGc)?,
-    );
-    let status = dir_proxy.unlink("garbage").await.context(ErrorKind::PkgfsGc)?;
-    zx::Status::ok(status).context(ErrorKind::PkgfsGc)?;
-    Ok(())
-}
-
 #[cfg(test)]
 mod test_apply_system_update_impl {
     use super::*;
-    use fuchsia_async::futures::future;
+    use fuchsia_async::{self as fasync, futures::future};
     use proptest::prelude::*;
-    use std::fs;
 
     const ACTIVE_SYSTEM_IMAGE_MERKLE: [u8; 32] = [0u8; 32];
     const NEW_SYSTEM_IMAGE_MERKLE: [u8; 32] = [1u8; 32];
-
-    struct TempDirServiceConnector {
-        temp_dir: tempfile::TempDir,
-    }
-    impl TempDirServiceConnector {
-        fn new() -> TempDirServiceConnector {
-            TempDirServiceConnector { temp_dir: tempfile::tempdir().expect("create temp dir") }
-        }
-        fn new_with_pkgfs_garbage() -> TempDirServiceConnector {
-            let service_connector = Self::new();
-            let pkgfs = service_connector.temp_dir.path().join("pkgfs");
-            fs::create_dir(&pkgfs).expect("create pkgfs dir");
-            fs::create_dir(pkgfs.join("ctl")).expect("create pkgfs/ctl dir");
-            fs::File::create(pkgfs.join("ctl/garbage")).expect("create garbage file");
-            service_connector
-        }
-    }
-    impl TempDirServiceConnector {
-        fn has_garbage_file(&self) -> bool {
-            self.temp_dir.path().join("pkgfs/ctl/garbage").exists()
-        }
-    }
-    impl ServiceConnector for TempDirServiceConnector {
-        fn service_connect(
-            &self,
-            service_path: &str,
-            channel: zx::Channel,
-        ) -> Result<(), zx::Status> {
-            fdio::service_connect(
-                self.temp_dir.path().join(&service_path[1..]).to_str().expect("paths are utf8"),
-                channel,
-            )
-        }
-    }
 
     struct DoNothingComponentRunner;
     impl ComponentRunner for DoNothingComponentRunner {
@@ -318,16 +258,13 @@ mod test_apply_system_update_impl {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_trigger_pkgfs_gc_if_update_available() {
-        let service_connector = TempDirServiceConnector::new_with_pkgfs_garbage();
         let mut component_runner = DoNothingComponentRunner;
         let time_source = FakeTimeSource { now: 0 };
         let filesystem = FakeFileSystem { has_amber: true };
-        assert!(service_connector.has_garbage_file());
 
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
-            &service_connector,
             &mut component_runner,
             Initiator::Manual,
             &time_source,
@@ -339,12 +276,10 @@ mod test_apply_system_update_impl {
             result.unwrap_err().downcast::<ErrorKind>().unwrap(),
             ErrorKind::SystemUpdaterFinished
         );
-        assert!(!service_connector.has_garbage_file());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_launch_system_updater_if_update_available() {
-        let service_connector = TempDirServiceConnector::new();
         let mut component_runner = WasCalledComponentRunner { was_called: false };
         let time_source = FakeTimeSource { now: 0 };
         let filesystem = FakeFileSystem { has_amber: true };
@@ -352,7 +287,6 @@ mod test_apply_system_update_impl {
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
-            &service_connector,
             &mut component_runner,
             Initiator::Manual,
             &time_source,
@@ -369,7 +303,6 @@ mod test_apply_system_update_impl {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_launch_system_updater_even_if_gc_fails() {
-        let service_connector = TempDirServiceConnector::new();
         let mut component_runner = WasCalledComponentRunner { was_called: false };
         let time_source = FakeTimeSource { now: 0 };
         let filesystem = FakeFileSystem { has_amber: true };
@@ -377,7 +310,6 @@ mod test_apply_system_update_impl {
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
-            &service_connector,
             &mut component_runner,
             Initiator::Manual,
             &time_source,
@@ -413,7 +345,6 @@ mod test_apply_system_update_impl {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_launch_system_updater_url_obtained_from_static_packages() {
-        let service_connector = TempDirServiceConnector::new();
         let mut component_runner = ArgumentCapturingComponentRunner { captured_args: vec![] };
         let time_source = FakeTimeSource { now: 0 };
         let filesystem = FakeFileSystem { has_amber: true };
@@ -421,7 +352,6 @@ mod test_apply_system_update_impl {
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
             NEW_SYSTEM_IMAGE_MERKLE.into(),
-            &service_connector,
             &mut component_runner,
             Initiator::Manual,
             &time_source,
@@ -462,7 +392,6 @@ mod test_apply_system_update_impl {
         {
             prop_assume!(source_merkle != target_merkle);
 
-            let service_connector = TempDirServiceConnector::new();
             let mut component_runner = ArgumentCapturingComponentRunner { captured_args: vec![] };
             let time_source = FakeTimeSource { now: start_time };
             let filesystem = FakeFileSystem { has_amber: false };
@@ -472,7 +401,6 @@ mod test_apply_system_update_impl {
             let result = executor.run_singlethreaded(apply_system_update_impl(
                 source_merkle.parse().expect("source merkle string literal"),
                 target_merkle.parse().expect("target merkle string literal"),
-                &service_connector,
                 &mut component_runner,
                 initiator,
                 &time_source,
@@ -500,6 +428,7 @@ mod test_apply_system_update_impl {
 #[cfg(test)]
 mod test_real_service_connector {
     use super::*;
+    use fuchsia_async as fasync;
     use matches::assert_matches;
     use std::fs;
 
@@ -558,6 +487,7 @@ mod test_real_service_connector {
 #[cfg(test)]
 mod test_real_component_runner {
     use super::*;
+    use fuchsia_async as fasync;
 
     const TEST_SHELL_COMMAND_RESOURCE_URL: &str =
         "fuchsia-pkg://fuchsia.com/system-update-checker-tests/0#meta/test-shell-command.cmx";

@@ -66,9 +66,6 @@ pub enum Error {
     #[error("system_updater component exited with success, it should have rebooted the system")]
     SystemUpdaterFinished,
 
-    #[error("failed to garbage collect pkgfs")]
-    PkgfsGc,
-
     #[error("error reading /system/data/static_packages")]
     ReadStaticPackages,
 }

@@ -17,7 +17,8 @@
             "fuchsia.device.manager.Administrator",
             "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver",
-            "fuchsia.pkg.PackageResolver"
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.space.Manager"
         ]
     }
 }
