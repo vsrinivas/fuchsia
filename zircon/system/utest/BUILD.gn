@@ -171,7 +171,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/simplehid/test",
       "$zx/system/ulib/smbios:smbios-test",
       "$zx/system/ulib/storage:test",
-      "$zx/system/ulib/storage-metrics/test",
       "$zx/system/ulib/sysconfig-client:tests",
       "$zx/system/ulib/syslog/test",
       "$zx/system/ulib/test-exceptions/test",
