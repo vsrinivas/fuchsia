@@ -40,7 +40,7 @@ if (is_linux) {
       "$zircon_root_build_dir/tools/netls",
       "$zircon_root_build_dir/tools/netruncmd",
     ]
-    outputs = [ "$root_out_dir/test_data/netsvc_tools/{{source_file_part}}" ]
+    outputs = [ "$root_out_dir/test_data/limited_netsvc/{{source_file_part}}" ]
   }
 
   group("netsvc_user_tools") {
@@ -48,11 +48,11 @@ if (is_linux) {
 
     metadata = {
       test_runtime_deps = [
-        "$root_out_dir/test_data/netsvc_tools/loglistener",
-        "$root_out_dir/test_data/netsvc_tools/netaddr",
-        "$root_out_dir/test_data/netsvc_tools/netcp",
-        "$root_out_dir/test_data/netsvc_tools/netls",
-        "$root_out_dir/test_data/netsvc_tools/netruncmd",
+        "$root_out_dir/test_data/limited_netsvc/loglistener",
+        "$root_out_dir/test_data/limited_netsvc/netaddr",
+        "$root_out_dir/test_data/limited_netsvc/netcp",
+        "$root_out_dir/test_data/limited_netsvc/netls",
+        "$root_out_dir/test_data/limited_netsvc/netruncmd",
       ]
     }
   }

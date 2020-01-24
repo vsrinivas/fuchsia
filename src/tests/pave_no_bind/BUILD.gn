@@ -33,15 +33,21 @@ if (is_linux) {
   copy("copy_netsvc_tools") {
     visibility = [ ":*" ]
 
-    sources = [ "$zircon_root_build_dir/tools/bootserver" ]
-    outputs = [ "$root_out_dir/test_data/netsvc_tools/{{source_file_part}}" ]
+    sources = [
+      "$zircon_root_build_dir/tools/bootserver",
+      "$zircon_root_build_dir/tools/netls",
+    ]
+    outputs = [ "$root_out_dir/test_data/pave_no_bind/{{source_file_part}}" ]
   }
 
   group("netsvc_user_tools") {
     deps = [ ":copy_netsvc_tools" ]
 
     metadata = {
-      test_runtime_deps = [ "$root_out_dir/test_data/netsvc_tools/bootserver" ]
+      test_runtime_deps = [
+        "$root_out_dir/test_data/pave_no_bind/bootserver",
+        "$root_out_dir/test_data/pave_no_bind/netls",
+      ]
     }
   }
 

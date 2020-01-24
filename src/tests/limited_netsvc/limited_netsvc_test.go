@@ -37,7 +37,7 @@ func toolPath(t *testing.T, name string) string {
 		return ""
 	}
 	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "test_data", "netsvc_tools", name)
+	return filepath.Join(exPath, "test_data", "limited_netsvc", name)
 }
 
 func cmdWithTimeout(t *testing.T, shouldWork bool, name string, arg ...string) {
