@@ -411,8 +411,9 @@ template("library") {
   shared = shared && defined(toolchain.shlib)
 
   # TODO(BLD-353): temporary hacks
-  if (sdk != false && toolchain.environment == "user" &&
-      current_toolchain == toolchain.shlib) {
+  if (sdk != false && ((toolchain.environment == "user" &&
+                        current_toolchain == toolchain.shlib) ||
+                       toolchain.environment == "host")) {
     sdk_deps = []
     if (defined(invoker.public_deps)) {
       foreach(label, invoker.public_deps) {
@@ -429,6 +430,11 @@ template("library") {
     }
     if (sdk != "shared" && defined(invoker.deps)) {
       sdk_deps += invoker.deps
+    }
+
+    name_suffix = ""
+    if (toolchain.environment == "host") {
+      name_suffix = "-host"
     }
 
     install_files = []
@@ -467,9 +473,15 @@ template("library") {
       ]
     }
 
+    dep_suffix = ""
+    if (is_host) {
+      dep_suffix = "-host"
+    }
+    not_needed([ "dep_suffix" ])
+
     legacy_metadata = {
       legacy_barrier = []
-      legacy_dirs = [ "lib/$_library_name" ]
+      legacy_dirs = [ "lib/$_library_name$name_suffix" ]
       legacy_targets = [
         {
           _label = get_label_info(":$_library_name", "label_with_toolchain")
@@ -477,7 +489,7 @@ template("library") {
           forward_variables_from(invoker, [ "testonly" ])
           import = "//build/zircon/zircon_library.gni"
           target_type = "zircon_library"
-          target_name = _library_name
+          target_name = "$_library_name$name_suffix"
           dir = "//zircon/" + rebase_path(".", "//")
           include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
           headers = sdk_headers
@@ -517,13 +529,13 @@ template("library") {
             } else if (get_label_info(dep, "name") == "headers") {
               dep = get_path_info(get_label_info(dep, "dir"), "name")
               if (dep != "c" && dep != "llcpp") {
-                public_deps += [ "//zircon/public/lib/$dep" ]
+                public_deps += [ "//zircon/public/lib/$dep$dep_suffix" ]
               }
             } else if (get_path_info(get_label_info(dep, "name"),
                                      "extension") == "headers") {
               dep = get_path_info(get_label_info(dep, "name"), "name")
               if (dep != "c" && dep != "llcpp") {
-                public_deps += [ "//zircon/public/lib/$dep" ]
+                public_deps += [ "//zircon/public/lib/$dep$dep_suffix" ]
               }
             } else {
               if (get_path_info(get_label_info(dep, "dir"), "dir") ==
@@ -533,11 +545,11 @@ template("library") {
               } else if (get_label_info(dep, "name") == "static" ||
                          get_label_info(dep, "name") == "shared") {
                 dep = get_path_info(get_label_info(dep, "dir"), "name")
-                deps += [ "//zircon/public/lib/$dep" ]
+                deps += [ "//zircon/public/lib/$dep$dep_suffix" ]
               } else {
                 dep = get_path_info(get_label_info(dep, "name"), "name")
                 if (dep != "common" && dep != "handler") {
-                  deps += [ "//zircon/public/lib/$dep" ]
+                  deps += [ "//zircon/public/lib/$dep$dep_suffix" ]
                 }
               }
             }
@@ -547,11 +559,12 @@ template("library") {
         },
       ]
     }
-  } else if (!is_host && !is_kernel && (static || shared)) {
+  } else {
     legacy_metadata = {
       legacy_barrier = []
     }
   }
+  not_needed([ "legacy_metadata" ])
 
   # Empty libraries are useless, so do a source set instead.
   # TODO(crbug.com/gn/16): Empty library works OK and the source_set
@@ -587,6 +600,9 @@ template("library") {
           public_deps = []
         }
         public_deps += [ ":${_library_name}.headers" ]
+
+        # TODO(BLD-353): temporary hacks
+        metadata = legacy_metadata
       }
     }
   } else if (static || shared) {

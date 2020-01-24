@@ -17,29 +17,32 @@
 #   testonly (optional)
 #     Same as for any GN target.
 template("migrated_manifest") {
-  assert(is_fuchsia, "Migrated manifests only target Fuchsia")
   assert(defined(invoker.deps) && invoker.deps != [],
          "Need deps to generate a manifest for")
 
-  generated_file(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
+  if (is_fuchsia) {
+    generated_file(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
 
-    deps += [
-      # Add sysroot-provided elements by default.
-      "//build/config/fuchsia:sysroot_metadata",
-    ]
+      deps += [
+        # Add sysroot-provided elements by default.
+        "//build/config/fuchsia:sysroot_metadata",
+      ]
 
-    data_keys = [ "migrated_manifest_lines" ]
-    walk_keys = [ "migrated_manifest_barrier" ]
+      data_keys = [ "migrated_manifest_lines" ]
+      walk_keys = [ "migrated_manifest_barrier" ]
 
-    # Use the same naming scheme as for other unification manifest templates,
-    # this makes them interoperable.
-    outputs = [
-      "$target_out_dir/$target_name.unification.manifest",
-    ]
+      # Use the same naming scheme as for other unification manifest templates,
+      # this makes them interoperable.
+      outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
+    }
+  } else {
+    # This template does nothing on non-Fuchsia platforms.
+    group(target_name) {
+    }
   }
 }

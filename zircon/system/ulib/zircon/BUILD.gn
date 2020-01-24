@@ -73,6 +73,16 @@ if (current_toolchain == default_toolchain) {
       public_deps = [ ":headers" ]
     }
   }
+
+  # Publish headers to the GN build so that they may be used in host binaries.
+  zx_library("zircon-headers") {
+    sdk = "source"
+    sdk_headers = [
+      "zircon/exception.h",
+      "zircon/status.h",
+    ]
+    sources = []
+  }
 } else {
   zx_library("zircon") {
     shared = true

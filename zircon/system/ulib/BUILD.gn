@@ -169,6 +169,7 @@ group("ulib") {
     "xdc-server-utils",
     "zbi-bootfs",
     "zircon",
+    "zircon:zircon-headers",
     "zircon-crypto",
     "zircon-crypto:zircon-crypto-static",
     "zircon-internal",
@@ -177,6 +178,15 @@ group("ulib") {
     "zxcrypt:zxcrypt-dev",
     "zxcrypt:zxcrypt-fdio",
     "zxio",
+    "zxtest",
+  ]
+}
+
+group("ulib-host") {
+  testonly = true
+  deps = [
+    "fbl",
+    "fit",
     "zxtest",
   ]
 }

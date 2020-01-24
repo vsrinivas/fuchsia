@@ -11,7 +11,6 @@ zircon_artifacts = []
 
 foreach(manifest, manifests) {
   if (manifest.cpu == target_cpu && manifest.os == target_os) {
-    # manifest.toolchain == "//public/gn/toolchain:user-$target_cpu-clang") {
     _manifest_file = "$zircon_root_build_dir/${manifest.path}"
     _lines = []
     _lines = read_file(_manifest_file, "list lines")

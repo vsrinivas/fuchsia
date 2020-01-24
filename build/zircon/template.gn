@@ -20,6 +20,16 @@ foreach(target, zircon_legacy_targets) {
     dir_target = target
   }
 }
+if (dir_target == false) {
+  foreach(target, zircon_legacy_host_targets) {
+    if (target.target_name == dir && target._zircon_public == zircon_public) {
+      assert(dir_target == false,
+             "$dir appears twice in Zircon legacy_host_targets metadata:" +
+                 " $dir_target vs $target")
+      dir_target = target
+    }
+  }
+}
 
 import(dir_target.import)
 

@@ -70,6 +70,7 @@ template("zircon_library") {
   if (defined(invoker.public_deps)) {
     library_public_deps = invoker.public_deps
   }
+
   # Remove references to a libzircon dependency, as it is provided by the
   # sysroot in the present build.
   if (library_deps + [ "//zircon/public/lib/zircon" ] -
@@ -82,6 +83,23 @@ template("zircon_library") {
     library_public_deps -= [ "//zircon/public/lib/zircon" ]
     library_libs += [ "zircon" ]
   }
+  if (library_deps + [ "//zircon/public/lib/zircon-host" ] -
+      [ "//zircon/public/lib/zircon-host" ] != library_deps) {
+    library_deps -= [ "//zircon/public/lib/zircon-host" ]
+    library_deps += [
+      "//zircon/public/lib/zircon-headers",
+      "//zircon/system/public",
+    ]
+  }
+  if (library_public_deps + [ "//zircon/public/lib/zircon-host" ] -
+      [ "//zircon/public/lib/zircon-host" ] != library_public_deps) {
+    library_public_deps -= [ "//zircon/public/lib/zircon-host" ]
+    library_public_deps += [
+      "//zircon/public/lib/zircon-headers",
+      "//zircon/system/public",
+    ]
+  }
+
   # Update dependency on libdriver, whose implementation is provided by the
   # present build.
   if (library_deps + [ "//zircon/public/lib/driver" ] -
@@ -94,6 +112,7 @@ template("zircon_library") {
     library_public_deps -= [ "//zircon/public/lib/driver" ]
     library_public_deps += [ "//src/devices:driver" ]
   }
+
   # Update reference to uboringssl, which really only forwards to boringssl.
   if (library_deps + [ "//zircon/public/lib/uboringssl" ] -
       [ "//zircon/public/lib/uboringssl" ] != library_deps) {
@@ -148,7 +167,7 @@ template("zircon_library") {
     if (is_fuchsia) {
       libs = library_libs
       lib_dirs = zx_lib_dirs
-      not_needed(["zx_libs"])
+      not_needed([ "zx_libs" ])
     } else {
       not_needed([
                    "library_libs",
@@ -265,9 +284,7 @@ template("zircon_library") {
         current = generated_symbols_file
         reference = reference_symbols_file
         library_name = "(zircon) ${lib_name}"
-        deps = [
-          ":$library-extract_public_symbols",
-        ]
+        deps = [ ":$library-extract_public_symbols" ]
       }
     }
 
@@ -453,9 +470,7 @@ template("zircon_library") {
       action("$library-meta") {
         visibility = [ ":*" ]
         script = "//build/zircon/sdk_build_id.py"
-        sources = [
-          "$target_gen_dir/$library.meta.in.json",
-        ]
+        sources = [ "$target_gen_dir/$library.meta.in.json" ]
         outputs = [
           "$target_out_dir/$library.meta.out.json",
           "$target_out_dir/$library.debug.manifest",

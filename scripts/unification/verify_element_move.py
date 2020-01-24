@@ -38,6 +38,11 @@ class Type(object):
     def all(cls): return [cls.AUX, cls.IMAGE, cls.TESTS]
 
 
+# Special-case for host tests which are not exposed in the same way as other
+# types.
+HOST_TESTS_TYPE = "host_tests"
+
+
 class Origin(object):
     LEGACY = 'legacy'
     MIGRATED = 'migrated'
@@ -153,6 +158,11 @@ class Summary(object):
         for name, path in objects.iteritems():
             dataset.add(name, FileData(path))
 
+    def add_host_tests(self, tests):
+        data = self.objects.setdefault(HOST_TESTS_TYPE, [])
+        data.extend(tests)
+        self.objects[HOST_TESTS_TYPE] = sorted(data)
+
     def get_objects(self, type):
         return self.objects[type]
 
@@ -170,6 +180,7 @@ class Summary(object):
         data = json.load(input)
         for type in Type.all():
             result.objects[type] = FileDataSet.from_json(data[type])
+        result.add_host_tests(data[HOST_TESTS_TYPE])
         return result
 
 
@@ -182,12 +193,15 @@ def generate_summary(manifests, base_dir):
             contents = dict([(n, os.path.join(base_dir, p))
                              for (n, p) in contents.iteritems()])
             result.add_objects(type, contents)
+    for manifest in filter(lambda m: m.type == HOST_TESTS_TYPE, manifests):
+        contents = manifest.contents
+        result.add_host_tests(contents)
     return result
 
 
 def report(manifest, is_error, message):
     type = 'Error' if is_error else 'Warning'
-    print('%s%s%s' % (type.ljust(10), manifest.ljust(8), message))
+    print('%s%s%s' % (type.ljust(10), manifest.ljust(12), message))
 
 
 def print_size(value):
@@ -259,6 +273,16 @@ def compare_summaries(reference, current):
                 report(type, is_error, 'shared library added to ' + name +
                        ': ' + lib)
 
+    # Host tests.
+    reference_host_tests = set(reference.get_objects(HOST_TESTS_TYPE))
+    current_host_tests = set(current.get_objects(HOST_TESTS_TYPE))
+    if reference_host_tests != current_host_tests:
+        has_errors = True
+        for element in reference_host_tests - current_host_tests:
+            report(HOST_TESTS_TYPE, True, 'test removed: ' + element)
+        for element in current_host_tests - reference_host_tests:
+            report(HOST_TESTS_TYPE, True, 'test added: ' + element)
+
     if has_errors:
         print('Error: summaries do not match!')
         return False
@@ -296,6 +320,11 @@ def main():
                 contents = dict(map(lambda line: line.strip().split('=', 1),
                                      manifest_file.readlines()))
                 manifests.append(Manifest(origin, type, contents))
+        host_tests_path = os.path.join(args.build_dir,
+                                       '%s_zircon_host_tests.json' % origin)
+        with open(host_tests_path, 'r') as host_tests_file:
+            data = json.load(host_tests_file)
+            manifests.append(Manifest(origin, 'host_tests', data))
 
     # Generate a summary for the current build.
     summary = generate_summary(manifests, args.build_dir)

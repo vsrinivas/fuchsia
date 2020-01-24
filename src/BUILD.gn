@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon.gni")
-import("//build/testing/environments.gni")
-
 group("src") {
   testonly = true
   deps = [
@@ -73,82 +70,9 @@ group("tests") {
   ]
 }
 
-# We link host tests from the zircon build into the fuchsia build directory
-# and synthesize test metadata for them so that these tests may be run as
-# fuchsia tests.
-zircon_host_test_deps = []
-zircon_test_specs = read_file("$zircon_root_build_dir/tests.json", "json")
-foreach(entry, zircon_test_specs) {
-  zircon_test = {  # Clear from previous iteration.
-  }
-  zircon_test = entry.test
-  is_disabled = defined(zircon_test.disabled) && zircon_test.disabled != ""
-  if (!is_disabled &&
-      (zircon_test.os == host_os && zircon_test.cpu == host_cpu)) {
-    # We need a unique target name derived from the test entry, and slashes are
-    # bad.
-    copy_target_name =
-        string_replace("_zircon_host_tests.${zircon_test.path}", "/", "_")
-    copy_deps = []
-
-    if (defined(zircon_test.runtime_deps)) {
-      entries = read_file("$zircon_root_build_dir/${zircon_test.runtime_deps}",
-                          "json")
-      foreach(entry, entries) {
-        # Same as above.
-        copy_dep_target_name =
-            string_replace("_zircon_host_tests.$entry", "/", "_")
-
-        copy(copy_dep_target_name) {
-          sources = [ "$zircon_root_build_dir/$entry" ]
-          outputs = [ "$root_build_dir/$entry" ]
-        }
-        copy_deps += [ ":$copy_dep_target_name" ]
-      }
-
-      runtime_deps_file = "$target_gen_dir/$copy_target_name.deps.json"
-      write_file(runtime_deps_file, entries, "json")
-    }
-
-    copy(copy_target_name) {
-      testonly = true
-      sources = [ "$zircon_root_build_dir/${zircon_test.path}" ]
-      outputs = [ "$root_build_dir/${zircon_test.path}" ]
-      deps = copy_deps
-
-      metadata = {
-        tests = [
-          {
-            test = {
-              forward_variables_from(zircon_test,
-                                     "*",
-                                     [
-                                       "disabled",
-                                       "runtime_deps",
-                                     ])
-              label = string_replace(label, "//", "//zircon/")
-              if (defined(runtime_deps_file)) {
-                runtime_deps = rebase_path(runtime_deps_file, root_build_dir)
-              }
-            }
-
-            # We only run host tests from x64 builds to avoid duplication.
-            if (target_cpu == "x64") {
-              environments = [ host_env ]
-            } else {
-              environments = []
-            }
-          },
-        ]
-      }
-    }
-    zircon_host_test_deps += [ ":$copy_target_name" ]
-  }
-}
-
 group("zircon_host_tests") {
   testonly = true
-  deps = zircon_host_test_deps
+  deps = [ "//build/unification/tests:host" ]
 }
 
 group("host_tests") {
