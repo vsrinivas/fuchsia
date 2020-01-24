@@ -202,11 +202,13 @@ ICD is loaded using `fuchsia.vulkan.loader.Loader`, which means the library is
 provided by the system itself rather than the package that contains the
 component. For this reason, the Vulkan ICD is part of the system ABI.
 
-The Vulkan ICD is an ELF shared library that exports exactly two symbols. These
-symbols are reserved for use by the Vulkan ICD and should not be used directly.
+The Vulkan ICD is an ELF shared library that exports exactly three symbols.
+These symbols are reserved for use by the Vulkan ICD and should not be used
+directly.
 
  * `vk_icdGetInstanceProcAddr`
  * `vk_icdNegotiateLoaderICDInterfaceVersion`
+ * `vk_icdInitializeConnectToServiceCallback`
 
 In addition, the Vulkan ICD shared library has a `NEEDED` section that lists
 several shared libraries upon which the Vulkan ICD depends. The package
