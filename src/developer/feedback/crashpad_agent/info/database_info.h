@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 
 namespace feedback {
 
@@ -15,6 +16,8 @@ namespace feedback {
 struct DatabaseInfo {
  public:
   DatabaseInfo(std::shared_ptr<InfoContext> context);
+
+  void CrashpadError(CrashpadFunctionError function);
 
   void LogMaxCrashpadDatabaseSize(uint64_t max_crashpad_database_size_in_kb);
   void LogGarbageCollection(uint64_t num_cleaned, uint64_t num_pruned);

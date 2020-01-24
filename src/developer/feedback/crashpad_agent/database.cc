@@ -38,6 +38,7 @@ std::unique_ptr<Database> Database::TryCreate(std::shared_ptr<InfoContext> info_
   if (!crashpad_database) {
     FX_LOGS(ERROR) << fxl::StringPrintf("Error initializing local crash report database at %s",
                                         kCrashpadDatabasePath);
+    info_context->Cobalt().LogOccurrence(CrashpadFunctionError::kInitializeDatabase);
     return nullptr;
   }
 
@@ -63,6 +64,7 @@ bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& 
   std::unique_ptr<crashpad::CrashReportDatabase::NewReport> report;
   if (const auto status = database_->PrepareNewCrashReport(&report);
       status != OperationStatus::kNoError) {
+    info_.CrashpadError(CrashpadFunctionError::kPrepareNewCrashReport);
     FX_LOGS(ERROR) << fxl::StringPrintf("Error creating local Crashpad report (%u)", status);
     return false;
   }
@@ -82,6 +84,7 @@ bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& 
   // Finish new local Crashpad report.
   if (const auto status = database_->FinishedWritingCrashReport(std::move(report), local_report_id);
       status != OperationStatus::kNoError) {
+    info_.CrashpadError(CrashpadFunctionError::kFinishedWritingCrashReport);
     FX_LOGS(ERROR) << fxl::StringPrintf("Error writing local Crashpad report (%u)", status);
     return false;
   }
@@ -101,6 +104,7 @@ std::unique_ptr<UploadReport> Database::GetUploadReport(const UUID& local_report
   auto upload_report = std::make_unique<const crashpad::CrashReportDatabase::UploadReport>();
   if (const auto status = database_->GetReportForUploading(local_report_id, &upload_report);
       status != OperationStatus::kNoError) {
+    info_.CrashpadError(CrashpadFunctionError::kGetReportForUploading);
     FX_LOGS(ERROR) << fxl::StringPrintf(
         "Error getting upload report for local id %s from the database (%u)",
         local_report_id.ToString().c_str(), status);
@@ -141,6 +145,7 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
   if (const auto status =
           database_->RecordUploadComplete(upload_report->TransferUploadReport(), server_report_id);
       status != OperationStatus::kNoError) {
+    info_.CrashpadError(CrashpadFunctionError::kRecordUploadComplete);
     FX_LOGS(ERROR) << fxl::StringPrintf(
         "Unable to record local crash report %s as uploaded in the database (%u)",
         local_report_id.ToString().c_str(), status);
@@ -169,6 +174,7 @@ bool Database::Archive(const crashpad::UUID& local_report_id) {
   if (const auto status =
           database_->SkipReportUpload(local_report_id, CrashSkippedReason::kUploadFailed);
       status != OperationStatus::kNoError) {
+    info_.CrashpadError(CrashpadFunctionError::kSkipReportUpload);
     FX_LOGS(ERROR) << fxl::StringPrintf(
         "Unable to record local crash report %s as skipped in the database (%u)",
         local_report_id.ToString().c_str(), status);

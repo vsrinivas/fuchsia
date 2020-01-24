@@ -14,6 +14,7 @@
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
+#include "src/developer/feedback/crashpad_agent/tests/crashpad_database_gremlin.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
@@ -100,7 +101,7 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
 
-    SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb);
+    ASSERT_TRUE(SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb));
     SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     RunLoopUntilIdle();
   }
@@ -110,13 +111,16 @@ class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
  protected:
-  void SetUpDatabase(const uint64_t max_size_in_kb) {
+  bool SetUpDatabase(const uint64_t max_size_in_kb) {
     auto new_database = Database::TryCreate(info_context_, max_size_in_kb);
-    ASSERT_TRUE(new_database) << "Error creating database";
+    if (!new_database) {
+      return false;
+    }
     database_ = std::move(new_database);
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
     completed_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadCompletedDir);
     pending_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadPendingDir);
+    return true;
   }
 
   std::vector<std::string> GetAttachmentsDirContents() {
@@ -607,6 +611,103 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
                         ChildrenMatch(IsEmpty())),
 
               })));
+}
+
+TEST_F(DatabaseTest, Check_CobaltLogsInitializeFailure) {
+  CrashpadDatabaseGremlin gremlin(kCrashpadDatabasePath);
+
+  gremlin.BreakInitialize();
+
+  EXPECT_FALSE(SetUpDatabase(/*max_size_in_kb=*/1024u));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(CrashpadFunctionError::kInitializeDatabase),
+                                      }));
+}
+
+TEST_F(DatabaseTest, Check_CobaltLogsPrepareNewCrashReportFailure) {
+  UUID uuid;
+  CrashpadDatabaseGremlin gremlin(kCrashpadDatabasePath);
+
+  gremlin.BreakPrepareNewCrashReport();
+
+  EXPECT_FALSE(database_->MakeNewReport(/*attachments=*/{}, /*minidump=*/std::nullopt,
+                                        /*annotations=*/{}, &uuid));
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  CobaltEvent(CrashpadFunctionError::kPrepareNewCrashReport),
+              }));
+}
+
+TEST_F(DatabaseTest, Check_CobaltLogsFinishedWritingCrashReportFailure) {
+  UUID uuid;
+  CrashpadDatabaseGremlin gremlin(kCrashpadDatabasePath);
+
+  gremlin.BreakFinishedWritingCrashReport();
+
+  EXPECT_FALSE(database_->MakeNewReport(/*attachments=*/{}, /*minidump=*/std::nullopt,
+                                        /*annotations=*/{}, &uuid));
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  CobaltEvent(CrashpadFunctionError::kFinishedWritingCrashReport),
+              }));
+}
+
+TEST_F(DatabaseTest, Check_CobaltLogsGetReportForUploadingFailure) {
+  UUID uuid;
+  CrashpadDatabaseGremlin gremlin(kCrashpadDatabasePath);
+
+  MakeNewReportOrDie(&uuid);
+
+  gremlin.DeletePendingReport(uuid);
+
+  EXPECT_FALSE(database_->GetUploadReport(uuid));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  CobaltEvent(CrashpadFunctionError::kGetReportForUploading),
+              }));
+}
+
+TEST_F(DatabaseTest, Check_CobaltLogsRecordUploadCompleteFailure) {
+  UUID uuid;
+  std::unique_ptr<UploadReport> upload_report;
+  CrashpadDatabaseGremlin gremlin(kCrashpadDatabasePath);
+
+  MakeNewReportOrDie(&uuid);
+  upload_report = database_->GetUploadReport(uuid);
+
+  gremlin.BreakRecordUploadComplete();
+
+  EXPECT_FALSE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(CrashState::kUploaded),
+                                          CobaltEvent(UploadAttemptState::kUploaded, 0u),
+                                          CobaltEvent(CrashpadFunctionError::kRecordUploadComplete),
+                                      }));
+}
+
+TEST_F(DatabaseTest, Check_CobaltLogsSkipReportUploadFailure) {
+  UUID uuid;
+  CrashpadDatabaseGremlin gremlin(kCrashpadDatabasePath);
+
+  MakeNewReportOrDie(&uuid);
+
+  gremlin.BreakSkipReportUpload();
+
+  EXPECT_FALSE(database_->Archive(uuid));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(CrashState::kArchived),
+                                          CobaltEvent(CrashpadFunctionError::kSkipReportUpload),
+                                      }));
 }
 
 }  // namespace

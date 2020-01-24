@@ -4,13 +4,16 @@
 
 #include "src/developer/feedback/crashpad_agent/info/database_info.h"
 
-#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
 
 DatabaseInfo::DatabaseInfo(std::shared_ptr<InfoContext> context) : context_(context) {
   FXL_CHECK(context);
+}
+
+void DatabaseInfo::CrashpadError(const CrashpadFunctionError function) {
+  context_->Cobalt().LogOccurrence(function);
 }
 
 void DatabaseInfo::LogMaxCrashpadDatabaseSize(const uint64_t max_crashpad_database_size_in_kb) {

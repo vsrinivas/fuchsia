@@ -221,7 +221,11 @@ executable("database_unittest") {
 
   output_name = "crashpad_agent_database_unittest"
 
-  sources = [ "database_unittest.cc" ]
+  sources = [
+    "crashpad_database_gremlin.cc",
+    "crashpad_database_gremlin.h",
+    "database_unittest.cc",
+  ]
 
   deps = [
     "//garnet/public/lib/timekeeper:testing",
