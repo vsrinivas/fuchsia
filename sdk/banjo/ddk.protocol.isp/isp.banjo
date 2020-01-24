@@ -31,6 +31,10 @@ protocol OutputStream {
 
     // Unlocks the specified frame, allowing the driver to reuse the memory.
     ReleaseFrame(uint32 buffer_id) -> (zx.status s);
+
+    // Shutdown the stream and release all resources that are no longer needed.
+    // |shutdown_callback| : Informs the caller that all cleanup is complete.
+    Shutdown(IspStreamShutdownCallback shutdown_callback) -> (zx.status s);
 };
 
 [Layout = "ddk-protocol"]

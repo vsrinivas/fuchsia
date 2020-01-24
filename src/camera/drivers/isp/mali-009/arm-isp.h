@@ -123,6 +123,12 @@ class ArmIspDevice : public IspDeviceType,
   // |type| : Either STREAM_TYPE_FULL_RESOLUTION or STREAM_TYPE_DOWNSCALED
   // @Return : indicates if the stream was stopped.
   zx_status_t StopStream(stream_type_t type);
+
+  // Shutdown streaming of a stream & reclaim resources.
+  // |shutdown_callback| : Notifies the caller that resource reclamation is complete.
+  // @Return : indicates if the stream shutdown correctly.
+  zx_status_t ShutdownStream(const isp_stream_shutdown_callback_t* shutdown_callback);
+
   // ---------------  End ZX_PROTOCOL_ISP ---------------
 
   // ISP Init Sequences (init_sequences.cc)
