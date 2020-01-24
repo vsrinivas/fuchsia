@@ -52,7 +52,6 @@ group("uapp") {
     "usb-fwloader",
     "usbctl",
     "waitfor",
-    "watch",
     "xdc-test",
   ]
 }
