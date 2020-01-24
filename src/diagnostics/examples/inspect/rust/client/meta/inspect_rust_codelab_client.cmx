@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/inspect_cpp_codelab_client"
+        "binary": "bin/inspect_rust_codelab_client"
     },
     "sandbox": {
         "services": [

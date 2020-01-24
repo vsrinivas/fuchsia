@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/inspect_rust_codelab_part_4"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.examples.inspect.FizzBuzz",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

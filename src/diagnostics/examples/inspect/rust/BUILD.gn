@@ -1,0 +1,215 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+group("rust") {
+  deps = [ ":inspect_rust_codelab" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":inspect_rust_codelab_integration_tests",
+    ":inspect_rust_codelab_unittests",
+  ]
+}
+
+package("inspect_rust_codelab") {
+  deps = [
+    "client:bin",
+    "fizzbuzz:bin",
+    "part_1:bin",
+    "part_2:bin",
+    "part_3:bin",
+    "part_4:bin",
+    "part_5:bin",
+  ]
+
+  binaries = [
+    {
+      name = "inspect_rust_codelab_client"
+    },
+    {
+      name = "inspect_rust_codelab_fizzbuzz"
+    },
+    {
+      name = "inspect_rust_codelab_part_1"
+    },
+    {
+      name = "inspect_rust_codelab_part_2"
+    },
+    {
+      name = "inspect_rust_codelab_part_3"
+    },
+    {
+      name = "inspect_rust_codelab_part_4"
+    },
+    {
+      name = "inspect_rust_codelab_part_5"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("client/meta/inspect_rust_codelab_client.cmx")
+      dest = "inspect_rust_codelab_client.cmx"
+    },
+    {
+      path = rebase_path("fizzbuzz/meta/inspect_rust_codelab_fizzbuzz.cmx")
+      dest = "inspect_rust_codelab_fizzbuzz.cmx"
+    },
+    {
+      path = rebase_path("part_1/meta/inspect_rust_codelab_part_1.cmx")
+      dest = "inspect_rust_codelab_part_1.cmx"
+    },
+    {
+      path = rebase_path("part_2/meta/inspect_rust_codelab_part_2.cmx")
+      dest = "inspect_rust_codelab_part_2.cmx"
+    },
+    {
+      path = rebase_path("part_3/meta/inspect_rust_codelab_part_3.cmx")
+      dest = "inspect_rust_codelab_part_3.cmx"
+    },
+    {
+      path = rebase_path("part_4/meta/inspect_rust_codelab_part_4.cmx")
+      dest = "inspect_rust_codelab_part_4.cmx"
+    },
+    {
+      path = rebase_path("part_5/meta/inspect_rust_codelab_part_5.cmx")
+      dest = "inspect_rust_codelab_part_5.cmx"
+    },
+  ]
+}
+
+test_package("inspect_rust_codelab_unittests") {
+  deps = [
+    "part_1:bin_test",
+    "part_2:bin_test",
+    "part_3:bin_test",
+    "part_4:bin_test",
+    "part_5:bin_test",
+  ]
+
+  tests = [
+    {
+      name = "inspect_rust_codelab_part_1_bin_test"
+      dest = "reverser_unittests_part_1"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_rust_codelab_part_2_bin_test"
+      dest = "reverser_unittests_part_2"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_rust_codelab_part_3_bin_test"
+      dest = "reverser_unittests_part_3"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_rust_codelab_part_4_bin_test"
+      dest = "reverser_unittests_part_4"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_rust_codelab_part_5_bin_test"
+      dest = "reverser_unittests_part_5"
+      environments = basic_envs
+    },
+  ]
+}
+
+test_package("inspect_rust_codelab_integration_tests") {
+  deps = [
+    "fizzbuzz:bin",
+    "part_1:bin",
+    "part_1/tests:integration_test",
+    "part_2:bin",
+    "part_2/tests:integration_test",
+    "part_3:bin",
+    "part_3/tests:integration_test",
+    "part_4:bin",
+    "part_4/tests:integration_test",
+    "part_5:bin",
+    "part_5/tests:integration_test",
+  ]
+
+  tests = [
+    {
+      name = "inspect_rust_codelab_part_1_integration_test"
+      dest = "integration_test_part_1"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_rust_codelab_part_2_integration_test"
+      dest = "integration_test_part_2"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_rust_codelab_part_3_integration_test"
+      dest = "integration_test_part_3"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_rust_codelab_part_4_integration_test"
+      dest = "integration_test_part_4"
+      environments = basic_envs
+    },
+    {
+      name = "inspect_rust_codelab_part_5_integration_test"
+      dest = "integration_test_part_5"
+      environments = basic_envs
+    },
+  ]
+
+  binaries = [
+    {
+      name = "inspect_rust_codelab_fizzbuzz"
+    },
+    {
+      name = "inspect_rust_codelab_part_1"
+    },
+    {
+      name = "inspect_rust_codelab_part_2"
+    },
+    {
+      name = "inspect_rust_codelab_part_3"
+    },
+    {
+      name = "inspect_rust_codelab_part_4"
+    },
+    {
+      name = "inspect_rust_codelab_part_5"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("fizzbuzz/meta/inspect_rust_codelab_fizzbuzz.cmx")
+      dest = "inspect_rust_codelab_fizzbuzz.cmx"
+    },
+    {
+      path = rebase_path("part_1/meta/inspect_rust_codelab_part_1.cmx")
+      dest = "inspect_rust_codelab_part_1.cmx"
+    },
+    {
+      path = rebase_path("part_2/meta/inspect_rust_codelab_part_2.cmx")
+      dest = "inspect_rust_codelab_part_2.cmx"
+    },
+    {
+      path = rebase_path("part_3/meta/inspect_rust_codelab_part_3.cmx")
+      dest = "inspect_rust_codelab_part_3.cmx"
+    },
+    {
+      path = rebase_path("part_4/meta/inspect_rust_codelab_part_4.cmx")
+      dest = "inspect_rust_codelab_part_4.cmx"
+    },
+    {
+      path = rebase_path("part_5/meta/inspect_rust_codelab_part_5.cmx")
+      dest = "inspect_rust_codelab_part_5.cmx"
+    },
+  ]
+}

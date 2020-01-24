@@ -119,6 +119,7 @@ group("inspection") {
     "//garnet/examples/inspection/vmo:inspect_vmo_example",
     "//garnet/examples/inspection/vmo:inspect_vmo_example_tests",
     "//src/diagnostics/examples/inspect/cpp:inspect_cpp_codelab",
+    "//src/diagnostics/examples/inspect/rust:inspect_rust_codelab",
   ]
 }
 

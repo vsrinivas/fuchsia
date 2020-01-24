@@ -1,11 +1,11 @@
 {
     "program": {
-        "binary": "bin/inspect_cpp_codelab_client"
+        "binary": "test/integration_test_part_2"
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Loader",
             "fuchsia.logger.LogSink",
+            "fuchsia.sys.Loader",
             "fuchsia.sys.Environment"
         ]
     }

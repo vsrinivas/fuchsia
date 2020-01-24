@@ -3,10 +3,16 @@
 # found in the LICENSE file.
 
 group("inspect") {
-  deps = [ "cpp" ]
+  deps = [
+    "cpp",
+    "rust",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "cpp:tests" ]
+  deps = [
+    "cpp:tests",
+    "rust:tests",
+  ]
 }
