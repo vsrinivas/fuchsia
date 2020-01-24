@@ -1147,37 +1147,22 @@ impl TouchDevice {
                     let (sender, receiver) =
                         futures::channel::mpsc::unbounded::<hid_input_report::InputReport>();
 
-                    // Thread is spawned here to listen to the input reports.
-                    // Separate thread is currently needed to generate accurate
-                    // timestamps.
-                    std::thread::spawn(move || {
-                        let mut executor = fasync::Executor::new().unwrap();
-                        executor.run_singlethreaded(async {
-                            let mut has_printed_timestamp_warning = false;
-                            if let Ok((_, event)) = device.get_reports_event(Time::INFINITE) {
-                                while let Ok(_) =
-                                    fasync::OnSignals::new(&event, zx::Signals::USER_0).await
-                                {
-                                    duration!("input", "on_report");
-                                    if let Ok(reports) = device.get_reports(Time::INFINITE) {
-                                        for report in reports {
-                                            let mut report_with_time = report;
-                                            if report_with_time.event_time.is_none() {
-                                                if !has_printed_timestamp_warning {
-                                                    println!("warning: touch reports are missing timestamps");
-                                                    has_printed_timestamp_warning = true;
-                                                }
-                                                let event_time = Time::get(ClockId::Monotonic);
-                                                report_with_time.event_time = Some(event_time.into_nanos());
-                                            }
-                                            sender
-                                                .unbounded_send(report_with_time)
-                                                .expect("unbounded_send");
-                                        }
+                    // TODO: move direct input processing into carnelian.
+                    fasync::spawn_local(async move {
+                        if let Ok((_, event)) = device.get_reports_event(Time::INFINITE) {
+                            while let Ok(_) =
+                                fasync::OnSignals::new(&event, zx::Signals::USER_0).await
+                            {
+                                if let Ok(reports) = device.get_reports(Time::INFINITE) {
+                                    for report in reports {
+                                        let event_time =
+                                            report.event_time.expect("missing timestamp");
+                                        duration!("input", "on_report", "event_time" => event_time);
+                                        sender.unbounded_send(report).expect("unbounded_send");
                                     }
                                 }
                             }
-                        });
+                        }
                     });
 
                     return Ok(TouchDevice { x_range, y_range, receiver });
