@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/thread.h>
 
 #include <memory>
 
@@ -16,6 +17,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/bin/app.h"
+#include "src/ui/scenic/lib/scenic/util/scheduler_profile.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -39,6 +41,22 @@ int main(int argc, const char** argv) {
 
   scenic_impl::App app(std::move(app_context), inspect_deprecated::Node(std::move(object_dir)),
                        [&loop] { loop.Quit(); });
+
+  // TODO(40858): Migrate to the role-based scheduler API when available,
+  // instead of hard coding parameters.
+  {
+    // TODO(44209): Centralize default frame period.
+    const zx::duration capacity = zx::msec(16);
+    const zx::duration deadline = zx::msec(16);
+    const zx::duration period = deadline;
+    const auto profile = util::GetSchedulerProfile(capacity, deadline, period);
+    if (profile) {
+      const auto status = zx::thread::self()->set_profile(profile, 0);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to apply profile to main thread: " << status;
+      }
+    }
+  }
 
   loop.Run();
   FXL_LOG(INFO) << "Quit main Scenic loop.";

@@ -17,7 +17,8 @@
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.vulkan.loader.Loader",
+            "fuchsia.scheduler.ProfileProvider"
         ]
     }
 }

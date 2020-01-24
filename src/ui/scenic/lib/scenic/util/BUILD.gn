@@ -8,9 +8,16 @@ source_set("util") {
     "error_reporter.h",
     "print_event.cc",
     "print_event.h",
+    "scheduler_profile.cc",
+    "scheduler_profile.h",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.ui.gfx" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-scheduler",
+  ]
 
   deps = [ "//src/lib/fxl" ]
 }

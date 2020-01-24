@@ -58,6 +58,7 @@ source_set("base_deps") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scenic",
+    "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",

@@ -1,0 +1,33 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":scenic_util_tests_pkg" ]
+}
+
+executable("scenic_util_tests_bin") {
+  testonly = true
+  output_name = "scenic_util_tests"
+  sources = [ "util_tests.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/scenic/lib/scenic/util",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+test_package("scenic_util_tests_pkg") {
+  deps = [ ":scenic_util_tests_bin" ]
+  tests = [
+    {
+      name = "scenic_util_tests"
+    },
+  ]
+}
