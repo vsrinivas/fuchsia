@@ -9,10 +9,10 @@ import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
+import 'package:fidl_fuchsia_ui_policy/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
-import 'package:fuchsia_modular_flutter/session_shell.dart' show SessionShell;
 
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
@@ -27,11 +27,11 @@ import 'topbar_model.dart';
 
 /// Model that manages all the application state of this session shell.
 class AppModel {
+  final _presentation = PresentationProxy();
   final _pointerEventsListener = PointerEventsListener();
   final _shortcutRegistry = ui_shortcut.RegistryProxy();
   final _intl = PropertyProviderProxy();
 
-  SessionShell sessionShell;
   SuggestionService _suggestionService;
 
   /// The [GlobalKey] associated with [Ask] widget.
@@ -59,6 +59,7 @@ class AppModel {
   AppModel() {
     _startupContext.incoming.connectToService(_shortcutRegistry);
     _startupContext.incoming.connectToService(_intl);
+    _startupContext.incoming.connectToService(_presentation);
 
     _localeStream = LocaleSource(_intl).stream().asBroadcastStream();
 
@@ -66,12 +67,6 @@ class AppModel {
       startupContext: _startupContext,
       viewCreated: clustersModel.storyStarted,
     );
-
-    // TODO(http://fxb/44105): Remove SessionShell needed for Presentation API.
-    sessionShell = SessionShell(
-      startupContext: _startupContext,
-      onStoryStarted: ({controller, info, sessionShell}) => null,
-    )..start();
 
     topbarModel = TopbarModel(appModel: this);
 
@@ -89,7 +84,7 @@ class AppModel {
   /// Called after runApp which initializes flutter's gesture system.
   Future<void> onStarted() async {
     // Capture pointer events directly from Scenic.
-    _pointerEventsListener.listen(sessionShell.presentation);
+    _pointerEventsListener.listen(_presentation);
 
     // Capture key pressess for key bindings in keyboard_shortcuts.json.
     File file = File('/pkg/data/keyboard_shortcuts.json');
@@ -235,13 +230,11 @@ class AppModel {
     status.dispose();
     _keyboardShortcuts.dispose();
     _shortcutRegistry.ctrl.close();
-    sessionShell
-      ..context.logout()
-      ..stop();
+    _presentation.ctrl.close();
   }
 
   void injectTap(Offset offset) {
-    sessionShell.presentation
+    _presentation
       ..injectPointerEventHack(_createPointerEvent(
         phase: input.PointerEventPhase.add,
         offset: offset,
