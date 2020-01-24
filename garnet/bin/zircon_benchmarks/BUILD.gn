@@ -12,6 +12,7 @@ executable("bin") {
   sources = [
     "channels.cc",
     "events.cc",
+    "example.cc",
     "expose.cc",
     "fdio_spawn.cc",
     "fifos.cc",
