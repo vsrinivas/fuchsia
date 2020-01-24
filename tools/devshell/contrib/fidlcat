@@ -228,7 +228,7 @@ if [[ "${action}" == "run" ]]; then
   # We have now removed "run <partial component URL regex>" from the remaining
   # positional parameters.  The following set command replaces them with "run
   # <full component URL>".
-  set - "run" "${component}" "$@"
+  set - "$@" "run" "${component}"
 fi
 
 if [[ -z "${port}" ]]; then
