@@ -73,7 +73,7 @@ class Ge2dDeviceTest : public zxtest::Test {
     res_callback_.ctx = this;
 
     remove_task_callback_.task_removed = [](void* ctx, task_remove_status_t status) {
-      EXPECT_TRUE(false);
+      static_cast<Ge2dDeviceTest*>(ctx)->RunTaskRemovedCallback(status);
     };
     remove_task_callback_.ctx = this;
     frame_callback_.frame_ready = [](void* ctx, const frame_available_info* info) {
@@ -88,6 +88,12 @@ class Ge2dDeviceTest : public zxtest::Test {
 
   void RunFrameCallback(const frame_available_info* info) { client_frame_callback_(info); }
 
+  void SetTaskRemovedCallback(fit::function<void(task_remove_status_t status)> callback) {
+    task_removed_callback_ = std::move(callback);
+  }
+
+  void RunTaskRemovedCallback(task_remove_status_t status) { task_removed_callback_(status); }
+
  protected:
   void CompareCroppedOutput(const frame_available_info* info);
 
@@ -96,6 +102,7 @@ class Ge2dDeviceTest : public zxtest::Test {
   hw_accel_remove_task_callback_t remove_task_callback_;
 
   fit::function<void(const frame_available_info* info)> client_frame_callback_;
+  fit::function<void(task_remove_status_t status)> task_removed_callback_;
   buffer_collection_info_2_t input_buffer_collection_;
   buffer_collection_info_2_t output_buffer_collection_;
   image_format_2_t output_image_format_table_[kImageFormatTableSize];
@@ -558,6 +565,47 @@ TEST_F(Ge2dDeviceTest, ChangeScale) {
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+TEST_F(Ge2dDeviceTest, RemoveTask) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteScalingDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[1]);
+
+  resize_info_.crop.x = 0;
+  resize_info_.crop.y = 0;
+  resize_info_.crop.width = kWidth / 2;
+  resize_info_.crop.height = kHeight / 2;
+
+  bool got_frame_callback = false;
+  SetFrameCallback([this, &got_frame_callback](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    got_frame_callback = true;
+  });
+
+  SetTaskRemovedCallback([this](const task_remove_status_t status) {
+    EXPECT_EQ(TASK_REMOVE_STATUS_OK, status);
+    sync_completion_signal(&completion_);
+  });
+
+  input_format_index_ = 1;
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[1], output_image_format_table_, kImageFormatTableSize, 0,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  g_ge2d_device->Ge2dRemoveTask(resize_task);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+  EXPECT_TRUE(got_frame_callback);
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_NOT_OK(status);
 }
 
 }  // namespace

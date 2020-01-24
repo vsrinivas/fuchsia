@@ -115,7 +115,8 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
     GE2D_OP_SETOUTPUTRES,
     GE2D_OP_SETINPUTOUTPUTRES,
     GE2D_OP_FRAME,
-    GE2D_OP_SETCROPRECT
+    GE2D_OP_SETCROPRECT,
+    GE2D_OP_REMOVETASK,
   };
 
   struct TaskInfo {
@@ -123,6 +124,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
     Ge2dTask* task;
     uint32_t index;
     rect_t crop_rect;
+    uint32_t task_index;
   };
 
   zx::port port_;
@@ -142,16 +144,20 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   void ProcessTask(TaskInfo& info);
   void ProcessChangeResolution(TaskInfo& info);
   void ProcessFrame(TaskInfo& info);
+  void ProcessRemoveTask(TaskInfo& info);
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
 
   // Used to access the processing queue.
   fbl::Mutex lock_;
+  // Used to access the GE2D's banjo interface.
+  fbl::Mutex interface_lock_;
 
   ddk::MmioBuffer ge2d_mmio_;
   zx::interrupt ge2d_irq_;
   zx::bti bti_;
-  uint32_t next_task_index_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<Ge2dTask>> task_map_;
+
+  uint32_t next_task_index_ __TA_GUARDED(interface_lock_) = 0;
+  std::unordered_map<uint32_t, std::unique_ptr<Ge2dTask>> task_map_ __TA_GUARDED(interface_lock_);
   std::deque<TaskInfo> processing_queue_ __TA_GUARDED(lock_);
   thrd_t processing_thread_;
   fbl::ConditionVariable frame_processing_signal_ __TA_GUARDED(lock_);

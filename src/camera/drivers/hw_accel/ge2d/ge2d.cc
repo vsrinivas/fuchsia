@@ -61,6 +61,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
     return status;
   }
 
+  fbl::AutoLock al(&interface_lock_);
   // Put an entry in the hashmap.
   task_map_[next_task_index_] = std::move(task);
   *out_task_index = next_task_index_;
@@ -91,6 +92,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
     return status;
   }
 
+  fbl::AutoLock al(&interface_lock_);
   // Put an entry in the hashmap.
   task_map_[next_task_index_] = std::move(task);
   *out_task_index = next_task_index_;
@@ -100,15 +102,29 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
 }
 
 void Ge2dDevice::Ge2dRemoveTask(uint32_t task_index) {
+  fbl::AutoLock al(&interface_lock_);
+
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
-  ZX_ASSERT(task_entry != task_map_.end());
+  if (task_entry == task_map_.end()) {
+    // Release lock so death test doesn't hang.
+    al.release();
+    ZX_ASSERT(false);
+  }
 
-  // Remove map entry.
-  task_map_.erase(task_entry);
+  TaskInfo info;
+  info.op = GE2D_OP_REMOVETASK;
+  info.task = task_entry->second.get();
+  info.task_index = task_index;
+
+  // Put the task on the queue.
+  fbl::AutoLock lock(&lock_);
+  processing_queue_.push_front(info);
+  frame_processing_signal_.Signal();
 }
 
 void Ge2dDevice::Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
+  fbl::AutoLock al(&interface_lock_);
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   ZX_ASSERT(task_entry != task_map_.end());
@@ -119,6 +135,7 @@ void Ge2dDevice::Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
 
 zx_status_t Ge2dDevice::Ge2dSetOutputResolution(uint32_t task_index,
                                                 uint32_t new_output_image_format_index) {
+  fbl::AutoLock al(&interface_lock_);
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   if (task_entry == task_map_.end()) {
@@ -148,6 +165,7 @@ zx_status_t Ge2dDevice::Ge2dSetOutputResolution(uint32_t task_index,
 
 zx_status_t Ge2dDevice::Ge2dSetInputAndOutputResolution(uint32_t task_index,
                                                         uint32_t new_image_format_index) {
+  fbl::AutoLock al(&interface_lock_);
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   if (task_entry == task_map_.end()) {
@@ -177,6 +195,7 @@ zx_status_t Ge2dDevice::Ge2dSetInputAndOutputResolution(uint32_t task_index,
 }
 
 zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
+  fbl::AutoLock al(&interface_lock_);
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   if (task_entry == task_map_.end()) {
@@ -201,6 +220,7 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
 }
 
 void Ge2dDevice::Ge2dSetCropRect(uint32_t task_index, const rect_t* crop) {
+  fbl::AutoLock al(&interface_lock_);
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   if (task_entry == task_map_.end()) {
@@ -253,6 +273,8 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
       return ProcessSetCropRect(info);
     case GE2D_OP_FRAME:
       return ProcessFrame(info);
+    case GE2D_OP_REMOVETASK:
+      return ProcessRemoveTask(info);
   }
 }
 
@@ -532,6 +554,25 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
     f_info.metadata.input_buffer_index = input_buffer_index;
     task->FrameReadyCallback(&f_info);
   }
+}
+
+void Ge2dDevice::ProcessRemoveTask(TaskInfo& info) {
+  fbl::AutoLock al(&interface_lock_);
+
+  auto task = info.task;
+  auto task_index = info.task_index;
+
+  // Find the entry in hashmap.
+  auto task_entry = task_map_.find(task_index);
+  if (task_entry == task_map_.end()) {
+    task->RemoveTaskCallback(TASK_REMOVE_STATUS_ERROR_INVALID);
+    return;
+  }
+
+  task->RemoveTaskCallback(TASK_REMOVE_STATUS_OK);
+
+  // Remove map entry.
+  task_map_.erase(task_entry);
 }
 
 int Ge2dDevice::FrameProcessingThread() {
