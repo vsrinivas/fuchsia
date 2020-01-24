@@ -10,6 +10,8 @@ toc:
     path: /docs/development/inspect/codelab/README.md
   - title: "C++"
     path: /docs/development/inspect/codelab/cpp.md
+  - title: "Rust"
+    path: /docs/development/inspect/codelab/rust.md
 - title: "Quickstart"
   path: /docs/development/inspect/quickstart.md
 - title: "Health check"

@@ -66,6 +66,8 @@ You will learn:
 * Access to a Fuchsia source tree you can execute build commands in.
 
 ## Get Started
+
 The inspect codelab is available in multiple languages:
 
 - [Inspect C++ Codelab](cpp.md)
+- [Inspect Rust Codelab](rust.md)
