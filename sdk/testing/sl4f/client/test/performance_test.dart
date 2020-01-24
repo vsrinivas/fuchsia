@@ -103,38 +103,6 @@ void main(List<String> args) {
         ['non-utf8-trace', 'json', nonUtf8Data]);
   });
 
-  test('process trace', () async {
-    final mockRunProcessObserver = MockRunProcessObserver();
-    final performance =
-        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
-
-    // Test trace processing with [appName] set.
-    await performance.processTrace(
-        '/bin/process_sample_trace', File('sample-trace.json'), 'test1',
-        appName: 'test-app');
-
-    var verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
-        '/bin/process_sample_trace', captureAny))
-      ..called(1);
-    var capturedArgs = verifyMockRunProcessObserver.captured.single;
-    expect(capturedArgs[0], '-test_suite_name=test1');
-    expect(capturedArgs[1], '-flutter_app_name=test-app');
-    expect(capturedArgs[2], endsWith('test1-benchmark.fuchsiaperf.json'));
-    expect(capturedArgs[3], endsWith('sample-trace.json'));
-
-    // Test trace processing without an [appName] set.
-    await performance.processTrace(
-        '/bin/process_sample_trace', File('sample-trace.json'), 'test1');
-
-    verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
-        '/bin/process_sample_trace', captureAny))
-      ..called(1);
-    capturedArgs = verifyMockRunProcessObserver.captured.single;
-    expect(capturedArgs[0], '-test_suite_name=test1');
-    expect(capturedArgs[1], endsWith('test1-benchmark.fuchsiaperf.json'));
-    expect(capturedArgs[2], endsWith('sample-trace.json'));
-  });
-
   Directory createTempDir() {
     final tempDir = Directory.systemTemp.createTempSync();
     addTearDown(() {
@@ -143,7 +111,7 @@ void main(List<String> args) {
     return tempDir;
   }
 
-  test('process trace 2', () async {
+  test('process trace', () async {
     final metricsSpecs = [
       MetricsSpec(name: 'test_metric_1'),
       MetricsSpec(name: 'test_metric_2'),
@@ -172,9 +140,8 @@ void main(List<String> args) {
 ''');
 
     final performance = Performance(mockSl4f, mockDump);
-    final resultsFile = await performance.processTrace2(
-        metricsSpecSet, traceFile,
-        registry: testMetricsRegistry);
+    final resultsFile = await performance
+        .processTrace(metricsSpecSet, traceFile, registry: testMetricsRegistry);
 
     final resultsFileContents = await resultsFile.readAsString();
     final resultsObject = json.decode(resultsFileContents);
