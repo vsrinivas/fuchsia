@@ -18,7 +18,9 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include "lib/fzl/fdio.h"
 #include "payload-streamer.h"
+#include "zircon/errors.h"
 
 namespace netsvc {
 namespace {
@@ -251,6 +253,94 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data
   return ClearSysconfig(devfs_root_);
 }
 
+zx_status_t Paver::OpenDataSink(
+    ::llcpp::fuchsia::mem::Buffer buffer,
+    std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient>* data_sink) {
+  modify_partition_table_info_t partition_info = {};
+  auto status = buffer.vmo.read(&partition_info, 0, sizeof(partition_info));
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Unable to read from vmo\n");
+    return status;
+  }
+  if (partition_info.block_device_path[ZX_MAX_NAME_LEN] != '\0') {
+    fprintf(stderr, "netsvc: Invalid block device path specified\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  constexpr char kDevfsPrefix[] = "/dev/";
+  if (strncmp(kDevfsPrefix, partition_info.block_device_path, strlen(kDevfsPrefix)) != 0) {
+    fprintf(stderr, "netsvc: Invalid block device path specified\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx::channel block_dev_chan, remote;
+  status = zx::channel::create(0, &block_dev_chan, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to create channel\n");
+    return status;
+  }
+
+  fzl::UnownedFdioCaller caller(devfs_root_.get());
+
+  status = fdio_service_connect_at(caller.borrow_channel(), &partition_info.block_device_path[5],
+                                   remote.release());
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Unable to open %s.\n", partition_info.block_device_path);
+    return status;
+  }
+
+  zx::channel data_sink_chan;
+  status = zx::channel::create(0, &data_sink_chan, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to create channel.\n");
+    return status;
+  }
+
+  auto res = paver_svc_->UseBlockDevice(std::move(block_dev_chan), std::move(remote));
+  status = res.status();
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to use block device.\n");
+    return status;
+  }
+
+  data_sink->emplace(std::move(data_sink_chan));
+  return ZX_OK;
+}
+
+zx_status_t Paver::InitPartitionTables(::llcpp::fuchsia::mem::Buffer buffer) {
+  std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient> data_sink;
+  auto status = OpenDataSink(std::move(buffer), &data_sink);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Unable to open data sink.\n");
+    return status;
+  }
+
+  auto result = data_sink->InitializePartitionTables();
+  status = result.ok() ? result->status : result.status();
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Unable to initialize partition tables.\n");
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Paver::WipePartitionTables(::llcpp::fuchsia::mem::Buffer buffer) {
+  std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient> data_sink;
+  auto status = OpenDataSink(std::move(buffer), &data_sink);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Unable to open data sink.\n");
+    return status;
+  }
+
+  auto result = data_sink->WipePartitionTables();
+  status = result.ok() ? result->status : result.status();
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: Unable to wipe partition tables.\n");
+    return status;
+  }
+  return ZX_OK;
+}
+
 int Paver::MonitorBuffer() {
   int result = TFTP_NO_ERROR;
 
@@ -294,6 +384,21 @@ int Paver::MonitorBuffer() {
   ::llcpp::fuchsia::mem::Buffer buffer = {
       .vmo = std::move(dup),
       .size = buffer_mapper_.size(),
+  };
+
+  // We need to open a specific data sink rather than find the default for partition table
+  // management commands.
+  switch (command_) {
+    case Command::kInitPartitionTables:
+      status = InitPartitionTables(std::move(buffer));
+      exit_code_.store(status);
+      return 0;
+    case Command::kWipePartitionTables:
+      status = WipePartitionTables(std::move(buffer));
+      exit_code_.store(status);
+      return 0;
+    default:
+      break;
   };
 
   zx::channel remote, data_sink_chan;
@@ -381,6 +486,18 @@ tftp_status Paver::OpenWrite(const char* filename, size_t size) {
     printf("netsvc: Installing SSH authorized_keys\n");
     command_ = Command::kDataFile;
     strncpy(path_, "ssh/authorized_keys", PATH_MAX);
+  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_INIT_PARTITION_TABLES_HOST_FILENAME)) {
+    if (size < sizeof(modify_partition_table_info_t)) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    printf("netsvc: Initializing partition tables\n");
+    command_ = Command::kInitPartitionTables;
+  } else if (!strcmp(filename + NB_IMAGE_PREFIX_LEN(), NB_WIPE_PARTITION_TABLES_HOST_FILENAME)) {
+    if (size < sizeof(modify_partition_table_info_t)) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    printf("netsvc: Wiping partition tables\n");
+    command_ = Command::kWipePartitionTables;
   } else {
     fprintf(stderr, "netsvc: Unknown Paver\n");
     return TFTP_ERR_IO;

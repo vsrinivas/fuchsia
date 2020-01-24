@@ -104,12 +104,14 @@ zx_test("netsvc-test") {
   deps = [
     ":args",
     ":netsvc_common",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/driver-integration-test",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/zircon",
@@ -127,6 +129,7 @@ zx_test("netsvc-stress-test") {
   include_dirs = [ "." ]
   deps = [
     ":netsvc_common",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/devmgr-integration-test",
@@ -134,6 +137,7 @@ zx_test("netsvc-stress-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fs",
+    "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",

@@ -85,6 +85,10 @@
 #define NB_BOARD_REVISION_FILENAME NB_IMAGE_PREFIX NB_BOARD_REVISION_HOST_FILENAME
 #define NB_BOARD_INFO_HOST_FILENAME "board_info"
 #define NB_BOARD_INFO_FILENAME NB_IMAGE_PREFIX NB_BOARD_INFO_HOST_FILENAME
+#define NB_INIT_PARTITION_TABLES_HOST_FILENAME "init_partition_tables"
+#define NB_INIT_PARTITION_TABLES_FILENAME NB_IMAGE_PREFIX NB_INIT_PARTITION_TABLES_HOST_FILENAME
+#define NB_WIPE_PARTITION_TABLES_HOST_FILENAME "wipe_partition_tables"
+#define NB_WIPE_PARTITION_TABLES_FILENAME NB_IMAGE_PREFIX NB_WIPE_PARTITION_TABLES_HOST_FILENAME
 
 typedef struct board_info {
   char board_name[ZX_MAX_NAME_LEN];
@@ -92,6 +96,10 @@ typedef struct board_info {
   uint8_t mac_address[8];
 } board_info_t;
 
+typedef struct modify_partition_table_info {
+  // Path of block device to initialize or wipe.
+  char block_device_path[ZX_MAX_NAME_LEN + 1];
+} modify_partition_table_info_t;
 
 typedef struct nbmsg_t {
     uint32_t magic;

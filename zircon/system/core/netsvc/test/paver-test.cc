@@ -4,7 +4,7 @@
 
 namespace {
 constexpr char kFakeData[] = "lalala";
-}
+}  // namespace
 
 TEST(PaverTest, Constructor) { netsvc::Paver paver(zx::channel); }
 
@@ -279,4 +279,38 @@ TEST_F(PaverTest, WriteFvmManySmallWrites) {
   Wait();
   ASSERT_OK(paver_.exit_code());
   ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteVolumes);
+}
+
+TEST_F(PaverTest, InitializePartitionTables) {
+  ASSERT_NO_FAILURES(SpawnBlockDevice());
+
+  modify_partition_table_info partition_info = {};
+  strcpy(partition_info.block_device_path, "/dev/");
+  strcat(partition_info.block_device_path, ramdisk_get_path(ramdisk_));
+
+  size_t size = sizeof(partition_info);
+  ASSERT_EQ(paver_.OpenWrite(NB_INIT_PARTITION_TABLES_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.Write(&partition_info, &size, 0), TFTP_NO_ERROR);
+  ASSERT_EQ(size, sizeof(partition_info));
+  paver_.Close();
+  Wait();
+  ASSERT_OK(paver_.exit_code());
+  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kInitPartitionTables);
+}
+
+TEST_F(PaverTest, WipePartitionTables) {
+  ASSERT_NO_FAILURES(SpawnBlockDevice());
+
+  modify_partition_table_info partition_info = {};
+  strcpy(partition_info.block_device_path, "/dev/");
+  strcat(partition_info.block_device_path, ramdisk_get_path(ramdisk_));
+
+  size_t size = sizeof(partition_info);
+  ASSERT_EQ(paver_.OpenWrite(NB_WIPE_PARTITION_TABLES_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.Write(&partition_info, &size, 0), TFTP_NO_ERROR);
+  ASSERT_EQ(size, sizeof(partition_info));
+  paver_.Close();
+  Wait();
+  ASSERT_OK(paver_.exit_code());
+  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWipePartitionTables);
 }

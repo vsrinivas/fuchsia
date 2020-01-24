@@ -3,16 +3,18 @@
 // found in the LICENSE file.
 #pragma once
 
-#include "paver.h"
-
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/dispatcher.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/boot/netboot.h>
+#include <zircon/time.h>
 
 #include <algorithm>
 #include <memory>
@@ -20,11 +22,10 @@
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
-#include "lib/sync/completion.h"
-#include "zircon/time.h"
 
-#include "lib/async/dispatcher.h"
+#include "paver.h"
 
 enum class Command {
   kUnknown,
@@ -40,11 +41,13 @@ enum class Command {
   kWriteBootloader,
   kWriteDataFile,
   kWipeVolume,
+  kInitPartitionTables,
+  kWipePartitionTables,
 };
 
 class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
                   public ::llcpp::fuchsia::paver::BootManager::Interface,
-                  public ::llcpp::fuchsia::paver::DataSink::Interface {
+                  public ::llcpp::fuchsia::paver::DynamicDataSink::Interface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     dispatcher_ = dispatcher;
@@ -53,12 +56,24 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   }
 
   void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _completer) override {
-    fidl::Bind<::llcpp::fuchsia::paver::DataSink::Interface>(dispatcher_, std::move(data_sink),
-                                                             this);
+    fidl::Bind<::llcpp::fuchsia::paver::DynamicDataSink::Interface>(dispatcher_,
+                                                                    std::move(data_sink), this);
   }
 
-  void UseBlockDevice(zx::channel _block_device, zx::channel _dynamic_data_sink,
-                      UseBlockDeviceCompleter::Sync _completer) override {}
+  void UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
+                      UseBlockDeviceCompleter::Sync _completer) override {
+    auto result =
+        ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned(block_device));
+    if (!result.ok() || result->result.is_err()) {
+      return;
+    }
+    const auto& path = result->result.response().path;
+    if (std::string(path.data(), path.size()) != expected_block_device_) {
+      return;
+    }
+    fidl::Bind<::llcpp::fuchsia::paver::DynamicDataSink::Interface>(
+        dispatcher_, std::move(dynamic_data_sink), this);
+  }
 
   void FindBootManager(zx::channel boot_manager, bool initialize,
                        FindBootManagerCompleter::Sync _completer) override {
@@ -202,6 +217,16 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     completer.ReplySuccess({});
   }
 
+  void InitializePartitionTables(InitializePartitionTablesCompleter::Sync completer) override {
+    last_command_ = Command::kInitPartitionTables;
+    completer.Reply(ZX_OK);
+  }
+
+  void WipePartitionTables(WipePartitionTablesCompleter::Sync completer) override {
+    last_command_ = Command::kWipePartitionTables;
+    completer.Reply(ZX_OK);
+  }
+
   void WaitForWritten(size_t size) {
     signal_size_ = size;
     sync_completion_signal(&start_signal_);
@@ -213,6 +238,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
   void set_abr_supported(bool supported) { abr_supported_ = supported; }
   void set_wait_for_start_signal(bool wait) { wait_for_start_signal_ = wait; }
+  void set_expected_device(std::string expected) { expected_block_device_ = expected; }
 
  private:
   bool wait_for_start_signal_ = false;
@@ -222,6 +248,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
 
   Command last_command_ = Command::kUnknown;
   size_t expected_payload_size_ = 0;
+  std::string expected_block_device_;
   bool abr_supported_ = false;
   bool abr_initialized_ = false;
 
@@ -268,7 +295,6 @@ class FakeDev {
   driver_integration_test::IsolatedDevmgr devmgr_;
 };
 
-
 class PaverTest : public zxtest::Test {
  protected:
   PaverTest()
@@ -282,6 +308,10 @@ class PaverTest : public zxtest::Test {
   ~PaverTest() {
     // Need to make sure paver thread exits.
     Wait();
+    if (ramdisk_ != nullptr) {
+      ramdisk_destroy(ramdisk_);
+      ramdisk_ = nullptr;
+    }
     loop_.Shutdown();
   }
 
@@ -290,7 +320,18 @@ class PaverTest : public zxtest::Test {
       continue;
   }
 
+  void SpawnBlockDevice() {
+    fbl::unique_fd fd;
+    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(fake_dev_.devmgr_.devfs_root(),
+                                                            "misc/ramctl", &fd));
+    ASSERT_OK(
+        ramdisk_create_at(fake_dev_.devmgr_.devfs_root().get(), ZX_PAGE_SIZE, 100, &ramdisk_));
+    std::string expected = std::string("/dev/") + ramdisk_get_path(ramdisk_);
+    fake_svc_.fake_paver().set_expected_device(expected);
+  }
+
   async::Loop loop_;
+  ramdisk_client_t* ramdisk_ = nullptr;
   FakeSvc fake_svc_;
   FakeDev fake_dev_;
   netsvc::Paver paver_;

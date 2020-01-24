@@ -63,12 +63,20 @@ class Paver : public PaverInterface {
     kBootloader,
     kDataFile,
     kFvm,
+    kInitPartitionTables,
+    kWipePartitionTables,
   };
 
   uint8_t* buffer() { return static_cast<uint8_t*>(buffer_mapper_.start()); }
 
   zx_status_t WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data_sink,
                          ::llcpp::fuchsia::mem::Buffer buffer);
+
+  zx_status_t OpenDataSink(
+      ::llcpp::fuchsia::mem::Buffer buffer,
+      std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient>* data_sink);
+  zx_status_t InitPartitionTables(::llcpp::fuchsia::mem::Buffer buffer);
+  zx_status_t WipePartitionTables(::llcpp::fuchsia::mem::Buffer buffer);
 
   // Pushes all data from the paver buffer (filled by netsvc) into the paver input VMO. When
   // there's no data to copy, blocks on data_ready until more data is written into the buffer.
