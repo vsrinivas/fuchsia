@@ -106,7 +106,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
 
  protected:
   // These functions require complicated hardware interaction so need to be
-  // overridden in tests.
+  // overridden or called differently in tests.
 
   // Waits until a read completes.
   virtual zx_status_t AmlQueueRB();
@@ -117,6 +117,11 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   // Reads a single status byte from a NAND register. Used during initialization
   // to query the chip information and settings.
   virtual uint8_t AmlReadByte();
+
+  // Normally called when the driver is unregistered but is not automatically
+  // called on destruction, so needs to be called manually by tests before
+  // destroying this object.
+  void CleanUpIrq();
 
   // Tests can fake page read/writes by copying bytes to/from these buffers.
   const ddk::IoBuffer& data_buffer() { return data_buffer_; }
@@ -189,7 +194,6 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   zx_status_t AmlNandInitFromPage0();
   zx_status_t AmlRawNandAllocBufs();
   zx_status_t AmlNandInit();
-  void CleanUpIrq();
 };
 
 }  // namespace amlrawnand

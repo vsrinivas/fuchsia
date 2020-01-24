@@ -149,7 +149,10 @@ class FakeAmlRawNand : public AmlRawNand {
   }
 
   // On test exit, make sure we sent all the bytes we expected to.
-  ~FakeAmlRawNand() override { EXPECT_TRUE(fake_read_bytes_.empty()); }
+  ~FakeAmlRawNand() override {
+    CleanUpIrq();
+    EXPECT_TRUE(fake_read_bytes_.empty());
+  }
 
   // Sets a fake NAND page for RawNandReadPageHwecc(), overwriting any page
   // data current at this index.
