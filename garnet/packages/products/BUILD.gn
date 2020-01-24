@@ -74,13 +74,13 @@ group("base") {
     "//garnet/packages/prod:openssh",
     "//garnet/packages/prod:pkg_cache",
     "//garnet/packages/prod:pkg_resolver",
-    "//garnet/packages/prod:root_ssl_certificates",
     "//garnet/packages/prod:runtime",
     "//garnet/packages/prod:scpi",
     "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:thermd",
     "//garnet/packages/prod:timezone",
+    "//src/security/root_ssl_certificates",
     "//src/sys/pkg/bin/amber:pkgfs",
   ]
 }

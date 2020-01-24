@@ -8,7 +8,7 @@ package("root_ssl_certificates") {
   resources = [
     {
       path = rebase_path(
-              "//garnet/lib/root_ssl_certificates/third_party/cert/cert.pem")
+              "//src/security/root_ssl_certificates/third_party/cert/cert.pem")
       dest = "cert.pem"
     },
   ]

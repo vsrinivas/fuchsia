@@ -194,7 +194,6 @@ group("all") {
     "//garnet/packages/prod:pm",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
-    "//garnet/packages/prod:root_ssl_certificates",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:runtime",
     "//garnet/packages/prod:sbase",
@@ -439,11 +438,6 @@ group("scenic_tools") {
 group("pkg_cache") {
   testonly = true
   public_deps = [ "//src/sys/pkg/bin/pkg-cache" ]
-}
-
-group("root_ssl_certificates") {
-  testonly = true
-  public_deps = [ "//garnet/lib/root_ssl_certificates" ]
 }
 
 group("battery_manager") {
