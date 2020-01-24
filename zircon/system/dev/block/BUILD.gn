@@ -9,7 +9,6 @@ group("block") {
     "as370-sdhci",
     "bootpart",
     "ftl",
-    "gpt",
     "hisi-ufs",
     "mbr",
     "msm8x53-sdhci",
