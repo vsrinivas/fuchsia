@@ -70,14 +70,14 @@ protocol Device {
     /// from `GetReportsEvent`.
     ReadReport() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data, zx.time time);
 
-    /// Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    /// Read up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     /// This is the interface that is supposed to be used for continuous polling.
     /// Multiple reports can be returned from this API at a time, it is up to the client
     /// to do the parsing of the reports with the correct sizes and offset.
     /// It is guaranteed that only whole reports will be sent.
     /// If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     /// wait on the event from |GetReportsEvent|.
-    GetReports() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data);
+    ReadReports() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data);
 
     /// Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
     /// Device's report FIFO. This signal will be de-asserted when there are no
@@ -85,7 +85,8 @@ protocol Device {
     /// the client wishes to know if there are reports in the FIFO.
     GetReportsEvent() -> (zx.status status, handle<event> event);
 
-    /// Get a single report of the given (type, id) pair.  This interface is not intended
+    /// Send a request to the hardware for a given report described by type and id.
+    /// Returns the hardware's response. This interface is not intended
     /// to be used for continuous polling of the reports.
     GetReport(ReportType type, ReportId id) -> (zx.status status, vector<uint8>:MAX_REPORT_LEN report);
 

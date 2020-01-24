@@ -437,7 +437,7 @@ TEST_F(HidDeviceTest, ReadReportDoubleReport) {
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
-TEST_F(HidDeviceTest, GetReportsSingleReport) {
+TEST_F(HidDeviceTest, ReadReportsSingleReport) {
   SetupBootMouseDevice();
   ASSERT_OK(device_->Bind(client_));
 
@@ -454,7 +454,7 @@ TEST_F(HidDeviceTest, GetReportsSingleReport) {
 
   auto sync_client =
       llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
-  auto result = sync_client.GetReports();
+  auto result = sync_client.ReadReports();
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   ASSERT_EQ(sizeof(mouse_report), result->data.count());
@@ -466,7 +466,7 @@ TEST_F(HidDeviceTest, GetReportsSingleReport) {
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
-TEST_F(HidDeviceTest, GetReportsDoubleeReport) {
+TEST_F(HidDeviceTest, ReadReportsDoubleReport) {
   SetupBootMouseDevice();
   ASSERT_OK(device_->Bind(client_));
 
@@ -483,7 +483,7 @@ TEST_F(HidDeviceTest, GetReportsDoubleeReport) {
 
   auto sync_client =
       llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
-  auto result = sync_client.GetReports();
+  auto result = sync_client.ReadReports();
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   ASSERT_EQ(sizeof(double_mouse_report), result->data.count());
@@ -495,7 +495,7 @@ TEST_F(HidDeviceTest, GetReportsDoubleeReport) {
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
-TEST_F(HidDeviceTest, GetReportsBlockingWait) {
+TEST_F(HidDeviceTest, ReadReportsBlockingWait) {
   SetupBootMouseDevice();
   ASSERT_OK(device_->Bind(client_));
 
@@ -525,7 +525,7 @@ TEST_F(HidDeviceTest, GetReportsBlockingWait) {
   ASSERT_OK(event.wait_one(DEV_STATE_READABLE, zx::time::infinite(), nullptr));
 
   // Get the report.
-  auto result = sync_client.GetReports();
+  auto result = sync_client.ReadReports();
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   ASSERT_EQ(sizeof(mouse_report), result->data.count());
@@ -540,7 +540,7 @@ TEST_F(HidDeviceTest, GetReportsBlockingWait) {
 }
 
 // Test that only whole reports get sent through.
-TEST_F(HidDeviceTest, GetReportsOneAndAHalfReports) {
+TEST_F(HidDeviceTest, ReadReportsOneAndAHalfReports) {
   SetupBootMouseDevice();
   ASSERT_OK(device_->Bind(client_));
 
@@ -560,7 +560,7 @@ TEST_F(HidDeviceTest, GetReportsOneAndAHalfReports) {
 
   auto sync_client =
       llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
-  auto result = sync_client.GetReports();
+  auto result = sync_client.ReadReports();
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   ASSERT_EQ(sizeof(mouse_report), result->data.count());

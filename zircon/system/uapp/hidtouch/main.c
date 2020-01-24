@@ -639,8 +639,8 @@ int main(int argc, char* argv[]) {
   size_t report_data_size = 0;
   size_t report_data_used = 0;
   while (run) {
-    status = fuchsia_hardware_input_DeviceGetReports(touchsvc, &out_status, report_data,
-                                                     sizeof(report_data), &report_data_size);
+    status = fuchsia_hardware_input_DeviceReadReports(touchsvc, &out_status, report_data,
+                                                      sizeof(report_data), &report_data_size);
     if (status != ZX_OK || out_status != ZX_OK) {
       if (out_status == ZX_ERR_SHOULD_WAIT) {
         status = zx_object_wait_one(report_event, DEV_STATE_READABLE, ZX_TIME_INFINITE, NULL);

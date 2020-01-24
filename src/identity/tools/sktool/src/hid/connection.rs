@@ -86,13 +86,13 @@ pub mod fidl {
             FidlConnection { proxy }
         }
 
-        /// Helper method to call the FIDL `GetReports` method and format the results.
-        async fn get_reports(&self) -> Result<(zx::Status, Vec<u8>), Error> {
+        /// Helper method to call the FIDL `ReadReports` method and format the results.
+        async fn read_reports(&self) -> Result<(zx::Status, Vec<u8>), Error> {
             self.proxy
-                .get_reports()
-                .map_err(|err| format_err!("FIDL error on GetReports: {:?}", err))
+                .read_reports()
+                .map_err(|err| format_err!("FIDL error on ReadReports: {:?}", err))
                 .on_timeout(Time::after(*FIDL_TIMEOUT), || {
-                    Err(format_err!("FIDL timeout on GetReports"))
+                    Err(format_err!("FIDL timeout on ReadReports"))
                 })
                 .await
                 .map(|(status, data)| (zx::Status::from_raw(status), data))
@@ -120,11 +120,11 @@ pub mod fidl {
     impl Connection for FidlConnection {
         async fn read_packet(&self) -> Result<Packet, Error> {
             // Poll once to see if a report is already waiting.
-            let (status, data) = self.get_reports().await?;
+            let (status, data) = self.read_reports().await?;
             match status {
                 zx::Status::OK => return Packet::try_from(data),
                 zx::Status::SHOULD_WAIT => (),
-                _ => return Err(format_err!("Received bad status on GetReports: {:?}", status)),
+                _ => return Err(format_err!("Received bad status on ReadReports: {:?}", status)),
             }
 
             // If we were told to wait, use GetReportEvent to do that. Although not documented in
@@ -143,10 +143,12 @@ pub mod fidl {
                 })?;
 
             // Now we expect a report to be waiting, poll again
-            let (status, data) = self.get_reports().await?;
+            let (status, data) = self.read_reports().await?;
             match status {
                 zx::Status::OK => Packet::try_from(data),
-                _ => Err(format_err!("Received bad status on post-event GetReports: {:?}", status)),
+                _ => {
+                    Err(format_err!("Received bad status on post-event ReadReports: {:?}", status))
+                }
             }
         }
 
@@ -228,7 +230,7 @@ pub mod fidl {
         #[fasync::run_until_stalled(test)]
         async fn test_read_immediate_packet() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, _| match req {
-                DeviceRequest::GetReports { responder } => {
+                DeviceRequest::ReadReports { responder } => {
                     let response = TEST_PACKET.to_vec();
                     responder
                         .send(zx::sys::ZX_OK, &mut response.into_iter())
@@ -244,7 +246,7 @@ pub mod fidl {
         #[fasync::run_singlethreaded(test)]
         async fn test_read_delayed_packet() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
-                (DeviceRequest::GetReports { responder }, 1) => {
+                (DeviceRequest::ReadReports { responder }, 1) => {
                     responder
                         .send(zx::sys::ZX_ERR_SHOULD_WAIT, &mut vec![].into_iter())
                         .expect("failed to send response");
@@ -254,7 +256,7 @@ pub mod fidl {
                     event.signal_handle(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
                     responder.send(zx::sys::ZX_OK, event).expect("failed to send response");
                 }
-                (DeviceRequest::GetReports { responder }, 3) => {
+                (DeviceRequest::ReadReports { responder }, 3) => {
                     let response = TEST_PACKET.to_vec();
                     responder
                         .send(zx::sys::ZX_OK, &mut response.into_iter())
@@ -270,7 +272,7 @@ pub mod fidl {
         #[fasync::run_singlethreaded(test)]
         async fn test_read_packet_timeout() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
-                (DeviceRequest::GetReports { responder }, 1) => {
+                (DeviceRequest::ReadReports { responder }, 1) => {
                     responder
                         .send(zx::sys::ZX_ERR_SHOULD_WAIT, &mut vec![].into_iter())
                         .expect("failed to send response");
@@ -290,13 +292,13 @@ pub mod fidl {
         #[fasync::run_until_stalled(test)]
         async fn test_read_matching_packet_success() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
-                (DeviceRequest::GetReports { responder }, 1) => {
+                (DeviceRequest::ReadReports { responder }, 1) => {
                     let response = DIFFERENT_PACKET.to_vec();
                     responder
                         .send(zx::sys::ZX_OK, &mut response.into_iter())
                         .expect("failed to send response");
                 }
-                (DeviceRequest::GetReports { responder }, 2) => {
+                (DeviceRequest::ReadReports { responder }, 2) => {
                     let response = TEST_PACKET.to_vec();
                     responder
                         .send(zx::sys::ZX_OK, &mut response.into_iter())
@@ -315,13 +317,13 @@ pub mod fidl {
         #[fasync::run_until_stalled(test)]
         async fn test_read_matching_packet_fail() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
-                (DeviceRequest::GetReports { responder }, 1) => {
+                (DeviceRequest::ReadReports { responder }, 1) => {
                     let response = DIFFERENT_PACKET.to_vec();
                     responder
                         .send(zx::sys::ZX_OK, &mut response.into_iter())
                         .expect("failed to send response");
                 }
-                (DeviceRequest::GetReports { responder }, 2) => {
+                (DeviceRequest::ReadReports { responder }, 2) => {
                     let response = TEST_PACKET.to_vec();
                     responder
                         .send(zx::sys::ZX_OK, &mut response.into_iter())

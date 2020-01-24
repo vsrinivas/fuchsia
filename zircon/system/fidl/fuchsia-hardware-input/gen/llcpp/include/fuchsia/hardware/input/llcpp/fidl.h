@@ -89,8 +89,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetMaxInputReportSi
 extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceReadReportRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceReadReportResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportsRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceReadReportsRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceReadReportsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportsEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportsEventResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceGetReportRequestTable;
@@ -278,13 +278,13 @@ class Device final {
   };
   using ReadReportRequest = ::fidl::AnyZeroArgMessage;
 
-  struct GetReportsResponse final {
+  struct ReadReportsResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t status;
     ::fidl::VectorView<uint8_t> data;
 
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceReadReportsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -294,7 +294,7 @@ class Device final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using GetReportsRequest = ::fidl::AnyZeroArgMessage;
+  using ReadReportsRequest = ::fidl::AnyZeroArgMessage;
 
   struct GetReportsEventResponse final {
     FIDL_ALIGNDECL
@@ -554,13 +554,13 @@ class Device final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class GetReports_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+    class ReadReports_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReports_Impl(::zx::unowned_channel _client_end);
-      ~GetReports_Impl() = default;
-      GetReports_Impl(GetReports_Impl&& other) = default;
-      GetReports_Impl& operator=(GetReports_Impl&& other) = default;
+      ReadReports_Impl(::zx::unowned_channel _client_end);
+      ~ReadReports_Impl() = default;
+      ReadReports_Impl(ReadReports_Impl&& other) = default;
+      ReadReports_Impl& operator=(ReadReports_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -639,7 +639,7 @@ class Device final {
     using GetReportSize = GetReportSize_Impl<GetReportSizeResponse>;
     using GetMaxInputReportSize = GetMaxInputReportSize_Impl<GetMaxInputReportSizeResponse>;
     using ReadReport = ReadReport_Impl<ReadReportResponse>;
-    using GetReports = GetReports_Impl<GetReportsResponse>;
+    using ReadReports = ReadReports_Impl<ReadReportsResponse>;
     using GetReportsEvent = GetReportsEvent_Impl<GetReportsEventResponse>;
     using GetReport = GetReport_Impl<GetReportResponse>;
     using SetReport = SetReport_Impl<SetReportResponse>;
@@ -796,13 +796,13 @@ class Device final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class GetReports_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+    class ReadReports_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReports_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~GetReports_Impl() = default;
-      GetReports_Impl(GetReports_Impl&& other) = default;
-      GetReports_Impl& operator=(GetReports_Impl&& other) = default;
+      ReadReports_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~ReadReports_Impl() = default;
+      ReadReports_Impl(ReadReports_Impl&& other) = default;
+      ReadReports_Impl& operator=(ReadReports_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -881,7 +881,7 @@ class Device final {
     using GetReportSize = GetReportSize_Impl<GetReportSizeResponse>;
     using GetMaxInputReportSize = GetMaxInputReportSize_Impl<GetMaxInputReportSizeResponse>;
     using ReadReport = ReadReport_Impl<ReadReportResponse>;
-    using GetReports = GetReports_Impl<GetReportsResponse>;
+    using ReadReports = ReadReports_Impl<ReadReportsResponse>;
     using GetReportsEvent = GetReportsEvent_Impl<GetReportsEventResponse>;
     using GetReport = GetReport_Impl<GetReportResponse>;
     using SetReport = SetReport_Impl<SetReportResponse>;
@@ -981,7 +981,7 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ReadReport ReadReport(::fidl::BytePart _response_buffer);
 
-    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // Read up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     // This is the interface that is supposed to be used for continuous polling.
     // Multiple reports can be returned from this API at a time, it is up to the client
     // to do the parsing of the reports with the correct sizes and offset.
@@ -989,9 +989,9 @@ class Device final {
     // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     // wait on the event from |GetReportsEvent|.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ResultOf::GetReports GetReports();
+    ResultOf::ReadReports ReadReports();
 
-    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // Read up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     // This is the interface that is supposed to be used for continuous polling.
     // Multiple reports can be returned from this API at a time, it is up to the client
     // to do the parsing of the reports with the correct sizes and offset.
@@ -999,7 +999,7 @@ class Device final {
     // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     // wait on the event from |GetReportsEvent|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetReports GetReports(::fidl::BytePart _response_buffer);
+    UnownedResultOf::ReadReports ReadReports(::fidl::BytePart _response_buffer);
 
     // Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
     // Device's report FIFO. This signal will be de-asserted when there are no
@@ -1015,12 +1015,14 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReportsEvent GetReportsEvent(::fidl::BytePart _response_buffer);
 
-    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // Send a request to the hardware for a given report described by type and id.
+    // Returns the hardware's response. This interface is not intended
     // to be used for continuous polling of the reports.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     ResultOf::GetReport GetReport(::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
 
-    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // Send a request to the hardware for a given report described by type and id.
+    // Returns the hardware's response. This interface is not intended
     // to be used for continuous polling of the reports.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReport GetReport(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
@@ -1132,7 +1134,7 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ReadReport ReadReport(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // Read up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     // This is the interface that is supposed to be used for continuous polling.
     // Multiple reports can be returned from this API at a time, it is up to the client
     // to do the parsing of the reports with the correct sizes and offset.
@@ -1140,9 +1142,9 @@ class Device final {
     // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     // wait on the event from |GetReportsEvent|.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetReports GetReports(::zx::unowned_channel _client_end);
+    static ResultOf::ReadReports ReadReports(::zx::unowned_channel _client_end);
 
-    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // Read up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     // This is the interface that is supposed to be used for continuous polling.
     // Multiple reports can be returned from this API at a time, it is up to the client
     // to do the parsing of the reports with the correct sizes and offset.
@@ -1150,7 +1152,7 @@ class Device final {
     // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     // wait on the event from |GetReportsEvent|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReports GetReports(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ReadReports ReadReports(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
     // Device's report FIFO. This signal will be de-asserted when there are no
@@ -1166,12 +1168,14 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReportsEvent GetReportsEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // Send a request to the hardware for a given report described by type and id.
+    // Returns the hardware's response. This interface is not intended
     // to be used for continuous polling of the reports.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
     static ResultOf::GetReport GetReport(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
 
-    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // Send a request to the hardware for a given report described by type and id.
+    // Returns the hardware's response. This interface is not intended
     // to be used for continuous polling of the reports.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReport GetReport(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
@@ -1232,14 +1236,14 @@ class Device final {
     // from `GetReportsEvent`.
     static ::fidl::DecodeResult<ReadReportResponse> ReadReport(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // Read up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     // This is the interface that is supposed to be used for continuous polling.
     // Multiple reports can be returned from this API at a time, it is up to the client
     // to do the parsing of the reports with the correct sizes and offset.
     // It is guaranteed that only whole reports will be sent.
     // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     // wait on the event from |GetReportsEvent|.
-    static ::fidl::DecodeResult<GetReportsResponse> GetReports(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReadReportsResponse> ReadReports(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
     // Device's report FIFO. This signal will be de-asserted when there are no
@@ -1247,7 +1251,8 @@ class Device final {
     // the client wishes to know if there are reports in the FIFO.
     static ::fidl::DecodeResult<GetReportsEventResponse> GetReportsEvent(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Get a single report of the given (type, id) pair.  This interface is not intended
+    // Send a request to the hardware for a given report described by type and id.
+    // Returns the hardware's response. This interface is not intended
     // to be used for continuous polling of the reports.
     static ::fidl::DecodeResult<GetReportResponse> GetReport(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1393,19 +1398,19 @@ class Device final {
 
     virtual void ReadReport(ReadReportCompleter::Sync _completer) = 0;
 
-    class GetReportsCompleterBase : public _Base {
+    class ReadReportsCompleterBase : public _Base {
      public:
       void Reply(int32_t status, ::fidl::VectorView<uint8_t> data);
       void Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::VectorView<uint8_t> data);
-      void Reply(::fidl::DecodedMessage<GetReportsResponse> params);
+      void Reply(::fidl::DecodedMessage<ReadReportsResponse> params);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
     };
 
-    using GetReportsCompleter = ::fidl::Completer<GetReportsCompleterBase>;
+    using ReadReportsCompleter = ::fidl::Completer<ReadReportsCompleterBase>;
 
-    virtual void GetReports(GetReportsCompleter::Sync _completer) = 0;
+    virtual void ReadReports(ReadReportsCompleter::Sync _completer) = 0;
 
     class GetReportsEventCompleterBase : public _Base {
      public:
@@ -1496,8 +1501,8 @@ class Device final {
     static void GetMaxInputReportSizeResponse(const ::fidl::DecodedMessage<Device::GetMaxInputReportSizeResponse>& _msg);
     static void ReadReportRequest(const ::fidl::DecodedMessage<Device::ReadReportRequest>& _msg);
     static void ReadReportResponse(const ::fidl::DecodedMessage<Device::ReadReportResponse>& _msg);
-    static void GetReportsRequest(const ::fidl::DecodedMessage<Device::GetReportsRequest>& _msg);
-    static void GetReportsResponse(const ::fidl::DecodedMessage<Device::GetReportsResponse>& _msg);
+    static void ReadReportsRequest(const ::fidl::DecodedMessage<Device::ReadReportsRequest>& _msg);
+    static void ReadReportsResponse(const ::fidl::DecodedMessage<Device::ReadReportsResponse>& _msg);
     static void GetReportsEventRequest(const ::fidl::DecodedMessage<Device::GetReportsEventRequest>& _msg);
     static void GetReportsEventResponse(const ::fidl::DecodedMessage<Device::GetReportsEventResponse>& _msg);
     static void GetReportRequest(const ::fidl::DecodedMessage<Device::GetReportRequest>& _msg);
@@ -1608,13 +1613,13 @@ static_assert(offsetof(::llcpp::fuchsia::hardware::input::Device::ReadReportResp
 static_assert(offsetof(::llcpp::fuchsia::hardware::input::Device::ReadReportResponse, time) == 40);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::input::Device::GetReportsResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::hardware::input::Device::ReadReportsResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::input::Device::GetReportsResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::input::Device::GetReportsResponse)
-    == ::llcpp::fuchsia::hardware::input::Device::GetReportsResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::input::Device::GetReportsResponse, status) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::input::Device::GetReportsResponse, data) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::hardware::input::Device::ReadReportsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::input::Device::ReadReportsResponse)
+    == ::llcpp::fuchsia::hardware::input::Device::ReadReportsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::input::Device::ReadReportsResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::input::Device::ReadReportsResponse, data) == 24);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::input::Device::GetReportsEventResponse> : public std::true_type {};

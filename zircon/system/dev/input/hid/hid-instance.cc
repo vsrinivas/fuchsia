@@ -134,7 +134,7 @@ void HidInstance::ReadReport(ReadReportCompleter::Sync completer) {
   completer.Reply(status, buf_view, time);
 }
 
-void HidInstance::GetReports(GetReportsCompleter::Sync completer) {
+void HidInstance::ReadReports(ReadReportsCompleter::Sync completer) {
   TRACE_DURATION("input", "HID GetReports Instance", "bytes_in_fifo", zx_hid_fifo_size(&fifo_));
 
   if (flags_ & kHidFlagsDead) {
