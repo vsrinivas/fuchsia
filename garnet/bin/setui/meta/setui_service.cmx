@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/setui_service"
+        "binary": "bin/setui_service"
     },
     "sandbox": {
         "dev": [

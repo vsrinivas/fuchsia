@@ -1,0 +1,70 @@
+
+{
+    program: {
+        binary: "bin/setui_service"
+    },
+    expose: [
+        {
+            protocol: [
+                "/svc/fuchsia.settings.Accessibility",
+                "/svc/fuchsia.settings.Audio",
+                "/svc/fuchsia.settings.Device",
+                "/svc/fuchsia.settings.Display",
+                "/svc/fuchsia.settings.DoNotDisturb",
+                "/svc/fuchsia.settings.Intl",
+                "/svc/fuchsia.settings.Privacy",
+                "/svc/fuchsia.settings.Setup",
+                "/svc/fuchsia.settings.System",
+                "/svc/fuchsia.setui.SetUiService",
+            ],
+            from: "self",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "/svc/fuchsia.accessibility.SettingsManager",
+                "/svc/fuchsia.deprecatedtimezone.Timezone",
+                "/svc/fuchsia.device.manager.Administrator",
+                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.media.AudioCore",
+                "/svc/fuchsia.media.audio.VolumeControl",
+                "/svc/fuchsia.media.sounds.Player",
+                "/svc/fuchsia.net.Connectivity",
+                "/svc/fuchsia.netstack.Netstack",
+                "/svc/fuchsia.stash.Store",
+                "/svc/fuchsia.sys.Environment",
+                "/svc/fuchsia.timezone.Timezone",
+                "/svc/fuchsia.ui.brightness.Control",
+                "/svc/fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+            from: "realm",
+        },
+        {
+            directory: "/dev/class/input",
+            from: "realm",
+            rights: [ "r*" ]
+        },
+        // features: build-info
+        {
+            directory: "/config/build-info",
+            from: "realm",
+            rights: [ "r*" ]
+        },
+        // features: config-data
+        {
+            directory: "/pkgfs/packages/config-data/0/data/setui_service",
+            as: "/config/data",
+            from: "realm",
+            rights: [ "r*" ]
+        },
+        // features: isolated-persistent-storage
+        {
+            directory: "/data",
+            from: "realm",
+            rights: [ "rw*" ]
+        },
+    ],
+}
+

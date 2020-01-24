@@ -117,12 +117,20 @@ rustc_binary("bin") {
 package("setui_service") {
   deps = [ ":bin" ]
 
-  binary = "setui_service"
+  binaries = [
+    {
+      name = "setui_service"
+    },
+  ]
 
   meta = [
     {
       path = rebase_path("meta/setui_service.cmx")
       dest = "setui_service.cmx"
+    },
+    {
+      path = rebase_path("meta/setui_service.cml")
+      dest = "setui_service.cm"
     },
   ]
 
