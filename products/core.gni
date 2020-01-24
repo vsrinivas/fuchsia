@@ -38,6 +38,7 @@ base_package_labels += [
   "//garnet/lib/root_ssl_certificates",
   "//src/diagnostics/archivist:with_default_config",
   "//src/cobalt/bin/app:cobalt",
+  "//src/cobalt/bin/app:cobalt_registry",
   "//src/cobalt/bin/app:config",
   "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
   "//src/connectivity/bluetooth:core",
