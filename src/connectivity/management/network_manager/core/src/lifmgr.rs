@@ -9,8 +9,8 @@
 
 use crate::portmgr::PortId;
 use crate::{error, ElementId, Version, UUID};
-use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_stack::{self as stack, InterfaceAddress};
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_stack::{self as stack};
 use fidl_fuchsia_router_config;
 use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
@@ -193,28 +193,28 @@ pub struct LifIpAddr {
 }
 
 /// Creates an `std::net::IpAddr` from fuchsia.net.IpAddress.
-pub fn to_ip_addr(addr: net::IpAddress) -> IpAddr {
+pub fn to_ip_addr(addr: fnet::IpAddress) -> IpAddr {
     match addr {
-        net::IpAddress::Ipv4(net::Ipv4Address { addr }) => IpAddr::from(addr),
-        net::IpAddress::Ipv6(net::Ipv6Address { addr }) => IpAddr::from(addr),
+        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => IpAddr::from(addr),
+        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => IpAddr::from(addr),
     }
 }
 
-impl From<&InterfaceAddress> for LifIpAddr {
-    fn from(addr: &InterfaceAddress) -> Self {
+impl From<&stack::InterfaceAddress> for LifIpAddr {
+    fn from(addr: &stack::InterfaceAddress) -> Self {
         LifIpAddr { address: to_ip_addr(addr.ip_address), prefix: addr.prefix_len }
     }
 }
 
-impl From<&net::Subnet> for LifIpAddr {
-    fn from(s: &net::Subnet) -> Self {
+impl From<&fnet::Subnet> for LifIpAddr {
+    fn from(s: &fnet::Subnet) -> Self {
         match *s {
-            net::Subnet {
-                addr: net::IpAddress::Ipv4(net::Ipv4Address { addr }),
+            fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }),
                 prefix_len: prefix,
             } => LifIpAddr { address: addr.into(), prefix },
-            net::Subnet {
-                addr: net::IpAddress::Ipv6(net::Ipv6Address { addr }),
+            fnet::Subnet {
+                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }),
                 prefix_len: prefix,
             } => LifIpAddr { address: addr.into(), prefix },
         }
@@ -222,12 +222,12 @@ impl From<&net::Subnet> for LifIpAddr {
 }
 
 /// Converts a subnet mask given as a set of octets to a scalar prefix length.
-pub fn subnet_mask_to_prefix_length(addr: net::IpAddress) -> u8 {
+pub fn subnet_mask_to_prefix_length(addr: fnet::IpAddress) -> u8 {
     match addr {
-        net::IpAddress::Ipv4(net::Ipv4Address { addr }) => {
+        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
             (!u32::from_be_bytes(addr)).leading_zeros() as u8
         }
-        net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
             (!u128::from_be_bytes(addr)).leading_zeros() as u8
         }
     }
@@ -279,29 +279,29 @@ impl LifIpAddr {
     pub fn to_fidl_address_and_prefix(&self) -> fidl_fuchsia_router_config::CidrAddress {
         match self.address {
             IpAddr::V4(a) => fidl_fuchsia_router_config::CidrAddress {
-                address: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: a.octets() })),
+                address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: a.octets() })),
                 prefix_length: Some(self.prefix),
             },
             IpAddr::V6(a) => fidl_fuchsia_router_config::CidrAddress {
-                address: Some(net::IpAddress::Ipv6(net::Ipv6Address { addr: a.octets() })),
+                address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: a.octets() })),
                 prefix_length: Some(self.prefix),
             },
         }
     }
 
     /// Convert to fuchsia.net.Subnet, which contains a subnet mask and prefix length.
-    pub fn to_fidl_subnet(&self) -> net::Subnet {
+    pub fn to_fidl_subnet(&self) -> fnet::Subnet {
         match self.address {
-            IpAddr::V4(a) => net::Subnet {
-                addr: net::IpAddress::Ipv4(net::Ipv4Address {
+            IpAddr::V4(a) => fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
                     addr: (u32::from_be_bytes(a.octets()) >> (32 - self.prefix)
                         << (32 - self.prefix))
                         .to_be_bytes(),
                 }),
                 prefix_len: self.prefix,
             },
-            IpAddr::V6(a) => net::Subnet {
-                addr: net::IpAddress::Ipv6(net::Ipv6Address {
+            IpAddr::V6(a) => fnet::Subnet {
+                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: (u128::from_be_bytes(a.octets()) >> (128 - self.prefix)
                         << (128 - self.prefix))
                         .to_be_bytes(),
@@ -315,11 +315,11 @@ impl LifIpAddr {
     pub fn to_fidl_interface_address(&self) -> stack::InterfaceAddress {
         match self.address {
             IpAddr::V4(a) => stack::InterfaceAddress {
-                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: a.octets() }),
+                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: a.octets() }),
                 prefix_len: self.prefix,
             },
             IpAddr::V6(a) => stack::InterfaceAddress {
-                ip_address: net::IpAddress::Ipv6(net::Ipv6Address { addr: a.octets() }),
+                ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: a.octets() }),
                 prefix_len: self.prefix,
             },
         }
@@ -459,7 +459,7 @@ impl LIFManager {
 mod tests {
     use super::*;
     use crate::portmgr::{Port, PortManager};
-    use net::Ipv4Address;
+    use fnet::Ipv4Address;
 
     fn create_ports() -> PortManager {
         let mut pm = PortManager::new();
@@ -799,12 +799,12 @@ mod tests {
         assert_eq!(got, None);
     }
 
-    fn v4(addr: [u8; 4]) -> net::IpAddress {
-        net::IpAddress::Ipv4(net::Ipv4Address { addr })
+    fn v4(addr: [u8; 4]) -> fnet::IpAddress {
+        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr })
     }
 
-    fn v6(addr: [u8; 16]) -> net::IpAddress {
-        net::IpAddress::Ipv6(net::Ipv6Address { addr })
+    fn v6(addr: [u8; 16]) -> fnet::IpAddress {
+        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr })
     }
 
     #[test]
@@ -830,29 +830,29 @@ mod tests {
     #[test]
     fn test_from_subnet_tolifipaddr() {
         assert_eq!(
-            LifIpAddr::from(&net::Subnet {
-                addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+            LifIpAddr::from(&fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
                 prefix_len: 32
             }),
             LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 32 }
         );
         assert_eq!(
-            LifIpAddr::from(&net::Subnet {
-                addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+            LifIpAddr::from(&fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
                 prefix_len: 24
             }),
             LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }
         );
         assert_eq!(
-            LifIpAddr::from(&net::Subnet {
-                addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 0] }),
+            LifIpAddr::from(&fnet::Subnet {
+                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
                 prefix_len: 24
             }),
             LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 24 }
         );
         assert_eq!(
-            LifIpAddr::from(&net::Subnet {
-                addr: net::IpAddress::Ipv6(net::Ipv6Address {
+            LifIpAddr::from(&fnet::Subnet {
+                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [
                         0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0xfc, 0xb6, 0x5b, 0x27, 0xfd, 0x2c, 0xf, 0x12
                     ]
@@ -867,12 +867,12 @@ mod tests {
         lifip_addr: &str,
         expected_addr: &str,
         prefix_len: u8,
-    ) -> (LifIpAddr, net::Subnet) {
+    ) -> (LifIpAddr, fnet::Subnet) {
         let lifip = LifIpAddr { address: lifip_addr.parse().unwrap(), prefix: prefix_len };
 
         let ip: IpAddr = expected_addr.parse().unwrap();
-        let expected_subnet = net::Subnet {
-            addr: net::IpAddress::Ipv4(Ipv4Address {
+        let expected_subnet = fnet::Subnet {
+            addr: fnet::IpAddress::Ipv4(Ipv4Address {
                 addr: match ip {
                     std::net::IpAddr::V4(v4addr) => v4addr.octets(),
                     std::net::IpAddr::V6(_) => panic!("unexpected ipv6 address"),
