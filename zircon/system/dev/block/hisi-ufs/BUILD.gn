@@ -2,17 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("hisi-ufs") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("hisi-ufs") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "hisi-ufs.c",
     "ufs-common.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.block",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/dev/lib/device-protocol-platform-device",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/zircon",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-platform-device",
+    "//zircon/system/banjo/ddk.protocol.block",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
+}
+
+migrated_manifest("hisi-ufs-manifest") {
+  deps = [ ":hisi-ufs" ]
 }
