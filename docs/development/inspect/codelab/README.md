@@ -67,7 +67,4 @@ You will learn:
 
 ## Get Started
 
-The inspect codelab is available in multiple languages:
-
-- [Inspect C++ Codelab](cpp.md)
-- [Inspect Rust Codelab](rust.md)
+- [Inspect C++ Codelab](codelab.md)

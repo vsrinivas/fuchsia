@@ -8,10 +8,8 @@ toc:
   section:
   - title: "Overview"
     path: /docs/development/inspect/codelab/README.md
-  - title: "C++"
-    path: /docs/development/inspect/codelab/cpp.md
-  - title: "Rust"
-    path: /docs/development/inspect/codelab/rust.md
+  - title: "Codelab"
+    path: /docs/development/inspect/codelab/codelab.md
 - title: "Quickstart"
   path: /docs/development/inspect/quickstart.md
 - title: "Health check"
