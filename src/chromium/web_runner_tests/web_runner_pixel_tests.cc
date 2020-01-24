@@ -252,16 +252,36 @@ TEST_F(WebRunnerPixelTest, Static) {
 // This fixture uses fuchsia.web FIDL services to interact with the WebEngine.
 class WebPixelTest : public PixelTest {
  protected:
-  WebPixelTest() : web_context_(context()) {
-    // And create a view for the frame.
-    // TODO use an embedder view.
-    web_context_.web_frame()->CreateView(CreatePresentationViewToken());
+  WebPixelTest()
+      : web_context_(context()),
+        embedder_view_({
+            .session_and_listener_request =
+                scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
+            .view_token = CreatePresentationViewToken(),
+        }) {
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+    web_context_.web_frame()->CreateView(std::move(view_token));
+
+    scenic::EmbeddedViewInfo embedded_view_info;
+    embedded_view_info.view_holder_token = std::move(view_holder_token);
+    embedder_view_.EmbedView(
+        std::move(embedded_view_info),
+        /*view_state_changed_callback=*/[this](fuchsia::ui::gfx::ViewState view_state) {
+          EXPECT_TRUE(view_state.is_rendering);
+          QuitLoop();
+        });
+
+    // Wait to get a signal that the view is being rendered.
+    EXPECT_FALSE(RunLoopWithTimeout(kTestTimeout))
+        << "Timed out waiting for a ViewStateChanged event.";
   }
 
   WebContext* web_context() { return &web_context_; }
 
  private:
   WebContext web_context_;
+  scenic::EmbedderView embedder_view_;
 };
 
 // Loads a static page with a solid color via fuchsia.web interfaces and
