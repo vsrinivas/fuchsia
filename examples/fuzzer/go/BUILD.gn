@@ -13,7 +13,14 @@ group("go") {
 
 group("tests") {
   testonly = true
-  deps = [ ":go_fuzzers" ]
+
+  # Building Go fuzzers exhibits linker errors on macOS for some
+  # reason (fxbug.dev/44551). Unlink from build while those are still
+  # being diagnosed.
+  deps = []
+  if (host_os != "mac") {
+    deps += [ ":go_fuzzers" ]
+  }
 }
 
 fuzzers_package("go_fuzzers") {
