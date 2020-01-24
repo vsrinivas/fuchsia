@@ -189,13 +189,22 @@ function get-fuchsia-device-addr {
     fx-error "Run \"fx build\" to build host tools."
     exit 1
   fi
+  local output devices
   case "$device" in
     "")
-        local -r output="$("${finder}" list --netboot --ipv4=false --mdns=false "$@")" || exit $?
+        output="$("${finder}" list --netboot --ipv4=false --mdns=false "$@")" || {
+          code=$?
+          fx-error "Device discovery failed with status: $code"
+          exit $code
+        }
         if [[ "$(echo "${output}" | wc -l)" -gt "1" ]]; then
           fx-error "Multiple devices found."
           fx-error "Please specify one of the following (check network if this fails):"
-          local -r devices="$("${finder}" list --netboot --ipv4=false --mdns=false --full)" || exit $?
+          devices="$("${finder}" list --netboot --ipv4=false --mdns=false --full)" || {
+            code=$?
+            fx-error "Device discovery failed with status: $code"
+            exit $code
+          }
           while IFS="" read -r line; do
             fx-error "\t${line}"
           done < <(printf '%s\n' "${devices}")
