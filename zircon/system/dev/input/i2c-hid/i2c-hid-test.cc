@@ -321,4 +321,76 @@ TEST_F(I2cHidTest, HidTestReadReportNoIrq) {
   }
 }
 
+TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
+  // Replace the device's interrupt with an invalid one.
+  fake_i2c_hid_.SetInterrupt(zx::interrupt());
+
+  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
+
+  StartHidBus();
+
+  // Send three reports.
+  std::vector<uint8_t> rpt1(4);
+  rpt1[0] = 1;
+  rpt1[1] = 100;
+  rpt1[2] = 255;
+  rpt1[3] = 5;
+  fake_i2c_hid_.SendReport(rpt1);
+  fake_i2c_hid_.SendReport(rpt1);
+  fake_i2c_hid_.SendReport(rpt1);
+
+  std::vector<uint8_t> returned_rpt1;
+  ASSERT_OK(fake_hid_bus_.WaitUntilNextReport(&returned_rpt1));
+
+  // We should've only seen one report since the repeats should have been deduped.
+  ASSERT_EQ(fake_hid_bus_.NumReportsSeen(), 1);
+
+  ASSERT_EQ(returned_rpt1.size(), rpt1.size());
+  for (size_t i = 0; i < returned_rpt1.size(); i++) {
+    EXPECT_EQ(returned_rpt1[i], rpt1[i]);
+  }
+
+  // Send three different reports.
+  std::vector<uint8_t> rpt2(4);
+  rpt2[0] = 1;
+  rpt2[1] = 200;
+  rpt2[2] = 100;
+  rpt2[3] = 6;
+  fake_i2c_hid_.SendReport(rpt2);
+  fake_i2c_hid_.SendReport(rpt2);
+  fake_i2c_hid_.SendReport(rpt2);
+
+  std::vector<uint8_t> returned_rpt2;
+  ASSERT_OK(fake_hid_bus_.WaitUntilNextReport(&returned_rpt2));
+
+  // We should've only seen two report since the repeats should have been deduped.
+  ASSERT_EQ(fake_hid_bus_.NumReportsSeen(), 2);
+
+  ASSERT_EQ(returned_rpt2.size(), rpt2.size());
+  for (size_t i = 0; i < returned_rpt2.size(); i++) {
+    EXPECT_EQ(returned_rpt2[i], rpt2[i]);
+  }
+
+  // Send a report with different length.
+  std::vector<uint8_t> rpt3(5);
+  rpt3[0] = 1;
+  rpt3[1] = 200;
+  rpt3[2] = 100;
+  rpt3[3] = 6;
+  rpt3[4] = 10;
+  fake_i2c_hid_.SendReport(rpt3);
+
+  std::vector<uint8_t> returned_rpt3;
+  ASSERT_OK(fake_hid_bus_.WaitUntilNextReport(&returned_rpt3));
+
+  ASSERT_EQ(fake_hid_bus_.NumReportsSeen(), 3);
+
+  ASSERT_EQ(returned_rpt3.size(), rpt3.size());
+  for (size_t i = 0; i < returned_rpt3.size(); i++) {
+    EXPECT_EQ(returned_rpt3[i], rpt3[i]);
+  }
+
+}
+
 }  // namespace i2c_hid

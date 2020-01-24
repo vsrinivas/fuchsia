@@ -52,6 +52,7 @@ class FakeHidbusIfc : public ddk::HidbusIfcProtocol<FakeHidbusIfc> {
       fbl::AutoLock lock(&report_lock_);
       *report = last_report_;
     }
+    sync_completion_reset(&report_queued_);
     return status;
   }
 

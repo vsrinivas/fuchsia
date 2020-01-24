@@ -126,12 +126,15 @@ int I2cHidbus::WorkerThreadNoIrq() {
 
   uint16_t len = letoh16(hiddesc_.wMaxInputLength);
   uint8_t* buf = static_cast<uint8_t*>(malloc(len));
+  uint16_t report_len = 0;
 
   // Last report received, so we can deduplicate.  This is only necessary since
   // we haven't wired through interrupts yet, and some devices always return
   // the last received report when you attempt to read from them.
   uint8_t* last_report = static_cast<uint8_t*>(malloc(len));
   size_t last_report_len = 0;
+  // Skip deduplicating for the first read.
+  bool dedupe = false;
 
   zx_time_t last_timeout_warning = 0;
   const zx_duration_t kMinTimeBetweenWarnings = ZX_SEC(10);
@@ -142,7 +145,13 @@ int I2cHidbus::WorkerThreadNoIrq() {
     usleep(I2C_POLL_INTERVAL_USEC);
     TRACE_DURATION("input", "Device Read");
 
-    uint16_t report_len = 0;
+    last_report_len = report_len;
+
+    // Swap buffers
+    uint8_t* tmp = last_report;
+    last_report = buf;
+    buf = tmp;
+
     {
       fbl::AutoLock lock(&i2c_lock_);
 
@@ -162,6 +171,15 @@ int I2cHidbus::WorkerThreadNoIrq() {
       }
 
       report_len = letoh16(*(uint16_t*)buf);
+
+      // Check for duplicates.  See comment by |last_report| definition.
+      if (dedupe && last_report_len == report_len && report_len <= len &&
+          !memcmp(buf, last_report, report_len)) {
+        continue;
+      }
+
+      dedupe = true;
+
       if (report_len == 0x0) {
         zxlogf(TRACE, "i2c-hid reset detected\n");
         // Either host or device reset.
@@ -174,20 +192,16 @@ int I2cHidbus::WorkerThreadNoIrq() {
         zxlogf(INFO, "i2c-hid: received event while waiting for reset? %u\n", report_len);
         continue;
       }
-    }
 
-    if ((report_len == 0xffff) || (report_len == 0x3fff)) {
-      // nothing to read
-      continue;
-    }
-    if ((report_len < 2) || (report_len > len)) {
-      zxlogf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %d)!!!\n", report_len, len);
-      continue;
-    }
+      if ((report_len == 0xffff) || (report_len == 0x3fff)) {
+        // nothing to read
+        continue;
+      }
 
-    // Check for duplicates.  See comment by |last_report| definition.
-    if (last_report_len == report_len && !memcmp(buf, last_report, report_len)) {
-      continue;
+      if ((report_len < 2) || (report_len > len)) {
+        zxlogf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %d)!!!\n", report_len, len);
+        continue;
+      }
     }
 
     {
@@ -196,13 +210,6 @@ int I2cHidbus::WorkerThreadNoIrq() {
         ifc_.IoQueue(buf + 2, report_len - 2, zx_clock_get_monotonic());
       }
     }
-
-    last_report_len = report_len;
-
-    // Swap buffers
-    uint8_t* tmp = last_report;
-    last_report = buf;
-    buf = tmp;
   }
 
   free(buf);
