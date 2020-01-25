@@ -7,7 +7,9 @@ use proc_macro_hack::proc_macro_hack;
 #[proc_macro_hack]
 pub use wlan_frame_writer_macro::write_frame;
 #[proc_macro_hack]
-pub use wlan_frame_writer_macro::write_frame_with_buf;
+pub use wlan_frame_writer_macro::write_frame_with_dynamic_buf;
+#[proc_macro_hack]
+pub use wlan_frame_writer_macro::write_frame_with_fixed_buf;
 
 #[cfg(test)]
 mod tests {
@@ -91,7 +93,7 @@ mod tests {
     #[test]
     fn write_emit_offset_buf() {
         let mut offset = 0;
-        write_frame_with_buf!(vec![0u8; 20], {
+        write_frame_with_dynamic_buf!(vec![], {
             ies: {
                 supported_rates: &[1u8, 2, 3, 4, 5, 6, 7, 8],
                 offset @ extended_supported_rates: &[1u8, 2, 3, 4]
@@ -103,13 +105,32 @@ mod tests {
 
     #[test]
     fn write_buf() {
-        let (mut buf, bytes_written) = write_frame_with_buf!(vec![0u8; 10], {
+        let (buf, bytes_written) = write_frame_with_fixed_buf!(vec![0u8; 10], {
             ies: { ssid: &b"foobar"[..] }
         })
         .expect("frame construction failed");
-        buf.truncate(bytes_written);
+        assert_eq!(bytes_written, 8);
+        assert_eq!(&[0, 6, 102, 111, 111, 98, 97, 114, 0, 0][..], &buf[..]);
+    }
+
+    #[test]
+    fn write_buf_empty_vec() {
+        let (buf, bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+            ies: { ssid: &b"foobar"[..] }
+        })
+        .expect("frame construction failed");
         assert_eq!(bytes_written, 8);
         assert_eq!(&[0, 6, 102, 111, 111, 98, 97, 114,][..], &buf[..]);
+    }
+
+    #[test]
+    fn write_fixed_buf() {
+        let (buf, bytes_written) = write_frame_with_fixed_buf!([0u8; 10], {
+            ies: { ssid: &b"foobar"[..] }
+        })
+        .expect("frame construction failed");
+        assert_eq!(bytes_written, 8);
+        assert_eq!(&[0, 6, 102, 111, 111, 98, 97, 114,][..], &buf[..bytes_written]);
     }
 
     #[test]
@@ -510,7 +531,7 @@ mod tests {
 
     #[test]
     fn write_fields() {
-        // Some expression which can't be statically be determined but always returns true.
+        // Some expression which can't be statically evaluated but always returns true.
         let v = vec![5; 5];
         let always_true = v.len() < 6;
         let mut ht_capabilities = None;

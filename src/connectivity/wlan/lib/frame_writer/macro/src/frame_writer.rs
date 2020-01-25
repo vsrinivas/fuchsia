@@ -167,7 +167,8 @@ impl Parse for GroupArgs {
 
 fn process_write_definitions(
     write_defs: Vec<Writeable>,
-    buf_tokens: proc_macro2::TokenStream,
+    make_buf_tokens: proc_macro2::TokenStream,
+    return_buf_tokens: proc_macro2::TokenStream,
 ) -> TokenStream {
     let mut declare_var_tokens = quote!();
     let mut write_to_buf_tokens = quote!();
@@ -202,15 +203,13 @@ fn process_write_definitions(
                 #declare_var_tokens
                 #frame_len_tokens
 
-                #buf_tokens
+                #make_buf_tokens
 
-                let bytes_written = {
-                    let mut w = BufferWriter::new(&mut buf[..]);
+                {
                     #write_to_buf_tokens
-                    w.bytes_written()
-                };
+                }
 
-                Ok((buf, bytes_written))
+                #return_buf_tokens
             }()
         }
     })
@@ -220,15 +219,40 @@ pub fn process_with_buf_provider(input: TokenStream) -> TokenStream {
     let macro_args = parse_macro_input!(input as MacroArgs);
     let buffer_source = macro_args.buffer_source;
     let buf_tokens = quote!(
-      let mut buffer_provider = #buffer_source;
-      let mut buf = buffer_provider.get_buffer(frame_len)?;
+        let mut buffer_provider = #buffer_source;
+        let mut buf = buffer_provider.get_buffer(frame_len)?;
+        let mut w = BufferWriter::new(&mut buf[..]);
     );
-    process_write_definitions(macro_args.write_defs.0, buf_tokens)
+    let return_buf_tokens = quote!(
+        let bytes_written = w.bytes_written();
+        Ok((buf, bytes_written))
+    );
+    process_write_definitions(macro_args.write_defs.0, buf_tokens, return_buf_tokens)
 }
 
-pub fn process_with_buf(input: TokenStream) -> TokenStream {
+pub fn process_with_dynamic_buf(input: TokenStream) -> TokenStream {
     let macro_args = parse_macro_input!(input as MacroArgs);
     let buffer_source = macro_args.buffer_source;
-    let buf_tokens = quote!(let mut buf = #buffer_source;);
-    process_write_definitions(macro_args.write_defs.0, buf_tokens)
+    let buf_tokens = quote!(
+        let mut w = #buffer_source;
+    );
+    let return_buf_tokens = quote!(
+        let bytes_written = w.bytes_written();
+        Ok((w, bytes_written))
+    );
+    process_write_definitions(macro_args.write_defs.0, buf_tokens, return_buf_tokens)
+}
+
+pub fn process_with_fixed_buf(input: TokenStream) -> TokenStream {
+    let macro_args = parse_macro_input!(input as MacroArgs);
+    let buffer_source = macro_args.buffer_source;
+    let buf_tokens = quote!(
+        let mut buf = #buffer_source;
+        let mut w = BufferWriter::new(&mut buf[..]);
+    );
+    let return_buf_tokens = quote!(
+        let bytes_written = w.bytes_written();
+        Ok((buf, bytes_written))
+    );
+    process_write_definitions(macro_args.write_defs.0, buf_tokens, return_buf_tokens)
 }

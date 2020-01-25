@@ -24,13 +24,19 @@ use proc_macro_hack::proc_macro_hack;
 /// * `write_frame!` requires a `BufferProvider`:
 ///   ```
 ///   let (buf, bytes_written) = write_frame!(my_buffer_provider, { ... })?;
+///   let (buf, bytes_written) = write_frame!(make_buffer_provider(), { ... })?;
+///   let (buf, bytes_written) = write_frame!(self.buf_provider, { ... })?;
 ///   ```
-///   Note: the `BufferProvider` can be any structure which provides a
-///   `get_buffer(usize) -> Result<_, Error>` implementation. The returned buffer type must support
-///   `AsSlice`.
-/// * `write_frame_with_buf!` works with pre-allocated buffers:
+///   Note: the `BufferProvider` can be any struct which provides a
+///   `get_buffer(usize) -> Result<_, Error>` implementation. The returned buffer type must
+///   implement the `Appendable` trait.
+/// * `write_frame_with_dynamic_buf!` works with dynamically sized buffers. Such buffers can grow
+///   in size and must implement the `Appendable` trait.
+/// * `write_frame_with_fixed_buf!` works with fixed sized buffers. Such buffers must implement the
+///   `AsMut<[u8]>` trait.
 ///   ```
-///   let (buf, bytes_written) = write_frame_with_buf!(vec![0u8; 20], { ... })?;
+///   let (buf, bytes_written) = write_frame_with_fixed_buf!([0u8; 20], { ... })?;
+///   let (buf, bytes_written) = write_frame_with_dynamic_buf!(vec![], { ... })?;
 ///   ```
 ///
 /// # Headers
@@ -157,6 +163,11 @@ pub fn write_frame(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 #[proc_macro_hack]
-pub fn write_frame_with_buf(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    frame_writer::process_with_buf(input)
+pub fn write_frame_with_fixed_buf(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    frame_writer::process_with_fixed_buf(input)
+}
+
+#[proc_macro_hack]
+pub fn write_frame_with_dynamic_buf(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    frame_writer::process_with_dynamic_buf(input)
 }
