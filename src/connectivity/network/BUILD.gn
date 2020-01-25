@@ -26,6 +26,7 @@ group("tests") {
     "dhcp:dhcp_tests",
     "dhcp:dhcpd_tests",
     "dhcpd-cli:dhcpd_cli_tests",
+    "dns:dns_tests",
     "http_client:tests",
     "mdns/service:mdns_tests",
     "net-cli:net-cli-tests",
