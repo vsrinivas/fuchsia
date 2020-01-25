@@ -31,18 +31,22 @@ TEST(MbrTest, Parse) {
   Mbr mbr;
   EXPECT_OK(Mbr::Parse(kFuchsiaMbr, sizeof(kFuchsiaMbr), &mbr));
 
-  const auto& partition0 = mbr.partitions[0];
-  EXPECT_EQ(partition0.type, kPartitionTypeFuchsiaSys);
-  EXPECT_EQ(partition0.start_sector_lba, 2048);
-  EXPECT_EQ(partition0.num_sectors, 20480);
+  MbrPartitionEntry partition;
+  memcpy(&partition, &mbr.partitions[0], kMbrPartitionEntrySize);
+  EXPECT_EQ(partition.type, kPartitionTypeFuchsiaSys);
+  EXPECT_EQ(partition.start_sector_lba, 2048);
+  EXPECT_EQ(partition.num_sectors, 20480);
 
-  const auto& partition1 = mbr.partitions[1];
-  EXPECT_EQ(partition1.type, kPartitionTypeFuchsiaData);
-  EXPECT_EQ(partition1.start_sector_lba, 22528);
-  EXPECT_EQ(partition1.num_sectors, 60532736);
+  memcpy(&partition, &mbr.partitions[1], kMbrPartitionEntrySize);
+  EXPECT_EQ(partition.type, kPartitionTypeFuchsiaData);
+  EXPECT_EQ(partition.start_sector_lba, 22528);
+  EXPECT_EQ(partition.num_sectors, 60532736);
 
-  EXPECT_EQ(mbr.partitions[2].type, kPartitionTypeNone);
-  EXPECT_EQ(mbr.partitions[3].type, kPartitionTypeNone);
+  memcpy(&partition, &mbr.partitions[2], kMbrPartitionEntrySize);
+  EXPECT_EQ(partition.type, kPartitionTypeNone);
+
+  memcpy(&partition, &mbr.partitions[3], kMbrPartitionEntrySize);
+  EXPECT_EQ(partition.type, kPartitionTypeNone);
 
   EXPECT_EQ(mbr.boot_signature, kMbrBootSignature);
 }
