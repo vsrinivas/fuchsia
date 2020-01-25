@@ -11,3 +11,15 @@ macro_rules! log_if_err {
         }
     };
 }
+
+/// Create and connect a FIDL proxy to the service at `path`
+pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
+    path: &String,
+) -> Result<T::Proxy, anyhow::Error> {
+    let (proxy, server) = fidl::endpoints::create_proxy::<T>()
+        .map_err(|e| anyhow::format_err!("Failed to create proxy: {}", e))?;
+
+    fdio::service_connect(path, server.into_channel())
+        .map_err(|s| anyhow::format_err!("Failed to connect to service at {}: {}", path, s))?;
+    Ok(proxy)
+}

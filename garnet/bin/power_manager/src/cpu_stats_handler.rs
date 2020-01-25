@@ -6,12 +6,12 @@ use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::Nanoseconds;
+use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_kernel as fstats;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
-use fuchsia_zircon as zx;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -32,10 +32,41 @@ use std::rc::Rc;
 /// The Kernel Stats service that we'll be communicating with
 const CPU_STATS_SVC: &'static str = "/svc/fuchsia.kernel.Stats";
 
+/// A builder for constructing the CpuStatsHandler node
+pub struct CpuStatsHandlerBuilder {
+    stats_svc_proxy: Option<fstats::StatsProxy>,
+}
+
+impl CpuStatsHandlerBuilder {
+    pub fn new() -> Self {
+        Self { stats_svc_proxy: None }
+    }
+
+    #[cfg(test)]
+    pub fn with_proxy(mut self, proxy: fstats::StatsProxy) -> Self {
+        self.stats_svc_proxy = Some(proxy);
+        self
+    }
+
+    pub fn build(self) -> Result<Rc<CpuStatsHandler>, Error> {
+        // Get default proxy if necessary
+        let proxy = if self.stats_svc_proxy.is_none() {
+            connect_proxy::<fstats::StatsMarker>(&CPU_STATS_SVC.to_string())?
+        } else {
+            self.stats_svc_proxy.unwrap()
+        };
+
+        Ok(Rc::new(CpuStatsHandler {
+            stats_svc_proxy: proxy,
+            cpu_idle_stats: RefCell::new(Default::default()),
+        }))
+    }
+}
+
 /// The CpuStatsHandler node
 pub struct CpuStatsHandler {
     /// A proxy handle to communicate with the Kernel Stats service
-    stats_svc: fstats::StatsProxy,
+    stats_svc_proxy: fstats::StatsProxy,
 
     /// Cached CPU idle states from the most recent call
     cpu_idle_stats: RefCell<CpuIdleStats>,
@@ -53,30 +84,11 @@ struct CpuIdleStats {
 }
 
 impl CpuStatsHandler {
-    pub fn new() -> Result<Rc<Self>, Error> {
-        Ok(Self::new_with_proxy(Self::connect_stats_service()?))
-    }
-
-    /// Create the node with an existing Kernel Stats proxy (test configuration can use this
-    /// to pass a proxy which connects to a fake stats service)
-    fn new_with_proxy(stats_svc: fstats::StatsProxy) -> Rc<Self> {
-        Rc::new(Self { stats_svc, cpu_idle_stats: RefCell::new(Default::default()) })
-    }
-
-    fn connect_stats_service() -> Result<fstats::StatsProxy, Error> {
-        let (client, server) =
-            zx::Channel::create().map_err(|s| format_err!("Failed to create channel: {}", s))?;
-
-        fdio::service_connect(CPU_STATS_SVC, server)
-            .map_err(|s| format_err!("Failed to connect to Stats service: {}", s))?;
-        Ok(fstats::StatsProxy::new(fasync::Channel::from_channel(client)?))
-    }
-
     /// Calls out to the Kernel Stats service to retrieve the latest CPU stats
     async fn get_cpu_stats(&self) -> Result<fstats::CpuStats, Error> {
         fuchsia_trace::duration!("power_manager", "CpuStatsHandler::get_cpu_stats");
         let result = self
-            .stats_svc
+            .stats_svc_proxy
             .get_cpu_stats()
             .await
             .map_err(|e| format_err!("get_cpu_stats IPC failed: {}", e));
@@ -279,7 +291,10 @@ pub mod tests {
     pub fn setup_test_node(
         get_idle_times: impl FnMut() -> Vec<Nanoseconds> + 'static,
     ) -> Rc<CpuStatsHandler> {
-        CpuStatsHandler::new_with_proxy(setup_fake_service(get_idle_times))
+        CpuStatsHandlerBuilder::new()
+            .with_proxy(setup_fake_service(get_idle_times))
+            .build()
+            .unwrap()
     }
 
     /// Creates a test CpuStatsHandler that reports zero idle times, with `TEST_NUM_CORES` CPUs.

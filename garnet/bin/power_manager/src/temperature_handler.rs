@@ -6,6 +6,7 @@ use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::Celsius;
+use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_thermal as fthermal;
@@ -27,30 +28,40 @@ use std::rc::Rc;
 ///     - fuchsia.hardware.thermal: the node uses this protocol to query the thermal driver
 ///       specified by `driver_path` in the TemperatureHandler constructor
 
+/// A builder for constructing the TemperatureHandler node
+pub struct TemperatureHandlerBuilder {
+    driver_path: String,
+    driver_proxy: Option<fthermal::DeviceProxy>,
+}
+
+impl TemperatureHandlerBuilder {
+    pub fn new_with_driver_path(driver_path: String) -> Self {
+        Self { driver_path, driver_proxy: None }
+    }
+
+    #[cfg(test)]
+    pub fn new_with_proxy(driver_path: String, proxy: fthermal::DeviceProxy) -> Self {
+        Self { driver_path, driver_proxy: Some(proxy) }
+    }
+
+    pub fn build(self) -> Result<Rc<TemperatureHandler>, Error> {
+        // Get default proxy if necessary
+        let proxy = if self.driver_proxy.is_none() {
+            connect_proxy::<fthermal::DeviceMarker>(&self.driver_path)?
+        } else {
+            self.driver_proxy.unwrap()
+        };
+
+        Ok(Rc::new(TemperatureHandler { driver_path: self.driver_path, driver_proxy: proxy }))
+    }
+}
+
 pub struct TemperatureHandler {
     driver_path: String,
     driver_proxy: fthermal::DeviceProxy,
 }
 
 impl TemperatureHandler {
-    pub fn new(driver_path: String) -> Result<Rc<Self>, Error> {
-        let proxy = Self::connect_driver(&driver_path)?;
-        Ok(Self::new_with_proxy(driver_path, proxy))
-    }
-
-    fn new_with_proxy(driver_path: String, driver_proxy: fthermal::DeviceProxy) -> Rc<Self> {
-        Rc::new(Self { driver_path, driver_proxy })
-    }
-
-    fn connect_driver(path: &String) -> Result<fthermal::DeviceProxy, Error> {
-        let (proxy, server) = fidl::endpoints::create_proxy::<fthermal::DeviceMarker>()
-            .map_err(|e| format_err!("Failed to create thermal proxy: {}", e))?;
-
-        fdio::service_connect(path, server.into_channel())
-            .map_err(|s| format_err!("Failed to connect to service at {}: {}", path, s))?;
-        Ok(proxy)
-    }
-
     async fn handle_read_temperature(&self) -> Result<MessageReturn, Error> {
         fuchsia_trace::duration!(
             "power_manager",
@@ -153,7 +164,12 @@ pub mod tests {
     pub fn setup_test_node(
         get_temperature: impl FnMut() -> Celsius + 'static,
     ) -> Rc<TemperatureHandler> {
-        TemperatureHandler::new_with_proxy("Fake".to_string(), setup_fake_driver(get_temperature))
+        TemperatureHandlerBuilder::new_with_proxy(
+            "Fake".to_string(),
+            setup_fake_driver(get_temperature),
+        )
+        .build()
+        .unwrap()
     }
 
     /// Tests that the node can handle the 'ReadTemperature' message as expected. The test

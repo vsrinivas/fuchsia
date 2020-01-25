@@ -5,6 +5,7 @@
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device as fdev;
@@ -29,30 +30,40 @@ use std::rc::Rc;
 
 pub const MAX_PERF_STATES: u32 = fdev::MAX_DEVICE_PERFORMANCE_STATES;
 
+/// A builder for constructing the DeviceControlhandler node
+pub struct DeviceControlHandlerBuilder {
+    driver_path: String,
+    driver_proxy: Option<fdev::ControllerProxy>,
+}
+
+impl DeviceControlHandlerBuilder {
+    pub fn new_with_driver_path(driver_path: String) -> Self {
+        Self { driver_path, driver_proxy: None }
+    }
+
+    #[cfg(test)]
+    pub fn new_with_proxy(driver_path: String, proxy: fdev::ControllerProxy) -> Self {
+        Self { driver_path, driver_proxy: Some(proxy) }
+    }
+
+    pub fn build(self) -> Result<Rc<DeviceControlHandler>, Error> {
+        // Get default proxy if necessary
+        let proxy = if self.driver_proxy.is_none() {
+            connect_proxy::<fdev::ControllerMarker>(&self.driver_path)?
+        } else {
+            self.driver_proxy.unwrap()
+        };
+
+        Ok(Rc::new(DeviceControlHandler { driver_path: self.driver_path, driver_proxy: proxy }))
+    }
+}
+
 pub struct DeviceControlHandler {
     driver_path: String,
     driver_proxy: fdev::ControllerProxy,
 }
 
 impl DeviceControlHandler {
-    pub fn new(driver_path: String) -> Result<Rc<Self>, Error> {
-        let proxy = Self::connect_driver(&driver_path)?;
-        Ok(Self::new_with_proxy(driver_path, proxy))
-    }
-
-    fn new_with_proxy(driver_path: String, driver_proxy: fdev::ControllerProxy) -> Rc<Self> {
-        Rc::new(Self { driver_path, driver_proxy })
-    }
-
-    fn connect_driver(path: &String) -> Result<fdev::ControllerProxy, Error> {
-        let (proxy, server) = fidl::endpoints::create_proxy::<fdev::ControllerMarker>()
-            .map_err(|e| format_err!("Failed to create Controller proxy: {}", e))?;
-
-        fdio::service_connect(path, server.into_channel())
-            .map_err(|s| format_err!("Failed to connect to service at {}: {}", path, s))?;
-        Ok(proxy)
-    }
-
     async fn handle_get_performance_state(&self) -> Result<MessageReturn, Error> {
         fuchsia_trace::duration!(
             "power_manager",
@@ -164,10 +175,12 @@ pub mod tests {
     pub fn setup_test_node(
         set_performance_state: impl FnMut(u32) + 'static,
     ) -> Rc<DeviceControlHandler> {
-        DeviceControlHandler::new_with_proxy(
+        DeviceControlHandlerBuilder::new_with_proxy(
             "Fake".to_string(),
             setup_fake_driver(set_performance_state),
         )
+        .build()
+        .unwrap()
     }
 
     #[fasync::run_singlethreaded(test)]

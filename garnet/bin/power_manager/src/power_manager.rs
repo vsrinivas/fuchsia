@@ -41,29 +41,36 @@ impl PowerManager {
         &mut self,
         service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>,
     ) -> Result<(), Error> {
-        let cpu_temperature =
-            temperature_handler::TemperatureHandler::new("/dev/class/thermal/000".to_string())?;
+        let cpu_temperature = temperature_handler::TemperatureHandlerBuilder::new_with_driver_path(
+            "/dev/class/thermal/000".to_string(),
+        )
+        .build()?;
         self.nodes.push(cpu_temperature.clone());
 
-        let cpu_stats_node = cpu_stats_handler::CpuStatsHandler::new()?;
+        let cpu_stats_node = cpu_stats_handler::CpuStatsHandlerBuilder::new().build()?;
         self.nodes.push(cpu_stats_node.clone());
 
         let cpu_path = "/dev/class/cpu-ctrl/000";
         let cpu_dev_handler_node =
-            dev_control_handler::DeviceControlHandler::new(cpu_path.to_string())?;
+            dev_control_handler::DeviceControlHandlerBuilder::new_with_driver_path(
+                cpu_path.to_string(),
+            )
+            .build()?;
         self.nodes.push(cpu_dev_handler_node.clone());
 
-        let cpu_control_node = cpu_control_handler::CpuControlHandler::new(
+        let cpu_control_node = cpu_control_handler::CpuControlHandlerBuilder::new_with_driver_path(
             cpu_path.to_string(),
             // TODO(claridge): This is a dummy value for now. Should the CPU driver provide it in
             // addition to the P-states?
             Farads(100.0e-12),
             cpu_stats_node,
             cpu_dev_handler_node,
-        )?;
+        )
+        .build()?;
         self.nodes.push(cpu_control_node.clone());
 
-        let sys_pwr_handler = system_power_handler::SystemPowerStateHandler::new()?;
+        let sys_pwr_handler =
+            system_power_handler::SystemPowerStateHandlerBuilder::new().build()?;
         self.nodes.push(sys_pwr_handler.clone());
 
         let thermal_limiter_node = thermal_limiter::ThermalLimiter::new(service_fs)?;

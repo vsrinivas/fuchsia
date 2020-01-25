@@ -6,6 +6,7 @@ use crate::dev_control_handler;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::{Farads, Hertz, Volts, Watts};
+use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_cpu_ctrl as fcpuctrl;
@@ -87,7 +88,74 @@ pub fn get_cpu_power(capacitance: Farads, voltage: Volts, op_completion_rate: He
     Watts(capacitance.0 * voltage.0.powi(2) * op_completion_rate.0)
 }
 
-/// The CpuControlHandler node.
+/// A builder for constructing the CpuControlHandler node. The fields of this struct are documented
+/// as part of the CpuControlHandler struct.
+pub struct CpuControlHandlerBuilder {
+    cpu_driver_path: String,
+    capacitance: Farads,
+    cpu_stats_handler: Rc<dyn Node>,
+    cpu_dev_handler_node: Rc<dyn Node>,
+    cpu_ctrl_proxy: Option<fcpuctrl::DeviceProxy>,
+}
+
+impl CpuControlHandlerBuilder {
+    pub fn new_with_driver_path(
+        cpu_driver_path: String,
+        // TODO(pshickel): Eventually we may want to query capacitance from the CPU driver (same as
+        // we do for CPU P-states)
+        capacitance: Farads,
+        cpu_stats_handler: Rc<dyn Node>,
+        cpu_dev_handler_node: Rc<dyn Node>,
+    ) -> Self {
+        Self {
+            cpu_driver_path,
+            capacitance,
+            cpu_stats_handler,
+            cpu_dev_handler_node,
+            cpu_ctrl_proxy: None,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new_with_proxy(
+        cpu_driver_path: String,
+        proxy: fcpuctrl::DeviceProxy,
+        capacitance: Farads,
+        cpu_stats_handler: Rc<dyn Node>,
+        cpu_dev_handler_node: Rc<dyn Node>,
+    ) -> Self {
+        Self {
+            cpu_driver_path,
+            cpu_ctrl_proxy: Some(proxy),
+            capacitance,
+            cpu_stats_handler,
+            cpu_dev_handler_node,
+        }
+    }
+
+    pub fn build(self) -> Result<Rc<CpuControlHandler>, Error> {
+        // Get default proxy if necessary
+        let proxy = if self.cpu_ctrl_proxy.is_none() {
+            connect_proxy::<fcpuctrl::DeviceMarker>(&self.cpu_driver_path)?
+        } else {
+            self.cpu_ctrl_proxy.unwrap()
+        };
+
+        Ok(Rc::new(CpuControlHandler {
+            cpu_driver_path: self.cpu_driver_path,
+            cpu_control_params: RefCell::new(CpuControlParams {
+                p_states: Vec::new(),
+                capacitance: self.capacitance,
+                num_cores: 0,
+            }),
+            current_p_state_index: Cell::new(None),
+            cpu_stats_handler: self.cpu_stats_handler,
+            cpu_dev_handler_node: self.cpu_dev_handler_node,
+            cpu_ctrl_proxy: proxy,
+        }))
+    }
+}
+
 pub struct CpuControlHandler {
     /// The path to the driver that this node controls.
     cpu_driver_path: String,
@@ -112,56 +180,6 @@ pub struct CpuControlHandler {
 }
 
 impl CpuControlHandler {
-    pub fn new(
-        cpu_driver_path: String,
-        // TODO(pshickel): Eventually we may want to query capacitance from the CPU driver (same as
-        // we do for CPU P-states)
-        capacitance: Farads,
-        cpu_stats_handler: Rc<dyn Node>,
-        cpu_dev_handler_node: Rc<dyn Node>,
-    ) -> Result<Rc<Self>, Error> {
-        Ok(Self::new_with_cpu_ctrl_proxy(
-            cpu_driver_path.clone(),
-            Self::connect_cpu_proxy(cpu_driver_path)?,
-            capacitance,
-            cpu_stats_handler,
-            cpu_dev_handler_node,
-        ))
-    }
-
-    /// Create the node with an existing CpuCtrl proxy (test configuration can use this
-    /// to pass a proxy which connects to a fake driver)
-    fn new_with_cpu_ctrl_proxy(
-        cpu_driver_path: String,
-        cpu_ctrl_proxy: fcpuctrl::DeviceProxy,
-        capacitance: Farads,
-        cpu_stats_handler: Rc<dyn Node>,
-        cpu_dev_handler_node: Rc<dyn Node>,
-    ) -> Rc<Self> {
-        Rc::new(Self {
-            cpu_driver_path,
-            cpu_control_params: RefCell::new(CpuControlParams {
-                p_states: Vec::new(),
-                capacitance,
-                num_cores: 0,
-            }),
-            current_p_state_index: Cell::new(None),
-            cpu_stats_handler,
-            cpu_dev_handler_node,
-            cpu_ctrl_proxy,
-        })
-    }
-
-    fn connect_cpu_proxy(cpu_driver_path: String) -> Result<fcpuctrl::DeviceProxy, Error> {
-        let (proxy, server) = fidl::endpoints::create_proxy::<fcpuctrl::DeviceMarker>()
-            .map_err(|e| format_err!("Failed to create proxy: {}", e))?;
-
-        fdio::service_connect(&cpu_driver_path, server.into_channel()).map_err(|s| {
-            format_err!("Failed to connect to service at {}: {}", cpu_driver_path, s)
-        })?;
-        Ok(proxy)
-    }
-
     /// Construct CpuControlParams by querying the required information from the CpuCtrl interface.
     async fn get_cpu_params(&self) -> Result<(), Error> {
         fuchsia_trace::duration!(
@@ -390,13 +408,15 @@ pub mod tests {
         cpu_dev_handler_node: Rc<dyn Node>,
     ) -> Rc<CpuControlHandler> {
         let capacitance = params.capacitance;
-        CpuControlHandler::new_with_cpu_ctrl_proxy(
+        CpuControlHandlerBuilder::new_with_proxy(
             "Fake".to_string(),
             setup_fake_service(params),
             capacitance,
             cpu_stats_handler,
             cpu_dev_handler_node,
         )
+        .build()
+        .unwrap()
     }
 
     #[test]

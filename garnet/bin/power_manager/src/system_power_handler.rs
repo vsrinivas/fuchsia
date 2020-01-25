@@ -5,10 +5,10 @@
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device_manager as fdevmgr;
-use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use std::rc::Rc;
@@ -30,28 +30,39 @@ use std::rc::Rc;
 /// The device manager service that we'll be communicating with
 const DEV_MGR_SVC: &'static str = "/svc/fuchsia.device.manager.Administrator";
 
+/// A builder for constructing the SystemPowerStateHandler node
+pub struct SystemPowerStateHandlerBuilder {
+    svc_proxy: Option<fdevmgr::AdministratorProxy>,
+}
+
+impl SystemPowerStateHandlerBuilder {
+    pub fn new() -> Self {
+        Self { svc_proxy: None }
+    }
+
+    #[cfg(test)]
+    pub fn with_proxy(mut self, proxy: fdevmgr::AdministratorProxy) -> Self {
+        self.svc_proxy = Some(proxy);
+        self
+    }
+
+    pub fn build(self) -> Result<Rc<SystemPowerStateHandler>, Error> {
+        // Get default proxy if necessary
+        let proxy = if self.svc_proxy.is_none() {
+            connect_proxy::<fdevmgr::AdministratorMarker>(&DEV_MGR_SVC.to_string())?
+        } else {
+            self.svc_proxy.unwrap()
+        };
+
+        Ok(Rc::new(SystemPowerStateHandler { svc_proxy: proxy }))
+    }
+}
+
 pub struct SystemPowerStateHandler {
     svc_proxy: fdevmgr::AdministratorProxy,
 }
 
 impl SystemPowerStateHandler {
-    pub fn new() -> Result<Rc<Self>, Error> {
-        Ok(Self::new_with_proxy(Self::connect_devmgr_service()?))
-    }
-
-    fn new_with_proxy(svc_proxy: fdevmgr::AdministratorProxy) -> Rc<Self> {
-        Rc::new(Self { svc_proxy })
-    }
-
-    fn connect_devmgr_service() -> Result<fdevmgr::AdministratorProxy, Error> {
-        let (client, server) =
-            zx::Channel::create().map_err(|s| format_err!("Failed to create channel: {}", s))?;
-
-        fdio::service_connect(DEV_MGR_SVC, server)
-            .map_err(|s| format_err!("Failed to connect to DevMgr service: {}", s))?;
-        Ok(fdevmgr::AdministratorProxy::new(fasync::Channel::from_channel(client)?))
-    }
-
     async fn handle_system_shutdown(&self, reason: String) -> Result<MessageReturn, Error> {
         fuchsia_trace::duration!(
             "power_manager",
@@ -118,7 +129,7 @@ pub mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fdevmgr::AdministratorMarker>().unwrap();
 
-        fasync::spawn_local(async move {
+        fuchsia_async::spawn_local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fdevmgr::AdministratorRequest::Suspend {
@@ -141,12 +152,15 @@ pub mod tests {
     pub fn setup_test_node(
         shutdown_function: impl FnMut() + 'static,
     ) -> Rc<SystemPowerStateHandler> {
-        SystemPowerStateHandler::new_with_proxy(setup_fake_service(shutdown_function))
+        SystemPowerStateHandlerBuilder::new()
+            .with_proxy(setup_fake_service(shutdown_function))
+            .build()
+            .unwrap()
     }
 
     /// Tests that the node can handle the 'SystemShutdown' message as expected. The test node uses
     /// a fake device manager service here, so a system shutdown will not actually happen.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_system_shutdown() {
         let shutdown_applied = Rc::new(Cell::new(false));
         let shutdown_applied_2 = shutdown_applied.clone();
