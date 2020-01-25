@@ -2,46 +2,78 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("ddk-runcompatibilityhook-test") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("ddk-runcompatibilityhook-test") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-driver.cc" ]
   deps = [
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fdio",
   ]
-
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  # Tests fail when using #"$zx/system/ulib/fdio:static",
-  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-zx_driver("ddk-runcompatibilityhook-test-child") {
+driver_module("ddk-runcompatibilityhook-test-child") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-driver-child.cc" ]
   deps = [
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fdio",
   ]
-
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-zx_test("ddk-runcompatibilityhook") {
+test("ddk-runcompatibilityhook") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-device-manager:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/driver-integration-test",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/devmgr-launcher",
+    "//zircon/public/lib/driver-integration-test",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-device-manager:c",
   ]
+}
+
+migrated_manifest("ddk-runcompatibilityhook-test-manifest") {
+  deps = [ ":ddk-runcompatibilityhook-test" ]
+}
+
+migrated_manifest("ddk-runcompatibilityhook-test-child-manifest") {
+  deps = [ ":ddk-runcompatibilityhook-test-child" ]
+}
+
+migrated_manifest("ddk-runcompatibilityhook-manifest") {
+  deps = [ ":ddk-runcompatibilityhook" ]
 }

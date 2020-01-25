@@ -9,7 +9,6 @@ group("test") {
     "ddk-fidl-test",
     "ddk-lifecycle",
     "ddk-power",
-    "ddk-runcompatibilityhook",
     "ddk-schedule-work",
     "isolateddevmgr",
     "mock-device",

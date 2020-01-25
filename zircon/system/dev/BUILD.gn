@@ -39,8 +39,6 @@ group("dev") {
     "test/ddk-lifecycle:ddk-lifecycle-test",
     "test/ddk-power:ddk-power-test",
     "test/ddk-power:ddk-power-test-child",
-    "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test",
-    "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child",
     "test/ddk-schedule-work:ddk-schedule-work-test",
     "test/fidl-async-llcpp-driver",
     "test/fidl-llcpp-driver",
