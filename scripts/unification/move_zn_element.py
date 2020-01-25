@@ -154,7 +154,9 @@ def transform_build_file(build):
             sys.stdout.write('  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]\n')
 
         if starting_type in Type.all():
-            sys.stdout.write('  configs += [ "//build/unification/config:zircon-migrated" ]\n')
+            sys.stdout.write('  if (is_fuchsia) {\n')
+            sys.stdout.write('    configs += [ "//build/unification/config:zircon-migrated" ]\n')
+            sys.stdout.write('  }\n')
 
     # Third pass: add manifest targets at the end of the file.
     with open(build, 'a') as build_file:
