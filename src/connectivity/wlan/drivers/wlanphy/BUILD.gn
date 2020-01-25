@@ -15,10 +15,10 @@ wlanphy_sources = [
 ]
 
 wlanphy_deps = [
-  "//garnet/lib/wlan/fidl",
-  "//garnet/lib/wlan/fidl:fidl_llcpp",
   "//garnet/lib/wlan/protocol",
   "//sdk/banjo/ddk.protocol.wlanphyimpl",
+  "//sdk/fidl/fuchsia.wlan.device",
+  "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
   "//src/connectivity/wlan/lib/common/cpp:common",
   "//src/devices:driver",
   "//zircon/public/lib/async-cpp",

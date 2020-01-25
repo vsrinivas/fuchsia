@@ -13,10 +13,10 @@ rustc_library("wlan-sme") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/wlan/fidl:sme-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.mesh:fuchsia.wlan.mesh-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/eapol",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",

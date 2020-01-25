@@ -7,8 +7,8 @@ import("//build/rust/rustc_test.gni")
 rustc_test("ethernet_tx_rx") {
   edition = "2018"
   deps = [
+    "////sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//garnet/lib/rust/ethernet",
-    "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",

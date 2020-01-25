@@ -8,7 +8,7 @@ rustc_library("wlan_dev") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/wlan/fidl:fidl-rustc",
+    "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/testing/wlan-devmgr/fidl:devmgr-rustc",
     "//src/lib/fdio/rust:fdio",

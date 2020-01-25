@@ -13,9 +13,9 @@ rustc_library("wlan-common") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/wlan/fidl:sme-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
     "//src/lib/fuchsia-async",
     "//src/lib/zerocopy",

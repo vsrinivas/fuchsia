@@ -19,8 +19,8 @@ driver_module("wlantap_driver") {
   ]
 
   deps = [
-    "//garnet/lib/wlan/fidl:wlantap",
-    "//garnet/lib/wlan/fidl:wlantap_llcpp",
+    "////sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap",
+    "////sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap_llcpp",
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/connectivity/wlan/lib/common/cpp:common",

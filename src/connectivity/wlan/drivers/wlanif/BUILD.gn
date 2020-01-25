@@ -18,8 +18,8 @@ all_src = [
 ]
 
 all_deps = [
-  "//garnet/lib/wlan/fidl",
   "//garnet/lib/wlan/protocol",
+  "//sdk/fidl/fuchsia.wlan.device",
   "//sdk/fidl/fuchsia.wlan.mlme",
   "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_client",
   "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_server",

@@ -10,7 +10,7 @@ rustc_library("wlantap-client") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/wlan/fidl:wlantap-rustc",
+    "////sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/wlan_dev",
     "//src/connectivity/wlan/testing/wlan-devmgr/fidl:devmgr-rustc",
     "//src/lib/fdio/rust:fdio",

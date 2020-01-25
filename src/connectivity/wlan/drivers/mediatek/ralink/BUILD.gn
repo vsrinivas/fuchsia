@@ -18,9 +18,9 @@ driver_module("ralink_driver") {
   ]
 
   deps = [
-    "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
+    "//sdk/fidl/fuchsia.wlan.device",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices:driver",

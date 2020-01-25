@@ -9,7 +9,7 @@ rustc_binary("util") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/wlan/fidl:fidl-rustc",
+    "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//src/connectivity/wlan/lib/wlan_dev",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
