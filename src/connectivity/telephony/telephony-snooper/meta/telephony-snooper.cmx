@@ -6,9 +6,6 @@
         "dev": [
             "class/qmi-transport"
         ],
-        "pkgfs": [
-            "packages"
-        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher",
