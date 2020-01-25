@@ -18,7 +18,7 @@ function fx-fvm-extend-image {
   stat_output=$(stat "${stat_flags[@]}" "${fvmraw}")
   if [[ "$stat_output" =~ Size:\ ([0-9]+) ]]; then
     size="${BASH_REMATCH[1]}"
-    recommended_size=$(($size * 2))
+    recommended_size=$((size * 2))
     if [[ $# -gt 2 && -n "$3" ]]; then
       newsize=$3
       if [[ "${newsize}" -le "${size}" ]]; then

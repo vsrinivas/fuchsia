@@ -192,7 +192,7 @@ if [[ $SMP != 1 ]]; then
 fi
 
 # TODO(raggi): do we want to use hda on arm64?
-if (( $AUDIO )); then
+if (( AUDIO )); then
   ARGS+=("-soundhw" "hda")
 fi
 
@@ -243,7 +243,7 @@ else
   exit 1
 fi
 
-if (( $VULKAN )); then
+if (( VULKAN )); then
   FEATURES+=",Vulkan"
 else
   FEATURES+=",-Vulkan"
@@ -253,20 +253,20 @@ OPTIONS=()
 OPTIONS+=("-feature" "$FEATURES")
 OPTIONS+=("-window-size" "$WINDOW_SIZE")
 OPTIONS+=("-gpu" "$GPU")
-if (( $DEBUGGER )); then
+if (( DEBUGGER )); then
     OPTIONS+=("-wait-for-debugger")
 fi
 
-if (( $HEADLESS )); then
+if (( HEADLESS )); then
     OPTIONS+=("-no-window")
 fi
 
 # use port 5556 by default
-if (( $HTTP )); then
+if (( HTTP )); then
   GRPC="${GRPC:-5556}"
 fi
 
-if (( $GRPC )); then
+if (( GRPC )); then
   OPTIONS+=("-grpc" "$GRPC")
   OPTIONS+=("-rtcfps" "$RTCFPS")
   if [[ -n "$TURNCFG" ]]; then
@@ -274,7 +274,7 @@ if (( $GRPC )); then
   fi
 fi
 
-if (( $NET )); then
+if (( NET )); then
   if [[ "$(uname -s)" == "Darwin" ]]; then
     if [[ -z "$IFNAME" ]]; then
       IFNAME="tap0"
@@ -294,7 +294,7 @@ if (( $NET )); then
       IFNAME="qemu"
     fi
     TAP_IFS=$(ip tuntap show 2>/dev/null)
-    if [[ ! "$TAP_IFS" =~ "${IFNAME}:" ]]; then
+    if [[ ! "$TAP_IFS" =~ ${IFNAME}: ]]; then
       echo "To use aemu with networking on Linux, configure tun/tap:"
       echo
       echo "sudo ip tuntap add dev $IFNAME mode tap user $USER && \\"
@@ -304,13 +304,13 @@ if (( $NET )); then
     # Try to detect if a firewall is active. There are only few ways to do that
     # without being root. Unfortunately, using systemd or systemctl does not work
     # (at least on Debian), so use the following hack instead:
-    if (which ufw && grep -q "^ENABLED=yes" /etc/ufw/ufw.conf) >/dev/null 2>&1; then
+    if (command -v ufw && grep -q "^ENABLED=yes" /etc/ufw/ufw.conf) >/dev/null 2>&1; then
       fx-warn "Active firewall detected: If this emulator is unreachable, run: fx setup-ufw"
     fi
   fi
   ARGS+=("-netdev" "type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0")
   HASH=$(echo $IFNAME | shasum)
-  SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
+  SUFFIX=$(for i in {0..2}; do echo -n ":${HASH:$(( 2 * i )):2}"; done)
   MAC=",mac=52:54:00$SUFFIX"
   ARGS+=("-device" "e1000,netdev=net0${MAC}")
 else
@@ -325,8 +325,7 @@ if [[ ! -d "${img_dir}" ]]; then
   fx-error "Failed to create temporary directory"
   exit 1
 fi
-trap 'rm -Rf "${img_dir}" ; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_PID}"; \
-      stty sane' EXIT
+trap 'rm -Rf "${img_dir}" ; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_PID}"; stty sane' EXIT
 
 KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 fx-zbi -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
@@ -340,7 +339,7 @@ if [[ -n "$IMAGE_FVM_RAW" ]]; then
 fi
 
 # Start gRPC web proxy if HTTP port is set
-if (( $HTTP )); then
+if (( HTTP )); then
   "${GRPCWEBPROXY_DIR}/grpcwebproxy" \
       --backend_addr localhost:"$GRPC" --server_http_debug_port "$HTTP" \
       --backend_tls=false --run_tls_server=false --allow_all_origins &
