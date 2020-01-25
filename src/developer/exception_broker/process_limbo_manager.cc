@@ -109,7 +109,8 @@ std::vector<ProcessExceptionMetadata> ProcessLimboManager::ListProcessesInLimbo(
   exceptions.reserve(max_size);
 
   // The new rights of the handles we're going to duplicate.
-  zx_rights_t rights = ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_TRANSFER;
+  zx_rights_t rights =
+      ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE;
   for (const auto& [process_koid, limbo_exception] : limbo_) {
     ProcessExceptionMetadata metadata = {};
 

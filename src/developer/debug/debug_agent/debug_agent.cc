@@ -960,12 +960,14 @@ void DebugAgent::OnComponentTerminated(int64_t return_code, const ComponentDescr
 void DebugAgent::OnProcessesEnteredLimbo(
     std::vector<fuchsia::exception::ProcessExceptionMetadata> processes) {
   for (auto& process : processes) {
-    DEBUG_LOG(Agent) << "Process " << process.info().process_koid << " entered limbo.";
+    std::string process_name = object_provider_->NameForObject(process.process());
+    DEBUG_LOG(Agent) << "Process " << process_name << " (" << process.info().process_koid
+                     << ") entered limbo.";
 
     debug_ipc::NotifyProcessStarting process_starting = {};
     process_starting.type = debug_ipc::NotifyProcessStarting::Type::kLimbo;
     process_starting.koid = process.info().process_koid;
-    process_starting.name = object_provider_->NameForObject(process.process());
+    process_starting.name = std::move(process_name);
 
     debug_ipc::MessageWriter writer;
     debug_ipc::WriteNotifyProcessStarting(std::move(process_starting), &writer);
