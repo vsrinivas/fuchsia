@@ -27,6 +27,11 @@ use crate::types::{
     bounded_queue::BoundedQueue, NotificationData, MAX_NOTIFICATION_EVENT_QUEUE_SIZE,
 };
 
+/// The system-wide ID of a MediaSession, as created and assigned by the media system.
+/// These IDs are used internally to disambiguate media sessions.
+#[derive(Debug, Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub(crate) struct MediaSessionId(pub u64);
+
 #[derive(Debug, Clone)]
 pub(crate) struct MediaSessions {
     inner: Arc<RwLock<MediaSessionsInner>>,
@@ -61,7 +66,7 @@ impl MediaSessions {
     }
 
     #[cfg(test)]
-    pub fn get_active_session_id(&self) -> Option<u64> {
+    pub fn get_active_session_id(&self) -> Option<MediaSessionId> {
         self.inner.read().active_session_id
     }
 
@@ -121,13 +126,13 @@ impl MediaSessions {
                     // active media session id every time a watcher event is triggered.
                     // This means AVRCP commands will be queried/set to the player that has most
                     // recently changed in status.
-                    sessions_inner.write().update_active_session_id(Some(id.clone()));
+                    sessions_inner.write().update_active_session_id(Some(MediaSessionId(id)));
 
                     // If this is our first time receiving updates from this MediaPlayer, create
                     // a session control proxy and connect to the session.
                     sessions_inner.write().create_or_update_session(
                         discovery.clone(),
-                        id.clone(),
+                        MediaSessionId(id),
                         delta,
                         &create_session_control_proxy,
                     )?;
@@ -141,7 +146,7 @@ impl MediaSessions {
                     // Clear any outstanding notifications with a player changed response.
                     // Clear the currently active session, if it equals `session_id`.
                     // Clear entry in state map.
-                    sessions_inner.write().clear_session(&session_id);
+                    sessions_inner.write().clear_session(&MediaSessionId(session_id));
                     fx_vlog!(tag: "avrcp-tg", 1, "Removed session [{:?}] from state map: {:?}", session_id, sessions_inner);
                 }
             }
@@ -154,9 +159,9 @@ impl MediaSessions {
 pub(crate) struct MediaSessionsInner {
     // The currently active MediaSession id.
     // If present, the `active_session_id` should be present in `map`.
-    active_session_id: Option<u64>,
+    active_session_id: Option<MediaSessionId>,
     // The map of ids to the respective media session.
-    map: HashMap<u64, MediaState>,
+    map: HashMap<MediaSessionId, MediaState>,
     // The map of outstanding notifications.
     notifications: HashMap<fidl_avrcp::NotificationEvent, BoundedQueue<NotificationData>>,
 }
@@ -182,7 +187,7 @@ impl MediaSessionsInner {
     /// Removes the MediaState specified by `id` from the map, should it exist.
     /// If the session was currently active, clears `self.active_session_id`.
     /// Returns the removed MediaState.
-    pub fn clear_session(&mut self, id: &u64) -> Option<MediaState> {
+    pub fn clear_session(&mut self, id: &MediaSessionId) -> Option<MediaState> {
         if Some(id) == self.active_session_id.as_ref() {
             self.update_active_session_id(None);
         }
@@ -206,7 +211,10 @@ impl MediaSessionsInner {
     /// Updates the active session with the new session specified by `id`.
     /// Clear all outstanding notifications, if the active session has changed.
     /// If the updated active session_id has changed, return old active id.
-    pub fn update_active_session_id(&mut self, id: Option<u64>) -> Option<u64> {
+    pub fn update_active_session_id(
+        &mut self,
+        id: Option<MediaSessionId>,
+    ) -> Option<MediaSessionId> {
         if self.active_session_id != id {
             self.clear_notification_responders();
             let previous_active_session_id = self.active_session_id.take();
@@ -255,12 +263,12 @@ impl MediaSessionsInner {
     pub fn create_or_update_session<F>(
         &mut self,
         discovery: DiscoveryProxy,
-        id: u64,
+        id: MediaSessionId,
         delta: SessionInfoDelta,
         create_fn: F,
     ) -> Result<(), Error>
     where
-        F: Fn(DiscoveryProxy, u64) -> Result<SessionControlProxy, Error>,
+        F: Fn(DiscoveryProxy, MediaSessionId) -> Result<SessionControlProxy, Error>,
     {
         self.map
             .entry(id)
@@ -357,10 +365,10 @@ impl MediaSessionsInner {
 /// the session specified by `id`.
 fn create_session_control_proxy(
     discovery: DiscoveryProxy,
-    id: u64,
+    id: MediaSessionId,
 ) -> Result<SessionControlProxy, Error> {
     let (session_proxy, session_request_stream) = create_proxy()?;
-    discovery.connect_to_session(id, session_request_stream)?;
+    discovery.connect_to_session(id.0, session_request_stream)?;
     Ok(session_proxy)
 }
 
@@ -380,7 +388,11 @@ pub(crate) mod tests {
 
     /// Creates the MediaSessions object and sets an active session if `is_active` = true.
     /// Returns the object and the id of the set active session.
-    fn create_session(discovery: DiscoveryProxy, id: u64, is_active: bool) -> MediaSessionsInner {
+    fn create_session(
+        discovery: DiscoveryProxy,
+        id: MediaSessionId,
+        is_active: bool,
+    ) -> MediaSessionsInner {
         let mut sessions = MediaSessionsInner::new();
         let delta = SessionInfoDelta::new_empty();
 
@@ -418,7 +430,7 @@ pub(crate) mod tests {
         {
             let supported_id = fidl_avrcp::NotificationEvent::TrackChanged;
             // Create an active session.
-            let id = 1234;
+            let id = MediaSessionId(1234);
             let mut inner = create_session(disc_clone.clone(), id, true);
 
             let current = fidl_avrcp::Notification {
@@ -466,7 +478,7 @@ pub(crate) mod tests {
 
         {
             // Create an active session.
-            let id = 1234;
+            let id = MediaSessionId(1234);
             let mut inner = create_session(disc_clone.clone(), id, true);
 
             // Because this is TrackPosChanged, the given `current` data should be ignored.
@@ -568,7 +580,7 @@ pub(crate) mod tests {
     async fn test_create_and_update_media_session() -> Result<(), Error> {
         let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()?;
 
-        let id = 1234;
+        let id = MediaSessionId(1234);
         let mut sessions = create_session(discovery.clone(), id, true);
         assert!(sessions.map.contains_key(&id));
 
@@ -615,7 +627,7 @@ pub(crate) mod tests {
         // Create a new active session with default state.
         let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()
             .expect("Discovery service should be able to be created");
-        let id = 1234;
+        let id = MediaSessionId(1234);
         let mut sessions = create_session(discovery.clone(), id, true);
 
         // 1. Update with the same id.
@@ -642,7 +654,7 @@ pub(crate) mod tests {
             );
 
             // 2. Update with a new id.
-            let new_id = 9876;
+            let new_id = MediaSessionId(9876);
             let expected_old_id = Some(id);
             let evicted_id = sessions.update_active_session_id(Some(new_id));
             assert_eq!(expected_old_id, evicted_id);
@@ -674,7 +686,7 @@ pub(crate) mod tests {
         // Create a new active session with default state.
         let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()
             .expect("Discovery service should be able to be created");
-        let id = 1234;
+        let id = MediaSessionId(1234);
         let mut sessions = create_session(discovery, id, true);
 
         // Create 4 WatchNotification responders.
@@ -794,7 +806,7 @@ pub(crate) mod tests {
         // Create a new active session with default state.
         let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()
             .expect("Discovery service should be able to be created");
-        let id = 1234;
+        let id = MediaSessionId(1234);
         let mut sessions = create_session(discovery, id, true);
 
         // Create 3 WatchNotification responders.
@@ -883,11 +895,11 @@ pub(crate) mod tests {
         let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()?;
 
         // Create a new active session with default state.
-        let id: u64 = 1234;
+        let id = MediaSessionId(1234);
         let mut sessions = create_session(discovery.clone(), id, true);
         assert!(sessions.map.contains_key(&id));
 
-        let id2: u64 = 5678;
+        let id2 = MediaSessionId(5678);
         let delta2 = SessionInfoDelta::new_empty();
         let create_res2 = sessions.create_or_update_session(
             discovery.clone(),
@@ -899,7 +911,7 @@ pub(crate) mod tests {
         assert!(sessions.map.contains_key(&id2));
 
         // 1. Dummy id.
-        let unknown_id = 999;
+        let unknown_id = MediaSessionId(999);
         let no_state = sessions.clear_session(&unknown_id);
         assert_eq!(Some(id), sessions.active_session_id);
         assert!(no_state.is_none());

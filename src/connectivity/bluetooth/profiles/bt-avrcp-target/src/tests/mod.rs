@@ -22,6 +22,7 @@ use fidl_fuchsia_bluetooth_avrcp::{
 use futures::StreamExt;
 
 use crate::avrcp_handler::handle_target_requests;
+use crate::media::media_sessions::MediaSessionId;
 use crate::media::media_state::tests::*;
 
 fn setup_target_handler() -> (TargetHandlerProxy, TargetHandlerRequestStream) {
@@ -274,8 +275,8 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
         );
 
         // Mock two sessions.
-        let session1_id: u64 = 1234;
-        let session2_id: u64 = 9876;
+        let session1_id = MediaSessionId(1234);
+        let session2_id = MediaSessionId(9876);
 
         // Get the play status of the active session.
         // There is no active session, so this should be rejected.
@@ -284,7 +285,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
 
         // Send a MediaSessionUpdate for session1 -> New active session.
         let delta1 = SessionInfoDelta { ..SessionInfoDelta::new_empty() };
-        let _ = watcher_client.session_updated(session1_id, delta1).await;
+        let _ = watcher_client.session_updated(session1_id.0, delta1).await;
         assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
 
         // Get MediaSession supported player application setting attributes. This is
@@ -308,7 +309,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
             player_status: Some(create_player_status()),
             ..SessionInfoDelta::new_empty()
         };
-        let _ = watcher_client.session_updated(session2_id, delta2).await;
+        let _ = watcher_client.session_updated(session2_id.0, delta2).await;
         assert_eq!(Some(session2_id), media_sessions.get_active_session_id());
 
         // Test getting the media info of the active session.
@@ -321,7 +322,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
         // As per MediaSession, when a player is paused, it becomes inactive, and a
         // SessionRemoved should be triggered.
         // Then, make session1 the new active session.
-        let res = watcher_client.session_removed(session2_id).await;
+        let res = watcher_client.session_removed(session2_id.0).await;
         assert_eq!(Ok(()), res.map_err(|e| format!("{}", e)));
         assert_eq!(None, media_sessions.get_active_session_id());
 
@@ -334,7 +335,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
             }),
             ..SessionInfoDelta::new_empty()
         };
-        let _ = watcher_client.session_updated(session1_id, delta1).await;
+        let _ = watcher_client.session_updated(session1_id.0, delta1).await;
         assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
 
         // Test getting player application settings.
@@ -381,7 +382,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
             player_status: Some(create_player_status()),
             ..SessionInfoDelta::new_empty()
         };
-        let res = watcher_client.session_updated(session1_id, delta1).await;
+        let res = watcher_client.session_updated(session1_id.0, delta1).await;
         assert_eq!(Ok(()), res.map_err(|e| format!("{}", e)));
 
         // We expect the `watch` future to have resolved now that an update has been received.
