@@ -16,7 +16,9 @@ static int irq_handler(void* arg) { return static_cast<i915::Interrupts*>(arg)->
 
 namespace i915 {
 
-Interrupts::Interrupts() {}
+Interrupts::Interrupts(Controller* controller) : controller_(controller) {
+  mtx_init(&lock_, mtx_plain);
+}
 
 Interrupts::~Interrupts() { ZX_ASSERT(irq_ == ZX_HANDLE_INVALID); }
 
@@ -156,11 +158,8 @@ zx_status_t Interrupts::SetInterruptCallback(const zx_intel_gpu_core_interrupt_t
   return ZX_OK;
 }
 
-zx_status_t Interrupts::Init(Controller* controller) {
-  controller_ = controller;
+zx_status_t Interrupts::Init() {
   ddk::MmioBuffer* mmio_space = controller_->mmio_space();
-
-  mtx_init(&lock_, mtx_plain);
 
   // Disable interrupts here, re-enable them in ::FinishInit()
   auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space);
@@ -187,6 +186,7 @@ zx_status_t Interrupts::Init(Controller* controller) {
   status = thrd_create_with_name(&irq_thread_, irq_handler, this, "i915-irq-thread");
   if (status != ZX_OK) {
     LOG_ERROR("Failed to create irq thread\n");
+    irq_.reset();
     return status;
   }
 

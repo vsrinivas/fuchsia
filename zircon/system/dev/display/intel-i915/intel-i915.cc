@@ -2153,7 +2153,7 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
                                        .ddi_a_lane_capability_control();
 
   LOG_TRACE("Initialzing hotplug\n");
-  status = interrupts_.Init(this);
+  status = interrupts_.Init();
   if (status != ZX_OK) {
     LOG_ERROR("Failed to init hotplugging\n");
     return status;
@@ -2210,7 +2210,7 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
   return ZX_OK;
 }
 
-Controller::Controller(zx_device_t* parent) : DeviceType(parent), power_(this) {
+Controller::Controller(zx_device_t* parent) : DeviceType(parent), interrupts_(this), power_(this) {
   mtx_init(&display_lock_, mtx_plain);
   mtx_init(&gtt_lock_, mtx_plain);
   mtx_init(&bar_lock_, mtx_plain);

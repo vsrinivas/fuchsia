@@ -8,8 +8,11 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
+#include <type_traits>
+
 #include <ddk/driver.h>
 
+#include "interrupts.h"
 #include "zxtest/zxtest.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
@@ -20,6 +23,8 @@ zx_status_t device_get_profile(zx_device_t* device, uint32_t priority, const cha
                                zx_handle_t* out_profile) {
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+static void empty_callback(void* ctx, uint32_t master_interrupt_control, uint64_t timestamp) {}
 
 namespace {
 class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
@@ -52,6 +57,19 @@ TEST(IntelI915Display, SysmemRequirements) {
 
   loop.RunUntilIdle();
   EXPECT_TRUE(collection.set_constraints_called());
+}
+
+TEST(IntelI915Display, SetInterruptCallback) {
+  i915::Controller controller(nullptr);
+
+  // Allocate Interrupts into non-zero memory
+  std::aligned_storage_t<sizeof(i915::Interrupts), alignof(i915::Interrupts)> mem;
+  memset(&mem, 0xff, sizeof(i915::Interrupts));
+  auto interrupts = new (&mem) i915::Interrupts(&controller);
+
+  zx_intel_gpu_core_interrupt_t callback = {.callback = empty_callback, .ctx = nullptr};
+  EXPECT_EQ(ZX_OK, interrupts->SetInterruptCallback(&callback, 0 /* interrupt_mask */));
+  interrupts->~Interrupts();
 }
 
 }  // namespace
