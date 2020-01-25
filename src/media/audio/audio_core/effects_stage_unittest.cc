@@ -132,5 +132,37 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
   }
 }
 
+TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
+  // Create a source stream.
+  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+
+  const uint32_t kBlockSize = 128;
+  const uint32_t kMaxBufferSize = 300;
+  ASSERT_EQ(ZX_OK, test_effects_->add_effect({{"test_effect", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                              kBlockSize,
+                                              kMaxBufferSize,
+                                              TEST_EFFECTS_ACTION_ADD,
+                                              1.0}));
+
+  // Create the effects stage.
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "test_effect",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream);
+
+  EXPECT_EQ(effects_stage->block_size(), kBlockSize);
+
+  {
+    auto buffer = effects_stage->LockBuffer(zx::time(0), 0, 512);
+    EXPECT_EQ(buffer->start().Floor(), 0u);
+    // Length is 2 full blocks since 3 blocks would be > 300 frames.
+    EXPECT_EQ(buffer->length().Floor(), 256u);
+  }
+}
+
 }  // namespace
 }  // namespace media::audio
