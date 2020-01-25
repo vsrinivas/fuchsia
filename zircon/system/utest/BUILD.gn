@@ -155,7 +155,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/minfs/allocator/test",
       "$zx/system/ulib/minfs/test",
       "$zx/system/ulib/mipi-dsi:mipidsi",
-      "$zx/system/ulib/mock-function/test",
       "$zx/system/ulib/paver:paver-test",
       "$zx/system/ulib/pretty:pretty-test",
       "$zx/system/ulib/range/test",

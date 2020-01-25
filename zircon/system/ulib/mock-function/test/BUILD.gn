@@ -6,15 +6,35 @@ group("test") {
   deps = [ ":mock-function-test" ]
 }
 
-zx_test("mock-function-test") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("mock-function-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mock-function-test"
   sources = [ "mock-function-test.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/mock-function",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+migrated_manifest("mock-function-test-manifest") {
+  deps = [ ":mock-function-test" ]
 }
