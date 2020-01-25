@@ -9,6 +9,7 @@
 
 #include "src/ui/lib/escher/renderer/batch_gpu_downloader.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/shape/rounded_rect.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_visitor.h"
 #include "src/ui/scenic/lib/gfx/snapshot/serializer.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
@@ -66,10 +67,24 @@ class Snapshotter : public ResourceVisitor {
   void Visit(PointLight* r) override;
 
  private:
+  // Struct for a vertex that contains interwoven
+  // position and uv data.
+  struct PosUvVertex {
+    escher::vec2 pos;
+    escher::vec2 uv;
+  };
+
+  // Used to keep alive RoundedRectData until serialization is complete.
+  struct RoundedRectData {
+    std::vector<uint32_t> indices;
+    std::vector<PosUvVertex> vertices;
+  };
+
   void VisitNode(Node* r);
   void VisitResource(Resource* r);
   void VisitMesh(escher::MeshPtr mesh);
   void VisitImage(escher::ImagePtr i);
+  void VisitRoundedRectSpec(const escher::RoundedRectSpec& spec);
 
   void ReadImage(const escher::ImagePtr& image, escher::BatchGpuDownloader::Callback callback);
   void ReadBuffer(const escher::BufferPtr& buffer, escher::BatchGpuDownloader::Callback callback);
@@ -84,6 +99,9 @@ class Snapshotter : public ResourceVisitor {
   // Holds the current serializer for the scenic node being serialized. This is
   // needed when visiting node's content like mesh, material and images.
   std::shared_ptr<NodeSerializer> current_node_serializer_;
+
+  // Vector of all visited rounded rects' data.
+  std::vector<RoundedRectData> rounded_rect_data_vec_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Snapshotter);
 };

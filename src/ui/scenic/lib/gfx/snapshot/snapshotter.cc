@@ -109,14 +109,15 @@ void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot
   // and buffers to read from the GPU.
   resource->Accept(this);
 
-  auto content_ready_callback = [node_serializer = current_node_serializer_,
+  auto content_ready_callback = [rounded_rect_data_vec = std::move(rounded_rect_data_vec_),
+                                 node_serializer = current_node_serializer_,
                                  snapshot_callback = std::move(snapshot_callback)]() {
     TRACE_DURATION("gfx", "Snapshotter::Serialize");
-    auto builder = std::make_shared<flatbuffers::FlatBufferBuilder>();
-    builder->Finish(node_serializer->serialize(*builder));
+    flatbuffers::FlatBufferBuilder builder;
+    builder.Finish(node_serializer->serialize(builder));
 
     fsl::SizedVmo sized_vmo;
-    if (!VmoFromBytes(builder->GetBufferPointer(), builder->GetSize(),
+    if (!VmoFromBytes(builder.GetBufferPointer(), builder.GetSize(),
                       SnapshotData::SnapshotType::kFlatBuffer, SnapshotData::SnapshotVersion::v1_0,
                       &sized_vmo)) {
       return snapshot_callback(fuchsia::mem::Buffer{}, false);
@@ -200,7 +201,7 @@ void Snapshotter::Visit(RoundedRectangleShape* r) {
 
   current_node_serializer_->shape = shape;
 
-  VisitMesh(r->escher_mesh());
+  VisitRoundedRectSpec(r->spec());
 }
 
 void Snapshotter::Visit(MeshShape* r) {
@@ -353,6 +354,75 @@ void Snapshotter::VisitMesh(escher::MeshPtr mesh) {
       }
     });
   }
+}
+
+// This function tessellates a new rounded rect mesh and writes out the mesh
+// data to the geometry serializer. This avoids having to read in an existing
+// GPU mesh buffer.
+//
+// To ensure that the tessellated mesh data remains alive long enough for it
+// to be serialized after this traversal is over, the data is stored in a
+// |RoundedRectData| struct which is stored in an array, to be cleared after
+// serialization is complete.
+void Snapshotter::VisitRoundedRectSpec(const escher::RoundedRectSpec& spec) {
+  FXL_DCHECK(current_node_serializer_);
+  auto geometry = std::make_shared<GeometrySerializer>();
+
+  // Create the mesh spec and make sure that the attribute offsets match those
+  // of the PosUvVertex struct. Also make sure that the total stride is equal to
+  // to the size of PosUvVertex. Index type sizes must also match.
+  const escher::MeshSpec mesh_spec{
+      {escher::MeshAttribute::kPosition2D | escher::MeshAttribute::kUV}};
+  FXL_DCHECK(mesh_spec.attribute_offset(0, escher::MeshAttribute::kPosition2D) ==
+             offsetof(PosUvVertex, pos))
+      << "Position offsets do not match.";
+  FXL_DCHECK(mesh_spec.attribute_offset(0, escher::MeshAttribute::kUV) == offsetof(PosUvVertex, uv))
+      << "UV offsets do not match.";
+  FXL_DCHECK(mesh_spec.stride(0) == sizeof(PosUvVertex)) << "Vertex strides do not match.";
+  FXL_DCHECK(sizeof(escher::MeshSpec::IndexType) == sizeof(uint32_t))
+      << "Index type sizes do not match.";
+
+  // Grab the counts for indices.
+  uint32_t vertex_count;
+  uint32_t index_count;
+  std::tie(vertex_count, index_count) = GetRoundedRectMeshVertexAndIndexCounts(spec);
+
+  // Create a new RoundedRectData struct.
+  RoundedRectData rect_data;
+  rect_data.indices.resize(index_count);
+  rect_data.vertices.resize(vertex_count);
+
+  // Calculate the total number of bytes needed for the indices and vertices.
+  const uint32_t kIndexBytes = sizeof(escher::MeshSpec::IndexType) * rect_data.indices.size();
+  const uint32_t kVertexBytes = sizeof(PosUvVertex) * rect_data.vertices.size();
+
+  // Now actually generate the data for the indices and vertices.
+  GenerateRoundedRectIndices(spec, mesh_spec, rect_data.indices.data(), kIndexBytes);
+  GenerateRoundedRectVertices(spec, mesh_spec, rect_data.vertices.data(), kVertexBytes);
+
+  // Get the bounding box from the RoundedRectSpec.
+  const escher::BoundingBox bounding_box(-0.5f * escher::vec3(spec.width, spec.height, 0),
+                                         0.5f * escher::vec3(spec.width, spec.height, 0));
+
+  // Write out the bounding box data to the geometry serializer.
+  geometry->bbox_min =
+      snapshot::Vec3(bounding_box.min().x, bounding_box.min().y, bounding_box.min().z);
+  geometry->bbox_max =
+      snapshot::Vec3(bounding_box.max().x, bounding_box.max().y, bounding_box.max().z);
+  current_node_serializer_->mesh = geometry;
+
+  // Write out the index data to the geometry serializer.
+  geometry->indices =
+      std::make_shared<IndexBufferSerializer>(index_count, rect_data.indices.data(), kIndexBytes);
+
+  // Write out the vertex data to the geometry serializer.
+  geometry->attributes.push_back(std::make_shared<AttributeBufferSerializer>(
+      /* vertex_count */ vertex_count, /* stride */ mesh_spec.stride(0), rect_data.vertices.data(),
+      kVertexBytes));
+
+  // Add the rect data to rounded rect vector so it can be kept alive until after serialization
+  // is complete. Then the vector will be cleared.
+  rounded_rect_data_vec_.push_back(std::move(rect_data));
 }
 
 void Snapshotter::ReadImage(const escher::ImagePtr& image,
