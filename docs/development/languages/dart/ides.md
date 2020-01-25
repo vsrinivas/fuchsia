@@ -3,16 +3,16 @@
 ### Dart SDK
 
 A prebuilt Dart SDK is available for IDE consumption at:
-`third_party/dart/tools/sdks/dart-sdk/`.
+`third_party/dart/{linux|mac|windows}-x64/bin/dart`.
 
-## Visual Studio Code {#visual-studio-code}
+## Visual Studio Code
 
 1.  Download and install [Visual Studio Code](https://code.visualstudio.com/)
-1.  [optional] Setup VS Code to launch from the command line
+1.  (Optional) Setup VS Code to launch from the command line
 
-    *   For Macs: To allow running VS Code from the terminal using the `code`
-        command, follow the instructions
-        [here](https://code.visualstudio.com/docs/setup/mac#_launching-from-the-command-line)
+    *   For macOS: To allow running VS Code from the terminal using the `code`
+        command, see
+        [Launching from the command line](https://code.visualstudio.com/docs/setup/mac#_launching-from-the-command-line).
 
     *   For Linux and Windows: This should already be done as part of the
         installation
@@ -27,33 +27,57 @@ A prebuilt Dart SDK is available for IDE consumption at:
         Syntax highlighting for GN build files
     *   Optional but helpful git extensions:
         *   [Git Blame](https://marketplace.visualstudio.com/items?itemName=waderyan.gitblame):
-            See git blam information in the status bar
+            See git blame information in the status bar
         *   [Git History](https://marketplace.visualstudio.com/items?itemName=donjayamanne.githistory):
             View git log, file history, etc.
 
-1.  Here are some helpful user settings for Dart. Open your user
-    settings (Ctrl+,), click the '{}' icon in the top left corner and add:
+1.  To improve your productivity for Dart in VS Code, you can set some useful
+    settings.
+
+    To add the settings:
+
+    1. Open your user settings (Ctrl+,)
+    1. Click the rotating page icon in the top left (or right for macOS) corner
+    1. Add:
+
+Note: This configuration file is a JSON file. Make sure that you properly use
+curly braces.
+
+* Auto-format your files when you save:
 
 ```json
-{
-  // Auto-formats your files when you save
-  "editor.formatOnSave": true,
+"editor.formatOnSave": true,
+```
 
-  // Don't run pub with fuchsia.
-  "dart.runPubGetOnPubspecChanges": false,
+* Check for new SDK updates for Fuchsia:
 
-  // Settings only when working in Dart
-  "[dart]": {
-    // Adds a ruler at 80 characters
-    "editor.rulers": [
-      80
-    ],
+```json
+"dart.checkForSdkUpdates": false,
+```
 
-    // Makes the tab size 2 spaces
-    "editor.tabSize": 2,
-  },
-}
+* Configure VS Code to use the bundled Dark SDK
 
+
+```json
+"dart.sdkPath": "/path/to/fuchsia/prebuilt/third_party/dart/linux-x64/bin/dart",
+```
+
+Note: For macOS, replace `linux-x64` with `mac-x64` in your supplied value for
+`dart.sdkPath`.
+
+* Don't run pub with fuchsia.
+
+```json
+"dart.runPubGetOnPubspecChanges": false,
+```
+
+* Configure an 80 character ruler and a tab size of two spaces
+
+```json
+"[dart]": {
+  "editor.rulers": [80],
+  "editor.tabSize": 2
+},
 ```
 
 ## CLion/IntelliJ
@@ -94,11 +118,15 @@ issues with really large source trees.
 Delete `/out` from your Fuchsia directory and rebuild. Dart FIDL bindings are
 build-generated and may be absent.
 
-### Ensure you have a complete build
+### Ensure that your build contains all packages
 
 Any Dart code from packages not included in your build will not be available to
 the analyzer, so ensure your build configuration (`fx set`) includes all
 the packages you need (the `--with` flag can be helpful.)
+
+For example, to view the `echo_client_async` example Dart code in VS Code, add
+`--with topaz/examples/fidl/echo_client_async_dart` to your `fx set`
+command. Then, rebuild with `fx build topaz/examples/fidl/echo_client_async_dart`.
 
 ### Reload the Dart Analyzer
 
@@ -123,13 +151,8 @@ This also restarts the Dart analyzer.
 ### Manually specifying the Dart sdk path
 
 #### VS Code
-Add the line
 
-```json
-  "dart.sdkPath": "[YOUR FUCHSIA DIR LOCATION]/third_party/dart/tools/sdks/dart-sdk",
-```
-
-and (Ctrl+Shift+P) "Reload Window".
+_See the recommended VS Code options above._
 
 #### IntelliJ
 
