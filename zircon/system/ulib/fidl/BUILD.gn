@@ -76,6 +76,8 @@ zx_library("fidl-llcpp") {
     "lib/fidl/llcpp/transaction.h",
     "lib/fidl/llcpp/string_view.h",
     "lib/fidl/llcpp/vector_view.h",
+    "lib/fidl/llcpp/tracking_ptr.h",
+    "lib/fidl/llcpp/unowned_ptr.h",
   ]
   sources = [ "llcpp_transaction.cc" ]
   public_deps = [

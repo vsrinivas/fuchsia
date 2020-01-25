@@ -114,3 +114,41 @@ package("fidl_llcpp_types_test") {
     },
   ]
 }
+
+executable("fidl_llcpp_builder_test_bin") {
+  testonly = true
+
+  output_name = "fidl_llcpp_builder_test"
+
+  sources = [
+    "tracking_ptr_test.cc",
+    "unowned_ptr_test.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+  ]
+}
+
+package("fidl_llcpp_builder_test") {
+  testonly = true
+
+  deps = [ ":fidl_llcpp_builder_test_bin" ]
+
+  meta = [
+    {
+      path = "fidl_llcpp_builder_test.cmx"
+      dest = "fidl_llcpp_builder_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "fidl_llcpp_builder_test"
+      environments = basic_envs
+    },
+  ]
+}

@@ -263,6 +263,7 @@ group("all") {
     ":fidl_compatibility_test_server_go",
     ":fidl_compatibility_test_server_llcpp",
     ":fidl_compatibility_test_server_rust",
+    ":fidl_llcpp_builder_test",
     ":fidl_llcpp_conformance_test",
     ":fidl_llcpp_types_test",
     ":fidlext_tests",
@@ -362,6 +363,11 @@ group("fidl_llcpp_conformance_test") {
 group("fidl_llcpp_types_test") {
   testonly = true
   public_deps = [ "//garnet/public/lib/fidl/llcpp:fidl_llcpp_types_test" ]
+}
+
+group("fidl_llcpp_builder_test") {
+  testonly = true
+  public_deps = [ "//garnet/public/lib/fidl/llcpp:fidl_llcpp_builder_test" ]
 }
 
 group("libc") {
