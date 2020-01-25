@@ -75,13 +75,6 @@ From /b/s/w/ir/k/root_build_dir.zircon/args.gn:5
 
 From //BUILD.gn:17
 
-### detailed_scheduler_tracing
-Enable detailed scheduler traces.
-
-**Current value (from the default):** `false`
-
-From //kernel/params.gni:41
-
 ### driver_unittest_log_flags
 Log levels to be printed when logs are enabled. Default is ERROR, WARNING, & INFO.
 Refer to zircon/system/public/zircon/syscalls/log.h for levels.
@@ -119,7 +112,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:64
+From //kernel/params.gni:70
 
 ### enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -138,7 +131,7 @@ Enable userspace PCI and disable kernel PCI.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:44
+From //kernel/params.gni:50
 
 ### environment_args
 List of clauses to apply other GN build arguments to specific compilation
@@ -322,7 +315,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:56
+From //kernel/params.gni:62
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -330,7 +323,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:48
+From //kernel/params.gni:54
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version`.
@@ -363,6 +356,19 @@ From //public/gn/config/levels.gni:19
 **Current value (from the default):** `false`
 
 From //public/gn/config/standard.gni:9
+
+### scheduler_tracing_level
+The level of detail for scheduler traces when enabled. Values greater than
+zero add increasing details at the cost of increased trace buffer use.
+
+0 = Default kernel:sched tracing.
+1 = Adds duration traces for key scheduler operations.
+2 = Adds flow events from wakeup to running state.
+3 = Adds detailed internal durations and probes.
+
+**Current value (from the default):** `0`
+
+From //kernel/params.gni:47
 
 ### select_scheduler
 Select an available scheduler.

@@ -384,7 +384,7 @@ From //BUILD.gn:27
 
 **Current value (from the default):** `false`
 
-From //src/camera/bin/device_watcher/BUILD.gn:8
+From //src/camera/bin/device_watcher/BUILD.gn:9
 
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
@@ -857,7 +857,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:565
+From //build/config/BUILDCONFIG.gn:586
 
 ### fastboot_product
 
@@ -1283,7 +1283,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:478
+From //build/config/BUILDCONFIG.gn:499
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1797,7 +1797,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:770
+From //build/config/BUILDCONFIG.gn:791
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1806,7 +1806,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:775
+From //build/config/BUILDCONFIG.gn:796
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1830,7 +1830,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:611
+From //build/config/BUILDCONFIG.gn:632
 
 ### signed_image
 
@@ -1980,7 +1980,7 @@ build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
 TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/0be2f99ea530a088d962b47bde3891354444084c/infra/test_durations/default.json)" after the recipes start
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/20c825796d03e936409988d280d0bfb559844618/infra/test_durations/default.json)" after the recipes start
 setting this arg.
 
 **Current value (from the default):** `"//integration/infra/test_durations.json"`
@@ -2058,7 +2058,7 @@ From //build/config/BUILDCONFIG.gn:98
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:585
+From //build/config/BUILDCONFIG.gn:606
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
