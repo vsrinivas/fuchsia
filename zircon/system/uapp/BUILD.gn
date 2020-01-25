@@ -34,7 +34,6 @@ group("uapp") {
     "syscall-check",
     "thermal-cli",
     "trace-example",
-    "unbind",
     "usb-fwloader",
     "waitfor",
     "xdc-test",

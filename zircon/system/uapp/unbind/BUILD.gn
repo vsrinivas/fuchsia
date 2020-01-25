@@ -2,12 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("unbind") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("unbind") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
   ]
+}
+
+migrated_manifest("unbind-manifest") {
+  deps = [ ":unbind" ]
 }
