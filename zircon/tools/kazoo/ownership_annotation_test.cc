@@ -83,6 +83,18 @@ __EXPORT extern zx_status_t _zx_handleownership_fun5(
     zx_handle_t in ZX_RELEASE_HANDLE,
     zx_handle_t* out ZX_USE_HANDLE) __NONNULL((2)) __LEAF_FN;
 
+__EXPORT extern void zx_handleownership_fun6(
+    const zx_handle_t* in ZX_USE_HANDLE_UNCHECKED,
+    size_t num_in,
+    zx_handle_t* out ZX_ACQUIRE_HANDLE_UNCHECKED,
+    size_t num_out) __LEAF_FN;
+
+__EXPORT extern void _zx_handleownership_fun6(
+    const zx_handle_t* in ZX_USE_HANDLE_UNCHECKED,
+    size_t num_in,
+    zx_handle_t* out ZX_ACQUIRE_HANDLE_UNCHECKED,
+    size_t num_out) __LEAF_FN;
+
 )");
 }
 

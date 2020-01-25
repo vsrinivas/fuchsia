@@ -14,4 +14,6 @@ protocol HandleOwnership {
     fun3(vector<handle> in) -> ([Acquire] vector<handle> out);
     fun4(handle in) -> (zx.status status, handle out);
     fun5([Release] handle in) -> (zx.status status, [Use] handle out);
+    [HandleUnchecked]
+    fun6(vector<handle> in) -> (vector<handle> out);
 };

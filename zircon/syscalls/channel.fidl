@@ -44,7 +44,8 @@ protocol channel {
 
     /// Read a message from a channel.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.
-    [ArgReorder = "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles"]
+    [ArgReorder = "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles",
+     HandleUnchecked]
     channel_read(handle<channel> handle,
                  uint32 options)
         -> (status status,

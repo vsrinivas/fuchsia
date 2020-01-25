@@ -5,6 +5,7 @@
 #include "tools/kazoo/output_util.h"
 
 #include <zircon/assert.h>
+#include <string_view>
 #include "tools/kazoo/string_util.h"
 
 bool CopyrightHeaderWithCppComments(Writer* writer) {
@@ -349,7 +350,8 @@ void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name
         writer->Puts(" ");  // No space after open ( for single line.
       }
       writer->Printf("%s %s", GetCUserModeName(arg.type()).c_str(), arg.name().c_str());
-      std::string attributes = GetHandleOwnershipAttribute(arg);
+      std::string attributes =
+          GetHandleOwnershipAttribute(arg, syscall.HasAttribute("HandleUnchecked"));
       if (!attributes.empty()) {
         writer->Printf(" %s", attributes.c_str());
       }
@@ -392,13 +394,19 @@ void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_p
 
 namespace {
 
-std::string GetHandleOwnershipAttributeImpl(const StructMember &arg, bool output) {
+constexpr std::string_view acquire = "ZX_ACQUIRE_HANDLE";
+constexpr std::string_view acquire_unchecked = "ZX_ACQUIRE_HANDLE_UNCHECKED";
+constexpr std::string_view release = "ZX_RELEASE_HANDLE";
+constexpr std::string_view use = "ZX_USE_HANDLE";
+constexpr std::string_view use_unchecked = "ZX_USE_HANDLE_UNCHECKED";
+
+std::string GetHandleOwnershipAttributeImpl(const StructMember& arg, bool unchecked, bool output) {
   if (arg.attributes().count("Acquire")) {
-    return "ZX_ACQUIRE_HANDLE";
+    return std::string(unchecked ? acquire_unchecked : acquire);
   } else if (arg.attributes().count("Release")) {
-    return "ZX_RELEASE_HANDLE";
+    return std::string(release);
   } else if (arg.attributes().count("Use")) {
-    return "ZX_USE_HANDLE";
+    return std::string(unchecked ? use_unchecked : use);
   }
 
   Type innermost_type = arg.type();
@@ -416,19 +424,19 @@ std::string GetHandleOwnershipAttributeImpl(const StructMember &arg, bool output
 
   if (innermost_type.IsHandle()) {
     if (output) {
-      return "ZX_ACQUIRE_HANDLE";
+      return std::string(unchecked ? acquire_unchecked : acquire);
     } else {
-      return "ZX_USE_HANDLE";
+      return std::string(unchecked ? use_unchecked : use);
     }
   }
 
   return std::string();
 }
 
-} // namespace
+}  // namespace
 
-std::string GetHandleOwnershipAttribute(const StructMember &arg) {
+std::string GetHandleOwnershipAttribute(const StructMember& arg, bool unchecked) {
   bool output = arg.type().optionality() == Optionality::kOutputOptional ||
-      arg.type().optionality() == Optionality::kOutputNonOptional;
-  return GetHandleOwnershipAttributeImpl(arg, output);
+                arg.type().optionality() == Optionality::kOutputNonOptional;
+  return GetHandleOwnershipAttributeImpl(arg, unchecked, output);
 }

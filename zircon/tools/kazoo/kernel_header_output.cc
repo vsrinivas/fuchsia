@@ -16,7 +16,8 @@ void KernelDeclaration(const Syscall& syscall, Writer* writer) {
     for (size_t i = 0; i < syscall.kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall.kernel_arguments()[i];
       const bool last = i == syscall.kernel_arguments().size() - 1;
-      std::string attributes = GetHandleOwnershipAttribute(arg);
+      std::string attributes =
+          GetHandleOwnershipAttribute(arg, syscall.HasAttribute("HandleUnchecked"));
       if (!attributes.empty()) {
         attributes = " " + attributes;
       }

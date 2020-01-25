@@ -14,12 +14,16 @@
 
 #if defined(__clang__)
 #define ZX_ACQUIRE_HANDLE __attribute__((acquire_handle("Fuchsia")))
+#define ZX_ACQUIRE_HANDLE_UNCHECKED __attribute__((acquire_handle("FuchsiaUnchecked")))
 #define ZX_RELEASE_HANDLE __attribute__((release_handle("Fuchsia")))
 #define ZX_USE_HANDLE __attribute__((use_handle("Fuchsia")))
+#define ZX_USE_HANDLE_UNCHECKED __attribute__((use_handle("FuchsiaUnchecked")))
 #else
 #define ZX_ACQUIRE_HANDLE
+#define ZX_ACQUIRE_HANDLE_UNCHECKED
 #define ZX_RELEASE_HANDLE
 #define ZX_USE_HANDLE
+#define ZX_USE_HANDLE_UNCHECKED
 #endif
 
 __BEGIN_CDECLS

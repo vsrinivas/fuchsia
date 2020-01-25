@@ -71,6 +71,6 @@ void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_p
 
 // Get the Clang attribute that describes the ownership of the handle.
 // Returns empty string for non-handle arguments.
-std::string GetHandleOwnershipAttribute(const StructMember &arg);
+std::string GetHandleOwnershipAttribute(const StructMember &arg, bool unchecked);
 
 #endif  // TOOLS_KAZOO_OUTPUT_UTIL_H_
