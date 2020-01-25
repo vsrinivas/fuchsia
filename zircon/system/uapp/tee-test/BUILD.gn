@@ -2,11 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("tee-test") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("tee-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tee-test.c" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/tee-client-api",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/tee-client-api",
   ]
+  libs = [ "zircon" ]
+}
+
+migrated_manifest("tee-test-manifest") {
+  deps = [ ":tee-test" ]
 }
