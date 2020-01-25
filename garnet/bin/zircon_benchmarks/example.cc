@@ -23,7 +23,7 @@ void RegisterTests() {
   // here and then manually check whether a regression gets reported, or
   // check whether the increase appears on the performance dashboard's
   // graph.
-  perftest::RegisterTest("ExampleNoOpLoop", NoOpLoop, 100);
+  perftest::RegisterTest("ExampleNoOpLoop", NoOpLoop, 1000);
 
   // Run these so we have reference values to compare against.
   perftest::RegisterTest("NoOpLoop/100", NoOpLoop, 100);

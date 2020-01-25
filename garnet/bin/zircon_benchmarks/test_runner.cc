@@ -13,5 +13,5 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  return perftest::PerfTestMain(argc, argv, "fuchsia.zircon_benchmarks");
+  return perftest::PerfTestMain(argc, argv, "fuchsia.microbenchmarks");
 }
