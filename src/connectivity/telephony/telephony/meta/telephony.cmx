@@ -3,7 +3,6 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "pkgfs": [ "packages" ],
         "dev": [ "class/qmi-transport" ],
         "services": [
             "fuchsia.logger.LogSink",
