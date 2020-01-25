@@ -54,14 +54,6 @@ fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
   return options;
 }
 
-fs_test_utils::FixtureOptions MinfsRamdiskOptions() {
-  fs_test_utils::FixtureOptions options = fs_test_utils::FixtureOptions::Default(DISK_FORMAT_MINFS);
-  options.use_fvm = false;
-  options.fs_format = true;
-  options.fs_mount = true;
-  return options;
-}
-
 void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
@@ -147,6 +139,8 @@ TEST(FmountFunmountCase, FmountFunmount) {
   ASSERT_EQ(unlink(mount_path), 0);
 }
 
+// TODO(FLK-371): Re-enable once deflaked.
+#if 0
 // All "parent" filesystems attempt to mount a MinFS ramdisk under malicious
 // conditions.
 //
@@ -247,6 +241,7 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
   ASSERT_EQ(rmdir(mount_path), 0);
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
 }
+#endif
 
 // TODO(FLK-371): Re-enable once deflaked.
 // TEST(MountEvilMemfsCase, MountEvilMemfs) {
