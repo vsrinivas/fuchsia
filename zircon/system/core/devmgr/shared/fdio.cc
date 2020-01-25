@@ -49,7 +49,7 @@ static struct {
     uint32_t flags;
     FdioAction action;
 } FSTAB[] = {
-    { "/svc",       "svc",       FS_SVC,      FdioAction::AddNsEntry },
+    { "/svc",       "svc",       FS_SVC,      FdioAction::CloneDir },
     { "/hub",       "hub",       FS_HUB,      FdioAction::AddNsEntry },
     { "/bin",       "bin",       FS_BIN,      FdioAction::AddNsEntry },
     { "/dev",       "dev",       FS_DEV,      FdioAction::AddNsEntry },

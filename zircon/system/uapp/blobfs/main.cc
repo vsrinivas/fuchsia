@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
 #include <lib/zx/channel.h>
@@ -22,6 +23,7 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
+#include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
@@ -171,6 +173,12 @@ int main(int argc, char** argv) {
   zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
   if (!block_connection.is_valid()) {
     FS_TRACE_ERROR("blobfs: Could not access startup handle to block device\n");
+    return -1;
+  }
+
+  fbl::unique_fd svc_fd(open("/svc", O_RDONLY));
+  if (!svc_fd.is_valid()) {
+    FS_TRACE_ERROR("blobfs: Failed to open svc from incoming namespace\n");
     return -1;
   }
 
