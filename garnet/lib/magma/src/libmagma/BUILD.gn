@@ -32,7 +32,7 @@ static_library("libmagma_static") {
   }
 
   # Magma ICDs are only allowed to depend on (parts of) libc and libzircon, and no other shared libraries.
-  assert_no_deps = [ "//zircon/system/lib/fdio" ]
+  assert_no_deps = [ "//zircon/public/lib/fdio" ]
 }
 
 # This library is complete, so it's usable outside BUILD.gn
