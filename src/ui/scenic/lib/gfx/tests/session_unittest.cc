@@ -40,12 +40,10 @@ TEST_F(SessionTest, TakeSnapshot_ShouldReturnFalse) {
 }
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent(
-      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
-  EXPECT_FALSE(session()->ScheduleUpdateForPresent(
-      zx::time(0), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(
+      session()->ScheduleUpdateForPresent(zx::time(1), std::vector<zx::event>(), [](auto) {}));
+  EXPECT_FALSE(
+      session()->ScheduleUpdateForPresent(zx::time(0), std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
       "scenic_impl::gfx::Session: Present called with out-of-order "
       "presentation "
@@ -56,12 +54,10 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 TEST_F(SessionTest, SchedulePresent2UpdatesOutOfOrder) {
   const SessionId session_id = 1;
 
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
-      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), Present2Info(session_id)));
-  EXPECT_FALSE(session()->ScheduleUpdateForPresent2(
-      zx::time(0), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), Present2Info(session_id)));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(zx::time(1), std::vector<zx::event>(),
+                                                   Present2Info(session_id)));
+  EXPECT_FALSE(session()->ScheduleUpdateForPresent2(zx::time(0), std::vector<zx::event>(),
+                                                    Present2Info(session_id)));
   ExpectLastReportedError(
       "scenic_impl::gfx::Session: Present called with out-of-order "
       "presentation "
@@ -70,24 +66,20 @@ TEST_F(SessionTest, SchedulePresent2UpdatesOutOfOrder) {
 }
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent(
-      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent(
-      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(
+      session()->ScheduleUpdateForPresent(zx::time(1), std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(
+      session()->ScheduleUpdateForPresent(zx::time(1), std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(nullptr);
 }
 
 TEST_F(SessionTest, SchedulePresent2UpdateInOrder) {
   const SessionId session_id = 1;
 
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
-      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), Present2Info(session_id)));
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
-      zx::time(1), std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), Present2Info(session_id)));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(zx::time(1), std::vector<zx::event>(),
+                                                   Present2Info(session_id)));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(zx::time(1), std::vector<zx::event>(),
+                                                   Present2Info(session_id)));
   ExpectLastReportedError(nullptr);
 }
 
@@ -95,9 +87,8 @@ TEST_F(SessionTest, ScheduledUpdate_ShouldBeAppliedOnTime) {
   const zx::time presentation_time = zx::time(100);
   const zx::time latched_time = zx::time(100);
 
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent(
-      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent(presentation_time, std::vector<zx::event>(),
+                                                  [](auto) {}));
 
   sys::testing::ComponentContextProvider app_context;
   SceneGraph scene_graph(app_context.context());
@@ -114,9 +105,8 @@ TEST_F(SessionTest, ScheduledPresent2Update_ShouldBeAppliedOnTime) {
   const zx::time latched_time = zx::time(100);
   const SessionId session_id = 1;
 
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
-      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), Present2Info(session_id)));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(presentation_time, std::vector<zx::event>(),
+                                                   Present2Info(session_id)));
 
   sys::testing::ComponentContextProvider app_context;
   SceneGraph scene_graph(app_context.context());
@@ -133,9 +123,8 @@ TEST_F(SessionTest, Present2Update_ShouldHaveReasonablePresentReceivedTime) {
   const zx::time latched_time = zx::time(100);
   const SessionId session_id = 1;
 
-  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
-      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), Present2Info(session_id)));
+  EXPECT_TRUE(session()->ScheduleUpdateForPresent2(presentation_time, std::vector<zx::event>(),
+                                                   Present2Info(session_id)));
 
   sys::testing::ComponentContextProvider app_context;
   SceneGraph scene_graph(app_context.context());
@@ -209,10 +198,9 @@ TEST_F(SessionTest, Present2Updates_AreScheduledInOrder) {
   const zx::time latched_time = zx::time(16);
 
   // Schedule the maximum amount of presents, incrementing the clock by one each time.
-  for (int i = 0; i < session()->kMaxPresentsInFlight; i++) {
+  for (int i = 0; i < scheduling::FrameScheduler::kMaxPresentsInFlight; i++) {
     EXPECT_TRUE(session()->ScheduleUpdateForPresent2(
-        requested_presentation_time, std::vector<::fuchsia::ui::gfx::Command>(),
-        std::vector<zx::event>(), std::vector<zx::event>(), Present2Info(session_id)));
+        requested_presentation_time, std::vector<zx::event>(), Present2Info(session_id)));
 
     // Advance the clock one nanosecond in between each scheduled update.
     RunLoopFor(zx::duration(1));
@@ -249,10 +237,9 @@ TEST_F(SessionTest, PresentsInFlightAreDecrementedCorrectly) {
   const zx::time latched_time = zx::time(1);
 
   // Max out the maximum allotted presents in flight.
-  for (int i = 0; i < session()->kMaxPresentsInFlight; i++) {
-    EXPECT_TRUE(session()->ScheduleUpdateForPresent(
-        presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-        std::vector<zx::event>(), [](auto) {}));
+  for (int i = 0; i < scheduling::FrameScheduler::kMaxPresentsInFlight; i++) {
+    EXPECT_TRUE(session()->ScheduleUpdateForPresent(presentation_time, std::vector<zx::event>(),
+                                                    [](auto) {}));
   }
 
   sys::testing::ComponentContextProvider app_context;
@@ -280,18 +267,17 @@ TEST_F(SessionTest, PresentsInFlightAreDecrementedCorrectly) {
 
   // Present exactly twice more successfully. This would only work if we succesfully decremented
   // |presents_in_flight_|.
-  for (int i = session()->presents_in_flight(); i < session()->kMaxPresentsInFlight; i++) {
-    EXPECT_TRUE(session()->ScheduleUpdateForPresent(
-        presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-        std::vector<zx::event>(), [](auto) {}));
+  for (int i = session()->presents_in_flight();
+       i < scheduling::FrameScheduler::kMaxPresentsInFlight; i++) {
+    EXPECT_TRUE(session()->ScheduleUpdateForPresent(presentation_time, std::vector<zx::event>(),
+                                                    [](auto) {}));
   }
 
   // TODO(35521) Re-enable.
   /*
   // This should fail.
   EXPECT_FALSE(session()->ScheduleUpdateForPresent(
-      presentation_time, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
-      std::vector<zx::event>(), [](auto) {}));
+      presentation_time, std::vector<zx::event>(), [](auto) {}));
   */
 }
 

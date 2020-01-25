@@ -64,7 +64,8 @@ void Session::SetFrameScheduler(
           // Update and set num_presents_allowed before ultimately calling into the client provided
           // callback.
           weak->num_presents_allowed_ += (info.presentation_infos.size());
-          FXL_DCHECK(weak->num_presents_allowed_ <= kMaxPresentsInFlight);
+          FXL_DCHECK(weak->num_presents_allowed_ <=
+                     scheduling::FrameScheduler::kMaxPresentsInFlight);
           info.num_presents_allowed = weak->num_presents_allowed_;
           weak->binding_.events().OnFramePresented(std::move(info));
         });
@@ -119,7 +120,7 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
     if (!weak)
       return;
     ++(weak->num_presents_allowed_);
-    FXL_DCHECK(weak->num_presents_allowed_ <= kMaxPresentsInFlight);
+    FXL_DCHECK(weak->num_presents_allowed_ <= scheduling::FrameScheduler::kMaxPresentsInFlight);
     callback(info);
   };
 
@@ -255,16 +256,15 @@ void Session::ScheduleNextPresent() {
   if (auto present_callback =
           std::get_if<scheduling::OnPresentedCallback>(&present_request.present_information)) {
     // TODO(SCN-469): Move Present logic into Session.
-    present_success = GetTempSessionDelegate()->Present(
-        present_request.requested_presentation_time.get(),
-        std::move(present_request.acquire_fences), std::move(present_request.release_fences),
+    present_success = GetGfxSession()->ScheduleUpdateForPresent(
+        present_request.requested_presentation_time, std::move(present_request.release_fences),
         std::move(*present_callback));
   } else {
     FXL_DCHECK(
         std::holds_alternative<scheduling::Present2Info>(present_request.present_information));
-    present_success = GetTempSessionDelegate()->Present2(
-        present_request.requested_presentation_time.get(),
-        std::move(present_request.acquire_fences), std::move(present_request.release_fences));
+    present_success = GetGfxSession()->ScheduleUpdateForPresent2(
+        present_request.requested_presentation_time, std::move(present_request.release_fences),
+        scheduling::Present2Info(id_));
   }
 
   // Pop it off the queue before continuing.
@@ -429,9 +429,9 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
   }
 }
 
-TempSessionDelegate* Session::GetTempSessionDelegate() {
+gfx::Session* Session::GetGfxSession() {
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
-  return dispatcher ? static_cast<TempSessionDelegate*>(dispatcher.get()) : nullptr;
+  return dispatcher ? static_cast<gfx::Session*>(dispatcher.get()) : nullptr;
 }
 
 }  // namespace scenic_impl

@@ -21,7 +21,7 @@ void SessionHandlerTest::SetUp() {
   InitializeScenic();
   InitializeEngine();
 
-  InitializeSessionHandler();
+  InitializeCommandDispatcher();
 
   RunLoopUntilIdle();  // Reset loop state; some tests are sensitive to dirty loop state.
 }
@@ -42,16 +42,16 @@ void SessionHandlerTest::InitializeScenic() {
   scenic_ = std::make_unique<Scenic>(app_context_.context(), inspect_deprecated::Node(), [] {});
 }
 
-void SessionHandlerTest::InitializeSessionHandler() {
+void SessionHandlerTest::InitializeCommandDispatcher() {
   auto session_context = engine_->session_context();
   auto session_id = SessionId(1);
 
   InitializeScenicSession(session_id);
 
-  session_manager_ = std::make_unique<SessionManagerForTest>(this->shared_event_reporter(),
-                                                             this->shared_error_reporter()),
+  session_manager_ = std::make_unique<SessionManager>();
   command_dispatcher_ = session_manager_->CreateCommandDispatcher(
-      CommandDispatcherContext(scenic_session_.get()), std::move(session_context));
+      scenic_session_->id(), std::move(session_context), this->shared_event_reporter(),
+      this->shared_error_reporter());
 }
 
 void SessionHandlerTest::InitializeEngine() {
@@ -88,8 +88,8 @@ scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
                                  /*display_manager*/ nullptr, engine_->scene_graph()->GetWeakPtr());
 
   for (auto session_id : sessions_to_update) {
-    auto session_handler = session_manager_->FindSessionHandler(session_id);
-    if (!session_handler) {
+    auto session = session_manager_->FindSession(session_id);
+    if (!session) {
       // This means the session that requested the update died after the
       // request. Requiring the scene to be re-rendered to reflect the session's
       // disappearance is probably desirable. ImagePipe also relies on this to
@@ -97,8 +97,6 @@ scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
       update_results.needs_render = true;
       continue;
     }
-
-    auto session = session_handler->session();
 
     auto apply_results =
         session->ApplyScheduledUpdates(&command_context, target_presentation_time, latched_time);

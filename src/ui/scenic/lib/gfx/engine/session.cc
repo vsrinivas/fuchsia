@@ -20,7 +20,6 @@
 #include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/lib/escher/util/type_utils.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
-#include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/swapchain/swapchain_factory.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
@@ -79,10 +78,9 @@ Session::Session(SessionId id, SessionContext session_context,
 Session::~Session() {
   resources_.Clear();
 
-  // We assume the channel for the associated gfx::Session is closed by
-  // SessionHandler before this point, since |scheduled_updates_| contains
-  // pending callbacks to gfx::Session::Present(). If the channel was not closed
-  // we would have to invoke those callbacks before destroying them.
+  // We assume the channel for the associated gfx::Session is closed before this point,
+  // since |scheduled_updates_| contains pending callbacks to gfx::Session::Present().
+  // If the channel was not closed we would have to invoke those callbacks before destroying them.
   scheduled_updates_ = {};
   fences_to_release_on_next_update_.clear();
 
@@ -90,15 +88,18 @@ Session::~Session() {
                                   << " resources have not yet been destroyed.";
 }
 
+void Session::DispatchCommand(fuchsia::ui::scenic::Command command) {
+  FXL_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
+  buffered_commands_.emplace_back(std::move(command.gfx()));
+}
+
 EventReporter* Session::event_reporter() const { return event_reporter_.get(); }
 
 bool Session::ScheduleUpdateForPresent(zx::time requested_presentation_time,
-                                       std::vector<::fuchsia::ui::gfx::Command> commands,
-                                       std::vector<zx::event> acquire_fences,
                                        std::vector<zx::event> release_events,
                                        fuchsia::ui::scenic::Session::PresentCallback callback) {
   // TODO(35521) If the client has no Present()s left, kill the session.
-  if (++presents_in_flight_ > kMaxPresentsInFlight) {
+  if (++presents_in_flight_ > scheduling::FrameScheduler::kMaxPresentsInFlight) {
     error_reporter_->ERROR() << "Present() called with no more presents left. In the future(Bug "
                                 "35521) this will terminate the session.";
   }
@@ -110,27 +111,21 @@ bool Session::ScheduleUpdateForPresent(zx::time requested_presentation_time,
         callback(info);
       };
 
-  return ScheduleUpdateCommon(requested_presentation_time, std::move(commands),
-                              std::move(acquire_fences), std::move(release_events),
+  return ScheduleUpdateCommon(requested_presentation_time, std::move(release_events),
                               std::move(new_callback));
 }
 
 bool Session::ScheduleUpdateForPresent2(zx::time requested_presentation_time,
-                                        std::vector<::fuchsia::ui::gfx::Command> commands,
-                                        std::vector<zx::event> acquire_fences,
                                         std::vector<zx::event> release_fences,
                                         Present2Info present2_info) {
   zx::time present_received_time = zx::time(async_now(async_get_default_dispatcher()));
   present2_info.SetPresentReceivedTime(present_received_time);
 
-  return ScheduleUpdateCommon(requested_presentation_time, std::move(commands),
-                              std::move(acquire_fences), std::move(release_fences),
+  return ScheduleUpdateCommon(requested_presentation_time, std::move(release_fences),
                               std::move(present2_info));
 }
 
 bool Session::ScheduleUpdateCommon(zx::time requested_presentation_time,
-                                   std::vector<::fuchsia::ui::gfx::Command> commands,
-                                   std::vector<zx::event> acquire_fences,
                                    std::vector<zx::event> release_fences,
                                    std::variant<PresentCallback, Present2Info> presentation_info) {
   TRACE_DURATION("gfx", "Session::ScheduleUpdate", "session_id", id_, "session_debug_name",
@@ -152,25 +147,25 @@ bool Session::ScheduleUpdateCommon(zx::time requested_presentation_time,
     return false;
   }
 
-  auto acquire_fence_set = std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
-  acquire_fence_set->WaitReadyAsync([weak = GetWeakPtr(), requested_presentation_time] {
-    // This weak pointer will go out of scope if the channel is killed between a call to Present()
-    // and the completion of the acquire fences.
-    if (weak) {
-      FXL_DCHECK(weak->session_context_.frame_scheduler);
-      weak->session_context_.frame_scheduler->ScheduleUpdateForSession(requested_presentation_time,
-                                                                       weak->id());
-    }
-  });
+  async::PostTask(async_get_default_dispatcher(),
+                  [weak = GetWeakPtr(), requested_presentation_time] {
+                    // This weak pointer will go out of scope if the channel is killed between a
+                    // call to Present() and the looper executing this task.
+                    if (weak) {
+                      FXL_DCHECK(weak->session_context_.frame_scheduler);
+                      weak->session_context_.frame_scheduler->ScheduleUpdateForSession(
+                          requested_presentation_time, weak->id());
+                    }
+                  });
 
   ++scheduled_update_count_;
   TRACE_FLOW_BEGIN("gfx", "scheduled_update", SESSION_TRACE_ID(id_, scheduled_update_count_));
 
   inspect_last_requested_presentation_time_.Set(requested_presentation_time.get());
 
-  scheduled_updates_.push(Update{requested_presentation_time, std::move(commands),
-                                 std::move(acquire_fence_set), std::move(release_fences),
-                                 std::move(presentation_info)});
+  scheduled_updates_.push(Update{requested_presentation_time, std::move(buffered_commands_),
+                                 std::move(release_fences), std::move(presentation_info)});
+  buffered_commands_.clear();
 
   return true;
 }
@@ -192,17 +187,6 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
     auto& update = scheduled_updates_.front();
 
     FXL_DCHECK(last_applied_update_presentation_time_ <= update.presentation_time);
-
-    // Should no longer receive any acquire fences, therefore they should always be ready.
-    FXL_DCHECK(update.acquire_fences->ready());
-    if (!update.acquire_fences->ready()) {
-      TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS, "session_id", id(),
-                    "session_debug_name", debug_name_, "target presentation time",
-                    target_presentation_time.get(), "session target presentation time",
-                    scheduled_updates_.front().presentation_time.get());
-      update_results.all_fences_ready = false;
-      break;
-    }
 
     ++applied_update_count_;
     TRACE_FLOW_END("gfx", "scheduled_update", SESSION_TRACE_ID(id_, applied_update_count_));
@@ -282,8 +266,6 @@ bool Session::ApplyUpdate(CommandContext* command_context,
     }
   }
   return true;
-  // TODO: acquire_fences and release_fences should be added to a list that is
-  // consumed by the FrameScheduler.
 }
 
 }  // namespace gfx

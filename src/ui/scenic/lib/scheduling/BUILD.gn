@@ -33,7 +33,6 @@ source_set("frame_scheduler") {
   ]
   deps = [
     ":frame_metrics_registry",
-    ":present2_info",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//src/lib/fxl",
@@ -41,6 +40,7 @@ source_set("frame_scheduler") {
   ]
   public_deps = [
     ":id",
+    ":present2_info",
     ":timings",
     ":vsync_timing",
     "//src/lib/cobalt/cpp:cobalt_logger",

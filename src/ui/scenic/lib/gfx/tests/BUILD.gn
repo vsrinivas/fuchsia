@@ -169,7 +169,7 @@ executable("unittests") {
     "protected_memory_visitor_unittest.cc",
     "scene_graph_unittest.cc",
     "scene_unittest.cc",
-    "session_handler_unittest.cc",
+    "session_manager_unittest.cc",
     "session_unittest.cc",
     "shape_unittest.cc",
     "size_change_hint_unittest.cc",

@@ -19,27 +19,29 @@ class DummySystem : public System {
 
   ~DummySystem() override;
 
-  CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
+  CommandDispatcherUniquePtr CreateCommandDispatcher(
+      scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+      std::shared_ptr<ErrorReporter> error_reporter) override;
 
   uint32_t GetNumDispatchers() { return num_dispatchers_; }
 
-  Session* GetLastSession() { return last_session_; }
+  int64_t GetLastSessionId() { return last_session_; }
 
  private:
   uint32_t num_dispatchers_ = 0;
-  Session* last_session_ = nullptr;
+  int64_t last_session_ = -1;
 };
 
 class DummyCommandDispatcher : public CommandDispatcher {
  public:
-  explicit DummyCommandDispatcher(CommandDispatcherContext context);
-  ~DummyCommandDispatcher() override;
+  DummyCommandDispatcher() = default;
+  ~DummyCommandDispatcher() override = default;
 
   // |CommandDispatcher|
   void SetDebugName(const std::string& debug_name) override {}
 
   // |CommandDispatcher|
-  void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
+  void DispatchCommand(const fuchsia::ui::scenic::Command command) override{};
 };
 
 }  // namespace test

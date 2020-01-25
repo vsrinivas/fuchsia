@@ -16,6 +16,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
+#include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/forward_declarations.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
@@ -26,7 +27,6 @@
 
 namespace scenic_impl {
 
-class CommandDispatcher;
 class Scenic;
 
 class Session final : public fuchsia::ui::scenic::Session {
@@ -77,10 +77,6 @@ class Session final : public fuchsia::ui::scenic::Session {
   bool is_bound() { return binding_.is_bound(); }
 
   void set_binding_error_handler(fit::function<void(zx_status_t)> error_handler);
-
-  // Clients cannot call Present() anymore when |presents_in_flight_| reaches this value. Scenic
-  // uses this to apply backpressure to clients.
-  static constexpr int64_t kMaxPresentsInFlight = 5;
 
  private:
   // Helper class which manages the reporting of events and errors to Scenic clients.
@@ -182,6 +178,8 @@ class Session final : public fuchsia::ui::scenic::Session {
   void InvokeFuturePresentationTimesCallback(zx_duration_t requested_prediction_span,
                                              RequestPresentationTimesCallback callback);
 
+  gfx::Session* GetGfxSession();
+
   const SessionId id_;
   fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
@@ -197,7 +195,7 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   zx::time last_scheduled_presentation_time_ = zx::time(0);
 
-  int64_t num_presents_allowed_ = kMaxPresentsInFlight;
+  int64_t num_presents_allowed_ = scheduling::FrameScheduler::kMaxPresentsInFlight;
 
   // Tracks if the client is using Present1 or Present2 while the Present1 API is being deprecated.
   // No client should use both Present commands in the same session.
@@ -214,8 +212,6 @@ class Session final : public fuchsia::ui::scenic::Session {
   // can simply be incremented as each one is handled.
   uint64_t queue_processing_id_begin_ = 0;
   uint64_t queue_processing_id_end_ = 0;
-
-  TempSessionDelegate* GetTempSessionDelegate();
 
   std::shared_ptr<EventAndErrorReporter> reporter_;
 

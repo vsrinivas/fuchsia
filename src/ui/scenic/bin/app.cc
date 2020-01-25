@@ -44,7 +44,8 @@ class Dependency : public scenic_impl::System {
  public:
   using System::System;
   scenic_impl::CommandDispatcherUniquePtr CreateCommandDispatcher(
-      scenic_impl::CommandDispatcherContext context) override {
+      scheduling::SessionId session_id, std::shared_ptr<scenic_impl::EventReporter> event_reporter,
+      std::shared_ptr<scenic_impl::ErrorReporter> error_reporter) override {
     return nullptr;
   };
 };

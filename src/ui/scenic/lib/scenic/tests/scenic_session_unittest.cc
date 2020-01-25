@@ -6,30 +6,30 @@
 
 #include "gtest/gtest.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace scenic_impl {
 namespace test {
 
-class MockTempSessionDelegate : public TempSessionDelegate {
+class MockGfxSession : public gfx::Session {
  public:
-  MockTempSessionDelegate() : TempSessionDelegate(CommandDispatcherContext(nullptr, 0)){};
+  MockGfxSession(scheduling::SessionId session_id = 1) : Session(session_id, {}){};
 
-  bool Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
-               std::vector<zx::event> release_fences,
-               fuchsia::ui::scenic::Session::PresentCallback callback) override {
+  bool ScheduleUpdateForPresent(zx::time presentation_time, std::vector<zx::event> release_fences,
+                                fuchsia::ui::scenic::Session::PresentCallback callback) override {
     ++present_called_count_;
     return true;
   }
 
-  bool Present2(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
-                std::vector<zx::event> release_fences) {
+  bool ScheduleUpdateForPresent2(zx::time requested_presentation_time,
+                                 std::vector<zx::event> release_fences,
+                                 scheduling::Present2Info present2_info) override {
     ++present2_called_count_;
     return true;
   };
 
-  void SetDebugName(const std::string&) override {}
   void DispatchCommand(fuchsia::ui::scenic::Command command) override {
     ++num_commands_dispatched_;
   };
@@ -50,10 +50,10 @@ class ScenicSessionTest : public ::gtest::TestLoopFixture {
     session.SetCommandDispatchers(std::move(dispatchers));
   }
 
-  std::unique_ptr<MockTempSessionDelegate> delegate_;
+  std::unique_ptr<MockGfxSession> delegate_;
 
  protected:
-  void SetUp() override { delegate_ = std::make_unique<MockTempSessionDelegate>(); }
+  void SetUp() override { delegate_ = std::make_unique<MockGfxSession>(); }
 
   void TearDown() override { delegate_.reset(); }
 };

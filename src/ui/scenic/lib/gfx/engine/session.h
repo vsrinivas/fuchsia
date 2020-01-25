@@ -19,14 +19,13 @@
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
-#include "src/ui/scenic/lib/gfx/engine/session_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/view_tree_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_context.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
+#include "src/ui/scenic/lib/scenic/command_dispatcher.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
-#include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/present2_info.h"
@@ -43,7 +42,7 @@ class Resource;
 
 // gfx::Session is the internal endpoint of the scenic::Session channel.
 // It owns, and is responsible for, all graphics state on the channel
-class Session {
+class Session : public CommandDispatcher {
  public:
   // Return type for ApplyScheduledUpdate
   struct ApplyUpdateResult {
@@ -60,6 +59,13 @@ class Session {
           std::shared_ptr<ErrorReporter> error_reporter = ErrorReporter::Default(),
           inspect_deprecated::Node inspect_node = inspect_deprecated::Node());
   virtual ~Session();
+
+  // |CommandDispatcher|
+  void SetDebugName(const std::string& debug_name) override { debug_name_ = debug_name; }
+
+  // |scenic::CommandDispatcher|
+  // Virtual for testing.
+  virtual void DispatchCommand(fuchsia::ui::scenic::Command command) override;
 
   // Apply the operation to the current session state.  Return true if
   // successful, and false if the op is somehow invalid.  In the latter case,
@@ -90,20 +96,17 @@ class Session {
   ResourceMap* resources() { return &resources_; }
   const ResourceMap* resources() const { return &resources_; }
 
-  // Called by SessionHandler::Present().  Stashes the arguments without applying them; they will
-  // later be applied by ApplyScheduledUpdates().
-  bool ScheduleUpdateForPresent(zx::time presentation_time,
-                                std::vector<::fuchsia::ui::gfx::Command> commands,
-                                std::vector<zx::event> acquire_fences,
-                                std::vector<zx::event> release_fences, PresentCallback callback);
+  // Stashes arguments without applying them and schedules a Present with the frame scheduler. The
+  // arguments will later be applied by ApplyScheduledUpdates(). Virtual for testing.
+  virtual bool ScheduleUpdateForPresent(zx::time presentation_time,
+                                        std::vector<zx::event> release_fences,
+                                        PresentCallback callback);
 
-  // Called by SessionHandler::Present2(). Like Present(), it stashes the arguments without
-  // applying them; they will later be applied by ApplyScheduledUpdates().
-  bool ScheduleUpdateForPresent2(zx::time requested_presentation_time,
-                                 std::vector<::fuchsia::ui::gfx::Command> commands,
-                                 std::vector<zx::event> acquire_fences,
-                                 std::vector<zx::event> release_fences,
-                                 scheduling::Present2Info present2_info);
+  // Stashes arguments without applying them and schedules a Present with the frame scheduler. The
+  // arguments will later be applied by ApplyScheduledUpdates(). Virtual for testing.
+  virtual bool ScheduleUpdateForPresent2(zx::time requested_presentation_time,
+                                         std::vector<zx::event> release_fences,
+                                         scheduling::Present2Info present2_info);
 
   // Called by Engine() when it is notified by the FrameScheduler that a frame should be rendered
   // for the specified |actual_presentation_time|. Returns ApplyUpdateResult.success as true if
@@ -122,11 +125,6 @@ class Session {
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
   void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
 
-  void SetDebugName(const std::string& debug_name) { debug_name_ = debug_name; }
-
-  // Clients cannot call Present() anymore when |presents_in_flight_| reaches this value. Scenic
-  // uses this to apply backpressure to clients.
-  static constexpr int64_t kMaxPresentsInFlight = ::scenic_impl::Session::kMaxPresentsInFlight;
   int64_t presents_in_flight() { return presents_in_flight_; }
 
   fxl::WeakPtr<ViewTreeUpdater> view_tree_updater() { return view_tree_updater_.GetWeakPtr(); }
@@ -140,15 +138,13 @@ class Session {
   bool SetRootView(fxl::WeakPtr<View> view);
 
   bool ScheduleUpdateCommon(
-      zx::time requested_presentation_time, std::vector<::fuchsia::ui::gfx::Command> commands,
-      std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
+      zx::time requested_presentation_time, std::vector<zx::event> release_fences,
       std::variant<PresentCallback, scheduling::Present2Info> presentation_info);
 
   struct Update {
     zx::time presentation_time;
 
     std::vector<::fuchsia::ui::gfx::Command> commands;
-    std::unique_ptr<escher::FenceSetListener> acquire_fences;
     std::vector<zx::event> release_fences;
 
     // Holds either Present1's |fuchsia::ui::scenic::PresentCallback| or Present2's |Present2Info|.
@@ -194,6 +190,10 @@ class Session {
   //
   // It is incremented on every Present(), and decremented on every OnPresentedCallback().
   int64_t presents_in_flight_ = 0;
+
+  // TODO(SCN-710): We reallocate this everytime we std::move it into
+  // ScheduleUpdate().  The bug has some ideas about how to do better.
+  std::vector<::fuchsia::ui::gfx::Command> buffered_commands_;
 
   inspect_deprecated::Node inspect_node_;
   inspect_deprecated::UIntMetric inspect_resource_count_;

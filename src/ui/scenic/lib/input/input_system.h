@@ -36,7 +36,9 @@ class InputSystem : public System,
   explicit InputSystem(SystemContext context, gfx::Engine* engine);
   ~InputSystem() override = default;
 
-  CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
+  CommandDispatcherUniquePtr CreateCommandDispatcher(
+      scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+      std::shared_ptr<ErrorReporter> error_reporter) override;
 
   fuchsia::ui::input::ImeServicePtr& ime_service() { return ime_service_; }
 

@@ -13,8 +13,8 @@
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
-#include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scenic/system.h"
+#include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -24,7 +24,7 @@ class GfxSystem;
 using GfxSystemWeakPtr = fxl::WeakPtr<GfxSystem>;
 
 class GfxSystem : public System,
-                  public Scenic::TakeScreenshotDelegateDeprecated,
+                  public scenic_impl::TakeScreenshotDelegateDeprecated,
                   public scheduling::SessionUpdater {
  public:
   static constexpr TypeId kTypeId = kGfx;
@@ -35,10 +35,12 @@ class GfxSystem : public System,
 
   GfxSystemWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-  CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
+  CommandDispatcherUniquePtr CreateCommandDispatcher(
+      scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+      std::shared_ptr<ErrorReporter> error_reporter) override;
 
   // TODO(fxb/40795): Remove this.
-  // |Scenic::TakeScreenshotDelegateDeprecated|
+  // |scenic_impl::TakeScreenshotDelegateDeprecated|
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
   // |scheduling::SessionUpdater|

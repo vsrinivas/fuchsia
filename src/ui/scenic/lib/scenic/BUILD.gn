@@ -4,25 +4,25 @@
 
 source_set("scenic") {
   sources = [
-    "command_dispatcher.cc",
-    "command_dispatcher.h",
-    "event_reporter.cc",
-    "event_reporter.h",
     "forward_declarations.h",
     "scenic.cc",
     "scenic.h",
     "session.cc",
     "session.h",
-    "system.cc",
-    "system.h",
   ]
 
   public_deps = [
+    ":command_dispatcher",
+    ":event_reporter",
+    ":system",
+    ":take_screenshot_delegate_deprecated",
+    "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//src/lib/fxl",
+    "//src/ui/lib/escher:escher_no_glslang",
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:present2_info",
     "//zircon/public/lib/fit",
@@ -35,9 +35,50 @@ source_set("scenic") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/inspect_deprecated",
-    "//src/ui/lib/escher",
+    "//src/ui/lib/escher:escher_no_glslang",
+    "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/gfx:view_focuser_registry",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/public/lib/trace",
   ]
+}
+
+source_set("event_reporter") {
+  sources = [
+    "event_reporter.cc",
+    "event_reporter.h",
+  ]
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/fxl",
+    "//src/ui/scenic/lib/scenic/util:util",
+  ]
+}
+
+source_set("command_dispatcher") {
+  sources = [ "command_dispatcher.h" ]
+  deps = [ "//src/lib/fxl" ]
+}
+
+source_set("system") {
+  sources = [
+    "system.cc",
+    "system.h",
+  ]
+  public_deps = [ ":command_dispatcher" ]
+  deps = [
+    ":event_reporter",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/fxl",
+    "//src/lib/inspect_deprecated:inspect_deprecated",
+    "//src/ui/scenic/lib/scenic/util:util",
+    "//src/ui/scenic/lib/scheduling:id",
+  ]
+}
+
+source_set("take_screenshot_delegate_deprecated") {
+  sources = [ "take_screenshot_delegate_deprecated.h" ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.scenic" ]
 }

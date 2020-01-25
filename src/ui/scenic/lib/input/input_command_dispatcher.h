@@ -34,7 +34,8 @@ class InputSystem;
 // decide where else to send]--> EnqueueEvent
 class InputCommandDispatcher : public CommandDispatcher {
  public:
-  InputCommandDispatcher(CommandDispatcherContext context, gfx::Engine* engine,
+  InputCommandDispatcher(scheduling::SessionId session_id,
+                         std::shared_ptr<EventReporter> event_reporter, gfx::Engine* engine,
                          InputSystem* input_system);
   ~InputCommandDispatcher() override = default;
 
@@ -99,7 +100,8 @@ class InputCommandDispatcher : public CommandDispatcher {
   bool ShouldForwardAccessibilityPointerEvents();
 
   // FIELDS
-
+  const scheduling::SessionId session_id_;
+  std::shared_ptr<EventReporter> event_reporter_;
   gfx::Engine* const engine_ = nullptr;
   InputSystem* const input_system_ = nullptr;
 

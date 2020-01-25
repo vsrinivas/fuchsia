@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
+#include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 #include "src/ui/scenic/lib/scenic/tests/dummy_system.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_gfx_test.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
@@ -24,7 +25,7 @@ class DisplayInfoDelegate : public scenic_impl::Scenic::GetDisplayInfoDelegateDe
   };
 };
 
-class TakeScreenshotDelegate : public scenic_impl::Scenic::TakeScreenshotDelegateDeprecated {
+class TakeScreenshotDelegate : public scenic_impl::TakeScreenshotDelegateDeprecated {
  public:
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override {
     fuchsia::ui::scenic::ScreenshotData data;
@@ -45,9 +46,9 @@ TEST_F(ScenicTest, CreateAndDestroySession) {
   auto session = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
   EXPECT_EQ(mock_system->GetNumDispatchers(), 1U);
-  EXPECT_TRUE(mock_system->GetLastSession());
+  EXPECT_NE(mock_system->GetLastSessionId(), -1);
 
-  scenic()->CloseSession(mock_system->GetLastSession()->id());
+  scenic()->CloseSession(mock_system->GetLastSessionId());
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 }
 
@@ -59,28 +60,28 @@ TEST_F(ScenicTest, CreateAndDestroyMultipleSessions) {
   auto session1 = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 1U);
   EXPECT_EQ(mock_system->GetNumDispatchers(), 1U);
-  auto session1_impl = mock_system->GetLastSession();
-  EXPECT_TRUE(session1_impl);
+  auto session1_id = mock_system->GetLastSessionId();
+  EXPECT_NE(session1_id, -1);
 
   auto session2 = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 2U);
   EXPECT_EQ(mock_system->GetNumDispatchers(), 2U);
-  auto session2_impl = mock_system->GetLastSession();
-  EXPECT_TRUE(session2_impl);
+  auto session2_id = mock_system->GetLastSessionId();
+  EXPECT_NE(session2_id, -1);
 
   auto session3 = CreateSession();
   EXPECT_EQ(scenic()->num_sessions(), 3U);
   EXPECT_EQ(mock_system->GetNumDispatchers(), 3U);
-  auto session3_impl = mock_system->GetLastSession();
-  EXPECT_TRUE(session3_impl);
+  auto session3_id = mock_system->GetLastSessionId();
+  EXPECT_TRUE(session3_id);
 
-  scenic()->CloseSession(session2_impl->id());
+  scenic()->CloseSession(session2_id);
   EXPECT_EQ(scenic()->num_sessions(), 2U);
 
-  scenic()->CloseSession(session3_impl->id());
+  scenic()->CloseSession(session3_id);
   EXPECT_EQ(scenic()->num_sessions(), 1U);
 
-  scenic()->CloseSession(session1_impl->id());
+  scenic()->CloseSession(session1_id);
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 }
 

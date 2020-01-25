@@ -13,19 +13,15 @@ DummySystem::DummySystem(SystemContext context) : System(std::move(context)) {}
 
 DummySystem::~DummySystem() = default;
 
-CommandDispatcherUniquePtr DummySystem::CreateCommandDispatcher(CommandDispatcherContext context) {
+CommandDispatcherUniquePtr DummySystem::CreateCommandDispatcher(
+    scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+    std::shared_ptr<ErrorReporter> error_reporter) {
   ++num_dispatchers_;
-  last_session_ = context.session();
-  return CommandDispatcherUniquePtr(new DummyCommandDispatcher(std::move(context)),
+  last_session_ = session_id;
+  return CommandDispatcherUniquePtr(new DummyCommandDispatcher(),
                                     // Custom deleter.
                                     [](CommandDispatcher* cd) { delete cd; });
 }
-
-DummyCommandDispatcher::DummyCommandDispatcher(CommandDispatcherContext context)
-    : CommandDispatcher(std::move(context)) {}
-DummyCommandDispatcher::~DummyCommandDispatcher() = default;
-
-void DummyCommandDispatcher::DispatchCommand(fuchsia::ui::scenic::Command command) {}
 
 }  // namespace test
 }  // namespace scenic_impl

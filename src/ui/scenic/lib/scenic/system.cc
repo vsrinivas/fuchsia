@@ -4,8 +4,6 @@
 
 #include "src/ui/scenic/lib/scenic/system.h"
 
-#include "src/ui/scenic/lib/scenic/scenic.h"
-
 namespace scenic_impl {
 
 SystemContext::SystemContext(sys::ComponentContext* app_context,

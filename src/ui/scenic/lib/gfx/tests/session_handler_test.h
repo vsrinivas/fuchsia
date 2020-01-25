@@ -24,8 +24,6 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-// For testing SessionHandler without having to manually provide all the state
-// necessary for SessionHandler to run
 class SessionHandlerTest : public ErrorReportingTest, public scheduling::SessionUpdater {
  public:
   SessionHandlerTest();
@@ -37,21 +35,19 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
 
   void InitializeScenic();
   void InitializeEngine();
-  void InitializeSessionHandler();
+  void InitializeCommandDispatcher();
   void InitializeScenicSession(SessionId session_id);
 
   virtual escher::EscherWeakPtr GetEscherWeakPtr();
 
-  SessionHandler* session_handler() {
+  Session* session() {
     FXL_DCHECK(command_dispatcher_);
-    return static_cast<SessionHandler*>(command_dispatcher_.get());
+    return static_cast<Session*>(command_dispatcher_.get());
   }
 
   Scenic* scenic() { return scenic_.get(); }
 
   Engine* engine() { return engine_.get(); }
-
-  Session* session() { return session_handler()->session(); }
 
   // |scheduling::SessionUpdater|
   UpdateResults UpdateSessions(const std::unordered_set<scheduling::SessionId>& sessions_to_update,

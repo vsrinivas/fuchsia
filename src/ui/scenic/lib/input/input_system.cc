@@ -32,10 +32,13 @@ InputSystem::InputSystem(SystemContext context, gfx::Engine* engine)
   FXL_LOG(INFO) << "Scenic input system initialized.";
 }
 
-CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(CommandDispatcherContext context) {
-  return CommandDispatcherUniquePtr(new InputCommandDispatcher(std::move(context), engine_, this),
-                                    // Custom deleter.
-                                    [](CommandDispatcher* cd) { delete cd; });
+CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
+    scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+    std::shared_ptr<ErrorReporter> error_reporter) {
+  return CommandDispatcherUniquePtr(
+      new InputCommandDispatcher(session_id, std::move(event_reporter), engine_, this),
+      // Custom deleter.
+      [](CommandDispatcher* cd) { delete cd; });
 }
 
 void InputSystem::Register(

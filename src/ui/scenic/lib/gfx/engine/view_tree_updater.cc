@@ -7,7 +7,6 @@
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
-#include "src/ui/scenic/lib/scenic/session.h"
 
 namespace scenic_impl::gfx {
 

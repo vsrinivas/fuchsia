@@ -21,6 +21,7 @@
 #include "src/ui/scenic/lib/gfx/engine/view_focuser_registry.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/system.h"
+#include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
@@ -37,13 +38,6 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
     virtual void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
     virtual void GetDisplayOwnershipEvent(
         fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
-  };
-
-  // TODO(fxb/23901): Remove this and move the screenshot API out of Scenic.
-  class TakeScreenshotDelegateDeprecated {
-   public:
-    virtual ~TakeScreenshotDelegateDeprecated() = default;
-    virtual void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
   };
 
   explicit Scenic(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,

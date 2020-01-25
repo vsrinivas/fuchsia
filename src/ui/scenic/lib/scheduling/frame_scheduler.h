@@ -131,6 +131,11 @@ class FrameScheduler {
   // associated session_id, the |OnSessionUpdateFailedCallback| and |OnFramePresentedCallback|
   // should be re-set.
   virtual void ClearCallbacksForSession(SessionId session_id) = 0;
+
+  // Clients cannot call Present() anymore when |presents_in_flight_| reaches this value. Scenic
+  // uses this to apply backpressure to clients.
+  // TODO(44211): Move into implementation.
+  static constexpr int64_t kMaxPresentsInFlight = 5;
 };
 
 }  // namespace scheduling

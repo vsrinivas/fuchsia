@@ -64,8 +64,7 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, SessionIntegration1) {
 
   constexpr zx::time kPresentationTime = zx::time(5);
   EXPECT_TRUE(gfx_session.session->ScheduleUpdateForPresent(
-      kPresentationTime, /*commands=*/std::move(commands), std::move(acquire_fences),
-      /*release_fences=*/{}, /*present_callback=*/[](auto) {}));
+      kPresentationTime, /*release_fences=*/{}, /*present_callback=*/[](auto) {}));
   fence.signal(0u, escher::kFenceSignalled);
   RunLoopUntilIdle();
 

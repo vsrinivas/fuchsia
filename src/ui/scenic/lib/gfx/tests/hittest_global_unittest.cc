@@ -54,10 +54,6 @@ escher::ray4 WorldSpaceCreateScreenPerpendicularRay(float x, float y) {
 }
 
 // Session wrapper that references a common Engine.
-//
-// This class calls Session::TearDown directly and so avoids pulling in
-// SessionHandler and SessionManager; these make a call to TearDown that's
-// triggered by Engine::RenderFrame, and we don't need that here.
 class CustomSession {
  public:
   CustomSession(SessionId id, SessionContext session_context)

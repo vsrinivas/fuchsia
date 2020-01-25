@@ -5,6 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_API_INTERNAL_SNAPSHOT_IMPL_H_
 #define SRC_UI_SCENIC_LIB_GFX_API_INTERNAL_SNAPSHOT_IMPL_H_
 
+#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/snapshot/snapshotter.h"
 

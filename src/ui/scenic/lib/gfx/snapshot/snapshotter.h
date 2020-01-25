@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_SNAPSHOT_SNAPSHOTTER_H_
 #define SRC_UI_SCENIC_LIB_GFX_SNAPSHOT_SNAPSHOTTER_H_
 
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/function.h>
 
 #include "src/ui/lib/escher/renderer/batch_gpu_downloader.h"
@@ -12,7 +13,6 @@
 #include "src/ui/lib/escher/shape/rounded_rect.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_visitor.h"
 #include "src/ui/scenic/lib/gfx/snapshot/serializer.h"
-#include "src/ui/scenic/lib/scenic/scenic.h"
 
 namespace scenic_impl {
 namespace gfx {

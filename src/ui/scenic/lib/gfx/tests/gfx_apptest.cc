@@ -266,7 +266,8 @@ TEST_F(GfxSystemTest, RequestPresentationTimes) {
   // never called Present2().
   session->RequestPresentationTimes(
       0, [](fuchsia::scenic::scheduling::FuturePresentationTimes future_times) {
-        EXPECT_EQ(future_times.remaining_presents_in_flight_allowed, Session::kMaxPresentsInFlight);
+        EXPECT_EQ(future_times.remaining_presents_in_flight_allowed,
+                  scheduling::FrameScheduler::kMaxPresentsInFlight);
       });
 
   EXPECT_TRUE(RunLoopUntilIdle());

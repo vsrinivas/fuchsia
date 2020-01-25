@@ -13,6 +13,9 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
+#include "src/ui/scenic/lib/scenic/event_reporter.h"
+#include "src/ui/scenic/lib/scenic/util/error_reporter.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace sys {
 class ComponentContext;
@@ -21,7 +24,6 @@ class ComponentContext;
 namespace scenic_impl {
 
 class Clock;
-class Session;
 
 // Provides the capabilities that a System needs to do its job, without directly
 // exposing the system's host (typically a Scenic, except for testing).
@@ -67,7 +69,9 @@ class System {
   explicit System(SystemContext context);
   virtual ~System();
 
-  virtual CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) = 0;
+  virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
+      scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+      std::shared_ptr<ErrorReporter> error_reporter) = 0;
 
   SystemContext* context() { return &context_; }
 

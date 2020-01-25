@@ -95,9 +95,11 @@ AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& ori
 
 }  // namespace
 
-InputCommandDispatcher::InputCommandDispatcher(CommandDispatcherContext command_dispatcher_context,
+InputCommandDispatcher::InputCommandDispatcher(scheduling::SessionId session_id,
+                                               std::shared_ptr<EventReporter> event_reporter,
                                                gfx::Engine* engine, InputSystem* input_system)
-    : CommandDispatcher(std::move(command_dispatcher_context)),
+    : session_id_(session_id),
+      event_reporter_(std::move(event_reporter)),
       engine_(engine),
       input_system_(input_system) {
   FXL_CHECK(engine_);
@@ -113,8 +115,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
     DispatchCommand(input.send_keyboard_input());
   } else if (input.is_send_pointer_input()) {
     // Compositor and layer stack required for dispatch.
-    GlobalId compositor_id(command_dispatcher_context()->session_id(),
-                           input.send_pointer_input().compositor_id);
+    GlobalId compositor_id(session_id_, input.send_pointer_input().compositor_id);
     gfx::CompositorWeakPtr compositor = engine_->scene_graph()->GetCompositor(compositor_id);
     if (!compositor)
       return;  // It's legal to race against GFX's compositor setup.
@@ -173,7 +174,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
   FXL_DCHECK(pointer_phase != Phase::HOVER) << "Oops, touch device had unexpected HOVER event.";
 
   if (pointer_phase == Phase::ADD) {
-    GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
+    GlobalId compositor_id(session_id_, command.compositor_id);
 
     gfx::SessionHitAccumulator accumulator;
     PerformGlobalHitTest(GetLayerStack(engine_, compositor_id), pointer, &accumulator);
@@ -251,7 +252,7 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
     // for "top hit".
     glm::mat4 view_transform(1.f);
     zx_koid_t view_ref_koid = ZX_KOID_INVALID;
-    GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
+    GlobalId compositor_id(session_id_, command.compositor_id);
     gfx::LayerStackPtr layer_stack = GetLayerStack(engine_, compositor_id);
     {
       // Find top-hit target and send it to accessibility.
@@ -315,7 +316,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
       << "Oops, mouse device (id=" << device_id << ") had an unexpected event: " << pointer_phase;
 
   if (pointer_phase == Phase::DOWN) {
-    GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
+    GlobalId compositor_id(session_id_, command.compositor_id);
 
     // Find top-hit target and associated properties.
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
@@ -364,7 +365,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
 
   // Deal with unlatched MOVE events.
   if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
-    GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
+    GlobalId compositor_id(session_id_, command.compositor_id);
 
     // Find top-hit target and send it this move event.
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
@@ -407,9 +408,7 @@ void InputCommandDispatcher::DispatchCommand(
 void InputCommandDispatcher::DispatchCommand(
     const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& command) {
   // Can't easily retrieve owning view's ViewRef KOID from just the Session or SessionId.
-  const scheduling::SessionId session_id = command_dispatcher_context()->session_id();
-
-  FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id
+  FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id_
               << ", delivery_request=" << (command.delivery_request ? "on" : "off");
 
   if (command.delivery_request) {
@@ -422,16 +421,15 @@ void InputCommandDispatcher::DispatchCommand(
       }
     }
     for (auto session_ids : dead_sessions) {
-      input_system_->hard_keyboard_requested().erase(session_id);
+      input_system_->hard_keyboard_requested().erase(session_id_);
     }
 
     // This code assumes one event reporter per session id.
-    FXL_DCHECK(input_system_->hard_keyboard_requested().count(session_id) == 0);
-    auto reporter = command_dispatcher_context()->session()->event_reporter().get();
-    if (reporter)
-      input_system_->hard_keyboard_requested().insert({session_id, reporter->GetWeakPtr()});
+    FXL_DCHECK(input_system_->hard_keyboard_requested().count(session_id_) == 0);
+    if (event_reporter_)
+      input_system_->hard_keyboard_requested().insert({session_id_, event_reporter_->GetWeakPtr()});
   } else {
-    input_system_->hard_keyboard_requested().erase(session_id);
+    input_system_->hard_keyboard_requested().erase(session_id_);
   }
 }
 

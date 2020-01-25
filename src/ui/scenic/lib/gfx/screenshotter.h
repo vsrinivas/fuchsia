@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_GFX_SCREENSHOTTER_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 
 #include <string>
 

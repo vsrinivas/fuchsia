@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "src/lib/inspect_deprecated/inspect.h"
+#include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
 
@@ -19,11 +20,7 @@ class ErrorReporter;
 namespace scenic_impl {
 namespace gfx {
 
-using SessionId = ::scenic_impl::SessionId;
-
-class SessionHandler;
-
-// Manages a collection of SessionHandlers.
+// Manages a collection of Sessions.
 // Tracks future updates requested by Sessions, and executes updates for a
 // particular presentation time.
 class SessionManager {
@@ -34,32 +31,28 @@ class SessionManager {
 
   // Finds and returns a pointer the session handler corresponding to the given
   // |id|. Returns nullptr if none found.
-  SessionHandler* FindSessionHandler(SessionId id) const;
-  const std::unordered_map<SessionId, SessionHandler*> sessions() { return session_handlers_; }
-  size_t GetSessionCount() { return session_count_; }
+  gfx::Session* FindSession(scheduling::SessionId id) const;
+  const std::unordered_map<scheduling::SessionId, gfx::Session*>& sessions() {
+    return session_map_;
+  }
 
-  // Returns a SessionHandler, which is casted as a CommandDispatcher. Used by
+  // Returns a Session, which is casted as a CommandDispatcher. Used by
   // ScenicSystem.
-  CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext dispatcher_context,
-                                                     SessionContext session_context);
+  CommandDispatcherUniquePtr CreateCommandDispatcher(scheduling::SessionId session_id,
+                                                     SessionContext session_context,
+                                                     std::shared_ptr<EventReporter> event_reporter,
+                                                     std::shared_ptr<ErrorReporter> error_reporter);
 
  private:
-  // Insert a SessionHandler into the |session_handlers_| map
-  void InsertSessionHandler(SessionId session_id, SessionHandler* session_handler);
+  // Insert a Session into the |session_map_|.
+  void InsertSession(scheduling::SessionId session_id, gfx::Session* session);
 
-  // Removes the SessionHandler from the |session_handlers_| map. Only called by
+  // Removes the Session from the |session_map_|. Only called by
   // the custom deleter provided by CreateCommandDispatcher.
-  void RemoveSessionHandler(SessionId id);
-
-  // Virtual for testing purposes
-  virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext dispatcher_context, SessionContext session_context,
-      SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
-      std::shared_ptr<ErrorReporter> error_reporter);
+  void RemoveSession(scheduling::SessionId id);
 
   // Map of all the sessions.
-  std::unordered_map<SessionId, SessionHandler*> session_handlers_;
-  size_t session_count_ = 0;
+  std::unordered_map<scheduling::SessionId, Session*> session_map_;
 
   inspect_deprecated::Node inspect_node_;
 };

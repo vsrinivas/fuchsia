@@ -102,8 +102,8 @@ void Scenic::CreateSessionImmediately(
   std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers;
   for (size_t i = 0; i < System::TypeId::kMaxSystems; ++i) {
     if (auto& system = systems_[i]) {
-      dispatchers[i] =
-          system->CreateCommandDispatcher(CommandDispatcherContext(session.get(), session_id));
+      dispatchers[i] = system->CreateCommandDispatcher(session_id, session->event_reporter(),
+                                                       session->error_reporter());
     }
   }
   session->SetCommandDispatchers(std::move(dispatchers));

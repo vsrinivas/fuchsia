@@ -22,7 +22,6 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
-#include "src/ui/scenic/lib/scenic/scenic.h"
 
 namespace scenic_impl {
 namespace gfx {

@@ -17,10 +17,8 @@
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/util/check_vulkan_support.h"
-#include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
 #include "src/ui/scenic/lib/gfx/screenshotter.h"
-#include "src/ui/scenic/lib/scenic/scenic.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -57,8 +55,11 @@ GfxSystem::GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPt
                          nullptr));
 }
 
-CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(CommandDispatcherContext context) {
-  return session_manager_.CreateCommandDispatcher(std::move(context), engine_->session_context());
+CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(
+    scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
+    std::shared_ptr<ErrorReporter> error_reporter) {
+  return session_manager_.CreateCommandDispatcher(
+      session_id, engine_->session_context(), std::move(event_reporter), std::move(error_reporter));
 }
 
 escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_context) {
@@ -157,9 +158,8 @@ void GfxSystem::DumpSessionMapResources(
   output << "============================================================\n";
   output << "============================================================\n\n";
   output << "Detached Nodes (unreachable by any Compositor): \n";
-  for (auto& [session_id, session_handler] : session_manager_.sessions()) {
-    const std::unordered_map<ResourceId, ResourcePtr>& resources =
-        session_handler->session()->resources()->map();
+  for (auto& [session_id, session] : session_manager_.sessions()) {
+    const std::unordered_map<ResourceId, ResourcePtr>& resources = session->resources()->map();
     for (auto& [resource_id, resource_ptr] : resources) {
       auto visited_resource_iter = visited_resources->find(GlobalId(session_id, resource_id));
       if (visited_resource_iter == visited_resources->end()) {
@@ -194,9 +194,8 @@ void GfxSystem::DumpSessionMapResources(
   output << "============================================================\n";
   output << "============================================================\n\n";
   output << "Other Detached Resources (unreachable by any Compositor): \n";
-  for (auto& [session_id, session_handler] : session_manager_.sessions()) {
-    const std::unordered_map<ResourceId, ResourcePtr>& resources =
-        session_handler->session()->resources()->map();
+  for (auto& [session_id, session] : session_manager_.sessions()) {
+    const std::unordered_map<ResourceId, ResourcePtr>& resources = session->resources()->map();
     for (auto& [resource_id, resource_ptr] : resources) {
       auto visited_resource_iter = visited_resources->find(GlobalId(session_id, resource_id));
       if (visited_resource_iter == visited_resources->end()) {
@@ -231,8 +230,8 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
   for (auto session_id : sessions_to_update) {
     TRACE_DURATION("gfx", "GfxSystem::UpdateSessions", "session_id", session_id,
                    "target_presentation_time", target_presentation_time.get());
-    auto session_handler = session_manager_.FindSessionHandler(session_id);
-    if (!session_handler) {
+    auto session = session_manager_.FindSession(session_id);
+    if (!session) {
       // This means the session that requested the update died after the
       // request. Requiring the scene to be re-rendered to reflect the session's
       // disappearance is probably desirable. ImagePipe also relies on this to
@@ -240,8 +239,6 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
       update_results.needs_render = true;
       continue;
     }
-
-    auto session = session_handler->session();
 
     auto apply_results = session->ApplyScheduledUpdates(&(command_context_.value()),
                                                         target_presentation_time, latched_time);

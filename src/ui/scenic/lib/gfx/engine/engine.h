@@ -41,8 +41,6 @@ namespace gfx {
 class Compositor;
 class Engine;
 using EngineWeakPtr = fxl::WeakPtr<Engine>;
-class Session;
-class SessionHandler;
 class View;
 class ViewHolder;
 
