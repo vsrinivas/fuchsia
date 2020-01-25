@@ -183,7 +183,6 @@ if (current_cpu != "") {
       "core",
       "device-enumeration",
       "dlfcn",
-      "driver-test",
       "fidl",
       "fidl-coding-tables",
       "fidl-llcpp-interop",
