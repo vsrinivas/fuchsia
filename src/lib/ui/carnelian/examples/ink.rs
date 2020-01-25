@@ -778,7 +778,7 @@ impl StylusDevice {
 
     fn get_events(&mut self) -> Result<Vec<Stylus>, Error> {
         let mut stylus_events = Vec::<Stylus>::new();
-        let reports = self.device.get_reports(zx::Time::INFINITE)?;
+        let reports = self.device.read_reports(zx::Time::INFINITE)?;
         let reports = reports.1;
         let mut report_index = 0;
         while report_index < reports.len() {
