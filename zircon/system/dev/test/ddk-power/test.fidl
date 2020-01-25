@@ -15,8 +15,6 @@ protocol TestDevice {
     GetCurrentDevicePowerState() -> (fuchsia.device.DevicePowerState cur_state) error zx.status;
     /// Get the suspend reason of the last suspend call
     GetCurrentSuspendReason() -> (uint8 cur_suspend_reason) error zx.status;
-    /// Get current performance state of the device
-    GetCurrentDevicePerformanceState() -> (int32 cur_state) error zx.status;
     /// Get current auto suspend status and deepest_sleep_state
     GetCurrentDeviceAutoSuspendConfig() -> (bool enabled,
                                             fuchsia.device.DevicePowerState deepest_sleep_state) error zx.status;

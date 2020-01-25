@@ -25,10 +25,9 @@ using llcpp::fuchsia::device::DevicePowerStateInfo;
 using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriverChild;
-using DeviceType =
-    ddk::Device<TestPowerDriverChild, ddk::UnbindableNew, ddk::Messageable, ddk::SuspendableNew,
-                ddk::ResumableNew, ddk::PerformanceTunable, ddk::AutoSuspendable,
-                ddk::Initializable>;
+using DeviceType = ddk::Device<TestPowerDriverChild, ddk::UnbindableNew, ddk::Messageable,
+                               ddk::SuspendableNew, ddk::ResumableNew, ddk::PerformanceTunable,
+                               ddk::AutoSuspendable, ddk::Initializable>;
 class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
  public:
   TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {}
@@ -43,8 +42,6 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
 
   void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
   void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) override;
-  void GetCurrentDevicePerformanceState(
-      GetCurrentDevicePerformanceStateCompleter::Sync completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) override;
 
@@ -60,8 +57,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   zx_status_t DdkResumeNew(uint8_t requested_state, uint8_t* out_state);
   zx_status_t DdkConfigureAutoSuspend(bool enable, uint8_t deepest_sleep_state);
 
-  void SavePowerStateInfo(std::unique_ptr<device_power_state_info_t[]> states,
-                          uint8_t states_count,
+  void SavePowerStateInfo(std::unique_ptr<device_power_state_info_t[]> states, uint8_t states_count,
                           std::unique_ptr<device_performance_state_info_t[]> perf_states,
                           uint8_t perf_states_count) {
     states_ = std::move(states);
@@ -148,8 +144,8 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
     status = child2->DdkAdd("power-test-child-2", 0, nullptr, 0, 0, nullptr, ZX_HANDLE_INVALID,
                             states.get(), count, performance_states.get(), perf_state_count);
   } else {
-    child2->SavePowerStateInfo(std::move(states), count,
-                               std::move(performance_states), perf_state_count);
+    child2->SavePowerStateInfo(std::move(states), count, std::move(performance_states),
+                               perf_state_count);
     status = child2->DdkAdd("power-test-child-2", DEVICE_ADD_INVISIBLE);
   }
   if (status != ZX_OK) {
@@ -164,11 +160,6 @@ void TestPowerDriverChild::GetCurrentDevicePowerState(
     GetCurrentDevicePowerStateCompleter::Sync completer) {
   completer.ReplySuccess(
       static_cast<llcpp::fuchsia::device::DevicePowerState>(current_power_state_));
-}
-
-void TestPowerDriverChild::GetCurrentDevicePerformanceState(
-    GetCurrentDevicePerformanceStateCompleter::Sync completer) {
-  completer.ReplySuccess(static_cast<int32_t>(current_performance_state_));
 }
 
 void TestPowerDriverChild::GetCurrentSuspendReason(

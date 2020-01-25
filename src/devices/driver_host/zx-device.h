@@ -237,9 +237,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   const SystemPowerStateMapping& GetSystemPowerStateMapping() const;
 
-  ::llcpp::fuchsia::device::DevicePowerState GetCurrentDevicePowerState() {
-    return current_power_state_;
-  }
+  uint32_t current_performance_state() { return current_performance_state_; }
+
+  void set_current_performance_state(uint32_t state) { current_performance_state_ = state; }
 
  private:
   zx_device() = default;
@@ -294,7 +294,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   PerformanceStates performance_states_;
   DevicePowerStates power_states_;
   SystemPowerStateMapping system_power_states_mapping_;
-  ::llcpp::fuchsia::device::DevicePowerState current_power_state_;
+  uint32_t current_performance_state_ = llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0;
   bool auto_suspend_configured_ = false;
 };
 

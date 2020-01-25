@@ -119,6 +119,11 @@ void DevfsConnection::GetDevicePerformanceStates(
   completer.Reply(states, ZX_OK);
 }
 
+void DevfsConnection::GetCurrentPerformanceState(
+    GetCurrentPerformanceStateCompleter::Sync completer) {
+  completer.Reply(dev->current_performance_state());
+}
+
 void DevfsConnection::Rebind(::fidl::StringView driver, RebindCompleter::Sync completer) {
   char drv_libname[fuchsia_device_MAX_DRIVER_PATH_LEN + 1];
   memcpy(drv_libname, driver.data(), driver.size());

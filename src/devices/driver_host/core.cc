@@ -801,7 +801,14 @@ zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device>& d
     return ZX_ERR_INVALID_ARGS;
   }
   if (dev->ops->set_performance_state) {
-    return dev->ops->set_performance_state(dev->ctx, requested_state, out_state);
+    zx_status_t status = dev->ops->set_performance_state(dev->ctx, requested_state, out_state);
+    if (!(dev->IsPerformanceStateSupported(*out_state))) {
+      ZX_PANIC(
+          "device: %p(%s) set_performance_state hook returned an unsupported performance state\n",
+          dev.get(), dev->name);
+    }
+    dev->set_current_performance_state(*out_state);
+    return status;
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

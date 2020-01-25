@@ -257,7 +257,7 @@ typedef struct zx_protocol_device {
   // The driver should put the device into the requested_state and call **device_suspend_reply()**
   // on itself. device_suspend_reply() will take in two parameters: status of the suspend operation
   // and an out_state. If status is success, the out_state is same as requested_state.
-  // If status is failure, out_state is the low power state the device can go into.
+  // If status is failure, out_state is the low power state the device is currently in.
   //
   // This hook assumes that the drivers are aware of their current state. This hook will only
   // be executed on the devhost's main thread.
@@ -298,9 +298,10 @@ typedef struct zx_protocol_device {
   // device_add.
   //
   // On success, the out_state is same as the requested_state. If the device is in working state,
-  // the transition is made immediately. If the device is in non working state, the device will be
-  // in this state, when it is working again.
-  // On failure, the out_state is the transition state that the device can go into.
+  // the transition is made immediately.
+  // On failure, the out_state is the performance state the device is currently in.
+  // If the device is not in working state, driver will return ZX_ERR_UNAVAILABLE and out_state will
+  // be fully working performance state.
   //
   // This hook assumes that the drivers are aware of their current sleep state and current
   // performance state.

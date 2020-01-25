@@ -20,7 +20,7 @@ const uint64 MAX_DRIVER_PATH_LEN = 1024;
 const uint32 MAX_DEVICE_POWER_STATES = 5;
 const uint32 MIN_DEVICE_POWER_STATES = 2; // D0 & D3COLD
 const uint32 MAX_DEVICE_PERFORMANCE_STATES = 20;
-const uint32 MIN_DEVICE_PERFORMANCE_STATES = 1;
+const uint32 MIN_DEVICE_PERFORMANCE_STATES = 1; // Fully performant state
 
 /// Signal that will be active on a device event handle if the device's read() method
 /// will return data.
@@ -169,6 +169,12 @@ protocol Controller {
     /// to manage power for this device.
     GetDevicePowerCaps() -> (array<DevicePowerStateInfo>:MAX_DEVICE_POWER_STATES dpstates) error zx.status;
 
+    /// Gets the current performance state of the device.
+    /// out_state is the state_id published via GetDevicePerformanceStates.
+    /// If the device is in non-working state, this will be the performance
+    /// state that the device will be in, after it is resumed.
+    GetCurrentPerformanceState() -> (uint32 out_state);
+
     /// Gets the device performance states. Used by the system wide power manager
     /// to manage power for this device.
     GetDevicePerformanceStates() -> (array<DevicePerformanceStateInfo>:MAX_DEVICE_PERFORMANCE_STATES states, zx.status status);
@@ -187,9 +193,7 @@ protocol Controller {
     // In a future change, this api will result in suspend hook being called on all the children and
     // descendants before transitioning this device.
     // On success, the out_state is same as requested_state.
-    // On failure, the out_state is the state the device can go into at this point, depending
-    // on the configuration of its children. For example, a device cannot go into the
-    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // On failure, the out_state is the state the device is currently in.
     Suspend(DevicePowerState requested_state) -> (zx.status status, DevicePowerState out_state);
     /// Transition this device from a sleep state to a working state.
     // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
@@ -204,11 +208,14 @@ protocol Controller {
     /// Set the performance state of this device to the requested performance state. This is only
     /// called for the current device and none of the descendants are aware of the state
     /// transition.
-    /// On success, the out_state and the requested_state is same. If the device is in a working
-    /// state, the performance state will be changed to requested_state immediately. If the device
-    /// is in non-working state, the performance state will be the requested_state whenever the
-    /// device transitions to working state.
-    /// On failure, the out_state will have the state that the device can go into.
+    /// Returns ZX_OK if the device is not in working state. When the device resumes
+    /// from the non working state, it resumes to the requested performance state. out_state will
+    /// be same as the requested state. If the device fails to resume to the performance state
+    /// that was set, the resume will fail with an error.
+    /// Returns ZX_OK, if the device is in a working state and the performance state is changed to
+    /// requested_state successfully. out_state will be same as requested_state.
+    /// Returns error status, if switching to the requested_state was unsuccessful. out_state
+    /// is the state that the device is currently in.
     SetPerformanceState(uint32 requested_state) -> (zx.status status, uint32 out_state);
     /// Configure autosuspend of device to this deepest sleep state.
     ConfigureAutoSuspend(bool enable,

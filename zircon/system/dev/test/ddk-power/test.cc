@@ -474,15 +474,9 @@ TEST_F(PowerTestCase, SetPerformanceState_Success) {
   ASSERT_OK(perf_change_response.status);
   ASSERT_EQ(perf_change_response.out_state, 1);
 
-  auto response2 =
-      TestDevice::Call::GetCurrentDevicePerformanceState(zx::unowned(child2_device_handle));
+  auto response2 = Controller::Call::GetCurrentPerformanceState(zx::unowned(child2_device_handle));
   ASSERT_OK(response2.status());
-  zx_status_t call_status = ZX_OK;
-  if (response2->result.is_err()) {
-    call_status = response2->result.err();
-  }
-  ASSERT_OK(call_status);
-  ASSERT_EQ(response2->result.response().cur_state, 1);
+  ASSERT_EQ(response2->out_state, 1);
 }
 
 TEST_F(PowerTestCase, SetPerformanceStateFail_HookNotPresent) {

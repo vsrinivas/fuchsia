@@ -41,8 +41,6 @@ class TestPowerDriver : public DeviceType,
 
   void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
   void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) override;
-  void GetCurrentDevicePerformanceState(
-      GetCurrentDevicePerformanceStateCompleter::Sync completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) override;
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -53,7 +51,6 @@ class TestPowerDriver : public DeviceType,
 
  private:
   DevicePowerState current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
-  uint8_t current_performance_state_ = 0;
   bool auto_suspend_enabled_ = false;
   DevicePowerState deepest_autosuspend_sleep_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
 };
@@ -70,11 +67,6 @@ void TestPowerDriver::AddDeviceWithPowerArgs(
 void TestPowerDriver::GetCurrentDevicePowerState(
     GetCurrentDevicePowerStateCompleter::Sync completer) {
   completer.ReplySuccess(current_power_state_);
-}
-
-void TestPowerDriver::GetCurrentDevicePerformanceState(
-    GetCurrentDevicePerformanceStateCompleter::Sync completer) {
-  completer.ReplySuccess(static_cast<int32_t>(current_performance_state_));
 }
 
 void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
