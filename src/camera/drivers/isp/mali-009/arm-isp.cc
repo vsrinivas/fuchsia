@@ -693,6 +693,15 @@ zx_status_t ArmIspDevice::StopStreaming() {
   return ZX_OK;
 }
 
+// Note that a proper implementation of this method is not forthcoming, as this driver shall shortly
+// be deprecated. For now, this implementation ensures compilation and provides identical
+// functionality to the current driver - which is to say, there is no cleanup upon stream shutdown.
+zx_status_t ArmIspDevice::ShutdownStream(const isp_stream_shutdown_callback_t* shutdown_callback) {
+  shutdown_callback->shutdown_complete(shutdown_callback->ctx, ZX_OK);
+
+  return ZX_OK;
+}
+
 zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_2_t* buffer_collection,
                                                 const image_format_2_t* image_format,
                                                 const frame_rate_t* rate, stream_type_t type,
@@ -729,6 +738,10 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_2_t
         return reinterpret_cast<ArmIspDevice*>(ctx)->ReleaseFrame(buffer_id,
                                                                   STREAM_TYPE_FULL_RESOLUTION);
       };
+      out_s->ops->shutdown = [](void* ctx,
+                                const isp_stream_shutdown_callback_t* shutdown_callback) {
+        return reinterpret_cast<ArmIspDevice*>(ctx)->ShutdownStream(shutdown_callback);
+      };
       return full_resolution_dma_->Configure(*buffer_collection, *image_format,
                                              frame_ready_callback);
     case STREAM_TYPE_DOWNSCALED:
@@ -741,6 +754,10 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_2_t
       out_s->ops->release_frame = [](void* ctx, uint32_t buffer_id) {
         return reinterpret_cast<ArmIspDevice*>(ctx)->ReleaseFrame(buffer_id,
                                                                   STREAM_TYPE_DOWNSCALED);
+      };
+      out_s->ops->shutdown = [](void* ctx,
+                                const isp_stream_shutdown_callback_t* shutdown_callback) {
+        return reinterpret_cast<ArmIspDevice*>(ctx)->ShutdownStream(shutdown_callback);
       };
       return downscaled_dma_->Configure(*buffer_collection, *image_format, frame_ready_callback);
     case STREAM_TYPE_SCALAR:
