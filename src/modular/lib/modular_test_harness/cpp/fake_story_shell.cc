@@ -4,9 +4,24 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"
 
+#include <fuchsia/modular/cpp/fidl.h>
+
 namespace modular_testing {
 
 FakeStoryShell::FakeStoryShell(FakeComponent::Args args) : FakeComponent(std::move(args)) {}
+FakeStoryShell::~FakeStoryShell() = default;
+
+// static
+std::unique_ptr<FakeStoryShell> FakeStoryShell::CreateWithDefaultOptions() {
+  return std::make_unique<FakeStoryShell>(modular_testing::FakeComponent::Args{
+      .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
+      .sandbox_services = FakeStoryShell::GetDefaultSandboxServices()});
+}
+
+// static
+std::vector<std::string> FakeStoryShell::GetDefaultSandboxServices() {
+  return {};
+}
 
 void FakeStoryShell::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->outgoing()->AddPublicService(bindings_.GetHandler(this));

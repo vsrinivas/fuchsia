@@ -29,7 +29,18 @@ namespace modular_testing {
 class FakeStoryShell : public modular_testing::FakeComponent, fuchsia::modular::StoryShell {
  public:
   explicit FakeStoryShell(FakeComponent::Args args);
-  ~FakeStoryShell() override = default;
+  ~FakeStoryShell() override;
+
+  // Instantiates a FakeStoryShell with a randomly generated URL and default sandbox services
+  // (see GetDefaultSandboxServices()).
+  static std::unique_ptr<FakeStoryShell> CreateWithDefaultOptions();
+
+  // Returns the default list of services (capabilities) a story shell expects in its namespace.
+  // This method is useful when setting up a story shell for interception.
+  //
+  // Default services:
+  //  * none
+  static std::vector<std::string> GetDefaultSandboxServices();
 
   bool is_initialized() const { return !!story_shell_context_; }
 
