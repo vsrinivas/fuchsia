@@ -34,14 +34,14 @@ class Ge2dDeviceTest : public zxtest::Test {
     EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection_));
   }
 
-  void SetupInput() {
+  void SetupInput(uint32_t output_format = fuchsia_sysmem_PixelFormatType_NV12) {
     uint32_t buffer_collection_count = 2;
-    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[0],
-                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight));
-    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[1],
-                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth / 2, kHeight / 2));
-    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[2],
-                                     fuchsia_sysmem_PixelFormatType_NV12, kWidth / 4, kHeight / 4));
+    ASSERT_OK(
+        camera::GetImageFormat(output_image_format_table_[0], output_format, kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[1], output_format, kWidth / 2,
+                                     kHeight / 2));
+    ASSERT_OK(camera::GetImageFormat(output_image_format_table_[2], output_format, kWidth / 4,
+                                     kHeight / 4));
     // Set up fake Resize info
     resize_info_.crop.x = 0;
     resize_info_.crop.y = 0;
@@ -49,8 +49,12 @@ class Ge2dDeviceTest : public zxtest::Test {
     resize_info_.crop.height = kHeight;
     resize_info_.output_rotation = GE2D_ROTATION_ROTATION_0;
 
+    image_format_2_t input_image_format;
+    ASSERT_OK(camera::GetImageFormat(input_image_format, fuchsia_sysmem_PixelFormatType_NV12,
+                                     kWidth, kHeight));
+
     zx_status_t status = camera::CreateContiguousBufferCollectionInfo(
-        input_buffer_collection_, output_image_format_table_[0], g_ge2d_device->bti().get(),
+        input_buffer_collection_, input_image_format, g_ge2d_device->bti().get(),
         buffer_collection_count);
     ASSERT_OK(status);
 
@@ -123,6 +127,27 @@ void WriteDataToVmo(zx_handle_t vmo, const image_format_2_t& format) {
     input_data[i] = i % kRunLength;
   }
   ASSERT_OK(zx_vmo_write(vmo, input_data.data(), 0, size));
+  ASSERT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0));
+}
+
+void WriteConstantColorToVmo(zx_handle_t vmo, uint32_t y, uint32_t u, uint32_t v,
+                             const image_format_2_t& format) {
+  uint32_t size = format.bytes_per_row * format.coded_height * 3 / 2;
+  std::vector<uint8_t> input_data(format.coded_width);
+  memset(input_data.data(), y, input_data.size());
+  uint32_t offset = 0;
+  for (uint32_t y = 0; y < format.coded_height; ++y) {
+    ASSERT_OK(zx_vmo_write(vmo, input_data.data(), offset, input_data.size()));
+    offset += format.bytes_per_row;
+  }
+  for (uint32_t x = 0; x < format.coded_width / 2; ++x) {
+    input_data[x * 2] = u;
+    input_data[x * 2 + 1] = v;
+  }
+  for (uint32_t y = 0; y < format.coded_height / 2; ++y) {
+    ASSERT_OK(zx_vmo_write(vmo, input_data.data(), offset, input_data.size()));
+    offset += format.bytes_per_row;
+  }
   ASSERT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0));
 }
 
@@ -521,6 +546,55 @@ TEST_F(Ge2dDeviceTest, Scale2x) {
       &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
       &output_image_format_table_[1], output_image_format_table_, kImageFormatTableSize, 0,
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+TEST_F(Ge2dDeviceTest, NV12ToRgba) {
+  SetupCallbacks();
+  SetupInput(fuchsia_sysmem_PixelFormatType_R8G8B8A8);
+
+  image_format_2_t input_image_format;
+  ASSERT_OK(camera::GetImageFormat(input_image_format, fuchsia_sysmem_PixelFormatType_NV12, kWidth,
+                                   kHeight));
+
+  // Pure red in YUV.
+  WriteConstantColorToVmo(input_buffer_collection_.buffers[0].vmo, 82, 90, 240, input_image_format);
+
+  resize_info_.crop.x = 0;
+  resize_info_.crop.y = 0;
+  resize_info_.crop.width = kWidth;
+  resize_info_.crop.height = kHeight;
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    fprintf(stderr, "Got completed conversion\n");
+    zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
+
+    CacheInvalidateVmo(vmo_b);
+
+    fzl::VmoMapper mapper_b;
+    ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
+    uint8_t* output = static_cast<uint8_t*>(mapper_b.start());
+    // R
+    EXPECT_EQ(0xff, output[0]);
+    // G (minor rounding issues)
+    EXPECT_EQ(0x01, output[1]);
+    // B
+    EXPECT_EQ(0x00, output[2]);
+    // A
+    EXPECT_EQ(0xff, output[3]);
+    sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_, &input_image_format,
+      output_image_format_table_, kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
+      &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
   status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);

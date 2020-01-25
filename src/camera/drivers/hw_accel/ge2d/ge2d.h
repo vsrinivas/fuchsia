@@ -145,6 +145,8 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   void ProcessChangeResolution(TaskInfo& info);
   void ProcessFrame(TaskInfo& info);
   void ProcessRemoveTask(TaskInfo& info);
+  void SetupInputOutputFormats(bool scaling_enabled, const image_format_2_t& input_format,
+                               const image_format_2_t& output_format);
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
 
   // Used to access the processing queue.

@@ -408,6 +408,77 @@ void Ge2dDevice::InitializeScaler(uint32_t input_width, uint32_t input_height,
   // Leave horizontal and vertical phase slopes set to 0.
 }
 
+void Ge2dDevice::SetupInputOutputFormats(bool scaling_enabled, const image_format_2_t& input_format,
+                                         const image_format_2_t& output_format) {
+  bool is_dst_nv12 = output_format.pixel_format.type == fuchsia_sysmem_PixelFormatType_NV12;
+  // Assume NV12 input for now. When using NV12 output DST1 gets Y and DST2 gets CbCr.
+  GenCtrl0::Get()
+      .FromValue(0)
+      .set_src1_separate_enable(true)
+      .set_x_yc_ratio(1)
+      .set_y_yc_ratio(1)
+      .WriteTo(&ge2d_mmio_);
+  GenCtrl2::Get()
+      .FromValue(0)
+      .set_dst_little_endian(0)  // endianness conversion happens in canvas
+      .set_dst1_color_map(is_dst_nv12 ? 0 : GenCtrl2::kColorMap32RGBA8888)
+      .set_dst1_format(is_dst_nv12 ? GenCtrl2::kFormat8Bit : GenCtrl2::kFormat32Bit)
+      .set_src1_little_endian(0)  // endianness conversion happens in canvas
+      .set_src1_color_map(GenCtrl2::kColorMap24NV12)
+      .set_src1_format(GenCtrl2::kFormat24Bit)
+      .set_src1_color_expand_mode(1)
+      .WriteTo(&ge2d_mmio_);
+
+  GenCtrl3::Get()
+      .FromValue(0)
+      .set_dst2_color_map(GenCtrl2::kColorMap16CbCr)
+      .set_dst2_format(GenCtrl2::kFormat16Bit)
+      .set_dst2_x_discard_mode(GenCtrl3::kDiscardModeOdd)
+      .set_dst2_y_discard_mode(GenCtrl3::kDiscardModeOdd)
+      .set_dst2_enable(is_dst_nv12)
+      .set_dst1_enable(1)
+      .WriteTo(&ge2d_mmio_);
+  if (!is_dst_nv12) {
+    // YCbCr BT.601 studio swing to RGB. Outputs of matrix multiplication seem
+    // to be divided by 1024.
+    MatrixCoef00_01::Get().FromValue(0).set_coef00(0x4a8).WriteTo(&ge2d_mmio_);
+    MatrixCoef02_10::Get().FromValue(0).set_coef02(0x662).set_coef10(0x4a8).WriteTo(&ge2d_mmio_);
+    MatrixCoef11_12::Get().FromValue(0).set_coef11(0x1e6f).set_coef12(0x1cbf).WriteTo(&ge2d_mmio_);
+    MatrixCoef20_21::Get().FromValue(0).set_coef20(0x4a8).set_coef21(0x811).WriteTo(&ge2d_mmio_);
+    MatrixCoef22Ctrl::Get()
+        .FromValue(0)
+        .set_saturation_enable(true)
+        .set_matrix_enable(true)
+        .WriteTo(&ge2d_mmio_);
+    MatrixPreOffset::Get()
+        .FromValue(0)
+        .set_offset0(0x1f0)
+        .set_offset1(0x180)
+        .set_offset2(0x180)
+        .WriteTo(&ge2d_mmio_);
+  } else {
+    MatrixCoef22Ctrl::Get().FromValue(0).set_matrix_enable(false).WriteTo(&ge2d_mmio_);
+  }
+  // To match the linux driver we repeat the UV planes instead of interpolating if we're not
+  // scaling the output. This is arguably incorrect, depending on chroma siting.
+  Src1FmtCtrl::Get()
+      .FromValue(0)
+      .set_horizontal_enable(true)
+      .set_vertical_enable(true)
+      .set_y_chroma_phase(0x4c)
+      .set_x_chroma_phase(0x8)
+      .set_horizontal_repeat(!scaling_enabled)
+      .set_vertical_repeat(!scaling_enabled)
+      .WriteTo(&ge2d_mmio_);
+
+  AluOpCtrl::Get()
+      .ReadFrom(&ge2d_mmio_)
+      .set_alpha_blending_mode(AluOpCtrl::kBlendingModeLogicOp)
+      .set_alpha_logic_operation(AluOpCtrl::kLogicOperationSet)
+      .WriteTo(&ge2d_mmio_);
+  AluConstColor::Get().FromValue(0).set_a(0xff).WriteTo(&ge2d_mmio_);
+}
+
 void Ge2dDevice::ProcessFrame(TaskInfo& info) {
   auto task = info.task;
 
@@ -452,24 +523,6 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
   InitializeScaler(resize_info.crop.width, resize_info.crop.height, output_format.coded_width,
                    output_format.coded_height);
 
-  // Assume NV12 input and output for now. DST1 gets Y and DST2 gets CbCr.
-  GenCtrl0::Get()
-      .FromValue(0)
-      .set_src1_separate_enable(true)
-      .set_x_yc_ratio(1)
-      .set_y_yc_ratio(1)
-      .WriteTo(&ge2d_mmio_);
-  GenCtrl2::Get()
-      .FromValue(0)
-      .set_dst_little_endian(0)  // endianness conversion happens in canvas
-      .set_dst1_color_map(0)
-      .set_dst1_format(GenCtrl2::kFormat8Bit)
-      .set_src1_little_endian(0)  // endianness conversion happens in canvas
-      .set_src1_color_map(GenCtrl2::kColorMap24NV12)
-      .set_src1_format(GenCtrl2::kFormat24Bit)
-      .set_src1_color_expand_mode(1)
-      .WriteTo(&ge2d_mmio_);
-
   Src1ClipXStartEnd::Get()
       .FromValue(0)
       .set_end(input_x_end)
@@ -499,15 +552,6 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
   DstXStartEnd::Get().FromValue(0).set_end(output_x_end).set_start(0).WriteTo(&ge2d_mmio_);
   DstClipYStartEnd::Get().FromValue(0).set_end(output_y_end).set_start(0).WriteTo(&ge2d_mmio_);
   DstYStartEnd::Get().FromValue(0).set_end(output_y_end).set_start(0).WriteTo(&ge2d_mmio_);
-  GenCtrl3::Get()
-      .FromValue(0)
-      .set_dst2_color_map(GenCtrl2::kColorMap16CbCr)
-      .set_dst2_format(GenCtrl2::kFormat16Bit)
-      .set_dst2_x_discard_mode(GenCtrl3::kDiscardModeOdd)
-      .set_dst2_y_discard_mode(GenCtrl3::kDiscardModeOdd)
-      .set_dst2_enable(1)
-      .set_dst1_enable(1)
-      .WriteTo(&ge2d_mmio_);
   auto& input_ids = task->GetInputCanvasIds(input_buffer_index);
   Src1Canvas::Get()
       .FromValue(0)
@@ -522,17 +566,8 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
       .set_dst2(output_canvas.canvas_idx[kUVComponent].id())
       .WriteTo(&ge2d_mmio_);
 
-  // To match the linux driver we repeat the UV planes instead of interpolating if we're not
-  // scaling the output. This is arguably incorrect, depending on chroma siting.
-  Src1FmtCtrl::Get()
-      .FromValue(0)
-      .set_horizontal_enable(true)
-      .set_vertical_enable(true)
-      .set_y_chroma_phase(0x4c)
-      .set_x_chroma_phase(0x8)
-      .set_horizontal_repeat(!scaling_enabled)
-      .set_vertical_repeat(!scaling_enabled)
-      .WriteTo(&ge2d_mmio_);
+  SetupInputOutputFormats(scaling_enabled, input_format, output_format);
+
   CmdCtrl::Get().FromValue(0).set_cmd_wr(1).WriteTo(&ge2d_mmio_);
 
   zx_port_packet_t packet;

@@ -56,6 +56,9 @@ class GenCtrl2 : public hwreg::RegisterBase<GenCtrl2, uint32_t> {
   enum ColorMap24 {
     kColorMap24NV12 = 14,
   };
+  enum ColorMap32 {
+    kColorMap32RGBA8888 = 0,
+  };
   enum Format { kFormat8Bit = 0, kFormat16Bit = 1, kFormat24Bit = 2, kFormat32Bit = 3 };
   DEF_BIT(31, alpha_conversion_mode0);
   DEF_BIT(30, color_conversion_mode);
@@ -273,6 +276,86 @@ class ScMiscCtrl : public hwreg::RegisterBase<ScMiscCtrl, uint32_t> {
   DEF_BIT(8, vsc_rpt_ctrl);
 
   static auto Get() { return hwreg::RegisterAddr<ScMiscCtrl>(0xc0 * 4); };
+};
+
+class MatrixPreOffset : public hwreg::RegisterBase<MatrixPreOffset, uint32_t> {
+ public:
+  DEF_FIELD(28, 20, offset0);
+  DEF_FIELD(18, 10, offset1);
+  DEF_FIELD(8, 0, offset2);
+
+  static auto Get() { return hwreg::RegisterAddr<MatrixPreOffset>(0xc5 * 4); };
+};
+
+class MatrixCoef00_01 : public hwreg::RegisterBase<MatrixCoef00_01, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, coef00);
+  DEF_FIELD(12, 0, coef01);
+
+  static auto Get() { return hwreg::RegisterAddr<MatrixCoef00_01>(0xc6 * 4); };
+};
+
+class MatrixCoef02_10 : public hwreg::RegisterBase<MatrixCoef02_10, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, coef02);
+  DEF_FIELD(12, 0, coef10);
+
+  static auto Get() { return hwreg::RegisterAddr<MatrixCoef02_10>(0xc7 * 4); };
+};
+
+class MatrixCoef11_12 : public hwreg::RegisterBase<MatrixCoef11_12, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, coef11);
+  DEF_FIELD(12, 0, coef12);
+
+  static auto Get() { return hwreg::RegisterAddr<MatrixCoef11_12>(0xc8 * 4); };
+};
+
+class MatrixCoef20_21 : public hwreg::RegisterBase<MatrixCoef20_21, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, coef20);
+  DEF_FIELD(12, 0, coef21);
+
+  static auto Get() { return hwreg::RegisterAddr<MatrixCoef20_21>(0xc9 * 4); };
+};
+
+class MatrixCoef22Ctrl : public hwreg::RegisterBase<MatrixCoef22Ctrl, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, coef22);
+  DEF_BIT(6, saturation_enable);
+  DEF_BIT(0, matrix_enable);
+
+  static auto Get() { return hwreg::RegisterAddr<MatrixCoef22Ctrl>(0xca * 4); };
+};
+
+class MatrixOffset : public hwreg::RegisterBase<MatrixOffset, uint32_t> {
+ public:
+  DEF_FIELD(28, 20, offset0);
+  DEF_FIELD(18, 10, offset1);
+  DEF_FIELD(8, 0, offset2);
+
+  static auto Get() { return hwreg::RegisterAddr<MatrixOffset>(0xcb * 4); };
+};
+
+class AluOpCtrl : public hwreg::RegisterBase<AluOpCtrl, uint32_t> {
+ public:
+  enum BlendingMode { kBlendingModeAdd = 0, kBlendingModeLogicOp = 5 };
+  enum LogicOperation { kLogicOperationSet = 3 };
+  DEF_FIELD(22, 20, blending_mode);
+  DEF_FIELD(15, 12, logic_operation);
+  DEF_FIELD(10, 8, alpha_blending_mode);
+  DEF_FIELD(3, 0, alpha_logic_operation);
+
+  static auto Get() { return hwreg::RegisterAddr<AluOpCtrl>(0xcc * 4); };
+};
+
+class AluConstColor : public hwreg::RegisterBase<AluConstColor, uint32_t> {
+ public:
+  DEF_FIELD(31, 24, r);
+  DEF_FIELD(23, 16, g);
+  DEF_FIELD(15, 8, b);
+  DEF_FIELD(7, 0, a);
+  static auto Get() { return hwreg::RegisterAddr<AluConstColor>(0xcd * 4); };
 };
 
 class ScaleCoefIdx : public hwreg::RegisterBase<ScaleCoefIdx, uint32_t> {
