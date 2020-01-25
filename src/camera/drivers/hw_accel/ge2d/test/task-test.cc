@@ -117,6 +117,8 @@ class TaskTest : public zxtest::Test {
   }
 
  protected:
+  enum class TaskType { kResize, kWatermark };
+
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
     frame_ready_ = false;
     ASSERT_OK(camera::GetImageFormat(output_image_format_table_[0],
@@ -220,6 +222,15 @@ class TaskTest : public zxtest::Test {
   void TearDown() override {
     EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection_));
     EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection_));
+  }
+
+  void TriggerInterrupts(TaskType type) {
+    uint32_t count = (type == TaskType::kWatermark) ? 3 : 1;
+    for (uint32_t i = 0; i < count; i++) {
+      // Trigger the interrupt manually.
+      zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
+      EXPECT_OK(port_.queue(&packet));
+    }
   }
 
   zx::vmo watermark_vmo_;
@@ -531,10 +542,8 @@ TEST_F(TaskTest, SetInputAndOutputResTest) {
   status = ge2d_device_->Ge2dProcessFrame(watermark_task_id, kNumberOfBuffers - 1);
   EXPECT_OK(status);
 
-  // Trigger the interrupt manually.
-  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
-  EXPECT_OK(port_.queue(&packet));
-
+  // Trigger the three interrupts manually.
+  TriggerInterrupts(TaskType::kWatermark);
   // Check if the callback was called.
   // The callback first tests to make sure the output res index matches what we
   // changed it to above.
@@ -624,12 +633,16 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   status = ge2d_device_->Ge2dProcessFrame(watermark_task_id, kNumberOfBuffers - 4);
   EXPECT_OK(status);
 
+  constexpr TaskType kType[] = {
+      TaskType::kResize,
+      TaskType::kWatermark,
+      TaskType::kResize,
+  };
+
   // Trigger interrupt manually thrice, making sure callback is called once
   // each time.
   for (uint32_t t = 1; t <= 3; t++) {
-    // Trigger the interrupt manually.
-    zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
-    EXPECT_OK(port_.queue(&packet));
+    TriggerInterrupts(kType[t - 1]);
 
     // Check if the callback was called once.
     WaitAndReset();
@@ -643,10 +656,12 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   status = ge2d_device_->Ge2dProcessFrame(resize_task_id, kNumberOfBuffers - 5);
   EXPECT_OK(status);
 
+  constexpr TaskType kType2[] = {
+      TaskType::kWatermark,
+      TaskType::kResize,
+  };
   for (uint32_t t = 1; t <= 2; t++) {
-    // Trigger the interrupt manually.
-    zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
-    EXPECT_OK(port_.queue(&packet));
+    TriggerInterrupts(kType2[t - 1]);
 
     // Check if the callback was called once.
     WaitAndReset();

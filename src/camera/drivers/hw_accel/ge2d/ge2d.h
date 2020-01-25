@@ -146,8 +146,22 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   void ProcessFrame(TaskInfo& info);
   void ProcessRemoveTask(TaskInfo& info);
   void SetupInputOutputFormats(bool scaling_enabled, const image_format_2_t& input_format,
-                               const image_format_2_t& output_format);
+                               const image_format_2_t& output_format,
+                               const image_format_2_t& src2_format = {});
+  void SetInputRect(const rect_t& rect);
+  void SetOutputRect(const rect_t& rect);
+  void SetSrc2InputRect(const rect_t& rect);
+  void SetRects(const rect_t& input_rect, const rect_t& output_rect);
+  void SetBlending(bool enable);
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
+  void ProcessAndWaitForIdle();
+  void SetSrc1Input(const image_canvas_id_t& canvas);
+  void SetSrc2Input(const image_canvas_id_t& canvas);
+  void SetDstOutput(const image_canvas_id_t& canvas);
+  void ProcessResizeTask(Ge2dTask* task, uint32_t input_buffer_index,
+                         const fzl::VmoPool::Buffer& output_buffer);
+  void ProcessWatermarkTask(Ge2dTask* task, uint32_t input_buffer_index,
+                            const fzl::VmoPool::Buffer& output_buffer);
 
   // Used to access the processing queue.
   fbl::Mutex lock_;

@@ -192,8 +192,8 @@ void Ge2dTask::FreeCanvasIds() {
     it->second.canvas_idx[kUVComponent] = ScopedCanvasId();
   }
   if (task_type_ == GE2D_WATERMARK) {
-    wm_input_canvas_id_ = ScopedCanvasId();
-    wm_blended_canvas_id_ = ScopedCanvasId();
+    wm_input_canvas_id_.canvas_idx[0] = ScopedCanvasId();
+    wm_blended_canvas_id_.canvas_idx[0] = ScopedCanvasId();
   }
 }
 
@@ -345,18 +345,12 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
     FX_LOG(ERROR, kTag, "Unable to get map contig watermark VMO");
     return status;
   }
-  memcpy(mapped_contig_vmo.start(), mapped_watermark_input_vmo.start(), vmo_size);
 
-  // Allocate input watermark canvas id.
-  canvas_info_t info;
-  info.height = wm_.wm_image_format.display_height;
-  info.stride_bytes = wm_.wm_image_format.bytes_per_row;
-  info.wrap = 0;
-  info.blkmode = 0;
-  // Do 64-bit endianness conversion.
-  info.endianness = 0;
-  info.flags = CANVAS_FLAGS_READ;
-  status = CanvasConfig(&canvas_, watermark_input_vmo_.get(), 0, &info, &wm_input_canvas_id_);
+  memcpy(mapped_contig_vmo.start(), mapped_watermark_input_vmo.start(), vmo_size);
+  zx_cache_flush(mapped_contig_vmo.start(), vmo_size, ZX_CACHE_FLUSH_DATA);
+
+  status = AllocCanvasId(&wm_.wm_image_format, watermark_input_vmo_.get(), wm_input_canvas_id_,
+                         CANVAS_FLAGS_READ);
   if (status != ZX_OK)
     return status;
 
@@ -366,9 +360,9 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
     FX_LOG(ERROR, kTag, "Unable to get create contiguous blended watermark VMO");
     return status;
   }
-
-  info.flags |= CANVAS_FLAGS_WRITE;
-  status = CanvasConfig(&canvas_, watermark_blended_vmo_.get(), 0, &info, &wm_blended_canvas_id_);
+  watermark_blended_vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, vmo_size, nullptr, 0);
+  status = AllocCanvasId(&wm_.wm_image_format, watermark_blended_vmo_.get(), wm_blended_canvas_id_,
+                         CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "Vmo creation for blended watermark image Failed");
     return status;

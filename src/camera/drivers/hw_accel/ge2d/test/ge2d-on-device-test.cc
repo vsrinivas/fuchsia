@@ -27,6 +27,11 @@ constexpr uint32_t kImageFormatTableSize = 3;
 constexpr uint32_t kWidth = 1024;
 constexpr uint32_t kHeight = 1024;
 
+constexpr uint32_t kWatermarkVerticalOffset = 10;
+constexpr uint32_t kWatermarkHorizontalOffset = 10;
+constexpr uint32_t kWatermarkWidth = 64;
+constexpr uint32_t kWatermarkHeight = 64;
+
 class Ge2dDeviceTest : public zxtest::Test {
  public:
   void TearDown() override {
@@ -34,7 +39,8 @@ class Ge2dDeviceTest : public zxtest::Test {
     EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection_));
   }
 
-  void SetupInput(uint32_t output_format = fuchsia_sysmem_PixelFormatType_NV12) {
+  void SetupInput(uint32_t input_format = fuchsia_sysmem_PixelFormatType_NV12,
+                  uint32_t output_format = fuchsia_sysmem_PixelFormatType_NV12) {
     uint32_t buffer_collection_count = 2;
     ASSERT_OK(
         camera::GetImageFormat(output_image_format_table_[0], output_format, kWidth, kHeight));
@@ -50,8 +56,7 @@ class Ge2dDeviceTest : public zxtest::Test {
     resize_info_.output_rotation = GE2D_ROTATION_ROTATION_0;
 
     image_format_2_t input_image_format;
-    ASSERT_OK(camera::GetImageFormat(input_image_format, fuchsia_sysmem_PixelFormatType_NV12,
-                                     kWidth, kHeight));
+    ASSERT_OK(camera::GetImageFormat(input_image_format, input_format, kWidth, kHeight));
 
     zx_status_t status = camera::CreateContiguousBufferCollectionInfo(
         input_buffer_collection_, input_image_format, g_ge2d_device->bti().get(),
@@ -99,7 +104,26 @@ class Ge2dDeviceTest : public zxtest::Test {
   void RunTaskRemovedCallback(task_remove_status_t status) { task_removed_callback_(status); }
 
  protected:
-  void CompareCroppedOutput(const frame_available_info* info);
+  void CompareCroppedOutput(const frame_available_info* info, float tolerance = 0.0f);
+
+  void SetupWatermarkInfo() {
+    image_format_2_t watermark_image_format;
+    ASSERT_OK(camera::GetImageFormat(watermark_image_format,
+                                     fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWatermarkWidth,
+                                     kWatermarkHeight));
+
+    watermark_info_.wm_image_format = watermark_image_format;
+    watermark_info_.loc_x = kWatermarkHorizontalOffset;
+    watermark_info_.loc_y = kWatermarkVerticalOffset;
+  }
+
+  zx::vmo CreateWatermarkVmo() {
+    zx::vmo watermark_vmo;
+    EXPECT_OK(zx::vmo::create(watermark_info_.wm_image_format.bytes_per_row *
+                                  watermark_info_.wm_image_format.coded_height,
+                              0, &watermark_vmo));
+    return watermark_vmo;
+  }
 
   hw_accel_frame_callback_t frame_callback_;
   hw_accel_res_change_callback_t res_callback_;
@@ -112,6 +136,7 @@ class Ge2dDeviceTest : public zxtest::Test {
   image_format_2_t output_image_format_table_[kImageFormatTableSize];
   sync_completion_t completion_;
   resize_info_t resize_info_;
+  water_mark_info_t watermark_info_;
   uint32_t input_format_index_ = 0;
 };
 
@@ -145,6 +170,24 @@ void WriteConstantColorToVmo(zx_handle_t vmo, uint32_t y, uint32_t u, uint32_t v
     input_data[x * 2 + 1] = v;
   }
   for (uint32_t y = 0; y < format.coded_height / 2; ++y) {
+    ASSERT_OK(zx_vmo_write(vmo, input_data.data(), offset, input_data.size()));
+    offset += format.bytes_per_row;
+  }
+  ASSERT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0));
+}
+
+void WriteConstantRgbaToVmo(zx_handle_t vmo, uint32_t r, uint32_t g, uint32_t b, uint32_t a,
+                            const image_format_2_t& format) {
+  uint32_t size = format.bytes_per_row * format.coded_height;
+  std::vector<uint8_t> input_data(format.coded_width * 4);
+  for (uint32_t x = 0; x < format.coded_width; x++) {
+    input_data[4 * x] = r;
+    input_data[4 * x + 1] = g;
+    input_data[4 * x + 2] = b;
+    input_data[4 * x + 3] = a;
+  }
+  uint32_t offset = 0;
+  for (uint32_t y = 0; y < format.coded_height; ++y) {
     ASSERT_OK(zx_vmo_write(vmo, input_data.data(), offset, input_data.size()));
     offset += format.bytes_per_row;
   }
@@ -258,7 +301,21 @@ void CheckEqual(zx_handle_t vmo_a, zx_handle_t vmo_b, const image_format_2_t& fo
                      1.0f, 0, "UV");
 }
 
-void Ge2dDeviceTest::CompareCroppedOutput(const frame_available_info* info) {
+uint8_t* GetPointerToPixel(void* base, const image_format_2_t& format, uint32_t x, uint32_t y,
+                           uint32_t plane = 0) {
+  if (format.pixel_format.type == fuchsia_sysmem_PixelFormatType_NV12) {
+    if (plane == 0) {
+      return static_cast<uint8_t*>(base) + format.bytes_per_row * y + x;
+    } else {
+      return static_cast<uint8_t*>(base) + format.bytes_per_row * (format.coded_height + y / 2) +
+             (x / 2) * 2;
+    }
+  } else {
+    return static_cast<uint8_t*>(base) + format.bytes_per_row * y + 4 * x;
+  }
+}
+
+void Ge2dDeviceTest::CompareCroppedOutput(const frame_available_info* info, float tolerance) {
   fprintf(stderr, "Got frame_ready, id %d\n", info->buffer_id);
   zx_handle_t vmo_a = input_buffer_collection_.buffers[0].vmo;
   zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
@@ -276,7 +333,6 @@ void Ge2dDeviceTest::CompareCroppedOutput(const frame_available_info* info) {
   uint32_t a_start_offset = input_format.bytes_per_row * resize_info_.crop.y + resize_info_.crop.x;
   float width_scale = static_cast<float>(resize_info_.crop.width) / output_format.coded_width;
   float height_scale = static_cast<float>(resize_info_.crop.height) / output_format.coded_height;
-  float tolerance = 0;
   // Account for rounding and other minor issues.
   if (width_scale != 1.0f || height_scale != 1.0f)
     tolerance += 0.7;
@@ -556,7 +612,7 @@ TEST_F(Ge2dDeviceTest, Scale2x) {
 
 TEST_F(Ge2dDeviceTest, NV12ToRgba) {
   SetupCallbacks();
-  SetupInput(fuchsia_sysmem_PixelFormatType_R8G8B8A8);
+  SetupInput(fuchsia_sysmem_PixelFormatType_NV12, fuchsia_sysmem_PixelFormatType_R8G8B8A8);
 
   image_format_2_t input_image_format;
   ASSERT_OK(camera::GetImageFormat(input_image_format, fuchsia_sysmem_PixelFormatType_NV12, kWidth,
@@ -680,6 +736,238 @@ TEST_F(Ge2dDeviceTest, RemoveTask) {
   EXPECT_TRUE(got_frame_callback);
   status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
   EXPECT_NOT_OK(status);
+}
+
+// Test that a resize from an RGBA image to an RGBA image keeps everything
+// except for setting alpha to 0xff.
+TEST_F(Ge2dDeviceTest, RgbaToRgba) {
+  SetupCallbacks();
+  SetupInput(fuchsia_sysmem_PixelFormatType_R8G8B8A8, fuchsia_sysmem_PixelFormatType_R8G8B8A8);
+
+  WriteConstantRgbaToVmo(input_buffer_collection_.buffers[0].vmo, 1, 2, 3, 4,
+                         output_image_format_table_[0]);
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    fprintf(stderr, "Got completed conversion\n");
+    zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
+
+    CacheInvalidateVmo(vmo_b);
+
+    fzl::VmoMapper mapper_b;
+    ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
+    uint8_t* output = static_cast<uint8_t*>(mapper_b.start());
+    // R
+    EXPECT_EQ(1, output[0]);
+    // G
+    EXPECT_EQ(2, output[1]);
+    // B
+    EXPECT_EQ(3, output[2]);
+    // A is forced to be 0xff.
+    EXPECT_EQ(0xff, output[3]);
+    sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 0,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Test that a watermark with 0 alpha doesn't change the input (when copying RGBA to RGBA)
+TEST_F(Ge2dDeviceTest, RGBABlankWatermark) {
+  SetupCallbacks();
+  SetupInput(fuchsia_sysmem_PixelFormatType_R8G8B8A8, fuchsia_sysmem_PixelFormatType_R8G8B8A8);
+  SetupWatermarkInfo();
+
+  WriteConstantRgbaToVmo(input_buffer_collection_.buffers[0].vmo, 0x00, 0xff, 0x00, 0xff,
+                         output_image_format_table_[0]);
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
+
+    CacheInvalidateVmo(vmo_b);
+
+    fzl::VmoMapper mapper_b;
+    ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
+    uint8_t* output = GetPointerToPixel(mapper_b.start(), output_image_format_table_[0],
+                                        kWatermarkHorizontalOffset, kWatermarkVerticalOffset);
+    // Should match the background color from above.
+    // R
+    EXPECT_EQ(0x0, output[0]);
+    // G
+    EXPECT_EQ(0xff, output[1]);
+    // B
+    EXPECT_EQ(0x00, output[2]);
+    // A
+    EXPECT_EQ(0xff, output[3]);
+    sync_completion_signal(&completion_);
+  });
+
+  // Set red to > alpha, to ensure we don't add it in.
+  zx::vmo watermark_vmo = CreateWatermarkVmo();
+  WriteConstantRgbaToVmo(watermark_vmo.get(), 0xff, 0, 0, 0x00, watermark_info_.wm_image_format);
+  uint32_t watermark_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskWaterMark(
+      &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
+      std::move(watermark_vmo), output_image_format_table_, kImageFormatTableSize, 0,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &watermark_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(watermark_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Test that a semi-transparent changes colors in the expected way (when copying RGBA to RGBA).
+TEST_F(Ge2dDeviceTest, RGBARedWatermark) {
+  SetupCallbacks();
+  SetupInput(fuchsia_sysmem_PixelFormatType_R8G8B8A8, fuchsia_sysmem_PixelFormatType_R8G8B8A8);
+  SetupWatermarkInfo();
+
+  WriteConstantRgbaToVmo(input_buffer_collection_.buffers[0].vmo, 0, 0xff, 0, 0,
+                         output_image_format_table_[0]);
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
+
+    CacheInvalidateVmo(vmo_b);
+
+    fzl::VmoMapper mapper_b;
+    ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
+    uint8_t* output = GetPointerToPixel(mapper_b.start(), output_image_format_table_[0],
+                                        kWatermarkHorizontalOffset, kWatermarkVerticalOffset);
+    // Should be an alpha-blended version of both images.
+    // R
+    EXPECT_EQ(0x7f, output[0]);
+    // G
+    EXPECT_EQ(0x80, output[1]);
+    // B
+    EXPECT_EQ(0x00, output[2]);
+    // A
+    EXPECT_EQ(0xff, output[3]);
+    sync_completion_signal(&completion_);
+  });
+
+  zx::vmo watermark_vmo = CreateWatermarkVmo();
+  WriteConstantRgbaToVmo(watermark_vmo.get(), 0xff, 0, 0, 0x7f, watermark_info_.wm_image_format);
+  uint32_t watermark_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskWaterMark(
+      &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
+      std::move(watermark_vmo), output_image_format_table_, kImageFormatTableSize, 0,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &watermark_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(watermark_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+// Simple test that a watermark the same color as the input keeps the output color the same.
+TEST_F(Ge2dDeviceTest, SameColorWatermark) {
+  SetupCallbacks();
+  SetupInput();
+  SetupWatermarkInfo();
+
+  // Pure red in YUV.
+  WriteConstantColorToVmo(input_buffer_collection_.buffers[0].vmo, 82, 90, 240,
+                          output_image_format_table_[0]);
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    // Red in input and output may be slightly different.
+    CompareCroppedOutput(info, 1.0f);
+    sync_completion_signal(&completion_);
+  });
+
+  zx::vmo watermark_vmo = CreateWatermarkVmo();
+  WriteConstantRgbaToVmo(watermark_vmo.get(), 0xff, 0, 0, 0xff, watermark_info_.wm_image_format);
+  uint32_t watermark_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskWaterMark(
+      &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
+      std::move(watermark_vmo), output_image_format_table_, kImageFormatTableSize, 0,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &watermark_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(watermark_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+TEST_F(Ge2dDeviceTest, NewColorWatermark) {
+  SetupCallbacks();
+  SetupInput();
+  SetupWatermarkInfo();
+
+  // Pure red in YUV.
+  WriteConstantColorToVmo(input_buffer_collection_.buffers[0].vmo, 82, 90, 240,
+                          output_image_format_table_[0]);
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    zx_handle_t vmo_a = input_buffer_collection_.buffers[0].vmo;
+    zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
+    image_format_2_t& format = output_image_format_table_[0];
+
+    CacheInvalidateVmo(vmo_a);
+    CacheInvalidateVmo(vmo_b);
+
+    fzl::VmoMapper mapper_a;
+    ASSERT_OK(mapper_a.Map(*zx::unowned_vmo(vmo_a), 0, 0, ZX_VM_PERM_READ));
+    fzl::VmoMapper mapper_b;
+    ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
+
+    // Just check the area above the watermark to make sure it's the same.
+    CheckSubPlaneEqual(mapper_a.start(), mapper_b.start(), 0, 0, format.bytes_per_row,
+                       format.bytes_per_row, format.coded_width, 1, kWatermarkVerticalOffset, 1.0f,
+                       1.0f, 0, "Y");
+    uint32_t uv_offset = format.bytes_per_row * format.coded_height;
+    CheckSubPlaneEqual(mapper_a.start(), mapper_b.start(), uv_offset, uv_offset,
+                       format.bytes_per_row, format.bytes_per_row, format.coded_width, 2,
+                       kWatermarkVerticalOffset / 2, 1.0f, 1.0f, 0, "UV");
+
+    for (uint32_t y = 0; y < kWatermarkHeight; y++) {
+      for (uint32_t x = 0; x < kWatermarkWidth; x++) {
+        uint32_t value =
+            *GetPointerToPixel(mapper_b.start(), format, kWatermarkHorizontalOffset + x,
+                               kWatermarkVerticalOffset + y, 0);
+        EXPECT_EQ(144, value);
+      }
+    }
+    for (uint32_t y = 0; y < kWatermarkHeight / 2; y++) {
+      for (uint32_t x = 0; x < kWatermarkWidth / 2; x++) {
+        uint32_t uv_value = *reinterpret_cast<volatile uint16_t*>(
+            GetPointerToPixel(mapper_b.start(), format, kWatermarkHorizontalOffset + x,
+                              kWatermarkVerticalOffset + y, 1));
+        // U
+        EXPECT_EQ(54, uv_value & 0xff);
+        // V
+        EXPECT_EQ(34, uv_value >> 8);
+      }
+    }
+    sync_completion_signal(&completion_);
+  });
+
+  zx::vmo watermark_vmo = CreateWatermarkVmo();
+  WriteConstantRgbaToVmo(watermark_vmo.get(), 0, 0xff, 0, 0xff, watermark_info_.wm_image_format);
+  uint32_t watermark_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskWaterMark(
+      &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
+      std::move(watermark_vmo), output_image_format_table_, kImageFormatTableSize, 0,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &watermark_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(watermark_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
 }
 
 }  // namespace

@@ -43,7 +43,9 @@ class GenCtrl0 : public hwreg::RegisterBase<GenCtrl0, uint32_t> {
 class GenCtrl1 : public hwreg::RegisterBase<GenCtrl1, uint32_t> {
  public:
   DEF_BIT(31, soft_reset);
-  DEF_FIELD(25, 24, interrupt_control);
+  DEF_BIT(25, interrupt_on_idling);
+  DEF_BIT(24, interrupt_on_completed);
+  DEF_FIELD(7, 0, global_alpha);
 
   static auto Get() { return hwreg::RegisterAddr<GenCtrl1>(0xa1 * 4); };
 };
@@ -166,6 +168,38 @@ class Src1YStartEnd : public hwreg::RegisterBase<Src1YStartEnd, uint32_t> {
   DEF_FIELD(13, 0, end);
 
   static auto Get() { return hwreg::RegisterAddr<Src1YStartEnd>(0xab * 4); };
+};
+
+class Src2ClipXStartEnd : public hwreg::RegisterBase<Src2ClipXStartEnd, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, start);
+  DEF_FIELD(12, 0, end);
+
+  static auto Get() { return hwreg::RegisterAddr<Src2ClipXStartEnd>(0xb0 * 4); };
+};
+
+class Src2ClipYStartEnd : public hwreg::RegisterBase<Src2ClipYStartEnd, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, start);
+  DEF_FIELD(12, 0, end);
+
+  static auto Get() { return hwreg::RegisterAddr<Src2ClipYStartEnd>(0xb1 * 4); };
+};
+
+class Src2XStartEnd : public hwreg::RegisterBase<Src2XStartEnd, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, start);
+  DEF_FIELD(12, 0, end);
+
+  static auto Get() { return hwreg::RegisterAddr<Src2XStartEnd>(0xb2 * 4); };
+};
+
+class Src2YStartEnd : public hwreg::RegisterBase<Src2YStartEnd, uint32_t> {
+ public:
+  DEF_FIELD(28, 16, start);
+  DEF_FIELD(12, 0, end);
+
+  static auto Get() { return hwreg::RegisterAddr<Src2YStartEnd>(0xb3 * 4); };
 };
 
 class DstClipXStartEnd : public hwreg::RegisterBase<DstClipXStartEnd, uint32_t> {
@@ -340,10 +374,34 @@ class MatrixOffset : public hwreg::RegisterBase<MatrixOffset, uint32_t> {
 class AluOpCtrl : public hwreg::RegisterBase<AluOpCtrl, uint32_t> {
  public:
   enum BlendingMode { kBlendingModeAdd = 0, kBlendingModeLogicOp = 5 };
-  enum LogicOperation { kLogicOperationSet = 3 };
+  enum BlendingFactor {
+    kBlendingFactorZero = 0b0000,
+    kBlendingFactorOne = 0b0001,
+    kBlendingFactorOneMinusSrcAlpha = 0b0111,
+    kBlendingFactorOneMinusDstAlpha = 0b1001,
+    kBlendingFactorOneMinusConstAlpha = 0b1101,
+  };
+  enum LogicOperation {
+    kLogicOperationCopy = 0b0001,
+    kLogicOperationSet = 0b0011,
+  };
+
+  enum ColorMult {
+    kColorMultNone = 0,
+    kColorMultNonPremult =
+        1,                  // Also multiplies with global alpha - with SRC2 only supported on G12A+
+    kColorMultPremult = 2,  // Also multiplies with global alpha
+  };
+
+  DEF_FIELD(28, 27, src2_cmult_ad);
+  DEF_FIELD(26, 25, src1_color_mult);
+  DEF_FIELD(24, 23, src2_color_mult);
+
   DEF_FIELD(22, 20, blending_mode);
+  DEF_FIELD(19, 16, source_factor);
   DEF_FIELD(15, 12, logic_operation);
   DEF_FIELD(10, 8, alpha_blending_mode);
+  DEF_FIELD(7, 4, alpha_source_factor);
   DEF_FIELD(3, 0, alpha_logic_operation);
 
   static auto Get() { return hwreg::RegisterAddr<AluOpCtrl>(0xcc * 4); };

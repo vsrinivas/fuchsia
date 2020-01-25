@@ -409,12 +409,14 @@ void Ge2dDevice::InitializeScaler(uint32_t input_width, uint32_t input_height,
 }
 
 void Ge2dDevice::SetupInputOutputFormats(bool scaling_enabled, const image_format_2_t& input_format,
-                                         const image_format_2_t& output_format) {
+                                         const image_format_2_t& output_format,
+                                         const image_format_2_t& src2_format) {
+  bool is_src_nv12 = input_format.pixel_format.type == fuchsia_sysmem_PixelFormatType_NV12;
   bool is_dst_nv12 = output_format.pixel_format.type == fuchsia_sysmem_PixelFormatType_NV12;
-  // Assume NV12 input for now. When using NV12 output DST1 gets Y and DST2 gets CbCr.
+  // When using NV12 output DST1 gets Y and DST2 gets CbCr.
   GenCtrl0::Get()
       .FromValue(0)
-      .set_src1_separate_enable(true)
+      .set_src1_separate_enable(is_src_nv12)
       .set_x_yc_ratio(1)
       .set_y_yc_ratio(1)
       .WriteTo(&ge2d_mmio_);
@@ -424,9 +426,12 @@ void Ge2dDevice::SetupInputOutputFormats(bool scaling_enabled, const image_forma
       .set_dst1_color_map(is_dst_nv12 ? 0 : GenCtrl2::kColorMap32RGBA8888)
       .set_dst1_format(is_dst_nv12 ? GenCtrl2::kFormat8Bit : GenCtrl2::kFormat32Bit)
       .set_src1_little_endian(0)  // endianness conversion happens in canvas
-      .set_src1_color_map(GenCtrl2::kColorMap24NV12)
-      .set_src1_format(GenCtrl2::kFormat24Bit)
+      .set_src1_color_map(is_src_nv12 ? GenCtrl2::kColorMap24NV12 : GenCtrl2::kColorMap32RGBA8888)
+      .set_src1_format(is_src_nv12 ? GenCtrl2::kFormat24Bit : GenCtrl2::kFormat32Bit)
       .set_src1_color_expand_mode(1)
+      .set_src2_little_endian(0)  // endianness conversion happens in canvas
+      .set_src2_color_map(GenCtrl2::kColorMap32RGBA8888)
+      .set_src2_format(GenCtrl2::kFormat32Bit)
       .WriteTo(&ge2d_mmio_);
 
   GenCtrl3::Get()
@@ -438,7 +443,7 @@ void Ge2dDevice::SetupInputOutputFormats(bool scaling_enabled, const image_forma
       .set_dst2_enable(is_dst_nv12)
       .set_dst1_enable(1)
       .WriteTo(&ge2d_mmio_);
-  if (!is_dst_nv12) {
+  if (is_src_nv12 && !is_dst_nv12) {
     // YCbCr BT.601 studio swing to RGB. Outputs of matrix multiplication seem
     // to be divided by 1024.
     MatrixCoef00_01::Get().FromValue(0).set_coef00(0x4a8).WriteTo(&ge2d_mmio_);
@@ -456,73 +461,77 @@ void Ge2dDevice::SetupInputOutputFormats(bool scaling_enabled, const image_forma
         .set_offset1(0x180)
         .set_offset2(0x180)
         .WriteTo(&ge2d_mmio_);
+  } else if (!is_src_nv12 && is_dst_nv12) {
+    // RGB to BT.601 studio swing. Outputs of matrix multiplication seem
+    // to be divided by 1024.
+    MatrixCoef00_01::Get().FromValue(0).set_coef00(0x107).set_coef01(0x204).WriteTo(&ge2d_mmio_);
+    MatrixCoef02_10::Get().FromValue(0).set_coef02(0x64).set_coef10(0x1f68).WriteTo(&ge2d_mmio_);
+    MatrixCoef11_12::Get().FromValue(0).set_coef11(0x1ed6).set_coef12(0x1c2).WriteTo(&ge2d_mmio_);
+    MatrixCoef20_21::Get().FromValue(0).set_coef20(0x1c2).set_coef21(0x1e87).WriteTo(&ge2d_mmio_);
+    MatrixCoef22Ctrl::Get()
+        .FromValue(0)
+        .set_coef22(0x1fb7)
+        .set_saturation_enable(false)
+        .set_matrix_enable(true)
+        .WriteTo(&ge2d_mmio_);
+    MatrixPreOffset::Get().FromValue(0).set_offset0(0).set_offset1(0).set_offset2(0).WriteTo(
+        &ge2d_mmio_);
+    MatrixOffset::Get().FromValue(0).set_offset0(16).set_offset1(128).set_offset2(128).WriteTo(
+        &ge2d_mmio_);
   } else {
+    // No colorspace conversion.
     MatrixCoef22Ctrl::Get().FromValue(0).set_matrix_enable(false).WriteTo(&ge2d_mmio_);
   }
   // To match the linux driver we repeat the UV planes instead of interpolating if we're not
   // scaling the output. This is arguably incorrect, depending on chroma siting.
   Src1FmtCtrl::Get()
       .FromValue(0)
-      .set_horizontal_enable(true)
-      .set_vertical_enable(true)
+      .set_horizontal_enable(is_src_nv12)
+      .set_vertical_enable(is_src_nv12)
       .set_y_chroma_phase(0x4c)
       .set_x_chroma_phase(0x8)
       .set_horizontal_repeat(!scaling_enabled)
       .set_vertical_repeat(!scaling_enabled)
       .WriteTo(&ge2d_mmio_);
-
-  AluOpCtrl::Get()
-      .ReadFrom(&ge2d_mmio_)
-      .set_alpha_blending_mode(AluOpCtrl::kBlendingModeLogicOp)
-      .set_alpha_logic_operation(AluOpCtrl::kLogicOperationSet)
-      .WriteTo(&ge2d_mmio_);
-  AluConstColor::Get().FromValue(0).set_a(0xff).WriteTo(&ge2d_mmio_);
 }
 
-void Ge2dDevice::ProcessFrame(TaskInfo& info) {
-  auto task = info.task;
-
-  auto input_buffer_index = info.index;
-
-  auto output_buffer = task->WriteLockOutputBuffer();
-  if (!output_buffer) {
-    frame_available_info f_info;
-    f_info.frame_status = FRAME_STATUS_ERROR_FRAME;
-    f_info.buffer_id = 0;
-    f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-    f_info.metadata.image_format_index = task->output_format_index();
-    f_info.metadata.input_buffer_index = input_buffer_index;
-    task->FrameReadyCallback(&f_info);
-    return;
-  }
-
-  image_format_2_t input_format = task->input_format();
-
-  image_format_2_t output_format = task->output_format();
-  uint32_t output_x_end = output_format.coded_width - 1;
-  uint32_t output_y_end = output_format.coded_height - 1;
-
-  resize_info_t resize_info;
-  if (task->Ge2dTaskType() == Ge2dTask::GE2D_RESIZE) {
-    resize_info = task->resize_info();
+void Ge2dDevice::SetBlending(bool enable) {
+  if (enable) {
+    // Blend src2 (non-premultiplied) on top of src1. The hardware considers
+    // SRC1 to be source and SRC2 to be dest.
+    AluOpCtrl::Get()
+        .ReadFrom(&ge2d_mmio_)
+        .set_src2_cmult_ad(0)
+        .set_src1_color_mult(AluOpCtrl::kColorMultNone)
+        .set_src2_color_mult(AluOpCtrl::kColorMultNonPremult)
+        .set_blending_mode(AluOpCtrl::kBlendingModeAdd)
+        .set_source_factor(AluOpCtrl::kBlendingFactorOneMinusDstAlpha)
+        .set_logic_operation(AluOpCtrl::kBlendingFactorOne)
+        .set_alpha_blending_mode(AluOpCtrl::kBlendingModeAdd)
+        .set_alpha_source_factor(AluOpCtrl::kBlendingFactorZero)
+        .set_alpha_logic_operation(AluOpCtrl::kBlendingFactorOne)
+        .WriteTo(&ge2d_mmio_);
   } else {
-    resize_info.crop.x = 0;
-    resize_info.crop.y = 0;
-    resize_info.crop.width = input_format.coded_width;
-    resize_info.crop.height = input_format.coded_height;
+    // Copy src1 color to output, but set alpha to 0xff.
+    AluOpCtrl::Get()
+        .ReadFrom(&ge2d_mmio_)
+        .set_src1_color_mult(AluOpCtrl::kColorMultNone)
+        .set_blending_mode(AluOpCtrl::kBlendingModeLogicOp)
+        .set_source_factor(AluOpCtrl::kBlendingFactorOne)
+        .set_logic_operation(AluOpCtrl::kLogicOperationCopy)
+        .set_alpha_blending_mode(AluOpCtrl::kBlendingModeLogicOp)
+        .set_alpha_logic_operation(AluOpCtrl::kLogicOperationSet)
+        .WriteTo(&ge2d_mmio_);
   }
+  AluConstColor::Get().FromValue(0).set_a(0xff).WriteTo(&ge2d_mmio_);
+  GenCtrl1::Get().ReadFrom(&ge2d_mmio_).set_global_alpha(0xff).WriteTo(&ge2d_mmio_);
+}
 
-  bool scaling_enabled = (resize_info.crop.width != output_format.coded_width) ||
-                         (resize_info.crop.height != output_format.coded_height);
-
-  uint32_t input_x_start = resize_info.crop.x;
-  uint32_t input_x_end = resize_info.crop.x + resize_info.crop.width - 1;
-  uint32_t input_y_start = resize_info.crop.y;
-  uint32_t input_y_end = resize_info.crop.y + resize_info.crop.height - 1;
-
-  InitializeScaler(resize_info.crop.width, resize_info.crop.height, output_format.coded_width,
-                   output_format.coded_height);
-
+void Ge2dDevice::SetInputRect(const rect_t& rect) {
+  uint32_t input_x_start = rect.x;
+  uint32_t input_x_end = rect.x + rect.width - 1;
+  uint32_t input_y_start = rect.y;
+  uint32_t input_y_end = rect.y + rect.height - 1;
   Src1ClipXStartEnd::Get()
       .FromValue(0)
       .set_end(input_x_end)
@@ -548,47 +557,213 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
       .set_start(input_y_start)
       .set_end_extra(3)
       .WriteTo(&ge2d_mmio_);
-  DstClipXStartEnd::Get().FromValue(0).set_end(output_x_end).set_start(0).WriteTo(&ge2d_mmio_);
-  DstXStartEnd::Get().FromValue(0).set_end(output_x_end).set_start(0).WriteTo(&ge2d_mmio_);
-  DstClipYStartEnd::Get().FromValue(0).set_end(output_y_end).set_start(0).WriteTo(&ge2d_mmio_);
-  DstYStartEnd::Get().FromValue(0).set_end(output_y_end).set_start(0).WriteTo(&ge2d_mmio_);
-  auto& input_ids = task->GetInputCanvasIds(input_buffer_index);
-  Src1Canvas::Get()
-      .FromValue(0)
-      .set_y(input_ids.canvas_idx[kYComponent].id())
-      .set_u(input_ids.canvas_idx[kUVComponent].id())
-      .set_v(input_ids.canvas_idx[kUVComponent].id())
-      .WriteTo(&ge2d_mmio_);
-  auto& output_canvas = task->GetOutputCanvasIds(output_buffer->vmo_handle());
-  Src2DstCanvas::Get()
-      .FromValue(0)
-      .set_dst1(output_canvas.canvas_idx[kYComponent].id())
-      .set_dst2(output_canvas.canvas_idx[kUVComponent].id())
-      .WriteTo(&ge2d_mmio_);
+}
 
-  SetupInputOutputFormats(scaling_enabled, input_format, output_format);
+void Ge2dDevice::SetSrc2InputRect(const rect_t& rect) {
+  uint32_t input_x_start = rect.x;
+  uint32_t input_x_end = rect.x + rect.width - 1;
+  uint32_t input_y_start = rect.y;
+  uint32_t input_y_end = rect.y + rect.height - 1;
+  Src2ClipXStartEnd::Get()
+      .FromValue(0)
+      .set_end(input_x_end)
+      .set_start(input_x_start)
+      .WriteTo(&ge2d_mmio_);
+  Src2XStartEnd::Get()
+      .FromValue(0)
+      .set_end(input_x_end)
+      .set_start(input_x_start)
+      .WriteTo(&ge2d_mmio_);
+  Src2ClipYStartEnd::Get()
+      .FromValue(0)
+      .set_end(input_y_end)
+      .set_start(input_y_start)
+      .WriteTo(&ge2d_mmio_);
+  Src2YStartEnd::Get()
+      .FromValue(0)
+      .set_end(input_y_end)
+      .set_start(input_y_start)
+      .WriteTo(&ge2d_mmio_);
+}
 
+void Ge2dDevice::SetOutputRect(const rect_t& rect) {
+  uint32_t output_x_start = rect.x;
+  uint32_t output_x_end = rect.x + rect.width - 1;
+  uint32_t output_y_start = rect.y;
+  uint32_t output_y_end = rect.y + rect.height - 1;
+  DstClipXStartEnd::Get()
+      .FromValue(0)
+      .set_end(output_x_end)
+      .set_start(output_x_start)
+      .WriteTo(&ge2d_mmio_);
+  DstXStartEnd::Get()
+      .FromValue(0)
+      .set_end(output_x_end)
+      .set_start(output_x_start)
+      .WriteTo(&ge2d_mmio_);
+  DstClipYStartEnd::Get()
+      .FromValue(0)
+      .set_end(output_y_end)
+      .set_start(output_y_start)
+      .WriteTo(&ge2d_mmio_);
+  DstYStartEnd::Get()
+      .FromValue(0)
+      .set_end(output_y_end)
+      .set_start(output_y_start)
+      .WriteTo(&ge2d_mmio_);
+}
+
+void Ge2dDevice::SetRects(const rect_t& input_rect, const rect_t& output_rect) {
+  InitializeScaler(input_rect.width, input_rect.height, output_rect.width, output_rect.height);
+  SetInputRect(input_rect);
+  SetOutputRect(output_rect);
+}
+
+void Ge2dDevice::ProcessAndWaitForIdle() {
   CmdCtrl::Get().FromValue(0).set_cmd_wr(1).WriteTo(&ge2d_mmio_);
-
   zx_port_packet_t packet;
   ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
   if (packet.key == kPortKeyIrqMsg) {
     ZX_ASSERT(ge2d_irq_.ack() == ZX_OK);
   }
-
   ZX_ASSERT(!Status0::Get().ReadFrom(&ge2d_mmio_).busy());
+}
 
-  if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {
-    // Invoke the callback function and tell about the output buffer index
-    // which is ready to be used.
+static rect_t FullImageRect(const image_format_2_t& format) {
+  return {
+      .x = 0,
+      .y = 0,
+      .width = format.coded_width,
+      .height = format.coded_height,
+  };
+}
+
+void Ge2dDevice::SetSrc1Input(const image_canvas_id_t& canvas) {
+  Src1Canvas::Get()
+      .FromValue(0)
+      .set_y(canvas.canvas_idx[kYComponent].id())
+      .set_u(canvas.canvas_idx[kUVComponent].id())
+      .set_v(canvas.canvas_idx[kUVComponent].id())
+      .WriteTo(&ge2d_mmio_);
+}
+
+void Ge2dDevice::SetSrc2Input(const image_canvas_id_t& canvas) {
+  // Src2 doesn't support multiplanar images.
+  ZX_ASSERT(!canvas.canvas_idx[kUVComponent].valid());
+  Src2DstCanvas::Get()
+      .ReadFrom(&ge2d_mmio_)
+      .set_src2(canvas.canvas_idx[kYComponent].id())
+      .WriteTo(&ge2d_mmio_);
+}
+
+void Ge2dDevice::SetDstOutput(const image_canvas_id_t& canvas) {
+  Src2DstCanvas::Get()
+      .ReadFrom(&ge2d_mmio_)
+      .set_dst1(canvas.canvas_idx[kYComponent].id())
+      .set_dst2(canvas.canvas_idx[kUVComponent].id())
+      .WriteTo(&ge2d_mmio_);
+}
+
+void Ge2dDevice::ProcessResizeTask(Ge2dTask* task, uint32_t input_buffer_index,
+                                   const fzl::VmoPool::Buffer& output_buffer) {
+  image_format_2_t input_format = task->input_format();
+  image_format_2_t output_format = task->output_format();
+  rect_t output_rect = FullImageRect(output_format);
+
+  resize_info_t resize_info = task->resize_info();
+
+  bool scaling_enabled = (resize_info.crop.width != output_format.coded_width) ||
+                         (resize_info.crop.height != output_format.coded_height);
+
+  SetRects(resize_info.crop, output_rect);
+  SetupInputOutputFormats(scaling_enabled, input_format, output_format);
+  SetBlending(false);
+
+  SetSrc1Input(task->GetInputCanvasIds(input_buffer_index));
+  SetDstOutput(task->GetOutputCanvasIds(output_buffer.vmo_handle()));
+
+  ProcessAndWaitForIdle();
+}
+
+void Ge2dDevice::ProcessWatermarkTask(Ge2dTask* task, uint32_t input_buffer_index,
+                                      const fzl::VmoPool::Buffer& output_buffer) {
+  image_format_2_t input_format = task->input_format();
+  image_format_2_t output_format = task->output_format();
+  rect_t output_rect = FullImageRect(output_format);
+  image_format_2_t watermark_format = task->WatermarkFormat();
+  rect_t input_rect = {
+      .x = task->watermark_loc_x(),
+      .y = task->watermark_loc_y(),
+      .width = watermark_format.coded_width,
+      .height = watermark_format.coded_height,
+  };
+  rect_t watermark_origin_rect = FullImageRect(watermark_format);
+
+  auto& input_ids = task->GetInputCanvasIds(input_buffer_index);
+  auto& output_canvas = task->GetOutputCanvasIds(output_buffer.vmo_handle());
+
+  // Copy entire input into output, unmodified.
+  SetRects(output_rect, output_rect);
+  SetupInputOutputFormats(/*scaling_enabled=*/false, input_format, output_format);
+  SetSrc1Input(input_ids);
+  SetDstOutput(output_canvas);
+  SetBlending(false);
+
+  ProcessAndWaitForIdle();
+
+  // Blend portion of input with watermark into temporary image (does colorspace conversion).
+  SetRects(input_rect, watermark_origin_rect);
+  SetSrc2InputRect(watermark_origin_rect);
+  SetBlending(true);
+  SetupInputOutputFormats(/*scaling_enabled=*/false, input_format, watermark_format);
+  SetSrc1Input(input_ids);
+  SetSrc2Input(task->watermark_input_canvas());
+  auto& intermediate_canvas = task->watermark_blended_canvas();
+  SetDstOutput(intermediate_canvas);
+
+  ProcessAndWaitForIdle();
+
+  // Copy from temporary image to correct region of output (does colorspace conversion).
+  SetRects(watermark_origin_rect, input_rect);
+  SetBlending(false);
+  SetupInputOutputFormats(/*scaling_enabled=*/false, watermark_format, output_format);
+  SetSrc1Input(intermediate_canvas);
+  SetDstOutput(output_canvas);
+
+  ProcessAndWaitForIdle();
+}
+
+void Ge2dDevice::ProcessFrame(TaskInfo& info) {
+  auto task = info.task;
+
+  auto input_buffer_index = info.index;
+
+  auto output_buffer = task->WriteLockOutputBuffer();
+  if (!output_buffer) {
     frame_available_info f_info;
-    f_info.frame_status = FRAME_STATUS_OK;
-    f_info.buffer_id = output_buffer->ReleaseWriteLockAndGetIndex();
+    f_info.frame_status = FRAME_STATUS_ERROR_FRAME;
+    f_info.buffer_id = 0;
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
     f_info.metadata.input_buffer_index = input_buffer_index;
     task->FrameReadyCallback(&f_info);
+    return;
   }
+
+  if (task->Ge2dTaskType() == Ge2dTask::GE2D_RESIZE) {
+    ProcessResizeTask(task, input_buffer_index, *output_buffer);
+  } else {
+    ProcessWatermarkTask(task, input_buffer_index, *output_buffer);
+  }
+  // Invoke the callback function and tell about the output buffer index
+  // which is ready to be used.
+  frame_available_info f_info;
+  f_info.frame_status = FRAME_STATUS_OK;
+  f_info.buffer_id = output_buffer->ReleaseWriteLockAndGetIndex();
+  f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+  f_info.metadata.image_format_index = task->output_format_index();
+  f_info.metadata.input_buffer_index = input_buffer_index;
+  task->FrameReadyCallback(&f_info);
 }
 
 void Ge2dDevice::ProcessRemoveTask(TaskInfo& info) {
@@ -717,7 +892,7 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
   // TODO(fxb/43822): Initialize clock.
   GenCtrl1::Get().FromValue(0).set_soft_reset(1).WriteTo(&*ge2d_mmio);
   GenCtrl1::Get().FromValue(0).set_soft_reset(0).WriteTo(&*ge2d_mmio);
-  GenCtrl1::Get().FromValue(0).set_interrupt_control(1).WriteTo(&*ge2d_mmio);
+  GenCtrl1::Get().FromValue(0).set_interrupt_on_idling(1).WriteTo(&*ge2d_mmio);
 
   auto ge2d_device = std::make_unique<Ge2dDevice>(
       parent, std::move(*ge2d_mmio), std::move(ge2d_irq), std::move(bti), std::move(port), c);

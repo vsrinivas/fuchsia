@@ -116,6 +116,12 @@ class Ge2dTask : public generictask::GenericTask {
 
   void SetCropRect(const rect_t& rect) { res_info_.crop = rect; }
 
+  uint32_t watermark_loc_x() const { return wm_.loc_x; }
+  uint32_t watermark_loc_y() const { return wm_.loc_y; }
+
+  const image_canvas_id& watermark_input_canvas() { return wm_input_canvas_id_; }
+  const image_canvas_id& watermark_blended_canvas() { return wm_blended_canvas_id_; }
+
  private:
   zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
                    const buffer_collection_info_2_t* output_buffer_collection,
@@ -155,8 +161,8 @@ class Ge2dTask : public generictask::GenericTask {
   watermark_info wm_;
   // Canvas id for the watermark image and the blended watermark image.
   // Both are RGBA images.
-  ScopedCanvasId wm_input_canvas_id_;
-  ScopedCanvasId wm_blended_canvas_id_;
+  image_canvas_id wm_input_canvas_id_;
+  image_canvas_id wm_blended_canvas_id_;
   // Allocate a contig vmo to hold the input watermark image.
   zx::vmo watermark_input_vmo_;
   // vmo to hold blended watermark image.
