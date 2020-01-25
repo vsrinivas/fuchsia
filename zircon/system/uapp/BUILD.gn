@@ -33,7 +33,6 @@ group("uapp") {
     "nand-loader",
     "nand-util",
     "psutils",
-    "spawn",
     "spiutil",
     "syscall-check",
     "thermal-cli",
