@@ -36,6 +36,8 @@ static bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSyn
 static bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
                                const VulkanCommandBuffers& command_buffers);
 
+static bool Readback(const VulkanLogicalDevice& logical_device, const VulkanImageView& image_view);
+
 void glfwErrorCallback(int error, const char* description) {
   fprintf(stderr, "glfwErrorCallback: %d : %s\n", error, description);
 }
@@ -189,6 +191,10 @@ int main(int argc, char* argv[]) {
 #endif
   logical_device->device()->waitIdle();
 
+  if (offscreen) {
+    Readback(*logical_device, *offscreen_image_view);
+  }
+
 #if USE_GLFW
   glfwDestroyWindow(window);
   glfwTerminate();
@@ -202,24 +208,23 @@ bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync
   static int current_frame = 0;
 
   // Compact variables for readability derived from |current_frame|.
-  const vk::Device& device = *logical_device.device();
+  const vk::UniqueDevice& device = logical_device.device();
 
   const vk::Fence& fence = *(sync.in_flight_fences()[current_frame]);
 
   const vk::Semaphore& image_available_semaphore =
       *(sync.image_available_semaphores()[current_frame]);
-
   const vk::Semaphore& render_finished_semaphore =
       *(sync.render_finished_semaphores()[current_frame]);
 
   // Wait for any outstanding command buffers to be processed.
-  device.waitForFences({fence}, VK_TRUE, std::numeric_limits<uint64_t>::max());
-  device.resetFences({fence});
+  device->waitForFences({fence}, VK_TRUE, std::numeric_limits<uint64_t>::max());
+  device->resetFences({fence});
 
   // Obtain next swap chain image in which to draw.
   auto [result, image_index] =
-      device.acquireNextImageKHR(*swap_chain.swap_chain(), std::numeric_limits<uint64_t>::max(),
-                                 image_available_semaphore, nullptr);
+      device->acquireNextImageKHR(*swap_chain.swap_chain(), std::numeric_limits<uint64_t>::max(),
+                                  image_available_semaphore, nullptr);
   if (vk::Result::eSuccess != result) {
     RTN_MSG(false, "VK Error: 0x%x - Failed to acquire swap chain image.", result);
   }
@@ -261,12 +266,12 @@ bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device, const VulkanS
                         const VulkanCommandBuffers& command_buffers) {
   static int current_frame = 0;
 
-  const vk::Device& device = *logical_device.device();
+  const vk::UniqueDevice& device = logical_device.device();
   const vk::Fence& fence = *(sync.in_flight_fences()[0]);
 
   // Wait for any outstanding command buffers to be processed.
-  device.waitForFences({fence}, VK_TRUE, std::numeric_limits<uint64_t>::max());
-  device.resetFences({fence});
+  device->waitForFences({fence}, VK_TRUE, std::numeric_limits<uint64_t>::max());
+  device->resetFences({fence});
 
   vk::CommandBuffer command_buffer = *(command_buffers.command_buffers()[0]);
 
@@ -279,6 +284,22 @@ bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device, const VulkanS
   }
 
   current_frame = (current_frame + 1) % sync.max_frames_in_flight();
+
+  return true;
+}
+
+bool Readback(const VulkanLogicalDevice& logical_device, const VulkanImageView& image_view) {
+  const vk::UniqueDevice& device = logical_device.device();
+  vk::DeviceMemory device_memory = *(image_view.image_memory());
+  auto rv = device->mapMemory(device_memory, 0 /* offset */, VK_WHOLE_SIZE,
+                              static_cast<vk::MemoryMapFlags>(0));
+  if (vk::Result::eSuccess != rv.result) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to map device memory for image.", rv.result);
+  }
+  uint8_t* image_buffer = static_cast<uint8_t*>(rv.value);
+  printf("Clear Color Read Back: (%02x,%02x,%02x,%02x)\n", *(image_buffer + 0), *(image_buffer + 1),
+         *(image_buffer + 2), *(image_buffer + 3));
+  device->unmapMemory(device_memory);
 
   return true;
 }
