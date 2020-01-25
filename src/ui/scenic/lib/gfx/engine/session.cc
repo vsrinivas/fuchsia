@@ -17,7 +17,6 @@
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh.h"
-#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/lib/escher/util/type_utils.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"

@@ -8,7 +8,6 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
@@ -32,8 +31,6 @@ struct SessionContext {
   escher::Escher* escher = nullptr;
   escher::ResourceRecycler* escher_resource_recycler = nullptr;
   escher::ImageFactory* escher_image_factory = nullptr;
-  // TODO(SCN-1168): Remove |escher_rounded_rect_factory| from here.
-  escher::RoundedRectFactory* escher_rounded_rect_factory = nullptr;
   escher::ReleaseFenceSignaller* release_fence_signaller = nullptr;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler = nullptr;
   SceneGraphWeakPtr scene_graph;

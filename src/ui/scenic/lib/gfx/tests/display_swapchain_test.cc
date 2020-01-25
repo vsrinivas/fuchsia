@@ -66,7 +66,6 @@ class DisplaySwapchainTest : public Fixture {
                                           escher_.get(),
                                           escher_->resource_recycler(),
                                           image_factory_.get(),
-                                          nullptr,
                                           release_fence_signaller_.get(),
                                           frame_scheduler_,
                                           SceneGraphWeakPtr(),
@@ -219,9 +218,9 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
   RunLoopUntilIdle();
   EXPECT_EQ(frame_rendered_call_count(), kNumFrames);
   // Last frame is left up on the display, so look for presentation.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this]() { return frame_presented_call_count() == kNumFrames; },
-      /*timeout=*/zx::msec(50)));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return frame_presented_call_count() == kNumFrames; },
+                                /*timeout=*/zx::msec(50)));
 }
 
 VK_TEST_F(DisplaySwapchainTest, InitializesFramebuffers) {

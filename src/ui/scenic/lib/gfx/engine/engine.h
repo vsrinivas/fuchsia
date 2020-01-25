@@ -20,7 +20,6 @@
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
@@ -126,7 +125,6 @@ class Engine : public scheduling::FrameRenderer {
                           escher(),
                           escher_resource_recycler(),
                           escher_image_factory(),
-                          escher_rounded_rect_factory(),
                           release_fence_signaller(),
                           delegating_frame_scheduler_,
                           scene_graph(),
@@ -161,8 +159,6 @@ class Engine : public scheduling::FrameRenderer {
 
   escher::ImageFactory* escher_image_factory() { return image_factory_.get(); }
 
-  escher::RoundedRectFactory* escher_rounded_rect_factory() { return rounded_rect_factory_.get(); }
-
   escher::ReleaseFenceSignaller* release_fence_signaller() {
     return release_fence_signaller_.get();
   }
@@ -188,7 +184,6 @@ class Engine : public scheduling::FrameRenderer {
   ViewLinker view_linker_;
 
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
-  std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
 
   // TODO(SCN-1502): This is a temporary solution until we can remove frame_scheduler from

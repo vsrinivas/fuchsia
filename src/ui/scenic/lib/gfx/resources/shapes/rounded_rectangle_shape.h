@@ -17,7 +17,7 @@ class RoundedRectangleShape final : public PlanarShape {
   static const ResourceTypeInfo kTypeInfo;
 
   RoundedRectangleShape(Session* session, SessionId session_id, ResourceId id,
-                        const escher::RoundedRectSpec& spec, escher::MeshPtr mesh);
+                        const escher::RoundedRectSpec& spec);
 
   float width() const { return spec_.width; }
   float height() const { return spec_.height; }
@@ -36,19 +36,10 @@ class RoundedRectangleShape final : public PlanarShape {
   escher::Object GenerateRenderObject(const escher::mat4& transform,
                                       const escher::MaterialPtr& material) override;
 
-  const escher::MeshPtr& escher_mesh() const {
-    // During tests, this mesh can be null, but otherwise
-    // we expect it to be allocated.
-    // TODO(SCN-1429) This is going to be removed anyway.
-    FXL_CHECK(mesh_);
-    return mesh_;
-  }
-
   const escher::RoundedRectSpec& spec() const { return spec_; }
 
  private:
   escher::RoundedRectSpec spec_;
-  escher::MeshPtr mesh_;
 };
 
 }  // namespace gfx

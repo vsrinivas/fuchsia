@@ -37,7 +37,6 @@ TestGfxSession CreateTestGfxSession(std::shared_ptr<EventReporter> event_reporte
                                  .escher = nullptr,
                                  .escher_resource_recycler = nullptr,
                                  .escher_image_factory = nullptr,
-                                 .escher_rounded_rect_factory = nullptr,
                                  .release_fence_signaller = nullptr,
                                  .frame_scheduler = gfx_session.delegating_frame_scheduler,
                                  .scene_graph = SceneGraphWeakPtr(),

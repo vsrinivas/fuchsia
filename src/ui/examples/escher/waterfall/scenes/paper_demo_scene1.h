@@ -8,7 +8,7 @@
 #include "src/ui/examples/escher/waterfall/scenes/scene.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_shape_cache.h"
-#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
+#include "src/ui/lib/escher/shape/rounded_rect.h"
 
 // Demo scene specifically designed to exercise the new PaperRenderer components
 // (e.g. PaperShapeCache and PaperRenderQueue).

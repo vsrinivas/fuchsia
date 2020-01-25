@@ -41,7 +41,6 @@ Engine::Engine(sys::ComponentContext* app_context,
               {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint})))),
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(escher()->gpu_allocator(),
                                                                    escher()->resource_recycler())),
-      rounded_rect_factory_(std::make_unique<escher::RoundedRectFactory>(escher_)),
       release_fence_signaller_(
           std::make_unique<escher::ReleaseFenceSignaller>(escher()->command_buffer_sequencer())),
       delegating_frame_scheduler_(

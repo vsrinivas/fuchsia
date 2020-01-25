@@ -5,7 +5,6 @@
 #include "src/ui/scenic/lib/gfx/resources/shapes/rounded_rectangle_shape.h"
 
 #include "src/ui/lib/escher/shape/mesh.h"
-#include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -14,11 +13,8 @@ const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kRoundedRectangle, "RoundedRectangleShape"};
 
 RoundedRectangleShape::RoundedRectangleShape(Session* session, SessionId session_id, ResourceId id,
-                                             const escher::RoundedRectSpec& spec,
-                                             escher::MeshPtr mesh)
-    : PlanarShape(session, session_id, id, RoundedRectangleShape::kTypeInfo),
-      spec_(spec),
-      mesh_(std::move(mesh)) {}
+                                             const escher::RoundedRectSpec& spec)
+    : PlanarShape(session, session_id, id, RoundedRectangleShape::kTypeInfo), spec_(spec) {}
 
 bool RoundedRectangleShape::ContainsPoint(const escher::vec2& point) const {
   return spec_.ContainsPoint(point);
@@ -26,7 +22,7 @@ bool RoundedRectangleShape::ContainsPoint(const escher::vec2& point) const {
 
 escher::Object RoundedRectangleShape::GenerateRenderObject(const escher::mat4& transform,
                                                            const escher::MaterialPtr& material) {
-  return escher::Object(transform, mesh_, material);
+  return escher::Object(transform, nullptr, material);
 }
 
 }  // namespace gfx

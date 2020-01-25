@@ -316,8 +316,6 @@ template("escher_library") {
       "shape/mesh_spec.h",
       "shape/rounded_rect.cc",
       "shape/rounded_rect.h",
-      "shape/rounded_rect_factory.cc",
-      "shape/rounded_rect_factory.h",
       "status.h",
       "third_party/granite/vk/command_buffer.cc",
       "third_party/granite/vk/command_buffer.h",

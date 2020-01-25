@@ -62,7 +62,6 @@ if (is_mac) {
       "renderer/render_queue_unittest.cc",
       "run_all_unittests.cc",
       "scene/directional_light_unittest.cc",
-      "shape/rounded_rect_factory_unittest.cc",
       "shape/rounded_rect_unittest.cc",
       "transform_unittest.cc",
       "util/align_unittest.cc",
