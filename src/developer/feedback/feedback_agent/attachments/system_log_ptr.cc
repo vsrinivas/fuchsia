@@ -114,7 +114,7 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
 
   return done_.consumer.promise_or(fit::error()).then([this](fit::result<void>& result) {
     done_after_timeout_.Cancel();
-    binding_.Unbind();
+    binding_.Close(ZX_OK);
     return std::move(result);
   });
 }

@@ -18,7 +18,7 @@ void StubProduct::GetInfo(GetInfoCallback callback) {
 
 void StubProduct::CloseConnection() {
   if (binding_) {
-    binding_->Unbind();
+    binding_->Close(ZX_ERR_PEER_CLOSED);
   }
 }
 
