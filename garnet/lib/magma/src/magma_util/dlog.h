@@ -12,12 +12,10 @@
 #define MAGMA_DLOG_ENABLE 0
 #endif
 
-// TODO(13095) - use MAGMA_LOG here
-#define DLOG(...)                           \
-  do {                                      \
-    if (MAGMA_DLOG_ENABLE) {                \
-      printf("%s:%d ", __FILE__, __LINE__); \
-      printf(__VA_ARGS__);                  \
-      printf("\n");                         \
-    }                                       \
+#define DLOG(format, ...)                                                                     \
+  do {                                                                                        \
+    if (MAGMA_DLOG_ENABLE) {                                                                  \
+      magma::PlatformLogger::Log(magma::PlatformLogger::LOG_INFO, "%s:%d: " format, __FILE__, \
+                                 __LINE__, ##__VA_ARGS__);                                    \
+    }                                                                                         \
   } while (0)
