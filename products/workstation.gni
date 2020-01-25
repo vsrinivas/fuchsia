@@ -17,7 +17,7 @@ base_package_labels += [
   "//src/flutter",
   "//src/fonts",
   "//src/fonts:open-fonts-collection",
-  "//src/modular/bundles:framework_experimental",
+  "//src/session:boot",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
   "//third_party/dart-pkg/git/flutter/examples/flutter_gallery",
@@ -29,8 +29,6 @@ cache_package_labels += [
   "//src/experiences/bin/simple_browser",
   "//src/media/audio/bundles:services",
 ]
-
-universe_package_labels += [ "//src/modular/bundles:tools" ]
 
 kernel_cmdline_args += [
   # hide the virtual console on boot

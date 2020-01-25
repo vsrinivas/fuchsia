@@ -1,6 +1,7 @@
 {
     program: {
         binary: "bin/session_manager",
+           "args": [ "-s", "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_session.cm" ],
     },
     expose: [
         {
@@ -56,6 +57,13 @@
         },
         {
             protocol: "/svc/fuchsia.ui.input.ImeService",
+            from: "realm",
+            to: [
+                "#session",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.ui.shortcut.Manager",
             from: "realm",
             to: [
                 "#session",
