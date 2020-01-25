@@ -235,6 +235,38 @@ affected by the build search path. Clang users should use the
 
 ### Diagnosing symbol problems
 
+#### Variable values are unavailable
+
+Usually this is related to the optimization level of the program:
+
+_Optimized out_ Indicates that the program symbols declare a variable with the given name, but
+that it has no value or location. This means the compiler has entirely optimized out the variable
+and the debugger can not show it. If you need to see it, use a less-optimized build setting.
+
+_Unavailable_ indicates that the variable is not valid at the current address, but that its value
+is known at other addresses. In optimized code, the compiler will often re-use registers, clobbering
+previous values which become unavailable.
+
+You can see the valid ranges for a variable with the "sym-info" command:
+
+```
+[zxdb] sym-info my_variable
+Variable: my_variable
+  Type: int
+  DWARF tag: 0x05
+  DWARF location (address range + DWARF expression bytes):
+    [0x3e0d0a3e05b, 0x3e0d0a3e0b2): 0x70 0x88 0x78
+    [0x3e0d0a3e0b2, 0x3e0d0a3eb11): 0x76 0x48 0x10 0xf8 0x07 0x1c 0x06
+
+```
+
+Under "DWARF location" it will give a list of address ranges where the value of the variable is
+known (inclusive at the beginning of the range, non-inclusive at the end). Run to one of these
+addresses to see the value of the variable (use "di" to see the current address).
+
+You can ignore the "DWARF expression bytes" which are the internal instructions for finding the
+variable.
+
 #### Can't find symbols
 
 The `sym-stat` command will tell you status for symbols. With no running

@@ -215,7 +215,7 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
     const char* err_str;
     if (var->location().is_null()) {
       // With no locations, this variable has been completely optimized out.
-      err_str = "Optimized out.";
+      err_str = "Optimized out";
     } else {
       // There are locations but none of them match the current IP.
       err_str = "Unavailable";

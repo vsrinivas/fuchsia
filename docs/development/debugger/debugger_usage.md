@@ -263,6 +263,63 @@ thread, and frame for the print command:
 "--foo=bar"
 ```
 
+### Attributes and settings
+
+Debugger objects have settings associated with them. Use the "get" verb to list the settings for
+a given object:
+
+```
+[zxdb] breakpoint 1 get
+  enabled  true
+  location main
+  one-shot false
+  scope    global
+  stop     all
+  type     software
+```
+
+The "get" command with a specific attribute will list the attribute and help associated with it:
+
+```
+[zxdb] breakpoint 1 get scope
+
+  ... help text here ...
+
+scope = global
+```
+
+The "set" command sets a value:
+
+```
+[zxdb] breakpoint 1 set scope="process 1 thread 2"
+[zxdb] breakpoint 1 set enabled=false
+```
+
+Some settings are hierarchical. A thread inherits settings from its process which in turn inherits
+settings from the global scope. The "get" command with no context or parameters will list the
+global settings and the ones for the current process and thread. You can set a global setting to
+apply to all threads and processes without specific overrides, or override a specific context:
+
+```
+[zxdb] set show-stdout = false            # Applies to all processes with no override.
+[zxdb] process 2 set show-stdout = true   # Overrides a specific process.
+```
+
+Some settings are lists. You can use += to append, or specify a new value with "=". List elements
+are space-separated (quote strings with spaces).
+
+```
+[zxdb] set symbol-paths = /foo/bar/baz "/home/Dr. Strangelove/cache"
+[zxdb] set symbol-paths += /tmp
+[zxdb] get symbol-paths
+  ... help text ...
+
+symbol-paths =
+  • /foo/bar/baz
+  • "/home/Dr. Strangelove/cache"
+  • /tmp
+```
+
 # Attaching and running
 
 ### Debugging drivers
@@ -348,22 +405,10 @@ Successfully authenticated with gs://fuchsia-infra-debug-symbols
 
 ### Debugging multiple processes
 
-You can debug many arbitrary processes at the same time. When you start, one
-“process context” (the container that may or may not have a running process)
- is created for you to use. When you run or attach, that process because
-associated with that context.
+You can debug many arbitrary processes at the same time. Attaching or running when a process is
+already running in the debugger will just create a new one in parallel.
 
-To debug a second program, create a new context with:
-
-```
-[zxdb] process new
-```
-
-This will clone the current process’ settings into a new context but not run
-anything yet. You can then run or attach as normal.
-
-Recall from the “Interaction model” section you can list the current processes
-with:
+Recall from the “Interaction model” section you can list the current processes with:
 
 ```
 [zxdb] process
@@ -434,6 +479,13 @@ A location can be expressed in many different ways.
     break 0xf72419a01
     ```
 
+  * Expression: Prefixing with "*" will treat the following input as an expression that evaluates to
+    an address. This is most often used with hardware breakpoints.
+
+    ```
+    break --type=write *&foo
+    ```
+
 To list all breakpoints:
 
 ```
@@ -469,6 +521,47 @@ Breakpoints can also be enabled or disabled:
 [zxdb] disable
 [zxdb] bp 4 enable
 ```
+
+Other properties can be modified via the "get" and "set" commands (see above for more):
+
+```
+[zxdb] bp 1 set location = Frobulator::GetThing
+```
+
+### Hardware data breakpoints ("watchpoints")
+
+The processor can be set to break execution when it reads or writes certain addresses. This can be
+particularly useful to track down memory corruption. Create a hardware breakpoint by specifying
+"write", "execute" or "read-write" in the "type" for a break command (unlike in some other
+debuggers, hardware breakpoints are exposed as a type of breakpoint rather than as a separate
+"watchpoint" concept).
+
+```
+[zxdb] break --type=read-write --size=4 0x12345670
+```
+
+As a shortcut, the "watch" command will take the contents of a variable or the result of an
+expression and set a data write breakpoint over its range:
+
+```
+[zxdb] watch i
+[zxdb] watch foo[5]->bar
+```
+
+Notes:
+
+  * CPUs only support a limited number of hardware watchpoints, typically around 4.
+
+  * The size of a watchpoint range is limited to 1, 2, 4, or 8 bytes and the address must be an even
+    multiple of the size.
+
+  * Unlike GDB, "watch" will evaluate the expression once and set a breakpoint on the result. It
+    won't re-evaluate the expression. In the above example, it will trigger when "bar" changes but
+    not if "foo[5]" changes to point to a different "bar".
+
+  * If you watch a variable on the stack and nobody touches it, you will often see it hit in
+    another part of the program when the stack memory is re-used. If you get a surprising breakpoint
+    hit, check that execution is still in the frame you expect.
 
 ### Programatic breakpoints
 

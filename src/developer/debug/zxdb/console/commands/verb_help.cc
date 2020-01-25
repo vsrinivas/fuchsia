@@ -117,6 +117,32 @@ Pretty printers
 
     [zxdb] print some_optional->x
     5
+
+Common errors
+
+  <Optimized out>
+      Indicates that the program symbols declare a variable with the given name,
+      but that it has no value or location. This means the compiler has entirely
+      optimized out the variable and the debugger can not show it. If you need
+      to see it, use a less-optimized build setting.
+
+  <Unavailable>
+      Indicates that the variable is not valid at the current address, but that
+      its value is known at other addresses. In optimized code, the compiler
+      will often re-use registers, clobbering previous values which become
+      unavailable.
+
+      You can see the valid ranges for a variable with the "sym-info" command:
+
+        [zxdb] sym-info my_variable
+
+      Under "DWARF location" it will give a list of address ranges where the
+      value of the variable is known (inclusive at the beginning of the range,
+      non-inclusive at the end). Run to one of these addresses to see the value
+      of the variable (use "di" to see the current address).
+
+      You can ignore the "DWARF expression bytes" which are the internal
+      instructions for finding the variable.
 )";
 
 const char kHelpShortHelp[] = R"(help / h: Help.)";
