@@ -7,7 +7,7 @@ use {
     fdio::{SpawnAction, SpawnOptions},
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx, HandleBased, Process, Task},
     std::ffi::CString,
 };
 
@@ -107,6 +107,14 @@ pub fn open_at(channel: &zx::Channel, path: &str, flags: u32) -> Result<zx::Chan
     Ok(client)
 }
 
+/// RAII helper for killing a process.
+struct KillOnDrop(Process);
+impl Drop for KillOnDrop {
+    fn drop(&mut self) {
+        self.0.kill().expect("unable to kill process");
+    }
+}
+
 // This test verifies that component_manager supports directory capabilities with differing rights
 // when the source of the capability is component_manager's namespace. This uses the same two test
 // helpers as the '_from_sibling' test above, but directly spawns the exposing side as a process,
@@ -123,7 +131,7 @@ async fn route_directories_from_component_manager_namespace() -> Result<(), Erro
     let (dir_request_server, dir_request_client) = zx::Channel::create()?;
     let dir_request_info = HandleInfo::new(HandleType::DirectoryRequest, 0);
     let bin = CString::new("/pkg/bin/expose_dir_rights")?;
-    fdio::spawn_etc(
+    let _expose_process = fdio::spawn_etc(
         &fuchsia_runtime::job_default(),
         SpawnOptions::DEFAULT_LOADER | SpawnOptions::CLONE_STDIO,
         &bin,
@@ -131,6 +139,13 @@ async fn route_directories_from_component_manager_namespace() -> Result<(), Erro
         None,
         &mut [SpawnAction::add_handle(dir_request_info, dir_request_server.into_handle())],
     )
+    .map(|process| {
+        // Always kill the process upon exit. expose_dir_rights clones our stdio
+        // handles but never exits on its own. This causes anyone who is waiting
+        // on those handles to close to wait forever, unless the process is
+        // killed.
+        KillOnDrop(process)
+    })
     .map_err(|(status, msg)| {
         format_err!("Failed to spawn expose_dirs process: {}, {}", status, msg)
     })?;
