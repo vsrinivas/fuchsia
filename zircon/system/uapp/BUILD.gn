@@ -34,7 +34,6 @@ group("uapp") {
     "thermal-cli",
     "trace-example",
     "usb-fwloader",
-    "waitfor",
     "xdc-test",
   ]
 }

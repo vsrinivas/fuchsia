@@ -2,15 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("waitfor") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("waitfor") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "waitfor.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/gpt",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/cksum",
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/gpt",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
   ]
+}
+
+migrated_manifest("waitfor-manifest") {
+  deps = [ ":waitfor" ]
 }
