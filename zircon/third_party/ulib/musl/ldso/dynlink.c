@@ -2055,7 +2055,19 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
   // DW_OP_breg*; these calls document that need in their "Input:" section.
   // Any DW_OP_addr operations encode an address relative to the load address
   // of the module containing this section.
+  uintptr_t bogon;
   __asm__ volatile(
+  // Since libc is linked with --gc-sections, the .zxdb_debug_api section
+  // will be dropped as unreferenced since it's an allocated section.  By
+  // rights, it should be a non-allocated section, but making it allocated
+  // simplifies things for zxdb right now and is harmless enough.  But, it
+  // means something must prevent the section from being GC'd.  So this
+  // useless instruction serves that purpose.
+#ifdef __aarch64__
+      "adrp %0, zxdb.thrd_t\n"
+#elif defined(__x86_64__)
+      "lea zxdb.thrd_t(%%rip), %0\n"
+#endif
       ".pushsection .zxdb_debug_api,\"a\",%%progbits\n"
 #define DEBUG_API(name) #name ":\n"
 #define DEBUG_API_END(name) ".size " #name ", . - " #name "\n"
@@ -2139,7 +2151,7 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
 #undef DEBUG_API
 #undef DEBUG_API_END
       ".popsection"
-      :
+      : "=r"(bogon)
       :
       // DW_OP_* constants per DWARF spec.
       [ bra ] "i"(0x28), [ bregx ] "i"(0x92), [ const1u ] "i"(0x08), [ deref ] "i"(0x06),
