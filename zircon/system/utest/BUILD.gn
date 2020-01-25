@@ -142,7 +142,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/hermetic-compute/test",
       "$zx/system/ulib/hermetic-decompressor/test",
       "$zx/system/ulib/hid-parser/test",
-      "$zx/system/ulib/hwreg/test",
       "$zx/system/ulib/image-format:image-format-test",
       "$zx/system/ulib/inspect/test",
       "$zx/system/ulib/intel-hda:test",

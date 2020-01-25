@@ -16,7 +16,7 @@
 
 // This function exists so that the resulting code can be inspected easily in the
 // object file.
-static void compilation_test() {
+[[maybe_unused]] static void compilation_test() {
   typedef hwreg::IndirectIo<0x00, 0x04> Io;
 
   volatile struct {

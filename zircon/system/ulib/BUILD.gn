@@ -89,6 +89,7 @@ group("ulib") {
     "hid",
     "hid-parser",
     "hwreg",
+    "hwreg:hwreg-i2c",
     "id_allocator",
     "image-format",
     "image-format:image-format-llcpp",

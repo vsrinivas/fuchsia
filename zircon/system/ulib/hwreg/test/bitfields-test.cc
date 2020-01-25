@@ -732,7 +732,7 @@ TEST(RegisterTestCase, SetChaining) {
 }
 
 // Compile-time test that not enabling printing functions provides a size reduction
-void printer_size_reduction() {
+[[maybe_unused]] void printer_size_reduction() {
   class TestRegWithPrinter
       : public hwreg::RegisterBase<TestRegWithPrinter, uint64_t, hwreg::EnablePrinter> {};
   class TestRegWithoutPrinter : public hwreg::RegisterBase<TestRegWithoutPrinter, uint64_t> {};
@@ -740,7 +740,7 @@ void printer_size_reduction() {
   static_assert(sizeof(TestRegWithPrinter) > sizeof(TestRegWithoutPrinter), "");
 }
 
-void type_size() {
+[[maybe_unused]] void type_size() {
   class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
    public:
     DEF_RSVDZ_BIT(7);

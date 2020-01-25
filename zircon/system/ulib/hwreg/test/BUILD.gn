@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [
@@ -10,37 +23,52 @@ group("test") {
   ]
 }
 
-zx_test("libhwreg") {
+test("libhwreg") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "bitfields-test.cc",
     "indirect-test.cc",
   ]
   deps = [
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hwreg:hwreg",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hwreg:hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
-zx_test("libhwreg-i2c") {
+test("libhwreg-i2c") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c-hwreg-test.cc" ]
   deps = [
-    "$zx/system/dev/lib/mock-i2c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hwreg:hwreg-i2c",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hwreg-i2c",
+    "//zircon/public/lib/mock-i2c",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.i2c",
   ]
+}
+
+migrated_manifest("libhwreg-manifest") {
+  deps = [ ":libhwreg" ]
+}
+
+migrated_manifest("libhwreg-i2c-manifest") {
+  deps = [ ":libhwreg-i2c" ]
 }
