@@ -53,6 +53,7 @@ use crate::{
 // end on the same thread it starts on, resulting in invalid trace events.
 // const SERVER_THREADS: usize = 2;
 const MAX_CONCURRENT_BLOB_FETCHES: usize = 5;
+const MAX_CONCURRENT_PACKAGE_FETCHES: usize = 5;
 
 const STATIC_REPO_DIR: &str = "/config/data/repositories";
 const DYNAMIC_REPO_PATH: &str = "/data/repositories.json";
@@ -143,20 +144,25 @@ fn main_inner() -> Result<(), Error> {
     );
     futures.push(blob_fetch_queue.boxed_local());
 
+    let (package_fetch_queue, package_fetcher) = resolver_service::make_package_fetch_queue(
+        cache.clone(),
+        Arc::clone(&repo_manager),
+        blob_fetcher.clone(),
+        MAX_CONCURRENT_PACKAGE_FETCHES,
+    );
+    futures.push(package_fetch_queue.boxed_local());
+    let package_fetcher = Arc::new(package_fetcher);
+
     let resolver_cb = {
-        // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
-        // from which to make new clones.
-        let repo_manager = Arc::clone(&repo_manager);
-        let rewrite_manager = Arc::clone(&rewrite_manager);
         let cache = cache.clone();
-        let blob_fetcher = blob_fetcher.clone();
+        let rewrite_manager = Arc::clone(&rewrite_manager);
+        let package_fetcher = Arc::clone(&package_fetcher);
         move |stream| {
             fasync::spawn_local(
                 resolver_service::run_resolver_service(
-                    Arc::clone(&rewrite_manager),
-                    Arc::clone(&repo_manager),
                     cache.clone(),
-                    blob_fetcher.clone(),
+                    Arc::clone(&rewrite_manager),
+                    Arc::clone(&package_fetcher),
                     stream,
                 )
                 .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:?}", e)),
@@ -165,17 +171,16 @@ fn main_inner() -> Result<(), Error> {
     };
 
     let font_resolver_fb = {
-        let repo_manager = Arc::clone(&repo_manager);
-        let rewrite_manager = Arc::clone(&rewrite_manager);
         let cache = cache.clone();
+        let rewrite_manager = Arc::clone(&rewrite_manager);
+        let package_fetcher = Arc::clone(&package_fetcher);
         move |stream| {
             fasync::spawn_local(
                 resolver_service::run_font_resolver_service(
                     Arc::clone(&font_package_manager),
-                    Arc::clone(&rewrite_manager),
-                    Arc::clone(&repo_manager),
                     cache.clone(),
-                    blob_fetcher.clone(),
+                    Arc::clone(&rewrite_manager),
+                    Arc::clone(&package_fetcher),
                     stream,
                 )
                 .unwrap_or_else(|e| {

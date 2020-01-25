@@ -848,3 +848,47 @@ async fn rust_tuf_experiment_identity() {
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
     env.stop().await;
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn verify_concurrent_resolve() {
+    let env = TestEnvBuilder::new().build();
+
+    let pkg1 = make_pkg_with_extra_blobs("first_concurrent_resolve_pkg", 1).await;
+    let pkg2 = make_pkg_with_extra_blobs("second_concurrent_resolve_pkg", 1).await;
+
+    // Make a repo with both packages.
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg1)
+            .add_package(&pkg2)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let pkg1_url = "fuchsia-pkg://test/first_concurrent_resolve_pkg";
+    let pkg2_url = "fuchsia-pkg://test/second_concurrent_resolve_pkg";
+
+    let path = format!("/blobs/{}", pkg1.content_blob_files().next().unwrap().merkle);
+    let (blocker, mut chan) = handler::BlockResponseHeaders::new();
+    let handler = handler::ForPath::new(path, blocker);
+
+    let served_repository = repo.server().uri_path_override_handler(handler).start().unwrap();
+    env.register_repo(&served_repository).await;
+
+    // First resolve should block per the handler we use.
+    let pkg1_resolve_fut = env.resolve_package(&pkg1_url);
+    // Get the BlockedResponse to make sure we're blocking the above resolve
+    // before we try to resolve the second package.
+    let blocked_response = chan.next().await.unwrap();
+    // Now await on resolving another package.
+
+    assert_matches!(env.resolve_package(&pkg2_url).await, Ok(_));
+    // Finally unblock the first resolve to safe
+    blocked_response.unblock();
+    assert_matches!(pkg1_resolve_fut.await, Ok(_));
+
+    // Tear down the test environment now so it doesn't live until another
+    // test environment is created which could cause an OOM.
+    env.stop().await;
+}
