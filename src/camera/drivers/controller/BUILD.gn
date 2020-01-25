@@ -34,15 +34,6 @@ driver_module("controller-driver") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-
-  if (internal_access) {
-    foreach(config_file, all_gdc_config_files) {
-      copy("gdc-config" + config_file) {
-        sources = [ "//prebuilt/camera/arm/gdc/configs/" + config_file ]
-        outputs = [ "$root_out_dir/firmware/" + config_file ]
-      }
-    }
-  }
 }
 
 source_set("controller-source") {
@@ -116,14 +107,10 @@ package("controller") {
   libraries = []
   if (internal_access) {
     foreach(config_file, all_gdc_config_files) {
-      deps += [
-        # The copy step has to be in the shared-library toolchain to use the
-        # expected output directory, since we treat firmware blobs as if they
-        # were libraries which always use the shared-library toolchain to build.
-        ":gdc-config" + config_file + "($shlib_toolchain)",
-      ]
       libraries += [
         {
+          source =
+              rebase_path("//prebuilt/camera/arm/gdc/configs/" + config_file)
           name = "firmware/" + config_file
         },
       ]
