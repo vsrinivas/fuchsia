@@ -19,6 +19,12 @@ if (internal_access) {
     "config_1152x1440_to_512x384_Crop_Rotate.bin",
     "config_1152x1440_to_720x540_Crop_Rotate.bin",
   ]
+
+  all_watermark_files = [
+    "watermark-360p.rgba",
+    "watermark-480p.rgba",
+    "watermark-720p.rgba",
+  ]
 }
 
 driver_module("controller-driver") {
@@ -119,6 +125,14 @@ package("controller") {
       libraries += [
         {
           name = "firmware/" + config_file
+        },
+      ]
+    }
+    foreach(watermark_file, all_watermark_files) {
+      libraries += [
+        {
+          source = rebase_path("//prebuilt/camera/watermark/" + watermark_file)
+          name = "firmware/" + watermark_file
         },
       ]
     }
