@@ -25,9 +25,7 @@ group("tests") {
 
 fuzzers_package("go_fuzzers") {
   fuzzers = [ ":basic_fuzzer" ]
-  # TODO(mdempsky): Requires Go toolchain roll, because prebuilt toolchain
-  # doesn't support -d=libfuzzer yet.
-  # fuzz_host = true
+  fuzz_host = true
 }
 
 go_fuzzer("basic_fuzzer") {

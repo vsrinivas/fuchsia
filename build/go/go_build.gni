@@ -67,6 +67,17 @@ template("go_build") {
 
   main_target_name = target_name
   is_test = defined(invoker.test) && invoker.test
+  carchive = defined(invoker.carchive) && invoker.carchive
+  assert(!(is_test && carchive),
+         "cannot specify both test=true and carchive=true")
+
+  output_name = target_name
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+  if (carchive) {
+    output_name = "${output_name}.a"
+  }
 
   # Variants don't have any effect for Go builds. But dependencies from other
   # targets in variant toolchains could lead to building the same Go target
@@ -90,10 +101,6 @@ template("go_build") {
           testonly = true
         }
         public_deps = [ ":$main_target_name(${toolchain_variant.base})" ]
-        output_name = target_name
-        if (defined(invoker.output_name)) {
-          output_name = invoker.output_name
-        }
         base_root_out_dir = get_label_info(public_deps[0], "root_out_dir")
         sources = [ "$base_root_out_dir/$output_name" ]
         outputs = [ "$root_out_dir/$output_name" ]
@@ -113,22 +120,11 @@ template("go_build") {
     }
     not_needed(invoker, "*")
   } else {
-    carchive = defined(invoker.carchive) && invoker.carchive
-    assert(!(is_test && carchive),
-           "cannot specify both test=true and carchive=true")
     define_sdk_target = defined(invoker.sdk_category) &&
                         invoker.sdk_category != "excluded" && !is_test
 
     # Strip target binaries and binaries that are included in the SDK.
     use_strip = (is_fuchsia || define_sdk_target) && !carchive
-
-    output_name = target_name
-    if (defined(invoker.output_name)) {
-      output_name = invoker.output_name
-    }
-    if (carchive) {
-      output_name = "${output_name}.a"
-    }
 
     output_path = "${root_out_dir}/${output_name}"
     if (use_strip) {
