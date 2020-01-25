@@ -154,8 +154,7 @@ TEST_F(StepIntoThreadControllerTest, Inline) {
   });
   EXPECT_TRUE(continued);
 
-  // That should have requested a synthetic exception which will be sent out asynchronously. The
-  // Resume() call will cause the MockRemoteAPI to exit the message loop.
+  // That should have requested a synthetic exception which will be sent out asynchronously.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Nothing yet.
   loop().RunUntilNoTasks();
 
@@ -163,6 +162,24 @@ TEST_F(StepIntoThreadControllerTest, Inline) {
   // backend.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
+}
+
+// If the program is killed out from under us, we can get an exception with no stack. This should
+// stop and not crash.
+TEST_F(StepIntoThreadControllerTest, NoStack) {
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep, {}, true);
+
+  auto step_into_controller = std::make_unique<StepIntoThreadController>(StepMode::kSourceLine);
+  std::optional<Err> result;
+  thread()->ContinueWith(std::move(step_into_controller),
+                         [&result](const Err& err) { result = err; });
+
+  loop().RunUntilNoTasks();
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
+
+  EXPECT_TRUE(result);
+  EXPECT_EQ("Can't step, no frames.", result->msg());
 }
 
 }  // namespace zxdb

@@ -72,11 +72,10 @@ ThreadController::ContinueOp StepThreadController::GetContinueOp() {
   if (finish_unsymolized_function_)
     return finish_unsymolized_function_->GetContinueOp();
 
-  // The stack shouldn't be empty when stepping in a range, but in case it is, fall back to
-  // single-step.
+  // The stack shouldn't be empty when stepping in a range, give up if it is.
   const auto& stack = thread()->GetStack();
   if (stack.empty())
-    return ContinueOp::StepInstruction();
+    return ContinueOp::SyntheticStop();
 
   // Check for inlines. This case will likely have an empty address range so the inline check needs
   // to be done before checking for empty ranges below.
@@ -105,6 +104,10 @@ ThreadController::ContinueOp StepThreadController::GetContinueOp() {
 ThreadController::StopOp StepThreadController::OnThreadStop(
     debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  Stack& stack = thread()->GetStack();
+  if (stack.empty())
+    return kUnexpected;  // Agent sent bad state, give up trying to step.
+
   if (finish_unsymolized_function_) {
     Log("Trying to step out of unsymbolized function.");
     if (finish_unsymolized_function_->OnThreadStop(stop_type, hit_breakpoints) == kContinue) {
@@ -133,10 +136,6 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
       return kUnexpected;
     }
   }
-
-  Stack& stack = thread()->GetStack();
-  if (stack.empty())
-    return kUnexpected;  // Agent sent bad state, give up trying to step.
 
   const Frame* top_frame = stack[0];
   uint64_t ip = top_frame->GetAddress();

@@ -34,8 +34,12 @@ StepIntoThreadController::~StepIntoThreadController() = default;
 void StepIntoThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
   SetThread(thread);
 
-  original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
+  if (thread->GetStack().empty()) {
+    cb(Err("Can't step, no frames."));
+    return;
+  }
 
+  original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
   step_into_->InitWithThread(thread, std::move(cb));
 }
 
