@@ -157,7 +157,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/paver:paver-test",
       "$zx/system/ulib/pretty:pretty-test",
       "$zx/system/ulib/refcount:test",
-      "$zx/system/ulib/region-alloc/test",
       "$zx/system/ulib/runtests-utils/test",
       "$zx/system/ulib/simplehid/test",
       "$zx/system/ulib/smbios:smbios-test",
