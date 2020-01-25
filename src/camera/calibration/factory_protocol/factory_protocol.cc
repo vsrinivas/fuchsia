@@ -5,7 +5,6 @@
 #include "src/camera/calibration/factory_protocol/factory_protocol.h"
 
 #include <fcntl.h>
-#include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 
 #include <fbl/unique_fd.h>
@@ -14,9 +13,11 @@
 
 namespace camera {
 
-constexpr auto kTag = "factory_protocol";
+constexpr auto kTag = "camera_calibration";
 
 static constexpr const char* kIspDevicePath = "/dev/class/isp-device-test/000";
+static constexpr const char* kControllerDevicePath =
+    "/dev/camera-controller/camera-controller-device";
 static constexpr const char* kDirPath = "/calibration";
 
 std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
@@ -45,7 +46,33 @@ std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
     FX_PLOGST(ERROR, kTag, status) << "Failed to get service handle";
     return nullptr;
   }
+
   factory_impl->isp_tester_.Bind(std::move(isp_tester_channel));
+
+  // Connect to the controller device.
+  result = open(kControllerDevicePath, O_RDONLY);
+  if (result < 0) {
+    FX_LOGST(ERROR, kTag) << "Error opening " << kControllerDevicePath;
+    return nullptr;
+  }
+  fbl::unique_fd controller_fd(result);
+
+  zx::channel controller_channel;
+  status = fdio_get_service_handle(controller_fd.get(), controller_channel.reset_and_get_address());
+  if (status != ZX_OK) {
+    FX_PLOGST(ERROR, kTag, status) << "Failed to get service handle";
+    return nullptr;
+  }
+
+  // TODO(nzo): Is there any harm to reusing the same dispatcher?
+  fuchsia::hardware::camera::DevicePtr device;
+  device.Bind(std::move(controller_channel), factory_impl->dispatcher_);
+
+  device->GetChannel2(factory_impl->controller_.NewRequest().TakeChannel());
+  if (!factory_impl->controller_) {
+    FX_LOGST(ERROR, kTag) << "Failed to get controller interface from device";
+    return nullptr;
+  }
 
   return factory_impl;
 }
@@ -54,6 +81,7 @@ zx_status_t FactoryProtocol::ConnectToStream() {
   fuchsia::sysmem::ImageFormat_2 format;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
 
+  // TODO(nzo): Is there any harm to reusing the same dispatcher?
   auto request = stream_.NewRequest(dispatcher_);
   zx_status_t status = isp_tester_->CreateStream(std::move(request), &buffers, &format);
   if (status != ZX_OK) {
@@ -112,7 +140,23 @@ void FactoryProtocol::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info
 
 // |fuchsia::factory::camera::CameraFactory|
 
-void FactoryProtocol::DetectCamera(DetectCameraCallback callback) { FX_NOTIMPLEMENTED(); }
+void FactoryProtocol::DetectCamera(DetectCameraCallback callback) {
+  fuchsia::camera2::DeviceInfo device_info;
+  zx_status_t status = controller_->GetDeviceInfo(&device_info);
+  if (status != ZX_OK) {
+    FX_PLOGST(ERROR, kTag, status) << "Failed to call GetDeviceInfo";
+    Shutdown(status);
+  }
+
+  auto response = fuchsia::factory::camera::CameraFactory_DetectCamera_Response();
+  // TODO(41671): account for multiple cameras on a single device.
+  response.camera_id = 0;
+  response.camera_info = std::move(device_info);
+
+  auto result = fuchsia::factory::camera::CameraFactory_DetectCamera_Result::WithResponse(
+      std::move(response));
+  callback(std::move(result));
+}
 
 void FactoryProtocol::Start() { FX_NOTIMPLEMENTED(); }
 

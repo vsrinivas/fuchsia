@@ -8,70 +8,94 @@
 #include <lib/async-loop/default.h>
 
 #include <gtest/gtest.h>
+#include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
-
-#include "src/lib/files/directory.h"
 
 namespace camera {
 namespace {
 
-constexpr const auto kDirPath = "/data/calibration";
-constexpr const auto kFilename = "/frame_0.raw";
-constexpr uint8_t kStrLength = 17;
+const auto kDirPath = "/data/calibration";
+const auto kFilename = "/frame_0.raw";
+const auto kCameraVendorName = "Google Inc.";
+const auto kCameraProductName = "Fuchsia Sherlock Camera";
+const uint16_t kCameraVendorId = 0x18D1;
+const uint16_t kCameraProductId = 0xF00D;
+const uint8_t kStrLength = 17;
 
-TEST(FactoryProtocolTest, DISABLED_ConstructorSanity) {
-  thrd_t thread;
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(ZX_OK, loop.StartThread("test-thread", &thread));
+class FactoryProtocolTest : public testing::Test {
+ public:
+  FactoryProtocolTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  ~FactoryProtocolTest() override { loop_.Shutdown(); }
 
-  zx::channel channel;
-  auto factory_impl = FactoryProtocol::Create(std::move(channel), loop.dispatcher());
-  ASSERT_NE(nullptr, factory_impl);
-}
+  void SetUp() override {
+    thrd_t thread;
+    ASSERT_EQ(ZX_OK, loop_.StartThread("factory_protocol_test_thread", &thread));
 
-TEST(FactoryProtocolTest, DISABLED_StreamingWritesToFile) {
-  thrd_t thread;
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(ZX_OK, loop.StartThread("test-thread", &thread));
+    auto channel = factory_protocol_.NewRequest(loop_.dispatcher()).TakeChannel();
+    factory_protocol_.set_error_handler([&](zx_status_t status) {
+      if (status != ZX_OK)
+        ADD_FAILURE() << "Channel Failure: " << status;
+    });
 
-  zx::channel channel;
-  auto factory_impl = FactoryProtocol::Create(std::move(channel), loop.dispatcher());
-  ASSERT_NE(nullptr, factory_impl);
-  ASSERT_EQ(ZX_OK, factory_impl->ConnectToStream());
+    factory_impl_ = FactoryProtocol::Create(std::move(channel), loop_.dispatcher());
+    ASSERT_NE(nullptr, factory_impl_);
+    ASSERT_FALSE(factory_impl_->streaming());
+  }
+
+  void TearDown() override {
+    factory_impl_ = nullptr;
+    factory_protocol_ = nullptr;
+  }
+
+  async::Loop loop_;
+  std::unique_ptr<FactoryProtocol> factory_impl_;
+  fuchsia::factory::camera::CameraFactoryPtr factory_protocol_;
+};
+
+TEST_F(FactoryProtocolTest, DISABLED_StreamingWritesToFile) {
+  ASSERT_EQ(ZX_OK, factory_impl_->ConnectToStream());
   const std::string kDirPathStr(kDirPath, kStrLength);
   ASSERT_TRUE(files::IsDirectory(kDirPathStr));
-  ASSERT_FALSE(factory_impl->frames_received());
+  ASSERT_FALSE(factory_impl_->frames_received());
 
-  while (!factory_impl->frames_received()) {
-    loop.RunUntilIdle();
+  while (!factory_impl_->frames_received() && !HasFailure()) {
+    loop_.RunUntilIdle();
   }
 
   auto path = kDirPathStr + kFilename;
   ASSERT_TRUE(files::IsFile(path));
 }
 
-TEST(FactoryProtocolTest, DISABLED_ShutdownClosesChannelAndStream) {
-  thrd_t thread;
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(ZX_OK, loop.StartThread("test-thread", &thread));
+TEST_F(FactoryProtocolTest, DISABLED_ShutdownClosesChannelAndStream) {
+  ASSERT_EQ(ZX_OK, factory_impl_->ConnectToStream());
+  ASSERT_TRUE(factory_impl_->streaming());
 
-  zx::channel channel;
-  auto factory_impl = FactoryProtocol::Create(std::move(channel), loop.dispatcher());
-  ASSERT_NE(nullptr, factory_impl);
-  ASSERT_FALSE(factory_impl->streaming());
-  ASSERT_EQ(ZX_OK, factory_impl->ConnectToStream());
-  loop.RunUntilIdle();
-  ASSERT_TRUE(factory_impl->streaming());
-
-  factory_impl->Shutdown(ZX_ERR_STOP);
-  loop.RunUntilIdle();
-
-  zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+  factory_impl_->Shutdown(ZX_OK);
+  zx_status_t status =
+      factory_protocol_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
   if (status != ZX_OK) {
     EXPECT_EQ(status, ZX_ERR_BAD_HANDLE);
   }
 
-  ASSERT_FALSE(factory_impl->streaming());
+  ASSERT_FALSE(factory_impl_->streaming());
+}
+
+TEST_F(FactoryProtocolTest, DISABLED_DetectCameraFIDL) {
+  auto test_done = false;
+  factory_protocol_->DetectCamera(
+      [&test_done](fuchsia::factory::camera::CameraFactory_DetectCamera_Result result) {
+        EXPECT_EQ(0, result.response().camera_id);
+        auto device_info = std::move(result.response().camera_info);
+        EXPECT_EQ(kCameraVendorName, device_info.vendor_name());
+        EXPECT_EQ(kCameraVendorId, device_info.vendor_id());
+        EXPECT_EQ(kCameraProductName, device_info.product_name());
+        EXPECT_EQ(kCameraProductId, device_info.product_id());
+        EXPECT_EQ(fuchsia::camera2::DeviceType::BUILTIN, device_info.type());
+        test_done = true;
+      });
+
+  while (!test_done && !HasFailure())
+    loop_.RunUntilIdle();
 }
 
 }  // namespace

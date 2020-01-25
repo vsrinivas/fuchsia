@@ -24,7 +24,7 @@ class FactoryProtocol : public fuchsia::camera2::Stream_EventSender,
  public:
   explicit FactoryProtocol(async_dispatcher_t* dispatcher)
       : binding_(this), dispatcher_(dispatcher) {}
-  ~FactoryProtocol() override { Shutdown(ZX_ERR_STOP); }
+  ~FactoryProtocol() override { Shutdown(ZX_OK); }
 
   // Factory method that creates a FactoryProtocol and connects it to the ISP Tester Driver.
   // Args:
