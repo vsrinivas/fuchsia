@@ -7,19 +7,9 @@
 
 use crate::common::AccountLifetime;
 use account_common::{LocalAccountId, LocalPersonaId};
-use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
 use fidl_fuchsia_auth::AppConfig;
-use fidl_fuchsia_identity_account::Error as ApiError;
-use fidl_fuchsia_identity_internal::{
-    AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerContextRequest,
-    AccountHandlerContextRequestStream,
-};
-use fuchsia_async as fasync;
-use futures::prelude::*;
 use lazy_static::lazy_static;
-use log::error;
 use std::path::PathBuf;
-use std::sync::Arc;
 use tempfile::TempDir;
 
 lazy_static! {
@@ -67,88 +57,5 @@ impl TempLocation {
     /// Returns a persistent AccountLifetime with the path set to this TempLocation's path.
     pub fn to_persistent_lifetime(&self) -> AccountLifetime {
         AccountLifetime::Persistent { account_dir: self.path.clone() }
-    }
-}
-
-/// A fake meant for tests which rely on an AccountHandlerContext, but the context itself
-/// isn't under test. As opposed to the real type, this doesn't depend on any other
-/// components. Panics when getting unexpected messages or args, as defined by the implementation.
-pub struct FakeAccountHandlerContext {}
-
-impl FakeAccountHandlerContext {
-    /// Creates new fake account handler context
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    /// Asynchronously handles the supplied stream of `AccountHandlerContextRequest` messages.
-    pub async fn handle_requests_from_stream(
-        &self,
-        mut stream: AccountHandlerContextRequestStream,
-    ) -> Result<(), fidl::Error> {
-        while let Some(req) = stream.try_next().await? {
-            self.handle_request(req).await?;
-        }
-        Ok(())
-    }
-
-    /// Asynchronously handles a single `AccountHandlerContextRequest`.
-    async fn handle_request(&self, req: AccountHandlerContextRequest) -> Result<(), fidl::Error> {
-        match req {
-            AccountHandlerContextRequest::GetOauth { responder, .. } => {
-                responder.send(&mut Err(ApiError::Internal))
-            }
-            AccountHandlerContextRequest::GetOpenIdConnect { responder, .. } => {
-                responder.send(&mut Err(ApiError::Internal))
-            }
-            AccountHandlerContextRequest::GetOauthOpenIdConnect { responder, .. } => {
-                responder.send(&mut Err(ApiError::Internal))
-            }
-            AccountHandlerContextRequest::GetStorageUnlockAuthMechanism { responder, .. } => {
-                responder.send(&mut Err(ApiError::Internal))
-            }
-        }
-    }
-}
-
-/// Creates a new `AccountHandlerContext` channel, spawns a task to handle requests received on
-/// this channel using the supplied `FakeAccountHandlerContext`, and returns the
-/// `AccountHandlerContextProxy`.
-pub fn spawn_context_channel(
-    context: Arc<FakeAccountHandlerContext>,
-) -> AccountHandlerContextProxy {
-    let (proxy, stream) = create_proxy_and_stream::<AccountHandlerContextMarker>().unwrap();
-    let context_clone = Arc::clone(&context);
-    fasync::spawn(async move {
-        context_clone
-            .handle_requests_from_stream(stream)
-            .await
-            .unwrap_or_else(|err| error!("Error handling FakeAccountHandlerContext: {:?}", err))
-    });
-    proxy
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn test_context_fake() {
-        let fake_context = Arc::new(FakeAccountHandlerContext::new());
-        let proxy = spawn_context_channel(fake_context.clone());
-        let (_, ap_server_end) = create_endpoints().expect("failed creating channel pair");
-        assert_eq!(
-            proxy.get_oauth("dummy_auth_provider", ap_server_end).await.unwrap(),
-            Err(ApiError::Internal)
-        );
-        let (_, authenticator_server_end) =
-            create_endpoints().expect("failed creating channel pair");
-        assert_eq!(
-            proxy
-                .get_storage_unlock_auth_mechanism("dummy_authenticator", authenticator_server_end)
-                .await
-                .unwrap(),
-            Err(ApiError::Internal)
-        );
     }
 }

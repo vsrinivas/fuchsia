@@ -474,6 +474,7 @@ impl AccountHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fake_account_handler_context::{spawn_context_channel, FakeAccountHandlerContext};
     use crate::test_util::*;
     use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
     use fidl_fuchsia_identity_account::{Scenario, ThreatScenario};
