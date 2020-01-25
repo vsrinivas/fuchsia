@@ -20,6 +20,9 @@ import("//build/rust/rustc_artifact.gni")
 #     Edition of the Rust language to be used.
 #     Options are "2015" and "2018". If unsure, choose "2018".
 #
+#   configs (optional)
+#     A list of config labels applying to this target.
+#
 #   deps (optional)
 #     List of rust_library GN targets on which this crate depends.
 #     Third party crates can be included through paths like
@@ -115,6 +118,7 @@ template("rustc_binary") {
                              "name",
                              "version",
                              "edition",
+                             "configs",
                              "deps",
                              "test_deps",
                              "non_rust_deps",

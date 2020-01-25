@@ -15,6 +15,13 @@ import("//build/rust/rustc_artifact.gni")
 #   version
 #     Semver version of the crate as seen on crates.io.
 #
+#   edition
+#     Edition of the Rust language to be used.
+#     Options are "2015" and "2018". If unsure, choose "2018".
+#
+#   configs (optional)
+#     A list of config labels applying to this target.
+#
 #   deps (optional)
 #     List of rust_library GN targets on which this crate depends.
 #     Third party crates can be included through paths like
@@ -78,6 +85,7 @@ template("rustc_staticlib") {
                              "version",
                              "deps",
                              "edition",
+                             "configs",
                              "non_rust_deps",
                              "with_unit_tests",
                              "output_name",
@@ -120,9 +128,7 @@ template("rustc_staticlib") {
     test_target_name = "${target_name}_test"
     group(test_target_name) {
       testonly = true
-      public_deps = [
-        ":${rustc_target}_test",
-      ]
+      public_deps = [ ":${rustc_target}_test" ]
     }
   }
 }

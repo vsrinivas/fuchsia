@@ -193,6 +193,7 @@ if (is_fuchsia) {
   default_common_binary_configs += [
     "//build/config/fuchsia:auto_var_init",
     "//build/config/fuchsia:icf",
+    "//build/config/fuchsia:large_rust_stack",
     "//build/config/fuchsia:thread_safety_annotations",
     "//build/config/fuchsia:werror",
 
@@ -248,6 +249,26 @@ set_defaults("loadable_module") {
 }
 set_defaults("executable") {
   configs = default_executable_configs
+}
+
+# Same for the rustc_* templates.
+set_defaults("rustc_binary") {
+  configs = default_common_binary_configs
+}
+set_defaults("rustc_cdylib") {
+  configs = default_shared_library_configs
+}
+set_defaults("rustc_library") {
+  configs = default_common_binary_configs
+}
+set_defaults("rustc_macro") {
+  configs = default_shared_library_configs
+}
+set_defaults("rustc_staticlib") {
+  configs = default_common_binary_configs
+}
+set_defaults("rustc_test") {
+  configs = default_common_binary_configs
 }
 
 if (toolchain_variant.with_shared) {

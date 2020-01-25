@@ -484,6 +484,7 @@ template("rustc_artifact") {
                    "root_file",
                    "rflags",
                  ])
+      not_needed(invoker, [ "configs" ])
       generated_file(build_target_name) {
         forward_variables_from(invoker, [ "testonly" ])
         outputs = [ output_file ]
@@ -498,6 +499,8 @@ template("rustc_artifact") {
         deps = build_target_deps
         output_name = output_filename
         rustflags = rflags
+        configs = []
+        configs = invoker.configs
       }
     } else if (type == "rlib") {
       rust_library(build_target_name) {
@@ -507,6 +510,8 @@ template("rustc_artifact") {
         deps = build_target_deps
         output_name = output_filename
         rustflags = rflags
+        configs = []
+        configs = invoker.configs
       }
     } else if (type == "proc-macro") {
       rust_proc_macro(build_target_name) {
@@ -516,6 +521,8 @@ template("rustc_artifact") {
         deps = build_target_deps
         output_name = output_filename
         rustflags = rflags
+        configs = []
+        configs = invoker.configs
       }
     } else if (type == "staticlib") {
       static_library(build_target_name) {
@@ -526,6 +533,8 @@ template("rustc_artifact") {
         output_name = output_filename
         rustflags = rflags
         complete_static_lib = true
+        configs = []
+        configs = invoker.configs
       }
     } else if (type == "cdylib") {
       shared_library(build_target_name) {
@@ -542,6 +551,8 @@ template("rustc_artifact") {
           "-Clink-arg=--soname=lib${crate_name}.so",
         ]
         rustflags = rflags
+        configs = []
+        configs = invoker.configs
       }
     } else {
       assert(
@@ -563,6 +574,7 @@ template("rustc_artifact") {
                    "cfg_feature_args",
                    "rust_lto_args",
                  ])
+      not_needed(invoker, [ "configs" ])
       generated_file(build_test_target_name) {
         outputs = [ test_output_file ]
         deps = build_target_deps
@@ -592,6 +604,8 @@ template("rustc_artifact") {
         if (defined(invoker.test_deps)) {
           deps += invoker.test_deps
         }
+        configs = []
+        configs = invoker.configs
       }
     }
   }

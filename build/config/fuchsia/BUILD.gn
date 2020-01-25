@@ -226,3 +226,13 @@ config("no_cpp_standard_library") {
 config("static_cpp_standard_library") {
   ldflags = [ "-static-libstdc++" ]
 }
+
+# Configure a larger (2MB) stack size for Rust binaries.
+#
+# Currently, threads created by Rust's libstd have a hardcoded default stack
+# size of 2MB on Fuchsia. This can create overflows when moving code to the
+# main thread, whose default stack size is 256kB. To remove this wrinkle, the
+# default stack size is changed to 2MB for Rust binaries.
+config("large_rust_stack") {
+  rustflags = [ "-Clink-args=-zstack-size=0x200000" ]
+}
