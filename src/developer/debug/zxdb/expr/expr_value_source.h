@@ -45,6 +45,9 @@ class ExprValueSource {
     kComposite,
   };
 
+  // Returns a string corresponding to the given type, "register", "temporary", etc.
+  static const char* TypeToString(Type t);
+
   // Indicates an unknown, temporary (the output of "i + 4"), or constant source.
   explicit ExprValueSource(Type type = Type::kTemporary) : type_(type) {}
 

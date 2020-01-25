@@ -53,7 +53,6 @@ enum class Verb {
   kEnable,
   kFinish,
   kGet,
-  kHardwareBreakpoint,
   kHelp,
   kJump,
   kKill,
@@ -89,6 +88,7 @@ enum class Verb {
   kSysInfo,
   kUntil,
   kUp,
+  kWatch,
 
   // Adding a new one? Add in one of the functions GetVerbs() calls.
   kLast  // Not a real verb, keep last.

@@ -27,6 +27,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_stderr.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stdout.h"
 #include "src/developer/debug/zxdb/console/commands/verb_sys_info.h"
+#include "src/developer/debug/zxdb/console/commands/verb_watch.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -108,6 +109,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kStderr] = GetStderrVerbRecord();
     all_verbs[Verb::kSysInfo] = GetSysInfoVerbRecord();
     all_verbs[Verb::kStack] = GetStackVerbRecord();
+    all_verbs[Verb::kWatch] = GetWatchVerbRecord();
 
     // Everything but Noun::kNone (= 0) should be in the map.
     FXL_DCHECK(all_verbs.size() == static_cast<size_t>(Verb::kLast) - 1)

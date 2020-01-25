@@ -436,8 +436,7 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
 Err EvalCommandExpression(const Command& cmd, const char* verb,
                           const fxl::RefPtr<EvalContext>& eval_context, bool follow_references,
                           EvalCallback cb) {
-  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
-  if (err.has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame}); err.has_error())
     return err;
 
   if (cmd.args().size() != 1)

@@ -5,41 +5,14 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/zx_status_definitions.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
+#include "src/developer/debug/zxdb/console/commands/breakpoint_command_test.h"
 #include "src/developer/debug/zxdb/console/console_test.h"
 
 namespace zxdb {
 
 namespace {
 
-// This just saves breakpoint add notifications. Tests will need to manually issue these callbacks.
-class BreakpointRemoteAPI : public MockRemoteAPI {
- public:
-  // RemoteAPI implementation.
-  void AddOrChangeBreakpoint(
-      const debug_ipc::AddOrChangeBreakpointRequest& request,
-      fit::callback<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {
-    last_request = request;
-    last_cb = std::move(cb);
-  }
-
-  std::optional<debug_ipc::AddOrChangeBreakpointRequest> last_request;
-  fit::callback<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> last_cb;
-};
-
-class VerbsBreakpointTest : public ConsoleTest {
- public:
-  BreakpointRemoteAPI* breakpoint_remote_api() { return breakpoint_remote_api_; }
-
- private:
-  // RemoteAPITest overrides.
-  std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override {
-    auto remote_api = std::make_unique<BreakpointRemoteAPI>();
-    breakpoint_remote_api_ = remote_api.get();
-    return remote_api;
-  }
-
-  BreakpointRemoteAPI* breakpoint_remote_api_ = nullptr;  // Owned by the session.
-};
+class VerbsBreakpointTest : public BreakpointCommandTest {};
 
 }  // namespace
 

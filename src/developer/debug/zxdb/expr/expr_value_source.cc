@@ -8,6 +8,23 @@
 
 namespace zxdb {
 
+// static
+const char* ExprValueSource::TypeToString(Type t) {
+  switch (t) {
+    case Type::kTemporary:
+      return "temporary";
+    case Type::kMemory:
+      return "memory";
+    case Type::kRegister:
+      return "register";
+    case Type::kConstant:
+      return "constant";
+    case Type::kComposite:
+      return "composite";
+  }
+  return "unknown";
+}
+
 uint128_t ExprValueSource::SetBits(uint128_t existing, uint128_t new_value) const {
   FXL_DCHECK(is_bitfield());
 

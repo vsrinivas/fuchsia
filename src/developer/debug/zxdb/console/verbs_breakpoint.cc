@@ -200,6 +200,7 @@ Other breakpoint commands
   "clear": To delete breakpoints.
   "disable": Disable a breakpoint without deleting it.
   "enable": Enable a previously-disabled breakpoint.
+  "watch": Create a hardware write breakpoint.
 
 Examples
 
@@ -262,7 +263,7 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
   }
 
   // Type.
-  settings.type = debug_ipc::BreakpointType::kSoftware;
+  settings.type = BreakpointSettings::Type::kSoftware;
   if (cmd.HasSwitch(kTypeSwitch)) {
     if (auto opt_type = BreakpointSettings::StringToType(cmd.GetSwitchValue(kTypeSwitch)))
       settings.type = *opt_type;
@@ -356,28 +357,6 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
       });
 
   return Err();
-}
-
-// hardware-breakpoint -----------------------------------------------------------------------------
-
-const char kHardwareBreakpointShortHelp[] =
-    "hardware-breakpoint / hb: Create a hardware breakpoint.";
-
-const char kHardwareBreakpointHelp[] =
-    R"(hardware-breakpoint <location>
-
-  Alias: "hb"
-
-  Creates or modifies a hardware breakpoint.
-  This is a convenience shorthand for "break --type hardware <location>".
-  See "help break" for more information.
-)";
-
-Err DoHardwareBreakpoint(ConsoleContext* context, const Command& cmd) {
-  // We hack our way the command :)
-  Command* cmd_ptr = const_cast<Command*>(&cmd);
-  cmd_ptr->SetSwitch(kTypeSwitch, "hardware");
-  return DoBreak(context, *cmd_ptr, [](const Err&) {});
 }
 
 // clear -------------------------------------------------------------------------------------------
@@ -522,10 +501,6 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
   (*verbs)[Verb::kBreak] = std::move(break_record);
-
-  (*verbs)[Verb::kHardwareBreakpoint] =
-      VerbRecord(&DoHardwareBreakpoint, {"hardware-breakpoint", "hb"}, kHardwareBreakpointShortHelp,
-                 kHardwareBreakpointHelp, CommandGroup::kBreakpoint);
 
   (*verbs)[Verb::kClear] =
       VerbRecord(&DoClear, {"clear", "cl"}, kClearShortHelp, kClearHelp, CommandGroup::kBreakpoint);
