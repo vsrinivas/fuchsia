@@ -9,6 +9,7 @@
 #include <third_party/crashpad/util/file/string_file.h>
 
 #include "src/developer/exception_broker/crash_report_generation.h"
+#include "src/developer/exception_broker/json_utils.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -31,8 +32,16 @@ std::unique_ptr<ExceptionBroker> ExceptionBroker::Create(
   if (!override_filepath)
     override_filepath = kEnableJitdConfigPath;
 
-  if (files::IsFile(override_filepath))
+  if (files::IsFile(override_filepath)) {
     broker->limbo_manager().SetActive(true);
+
+    std::string file_content;
+    if (!files::ReadFileToString(override_filepath, &file_content)) {
+      FX_LOGS(WARNING) << "Could not read the config file.";
+    } else {
+      broker->limbo_manager().set_filters(ExtractFilters(file_content));
+    }
+  }
 
   return broker;
 }

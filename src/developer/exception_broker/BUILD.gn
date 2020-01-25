@@ -10,6 +10,8 @@ source_set("lib") {
     "crash_report_generation.h",
     "exception_broker.cc",
     "exception_broker.h",
+    "json_utils.cc",
+    "json_utils.h",
     "process_limbo_manager.cc",
     "process_limbo_manager.h",
   ]
@@ -24,6 +26,7 @@ source_set("lib") {
     "//third_party/crashpad/snapshot",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//third_party/crashpad/util",
+    "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",

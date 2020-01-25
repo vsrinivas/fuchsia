@@ -7,10 +7,25 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/developer/exception_broker/exception_broker.h"
+#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::exception::ProcessLimbo;
 using fuchsia::exception::ProcessLimboHandler;
+
+namespace {
+
+void LogProcessLimboStatus(const fuchsia::exception::ProcessLimboManager& limbo) {
+  if (!limbo.active()) {
+    FX_LOGS(INFO) << "Process Limbo is not active at startup.";
+    return;
+  }
+
+  auto filters = fxl::JoinStrings(limbo.filters(), ", ");
+  FX_LOGS(INFO) << "Process limbo is active at startup with the following filters: " << filters;
+}
+
+}  // namespace
 
 int main() {
   syslog::InitLogger({"exception-broker"});
@@ -43,6 +58,8 @@ int main() {
         // Add the handler to the bindings, which is where the fidl calls come through.
         limbo_bindings.AddBinding(std::move(handler), std::move(request));
       }));
+
+  LogProcessLimboStatus(broker->limbo_manager());
 
   loop.Run();
 

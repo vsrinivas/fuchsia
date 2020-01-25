@@ -37,6 +37,7 @@ class ProcessLimboManager {
 
   const std::map<zx_koid_t, ProcessException>& limbo() const { return limbo_; }
 
+  void set_filters(std::set<std::string> filters) { filters_ = std::move(filters); }
   const std::set<std::string>& filters() const { return filters_; }
 
   // Testing utilities.

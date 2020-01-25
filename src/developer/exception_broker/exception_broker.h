@@ -39,6 +39,7 @@ class ExceptionBroker : public Handler {
   }
 
   ProcessLimboManager& limbo_manager() { return limbo_manager_; }
+  const ProcessLimboManager& limbo_manager() const { return limbo_manager_; }
 
  private:
   void FileCrashReport(ProcessException);  // |use_limbo_| == false.

@@ -21,8 +21,19 @@ constexpr char kTestConfigFile[] = "/pkg/data/enable_jitd_on_startup.json";
 
 }  // namespace
 
+TEST(ExceptionBrokerConfig, NonExistanceShouldNotActivate) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto context = sys::ComponentContext::Create();
 
-TEST(ConfigText, ShouldBeActive) {
+  sys::testing::ServiceDirectoryProvider services;
+
+  auto broker =
+      fuchsia::exception::ExceptionBroker::Create(loop.dispatcher(), services.service_directory());
+
+  ASSERT_FALSE(broker->limbo_manager().active());
+}
+
+TEST(ExceptionBrokerConfig, ExistanceShouldActivate) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
@@ -32,6 +43,34 @@ TEST(ConfigText, ShouldBeActive) {
       loop.dispatcher(), services.service_directory(), kTestConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
+
+  {
+    auto& filters = broker->limbo_manager().filters();
+    ASSERT_EQ(filters.size(), 0u);
+  }
+}
+
+constexpr char kFilterConfigFile[] = "/pkg/data/filter_jitd_config.json";
+
+TEST(ExceptionBrokerConfig, FilterArray) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto context = sys::ComponentContext::Create();
+
+  sys::testing::ServiceDirectoryProvider services;
+
+  auto broker = fuchsia::exception::ExceptionBroker::Create(
+      loop.dispatcher(), services.service_directory(), kFilterConfigFile);
+
+  ASSERT_TRUE(broker->limbo_manager().active());
+
+  {
+    auto& filters = broker->limbo_manager().filters();
+    ASSERT_EQ(filters.size(), 3u);
+    auto it = filters.begin();
+    EXPECT_EQ(*it++, "filter-1");
+    EXPECT_EQ(*it++, "filter-2");
+    EXPECT_EQ(*it++, "filter-3");
+  }
 }
 
 }  // namespace exception

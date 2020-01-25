@@ -69,6 +69,10 @@ test_package("exception_broker_tests") {
       path = "configs/test_enable_jitd_on_startup.json"
       dest = "enable_jitd_on_startup.json"
     },
+    {
+      path = "configs/test_filter_jitd_config.json"
+      dest = "filter_jitd_config.json"
+    },
   ]
 }
 
