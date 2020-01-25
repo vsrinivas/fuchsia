@@ -171,7 +171,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/trace-provider:tests",
       "$zx/system/ulib/trace-reader:tests",
       "$zx/system/ulib/trace-vthread:tests",
-      "$zx/system/ulib/unittest/test",
       "$zx/system/ulib/utf_conversion/test",
       "$zx/system/ulib/zbi-bootfs:test",
       "$zx/system/ulib/zircon-crypto/test",
