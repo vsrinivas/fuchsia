@@ -37,8 +37,14 @@ declare_args() {
   # Valid values are: "legacy", "fair", "unified"
   select_scheduler = "fair"
 
-  # Enable detailed scheduler traces.
-  detailed_scheduler_tracing = false
+  # The level of detail for scheduler traces when enabled. Values greater than
+  # zero add increasing details at the cost of increased trace buffer use.
+  #
+  # 0 = Default kernel:sched tracing.
+  # 1 = Adds duration traces for key scheduler operations.
+  # 2 = Adds flow events from wakeup to running state.
+  # 3 = Adds detailed internal durations and probes.
+  scheduler_tracing_level = 0
 
   # Enable userspace PCI and disable kernel PCI.
   enable_user_pci = false

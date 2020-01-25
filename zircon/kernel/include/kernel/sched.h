@@ -58,8 +58,8 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) TA_REQ(thread_lock);
 void sched_preempt_timer_tick(zx_time_t now);
 
 // Ensure this define has a value when not defined globally by the build system.
-#ifndef WITH_DETAILED_SCHEDULER_TRACING
-#define WITH_DETAILED_SCHEDULER_TRACING 0
+#ifndef SCHEDULER_TRACING_LEVEL
+#define SCHEDULER_TRACING_LEVEL 0
 #endif
 
 __END_CDECLS

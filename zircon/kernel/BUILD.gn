@@ -269,9 +269,7 @@ if (current_toolchain == default_toolchain) {
     } else {
       assert(false, "Invalid scheduler selection!")
     }
-    if (detailed_scheduler_tracing) {
-      defines += [ "WITH_DETAILED_SCHEDULER_TRACING=1" ]
-    }
+    defines += [ "SCHEDULER_TRACING_LEVEL=$scheduler_tracing_level" ]
   }
 
   # This is the kernel proper, an ELF executable with full symbols.
