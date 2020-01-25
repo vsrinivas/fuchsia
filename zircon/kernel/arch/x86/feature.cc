@@ -344,14 +344,17 @@ void x86_feature_debug(void) {
     case X86_MICROARCH_INTEL_SKYLAKE:
       microarch_string = "Skylake";
       break;
-    case X86_MICROARCH_INTEL_KABYLAKE:
-      microarch_string = "Kaby Lake";
+    case X86_MICROARCH_INTEL_CANNONLAKE:
+      microarch_string = "Cannon Lake";
       break;
     case X86_MICROARCH_INTEL_SILVERMONT:
       microarch_string = "Silvermont";
       break;
     case X86_MICROARCH_INTEL_GOLDMONT:
       microarch_string = "Goldmont";
+      break;
+    case X86_MICROARCH_INTEL_GOLDMONT_PLUS:
+      microarch_string = "Goldmont Plus";
       break;
     case X86_MICROARCH_AMD_BULLDOZER:
       microarch_string = "Bulldozer";
@@ -455,7 +458,7 @@ static uint64_t default_apic_freq() {
   return 0;
 }
 
-static uint64_t kbl_apic_freq() {
+static uint64_t skl_apic_freq() {
   uint64_t v = default_apic_freq();
   if (v != 0) {
     return v;
@@ -565,9 +568,28 @@ static void hsw_reboot_reason(uint64_t reason) {
 }
 
 // Intel microarches
-static const x86_microarch_config_t kbl_config{
-    .x86_microarch = X86_MICROARCH_INTEL_KABYLAKE,
-    .get_apic_freq = kbl_apic_freq,
+static const x86_microarch_config_t cannon_lake_config{
+    .x86_microarch = X86_MICROARCH_INTEL_CANNONLAKE,
+    .get_apic_freq = skl_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = hsw_reboot_system,
+    .reboot_reason = hsw_reboot_reason,
+    .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
+    .has_swapgs_bug = true,
+    .has_ssb = true,
+    .idle_states =
+        {
+            .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
+        },
+};
+
+static const x86_microarch_config_t skylake_config{
+    .x86_microarch = X86_MICROARCH_INTEL_SKYLAKE,
+    .get_apic_freq = skl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
@@ -592,9 +614,10 @@ static const x86_microarch_config_t kbl_config{
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
-static const x86_microarch_config_t skl_config{
+
+static const x86_microarch_config_t skylake_x_config{
     .x86_microarch = X86_MICROARCH_INTEL_SKYLAKE,
-    .get_apic_freq = kbl_apic_freq,
+    .get_apic_freq = skl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
@@ -610,7 +633,8 @@ static const x86_microarch_config_t skl_config{
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
-static const x86_microarch_config_t bdw_config{
+
+static const x86_microarch_config_t broadwell_config{
     .x86_microarch = X86_MICROARCH_INTEL_BROADWELL,
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
@@ -628,7 +652,7 @@ static const x86_microarch_config_t bdw_config{
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
-static const x86_microarch_config_t hsw_config{
+static const x86_microarch_config_t haswell_config{
     .x86_microarch = X86_MICROARCH_INTEL_HASWELL,
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
@@ -646,7 +670,7 @@ static const x86_microarch_config_t hsw_config{
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
-static const x86_microarch_config_t ivb_config{
+static const x86_microarch_config_t ivybridge_config{
     .x86_microarch = X86_MICROARCH_INTEL_IVY_BRIDGE,
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
@@ -664,7 +688,7 @@ static const x86_microarch_config_t ivb_config{
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
-static const x86_microarch_config_t snb_config{
+static const x86_microarch_config_t sandybridge_config{
     .x86_microarch = X86_MICROARCH_INTEL_SANDY_BRIDGE,
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
@@ -718,7 +742,7 @@ static const x86_microarch_config_t nehalem_config{
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
-static const x86_microarch_config_t smt_config{
+static const x86_microarch_config_t silvermont_config{
     .x86_microarch = X86_MICROARCH_INTEL_SILVERMONT,
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
@@ -736,9 +760,26 @@ static const x86_microarch_config_t smt_config{
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
-static const x86_microarch_config_t glm_config{
-    // Goldmont, Goldmont+
+static const x86_microarch_config_t goldmont_config{
     .x86_microarch = X86_MICROARCH_INTEL_GOLDMONT,
+    .get_apic_freq = default_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
+    .disable_c1e = false,
+    .has_meltdown = true,
+    .has_l1tf = false,
+    .has_mds = false,
+    .has_swapgs_bug = false,
+    .has_ssb = true,
+    .idle_states =
+        {
+            .states = {X86_CSTATE_C1(0)},
+            .default_state_mask = kX86IdleStateMaskC1Only,
+        },
+};
+static const x86_microarch_config_t goldmont_plus_config{
+    .x86_microarch = X86_MICROARCH_INTEL_GOLDMONT_PLUS,
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
@@ -885,37 +926,40 @@ const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid) {
         return &westmere_config;
       case 0x2a: /* Sandy Bridge */
       case 0x2d: /* Sandy Bridge EP */
-        return &snb_config;
+        return &sandybridge_config;
       case 0x3a: /* Ivy Bridge */
       case 0x3e: /* Ivy Bridge EP */
-        return &ivb_config;
+        return &ivybridge_config;
       case 0x3c: /* Haswell DT */
       case 0x3f: /* Haswell MB */
       case 0x45: /* Haswell ULT */
       case 0x46: /* Haswell ULX */
-        return &hsw_config;
+        return &haswell_config;
       case 0x3d: /* Broadwell */
       case 0x47: /* Broadwell H */
       case 0x56: /* Broadwell EP */
       case 0x4f: /* Broadwell EX */
-        return &bdw_config;
+        return &broadwell_config;
       case 0x4e: /* Skylake Y/U */
       case 0x5e: /* Skylake H/S */
-      case 0x55: /* Skylake E */
-        return &skl_config;
-      case 0x8e: /* Kabylake Y/U */
-      case 0x9e: /* Kabylake H/S */
-        return &kbl_config;
+      case 0x8e: /* Kaby Lake Y/U, Coffee Lake, Whiskey Lake */
+      case 0x9e: /* Kaby Lake H/S, Coffee Lake, Whiskey Lake */
+        return &skylake_config;
+      case 0x55: /* Skylake X/SP, Cascade Lake */
+        return &skylake_x_config;
+      case 0x66: /* Cannon Lake U */
+        return &cannon_lake_config;
       case 0x37: /* Silvermont */
       case 0x4a: /* Silvermont "Cherry View" */
       case 0x4d: /* Silvermont "Avoton" */
       case 0x4c: /* Airmont "Braswell" */
       case 0x5a: /* Airmont */
-        return &smt_config;
+        return &silvermont_config;
       case 0x5c: /* Goldmont (Apollo Lake) */
       case 0x5f: /* Goldmont (Denverton) */
-      case 0x7a: /* Goldmont+ (Gemini Lake) */
-        return &glm_config;
+        return &goldmont_config;
+      case 0x7a: /* Goldmont Plus (Gemini Lake) */
+        return &goldmont_plus_config;
       default:
         return &intel_default_config;
     }

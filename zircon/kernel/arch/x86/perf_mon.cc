@@ -391,7 +391,6 @@ static unsigned x86_perfmon_lbr_stack_size() {
     uint8_t stack_size;
   } supported_chips[] = {
       {X86_MICROARCH_INTEL_SKYLAKE, 32},
-      {X86_MICROARCH_INTEL_KABYLAKE, 32},
   };
 
   unsigned lbr_format = perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);

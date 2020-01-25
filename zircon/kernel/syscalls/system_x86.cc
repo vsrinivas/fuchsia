@@ -107,8 +107,7 @@ zx_status_t x86_set_pkg_pl1(const zx_system_powerctl_arg_t* arg, MsrAccess* msr)
       (x86_microarch != X86_MICROARCH_INTEL_SILVERMONT) &&
       (x86_microarch != X86_MICROARCH_INTEL_BROADWELL) &&
       (x86_microarch != X86_MICROARCH_INTEL_HASWELL) &&
-      (x86_microarch != X86_MICROARCH_INTEL_SKYLAKE) &&
-      (x86_microarch != X86_MICROARCH_INTEL_KABYLAKE)) {
+      (x86_microarch != X86_MICROARCH_INTEL_SKYLAKE)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
