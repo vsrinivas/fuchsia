@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":image-format-test" ]
+}
+
+zx_test("image-format-test") {
+  sources = [ "image-format-test.cc" ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/image-format",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -26,12 +26,3 @@ zx_library("image-format-llcpp") {
     "$zx/system/fidl/fuchsia-sysmem:llcpp.headers",
   ]
 }
-
-zx_test("image-format-test") {
-  sources = [ "image-format-test.cc" ]
-  deps = [
-    ":image-format",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-  ]
-}
