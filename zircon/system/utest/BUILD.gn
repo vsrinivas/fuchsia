@@ -187,7 +187,6 @@ if (current_cpu != "") {
       "fidl-utils",
       "fit",
       "fs-bench",
-      "fs-recovery",
       "fs-test-utils",
       "fvm",
       "kcounter",

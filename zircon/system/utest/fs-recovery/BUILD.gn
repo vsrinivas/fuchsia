@@ -2,26 +2,52 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/resource.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-generated_resource("zxcrypt_config.txt") {
-  testonly = true
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+generated_file("zxcrypt_config.txt") {
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+
+  outputs = [ "$target_gen_dir/$target_name.txt" ]
+
   contents = "null"
-  outputs = [ "config/zxcrypt" ]
+
+  metadata = {
+    migrated_manifest_lines = [ "config/zxcrypt=" + rebase_path(outputs[0], root_build_dir) ]
+  }
 }
 
-zx_test("fs-recovery") {
+test("fs-recovery") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "recovery.cc" ]
   deps = [
     ":zxcrypt_config.txt",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs-management",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/ramdevice-client",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs-management",
+    "//zircon/public/lib/fvm",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/ramdevice-client",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
   ]
+}
+
+migrated_manifest("fs-recovery-manifest") {
+  deps = [ ":fs-recovery" ]
 }
