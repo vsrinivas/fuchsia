@@ -124,16 +124,16 @@ Err ParseGlobalInputLocation(const Location& location, const std::string& input,
   return Err();
 }
 
-void EvalGlobalInputLocation(const fxl::RefPtr<EvalContext> eval_context, const Location& location,
-                             const std::string& input,
-                             fit::callback<void(ErrOr<InputLocation>)> cb) {
+void EvalGlobalInputLocation(
+    const fxl::RefPtr<EvalContext> eval_context, const Location& location, const std::string& input,
+    fit::callback<void(ErrOr<InputLocation>, std::optional<uint32_t> size)> cb) {
   if (input.empty() || input[0] != '*') {
     // Not an expression, forward to the synchronous parser.
     InputLocation sync_result;
     if (Err err = ParseGlobalInputLocation(location, input, &sync_result); err.has_error())
-      cb(err);
+      cb(err, std::nullopt);
     else
-      cb(sync_result);
+      cb(sync_result, std::nullopt);
     return;
   }
 
@@ -142,16 +142,16 @@ void EvalGlobalInputLocation(const fxl::RefPtr<EvalContext> eval_context, const 
   EvalExpression(
       expr, eval_context, true, [eval_context, cb = std::move(cb)](ErrOrValue result) mutable {
         if (result.has_error())
-          return cb(result.err());
+          return cb(result.err(), std::nullopt);
 
         uint64_t address = 0;
         std::optional<uint32_t> size;
         if (Err err = ValueToAddressAndSize(eval_context, result.value(), &address, &size);
             err.has_error()) {
-          return cb(err);
+          return cb(err, std::nullopt);
         }
 
-        cb(InputLocation(address));
+        cb(InputLocation(address), size);
       });
 }
 
@@ -183,14 +183,16 @@ Err ParseLocalInputLocation(const Frame* optional_frame, const std::string& inpu
   return ParseLocalInputLocation(process_symbols, location, input, output);
 }
 
-void EvalLocalInputLocation(const fxl::RefPtr<EvalContext>& eval_context, const Location& location,
-                            const std::string& input,
-                            fit::callback<void(ErrOr<std::vector<InputLocation>>)> cb) {
+void EvalLocalInputLocation(
+    const fxl::RefPtr<EvalContext>& eval_context, const Location& location,
+    const std::string& input,
+    fit::callback<void(ErrOr<std::vector<InputLocation>>, std::optional<uint32_t> size)> cb) {
   EvalGlobalInputLocation(
       eval_context, location, input,
-      [eval_context, location, cb = std::move(cb)](ErrOr<InputLocation> global_location) mutable {
+      [eval_context, location, cb = std::move(cb)](ErrOr<InputLocation> global_location,
+                                                   std::optional<uint32_t> size) mutable {
         if (global_location.has_error())
-          return cb(global_location.err());
+          return cb(global_location.err(), std::nullopt);
 
         // Possibly null.
         const ProcessSymbols* process_symbols = eval_context->GetProcessSymbols();
@@ -204,7 +206,7 @@ void EvalLocalInputLocation(const fxl::RefPtr<EvalContext>& eval_context, const 
         // The global one always goes last so the most specific ones come first.
         result.push_back(global_location.take_value());
 
-        cb(std::move(result));
+        cb(std::move(result), size);
       });
 }
 

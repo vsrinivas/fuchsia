@@ -270,8 +270,11 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
       return Err("Unknown breakpoint type.");
   }
 
-  // Size.
+  // Size. Track if this is set or not si we can change the default based on the expression result.
+  bool has_explicit_size = false;
   if (cmd.HasSwitch(kSizeSwitch)) {
+    has_explicit_size = true;
+
     if (!BreakpointSettings::TypeHasSize(settings.type))
       return Err("Breakpoint size is only supported for write and read-write breakpoints.");
     if (Err err = StringToUint32(cmd.GetSwitchValue(kSizeSwitch), &settings.byte_size);
@@ -326,7 +329,8 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
 
   EvalLocalInputLocation(
       GetEvalContextForCommand(cmd), cur_location, cmd.args()[0],
-      [settings, cb = std::move(cb)](ErrOr<std::vector<InputLocation>> locs) mutable {
+      [settings, has_explicit_size, cb = std::move(cb)](ErrOr<std::vector<InputLocation>> locs,
+                                                        std::optional<uint32_t> expr_size) mutable {
         if (locs.has_error()) {
           Console::get()->Output(locs.err());
           if (cb)
@@ -338,6 +342,11 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
         ConsoleContext* context = &Console::get()->context();
         Breakpoint* breakpoint = context->session()->system().CreateNewBreakpoint();
         context->SetActiveBreakpoint(breakpoint);
+
+        if (BreakpointSettings::TypeHasSize(settings.type) && !has_explicit_size && expr_size) {
+          // Input expression has a size we should default to.
+          settings.byte_size = *expr_size;
+        }
 
         settings.locations = locs.take_value();
         breakpoint->SetSettings(settings);

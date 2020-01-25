@@ -27,21 +27,27 @@ namespace zxdb {
 
 namespace {
 
+struct EvalResult {
+  ErrOr<InputLocation> loc = ErrOr<InputLocation>(Err("<test hardness>: callback not issued>"));
+  std::optional<uint32_t> size;
+};
+
 class InputLocationParserTest : public TestWithLoop {
  public:
   void SetUp() override { mock_module_symbols_ = symbols_.InjectMockModule(); }
 
-  ErrOr<InputLocation> SyncEvalGlobalInputLocation(const fxl::RefPtr<EvalContext> eval_context,
-                                                   const Location& location,
-                                                   const std::string& input) {
+  EvalResult SyncEvalGlobalInputLocation(const fxl::RefPtr<EvalContext> eval_context,
+                                         const Location& location, const std::string& input) {
     bool called = false;
-    ErrOr<InputLocation> result(Err("<test hardness>: callback not issued>"));
+    EvalResult result;
 
-    EvalGlobalInputLocation(eval_context, location, input,
-                            [&called, &result](ErrOr<InputLocation> value) {
-                              called = true;
-                              result = std::move(value);
-                            });
+    EvalGlobalInputLocation(
+        eval_context, location, input,
+        [&called, &result](ErrOr<InputLocation> value, std::optional<uint32_t> size) {
+          called = true;
+          result.loc = std::move(value);
+          result.size = size;
+        });
     loop().RunUntilNoTasks();
     EXPECT_TRUE(called);
     return result;
@@ -61,55 +67,69 @@ TEST_F(InputLocationParserTest, EvalGlobalInputLocation) {
 
   // Valid symbol (including colons).
   auto result = SyncEvalGlobalInputLocation(eval_context, existing_location, "Foo::Bar");
-  ASSERT_TRUE(result.ok()) << result.err().msg();
-  EXPECT_EQ(InputLocation::Type::kName, result.value().type);
-  EXPECT_EQ(R"("Foo"; ::"Bar")", result.value().name.GetDebugName());
+  ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
+  EXPECT_FALSE(result.size);
+  EXPECT_EQ(InputLocation::Type::kName, result.loc.value().type);
+  EXPECT_EQ(R"("Foo"; ::"Bar")", result.loc.value().name.GetDebugName());
 
   // Valid file/line.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:123");
-  ASSERT_TRUE(result.ok()) << result.err().msg();
-  EXPECT_EQ(InputLocation::Type::kLine, result.value().type);
-  EXPECT_EQ("foo/bar.cc", result.value().line.file());
-  EXPECT_EQ(123, result.value().line.line());
+  ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
+  EXPECT_FALSE(result.size);
+  EXPECT_EQ(InputLocation::Type::kLine, result.loc.value().type);
+  EXPECT_EQ("foo/bar.cc", result.loc.value().line.file());
+  EXPECT_EQ(123, result.loc.value().line.line());
 
   // Invalid file/line.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:123x");
-  EXPECT_TRUE(result.has_error());
+  EXPECT_TRUE(result.loc.has_error());
 
   // Valid hex address with *.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*0x12345f");
-  ASSERT_TRUE(result.ok()) << result.err().msg();
-  EXPECT_EQ(InputLocation::Type::kAddress, result.value().type);
-  EXPECT_EQ(0x12345fu, result.value().address);
+  ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
+  EXPECT_FALSE(result.size);
+  EXPECT_EQ(InputLocation::Type::kAddress, result.loc.value().type);
+  EXPECT_EQ(0x12345fu, result.loc.value().address);
 
   // Valid hex address without a *.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "0x12345f");
-  ASSERT_TRUE(result.ok()) << result.err().msg();
-  EXPECT_EQ(InputLocation::Type::kAddress, result.value().type);
-  EXPECT_EQ(0x12345fu, result.value().address);
+  ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
+  EXPECT_FALSE(result.size);
+  EXPECT_EQ(InputLocation::Type::kAddress, result.loc.value().type);
+  EXPECT_EQ(0x12345fu, result.loc.value().address);
 
   // Decimal number with "*" override should be an address.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*21");
-  ASSERT_TRUE(result.ok()) << result.err().msg();
-  EXPECT_EQ(InputLocation::Type::kAddress, result.value().type);
-  EXPECT_EQ(21u, result.value().address);
+  ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
+  EXPECT_FALSE(result.size);
+  EXPECT_EQ(InputLocation::Type::kAddress, result.loc.value().type);
+  EXPECT_EQ(21u, result.loc.value().address);
 
   // Invalid address.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*2134x");
-  ASSERT_TRUE(result.has_error());
+  ASSERT_TRUE(result.loc.has_error());
 
   // Line number with no Frame for context.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "21");
-  ASSERT_TRUE(result.has_error());
+  ASSERT_TRUE(result.loc.has_error());
 
   // Valid implicit file name.
   std::string file = "foo.cc";
   Location existing_location_with_file(0x1234, FileLine(file, 12), 0,
                                        SymbolContext::ForRelativeAddresses(), LazySymbol());
   result = SyncEvalGlobalInputLocation(eval_context, existing_location_with_file, "21");
-  ASSERT_TRUE(result.ok()) << result.err().msg();
-  EXPECT_EQ(file, result.value().line.file());
-  EXPECT_EQ(21, result.value().line.line());
+  ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
+  EXPECT_FALSE(result.size);
+  EXPECT_EQ(file, result.loc.value().line.file());
+  EXPECT_EQ(21, result.loc.value().line.line());
+
+  // Pointer to a double. This should give a valid expression size.
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*(double*)0x123450");
+  ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
+  ASSERT_TRUE(result.size);
+  EXPECT_EQ(8u, *result.size);
+  EXPECT_EQ(InputLocation::Type::kAddress, result.loc.value().type);
+  EXPECT_EQ(0x123450u, result.loc.value().address);
 }
 
 TEST_F(InputLocationParserTest, ResolveInputLocation) {

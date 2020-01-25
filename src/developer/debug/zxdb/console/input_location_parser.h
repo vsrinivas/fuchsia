@@ -39,11 +39,14 @@ Err ParseGlobalInputLocation(const Location& location, const std::string& input,
 // Like ParseGlobalInputLocation() but also accepts expressions preceeded with a "*". Because
 // evaluating expressions may be asynchronous, this function is too.
 //
+// If the input location is an expression and the thing it points to has an intrinsic size, that
+// size will be passed as the second parameter of the callback.
+//
 // The callback follows "expression" rules in that it will be evaluted from within the stack of this
 // function if the result is synchronously available.
-void EvalGlobalInputLocation(const fxl::RefPtr<EvalContext> eval_context, const Location& location,
-                             const std::string& input,
-                             fit::callback<void(ErrOr<InputLocation>)> cb);
+void EvalGlobalInputLocation(
+    const fxl::RefPtr<EvalContext> eval_context, const Location& location, const std::string& input,
+    fit::callback<void(ErrOr<InputLocation>, std::optional<uint32_t> size)> cb);
 
 // The same as ParseGlobalInputLocation() but this will additionally find unqualified functions on
 // the current class if there is one. For file/line and address based inputs, this will be identical
@@ -77,11 +80,15 @@ Err ParseLocalInputLocation(const Frame* optional_frame, const std::string& inpu
 // Like ParseLocalInputLocation() but also accepts expressions preceeded with a "*". Because
 // evaluating expressions may be asynchronous, this function is too.
 //
+// If the input location is an expression and the thing it points to has an intrinsic size, that
+// size will be passed as the second parameter of the callback.
+//
 // The callback follows "expression" rules in that it will be evaluted from within the stack of this
 // function if the result is synchronously available.
-void EvalLocalInputLocation(const fxl::RefPtr<EvalContext>& eval_context, const Location& location,
-                            const std::string& input,
-                            fit::callback<void(ErrOr<std::vector<InputLocation>>)> cb);
+void EvalLocalInputLocation(
+    const fxl::RefPtr<EvalContext>& eval_context, const Location& location,
+    const std::string& input,
+    fit::callback<void(ErrOr<std::vector<InputLocation>>, std::optional<uint32_t> size)> cb);
 
 // Parses the input and generates a list of matches. No matches will generate an error. This can
 // take either a pre-parsed InputLocation, or can parse the input itself.

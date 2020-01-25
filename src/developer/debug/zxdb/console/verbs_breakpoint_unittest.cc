@@ -79,21 +79,45 @@ TEST_F(VerbsBreakpointTest, Break) {
 
 TEST_F(VerbsBreakpointTest, WriteBreakpoint) {
   // Creates a specifically-sized write breakpoint at a manual address.
-  console().ProcessInputLine("break -s 8 -t write 0x1234");
+  console().ProcessInputLine("break -t write *(uint16_t*)0x1234");
 
-  // Validate the set request. It will have a 0 address but the range will be set.
+  // Validate the set request. It will have a 0 address but the range will be set to cover the
+  // 16-bit input value.
   ASSERT_TRUE(breakpoint_remote_api()->last_request);
   ASSERT_EQ(1u, breakpoint_remote_api()->last_request->breakpoint.locations.size());
   EXPECT_EQ(0u, breakpoint_remote_api()->last_request->breakpoint.locations[0].address);
   EXPECT_EQ(0x1234u,
             breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.begin());
-  EXPECT_EQ(8u,
+  EXPECT_EQ(2u,
             breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.size());
 
   // The breakpoint info should be immediately printed even though the backend has not replied.
   auto event = console().GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Created Breakpoint 1 type=write size=8 @ 0x1234\n", event.output.AsString());
+  EXPECT_EQ("Created Breakpoint 1 type=write size=2 @ 0x1234\n", event.output.AsString());
+
+  // Now do an explicitly-sized override.
+  console().ProcessInputLine("break -s 8 -t read-write *(uint16_t*)0x5678");
+  ASSERT_TRUE(breakpoint_remote_api()->last_request);
+  EXPECT_EQ(0u, breakpoint_remote_api()->last_request->breakpoint.locations[0].address);
+  EXPECT_EQ(0x5678u,
+            breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.begin());
+  EXPECT_EQ(8u,
+            breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.size());
+
+  // The breakpoint info should be immediately printed even though the backend has not replied.
+  event = console().GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("Created Breakpoint 2 type=read-write size=8 @ 0x5678\n", event.output.AsString());
+
+  // Untyped numeric inputs get a default size of 4.
+  console().ProcessInputLine("break -t read-write 0x9abc");
+  ASSERT_TRUE(breakpoint_remote_api()->last_request);
+  EXPECT_EQ(0u, breakpoint_remote_api()->last_request->breakpoint.locations[0].address);
+  EXPECT_EQ(0x9abcu,
+            breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.begin());
+  EXPECT_EQ(4u,
+            breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.size());
 }
 
 // This is a more end-to-end-type test that tests that breakpoints that hit backend errors issue
