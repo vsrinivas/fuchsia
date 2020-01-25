@@ -125,7 +125,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/driver-unit-test/test",
       "$zx/system/ulib/elf-search/test",
       "$zx/system/ulib/elfload/test",
-      "$zx/system/ulib/fbl/test",
       "$zx/system/ulib/fdio/test",
       "$zx/system/ulib/ffl/test",
       "$zx/system/ulib/fidl-async/test:fidl-async-test",
@@ -245,7 +244,6 @@ if (current_cpu != "") {
     testonly = true
     deps = [
       "$zx/system/ulib/blobfs/test:blobfs-host",
-      "$zx/system/ulib/fbl/test",
       "$zx/system/ulib/ffl/test",
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/libzbi/test",

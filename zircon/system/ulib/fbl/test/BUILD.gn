@@ -2,12 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":fbl" ]
 }
 
-zx_test("fbl") {
+test("fbl") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   include_dirs = [ "include" ]
   sources = [
     "algorithm_tests.cc",
@@ -40,9 +61,13 @@ zx_test("fbl") {
   ]
 
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fbl",
   ]
+  if (is_fuchsia) {
+    deps += [ "//zircon/public/lib/zxtest" ]
+  } else {
+    deps += [ "//zircon/public/lib/zxtest-host" ]
+  }
 
   if (!is_fuchsia) {
     defines = [ "FBL_TEST_ENABLE_WAVL_TREE_BALANCE_TEST=1" ]
@@ -69,9 +94,12 @@ zx_test("fbl") {
       "slab_allocator_tests.cc",
     ]
     deps += [
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zx",
     ]
   }
+}
+
+migrated_manifest("fbl-manifest") {
+  deps = [ ":fbl" ]
 }

@@ -32,7 +32,6 @@ foreach(entry, zircon_test_specs) {
 listed_tests = [
   "blobfs-host",
   "cmdline",
-  "fbl",
   "ffl",
   "fidl",
   "fidl-compiler",
@@ -88,7 +87,9 @@ group("legacy-tests") {
 group("migrated-tests") {
   testonly = true
 
-  deps = []
+  deps = [
+    "//zircon/system/ulib/fbl/test:fbl",
+  ]
 }
 
 group("host") {
