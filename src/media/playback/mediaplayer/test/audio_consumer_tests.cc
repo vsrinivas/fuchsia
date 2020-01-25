@@ -605,7 +605,8 @@ TEST_F(AudioConsumerTests, BufferOrdering) {
   sink->SendPacket(*packet, [&sent_packet]() { sent_packet = true; });
   RunLoopUntil([&sent_packet]() { return sent_packet; });
 
-  EXPECT_TRUE(fake_audio_.renderer().expected());
+  RunLoopUntil([this]() { return fake_audio_.renderer().expected(); });
+
   EXPECT_FALSE(sink_connection_closed);
 }
 
