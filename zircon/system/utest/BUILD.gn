@@ -72,8 +72,6 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/scsi:scsilib-disk-test",
       "$zx/system/dev/lib/usb:usb-lib-test",
       "$zx/system/dev/light-sensor/lite-on:ltr-578als-test",
-      "$zx/system/dev/light/aml-light:aml-light-test",
-      "$zx/system/dev/light/lp50xx-light:lp50xx-light-test",
       "$zx/system/dev/nand/aml-rawnand/test",
       "$zx/system/dev/nand/broker/test",
       "$zx/system/dev/nand/cadence-hpnfc:cadence-hpnfc-test",

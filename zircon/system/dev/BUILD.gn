@@ -19,7 +19,6 @@ group("dev") {
     "display",
     "fw",
     "gpu",
-    "light",
     "light-sensor",
     "mlg",
     "nand",
