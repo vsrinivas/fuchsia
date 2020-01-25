@@ -2,11 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("loadgen") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("loadgen") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "loadgen.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
   ]
+}
+
+migrated_manifest("loadgen-manifest") {
+  deps = [ ":loadgen" ]
 }
