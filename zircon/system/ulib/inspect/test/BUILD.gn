@@ -2,12 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":inspect" ]
 }
 
-zx_test("inspect") {
+test("inspect") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   test_group = "sys"
   sources = [
     "health_unittest.cc",
@@ -22,10 +39,14 @@ zx_test("inspect") {
   ]
 
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/inspect",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/inspect",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+migrated_manifest("inspect-manifest") {
+  deps = [ ":inspect" ]
 }
