@@ -90,12 +90,20 @@ type ChildStub struct {
 }
 
 func (s_ *ChildStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
+}
+
+func (s_ *ChildStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-func (s_ *ChildStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+type ChildWithCtxStub struct {
+	Impl ChildWithCtx
+}
+
+func (s_ *ChildWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
@@ -198,41 +206,7 @@ type ParentStub struct {
 }
 
 func (s_ *ParentStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case ParentGetChildOrdinal:
-		fallthrough
-	case ParentGetChildGenOrdinal:
-		c, err_ := s_.Impl.GetChild()
-		out_ := parentGetChildResponse{}
-		out_.C = c
-		return &out_, true, err_
-	case ParentGetChildRequestOrdinal:
-		fallthrough
-	case ParentGetChildRequestGenOrdinal:
-		r, err_ := s_.Impl.GetChildRequest()
-		out_ := parentGetChildRequestResponse{}
-		out_.R = r
-		return &out_, true, err_
-	case ParentTakeChildOrdinal:
-		fallthrough
-	case ParentTakeChildGenOrdinal:
-		in_ := parentTakeChildRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.TakeChild(in_.C)
-		return nil, false, err_
-	case ParentTakeChildRequestOrdinal:
-		fallthrough
-	case ParentTakeChildRequestGenOrdinal:
-		in_ := parentTakeChildRequestRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.TakeChildRequest(in_.R)
-		return nil, false, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
+	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
 }
 
 func (s_ *ParentStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
@@ -268,6 +242,48 @@ func (s_ *ParentStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.Marsha
 			return nil, false, err_
 		}
 		err_ := s_.Impl.TakeChildRequest(in_.R)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type ParentWithCtxStub struct {
+	Impl ParentWithCtx
+}
+
+func (s_ *ParentWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case ParentGetChildOrdinal:
+		fallthrough
+	case ParentGetChildGenOrdinal:
+		c, err_ := s_.Impl.GetChild(ctx_)
+		out_ := parentGetChildResponse{}
+		out_.C = c
+		return &out_, true, err_
+	case ParentGetChildRequestOrdinal:
+		fallthrough
+	case ParentGetChildRequestGenOrdinal:
+		r, err_ := s_.Impl.GetChildRequest(ctx_)
+		out_ := parentGetChildRequestResponse{}
+		out_.R = r
+		return &out_, true, err_
+	case ParentTakeChildOrdinal:
+		fallthrough
+	case ParentTakeChildGenOrdinal:
+		in_ := parentTakeChildRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.TakeChild(ctx_, in_.C)
+		return nil, false, err_
+	case ParentTakeChildRequestOrdinal:
+		fallthrough
+	case ParentTakeChildRequestGenOrdinal:
+		in_ := parentTakeChildRequestRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.TakeChildRequest(ctx_, in_.R)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal

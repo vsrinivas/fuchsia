@@ -94,6 +94,10 @@ type SomeProtocolStub struct {
 }
 
 func (s_ *SomeProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
+}
+
+func (s_ *SomeProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case SomeProtocolSomeMethodOrdinal:
 		fallthrough
@@ -104,12 +108,16 @@ func (s_ *SomeProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-func (s_ *SomeProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+type SomeProtocolWithCtxStub struct {
+	Impl SomeProtocolWithCtx
+}
+
+func (s_ *SomeProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case SomeProtocolSomeMethodOrdinal:
 		fallthrough
 	case SomeProtocolSomeMethodGenOrdinal:
-		err_ := s_.Impl.SomeMethod()
+		err_ := s_.Impl.SomeMethod(ctx_)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal

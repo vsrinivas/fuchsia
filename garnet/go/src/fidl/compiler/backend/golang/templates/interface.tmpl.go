@@ -125,12 +125,16 @@ type {{ .WithCtxName }} interface {
 type {{.TransitionalBaseWithCtxName}} struct {}
 
 {{ range .Methods }}
-{{- if and .IsTransitional .Request }}
+{{- if and .IsTransitional .HasRequest }}
+{{- if .Request }}
 func (_ *{{$transitionalBaseWithCtxName}}) {{ .Name }} (ctx_ _bindings.Context
 {{- range .Request.Members -}}
 	, {{ .PrivateName }} {{ .Type }}
 {{- end -}}
 )
+{{- else }}
+func (_ *{{$transitionalBaseWithCtxName}}) {{ .Name }} (ctx_ _bindings.Context)
+{{- end }}
 {{- if .HasResponse -}}
 	{{- if .Response }} (
 		{{- range .Response.Members }}{{ .Type }}, {{ end -}}
@@ -236,6 +240,10 @@ type {{ .StubName }} struct {
 }
 
 func (s_ *{{ .StubName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
+}
+
+func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
@@ -248,7 +256,7 @@ func (s_ *{{ .StubName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64,
 		{{- if .HasRequest }}
 		{{- if .Request }}
 		in_ := {{ .Request.Name }}{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		{{- end }}
@@ -285,7 +293,11 @@ func (s_ *{{ .StubName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64,
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+type {{ .StubWithCtxName }} struct {
+	Impl {{ .WithCtxName }}
+}
+
+func (s_ *{{ .StubWithCtxName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
@@ -298,7 +310,7 @@ func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.M
 		{{- if .HasRequest }}
 		{{- if .Request }}
 		in_ := {{ .Request.Name }}{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		{{- end }}
@@ -306,12 +318,11 @@ func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.M
 		{{ if .Response }}
 		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
 		{{- end -}}
-		err_ := s_.Impl.{{ .Name }}(
+		err_ := s_.Impl.{{ .Name }}(ctx_
 		{{- if .HasRequest -}}
 		{{- if .Request -}}
 		{{- range $index, $m := .Request.Members -}}
-		{{- if $index -}}, {{- end -}}
-		in_.{{ $m.Name }}
+		, in_.{{ $m.Name }}
 		{{- end -}}
 		{{- end -}}
 		{{- end -}}

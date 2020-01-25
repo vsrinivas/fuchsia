@@ -56,6 +56,10 @@ type FirstProtocolStub struct {
 }
 
 func (s_ *FirstProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
+}
+
+func (s_ *FirstProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case FirstProtocolMethodOnFirstOrdinal:
 		fallthrough
@@ -66,12 +70,16 @@ func (s_ *FirstProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint6
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-func (s_ *FirstProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+type FirstProtocolWithCtxStub struct {
+	Impl FirstProtocolWithCtx
+}
+
+func (s_ *FirstProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case FirstProtocolMethodOnFirstOrdinal:
 		fallthrough
 	case FirstProtocolMethodOnFirstGenOrdinal:
-		err_ := s_.Impl.MethodOnFirst()
+		err_ := s_.Impl.MethodOnFirst(ctx_)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
@@ -138,6 +146,10 @@ type SecondProtocolStub struct {
 }
 
 func (s_ *SecondProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
+}
+
+func (s_ *SecondProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case SecondProtocolMethodOnSecondOrdinal:
 		fallthrough
@@ -148,12 +160,16 @@ func (s_ *SecondProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-func (s_ *SecondProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+type SecondProtocolWithCtxStub struct {
+	Impl SecondProtocolWithCtx
+}
+
+func (s_ *SecondProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case SecondProtocolMethodOnSecondOrdinal:
 		fallthrough
 	case SecondProtocolMethodOnSecondGenOrdinal:
-		err_ := s_.Impl.MethodOnSecond()
+		err_ := s_.Impl.MethodOnSecond(ctx_)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal

@@ -274,6 +274,10 @@ type Interface struct {
 	// StubName is the name of the stub type for this FIDL interface.
 	StubName string
 
+	// StubWithCtxName is the name of the stub type which wraps the WithCtx version of this
+	// FIDL interface.
+	StubWithCtxName string
+
 	// EventProxyName is the name of the event proxy type for this FIDL interface.
 	EventProxyName string
 
@@ -861,6 +865,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		ProxyName:                   c.compileCompoundIdentifier(val.Name, true, ProxySuffix),
 		ProxyType:                   proxyType,
 		StubName:                    c.compileCompoundIdentifier(val.Name, true, StubSuffix),
+		StubWithCtxName:             c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+StubSuffix),
 		RequestName:                 c.compileCompoundIdentifier(val.Name, true, RequestSuffix),
 		EventProxyName:              c.compileCompoundIdentifier(val.Name, true, EventProxySuffix),
 		ServerName:                  c.compileCompoundIdentifier(val.Name, true, ServiceSuffix),

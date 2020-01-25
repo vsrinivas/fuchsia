@@ -411,6 +411,10 @@ type TestProtocolStub struct {
 }
 
 func (s_ *TestProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
+}
+
+func (s_ *TestProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal:
 		fallthrough
@@ -430,19 +434,23 @@ func (s_ *TestProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
-func (s_ *TestProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+type TestProtocolWithCtxStub struct {
+	Impl TestProtocolWithCtx
+}
+
+func (s_ *TestProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal:
 		fallthrough
 	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal:
-		xu, err_ := s_.Impl.StrictXUnionHenceResponseMayBeStackAllocated()
+		xu, err_ := s_.Impl.StrictXUnionHenceResponseMayBeStackAllocated(ctx_)
 		out_ := testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
 		out_.Xu = xu
 		return &out_, true, err_
 	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal:
 		fallthrough
 	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal:
-		xu, err_ := s_.Impl.FlexibleXUnionHenceResponseMustBeHeapAllocated()
+		xu, err_ := s_.Impl.FlexibleXUnionHenceResponseMustBeHeapAllocated(ctx_)
 		out_ := testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
 		out_.Xu = xu
 		return &out_, true, err_
