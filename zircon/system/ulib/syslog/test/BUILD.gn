@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [
@@ -10,33 +23,47 @@ group("test") {
   ]
 }
 
-zx_test("syslog") {
+test("syslog") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "syslog_socket_tests.cc",
     "syslog_tests.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/syslog",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
   ]
 }
 
-zx_test("syslog-static") {
+test("syslog-static") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "syslog_socket_tests.cc",
     "syslog_tests.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/syslog:syslog-static",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/syslog-static",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
   ]
   defines = [ "SYSLOG_STATIC" ]
+}
+
+migrated_manifest("syslog-manifest") {
+  deps = [ ":syslog" ]
+}
+
+migrated_manifest("syslog-static-manifest") {
+  deps = [ ":syslog-static" ]
 }

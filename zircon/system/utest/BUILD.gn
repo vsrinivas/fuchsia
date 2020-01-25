@@ -160,7 +160,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/smbios:smbios-test",
       "$zx/system/ulib/storage:test",
       "$zx/system/ulib/sysconfig-client:tests",
-      "$zx/system/ulib/syslog/test",
       "$zx/system/ulib/tftp:tftp-fuzzer",
       "$zx/system/ulib/tftp:tftp-test",
       "$zx/system/ulib/trace-engine:tests",
