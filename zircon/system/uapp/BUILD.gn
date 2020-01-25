@@ -13,7 +13,6 @@ group("uapp") {
     "disk-pave",
     "display-test",
     "fs-fsck",
-    "fs-mount",
     "fvm-check",
     "hid",
     "hidsensor",

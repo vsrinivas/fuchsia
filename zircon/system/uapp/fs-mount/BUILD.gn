@@ -2,15 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
 group("fs-mount") {
   deps = [ ":mount" ]
 }
 
-zx_executable("mount") {
+executable("mount") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.c" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs-management",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs-management",
   ]
+}
+
+migrated_manifest("mount-manifest") {
+  deps = [ ":mount" ]
 }
