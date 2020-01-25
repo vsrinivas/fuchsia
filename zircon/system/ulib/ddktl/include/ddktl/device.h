@@ -14,6 +14,7 @@
 #include <ddktl/device-internal.h>
 #include <ddktl/init-txn.h>
 #include <ddktl/suspend-txn.h>
+#include <ddktl/resume-txn.h>
 #include <ddktl/unbind-txn.h>
 
 // ddk::Device<D, ...>
@@ -341,8 +342,10 @@ class ResumableNew : public base_mixin {
   }
 
  private:
-  static zx_status_t Resume_New(void* ctx, uint8_t requested_state, uint8_t* out_state) {
-    return static_cast<D*>(ctx)->DdkResumeNew(requested_state, out_state);
+  static void Resume_New(void* ctx, uint32_t requested_state) {
+    auto dev = static_cast<D*>(ctx);
+    ResumeTxn txn(dev->zxdev(), requested_state);
+    static_cast<D*>(ctx)->DdkResumeNew(std::move(txn));
   }
 };
 

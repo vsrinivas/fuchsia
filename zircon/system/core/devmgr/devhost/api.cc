@@ -23,11 +23,18 @@ __EXPORT void device_make_visible(zx_device_t* dev, const device_init_reply_args
 __EXPORT void device_async_remove(zx_device_t* dev) { __builtin_abort(); }
 
 __EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
-                                const device_make_visible_args_t* args) { __builtin_abort(); }
+                                const device_make_visible_args_t* args) {
+  __builtin_abort();
+}
 
 __EXPORT void device_unbind_reply(zx_device_t* dev) { __builtin_abort(); }
 
 __EXPORT void device_suspend_reply(zx_device_t* dev, zx_status_t status, uint8_t out_state) {
+  __builtin_abort();
+}
+
+__EXPORT void device_resume_reply(zx_device_t* dev, zx_status_t status, uint8_t out_power_state,
+                                  uint32_t out_perf_state) {
   __builtin_abort();
 }
 

@@ -47,6 +47,9 @@ typedef struct fidl_txn fidl_txn_t;
 #define DEV_POWER_STATE_D3HOT UINT8_C(3)
 #define DEV_POWER_STATE_DCOLD UINT8_C(4)
 
+// Performance state
+#define DEV_PERFORMANCE_STATE_P0 UINT32_C(0)
+
 // reboot modifiers
 #define DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER (DEVICE_SUSPEND_FLAG_REBOOT | 0x01)
 #define DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY (DEVICE_SUSPEND_FLAG_REBOOT | 0x02)
@@ -272,23 +275,24 @@ typedef struct zx_protocol_device {
   // or partially depending on the sleep state that device was in, when the
   // resume call was made.
   //
-  // requested_state is always a working state. It is fully working D0 for now.
-  // When we add more performant states, requested_state can be one of the working
-  // performant state.
+  // requested_state is the performance state that the device has to be in.
   //
-  // On success, the out_state is one of the working states that the device is
-  // in, although it might not be the requested_state.
-  //
-  // If the device, is not able to resume to a working state, the hook returns a
-  // failure.
-  //
+  // The driver should put the device into the requested_state and call **device_resume_reply()**
+  // on itself. device_resume_reply() will take in the following parameters:
+  // (1)Status of the resume operation (2)out_power_state (3) out_perf_state
+  // On success, the device has been resumed successfully to a working state,
+  // out_perf_state is same as requested state.
+  // If the device is not able to resume to a working state, the hook returns a
+  // failure. out_power_state has the non working state the device is in.
+  // if out_power_state is a working state, out_perf_state has the performance
+  // state the device is in.
   // This hook assumes that the drivers are aware of their current state.
   //
   // This hook will only be executed on the devhost's main thread.
   //
   // TODO(ravoorir): Remove the old resume when all the drivers are moved to
   // new suspend and resume.
-  zx_status_t (*resume_new)(void* ctx, uint8_t requested_state, uint8_t* out_state);
+  void (*resume_new)(void* ctx, uint32_t requested_state);
 
   //@ ## set_performance_state
   // The set_performance_state hook is used for transitioning the performant state of

@@ -250,6 +250,16 @@ void device_unbind_reply(zx_device_t* device);
 // state that the device can go into.
 void device_suspend_reply(zx_device_t* device, zx_status_t status, uint8_t out_state);
 
+// This is used to signal completion of the device's |resume_new| hook.
+// Need not necessarily need to be called from within the |resume_new| hook.
+// |status| is the status of the resume operation.
+// If |status| is success, the |out_perf_state| has the working performance state
+// that the device is in currently.
+// If |status| is failure, the |out_power_state| has the power state
+// the device is in currently.
+void device_resume_reply(zx_device_t* device, zx_status_t status, uint8_t out_power_state,
+                         uint32_t out_perf_state);
+
 // Retrieves a profile handle into |out_profile| from the scheduler for the
 // given |priority| and |name|. Ownership of |out_profile| is given to the
 // caller. See fuchsia.scheduler.ProfileProvider for more detail.

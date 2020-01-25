@@ -116,12 +116,16 @@ struct DevicePerformanceStateInfo {
 };
 
 struct SystemPowerStateInfo {
+    // TODO(ravoorir): This can be removed when all clients move away from the suspend_flag.
     uint32 suspend_flag;
     /// Should wakeup be enabled from this system state?
     bool wakeup_enable;
 
-    /// Device power state that the device should be in for this system power state.
+    /// Device power state that the device should be in, for this system power state.
     DevicePowerState dev_state;
+    /// Performance state that the device should be in, for this system power state.
+    /// Only applicable, if the dev_state is a working state (DEVICE_POWER_STATE_D0).
+    uint32 performance_state;
 };
 
 /// Interface for manipulating a device in a devhost
@@ -195,16 +199,28 @@ protocol Controller {
     // On success, the out_state is same as requested_state.
     // On failure, the out_state is the state the device is currently in.
     Suspend(DevicePowerState requested_state) -> (zx.status status, DevicePowerState out_state);
+
     /// Transition this device from a sleep state to a working state.
+    /// out_power_state is the power state the device is currently in.
+    /// out_perf_state is the performance state the device is currently in.
+    ///
+    /// Returns ZX_OK, if resume is successful. out_power_state will be DEVICE_POWER_STATE_D0
+    /// out_perf_state will be the performance state that was previously set(if any) or
+    /// DEVICE_PERFORMANCE_STATE_P0.
+    ///
+    /// Returns error, if the device is unable to resume successfully or unable to resume
+    /// to a previously set performance state(if any).
+    /// If out_power_state is DEVICE_POWER_STATE_D0, out_perf_state will have the actual
+    /// performance state the device is in.
+    ///
+    /// Returns ZX_ERR_NOT_SUPPORTED if auto-suspend is configured/the resume hook is not
+    /// provided by the driver. The out_power_state and out_perf_state do not mean anything
+    /// in this case.
     // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
     // In a future change, this api will result in resume hook being called on all the children
     // after the current device is transitioned.
-    // On success, the out_state has the actual state of the device. The out_state could be
-    // different from the requested_state, if the device could not resume to the requested
-    // performance state, but the device could resume to a working state.
-    // Just because the device is not able to transition to a particular performance state,
-    // we do not want to suspend the device back.
-    Resume(DevicePowerState requested_state) -> (DevicePowerState out_state) error zx.status;
+    Resume() -> (zx.status status, DevicePowerState out_power_state, uint32 out_perf_state);
+
     /// Set the performance state of this device to the requested performance state. This is only
     /// called for the current device and none of the descendants are aware of the state
     /// transition.

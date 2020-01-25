@@ -34,6 +34,11 @@ class TestPowerDriver : public DeviceType,
     current_power_state_ = static_cast<DevicePowerState>(txn.requested_state());
     txn.Reply(ZX_OK, txn.requested_state());
   }
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    DdkTransaction transaction(txn);
+    ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
+    return transaction.Status();
+  }
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                               ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
                               bool add_invisible,
@@ -43,16 +48,15 @@ class TestPowerDriver : public DeviceType,
   void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) override;
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
-    return transaction.Status();
-  }
+  void SetTestStatusInfo(llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
+                         SetTestStatusInfoCompleter::Sync completer) override;
 
  private:
   DevicePowerState current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
   bool auto_suspend_enabled_ = false;
   DevicePowerState deepest_autosuspend_sleep_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
+  zx_status_t reply_suspend_status_ = ZX_OK;
+  zx_status_t reply_resume_status_ = ZX_OK;
 };
 
 zx_status_t TestPowerDriver::Bind() { return DdkAdd("power-test"); }
@@ -74,6 +78,13 @@ void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
   completer.ReplySuccess(
       auto_suspend_enabled_,
       static_cast<llcpp::fuchsia::device::DevicePowerState>(deepest_autosuspend_sleep_state_));
+}
+void TestPowerDriver::SetTestStatusInfo(
+    llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
+    SetTestStatusInfoCompleter::Sync completer) {
+  reply_suspend_status_ = status_info.suspend_status;
+  reply_resume_status_ = status_info.resume_status;
+  completer.ReplySuccess();
 }
 
 void TestPowerDriver::GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) {

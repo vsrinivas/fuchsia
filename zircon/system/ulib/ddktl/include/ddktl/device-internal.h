@@ -10,6 +10,7 @@
 #include <ddk/device.h>
 #include <ddktl/init-txn.h>
 #include <ddktl/suspend-txn.h>
+#include <ddktl/resume-txn.h>
 #include <ddktl/unbind-txn.h>
 #include <fbl/macros.h>
 
@@ -294,9 +295,9 @@ template <typename D>
 constexpr void CheckResumableNew() {
   static_assert(has_ddk_resume_new<D>::value, "ResumableNew classes must implement DdkResumeNew");
   static_assert(
-      std::is_same<decltype(&D::DdkResumeNew), zx_status_t (D::*)(uint8_t, uint8_t*)>::value,
+      std::is_same<decltype(&D::DdkResumeNew), void (D::*)(ResumeTxn txn)>::value,
       "DdkResumeNew must be a public non-static member function with signature "
-      "'zx_status_t DdkResumeNew(uint8_t, uint8_t*)'.");
+      "'void DdkResumeNew(ResumeTxn)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_set_performance_state, DdkSetPerformanceState);

@@ -7,6 +7,17 @@ library fuchsia.device.power.test;
 using zx;
 using fuchsia.device;
 
+struct TestStatusInfo {
+    /// Driver will respond to suspend hook with this status.
+    zx.status suspend_status;
+    /// Driver will respond to resume hook with this status.
+    zx.status resume_status;
+    /// This is the out_power_state we want as a reply.
+    uint8 out_power_state;
+    /// This is the out_perf_state we want as a reply.
+    uint8 out_performance_state;
+};
+
 protocol TestDevice {
     /// Add Test Device with some powerargs
     AddDeviceWithPowerArgs(vector<fuchsia.device.DevicePowerStateInfo> info,
@@ -18,4 +29,5 @@ protocol TestDevice {
     /// Get current auto suspend status and deepest_sleep_state
     GetCurrentDeviceAutoSuspendConfig() -> (bool enabled,
                                             fuchsia.device.DevicePowerState deepest_sleep_state) error zx.status;
+    SetTestStatusInfo(TestStatusInfo test_info) -> () error zx.status;
 };

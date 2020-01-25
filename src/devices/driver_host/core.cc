@@ -50,6 +50,8 @@ __LOCAL mtx_t devhost_api_lock = MTX_INIT;
 __LOCAL std::atomic<thrd_t> devhost_api_lock_owner(0);
 }  // namespace internal
 
+using llcpp::fuchsia::device::DevicePowerState;
+
 static thread_local BindContext* g_bind_context;
 static thread_local CreationContext* g_creation_context;
 
@@ -538,6 +540,19 @@ void devhost_device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status
   }
 }
 
+void devhost_device_resume_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                                 uint8_t out_power_state, uint32_t out_perf_state) REQ_DM_LOCK {
+  if (dev->resume_cb) {
+    if (out_power_state == static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0)) {
+      // Update the current performance state.
+      dev->set_current_performance_state(out_perf_state);
+    }
+    dev->resume_cb(status, out_power_state, out_perf_state);
+  } else {
+    ZX_PANIC("device: %p(%s): cannot reply to resume, no callback set\n", dev.get(), dev->name);
+  }
+}
+
 void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (dev->flags & REMOVAL_BAD_FLAGS) {
     ZX_PANIC("device: %p(%s): cannot reply to unbind, bad flags: (%s)\n", dev.get(), dev->name,
@@ -675,7 +690,7 @@ uint8_t devhost_device_get_suspend_reason(fuchsia_device_manager_SystemPowerStat
 
 zx_status_t devhost_device_get_dev_power_state_from_mapping(
     const fbl::RefPtr<zx_device>& dev, uint32_t flags,
-    ::llcpp::fuchsia::device::SystemPowerStateInfo* info, uint8_t* suspend_reason) {
+    llcpp::fuchsia::device::SystemPowerStateInfo* info, uint8_t* suspend_reason) {
   // TODO(ravoorir) : When the usage of suspend flags is replaced with
   // system power states, this function will not need the switch case.
   // Some suspend flags might be translated to system power states with
@@ -716,7 +731,7 @@ void devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new suspend hook is implemented, prefer that.
   if (dev->ops->suspend_new) {
-    ::llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
+    llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
     uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
 
     status = devhost_device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,
@@ -741,19 +756,35 @@ void devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
   dev->suspend_cb(status, 0);
 }
 
-zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
+uint32_t devhost_get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_perf_state) {
+  // Give preference to the performance state that is explicitly for this device.
+  if (dev->current_performance_state() != ::llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0) {
+    return dev->current_performance_state();
+  }
+  return requested_perf_state;
+}
+
+void devhost_device_system_resume(const fbl::RefPtr<zx_device>& dev,
                                   uint32_t target_system_state) REQ_DM_LOCK {
+  if (dev->auto_suspend_configured()) {
+    dev->ops->configure_auto_suspend(dev->ctx, false,
+                                     fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
+    log(INFO, "Devhost: system resume overriding auto suspend for %s\n", dev->name);
+  }
   enum_lock_acquire();
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  // If new suspend hook is implemented, prefer that.
+  // If new resume hook is implemented, prefer that.
   if (dev->ops->resume_new) {
-    fuchsia_device_DevicePowerState out_state;
-    ApiAutoRelock relock;
-    auto& sys_power_states = dev->GetSystemPowerStateMapping();
-    status = dev->ops->resume_new(
-        dev->ctx, static_cast<uint8_t>(sys_power_states[target_system_state].dev_state),
-        &out_state);
+    {
+      ApiAutoRelock relock;
+      auto& sys_power_states = dev->GetSystemPowerStateMapping();
+      uint32_t requested_perf_state =
+          devhost_get_perf_state(dev, sys_power_states[target_system_state].performance_state);
+      dev->ops->resume_new(dev->ctx, requested_perf_state);
+    }
+    enum_lock_release();
+    return;
   } else if (dev->ops->resume) {
     // Invoke resume hook otherwise.
     ApiAutoRelock relock;
@@ -763,25 +794,24 @@ zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
   enum_lock_release();
 
   // default_resume() returns ZX_ERR_NOT_SUPPORTED
-  if (status != ZX_ERR_NOT_SUPPORTED) {
-    return status;
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    status = ZX_OK;
   }
-  return ZX_OK;
+  dev->resume_cb(status, static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
+                 llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
 }
 
 void devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
-                                ::llcpp::fuchsia::device::DevicePowerState requested_state) {
+                                DevicePowerState requested_state) {
   if (dev->auto_suspend_configured()) {
     log(INFO, "Devhost: Suspending %s failed: AutoSuspend is enabled\n", dev->name);
-    dev->suspend_cb(
-        ZX_ERR_NOT_SUPPORTED,
-        static_cast<uint8_t>(::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0));
+    dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,
+                    static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
     return;
   }
   if (!(dev->IsPowerStateSupported(requested_state))) {
-    dev->suspend_cb(
-        ZX_ERR_INVALID_ARGS,
-        static_cast<uint8_t>(::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0));
+    dev->suspend_cb(ZX_ERR_INVALID_ARGS,
+                    static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
     return;
   }
 
@@ -790,9 +820,8 @@ void devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
                           DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND, false /* wake_configured */);
     return;
   }
-  dev->suspend_cb(
-      ZX_ERR_NOT_SUPPORTED,
-      static_cast<uint8_t>(::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0));
+  dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,
+                  static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
 }
 
 zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device>& dev,
@@ -813,21 +842,29 @@ zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device>& d
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev,
-                                      ::llcpp::fuchsia::device::DevicePowerState requested_state,
-                                      ::llcpp::fuchsia::device::DevicePowerState* out_state) {
-  zx_status_t status = ZX_OK;
-  if (dev->ops->resume_new) {
-    uint8_t raw_out;
-    status = dev->ops->resume_new(dev->ctx, static_cast<uint8_t>(requested_state), &raw_out);
-    *out_state = static_cast<::llcpp::fuchsia::device::DevicePowerState>(raw_out);
+void devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev) {
+  if (dev->auto_suspend_configured()) {
+    log(INFO, "Devhost: Resuming %s failed: AutoSuspend/Resume is enabled for the driver\n",
+        dev->name);
+    dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
+                   static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
+                   llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
+    return;
   }
-  return status;
+  // If new resume hook is implemented, prefer that.
+  if (dev->ops->resume_new) {
+    uint32_t requested_perf_state =
+        devhost_get_perf_state(dev, llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
+    dev->ops->resume_new(dev->ctx, requested_perf_state);
+    return;
+  }
+  dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
+                 static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
+                 llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
 }
 
-zx_status_t devhost_device_configure_auto_suspend(
-    const fbl::RefPtr<zx_device>& dev, bool enable,
-    ::llcpp::fuchsia::device::DevicePowerState requested_state) {
+zx_status_t devhost_device_configure_auto_suspend(const fbl::RefPtr<zx_device>& dev, bool enable,
+                                                  DevicePowerState requested_state) {
   if (enable && !(dev->IsPowerStateSupported(requested_state))) {
     return ZX_ERR_INVALID_ARGS;
   }

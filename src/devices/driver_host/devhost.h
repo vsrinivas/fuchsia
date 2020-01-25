@@ -154,6 +154,8 @@ zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
 void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 void devhost_device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                                   uint8_t out_state) REQ_DM_LOCK;
+void devhost_device_resume_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                                 uint8_t out_power_state, uint32_t out_perf_state) REQ_DM_LOCK;
 zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev,
                                 const char* drv_libname) REQ_DM_LOCK;
 zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
@@ -175,11 +177,9 @@ zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device_t>&
 zx_status_t devhost_device_configure_auto_suspend(
     const fbl::RefPtr<zx_device_t>& dev, bool enable,
     ::llcpp::fuchsia::device::DevicePowerState requested_state);
-zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device_t>& dev,
+void devhost_device_system_resume(const fbl::RefPtr<zx_device_t>& dev,
                                   uint32_t target_system_state) REQ_DM_LOCK;
-zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device_t>& dev,
-                                      ::llcpp::fuchsia::device::DevicePowerState requested_state,
-                                      ::llcpp::fuchsia::device::DevicePowerState* out_state);
+void devhost_device_resume_new(const fbl::RefPtr<zx_device_t>& dev);
 void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK;
 
 zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,

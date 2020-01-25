@@ -306,17 +306,14 @@ void DevfsConnection::Suspend(::llcpp::fuchsia::device::DevicePowerState request
   devhost_device_suspend_new(dev, requested_state);
 }
 
-void DevfsConnection::Resume(::llcpp::fuchsia::device::DevicePowerState requested_state,
-                             ResumeCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::DevicePowerState out_state;
-  zx_status_t status = devhost_device_resume_new(this->dev, requested_state, &out_state);
-  if (status != ZX_OK) {
-    return completer.Reply(::llcpp::fuchsia::device::Controller_Resume_Result::WithErr(&status));
-  }
-
-  ::llcpp::fuchsia::device::Controller_Resume_Response response;
-  response.out_state = out_state;
-  completer.Reply(::llcpp::fuchsia::device::Controller_Resume_Result::WithResponse(&response));
+void DevfsConnection::Resume(ResumeCompleter::Sync completer) {
+  dev->resume_cb = [completer = completer.ToAsync()](zx_status_t status, uint8_t out_power_state,
+                                                     uint32_t out_perf_state) mutable {
+    completer.Reply(status,
+                    static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_power_state),
+                    out_perf_state);
+  };
+  devhost_device_resume_new(dev);
 }
 
 void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispatcher_t* dispatcher,

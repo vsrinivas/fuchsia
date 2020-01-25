@@ -101,8 +101,7 @@ class DevfsConnection : public fbl::RefCounted<DevfsConnection>,
   void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync _completer) override;
   void Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
                SuspendCompleter::Sync _completer) override;
-  void Resume(::llcpp::fuchsia::device::DevicePowerState requested_state,
-              ResumeCompleter::Sync _complete) override;
+  void Resume(ResumeCompleter::Sync _complete) override;
 };
 
 class Connection {

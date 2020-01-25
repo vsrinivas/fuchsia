@@ -33,7 +33,6 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {}
   static zx_status_t Create(void* ctx, zx_device_t* device);
   zx_status_t Bind();
-  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                               ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
@@ -45,6 +44,10 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) override;
 
+  void SetTestStatusInfo(::llcpp::fuchsia::device::power::test::TestStatusInfo test_info,
+                         SetTestStatusInfoCompleter::Sync completer) override;
+
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
@@ -54,7 +57,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   void DdkRelease() { delete this; }
   void DdkSuspendNew(ddk::SuspendTxn txn);
   zx_status_t DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state);
-  zx_status_t DdkResumeNew(uint8_t requested_state, uint8_t* out_state);
+  void DdkResumeNew(ddk::ResumeTxn txn);
   zx_status_t DdkConfigureAutoSuspend(bool enable, uint8_t deepest_sleep_state);
 
   void SavePowerStateInfo(std::unique_ptr<device_power_state_info_t[]> states, uint8_t states_count,
@@ -73,6 +76,11 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   bool auto_suspend_enabled_ = false;
   uint8_t current_suspend_reason_ = 0;
 
+  zx_status_t reply_suspend_status_ = ZX_OK;
+  zx_status_t reply_resume_status_ = ZX_OK;
+  uint8_t reply_out_power_state_ = DEV_POWER_STATE_D0;
+  uint32_t reply_out_performance_state_ = DEV_PERFORMANCE_STATE_P0;
+
   std::unique_ptr<device_power_state_info_t[]> states_;
   uint8_t states_count_ = 0;
   std::unique_ptr<device_performance_state_info_t[]> perf_states_;
@@ -84,9 +92,15 @@ void TestPowerDriverChild::DdkInit(ddk::InitTxn txn) {
 }
 
 void TestPowerDriverChild::DdkSuspendNew(ddk::SuspendTxn txn) {
-  current_power_state_ = txn.requested_state();
+  if (reply_suspend_status_ == ZX_OK) {
+    reply_out_power_state_ = txn.requested_state();
+  }
   current_suspend_reason_ = txn.suspend_reason();
-  txn.Reply(ZX_OK, txn.requested_state());
+  current_power_state_ = reply_out_power_state_;
+  txn.Reply(reply_suspend_status_, reply_out_power_state_);
+  reply_suspend_status_ = ZX_OK;
+  reply_out_power_state_ = DEV_POWER_STATE_D0;
+  reply_out_performance_state_ = DEV_PERFORMANCE_STATE_P0;
 }
 
 zx_status_t TestPowerDriverChild::DdkSetPerformanceState(uint32_t requested_state,
@@ -96,10 +110,18 @@ zx_status_t TestPowerDriverChild::DdkSetPerformanceState(uint32_t requested_stat
   return ZX_OK;
 }
 
-zx_status_t TestPowerDriverChild::DdkResumeNew(uint8_t requested_state, uint8_t* out_state) {
-  current_power_state_ = requested_state;
-  *out_state = requested_state;
-  return ZX_OK;
+void TestPowerDriverChild::DdkResumeNew(ddk::ResumeTxn txn) {
+  if (reply_resume_status_ == ZX_OK) {
+    reply_out_power_state_ = DEV_POWER_STATE_D0;
+    reply_out_performance_state_ = txn.requested_state();
+  }
+  current_power_state_ = reply_out_power_state_;
+  current_performance_state_ = reply_out_performance_state_;
+  // In a successful response, power state is a working state.
+  txn.Reply(reply_resume_status_, reply_out_power_state_, reply_out_performance_state_);
+  reply_resume_status_ = ZX_OK;
+  reply_out_power_state_ = DEV_POWER_STATE_D0;
+  reply_out_performance_state_ = DEV_PERFORMANCE_STATE_P0;
 }
 
 zx_status_t TestPowerDriverChild::DdkConfigureAutoSuspend(bool enable,
@@ -154,6 +176,16 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
     completer.ReplySuccess();
     __UNUSED auto ptr = child2.release();
   }
+}
+
+void TestPowerDriverChild::SetTestStatusInfo(
+    llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
+    SetTestStatusInfoCompleter::Sync completer) {
+  reply_suspend_status_ = status_info.suspend_status;
+  reply_resume_status_ = status_info.resume_status;
+  reply_out_power_state_ = status_info.out_power_state;
+  reply_out_performance_state_ = status_info.out_performance_state;
+  completer.ReplySuccess();
 }
 
 void TestPowerDriverChild::GetCurrentDevicePowerState(

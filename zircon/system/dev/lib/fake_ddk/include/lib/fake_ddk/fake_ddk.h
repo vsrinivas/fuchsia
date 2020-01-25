@@ -108,6 +108,10 @@ class Bind {
   // Internal fake implementation of ddk functionaility.
   virtual void DeviceSuspendComplete(zx_device_t* device, zx_status_t status, uint8_t out_state);
 
+  // Internal fake implementation of ddk functionaility.
+  virtual void DeviceResumeComplete(zx_device_t* device, zx_status_t status,
+                                    uint8_t out_power_state, uint32_t out_perf_state);
+
   // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                         void* protocol);
@@ -132,6 +136,7 @@ class Bind {
   sync_completion_t remove_called_sync_;
   bool make_visible_called_ = false;
   bool suspend_complete_called_ = false;
+  bool resume_complete_called_ = false;
 
   int add_metadata_calls_ = 0;
   size_t metadata_length_ = 0;

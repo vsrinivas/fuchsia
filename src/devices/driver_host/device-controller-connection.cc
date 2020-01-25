@@ -15,6 +15,7 @@
 #include "devhost.h"
 #include "env.h"
 #include "fidl_txn.h"
+#include "fuchsia/device/llcpp/fidl.h"
 #include "log.h"
 #include "proxy-iostate.h"
 #include "zx-device.h"
@@ -75,12 +76,24 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync 
 
 void DeviceControllerConnection::Resume(uint32_t target_system_state,
                                         ResumeCompleter::Sync completer) {
-  zx_status_t r;
-  {
-    ApiAutoLock lock;
-    r = devhost_device_resume(this->dev(), target_system_state);
-  }
-  completer.Reply(r);
+  ZX_ASSERT(this->dev()->resume_cb == nullptr);
+  this->dev()->resume_cb = [completer = completer.ToAsync()](zx_status_t status,
+                                                             uint8_t out_power_state,
+                                                             uint32_t out_perf_state) mutable {
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+      status = ZX_OK;
+    }
+    if (status != ZX_OK &&
+        (out_power_state ==
+         static_cast<uint8_t>(llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0))) {
+      // Do not fail system resume, when the device is unable to go into a particular performance
+      // state, but resumed to a working state.
+      status = ZX_OK;
+    }
+    completer.Reply(status);
+  };
+  ApiAutoLock lock;
+  devhost_device_system_resume(this->dev(), target_system_state);
 }
 
 void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,

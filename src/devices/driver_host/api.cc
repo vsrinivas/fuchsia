@@ -214,6 +214,13 @@ __EXPORT void device_suspend_reply(zx_device_t* dev, zx_status_t status, uint8_t
   devhost_device_suspend_reply(dev_ref, status, out_state);
 }
 
+__EXPORT void device_resume_reply(zx_device_t* dev, zx_status_t status, uint8_t out_power_state,
+                                  uint32_t out_perf_state) {
+  ApiAutoLock lock;
+  fbl::RefPtr<zx_device_t> dev_ref(dev);
+  devhost_device_resume_reply(dev_ref, status, out_power_state, out_perf_state);
+}
+
 __EXPORT zx_status_t device_get_profile(zx_device_t* dev, uint32_t priority, const char* name,
                                         zx_handle_t* out_profile) {
   return devhost_get_scheduler_profile(priority, name, out_profile);
