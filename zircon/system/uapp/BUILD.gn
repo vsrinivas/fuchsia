@@ -42,7 +42,6 @@ group("uapp") {
     "trace-example",
     "unbind",
     "usb-fwloader",
-    "usbctl",
     "waitfor",
     "xdc-test",
   ]
