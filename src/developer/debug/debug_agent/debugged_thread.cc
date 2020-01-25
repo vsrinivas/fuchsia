@@ -314,8 +314,7 @@ void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
   }
 
   // TODO(donosoc): Plumb in R/RW types.
-  UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kWrite, watchpoint, regs,
-                                &exception->hit_breakpoints);
+  UpdateForHitProcessBreakpoint(watchpoint->Type(), watchpoint, regs, &exception->hit_breakpoints);
   // The ProcessBreakpoint could'be been deleted, so we cannot use it anymore.
   watchpoint = nullptr;
   SendExceptionNotification(exception, regs);

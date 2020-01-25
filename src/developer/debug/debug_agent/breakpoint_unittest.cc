@@ -252,7 +252,7 @@ TEST(Breakpoint, WatchpointLocations) {
   settings.locations.push_back(CreateLocation(kProcess2Koid, 0, kProcess2Range));
 
   settings.type = debug_ipc::BreakpointType::kReadWrite;
-  ASSERT_ZX_EQ(breakpoint.SetSettings(settings), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_ZX_EQ(breakpoint.SetSettings(settings), ZX_OK);
 
   settings.type = debug_ipc::BreakpointType::kWrite;
   ASSERT_ZX_EQ(breakpoint.SetSettings(settings), ZX_OK);

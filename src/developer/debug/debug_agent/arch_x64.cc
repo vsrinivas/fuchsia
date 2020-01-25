@@ -121,6 +121,7 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
     ret.dr2 = debug_regs.dr[2];
     ret.dr3 = debug_regs.dr[3];
     ret.dr6 = debug_regs.dr6;
+    ret.dr7 = debug_regs.dr7;
 
     return ret;
   }
