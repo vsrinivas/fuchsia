@@ -28,6 +28,9 @@ class StubProcessLimbo : public ProcessLimbo {
 
   bool has_active_call() const { return has_active_call_; }
 
+  const std::vector<zx_koid_t>& release_calls() const { return release_calls_; }
+  void ResetReleaseCalls() { release_calls_.clear(); }
+
   void AppendException(zx_koid_t process_koid, zx_koid_t thread_koid, zx_excp_type_t exception) {
     exceptions_.push_back({process_koid, thread_koid, exception});
   }
@@ -75,7 +78,22 @@ class StubProcessLimbo : public ProcessLimbo {
   }
 
   void ReleaseProcess(zx_koid_t process_koid, ProcessLimbo::ReleaseProcessCallback cb) override {
-    FXL_NOTREACHED() << "Not needed for tests.";
+    release_calls_.push_back(process_koid);
+
+    // Search for the process in exception.
+    auto it = exceptions_.begin();
+    for (; it != exceptions_.end(); it++) {
+      if (std::get<0>(*it) == process_koid)
+        break;
+    }
+
+    if (it == exceptions_.end()) {
+      cb(fit::error(ZX_ERR_NOT_FOUND));
+      return;
+    }
+
+    exceptions_.erase(it);
+    cb(fit::ok());
   }
 
   void GetFilters(GetFiltersCallback callback) override { callback(filters_); }
@@ -101,6 +119,7 @@ class StubProcessLimbo : public ProcessLimbo {
 
   std::vector<std::string> filters_;
   std::vector<std::tuple<zx_koid_t, zx_koid_t, zx_excp_type_t>> exceptions_;
+  std::vector<zx_koid_t> release_calls_;
 
   fidl::BindingSet<ProcessLimbo> bindings_;
 };
@@ -225,11 +244,11 @@ TEST(LimboClient, Enable) {
 
   std::stringstream ss;
 
-  const char* kArgs[] = {"limbo.cmx", "enable"};
-  OptionFunction function = ParseArgs(2, kArgs, ss);
+  std::vector<const char*> kArgs = {"limbo.cmx", "enable"};
+  OptionFunction function = ParseArgs(2, kArgs.data(), ss);
   ASSERT_TRUE(function);
 
-  ASSERT_ZX_EQ(function(&client, ss), ZX_OK);
+  ASSERT_ZX_EQ(function(&client, kArgs, ss), ZX_OK);
   ASSERT_TRUE(context.process_limbo.has_active_call());
   EXPECT_TRUE(context.process_limbo.active_call());
 }
@@ -243,11 +262,11 @@ TEST(LimboClient, Disable) {
 
   std::stringstream ss;
 
-  const char* kArgs[] = {"limbo.cmx", "disable"};
-  OptionFunction function = ParseArgs(2, kArgs, ss);
+  std::vector<const char*> kArgs = {"limbo.cmx", "disable"};
+  OptionFunction function = ParseArgs(2, kArgs.data(), ss);
   ASSERT_TRUE(function);
 
-  ASSERT_ZX_EQ(function(&client, ss), ZX_OK);
+  ASSERT_ZX_EQ(function(&client, kArgs, ss), ZX_OK);
   ASSERT_TRUE(context.process_limbo.has_active_call());
   EXPECT_FALSE(context.process_limbo.active_call());
 }
@@ -271,12 +290,11 @@ TEST(LimboClient, ListOption) {
 
   {
     std::stringstream ss;
-    const char* kArgs[] = {"limbo.cmx", "list"};
+    std::vector<const char*> kArgs = {"limbo.cmx", "list"};
 
-    OptionFunction function = ParseArgs(2, kArgs, ss);
+    OptionFunction function = ParseArgs(2, kArgs.data(), ss);
     ASSERT_TRUE(function);
-
-    ASSERT_ZX_EQ(function(&client, ss), ZX_OK);
+    ASSERT_ZX_EQ(function(&client, kArgs, ss), ZX_OK);
 
     // The koids should be there.
     std::string msg = ss.str();
@@ -287,6 +305,85 @@ TEST(LimboClient, ListOption) {
     EXPECT_NE(msg.find("2000"), std::string::npos);                   // kProcessKoid2
     EXPECT_NE(msg.find("2001"), std::string::npos);                   // kThreadKoid2
     EXPECT_NE(msg.find("ZX_EXCP_SW_BREAKPOINT"), std::string::npos);  // kException1.
+  }
+}
+
+TEST(LimboClient, ReleaseOption) {
+  TestContext context;
+
+  LimboClient client(context.services.service_directory());
+  ASSERT_ZX_EQ(client.Init(), ZX_OK);
+
+  constexpr zx_koid_t kProcessKoid1 = 1000;
+  constexpr zx_koid_t kThreadKoid1 = 1001;
+  constexpr zx_koid_t kProcessKoid2 = 2000;
+  constexpr zx_koid_t kThreadKoid2 = 2001;
+
+  constexpr zx_excp_type_t kException1 = ZX_EXCP_UNALIGNED_ACCESS;
+  constexpr zx_excp_type_t kException2 = ZX_EXCP_SW_BREAKPOINT;
+
+  context.process_limbo.AppendException(kProcessKoid1, kThreadKoid1, kException1);
+  context.process_limbo.AppendException(kProcessKoid2, kThreadKoid2, kException2);
+
+  // No <pid>.
+  {
+    std::stringstream ss;
+    std::vector<const char*> kArgs = {"limbo.cmx", "release"};
+
+    OptionFunction function = ParseArgs(2, kArgs.data(), ss);
+    ASSERT_TRUE(function);
+    ASSERT_ZX_EQ(function(&client, kArgs, ss), ZX_ERR_INVALID_ARGS);
+
+    // Should've not received the call.
+    ASSERT_EQ(context.process_limbo.release_calls().size(), 0u);
+  }
+
+  // No invalid pid.
+  {
+    std::stringstream ss;
+    std::vector<const char*> kArgs = {"limbo.cmx", "release", "asdasd"};
+    context.process_limbo.ResetReleaseCalls();
+
+    OptionFunction function = ParseArgs(3, kArgs.data(), ss);
+    ASSERT_TRUE(function);
+    ASSERT_ZX_EQ(function(&client, kArgs, ss), ZX_ERR_INVALID_ARGS);
+
+    // Should've not received the call.
+    ASSERT_EQ(context.process_limbo.release_calls().size(), 0u);
+  }
+
+  // pid not found.
+  {
+    std::stringstream ss;
+    std::vector<const char*> kArgs = {"limbo.cmx", "release", "3000"};
+    context.process_limbo.ResetReleaseCalls();
+
+    OptionFunction function = ParseArgs(3, kArgs.data(), ss);
+    ASSERT_TRUE(function);
+    ASSERT_ZX_EQ(function(&client, kArgs, ss), ZX_ERR_NOT_FOUND);
+
+    // Should've received the call.
+    ASSERT_EQ(context.process_limbo.release_calls().size(), 1u);
+  }
+
+  // Release.
+  {
+    std::stringstream ss;
+    std::vector<const char*> kArgs = {"limbo.cmx", "release", "1000"};
+    context.process_limbo.ResetReleaseCalls();
+
+    OptionFunction function = ParseArgs(3, kArgs.data(), ss);
+    ASSERT_TRUE(function);
+    ASSERT_ZX_EQ(function(&client, kArgs, ss), ZX_OK);
+
+    // Should've received a release call.
+    ASSERT_EQ(context.process_limbo.release_calls().size(), 1u);
+
+    // Calling again should fail.
+    ASSERT_ZX_EQ(function(&client, kArgs, ss), ZX_ERR_NOT_FOUND);
+
+    // Should've received another release call.
+    ASSERT_EQ(context.process_limbo.release_calls().size(), 2u);
   }
 }
 

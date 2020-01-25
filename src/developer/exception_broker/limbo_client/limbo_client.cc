@@ -64,6 +64,19 @@ zx_status_t LimboClient::ListProcesses(std::vector<ProcessDescription>* processe
   return ZX_OK;
 }
 
+zx_status_t LimboClient::Release(zx_koid_t pid) {
+  if (!connection_)
+    return ZX_ERR_UNAVAILABLE;
+
+  ProcessLimbo_ReleaseProcess_Result result;
+  if (zx_status_t status = connection_->ReleaseProcess(pid, &result); status != ZX_OK)
+    return status;
+
+  if (result.is_err())
+    return result.err();
+  return ZX_OK;
+}
+
 zx_status_t LimboClient::GetFilters(std::vector<std::string>* filters) {
   if (!connection_)
     return ZX_ERR_UNAVAILABLE;

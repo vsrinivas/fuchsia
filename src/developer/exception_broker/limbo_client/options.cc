@@ -15,9 +15,10 @@ namespace exception {
 
 namespace {
 
-zx_status_t EnableLimbo(LimboClient*, std::ostream&);
-zx_status_t DisableLimbo(LimboClient*, std::ostream&);
-zx_status_t ListLimbo(LimboClient*, std::ostream&);
+zx_status_t EnableLimbo(LimboClient*, const std::vector<const char*>&, std::ostream&);
+zx_status_t DisableLimbo(LimboClient*, const std::vector<const char*>&, std::ostream&);
+zx_status_t ListLimbo(LimboClient*, const std::vector<const char*>&, std::ostream&);
+zx_status_t ReleaseFromLimbo(LimboClient*, const std::vector<const char*>&, std::ostream&);
 
 struct Option {
   std::string name;
@@ -32,10 +33,13 @@ const Option kOptions[] = {
      DisableLimbo},
     {"list", "Lists the processes currently waiting on limbo. The limbo must be active.",
      ListLimbo},
+    {"release",
+     "Release a process from limbo. The limbo must be active. Usage: limbo release <pid>.",
+     ReleaseFromLimbo},
 };
 
 void PrintUsage(std::ostream& os) {
-  os << R"(Usage: limbo [--help] <option>" << std::endl;
+  os << R"(Usage: limbo [--help] <option>
 
   The process limbo is a service that permits the system to suspend any processes that throws an
   exception (crash) for later processing/debugging. This CLI tool permits to query and modify the
@@ -52,7 +56,8 @@ void PrintUsage(std::ostream& os) {
 
 // Actions Implementations -------------------------------------------------------------------------
 
-zx_status_t EnableLimbo(LimboClient* limbo, std::ostream& os) {
+zx_status_t EnableLimbo(LimboClient* limbo, const std::vector<const char*>& argv,
+                        std::ostream& os) {
   if (limbo->active()) {
     os << "Limbo is already active." << std::endl;
     return ZX_OK;
@@ -67,7 +72,8 @@ zx_status_t EnableLimbo(LimboClient* limbo, std::ostream& os) {
   return ZX_OK;
 }
 
-zx_status_t DisableLimbo(LimboClient* limbo, std::ostream& os) {
+zx_status_t DisableLimbo(LimboClient* limbo, const std::vector<const char*>& argv,
+                         std::ostream& os) {
   if (!limbo->active()) {
     os << "Limbo is already deactivated." << std::endl;
     return ZX_OK;
@@ -82,7 +88,7 @@ zx_status_t DisableLimbo(LimboClient* limbo, std::ostream& os) {
   return ZX_OK;
 }
 
-zx_status_t ListLimbo(LimboClient* client, std::ostream& os) {
+zx_status_t ListLimbo(LimboClient* client, const std::vector<const char*>& argv, std::ostream& os) {
   if (!client->active()) {
     os << "Process limbo is not active." << std::endl;
     return ZX_OK;
@@ -108,6 +114,37 @@ zx_status_t ListLimbo(LimboClient* client, std::ostream& os) {
     os << "- " << msg << std::endl;
   }
 
+  return ZX_OK;
+}
+
+zx_status_t ReleaseFromLimbo(LimboClient* client, const std::vector<const char*>& argv,
+                             std::ostream& os) {
+  if (!client->active()) {
+    os << "Process limbo is not active." << std::endl;
+    return ZX_OK;
+  }
+
+  if (argv.size() != 3u) {
+    os << "Release Usage: limbo release <pid>" << std::endl;
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint64_t pid = std::atoll(argv[2]);
+  if (pid == 0) {
+    os << "Invalid pid " << argv[2] << std::endl;
+    os << "Release Usage: limbo release <pid>" << std::endl;
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (zx_status_t status = client->Release(pid); status != ZX_OK) {
+    if (status == ZX_ERR_NOT_FOUND) {
+      os << "Could not find pid: " << pid << std::endl;
+    }
+
+    return status;
+  }
+
+  os << "Successfully release process " << pid << " from limbo." << std::endl;
   return ZX_OK;
 }
 

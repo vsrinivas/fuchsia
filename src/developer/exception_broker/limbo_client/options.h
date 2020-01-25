@@ -15,7 +15,8 @@ namespace exception {
 class LimboClient;
 
 // Returns |nullptr| on error.
-using OptionFunction = zx_status_t (*)(LimboClient*, std::ostream&);
+using OptionFunction = zx_status_t (*)(LimboClient*, const std::vector<const char*>& argv,
+                                       std::ostream&);
 OptionFunction ParseArgs(int argc, const char* argv[], std::ostream&);
 
 }  // namespace exception

@@ -21,6 +21,16 @@ void PrintError(zx_status_t status) {
   fprintf(stderr, "Could not communicate to limbo: %s\n", zx_status_get_string(status));
 }
 
+std::vector<const char*> ArgsToVec(int argc, const char* argv[]) {
+  std::vector<const char*> args;
+  args.reserve(argc);
+  for (int i = 0; i < argc; i++) {
+    args.push_back(argv[i]);
+  }
+
+  return args;
+}
+
 };  // namespace
 
 int main(int argc, const char* argv[]) {
@@ -41,5 +51,10 @@ int main(int argc, const char* argv[]) {
   }
 
   // Call the parsed function.
-  return func(&client, std::cout) ? EXIT_SUCCESS : EXIT_FAILURE;
+  if (zx_status_t status = func(&client, ArgsToVec(argc, argv), std::cout); status != ZX_OK) {
+    fprintf(stderr, "Client exit status: %s.\n", zx_status_get_string(status));
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }
