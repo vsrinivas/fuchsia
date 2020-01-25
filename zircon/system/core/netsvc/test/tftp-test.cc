@@ -8,7 +8,9 @@
 #include <zxtest/zxtest.h>
 
 #include "file-api.h"
+#include "netboot.h"
 
+extern "C" {
 void update_timeouts() {}
 bool netbootloader() { return false; }
 bool all_features() { return true; }
@@ -20,6 +22,7 @@ void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
 
 void netifc_recv(void* data, size_t len) {}
 bool netifc_send_pending() { return false; }
+}
 
 namespace {
 

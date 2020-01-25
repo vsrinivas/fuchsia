@@ -11,4 +11,4 @@ void netboot_advertise(const char* nodename);
 void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr, uint16_t dport,
                   const ip6_addr_t* saddr, uint16_t sport);
 
-void netboot_run_cmd(const char* cmd);
+extern "C" void netboot_run_cmd(const char* cmd);

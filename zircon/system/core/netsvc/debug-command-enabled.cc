@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "netsvc.h"
+#include "netboot.h"
 
 #include <stdio.h>
 
@@ -35,7 +35,7 @@ static void run_program(const char* progname, const char** argv, zx_handle_t h) 
   }
 }
 
-void netboot_run_cmd(const char* cmd) {
+extern "C" void netboot_run_cmd(const char* cmd) {
   const char* argv[] = {"/boot/bin/sh", "-c", cmd, NULL};
   printf("net cmd: %s\n", cmd);
   run_program("net:sh", argv, ZX_HANDLE_INVALID);
