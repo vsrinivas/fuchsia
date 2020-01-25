@@ -26,7 +26,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <hw/arch_ops.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // We assume one sysmem since boot, for now.
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
@@ -237,11 +237,10 @@ class SecureVmoReadTester {
  public:
   SecureVmoReadTester(zx::vmo secure_vmo);
   ~SecureVmoReadTester();
-  static void AttemptReadFromSecureStaticFunction(void* arg);
   bool IsReadFromSecureAThing();
+  void AttemptReadFromSecure();
 
  private:
-  void AttemptReadFromSecure();
   zx::vmo secure_vmo_;
   zx::vmar child_vmar_;
   // volatile only so reads in the code actually read despite the value being
@@ -321,10 +320,6 @@ SecureVmoReadTester::~SecureVmoReadTester() {
   child_vmar_.destroy();
 }
 
-void SecureVmoReadTester::AttemptReadFromSecureStaticFunction(void* arg) {
-  static_cast<SecureVmoReadTester*>(arg)->AttemptReadFromSecure();
-}
-
 bool SecureVmoReadTester::IsReadFromSecureAThing() {
   ZX_ASSERT(is_let_die_started_);
   ZX_ASSERT(is_read_from_secure_attempted_);
@@ -371,9 +366,7 @@ void SecureVmoReadTester::AttemptReadFromSecure() {
 
 }  // namespace
 
-extern "C" bool test_sysmem_driver_connection(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, DriverConnection) {
   zx_status_t status;
   zx::channel allocator2_client;
   status = connect_to_sysmem_driver(&allocator2_client);
@@ -381,13 +374,9 @@ extern "C" bool test_sysmem_driver_connection(void) {
 
   status = verify_connectivity(allocator2_client);
   ASSERT_EQ(status, ZX_OK, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_service_connection(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, ServiceConnection) {
   zx_status_t status;
   zx::channel allocator2_client;
   status = connect_to_sysmem_service(&allocator2_client);
@@ -395,13 +384,9 @@ extern "C" bool test_sysmem_service_connection(void) {
 
   status = verify_connectivity(allocator2_client);
   ASSERT_EQ(status, ZX_OK, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, TokenOneParticipantNoImageConstraints) {
   zx::channel collection_client;
   zx_status_t status = make_single_participant_collection(&collection_client);
   ASSERT_EQ(status, ZX_OK, "");
@@ -454,13 +439,9 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
       ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
     }
   }
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, TokenOneParticipantWithImageConstraints) {
   zx_status_t status;
   zx::channel allocator2_client;
   status = connect_to_sysmem_driver(&allocator2_client);
@@ -569,13 +550,9 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
       ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
     }
   }
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_min_buffer_count(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, MinBufferCount) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -631,13 +608,9 @@ extern "C" bool test_sysmem_min_buffer_count(void) {
   ASSERT_EQ(allocation_status, ZX_OK, "");
 
   ASSERT_EQ(buffer_collection_info->buffer_count, 5, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_no_token(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, NoToken) {
   zx_status_t status;
   zx::channel allocator2_client;
   status = connect_to_sysmem_driver(&allocator2_client);
@@ -702,13 +675,9 @@ extern "C" bool test_sysmem_no_token(void) {
       ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
     }
   }
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_multiple_participants(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, MultipleParticipants) {
   zx_status_t status;
   zx::channel allocator2_client_1;
   status = connect_to_sysmem_driver(&allocator2_client_1);
@@ -1008,13 +977,9 @@ extern "C" bool test_sysmem_multiple_participants(void) {
   // doesn't crash
   zx_status_t close_status = fuchsia_sysmem_BufferCollectionClose(collection_client_3.get());
   EXPECT_EQ(close_status, ZX_OK, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
-  BEGIN_TEST;
-
+TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   zx_status_t status;
   zx::channel allocator2_client_1;
   status = connect_to_sysmem_driver(&allocator2_client_1);
@@ -1149,13 +1114,9 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
   // The fact that this is 4 instead of 2 proves that client 1's constraints
   // were taken into account.
   ASSERT_EQ(buffer_collection_info_2->buffer_count, 4, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_heap_constraints(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, HeapConstraints) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -1213,13 +1174,9 @@ extern "C" bool test_sysmem_heap_constraints(void) {
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.heap,
             fuchsia_sysmem_HeapType_SYSTEM_RAM, "");
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_cpu_usage_and_inaccessible_domain_fails(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, CpuUsageAndInaccessibleDomainFails) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -1270,13 +1227,9 @@ extern "C" bool test_sysmem_cpu_usage_and_inaccessible_domain_fails(void) {
   // usage.cpu != 0 && inaccessible_domain_supported is expected to result in failure to
   // allocate.
   ASSERT_NE(status, ZX_OK, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_required_size(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, RequiredSize) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -1347,13 +1300,9 @@ extern "C" bool test_sysmem_required_size(void) {
   // Image must be at least 512x1024 NV12, due to the required max sizes
   // above.
   EXPECT_LE(1024 * 512 * 3 / 2, vmo_size);
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_cpu_usage_and_no_buffer_memory_constraints(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   zx_status_t status;
   zx::channel allocator_client_1;
   status = connect_to_sysmem_driver(&allocator_client_1);
@@ -1442,13 +1391,9 @@ extern "C" bool test_sysmem_cpu_usage_and_no_buffer_memory_constraints(void) {
   ASSERT_EQ(allocation_status, ZX_OK, "");
   ASSERT_EQ(buffer_collection_info_1->settings.buffer_settings.coherency_domain,
             fuchsia_sysmem_CoherencyDomain_CPU, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_contiguous_system_ram_is_cached(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, ContiguousSystemRamIsCached) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -1522,13 +1467,9 @@ extern "C" bool test_sysmem_contiguous_system_ram_is_cached(void) {
   status = the_vmo->get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
   ASSERT_EQ(status, ZX_OK, "");
   ASSERT_EQ(vmo_info.cache_policy, ZX_CACHE_POLICY_CACHED, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_contiguous_system_ram_is_recycled(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, ContiguousSystemRamIsRecycled) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -1558,8 +1499,7 @@ extern "C" bool test_sysmem_contiguous_system_ram_is_recycled(void) {
           "\ntest_sysmem_contiguous_system_ram_is_recycled() internal timeout - fake success - "
           "total_bytes_allocated so far: %zu\n",
           total_bytes_allocated);
-      END_TEST;
-      ZX_PANIC("unreachable\n");
+      return;
     }
 
     zx::channel token_client;
@@ -1623,12 +1563,9 @@ extern "C" bool test_sysmem_contiguous_system_ram_is_recycled(void) {
   }
 
   printf("\ntest_sysmem_contiguous_system_ram_is_recycled() real success\n");
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_only_none_usage_fails(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, OnlyNoneUsageFails) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -1690,13 +1627,9 @@ extern "C" bool test_sysmem_only_none_usage_fails(void) {
   // verify that the wait succeeds but the allocation_status is
   // ZX_ERR_NOT_SUPPORTED.
   ASSERT_TRUE(status == ZX_ERR_PEER_CLOSED || allocation_status == ZX_ERR_NOT_SUPPORTED);
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_none_usage_and_other_usage_from_single_participant_fails(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, NoneUsageAndOtherUsageFromSingleParticipantFails) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -1760,13 +1693,9 @@ extern "C" bool test_sysmem_none_usage_and_other_usage_from_single_participant_f
   // verify that the wait succeeds but the allocation_status is
   // ZX_ERR_NOT_SUPPORTED.
   ASSERT_TRUE(status == ZX_ERR_PEER_CLOSED || allocation_status == ZX_ERR_NOT_SUPPORTED);
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_none_usage_with_separate_other_usage_succeeds(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   zx_status_t status;
   zx::channel allocator2_client_1;
   status = connect_to_sysmem_driver(&allocator2_client_1);
@@ -1881,12 +1810,9 @@ extern "C" bool test_sysmem_none_usage_with_separate_other_usage_succeeds(void) 
   // Success when at least one participant specifies "none" usage and at least
   // one participant specifies a usage other than "none".
   ASSERT_EQ(allocation_status, ZX_OK, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_pixel_format_bgr24(void) {
-  BEGIN_TEST;
+TEST(Sysmem, PixelFormatBgr24) {
   constexpr uint32_t kWidth = 600;
   constexpr uint32_t kHeight = 1;
   constexpr uint32_t kStride = kWidth * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
@@ -2001,13 +1927,10 @@ extern "C" bool test_sysmem_pixel_format_bgr24(void) {
 
   zx_status_t close_status = fuchsia_sysmem_BufferCollectionClose(collection_client.get());
   EXPECT_EQ(close_status, ZX_OK, "");
-
-  END_TEST;
 }
 
 // Test that closing a token handle that's had Close() called on it doesn't crash sysmem.
-extern "C" bool test_sysmem_close_token(void) {
-  BEGIN_TEST;
+TEST(Sysmem, CloseToken) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -2039,14 +1962,11 @@ extern "C" bool test_sysmem_close_token(void) {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
   EXPECT_EQ(fuchsia_sysmem_BufferCollectionTokenSync(token2_client.get()), ZX_OK, "");
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_heap_amlogic_secure(void) {
-  BEGIN_TEST;
+TEST(Sysmem, HeapAmlogicSecure) {
   if (!is_board_with_amlogic_secure()) {
-    END_TEST;
+    return;
   }
 
   for (uint32_t i = 0; i < 64; ++i) {
@@ -2110,17 +2030,14 @@ extern "C" bool test_sysmem_heap_amlogic_secure(void) {
     zx::vmo the_vmo = zx::vmo(buffer_collection_info->buffers[0].vmo);
     buffer_collection_info->buffers[0].vmo = ZX_HANDLE_INVALID;
     SecureVmoReadTester tester(std::move(the_vmo));
-    ASSERT_DEATH(tester.AttemptReadFromSecureStaticFunction, &tester, "");
+    ASSERT_DEATH(([&] { tester.AttemptReadFromSecure(); }));
     ASSERT_FALSE(tester.IsReadFromSecureAThing());
   }
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_heap_amlogic_secure_vdec(void) {
-  BEGIN_TEST;
+TEST(Sysmem, HeapAmlogicSecureVdec) {
   if (!is_board_with_amlogic_secure_vdec()) {
-    END_TEST;
+    return;
   }
 
   for (uint32_t i = 0; i < 64; ++i) {
@@ -2186,16 +2103,12 @@ extern "C" bool test_sysmem_heap_amlogic_secure_vdec(void) {
     zx::vmo the_vmo = zx::vmo(buffer_collection_info->buffers[0].vmo);
     buffer_collection_info->buffers[0].vmo = ZX_HANDLE_INVALID;
     SecureVmoReadTester tester(std::move(the_vmo));
-    ASSERT_DEATH(tester.AttemptReadFromSecureStaticFunction, &tester, "");
+    ASSERT_DEATH(([&] { tester.AttemptReadFromSecure(); }));
     ASSERT_FALSE(tester.IsReadFromSecureAThing());
   }
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_cpu_usage_and_inaccessible_domain_supported_succeeds(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, CpuUsageAndInaccessibleDomainSupportedSucceeds) {
   zx::channel collection_client;
   zx_status_t status = make_single_participant_collection(&collection_client);
   ASSERT_EQ(status, ZX_OK, "");
@@ -2250,13 +2163,9 @@ extern "C" bool test_sysmem_cpu_usage_and_inaccessible_domain_supported_succeeds
       ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
     }
   }
-
-  END_TEST;
 }
 
-extern "C" bool test_sysmem_allocated_buffer_zero_in_ram(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, AllocatedBufferZeroInRam) {
   constexpr uint32_t kBufferCount = 1;
   // Since we're reading from buffer start to buffer end, let's not allocate too large a buffer,
   // since perhaps that'd hide problems if the cache flush is missing in sysmem.
@@ -2333,14 +2242,10 @@ extern "C" bool test_sysmem_allocated_buffer_zero_in_ram(void) {
     // ~vmo
     // ~collection_client
   }
-
-  END_TEST;
 }
 
 // Test that most image format constraints don't need to be specified.
-extern "C" bool test_sysmem_default_attributes(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, DefaultAttributes) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -2397,12 +2302,10 @@ extern "C" bool test_sysmem_default_attributes(void) {
   // Image must be at least 512x1024 NV12, due to the required max sizes
   // above.
   EXPECT_LE(512 * 1024 * 3 / 2, vmo_size);
-
-  END_TEST;
 }
 
 // Perform a sync IPC to ensure the server is still alive.
-static bool VerifyServerAlive(const zx::channel& allocator_client) {
+static void VerifyServerAlive(const zx::channel& allocator_client) {
   zx::channel token_client;
   zx::channel token_server;
   zx_status_t status = zx::channel::create(0, &token_client, &token_server);
@@ -2414,13 +2317,10 @@ static bool VerifyServerAlive(const zx::channel& allocator_client) {
   // Ensure server is still alive.
   status = fuchsia_sysmem_BufferCollectionTokenSync(token_client.get());
   EXPECT_EQ(status, ZX_OK, "");
-  return true;
 }
 
 // Check that the server validates how many image format constraints there are.
-extern "C" bool test_sysmem_too_many_formats(void) {
-  BEGIN_TEST;
-
+TEST(Sysmem, TooManyFormats) {
   zx_status_t status;
   zx::channel allocator_client;
   status = connect_to_sysmem_driver(&allocator_client);
@@ -2474,40 +2374,7 @@ extern "C" bool test_sysmem_too_many_formats(void) {
       collection_client.get(), &allocation_status, buffer_collection_info.get());
   EXPECT_NE(status, ZX_OK, "");
 
-  if (!VerifyServerAlive(allocator_client))
-    return false;
-
-  END_TEST;
+  VerifyServerAlive(allocator_client);
 }
 
 // TODO(dustingreen): Add tests to cover more failure cases.
-
-// clang-format off
-BEGIN_TEST_CASE(sysmem_tests)
-    RUN_TEST(test_sysmem_driver_connection)
-    RUN_TEST(test_sysmem_service_connection)
-    RUN_TEST(test_sysmem_token_one_participant_no_image_constraints)
-    RUN_TEST(test_sysmem_token_one_participant_with_image_constraints)
-    RUN_TEST(test_sysmem_min_buffer_count)
-    RUN_TEST(test_sysmem_no_token)
-    RUN_TEST(test_sysmem_multiple_participants)
-    RUN_TEST(test_sysmem_constraints_retained_beyond_clean_close)
-    RUN_TEST(test_sysmem_heap_constraints)
-    RUN_TEST(test_sysmem_cpu_usage_and_inaccessible_domain_fails)
-    RUN_TEST(test_sysmem_required_size)
-    RUN_TEST(test_sysmem_cpu_usage_and_no_buffer_memory_constraints)
-    RUN_TEST(test_sysmem_contiguous_system_ram_is_cached)
-    RUN_TEST(test_sysmem_contiguous_system_ram_is_recycled)
-    RUN_TEST(test_sysmem_only_none_usage_fails)
-    RUN_TEST(test_sysmem_none_usage_and_other_usage_from_single_participant_fails)
-    RUN_TEST(test_sysmem_none_usage_with_separate_other_usage_succeeds)
-    RUN_TEST(test_sysmem_pixel_format_bgr24)
-    RUN_TEST(test_sysmem_close_token)
-    RUN_TEST(test_sysmem_heap_amlogic_secure)
-    RUN_TEST(test_sysmem_heap_amlogic_secure_vdec)
-    RUN_TEST(test_sysmem_cpu_usage_and_inaccessible_domain_supported_succeeds)
-    RUN_TEST(test_sysmem_allocated_buffer_zero_in_ram)
-    RUN_TEST(test_sysmem_default_attributes)
-    RUN_TEST(test_sysmem_too_many_formats)
-END_TEST_CASE(sysmem_tests)
-// clang-format on

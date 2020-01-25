@@ -28,8 +28,8 @@ test("sysmem") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async-2",
-    "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-sysinfo:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
