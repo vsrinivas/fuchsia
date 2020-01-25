@@ -18,6 +18,7 @@ impl<B: ByteSlice> From<&mac::MacFrame<B>> for FrameClass {
         match mac_frame {
             mac::MacFrame::Data { fixed_fields, .. } => frame_class(&{ fixed_fields.frame_ctrl }),
             mac::MacFrame::Mgmt { mgmt_hdr, .. } => frame_class(&{ mgmt_hdr.frame_ctrl }),
+            mac::MacFrame::Ctrl { ctrl_hdr, .. } => frame_class(&{ ctrl_hdr.frame_ctrl }),
             mac::MacFrame::Unsupported { frame_ctrl } => frame_class(&frame_ctrl),
         }
     }

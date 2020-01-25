@@ -669,7 +669,7 @@ impl<'a> BoundClient<'a> {
     }
 
     pub fn send_ps_poll_frame(&mut self, aid: Aid) -> Result<(), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::PsPoll);
+        const FRAME_LEN: usize = frame_len!(mac::CtrlHdr, mac::MacAddr);
         let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
         write_ps_poll_frame(&mut w, aid, self.sta.bssid, self.sta.iface_mac)?;

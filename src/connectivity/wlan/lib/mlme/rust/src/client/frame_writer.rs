@@ -182,19 +182,18 @@ pub fn write_ps_poll_frame<B: Appendable>(
     bssid: Bssid,
     ta: MacAddr,
 ) -> Result<(), Error> {
+    // IEEE 802.11-2016 9.3.1.5 states the ID in the PS-Poll frame is the association ID with the 2
+    // MSBs set to 1.
     const PS_POLL_ID_MASK: u16 = 0b11000000_00000000;
 
-    buf.append_value(&mac::PsPoll {
+    buf.append_value(&mac::CtrlHdr {
         frame_ctrl: mac::FrameControl(0)
             .with_frame_type(mac::FrameType::CTRL)
             .with_ctrl_subtype(mac::CtrlSubtype::PS_POLL),
-        // IEEE 802.11-2016 9.3.1.5 states the ID in the PS-Poll frame is the association ID with
-        // the 2 MSBs set to 1.
-        id: aid | PS_POLL_ID_MASK,
-        bssid: bssid,
-        ta: ta,
+        duration_or_id: aid | PS_POLL_ID_MASK,
+        ra: bssid.0,
     })?;
-
+    buf.append_value(&ta)?;
     Ok(())
 }
 
