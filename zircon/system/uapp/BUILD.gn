@@ -24,7 +24,6 @@ group("uapp") {
     "ktrace",
     "loadgen",
     "lsdev",
-    "lspwr",
     "lsusb",
     "lz4",
     "minfs",
