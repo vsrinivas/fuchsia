@@ -2,12 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("blobfs-load-generator") {
-  testonly = true
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("blobfs-load-generator") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fs-test-utils",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fs-test-utils",
   ]
+}
+
+migrated_manifest("blobfs-load-generator-manifest") {
+  deps = [ ":blobfs-load-generator" ]
 }

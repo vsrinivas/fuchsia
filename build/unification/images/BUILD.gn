@@ -45,7 +45,6 @@ group("images") {
 aggregate_manifest("legacy-image") {
   deps = [
     ":bin.blktest",
-    ":bin.blobfs-load-generator",
     ":bin.console",
     ":bin.ddk-schedule-work-perf",
     ":bin.device-name-provider",
@@ -1146,7 +1145,7 @@ aggregate_manifest("migrated-image") {
     # unsorted to avoid trivial rebase collisions.
     "//zircon/system/uapp/biotime:biotime-manifest",
     #":bin.blktest",
-    #":bin.blobfs-load-generator",
+    "//zircon/system/uapp/blobfs-load-generator:blobfs-load-generator-manifest",
     "//zircon/system/uapp/clock:clkctl-manifest",
     "//zircon/system/uapp/clock:clock-manifest",
     #":bin.console",

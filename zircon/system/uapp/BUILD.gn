@@ -9,7 +9,6 @@ group("uapp") {
     "$zx/system/ulib/driver-info:driverinfo",
     "blktest",
     "blobfs",
-    "blobfs-load-generator",
     "disk-inspect",
     "disk-pave",
     "display-test",
