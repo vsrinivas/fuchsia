@@ -7,6 +7,7 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 
 #include <map>
 #include <vector>
@@ -23,6 +24,10 @@
 
 namespace camera {
 
+namespace {
+constexpr auto kPipelineManagerSignalExitDone = ZX_USER_SIGNAL_0;
+}  // namespace
+
 // |PipelineManager|
 // This class provides a way to create the stream pipeline for a particular
 // stream configuration requested.
@@ -34,8 +39,10 @@ class PipelineManager {
   PipelineManager(zx_device_t* device, async_dispatcher_t* dispatcher,
                   const ddk::IspProtocolClient& isp, const ddk::GdcProtocolClient& gdc,
                   const ddk::Ge2dProtocolClient& ge2d,
-                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : device_(device),
+                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator,
+                  const zx::event& shutdown_event)
+      : shutdown_event_(shutdown_event),
+        device_(device),
         dispatcher_(dispatcher),
         isp_(isp),
         gdc_(gdc),
@@ -61,9 +68,7 @@ class PipelineManager {
   // Disconnects the stream.
   // This is called when the stream channel receives a ZX_ERR_PEER_CLOSE message.
   // |stream_to_be_disconnected| : Stream type of the stream to be disconnected.
-  // |input_stream_type|         : Either FR or DS.
-  void OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType input_stream_type,
-                                fuchsia::camera2::CameraStreamType stream_to_be_disconnected);
+  void OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType stream_to_be_disconnected);
 
   // Helper function to find out which portion of the graph
   // needs to be disconnected and shut down.
@@ -90,13 +95,19 @@ class PipelineManager {
   void StopStreaming();
   void StartStreaming();
 
+  // Shuts down all existing streams
+  void Shutdown();
+
+  // Finds which graph head is the requested stream |stream_type| configured in.
+  fit::result<std::pair<ProcessNode*, fuchsia::camera2::CameraStreamType>, zx_status_t>
+  FindGraphHead(fuchsia::camera2::CameraStreamType stream_type);
+
  private:
   fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
       StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
-  // Lock to guard |event_queue_|.
-  fbl::Mutex event_queue_lock_;
-
+  bool global_shutdown_requested_ = false;
+  const zx::event& shutdown_event_;
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient isp_;
@@ -105,8 +116,8 @@ class PipelineManager {
   ControllerMemoryAllocator memory_allocator_;
   std::unique_ptr<ProcessNode> full_resolution_stream_;
   std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
-  std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
   std::map<fuchsia::camera2::CameraStreamType, OutputNode*> output_nodes_info_;
+  std::vector<fuchsia::camera2::CameraStreamType> stream_shutdown_requested_;
 };
 
 }  // namespace camera

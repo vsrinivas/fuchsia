@@ -165,8 +165,7 @@ void GdcNode::OnReleaseFrame(uint32_t buffer_index) {
 }
 
 void GdcNode::OnReadyToProcess(const frame_available_info_t* info) {
-  fbl::AutoLock guard(&event_queue_lock_);
-  event_queue_.emplace([this, buffer_index = info->buffer_id]() {
+  async::PostTask(dispatcher_, [this, buffer_index = info->buffer_id]() {
     if (enabled_) {
       ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index));
     } else {
@@ -174,22 +173,15 @@ void GdcNode::OnReadyToProcess(const frame_available_info_t* info) {
       // so it gets added back to the pool.
       parent_node_->OnReleaseFrame(buffer_index);
     }
-    fbl::AutoLock guard(&event_queue_lock_);
-    event_queue_.pop();
   });
-  event_queue_.back().Post(dispatcher_);
 }
 
 void GdcNode::OnTaskRemoved(zx_status_t status) {
   ZX_ASSERT(status == ZX_OK);
-  fbl::AutoLock guard(&event_queue_lock_);
-  event_queue_.emplace([this]() {
+  async::PostTask(dispatcher_, [this]() {
     node_callback_received_ = true;
-    fbl::AutoLock guard(&event_queue_lock_);
-    event_queue_.pop();
     OnCallbackReceived();
   });
-  event_queue_.back().Post(dispatcher_);
 }
 
 void GdcNode::OnShutdown(fit::function<void(void)> shutdown_callback) {

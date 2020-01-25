@@ -65,10 +65,25 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
     return status;
   }
 
+  auto shutdown_callback = [this] {
+    controller_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                            zx_status_t status, const zx_packet_signal_t* signal) {
+      controller_ = nullptr;
+      // Clear the signal.
+      shutdown_event_.signal(kPipelineManagerSignalExitDone, 0u);
+    });
+
+    controller_shutdown_.set_object(shutdown_event_.get());
+    controller_shutdown_.set_trigger(kPipelineManagerSignalExitDone);
+    controller_shutdown_.Begin(controller_loop_.dispatcher());
+
+    controller_->Shutdown();
+  };
+
   if (control_interface.is_valid()) {
     controller_ = std::make_unique<ControllerImpl>(
         parent(), std::move(control_interface), controller_loop_.dispatcher(), isp_, gdc_, ge2d_,
-        [this] { controller_ = nullptr; }, std::move(sysmem_allocator));
+        shutdown_callback, std::move(sysmem_allocator), shutdown_event_);
     return ZX_OK;
   }
   return ZX_ERR_INTERNAL;
@@ -167,12 +182,18 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     zxlogf(ERROR, "%s: ZX_PROTOCOL_BUTTONS not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
+  zx::event event;
+  auto status = zx::event::create(0, &event);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not create shutdown event", __func__);
+    return status;
+  }
 
   auto controller = std::make_unique<ControllerDevice>(
       parent, components[COMPONENT_ISP], components[COMPONENT_GDC], components[COMPONENT_GE2D],
-      components[COMPONENT_SYSMEM], components[COMPONENT_BUTTONS]);
+      components[COMPONENT_SYSMEM], components[COMPONENT_BUTTONS], std::move(event));
 
-  auto status = controller->StartThread();
+  status = controller->StartThread();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not start loop thread\n", __func__);
     return status;

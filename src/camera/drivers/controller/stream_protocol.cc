@@ -37,18 +37,14 @@ zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> di
 void StreamImpl::FrameReady(const frame_available_info_t* info) {
   // This method is invoked by the ISP in its own thread, so the event must be marshalled to the
   // binding's thread.
-  fbl::AutoLock guard(&event_queue_lock_);
-  event_queue_.emplace([this, info = *info]() {
+  async::PostTask(dispatcher_, [this, info = *info]() {
     fuchsia::camera2::FrameAvailableInfo frame_info;
     frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;
     frame_info.buffer_id = info.buffer_id;
     frame_info.metadata.set_image_format_index(info.metadata.image_format_index);
     frame_info.metadata.set_timestamp(info.metadata.timestamp);
     binding_.events().OnFrameAvailable(std::move(frame_info));
-    fbl::AutoLock guard(&event_queue_lock_);
-    event_queue_.pop();
   });
-  event_queue_.back().Post(dispatcher_);
 }
 
 void StreamImpl::Shutdown(zx_status_t status) {

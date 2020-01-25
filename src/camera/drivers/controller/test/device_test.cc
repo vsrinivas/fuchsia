@@ -28,9 +28,12 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
     protocols[0] = fake_sysmem_.ProtocolEntry();
     protocols[1] = fake_buttons_.ProtocolEntry();
     ddk_->SetProtocols(std::move(protocols));
+    zx::event event;
+    ASSERT_EQ(ZX_OK, zx::event::create(0, &event));
+
     controller_device_ = std::make_unique<ControllerDevice>(
         fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent,
-        fake_ddk::kFakeParent, fake_ddk::kFakeParent);
+        fake_ddk::kFakeParent, fake_ddk::kFakeParent, std::move(event));
   }
 
   void TearDown() override {

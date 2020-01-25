@@ -33,11 +33,13 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator_.NewRequest()));
     ASSERT_EQ(ZX_OK, loop_.StartThread("test-controller-frame-processing-thread",
                                        &controller_frame_processing_thread_));
+    ASSERT_EQ(ZX_OK, zx::event::create(0, &event_));
+
     controller_memory_allocator_ =
         std::make_unique<ControllerMemoryAllocator>(std::move(sysmem_allocator_));
     pipeline_manager_ =
         std::make_unique<PipelineManager>(fake_ddk::kFakeParent, loop_.dispatcher(), isp_, gdc_,
-                                          ge2d_, std::move(sysmem_allocator1_));
+                                          ge2d_, std::move(sysmem_allocator1_), event_);
   }
 
   void TearDown() override {
@@ -46,6 +48,7 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
   }
 
   async::Loop loop_;
+  zx::event event_;
   thrd_t controller_frame_processing_thread_;
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;

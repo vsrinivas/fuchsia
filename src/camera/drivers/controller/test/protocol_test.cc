@@ -48,16 +48,19 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator2_.NewRequest()));
     ASSERT_EQ(ZX_OK, loop_.StartThread("test-controller-frame-processing-thread",
                                        &controller_frame_processing_thread_));
+    ASSERT_EQ(ZX_OK, zx::event::create(0, &event_));
+
     isp_ = fake_isp_.client();
     gdc_ = fake_gdc_.client();
     ge2d_ = fake_ge2d_.client();
     pipeline_manager_ =
         std::make_unique<PipelineManager>(fake_ddk::kFakeParent, loop_.dispatcher(), isp_, gdc_,
-                                          ge2d_, std::move(sysmem_allocator1_));
+                                          ge2d_, std::move(sysmem_allocator1_), event_);
     internal_config_info_ = SherlockInternalConfigs();
   }
 
   void TearDown() override {
+    pipeline_manager_ = nullptr;
     loop_.Shutdown();
     context_ = nullptr;
     sysmem_allocator1_ = nullptr;
@@ -457,8 +460,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(fr_head_node->child_nodes().size(), 2u);
 
     // Disconnect FR|ML stream.
-    pipeline_manager_->OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
-                                                stream_type_fr);
+    pipeline_manager_->OnClientStreamDisconnect(stream_type_fr);
     RunLoopUntilIdle();
 
     EXPECT_EQ(fr_head_node->configured_streams().size(), 1u);
@@ -466,8 +468,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(fr_head_node->child_nodes().size(), 1u);
 
     // Disconnect DS|ML stream.
-    pipeline_manager_->OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
-                                                stream_type_ds);
+    pipeline_manager_->OnClientStreamDisconnect(stream_type_ds);
     RunLoopUntilIdle();
 
     while (pipeline_manager_->full_resolution_stream() != nullptr) {
@@ -767,9 +768,63 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ds_frame_count, 5u);
   }
 
+  void TestFindGraphHead() {
+    auto fr_stream_type = kStreamTypeFR | kStreamTypeML;
+    auto ds_stream_type = kStreamTypeMonitoring;
+    fuchsia::camera2::StreamPtr fr_stream;
+    auto fr_result = SetupStream(kMonitorConfig, fr_stream_type, fr_stream);
+    ASSERT_EQ(ZX_OK, fr_result.error());
+
+    fuchsia::camera2::StreamPtr ds_stream;
+    auto ds_result = SetupStream(kMonitorConfig, ds_stream_type, ds_stream);
+    ASSERT_EQ(ZX_OK, ds_result.error());
+
+    auto result = pipeline_manager_->FindGraphHead(fr_stream_type);
+    EXPECT_FALSE(result.is_error());
+    EXPECT_EQ(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION, result.value().second);
+
+    result = pipeline_manager_->FindGraphHead(ds_stream_type);
+    EXPECT_FALSE(result.is_error());
+    EXPECT_EQ(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION, result.value().second);
+
+    result = pipeline_manager_->FindGraphHead(kStreamTypeVideo);
+    EXPECT_TRUE(result.is_error());
+    EXPECT_EQ(result.error(), ZX_ERR_BAD_STATE);
+  }
+
+  void TestPipelineManagerShutdown() {
+    fuchsia::camera2::StreamPtr stream_ds;
+    fuchsia::camera2::StreamPtr stream_fr;
+
+    auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
+    auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
+
+    auto result_fr = SetupStream(kMonitorConfig, stream_type_fr, stream_fr);
+    ASSERT_EQ(ZX_OK, result_fr.error());
+
+    auto result_ds = SetupStream(kMonitorConfig, stream_type_ds, stream_ds);
+    ASSERT_EQ(ZX_OK, result_ds.error());
+
+    // Start streaming.
+    stream_fr->Start();
+    stream_ds->Start();
+    RunLoopUntilIdle();
+
+    async::PostTask(loop_.dispatcher(), [this]() { pipeline_manager_->Shutdown(); });
+
+    zx_signals_t pending;
+    event_.wait_one(kPipelineManagerSignalExitDone, zx::time::infinite(), &pending);
+
+    RunLoopUntilIdle();
+
+    EXPECT_EQ(nullptr, pipeline_manager_->full_resolution_stream());
+    EXPECT_EQ(nullptr, pipeline_manager_->downscaled_resolution_stream());
+  }
+
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
   FakeGe2d fake_ge2d_;
+  zx::event event_;
   async::Loop loop_;
   thrd_t controller_frame_processing_thread_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
@@ -828,6 +883,10 @@ TEST_F(ControllerProtocolTest, TestReleaseAfterStopStreaming) { TestReleaseAfter
 TEST_F(ControllerProtocolTest, TestEnabledDisableStreaming) { TestEnabledDisableStreaming(); }
 
 TEST_F(ControllerProtocolTest, TestMultipleFrameRates) { TestMultipleFrameRates(); }
+
+TEST_F(ControllerProtocolTest, TestFindGraphHead) { TestFindGraphHead(); }
+
+TEST_F(ControllerProtocolTest, TestPipelineManagerShutdown) { TestPipelineManagerShutdown(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

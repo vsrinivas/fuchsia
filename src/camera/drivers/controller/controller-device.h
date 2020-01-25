@@ -15,6 +15,7 @@
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
@@ -45,12 +46,14 @@ class ControllerDevice : public ControllerDeviceType,
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
   explicit ControllerDevice(zx_device_t* parent, zx_device_t* isp, zx_device_t* gdc,
-                            zx_device_t* ge2d, zx_device_t* sysmem, zx_device_t* buttons)
+                            zx_device_t* ge2d, zx_device_t* sysmem, zx_device_t* buttons,
+                            zx::event event)
       : ControllerDeviceType(parent),
         isp_(isp),
         gdc_(gdc),
         ge2d_(ge2d),
         buttons_(buttons),
+        shutdown_event_(std::move(event)),
         controller_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         sysmem_(sysmem) {}
 
@@ -97,6 +100,8 @@ class ControllerDevice : public ControllerDeviceType,
   ddk::Ge2dProtocolClient ge2d_;
   ddk::ButtonsProtocolClient buttons_;
   fuchsia::buttons::ButtonsPtr buttons_client_;
+  async::Wait controller_shutdown_;
+  zx::event shutdown_event_;
   async::Loop controller_loop_;
   thrd_t loop_thread_;
   std::unique_ptr<ControllerImpl> controller_;

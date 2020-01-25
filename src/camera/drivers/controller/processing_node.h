@@ -177,8 +177,6 @@ class ProcessNode {
   async_dispatcher_t* dispatcher_;
   // Lock to guard |in_use_buffer_count_|
   fbl::Mutex in_use_buffer_lock_;
-  // Lock to guard |event_queue_|.
-  fbl::Mutex event_queue_lock_;
   // The output frame rate for this node.
   fuchsia::camera2::FrameRate output_frame_rate_;
   // Current frame counter. This is in terms of no. of output frames
@@ -203,8 +201,6 @@ class ProcessNode {
   // A vector to keep track of outstanding in-use buffers handed off to all child nodes.
   // [buffer_index] --> [count]
   std::vector<uint32_t> in_use_buffer_count_ __TA_GUARDED(in_use_buffer_lock_);
-  // Task queue for all the frame processing.
-  std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
   // ISP/GDC or GE2D shutdown complete status.
   bool node_callback_received_ = false;
   // Child node shutdown complete status.

@@ -7,6 +7,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_call.h>
+
 #include "graph_utils.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -93,13 +95,11 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureS
   }
 
   auto output_node = output_node_result.value();
-  auto input_stream_type = info->node.input_stream_type;
   auto stream_configured = info->stream_config->properties.stream_type();
 
-  auto status =
-      output_node->Attach(stream.TakeChannel(), [this, input_stream_type, stream_configured]() {
-        OnClientStreamDisconnect(input_stream_type, stream_configured);
-      });
+  auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
+    OnClientStreamDisconnect(stream_configured);
+  });
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to bind output stream";
     return fit::error(status);
@@ -175,13 +175,11 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   }
 
   auto output_node = output_node_result.value();
-  auto input_stream_type = info->node.input_stream_type;
   auto stream_configured = info->stream_config->properties.stream_type();
-  auto status =
-      output_node->Attach(stream.TakeChannel(), [this, input_stream_type, stream_configured]() {
-        FX_LOGS(INFO) << "Stream client disconnected";
-        OnClientStreamDisconnect(input_stream_type, stream_configured);
-      });
+  auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
+    FX_LOGS(INFO) << "Stream client disconnected";
+    OnClientStreamDisconnect(stream_configured);
+  });
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to bind output stream";
     return status;
@@ -301,7 +299,22 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
                                        fuchsia::camera2::CameraStreamType stream_to_disconnect) {
   auto shutdown_callback = [this, input_stream_type, stream_to_disconnect]() {
     ProcessNode* graph_head = nullptr;
+
+    // Remove entry from shutdown book keeping.
     output_nodes_info_.erase(stream_to_disconnect);
+    stream_shutdown_requested_.erase(
+        std::remove(stream_shutdown_requested_.begin(), stream_shutdown_requested_.end(),
+                    stream_to_disconnect),
+        stream_shutdown_requested_.end());
+
+    // Check if global shutdown was requested and it was complete before exiting
+    // this function.
+    auto shutdown_cleanup = fbl::MakeAutoCall([this]() {
+      if (output_nodes_info_.empty() && global_shutdown_requested_) {
+        // Signal for pipeline manager shutdown complete.
+        shutdown_event_.signal(0, kPipelineManagerSignalExitDone);
+      }
+    });
 
     switch (input_stream_type) {
       case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
@@ -349,27 +362,34 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
   }
 }
 
-void PipelineManager::OnClientStreamDisconnect(
-    fuchsia::camera2::CameraStreamType input_stream_type,
-    fuchsia::camera2::CameraStreamType stream_to_disconnect) {
-  ProcessNode* graph_head = nullptr;
-  switch (input_stream_type) {
-    case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
-      ZX_ASSERT_MSG(full_resolution_stream_ != nullptr, "FR node is null");
-      graph_head = full_resolution_stream_.get();
-      break;
-    }
-    case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
-      ZX_ASSERT_MSG(downscaled_resolution_stream_ != nullptr, "DS node is null");
-      graph_head = downscaled_resolution_stream_.get();
-      break;
-    }
-    default: {
-      ZX_ASSERT_MSG(false, "Invalid input stream type\n");
-      break;
+fit::result<std::pair<ProcessNode*, fuchsia::camera2::CameraStreamType>, zx_status_t>
+PipelineManager::FindGraphHead(fuchsia::camera2::CameraStreamType stream_type) {
+  if (full_resolution_stream_ != nullptr) {
+    if (HasStreamType(full_resolution_stream_->configured_streams(), stream_type)) {
+      return fit::ok(std::make_pair(full_resolution_stream_.get(),
+                                    fuchsia::camera2::CameraStreamType::FULL_RESOLUTION));
     }
   }
-  DisconnectStream(graph_head, input_stream_type, stream_to_disconnect);
+  if (downscaled_resolution_stream_ != nullptr) {
+    if (HasStreamType(downscaled_resolution_stream_->configured_streams(), stream_type)) {
+      return fit::ok(std::make_pair(downscaled_resolution_stream_.get(),
+                                    fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION));
+    }
+  }
+  return fit::error(ZX_ERR_BAD_STATE);
+}
+
+void PipelineManager::OnClientStreamDisconnect(
+    fuchsia::camera2::CameraStreamType stream_to_disconnect) {
+  auto result = FindGraphHead(stream_to_disconnect);
+  if (result.is_error()) {
+    FX_PLOGS(ERROR, result.error()) << "Failed to FindGraphHead";
+    ZX_ASSERT_MSG(false, "Invalid stream_to_disconnect stream type\n");
+  }
+
+  stream_shutdown_requested_.push_back(stream_to_disconnect);
+
+  DisconnectStream(result.value().first, result.value().second, stream_to_disconnect);
 }
 
 void PipelineManager::StopStreaming() {
@@ -384,6 +404,28 @@ void PipelineManager::StartStreaming() {
   for (auto output_node_info : output_nodes_info_) {
     if (output_node_info.second) {
       output_node_info.second->client_stream()->Start();
+    }
+  }
+}
+
+void PipelineManager::Shutdown() {
+  // No existing streams, safe to signal shutdown complete.
+  if (output_nodes_info_.empty()) {
+    // Signal for pipeline manager shutdown complete.
+    shutdown_event_.signal(0u, kPipelineManagerSignalExitDone);
+    return;
+  }
+
+  global_shutdown_requested_ = true;
+
+  // First stop streaming all active streams.
+  StopStreaming();
+
+  // Instantiate shutdown of all active streams.
+  auto output_node_info_copy = output_nodes_info_;
+  for (auto output_node_info : output_node_info_copy) {
+    if (!HasStreamType(stream_shutdown_requested_, output_node_info.first)) {
+      OnClientStreamDisconnect(output_node_info.first);
     }
   }
 }

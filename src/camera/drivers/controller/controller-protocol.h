@@ -38,7 +38,7 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
                  async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
                  const ddk::GdcProtocolClient& gdc, const ddk::Ge2dProtocolClient& ge2d,
                  fit::closure on_connection_closed,
-                 fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
+                 fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator, const zx::event& shutdown_event);
 
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
   InternalConfigNode* GetStreamConfigNode(InternalConfigInfo* internal_config,
@@ -53,6 +53,8 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   void EnableStreaming() override;
 
   void DisableStreaming() override;
+
+  void Shutdown() { pipeline_manager_.Shutdown(); };
 
  private:
   // Device FIDL implementation

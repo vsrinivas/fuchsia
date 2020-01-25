@@ -52,9 +52,7 @@ class StreamImpl : public fuchsia::camera2::Stream {
   bool started_ = false;
   fidl::Binding<fuchsia::camera2::Stream> binding_;
   fit::function<void(void)> disconnect_handler_;
-  fbl::Mutex event_queue_lock_;
   ProcessNode& output_node_;
-  std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
 };
 
 }  // namespace camera
