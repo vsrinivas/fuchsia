@@ -13,6 +13,7 @@ executable("test") {
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/lib/sys/cpp",
     "//src/camera/bin/device_watcher",
+    "//src/camera/bin/device_watcher:fuchsia.camera.test",
     "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/fs",

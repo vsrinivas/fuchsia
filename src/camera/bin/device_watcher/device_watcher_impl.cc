@@ -6,9 +6,6 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
-#include <fuchsia/hardware/camera/cpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
@@ -34,45 +31,31 @@ fit::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherImpl::
   return fit::ok(std::move(server));
 }
 
-zx_status_t DeviceWatcherImpl::AddDevice(std::string path) {
-  FX_LOGS(DEBUG) << "Adding device at " << path;
-
-  UniqueDevice device{};
-
-  device.current_path = path;
-  device.id = device_id_next_;
-
-  // Get the controller protocol for this device.
-
-  fuchsia::hardware::camera::DeviceSyncPtr camera;
-  zx_status_t status = fdio_service_connect(path.c_str(), camera.NewRequest().TakeChannel().get());
+fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
+    fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller) {
+  FX_LOGS(DEBUG) << "AddDevice(...)";
+  fuchsia::camera2::hal::ControllerPtr ctrl;
+  zx_status_t status = ctrl.Bind(std::move(controller), loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return status;
-  }
-
-  status = camera->GetChannel2(device.controller.NewRequest(loop_.dispatcher()).TakeChannel());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return status;
+    return fit::error(status);
   }
 
   // Try to get the device info, waiting for either the info to be returned, or for an error.
-
   zx::event event;
   zx::event::create(0, &event);
   constexpr auto kErrorSignal = ZX_USER_SIGNAL_0;
   constexpr auto kInfoSignal = ZX_USER_SIGNAL_1;
 
   zx_status_t status_return;
-  device.controller.set_error_handler([&](zx_status_t status) {
+  ctrl.set_error_handler([&](zx_status_t status) {
     FX_PLOGS(ERROR, status);
     status_return = status;
     event.signal(0, kErrorSignal);
   });
 
   fuchsia::camera2::DeviceInfo info_return;
-  device.controller->GetDeviceInfo([&](fuchsia::camera2::DeviceInfo info) {
+  ctrl->GetDeviceInfo([&](fuchsia::camera2::DeviceInfo info) {
     info_return = std::move(info);
     event.signal(0, kInfoSignal);
   });
@@ -81,31 +64,30 @@ zx_status_t DeviceWatcherImpl::AddDevice(std::string path) {
   status = event.wait_one(kErrorSignal | kInfoSignal, zx::time::infinite(), &signaled);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return status;
+    return fit::error(status);
   }
 
   if (signaled & kErrorSignal) {
-    FX_LOGS(INFO)
-        << path
-        << " failed to return device information. This device will not be reported to clients.";
-    return ZX_OK;
+    FX_PLOGS(ERROR, status_return);
+    return fit::error(status_return);
   }
 
   ZX_ASSERT(signaled & kInfoSignal);
+
   if (!info_return.has_vendor_id() || !info_return.has_product_id()) {
-    FX_LOGS(INFO) << path
-                  << " missing vendor or product ID. This device will not be reported to clients.";
-    return ZX_OK;
+    FX_LOGS(ERROR) << "Controller missing vendor or product ID.";
+    return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Determine the persistent ID for this device and create/update its entry.
 
   // TODO(fxb/43565): This generates the same ID for multiple instances of the same device. It
   // should be made unique by incorporating a truly unique value such as the bus ID.
-  constexpr auto kVendorShift = 16;
-  uint64_t persistent_id = (info_return.vendor_id() << kVendorShift) | info_return.product_id();
+  constexpr uint32_t kVendorShift = 16;
+  PersistentDeviceId persistent_id =
+      (static_cast<uint64_t>(info_return.vendor_id()) << kVendorShift) | info_return.product_id();
 
-  device.controller.set_error_handler([this, persistent_id](zx_status_t status) {
+  ctrl.set_error_handler([this, persistent_id](zx_status_t status) {
     FX_PLOGS(INFO, status) << "Camera " << persistent_id << " disconnected";
     std::lock_guard<std::mutex> lock(devices_lock_);
     devices_[persistent_id].controller = nullptr;
@@ -115,26 +97,26 @@ zx_status_t DeviceWatcherImpl::AddDevice(std::string path) {
   });
 
   std::lock_guard<std::mutex> lock(devices_lock_);
-  devices_[persistent_id] = std::move(device);
+  devices_[persistent_id] = {.id = device_id_next_, .controller = ctrl.Unbind()};
 
   FX_LOGS(DEBUG) << "Added device " << persistent_id << " as device ID " << device_id_next_;
-
   ++device_id_next_;
 
-  return ZX_OK;
+  return fit::ok(persistent_id);
 }
 
-zx_status_t DeviceWatcherImpl::RemoveDevice(std::string path) {
-  FX_LOGS(DEBUG) << "Removing device at " << path;
+zx_status_t DeviceWatcherImpl::RemoveDevice(PersistentDeviceId id) {
+  FX_LOGS(DEBUG) << "RemoveDevice(" << id << ")";
 
   std::lock_guard<std::mutex> lock(devices_lock_);
-  for (auto& device : devices_) {
-    if (device.second.current_path.has_value() && device.second.current_path.value() == path) {
-      device.second.current_path = nullptr;
-      return ZX_OK;
-    }
+  auto it = devices_.find(id);
+  if (it == devices_.end()) {
+    FX_PLOGS(ERROR, ZX_ERR_NOT_FOUND);
+    return ZX_ERR_NOT_FOUND;
   }
-  return ZX_ERR_NOT_FOUND;
+  devices_.erase(it);
+
+  return ZX_OK;
 }
 
 void DeviceWatcherImpl::UpdateClients() {
@@ -165,7 +147,7 @@ void DeviceWatcherImpl::OnNewRequest(
 DeviceWatcherImpl::Client::Client() : binding_(this) {}
 
 fit::result<std::unique_ptr<DeviceWatcherImpl::Client>, zx_status_t>
-DeviceWatcherImpl::Client::Create(uint64_t id,
+DeviceWatcherImpl::Client::Create(ClientId id,
                                   fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request,
                                   async_dispatcher_t* dispatcher) {
   auto client = std::make_unique<DeviceWatcherImpl::Client>();
@@ -200,7 +182,8 @@ DeviceWatcherImpl::Client::operator bool() { return binding_.is_bound(); }
 // Constructs the set of events that should be returned to the client, or null if the response
 // should not be sent.
 static std::optional<std::vector<fuchsia::camera3::WatchDevicesEvent>> BuildEvents(
-    const std::set<uint64_t>& last_known, const std::optional<std::set<uint64_t>>& last_sent) {
+    const std::set<TransientDeviceId>& last_known,
+    const std::optional<std::set<TransientDeviceId>>& last_sent) {
   std::vector<fuchsia::camera3::WatchDevicesEvent> events;
 
   // If never sent, just populate with Added events for the known IDs.
@@ -212,9 +195,9 @@ static std::optional<std::vector<fuchsia::camera3::WatchDevicesEvent>> BuildEven
   }
 
   // Otherwise, build a full event list.
-  std::set<uint64_t> existing;
-  std::set<uint64_t> added;
-  std::set<uint64_t> removed;
+  std::set<TransientDeviceId> existing;
+  std::set<TransientDeviceId> added;
+  std::set<TransientDeviceId> removed;
 
   // Exisitng = Known && Sent
   std::set_intersection(last_known.begin(), last_known.end(), last_sent.value().begin(),
@@ -276,6 +259,6 @@ void DeviceWatcherImpl::Client::WatchDevices(WatchDevicesCallback callback) {
 }
 
 void DeviceWatcherImpl::Client::ConnectToDevice(
-    uint64_t id, fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
+    TransientDeviceId id, fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
   request.Close(ZX_ERR_NOT_SUPPORTED);
 }

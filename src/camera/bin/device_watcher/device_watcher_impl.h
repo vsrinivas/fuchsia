@@ -18,21 +18,25 @@
 #include <set>
 #include <unordered_map>
 
+using ClientId = uint64_t;
+using TransientDeviceId = uint64_t;
+using PersistentDeviceId = uint64_t;
+
 struct UniqueDevice {
-  uint64_t id;
-  fuchsia::camera2::hal::ControllerPtr controller;
-  std::optional<std::string> current_path;
+  TransientDeviceId id;
+  fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller;
 };
 
-using DevicesMap = std::unordered_map<uint64_t, UniqueDevice>;
+using DevicesMap = std::unordered_map<PersistentDeviceId, UniqueDevice>;
 
 class DeviceWatcherImpl {
  public:
   DeviceWatcherImpl();
   ~DeviceWatcherImpl();
   static fit::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create();
-  zx_status_t AddDevice(std::string path);
-  zx_status_t RemoveDevice(std::string path);
+  fit::result<PersistentDeviceId, zx_status_t> AddDevice(
+      fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller);
+  zx_status_t RemoveDevice(PersistentDeviceId id);
   void UpdateClients();
   fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> GetHandler();
 
@@ -44,7 +48,7 @@ class DeviceWatcherImpl {
    public:
     Client();
     static fit::result<std::unique_ptr<Client>, zx_status_t> Create(
-        uint64_t id, fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request,
+        ClientId id, fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request,
         async_dispatcher_t* dispatcher);
     void UpdateDevices(const DevicesMap& devices);
     operator bool();
@@ -53,22 +57,22 @@ class DeviceWatcherImpl {
     void CheckDevicesChanged();
     // |fuchsia::camera3::DeviceWatcher|
     void WatchDevices(WatchDevicesCallback callback) override;
-    void ConnectToDevice(uint64_t id,
+    void ConnectToDevice(TransientDeviceId id,
                          fidl::InterfaceRequest<fuchsia::camera3::Device> request) override;
 
-    uint64_t id_;
+    ClientId id_;
     fidl::Binding<fuchsia::camera3::DeviceWatcher> binding_;
     WatchDevicesCallback callback_;
-    std::set<uint64_t> last_known_ids_;
-    std::optional<std::set<uint64_t>> last_sent_ids_;
+    std::set<TransientDeviceId> last_known_ids_;
+    std::optional<std::set<TransientDeviceId>> last_sent_ids_;
   };
 
   async::Loop loop_;
-  uint64_t device_id_next_ = 1;
+  TransientDeviceId device_id_next_ = 1;
   std::mutex devices_lock_;
   DevicesMap devices_ __TA_GUARDED(devices_lock_);
-  uint64_t client_id_next_ = 1;
-  std::unordered_map<uint64_t, std::unique_ptr<Client>> clients_;
+  ClientId client_id_next_ = 1;
+  std::unordered_map<ClientId, std::unique_ptr<Client>> clients_;
 };
 
 #endif  // SRC_CAMERA_BIN_DEVICE_WATCHER_DEVICE_WATCHER_IMPL_H_

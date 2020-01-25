@@ -1,0 +1,15 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera.test;
+
+using fuchsia.camera2.hal;
+
+/// This interface provides manipulation methods for a standard DeviceWatcher. This is intended for
+/// test purposes only.
+[Discoverable]
+protocol DeviceWatcherTester {
+    /// Inserts the given controller implementation as a new device.
+    InjectDevice(fuchsia.camera2.hal.Controller controller);
+};
