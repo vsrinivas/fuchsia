@@ -661,10 +661,10 @@ impl ReaderServer {
         })
     }
 
-    /// Takes a vector of HierarchyData structs, and a `fidl_fuschia_diagnostics/Format`
+    /// Takes a vector of HierarchyData structs, and a `fidl_fuchsia_diagnostics/Format`
     /// enum, and writes each diagnostics hierarchy into a READ_ONLY VMO according to
     /// provided format. This VMO is then packaged into a `fidl_fuchsia_mem/Buffer`
-    /// which is then packaged into a `fidl_fuschia_diagnostics/FormattedContent`
+    /// which is then packaged into a `fidl_fuchsia_diagnostics/FormattedContent`
     /// xunion which specifies the format of the VMO for clients.
     ///
     /// Errors in the returned Vector correspond to IO failures in writing to a VMO. If
