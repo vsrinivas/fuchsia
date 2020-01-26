@@ -148,7 +148,7 @@ async fn start_without_fizzbuzz() -> Result<(), Error> {
     assert_inspect_tree!(hierarchy, root: contains {
         "fuchsia.inspect.Health": {
             status: "UNHEALTHY",
-            message: "FizzBuzz connection closed: ClientChannelClosed(Status(PEER_CLOSED))"
+            message: "FizzBuzz connection closed",
         }
     });
     Ok(())

@@ -51,8 +51,8 @@ async fn main() -> Result<(), Error> {
                 component::health().set_ok();
                 fx_log_info!("Got FizzBuzz: {}", result);
             }
-            Err(e) => {
-                component::health().set_unhealthy(&format!("FizzBuzz connection closed: {:?}", e));
+            Err(_) => {
+                component::health().set_unhealthy("FizzBuzz connection closed");
             }
         };
         Ok(())
