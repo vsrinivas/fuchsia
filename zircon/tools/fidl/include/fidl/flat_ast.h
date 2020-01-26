@@ -1417,10 +1417,15 @@ class TypeTemplate {
 
   const Name& name() const { return name_; }
 
-  virtual bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-                      const std::optional<types::HandleSubtype>& handle_subtype,
-                      const Constant* handle_rights, const Size* size,
-                      types::Nullability nullability, std::unique_ptr<Type>* out_type,
+  struct CreateInvocation {
+    const std::optional<SourceSpan>& span;
+    const Type* arg_type;
+    const std::optional<types::HandleSubtype>& handle_subtype;
+    const Constant* handle_rights;
+    const Size* size;
+    const types::Nullability nullability;
+  };
+  virtual bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
 
  protected:

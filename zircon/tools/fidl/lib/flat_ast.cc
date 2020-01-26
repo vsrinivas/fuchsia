@@ -280,8 +280,13 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
     error_reporter_->ReportError(name.span(), message);
     return false;
   }
-  return type_template->Create(name.span(), arg_type, handle_subtype, handle_rights, size,
-                               nullability, out_type, out_from_type_alias);
+  return type_template->Create({.span = name.span(),
+                                .arg_type = arg_type,
+                                .handle_subtype = handle_subtype,
+                                .handle_rights = handle_rights,
+                                .size = size,
+                                .nullability = nullability},
+                               out_type, out_from_type_alias);
 }
 
 void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
@@ -315,20 +320,17 @@ class PrimitiveTypeTemplate : public TypeTemplate {
                         const std::string& name, types::PrimitiveSubtype subtype)
       : TypeTemplate(Name::CreateIntrinsic(name), typespace, error_reporter), subtype_(subtype) {}
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype,
-              const Constant* handle_rights, const Size* maybe_size, types::Nullability nullability,
-              std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!no_handle_subtype);
-    assert(!handle_rights);
+    assert(!args.handle_subtype);
+    assert(!args.handle_rights);
 
-    if (maybe_arg_type != nullptr)
-      return CannotBeParameterized(span);
-    if (maybe_size != nullptr)
-      return CannotHaveSize(span);
-    if (nullability == types::Nullability::kNullable)
-      return CannotBeNullable(span);
+    if (args.arg_type != nullptr)
+      return CannotBeParameterized(args.span);
+    if (args.size != nullptr)
+      return CannotHaveSize(args.span);
+    if (args.nullability == types::Nullability::kNullable)
+      return CannotBeNullable(args.span);
 
     *out_type = std::make_unique<PrimitiveType>(name_, subtype_);
     return true;
@@ -344,20 +346,18 @@ class BytesTypeTemplate final : public TypeTemplate {
       : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, error_reporter),
         uint8_type_(kUint8Type) {}
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype,
-              const Constant* handle_rights, const Size* size, types::Nullability nullability,
-              std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!no_handle_subtype);
-    assert(!handle_rights);
+    assert(!args.handle_subtype);
+    assert(!args.handle_rights);
 
-    if (maybe_arg_type != nullptr)
-      return CannotBeParameterized(span);
+    if (args.arg_type != nullptr)
+      return CannotBeParameterized(args.span);
+    const Size* size = args.size;
     if (size == nullptr)
       size = &max_size;
 
-    *out_type = std::make_unique<VectorType>(name_, &uint8_type_, size, nullability);
+    *out_type = std::make_unique<VectorType>(name_, &uint8_type_, size, args.nullability);
     return true;
   }
 
@@ -375,24 +375,21 @@ class ArrayTypeTemplate final : public TypeTemplate {
   ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name::CreateIntrinsic("array"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype,
-              const Constant* handle_rights, const Size* size, types::Nullability nullability,
-              std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!no_handle_subtype);
-    assert(!handle_rights);
+    assert(!args.handle_subtype);
+    assert(!args.handle_rights);
 
-    if (arg_type == nullptr)
-      return MustBeParameterized(span);
-    if (size == nullptr)
-      return MustHaveSize(span);
-    if (size->value == 0)
-      return MustHaveNonZeroSize(span);
-    if (nullability == types::Nullability::kNullable)
-      return CannotBeNullable(span);
+    if (args.arg_type == nullptr)
+      return MustBeParameterized(args.span);
+    if (args.size == nullptr)
+      return MustHaveSize(args.span);
+    if (args.size->value == 0)
+      return MustHaveNonZeroSize(args.span);
+    if (args.nullability == types::Nullability::kNullable)
+      return CannotBeNullable(args.span);
 
-    *out_type = std::make_unique<ArrayType>(name_, arg_type, size);
+    *out_type = std::make_unique<ArrayType>(name_, args.arg_type, args.size);
     return true;
   }
 };
@@ -402,20 +399,18 @@ class VectorTypeTemplate final : public TypeTemplate {
   VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype,
-              const Constant* handle_rights, const Size* size, types::Nullability nullability,
-              std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!no_handle_subtype);
-    assert(!handle_rights);
+    assert(!args.handle_subtype);
+    assert(!args.handle_rights);
 
-    if (arg_type == nullptr)
-      return MustBeParameterized(span);
+    if (args.arg_type == nullptr)
+      return MustBeParameterized(args.span);
+    const Size* size = args.size;
     if (size == nullptr)
       size = &max_size;
 
-    *out_type = std::make_unique<VectorType>(name_, arg_type, size, nullability);
+    *out_type = std::make_unique<VectorType>(name_, args.arg_type, size, args.nullability);
     return true;
   }
 
@@ -428,20 +423,18 @@ class StringTypeTemplate final : public TypeTemplate {
   StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name::CreateIntrinsic("string"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype,
-              const Constant* handle_rights, const Size* size, types::Nullability nullability,
-              std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!no_handle_subtype);
-    assert(!handle_rights);
+    assert(!args.handle_subtype);
+    assert(!args.handle_rights);
 
-    if (arg_type != nullptr)
-      return CannotBeParameterized(span);
+    if (args.arg_type != nullptr)
+      return CannotBeParameterized(args.span);
+    const Size* size = args.size;
     if (size == nullptr)
       size = &max_size;
 
-    *out_type = std::make_unique<StringType>(name_, size, nullability);
+    *out_type = std::make_unique<StringType>(name_, size, args.nullability);
     return true;
   }
 
@@ -457,21 +450,20 @@ class HandleTypeTemplate final : public TypeTemplate {
     same_rights->ResolveTo(std::make_unique<NumericConstantValue<uint32_t>>(kHandleSameRights));
   }
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
-              const std::optional<types::HandleSubtype>& opt_handle_subtype,
-              const Constant* handle_rights, const Size* maybe_size, types::Nullability nullability,
-              std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(maybe_arg_type == nullptr);
+    assert(args.arg_type == nullptr);
 
-    if (maybe_size != nullptr)
-      return CannotHaveSize(span);
+    if (args.size != nullptr)
+      return CannotHaveSize(args.span);
 
-    auto handle_subtype = opt_handle_subtype.value_or(types::HandleSubtype::kHandle);
+    auto handle_subtype = args.handle_subtype.value_or(types::HandleSubtype::kHandle);
+    const Constant* handle_rights = args.handle_rights;
     if (handle_rights == nullptr)
       handle_rights = same_rights.get();
 
-    *out_type = std::make_unique<HandleType>(name_, handle_subtype, handle_rights, nullability);
+    *out_type =
+        std::make_unique<HandleType>(name_, handle_subtype, handle_rights, args.nullability);
     return true;
   }
 
@@ -484,25 +476,22 @@ class RequestTypeTemplate final : public TypeTemplate {
   RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name::CreateIntrinsic("request"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype,
-              const Constant* handle_rights, const Size* maybe_size, types::Nullability nullability,
-              std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!no_handle_subtype);
-    assert(!handle_rights);
+    assert(!args.handle_subtype);
+    assert(!args.handle_rights);
 
-    if (arg_type == nullptr)
-      return MustBeParameterized(span);
-    if (arg_type->kind != Type::Kind::kIdentifier)
-      return Fail(span, "must be a protocol");
-    auto protocol_type = static_cast<const IdentifierType*>(arg_type);
+    if (args.arg_type == nullptr)
+      return MustBeParameterized(args.span);
+    if (args.arg_type->kind != Type::Kind::kIdentifier)
+      return Fail(args.span, "must be a protocol");
+    auto protocol_type = static_cast<const IdentifierType*>(args.arg_type);
     if (protocol_type->type_decl->kind != Decl::Kind::kProtocol)
-      return Fail(span, "must be a protocol");
-    if (maybe_size != nullptr)
-      return CannotHaveSize(span);
+      return Fail(args.span, "must be a protocol");
+    if (args.size != nullptr)
+      return CannotHaveSize(args.span);
 
-    *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, nullability);
+    *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, args.nullability);
     return true;
   }
 
@@ -520,12 +509,9 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         library_(library),
         type_decl_(type_decl) {}
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype,
-              const Constant* handle_rights, const Size* size, types::Nullability nullability,
-              std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!no_handle_subtype);
+    assert(!args.handle_subtype);
 
     if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
       if (type_decl_->compiling) {
@@ -538,7 +524,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
     }
     switch (type_decl_->kind) {
       case Decl::Kind::kService:
-        return Fail(span, "cannot use services in other declarations");
+        return Fail(args.span, "cannot use services in other declarations");
 
       case Decl::Kind::kProtocol:
         break;
@@ -551,16 +537,16 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
 
       case Decl::Kind::kEnum:
       case Decl::Kind::kTable:
-        if (nullability == types::Nullability::kNullable)
-          return CannotBeNullable(span);
+        if (args.nullability == types::Nullability::kNullable)
+          return CannotBeNullable(args.span);
         break;
 
       default:
-        if (nullability == types::Nullability::kNullable)
+        if (args.nullability == types::Nullability::kNullable)
           break;
     }
 
-    *out_type = std::make_unique<IdentifierType>(name_, nullability, type_decl_);
+    *out_type = std::make_unique<IdentifierType>(name_, args.nullability, type_decl_);
     return true;
   }
 
@@ -575,13 +561,10 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
                         Library* library, TypeAlias* decl)
       : TypeTemplate(std::move(name), typespace, error_reporter), library_(library), decl_(decl) {}
 
-  bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
-              const std::optional<types::HandleSubtype>& no_handle_subtype,
-              const Constant* handle_rights, const Size* maybe_size,
-              types::Nullability maybe_nullability, std::unique_ptr<Type>* out_type,
+  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!no_handle_subtype);
-    assert(!handle_rights);
+    assert(!args.handle_subtype);
+    assert(!args.handle_rights);
 
     if (!decl_->compiled) {
       assert(!decl_->compiling && "TODO(fxb/35218): Improve support for recursive types.");
@@ -593,32 +576,32 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
 
     const Type* arg_type = nullptr;
     if (decl_->partial_type_ctor->maybe_arg_type_ctor) {
-      if (maybe_arg_type) {
-        return Fail(span, "cannot parametrize twice");
+      if (args.arg_type) {
+        return Fail(args.span, "cannot parametrize twice");
       }
       arg_type = decl_->partial_type_ctor->maybe_arg_type_ctor->type;
     } else {
-      arg_type = maybe_arg_type;
+      arg_type = args.arg_type;
     }
 
     const Size* size = nullptr;
     if (decl_->partial_type_ctor->maybe_size) {
-      if (maybe_size) {
-        return Fail(span, "cannot bound twice");
+      if (args.size) {
+        return Fail(args.span, "cannot bound twice");
       }
       size = static_cast<const Size*>(&decl_->partial_type_ctor->maybe_size->Value());
     } else {
-      size = maybe_size;
+      size = args.size;
     }
 
     types::Nullability nullability;
     if (decl_->partial_type_ctor->nullability == types::Nullability::kNullable) {
-      if (maybe_nullability == types::Nullability::kNullable) {
-        return Fail(span, "cannot indicate nullability twice");
+      if (args.nullability == types::Nullability::kNullable) {
+        return Fail(args.span, "cannot indicate nullability twice");
       }
       nullability = types::Nullability::kNullable;
     } else {
-      nullability = maybe_nullability;
+      nullability = args.nullability;
     }
 
     if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type,
@@ -630,7 +613,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       return false;
     if (out_from_type_alias)
       *out_from_type_alias =
-          TypeConstructor::FromTypeAlias(decl_, maybe_arg_type, maybe_size, maybe_nullability);
+          TypeConstructor::FromTypeAlias(decl_, args.arg_type, args.size, args.nullability);
     return true;
   }
 
