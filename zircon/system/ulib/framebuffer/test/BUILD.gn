@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_test("framebuffer-test") {
+  deps = [
+    "$zx/system/banjo/ddk.protocol.display.controller",
+    "$zx/system/fidl/fuchsia-hardware-display:llcpp",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/framebuffer",
+    "$zx/system/ulib/image-format:image-format-llcpp",
+    "$zx/system/ulib/zxtest",
+  ]
+  sources = [ "framebuffer-test.cc" ]
+}
+
+group("test") {
+  testonly = true
+  deps = [ ":framebuffer-test" ]
+}
