@@ -37,10 +37,13 @@ fidl::InterfaceRequestHandler<fuchsia::examples::inspect::Reverser> Reverser::Cr
   // particular implementation of a FIDL interface. This particular binding set is configured to
   // bind incoming requests to unique_ptr<Reverser>, which means the binding set itself takes
   // ownership of the created Reversers and frees them when the connection is closed.
-  return [node = std::move(node), global_request_count,
+  return [connection_count = node.CreateUint("connection_count", 0), node = std::move(node),
+          global_request_count,
           binding_set =
               std::make_unique<fidl::BindingSet<ReverserProto, std::unique_ptr<Reverser>>>()](
              fidl::InterfaceRequest<ReverserProto> request) mutable {
+    connection_count.Add(1);
+
     // Create a stats structure for the new reverser.
     ReverserStats stats{.connection_node = node.CreateChild(node.UniqueName("connection-")),
                         .global_request_count = global_request_count};
