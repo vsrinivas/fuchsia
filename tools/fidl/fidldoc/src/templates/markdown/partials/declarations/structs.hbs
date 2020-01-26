@@ -1,10 +1,9 @@
 {{#if struct_declarations}}
 ## **STRUCTS**
 {{#each struct_declarations}}
+{{~ #unless anonymous}}
 ### {{rpn name}} {#{{rpn name}}}
 {{> filename }}
-
-{{#if anonymous}}*anonymous struct*{{/if}}
 
 {{> doc }}
 
@@ -41,5 +40,6 @@
         </tr>
     {{~ /each}}
 </table>
+{{/unless ~}}
 {{/each ~}}
 {{~ /if ~}}

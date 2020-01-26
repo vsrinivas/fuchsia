@@ -522,6 +522,43 @@
         "has_padding": false,
         "has_flexible_envelope": false
       }
+    },
+    {
+      "name": "fuchsia.images/SomeLongAnonymousPrefix7",
+      "location": {
+        "filename": "generated",
+        "line": 8,
+        "column": 1
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "image_id",
+          "location": {
+            "filename": "../../sdk/fidl/fuchsia.images/image_pipe2.fidl",
+            "line": 136,
+            "column": 24
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
     }
   ]
 }

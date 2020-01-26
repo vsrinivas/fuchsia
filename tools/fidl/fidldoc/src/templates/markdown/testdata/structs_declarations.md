@@ -6,8 +6,6 @@
 
 
 
-
-
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr>
             <td><code>vmo</code></td>
@@ -30,8 +28,6 @@
 
 ### ImageInfo {#ImageInfo}
 *Defined in [fuchsia.images/image_info.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.images/image_info.fidl#117)*
-
-
 
 <p>Information about a graphical image (texture) including its format and size.</p>
 
@@ -105,8 +101,6 @@
 
 ### PresentationInfo {#PresentationInfo}
 *Defined in [fuchsia.images/presentation_info.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.images/presentation_info.fidl#10)*
-
-
 
 <p>Information returned by methods such as <code>ImagePipe.PresentImage()</code> and
 <code>Session.Present()</code>, when the consumer begins preparing the first frame
