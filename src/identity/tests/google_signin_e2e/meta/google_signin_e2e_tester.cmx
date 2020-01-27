@@ -3,9 +3,6 @@
         "binary": "data/google_signin_e2e_tester"
     },
     "sandbox": {
-        "pkgfs": [
-            "packages"
-        ],
         "services": [
             "fuchsia.auth.TokenManagerFactory",
             "fuchsia.fonts.Provider",
