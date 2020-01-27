@@ -613,7 +613,7 @@ bool DpDisplay::LinkTrainingSetup() {
     } else if (dp_link_rate_mhz_ == 2700) {
       target_bw = dpcd::LinkBw::k2700Mbps;
     } else {
-      ZX_ASSERT(dp_link_rate_mhz_ = 5400);
+      ZX_ASSERT(dp_link_rate_mhz_ == 5400);
       target_bw = dpcd::LinkBw::k5400Mbps;
     }
 
