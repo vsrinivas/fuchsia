@@ -265,14 +265,58 @@ async fn test_sounds() {
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
     assert!(fake_services.sound_player.read().id_exists(1));
-    assert_eq!(fake_services.sound_player.read().get_mapping(1), Some(AudioRenderUsage::Media));
+    assert_eq!(fake_services.sound_player.read().get_usage_by_id(1), Some(AudioRenderUsage::Media));
 
     // Test that the volume-max sound gets played on the soundplayer.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
     assert!(fake_services.sound_player.read().id_exists(0));
-    assert_eq!(fake_services.sound_player.read().get_mapping(0), Some(AudioRenderUsage::Media));
+    assert_eq!(fake_services.sound_player.read().get_usage_by_id(0), Some(AudioRenderUsage::Media));
+}
+
+// Test to ensure that when the volume is increased while already at max volume, the earcon for
+// max volume plays.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_max_volume_sound_on_press() {
+    let (service_registry, fake_services) = create_services();
+
+    let mut fs = ServiceFs::new();
+
+    assert!(create_environment(
+        fs.root_dir(),
+        [SettingType::Audio].iter().cloned().collect(),
+        vec![],
+        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
+        Box::new(InMemoryStorageFactory::create()),
+    )
+    .await
+    .unwrap()
+    .is_ok());
+
+    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+    fasync::spawn(fs.collect());
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    // Set volume to max.
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+
+    assert!(fake_services.sound_player.read().id_exists(0));
+    assert_eq!(fake_services.sound_player.read().get_play_count(0), Some(1));
+
+    // Try to increase volume. Only serves to set the "last volume button press" event
+    // to 1 (volume up).
+    let buttons_event = MediaButtonsEvent { volume: Some(1), mic_mute: Some(false) };
+    fake_services.input_device_registry.read().send_media_button_event(buttons_event.clone());
+
+    // Sets volume max again.
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+
+    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+
+    // Check that the sound played more than once.
+    assert!(fake_services.sound_player.read().id_exists(0));
+    assert!(fake_services.sound_player.read().get_play_count(0).unwrap() > 1);
 }
 
 // Test to ensure that when another higher priority stream is playing,
@@ -302,7 +346,7 @@ async fn test_earcons_with_active_stream() {
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
     assert!(fake_services.sound_player.read().id_exists(1));
-    assert_eq!(fake_services.sound_player.read().get_mapping(1), Some(AudioRenderUsage::Media));
+    assert_eq!(fake_services.sound_player.read().get_usage_by_id(1), Some(AudioRenderUsage::Media));
 
     fake_services
         .usage_reporter
@@ -319,7 +363,7 @@ async fn test_earcons_with_active_stream() {
 
     // With the background stream muted, the sound should not have played.
     assert!(!fake_services.sound_player.read().id_exists(0));
-    assert_ne!(fake_services.sound_player.read().get_mapping(0), Some(AudioRenderUsage::Media));
+    assert_ne!(fake_services.sound_player.read().get_usage_by_id(0), Some(AudioRenderUsage::Media));
 
     fake_services
         .usage_reporter
@@ -335,7 +379,7 @@ async fn test_earcons_with_active_stream() {
 
     // With the background stream ducked, the sound should not have played.
     assert!(!fake_services.sound_player.read().id_exists(0));
-    assert_ne!(fake_services.sound_player.read().get_mapping(0), Some(AudioRenderUsage::Media));
+    assert_ne!(fake_services.sound_player.read().get_usage_by_id(0), Some(AudioRenderUsage::Media));
 
     fake_services
         .usage_reporter
@@ -351,7 +395,7 @@ async fn test_earcons_with_active_stream() {
 
     // With the background stream unadjusted, the sound should have played.
     assert!(fake_services.sound_player.read().id_exists(0));
-    assert_eq!(fake_services.sound_player.read().get_mapping(0), Some(AudioRenderUsage::Media));
+    assert_eq!(fake_services.sound_player.read().get_usage_by_id(0), Some(AudioRenderUsage::Media));
 }
 
 // Test to ensure mic input change events are received.

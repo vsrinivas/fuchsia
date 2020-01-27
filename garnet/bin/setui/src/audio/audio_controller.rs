@@ -59,6 +59,7 @@ pub fn spawn_audio_controller(
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
     let mic_mute_state =
         Arc::<RwLock<bool>>::new(RwLock::new(default_audio_settings.input.mic_mute));
+    let volume_button_event = Arc::<Mutex<i8>>::new(Mutex::new(0));
 
     let priority_stream_playing = Arc::new(AtomicBool::new(false));
     let input_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
@@ -79,6 +80,7 @@ pub fn spawn_audio_controller(
     });
 
     let mic_mute_state_clone = mic_mute_state.clone();
+    let volume_button_event_clone = volume_button_event.clone();
     let notifier_lock_clone = notifier_lock.clone();
     fasync::spawn(async move {
         while let Some(event) = input_rx.next().await {
@@ -88,6 +90,12 @@ pub fn spawn_audio_controller(
                     if let Some(notifier) = (*notifier_lock_clone.read()).clone() {
                         notifier.unbounded_send(SettingType::Audio).unwrap();
                     }
+                }
+            }
+            if let Some(volume) = event.volume {
+                *volume_button_event_clone.lock().await = volume;
+                if let Some(notifier) = (*notifier_lock_clone.read()).clone() {
+                    notifier.unbounded_send(SettingType::Audio).unwrap();
                 }
             }
         }
@@ -105,6 +113,7 @@ pub fn spawn_audio_controller(
     });
 
     let input_service_connected_clone = input_service_connected.clone();
+    let volume_button_event_clone = volume_button_event.clone();
     let service_context_handle_clone = service_context_handle.clone();
     fasync::spawn(async move {
         check_and_bind_volume_controls(
@@ -162,8 +171,11 @@ pub fn spawn_audio_controller(
                             update_volume_stream(&volume, &mut stream_volume_controls).await;
                             let new_media_user_volume =
                                 volume_on_stream(AudioStreamType::Media, &stream_volume_controls);
-
-                            if last_media_user_volume != new_media_user_volume {
+                            let volume_up_max_pressed = new_media_user_volume == Some(1.0)
+                                && *volume_button_event_clone.lock().await == 1;
+                            if last_media_user_volume != new_media_user_volume
+                                || volume_up_max_pressed
+                            {
                                 play_media_volume_sound(
                                     sound_player_connection.clone(),
                                     priority_stream_playing.clone(),

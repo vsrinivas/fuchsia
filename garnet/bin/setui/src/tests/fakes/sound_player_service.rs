@@ -10,28 +10,28 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
 use parking_lot::RwLock;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// An implementation of the SoundPlayer for tests.
 pub struct SoundPlayerService {
+    // Represents the number of times the sound has been played in total.
+    play_counts: Arc<RwLock<HashMap<u32, u32>>>,
+
     // Represents the sounds that were played. Stores the id to AudioRenderUsage it was played on.
     sound_mappings: Arc<RwLock<HashMap<u32, AudioRenderUsage>>>,
-
-    // Represents the sounds that have been added to the player. Stores the id of the added sound.
-    sounds: Arc<RwLock<HashSet<u32>>>,
 }
 
 impl SoundPlayerService {
     pub fn new() -> Self {
         Self {
+            play_counts: Arc::new(RwLock::new(HashMap::new())),
             sound_mappings: Arc::new(RwLock::new(HashMap::new())),
-            sounds: Arc::new(RwLock::new(HashSet::new())),
         }
     }
 
     // Retrieve a mapping from sound id to AudioRenderUsage it was played on.
-    pub fn get_mapping(&self, id: u32) -> Option<AudioRenderUsage> {
+    pub fn get_usage_by_id(&self, id: u32) -> Option<AudioRenderUsage> {
         match self.sound_mappings.read().get(&id) {
             None => None,
             Some(&val) => Some(val),
@@ -40,7 +40,15 @@ impl SoundPlayerService {
 
     // Check whether the sound with the given id was added to the Player.
     pub fn id_exists(&self, id: u32) -> bool {
-        self.sounds.read().get(&id).is_some()
+        self.play_counts.read().get(&id).is_some()
+    }
+
+    // Get the number of times the sound with the given id has played.
+    pub fn get_play_count(&self, id: u32) -> Option<u32> {
+        match self.play_counts.read().get(&id) {
+            None => None,
+            Some(&val) => Some(val),
+        }
     }
 }
 
@@ -57,7 +65,7 @@ impl Service for SoundPlayerService {
         let mut player_stream = ServerEnd::<PlayerMarker>::new(channel).into_stream()?;
 
         let sound_mappings_clone = self.sound_mappings.clone();
-        let sounds_clone = self.sounds.clone();
+        let play_counts_clone = self.play_counts.clone();
 
         fasync::spawn(async move {
             while let Some(req) = player_stream.try_next().await.unwrap() {
@@ -67,11 +75,12 @@ impl Service for SoundPlayerService {
                         file_channel: _file_channel,
                         responder,
                     } => {
-                        sounds_clone.write().insert(id);
+                        play_counts_clone.write().insert(id, 0);
                         responder.send(&mut Ok(())).unwrap();
                     }
                     PlayerRequest::PlaySound { id, usage, responder } => {
                         sound_mappings_clone.write().insert(id, usage);
+                        play_counts_clone.write().entry(id).and_modify(|count| *count += 1);
                         responder.send(&mut Ok(())).unwrap();
                     }
                     _ => {}
