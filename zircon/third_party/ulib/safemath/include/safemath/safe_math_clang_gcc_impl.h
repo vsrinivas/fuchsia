@@ -5,11 +5,11 @@
 #ifndef SAFEMATH_SAFE_MATH_CLANG_GCC_IMPL_H_
 #define SAFEMATH_SAFE_MATH_CLANG_GCC_IMPL_H_
 
-#include <safemath/safe_conversions.h>
-
 #include <cassert>
 #include <limits>
 #include <type_traits>
+
+#include <safemath/safe_conversions.h>
 
 #if !defined(__native_client__) && (defined(__ARMEL__) || defined(__arch64__))
 #include <safemath/safe_math_arm_impl.h>

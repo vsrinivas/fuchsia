@@ -5,11 +5,12 @@
 #ifndef SAFEMATH_CHECKED_MATH_H_
 #define SAFEMATH_CHECKED_MATH_H_
 
-#include <safemath/checked_math_impl.h>
 #include <stddef.h>
 
 #include <limits>
 #include <type_traits>
+
+#include <safemath/checked_math_impl.h>
 
 namespace safemath {
 namespace internal {

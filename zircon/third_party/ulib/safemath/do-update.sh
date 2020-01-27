@@ -12,11 +12,20 @@ then
   exit 65
 fi
 
+pushd $1
+REV=`git rev-parse HEAD`
+popd
+
+echo "Updating to Chromium revision $REV"
+
 # Copy in pristine version.
 cp $1/* .
 
 # Update to local maintainer(s).
 printf 'scottmg@google.com\n*\n' > OWNERS
+
+# Update revision.
+sed -i -e "s/Git Commit:.*/Git Commit: $REV/" README.fuchsia
 
 # Remove Chromium-specific file.
 rm -f DEPS
@@ -47,7 +56,7 @@ cat <<END
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("safemath") {
+zx_library("safemath") {
   sdk = "source"
   sdk_headers = [
     "safemath/checked_math.h",
@@ -74,7 +83,7 @@ END
 
 # Reformat due to different line lengths, but don't reformat to local style to
 # keep diff small.
-../../../prebuilt/downloads/clang/bin/clang-format -i -style=Chromium *.h
+../../../../prebuilt/third_party/clang/linux-x64/bin/clang-format -i -style=Chromium *.h
 
 rm -rf include/safemath
 mkdir -p include/safemath

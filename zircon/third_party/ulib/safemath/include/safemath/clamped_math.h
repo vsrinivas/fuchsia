@@ -5,11 +5,12 @@
 #ifndef SAFEMATH_CLAMPED_MATH_H_
 #define SAFEMATH_CLAMPED_MATH_H_
 
-#include <safemath/clamped_math_impl.h>
 #include <stddef.h>
 
 #include <limits>
 #include <type_traits>
+
+#include <safemath/clamped_math_impl.h>
 
 namespace safemath {
 namespace internal {

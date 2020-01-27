@@ -5,11 +5,12 @@
 #ifndef SAFEMATH_SAFE_CONVERSIONS_H_
 #define SAFEMATH_SAFE_CONVERSIONS_H_
 
-#include <safemath/safe_conversions_impl.h>
 #include <stddef.h>
 
 #include <limits>
 #include <type_traits>
+
+#include <safemath/safe_conversions_impl.h>
 
 #if !defined(__native_client__) && (defined(__ARMEL__) || defined(__arch64__))
 #include <safemath/safe_conversions_arm_impl.h>

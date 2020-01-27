@@ -5,16 +5,17 @@
 #ifndef SAFEMATH_SAFE_MATH_SHARED_IMPL_H_
 #define SAFEMATH_SAFE_MATH_SHARED_IMPL_H_
 
-#include <math.h>
-#include <safemath/safe_conversions.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#include <math.h>
 #include <cassert>
 #include <climits>
 #include <cstdlib>
 #include <limits>
 #include <type_traits>
+
+#include <safemath/safe_conversions.h>
 
 #ifdef __asmjs__
 // Optimized safe math instructions are incompatible with asmjs.
