@@ -6,7 +6,7 @@ group("uapp") {
   testonly = true
   deps = [
     "$zx/system/dev/test/ddk-schedule-work:ddk-schedule-work-perf",
-    "$zx/system/ulib/driver-info:driverinfo",
+    "$zx/system/ulib/driver-info/app:driverinfo",
     "blktest",
     "blobfs",
     "disk-inspect",

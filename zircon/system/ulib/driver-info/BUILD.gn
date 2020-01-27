@@ -7,11 +7,3 @@ zx_library("driver-info") {
   sdk_headers = []
   sources = [ "driver-info.c" ]
 }
-
-zx_executable("driverinfo") {
-  sources = [ "driver-info-app.c" ]
-  deps = [
-    ":driver-info",
-    "$zx/system/ulib/fdio",
-  ]
-}
