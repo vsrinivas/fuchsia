@@ -230,6 +230,11 @@ class InterfacePtr final {
   // For example, the error handler will be called if the remote side of the
   // channel sends an invalid message. When the error handler is called, the
   // |Binding| will no longer be bound to the channel.
+  //
+  // WARNING: The |error_handler| is often called from the thread to which the
+  // |InterfacePtr| was bound, but the function can also be called from another
+  // thread if the |InterfacePtr| is still bound to the thread when the
+  // |async::Loop| for the thread is shutdown.
   void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
     impl_->controller.reader().set_error_handler(std::move(error_handler));
   }

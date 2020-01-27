@@ -3,7 +3,7 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/binding_set.h": "a4aaf8ac87d3c7628a3c574d5e95bca1",
   "pkg/fidl_cpp/include/lib/fidl/cpp/enum.h": "ad164c5cd66ea3db9d5df386b47755a4",
   "pkg/fidl_cpp/include/lib/fidl/cpp/event_sender.h": "cac2e1fe4c1e0f4efafec35a57e04ab3",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr.h": "49017de688ed353a5f5ba8c66412420c",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr.h": "1521ecf661f41452115380664f4b38bd",
   "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr_set.h": "f58f00673b293acbb674b9ec6f02b2dd",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/header.h": "f83255d75cb018538697111f613e416f",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/implementation.h": "8dfc64d045bbfb27491e60988ba56c07",
