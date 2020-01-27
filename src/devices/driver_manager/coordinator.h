@@ -200,7 +200,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   explicit Coordinator(CoordinatorConfig config);
   ~Coordinator();
 
-  zx_status_t InitializeCoreDevices(const char* sys_device_driver);
+  zx_status_t InitCoreDevices(const char* sys_device_driver);
   bool InSuspend() const;
   bool InResume() const;
 

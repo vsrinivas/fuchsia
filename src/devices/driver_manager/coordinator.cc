@@ -142,7 +142,7 @@ void Coordinator::ShutdownFilesystems() {
   printf("devcoordinator: Successfully waited for VFS exit completion\n");
 }
 
-zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
+zx_status_t Coordinator::InitCoreDevices(const char* sys_device_driver) {
   root_device_ = fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
                                              ZX_PROTOCOL_ROOT, zx::channel());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;

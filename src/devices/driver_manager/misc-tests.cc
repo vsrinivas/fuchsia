@@ -203,17 +203,17 @@ class TestDriverTestReporter : public devmgr::DriverTestReporter {
   bool finished_called = false;
 };
 
-TEST(MiscTestCase, InitializeCoreDevices) {
+TEST(MiscTestCase, InitCoreDevices) {
   devmgr::Coordinator coordinator(DefaultConfig(nullptr, nullptr));
 
-  zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
+  zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 }
 
 TEST(MiscTestCase, DumpState) {
   devmgr::Coordinator coordinator(DefaultConfig(nullptr, nullptr));
 
-  zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
+  zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 
   constexpr int32_t kBufSize = 256;
@@ -247,7 +247,7 @@ TEST(MiscTestCase, BindDrivers) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
-  zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
+  zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
   coordinator.set_running(true);
 
@@ -267,7 +267,7 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
-  zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
+  zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 
   // AttemptBind function that asserts it has only been called once

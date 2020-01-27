@@ -37,7 +37,7 @@ void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args
 }
 
 void InitializeCoordinator(devmgr::Coordinator* coordinator) {
-  zx_status_t status = coordinator->InitializeCoreDevices(kSystemDriverPath);
+  zx_status_t status = coordinator->InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 
   // Load the component driver

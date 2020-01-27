@@ -240,7 +240,7 @@ int main(int argc, char** argv) {
   }
 
   devmgr::Coordinator coordinator(std::move(config));
-  status = coordinator.InitializeCoreDevices(devmgr_args.sys_device_driver);
+  status = coordinator.InitCoreDevices(devmgr_args.sys_device_driver);
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: failed to initialize core devices\n");
     return 1;
