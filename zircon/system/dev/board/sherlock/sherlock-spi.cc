@@ -9,8 +9,8 @@
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <lib/mmio/mmio.h>
+#include <soc/aml-common/aml-spi.h>
 #include <soc/aml-t931/t931-gpio.h>
-#include <soc/aml-t931/t931-spi.h>
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"

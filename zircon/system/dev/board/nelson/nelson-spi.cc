@@ -10,9 +10,9 @@
 #include <ddk/metadata/spi.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
+#include <soc/aml-common/aml-spi.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
-#include <soc/aml-t931/t931-spi.h>
 
 #include "nelson-gpios.h"
 #include "nelson.h"
