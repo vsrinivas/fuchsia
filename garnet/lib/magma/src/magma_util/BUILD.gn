@@ -63,6 +63,26 @@ source_set("status") {
   public_deps = [ "$magma_build_root/include:magma_abi_common" ]
 }
 
+source_set("mapped_batch") {
+  visibility = visibility_list
+
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "command_buffer.h",
+    "mapped_batch.h",
+  ]
+
+  public_deps = [
+    ":address_space",
+    "platform:semaphore",
+    "platform:trace",
+  ]
+}
+
 source_set("thread") {
   visibility = visibility_list
 

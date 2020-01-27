@@ -53,6 +53,14 @@ class GpuMappingAccessor {
   static uint64_t length(GpuMapping* mapping) { return mapping->length(); }
 };
 
+template <typename Context, typename AddressSpace>
+class ContextAccessor {
+ public:
+  static std::shared_ptr<AddressSpace> exec_address_space(Context* context) {
+    return context->exec_address_space();
+  }
+};
+
 }  // namespace magma
 
 #endif  // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_ACCESSOR_H_
