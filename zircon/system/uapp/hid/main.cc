@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
+#include <lib/zx/event.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 #include <zircon/types.h>
 
 #include <utility>
+#include <vector>
 
 #include <fbl/algorithm.h>
 
@@ -307,6 +309,25 @@ static zx_status_t parse_rpt_descriptor(const fzl::FdioCaller& caller, const cha
 
 #undef TRY
 
+static zx_status_t hid_input_read_report(zx_handle_t channel, const zx::event& report_event,
+                                         uint8_t* report_data, size_t report_size,
+                                         size_t* returned_size) {
+  zx_time_t time;
+  zx_status_t status;
+  while (true) {
+    zx_status_t call_status = fuchsia_hardware_input_DeviceReadReport(
+        channel, &status, report_data, report_size, returned_size, &time);
+    if (call_status != ZX_OK) {
+      return call_status;
+    }
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      report_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
+      continue;
+    }
+    return status;
+  }
+}
+
 static int hid_input_thread(void* arg) {
   input_args_t* args = (input_args_t*)arg;
   lprintf("hid: input thread started for %s\n", args->name);
@@ -319,22 +340,35 @@ static int hid_input_thread(void* arg) {
     return static_cast<int>(rc);
   }
 
+  zx_status_t status;
+  zx::event report_event;
+  zx_status_t call_status = fuchsia_hardware_input_DeviceGetReportsEvent(
+      caller.borrow_channel(), &status, report_event.reset_and_get_address());
+  if ((call_status != ZX_OK) || (status != ZX_OK)) {
+    mtx_lock(&print_lock);
+    printf("read returned error: (call_status=%d) (status=%d)\n", call_status, status);
+    mtx_unlock(&print_lock);
+    return ZX_ERR_INTERNAL;
+  }
+
   // Add 1 to the max report length to make room for a Report ID.
   max_report_len++;
-  std::unique_ptr<uint8_t[]> report(new uint8_t[max_report_len]);
-
-  args->fd = caller.release();
+  std::vector<uint8_t> report(max_report_len);
   for (uint32_t i = 0; i < args->num_reads; i++) {
-    ssize_t r = read(args->fd.get(), report.get(), max_report_len);
-    mtx_lock(&print_lock);
-    printf("read returned %ld\n", r);
-    if (r < 0) {
-      printf("read errno=%d (%s)\n", errno, strerror(errno));
+    size_t returned_size;
+    status = hid_input_read_report(caller.borrow_channel(), report_event, report.data(),
+                                   report.size(), &returned_size);
+    if (status != ZX_OK) {
+      mtx_lock(&print_lock);
+      printf("hid_input_read_report returned %d\n", status);
       mtx_unlock(&print_lock);
       break;
     }
+
+    mtx_lock(&print_lock);
+    printf("read returned %ld\n bytes", returned_size);
     printf("hid: input from %s\n", args->name);
-    print_hex(report.get(), r);
+    print_hex(report.data(), returned_size);
     mtx_unlock(&print_lock);
   }
 
