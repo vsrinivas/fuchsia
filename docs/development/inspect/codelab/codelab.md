@@ -6,6 +6,7 @@ The code is available at:
 
 * [//src/diagnostics/examples/inspect/cpp][inspect-cpp-codelab].
 * [//src/diagnostics/examples/inspect/rust][inspect-rust-codelab].
+* [//topaz/public/dart/fuchsia_inspect/codelab][inspect-dart-codelab].
 
 This codelab is organized into several parts, each with their own
 subdirectory. The starting point for the codelab is part 1,
@@ -13,6 +14,7 @@ and the code for each part contains the solution for the previous parts.
 
 * [C++ Part 1][cpp-part1]
 * [Rust Part 1][rust-part1]
+* [Dart Part 1][dart-part1]
 
 When working on this codelab, you may continue adding your solutions to
 "part\_1", or you may skip around by building on the existing solutions.
@@ -48,11 +50,18 @@ Note: Replace core.x64 with your product and board configuration.
    --with //src/diagnostics/examples/inspect/rust:tests
    ```
 
+* {Dart}
+
+   ```
+   fx set workstation.x64
+   --with //topaz/public/dart/fuchsia_inspect/codelab:all
+   ```
+
 ## Part 1: A buggy component
 
 There is a component that serves a protocol called [Reverser][fidl-reverser]:
 
-```
+```fidl
 // Implementation of a string reverser.
 [Discoverable]
 protocol Reverser {
@@ -87,6 +96,12 @@ command line arguments as strings to Reverse:
       fx shell run inspect_rust_codelab_client
       ```
 
+   * {Dart}
+
+      ```
+      fx shell run inspect_dart_codelab_client
+      ```
+
 2. Run part 1 code, and reverse the string "Hello"
 
    * {C++}
@@ -104,6 +119,14 @@ command line arguments as strings to Reverse:
       ```
 
       This command prints some output containing errors.
+
+   * {Dart}
+
+      ```
+      fx shell run inspect_dart_codelab_client 1 Hello
+      ```
+
+      This command prints no outputs.
 
 3. Press Ctrl+C to stop the client and try running with
    more arguments:
@@ -124,6 +147,14 @@ command line arguments as strings to Reverse:
 
       This command also prints errors.
 
+   * {Dart}
+
+      ```
+      fx shell run inspect_dart_codelab_client 1 Hello World
+      ```
+
+      This command also prints no outputs.
+
 You are now ready to look through the code to troubleshoot the issue.
 
 ### Look through the code
@@ -134,7 +165,7 @@ Now that you can reproduce the problem, take a look at what the client is doing:
 
    In the [client main][cpp-client-main]:
 
-   ```
+   ```cpp
    // Repeatedly send strings to be reversed to the other component.
    for (int i = 2; i < argc; i++) {
      printf("Input: %s\n", argv[i]);
@@ -154,7 +185,7 @@ Now that you can reproduce the problem, take a look at what the client is doing:
 
    In the [client main][rust-client-main]:
 
-   ```
+   ```rust
    for string in args.strings {
        println!("Input: {}", string);
        match reverser.reverse(&string).await {
@@ -163,6 +194,19 @@ Now that you can reproduce the problem, take a look at what the client is doing:
        }
    }
    ```
+
+* {Dart}
+
+  In the [client main][dart-client-main]:
+
+  ```dart
+  for (int i = 1; i < args.length; i++) {
+      print('Input: ${args[i]}');
+      final response = await reverser.reverse(args[i]);
+      print('Output: $response');
+  }
+  ```
+
 
 In this code snippet, the client calls the `Reverse` method but never
 seems to get a response. There doesn't seem to be an error message
@@ -177,20 +221,20 @@ codelab. There is a lot of standard component setup:
 
    - Logging initialization
 
-     ```
+     ```cpp
      InitLogger({"inspect_cpp_codelab", "part1"});
      ```
 
    - Creating an asynchronous executor
 
-     ```
+     ```cpp
      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
      auto context = sys::ComponentContext::Create();
      ```
 
    - Serving a public service
 
-     ```
+     ```cpp
      context->outgoing()->AddPublicService(Reverser::CreateDefaultHandler());
      ```
 
@@ -200,13 +244,13 @@ codelab. There is a lot of standard component setup:
 
    - Logging initialization
 
-     ```
+     ```rust
      syslog::init_with_tags(&["inspect_rust_codelab", "part1"])?;
      ```
 
-   - ServiceFs initialization and collection:
+   - ServiceFs initialization and collection
 
-     ```
+     ```rust
      let mut fs = ServiceFs::new();
      ...
      let running_service_fs = fs.collect::<()>().map(Ok);
@@ -214,10 +258,30 @@ codelab. There is a lot of standard component setup:
 
    - Serving a public service
 
-     ```
+     ```rust
      fs.dir("svc").add_fidl_service(move |stream| reverser_factory.spawn_new(stream));
      fs.take_and_serve_directory_handle()?;
      ```
+
+* {Dart}
+
+  In the [part 1 main][dart-part1-main]:
+
+  - Logging initialization
+
+    ```dart
+    setupLogger(name: 'inspect_rust_codelab', globalTags: ['part_1']);
+    ```
+
+  - Serving a public service
+
+    ```dart
+    final context = StartupContext.fromStartupInfo();
+    context.outgoing.addPublicService<fidl_codelab.Reverser>(
+        ReverserImpl.getDefaultBinder(),
+        fidl_codelab.Reverser.$serviceName,
+    );
+    ```
 
 See what the reverser definition is:
 
@@ -225,7 +289,7 @@ See what the reverser definition is:
 
    In [reverser.h][cpp-part1-reverser-h]:
 
-   ```
+   ```cpp
    class Reverser final : public fuchsia::examples::inspect::Reverser {
     public:
      // Implementation of Reverser.Reverse().
@@ -246,7 +310,7 @@ See what the reverser definition is:
 
    In [reverser.rs][rust-part1-reverser]:
 
-   ```
+   ```rust
    pub struct ReverserServerFactory {}
 
    impl ReverserServerFactory {
@@ -281,6 +345,56 @@ See what the reverser definition is:
 
    This struct serves the `Reverser` protocol. The `ReverserServerFactory` (will make more sense
    later) constructs a `ReverserServer` when a new connection to `Reverser` is established.
+
+- {Dart}
+
+   In [reverser.dart][dart-part1-reverser]:
+
+   ```dart
+   typedef BindCallback = void Function(InterfaceRequest<fidl_codelab.Reverser>);
+   typedef VoidCallback = void Function();
+
+   class ReverserImpl extends fidl_codelab.Reverser {
+     final _binding = fidl_codelab.ReverserBinding();
+
+     // CODELAB: Create a constructor that takes an Inspect node.
+     ReverserImpl();
+
+     @override
+     Future<String> reverse(String value) async {
+       // CODELAB: Add stats about incoming requests.
+       print(String.fromCharCodes(value.runes.toList().reversed));
+       return '';
+     }
+
+     static final _bindingSet = <ReverserImpl>{};
+     static BindCallback getDefaultBinder() {
+       return (InterfaceRequest<fidl_codelab.Reverser> request) {
+         // CODELAB: Add stats about incoming connections.
+         final reverser = ReverserImpl()..bind(request, onClose: () {});
+         _bindingSet.add(reverser);
+       };
+     }
+
+     void bind(
+       InterfaceRequest<fidl_codelab.Reverser> request, {
+       @required VoidCallback onClose,
+     }) {
+       _binding.stateChanges.listen((state) {
+         if (state == InterfaceState.closed) {
+           dispose();
+           onClose();
+         }
+       });
+       _binding.bind(this, request);
+     }
+
+     void dispose() {}
+   }
+   ```
+
+   This class implements the `Reverser` protocol. A helper method called `getDefaultBinder` returns
+   a closure that creates new `Reverser`s for incoming requests.
 
 
 ### Add Inspect
@@ -330,13 +444,37 @@ state without needing to dig through logs.
       }
       ```
 
+   * {Dart}
+
+     In [BUILD.gn][dart-part1-build]:
+
+     ```
+     dart_library("lib") {
+       ...
+
+       deps = [
+         "//src/lib/inspect/rust/fuchsia-inspect",
+         ...
+       ]
+     }
+
+     dart_app("bin") {
+       ...
+
+       deps = [
+         "//src/lib/inspect/rust/fuchsia-inspect",
+         ...
+       ]
+     }
+     ```
+
 2. Initialize Inspect:
 
    * {C++}
 
       In [main.cc][cpp-part1-main]:
 
-      ```
+      ```cpp
       async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
       auto context = sys::ComponentContext::Create();
 
@@ -349,10 +487,19 @@ state without needing to dig through logs.
 
       In [main.rs][rust-part1-main]:
 
-      ```
+      ```rust
       let mut fs = ServiceFs::new();
       component::inspector().serve(&mut fs)?;
       ```
+
+   * {Dart}
+
+     In [main.dart][dart-part1-main]:
+
+     ```dart
+     import 'package:fuchsia_inspect/inspect.dart' as inspect;
+     final inspector = inspect.Inspect();
+     ```
 
    You are now using Inspect.
 
@@ -360,7 +507,7 @@ state without needing to dig through logs.
 
    * {C++}
 
-      ```
+      ```cpp
       inspector.root().CreateString("version", "part1", &inspector);
       ```
 
@@ -384,10 +531,9 @@ state without needing to dig through logs.
          rather than return it.  As a result, the new property lives as long
          as the inspector itself (the entire execution of the component).
 
-
    * {Rust}
 
-     ```
+     ```rust
      component::inspector().root().record_string("version", "part1");
      ```
 
@@ -412,6 +558,30 @@ state without needing to dig through logs.
         method was called. As a result, the new property lives as long as the node itself (in this
         case, as long as the root node, so the entire execution of the component).
 
+   * {Dart}
+
+     ```dart
+     inspector.root.stringProperty('version').setValue('part1');
+     ```
+
+     This snippet does the following:
+
+     1. Obtain the "root" node of the Inspect hierarchy.
+
+        The Inspect hierarchy for your component consists of a tree of Nodes,
+        each of which contains any number of properties.
+
+     2. Create a new property using `stringProperty(...).setValue(...)`.
+
+        This adds a new `StringProperty` on the root. This `StringProperty`
+        is called "version", and its value is "part1".
+
+     3. It records it in the root node.
+
+        The lifetime of a property is tied to the lifetime of the node where it was created (in this
+        case root, so the lifetime of the component). To delete the property one would have to call
+        `delete()` on it.
+
 
 ### Reading Inspect data
 
@@ -428,6 +598,12 @@ Now that you have added Inspect to your component, you can read what it says:
 
       ```
       fx build-push inspect_rust_codelab
+      ```
+
+   * {Dart}
+
+      ```
+      fx build-push inspect_dart_codelab_part_1
       ```
 
    In some cases you may find it useful to rebuild and update all components:
@@ -454,6 +630,14 @@ Now that you have added Inspect to your component, you can read what it says:
 
       Note that this should still print errors.
 
+   * {Dart}
+
+      ```
+      fx shell run inspect_dart_codelab_client 1 Hello
+      ```
+
+      Note that this should still not show the desired output.
+
 3. Use `iquery` (Inspect query) to view your output:
 
    ```
@@ -477,6 +661,14 @@ Now that you have added Inspect to your component, you can read what it says:
       ```
       $ fx iquery inspect_rust_codelab_part_1
       /hub/r/codelab/1234/c/inspect_rust_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
+        version = part1
+      ```
+
+   * {Dart}
+
+      ```
+      $ fx iquery inspect_dart_codelab_part_1
+      /hub/r/codelab/1234/c/inspect_dart_codelab_part_1.cmx/1234/out/diagnostics/root.inspect:
         version = part1
       ```
 
@@ -514,6 +706,22 @@ Now that you have added Inspect to your component, you can read what it says:
       ]
       ```
 
+   * {Dart}
+
+      ```
+      $ fx iquery -f json inspect_dart_codelab_part_1
+      [
+          {
+              "contents": {
+                  "root": {
+                      "version": "part1"
+                  }
+              },
+              "path": "/hub/r/codelab/1234/c/inspect_dart_codelab_part_1.cmx/1234/out/diagnostics/root.inspect"
+          }
+      ]
+      ```
+
 ### Instrumenting the code to find the bug
 
 Now that you have initialized Inspect and know how to read data, you
@@ -530,7 +738,7 @@ is even being handled by your component.
 
    * {C++}
 
-      ```
+      ```cpp
       context->outgoing()->AddPublicService(
           Reverser::CreateDefaultHandler(inspector.root().CreateChild("reverser_service")));
       ```
@@ -538,9 +746,20 @@ is even being handled by your component.
    * {Rust}
 
 
-      ```
+      ```rust
       let reverser_factory = ReverserServerFactory::new(
           component::inspector().root().create_child("reverser_service"));
+      ```
+
+   * {Dart}
+
+
+      ```dart
+      final context = StartupContext.fromStartupInfo();
+      context.outgoing.addPublicService<fidl_codelab.Reverser>(
+          ReverserImpl.getDefaultBinder(inspector.root.child('reverser_service')),
+          fidl_codelab.Reverser.$serviceName,
+      );
       ```
 
 2. Update your server to accept this node:
@@ -550,7 +769,7 @@ is even being handled by your component.
       Update the definition of `CreateDefaultHandler` in [reverser.h][cpp-part1-reverser-h]
       and [reverser.cc][part1-reverser-cc]:
 
-      ```
+      ```cpp
       fidl::InterfaceRequestHandler<fuchsia::examples::inspect::Reverser>
       Reverser::CreateDefaultHandler(inspect::Node node) {
          ...
@@ -558,9 +777,9 @@ is even being handled by your component.
 
    * {Rust}
 
-      Update `ReverserServerFactory::new` to accept this node in [reverser.rs][part1-reverser]:
+      Update `ReverserServerFactory::new` to accept this node in [reverser.rs][rust-part1-reverser]:
 
-      ```
+      ```rust
       pub struct ReverserServerFactory {
           node: inspect::Node,
       }
@@ -576,13 +795,24 @@ is even being handled by your component.
       }
       ```
 
+   * {Dart}
+
+      Update the definition of `getDefaultBinder` in [reverser.dart][dart-part1-reverser]
+      and [reverser.cc][part1-reverser-cc]:
+
+      ```dart
+      import 'package:fuchsia_inspect/inspect.dart' as inspect;
+      static BindCallback getDefaultBinder(inspect.Node node) {
+        ...
+      ```
+
 3. Add a property to keep track of the number of connections:
 
    Note: Nesting related data under a child is a powerful feature of Inspect.
 
    * {C++}
 
-      ```
+      ```cpp
       return [connection_count = node.CreateUint("connection_count", 0),
               node = std::move(node),
               binding_set =
@@ -598,7 +828,7 @@ is even being handled by your component.
 
    * {Rust}
 
-      ```
+      ```rust
       pub struct ReverserServerFactory {
           node: inspect::Node,
           connection_count: inspect::UintProperty,
@@ -617,8 +847,22 @@ is even being handled by your component.
       }
       ```
 
+     Note: `node` is moved into the handler so that it is not dropped and
+     deleted from the output.
+
      Note: `node` is kept in ReverserServerFactory so that it is not dropped and deleted from the
      output.
+
+   * {Dart}
+
+      ```dart
+      static BindCallback getDefaultBinder(inspect.Node node) {
+        final glabalConnectionCount = node.intProperty('connection_count')
+          ..setValue(0);
+        return (InterfaceRequest<fidl_codelab.Reverser> request) {
+          glabalConnectionCount.add(1);
+          ...
+      ```
 
    This snippet demonstrates creating a new `UintProperty` (containing a 64
    bit unsigned int) called `connection_count` and setting it to 0. In the handler
@@ -636,6 +880,12 @@ is even being handled by your component.
 
       ```
       $ fx iquery -f json inspect_rust_codelab_part_1
+      ```
+
+   * {Dart}
+
+      ```
+      $ fx iquery -f json inspect_dart_codelab_part_1
       ```
 
    You should now see:
@@ -668,16 +918,23 @@ implementation itself. In particular, it will be helpful to know:
 
    * {C++}
 
-      ```
+      ```cpp
       auto child = node.CreateChild(node.UniqueName("connection-"));
       ```
+
    * {Rust}
 
-      ```
+      ```rust
       let node = self.node.create_child(inspect::unique_name("connection"));
       ```
 
-   This will create unique names starting with "connection-".
+   * {Dart}
+
+      ```dart
+      final node = node.child(inspect.uniqueName('connection'));
+      ```
+
+   This will create unique names starting with "connection".
 
 
 * {C++}
@@ -687,8 +944,15 @@ implementation itself. In particular, it will be helpful to know:
    a useful pattern.
 
 * {Rust}
+
    *Hint*: You will find it helpful to create a constructor for `ReverserServer`
    that takes `inspect::Node` for the same reason as we did for `ReverserServerFactory`.
+
+* {Dart}
+
+   *Hint*: You will find it helpful to create a constructor for `ReverserImpl`
+   that takes `inspect.Node`. [Part 3](#part-3) of this codelab explains why this is
+   a useful pattern.
 
 - *Hint*: You will need to create a member on Reverser to hold the
 `request_count` property. Its type will be `inspect::UintProperty`.
@@ -730,20 +994,32 @@ The output above shows that the connection is still open and it received one req
    If you added "response\_count" as well, you may have noticed the bug.
    The `Reverse` method receives a `responder`, but it is never called with the value of `result`.
 
+* {Dart}
+
+   If you added "response\_count" as well, you may have noticed the bug.
+   The `reverse` method receives never returns the value of `result`.
+
 
 1. Send the response:
 
    * {C++}
 
-      ```
+      ```cpp
       // At the end of Reverser::Reverse
       callback(std::move(output));
       ```
 
    * {Rust}
 
-      ```
+      ```rust
       responder.send(&result).expect("send reverse request response");
+      ```
+
+   * {Dart}
+
+      ```dart
+      final result = String.fromCharCodes(value.runes.toList().reversed);
+      return result;
       ```
 
 2. Run the client again:
@@ -766,6 +1042,15 @@ The output above shows that the connection is still open and it received one req
       Done. Press Ctrl+C to exit
       ```
 
+   * {Dart}
+
+      ```
+      fx shell run inspect_dart_codelab_client 1 hello
+      Input: hello
+      Output: olleh
+      Done. Press Ctrl+C to exit
+      ```
+
    The component continues running until Ctrl+C is pressed to give you
    a chance to run iquery and observe your output.
 
@@ -780,7 +1065,7 @@ git commit -am "solution to part 1"
 Note: All links and examples in this section refer to "part\_2" code. If
 you are following along, you may continue using "part\_1."
 
-You received a bug report, the "FizzBuzz" team is saying they
+You received a bug report. The "FizzBuzz" team is saying they
 are not receiving data from your component.
 
 In addition to serving the Reverser protocol, the component also reaches
@@ -788,7 +1073,7 @@ out to the "FizzBuzz" service and prints the response:
 
 * {C++}
 
-   ```
+   ```cpp
    // Send a request to the FizzBuzz service and print the response when it arrives.
    fuchsia::examples::inspect::FizzBuzzPtr fizz_buzz;
    context->svc()->Connect(fizz_buzz.NewRequest());
@@ -797,7 +1082,7 @@ out to the "FizzBuzz" service and prints the response:
 
 * {Rust}
 
-   ```
+   ```rust
    let fizzbuzz = client::connect_to_service::<FizzBuzzMarker>()
        .context("failed to connect to fizzbuzz")?;
    match fizzbuzz.execute(30u32).await {
@@ -806,18 +1091,32 @@ out to the "FizzBuzz" service and prints the response:
    };
    ```
 
+* {Dart}
+
+   ```dart
+   final fizzBuzz = fidl_codelab.FizzBuzzProxy();
+   context.incoming.connectToService(fizzBuzz);
+   final result = await fizzBuzz.execute(30);
+   ```
+
 If you see the logs, you will see that this log is never printed.
 
 * {C++}
 
-   ```
+   ```cpp
    fx log --tag inspect_cpp_codelab
    ```
 
 * {Rust}
 
-   ```
+   ```rust
    fx log --tag inspect_rust_codelab
+   ```
+
+* {Dart}
+
+   ```dart
+   fx log --tag inspect_dart_codelab_part_2
    ```
 
 You will need to diagnose and solve this problem.
@@ -840,6 +1139,12 @@ You will need to diagnose and solve this problem.
       $ fx shell run inspect_rust_codelab_client 2 hello
       ```
 
+   * {Dart}
+
+      ```
+      $ fx shell run inspect_dart_codelab_client 2 hello
+      ```
+
    Fortunately the FizzBuzz team instrumented their component using Inspect.
 
 2. Read the FizzBuzz Inspect data using iquery as before, you get:
@@ -860,7 +1165,7 @@ You will need to diagnose and solve this problem.
 
    * {C++}
 
-      ```
+      ```cpp
       // Send a request to the FizzBuzz service and print the response when it arrives.
       fuchsia::examples::inspect::FizzBuzzPtr fizz_buzz;
       context->svc()->Connect(fizz_buzz.NewRequest());
@@ -878,7 +1183,7 @@ You will need to diagnose and solve this problem.
 
    * {Rust}
 
-      ```
+      ```rust
       let fizzbuzz = client::connect_to_service::<FizzBuzzMarker>()
           .context("failed to connect to fizzbuzz")?;
       match fizzbuzz.execute(30u32).await {
@@ -890,6 +1195,22 @@ You will need to diagnose and solve this problem.
               // CODELAB: Add Inspect here to see if there is an error
           }
       };
+      ```
+
+   * {Dart}
+
+      ```dart
+      final fizzBuzz = fidl_codelab.FizzBuzzProxy();
+      context.incoming.connectToService(fizzBuzz);
+
+      // CODELAB: Instrument our connection to FizzBuzz using Inspect. Is there an error?
+      try {
+        final result = await fizzBuzz.execute(30);
+        // CODELAB: Add Inspect here to see if there is a response.
+        log.info('Got FizzBuzz: $result');
+      } on Exception {
+        // CODELAB: Add Inspect here to see if there is an error
+      }
       ```
 
 **Exercise**: Add Inspect to the FizzBuzz connection to identify the problem
@@ -906,7 +1227,7 @@ error handler for the connection attempt.
    overall health status in a special location. Since our service is not
    healthy unless it can connect to FizzBuzz, can you incorporate this:
 
-     ```
+     ```cpp
      /*
      "fuchsia.inspect.Health": {
          "status": "STARTING_UP"
@@ -937,7 +1258,7 @@ error handler for the connection attempt.
    inspect tree). Since our service is not healthy unless it can connect to FizzBuzz, can
    you incorporate this:
 
-   ```
+   ```rust
    /*
    "fuchsia.inspect.Health": {
        "status": "STARTING_UP"
@@ -959,6 +1280,37 @@ error handler for the connection attempt.
    }
    */
    fuchsia_inspect::component::health().set_unhealthy("something went wrong!");
+   ```
+
+* {Dart}
+
+   *Advanced*: `fuchsia_inspect::Inspect` has a getter called `health` that returns an object
+   that announces overall health status in a special location (a node child of the root of the
+   inspect tree). Since our service is not healthy unless it can connect to FizzBuzz, can
+   you incorporate this:
+
+   ```dart
+   /*
+   "fuchsia.inspect.Health": {
+       "status": "STARTING_UP"
+   }
+   */
+   inspect.Inspect().health.setStartingUp();
+
+   /*
+   "fuchsia.inspect.Health": {
+       "status": "OK"
+   }
+   */
+   inspect.Inspect().health.setOk();
+
+   /*
+   "fuchsia.inspect.Health": {
+       "status": "UNHEALTHY",
+       "message": "Something went wrong!"
+   }
+   */
+   inspect.Inspect().health.setUnhealthy('Something went wrong!');
    ```
 
 Once you complete this exercise, you should see that the connection
@@ -985,6 +1337,15 @@ look at the logs:
    is not allowed to connect to fuchsia.examples.inspect.FizzBuzz...
    ```
 
+* {Dart}
+
+   ```
+   $ fx log --only FizzBuzz
+   ...
+   ... Component fuchsia-pkg://fuchsia.com/inspect_dart_codelab_part_2.cmx
+   is not allowed to connect to fuchsia.examples.inspect.FizzBuzz...
+   ```
+
 Sandboxing errors are a common pitfall that are sometimes difficult to uncover.
 
 Note: While you could have looked at the logs from the beginning to find
@@ -1002,6 +1363,10 @@ Looking at the sandbox in part2 meta, you can see it is missing the service:
 
     Find the sandbox meta in [part_2/meta][rust-part2-meta]
 
+* {Dart}
+
+    Find the sandbox meta in [part_2/meta][dart-part2-meta]
+
 ```
 "sandbox": {
     "services": [
@@ -1017,7 +1382,7 @@ and run again. You should now see FizzBuzz in the logs and an OK status:
 
    ```
    $ fx log --tag inspect_cpp_codelab
-   [inspect_cpp_codelab, part3] INFO: main.cc(57): Got FizzBuzz: 1 2 Fizz
+   [inspect_cpp_codelab, part2] INFO: main.cc(57): Got FizzBuzz: 1 2 Fizz
    4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz 16 17 Fizz 19 Buzz Fizz
    22 23 Fizz Buzz 26 Fizz 28 29 FizzBuzz
    ```
@@ -1026,7 +1391,16 @@ and run again. You should now see FizzBuzz in the logs and an OK status:
 
    ```
    $ fx log --tag inspect_rust_codelab
-   [inspect_rust_codelab, part3] INFO: main.rs(52): Got FizzBuzz: 1 2 Fizz
+   [inspect_rust_codelab, part2] INFO: main.rs(52): Got FizzBuzz: 1 2 Fizz
+   4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz 16 17 Fizz 19 Buzz Fizz
+   22 23 Fizz Buzz 26 Fizz 28 29 FizzBuzz
+   ```
+
+* {Dart}
+
+   ```
+   $ fx log --tag inspect_dart_codelab
+   [inspect_dart_codelab, part2] INFO: main.dart(35): Got FizzBuzz: 1 2 Fizz
    4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz 16 17 Fizz 19 Buzz Fizz
    22 23 Fizz Buzz 26 Fizz 28 29 FizzBuzz
    ```
@@ -1068,6 +1442,14 @@ Reverser has a basic unit test. Run it:
    fx run-test inspect_rust_codelab_unittests
    ```
 
+* {Dart}
+
+   The unit test is located in [reverser\_test.dart][dart-part3-unittest].
+
+   ```
+   fx run-test inspect_dart_codelab_part_3_unittests
+   ```
+
 Note: This runs unit tests for all parts of this codelab.
 
 The unit test ensures that Reverser works properly (and doesn't hang!), but it does
@@ -1085,7 +1467,7 @@ The code to open a Reverser looks like the following:
 
 * {C++}
 
-   ```
+   ```cpp
    binding_set_.AddBinding(std::make_unique<Reverser>(ReverserStats::CreateDefault()),
                            ptr.NewRequest());
 
@@ -1096,10 +1478,16 @@ The code to open a Reverser looks like the following:
 
 * {Rust}
 
-   ```
+   ```rust
    let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<ReverserMarker>()?;
    let reverser = ReverserServer::new(ReverserServerMetrics::default());
    reverser::spawn(stream);
+   ```
+
+* {Dart}
+
+   ```dart
+   ReverserImpl(ReverserStats());
    ```
 
 A default version of the Inspect Node is passed into the Reverser. This
@@ -1131,6 +1519,17 @@ support asserting on Inspect output.
 
    - *Hint*: You will need to create a child on the root to pass in to `ReverserServerFactory::new`.
 
+* {Dart}
+
+   **Exercise**: Change `openReverser` to take the dependency for an `inspect.Node`
+   as an argument and use it when constructing Reverser.
+
+   - *Hint*: Use `inspect.Inspect.forTesting` and `FakeVmoHolder` to create
+     an Inspect object without fuchsia dependencies to run your test on host.
+
+   - *Hint*: You will need to create a child on the root to pass in to `openReverser`.
+
+
 **Follow up**: Create multiple reverser connections and test them independently.
 
 Following this exercise, your unit test will set real values in an
@@ -1140,7 +1539,7 @@ Add code to test the output in Inspect:
 
 * {C++}
 
-   ```
+   ```cpp
    #include <lib/inspect/cpp/reader.h>
    ...
 
@@ -1157,7 +1556,7 @@ Add code to test the output in Inspect:
 
    You can now read individual properties and children as follows:
 
-   ```
+   ```cpp
    // Get the property on root called "request_count"
    auto* global_count =
            hierarchy.value().node().get_property<inspect::UintPropertyValue>("request_count");
@@ -1179,7 +1578,7 @@ Add code to test the output in Inspect:
 
 * {Rust}
 
-   ```
+   ```rust
    use fuchsia_inspect::{Inspector, assert_inspect_tree};
    ...
    let inspector = Inspector::new();
@@ -1187,6 +1586,7 @@ Add code to test the output in Inspect:
    assert_inspect_tree!(inspector, root: {
        reverser_service: {
            connection_count: 2u64,
+           total_requests: 2u
            "connection0": {
                request_count: 2u64,
            },
@@ -1194,20 +1594,29 @@ Add code to test the output in Inspect:
    });
    ```
 
-   The `assert_inspect_tree` macro has lots of nice features that allow you to match a part of the
-   tree, match only some properties, etc. Refer to the [crate
-   documentation](https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/macro.assert_inspect_tree.html)
-   to learn more about these features.
+* {Dart}
 
-   If you want to have control on the assertion of your hierarchy, you can read it directly:
+   ```dart
+   test('reverser', () async {
+     final vmo = FakeVmoHolder(256 * 1024);
+     final inspector = inspect.Inspect.forTesting(vmo, 'root.inspect');
+     ...
 
+     final matcher = VmoMatcher(vmo);
+
+     final reverserServiceNode = matcher.node().at(['reverser_service']);
+     expect(
+         reverserServiceNode.at(['connection0'])
+           ..propertyEquals('request_count', 2)
+         hasNoErrors);
+   });
    ```
-   use fuchsia_inspect::reader::{self, NodeHierarchy};
-   let hierarchy : NodeHierarchy = reader::read_from_inspector(&inspector);
-   ```
 
-   The snippets above read a snapshot from the underlying virtual memory object (VMO)
-   containing Inspect data and parses it into a readable hierarchy.
+   The `VmoMatcher` is a convenient utility for testing inspect integrations. It allows to assert
+   existing properties and children and missing ones, among other features.
+
+The snippets above read a snapshot from the underlying virtual memory object (VMO)
+containing Inspect data and parses it into a readable hierarchy.
 
 **Exercise**: Add assertions for the rest of your Inspect data.
 
@@ -1246,6 +1655,12 @@ You can run the integration tests for the codelab as follows:
    $ fx run-test inspect_rust_codelab_integration_tests
    ```
 
+* {Dart}
+
+   ```
+   $ fx run-test inspect_dart_codelab_part_4_integration_tests
+   ```
+
 Note: This runs integration tests for all parts of this codelab.
 
 ### View the code
@@ -1261,6 +1676,10 @@ Look at how the integration test is setup:
    * {Rust}
 
      Find the component manifest (cmx) in [rust/meta][rust-part4-integration-meta]
+
+   * {Dart}
+
+     Find the component manifest (cmx) in [dart/part_4/meta][dart-part4-integration-meta]
 
    ```
    {
@@ -1280,6 +1699,7 @@ Look at how the integration test is setup:
                "fuchsia.logger.LogSink",
                "fuchsia.sys.Loader",
                "fuchsia.sys.Environment"
+               ...
            ]
        }
    }
@@ -1306,7 +1726,7 @@ Look at how the integration test is setup:
 
       Locate the integration test in [part4/tests/integration_test.cc][cpp-part4-integration].
 
-      ```
+      ```cpp
       TEST_F(CodelabTest, StartWithFizzBuzz) {
         auto ptr = StartComponentAndConnect({.include_fizzbuzz_service = true});
 
@@ -1338,7 +1758,7 @@ Look at how the integration test is setup:
 
       Locate the integration test in [part4/tests/integration_test.rs][rust-part4-integration].
 
-      ```
+      ```rust
       #[fasync::run_singlethreaded(test)]
       async fn start_with_fizzbuzz() -> Result<(), Error> {
           let mut test = IntegrationTest::start()?;
@@ -1367,11 +1787,40 @@ Look at how the integration test is setup:
       launch the FizzBuzz component. This feature tests that your Inspect
       output is as expected in case it fails to connect to FizzBuzz as in Part 2.
 
+   * {Dart}
+
+      Locate the integration test in [part_4/test/integration_test.dart][dart-part4-integration].
+
+      ```dart
+      setUp(() async {
+        await env.create();
+      });
+
+      test('start with fizzbuzz', () async {
+        final reverser = await startComponentAndConnect(includeFizzbuzz: true);
+        final result = await reverser.reverse('hello');
+        expect(result, equals('olleh'));
+        // CODELAB: Check that the component was connected to FizzBuzz.
+      });
+
+      test('start without fizzbuzz', () async {
+        final reverser = await startComponentAndConnect();
+        final result = await reverser.reverse('hello');
+        expect(result, equals('olleh'));
+        // CODELAB: Check that the component failed to connect to FizzBuzz.
+      });
+      ```
+
+      `env.create()` is responsible for creating a new test environment.
+      `startComponentAndConnect` launches the reverser component and optionally launches the
+      FizzBuzz component. This feature tests that the Inspect output is as expected in case it fails
+      to connect to FizzBuzz as in Part 2.
+
 3. Add the following method to your test fixture to read from the Archive service:
 
    * {C++}
 
-     ```
+     ```cpp
      #include <rapidjson/document.h>
      #include <rapidjson/pointer.h>
 
@@ -1433,7 +1882,7 @@ Look at how the integration test is setup:
 
    * {Rust}
 
-     ```
+     ```rust
      use {
          ...,
          anyhow::{format_err, Context},
@@ -1504,11 +1953,51 @@ Look at how the integration test is setup:
      }
      ```
 
+   * {Dart}
+
+     ```dart
+     import 'dart:convert';
+     import 'package:fidl_fuchsia_diagnostics/fidl_async.dart';
+     import 'package:fidl_fuchsia_mem/fidl_async.dart';
+     import 'package:fuchsia_services/services.dart';
+     import 'package:zircon/zircon.dart';
+
+     Future<Map<String, dynamic>> getInspectHierarchy() async {
+       final archive = ArchiveProxy();
+       StartupContext.fromStartupInfo().incoming.connectToService(archive);
+
+       final reader = ReaderProxy();
+       final List<SelectorArgument> selectors = [];
+       await archive.readInspect(reader.ctrl.request(), selectors);
+
+       // ignore: literal_only_boolean_expressions
+       while (true) {
+         final iterator = BatchIteratorProxy();
+         await reader.getSnapshot(Format.json, iterator.ctrl.request());
+         final batch = await iterator.getNext();
+         for (final entry in batch) {
+           final jsonData = readBuffer(entry.formattedJsonHierarchy);
+           if (jsonData.contains('inspect_dart_codelab_part_5')) {
+             return json.decode(jsonData);
+           }
+         }
+         await Future.delayed(Duration(milliseconds: 150));
+       }
+     }
+
+     String readBuffer(Buffer buffer) {
+       final dataVmo = SizedVmo(buffer.vmo.handle, buffer.size);
+       final data = dataVmo.read(buffer.size);
+       return utf8.decode(data.bytesAsUint8List());
+     }
+     ```
+
+
 4. **Exercise**. Use the returned data in your tests and add assertions to the returned data:
 
    * {C++}
 
-     ```
+     ```cpp
      rapidjson::Document document;
      document.Parse(GetInspectJson());
      ```
@@ -1529,13 +2018,24 @@ Look at how the integration test is setup:
 
    * {Rust}
 
-      ```
+      ```rust
       let hierarchy = test.get_inspect_hierarchy().await?;
       ```
 
-     Add assertions on the returned `NodeHierarchy`.
+      Add assertions on the returned `NodeHierarchy`.
 
       - *Hint*: It may help to print the JSON output to view the schema.
+
+   * {Dart}
+
+      ```dart
+      final inspectData = await getInspectHierarchy();
+      ```
+
+      Add assertions on the returned Map data.
+
+      - *Hint*: It may help to print the JSON output to view the schema.
+
 
 Your integration test will now ensure your inspect output is correct.
 
@@ -1580,3 +2080,14 @@ This section is under construction.
 [rust-part3-unittest]: /src/diagnostics/examples/inspect/rust/part_3/src/reverser.rs#99
 [rust-part4-integration]: /src/diagnostics/examples/inspect/rust/part_4/tests/integration_test.rs
 [rust-part4-integration-meta]: /src/diagnostics/examples/inspect/rust/meta/integration_test_part_4.cmx
+
+[inspect-dart-codelab]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab
+[dart-part1]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1
+[dart-part1-main]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart
+[dart-part1-reverser]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/lib/src/reverser.dart
+[dart-part1-build]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/BUILD.gn
+[dart-client-main]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/client/lib/main.dart#9
+[dart-part2-meta]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_2/meta/inspect_dart_codelab_part_2.cmx
+[dart-part3-unittest]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_3/test/reverser_test.dart
+[dart-part4-integration]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_4/test/integration_test.dart
+[dart-part4-integration-meta]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_4/meta/inspect_dart_codelab_part_4_integration_tests.cmx

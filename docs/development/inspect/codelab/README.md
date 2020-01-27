@@ -67,4 +67,4 @@ You will learn:
 
 ## Get Started
 
-- [Inspect C++ Codelab](codelab.md)
+- [Inspect Codelab](codelab.md)
