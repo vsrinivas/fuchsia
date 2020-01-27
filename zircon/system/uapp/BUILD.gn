@@ -8,7 +8,6 @@ group("uapp") {
     "$zx/system/dev/test/ddk-schedule-work:ddk-schedule-work-perf",
     "blktest",
     "blobfs",
-    "disk-inspect",
     "disk-pave",
     "display-test",
     "fs-fsck",

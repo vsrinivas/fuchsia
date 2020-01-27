@@ -2,10 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("disk-inspect") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("disk-inspect") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
-    "$zx/system/ulib/disk-inspector",
-    "$zx/system/ulib/minfs",
+    "//zircon/public/lib/disk-inspector",
+    "//zircon/public/lib/minfs",
   ]
+}
+
+migrated_manifest("disk-inspect-manifest") {
+  deps = [ ":disk-inspect" ]
 }
