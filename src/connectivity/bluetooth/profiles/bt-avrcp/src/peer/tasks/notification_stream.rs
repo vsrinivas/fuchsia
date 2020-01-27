@@ -4,6 +4,8 @@
 
 use super::*;
 
+use futures::ready;
+
 /// NotificationStream returns each INTERIM response for a given NotificationEventId on a peer.
 ///
 /// This will register for the notification with the peer and produce elements whenever the event
@@ -20,7 +22,9 @@ pub struct NotificationStream {
 }
 
 impl NotificationStream {
-    pub fn new(
+    // Only the task processing peer notifications should construct new notification streams to
+    // avoid transaction id exhaustion.
+    pub(super) fn new(
         peer: Arc<RwLock<RemotePeer>>,
         event_id: NotificationEventId,
         playback_interval: u32,
@@ -36,7 +40,7 @@ impl NotificationStream {
         } else {
             RegisterNotificationCommand::new(self.event_id)
         };
-        let conn = RemotePeer::get_control_connection(&self.peer)?;
+        let conn = self.peer.write().control_connection()?;
         let packet = command.encode_packet().expect("unable to encode packet");
         let stream = conn
             .send_vendor_dependent_command(AvcCommandType::Notify, &packet[..])

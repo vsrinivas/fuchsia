@@ -17,7 +17,7 @@ use {
     },
     parking_lot::Mutex,
     pin_utils::pin_mut,
-    std::{collections::VecDeque, convert::TryFrom},
+    std::{collections::VecDeque, convert::TryFrom, sync::Arc},
 };
 
 use crate::{
@@ -25,7 +25,7 @@ use crate::{
         player_application_settings::PlayerApplicationSettingAttributeId,
         GetCapabilitiesCapabilityId, PlaybackStatus, *,
     },
-    peer::PeerManager,
+    peer_manager::PeerManager,
     profile::{
         AvcrpTargetFeatures, AvrcpProfileEvent, AvrcpProtocolVersion, AvrcpService, ProfileService,
     },
@@ -43,8 +43,14 @@ pub fn create_fidl_endpoints<S: ServiceMarker>() -> Result<(S::Proxy, S::Request
 }
 
 #[derive(Debug)]
-pub struct MockProfileService {
+pub struct MockProfileServiceState {
     pub fake_events: Mutex<Option<VecDeque<Result<AvrcpProfileEvent, Error>>>>,
+    pub fake_connect_to_device_response: Mutex<Option<Result<zx::Socket, Error>>>,
+}
+
+#[derive(Debug)]
+pub struct MockProfileService {
+    inner: Arc<MockProfileServiceState>,
 }
 
 impl ProfileService for MockProfileService {
@@ -53,12 +59,16 @@ impl ProfileService for MockProfileService {
         _peer_id: &'a PeerId,
         _psm: u16,
     ) -> BoxFuture<Result<zx::Socket, Error>> {
-        // let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        future::ready(Err(format_err!("Unsupported"))).boxed()
+        let result = self.inner.fake_connect_to_device_response.lock().take();
+
+        match result {
+            Some(result_value) => future::ready(result_value).boxed(),
+            None => future::ready(Err(format_err!("no value"))).boxed(),
+        }
     }
 
     fn take_event_stream(&self) -> BoxStream<Result<AvrcpProfileEvent, Error>> {
-        let value = self.fake_events.lock().take();
+        let value = self.inner.fake_events.lock().take();
         match value {
             Some(events) => stream::iter(events).boxed(),
             None => panic!("No fake events"),
@@ -66,11 +76,24 @@ impl ProfileService for MockProfileService {
     }
 }
 
+impl MockProfileService {
+    pub fn new(
+        events: Option<VecDeque<Result<AvrcpProfileEvent, Error>>>,
+        device_response: Option<Result<zx::Socket, Error>>,
+    ) -> (Self, Arc<MockProfileServiceState>) {
+        let state = Arc::new(MockProfileServiceState {
+            fake_events: Mutex::new(events),
+            fake_connect_to_device_response: Mutex::new(device_response),
+        });
+        (Self { inner: state.clone() }, state)
+    }
+}
+
 fn spawn_peer_manager() -> Result<PeerManagerProxy, Error> {
     let (client_sender, service_request_receiver) = mpsc::channel(2);
-    let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
+    let (profile_service, _) = MockProfileService::new(Some(VecDeque::new()), None);
 
-    let mut peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
+    let peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
         .expect("unable to create peer manager");
 
     let (peer_manager_client, peer_manager_client_stream): (
@@ -279,9 +302,9 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
 
     let remote_peer = AvcPeer::new(remote)?;
 
-    let profile_service = MockProfileService { fake_events: Mutex::new(Some(events)) };
+    let (profile_service, _state) = MockProfileService::new(Some(events), None);
 
-    let mut peer_manager =
+    let peer_manager =
         PeerManager::new(Box::new(profile_service), peer_controller_request_receiver)
             .expect("unable to create peer manager");
 

@@ -20,11 +20,11 @@ pub type ControllerEventStream = mpsc::Receiver<ControllerEvent>;
 /// ControllerRequest stream for a given ControllerRequest.
 #[derive(Debug)]
 pub struct Controller {
-    peer: Arc<RemotePeerHandle>,
+    peer: RemotePeerHandle,
 }
 
 impl Controller {
-    pub fn new(peer: Arc<RemotePeerHandle>) -> Controller {
+    pub(super) fn new(peer: RemotePeerHandle) -> Controller {
         Controller { peer }
     }
 
@@ -33,12 +33,12 @@ impl Controller {
         {
             // key_press
             let payload_1 = &[avc_keycode, 0x00];
-            let _ = RemotePeer::send_avc_passthrough(self.peer.clone(), payload_1).await?;
+            let _ = self.peer.send_avc_passthrough(payload_1).await?;
         }
         {
             // key_release
             let payload_2 = &[avc_keycode | 0x80, 0x00];
-            RemotePeer::send_avc_passthrough(self.peer.clone(), payload_2).await
+            self.peer.send_avc_passthrough(payload_2).await
         }
     }
 
@@ -47,7 +47,7 @@ impl Controller {
     pub async fn set_absolute_volume(&self, volume: u8) -> Result<u8, Error> {
         let cmd = SetAbsoluteVolumeCommand::new(volume).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "set_absolute_volume send command {:#?}", cmd);
-        let buf = RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await?;
+        let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response =
             SetAbsoluteVolumeResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "set_absolute_volume received response {:#?}", response);
@@ -60,7 +60,7 @@ impl Controller {
         let mut media_attributes = MediaAttributes::new_empty();
         let cmd = GetElementAttributesCommand::all_attributes();
         fx_vlog!(tag: "avrcp", 1, "get_media_attributes send command {:#?}", cmd);
-        let buf = RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await?;
+        let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response =
             GetElementAttributesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "get_media_attributes received response {:#?}", response);
@@ -77,7 +77,7 @@ impl Controller {
     /// Send a GetCapabilities command requesting all supported events by the peer.
     /// Returns the supported NotificationEventIds by the peer or an error.
     pub async fn get_supported_events(&self) -> Result<Vec<NotificationEventId>, Error> {
-        RemotePeer::get_supported_events(self.peer.clone()).await
+        self.peer.get_supported_events().await
     }
 
     /// Send a GetPlayStatus command requesting current status of playing media.
@@ -85,7 +85,7 @@ impl Controller {
     pub async fn get_play_status(&self) -> Result<PlayStatus, Error> {
         let cmd = GetPlayStatusCommand::new();
         fx_vlog!(tag: "avrcp", 1, "get_play_status send command {:?}", cmd);
-        let buf = RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await?;
+        let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response =
             GetPlayStatusResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "get_play_status received response {:?}", response);
@@ -110,7 +110,7 @@ impl Controller {
     ) -> Result<PlayerApplicationSettings, Error> {
         let cmd = GetCurrentPlayerApplicationSettingValueCommand::new(attribute_ids);
         fx_vlog!(tag: "avrcp", 1, "get_current_player_application_settings command {:?}", cmd);
-        let buf = RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await?;
+        let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response = GetCurrentPlayerApplicationSettingValueResponse::decode(&buf[..])
             .map_err(|e| Error::PacketError(e))?;
         Ok(response.try_into()?)
@@ -122,7 +122,7 @@ impl Controller {
         // Get all the supported attributes.
         let cmd = ListPlayerApplicationSettingAttributesCommand::new();
         fx_vlog!(tag: "avrcp", 1, "list_player_application_setting_attributes command {:?}", cmd);
-        let buf = RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await?;
+        let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response = ListPlayerApplicationSettingAttributesResponse::decode(&buf[..])
             .map_err(|e| Error::PacketError(e))?;
 
@@ -132,7 +132,7 @@ impl Controller {
             response.player_application_setting_attribute_ids().clone(),
         );
         fx_vlog!(tag: "avrcp", 1, "get_player_application_setting_attribute_text command {:?}", cmd);
-        let buf = RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await?;
+        let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let _text_response = GetPlayerApplicationSettingAttributeTextResponse::decode(&buf[..])
             .map_err(|e| Error::PacketError(e))?;
 
@@ -140,7 +140,7 @@ impl Controller {
         for attribute in response.player_application_setting_attribute_ids() {
             let cmd = ListPlayerApplicationSettingValuesCommand::new(attribute);
             fx_vlog!(tag: "avrcp", 1, "list_player_application_setting_values command {:?}", cmd);
-            let buf = RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await?;
+            let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
             let list_response = ListPlayerApplicationSettingValuesResponse::decode(&buf[..])
                 .map_err(|e| Error::PacketError(e))?;
 
@@ -150,7 +150,7 @@ impl Controller {
                 list_response.player_application_setting_value_ids(),
             );
             fx_vlog!(tag: "avrcp", 1, "get_player_application_setting_value_text command {:?}", cmd);
-            let buf = RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await?;
+            let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
             let value_text_response =
                 GetPlayerApplicationSettingValueTextResponse::decode(&buf[..])
                     .map_err(|e| Error::PacketError(e))?;
@@ -193,8 +193,7 @@ impl Controller {
         for setting in settings_vec {
             let cmd = SetPlayerApplicationSettingValueCommand::new(vec![setting]);
             fx_vlog!(tag: "avrcp", 1, "set_player_application_settings command {:?}", cmd);
-            let response_buf =
-                RemotePeer::send_vendor_dependent_command(self.peer.clone(), &cmd).await;
+            let response_buf = self.peer.send_vendor_dependent_command(&cmd).await;
 
             match response_buf {
                 Ok(buf) => {
@@ -218,19 +217,20 @@ impl Controller {
         payload: &'a [u8],
     ) -> Result<Vec<u8>, Error> {
         let command = RawVendorDependentPacket::new(PduId::try_from(pdu_id)?, payload);
-        RemotePeer::send_vendor_dependent_command(self.peer.clone(), &command).await
+        self.peer.send_vendor_dependent_command(&command).await
     }
 
     /// For the FIDL test controller. Informational only and intended for logging only. The state is
     /// inherently racey.
     pub fn is_connected(&self) -> bool {
-        RemotePeer::is_connected(&self.peer)
+        self.peer.is_connected()
     }
 
     /// Returns notification events from the peer.
     pub fn take_event_stream(&self) -> ControllerEventStream {
-        let (sender, receiver) = mpsc::channel(2);
-        RemotePeer::add_control_listener(&self.peer, sender);
+        // TODO(44330) handle back pressure correctly and reduce mpsc::channel buffer sizes.
+        let (sender, receiver) = mpsc::channel(512);
+        self.peer.add_control_listener(sender);
         receiver
     }
 }

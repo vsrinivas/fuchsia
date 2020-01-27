@@ -26,7 +26,8 @@ use {
 
 use crate::{
     packets::PlaybackStatus as PacketPlaybackStatus,
-    peer::{Controller, ControllerEvent as PeerControllerEvent, ServiceRequest},
+    peer::{Controller, ControllerEvent as PeerControllerEvent},
+    peer_manager::ServiceRequest,
     types::PeerError,
 };
 
@@ -151,10 +152,6 @@ impl AvrcpClientController {
                 if self.notification_window_counter < Self::EVENT_WINDOW_LIMIT {
                     match self.notification_queue.pop_front() {
                         Some((timestamp, event)) => {
-                            println!(
-                                "sending defering event. window at {}",
-                                self.notification_window_counter
-                            );
                             self.handle_controller_event(timestamp, event)?;
                         }
                         None => {}
@@ -540,12 +537,11 @@ pub fn run_services(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::peer::PeerManager;
+    use crate::peer_manager::PeerManager;
     use crate::tests::{create_fidl_endpoints, MockProfileService};
     use anyhow::format_err;
     use fidl::endpoints::create_endpoints;
     use futures::{future, future::FutureExt};
-    use parking_lot::Mutex;
     use pin_utils::pin_mut;
     use std::collections::VecDeque;
 
@@ -642,15 +638,14 @@ mod tests {
         let control_handle = server.control_handle();
         let (client_sender, service_request_receiver) = mpsc::channel(512);
 
-        let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
+        let (profile_service, _) = MockProfileService::new(Some(VecDeque::new()), None);
 
         let test_fn = |_controller: Controller, _fidl_stream: ControllerRequestStream| {
             control_handle.shutdown();
         };
 
-        let mut peer_manager =
-            PeerManager::new(Box::new(profile_service), service_request_receiver)
-                .expect("unable to create peer manager");
+        let peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
+            .expect("unable to create peer manager");
 
         let (target_client, target_server) = create_endpoints::<TargetHandlerMarker>()
             .expect("Error creating TargetHandler endpoint");
@@ -697,15 +692,14 @@ mod tests {
         let control_handle = server.control_handle();
         let (client_sender, service_request_receiver) = mpsc::channel(512);
 
-        let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
+        let (profile_service, _) = MockProfileService::new(Some(VecDeque::new()), None);
 
         let test_fn = |_controller: Controller, _fidl_stream: ControllerRequestStream| {
             control_handle.shutdown();
         };
 
-        let mut peer_manager =
-            PeerManager::new(Box::new(profile_service), service_request_receiver)
-                .expect("unable to create peer manager");
+        let peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
+            .expect("unable to create peer manager");
         let (_c_client, c_server) =
             create_endpoints::<ControllerMarker>().expect("Error creating Controller endpoint");
 
@@ -740,15 +734,14 @@ mod tests {
         let control_handle = server.control_handle();
         let (client_sender, service_request_receiver) = mpsc::channel(512);
 
-        let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
+        let (profile_service, _) = MockProfileService::new(Some(VecDeque::new()), None);
 
         let test_fn = |_controller: Controller, _fidl_stream: ControllerExtRequestStream| {
             control_handle.shutdown();
         };
 
-        let mut peer_manager =
-            PeerManager::new(Box::new(profile_service), service_request_receiver)
-                .expect("unable to create peer manager");
+        let peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
+            .expect("unable to create peer manager");
 
         let (_target_client, target_server) = create_endpoints::<ControllerExtMarker>()
             .expect("Error creating Test Controller endpoint");

@@ -9,16 +9,17 @@ use {
     futures::{channel::mpsc, try_join},
 };
 
-use crate::{peer::PeerManager, profile::ProfileServiceImpl};
-
 mod packets;
 mod peer;
+mod peer_manager;
 mod profile;
 mod service;
 mod types;
 
 #[cfg(test)]
 mod tests;
+
+use crate::{peer_manager::PeerManager, profile::ProfileServiceImpl};
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -32,9 +33,10 @@ async fn main() -> Result<(), Error> {
 
     // Create a channel that peer manager will receive requests for peer controllers from the FIDL
     // service runner.
-    let (client_sender, service_request_receiver) = mpsc::channel(1);
+    // TODO(44330) handle back pressure correctly and reduce mpsc::channel buffer sizes.
+    let (client_sender, service_request_receiver) = mpsc::channel(512);
 
-    let mut peer_manager = PeerManager::new(Box::new(profile_svc), service_request_receiver)
+    let peer_manager = PeerManager::new(Box::new(profile_svc), service_request_receiver)
         .expect("Unable to create Peer Manager");
 
     let service_fut =
