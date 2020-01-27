@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootResource"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/loadbench_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.boot.RootResource"
+        ]
+    }
+}

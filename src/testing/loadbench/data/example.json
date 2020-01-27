@@ -54,5 +54,8 @@
       "instances" : 10,
       "actions": "sequence"
     }
-  ]
+  ],
+
+  // Optional kernel tracing, argument sets group mask.
+  "tracing": 0
 }

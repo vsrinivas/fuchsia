@@ -326,6 +326,15 @@ const auto& GetObject(const char* name, const rapidjson::Value& object, Context&
   return member;
 }
 
+template <typename... Context>
+auto GetUint(const char* name, const rapidjson::Value& object, Context&&... context) {
+  const auto& member = GetMember(name, object, std::forward<Context>(context)...);
+  FXL_CHECK(member.IsUint())
+      << (std::ostringstream{} << ... << std::forward<Context>(context)).rdbuf() << " member \""
+      << name << "\" must be an unsigned integer!";
+  return member.GetUint();
+}
+
 void Workload::ParseObject(const std::string& name, const rapidjson::Value& object) {
   const std::string type_string = GetString("type", object, "Named object \"", name, "\"");
   if (type_string == "timer") {
@@ -715,6 +724,11 @@ Workload Workload::Load(const std::string& path) {
     for (const auto& worker : IterateValues(workers)) {
       workload.ParseWorker(worker);
     }
+  }
+
+  // Handle tracing.
+  if (document.HasMember("tracing")) {
+    workload.tracing_enabled_ = GetUint("tracing", document, "Workload");
   }
 
   return workload;

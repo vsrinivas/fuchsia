@@ -3,11 +3,12 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [],
+        "features": [
+            "system-temp"
+        ],
         "services": [
             "fuchsia.boot.RootResource",
             "fuchsia.scheduler.ProfileProvider"
         ]
     }
 }
-

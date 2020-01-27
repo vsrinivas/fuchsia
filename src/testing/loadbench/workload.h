@@ -66,6 +66,7 @@ class Workload {
   const auto& name() const { return name_; }
   const auto& priority() const { return priority_; }
   const auto& interval() const { return interval_; }
+  const auto& tracing() const { return tracing_enabled_; }
 
   auto& workers() { return workers_; }
 
@@ -128,6 +129,7 @@ class Workload {
   std::unordered_map<std::string, std::unique_ptr<Object>> objects_;
   std::unordered_map<std::string, std::unique_ptr<Action>> behaviors_;
   std::vector<WorkerConfig> workers_;
+  std::optional<uint32_t> tracing_enabled_;
 };
 
 #endif  // SRC_TESTING_LOADBENCH_WORKLOAD_H_

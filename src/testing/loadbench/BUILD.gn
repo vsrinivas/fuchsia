@@ -3,23 +3,25 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-executable("bin") {
-  output_name = "loadbench"
+source_set("lib") {
   sources = [
     "action.h",
-    "loadbench.cc",
     "measurement.h",
     "object.h",
     "random.h",
+    "tracing.cc",
+    "tracing.h",
     "utility.cc",
     "utility.h",
     "worker.h",
     "workload.cc",
     "workload.h",
   ]
-  deps = [
+  public_deps = [
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/rapidjson",
@@ -27,10 +29,17 @@ executable("bin") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-scheduler",
   ]
+}
+
+executable("bin") {
+  output_name = "loadbench"
+  sources = [ "loadbench.cc" ]
+  deps = [ ":lib" ]
 }
 
 package("loadbench") {
@@ -69,4 +78,28 @@ package("loadbench") {
       },
     ]
   }
+}
+
+executable("loadbench_unittests") {
+  testonly = true
+
+  sources = [ "tracing_unittest.cc" ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("loadbench_tests") {
+  rootresource_svc = "//build"
+
+  deps = [ ":loadbench_unittests" ]
+
+  tests = [
+    {
+      name = "loadbench_unittests"
+    },
+  ]
 }
