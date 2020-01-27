@@ -16,7 +16,6 @@ group("uapp") {
     "fvm-check",
     "hid",
     "hidsensor",
-    "hidtouch",
     "ihda",
     "kcounter",
     "kstress",
