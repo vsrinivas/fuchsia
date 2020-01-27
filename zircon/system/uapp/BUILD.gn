@@ -28,7 +28,6 @@ group("uapp") {
     "spiutil",
     "syscall-check",
     "thermal-cli",
-    "trace-example",
     "usb-fwloader",
     "xdc-test",
   ]
