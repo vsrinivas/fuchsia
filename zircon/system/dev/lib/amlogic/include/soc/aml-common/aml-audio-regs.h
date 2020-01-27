@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_AUDIO_REGS_H_
+#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_AUDIO_REGS_H_
 
 __BEGIN_CDECLS
 
@@ -28,15 +29,29 @@ __BEGIN_CDECLS
 #define EE_AUDIO_MCLK_ENA            (1 << 31)
 
 #define EE_AUDIO_CLK_GATE_EN        0x0000
+
+// For version baseline (works with for S905D2G and T931G).
 #define EE_AUDIO_MCLK_A_CTRL        0x0004
 #define EE_AUDIO_MCLK_B_CTRL        0x0008
 #define EE_AUDIO_MCLK_C_CTRL        0x000C
 #define EE_AUDIO_MCLK_D_CTRL        0x0010
 #define EE_AUDIO_MCLK_E_CTRL        0x0014
 #define EE_AUDIO_MCLK_F_CTRL        0x0018
-
 #define EE_AUDIO_MST_PAD_CTRL0      0x001C
 #define EE_AUDIO_MST_PAD_CTRL1      0x0020
+
+// For version S905D3G.
+#define EE_AUDIO_CLK_GATE_EN1_D3G       0x0004
+#define EE_AUDIO_MCLK_A_CTRL_D3G        0x0008
+#define EE_AUDIO_MCLK_B_CTRL_D3G        0x000c
+#define EE_AUDIO_MCLK_C_CTRL_D3G        0x0010
+#define EE_AUDIO_MCLK_D_CTRL_D3G        0x0014
+#define EE_AUDIO_MCLK_E_CTRL_D3G        0x0018
+#define EE_AUDIO_MCLK_F_CTRL_D3G        0x001c
+#define EE_AUDIO_MST_PAD_CTRL0_D3G      0x0020
+#define EE_AUDIO_MST_PAD_CTRL1_D3G      0x0024
+#define EE_AUDIO_SW_RESET0_D3G          0x0028
+#define EE_AUDIO_SW_RESET1_D3G          0x002c
 
 #define EE_AUDIO_MST_A_SCLK_CTRL0     0x0040
 #define EE_AUDIO_MST_A_SCLK_CTRL1     0x0044
@@ -72,13 +87,14 @@ __BEGIN_CDECLS
 
 
 //FRDDR control reg blocks and offsets
-#define FRDDR_CTRL0_OFFS        (0x00)
-#define FRDDR_CTRL1_OFFS        (0x04)
-#define FRDDR_START_ADDR_OFFS   (0x08)
-#define FRDDR_FINISH_ADDR_OFFS  (0x0c)
-#define FRDDR_INT_ADDR_OFFS     (0x10)
-#define FRDDR_STATUS1_OFFS      (0x14)
-#define FRDDR_STATUS2_OFFS      (0x18)
+#define FRDDR_CTRL0_OFFS        (0x00 << 2)
+#define FRDDR_CTRL1_OFFS        (0x01 << 2)
+#define FRDDR_START_ADDR_OFFS   (0x02 << 2)
+#define FRDDR_FINISH_ADDR_OFFS  (0x03 << 2)
+#define FRDDR_INT_ADDR_OFFS     (0x04 << 2)
+#define FRDDR_STATUS1_OFFS      (0x05 << 2)
+#define FRDDR_STATUS2_OFFS      (0x06 << 2)
+#define FRDDR_CTRL2_OFFS_D3G    (0x0a << 2)
 
 #define EE_AUDIO_TODDR_A_CTRL0       (0x40 << 2)
 #define EE_AUDIO_TODDR_B_CTRL0       (0x50 << 2)
@@ -90,22 +106,23 @@ __BEGIN_CDECLS
 #define EE_AUDIO_ARB_CTRL             (0xa0 << 2)
 
 //TDMOUT control regs (common to three separate units)
-#define TDMOUT_CTRL0_OFFS     (0x00)
-#define TDMOUT_CTRL1_OFFS     (0x04)
-#define TDMOUT_SWAP_OFFS      (0x08)
-#define TDMOUT_MASK0_OFFS     (0x0c)
-#define TDMOUT_MASK1_OFFS     (0x10)
-#define TDMOUT_MASK2_OFFS     (0x14)
-#define TDMOUT_MASK3_OFFS     (0x18)
-#define TDMOUT_STAT_OFFS      (0x1c)
-#define TDMOUT_GAIN0_OFFS     (0x20)
-#define TDMOUT_GAIN1_OFFS     (0x24)
-#define TDMOUT_MUTE_VAL_OFFS  (0x28)
-#define TDMOUT_MUTE0_OFFS     (0x2c)
-#define TDMOUT_MUTE1_OFFS     (0x30)
-#define TDMOUT_MUTE2_OFFS     (0x34)
-#define TDMOUT_MUTE3_OFFS     (0x38)
-#define TDMOUT_MASK_VAL_OFFS  (0x3c)
+#define TDMOUT_CTRL0_OFFS     (0x00 << 2)
+#define TDMOUT_CTRL1_OFFS     (0x01 << 2)
+#define TDMOUT_SWAP_OFFS      (0x02 << 2)
+#define TDMOUT_MASK0_OFFS     (0x03 << 2)
+#define TDMOUT_MASK1_OFFS     (0x04 << 2)
+#define TDMOUT_MASK2_OFFS     (0x05 << 2)
+#define TDMOUT_MASK3_OFFS     (0x06 << 2)
+#define TDMOUT_STAT_OFFS      (0x07 << 2)
+#define TDMOUT_GAIN0_OFFS     (0x08 << 2)
+#define TDMOUT_GAIN1_OFFS     (0x09 << 2)
+#define TDMOUT_MUTE_VAL_OFFS  (0x0a << 2)
+#define TDMOUT_MUTE0_OFFS     (0x0b << 2)
+#define TDMOUT_MUTE1_OFFS     (0x0c << 2)
+#define TDMOUT_MUTE2_OFFS     (0x0d << 2)
+#define TDMOUT_MUTE3_OFFS     (0x0e << 2)
+#define TDMOUT_MASK_VAL_OFFS  (0x0f << 2)
+#define TDMOUT_CTRL2_OFFS_D3G (0x160 << 2)
 
 #define EE_AUDIO_TDMOUT_A_CTRL0         (0x140 << 2)
 #define EE_AUDIO_TDMOUT_B_CTRL0         (0x150 << 2)
@@ -175,3 +192,5 @@ typedef enum {
 
 // clang-format on
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_AUDIO_REGS_H_

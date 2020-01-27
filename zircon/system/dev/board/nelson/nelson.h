@@ -82,7 +82,7 @@ constexpr uint32_t GPIO_HW_ID2 = (S905D2_GPIOZ(3));
 constexpr uint8_t I2C_BACKLIGHT_ADDR = (0x2C);
 constexpr uint8_t I2C_FOCALTECH_TOUCH_ADDR = (0x38);
 constexpr uint8_t I2C_AMBIENTLIGHT_ADDR = (0x39);
-constexpr uint8_t I2C_AUDIO_CODEC_ADDR = (0x48);
+constexpr uint8_t I2C_AUDIO_CODEC_ADDR = (0x31);  // For Nelson P1.
 constexpr uint8_t I2C_GOODIX_TOUCH_ADDR = (0x5d);
 
 class Nelson;

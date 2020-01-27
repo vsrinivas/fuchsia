@@ -39,7 +39,7 @@ fbl::String GetTestFilter() {
   zx_status_t status;
   size_t actual_size;
   zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(channel.get(), &status, board_name,
-                                                               sizeof(board_name), &actual_size);
+                                                                sizeof(board_name), &actual_size);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     return "Unknown";
   }
@@ -183,7 +183,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "tcs3400-light/tcs-3400/hid-device-000",
       "sys/platform/05:03:11/clocks",
       "aml-thermal/thermal",
-      "AstroAudio/astro-audio-out",
+      "astro-audio-out",
       "sys/platform/05:03:13/astro-audio-in",
       "aml-secure-mem/aml-securemem",
       //"sys/platform/05:05:3/aml-uart/serial/bt-transport-uart/bcm-hci",
@@ -207,6 +207,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/aml-gpu",
       "sys/platform/05:00:21/nelson-usb-phy",
+      "nelson-audio-out",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",

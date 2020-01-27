@@ -9,152 +9,130 @@
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-meson/sm1-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
-#include "nelson.h"
 #include "nelson-gpios.h"
+#include "nelson.h"
 
 namespace nelson {
-
-static const pbus_mmio_t audio_mmios[] = {
-    {.base = S905D2_EE_AUDIO_BASE, .length = S905D2_EE_AUDIO_LENGTH},
-};
-
-static const pbus_bti_t tdm_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_AUDIO_OUT,
-    },
-};
-
-static pbus_dev_t tdm_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "NelsonAudio";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
-  dev.did = PDEV_DID_AMLOGIC_TDM;
-  dev.mmio_list = audio_mmios;
-  dev.mmio_count = countof(audio_mmios);
-  dev.bti_list = tdm_btis;
-  dev.bti_count = countof(tdm_btis);
-  return dev;
-}();
-
-static const zx_bind_inst_t root_match[] = {
+constexpr zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
-
-static const zx_bind_inst_t i2c_match[] = {
+static const zx_bind_inst_t ref_out_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, NELSON_I2C_3),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_AUDIO_CODEC_ADDR),
 };
-
-static const zx_bind_inst_t fault_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
+static const zx_bind_inst_t ref_out_codec_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MAXIM),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MAXIM_MAX98373),  // For Nelson P1.
+};
+static const zx_bind_inst_t ref_out_clk0_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, sm1_clk::CLK_HIFI_PLL),
 };
 
-static const zx_bind_inst_t enable_gpio_match[] = {
+static const device_component_part_t ref_out_i2c_component[] = {
+    {countof(root_match), root_match},
+    {countof(ref_out_i2c_match), ref_out_i2c_match},
+};
+static const device_component_part_t ref_out_codec_component[] = {
+    {countof(root_match), root_match},
+    {countof(ref_out_codec_match), ref_out_codec_match},
+};
+
+static const zx_bind_inst_t ref_out_enable_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
 };
-
-static const device_component_part_t i2c_component[] = {
+static const zx_bind_inst_t ref_out_fault_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
+};
+static const device_component_part_t ref_out_enable_gpio_component[] = {
     {countof(root_match), root_match},
-    {countof(i2c_match), i2c_match},
+    {countof(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
 };
-
-static const device_component_part_t fault_gpio_component[] = {
+static const device_component_part_t ref_out_fault_gpio_component[] = {
     {countof(root_match), root_match},
-    {countof(fault_gpio_match), fault_gpio_match},
+    {countof(ref_out_fault_gpio_match), ref_out_fault_gpio_match},
 };
-
-static const device_component_part_t enable_gpio_component[] = {
+static const device_component_part_t ref_out_clk0_component[] = {
     {countof(root_match), root_match},
-    {countof(enable_gpio_match), enable_gpio_match},
+    {countof(ref_out_clk0_match), ref_out_clk0_match},
 };
 
-static const device_component_t components[] = {
-    {countof(i2c_component), i2c_component},
-    {countof(fault_gpio_component), fault_gpio_component},
-    {countof(enable_gpio_component), enable_gpio_component},
+static const device_component_t codec_components[] = {
+    {countof(ref_out_i2c_component), ref_out_i2c_component},
+    {countof(ref_out_enable_gpio_component), ref_out_enable_gpio_component},
+    {countof(ref_out_enable_gpio_component), ref_out_fault_gpio_component},
 };
-
-// PDM input configurations
-static const pbus_mmio_t pdm_mmios[] = {
-    {.base = S905D2_EE_PDM_BASE, .length = S905D2_EE_PDM_LENGTH},
-    {.base = S905D2_EE_AUDIO_BASE, .length = S905D2_EE_AUDIO_LENGTH},
+static const device_component_t controller_components[] = {
+    {countof(ref_out_codec_component), ref_out_codec_component},
+    {countof(ref_out_clk0_component), ref_out_clk0_component},
 };
-
-static const pbus_bti_t pdm_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_AUDIO_IN,
-    },
-};
-
-static const pbus_dev_t pdm_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "gauss-audio-in";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
-  dev.did = PDEV_DID_NELSON_PDM;
-  dev.mmio_list = pdm_mmios;
-  dev.mmio_count = countof(pdm_mmios);
-  dev.bti_list = pdm_btis;
-  dev.bti_count = countof(pdm_btis);
-  return dev;
-}();
 
 zx_status_t Nelson::AudioInit() {
-  zx_status_t status;
+  const pbus_mmio_t mmios_out[] = {
+      {
+          .base = S905D3_EE_AUDIO_BASE,
+          .length = S905D3_EE_AUDIO_LENGTH,
+      },
+  };
 
-  status = clk_impl_.Disable(sm1_clk::CLK_HIFI_PLL);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d\n",
-           __func__, status);
-    return status;
-  }
+  const pbus_bti_t btis_out[] = {
+      {
+          .iommu_index = 0,
+          .bti_id = BTI_AUDIO_OUT,
+      },
+  };
 
-  status = clk_impl_.SetRate(sm1_clk::CLK_HIFI_PLL, 1536000000);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d\n",
-           __func__, status);
-    return status;
-  }
+  pbus_dev_t controller_out = {};
+  controller_out.name = "nelson-audio-out";
+  controller_out.vid = PDEV_VID_AMLOGIC;
+  controller_out.pid = PDEV_PID_AMLOGIC_S905D3;
+  controller_out.did = PDEV_DID_AMLOGIC_TDM;
+  controller_out.mmio_list = mmios_out;
+  controller_out.mmio_count = countof(mmios_out);
+  controller_out.bti_list = btis_out;
+  controller_out.bti_count = countof(btis_out);
 
-  status = clk_impl_.Enable(sm1_clk::CLK_HIFI_PLL);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d\n",
-           __func__, status);
-    return status;
-  }
-
-  // TDM pin assignments
+  // TDM pin assignments.
   gpio_impl_.SetAltFunction(S905D2_GPIOA(1), S905D2_GPIOA_1_TDMB_SCLK_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(2), S905D2_GPIOA_2_TDMB_FS_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(3), S905D2_GPIOA_3_TDMB_D0_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(6), S905D2_GPIOA_6_TDMB_DIN3_FN);
 
-  // PDM pin assignments
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(7), S905D2_GPIOA_7_PDM_DCLK_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(8), S905D2_GPIOA_8_PDM_DIN0_FN);
+  // CODEC pin assignments.
+  gpio_impl_.ConfigOut(S905D2_GPIOA(5), 0);
 
-  gpio_impl_.ConfigOut(S905D2_GPIOA(5), 1);
+  // Output devices.
+  constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
+                                        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
 
-  status = pbus_.CompositeDeviceAdd(&tdm_dev, components, countof(components), UINT32_MAX);
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = codec_components,
+      .components_count = countof(codec_components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  auto status = DdkAddComposite("audio-max98373", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FILE__, status);
     return status;
   }
 
-  status = pbus_.DeviceAdd(&pdm_dev);
+  status = pbus_.CompositeDeviceAdd(&controller_out, controller_components,
+                                    countof(controller_components), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+    zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
     return status;
   }
-
   return ZX_OK;
 }
 

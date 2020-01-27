@@ -30,6 +30,9 @@ constexpr pbus_mmio_t clk_mmios[] = {
 
 constexpr clock_id_t clock_ids[] = {
   {sm1_clk::CLK_RESET},   // PLACEHOLDER.
+
+  // For audio driver.
+  {sm1_clk::CLK_HIFI_PLL},
 };
 
 constexpr pbus_metadata_t clock_metadata[] = {

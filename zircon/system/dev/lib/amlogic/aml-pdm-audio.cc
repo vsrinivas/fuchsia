@@ -58,7 +58,7 @@ std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
                                                    ddk::MmioBuffer audio_mmio,
                                                    ee_audio_mclk_src_t pdm_clk_src,
                                                    uint32_t sysclk_div, uint32_t dclk_div,
-                                                   aml_toddr_t toddr_dev) {
+                                                   aml_toddr_t toddr_dev, AmlVersion version) {
   // TODDR A has 256 64-bit lines in the FIFO, B and C have 128.
   uint32_t fifo_depth = 128 * 8;  // in bytes.
   if (toddr_dev == TODDR_A) {
@@ -68,7 +68,7 @@ std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
   fbl::AllocChecker ac;
   auto pdm = std::unique_ptr<AmlPdmDevice>(
       new (&ac) AmlPdmDevice(std::move(pdm_mmio), std::move(audio_mmio), pdm_clk_src, sysclk_div,
-                             dclk_div, toddr_dev, fifo_depth));
+                             dclk_div, toddr_dev, fifo_depth, version));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Could not create AmlPdmDevice\n", __func__);
     return nullptr;

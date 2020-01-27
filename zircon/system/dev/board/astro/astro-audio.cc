@@ -11,8 +11,8 @@
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-#include "astro.h"
 #include "astro-gpios.h"
+#include "astro.h"
 
 namespace astro {
 
@@ -29,7 +29,7 @@ static const pbus_bti_t tdm_btis[] = {
 
 static pbus_dev_t tdm_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "AstroAudio";
+  dev.name = "astro-audio-out";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
   dev.did = PDEV_DID_AMLOGIC_TDM;
@@ -96,10 +96,10 @@ static const pbus_bti_t pdm_btis[] = {
 
 static const pbus_dev_t pdm_dev = []() {
   pbus_dev_t dev = {};
-  dev.name = "gauss-audio-in";
+  dev.name = "astro-audio-in";
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
-  dev.did = PDEV_DID_ASTRO_PDM;
+  dev.did = PDEV_DID_AMLOGIC_PDM;
   dev.mmio_list = pdm_mmios;
   dev.mmio_count = countof(pdm_mmios);
   dev.bti_list = pdm_btis;
@@ -112,22 +112,19 @@ zx_status_t Astro::AudioInit() {
 
   status = clk_impl_.Disable(g12a_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d\n",
-           __func__, status);
+    zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
     return status;
   }
 
   status = clk_impl_.SetRate(g12a_clk::CLK_HIFI_PLL, 1536000000);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d\n",
-           __func__, status);
+    zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
     return status;
   }
 
   status = clk_impl_.Enable(g12a_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d\n",
-           __func__, status);
+    zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
     return status;
   }
 

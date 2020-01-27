@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <soc/aml-common/aml-audio-regs.h>
+#include <soc/aml-common/aml-audio.h>
 /*
     Presently assumes stereo input with both streams multiplexed on the same
     PDM input line. (TODO: support up to 8 channels to refactor gauss to use this)
@@ -23,7 +24,8 @@ class AmlPdmDevice {
 
   static std::unique_ptr<AmlPdmDevice> Create(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio,
                                               ee_audio_mclk_src_t pdm_clk_src, uint32_t sclk_div,
-                                              uint32_t dclk_div, aml_toddr_t toddr_dev);
+                                              uint32_t dclk_div, aml_toddr_t toddr_dev,
+                                              AmlVersion version = AmlVersion::kS905D2G);
 
   // Sets the buffer/length pointers for dma engine
   //  must resize in lower 32-bits of address space
@@ -66,7 +68,8 @@ class AmlPdmDevice {
   friend class std::default_delete<AmlPdmDevice>;
 
   AmlPdmDevice(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio, ee_audio_mclk_src_t clk_src,
-               uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr, uint32_t fifo_depth)
+               uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr, uint32_t fifo_depth,
+               AmlVersion version)
       : fifo_depth_(fifo_depth),
         toddr_ch_(toddr),
         clk_src_(clk_src),
@@ -74,7 +77,8 @@ class AmlPdmDevice {
         dclk_div_(dclk_div),
         toddr_base_(GetToddrBase(toddr)),
         pdm_mmio_(std::move(pdm_mmio)),
-        audio_mmio_(std::move(audio_mmio)) {}
+        audio_mmio_(std::move(audio_mmio)),
+        version_(version) {}
 
   ~AmlPdmDevice() = default;
 
@@ -113,6 +117,7 @@ class AmlPdmDevice {
   const zx_off_t toddr_base_;  // base offset of frddr ch used by this instance
   const ddk::MmioBuffer pdm_mmio_;
   const ddk::MmioBuffer audio_mmio_;
+  const AmlVersion version_;
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_PDM_AUDIO_H_

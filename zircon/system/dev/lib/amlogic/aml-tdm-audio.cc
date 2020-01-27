@@ -13,7 +13,7 @@
 // static
 std::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
                                                    aml_tdm_out_t tdm_dev, aml_frddr_t frddr_dev,
-                                                   aml_tdm_mclk_t mclk) {
+                                                   aml_tdm_mclk_t mclk, AmlVersion version) {
   // FRDDR A has 256 64-bit lines in the FIFO, B and C have 128.
   uint32_t fifo_depth = 128 * 8;  // in bytes.
   if (frddr_dev == FRDDR_A) {
@@ -22,7 +22,7 @@ std::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio, ee_audi
 
   fbl::AllocChecker ac;
   auto tdm = std::unique_ptr<AmlTdmDevice>(
-      new (&ac) AmlTdmDevice(std::move(mmio), src, tdm_dev, frddr_dev, mclk, fifo_depth));
+      new (&ac) AmlTdmDevice(std::move(mmio), src, tdm_dev, frddr_dev, mclk, fifo_depth, version));
   if (!ac.check()) {
     return nullptr;
   }
@@ -37,11 +37,20 @@ void AmlTdmDevice::InitRegs() {
   AudioClkEna((EE_AUDIO_CLK_GATE_TDMOUTA << tdm_ch_) | (EE_AUDIO_CLK_GATE_FRDDRA << frddr_ch_) |
               EE_AUDIO_CLK_GATE_ARB);
 
+  zx_off_t mclk_a = {};
+  switch (version_) {
+    case AmlVersion::kS905D2G:
+      mclk_a = EE_AUDIO_MCLK_A_CTRL;
+      break;
+    case AmlVersion::kS905D3G:
+      mclk_a = EE_AUDIO_MCLK_A_CTRL_D3G;
+      break;
+  }
   // Set chosen mclk channels input to selected source
   // Since this is init, set the divider to max value assuming it will
   //    be set to proper value later (slower is safer from circuit standpoint)
   // Leave disabled for now.
-  zx_off_t ptr = EE_AUDIO_MCLK_A_CTRL + (mclk_ch_ * sizeof(uint32_t));
+  zx_off_t ptr = mclk_a + (mclk_ch_ * sizeof(uint32_t));
   mmio_.Write32((clk_src_ << 24) | 0xffff, ptr);
 
   // Set the sclk and lrclk sources to the chosen mclk channel
@@ -56,7 +65,14 @@ void AmlTdmDevice::InitRegs() {
   // Interrupts off
   // ack delay = 0
   // set destination tdm block and enable that selection
-  mmio_.Write32(tdm_ch_ | (1 << 3), GetFrddrOffset(FRDDR_CTRL0_OFFS));
+  switch (version_) {
+    case AmlVersion::kS905D2G:
+      mmio_.Write32(tdm_ch_ | (1 << 3), GetFrddrOffset(FRDDR_CTRL0_OFFS));
+      break;
+    case AmlVersion::kS905D3G:
+      mmio_.Write32(tdm_ch_ | (1 << 4), GetFrddrOffset(FRDDR_CTRL2_OFFS_D3G));
+      break;
+  }
   // use entire fifo, start transfer request when fifo is at 1/2 full
   // set the magic force end bit(12) to cause fetch from start
   //    -this only happens when the bit is set from 0->1 (edge)
@@ -78,15 +94,24 @@ void AmlTdmDevice::InitRegs() {
   // it does this per pad (0, 1, 2).  These pads are tied to the TDM channel in use
   // (this is not specified in the datasheets but confirmed empirically) such that TDM_OUT_A
   // corresponds to pad 0, TDM_OUT_B to pad 1, and TDM_OUT_C to pad 2.
+  uint32_t pad1 = {};
+  switch (version_) {
+    case AmlVersion::kS905D2G:
+      pad1 = EE_AUDIO_MST_PAD_CTRL1;
+      break;
+    case AmlVersion::kS905D3G:
+      pad1 = EE_AUDIO_MST_PAD_CTRL1_D3G;
+      break;
+  }
   switch (tdm_ch_) {
     case TDM_OUT_A:
-      mmio_.Write32((mclk_ch_ << 16) | (mclk_ch_ << 0), EE_AUDIO_MST_PAD_CTRL1);
+      mmio_.Write32((mclk_ch_ << 16) | (mclk_ch_ << 0), pad1);
       break;
     case TDM_OUT_B:
-      mmio_.Write32((mclk_ch_ << 20) | (mclk_ch_ << 4), EE_AUDIO_MST_PAD_CTRL1);
+      mmio_.Write32((mclk_ch_ << 20) | (mclk_ch_ << 4), pad1);
       break;
     case TDM_OUT_C:
-      mmio_.Write32((mclk_ch_ << 24) | (mclk_ch_ << 8), EE_AUDIO_MST_PAD_CTRL1);
+      mmio_.Write32((mclk_ch_ << 24) | (mclk_ch_ << 8), pad1);
       break;
   }
 }
@@ -98,7 +123,16 @@ zx_status_t AmlTdmDevice::SetMclkDiv(uint32_t div) {
   // check that divider is in range
   ZX_DEBUG_ASSERT(div < (1 << kMclkDivBits));
 
-  zx_off_t ptr = EE_AUDIO_MCLK_A_CTRL + (mclk_ch_ * sizeof(uint32_t));
+  zx_off_t mclk_a = {};
+  switch (version_) {
+    case AmlVersion::kS905D2G:
+      mclk_a = EE_AUDIO_MCLK_A_CTRL;
+      break;
+    case AmlVersion::kS905D3G:
+      mclk_a = EE_AUDIO_MCLK_A_CTRL_D3G;
+      break;
+  }
+  zx_off_t ptr = mclk_a + (mclk_ch_ * sizeof(uint32_t));
   // disable and clear out old divider value
   mmio_.ClearBits32((1 << 31) | ((1 << kMclkDivBits) - 1), ptr);
 
@@ -136,10 +170,24 @@ zx_status_t AmlTdmDevice::SetSclkDiv(uint32_t sdiv, uint32_t lrduty, uint32_t lr
 zx_status_t AmlTdmDevice::SetMClkPad(aml_tdm_mclk_pad_t mclk_pad) {
   switch (mclk_pad) {
     case MCLK_PAD_0:
-      mmio_.Write32(mclk_ch_, EE_AUDIO_MST_PAD_CTRL0);
+      switch (version_) {
+        case AmlVersion::kS905D2G:
+          mmio_.Write32(mclk_ch_, EE_AUDIO_MST_PAD_CTRL0);
+          break;
+        case AmlVersion::kS905D3G:
+          mmio_.Write32((mclk_ch_ << 8) | (1 << 15), EE_AUDIO_MST_PAD_CTRL0);  // Bit 15 to enable.
+          break;
+      }
       break;
     case MCLK_PAD_1:
-      mmio_.Write32(mclk_ch_, EE_AUDIO_MST_PAD_CTRL1);
+      switch (version_) {
+        case AmlVersion::kS905D2G:
+          mmio_.Write32(mclk_ch_ << 4, EE_AUDIO_MST_PAD_CTRL0);
+          break;
+        case AmlVersion::kS905D3G:
+          mmio_.Write32((mclk_ch_ << 24) | (1 << 31), EE_AUDIO_MST_PAD_CTRL0);  // Bit 31 to enable.
+          break;
+      }
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
@@ -179,10 +227,21 @@ zx_status_t AmlTdmDevice::SetBuffer(zx_paddr_t buf, size_t len) {
 */
 void AmlTdmDevice::ConfigTdmOutSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
                                     uint8_t bits_per_sample, uint8_t mix_mask) {
-  uint32_t reg = bits_per_slot | (num_slots << 5) | (bit_offset << 15) | (mix_mask << 20);
-  mmio_.Write32(reg, GetTdmOffset(TDMOUT_CTRL0_OFFS));
+  switch (version_) {
+    case AmlVersion::kS905D2G: {
+      uint32_t reg0 = bits_per_slot | (num_slots << 5) | (bit_offset << 15) | (mix_mask << 20);
+      mmio_.Write32(reg0, GetTdmOffset(TDMOUT_CTRL0_OFFS));
+    } break;
+    case AmlVersion::kS905D3G: {
+      uint32_t reg0 =
+          bits_per_slot | (num_slots << 5) | (bit_offset << 15) | (1 << 31);  // Bit 31 to enable.
+      mmio_.Write32(reg0, GetTdmOffset(TDMOUT_CTRL0_OFFS));
+      uint32_t reg2 = (mix_mask << 0);
+      mmio_.Write32(reg2, GetTdmOffset(TDMOUT_CTRL2_OFFS_D3G));
+    } break;
+  }
 
-  reg = (bits_per_sample << 8) | (frddr_ch_ << 24);
+  uint32_t reg = (bits_per_sample << 8) | (frddr_ch_ << 24);
   if (bits_per_sample <= 8) {
     // 8 bit sample, left justify in frame, split 64-bit dma fetch into 8 samples
     reg |= (0 << 4);

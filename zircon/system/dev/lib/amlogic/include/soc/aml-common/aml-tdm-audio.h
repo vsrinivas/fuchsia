@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <soc/aml-common/aml-audio-regs.h>
+#include <soc/aml-common/aml-audio.h>
 
 class AmlTdmDevice {
  public:
@@ -23,7 +24,8 @@ class AmlTdmDevice {
 
   static std::unique_ptr<AmlTdmDevice> Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
                                               aml_tdm_out_t tdm_dev, aml_frddr_t frddr_dev,
-                                              aml_tdm_mclk_t mclk);
+                                              aml_tdm_mclk_t mclk,
+                                              AmlVersion version = AmlVersion::kS905D2G);
 
   // Configure an mclk channel divider
   zx_status_t SetMclkDiv(uint32_t div);
@@ -87,7 +89,7 @@ class AmlTdmDevice {
   friend class std::default_delete<AmlTdmDevice>;
 
   AmlTdmDevice(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
-               aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth)
+               aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth, AmlVersion version)
       : fifo_depth_(fifo_depth),
         tdm_ch_(tdm),
         frddr_ch_(frddr),
@@ -95,7 +97,8 @@ class AmlTdmDevice {
         clk_src_(clk_src),
         frddr_base_(GetFrddrBase(frddr)),
         tdm_base_(GetTdmBase(tdm)),
-        mmio_(std::move(mmio)) {}
+        mmio_(std::move(mmio)),
+        version_(version) {}
 
   ~AmlTdmDevice() = default;
 
@@ -140,6 +143,8 @@ class AmlTdmDevice {
   zx_off_t GetFrddrOffset(zx_off_t off) { return frddr_base_ + off; }
   /* Get the register block offset for our tdm block */
   zx_off_t GetTdmOffset(zx_off_t off) { return tdm_base_ + off; }
+
+  const AmlVersion version_;
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_TDM_AUDIO_H_
