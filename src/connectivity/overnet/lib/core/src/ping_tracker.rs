@@ -4,7 +4,16 @@
 
 //! Schedule pings when they need to be scheduled, provide an estimation of round trip time
 
+use crate::future_help::{log_errors, Observable, Observer};
+use crate::runtime::{maybe_wait_until, spawn};
+use anyhow::{format_err, Error};
+use futures::{prelude::*, select};
+use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
+use std::convert::TryInto;
+use std::pin::Pin;
+use std::rc::Rc;
+use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
 const MIN_PING_SPACING: Duration = Duration::from_millis(100);
@@ -21,278 +30,292 @@ pub struct Pong {
     pub queue_time: u64,
 }
 
-/// Structure returning actions that need to be scheduled in response to a PingTracker operation
-#[must_use = "This result may contain actions that users need to act upon"]
-#[derive(Debug, PartialEq)]
-pub struct PingTrackerResult {
-    pub sched_timeout: Option<Duration>,
-    pub sched_send: bool,
-    pub new_round_trip_time: bool,
-}
-
-impl PingTrackerResult {
-    pub fn anything_to_do(&self) -> bool {
-        self.sched_send || self.new_round_trip_time || self.sched_timeout.is_some()
-    }
-}
-
 #[derive(Debug)]
 struct Sample {
     when: Instant,
     rtt_us: i64,
 }
 
-/// Schedule pings when they need to be scheduled, provide an estimation of round trip time
-#[derive(Debug)]
-pub struct PingTracker {
-    samples: VecDeque<Sample>,
-    mean: i64,
-    variance: i64,
-    sent_ping_map: HashMap<u64, Instant>,
-    sent_ping_list: VecDeque<(u64, Instant)>,
-    ping_spacing: Duration,
-    used_ping_spacing: bool,
-    last_ping_sent: Option<Instant>,
-    scheduled_timeout: Option<Instant>,
-    scheduled_send: bool,
+struct State {
+    round_trip_time: Observable<Option<Duration>>,
+    send_ping: bool,
+    on_send_ping: Option<Waker>,
+    sent_ping: Option<(u64, Instant)>,
+    on_sent_ping: Option<Waker>,
+    send_pong: Option<(u64, Instant)>,
+    on_send_pong: Option<Waker>,
+    received_pong: Option<(Pong, Instant)>,
+    on_received_pong: Option<Waker>,
+    closed: bool,
+    on_closed: Option<Waker>,
     next_ping_id: u64,
-    published_mean: i64,
 }
+
+struct OnSentPing<'a>(&'a RefCell<State>);
+impl<'a> Future for OnSentPing<'a> {
+    type Output = (u64, Instant);
+    fn poll(self: Pin<&mut Self>, ctx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        let mut inner = Pin::into_inner(self).0.borrow_mut();
+        match inner.sent_ping.take() {
+            Some(r) => Poll::Ready(r),
+            None => {
+                inner.on_sent_ping = Some(ctx.waker().clone());
+                Poll::Pending
+            }
+        }
+    }
+}
+
+struct OnReceivedPong<'a>(&'a RefCell<State>);
+impl<'a> Future for OnReceivedPong<'a> {
+    type Output = (Pong, Instant);
+    fn poll(self: Pin<&mut Self>, ctx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        let mut inner = Pin::into_inner(self).0.borrow_mut();
+        match inner.received_pong.take() {
+            Some(r) => Poll::Ready(r),
+            None => {
+                inner.on_received_pong = Some(ctx.waker().clone());
+                Poll::Pending
+            }
+        }
+    }
+}
+
+struct Closed<'a>(&'a RefCell<State>);
+impl<'a> Future for Closed<'a> {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, ctx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        let mut inner = Pin::into_inner(self).0.borrow_mut();
+        if inner.closed {
+            Poll::Ready(())
+        } else {
+            inner.on_closed = Some(ctx.waker().clone());
+            Poll::Pending
+        }
+    }
+}
+
+async fn ping_pong(state: Rc<RefCell<State>>) -> Result<(), Error> {
+    let mut samples = VecDeque::<Sample>::new();
+    let mut variance = 0i64;
+    let mut sent_ping_map = HashMap::<u64, Instant>::new();
+    let mut sent_ping_list = VecDeque::<(u64, Instant)>::new();
+    let mut ping_spacing = Duration::from_millis(100);
+    let mut last_ping_sent = Instant::now();
+    let mut timeout = None;
+    let mut published_mean = 0i64;
+    loop {
+        #[derive(Debug)]
+        enum Action {
+            Timeout,
+            SentPing(u64, Instant),
+            ReceivedPong(Pong, Instant),
+        };
+        // Wait for event
+        let action = select! {
+            _ = maybe_wait_until(timeout).fuse() => Action::Timeout,
+            p = OnSentPing(&*state).fuse() => Action::SentPing(p.0, p.1),
+            p = OnReceivedPong(&*state).fuse() => Action::ReceivedPong(p.0, p.1),
+            _ = Closed(&*state).fuse() => return Ok(()),
+        };
+        // Perform selected action
+        let variance_before = variance;
+        let now = Instant::now();
+        let mut state = state.borrow_mut();
+        match action {
+            Action::Timeout => {
+                timeout = None;
+                if let Some(epoch) = now.checked_sub(MAX_SAMPLE_AGE) {
+                    while samples.len() > 3 && samples[0].when < epoch {
+                        samples.pop_front();
+                    }
+                }
+                if let Some(epoch) = now.checked_sub(MAX_PING_AGE) {
+                    while sent_ping_list.len() > 1 && sent_ping_list[0].1 < epoch {
+                        sent_ping_map.remove(&sent_ping_list.pop_front().unwrap().0);
+                    }
+                }
+                state.send_ping = true;
+                state.on_send_ping.take().map(|w| w.wake());
+            }
+            Action::SentPing(id, when) => {
+                last_ping_sent = when;
+                sent_ping_map.insert(id, when);
+                sent_ping_list.push_back((id, when));
+                sent_ping_map.insert(id, when);
+            }
+            Action::ReceivedPong(Pong { id, queue_time }, when) => {
+                if let Some(ping_sent) = sent_ping_map.get(&id) {
+                    if let Some(rtt) =
+                        (now - *ping_sent).checked_sub(Duration::from_micros(queue_time))
+                    {
+                        samples.push_back(Sample {
+                            when,
+                            rtt_us: rtt.as_micros().try_into().unwrap_or(std::i64::MAX),
+                        });
+                    }
+                }
+            }
+        }
+        // Update statistics
+        let mut mean = 0i64;
+        let mut total = 0i64;
+        let n = samples.len() as i64;
+        if n == 0i64 {
+            variance = 0;
+        } else {
+            for Sample { rtt_us, .. } in samples.iter() {
+                total = total
+                    .checked_add(*rtt_us)
+                    .ok_or_else(|| format_err!("Overflow calculating mean"))?;
+            }
+            mean = total / n;
+            if n == 1i64 {
+                variance = 0;
+            } else {
+                let mut numer = 0;
+                for Sample { rtt_us, .. } in samples.iter() {
+                    numer += square(rtt_us - mean)
+                        .ok_or_else(|| format_err!("Overflow calculating variance"))?;
+                }
+                variance = numer / (n - 1i64);
+            }
+        }
+        // Publish state
+        if variance > variance_before {
+            ping_spacing /= 2;
+            if ping_spacing < MIN_PING_SPACING {
+                ping_spacing = MIN_PING_SPACING;
+            }
+        } else if variance < variance_before {
+            ping_spacing = ping_spacing * 5 / 4;
+            if ping_spacing > MAX_PING_SPACING {
+                ping_spacing = MAX_PING_SPACING;
+            }
+        }
+
+        let new_round_trip_time = mean > 0
+            && (published_mean <= 0 || (published_mean - mean).abs() > published_mean / 10);
+        if new_round_trip_time {
+            published_mean = mean;
+            eprintln!("PUBLISH MEAN: {} variance={}", mean, variance);
+            state.round_trip_time.push(Some(Duration::from_micros(mean as u64)));
+        }
+
+        if !state.send_ping {
+            timeout = Some(last_ping_sent + ping_spacing);
+        }
+    }
+}
+
+/// Schedule pings when they need to be scheduled, provide an estimation of round trip time
+pub struct PingTracker(Rc<RefCell<State>>);
 
 fn square(a: i64) -> Option<i64> {
     a.checked_mul(a)
 }
 
+impl Drop for PingTracker {
+    fn drop(&mut self) {
+        let mut state = self.0.borrow_mut();
+        state.closed = true;
+        state.on_closed.take().map(|w| w.wake());
+    }
+}
+
 impl PingTracker {
     /// Setup a new (empty) PingTracker
-    pub fn new() -> (PingTracker, PingTrackerResult) {
-        let tracker = PingTracker {
-            samples: VecDeque::new(),
-            mean: 0,
-            variance: 0,
-            sent_ping_map: HashMap::new(),
-            sent_ping_list: VecDeque::new(),
-            ping_spacing: Duration::from_millis(100),
-            used_ping_spacing: true,
-            last_ping_sent: None,
-            scheduled_send: true,
-            scheduled_timeout: None,
+    pub fn new() -> PingTracker {
+        let state = Rc::new(RefCell::new(State {
+            round_trip_time: Observable::new(None),
+            send_ping: true,
+            on_send_ping: None,
+            sent_ping: None,
+            on_sent_ping: None,
+            send_pong: None,
+            on_send_pong: None,
+            received_pong: None,
+            on_received_pong: None,
+            closed: false,
+            on_closed: None,
             next_ping_id: 1,
-            published_mean: 0,
-        };
-        let ptres =
-            PingTrackerResult { sched_send: true, sched_timeout: None, new_round_trip_time: false };
-        (tracker, ptres)
+        }));
+        spawn(log_errors(ping_pong(state.clone()), "Failed ping pong"));
+        Self(state)
     }
 
     /// Query current round trip time
+    pub fn new_round_trip_time_observer(&self) -> Observer<Option<Duration>> {
+        self.0.borrow().round_trip_time.new_observer()
+    }
+
     pub fn round_trip_time(&self) -> Option<Duration> {
-        if self.mean > 0 {
-            Some(Duration::from_micros(self.mean as u64))
+        self.0.borrow().round_trip_time.current()
+    }
+
+    pub fn take_send_ping(&self, ctx: &mut Context<'_>) -> Option<u64> {
+        let mut state = self.0.borrow_mut();
+        if state.send_ping {
+            state.send_ping = false;
+            let id = state.next_ping_id;
+            state.next_ping_id += 1;
+            let now = Instant::now();
+            state.sent_ping = Some((id, now));
+            state.on_sent_ping.take().map(|w| w.wake());
+            Some(id)
         } else {
+            state.on_send_ping = Some(ctx.waker().clone());
             None
         }
     }
 
-    fn send_ping(&mut self, now: Instant) -> Option<u64> {
-        self.last_ping_sent = Some(now);
-        let id = self.next_ping_id;
-        self.next_ping_id += 1;
-        self.sent_ping_map.insert(id, now);
-        self.sent_ping_list.push_back((id, now));
-        Some(id)
-    }
-
-    /// Returns a ping id if a ping needs to be sent, updating tracking to indicate that the ping
-    /// was sent.
-    pub fn maybe_send_ping(
-        &mut self,
-        now: Instant,
-        empty_packet: bool,
-    ) -> (Option<u64>, PingTrackerResult) {
-        self.mutate(now, |this| {
-            if empty_packet {
-                this.scheduled_send = false;
-            }
-            if let Some(last_ping_sent) = this.last_ping_sent {
-                if now >= last_ping_sent + this.ping_spacing {
-                    this.send_ping(now)
-                } else {
-                    None
-                }
-            } else {
-                this.send_ping(now)
-            }
-        })
-    }
-
-    /// Upon timeout: check whether that timeout causes a ping to need to be scheduled
-    pub fn on_timeout(&mut self, now: Instant) -> PingTrackerResult {
-        self.mutate(now, |this| {
-            this.scheduled_timeout = None;
-            if let Some(epoch) = now.checked_sub(MAX_SAMPLE_AGE) {
-                while this.samples.len() > 3 && this.samples[0].when < epoch {
-                    this.samples.pop_front();
-                }
-            }
-            if let Some(epoch) = now.checked_sub(MAX_PING_AGE) {
-                while this.sent_ping_list.len() > 1 && this.sent_ping_list[0].1 < epoch {
-                    this.sent_ping_map.remove(&this.sent_ping_list.pop_front().unwrap().0);
-                }
-            }
-        })
-        .1
+    pub fn take_send_pong(&self, ctx: &mut Context<'_>) -> Option<Pong> {
+        let mut state = self.0.borrow_mut();
+        if let Some((id, ping_received)) = state.send_pong.take() {
+            let queue_time =
+                (Instant::now() - ping_received).as_micros().try_into().unwrap_or(std::u64::MAX);
+            Some(Pong { id, queue_time })
+        } else {
+            state.on_send_pong = Some(ctx.waker().clone());
+            None
+        }
     }
 
     /// Upon receiving a pong: return a set of operations that need to be scheduled
-    pub fn got_pong(&mut self, now: Instant, pong: Pong) -> PingTrackerResult {
-        self.mutate(now, |this| {
-            if let Some(send_time) = this.sent_ping_map.remove(&pong.id) {
-                this.samples
-                    .push_back(Sample { when: now, rtt_us: (now - send_time).as_micros() as i64 });
-            }
-        })
-        .1
+    pub fn got_pong(&self, pong: Pong) {
+        let mut state = self.0.borrow_mut();
+        state.received_pong = Some((pong, Instant::now()));
+        state.on_received_pong.take().map(|w| w.wake());
     }
 
-    fn mutate<R>(
-        &mut self,
-        now: Instant,
-        f: impl FnOnce(&mut Self) -> R,
-    ) -> (R, PingTrackerResult) {
-        let variance_before = self.variance;
-        let r = f(self);
-        if let Err(e) = self.recalculate_stats() {
-            log::trace!("Failed to recalculate statistics: {}", e);
-            self.mean = 0;
-            self.variance = 0;
-        }
-        let variance_after = self.variance;
-
-        if self.used_ping_spacing {
-            if variance_after > variance_before {
-                self.ping_spacing /= 2;
-                if self.ping_spacing < MIN_PING_SPACING {
-                    self.ping_spacing = MIN_PING_SPACING;
-                    self.used_ping_spacing = false;
-                }
-            } else if variance_after < variance_before {
-                self.ping_spacing = self.ping_spacing * 5 / 4;
-                if self.ping_spacing > MAX_PING_SPACING {
-                    self.ping_spacing = MAX_PING_SPACING;
-                    self.used_ping_spacing = false;
-                }
-            }
-        }
-
-        let new_round_trip_time = self.mean > 0
-            && (self.published_mean <= 0
-                || (self.published_mean - self.mean).abs() > self.published_mean / 10);
-        if new_round_trip_time {
-            self.published_mean = self.mean;
-        }
-
-        let mut sched_send = !self.scheduled_send
-            && self.last_ping_sent.map_or(true, |tm| now >= tm + self.ping_spacing);
-
-        let want_timeout = self.last_ping_sent.unwrap_or(now) + 2 * self.ping_spacing;
-        let sched_timeout = if self.scheduled_timeout.map_or(true, |tm| tm > want_timeout) {
-            self.scheduled_timeout = Some(want_timeout);
-            if want_timeout > now {
-                Some(want_timeout - now)
-            } else {
-                sched_send = true;
-                None
-            }
-        } else {
-            None
-        };
-
-        if sched_send {
-            self.scheduled_send = true;
-        }
-
-        (r, PingTrackerResult { sched_send, sched_timeout, new_round_trip_time })
-    }
-
-    fn recalculate_stats(&mut self) -> Result<(), &'static str> {
-        let mut total = 0i64;
-        let n = self.samples.len() as i64;
-        if n == 0 {
-            self.mean = 0;
-            self.variance = 0;
-            return Ok(());
-        }
-        for Sample { rtt_us, .. } in self.samples.iter() {
-            total = total.checked_add(*rtt_us).ok_or("Overflow calculating mean")?;
-        }
-        let mean = total / n;
-        self.mean = mean;
-
-        if n == 1 {
-            self.variance = 0;
-            return Ok(());
-        }
-
-        let mut numer = 0;
-        for Sample { rtt_us, .. } in self.samples.iter() {
-            numer += square(rtt_us - mean).ok_or("Overflow calculating variance")?;
-        }
-        let variance = numer / (n - 1);
-
-        self.variance = variance;
-
-        Ok(())
-    }
-}
-
-/// Track which pings need pongs to be sent
-#[derive(Debug)]
-pub struct PongTracker {
-    pong: Option<(u64, Instant)>,
-}
-
-impl PongTracker {
-    /// Setup a new pong tracker
-    pub fn new() -> PongTracker {
-        PongTracker { pong: None }
-    }
-
-    /// Returns a Pong structure if a pong needs to be sent, updating tracking to indicate that the
-    /// pong was sent.
-    pub fn maybe_send_pong(&mut self) -> Option<Pong> {
-        self.pong.take().map(|(id, received)| Pong {
-            id,
-            queue_time: (Instant::now() - received).as_micros() as u64,
-        })
-    }
-
-    /// Register that a ping was received, and return true if a pong should be sent at the next
-    /// available opportunity
-    pub fn got_ping(&mut self, id: u64) -> bool {
-        self.pong.replace((id, Instant::now())).is_none()
+    pub fn got_ping(&self, ping: u64) {
+        let mut state = self.0.borrow_mut();
+        state.send_pong = Some((ping, Instant::now()));
+        state.on_send_pong.take().map(|w| w.wake());
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn create() {
-        assert_eq!(
-            PingTracker::new().1,
-            PingTrackerResult { sched_send: true, new_round_trip_time: false, sched_timeout: None }
-        );
-    }
+    use crate::router::test_util::run;
+    use crate::runtime::wait_until;
+    use futures::task::noop_waker;
 
     #[test]
     fn published_mean_updates() {
-        let (mut pt, _) = PingTracker::new();
-        let now = Instant::now();
-        let id = pt.send_ping(now).unwrap();
-        let r = pt.got_pong(now + Duration::from_millis(100), Pong { id, queue_time: 100 });
-        assert!(r.new_round_trip_time);
-        assert_ne!(pt.published_mean, 0);
+        run(|| {
+            async move {
+                let pt = PingTracker::new();
+                let mut rtt_obs = pt.new_round_trip_time_observer();
+                assert_eq!(pt.take_send_ping(&mut Context::from_waker(&noop_waker())), Some(1));
+                assert_eq!(rtt_obs.next().await, Some(None));
+                wait_until(Instant::now() + Duration::from_secs(1)).await;
+                pt.got_pong(Pong { id: 1, queue_time: 100 });
+                let next = rtt_obs.next().await;
+                assert_ne!(next, None);
+                assert_ne!(next, Some(None));
+            }
+        })
     }
 }

@@ -64,6 +64,13 @@ impl<T> Observable<T> {
     pub fn push(&self, new: T) {
         self.edit(|current| *current = new);
     }
+
+    pub fn current(&self) -> T
+    where
+        T: Clone,
+    {
+        self.0.borrow().current.clone()
+    }
 }
 
 impl<T: Clone> futures::Stream for Observer<T> {

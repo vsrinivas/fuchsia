@@ -6,11 +6,10 @@ use crate::{
     future_help::{Observable, Observer},
     labels::{Endpoint, NodeId, NodeLinkId},
     peer::Peer,
-    ping_tracker::{PingTracker, PingTrackerResult, PongTracker},
+    ping_tracker::PingTracker,
     route_planner::LinkDescription,
     router::Router,
     routing_label::{RoutingLabel, MAX_ROUTING_LABEL_LENGTH},
-    runtime::{spawn, wait_until},
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::{LinkDiagnosticInfo, LinkMetrics};
@@ -22,15 +21,11 @@ use std::{
     pin::Pin,
     rc::{Rc, Weak},
     task::{Context, Poll, Waker},
-    time::Instant,
 };
 
 struct LinkState {
-    ping_tracker: PingTracker,
-    pong_tracker: PongTracker,
     route_for_peers: Vec<Weak<Peer>>,
     waiting_for_send: Option<Waker>,
-    timeout_generation: u64,
     to_forward: VecDeque<(RoutingLabel, Vec<u8>)>,
     //---- Stats ----
     packets_forwarded: u64,
@@ -46,6 +41,7 @@ pub struct Link {
     own_node_id: NodeId,
     peer_node_id: NodeId,
     node_link_id: NodeLinkId,
+    ping_tracker: PingTracker,
     router: Rc<Router>,
     description: Observable<Option<LinkDescription>>,
     state: RefCell<LinkState>,
@@ -57,18 +53,15 @@ impl Link {
         node_link_id: NodeLinkId,
         router: &Rc<Router>,
     ) -> Result<Rc<Link>, Error> {
-        let (ping_tracker, ptres) = PingTracker::new();
         let link = Rc::new(Link {
             own_node_id: router.node_id(),
             peer_node_id,
             node_link_id,
+            ping_tracker: PingTracker::new(),
             state: RefCell::new(LinkState {
-                ping_tracker,
-                pong_tracker: PongTracker::new(),
                 route_for_peers: Vec::new(),
                 waiting_for_send: None,
                 to_forward: VecDeque::new(),
-                timeout_generation: 0,
                 // Stats
                 packets_forwarded: 0,
                 pings_sent: 0,
@@ -80,7 +73,6 @@ impl Link {
             router: router.clone(),
             description: Observable::new(None),
         });
-        link.handle_ping_tracker_result(ptres).await;
         let weak_link = Rc::downgrade(&link);
         router
             .client_peer(peer_node_id, &weak_link)
@@ -91,7 +83,12 @@ impl Link {
         if let Some(peer) = router.server_peer(peer_node_id, false, &Weak::new()).await? {
             peer.update_link_if_unset(&weak_link).await;
         }
-        router.add_link(&link).await;
+        router
+            .add_link(
+                &link,
+                link.ping_tracker.new_round_trip_time_observer().map(|_| ()).boxed_local(),
+            )
+            .await?;
         Ok(link)
     }
 
@@ -111,7 +108,7 @@ impl Link {
             received_bytes: Some(state.received_bytes),
             pings_sent: Some(state.pings_sent),
             packets_forwarded: Some(state.packets_forwarded),
-            round_trip_time_microseconds: state
+            round_trip_time_microseconds: self
                 .ping_tracker
                 .round_trip_time()
                 .map(|rtt| rtt.as_micros().try_into().unwrap_or(std::u64::MAX)),
@@ -161,16 +158,8 @@ impl Link {
         );
         let packet = &mut packet[..packet_length];
 
-        if let Some(ping) = routing_label.ping {
-            if state.pong_tracker.got_ping(ping) {
-                state.wake_send();
-            }
-        }
-
-        let mut ping_tracker_result = None;
-        if let Some(pong) = routing_label.pong {
-            ping_tracker_result = Some(state.ping_tracker.got_pong(Instant::now(), pong));
-        }
+        routing_label.ping.map(|ping| self.ping_tracker.got_ping(ping));
+        routing_label.pong.map(|pong| self.ping_tracker.got_pong(pong));
 
         if packet.len() == 0 {
             // Packet was just control bits
@@ -179,8 +168,6 @@ impl Link {
 
         // state updates complete
         drop(state);
-
-        ping_tracker_result.map(|r| self.handle_ping_tracker_result(r));
 
         if routing_label.dst == self.own_node_id {
             let peer = match routing_label.target {
@@ -249,19 +236,8 @@ impl Link {
 
     /// Fetch the next frame that should be sent by the link. Returns Ok(None) on link
     /// closure, Ok(Some(packet_length)) on successful read, and an error otherwise.
-    pub async fn next_send(self: &Rc<Link>, frame: &mut [u8]) -> Result<Option<usize>, Error> {
-        loop {
-            match (NextLinkSend { link: self, frame }).await {
-                Ok(Some((n, ping_tracker_result))) => {
-                    self.handle_ping_tracker_result(ping_tracker_result).await;
-                    if n != 0 {
-                        return Ok(Some(n));
-                    }
-                }
-                Ok(None) => return Ok(None),
-                Err(e) => return Err(e),
-            }
-        }
+    pub fn next_send<'a>(self: &'a Rc<Link>, frame: &'a mut [u8]) -> NextLinkSend<'a> {
+        NextLinkSend { link: self, frame }
     }
 
     /// Return an `Observer` against this links description
@@ -269,48 +245,11 @@ impl Link {
         self.description.new_observer()
     }
 
-    async fn handle_ping_tracker_result(self: &Rc<Link>, r: PingTrackerResult) {
-        let mut state = self.state.borrow_mut();
-        if r.sched_send {
-            state.wake_send();
-        }
-        if r.new_round_trip_time {
-            // Trigger a send of link state to peers.
-            self.router.schedule_link_status_update();
-            let desc = state.make_desc();
-            self.description.push(desc);
-        }
-        if let Some(dt) = r.sched_timeout {
-            // TODO: keep a dedicated thing around to do this, cancel previous timeouts
-            state.timeout_generation += 1;
-            let gen = state.timeout_generation;
-            drop(state);
-            let at = std::time::Instant::now() + dt;
-            let link = self.clone();
-            spawn(async move {
-                wait_until(at).await;
-                let mut state = link.state.borrow_mut();
-                if gen == state.timeout_generation {
-                    let r = state.ping_tracker.on_timeout(std::time::Instant::now());
-                    drop(state);
-                    link.handle_ping_tracker_result(r).await;
-                }
-            });
-        }
-    }
-
     pub(crate) fn make_status(&self) -> Option<LinkStatus> {
-        self.state.borrow().make_desc().map(|desc| {
-            let round_trip_time = desc.round_trip_time.as_micros();
-            LinkStatus {
-                local_id: self.node_link_id,
-                to: self.peer_node_id,
-                round_trip_time: if round_trip_time > std::u64::MAX as u128 {
-                    std::u64::MAX
-                } else {
-                    round_trip_time as u64
-                },
-            }
+        self.ping_tracker.round_trip_time().map(|round_trip_time| LinkStatus {
+            local_id: self.node_link_id,
+            to: self.peer_node_id,
+            round_trip_time: round_trip_time.as_micros().try_into().unwrap_or(std::u64::MAX),
         })
     }
 }
@@ -333,12 +272,6 @@ impl From<LinkStatus> for fidl_fuchsia_overnet_protocol::LinkStatus {
 }
 
 impl LinkState {
-    fn make_desc(&self) -> Option<LinkDescription> {
-        self.ping_tracker
-            .round_trip_time()
-            .map(|round_trip_time| LinkDescription { round_trip_time })
-    }
-
     fn wake_send(&mut self) {
         self.waiting_for_send.take().map(|w| w.wake());
     }
@@ -388,19 +321,18 @@ impl<'a> NextLinkSend<'a> {
 }
 
 impl<'a> Future for NextLinkSend<'a> {
-    type Output = Result<Option<(usize, PingTrackerResult)>, Error>;
+    type Output = Result<Option<usize>, Error>;
 
     fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
         let inner = Pin::into_inner(self);
+        let ping = inner.link.ping_tracker.take_send_ping(ctx);
+        let pong = inner.link.ping_tracker.take_send_pong(ctx);
         match inner.poll_next_peer_packet(ctx) {
             Poll::Ready(Ok(None)) => Poll::Ready(Ok(None)),
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
             Poll::Ready(Ok(Some((n, src, dst, target)))) => {
                 let frame = &mut inner.frame;
                 let mut state = inner.link.state.borrow_mut();
-                let (ping, ping_tracker_result) =
-                    state.ping_tracker.maybe_send_ping(Instant::now(), false);
-                let pong = state.pong_tracker.maybe_send_pong();
                 if ping.is_some() {
                     state.pings_sent += 1;
                 }
@@ -423,15 +355,12 @@ impl<'a> Future for NextLinkSend<'a> {
                 let packet_len = n + suffix_len;
                 state.sent_packets += 1;
                 state.sent_bytes += packet_len as u64;
-                Poll::Ready(Ok(Some((packet_len, ping_tracker_result))))
+                Poll::Ready(Ok(Some(packet_len)))
             }
             Poll::Pending => {
                 // No packet from a link, but we should check if we need to ping/pong
                 let frame = &mut inner.frame;
                 let mut state = inner.link.state.borrow_mut();
-                let (ping, ping_tracker_result) =
-                    state.ping_tracker.maybe_send_ping(Instant::now(), true);
-                let pong = state.pong_tracker.maybe_send_pong();
                 if ping.is_some() {
                     state.pings_sent += 1;
                 }
@@ -448,13 +377,9 @@ impl<'a> Future for NextLinkSend<'a> {
                     .context("Formatting control packet for send")?;
                     state.sent_packets += 1;
                     state.sent_bytes += len as u64;
-                    Poll::Ready(Ok(Some((len, ping_tracker_result))))
+                    Poll::Ready(Ok(Some(len)))
                 } else {
-                    if ping_tracker_result.anything_to_do() {
-                        Poll::Ready(Ok(Some((0, ping_tracker_result))))
-                    } else {
-                        Poll::Pending
-                    }
+                    Poll::Pending
                 }
             }
         }

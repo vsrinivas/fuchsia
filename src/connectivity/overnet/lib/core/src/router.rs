@@ -23,7 +23,7 @@ use crate::{
     future_help::{Observable, Observer},
     labels::{Endpoint, NodeId, NodeLinkId},
     link::{Link, LinkStatus},
-    link_status_updater::spawn_link_status_updater,
+    link_status_updater::{spawn_link_status_updater, LinkStatePublisher},
     peer::Peer,
     route_planner::{
         routing_update_channel, spawn_route_planner, RoutingUpdate, RoutingUpdateSender,
@@ -109,7 +109,7 @@ pub struct Router {
     /// All peers.
     peers: Mutex<BTreeMap<(NodeId, Endpoint), Rc<Peer>>>,
     links: Mutex<HashMap<NodeLinkId, Weak<Link>>>,
-    link_state_changed_observable: Observable<()>,
+    link_state_publisher: LinkStatePublisher,
     link_state_observable: Observable<Vec<LinkStatus>>,
     service_map: ServiceMap,
     routing_update_sender: RoutingUpdateSender,
@@ -146,13 +146,14 @@ impl Router {
         let (routing_update_sender, routing_update_receiver) = routing_update_channel();
         let service_map = ServiceMap::new(node_id);
         let list_peers_observer = Mutex::new(Some(service_map.new_list_peers_observer()));
+        let (link_state_publisher, link_state_receiver) = futures::channel::mpsc::channel(1);
         let router = Rc::new(Router {
             node_id,
             next_node_link_id: 1.into(),
             server_cert_file,
             server_key_file,
             routing_update_sender,
-            link_state_changed_observable: Observable::new(()),
+            link_state_publisher,
             link_state_observable: Observable::new(Vec::new()),
             service_map,
             links: Mutex::new(HashMap::new()),
@@ -161,7 +162,7 @@ impl Router {
         });
 
         spawn_route_planner(router.clone(), routing_update_receiver);
-        spawn_link_status_updater(&router, router.link_state_changed_observable.new_observer());
+        spawn_link_status_updater(&router, link_state_receiver);
         // Spawn a future to service diagnostic requests
         if let Some(implementation) = options.diagnostics {
             spawn_diagostic_service_request_handler(router.clone(), implementation);
@@ -304,13 +305,17 @@ impl Router {
             .collect()
     }
 
-    pub(crate) async fn add_link(&self, link: &Rc<Link>) {
+    pub(crate) async fn add_link<'a>(
+        &self,
+        link: &Rc<Link>,
+        status_change: std::pin::Pin<Box<dyn 'a + Stream<Item = ()>>>,
+    ) -> Result<(), Error>
+    where
+        'a: 'static,
+    {
+        self.link_state_publisher.clone().send(status_change).await?;
         self.links.lock().await.insert(link.id(), Rc::downgrade(link));
-        self.schedule_link_status_update();
-    }
-
-    pub(crate) fn schedule_link_status_update(&self) {
-        self.link_state_changed_observable.push(());
+        Ok(())
     }
 
     pub(crate) async fn publish_new_link_status(&self) {

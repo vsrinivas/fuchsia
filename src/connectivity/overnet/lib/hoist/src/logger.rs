@@ -5,13 +5,13 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use anyhow::Error;
-use log::{Level, LevelFilter, Metadata, Record};
+use log::{LevelFilter, Metadata, Record};
 
 struct Logger;
 
 impl log::Log for Logger {
-    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
-        metadata.level() <= Level::Trace
+    fn enabled(&self, _: &Metadata<'_>) -> bool {
+        true
     }
 
     fn log(&self, record: &Record<'_>) {

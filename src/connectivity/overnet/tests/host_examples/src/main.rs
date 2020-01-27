@@ -103,13 +103,13 @@ impl Daemon {
         Daemon { details: ChildInfo::new(name, &mut child), child }
     }
 
-    fn new(mut command: Command) -> Result<Daemon, Error> {
+    fn new(mut command: Command, args: &TestArgs) -> Result<Daemon, Error> {
         let name = format!("{:?}", command);
-        let child = command
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .context(format!("spawning command {}", name))?;
+        if args.capture_output {
+            command.stdout(Stdio::piped());
+            command.stderr(Stdio::piped());
+        }
+        let child = command.spawn().context(format!("spawning command {}", name))?;
         Ok(Self::new_from_child(name, child))
     }
 }
@@ -124,6 +124,7 @@ impl Drop for Daemon {
 struct TestContextInner {
     daemons: Vec<Daemon>,
     run_things: Vec<ChildInfo>,
+    args: TestArgs,
 }
 
 struct TestContext(RefCell<TestContextInner>);
@@ -133,21 +134,25 @@ lazy_static::lazy_static! {
 }
 
 impl TestContext {
-    fn new() -> Self {
-        Self(RefCell::new(TestContextInner { daemons: vec![], run_things: vec![] }))
+    fn new(args: TestArgs) -> Self {
+        Self(RefCell::new(TestContextInner { daemons: vec![], run_things: vec![], args }))
     }
 
     fn run_client(&self, mut cmd: Command) -> Result<(), Error> {
         let name = format!("{:?}", cmd);
-        let mut child =
-            cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().context("spawning client")?;
+        if self.0.borrow().args.capture_output {
+            cmd.stdout(Stdio::piped());
+            cmd.stderr(Stdio::piped());
+        }
+        let mut child = cmd.spawn().context("spawning client")?;
         self.0.borrow_mut().run_things.push(ChildInfo::new(name, &mut child));
         assert!(child.wait().expect("client should succeed").success());
         Ok(())
     }
 
     fn new_daemon(&self, command: Command) -> Result<(), Error> {
-        self.0.borrow_mut().daemons.push(Daemon::new(command)?);
+        let d = Daemon::new(command, &self.0.borrow().args)?;
+        self.0.borrow_mut().daemons.push(d);
         Ok(())
     }
 
@@ -285,11 +290,11 @@ mod tests {
 
     #[test]
     fn echo() -> Result<(), Error> {
-        echo_test()
+        echo_test(Default::default())
     }
 
-    pub fn echo_test() -> Result<(), Error> {
-        let ctx = TestContext::new();
+    pub fn echo_test(args: TestArgs) -> Result<(), Error> {
+        let ctx = TestContext::new(args);
         let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
         ctx.show_reports_if_failed(|| {
             ascendd.add_echo_server().context("starting server")?;
@@ -301,11 +306,11 @@ mod tests {
 
     #[test]
     fn multiple_ascendd_echo() -> Result<(), Error> {
-        multiple_ascendd_echo_test()
+        multiple_ascendd_echo_test(Default::default())
     }
 
-    pub fn multiple_ascendd_echo_test() -> Result<(), Error> {
-        let ctx = TestContext::new();
+    pub fn multiple_ascendd_echo_test(args: TestArgs) -> Result<(), Error> {
+        let ctx = TestContext::new(args);
         let mut ascendd1 = Ascendd::new(&ctx).context("creating ascendd 1")?;
         let mut ascendd2 = Ascendd::new(&ctx).context("creating ascendd 2")?;
         ctx.show_reports_if_failed(|| {
@@ -319,11 +324,11 @@ mod tests {
 
     #[test]
     fn interface_passing() -> Result<(), Error> {
-        interface_passing_test()
+        interface_passing_test(Default::default())
     }
 
-    pub fn interface_passing_test() -> Result<(), Error> {
-        let ctx = TestContext::new();
+    pub fn interface_passing_test(args: TestArgs) -> Result<(), Error> {
+        let ctx = TestContext::new(args);
         let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
         ctx.show_reports_if_failed(|| {
             ascendd.add_interface_passing_server().context("starting server")?;
@@ -331,6 +336,16 @@ mod tests {
             ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
             Ok(())
         })
+    }
+}
+
+pub struct TestArgs {
+    capture_output: bool,
+}
+
+impl Default for TestArgs {
+    fn default() -> Self {
+        TestArgs { capture_output: true }
     }
 }
 
@@ -348,6 +363,16 @@ struct Args {
     #[argh(option)]
     /// number of instances to run total
     jobs: Option<usize>,
+
+    #[argh(option)]
+    /// enable log capture (default true)
+    capture_output: Option<bool>,
+}
+
+impl Args {
+    fn test_args(&self) -> TestArgs {
+        TestArgs { capture_output: self.capture_output.unwrap_or(true) }
+    }
 }
 
 fn main() -> Result<(), Error> {
@@ -365,9 +390,10 @@ fn main() -> Result<(), Error> {
         let guard = Arc::new(sema.access());
         eprintln!("START JOB: {}", i);
         let errors = errors.clone();
+        let args = args.test_args();
         std::thread::Builder::new()
             .spawn(move || {
-                if let Err(e) = test_fn() {
+                if let Err(e) = test_fn(args) {
                     eprintln!("ERROR: {:?}", e);
                     errors.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 }
