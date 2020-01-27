@@ -8,14 +8,24 @@ use {
         result::IqueryResult,
     },
     anyhow::Error,
-    futures::future::join_all,
+    futures::{future::join_all, TryFutureExt},
     std::str::FromStr,
 };
 
 /// Executes the FIND command.
 pub async fn find(paths: &[String], recursive: bool) -> Vec<IqueryResult> {
-    let mut locations =
-        paths.iter().flat_map(|path| all_locations(path)).collect::<Vec<InspectLocation>>();
+    let futs = paths.iter().map(|path| {
+        all_locations(path).map_err(|e| {
+            eprintln!("Error: {:?}", e);
+            e
+        })
+    });
+    let mut locations = join_all(futs)
+        .await
+        .into_iter()
+        .filter_map(Result::ok)
+        .flatten()
+        .collect::<Vec<InspectLocation>>();
     locations.sort();
     let results = locations.into_iter().map(|location| IqueryResult::new(location));
     if recursive {

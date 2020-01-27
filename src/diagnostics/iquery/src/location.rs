@@ -7,21 +7,53 @@ use {
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
-    std::{
-        collections::VecDeque, convert::TryFrom, fs, iter::FromIterator, path::PathBuf,
-        str::FromStr,
-    },
+    files_async,
+    fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_zircon::DurationNum,
+    io_util,
+    lazy_static::lazy_static,
+    std::{convert::TryFrom, path::PathBuf, str::FromStr},
 };
 
+lazy_static! {
+    static ref EXPECTED_FILES: Vec<(String, InspectType)> = vec![
+        (<TreeMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME.to_string(), InspectType::Tree),
+        (
+            <InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME.to_string(),
+            InspectType::DeprecatedFidl,
+        ),
+        (".inspect".to_string(), InspectType::Vmo),
+    ];
+    static ref READDIR_TIMEOUT_SECONDS: i64 = 15;
+}
+
 /// Gets an iterator over all inspect files in a directory.
-pub fn all_locations(root: &str) -> Box<dyn Iterator<Item = InspectLocation>> {
-    match InspectLocationIterator::try_from(root) {
-        Ok(iterator) => Box::new(iterator),
-        Err(e) => {
-            eprintln!("Error while reading dir {}: {}", root, e);
-            Box::new(std::iter::empty::<InspectLocation>())
-        }
-    }
+pub async fn all_locations(root: &str) -> Result<Vec<InspectLocation>, Error> {
+    let mut path = std::env::current_dir()?;
+    path.push(root);
+    let dir_proxy = io_util::open_directory_in_namespace(
+        &path.to_string_lossy().to_string(),
+        io_util::OPEN_RIGHT_READABLE,
+    )?;
+    let locations = files_async::readdir_recursive(&dir_proxy)
+        .on_timeout(READDIR_TIMEOUT_SECONDS.seconds().after_now(), || {
+            Err(format_err!("Timed out recursively searching directory: {:?}", dir_proxy))
+        })
+        .await?
+        .into_iter()
+        .filter_map(|entry| {
+            let mut path = PathBuf::from(&root);
+            path.push(&entry.name);
+            EXPECTED_FILES.iter().find(|(filename, _)| entry.name.ends_with(filename)).map(
+                |(_, inspect_type)| InspectLocation {
+                    inspect_type: inspect_type.clone(),
+                    path,
+                    parts: vec![],
+                },
+            )
+        })
+        .collect::<Vec<InspectLocation>>();
+    Ok(locations)
 }
 
 /// Type of the inspect file.
@@ -144,44 +176,6 @@ impl TryFrom<PathBuf> for InspectLocation {
                     Ok(InspectLocation { inspect_type: InspectType::Vmo, path, parts: vec![] })
                 } else {
                     return Err(format_err!("Not an inspect file"));
-                }
-            }
-        }
-    }
-}
-
-/// Iterates over a directory tree and returns all Inspect files.
-struct InspectLocationIterator {
-    pending: VecDeque<fs::DirEntry>,
-}
-
-impl TryFrom<&str> for InspectLocationIterator {
-    type Error = std::io::Error;
-
-    fn try_from(root: &str) -> Result<Self, Self::Error> {
-        let pending = VecDeque::from_iter(fs::read_dir(root)?.filter_map(|e| e.ok()));
-        Ok(Self { pending })
-    }
-}
-
-impl Iterator for InspectLocationIterator {
-    type Item = InspectLocation;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if self.pending.is_empty() {
-                return None;
-            }
-            let path = self.pending.pop_front()?.path();
-            if path.is_dir() {
-                match fs::read_dir(path) {
-                    Ok(entries) => self.pending.extend(entries.filter_map(|e| e.ok())),
-                    _ => {}
-                }
-            } else {
-                match InspectLocation::try_from(path) {
-                    Ok(location) => return Some(location),
-                    Err(_) => continue,
                 }
             }
         }
