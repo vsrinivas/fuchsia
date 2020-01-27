@@ -10,7 +10,6 @@ group("uapp") {
     "blobfs",
     "disk-pave",
     "display-test",
-    "fs-fsck",
     "fvm-check",
     "hid",
     "ihda",
