@@ -214,21 +214,6 @@ static bool wait_thread_blocked(zx_handle_t thread, zx_thread_state_t reason) {
   return true;
 }
 
-static bool start_and_kill_thread_in_state(zxr_thread_entry_t entry, void* arg,
-                                           zx_thread_state_t state) {
-  zxr_thread_t thread;
-  zx_handle_t thread_h;
-  ASSERT_TRUE(start_thread(entry, arg, &thread, &thread_h));
-
-  ASSERT_TRUE(wait_thread_blocked(thread_h, state));
-
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
-  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
-  zxr_thread_destroy(&thread);
-  ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-  return true;
-}
-
 static bool CpuMaskBitSet(const zx_cpu_set_t& set, uint32_t i) {
   if (i >= ZX_CPU_SET_MAX_CPUS) {
     return false;
@@ -369,49 +354,6 @@ static bool TestThreadStartWithZeroInstructionPointer() {
   END_TEST;
 }
 
-static bool TestKillBusyThread() {
-  BEGIN_TEST;
-
-  zxr_thread_t thread;
-  zx_handle_t thread_h;
-
-  std::atomic<int> p = 0;
-  ASSERT_TRUE(start_thread(threads_test_atomic_store, &p, &thread, &thread_h));
-
-  // Wait for the thread to begin executing.
-  while (p.load() == 0) {
-    zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
-  }
-
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
-  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
-  zxr_thread_destroy(&thread);
-  ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
-}
-
-static bool TestKillSleepThread() {
-  BEGIN_TEST;
-
-  ASSERT_TRUE(start_and_kill_thread_in_state(threads_test_infinite_sleep_fn, nullptr,
-                                             ZX_THREAD_STATE_BLOCKED_SLEEPING));
-
-  END_TEST;
-}
-
-static bool TestKillWaitThread() {
-  BEGIN_TEST;
-
-  zx_handle_t event;
-  ASSERT_EQ(zx_event_create(0, &event), ZX_OK);
-  ASSERT_TRUE(start_and_kill_thread_in_state(threads_test_infinite_wait_fn, &event,
-                                             ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
-  ASSERT_EQ(zx_handle_close(event), ZX_OK);
-
-  END_TEST;
-}
-
 static bool TestNonstartedThread() {
   BEGIN_TEST;
 
@@ -422,41 +364,6 @@ static bool TestNonstartedThread() {
   ASSERT_EQ(zx_task_kill(thread), ZX_OK);
   ASSERT_EQ(zx_task_kill(thread), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread), ZX_OK);
-
-  END_TEST;
-}
-
-// Arguments for self_killing_fn().
-struct self_killing_thread_args {
-  zxr_thread_t thread;  // Used for the thread to kill itself.
-  uint32_t test_value;  // Used for testing what the thread does.
-};
-
-__NO_SAFESTACK static void self_killing_fn(void* arg) {
-  self_killing_thread_args* args = static_cast<self_killing_thread_args*>(arg);
-  // Kill the current thread.
-  zx_task_kill(zxr_thread_get_handle(&args->thread));
-  // We should not reach here -- the syscall should not have returned.
-  args->test_value = 999;
-  zx_thread_exit();
-}
-
-// This tests that the zx_task_kill() syscall does not return when a thread
-// uses it to kill itself.
-static bool TestThreadKillsItself() {
-  BEGIN_TEST;
-
-  self_killing_thread_args args;
-  args.test_value = 111;
-  zx_handle_t thread_handle;
-  ASSERT_TRUE(start_thread(self_killing_fn, &args, &args.thread, &thread_handle));
-  ASSERT_EQ(zx_object_wait_one(thread_handle, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
-  ASSERT_EQ(zx_handle_close(thread_handle), ZX_OK);
-  // Check that the thread did not continue execution and modify test_value.
-  ASSERT_EQ(args.test_value, 111u);
-  // We have to destroy the thread afterwards to clean up its internal
-  // handle, since it did not properly exit.
-  zxr_thread_destroy(&args.thread);
 
   END_TEST;
 }
@@ -1841,11 +1748,7 @@ RUN_TEST(TestEmptyNameSucceeds)
 RUN_TEST(TestLongNameSucceeds)
 RUN_TEST(TestThreadStartOnInitialThread)
 RUN_TEST(TestThreadStartWithZeroInstructionPointer)
-RUN_TEST(TestKillBusyThread)
-RUN_TEST(TestKillSleepThread)
-RUN_TEST(TestKillWaitThread)
 RUN_TEST(TestNonstartedThread)
-RUN_TEST(TestThreadKillsItself)
 RUN_TEST(TestInfoTaskStatsFails)
 RUN_TEST(TestGetLastScheduledCpu)
 RUN_TEST(TestGetAffinity)
