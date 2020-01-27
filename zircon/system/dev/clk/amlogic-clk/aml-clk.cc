@@ -87,6 +87,8 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
       muxes_ = sm1_muxes;
       mux_count_ = countof(sm1_muxes);
 
+      InitHiu();
+
       break;
     }
     default:
@@ -236,7 +238,6 @@ zx_status_t AmlClock::ClockImplSetRate(uint32_t clk, uint64_t hz) {
     // For now, only Meson PLLs support rate operation.
     return ZX_ERR_NOT_SUPPORTED;
   }
-
 
   aml_pll_dev_t* target = &plldev_[clkid];
 

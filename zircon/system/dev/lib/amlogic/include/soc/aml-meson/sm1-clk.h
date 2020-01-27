@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <soc/aml-meson/aml-clk-common.h>
+#include <soc/aml-s905d2/s905d2-hiu.h>
 
 namespace sm1_clk {
 
@@ -108,5 +109,12 @@ constexpr uint32_t CLK_DSU_PRE_CLK = AmlClkId(7, clk_type::kMesonMux);
 constexpr uint32_t CLK_DSU_CLK = AmlClkId(8, clk_type::kMesonMux);
 constexpr uint32_t CLK_MPEG_CLK_SEL = AmlClkId(9, clk_type::kMesonMuxRo);
 constexpr uint32_t CLK_SM1_MUX_COUNT = 10;
+
+// kMesonPllClocks
+constexpr uint32_t CLK_GP0_PLL  = AmlClkId(GP0_PLL,  clk_type::kMesonPll);
+constexpr uint32_t CLK_PCIE_PLL = AmlClkId(PCIE_PLL, clk_type::kMesonPll);
+constexpr uint32_t CLK_HIFI_PLL = AmlClkId(HIFI_PLL, clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS_PLL  = AmlClkId(SYS_PLL,  clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS1_PLL = AmlClkId(SYS1_PLL, clk_type::kMesonPll);
 
 }  // namespace sm1_clk

@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <soc/aml-meson/g12a-clk.h>
+#include <soc/aml-meson/sm1-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
@@ -110,28 +110,26 @@ static const pbus_dev_t pdm_dev = []() {
 zx_status_t Nelson::AudioInit() {
   zx_status_t status;
 
-  /* Don't Meddle with G12A PLLs on a SM1 SoC
-  status = clk_impl_.Disable(g12a_clk::CLK_HIFI_PLL);
+  status = clk_impl_.Disable(sm1_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d\n",
            __func__, status);
     return status;
   }
 
-  status = clk_impl_.SetRate(g12a_clk::CLK_HIFI_PLL, 1536000000);
+  status = clk_impl_.SetRate(sm1_clk::CLK_HIFI_PLL, 1536000000);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d\n",
            __func__, status);
     return status;
   }
 
-  status = clk_impl_.Enable(g12a_clk::CLK_HIFI_PLL);
+  status = clk_impl_.Enable(sm1_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d\n",
            __func__, status);
     return status;
   }
-  */
 
   // TDM pin assignments
   gpio_impl_.SetAltFunction(S905D2_GPIOA(1), S905D2_GPIOA_1_TDMB_SCLK_FN);
