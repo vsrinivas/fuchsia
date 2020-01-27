@@ -13,7 +13,10 @@ use self::{
 };
 use crate::{proxies::player::Player, Result, CHANNEL_BUFFER_SIZE};
 use anyhow::Error;
-use fidl::encoding::Decodable;
+use fidl::{
+    encoding::Decodable,
+    endpoints::{ClientEnd, ServerEnd},
+};
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_syslog::fx_log_warn;
 use futures::{
@@ -28,6 +31,8 @@ use futures::{
 use mpmc;
 use std::{collections::HashMap, marker::Unpin, ops::RangeFrom, pin::Pin};
 use streammap::StreamMap;
+
+const LOG_TAG: &str = "discovery";
 
 struct WatcherClient {
     event_forward: BoxFuture<'static, Result<()>>,
@@ -92,6 +97,95 @@ impl Discovery {
         self.watchers.insert(id, stream::once(watcher)).await;
     }
 
+    /// Connects a client to a single session if that session exists.
+    async fn connect_to_session(
+        &mut self,
+        session_id: u64,
+        session_control_request: ServerEnd<SessionControlMarker>,
+    ) {
+        let requests = match session_control_request.into_stream() {
+            Ok(requests) => requests,
+            Err(e) => {
+                fx_log_warn!(
+                    tag: LOG_TAG,
+                    "Client attempted to connect to session with bad channel: {:?}",
+                    e
+                );
+                return;
+            }
+        };
+
+        let (watcher_send, watcher_recv) = mpsc::channel(CHANNEL_BUFFER_SIZE);
+        self.add_watcher_client(
+            stream::pending(),
+            watcher_send.sink_map_err(Error::from),
+            self.player_update_sender.new_receiver(),
+            Filter::new(WatchOptions {
+                allowed_sessions: Some(vec![session_id]),
+                ..Decodable::new_empty()
+            }),
+        )
+        .await;
+
+        let player_event_loopback = watcher_recv.filter_map(move |(id, event)| {
+            if id != session_id {
+                fx_log_warn!(tag: LOG_TAG, "Watcher did not filter sessions by id");
+                future::ready(None)
+            } else {
+                match event {
+                    SessionsWatcherEvent::Updated(update) => future::ready(Some(update)),
+                    _ => future::ready(None),
+                }
+            }
+        });
+
+        self.player_updates
+            .with_elem(session_id, move |player: &mut Player| {
+                player.serve_controls(requests, player_event_loopback);
+            })
+            .await;
+    }
+
+    /// Connects a client to the set of all sessions.
+    async fn watch_sessions(
+        &mut self,
+        watch_options: WatchOptions,
+        session_watcher: ClientEnd<SessionsWatcherMarker>,
+    ) {
+        let proxy = match session_watcher.into_proxy() {
+            Ok(proxy) => proxy,
+            Err(e) => {
+                fx_log_warn!(
+                    tag: LOG_TAG,
+                    "Client tried to watch session with invalid watcher: {:?}",
+                    e
+                );
+                return;
+            }
+        };
+
+        self.add_watcher_client(
+            proxy.take_event_stream().map(drop),
+            FlowControlledProxySink::from(proxy),
+            self.player_update_sender.new_receiver(),
+            Filter::new(watch_options),
+        )
+        .await;
+    }
+
+    async fn handle_player_update(&mut self, player_update: FilterApplicant<(u64, PlayerEvent)>) {
+        let (id, event) = &player_update.applicant;
+        if let PlayerEvent::Removed = event {
+            self.catch_up_events.remove(id);
+            if let Some(mut player) = self.player_updates.remove(*id).await {
+                player.disconnect_proxied_clients().await;
+            }
+        } else {
+            self.catch_up_events.insert(*id, player_update.clone());
+        }
+        self.player_update_sender.send(player_update).await;
+    }
+
     pub async fn serve(
         mut self,
         mut request_stream: mpsc::Receiver<DiscoveryRequest>,
@@ -107,59 +201,10 @@ impl Discovery {
                         DiscoveryRequest::ConnectToSession {
                             session_id, session_control_request, ..
                         } => {
-                            if let Ok(requests) = session_control_request.into_stream() {
-                                let (watcher_send, recv) = mpsc::channel(CHANNEL_BUFFER_SIZE);
-                                self.add_watcher_client(
-                                    stream::pending(),
-                                    watcher_send.sink_map_err(Error::from),
-                                    self.player_update_sender.new_receiver(),
-                                    Filter::new(WatchOptions {
-                                        allowed_sessions: Some(vec![session_id]),
-                                        ..Decodable::new_empty()
-                                    })
-                                ).await;
-
-                                self.player_updates.with_elem(session_id, move |player: &mut Player| {
-                                    player.serve_controls(
-                                        requests,
-                                        recv.filter_map(move |(id, event)| {
-                                            if !(id == session_id) {
-                                                fx_log_warn!(
-                                                    tag: "discovery",
-                                                    "Watcher did not filter sessions by id"
-                                                );
-                                                future::ready(None)
-                                            } else {
-                                                match event {
-                                                    SessionsWatcherEvent::Updated(update) => {
-                                                        future::ready(Some(update))
-                                                    },
-                                                    _ => future::ready(None)
-                                                }
-                                            }
-                                        })
-                                    );
-                                }).await;
-                            }
+                            self.connect_to_session(session_id, session_control_request).await;
                         }
                         DiscoveryRequest::WatchSessions { watch_options, session_watcher, ..} => {
-                            match session_watcher.into_proxy() {
-                                Ok(proxy) => {
-                                    self.add_watcher_client(
-                                        proxy.take_event_stream().map(drop),
-                                        FlowControlledProxySink::from(proxy),
-                                        self.player_update_sender.new_receiver(),
-                                        Filter::new(watch_options)
-                                    ).await;
-                                },
-                                Err(e) => {
-                                    fx_log_warn!(
-                                        tag: "discovery",
-                                        "Client tried to watch session with invalid watcher: {:?}",
-                                        e
-                                    );
-                                }
-                            };
+                            self.watch_sessions(watch_options, session_watcher).await;
                         }
                     }
                 }
@@ -171,16 +216,7 @@ impl Discovery {
                 }
                 // A player answered a hanging get for its status.
                 player_update = self.player_updates.select_next_some() => {
-                    let (id, event) = &player_update.applicant;
-                    if let PlayerEvent::Removed = event {
-                        self.catch_up_events.remove(id);
-                        if let Some(mut player) = self.player_updates.remove(*id).await {
-                            player.disconnect_proxied_clients().await;
-                        }
-                    } else {
-                        self.catch_up_events.insert(*id, player_update.clone());
-                    }
-                    self.player_update_sender.send(player_update).await;
+                    self.handle_player_update(player_update).await;
                 }
             }
         }
