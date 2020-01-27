@@ -727,26 +727,6 @@ TEST_F(ApInfraBssTest, SetKeys_IgnoredForUnprotectedAp) {
   EXPECT_TRUE(device.GetKeys().empty());
 }
 
-// TODO(41759): Support this!
-#if 0
-TEST_F(ApInfraBssTest, PowerSaving_IgnoredBeforeControlledPortOpens) {
-  ctx.StartAp();
-  ctx.AuthenticateAndAssociateClient(kAid);
-
-  // Simulate client sending null data frame with power saving.
-  auto pwr_mgmt = true;
-  ctx.SendNullDataFrame(pwr_mgmt);
-  EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
-
-  // Two Ethernet frames arrive. WLAN frame is sent out since we ignored
-  // previous frame and did not change client's status to dozing
-  std::vector<uint8_t> payload2 = {'m', 's', 'g', '2'};
-  ctx.SendEthFrame(kTestPayload);
-  ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-  auto pkt = std::move(*device.wlan_queue.begin());
-  ctx.AssertDataFrameSentToClient(std::move(pkt), kTestPayload);
-}
-
 TEST_F(ApInfraBssTest, PowerSaving_AfterControlledPortOpens) {
   ctx.StartAp();
   ctx.AuthenticateAndAssociateClient(kAid);
@@ -794,11 +774,11 @@ TEST_F(ApInfraBssTest, PowerSaving_UnprotectedAp) {
   ctx.SendNullDataFrame(!pwr_mgmt);
   EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
   auto pkt = std::move(*device.wlan_queue.begin());
-  ctx.AssertDataFrameSentToClient(std::move(pkt), kTestPayload, {.more_data = 1});
+  ctx.AssertDataFrameSentToClient(std::move(pkt), kTestPayload,
+                                  {.more_data = 1, .protected_frame = 0});
   pkt = std::move(*(device.wlan_queue.begin() + 1));
-  ctx.AssertDataFrameSentToClient(std::move(pkt), payload2);
+  ctx.AssertDataFrameSentToClient(std::move(pkt), payload2, {.more_data = 0, .protected_frame = 0});
 }
-#endif
 
 TEST_F(ApInfraBssTest, OutboundFramesAreProtectedAfterControlledPortOpens) {
   ctx.StartAp();

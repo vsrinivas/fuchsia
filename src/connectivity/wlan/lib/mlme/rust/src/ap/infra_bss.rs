@@ -436,6 +436,29 @@ impl InfraBss {
         Ok(())
     }
 
+    pub fn handle_ctrl_frame<B: ByteSlice>(
+        &mut self,
+        ctx: &mut Context,
+        ctrl_hdr: mac::CtrlHdr,
+        ta: Option<MacAddr>,
+        body: B,
+    ) -> Result<(), Rejection> {
+        let ta = match ta {
+            Some(ta) => ta,
+            _ => {
+                return Err(Rejection::NoSrcAddr);
+            }
+        };
+
+        let client = match self.clients.get_mut(&ta) {
+            Some(client) => client,
+            _ => {
+                return Err(Rejection::Client(ta, ClientRejection::NotAuthenticated));
+            }
+        };
+        client.handle_ctrl_frame(ctx, ctrl_hdr, body).map_err(|e| Rejection::Client(client.addr, e))
+    }
+
     pub fn handle_multicast_eth_frame(
         &mut self,
         ctx: &mut Context,
@@ -1846,6 +1869,87 @@ mod tests {
             &[
                 // Mgmt header
                 0b00001000, 0b01000010, // Frame Control
+                0, 0, // Duration
+                4, 4, 4, 4, 4, 4, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                6, 6, 6, 6, 6, 6, // addr3
+                0x30, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                1, 2, 3, 4, 5,
+            ][..]
+        );
+    }
+
+    #[test]
+    fn handle_ps_poll() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            2,
+            CapabilityInfo(0),
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok");
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
+        client
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .expect("expected OK");
+        client
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                false,
+                1,
+                mac::CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::Success,
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            )
+            .expect("expected OK");
+        client.set_power_state(&mut ctx, mac::PowerState::DOZE).expect("expected doze ok");
+        fake_device.wlan_queue.clear();
+
+        bss.handle_eth_frame(
+            &mut ctx,
+            EthernetIIHdr {
+                da: CLIENT_ADDR,
+                sa: CLIENT_ADDR2,
+                ether_type: BigEndianU16::from_native(0x1234),
+            },
+            &[1, 2, 3, 4, 5][..],
+        )
+        .expect("expected OK");
+        assert_eq!(fake_device.wlan_queue.len(), 0);
+
+        bss.handle_ctrl_frame(
+            &mut ctx,
+            mac::CtrlHdr {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::CTRL)
+                    .with_ctrl_subtype(mac::CtrlSubtype::PS_POLL),
+                duration_or_id: 1 | 0b11000000_00000000,
+                ra: BSSID.0,
+            },
+            Some(CLIENT_ADDR),
+            &[][..],
+        )
+        .expect("expected OK");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b00001000, 0b00000010, // Frame Control
                 0, 0, // Duration
                 4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2

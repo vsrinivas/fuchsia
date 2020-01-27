@@ -293,9 +293,12 @@ impl Ap {
                     qos_ctrl.map(|x| x.get()),
                     body,
                 ),
-            _ => {
-                // TODO(37891): Handle control frames.
-                Ok(())
+            mac::MacFrame::Ctrl { ctrl_hdr, ta, body } => {
+                bss.handle_ctrl_frame(&mut self.ctx, *ctrl_hdr, ta.map(|a| a.get()), body)
+            }
+            mac::MacFrame::Unsupported { frame_ctrl } => {
+                error!("received unsupported MAC frame: frame_ctrl = {:?}", frame_ctrl);
+                return;
             }
         } {
             log!(e.log_level(), "failed to handle MAC frame: {}", e)
@@ -331,9 +334,9 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{assert_variant, test_utils::fake_frames::fake_wpa2_rsne},
     };
-    const CLIENT_ADDR: MacAddr = [1u8; 6];
+    const CLIENT_ADDR: MacAddr = [4u8; 6];
     const BSSID: Bssid = Bssid([2u8; 6]);
-    const CLIENT_ADDR2: MacAddr = [3u8; 6];
+    const CLIENT_ADDR2: MacAddr = [6u8; 6];
 
     fn make_eth_frame(
         dst_addr: MacAddr,
@@ -403,9 +406,9 @@ mod tests {
                 // Mgmt header
                 0b00001000, 0b00000010, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
-                3, 3, 3, 3, 3, 3, // addr3
+                6, 6, 6, 6, 6, 6, // addr3
                 0x30, 0, // Sequence Control
                 0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
                 0, 0, 0, // OUI
@@ -476,7 +479,7 @@ mod tests {
                 0b10110000, 0b00000000, // Frame Control
                 0, 0, // Duration
                 2, 2, 2, 2, 2, 2, // addr1
-                1, 1, 1, 1, 1, 1, // addr2
+                4, 4, 4, 4, 4, 4, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
                 // Auth body
@@ -498,6 +501,101 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             },
+        );
+    }
+
+    #[test]
+    fn ap_handle_mac_frame_ps_poll() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
+        ap.bss.replace(
+            InfraBss::new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                2,
+                CapabilityInfo(0),
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::new ok"),
+        );
+        ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        let client = ap.bss.as_mut().unwrap().clients.get_mut(&CLIENT_ADDR).unwrap();
+        client
+            .handle_mlme_auth_resp(&mut ap.ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .expect("expected OK");
+        client
+            .handle_mlme_assoc_resp(
+                &mut ap.ctx,
+                false,
+                1,
+                mac::CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::Success,
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            )
+            .expect("expected OK");
+        fake_device.wlan_queue.clear();
+
+        // Put the client into dozing.
+        ap.handle_mac_frame(
+            &[
+                0b01001000, 0b00010001, // Frame control.
+                0, 0, // Duration.
+                2, 2, 2, 2, 2, 2, // BSSID.
+                4, 4, 4, 4, 4, 4, // MAC address.
+                2, 2, 2, 2, 2, 2, // BSSID.
+                0x10, 0, // Sequence control.
+            ][..],
+            false,
+        );
+
+        ap.handle_eth_frame(&make_eth_frame(
+            CLIENT_ADDR,
+            CLIENT_ADDR2,
+            0x1234,
+            &[1, 2, 3, 4, 5][..],
+        ));
+        assert_eq!(fake_device.wlan_queue.len(), 0);
+
+        // Send a PS-Poll.
+        ap.handle_mac_frame(
+            &[
+                // Ctrl header
+                0b10100100, 0b00000000, // Frame Control
+                0b00000001, 0b11000000, // Masked AID
+                2, 2, 2, 2, 2, 2, // addr1
+                4, 4, 4, 4, 4, 4, // addr2
+            ][..],
+            false,
+        );
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b00001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                4, 4, 4, 4, 4, 4, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                6, 6, 6, 6, 6, 6, // addr3
+                0x30, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                1, 2, 3, 4, 5,
+            ][..]
         );
     }
 
@@ -530,7 +628,7 @@ mod tests {
                 0b10100000, 0b00000001, // Frame Control
                 0, 0, // Duration
                 2, 2, 2, 2, 2, 2, // addr1
-                1, 1, 1, 1, 1, 1, // addr2
+                4, 4, 4, 4, 4, 4, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
                 // Disassoc header:
@@ -857,7 +955,7 @@ mod tests {
                 // Mgmt header
                 0b10110000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -976,7 +1074,7 @@ mod tests {
                 // Mgmt header
                 0b11000000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -1029,7 +1127,7 @@ mod tests {
                 // Mgmt header
                 0b00010000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -1085,7 +1183,7 @@ mod tests {
                 // Mgmt header
                 0b10100000, 0, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
@@ -1185,7 +1283,7 @@ mod tests {
                 // Header
                 0b00001000, 0b00000010, // Frame Control
                 0, 0, // Duration
-                1, 1, 1, 1, 1, 1, // addr1
+                4, 4, 4, 4, 4, 4, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control

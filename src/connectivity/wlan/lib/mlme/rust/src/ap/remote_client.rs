@@ -105,6 +105,9 @@ pub enum ClientRejection {
     /// The frame does not have a corresponding handler.
     Unsupported,
 
+    /// The client is not authenticated.
+    NotAuthenticated,
+
     /// The client is not associated.
     NotAssociated,
 
@@ -655,38 +658,46 @@ impl RemoteClient {
     }
 
     /// Handles PS-Poll (IEEE Std 802.11-2016, 9.3.1.5) from the PHY.
-    #[allow(dead_code)]
-    fn handle_ps_poll(&mut self, ctx: &mut Context) -> Result<(), ClientRejection> {
+    fn handle_ps_poll(&mut self, ctx: &mut Context, aid: Aid) -> Result<(), ClientRejection> {
         match self.state.as_mut() {
-            State::Associated { ps_state, .. } => match ps_state {
-                PowerSaveState::Dozing { buffered } => {
-                    let BufferedFrame { mut in_buf, bytes_written, tx_flags } =
-                        match buffered.pop_front() {
-                            Some(buffered) => buffered,
-                            None => {
-                                // No frames available for the client to PS-Poll, just return OK.
-                                return Ok(());
-                            }
-                        };
+            State::Associated { aid: current_aid, ps_state, .. } => {
+                if aid != *current_aid {
+                    return Err(ClientRejection::NotPermitted);
+                }
 
-                    if !buffered.is_empty() {
-                        frame_writer::set_more_data(&mut in_buf.as_mut_slice()[..bytes_written])
+                match ps_state {
+                    PowerSaveState::Dozing { buffered } => {
+                        let BufferedFrame { mut in_buf, bytes_written, tx_flags } =
+                            match buffered.pop_front() {
+                                Some(buffered) => buffered,
+                                None => {
+                                    // No frames available for the client to PS-Poll, just return
+                                    // OK.
+                                    return Ok(());
+                                }
+                            };
+
+                        if !buffered.is_empty() {
+                            frame_writer::set_more_data(
+                                &mut in_buf.as_mut_slice()[..bytes_written],
+                            )
                             .map_err(ClientRejection::WlanSendError)?;
-                    }
+                        }
 
-                    ctx.device
-                        .send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags)
-                        .map_err(|s| {
+                        ctx.device
+                            .send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags)
+                            .map_err(|s| {
                             ClientRejection::WlanSendError(Error::Status(
                                 format!("error sending buffered frame on PS-Poll"),
                                 s,
                             ))
                         })?;
+                    }
+                    _ => {
+                        return Err(ClientRejection::NotPermitted);
+                    }
                 }
-                _ => {
-                    return Err(ClientRejection::NotPermitted);
-                }
-            },
+            }
             _ => {
                 return Err(ClientRejection::NotAssociated);
             }
@@ -989,6 +1000,28 @@ impl RemoteClient {
             }
         }
         Ok(())
+    }
+
+    /// Handles control frames (IEEE Std 802.11-2016, 9.3.1) from the PHY.
+    pub fn handle_ctrl_frame<B: ByteSlice>(
+        &mut self,
+        ctx: &mut Context,
+        ctrl_hdr: mac::CtrlHdr,
+        body: B,
+    ) -> Result<(), ClientRejection> {
+        self.reject_frame_class_if_not_permitted(ctx, mac::frame_class(&{ ctrl_hdr.frame_ctrl }))?;
+
+        match mac::CtrlBody::parse({ ctrl_hdr.frame_ctrl }.ctrl_subtype(), body)
+            .ok_or(ClientRejection::ParseFailed)?
+        {
+            mac::CtrlBody::PsPoll => {
+                // IEEE 802.11-2016 9.3.1.5 states the ID in the PS-Poll frame is the association ID
+                // with the 2 MSBs set to 1.
+                const PS_POLL_MASK: u16 = 0b11000000_00000000;
+                self.handle_ps_poll(ctx, ctrl_hdr.duration_or_id & !PS_POLL_MASK)
+            }
+            _ => Err(ClientRejection::Unsupported),
+        }
     }
 
     /// Handles Ethernet II frames from the netstack.
@@ -1629,7 +1662,7 @@ mod tests {
         // Make sure nothing has been actually sent to the WLAN queue.
         assert_eq!(fake_device.wlan_queue.len(), 0);
 
-        r_sta.handle_ps_poll(&mut ctx).expect("expected handle_ps_poll OK");
+        r_sta.handle_ps_poll(&mut ctx, 1).expect("expected handle_ps_poll OK");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -1649,7 +1682,7 @@ mod tests {
             ][..]
         );
 
-        r_sta.handle_ps_poll(&mut ctx).expect("expected handle_ps_poll OK");
+        r_sta.handle_ps_poll(&mut ctx, 1).expect("expected handle_ps_poll OK");
         assert_eq!(fake_device.wlan_queue.len(), 2);
         assert_eq!(
             &fake_device.wlan_queue[1].0[..],
@@ -1669,8 +1702,49 @@ mod tests {
             ][..]
         );
 
-        r_sta.handle_ps_poll(&mut ctx).expect("expected handle_ps_poll OK");
+        r_sta.handle_ps_poll(&mut ctx, 1).expect("expected handle_ps_poll OK");
         assert_eq!(fake_device.wlan_queue.len(), 2);
+    }
+
+    #[test]
+    fn handle_ps_poll_not_buffered() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Associated {
+            aid: 1,
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+            ps_state: PowerSaveState::Awake,
+        });
+
+        r_sta.set_power_state(&mut ctx, mac::PowerState::DOZE).expect("expected doze OK");
+
+        r_sta.handle_ps_poll(&mut ctx, 1).expect("expected handle_ps_poll OK");
+    }
+
+    #[test]
+    fn handle_ps_poll_wrong_aid() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Associated {
+            aid: 1,
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+            ps_state: PowerSaveState::Awake,
+        });
+
+        r_sta.set_power_state(&mut ctx, mac::PowerState::DOZE).expect("expected doze OK");
+
+        assert_variant!(
+            r_sta.handle_ps_poll(&mut ctx, 2).expect_err("expected handle_ps_poll error"),
+            ClientRejection::NotPermitted
+        );
     }
 
     #[test]
@@ -1688,7 +1762,7 @@ mod tests {
         });
 
         assert_variant!(
-            r_sta.handle_ps_poll(&mut ctx).expect_err("expected handle_ps_poll error"),
+            r_sta.handle_ps_poll(&mut ctx, 1).expect_err("expected handle_ps_poll error"),
             ClientRejection::NotPermitted
         );
     }
