@@ -2,10 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("driverinfo") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("driverinfo") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [ "driver-info-app.c" ]
   deps = [
-    "$zx/system/ulib/driver-info",
-    "$zx/system/ulib/fdio",
+    "//zircon/public/lib/driver-info",
+    "//zircon/public/lib/fdio",
   ]
+}
+
+migrated_manifest("driverinfo-manifest") {
+  deps = [ ":driverinfo" ]
 }
