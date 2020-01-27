@@ -12,7 +12,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.accessibility.SettingsManager",
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
@@ -21,11 +20,7 @@
             "fuchsia.media.UsageReporter",
             "fuchsia.media.audio.VolumeControl",
             "fuchsia.media.sounds.Player",
-            "fuchsia.net.Connectivity",
-            "fuchsia.netstack.Netstack",
             "fuchsia.stash.Store",
-            "fuchsia.sys.Environment",
-            "fuchsia.timezone.Timezone",
             "fuchsia.ui.brightness.Control",
             "fuchsia.ui.policy.DeviceListenerRegistry"
         ]
