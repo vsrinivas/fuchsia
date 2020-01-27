@@ -82,16 +82,19 @@ constexpr uint32_t CLK_EFUSE = AmlClkId(66, clk_type::kMesonGate);
 constexpr uint32_t CLK_81 = AmlClkId(67, clk_type::kMesonGate);
 constexpr uint32_t CLK_24M = AmlClkId(68, clk_type::kMesonGate);
 constexpr uint32_t CLK_GEN_CLK = AmlClkId(69, clk_type::kMesonGate);
+constexpr uint32_t CLK_TS_CLK = AmlClkId(70, clk_type::kMesonGate);
+constexpr uint32_t CLK_SPICC0_GATE = AmlClkId(71, clk_type::kMesonGate);
+constexpr uint32_t CLK_SPICC1_GATE = AmlClkId(72, clk_type::kMesonGate);
 
 // Clock gates specific to SM1.
-constexpr uint32_t CLK_CSI_DIG = AmlClkId(70, clk_type::kMesonGate);
-constexpr uint32_t CLK_NNA = AmlClkId(71, clk_type::kMesonGate);
-constexpr uint32_t CLK_PARSER1 = AmlClkId(72, clk_type::kMesonGate);
-constexpr uint32_t CLK_CSI_HOST = AmlClkId(73, clk_type::kMesonGate);
-constexpr uint32_t CLK_CSI_ADPAT = AmlClkId(74, clk_type::kMesonGate);
-constexpr uint32_t CLK_TEMP_SENSOR = AmlClkId(75, clk_type::kMesonGate);
-constexpr uint32_t CLK_CSI_PHY = AmlClkId(76, clk_type::kMesonGate);
-constexpr uint32_t CLK_SM1_GATE_COUNT = 77;
+constexpr uint32_t CLK_CSI_DIG = AmlClkId(73, clk_type::kMesonGate);
+constexpr uint32_t CLK_NNA = AmlClkId(74, clk_type::kMesonGate);
+constexpr uint32_t CLK_PARSER1 = AmlClkId(75, clk_type::kMesonGate);
+constexpr uint32_t CLK_CSI_HOST = AmlClkId(76, clk_type::kMesonGate);
+constexpr uint32_t CLK_CSI_ADPAT = AmlClkId(77, clk_type::kMesonGate);
+constexpr uint32_t CLK_TEMP_SENSOR = AmlClkId(78, clk_type::kMesonGate);
+constexpr uint32_t CLK_CSI_PHY = AmlClkId(79, clk_type::kMesonGate);
+constexpr uint32_t CLK_SM1_GATE_COUNT = 80;
 
 // Muxes
 constexpr uint32_t CLK_GEN_CLK_SEL = AmlClkId(0, clk_type::kMesonMux);

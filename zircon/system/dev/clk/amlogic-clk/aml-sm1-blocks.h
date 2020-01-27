@@ -90,6 +90,9 @@ static constexpr meson_clk_gate_t sm1_clk_gates[] = {
     {.reg = kHhiMpegClkCntl,  .bit = 7},   // CLK_81
     {.reg = kHhiXtalDivnCntl, .bit = 11},  // CLK_24M
     {.reg = kHhiGenClkCntl,   .bit = 11},  // CLK_GEN_CLK
+    {.reg = kHhiTsClkCntl,    .bit = 8},   // CLK_TS_CLK
+    {.reg = kHhiSpiccClkCntl, .bit = 6},   // CLK_SPICC0_GATE
+    {.reg = kHhiSpiccClkCntl, .bit = 22},  // CLK_SPICC1_GATE
 
     // SM1 Specific Clock Gates.
     {.reg = kHhiGclkMpeg1, .bit = 18},  // CLK_CSI_DIG
