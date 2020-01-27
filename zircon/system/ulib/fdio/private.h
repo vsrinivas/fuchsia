@@ -232,7 +232,7 @@ fdio_t* fdio_stream_socket_create(zx::socket socket,
                                   llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client);
 
 // Creates a message port and pair of simple io fdio_t's
-int fdio_pipe_pair(fdio_t** a, fdio_t** b);
+int fdio_pipe_pair(fdio_t** a, fdio_t** b, uint32_t options);
 
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);

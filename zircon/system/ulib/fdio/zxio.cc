@@ -730,11 +730,11 @@ fdio_t* fdio_pipe_create(zx::socket socket) {
   return io;
 }
 
-int fdio_pipe_pair(fdio_t** _a, fdio_t** _b) {
+int fdio_pipe_pair(fdio_t** _a, fdio_t** _b, uint32_t options) {
   zx::socket h0, h1;
   fdio_t *a, *b;
   zx_status_t r;
-  if ((r = zx::socket::create(0, &h0, &h1)) < 0) {
+  if ((r = zx::socket::create(options, &h0, &h1)) < 0) {
     return r;
   }
   if ((a = fdio_pipe_create(std::move(h0))) == NULL) {
