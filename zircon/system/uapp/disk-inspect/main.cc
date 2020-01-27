@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/fdio.h>
 #include <stdio.h>
+#include <zircon/status.h>
 
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
+#include <disk_inspector/disk_inspector.h>
 #include <fbl/unique_fd.h>
-#include <lib/disk-inspector/disk-inspector.h>
-#include <lib/fdio/fdio.h>
 #include <minfs/inspector.h>
-#include <zircon/status.h>
 
 namespace {
 
@@ -96,8 +96,7 @@ int main(int argc, char **argv) {
   }
 
   zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(fd.release(),
-                                               channel.reset_and_get_address());
+  zx_status_t status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
   if (status != ZX_OK) {
     fprintf(stderr, "ERROR: cannot acquire handle: %d\n", status);
     return -1;

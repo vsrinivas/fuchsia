@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_DISK_INSPECTOR_INSPECTOR_TRANSACTION_HANDLER_H_
-#define LIB_DISK_INSPECTOR_INSPECTOR_TRANSACTION_HANDLER_H_
+#ifndef DISK_INSPECTOR_INSPECTOR_TRANSACTION_HANDLER_H_
+#define DISK_INSPECTOR_INSPECTOR_TRANSACTION_HANDLER_H_
 
 #include <lib/fit/result.h>
 #include <zircon/types.h>
@@ -61,4 +61,4 @@ class InspectorTransactionHandler : public fs::TransactionHandler, public storag
 
 }  // namespace disk_inspector
 
-#endif  // LIB_DISK_INSPECTOR_INSPECTOR_TRANSACTION_HANDLER_H_
+#endif  // DISK_INSPECTOR_INSPECTOR_TRANSACTION_HANDLER_H_

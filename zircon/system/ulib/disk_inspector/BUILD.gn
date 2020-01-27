@@ -2,20 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("disk-inspector") {
+zx_library("disk_inspector") {
   sdk = "source"
   sdk_headers = [
-    "lib/disk-inspector/inspector-transaction-handler.h",
-    "lib/disk-inspector/common-types.h",
-    "lib/disk-inspector/disk-inspector.h",
+    "disk_inspector/inspector_transaction_handler.h",
+    "disk_inspector/common_types.h",
+    "disk_inspector/disk_inspector.h",
   ]
   static = true
-  sources = [ "disk-inspector.cc" ]
+  sources = [ "disk_inspector.cc" ]
   public_deps = [ "$zx/system/ulib/fbl:headers" ]
   deps = [ "$zx/system/ulib/fbl" ]
 
   if (is_fuchsia) {
-    sources += [ "inspector-transaction-handler.cc" ]
+    sources += [ "inspector_transaction_handler.cc" ]
 
     public_deps += [
       "$zx/system/ulib/block-client:headers",

@@ -5,8 +5,7 @@
 #ifndef FS_JOURNAL_INSPECTOR_JOURNAL_H_
 #define FS_JOURNAL_INSPECTOR_JOURNAL_H_
 
-#include <lib/disk-inspector/common-types.h>
-
+#include <disk_inspector/common_types.h>
 #include <fs/inspectable.h>
 #include <fs/journal/format.h>
 

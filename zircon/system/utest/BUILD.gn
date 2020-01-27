@@ -116,7 +116,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/debugdata/test",
       "$zx/system/ulib/devmgr-integration-test/test",
       "$zx/system/ulib/digest/test",
-      "$zx/system/ulib/disk-inspector/test",
+      "$zx/system/ulib/disk_inspector/test",
       "$zx/system/ulib/driver-integration-test/test",
       "$zx/system/ulib/driver-unit-test/test",
       "$zx/system/ulib/elf-search/test",

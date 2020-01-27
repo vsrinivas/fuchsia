@@ -18,7 +18,7 @@ executable("disk-inspect") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
-    "//zircon/public/lib/disk-inspector",
+    "//zircon/public/lib/disk_inspector",
     "//zircon/public/lib/minfs",
   ]
 }

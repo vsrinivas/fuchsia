@@ -5,10 +5,9 @@
 #ifndef ZIRCON_SYSTEM_ULIB_FS_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
 #define ZIRCON_SYSTEM_ULIB_FS_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
 
-#include <lib/disk-inspector/common-types.h>
-
 #include <array>
 
+#include <disk_inspector/common_types.h>
 #include <fbl/string_printf.h>
 #include <fs/inspectable.h>
 #include <fs/journal/format.h>

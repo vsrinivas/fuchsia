@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/disk-inspector/inspector-transaction-handler.h"
+#include "disk_inspector/inspector_transaction_handler.h"
 
 #include <fcntl.h>
 #include <lib/fdio/fdio.h>

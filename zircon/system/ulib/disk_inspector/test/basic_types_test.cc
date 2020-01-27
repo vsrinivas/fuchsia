@@ -4,8 +4,8 @@
 
 // Tests disk-inspector primitive data type behavior.
 
+#include <disk_inspector/common_types.h>
 #include <zxtest/zxtest.h>
-#include <lib/disk-inspector/common-types.h>
 
 namespace disk_inspector {
 namespace {

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DISK_INSPECTOR_COMMON_TYPES_H_
+#define DISK_INSPECTOR_COMMON_TYPES_H_
 
-#include <fbl/string.h>
 #include <zircon/types.h>
 
-#include "disk-inspector.h"
+#include <fbl/string.h>
+
+#include "disk_inspector.h"
 
 namespace disk_inspector {
 
@@ -81,3 +83,5 @@ using DiskObjectUint32Array = PrimitiveTypeArray<uint32_t>;
 using DiskObjectCharArray = PrimitiveTypeArray<char>;
 
 }  // namespace disk_inspector
+
+#endif  // DISK_INSPECTOR_COMMON_TYPES_H_

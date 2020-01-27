@@ -4,7 +4,7 @@
 
 #include "inspector-inode-table.h"
 
-#include <lib/disk-inspector/common-types.h>
+#include <disk_inspector/common_types.h>
 
 #include "inspector-inode.h"
 #include "inspector-private.h"

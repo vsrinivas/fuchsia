@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/disk-inspector/common-types.h>
 #include <sys/stat.h>
 
 #include <block-client/cpp/block-device.h>
+#include <disk_inspector/common_types.h>
 #include <fbl/unique_fd.h>
 #include <fs/journal/inspector_journal.h>
 #include <minfs/bcache.h>

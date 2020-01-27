@@ -16,7 +16,6 @@ zx_executable("minfs") {
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/block-client",
-    "$zx/system/ulib/disk-inspector",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs",

@@ -4,12 +4,13 @@
 
 // This file contains apis needed for inspection of on-disk data structures.
 
-#pragma once
+#ifndef DISK_INSPECTOR_DISK_INSPECTOR_H_
+#define DISK_INSPECTOR_DISK_INSPECTOR_H_
+
+#include <zircon/types.h>
 
 #include <cstdint>
 #include <memory>
-
-#include <zircon/types.h>
 
 namespace disk_inspector {
 
@@ -51,3 +52,5 @@ class DiskInspector {
 };
 
 }  // namespace disk_inspector
+
+#endif  // DISK_INSPECTOR_DISK_INSPECTOR_H_

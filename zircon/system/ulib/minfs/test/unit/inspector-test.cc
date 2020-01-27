@@ -4,10 +4,10 @@
 
 // Tests minfs inspector behavior.
 
-#include <lib/disk-inspector/disk-inspector.h>
 #include <lib/sync/completion.h>
 
 #include <block-client/cpp/fake-device.h>
+#include <disk_inspector/disk_inspector.h>
 #include <fbl/string_printf.h>
 #include <fs/journal/inspector_journal.h>
 #include <minfs/inspector.h>

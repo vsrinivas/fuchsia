@@ -5,10 +5,11 @@
 // This file includes necessary methods for inspecting various on-disk structures
 // of a MinFS filesystem.
 
-#pragma once
+#ifndef MINFS_INSPECTOR_H_
+#define MINFS_INSPECTOR_H_
 
 #include <block-client/cpp/block-device.h>
-#include <lib/disk-inspector/common-types.h>
+#include <disk_inspector/common_types.h>
 #include <minfs/bcache.h>
 
 namespace minfs {
@@ -22,7 +23,7 @@ class Inspector : public disk_inspector::DiskInspector {
   Inspector& operator=(Inspector&&) = delete;
 
   explicit Inspector(std::unique_ptr<block_client::BlockDevice> device)
-    : device_(std::move(device)) {}
+      : device_(std::move(device)) {}
 
   // DiskInspector interface:
   zx_status_t GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out) final;
@@ -37,3 +38,5 @@ class Inspector : public disk_inspector::DiskInspector {
 };
 
 }  // namespace minfs
+
+#endif  // MINFS_INSPECTOR_H_

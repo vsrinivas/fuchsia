@@ -4,18 +4,19 @@
 
 group("test") {
   testonly = true
-  deps = [ ":disk-inspector-unit" ]
+  deps = [ ":disk_inspector_unit" ]
 }
 
-zx_test("disk-inspector-unit") {
+zx_test("disk_inspector_unit") {
+  output_name = "disk-inspector-unit-test"
   sources = [
-    "basic-types-test.cc",
-    "inspector-transaction-handler-test.cc",
+    "basic_types_test.cc",
+    "inspector_transaction_handler_test.cc",
   ]
   deps = [
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/block-client:fake-device",
-    "$zx/system/ulib/disk-inspector",
+    "$zx/system/ulib/disk_inspector",
     "$zx/system/ulib/storage/buffer",
     "$zx/system/ulib/storage/operation",
     "$zx/system/ulib/zircon",

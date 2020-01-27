@@ -48,7 +48,7 @@ zx_library("journal") {
       "superblock.cc",
     ]
     public_deps = [
-      "$zx/system/ulib/disk-inspector:headers",
+      "$zx/system/ulib/disk_inspector:headers",
       "$zx/system/ulib/fs:headers",
       "$zx/system/ulib/fs/transaction:headers",
       "$zx/system/ulib/fzl:headers",
@@ -57,7 +57,7 @@ zx_library("journal") {
       "$zx/system/ulib/storage/operation:headers",
     ]
     deps += [
-      "$zx/system/ulib/disk-inspector",
+      "$zx/system/ulib/disk_inspector",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fs/transaction",

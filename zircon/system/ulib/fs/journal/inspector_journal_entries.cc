@@ -4,8 +4,6 @@
 
 #include "inspector_journal_entries.h"
 
-#include <lib/disk-inspector/common-types.h>
-
 #include <array>
 
 namespace fs {

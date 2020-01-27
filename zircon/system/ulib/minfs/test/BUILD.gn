@@ -29,7 +29,7 @@ zx_test("minfs-unit") {
     "$zx/system/fidl/fuchsia-minfs:c",
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/block-client:fake-device",
-    "$zx/system/ulib/disk-inspector",
+    "$zx/system/ulib/disk_inspector",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs/test_support",
     "$zx/system/ulib/fvm",

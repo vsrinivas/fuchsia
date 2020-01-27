@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/disk-inspector/common-types.h>
+#include <disk_inspector/common_types.h>
 
 namespace disk_inspector {
 

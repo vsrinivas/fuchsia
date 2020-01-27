@@ -8,9 +8,9 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_PRIVATE_H_
 #define ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_PRIVATE_H_
 
-#include <lib/disk-inspector/common-types.h>
 #include <sys/stat.h>
 
+#include <disk_inspector/common_types.h>
 #include <fbl/unique_fd.h>
 #include <fs/journal/format.h>
 #include <minfs/format.h>

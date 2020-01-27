@@ -49,7 +49,7 @@ group("ulib") {
     "devmgr-integration-test",
     "devmgr-launcher",
     "digest",
-    "disk-inspector",
+    "disk_inspector",
     "dispatcher-pool",
     "driver",
     "driver-info",

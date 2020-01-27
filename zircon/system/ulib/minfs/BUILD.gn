@@ -46,7 +46,8 @@ zx_library("minfs") {
   }
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
-    "$zx/system/ulib/disk-inspector:headers",
+
+    #"$zx/system/ulib/disk_inspector:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fs:headers",
     "$zx/system/ulib/fs/journal:headers",
@@ -58,7 +59,7 @@ zx_library("minfs") {
   ]
   deps = [
     "$zx/system/ulib/bitmap",
-    "$zx/system/ulib/disk-inspector",
+    "$zx/system/ulib/disk_inspector",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs",

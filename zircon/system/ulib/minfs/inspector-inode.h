@@ -5,8 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_INODE_H_
 #define ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_INODE_H_
 
-#include <lib/disk-inspector/common-types.h>
-
+#include <disk_inspector/common_types.h>
 #include <fbl/string_printf.h>
 #include <fs/journal/format.h>
 #include <minfs/format.h>
