@@ -20,6 +20,8 @@ use {
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
+    crate::night_mode::night_mode_controller::NightModeController,
+    crate::night_mode::spawn_night_mode_fidl_handler,
     crate::power::spawn_power_controller,
     crate::privacy::privacy_controller::PrivacyController,
     crate::privacy::spawn_privacy_fidl_handler,
@@ -54,6 +56,7 @@ mod fidl_clone;
 mod fidl_processor;
 mod input;
 mod intl;
+mod night_mode;
 mod power;
 mod privacy;
 mod setup;
@@ -218,6 +221,24 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: IntlRequestStream| {
             spawn_intl_fidl_handler(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
+    if components.contains(&SettingType::NightMode) {
+        registry_handle
+            .write()
+            .register(
+                switchboard::base::SettingType::NightMode,
+                NightModeController::spawn(
+                    unboxed_storage_factory.get_store::<switchboard::base::NightModeInfo>(),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+        let switchboard_handle_clone = switchboard_handle.clone();
+        service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
+            spawn_night_mode_fidl_handler(switchboard_handle_clone.clone(), stream);
         });
     }
 

@@ -39,6 +39,7 @@ pub enum SettingType {
     DoNotDisturb,
     Intl,
     LightSensor,
+    NightMode,
     Power,
     Privacy,
     Setup,
@@ -56,6 +57,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     set.insert(SettingType::DoNotDisturb);
     set.insert(SettingType::Intl);
     set.insert(SettingType::LightSensor);
+    set.insert(SettingType::NightMode);
     set.insert(SettingType::Privacy);
     set.insert(SettingType::Setup);
     set.insert(SettingType::System);
@@ -88,6 +90,9 @@ pub enum SettingRequest {
 
     // Intl requests.
     SetIntlInfo(IntlInfo),
+
+    // Night mode requests.
+    SetNightModeInfo(NightModeInfo),
 
     // Power requests.
     Reboot,
@@ -185,6 +190,20 @@ impl DoNotDisturbInfo {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct NightModeInfo {
+    pub night_mode_enabled: Option<bool>,
+}
+
+impl NightModeInfo {
+    pub const fn empty() -> NightModeInfo {
+        NightModeInfo { night_mode_enabled: None }
+    }
+    pub const fn new(user_night_mode_enabled: bool) -> NightModeInfo {
+        NightModeInfo { night_mode_enabled: Some(user_night_mode_enabled) }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PrivacyInfo {
     pub user_data_sharing_consent: Option<bool>,
 }
@@ -227,6 +246,7 @@ pub enum SettingResponse {
     LightSensor(LightData),
     DoNotDisturb(DoNotDisturbInfo),
     Intl(IntlInfo),
+    NightMode(NightModeInfo),
     Privacy(PrivacyInfo),
     Setup(SetupInfo),
     System(SystemInfo),

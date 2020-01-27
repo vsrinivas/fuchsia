@@ -9,6 +9,7 @@ mod fakes;
 mod input_tests;
 mod intl_tests;
 mod light_sensor_tests;
+mod night_mode_tests;
 mod privacy_tests;
 mod setui_tests;
 mod setup_tests;

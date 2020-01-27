@@ -12,6 +12,7 @@
                 "/svc/fuchsia.settings.Display",
                 "/svc/fuchsia.settings.DoNotDisturb",
                 "/svc/fuchsia.settings.Intl",
+                "/svc/fuchsia.settings.NightMode",
                 "/svc/fuchsia.settings.Privacy",
                 "/svc/fuchsia.settings.Setup",
                 "/svc/fuchsia.settings.System",
