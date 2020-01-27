@@ -28,7 +28,7 @@ import (
 	"fuchsia.googlesource.com/pm/cmd/pm/verify"
 )
 
-const usage = `Usage: %s [-k key] [-m manifest] [-o output dir] [-t tempdir] <command>
+const usage = `Usage: %s [-k key] [-m manifest] [-o output dir] [-t tempdir] <command> [-help]
 
 Package Commands:
     init     - initialize a package meta directory in the standard form
@@ -47,6 +47,8 @@ Repository Commands:
 Tools:
     snapshot - capture metadata from multiple packages in a single file
     delta    - compare two snapshot files
+
+For help with individual commands run "pm <command> --help"
 `
 
 var tracePath = flag.String("trace", "", "write runtime trace to `file`")
