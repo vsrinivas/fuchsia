@@ -355,7 +355,8 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create() {
   client_connection = std::make_unique<magma::LinuxPlatformConnectionClient>(delegate.get());
 #endif
 
-  auto connection = magma::PlatformConnection::Create(std::move(delegate), 1u);
+  auto connection =
+      magma::PlatformConnection::Create(std::move(delegate), 1u, /*thread_profile*/ nullptr);
   if (!connection)
     return DRETP(nullptr, "failed to create PlatformConnection");
 

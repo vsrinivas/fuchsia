@@ -5,6 +5,7 @@
 #ifndef PLATFORM_DEVICE_H
 #define PLATFORM_DEVICE_H
 
+#include <chrono>
 #include <memory>
 
 #include "magma_util/dlog.h"
@@ -36,6 +37,10 @@ class PlatformDevice {
 
   virtual std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
                                                               const char* name) const = 0;
+
+  virtual std::unique_ptr<PlatformHandle> GetDeadlineSchedulerProfile(
+      std::chrono::nanoseconds capacity_ns, std::chrono::nanoseconds deadline_ns,
+      std::chrono::nanoseconds period_ns, const char* name) const = 0;
 
   virtual std::unique_ptr<PlatformHandle> GetIommuConnector() const {
     return DRETP(nullptr, "GetIommuConnector not implemented");

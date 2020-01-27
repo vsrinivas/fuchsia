@@ -16,6 +16,7 @@
 #include "msd.h"
 #include "platform_connection.h"
 #include "platform_event.h"
+#include "platform_handle.h"
 #include "platform_thread.h"
 
 using msd_device_unique_ptr_t = std::unique_ptr<msd_device_t, decltype(&msd_device_destroy)>;
@@ -37,10 +38,13 @@ class MagmaSystemDevice {
     connection_map_ = std::make_unique<std::unordered_map<std::thread::id, Connection>>();
   }
 
-  // Opens a connection to the device. On success |connection_handle_out| will contain the
-  // connection handle to be passed to the client
-  static std::shared_ptr<magma::PlatformConnection> Open(std::shared_ptr<MagmaSystemDevice>,
-                                                         msd_client_id_t client_id);
+  // Opens a connection to the device. On success, returns the connection handle
+  // to be passed to the client. A scheduler profile may be passed to
+  // |thread_profile| to apply to the connection handler or nullptr to use the
+  // default profile.
+  static std::shared_ptr<magma::PlatformConnection> Open(
+      std::shared_ptr<MagmaSystemDevice>, msd_client_id_t client_id,
+      std::unique_ptr<magma::PlatformHandle> thread_profile);
 
   msd_device_t* msd_dev() { return msd_dev_.get(); }
 

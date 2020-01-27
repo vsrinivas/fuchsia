@@ -4,6 +4,7 @@
 
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <zircon/process.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -17,6 +18,7 @@
 
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
+#include "platform_handle.h"
 #include "platform_logger.h"
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
@@ -112,7 +114,28 @@ static zx_status_t device_fidl_connect(void* context, uint64_t client_id, fidl_t
   DLOG("magma_DeviceConnectOrdinal");
   gpu_device* device = get_gpu_device(context);
 
-  auto connection = MagmaSystemDevice::Open(device->magma_system_device, client_id);
+  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  std::unique_ptr<magma::PlatformHandle> thread_profile;
+
+  {
+    // These parameters permit 2ms at 250Hz, 1ms at 500Hz, ... 50us at 10kHz.
+    const zx_duration_t capacity = ZX_MSEC(2);
+    const zx_duration_t deadline = ZX_MSEC(4);
+    const zx_duration_t period = deadline;
+
+    zx_handle_t handle;
+    zx_status_t profile_status = device_get_deadline_profile(
+        device->zx_device, capacity, deadline, period, "magma/connection-thread", &handle);
+    if (profile_status != ZX_OK) {
+      DLOG("Failed to get thread profile: %d", profile_status);
+    } else {
+      thread_profile = magma::PlatformHandle::Create(handle);
+    }
+  }
+
+  auto connection =
+      MagmaSystemDevice::Open(device->magma_system_device, client_id, std::move(thread_profile));
   if (!connection)
     return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
 

@@ -144,7 +144,8 @@ zx_status_t NoHardwareGpu::Connect(uint64_t client_id, fidl_txn_t* transaction) 
   DLOG("NoHardwareGpu::Connect");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
-  auto connection = MagmaSystemDevice::Open(magma_system_device_, client_id);
+  auto connection =
+      MagmaSystemDevice::Open(magma_system_device_, client_id, /*thread_profile*/ nullptr);
   if (!connection)
     return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
 

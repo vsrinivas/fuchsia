@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <chrono>
 #include <thread>
 
 #include "gtest/gtest.h"
 #include "helper/platform_device_helper.h"
 #include "platform_device.h"
 #include "platform_thread.h"
+
+using std::chrono_literals::operator""ms;
 
 TEST(PlatformDevice, Basic) {
   magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
@@ -44,6 +47,23 @@ TEST(PlatformDevice, SchedulerProfile) {
 
   auto profile = platform_device->GetSchedulerProfile(magma::PlatformDevice::kPriorityHigher,
                                                       "msd/test-profile");
+  ASSERT_TRUE(profile);
+
+  std::thread test_thread(
+      [&profile]() { EXPECT_TRUE(magma::PlatformThreadHelper::SetProfile(profile.get())); });
+
+  test_thread.join();
+}
+
+TEST(PlatformDevice, DeadlineSchedulerProfile) {
+  magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+  ASSERT_TRUE(platform_device);
+
+  const std::chrono::nanoseconds capacity_ns = 5ms;
+  const std::chrono::nanoseconds deadline_ns = 10ms;
+  const std::chrono::nanoseconds period_ns = deadline_ns;
+  auto profile = platform_device->GetDeadlineSchedulerProfile(capacity_ns, deadline_ns, period_ns,
+                                                              "msd/test-profile");
   ASSERT_TRUE(profile);
 
   std::thread test_thread(

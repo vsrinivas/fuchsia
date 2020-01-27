@@ -9,9 +9,11 @@
 #include <lib/async/wait.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/profile.h>
 #include <zircon/status.h>
 
 #include "platform_connection.h"
+#include "platform_handle.h"
 #include "zircon_platform_event.h"
 
 namespace magma {
@@ -48,8 +50,9 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
                            zx::channel server_endpoint, zx::channel client_endpoint,
                            zx::channel server_notification_endpoint,
                            zx::channel client_notification_endpoint,
-                           std::shared_ptr<magma::PlatformEvent> shutdown_event)
-      : magma::PlatformConnection(shutdown_event, client_id),
+                           std::shared_ptr<magma::PlatformEvent> shutdown_event,
+                           std::unique_ptr<magma::PlatformHandle> thread_profile)
+      : magma::PlatformConnection(shutdown_event, client_id, std::move(thread_profile)),
         delegate_(std::move(delegate)),
         client_endpoint_(std::move(client_endpoint)),
         server_notification_endpoint_(std::move(server_notification_endpoint)),
@@ -285,7 +288,8 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
 };
 
 std::shared_ptr<PlatformConnection> PlatformConnection::Create(
-    std::unique_ptr<PlatformConnection::Delegate> delegate, msd_client_id_t client_id) {
+    std::unique_ptr<PlatformConnection::Delegate> delegate, msd_client_id_t client_id,
+    std::unique_ptr<magma::PlatformHandle> thread_profile) {
   if (!delegate)
     return DRETP(nullptr, "attempting to create PlatformConnection with null delegate");
 
@@ -308,7 +312,7 @@ std::shared_ptr<PlatformConnection> PlatformConnection::Create(
   auto connection = std::make_shared<ZirconPlatformConnection>(
       std::move(delegate), client_id, std::move(server_endpoint), std::move(client_endpoint),
       std::move(server_notification_endpoint), std::move(client_notification_endpoint),
-      std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)));
+      std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)), std::move(thread_profile));
 
   if (!connection->BeginShutdownWait())
     return DRETP(nullptr, "Failed to begin shutdown wait");

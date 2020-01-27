@@ -25,7 +25,8 @@ class LinuxDeviceProtocol {
     DASSERT(device_proto(context)->device());
     DASSERT(!device_proto(context)->platform_connection_);
 
-    auto platform_connection = MagmaSystemDevice::Open(device_proto(context)->device(), client_id);
+    auto platform_connection = MagmaSystemDevice::Open(device_proto(context)->device(), client_id,
+                                                       /*thread_profile*/ nullptr);
     if (!platform_connection)
       return DRET(MAGMA_STATUS_INTERNAL_ERROR);
 

@@ -100,7 +100,8 @@ static zx_status_t device_fidl_connect(void* context, uint64_t client_id, fidl_t
   DLOG("magma_DeviceConnectOrdinal");
   sysdrv_device_t* device = get_device(context);
 
-  auto connection = MagmaSystemDevice::Open(device->magma_system_device, client_id);
+  auto connection =
+      MagmaSystemDevice::Open(device->magma_system_device, client_id, /*thread_profile*/ nullptr);
   if (!connection)
     return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
 

@@ -29,6 +29,13 @@ class LinuxPlatformDevice : public PlatformDevice {
     return DRETP(nullptr, "GetSchedulerProfile not implemented");
   }
 
+  std::unique_ptr<PlatformHandle> GetDeadlineSchedulerProfile(std::chrono::nanoseconds capacity_ns,
+                                                              std::chrono::nanoseconds deadline_ns,
+                                                              std::chrono::nanoseconds period_ns,
+                                                              const char* name) const override {
+    return DRETP(nullptr, "GetDeadlineSchedulerProfile not implemented");
+  }
+
   std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override;
 
   std::unique_ptr<PlatformHandle> GetIommuConnector() const override;
