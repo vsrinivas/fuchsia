@@ -111,12 +111,10 @@ void AudioRendererImpl::RecomputeMinLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
 
-  ForEachDestLink([&cur_lead_time](AudioLink& link) {
-    if (link.GetDest().is_output()) {
-      const auto& output = static_cast<const AudioDevice&>(link.GetDest());
+  link_matrix_.ForEachDestLink(*this, [&cur_lead_time](LinkMatrix::LinkHandle link) {
+    const auto& output = static_cast<const AudioDevice&>(*link.object);
 
-      cur_lead_time = std::max(cur_lead_time, output.min_lead_time());
-    }
+    cur_lead_time = std::max(cur_lead_time, output.min_lead_time());
   });
 
   if (min_lead_time_ != cur_lead_time) {
@@ -743,19 +741,22 @@ fuchsia::media::Usage AudioRendererImpl::GetStreamUsage() const {
 }
 
 void AudioRendererImpl::RealizeVolume(VolumeCommand volume_command) {
-  ForEachDestLink([this, stream_gain_db = stream_gain_db_, &volume_command](auto& link) {
-    float gain_db = link.volume_curve().VolumeToDb(volume_command.volume);
+  link_matrix_.ForEachDestLink(*this, [this, &volume_command](LinkMatrix::LinkHandle link) {
+    float gain_db = link.loudness_transform->Evaluate<3>({
+        VolumeValue{volume_command.volume},
+        GainDbFsValue{volume_command.gain_db_adjustment},
+        GainDbFsValue{stream_gain_db_},
+    });
 
-    gain_db = Gain::CombineGains(gain_db, stream_gain_db);
-    gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
+    auto& gain = link.mixer->bookkeeping().gain;
 
     REP(SettingRendererFinalGain(*this, gain_db));
 
     if (volume_command.ramp.has_value()) {
-      link.gain().SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
-                                        volume_command.ramp->ramp_type);
+      gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
+                                 volume_command.ramp->ramp_type);
     } else {
-      link.gain().SetSourceGain(gain_db);
+      gain.SetSourceGain(gain_db);
     }
   });
 }

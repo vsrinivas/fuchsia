@@ -187,7 +187,7 @@ class AudioRendererImpl : public AudioObject,
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
 
-  [[maybe_unused]] LinkMatrix& link_matrix_;
+  LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

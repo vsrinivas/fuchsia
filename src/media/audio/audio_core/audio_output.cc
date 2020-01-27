@@ -93,7 +93,7 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
       mixer->bookkeeping().gain.SetDestGain(
           cur_gain_state.muted
               ? fuchsia::media::audio::MUTED_GAIN_DB
-              : fbl::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
+              : std::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
     }
     return fit::ok(std::move(mixer));
   }

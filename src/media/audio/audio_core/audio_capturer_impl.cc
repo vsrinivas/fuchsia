@@ -98,7 +98,7 @@ AudioCapturerImpl::AudioCapturerImpl(
   volume_manager_.AddStream(this);
 
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
-  source_link_refs_.reserve(16u);
+  source_links_.reserve(16u);
 
   // Ideally, initialize this to the native configuration of our initially-bound source.
   UpdateFormat(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 8000);
@@ -134,15 +134,14 @@ void AudioCapturerImpl::RealizeVolume(VolumeCommand volume_command) {
         << "Requested ramp of capturer; ramping for destination gains is unimplemented.";
   }
 
-  ForEachSourceLink([stream_gain_db = stream_gain_db_.load(), &volume_command](AudioLink& link) {
-    // Gain objects contain multiple stages. In capture, device gain is
-    // the "source" stage and stream gain is the "dest" stage.
-    float gain_db = link.volume_curve().VolumeToDb(volume_command.volume);
+  link_matrix_.ForEachSourceLink(*this, [this, &volume_command](LinkMatrix::LinkHandle link) {
+    float gain_db = link.loudness_transform->Evaluate<3>({
+        VolumeValue{volume_command.volume},
+        GainDbFsValue{volume_command.gain_db_adjustment},
+        GainDbFsValue{stream_gain_db_.load()},
+    });
 
-    gain_db = Gain::CombineGains(gain_db, stream_gain_db);
-    gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
-
-    link.gain().SetDestGain(gain_db);
+    link.mixer->bookkeeping().gain.SetDestGain(gain_db);
   });
 }
 
@@ -374,7 +373,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   state_.store(State::OperatingSync);
 
   // Mark ourselves as routable now that we're fully configured.
-  FX_DCHECK(source_link_count() == 0)
+  FX_DCHECK(link_matrix_.SourceLinkCount(*this) == 0u)
       << "No links should be established before a capturer has a payload buffer";
   volume_manager_.NotifyStreamChanged(this);
   SetRoutingProfile();
@@ -578,9 +577,9 @@ void AudioCapturerImpl::RecomputeMinFenceTime() {
   TRACE_DURATION("audio", "AudioCapturerImpl::RecomputeMinFenceTime");
 
   zx::duration cur_min_fence_time{0};
-  ForEachSourceLink([&cur_min_fence_time](AudioLink& source_link) {
-    if (source_link.GetSource().is_input()) {
-      const auto& device = static_cast<const AudioDevice&>(source_link.GetSource());
+  link_matrix_.ForEachSourceLink(*this, [&cur_min_fence_time](LinkMatrix::LinkHandle link) {
+    if (link.object->is_input()) {
+      const auto& device = static_cast<const AudioDevice&>(*link.object);
       auto fence_time = device.driver()->fifo_depth_duration();
 
       cur_min_fence_time = std::max(cur_min_fence_time, fence_time);
@@ -961,12 +960,8 @@ void AudioCapturerImpl::PartialOverflowOccurred(FractionalFrames<int64_t> frac_s
 
 bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   TRACE_DURATION("audio", "AudioCapturerImpl::MixToIntermediate");
-  // Snapshot our source link references, but skip packet sources (we can't sample from them yet).
-  FX_DCHECK(source_link_refs_.size() == 0);
-
-  ForEachSourceLink([src_link_refs = &source_link_refs_](AudioLink& link) {
-    src_link_refs->emplace_back(fbl::RefPtr(&link));
-  });
+  FX_DCHECK(source_links_.size() == 0);
+  link_matrix_.SourceLinks(*this, &source_links_);
 
   // No matter what happens here, make certain that we are not holding any link
   // references in our snapshot when we are done.
@@ -979,10 +974,10 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   // 2) Because of this, the defer basically should inherit all of the thread
   //    analysis attributes of MixToIntermediate, including the assertion that
   //    MixToIntermediate is running in the mixer execution domain, which is
-  //    what guards the source_link_refs_ member.
+  //    what guards the source_links_ member.
   // For this reason, we manually disable thread analysis on the cleanup lambda.
   auto release_snapshot_refs =
-      fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
+      fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_links_.clear(); });
 
   // Silence our intermediate buffer.
   size_t job_bytes = sizeof(mix_buf_[0]) * mix_frames * format_.channels;
@@ -994,13 +989,13 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   }
 
   bool accumulate = false;
-  for (auto& link : source_link_refs_) {
-    FX_DCHECK(link->GetSource().is_input() || link->GetSource().is_output());
+  for (auto& link : source_links_) {
+    FX_DCHECK(link.object->is_input() || link.object->is_output());
 
     // Get a hold of our device source (we know it is a device because this is a
     // ring buffer source, and ring buffer sources are always currently input
     // devices) and snapshot the current state of the ring buffer.
-    const auto& device = static_cast<const AudioDevice&>(link->GetSource());
+    const auto& device = static_cast<const AudioDevice&>(*link.object);
 
     // TODO(MTWN-52): Right now, the only device without a driver is the throttle output. Sourcing a
     // capturer from the throttle output would be a mistake. For now if we detect this, log a
@@ -1012,8 +1007,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     }
 
     // Get our capture link mixer.
-    FX_DCHECK(link->mixer() != nullptr);
-    auto& mixer = static_cast<Mixer&>(*link->mixer());
+    FX_DCHECK(link.mixer != nullptr);
+    auto& mixer = static_cast<Mixer&>(*link.mixer);
     auto& info = mixer.bookkeeping();
 
     // If this gain scale is at or below our mute threshold, skip this source,

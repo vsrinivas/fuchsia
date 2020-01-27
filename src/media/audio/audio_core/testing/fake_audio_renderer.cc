@@ -23,18 +23,20 @@ const fuchsia::media::AudioStreamType kDefaultStreamType{
 
 // static
 std::shared_ptr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInfo(
-    async_dispatcher_t* dispatcher) {
+    async_dispatcher_t* dispatcher, LinkMatrix* link_matrix) {
   return FakeAudioRenderer::Create(dispatcher, Format::Create(kDefaultStreamType),
-                                   fuchsia::media::AudioRenderUsage::MEDIA);
+                                   fuchsia::media::AudioRenderUsage::MEDIA, link_matrix);
 }
 
 FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format,
-                                     fuchsia::media::AudioRenderUsage usage)
+                                     fuchsia::media::AudioRenderUsage usage,
+                                     LinkMatrix* link_matrix)
     : AudioObject(AudioObject::Type::AudioRenderer),
       dispatcher_(dispatcher),
       format_(format),
       usage_(usage),
-      packet_factory_(dispatcher, *format, 2 * PAGE_SIZE) {}
+      packet_factory_(dispatcher, *format, 2 * PAGE_SIZE),
+      link_matrix_(*link_matrix) {}
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,
                                            fit::closure callback) {
@@ -58,9 +60,9 @@ zx::duration FakeAudioRenderer::FindMinLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
 
-  ForEachDestLink([&cur_lead_time](AudioLink& link) {
-    if (link.GetDest().is_output()) {
-      const auto& output = static_cast<const AudioOutput&>(link.GetDest());
+  link_matrix_.ForEachDestLink(*this, [&cur_lead_time](LinkMatrix::LinkHandle link) {
+    if (link.object->is_output()) {
+      const auto& output = static_cast<const AudioOutput&>(*link.object);
       cur_lead_time = std::max(cur_lead_time, output.min_lead_time());
     }
   });

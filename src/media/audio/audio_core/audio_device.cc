@@ -10,7 +10,6 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/utils.h"
 
@@ -52,18 +51,6 @@ void AudioDevice::Wakeup() {
   mix_wakeup_.Signal();
 }
 
-std::optional<VolumeCurve> AudioDevice::GetVolumeCurve() const {
-  // ThrottleOutput does not have a driver.
-  if (!driver_) {
-    return std::nullopt;
-  }
-
-  // TODO(35394): Check here for whether the device has its own dedicated curve, which should
-  //              take precedence over the default.
-
-  return std::nullopt;
-}
-
 uint64_t AudioDevice::token() const {
   return driver_ ? driver_->stream_channel_koid() : ZX_KOID_INVALID;
 }
@@ -77,23 +64,23 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
 
   // For outputs, change the gain of all links where it is the destination.
   if (is_output()) {
-    std::lock_guard<std::mutex> links_lock(links_lock_);
-    for (auto& link : source_links_) {
-      if (link.GetSource().type() == AudioObject::Type::AudioRenderer) {
+    link_matrix_.ForEachSourceLink(*this, [&limited](LinkMatrix::LinkHandle link) {
+      if (link.object->type() == AudioObject::Type::AudioRenderer) {
         const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
-        link.gain().SetDestGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB : limited.gain_db);
+        link.mixer->bookkeeping().gain.SetDestGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB
+                                                         : limited.gain_db);
       }
-    }
+    });
   } else {
     // For inputs, change the gain of all links where it is the source.
     FX_DCHECK(is_input());
-    std::lock_guard<std::mutex> links_lock(links_lock_);
-    for (auto& link : dest_links_) {
-      if (link.GetDest().type() == AudioObject::Type::AudioCapturer) {
+    link_matrix_.ForEachDestLink(*this, [&limited](LinkMatrix::LinkHandle link) {
+      if (link.object->type() == AudioObject::Type::AudioCapturer) {
         const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
-        link.gain().SetSourceGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB : limited.gain_db);
+        link.mixer->bookkeeping().gain.SetSourceGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB
+                                                           : limited.gain_db);
       }
-    }
+    });
   }
 
   FX_DCHECK(device_settings_ != nullptr);
@@ -193,9 +180,6 @@ fit::promise<void> AudioDevice::Shutdown() {
     return fit::make_ok_promise();
   }
   shut_down_ = true;
-
-  // Unlink ourselves from everything we are currently attached to.
-  Unlink();
 
   // Give our derived class, and our driver, a chance to clean up resources.
   fit::bridge<void> bridge;

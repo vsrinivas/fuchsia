@@ -39,7 +39,13 @@ constexpr zx_vm_option_t kAudioRendererUnittestVmarFlags =
 class AudioRendererImplTest : public testing::ThreadingModelFixture {
  public:
   AudioRendererImplTest()
-      : admin_(&gain_adjustment_, dispatcher(), &policy_action_reporter_),
+      : config_handle_([] {
+          auto default_curve = VolumeCurve::DefaultForMinGain(-33.0);
+          auto process_config =
+              ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
+          return ProcessConfig::set_instance(process_config);
+        }()),
+        admin_(&gain_adjustment_, dispatcher(), &policy_action_reporter_),
         volume_manager_(dispatcher()),
         route_graph_(routing_config_, &link_matrix_),
         vmar_(fzl::VmarManager::Create(kAudioRendererUnittestVmarSize, nullptr,
@@ -53,10 +59,6 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   void SetUp() override {
     Logging::Init(-media::audio::SPEW, {"audio_core"});
     testing::ThreadingModelFixture::SetUp();
-
-    auto default_curve = VolumeCurve::DefaultForMinGain(-33.0);
-    auto process_config = ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
-    config_handle_ = ProcessConfig::set_instance(process_config);
 
     route_graph_.SetThrottleOutput(
         &threading_model(),
@@ -99,6 +101,8 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   }
 
  protected:
+  ProcessConfig::Handle config_handle_;
+
   StubUsageGainAdjustment gain_adjustment_;
   StubPolicyActionReporter policy_action_reporter_;
   AudioAdmin admin_;
@@ -114,7 +118,6 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
 
   zx::vmo vmo_;
   fbl::RefPtr<fzl::VmarManager> vmar_;
-  ProcessConfig::Handle config_handle_;
 
   fuchsia::media::AudioStreamType stream_type_ = {
       .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
@@ -169,9 +172,11 @@ TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
   packet.payload_offset = 128;
   renderer_raw->SendPacketNoReply(std::move(packet));
 
-  ASSERT_EQ(1u, fake_output->source_link_count());
-  fake_output->ForEachSourceLink([](auto& link) {
-    auto stream = link.stream();
+  std::vector<LinkMatrix::LinkHandle> links;
+  link_matrix_.SourceLinks(*fake_output, &links);
+  ASSERT_EQ(1u, links.size());
+  for (auto& link : links) {
+    auto stream = link.stream;
     ASSERT_TRUE(stream);
 
     {  // Expect a buffer.
@@ -185,11 +190,11 @@ TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
       auto buffer = stream->LockBuffer(zx::time(0), 0, 0);
       ASSERT_FALSE(buffer);
     }
-  });
+  }
 }
 
 TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
-  EXPECT_EQ(renderer_->dest_link_count(), 0u);
+  EXPECT_EQ(link_matrix_.DestLinkCount(*renderer_), 0u);
 
   zx::vmo duplicate;
   ASSERT_EQ(
@@ -208,7 +213,7 @@ TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
   fidl_renderer_->AddPayloadBuffer(0, std::move(duplicate));
 
   RunLoopUntilIdle();
-  EXPECT_EQ(renderer_raw->dest_link_count(), 1u);
+  EXPECT_EQ(link_matrix_.DestLinkCount(*renderer_raw), 1u);
 }
 
 TEST_F(AudioRendererImplTest, ReportsPlayAndPauseToPolicy) {

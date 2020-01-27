@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_output.h"
 
+#include "src/media/audio/audio_core/link_matrix.h"
+#include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/test_process_config.h"
@@ -66,6 +68,7 @@ class TestAudioOutput : public AudioOutput {
 class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
   LinkMatrix link_matrix_;
+  VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
   testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   std::shared_ptr<TestAudioOutput> audio_output_ =
@@ -73,11 +76,13 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
 };
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher());
+  auto renderer =
+      testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(), &link_matrix_);
   static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
   audio_output_->SetupMixTask(renderer->format()->stream_type(), zx::msec(1).to_msecs(),
                               kOneFramePerMs);
-  AudioObject::LinkObjects(renderer, audio_output_);
+  link_matrix_.LinkObjects(renderer, audio_output_,
+                           std::make_shared<MappedLoudnessTransform>(volume_curve_));
 
   // StartMixJob always returns nullopt (no work) and schedules another mix 1ms in the future.
   audio_output_->set_start_mix_delegate([this, audio_output = audio_output_.get()](zx::time now) {

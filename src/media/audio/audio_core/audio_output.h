@@ -11,7 +11,6 @@
 #include <lib/zx/time.h>
 
 #include "src/media/audio/audio_core/audio_device.h"
-#include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
 

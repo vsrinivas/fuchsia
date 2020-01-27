@@ -148,7 +148,7 @@ class RouteGraph {
 
   Target OutputForUsage(const fuchsia::media::Usage& usage) const;
 
-  [[maybe_unused]] LinkMatrix& link_matrix_;
+  LinkMatrix& link_matrix_;
 
   const RoutingConfig& routing_config_;
 

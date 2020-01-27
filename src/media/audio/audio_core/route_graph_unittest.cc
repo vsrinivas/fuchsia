@@ -50,19 +50,6 @@ class FakeAudioObject : public AudioObject {
 
   std::optional<fuchsia::media::Usage> usage() const override { return {fidl::Clone(usage_)}; }
 
-  std::vector<const AudioObject*> SourceLinks() {
-    std::vector<const AudioObject*> source_links;
-    ForEachSourceLink(
-        [&source_links](AudioLink& link) { source_links.push_back(&link.GetSource()); });
-    return source_links;
-  }
-
-  std::vector<const AudioObject*> DestLinks() {
-    std::vector<const AudioObject*> dest_links;
-    ForEachDestLink([&dest_links](AudioLink& link) { dest_links.push_back(&link.GetDest()); });
-    return dest_links;
-  }
-
  private:
   fbl::RefPtr<Format> format_ = nullptr;
   fuchsia::media::Usage usage_;
@@ -86,19 +73,6 @@ class FakeAudioOutput : public AudioOutput {
 
   std::optional<MixStage::FrameSpan> StartMixJob(zx::time process_start) override {
     return std::nullopt;
-  }
-
-  std::vector<const AudioObject*> SourceLinks() {
-    std::vector<const AudioObject*> source_links;
-    ForEachSourceLink(
-        [&source_links](AudioLink& link) { source_links.push_back(&link.GetSource()); });
-    return source_links;
-  }
-
-  std::vector<const AudioObject*> DestLinks() {
-    std::vector<const AudioObject*> dest_links;
-    ForEachDestLink([&dest_links](AudioLink& link) { dest_links.push_back(&link.GetDest()); });
-    return dest_links;
   }
 
   void FinishMixJob(const MixStage::FrameSpan& span, float* buffer) override {}
@@ -139,6 +113,26 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
     return {output, std::move(fake_driver)};
   }
 
+  std::vector<AudioObject*> SourceLinks(const AudioObject& object) {
+    std::vector<LinkMatrix::LinkHandle> handles;
+    link_matrix_.SourceLinks(object, &handles);
+
+    std::vector<AudioObject*> links;
+    std::transform(handles.begin(), handles.end(), std::back_inserter(links),
+                   [](auto handle) { return handle.object.get(); });
+    return links;
+  }
+
+  std::vector<AudioObject*> DestLinks(const AudioObject& object) {
+    std::vector<LinkMatrix::LinkHandle> handles;
+    link_matrix_.DestLinks(object, &handles);
+
+    std::vector<AudioObject*> links;
+    std::transform(handles.begin(), handles.end(), std::back_inserter(links),
+                   [](auto handle) { return handle.object.get(); });
+    return links;
+  }
+
   testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   LinkMatrix link_matrix_;
@@ -151,7 +145,7 @@ TEST_F(RouteGraphTest, RenderersAreUnlinkedWhenHaveNoRoutingProfile) {
   auto* renderer_raw = renderer.get();
 
   under_test_.AddRenderer(std::move(renderer));
-  EXPECT_THAT(renderer_raw->DestLinks(), IsEmpty());
+  EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, RenderersRouteToLastPluggedOutput) {
@@ -165,12 +159,11 @@ TEST_F(RouteGraphTest, RenderersRouteToLastPluggedOutput) {
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddOutput(first_output.get());
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({first_output.get()}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({first_output.get()}));
 
   auto later_output = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddOutput(later_output.get());
-  EXPECT_THAT(renderer_raw->DestLinks(),
-              UnorderedElementsAreArray(std::vector<AudioObject*>{later_output.get()}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({later_output.get()}));
 }
 
 TEST_F(RouteGraphTest, RenderersFallbackWhenOutputRemoved) {
@@ -189,11 +182,11 @@ TEST_F(RouteGraphTest, RenderersFallbackWhenOutputRemoved) {
   under_test_.AddOutput(later_output.get());
 
   under_test_.RemoveOutput(later_output.get());
-  EXPECT_THAT(renderer_raw->DestLinks(),
+  EXPECT_THAT(DestLinks(*renderer_raw),
               UnorderedElementsAreArray(std::vector<AudioObject*>{first_output.get()}));
 
   under_test_.RemoveOutput(first_output.get());
-  EXPECT_THAT(renderer_raw->DestLinks(),
+  EXPECT_THAT(DestLinks(*renderer_raw),
               UnorderedElementsAreArray(std::vector<AudioObject*>{throttle_output_.get()}));
 }
 
@@ -216,10 +209,10 @@ TEST_F(RouteGraphTest, RemovingNonLastOutputDoesNotRerouteRenderers) {
   under_test_.AddOutput(last_output.get());
 
   under_test_.RemoveOutput(second_output.get());
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({last_output.get()}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({last_output.get()}));
 
   under_test_.RemoveOutput(first_output.get());
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({last_output.get()}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({last_output.get()}));
 }
 
 TEST_F(RouteGraphTest, RenderersPickUpLastPluggedOutputWhenRoutable) {
@@ -230,12 +223,12 @@ TEST_F(RouteGraphTest, RenderersPickUpLastPluggedOutputWhenRoutable) {
   auto* renderer_raw = renderer.get();
 
   under_test_.AddRenderer(std::move(renderer));
-  EXPECT_THAT(renderer_raw->DestLinks(), IsEmpty());
+  EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({first_output.get()}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({first_output.get()}));
 }
 
 TEST_F(RouteGraphTest, RenderersAreRemoved) {
@@ -251,12 +244,12 @@ TEST_F(RouteGraphTest, RenderersAreRemoved) {
   //   1. Ours in this test.
   //   2. The RouteGraph's.
   //   3. The ThrottleOutput's (because they are linked).
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({throttle_output_.get()}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({throttle_output_.get()}));
 
   under_test_.RemoveRenderer(*renderer_raw);
   auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddOutput(output.get());
-  EXPECT_THAT(output->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*output), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, CapturersAreUnlinkedWhenHaveNoRoutingProfile) {
@@ -264,7 +257,7 @@ TEST_F(RouteGraphTest, CapturersAreUnlinkedWhenHaveNoRoutingProfile) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, CapturersRouteToLastPluggedInput) {
@@ -279,12 +272,12 @@ TEST_F(RouteGraphTest, CapturersRouteToLastPluggedInput) {
   auto first_input =
       AudioInput::Create(zx::channel(), &threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddInput(first_input.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({first_input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({first_input.get()}));
 
   auto later_input =
       AudioInput::Create(zx::channel(), &threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddInput(later_input.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({later_input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({later_input.get()}));
 }
 
 TEST_F(RouteGraphTest, CapturersFallbackWhenInputRemoved) {
@@ -305,10 +298,10 @@ TEST_F(RouteGraphTest, CapturersFallbackWhenInputRemoved) {
   under_test_.AddInput(later_input.get());
 
   under_test_.RemoveInput(later_input.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({first_input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({first_input.get()}));
 
   under_test_.RemoveInput(first_input.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, RemovingNonLastInputDoesNotRerouteCapturers) {
@@ -332,10 +325,10 @@ TEST_F(RouteGraphTest, RemovingNonLastInputDoesNotRerouteCapturers) {
   under_test_.AddInput(last_input.get());
 
   under_test_.RemoveInput(first_input.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({last_input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({last_input.get()}));
 
   under_test_.RemoveInput(second_input.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({last_input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({last_input.get()}));
 }
 
 TEST_F(RouteGraphTest, CapturersPickUpLastPluggedInputWhenRoutable) {
@@ -351,12 +344,12 @@ TEST_F(RouteGraphTest, CapturersPickUpLastPluggedInputWhenRoutable) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
   under_test_.SetCapturerRoutingProfile(
       *capturer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({later_input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({later_input.get()}));
 }
 
 TEST_F(RouteGraphTest, CapturersAreRemoved) {
@@ -370,9 +363,9 @@ TEST_F(RouteGraphTest, CapturersAreRemoved) {
 
   auto input = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddInput(input.get());
-  EXPECT_THAT(input->DestLinks(), UnorderedElementsAreArray({capturer_raw}));
+  EXPECT_THAT(DestLinks(*input), UnorderedElementsAreArray({capturer_raw}));
   under_test_.RemoveCapturer(*capturer_raw);
-  EXPECT_THAT(input->DestLinks(), IsEmpty());
+  EXPECT_THAT(DestLinks(*input), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, LoopbackCapturersAreUnlinkedWhenHaveNoRoutingProfile) {
@@ -380,7 +373,7 @@ TEST_F(RouteGraphTest, LoopbackCapturersAreUnlinkedWhenHaveNoRoutingProfile) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, LoopbackCapturersRouteToLastPluggedOutput) {
@@ -394,11 +387,11 @@ TEST_F(RouteGraphTest, LoopbackCapturersRouteToLastPluggedOutput) {
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddOutput(first_output.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({first_output.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({first_output.get()}));
 
   auto later_output = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddOutput(later_output.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({later_output.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({later_output.get()}));
 }
 
 TEST_F(RouteGraphTest, LoopbackCapturersFallbackWhenOutputRemoved) {
@@ -417,10 +410,10 @@ TEST_F(RouteGraphTest, LoopbackCapturersFallbackWhenOutputRemoved) {
   under_test_.AddOutput(later_output.get());
 
   under_test_.RemoveOutput(later_output.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({first_output.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({first_output.get()}));
 
   under_test_.RemoveOutput(first_output.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, RemovingNonLastOutputDoesNotRerouteLoopbackCapturers) {
@@ -442,10 +435,10 @@ TEST_F(RouteGraphTest, RemovingNonLastOutputDoesNotRerouteLoopbackCapturers) {
   under_test_.AddOutput(last_output.get());
 
   under_test_.RemoveOutput(second_output.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({last_output.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({last_output.get()}));
 
   under_test_.RemoveOutput(first_output.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({last_output.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({last_output.get()}));
 }
 
 TEST_F(RouteGraphTest, LoopbackCapturersPickUpLastPluggedOutputWhenRoutable) {
@@ -459,12 +452,12 @@ TEST_F(RouteGraphTest, LoopbackCapturersPickUpLastPluggedOutputWhenRoutable) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
   under_test_.SetLoopbackCapturerRoutingProfile(
       *capturer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({later_output.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({later_output.get()}));
 }
 
 TEST_F(RouteGraphTest, LoopbackCapturersAreRemoved) {
@@ -478,10 +471,10 @@ TEST_F(RouteGraphTest, LoopbackCapturersAreRemoved) {
 
   auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddOutput(output.get());
-  EXPECT_THAT(output->DestLinks(), UnorderedElementsAreArray({capturer_raw}));
+  EXPECT_THAT(DestLinks(*output), UnorderedElementsAreArray({capturer_raw}));
 
   under_test_.RemoveLoopbackCapturer(*capturer_raw);
-  EXPECT_THAT(output->DestLinks(), IsEmpty());
+  EXPECT_THAT(DestLinks(*output), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, OutputRouteCategoriesDoNotAffectEachOther) {
@@ -492,7 +485,7 @@ TEST_F(RouteGraphTest, OutputRouteCategoriesDoNotAffectEachOther) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
   auto renderer = FakeAudioObject::FakeRenderer();
   auto* renderer_raw = renderer.get();
@@ -501,15 +494,15 @@ TEST_F(RouteGraphTest, OutputRouteCategoriesDoNotAffectEachOther) {
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
-  EXPECT_THAT(renderer_raw->DestLinks(),
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
+  EXPECT_THAT(DestLinks(*renderer_raw),
               UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
 
   under_test_.SetLoopbackCapturerRoutingProfile(
       *capturer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({output.get()}));
-  EXPECT_THAT(renderer_raw->DestLinks(),
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({output.get()}));
+  EXPECT_THAT(DestLinks(*renderer_raw),
               UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
 }
 
@@ -528,7 +521,7 @@ TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
   under_test_.SetCapturerRoutingProfile(
       *capturer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({first_input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({first_input.get()}));
 
   auto renderer = FakeAudioObject::FakeRenderer();
   auto* renderer_raw = renderer.get();
@@ -537,9 +530,9 @@ TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
-  EXPECT_THAT(renderer_raw->DestLinks(),
+  EXPECT_THAT(DestLinks(*renderer_raw),
               UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({first_input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({first_input.get()}));
 }
 
 TEST_F(RouteGraphTest, DoesNotRouteUnroutableRenderer) {
@@ -550,7 +543,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableRenderer) {
   auto* renderer_raw = renderer.get();
 
   under_test_.AddRenderer(std::move(renderer));
-  EXPECT_THAT(renderer_raw->DestLinks(), IsEmpty());
+  EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
@@ -559,7 +552,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableRenderer) {
   auto second_output =
       FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddOutput(second_output.get());
-  EXPECT_THAT(renderer_raw->DestLinks(), IsEmpty());
+  EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
@@ -571,7 +564,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
   under_test_.SetCapturerRoutingProfile(
       *capturer_raw,
@@ -580,7 +573,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
   auto second_input =
       AudioInput::Create(zx::channel(), &threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddInput(second_input.get());
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, DoesNotRouteUnroutableLoopbackCapturer) {
@@ -591,7 +584,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableLoopbackCapturer) {
   auto* loopback_capturer_raw = loopback_capturer.get();
 
   under_test_.AddLoopbackCapturer(std::move(loopback_capturer));
-  EXPECT_THAT(loopback_capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*loopback_capturer_raw), IsEmpty());
 
   under_test_.SetLoopbackCapturerRoutingProfile(
       *loopback_capturer_raw,
@@ -600,7 +593,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableLoopbackCapturer) {
   auto second_output =
       FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
   under_test_.AddOutput(second_output.get());
-  EXPECT_THAT(loopback_capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*loopback_capturer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, AcceptsUnroutableRendererWithInvalidFormat) {
@@ -623,7 +616,7 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableRenderer) {
   auto* renderer_raw = renderer.get();
 
   under_test_.AddRenderer(std::move(renderer));
-  EXPECT_THAT(renderer_raw->DestLinks(), IsEmpty());
+  EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
@@ -631,7 +624,7 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableRenderer) {
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
       {.routable = false, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
-  EXPECT_THAT(renderer_raw->DestLinks(), IsEmpty());
+  EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableCapturer) {
@@ -643,7 +636,7 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableCapturer) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
   under_test_.SetCapturerRoutingProfile(
       *capturer_raw,
@@ -651,7 +644,7 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableCapturer) {
   under_test_.SetCapturerRoutingProfile(
       *capturer_raw,
       {.routable = false, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  EXPECT_THAT(capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 }
 
 TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableLoopbackCapturer) {
@@ -662,7 +655,7 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableLoopbackCapturer) {
   auto* loopback_capturer_raw = loopback_capturer.get();
 
   under_test_.AddLoopbackCapturer(std::move(loopback_capturer));
-  EXPECT_THAT(loopback_capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*loopback_capturer_raw), IsEmpty());
 
   under_test_.SetLoopbackCapturerRoutingProfile(
       *loopback_capturer_raw,
@@ -670,7 +663,7 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableLoopbackCapturer) {
   under_test_.SetLoopbackCapturerRoutingProfile(
       *loopback_capturer_raw,
       {.routable = false, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  EXPECT_THAT(loopback_capturer_raw->SourceLinks(), IsEmpty());
+  EXPECT_THAT(SourceLinks(*loopback_capturer_raw), IsEmpty());
 }
 
 const audio_stream_unique_id_t kSupportsAllDeviceId = audio_stream_unique_id_t{.data = {0x33}};
@@ -707,12 +700,12 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, MediaRoutesToLastPluggedSupportedD
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({output}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({output}));
 
   auto unconfigured_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
   auto unconfigured_output = unconfigured_output_and_driver.output.get();
   under_test_.AddOutput(unconfigured_output);
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({unconfigured_output}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({unconfigured_output}));
 }
 
 TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsupportedDevice) {
@@ -727,12 +720,12 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsuppor
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION)});
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({output}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({output}));
 
   auto unconfigured_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
   auto unconfigured_output = unconfigured_output_and_driver.output.get();
   under_test_.AddOutput(unconfigured_output);
-  EXPECT_THAT(renderer_raw->DestLinks(), UnorderedElementsAreArray({output}));
+  EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({output}));
 }
 
 const audio_stream_unique_id_t kSupportsLoopbackDeviceId = audio_stream_unique_id_t{.data = {0x7a}};
@@ -778,12 +771,12 @@ TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackRoutesToLastPluggedS
   under_test_.SetLoopbackCapturerRoutingProfile(
       *capturer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({output}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({output}));
 
   auto second_output_and_driver = OutputWithDeviceId(kSupportsLoopbackDeviceId);
   auto second_output = second_output_and_driver.output.get();
   under_test_.AddOutput(second_output);
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({second_output}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({second_output}));
 }
 
 TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackDoesNotRouteToUnsupportedDevice) {
@@ -798,23 +791,23 @@ TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackDoesNotRouteToUnsupp
   under_test_.SetLoopbackCapturerRoutingProfile(
       *capturer_raw,
       {.routable = true, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({output}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({output}));
 
   auto second_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
   auto second_output = second_output_and_driver.output.get();
   under_test_.AddOutput(second_output);
-  EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({output}));
+  EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({output}));
 }
 
 TEST_F(RouteGraphTest, DoesNotUnlinkRendererNotInGraph) {
   auto renderer = std::shared_ptr<FakeAudioObject>(FakeAudioObject::FakeRenderer().release());
   auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
 
-  AudioObject::LinkObjects(renderer, output);
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({output.get()}));
+  link_matrix_.LinkObjects(renderer, output, std::make_shared<NoOpLoudnessTransform>());
+  EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
 
   under_test_.RemoveRenderer(*renderer);
-  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({output.get()}));
+  EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output.get()}));
 }
 
 TEST_F(RouteGraphTest, DoesNotUnlinkCapturerNotInGraph) {
@@ -822,11 +815,11 @@ TEST_F(RouteGraphTest, DoesNotUnlinkCapturerNotInGraph) {
   auto input =
       AudioInput::Create(zx::channel(), &threading_model(), &device_registry_, &link_matrix_);
 
-  AudioObject::LinkObjects(input, capturer);
-  EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({input.get()}));
+  link_matrix_.LinkObjects(input, capturer, std::make_shared<NoOpLoudnessTransform>());
+  EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({input.get()}));
 
   under_test_.RemoveCapturer(*capturer);
-  EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({input.get()}));
+  EXPECT_THAT(SourceLinks(*capturer), UnorderedElementsAreArray({input.get()}));
 }
 
 TEST_F(RouteGraphTest, DoesNotUnlinkLoopbackCapturerNotInGraph) {
@@ -834,11 +827,11 @@ TEST_F(RouteGraphTest, DoesNotUnlinkLoopbackCapturerNotInGraph) {
       std::shared_ptr<FakeAudioObject>(FakeAudioObject::FakeCapturer().release());
   auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_);
 
-  AudioObject::LinkObjects(output, loopback_capturer);
-  EXPECT_THAT(loopback_capturer->SourceLinks(), UnorderedElementsAreArray({output.get()}));
+  link_matrix_.LinkObjects(output, loopback_capturer, std::make_shared<NoOpLoudnessTransform>());
+  EXPECT_THAT(SourceLinks(*loopback_capturer), UnorderedElementsAreArray({output.get()}));
 
   under_test_.RemoveLoopbackCapturer(*loopback_capturer);
-  EXPECT_THAT(loopback_capturer->SourceLinks(), UnorderedElementsAreArray({output.get()}));
+  EXPECT_THAT(SourceLinks(*loopback_capturer), UnorderedElementsAreArray({output.get()}));
 }
 
 }  // namespace

@@ -112,7 +112,7 @@ TEST_F(AudioCapturerImplTest, CanShutdownWithUnusedBuffer) {
 }
 
 TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
-  EXPECT_EQ(capturer_->source_link_count(), 0u);
+  EXPECT_EQ(link_matrix_.SourceLinkCount(*capturer_), 0u);
 
   zx::vmo duplicate;
   ASSERT_EQ(
@@ -148,7 +148,7 @@ TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
   fidl_capturer_->SetUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
 
   RunLoopUntilIdle();
-  EXPECT_EQ(capturer_->source_link_count(), 1u);
+  EXPECT_EQ(link_matrix_.SourceLinkCount(*capturer_), 1u);
 }
 
 TEST_F(AudioCapturerImplTest, CanReleasePacketWithoutDroppingConnection) {

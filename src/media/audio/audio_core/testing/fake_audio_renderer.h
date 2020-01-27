@@ -13,6 +13,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/usage_settings.h"
@@ -24,14 +25,15 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
  public:
   static std::shared_ptr<FakeAudioRenderer> Create(async_dispatcher_t* dispatcher,
                                                    fbl::RefPtr<Format> format,
-                                                   fuchsia::media::AudioRenderUsage usage) {
-    return std::make_shared<FakeAudioRenderer>(dispatcher, std::move(format), usage);
+                                                   fuchsia::media::AudioRenderUsage usage,
+                                                   LinkMatrix* link_matrix) {
+    return std::make_shared<FakeAudioRenderer>(dispatcher, std::move(format), usage, link_matrix);
   }
   static std::shared_ptr<FakeAudioRenderer> CreateWithDefaultFormatInfo(
-      async_dispatcher_t* dispatcher);
+      async_dispatcher_t* dispatcher, LinkMatrix* link_matrix);
 
   FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format,
-                    fuchsia::media::AudioRenderUsage usage);
+                    fuchsia::media::AudioRenderUsage usage, LinkMatrix* link_matrix);
 
   // Enqueues a packet that has all samples initialized to |sample| and lasts for |duration|.
   void EnqueueAudioPacket(float sample, zx::duration duration = zx::msec(1),
@@ -77,6 +79,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   std::unordered_map<const AudioObject*, std::shared_ptr<PacketQueue>> packet_queues_;
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
+  LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio::testing

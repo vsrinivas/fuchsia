@@ -19,7 +19,6 @@
 #include <fbl/slab_allocator.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
@@ -279,10 +278,7 @@ class AudioCapturerImpl : public AudioObject,
   std::unique_ptr<OutputProducer> output_producer_;
   std::unique_ptr<float[]> mix_buf_;
 
-  // Vector used to hold references to our source links while we are mixing
-  // (instead of holding the lock which prevents source_links_ mutation for the
-  // entire mix job)
-  std::vector<fbl::RefPtr<AudioLink>> source_link_refs_ FXL_GUARDED_BY(mix_domain_->token());
+  std::vector<LinkMatrix::LinkHandle> source_links_ FXL_GUARDED_BY(mix_domain_->token());
 
   // Capture bookkeeping
   bool async_mode_ = false;
@@ -316,7 +312,7 @@ class AudioCapturerImpl : public AudioObject,
   };
   std::vector<MixerHolder> mixers_;
 
-  [[maybe_unused]] LinkMatrix& link_matrix_;
+  LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

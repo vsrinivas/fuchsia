@@ -62,9 +62,6 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
     return zx::nsec(0);
   }
 
-  // AudioObject overrides.
-  std::optional<VolumeCurve> GetVolumeCurve() const override;
-
   // Accessor set gain. Limits the gain command to what the hardware allows, and
   // wakes up the device in the event of a meaningful change in gain settings.
   //
@@ -238,7 +235,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   volatile bool shut_down_ = false;
   volatile bool activated_ = false;
 
-  [[maybe_unused]] LinkMatrix& link_matrix_;
+  LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

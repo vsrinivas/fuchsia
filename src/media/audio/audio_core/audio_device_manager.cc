@@ -13,7 +13,6 @@
 
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
-#include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/driver_output.h"

@@ -124,23 +124,25 @@ void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingP
 
   it->second.profile = std::move(profile);
   if (!it->second.profile.routable || !it->second.profile.usage.is_render_usage()) {
-    it->second.ref->Unlink();
+    link_matrix_.Unlink(*it->second.ref);
     return;
   }
 
   auto output = OutputForUsage(it->second.profile.usage);
-  if (it->second.ref->has_link_to(output.device)) {
-    return;
-  }
-
-  it->second.ref->Unlink();
-
   if (!output.is_linkable()) {
     FX_LOGS(WARNING) << "Tried to route AudioRenderer, but no output for the given usage exist.";
+    link_matrix_.Unlink(*it->second.ref);
     return;
   }
 
-  AudioObject::LinkObjects(it->second.ref, output.device->shared_from_this());
+  if (link_matrix_.AreLinked(*it->second.ref, *output.device)) {
+    FX_LOGS(WARNING) << "renderer already linked";
+    return;
+  }
+
+  link_matrix_.Unlink(*it->second.ref);
+
+  link_matrix_.LinkObjects(it->second.ref, output.device->shared_from_this(), output.transform);
 }
 
 void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
@@ -153,7 +155,7 @@ void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
     return;
   }
 
-  it->second.ref->Unlink();
+  link_matrix_.Unlink(*it->second.ref);
   renderers_.erase(it);
 }
 
@@ -177,22 +179,24 @@ void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingP
 
   it->second.profile = std::move(profile);
   if (!it->second.profile.routable || !it->second.profile.usage.is_capture_usage()) {
-    it->second.ref->Unlink();
+    link_matrix_.Unlink(*it->second.ref);
     return;
   }
-
-  if (it->second.ref->has_link_to(targets_.capture.device)) {
-    return;
-  }
-
-  it->second.ref->Unlink();
 
   if (!targets_.capture.is_linkable()) {
     FX_LOGS(WARNING) << "Tried to route AudioCapturer, but no inputs exist.";
+    link_matrix_.Unlink(*it->second.ref);
     return;
   }
 
-  AudioObject::LinkObjects(targets_.capture.device->shared_from_this(), it->second.ref);
+  if (link_matrix_.AreLinked(*it->second.ref, *targets_.capture.device)) {
+    return;
+  }
+
+  link_matrix_.Unlink(*it->second.ref);
+
+  link_matrix_.LinkObjects(targets_.capture.device->shared_from_this(), it->second.ref,
+                           targets_.capture.transform);
 }
 
 void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
@@ -205,7 +209,7 @@ void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
     return;
   }
 
-  it->second.ref->Unlink();
+  link_matrix_.Unlink(*it->second.ref);
   capturers_.erase(it);
 }
 
@@ -233,22 +237,24 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(const AudioObject& loopback_c
 
   it->second.profile = std::move(profile);
   if (!it->second.profile.routable || !it->second.profile.usage.is_capture_usage()) {
-    it->second.ref->Unlink();
+    link_matrix_.Unlink(*it->second.ref);
     return;
   }
-
-  if (it->second.ref->has_link_to(targets_.loopback.device)) {
-    return;
-  }
-
-  it->second.ref->Unlink();
 
   if (!targets_.loopback.is_linkable()) {
     FX_LOGS(WARNING) << "Tried to route loopback AudioCapturer, but no outputs exist.";
+    link_matrix_.Unlink(*it->second.ref);
     return;
   }
 
-  AudioObject::LinkObjects(targets_.loopback.device->shared_from_this(), it->second.ref);
+  if (link_matrix_.AreLinked(*it->second.ref, *targets_.loopback.device)) {
+    return;
+  }
+
+  link_matrix_.Unlink(*it->second.ref);
+
+  link_matrix_.LinkObjects(targets_.loopback.device->shared_from_this(), it->second.ref,
+                           targets_.loopback.transform);
 }
 
 // TODO(39627): Only accept capturers of loopback type.
@@ -262,7 +268,7 @@ void RouteGraph::RemoveLoopbackCapturer(const AudioObject& loopback_capturer) {
     return;
   }
 
-  it->second.ref->Unlink();
+  link_matrix_.Unlink(*it->second.ref);
   loopback_capturers_.erase(it);
 }
 
@@ -277,39 +283,41 @@ void RouteGraph::UpdateGraphForDeviceChange() {
       Target output;
       if (!renderer.second.profile.routable ||
           !((output = OutputForUsage(renderer.second.profile.usage)).is_linkable()) ||
-          renderer.second.ref->dest_link_count() > 0) {
+          link_matrix_.DestLinkCount(*renderer.second.ref) > 0u) {
         return;
       }
 
-      AudioObject::LinkObjects(renderer.second.ref, output.device->shared_from_this());
+      link_matrix_.LinkObjects(renderer.second.ref, output.device->shared_from_this(),
+                               output.transform);
     });
   }
 
   if (unlink_command.loopback_capturers && targets_.loopback.is_linkable()) {
     std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
-                  [target = targets_.loopback](auto& loopback_capturer) {
+                  [this, target = targets_.loopback](auto& loopback_capturer) {
                     if (!loopback_capturer.second.profile.routable ||
                         !loopback_capturer.second.profile.usage.is_capture_usage()) {
                       return;
                     }
 
-                    FX_DCHECK(loopback_capturer.second.ref->source_link_count() == 0);
-                    AudioObject::LinkObjects(target.device->shared_from_this(),
-                                             loopback_capturer.second.ref);
+                    FX_DCHECK(link_matrix_.SourceLinkCount(*loopback_capturer.second.ref) == 0);
+                    link_matrix_.LinkObjects(target.device->shared_from_this(),
+                                             loopback_capturer.second.ref, target.transform);
                   });
   }
 
   if (unlink_command.capturers && targets_.capture.is_linkable()) {
-    std::for_each(
-        capturers_.begin(), capturers_.end(), [target = targets_.capture](auto& capturer) {
-          if (!capturer.second.profile.routable ||
-              !capturer.second.profile.usage.is_capture_usage()) {
-            return;
-          }
+    std::for_each(capturers_.begin(), capturers_.end(),
+                  [this, target = targets_.capture](auto& capturer) {
+                    if (!capturer.second.profile.routable ||
+                        !capturer.second.profile.usage.is_capture_usage()) {
+                      return;
+                    }
 
-          FX_DCHECK(capturer.second.ref->source_link_count() == 0);
-          AudioObject::LinkObjects(target.device->shared_from_this(), capturer.second.ref);
-        });
+                    FX_DCHECK(link_matrix_.SourceLinkCount(*capturer.second.ref) == 0);
+                    link_matrix_.LinkObjects(target.device->shared_from_this(), capturer.second.ref,
+                                             target.transform);
+                  });
   }
 }
 
@@ -370,22 +378,23 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
 }
 
 void RouteGraph::Unlink(UnlinkCommand unlink_command) {
-  std::for_each(renderers_.begin(), renderers_.end(), [&unlink_command](auto& renderer) {
+  std::for_each(renderers_.begin(), renderers_.end(), [this, &unlink_command](auto& renderer) {
     if (renderer.second.profile.usage.is_render_usage() &&
         unlink_command
             .renderers[fidl::ToUnderlying(renderer.second.profile.usage.render_usage())]) {
-      renderer.second.ref->Unlink();
+      link_matrix_.Unlink(*renderer.second.ref);
     }
   });
 
   if (unlink_command.loopback_capturers) {
-    std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
-                  [](auto& loopback_capturer) { loopback_capturer.second.ref->Unlink(); });
+    std::for_each(
+        loopback_capturers_.begin(), loopback_capturers_.end(),
+        [this](auto& loopback_capturer) { link_matrix_.Unlink(*loopback_capturer.second.ref); });
   }
 
   if (unlink_command.capturers) {
     std::for_each(capturers_.begin(), capturers_.end(),
-                  [](auto& capturer) { capturer.second.ref->Unlink(); });
+                  [this](auto& capturer) { link_matrix_.Unlink(*capturer.second.ref); });
   }
 }
 
