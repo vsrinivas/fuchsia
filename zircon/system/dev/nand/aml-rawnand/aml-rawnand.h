@@ -26,7 +26,6 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/rawnand.h>
-#include <fbl/bitfield.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-rawnand.h>
 
@@ -42,46 +41,14 @@ struct AmlController {
   int bch_mode;
 };
 
-// In the case where user_mode == 2 (2 OOB bytes per ECC page),
-// the controller adds one of these structs *per* ECC page in
-// the info_buf.
-struct AmlInfoFormat {
-  uint16_t info_bytes;
-  uint8_t zero_bits; /* bit0~5 is valid */
-  union ecc_sta {
-    uint8_t raw_value;
-    fbl::BitFieldMember<uint8_t, 0, 6> eccerr_cnt;
-    fbl::BitFieldMember<uint8_t, 7, 1> completed;
-  } ecc;
-  uint32_t reserved;
-
-  // BitFieldMember is not trivially copyable so neither are we, have to copy
-  // each member over manually (copy assignment is needed by tests).
-  AmlInfoFormat& operator=(const AmlInfoFormat& other) {
-    info_bytes = other.info_bytes;
-    zero_bits = other.zero_bits;
-    ecc.raw_value = other.ecc.raw_value;
-    reserved = other.reserved;
-    return *this;
-  }
-};
-
-// gcc doesn't let us use __PACKED with fbl::BitFieldMember<>, but it shouldn't
-// make a difference practically in how the AmlInfoFormat struct is laid out
-// and this assertion will double-check that we don't need it.
-static_assert(sizeof(struct AmlInfoFormat) == 8,
-              "sizeof(struct AmlInfoFormat) must be exactly 8 bytes");
-
 class AmlRawNand;
 using DeviceType = ddk::Device<AmlRawNand, ddk::UnbindableNew>;
 
 class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, ddk::base_protocol> {
  public:
   explicit AmlRawNand(zx_device_t* parent, ddk::MmioBuffer mmio_nandreg,
-                      ddk::MmioBuffer mmio_clockreg, zx::bti bti, zx::interrupt irq,
-                      std::unique_ptr<Onfi> onfi)
+                      ddk::MmioBuffer mmio_clockreg, zx::bti bti, zx::interrupt irq)
       : DeviceType(parent),
-        onfi_(std::move(onfi)),
         mmio_nandreg_(std::move(mmio_nandreg)),
         mmio_clockreg_(std::move(mmio_clockreg)),
         bti_(std::move(bti)),
@@ -89,7 +56,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  virtual ~AmlRawNand() = default;
+  ~AmlRawNand() = default;
 
   void DdkRelease();
   void DdkUnbindNew(ddk::UnbindTxn txn);
@@ -104,26 +71,8 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   zx_status_t RawNandEraseBlock(uint32_t nand_page);
   zx_status_t RawNandGetNandInfo(fuchsia_hardware_nand_Info* nand_info);
 
- protected:
-  // These functions require complicated hardware interaction so need to be
-  // overridden in tests.
-
-  // Waits until a read completes.
-  virtual zx_status_t AmlQueueRB();
-
-  // Waits until DMA has transfered data into or out of the NAND buffers.
-  virtual zx_status_t AmlWaitDmaFinish();
-
-  // Reads a single status byte from a NAND register. Used during initialization
-  // to query the chip information and settings.
-  virtual uint8_t AmlReadByte();
-
-  // Tests can fake page read/writes by copying bytes to/from these buffers.
-  const ddk::IoBuffer& data_buffer() { return data_buffer_; }
-  const ddk::IoBuffer& info_buffer() { return info_buffer_; }
-
  private:
-  std::unique_ptr<Onfi> onfi_;
+  Onfi onfi_;
   void *info_buf_, *data_buf_;
   zx_paddr_t info_buf_paddr_, data_buf_paddr_;
 
@@ -139,10 +88,10 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   sync_completion_t req_completion_;
 
   AmlController controller_params_;
-  uint32_t chip_select_ = 0;  // Default to 0.
-  int chip_delay_ = 100;      // Conservative default before we query chip to find better value.
-  uint32_t writesize_;        /* NAND pagesize - bytes */
-  uint32_t erasesize_;        /* size of erase block - bytes */
+  uint32_t chip_select_ = 0; // Default to 0.
+  int chip_delay_ = 100; // Conservative default before we query chip to find better value.
+  uint32_t writesize_; /* NAND pagesize - bytes */
+  uint32_t erasesize_; /* size of erase block - bytes */
   uint32_t erasesize_pages_;
   uint32_t oobsize_;    /* oob bytes per NAND page - bytes */
   uint32_t bus_width_;  /* 16bit or 8bit ? */
@@ -156,6 +105,8 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   polling_timings_t polling_timings_ = {};
 
   void AmlCmdCtrl(int32_t cmd, uint32_t ctrl);
+  // Reads status byte.
+  uint8_t AmlReadByte();
   void NandctrlSetCfg(uint32_t val);
   void NandctrlSetTimingAsync(int bus_tim, int bus_cyc);
   void NandctrlSendCmd(uint32_t cmd);
@@ -167,15 +118,17 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   void AmlCmdM2N(uint32_t ecc_pages, uint32_t ecc_pagesize);
   void AmlCmdM2NPage0();
   void AmlCmdN2MPage0();
+  zx_status_t AmlWaitDmaFinish();
   // Returns the AmlInfoFormat struct corresponding to the i'th
   // ECC page. THIS ASSUMES user_mode == 2 (2 OOB bytes per ECC page).
   void* AmlInfoPtr(int i);
-  zx_status_t AmlGetOOBByte(uint8_t* oob_buf, size_t* oob_actual);
+  zx_status_t AmlGetOOBByte(uint8_t* oob_buf);
   zx_status_t AmlSetOOBByte(const uint8_t* oob_buf, uint32_t ecc_pages);
   // Returns the maximum bitflips corrected on this NAND page
   // (the maximum bitflips across all of the ECC pages in this page).
   zx_status_t AmlGetECCCorrections(int ecc_pages, uint32_t nand_page, uint32_t* ecc_corrected);
   zx_status_t AmlCheckECCPages(int ecc_pages);
+  zx_status_t AmlQueueRB();
   void AmlSetClockRate(uint32_t clk_freq);
   void AmlClockInit();
   void AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t RHOH_min);

@@ -14,6 +14,23 @@ namespace amlrawnand {
 
 static constexpr uint32_t NAND_BUSWIDTH_16 = 0x00000002;
 
+// In the case where user_mode == 2 (2 OOB bytes per ECC page),
+// the controller adds one of these structs *per* ECC page in
+// the info_buf.
+struct __attribute__((packed)) AmlInfoFormat {
+  uint16_t info_bytes;
+  uint8_t zero_bits; /* bit0~5 is valid */
+  struct ecc_sta {
+    uint8_t eccerr_cnt : 6;
+    uint8_t notused : 1;
+    uint8_t completed : 1;
+  } ecc;
+  uint32_t reserved;
+};
+
+static_assert(sizeof(struct AmlInfoFormat) == 8,
+              "sizeof(struct AmlInfoFormat) must be exactly 8 bytes");
+
 struct NandSetup {
   union {
     uint32_t d32;
@@ -250,7 +267,7 @@ void* AmlRawNand::AmlInfoPtr(int i) {
 // In the case where user_mode == 2, info_buf contains one nfc_info_format
 // struct per ECC page on completion of a read. This 8 byte structure has
 // the 2 OOB bytes and ECC/error status.
-zx_status_t AmlRawNand::AmlGetOOBByte(uint8_t* oob_buf, size_t* oob_actual) {
+zx_status_t AmlRawNand::AmlGetOOBByte(uint8_t* oob_buf) {
   struct AmlInfoFormat* info;
   int count = 0;
   uint32_t ecc_pagesize, ecc_pages;
@@ -265,11 +282,6 @@ zx_status_t AmlRawNand::AmlGetOOBByte(uint8_t* oob_buf, size_t* oob_actual) {
     oob_buf[count++] = static_cast<uint8_t>(info->info_bytes & 0xff);
     oob_buf[count++] = static_cast<uint8_t>((info->info_bytes >> 8) & 0xff);
   }
-
-  if (oob_actual) {
-    *oob_actual = count;
-  }
-
   return ZX_OK;
 }
 
@@ -471,8 +483,8 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
   } else
     ecc_pages = 1;
   // Send the page address into the controller.
-  onfi_->OnfiCommand(NAND_CMD_READ0, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
-                     (controller_params_.options & NAND_BUSWIDTH_16));
+  onfi_.OnfiCommand(NAND_CMD_READ0, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
+                    (controller_params_.options & NAND_BUSWIDTH_16));
   mmio_nandreg_.Write32(GENCMDDADDRL(AML_CMD_ADL, data_buf_paddr_), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, data_buf_paddr_), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDIADDRL(AML_CMD_AIL, info_buf_paddr_), P_NAND_CMD);
@@ -500,19 +512,18 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
     zxlogf(ERROR, "%s: AmlCheckECCPages failed %d\n", __func__, status);
     return status;
   }
-
   // Finally copy out the data and oob as needed.
   if (data != nullptr) {
-    // Page0 is always 384 bytes.
-    size_t num_bytes = (page0 ? 384 : writesize_);
-    memcpy(data, data_buf_, num_bytes);
-    if (data_actual) {
-      *data_actual = num_bytes;
+    if (!page0)
+      memcpy(data, data_buf_, writesize_);
+    else {
+      static constexpr uint32_t AmlPage0Len = 384;
+
+      memcpy(data, data_buf_, AmlPage0Len);
     }
   }
-
   if (oob != nullptr)
-    status = AmlGetOOBByte(reinterpret_cast<uint8_t*>(oob), oob_actual);
+    status = AmlGetOOBByte(reinterpret_cast<uint8_t*>(oob));
   status = AmlGetECCCorrections(ecc_pages, nand_page, ecc_correct);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Uncorrectable ECC error on read\n", __func__);
@@ -542,8 +553,8 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
     AmlSetOOBByte(reinterpret_cast<const uint8_t*>(oob), ecc_pages);
   }
 
-  onfi_->OnfiCommand(NAND_CMD_SEQIN, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
-                     (controller_params_.options & NAND_BUSWIDTH_16));
+  onfi_.OnfiCommand(NAND_CMD_SEQIN, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
+                    (controller_params_.options & NAND_BUSWIDTH_16));
   mmio_nandreg_.Write32(GENCMDDADDRL(AML_CMD_ADL, data_buf_paddr_), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, data_buf_paddr_), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDIADDRL(AML_CMD_AIL, info_buf_paddr_), P_NAND_CMD);
@@ -561,10 +572,10 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
     zxlogf(ERROR, "%s: error from wait_dma_finish\n", __func__);
     return status;
   }
-  onfi_->OnfiCommand(NAND_CMD_PAGEPROG, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
-                     (controller_params_.options & NAND_BUSWIDTH_16));
-  status = onfi_->OnfiWait(zx::msec(AML_WRITE_PAGE_TIMEOUT), polling_timings_.write.min,
-                           polling_timings_.write.interval);
+  onfi_.OnfiCommand(NAND_CMD_PAGEPROG, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
+                    (controller_params_.options & NAND_BUSWIDTH_16));
+  status = onfi_.OnfiWait(zx::msec(AML_WRITE_PAGE_TIMEOUT), polling_timings_.write.min,
+                          polling_timings_.write.interval);
 
   return status;
 }
@@ -578,12 +589,12 @@ zx_status_t AmlRawNand::RawNandEraseBlock(uint32_t nand_page) {
            nand_page, erasesize_pages_);
     return ZX_ERR_INVALID_ARGS;
   }
-  onfi_->OnfiCommand(NAND_CMD_ERASE1, -1, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
-                     (controller_params_.options & NAND_BUSWIDTH_16));
-  onfi_->OnfiCommand(NAND_CMD_ERASE2, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
-                     (controller_params_.options & NAND_BUSWIDTH_16));
-  status = onfi_->OnfiWait(zx::msec(AML_ERASE_BLOCK_TIMEOUT), polling_timings_.erase.min,
-                           polling_timings_.erase.interval);
+  onfi_.OnfiCommand(NAND_CMD_ERASE1, -1, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
+                    (controller_params_.options & NAND_BUSWIDTH_16));
+  onfi_.OnfiCommand(NAND_CMD_ERASE2, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
+                    (controller_params_.options & NAND_BUSWIDTH_16));
+  status = onfi_.OnfiWait(zx::msec(AML_ERASE_BLOCK_TIMEOUT), polling_timings_.erase.min,
+                          polling_timings_.erase.interval);
   return status;
 }
 
@@ -592,16 +603,16 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
   uint8_t id_data[8];
   struct nand_chip_table* nand_chip;
 
-  onfi_->OnfiCommand(NAND_CMD_RESET, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
-                     (controller_params_.options & NAND_BUSWIDTH_16));
-  onfi_->OnfiCommand(NAND_CMD_READID, 0x00, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
-                     (controller_params_.options & NAND_BUSWIDTH_16));
+  onfi_.OnfiCommand(NAND_CMD_RESET, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
+                    (controller_params_.options & NAND_BUSWIDTH_16));
+  onfi_.OnfiCommand(NAND_CMD_READID, 0x00, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
+                    (controller_params_.options & NAND_BUSWIDTH_16));
   // Read manufacturer and device IDs.
   nand_maf_id = AmlReadByte();
   nand_dev_id = AmlReadByte();
   // Read again.
-  onfi_->OnfiCommand(NAND_CMD_READID, 0x00, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
-                     (controller_params_.options & NAND_BUSWIDTH_16));
+  onfi_.OnfiCommand(NAND_CMD_READID, 0x00, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
+                    (controller_params_.options & NAND_BUSWIDTH_16));
   // Read entire ID string.
   for (uint32_t i = 0; i < sizeof(id_data); i++)
     id_data[i] = AmlReadByte();
@@ -610,9 +621,8 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
            nand_dev_id, id_data[0], id_data[1]);
   }
 
-  zxlogf(INFO, "%s: manufacturer_id = %x, device_ide = %x, extended_id = %x\n", __func__,
-         nand_maf_id, nand_dev_id, id_data[3]);
-  nand_chip = onfi_->FindNandChipTable(nand_maf_id, nand_dev_id);
+  zxlogf(INFO, "%s: manufacturer_id = %x, device_ide = %x\n", __func__, nand_maf_id, nand_dev_id);
+  nand_chip = onfi_.FindNandChipTable(nand_maf_id, nand_dev_id);
   if (nand_chip == nullptr) {
     zxlogf(ERROR,
            "%s: Cound not find matching NAND chip. NAND chip unsupported."
@@ -829,8 +839,8 @@ void AmlRawNand::DdkUnbindNew(ddk::UnbindTxn txn) {
 }
 
 zx_status_t AmlRawNand::Init() {
-  onfi_->Init([this](int32_t cmd, uint32_t ctrl) -> void { AmlCmdCtrl(cmd, ctrl); },
-              [this]() -> uint8_t { return AmlReadByte(); });
+  onfi_.Init([this](int32_t cmd, uint32_t ctrl) -> void { AmlCmdCtrl(cmd, ctrl); },
+             [this]() -> uint8_t { return AmlReadByte(); });
   auto cb = [](void* arg) -> int { return reinterpret_cast<AmlRawNand*>(arg)->IrqThread(); };
   if (thrd_create_with_name(&irq_thread_, cb, this, "aml_raw_nand_irq_thread") != thrd_success) {
     zxlogf(ERROR, "%s: Failed to create IRQ thread\n", __FILE__);
@@ -894,9 +904,8 @@ zx_status_t AmlRawNand::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
   fbl::AllocChecker ac;
-  std::unique_ptr<AmlRawNand> device(
-      new (&ac) AmlRawNand(parent, *std::move(mmio_nandreg), *std::move(mmio_clockreg),
-                           std::move(bti), std::move(irq), std::make_unique<Onfi>()));
+  std::unique_ptr<AmlRawNand> device(new (&ac) AmlRawNand(
+      parent, *std::move(mmio_nandreg), *std::move(mmio_clockreg), std::move(bti), std::move(irq)));
 
   if (!ac.check()) {
     zxlogf(ERROR, "%s: AmlRawNand alloc failed\n", __FILE__);
