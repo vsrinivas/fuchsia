@@ -1,0 +1,21 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":fs_test_support" ]
+}
+
+zx_test("fs_test_support") {
+  output_name = "fs-test-support-test"
+  sources = [
+    "environment_test.cc",
+    "fixtures_test.cc",
+    "main.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fs/test_support",
+    "$zx/system/ulib/zxtest",
+  ]
+}

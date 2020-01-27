@@ -39,21 +39,3 @@ zx_library("test_support") {
     "$zx/system/ulib/zxtest",
   ]
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":fs_test_support" ]
-}
-
-zx_test("fs_test_support") {
-  output_name = "fs-test-support-test"
-  sources = [
-    "test/environment_test.cc",
-    "test/fixtures_test.cc",
-    "test/main.cc",
-  ]
-  deps = [
-    ":test_support",
-    "$zx/system/ulib/zxtest",
-  ]
-}

@@ -47,7 +47,7 @@ zx_test("metrics-cobalt") {
   ]
 }
 
-group("metrics") {
+group("test") {
   testonly = true
   deps = [
     ":metrics-cobalt",

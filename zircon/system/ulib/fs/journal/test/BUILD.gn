@@ -1,0 +1,70 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx_build/public/gn/fuzzer.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":journal-entry-fuzzer",
+    ":journal-fuzzer",
+    ":journal-replay-fuzzer",
+    ":journal-unit",
+  ]
+}
+
+zx_test("journal-unit") {
+  test_group = "fs"
+  sources = [
+    "background_executor_test.cc",
+    "data_streamer_test.cc",
+    "entry_view_test.cc",
+    "header_view_test.cc",
+    "inspector_parser_test.cc",
+    "inspector_test.cc",
+    "journal_test.cc",
+    "operation_tracker_test.cc",
+    "replay_test.cc",
+    "replay_tree_test.cc",
+    "superblock_test.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fs/journal",
+    "$zx/system/ulib/storage/buffer/test_support",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/cksum",
+  ]
+
+  include_dirs = [ ".." ]
+}
+
+source_set("fuzz-utils") {
+  sources = [ "fuzzer_utils.cc" ]
+  public_deps = [
+    "$zx/system/ulib/fs/journal",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zx",
+    "$zx/third_party/ulib/cksum",
+  ]
+}
+
+fuzzer("journal-fuzzer") {
+  sources = [ "journal_fuzztest.cc" ]
+  deps = [ ":fuzz-utils" ]
+  include_dirs = [ "test" ]
+}
+
+fuzzer("journal-entry-fuzzer") {
+  sources = [ "entry_parse_fuzztest.cc" ]
+  deps = [ ":fuzz-utils" ]
+  include_dirs = [ "test" ]
+}
+
+fuzzer("journal-replay-fuzzer") {
+  sources = [ "replay_fuzztest.cc" ]
+  deps = [ ":fuzz-utils" ]
+  include_dirs = [ "test" ]
+}
