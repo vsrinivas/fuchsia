@@ -242,7 +242,7 @@ func Main() {
 	ctx := context.CreateFromStartupInfo()
 
 	{
-		if l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), "system_updater"); err != nil {
+		if l, err := syslog.NewLoggerWithDefaults(ctx.Connector(), "system-updater"); err != nil {
 			fmt.Println(err)
 		} else {
 			syslog.SetDefaultLogger(l)

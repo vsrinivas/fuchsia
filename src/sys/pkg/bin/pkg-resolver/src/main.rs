@@ -82,7 +82,7 @@ impl ChannelInspectState {
 }
 
 fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["pkg_resolver"]).expect("can't init logger");
+    fuchsia_syslog::init_with_tags(&["pkg-resolver"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
     fx_log_info!("starting package resolver");
 
