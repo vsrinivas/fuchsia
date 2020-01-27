@@ -26,7 +26,6 @@ group("uapp") {
     "psutils",
     "spiutil",
     "syscall-check",
-    "thermal-cli",
     "usb-fwloader",
     "xdc-test",
   ]

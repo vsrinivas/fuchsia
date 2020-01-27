@@ -2,14 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("thermal-cli") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("thermal-cli") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     ":common",
-    "$zx/system/fidl/fuchsia-hardware-thermal:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }
 
@@ -19,26 +33,37 @@ source_set("common") {
     "thermal-cli.h",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-thermal:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }
 
-zx_test("thermal-cli-test") {
+test("thermal-cli-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "thermal-cli-test"
   sources = [ "test/thermal-cli-test.cc" ]
   include_dirs = [ "." ]
   deps = [
     ":common",
-    "$zx/system/fidl/fuchsia-hardware-thermal:c",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/mock-function",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
+}
+
+migrated_manifest("thermal-cli-manifest") {
+  deps = [ ":thermal-cli" ]
+}
+
+migrated_manifest("thermal-cli-test-manifest") {
+  deps = [ ":thermal-cli-test" ]
 }
