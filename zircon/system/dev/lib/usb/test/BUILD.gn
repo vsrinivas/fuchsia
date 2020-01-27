@@ -1,0 +1,62 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":usb-desc-lib-test",
+    ":usb-request-cpp-test",
+    ":usb-wrapper-test",
+  ]
+}
+
+zx_test("usb-request-cpp-test") {
+  output_name = "usb-request-cpp-test"
+  sources = [ "request-cpp-test.cc" ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.function",
+    "$zx/system/banjo/ddk.protocol.usb.request",
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_test("usb-wrapper-test") {
+  output_name = "usb-wrapper-test"
+  sources = [ "usb-wrapper-test.cc" ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.composite",
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_test("usb-desc-lib-test") {
+  output_name = "usb-desc-lib-test"
+  sources = [ "usb-desc-lib-test.cc" ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.composite",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+  ]
+}
