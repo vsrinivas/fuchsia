@@ -57,9 +57,9 @@ source_set("test_common") {
   visibility = [ ":*" ]
   sources = [ "test/common.cc" ]
   public_deps = [
-    "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/tee-client-api",
     "//zircon/system/fidl/fuchsia-tee",
   ]
