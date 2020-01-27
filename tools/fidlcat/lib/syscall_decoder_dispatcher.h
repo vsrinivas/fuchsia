@@ -1695,16 +1695,16 @@ class SyscallCompareDispatcher : public SyscallDisplayDispatcher {
  public:
   SyscallCompareDispatcher(fidl_codec::LibraryLoader* loader, const DecodeOptions& decode_options,
                            const DisplayOptions& display_options,
-                           std::string_view compare_file_name)
+                           std::shared_ptr<Comparator> comparator)
       : SyscallDisplayDispatcher(loader, decode_options, display_options, os_),
-        comparator_(compare_file_name, std::cout) {}
+        comparator_(comparator) {}
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
                                                 zxdb::Thread* thread,
                                                 const Syscall* syscall) override;
 
  private:
-  Comparator comparator_;
+  std::shared_ptr<Comparator> comparator_;
   std::ostringstream os_;
 };
 

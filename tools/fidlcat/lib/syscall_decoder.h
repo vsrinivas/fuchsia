@@ -282,7 +282,7 @@ class SyscallDisplay : public SyscallUse {
 
 class SyscallCompare : public SyscallDisplay {
  public:
-  SyscallCompare(SyscallDisplayDispatcher* dispatcher, Comparator& comparator,
+  SyscallCompare(SyscallDisplayDispatcher* dispatcher, std::shared_ptr<Comparator> comparator,
                  std::ostringstream& os)
       : SyscallDisplay(dispatcher, os), comparator_(comparator), os_(os) {}
 
@@ -291,7 +291,7 @@ class SyscallCompare : public SyscallDisplay {
   void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) override;
 
  private:
-  Comparator& comparator_;
+  std::shared_ptr<Comparator> comparator_;
   std::ostringstream& os_;
 };
 

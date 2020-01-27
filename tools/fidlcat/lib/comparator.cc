@@ -4,6 +4,8 @@
 
 #include "tools/fidlcat/lib/comparator.h"
 
+#include <zircon/assert.h>
+
 #include <iostream>
 #include <string>
 #include <utility>
@@ -11,280 +13,196 @@
 
 namespace fidlcat {
 
-void Comparator::CompareInput(std::string_view syscall_inputs, uint64_t actual_pid,
-                              uint64_t actual_tid) {
-  // A difference has already been found, no need for anymore comparing.
-  if (found_difference_) {
-    return;
+void Comparator::CompareInput(std::string_view syscall_inputs, std::string_view actual_process_name,
+                              uint64_t actual_pid, uint64_t actual_tid) {
+  // remove header from the message
+  syscall_inputs = AnalyzesAndRemovesHeader(syscall_inputs);
+  auto actual_message_node = actual_message_graph_.InsertMessage(actual_process_name, actual_pid,
+                                                                 actual_tid, syscall_inputs);
+  // Is there a unique match for this message in the golden messages? If so, we propagate this
+  // match.
+  if (UniqueMatchToGolden(actual_message_node)) {
+    PropagateMatch(actual_message_node, false);
   }
-
-  std::unique_ptr<Message> expected_inputs = GetNextExpectedMessage(actual_pid, actual_tid);
-  if (!expected_inputs) {
-    found_difference_ = true;
-    return;
-  }
-
-  // Now get process name, and remove the header from syscall_inputs.
-  std::string_view actual_process_name =
-      syscall_inputs.length() > 0 && syscall_inputs[0] == '\n'
-          ? syscall_inputs.substr(1, syscall_inputs.find(' ') - 1)
-          : syscall_inputs.substr(0, syscall_inputs.find(' '));
-  if (actual_process_name.compare(expected_inputs->process_name) != 0) {
-    found_difference_ = true;
-    compare_results_ << "Different process names for actual pid:tid " << actual_pid << ":"
-                     << actual_tid << ", matched with expected pid:tid "
-                     << expected_pids_[actual_pid] << ":"
-                     << expected_pids_tids_[std::make_pair(actual_pid, actual_tid)].second
-                     << ", expected " << expected_inputs->process_name << " actual was "
-                     << actual_process_name;
-    return;
-  }
-  std::string actual_inputs = static_cast<std::string>(
-      syscall_inputs.substr(syscall_inputs.find(' ', syscall_inputs.find(":")) + 1));
-
-  // Now we replace handles ids, then compare.
-  static std::vector<std::string> handle_texts = {"handle: ", "handle = "};
-  for (size_t i = 0; i < handle_texts.size(); i++) {
-    if (!CouldReplaceHandles(&actual_inputs, expected_inputs->message, handle_texts[i])) {
-      found_difference_ = true;
-      return;
-    }
-  }
-
-  if (actual_inputs.compare(expected_inputs->message) != 0) {
-    compare_results_ << "Different messages. expected " << expected_inputs->message << " got "
-                     << actual_inputs;
-    found_difference_ = true;
-    return;
-  }
+  last_unmatched_input_from_tid_[actual_tid] = actual_message_node;
 }
 
-void Comparator::CompareOutput(std::string_view syscall_outputs, uint64_t actual_pid,
+void Comparator::CompareOutput(std::string_view syscall_outputs,
+                               std::string_view actual_process_name, uint64_t actual_pid,
                                uint64_t actual_tid) {
-  // A difference has already been found, no need for anymore comparison.
-  if (found_difference_) {
-    return;
-  }
+  // If present, remove header from message
+  syscall_outputs = AnalyzesAndRemovesHeader(syscall_outputs);
 
-  std::unique_ptr<Message> expected_outputs = GetNextExpectedMessage(actual_pid, actual_tid);
-  if (!expected_outputs) {
-    found_difference_ = true;
-    return;
-  }
+  // Create the output node, linking it to its corresponding input node if there is one.
+  auto matching_input = last_unmatched_input_from_tid_.find(actual_tid);
+  auto actual_message_node =
+      matching_input != last_unmatched_input_from_tid_.end()
+          ? actual_message_graph_.InsertMessage(actual_process_name, actual_pid, actual_tid,
+                                                syscall_outputs, matching_input->second)
+          : actual_message_graph_.InsertMessage(actual_process_name, actual_pid, actual_tid,
+                                                syscall_outputs);
 
-  // Does output begin with process name, pid and tid?
-  std::string actual_outputs;
-  //'process_name pid:tid ' with one char for process_name/pid/tid
-  constexpr size_t kMinNbCharHeader = 5;
-  if (syscall_outputs.find("->") > kMinNbCharHeader) {
-    // We check that processes names match.
-    std::string_view actual_process_name =
-        syscall_outputs.length() > 0 && syscall_outputs[0] == '\n'
-            ? syscall_outputs.substr(1, syscall_outputs.find(' ') - 1)
-            : syscall_outputs.substr(0, syscall_outputs.find(' '));
-    if (actual_process_name.compare(expected_outputs->process_name) != 0) {
-      found_difference_ = true;
-      compare_results_ << "Different process names for actual pid:tid " << actual_pid << ":"
-                       << actual_tid << ", matched with expected pid:tid "
-                       << expected_pids_[actual_pid] << ":"
-                       << expected_pids_tids_[std::make_pair(actual_pid, actual_tid)].second
-                       << ", expected " << expected_outputs->process_name << " actual was "
-                       << actual_process_name;
-      return;
-    }
-    actual_outputs = static_cast<std::string>(
-        syscall_outputs.substr(syscall_outputs.find(' ', syscall_outputs.find(":")) + 1));
-  } else {
-    actual_outputs = syscall_outputs.length() > 0 && syscall_outputs[0] == '\n'
-                         ? static_cast<std::string>(syscall_outputs.substr(1))
-                         : static_cast<std::string>(syscall_outputs);
-  }
-  // Now we replace handle ids, then compare.
-  static std::vector<std::string> handle_texts = {"handle: ", "handle = "};
-  for (size_t i = 0; i < handle_texts.size(); i++) {
-    if (!CouldReplaceHandles(&actual_outputs, expected_outputs->message, handle_texts[i])) {
-      found_difference_ = true;
-      return;
-    }
-  }
-
-  if (actual_outputs.compare(expected_outputs->message) != 0) {
-    compare_results_ << "Different messages, expected " << expected_outputs->message << " got "
-                     << actual_outputs;
-    found_difference_ = true;
-    return;
+  // Is there a unique match for this message in the golden messages? If so, we propagate this
+  // match.
+  if (UniqueMatchToGolden(actual_message_node)) {
+    PropagateMatch(actual_message_node, false);
   }
 }
-void Comparator::DecodingError(std::string error) {
-  found_difference_ = true;
+
+void Comparator::DecodingError(std::string_view error) {
   compare_results_ << "Unexpected decoding error in the current execution:\n" << error;
 }
 
-bool Comparator::CouldReplaceHandles(std::string* actual, std::string_view expected,
-                                     std::string_view handle_text) {
-  size_t handle_position = actual->find(handle_text);
-  while (handle_position != std::string::npos) {
-    if (expected.find(handle_text, handle_position) != handle_position) {
-      compare_results_ << "Different messages, expected " << expected << " actual " << actual;
-      return false;
-    }
-    handle_position += handle_text.length();
-    uint32_t act_handle = ExtractHexUint32(std::string_view(*actual).substr(handle_position));
-    uint32_t exp_handle = ExtractHexUint32(expected.substr(handle_position));
+bool Comparator::UniqueMatchToGolden(std::shared_ptr<ActualMessageNode> actual_message_node) {
+  auto poss_golden_messages =
+      golden_message_graph_.message_nodes().find(actual_message_node->message());
+  if (poss_golden_messages == golden_message_graph_.message_nodes().end()) {  // No message matched
+    compare_results_ << "No golden message could match " << *actual_message_node;
+    return false;
+  }
+  if (poss_golden_messages->second.size() == 1) {
+    // exactly one message from golden matched this string
+    actual_message_node->set_matching_golden_node(poss_golden_messages->second[0]);
+    return true;
+  }
+  // More than one golden message matched
+  return false;
+}
 
-    // Actual handle matches to the expected
-    if (expected_handles_.find(act_handle) == expected_handles_.end()) {
-      expected_handles_[act_handle] = exp_handle;
-    } else if (expected_handles_[act_handle] != exp_handle) {
-      compare_results_ << std::hex;
-      compare_results_ << "Different handles, actual handle " << act_handle << " should be "
-                       << expected_handles_[act_handle] << " in golden file but was " << exp_handle;
-      compare_results_ << std::dec;
+bool Comparator::PropagateMatch(std::shared_ptr<ActualNode> actual_node, bool reverse_propagate) {
+  auto golden_node = actual_node->matching_golden_node();
+  ZX_ASSERT(golden_node != nullptr);
+
+  for (auto i = actual_node->dependencies().begin(); i != actual_node->dependencies().end(); i++) {
+    auto actual_dependency_node = i->second;
+    // The golden node that should match actual_dependency_node according to the dependency links
+    // of golden_node
+    auto golden_dependency_node = golden_node->get_dependency_by_type(i->first);
+
+    // golden_node does not have the dependency actual_node has, there is no possible matching
+    // between the current execution and the one stored in the golden file.
+    if (!golden_dependency_node) {
+      compare_results_ << *actual_node << " with dependency to " << *actual_dependency_node
+                       << " was matched to " << *golden_node
+                       << " which does not have this dependency \n";
       return false;
     }
 
-    // and no other actual handle matches to the same expected.
-    if (actual_handles_.find(exp_handle) == actual_handles_.end()) {
-      actual_handles_[exp_handle] = act_handle;
-    } else if (actual_handles_[exp_handle] != act_handle) {
-      compare_results_ << std::hex;
-      compare_results_ << "Different handles, expected handle " << exp_handle << " should be "
-                       << actual_handles_[exp_handle] << " in this execution but was "
-                       << act_handle;
-      compare_results_ << std::dec;
+    if (!actual_dependency_node->matching_golden_node()) {
+      actual_dependency_node->set_matching_golden_node(golden_dependency_node);
+      if (!PropagateMatch(actual_dependency_node, reverse_propagate)) {
+        return false;
+      }
+      if (reverse_propagate && !ReversePropagateMatch(actual_dependency_node)) {
+        return false;
+      }
+    }
+    // actual_dependency_node was already matched, we check that this match makes sense for the
+    // current link
+    else if (actual_dependency_node->matching_golden_node() != golden_dependency_node) {
+      compare_results_
+          << "Conflicting matches for " << *actual_node << "matched to " << *golden_node
+          << "\n. Actual has dependency to " << *actual_dependency_node << " matched to "
+          << *actual_dependency_node->matching_golden_node()
+          << " whereas according to dependency from actual and its match it should have been "
+          << *golden_dependency_node << "\n";
       return false;
     }
-    size_t act_handle_end = actual->find_first_not_of("abcdef1234567890", handle_position);
-    size_t exp_handle_end = expected.find_first_not_of("abcdef1234567890", handle_position);
-    actual->replace(handle_position, act_handle_end - handle_position,
-                    expected.substr(handle_position, exp_handle_end - handle_position));
-    handle_position = actual->find(handle_text, handle_position);
   }
   return true;
 }
 
-uint64_t Comparator::ExtractUint64(std::string_view str) {
-  uint64_t result = 0;
-  for (size_t i = 0; i < str.size(); ++i) {
-    char value = str[i];
-    if ((value < '0') || (value > '9')) {
-      break;
+bool Comparator::ReversePropagateMatch(std::shared_ptr<ActualNode> actual_node) {
+  // golden_node matches actual_node
+  auto golden_node = actual_node->matching_golden_node();
+  ZX_ASSERT(golden_node != nullptr);
+
+  // We can only propagate along a reverse dependency if it is the only one of its type.
+  for (auto actual_link_type_pair = actual_node->reverse_dependencies().begin();
+       actual_link_type_pair != actual_node->reverse_dependencies().end();
+       actual_link_type_pair++) {
+    size_t actual_nb_link_of_type = actual_link_type_pair->second.size();
+    if (actual_nb_link_of_type > 1) {
+      // multiple links with same type, we can't do any propagation
+      continue;
     }
-    result = 10 * result + (value - '0');
-  }
-  return result;
-}
-
-uint32_t Comparator::ExtractHexUint32(std::string_view str) {
-  uint32_t result = 0;
-  for (size_t i = 0; i < str.size(); ++i) {
-    char value = str[i];
-    if ('0' <= value && value <= '9') {
-      result = 16 * result + (value - '0');
-    } else if ('a' <= value && value <= 'f') {
-      result = 16 * result + (value - 'a' + 10);
-    } else {
-      break;
+    auto golden_link_type_pair =
+        golden_node->get_reverse_dependencies_by_type(actual_link_type_pair->first);
+    // This reverse link is not present in golden_node, there is no possible matching between the
+    // current execution and the one stored in the golden file.
+    if (golden_link_type_pair == golden_node->reverse_dependencies().end()) {
+      compare_results_ << *actual_node << " with a reverse dependency of type "
+                       << actual_link_type_pair->first.second << " was matched to " << *golden_node
+                       << " which has no such reverse dependency \n";
+      return false;
+    }
+    size_t golden_nb_link_of_type = golden_link_type_pair->second.size();
+    // golden node also has more reverse dependencies than actual_node, this means the matching is
+    // not possible as we only call ReversePropagate when the actual_message_graph_ is complete
+    if (golden_nb_link_of_type > 1) {
+      compare_results_ << *actual_node << " with one reverse dependency of type "
+                       << actual_link_type_pair->first.second << " was matched to " << *golden_node
+                       << " which has " << golden_nb_link_of_type
+                       << " such reverse dependencies \n";
+      return false;
+    }
+    auto actual_dependency_node = actual_link_type_pair->second[0].lock();
+    auto golden_dependency_node = golden_link_type_pair->second[0].lock();
+    if (!actual_dependency_node->matching_golden_node()) {
+      actual_dependency_node->set_matching_golden_node(golden_dependency_node);
+      if (!PropagateMatch(actual_dependency_node, true) ||
+          !ReversePropagateMatch(actual_dependency_node)) {
+        return false;
+      }
+    } else if (actual_dependency_node->matching_golden_node() != golden_dependency_node) {
+      compare_results_
+          << "Conflicting matches for " << *actual_node << "matched to " << *golden_node
+          << "\n. Actual has a reverse dependency to " << *actual_dependency_node << " matched to "
+          << *actual_dependency_node->matching_golden_node()
+          << " whereas according to dependency from actual and its match it should have been "
+          << *golden_dependency_node << "\n";
+      return false;
     }
   }
-  return result;
-}
-
-std::unique_ptr<Message> Comparator::GetNextExpectedMessage(uint64_t actual_pid,
-                                                            uint64_t actual_tid) {
-  uint64_t expected_pid = 0;
-  uint64_t expected_tid = 0;
-
-  // Have we already seen this pid?
-  if (expected_pids_.find(actual_pid) == expected_pids_.end()) {
-    if (pids_by_order_of_appearance_.empty()) {
-      compare_results_ << "More actual processes than expected.";
-      return nullptr;
-    }
-    // We assume the order of appearance of pids are the same in the golden file and in the current
-    // execution.
-    expected_pid = pids_by_order_of_appearance_.front();
-    pids_by_order_of_appearance_.pop_front();
-    expected_pids_[actual_pid] = expected_pid;
-    // As each expected pid appears only once in pids_by_order_of_appearance_, we know for sure that
-    // only this actual_pid can link to this expected_pid, no need for a reverse map.
-  } else {
-    expected_pid = expected_pids_[actual_pid];
-  }
-
-  // Have we already seen this tid?
-  if (expected_pids_tids_.find(std::make_pair(actual_pid, actual_tid)) ==
-      expected_pids_tids_.end()) {
-    expected_pid = expected_pids_[actual_pid];
-    if (tids_by_order_of_appearance_[expected_pid].empty()) {
-      compare_results_ << "More actual threads than expected for actual pid " << actual_pid
-                       << " matched with expected pid " << expected_pid;
-      return nullptr;
-    }
-    // We assume the order of appearance of tids per pid are the same in the golden file and in the
-    // current execution.
-    expected_tid = tids_by_order_of_appearance_[expected_pid].front();
-    tids_by_order_of_appearance_[expected_pid].pop_front();
-    expected_pids_tids_[std::make_pair(actual_pid, actual_tid)] =
-        std::make_pair(expected_pid, expected_tid);
-    // Same as above, no need for a reverse map.
-  } else {
-    expected_tid = expected_pids_tids_[std::make_pair(actual_pid, actual_tid)].second;
-  }
-
-  if (messages_[std::make_pair(expected_pid, expected_tid)].empty()) {
-    compare_results_ << "More actual messages than expected for actual pid:tid " << actual_pid
-                     << ":" << actual_tid << " matched with expected pid:tid " << expected_pid
-                     << ":" << expected_tid;
-    return nullptr;
-  }
-  std::unique_ptr<Message> expected_message =
-      std::move(messages_[std::make_pair(expected_pid, expected_tid)].front());
-  messages_[std::make_pair(expected_pid, expected_tid)].pop_front();
-  return expected_message;
+  return true;
 }
 
 void Comparator::ParseGolden(std::string_view golden_file_contents) {
   size_t processed_char_count = 0;
+  // We use this map to link output messages to their corresponding input messages.
+  std::map<uint64_t, std::shared_ptr<GoldenMessageNode>> last_unmatched_input_from_tid_golden;
 
   std::string_view cur_msg = GetMessage(golden_file_contents, &processed_char_count);
   uint64_t previous_pid = 0;
   uint64_t previous_tid = 0;
-  std::string_view previous_process_name;
+  std::string previous_process_name;
   while (!cur_msg.empty()) {
-    uint64_t pid, tid;
-    std::string_view process_name;
-    //'process_name pid:tid ' with one char for process_name/pid/tid
-    constexpr size_t kMinNbCharHeader = 5;
+    uint64_t pid = 0, tid = 0;
+    std::string process_name;
 
-    // The message does not contain the process name and pid:tid.
-    if (cur_msg.find("->") <= kMinNbCharHeader) {
+    cur_msg = AnalyzesAndRemovesHeader(cur_msg, &process_name, &pid, &tid);
+
+    // AnalyzesAndRemovesHeader did not update the values of pid, tid and process_name, as there was
+    // no header to the message (or it could not be parsed).
+    if (pid == 0) {
       pid = previous_pid;
       tid = previous_tid;
       process_name = previous_process_name;
+    }
+
+    auto last_unmatched = last_unmatched_input_from_tid_golden.find(tid);
+    if (last_unmatched != last_unmatched_input_from_tid_golden.end()) {
+      // This is an output message, with a corresponding input messge
+      auto message_node = golden_message_graph_.InsertMessage(process_name, pid, tid, cur_msg,
+                                                              last_unmatched->second);
+      last_unmatched_input_from_tid_golden.erase(tid);
     } else {
-      pid = ExtractUint64(cur_msg.substr(cur_msg.find(' ') + 1));
-      tid = ExtractUint64(cur_msg.substr(cur_msg.find(':') + 1));
-      process_name = cur_msg.substr(0, cur_msg.find(' '));
-      // We remove process name, pid and tid from the message, as those are now saved in the map
-      // explicitely
-      cur_msg = cur_msg.substr(cur_msg.find(' ', cur_msg.find(':')) + 1);
+      auto message_node = golden_message_graph_.InsertMessage(process_name, pid, tid, cur_msg);
+      if (HasReturn(cur_msg)) {
+        last_unmatched_input_from_tid_golden[tid] = message_node;
+      }
     }
 
-    // Have we already seen this pid?
-    if (tids_by_order_of_appearance_.find(pid) == tids_by_order_of_appearance_.end()) {
-      std::deque<uint64_t> tids = {tid};
-      tids_by_order_of_appearance_[pid] = tids;
-      pids_by_order_of_appearance_.push_back(pid);
-      messages_[std::make_pair(pid, tid)] = std::deque<std::unique_ptr<Message>>();
-    }
-
-    // Have we already seen this tid?
-    else if (messages_.find(std::make_pair(pid, tid)) == messages_.end()) {
-      tids_by_order_of_appearance_[pid].push_back(tid);
-      messages_[std::make_pair(pid, tid)] = std::deque<std::unique_ptr<Message>>();
-    }
-    messages_[std::make_pair(pid, tid)].push_back(std::make_unique<Message>(process_name, cur_msg));
     golden_file_contents = golden_file_contents.substr(processed_char_count);
     cur_msg = GetMessage(golden_file_contents, &processed_char_count);
     previous_pid = pid;
@@ -341,5 +259,114 @@ bool Comparator::IgnoredLine(std::string_view line) {
     }
   }
   return false;
+}
+
+std::string_view Comparator::AnalyzesAndRemovesHeader(std::string_view message,
+                                                      std::string* process_name, uint64_t* pid,
+                                                      uint64_t* tid) {
+  constexpr size_t kMinNbCharHeader = 5;
+  // The message is a syscall output with no header.
+  if (message.find("->") <= kMinNbCharHeader) {
+    return message;
+  }
+
+  size_t pos_pid = message.find(' ');
+  size_t pos_tid = message.find(':');
+  // Either there is no header, or we cannot parse it so leave it as is.
+  if (pos_pid == std::string::npos || pos_tid == std::string::npos) {
+    return message;
+  }
+
+  // If we have pointers to pid, tid and process_name, update those.
+  if (pid) {
+    *pid = ExtractUint64(message.substr(pos_pid + 1));
+  }
+  if (tid) {
+    *tid = ExtractUint64(message.substr(pos_tid + 1));
+  }
+  if (process_name) {
+    *process_name = message.substr(0, pos_pid);
+  }
+  size_t end_header = message.find(' ', pos_tid);
+  if (end_header != std::string::npos) {
+    return message.substr(end_header + 1);
+  }
+  return message;
+}
+
+uint64_t Comparator::ExtractUint64(std::string_view str) {
+  uint64_t result = 0;
+  for (size_t i = 0; i < str.size(); ++i) {
+    char value = str[i];
+    if ((value < '0') || (value > '9')) {
+      break;
+    }
+    result = 10 * result + (value - '0');
+  }
+  return result;
+}
+
+bool Comparator::HasReturn(std::string_view message) {
+  // Only three syscalls have no return value. Besides as we removed the header from the message,
+  // the syscall name is the first word of the message.
+  if (message.find("zx_thread_exit") == 0 || message.find("zx_process_exit") == 0 ||
+      message.find("zx_futex_wake_handle_close_thread_exit") == 0) {
+    return false;
+  }
+  return true;
+}
+
+void Comparator::FinishComparison() {
+  // All the messages have been intercepted, we now want to check our graph:
+  // - First propagates matchings along reverse dependencies now that the graph is complete,
+  // - Then checks if there still are unmatched nodes.
+
+  for (auto i = actual_message_graph_.message_nodes().begin();
+       i != actual_message_graph_.message_nodes().end(); i++) {
+    for (size_t j = 0; j < i->second.size(); j++) {
+      if (i->second[j]->matching_golden_node() && !ReversePropagateMatch(i->second[j])) {
+        // The matching failed, with a proper error message
+        return;
+      }
+    }
+  }
+
+  for (auto i = actual_message_graph_.pid_nodes().begin();
+       i != actual_message_graph_.pid_nodes().end(); i++) {
+    if (i->second->matching_golden_node() && !ReversePropagateMatch(i->second)) {
+      return;
+    }
+  }
+
+  for (auto i = actual_message_graph_.tid_nodes().begin();
+       i != actual_message_graph_.tid_nodes().end(); i++) {
+    if (i->second->matching_golden_node() && !ReversePropagateMatch(i->second)) {
+      return;
+    }
+  }
+
+  for (auto i = actual_message_graph_.handle_nodes().begin();
+       i != actual_message_graph_.handle_nodes().end(); i++) {
+    if (i->second->matching_golden_node() && !ReversePropagateMatch(i->second)) {
+      return;
+    }
+  }
+
+  // We check that all message nodes are matched to a golden node.
+  bool unmatched_message = false;
+  for (auto i = actual_message_graph_.message_nodes().begin();
+       i != actual_message_graph_.message_nodes().end(); i++) {
+    for (size_t j = 0; j < i->second.size(); j++) {
+      if (!i->second[j]->matching_golden_node()) {
+        compare_results_ << "Unmatched message " << i->second[j]->message();
+        unmatched_message = true;
+      }
+    }
+  }
+  // There is no need to check that handles, pids and tids are matched: as all of them have at least
+  // one message that depends from them, if all messages are matched, so are they.
+  if (!unmatched_message) {
+    compare_results_ << "Messages from the current execution matched the golden file.\n";
+  }
 }
 }  // namespace fidlcat

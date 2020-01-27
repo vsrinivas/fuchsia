@@ -9,6 +9,7 @@
 #include <string>
 
 #include "gtest/gtest.h"
+#include "tools/fidlcat/lib/message_graph.h"
 
 namespace fidlcat {
 
@@ -17,6 +18,26 @@ class TestComparator : public Comparator {
   TestComparator(std::string_view expected_output) : Comparator(os_) {
     ParseGolden(expected_output);
   }
+
+  TestComparator() : Comparator(os_) {}
+
+  std::shared_ptr<GoldenMessageNode> InsertMessage(std::string process_name, uint64_t pid,
+                                                   uint64_t tid, std::string_view cur_msg) {
+    return golden_message_graph_.InsertMessage(process_name, pid, tid, cur_msg);
+  }
+
+  bool UniqueMatchToGoldenTest(std::shared_ptr<ActualMessageNode> actual_message_node) {
+    return UniqueMatchToGolden(actual_message_node);
+  }
+
+  bool PropagateMatchTest(std::shared_ptr<ActualNode> actual_node) {
+    return PropagateMatch(actual_node, false);
+  }
+
+  bool ReversePropagateMatchTest(std::shared_ptr<ActualNode> actual_node) {
+    return ReversePropagateMatch(actual_node);
+  }
+
   std::string output_string() {
     std::string res = os_.str();
     os_.clear();
@@ -29,31 +50,7 @@ class TestComparator : public Comparator {
     return std::string(GetMessage(messages, number_char_processed));
   }
 
-  std::unique_ptr<Message> GetNextExpectedMessageTest(uint64_t pid, uint64_t tid) {
-    return GetNextExpectedMessage(pid, tid);
-  }
-
-  bool CouldReplaceAllHandles(std::string* actual, const std::string& expected) {
-    std::string handle1 = "handle: ";
-    std::string handle2 = "handle = ";
-    return CouldReplaceHandles(actual, expected, handle1) &&
-           CouldReplaceHandles(actual, expected, handle2);
-  }
-
-  // Used to access directly the messages_ map, removes the returned message from the map.
-  // If there is no message in the map for the given (pid, tid), returns a null pointer.
-  std::unique_ptr<Message> GetMessageFromExpectedPidTid(uint64_t pid, uint64_t tid) {
-    std::pair<uint64_t, uint64_t> pid_tid(pid, tid);
-    if (messages_.find(pid_tid) == messages_.end()) {
-      return nullptr;
-    }
-    if (messages_[pid_tid].empty()) {
-      return nullptr;
-    }
-    std::unique_ptr<Message> result = std::move(messages_[pid_tid].front());
-    messages_[pid_tid].pop_front();
-    return result;
-  }
+  const GoldenMessageGraph& golden_message_graph() { return golden_message_graph_; }
 
  private:
   std::ostringstream os_;
@@ -98,209 +95,231 @@ echo_client 28777:28779 zx_channel_write(handle:handle: 6d1e0003, options:uint32
   ASSERT_EQ(number_char_processed, message3.length() + 1);
 }
 
-// Test checking that ParseGolden works: it updates the messages map, as well as the order of
-// appearance of pid/tids
+// Checks that the golden graph construction is correct, even for interleaved syscalls, or syscalls
+// without a return.
 TEST(Comparator, ParseGolden) {
   std::string messages = R"(
 Launched run fuchsia-pkg
-echo_client 1:11 zx_channel_create(options:uint32: 0)
-  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)
+echo_client 1:1 zx_process_exit(retcode:uint64: 0)
 
-echo_client 2:21 zx_channel_write(handle:handle: 221a, options:uint32: 0)
+echo_client 1:1 zx_channel_create(options:uint32: 0)
 
-echo_client 1:12 zx_channel_write(handle:handle: 112a, options:uint32: 0)
-
-echo_client 2:21   -> ZX_OK (out0:handle: 221b, out1:handle: 221c)
-)";
-  TestComparator comparator(messages);
-
-  // pids are in the right order
-  std::deque<uint64_t> pids = comparator.pids_by_order_of_appearance();
-  ASSERT_EQ(pids.size(), 2u);
-  ASSERT_EQ(pids.front(), 1u);
-  pids.pop_front();
-  ASSERT_EQ(pids.front(), 2u);
-
-  // for a given pid, tids are in the right order
-  std::map<uint64_t, std::deque<uint64_t>> tids = comparator.tids_by_order_of_appearance();
-  ASSERT_NE(tids.find(1), tids.end());
-  ASSERT_EQ(tids[1].size(), 2u);
-  ASSERT_EQ(tids[1].front(), 11u);
-  tids[1].pop_front();
-  ASSERT_EQ(tids[1].front(), 12u);
-  ASSERT_NE(tids.find(2), tids.end());
-  ASSERT_EQ(tids[2].size(), 1u);
-  ASSERT_EQ(tids[2].front(), 21u);
-
-  // for a given (pid, tid), messages are in the right order, and properly stripped of process_name
-  // and pid:tid
-  std::string message1 = "zx_channel_create(options:uint32: 0)\n";
-  std::string message2 = "  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)\n";
-  std::unique_ptr<Message> message_in_map = comparator.GetMessageFromExpectedPidTid(1, 11);
-  ASSERT_NE(message_in_map, nullptr);
-  ASSERT_EQ(message_in_map->message, message1);
-  ASSERT_EQ(message_in_map->process_name, std::string("echo_client"));
-  message_in_map = comparator.GetMessageFromExpectedPidTid(1, 11);
-  ASSERT_NE(message_in_map, nullptr);
-  ASSERT_EQ(message_in_map->message, message2);
-  ASSERT_EQ(message_in_map->process_name, std::string("echo_client"));
-
-  message1 = "zx_channel_write(handle:handle: 221a, options:uint32: 0)\n";
-  message2 = "  -> ZX_OK (out0:handle: 221b, out1:handle: 221c)\n";
-  message_in_map = comparator.GetMessageFromExpectedPidTid(2, 21);
-  ASSERT_NE(message_in_map, nullptr);
-  ASSERT_EQ(message_in_map->message, message1);
-  message_in_map = comparator.GetMessageFromExpectedPidTid(2, 21);
-  ASSERT_NE(message_in_map, nullptr);
-  ASSERT_EQ(message_in_map->message, message2);
-}
-
-// Test checking that GetNextExpectedMessage works: it gets unknown pids/tids in the right order,
-// while matching known ones correctly
-TEST(Comparator, GetNextExpectedMessage) {
-  std::string messages = R"(
-Launched run fuchsia-pkg
-echo_client 1:11 zx_channel_create(options:uint32: 0)
-  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)
-
-echo_client 2:21 zx_channel_write(handle:handle: 221a, options:uint32: 0)
-
-echo_client 1:12 zx_channel_write(handle:handle: 112a, options:uint32: 0)
-
-echo_client 2:21   -> ZX_OK (out0:handle: 221b, out1:handle: 221c)
-)";
-  TestComparator comparator(messages);
-
-  // In this test, we call on GetNextExpectedMessage as if the actual output was the following. Note
-  // that only the order of pids, tids per pid and messages per tid are respected here.
-  //  Launched run fuchsia-pkg
-  //  echo_client 1:11 zx_channel_create(options:uint32: 0)
-  //  echo_client 1:12 zx_channel_write(handle:handle: 112a, options:uint32: 0)
-  //  echo_client 2:21 zx_channel_write(handle:handle: 221a, options:uint32: 0)
-  //  echo_client 1:11   -> ZX_OK (out0:handle:111a, out1:handle: 111b)
-  //  echo_client 2:21   -> ZX_OK (out0:handle: 221b, out1:handle: 221c)
-  // We use the following pids:tids mapping: expected pid:tid -> actual pid:tid
-  //  1:11 -> 3:31
-  //  1:12 -> 3:32
-  //  2:21 -> 4:41
-
-  std::unique_ptr<Message> result = comparator.GetNextExpectedMessageTest(3, 31);
-  ASSERT_EQ("zx_channel_create(options:uint32: 0)\n", result->message);
-  result = comparator.GetNextExpectedMessageTest(3, 32);
-  ASSERT_EQ("zx_channel_write(handle:handle: 112a, options:uint32: 0)\n", result->message);
-  result = comparator.GetNextExpectedMessageTest(4, 41);
-  ASSERT_EQ("zx_channel_write(handle:handle: 221a, options:uint32: 0)\n", result->message);
-  result = comparator.GetNextExpectedMessageTest(3, 31);
-  ASSERT_EQ("  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)\n", result->message);
-  result = comparator.GetNextExpectedMessageTest(4, 41);
-  ASSERT_EQ("  -> ZX_OK (out0:handle: 221b, out1:handle: 221c)\n", result->message);
-
-  // Now we check that the correspondance maps between pids and tids were properly updated
-  std::map<uint64_t, uint64_t> expected_pids = comparator.expected_pids();
-  ASSERT_NE(expected_pids.find(3), expected_pids.end());
-  ASSERT_EQ(expected_pids[3], 1u);
-  ASSERT_NE(expected_pids.find(4), expected_pids.end());
-  ASSERT_EQ(expected_pids[4], 2u);
-
-  std::map<std::pair<uint64_t, uint64_t>, std::pair<uint64_t, uint64_t>> expected_pids_tids =
-      comparator.expected_pids_tids();
-  std::pair actual3_31(3, 31);
-  ASSERT_NE(expected_pids_tids.find(actual3_31), expected_pids_tids.end());
-  ASSERT_TRUE(expected_pids_tids[actual3_31] == (std::pair<uint64_t, uint64_t>(1, 11)));
-  std::pair actual3_32(3, 32);
-  ASSERT_NE(expected_pids_tids.find(actual3_32), expected_pids_tids.end());
-  ASSERT_TRUE(expected_pids_tids[actual3_32] == (std::pair<uint64_t, uint64_t>(1, 12)));
-  std::pair actual4_41(4, 41);
-  ASSERT_NE(expected_pids_tids.find(actual4_41), expected_pids_tids.end());
-  ASSERT_TRUE(expected_pids_tids[actual4_41] == (std::pair<uint64_t, uint64_t>(2, 21)));
-}
-
-TEST(Comparator, CouldReplaceHandles) {
-  std::string empty("");
-  fidlcat::TestComparator comparator(empty);
-
-  // Replacing after "handle: "
-  std::string actual0 = "zx_channel_write(handle:handle: a0, options:uint32: 0)";
-  std::string expected0 = "zx_channel_write(handle:handle: e0, options:uint32: 0)";
-  EXPECT_TRUE(comparator.CouldReplaceAllHandles(&actual0, expected0));
-  EXPECT_EQ(actual0, expected0);
-
-  // Replacing after "handle = "
-  std::string actual1 = "object: handle = a1";
-  std::string expected1 = "object: handle = e1";
-  EXPECT_TRUE(comparator.CouldReplaceAllHandles(&actual1, expected1));
-  EXPECT_EQ(actual1, expected1);
-
-  // If first occurence after "handle: ", saved for "handle = " as well
-  std::string actual2 = "object: handle = a0";
-  std::string expected2 = "object: handle = e2";
-  EXPECT_FALSE(comparator.CouldReplaceAllHandles(&actual2, expected2));
-  EXPECT_EQ("Different handles, actual handle a0 should be e0 in golden file but was e2",
-            comparator.output_string());
-
-  // If first occurence after "handle = ", saved for "handle: " as well
-  std::string actual3 = "zx_channel_write(handle:handle: a1, options:uint32: 0)";
-  std::string expected3 = "zx_channel_write(handle:handle: e3, options:uint32: 0)";
-  EXPECT_FALSE(comparator.CouldReplaceAllHandles(&actual3, expected3));
-  EXPECT_EQ("Different handles, actual handle a1 should be e1 in golden file but was e3",
-            comparator.output_string());
-
-  // And the other way round: wrong actual instead of wrong expected
-  // If first occurence after "handle: ", saved for "handle = " as well
-  std::string actual4 = "object: handle = a4";
-  std::string expected4 = "object: handle = e0";
-  EXPECT_FALSE(comparator.CouldReplaceAllHandles(&actual4, expected4));
-  EXPECT_EQ("Different handles, expected handle e0 should be a0 in this execution but was a4",
-            comparator.output_string());
-
-  // If first occurence after "handle = ", saved for "handle: " as well
-  std::string actual5 = "zx_channel_write(handle:handle: a5, options:uint32: 0)";
-  std::string expected5 = "zx_channel_write(handle:handle: e1, options:uint32: 0)";
-  EXPECT_FALSE(comparator.CouldReplaceAllHandles(&actual5, expected5));
-  EXPECT_EQ("Different handles, expected handle e1 should be a1 in this execution but was a5",
-            comparator.output_string());
-}
-
-TEST(Comparator, CompareInputOutput) {
-  std::string messages = R"(
-echo_client 28777:28779 zx_channel_create(options:uint32: 0)
-  -> ZX_OK (out0:handle: 6d3e0273, out1:handle: 6c2e0347)
-
-echo_client 28777:28779 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)
+echo_client 1:2 zx_channel_write(handle:handle: a1, options:uint32: 0)
   sent request fuchsia.io/Directory.Open = {
     flags: uint32 = 3
     mode: uint32 = 493
     path: string = "fuchsia.sys.Launcher"
-    object: handle = 6c0e0387
+    object: handle = a2
+  }
+  -> ZX_OK
+
+echo_client 1:1   -> ZX_OK (out0:handle: a1, out1:handle: a2)
+)";
+  std::string message1 = "zx_process_exit(retcode:uint64: 0)\n";
+  std::string message2 = "zx_channel_create(options:uint32: 0)\n";
+  std::string message3 =
+      R"(zx_channel_write(handle:handle: 0, options:uint32: 0)
+  sent request fuchsia.io/Directory.Open = {
+    flags: uint32 = 3
+    mode: uint32 = 493
+    path: string = "fuchsia.sys.Launcher"
+    object: handle = 1
   }
 )";
-  fidlcat::TestComparator comparator(messages);
+  std::string message4 = "  -> ZX_OK\n";
+  std::string message5 = "  -> ZX_OK (out0:handle: 0, out1:handle: 1)\n";
+  TestComparator comparator(messages);
+  GoldenMessageGraph golden_message_graph = comparator.golden_message_graph();
 
-  std::string input_1 = "echo_client 28777:28779 zx_channel_create(options:uint32: 0)\n";
-  comparator.CompareInput(input_1, 1, 2);
+  // Check tid to pid dependencies.
+  auto tid_node1 = golden_message_graph.get_tid_node(1);
+  auto tid_node2 = golden_message_graph.get_tid_node(2);
+  auto pid_node1 = golden_message_graph.get_pid_node(1);
+  ASSERT_EQ(tid_node1->get_dependency_by_type(DependencyType(kTidNode, kPidNode)), pid_node1);
+  ASSERT_EQ(tid_node2->get_dependency_by_type(DependencyType(kTidNode, kPidNode)), pid_node1);
+
+  // Check dependencies for messages.
+  auto message_nodes = golden_message_graph.message_nodes();
+
+  // message1
+  auto message_node1 = message_nodes[message1][0];
+  ASSERT_EQ(message_node1->get_dependency_by_type(DependencyType(kMessageNode, kTidNode)),
+            tid_node1);
+
+  // message2
+  auto message_node2 = message_nodes[message2][0];
+  ASSERT_EQ(message_node2->get_dependency_by_type(DependencyType(kMessageNode, kTidNode)),
+            tid_node1);
+
+  // message 3
+  auto message_node3 = message_nodes[message3][0];
+  auto handle_nodea1 = golden_message_graph.get_handle_node(0xa1);
+  auto handle_nodea2 = golden_message_graph.get_handle_node(0xa2);
+  ASSERT_EQ(message_node3->get_dependency_by_type(DependencyType(kZxWriteMessageNode, kTidNode)),
+            tid_node2);
+  ASSERT_EQ(
+      message_node3->get_dependency_by_type(DependencyType(kZxWriteMessageNode, kHandleNode + 0)),
+      handle_nodea1);
+  ASSERT_EQ(
+      message_node3->get_dependency_by_type(DependencyType(kZxWriteMessageNode, kHandleNode + 1)),
+      handle_nodea2);
+
+  // message 4
+  auto message_node4 = message_nodes[message4][0];
+  ASSERT_EQ(message_node4->get_dependency_by_type(DependencyType(kMessageNode, kTidNode)),
+            tid_node2);
+  ASSERT_EQ(message_node4->get_dependency_by_type(DependencyType(kMessageNode, kMessageInputNode)),
+            message_node3);
+
+  // message 5
+  auto message_node5 = message_nodes[message5][0];
+  ASSERT_EQ(message_node5->get_dependency_by_type(DependencyType(kMessageNode, kTidNode)),
+            tid_node1);
+  ASSERT_EQ(message_node5->get_dependency_by_type(DependencyType(kMessageNode, kMessageInputNode)),
+            message_node2);
+  ASSERT_EQ(message_node5->get_dependency_by_type(DependencyType(kMessageNode, kHandleNode + 0)),
+            handle_nodea1);
+  ASSERT_EQ(message_node5->get_dependency_by_type(DependencyType(kMessageNode, kHandleNode + 1)),
+            handle_nodea2);
+}
+
+TEST(Comparator, UniqueMatchToGolden) {
+  std::string messages = R"(
+echo_client 1:11 zx_channel_create(options:uint32: 0)
+  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)
+
+echo_client 2:21 zx_channel_write(handle:handle: 221a, options:uint32: 0)
+
+echo_client 1:12 zx_channel_write(handle:handle: 112a, options:uint32: 0)
+
+echo_client 2:21   -> ZX_OK (out0:handle: 221b, out1:handle: 221c)
+)";
+  TestComparator comparator(messages);
+
+  std::string message1 = "zx_channel_create(options:uint32: 0)\n";
+  ActualMessageGraph message_graph1;
+  auto message_node1 = message_graph1.InsertMessage("echo_client", 1, 1, message1);
+  ASSERT_TRUE(comparator.UniqueMatchToGoldenTest(message_node1));
+
+  std::string message2 = "zx_channel_write(handle:handle: 6, options:uint32: 0)\n";
+  ActualMessageGraph message_graph2;
+  auto message_node2 = message_graph2.InsertMessage("echo_client", 1, 1, message2);
+  ASSERT_FALSE(comparator.UniqueMatchToGoldenTest(message_node2));
+
+  std::string message3 = "zx_channel_read(handle:handle: 6, options:uint32: 0)\n";
+  ActualMessageGraph message_graph3;
+  auto message_node3 = message_graph3.InsertMessage("echo_client", 1, 1, message3);
+  ASSERT_FALSE(comparator.UniqueMatchToGoldenTest(message_node3));
+}
+
+TEST(Comparator, PropagateMatch) {
+  // A propagation that should work
+  std::string golden_message1 = "echo_client 1:11 zx_channel_create(options:uint32: 0)\n";
+  TestComparator comparator1(golden_message1);
+
+  std::string message1 = "zx_channel_create(options:uint32: 0)\n";
+  ActualMessageGraph message_graph1;
+  auto message_node1 = message_graph1.InsertMessage("echo_client", 2, 22, message1);
+  ASSERT_TRUE(comparator1.UniqueMatchToGoldenTest(
+      message_node1));  // set the matching node for message_node1
+  ASSERT_TRUE(comparator1.PropagateMatchTest(message_node1));
+  auto golden_tid = comparator1.golden_message_graph().get_tid_node(11);
+  auto actual_tid = message_graph1.get_tid_node(22);
+  ASSERT_EQ(actual_tid->matching_golden_node(), golden_tid);
+
+  auto golden_pid = comparator1.golden_message_graph().get_pid_node(1);
+  auto actual_pid = message_graph1.get_pid_node(2);
+  ASSERT_EQ(actual_pid->matching_golden_node(), golden_pid);
+
+  std::string golden_message2 = R"(
+echo_client 1:11 zx_channel_create(options:uint32: 0)
+  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)
+
+echo_client 1:21 zx_channel_write(handle:handle: 221a, options:uint32: 0)
+)";
+  TestComparator comparator2(golden_message2);
+
+  std::string message2a = "zx_channel_create(options:uint32: 0)\n";
+  ActualMessageGraph message_graph2;
+  auto message_node2a = message_graph2.InsertMessage("echo_client", 2, 22, message2a);
+  ASSERT_TRUE(comparator2.UniqueMatchToGoldenTest(message_node2a));
+  ASSERT_TRUE(comparator2.PropagateMatchTest(message_node2a));
+
+  std::string message2b = "  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)\n";
+  auto message_node2b =
+      message_graph2.InsertMessage("echo_client", 2, 22, message2b, message_node2a);
+  ASSERT_TRUE(comparator2.UniqueMatchToGoldenTest(message_node2b));
+  ASSERT_TRUE(comparator2.PropagateMatchTest(message_node2b));
+
+  std::string message2c = "zx_channel_write(handle:handle: 221a, options:uint32: 0)\n";
+  auto message_node2c = message_graph2.InsertMessage("echo_client", 2, 22, message2c);
+  ASSERT_TRUE(comparator2.UniqueMatchToGoldenTest(message_node2c));
+  ASSERT_FALSE(comparator2.PropagateMatchTest(message_node2c));
+}
+
+TEST(Comparator, ReversePropagateMatch) {
+  // A reverse propagation that should work
+  std::string golden_message1 = "echo_client 1:11 zx_channel_create(options:uint32: 0)\n";
+  TestComparator comparator1(golden_message1);
+
+  std::string message1 = "zx_channel_create(options:uint32: 0)\n";
+  ActualMessageGraph message_graph1;
+  auto message_node1 = message_graph1.InsertMessage("echo_client", 2, 22, message1);
+  auto actual_pid = message_graph1.get_pid_node(2);
+  auto golden_pid = comparator1.golden_message_graph().get_pid_node(1);
+  actual_pid->set_matching_golden_node(golden_pid);
+  ASSERT_TRUE(comparator1.ReversePropagateMatchTest(actual_pid));
+
+  auto golden_tid = comparator1.golden_message_graph().get_tid_node(11);
+  auto actual_tid = message_graph1.get_tid_node(22);
+  ASSERT_EQ(actual_tid->matching_golden_node(), golden_tid);
+  ASSERT_TRUE(message_node1->matching_golden_node());
+
+  std::string golden_message2 = R"(
+echo_client 1:11 zx_channel_create(options:uint32: 0)
+  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)
+)";
+  TestComparator comparator2(golden_message2);
+
+  std::string message2 = "zx_channel_create(options:uint32: 0)\n";
+  ActualMessageGraph message_graph2;
+  auto message_node2 = message_graph2.InsertMessage("echo_client", 2, 22, message2);
+  actual_pid = message_graph2.get_pid_node(2);
+  golden_pid = comparator2.golden_message_graph().get_pid_node(1);
+  actual_pid->set_matching_golden_node(golden_pid);
+  ASSERT_FALSE(comparator1.ReversePropagateMatchTest(actual_pid));
+}
+
+TEST(Comparator, CompareInputOutput) {
+  std::string messages = R"(
+echo_client 1:11 zx_channel_create(options:uint32: 0)
+  -> ZX_OK (out0:handle: 6d3e0273, out1:handle: 6c2e0347)
+
+echo_client 1:12 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)
+)";
+  fidlcat::TestComparator comparator(messages);
+  std::string process_name = "echo_client";
+
+  std::string input_1 = "echo_client 2:21 zx_channel_create(options:uint32: 0)\n";
+  comparator.CompareInput(input_1, process_name, 2, 21);
   ASSERT_EQ("", comparator.output_string());
 
   std::string output_1 = "  -> ZX_OK (out0:handle: 6d3e0273, out1:handle: 6c2e0347)\n";
-  comparator.CompareOutput(output_1, 1, 2);
+  comparator.CompareOutput(output_1, process_name, 2, 21);
   ASSERT_EQ("", comparator.output_string());
 
   std::string input_2 =
-      "\nAAA 28777:28779 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)\n";
-  comparator.CompareInput(input_2, 1, 2);
+      "echo_client 2:21 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)\n";
+  comparator.CompareInput(input_2, process_name, 2, 21);
   ASSERT_EQ(
-      "Different process names for actual pid:tid 1:2, matched with expected pid:tid "
-      "28777:28779, expected echo_client actual was AAA",
+      "Conflicting matches for  actual message node: zx_channel_write(handle:handle: 0, "
+      "options:uint32: 0)\n "
+      "matched to  golden message node: zx_channel_write(handle:handle: 0, options:uint32: "
+      "0)\n \n. "
+      "Actual has dependency to  actual tid node: 21  matched to  golden tid node: 11  whereas "
+      "according to dependency from actual and its match it should have been  golden tid node: 12 "
+      "\n",
       comparator.output_string());
-
-  // Comparison should have stopped now, and ignore next outputs
-  std::string output_2 = "anything";
-  comparator.CompareOutput(output_2, 1, 2);
-  ASSERT_EQ("", comparator.output_string());
-
-  // Next inputs should be ignored as well
-  std::string input_3 = "anything";
-  comparator.CompareInput(input_3, 1, 2);
-  ASSERT_EQ("", comparator.output_string());
 }
 
 }  // namespace fidlcat

@@ -540,7 +540,8 @@ void SyscallCompare::SyscallInputsDecoded(SyscallDecoder* decoder) {
   os_.clear();
   os_.str("");
   SyscallDisplay::SyscallInputsDecoded(decoder);
-  comparator_.CompareInput(os_.str(), decoder->process_id(), decoder->thread_id());
+  comparator_->CompareInput(os_.str(), decoder->process_name(), decoder->process_id(),
+                            decoder->thread_id());
 }
 
 void SyscallCompare::SyscallOutputsDecoded(SyscallDecoder* decoder) {
@@ -548,7 +549,8 @@ void SyscallCompare::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   os_.str("");
   SyscallDisplay::SyscallOutputsDecoded(decoder);
   if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
-    comparator_.CompareOutput(os_.str(), decoder->process_id(), decoder->thread_id());
+    comparator_->CompareOutput(os_.str(), decoder->process_name(), decoder->process_id(),
+                               decoder->thread_id());
   }
 }
 
@@ -556,7 +558,7 @@ void SyscallCompare::SyscallDecodingError(const DecoderError& error, SyscallDeco
   os_.clear();
   os_.str("");
   SyscallDisplay::SyscallDecodingError(error, decoder);
-  comparator_.DecodingError(os_.str());
+  comparator_->DecodingError(os_.str());
 }
 
 }  // namespace fidlcat

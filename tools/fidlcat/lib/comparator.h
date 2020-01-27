@@ -14,17 +14,19 @@
 #include <string_view>
 #include <utility>
 
+#include "message_graph.h"
+
 namespace fidlcat {
 
-// Used when parsing the golden file, to avoid parsing the messages header again when running the
-// comparison
-struct Message {
- public:
-  Message(std::string_view p, std::string_view m) : process_name(p), message(m) {}
-  const std::string process_name;
-  const std::string message;
-};
-
+// To compare the messages stored in the golden file to the messages intercepted by fidlcat in the
+// current execution, this class first builds a GoldenMessageGraph from the golden file when
+// initialized. It also creates an empty ActualMessageGraph, actual_message_graph_, for the current
+// execution. Then for each message passed to CompareInput or CompareOutput, it updates
+// actual_message_graph_ by inserting the new message in it. If this message can be matched uniquely
+// to a message from the golden_message_graph_, we record it, and try to propagate this matching
+// along dependenies in the graphs. When there are no more messages to receive, that is to say when
+// FinishComparison is called, we propagate (along dependencies) and reverse propagate
+// (along reverse dependencies) matchings for all nodes.
 class Comparator {
  public:
   Comparator(std::string_view compare_file_name, std::ostream& os) : compare_results_(os) {
@@ -35,40 +37,47 @@ class Comparator {
     ParseGolden(golden_file_contents);
   }
 
-  // If no difference has been found yet (as saved in found_difference_), compares this input to
-  // the current one in expected_output_ (ie the one at pos position_in_golden_file_), outputs any
-  // difference to compare_results and updates found_difference_.
-  void CompareInput(std::string_view syscall_inputs, uint64_t actual_pid, uint64_t actual_tid);
+  // Creates a new node in actual_message_graph_ and tries to match.
+  void CompareInput(std::string_view syscall_inputs, std::string_view actual_process_name,
+                    uint64_t actual_pid, uint64_t actual_tid);
 
-  void CompareOutput(std::string_view syscall_outputs, uint64_t actual_pid, uint64_t actual_tid);
+  void CompareOutput(std::string_view syscall_outputs, std::string_view actual_process_name,
+                     uint64_t actual_pid, uint64_t actual_tid);
 
-  // As the golden file should not contain any error, any error in the actual execution sets
-  // found_difference_ to true and displays the decoding error.
-  void DecodingError(std::string error);
+  // As the golden file should not contain any error, any error in the actual execution results in
+  // an error message.
+  void DecodingError(std::string_view error);
 
-  const std::deque<uint64_t>& pids_by_order_of_appearance() const {
-    return pids_by_order_of_appearance_;
-  }
-
-  const std::map<uint64_t, std::deque<uint64_t>>& tids_by_order_of_appearance() const {
-    return tids_by_order_of_appearance_;
-  }
-
-  const std::map<uint64_t, uint64_t>& expected_pids() const { return expected_pids_; }
-
-  const std::map<std::pair<uint64_t, uint64_t>, std::pair<uint64_t, uint64_t>>& expected_pids_tids()
-      const {
-    return expected_pids_tids_;
-  }
+  // Tries, using all the information in golden_message_graph_ and actual_message_graph_, to match
+  // as many nodes as possible to one another, and outputs the result of the comparison.
+  void FinishComparison();
 
  protected:
   // For testing, expected_output_ should then be set using ParseGolden.
   Comparator(std::ostream& os) : compare_results_(os) {}
 
-  // Returns the next block of syscall input or output that fit this pid and tid.
-  // Returns a null ppointer if no matching message can be found.
-  std::unique_ptr<Message> GetNextExpectedMessage(uint64_t actual_pid, uint64_t actual_tid);
+  // Given a message node for the current execution, see if it can be uniquely matched with a
+  // golden message node. Returns true if and only if there is exactly one golden node that could
+  // match, and false otherwise. In case no golden node could match this message, outputs an error
+  // to compare_results_.
+  bool UniqueMatchToGolden(std::shared_ptr<ActualMessageNode> actual_message_node);
 
+  // Given an actual node with a matching golden node (ie assumes
+  // actual_node->matching_golden_node()) is not null) recursively propagates this matching
+  // along all dependency links. Returns false if an inconsistency in the matching was found while
+  // propagating. If reverse_propagate is set to true, also runs ReversePropagate for any new
+  // matching found.
+  bool PropagateMatch(std::shared_ptr<ActualNode> actual_node, bool reverse_propagate);
+
+  // Given an actual node with a matching golden node (ie assumes
+  // actual_node->matching_golden_node()) is not null) recursively propagates this matching
+  // along reverse dependency links. Returns false if an inconsistency in the matching was found
+  // while propagating. Also runs Propagate for any new matching found. Assumes the
+  // actual_message_graph_ is complete, that is to say no more messages/nodes/links will be added to
+  // it.
+  bool ReversePropagateMatch(std::shared_ptr<ActualNode> actual_node);
+
+  // Creates the golden_message_graph_ from the contents of the file.
   void ParseGolden(std::string_view golden_file_contents);
 
   // Returns the first block of syscall input or output from messages, and stores the number of
@@ -76,44 +85,34 @@ class Comparator {
   // message if some lines from messages were ignored).
   static std::string_view GetMessage(std::string_view messages, size_t* processed_char_count);
 
-  // Check that both messages are the same modulo handle correspondance in the maps, and updates
-  // actual with the handle ids from expected.
-  bool CouldReplaceHandles(std::string* actual, std::string_view expected,
-                           std::string_view handle_text);
+  // golden_message_graph contains all the information about the execution saved in the golden file,
+  // while acutal_message_graph is constructed progressively, every time fidlcat intercepts a
+  // message in the current execution.
+  GoldenMessageGraph golden_message_graph_;
+  ActualMessageGraph actual_message_graph_;
 
-  // All deques in this class are used as fifo: push_back and pop_front
-  // Contains all the messages (a message is a syscall input or a syscall output), mapped to their
-  // (pid, tid), and stored by order of appearance in the golden file
-  std::map<std::pair<uint64_t, uint64_t>, std::deque<std::unique_ptr<Message>>> messages_;
+  // We need this map to link output messages to their corresponding input messages.
+  std::map<uint64_t, std::shared_ptr<ActualMessageNode>> last_unmatched_input_from_tid_;
 
  private:
   std::ostream& compare_results_;
-  bool found_difference_ = false;
-
-  // Contains the pids by order of appearance in the golden file (pids_by_order_of_appearance.pop()
-  // gives the one that appeared first)
-  std::deque<uint64_t> pids_by_order_of_appearance_;
-
-  // For each pid p, contains the tids t by order of appearance of (p, t) in the golden file
-  std::map<uint64_t, std::deque<uint64_t>> tids_by_order_of_appearance_;
-
-  // Maps to match actual pids/tids to expected pids/tids. Note that we don't need a reverse
-  // actual_pids_/tids map to make sure that only one expected pid/tid matches to any given actual
-  // pid/tid, as this is enforced in ParseGolden, where each expected pid/tid is added only once to
-  // expected_pids_/tids, thanks to the order_of_appearance queues.
-  std::map<uint64_t, uint64_t> expected_pids_;
-  std::map<std::pair<uint64_t, uint64_t>, std::pair<uint64_t, uint64_t>> expected_pids_tids_;
-  std::map<uint32_t, uint32_t> expected_handles_;
-  std::map<uint32_t, uint32_t> actual_handles_;
 
   // Returns true if line is not part of a message (ie a fidlcat startup indication or a newline).
   static bool IgnoredLine(std::string_view line);
 
   // Expects decimal numbers.
-  uint64_t ExtractUint64(std::string_view str);
+  static uint64_t ExtractUint64(std::string_view str);
 
-  // Expects hexadecimal numbers.
-  uint32_t ExtractHexUint32(std::string_view str);
+  // Removes the header (process name pid:tid) from a message. If there is no header, returns the
+  // string unchanged. If pid, tid and process_name pointers are passed as arguments, updates them
+  // if a header was present, leaves them unchanged otherwise.
+  static std::string_view AnalyzesAndRemovesHeader(std::string_view message,
+                                                   std::string* process_name = nullptr,
+                                                   uint64_t* pid = nullptr,
+                                                   uint64_t* tid = nullptr);
+
+  // Returns true if message is the input message of a syscall with no return value.
+  static bool HasReturn(std::string_view message);
 };
 
 }  // namespace fidlcat

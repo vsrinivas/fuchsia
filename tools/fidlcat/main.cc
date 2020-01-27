@@ -150,12 +150,16 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  std::unique_ptr<SyscallDecoderDispatcher> decoder_dispatcher =
+  std::shared_ptr<Comparator> comparator =
       options.compare_file.has_value()
-          ? std::make_unique<SyscallCompareDispatcher>(&loader, decode_options, display_options,
-                                                       options.compare_file.value())
-          : std::make_unique<SyscallDisplayDispatcher>(&loader, decode_options, display_options,
-                                                       std::cout);
+          ? std::make_shared<Comparator>(options.compare_file.value(), std::cout)
+          : nullptr;
+
+  std::unique_ptr<SyscallDecoderDispatcher> decoder_dispatcher =
+      options.compare_file.has_value() ? std::make_unique<SyscallCompareDispatcher>(
+                                             &loader, decode_options, display_options, comparator)
+                                       : std::make_unique<SyscallDisplayDispatcher>(
+                                             &loader, decode_options, display_options, std::cout);
 
   InterceptionWorkflow workflow;
   workflow.Initialize(options.symbol_paths, options.symbol_repo_paths, options.symbol_cache_path,
@@ -225,6 +229,10 @@ int ConsoleMain(int argc, const char* argv[]) {
   // Start waiting for events on the message loop.
   // When all the monitored process will be terminated, we will exit the loop.
   InterceptionWorkflow::Go();
+
+  if (options.compare_file.has_value()) {
+    comparator->FinishComparison();
+  }
 
   return 0;
 }
