@@ -287,8 +287,8 @@ class Client : private FenceCallback {
                            zx_status_t status, const zx_packet_signal_t* signal);
   async::WaitMethod<Client, &Client::HandleControllerApi> api_wait_{this};
 
-  void NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
-                             const int32_t* displays_removed, uint32_t removed_count);
+  void NotifyOnDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
+                               const int32_t* displays_removed, uint32_t removed_count);
   bool CheckConfig(fidl::Builder* resp_builder);
 
   fbl::RefPtr<FenceReference> GetFence(uint64_t id) __TA_EXCLUDES(fence_mtx_);

@@ -343,7 +343,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
                                        ->ImportImage(image_config_, display_collection_id, i,
                                                      &import_image_status, &buffer.id);
     if (transport_status != ZX_OK || import_image_status != ZX_OK) {
-      buffer.id = fuchsia::hardware::display::invalidId;
+      buffer.id = fuchsia::hardware::display::INVALID_DISP_ID;
       FXL_LOG(ERROR) << "Importing image failed.";
       return false;
     }

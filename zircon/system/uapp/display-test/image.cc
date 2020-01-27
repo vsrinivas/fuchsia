@@ -81,7 +81,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
     display_token_handle = client.release();
   }
 
-  static uint32_t next_collection_id = fhd::invalidId + 1;
+  static uint32_t next_collection_id = fhd::INVALID_DISP_ID + 1;
   uint32_t collection_id = next_collection_id++;
   if (!token->Sync().ok()) {
     fprintf(stderr, "Failed to sync token\n");
@@ -316,7 +316,7 @@ void Image::GetConfig(fhd::ImageConfig* config_out) {
 
 bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {
   for (int i = 0; i < 2; i++) {
-    static int event_id = fhd::invalidId + 1;
+    static int event_id = fhd::INVALID_DISP_ID + 1;
     zx::event e1, e2;
     if (zx::event::create(0, &e1) != ZX_OK || e1.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK) {
       printf("Failed to create event\n");

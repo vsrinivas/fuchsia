@@ -84,7 +84,7 @@ DisplaySwapchain::DisplaySwapchain(
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
 
-    display_controller_listener_->SetVsyncCallback(
+    display_controller_listener_->SetOnVsyncCallback(
         fit::bind_member(this, &DisplaySwapchain::OnVsync));
     if ((*display_controller_)->EnableVsync(true) != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to enable vsync";
@@ -135,7 +135,7 @@ DisplaySwapchain::~DisplaySwapchain() {
     FXL_LOG(ERROR) << "Failed to disable vsync";
   }
 
-  display_controller_listener_->SetVsyncCallback(nullptr);
+  display_controller_listener_->SetOnVsyncCallback(nullptr);
 
   // A FrameRecord is now stale and will no longer receive the OnFramePresented
   // callback; OnFrameDropped will clean up and make the state consistent.
@@ -180,7 +180,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
   uint64_t render_finished_event_id = ImportEvent(render_finished_event);
 
   if (!render_finished_escher_semaphore ||
-      render_finished_event_id == fuchsia::hardware::display::invalidId) {
+      render_finished_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
     FXL_LOG(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to create semaphores";
     return std::unique_ptr<FrameRecord>();
   }
@@ -193,7 +193,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
   }
 
   uint64_t retired_event_id = ImportEvent(retired_event);
-  if (retired_event_id == fuchsia::hardware::display::invalidId) {
+  if (retired_event_id == fuchsia::hardware::display::INVALID_DISP_ID) {
     FXL_LOG(ERROR) << "DisplaySwapchain::NewFrameRecord() failed to import retired event";
     return std::unique_ptr<FrameRecord>();
   }
@@ -451,12 +451,12 @@ uint64_t DisplaySwapchain::ImportEvent(const zx::event& event) {
   uint64_t event_id = next_event_id_++;
   if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to duplicate display controller event.";
-    return fuchsia::hardware::display::invalidId;
+    return fuchsia::hardware::display::INVALID_DISP_ID;
   }
 
   if ((*display_controller_)->ImportEvent(std::move(dup), event_id) != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to import display controller event.";
-    return fuchsia::hardware::display::invalidId;
+    return fuchsia::hardware::display::INVALID_DISP_ID;
   }
   return event_id;
 }

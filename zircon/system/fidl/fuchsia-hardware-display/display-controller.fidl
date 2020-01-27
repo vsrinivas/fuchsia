@@ -8,7 +8,7 @@ using fuchsia.sysmem;
 using zx;
 
 // Invalid id for displays, images, and events.
-const uint64 invalidId = 0;
+const uint64 INVALID_DISP_ID = 0;
 
 enum VirtconMode : uint8 {
     INACTIVE = 0; // the virtcon is never visible.
@@ -31,7 +31,7 @@ struct Mode {
 // === Mode flags ===
 
 // Flag for interlaced display modes.
-const int32 modeInterlaced = 0x1;
+const int32 MODE_INTERLACED = 0x1;
 
 // Info about valid cursor configurations.
 struct CursorInfo {
@@ -42,7 +42,7 @@ struct CursorInfo {
     uint32 pixel_format;
 };
 
-const uint32 identifierMaxLen = 128;
+const uint32 IDENTIFIER_MAX_LEN = 128;
 
 // Info contains the information about a particular attached display.
 struct Info {
@@ -50,10 +50,10 @@ struct Info {
 
     // Modes supported by the attached display. The first entry is the
     // preferred mode.
-    vector<Mode> modes;
+    vector<Mode>:MAX modes;
     // zx_pixel_format_t constants supported by the attached display. The
     // first entry is the preferred mode.
-    vector<uint32> pixel_format;
+    vector<uint32>:MAX pixel_format;
 
     // A list of cursor configurations most likely to be accepted by the
     // driver. Maybe be empty if there is no hardware support for cursors.
@@ -61,11 +61,11 @@ struct Info {
     // The driver may reject some of these configurations in some
     // circumstances, and it may accept other configurations, but at least
     // one of these configurations should be valid at most times.
-    vector<CursorInfo> cursor_configs;
+    vector<CursorInfo>:MAX cursor_configs;
 
-    string:identifierMaxLen manufacturer_name;
-    string:identifierMaxLen monitor_name;
-    string:identifierMaxLen monitor_serial;
+    string:IDENTIFIER_MAX_LEN manufacturer_name;
+    string:IDENTIFIER_MAX_LEN monitor_name;
+    string:IDENTIFIER_MAX_LEN monitor_serial;
 };
 
 // An ImageConfig accompanies image data and defines how to interpret that data.
@@ -78,14 +78,14 @@ struct ImageConfig {
     uint32 pixel_format;
 
     // Type conveys information about what is providing the pixel data. If this
-    // is not typeSimple, it is up to the driver and image producer to
+    // is not TYPE_SIMPLE, it is up to the driver and image producer to
     // agree on the meaning of the value through some mechanism outside the scope
     // of this API.
-    uint32 type = typeSimple;
+    uint32 type = TYPE_SIMPLE;
 };
-const uint32 typeSimple = 0;
+const uint32 TYPE_SIMPLE = 0;
 // Intentionally left some gap between Simple and Capture types.
-const uint32 typeCapture = 10; //The image is used for capture
+const uint32 TYPE_CAPTURE = 10; //The image is used for capture
 
 // Rotations are applied counter-clockwise, and are applied before reflections.
 enum Transform : uint8 {
@@ -215,9 +215,9 @@ protocol Controller {
     // A display change always invalidates the current configuration. When a
     // client receives this event, they must either apply a new configuration
     // or revalidate and reapply their current configuration.
-    -> DisplaysChanged(vector<Info> added, vector<uint64> removed);
+    -> OnDisplaysChanged(vector<Info>:MAX added, vector<uint64>:MAX removed);
 
-    // Imports a VMO backed image. If tiling is not typeSimple, it is up to
+    // Imports a VMO backed image. If tiling is not TYPE_SIMPLE, it is up to
     // the driver and client to agree on its meaning through some mechanism
     // outside the scope of this API.
     //
@@ -225,7 +225,7 @@ protocol Controller {
     // should be used instead.
     ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (zx.status res, uint64 image_id);
 
-    // Imports a Buffer-Collection backed image. If tiling is not typeSimple,
+    // Imports a Buffer-Collection backed image. If tiling is not TYPE_SIMPLE,
     // it is up to the driver and client to agree on its meaning through some
     // mechanism outside the scope of this API. The ImageConfig must be
     // compatible with that passed through SetBufferCollectionConstraints on
@@ -244,7 +244,7 @@ protocol Controller {
 
     /// Imports an event into the driver and associates it with the given id.
     ///
-    /// It is illegal for id to be equal to invalidId, and it is undefined to
+    /// It is illegal for id to be equal to INVALID_DISP_ID, and it is undefined to
     /// import one event with two different ids or to import two different events
     /// with the same id (note that ids map well to koids).
     ///
@@ -300,7 +300,7 @@ protocol Controller {
     // needs to be moved between displays, it must be removed from the first display's
     // pending config before being added to the second display's pending config. It
     // is also illegal to pass an invalid layer id.
-    SetDisplayLayers(uint64 display_id, vector<uint64> layer_ids);
+    SetDisplayLayers(uint64 display_id, vector<uint64>:MAX layer_ids);
 
     // Configures the layer as a primary layer with no image and the default
     // config (no src_frame cropping, the identity transform, positioned in the
@@ -363,7 +363,7 @@ protocol Controller {
     //
     // It is illegal to call this on an invalid layer or for the length of
     // color_bytes to mismatch the size of the supplied format.
-    SetLayerColorConfig(uint64 layer_id, uint32 pixel_format, vector<uint8> color_bytes);
+    SetLayerColorConfig(uint64 layer_id, uint32 pixel_format, vector<uint8>:MAX color_bytes);
 
     // Sets the image for the layer.
     //
@@ -411,7 +411,7 @@ protocol Controller {
     // modify the configuration in a way which requires revalidation.
     //
     // If discard is true, the pending changes will be discarded after validation.
-    CheckConfig(bool discard) -> (ConfigResult res, vector<ClientCompositionOp> ops);
+    CheckConfig(bool discard) -> (ConfigResult res, vector<ClientCompositionOp>:MAX ops);
 
     // Applies any pending changes to the current configuration. This will
     // not apply pending changes to layers which are not on any display.
@@ -430,7 +430,7 @@ protocol Controller {
     // display_id is the identifies the display on which the vsync occurred, and
     // timestamp indicates the time the vsync occurred. images is a (possibly
     // empty) vector of all images where were actively being displayed.
-    -> Vsync(uint64 display_id, uint64 timestamp, vector<uint64> images);
+    -> OnVsync(uint64 display_id, uint64 timestamp, vector<uint64>:MAX images);
 
     // Sets the visibility behavior of the virtcon. It is illegal to call this
     // from the primary client.
@@ -440,7 +440,7 @@ protocol Controller {
     //
     // New clients should assume they do not have ownership of the display
     // until this event informs them otherwise.
-    -> ClientOwnershipChange(bool has_ownership);
+    -> OnClientOwnershipChange(bool has_ownership);
 
     // Import a sysmem buffer collection token. `collection_id` must not
     // already be in use.

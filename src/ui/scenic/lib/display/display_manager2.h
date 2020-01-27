@@ -24,7 +24,7 @@ namespace display {
 // Implements the |fuchsia::ui::display::DisplayManager| protocol. Notifies protocol clients
 // of new or removed displays and allows changing of display configuration. Every display is
 // associated with a DisplayRef which can also be used as a parameter to other apis (e.g. Scenic).
-// Additionally, allows an internal (within Scenic) client to claim the display and 
+// Additionally, allows an internal (within Scenic) client to claim the display and
 class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
  public:
   DisplayManager2();
@@ -81,7 +81,7 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
     std::unique_ptr<DisplayControllerListener> listener;
     std::vector<DisplayInfoPrivate> displays;
 
-    // The latest value of the ClientOwnershipChange event from the
+    // The latest value of the OnClientOwnershipChange event from the
     // display controller.
     bool has_ownership = false;
   };

@@ -320,14 +320,14 @@ class VcDisplayTest : public zxtest::Test {
     ASSERT_OK(fidl::Bind(loop_->dispatcher(), std::move(server_end), controller_.get()));
   }
   void SendAddDisplay(fhd::Info* display) {
-    fhd::Controller::SendDisplaysChangedEvent(zx::unowned_channel(server_end_),
-                                              fidl::VectorView(display, 1),
-                                              fidl::VectorView<uint64_t>());
+    fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_end_),
+                                                fidl::VectorView(display, 1),
+                                                fidl::VectorView<uint64_t>());
   }
   void SendRemoveDisplay(uint64_t id) {
-    fhd::Controller::SendDisplaysChangedEvent(zx::unowned_channel(server_end_),
-                                              fidl::VectorView<fhd::Info>(),
-                                              fidl::VectorView<uint64_t>(&id, 1));
+    fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_end_),
+                                                fidl::VectorView<fhd::Info>(),
+                                                fidl::VectorView<uint64_t>(&id, 1));
   }
   void ProcessEvent() { ASSERT_OK(dc_callback_handler(nullptr, ZX_CHANNEL_READABLE, 0)); }
   std::unique_ptr<StubDisplayController> controller_;

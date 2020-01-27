@@ -450,7 +450,7 @@ impl FrameBuffer {
             let timeout = 2_i64.seconds().after_now();
             let event = stream.next().on_timeout(timeout, || None).await;
             if let Some(event) = event {
-                if let Ok(ControllerEvent::DisplaysChanged { added, .. }) = event {
+                if let Ok(ControllerEvent::OnDisplaysChanged { added, .. }) = event {
                     let first_added = &added[0];
                     display_id = first_added.id;
                     pixel_format = first_added.pixel_format[0];
@@ -461,7 +461,7 @@ impl FrameBuffer {
                 }
             } else {
                 return Err(format_err!(
-                    "Timed out waiting for display controller to send a DisplaysChanged event"
+                    "Timed out waiting for display controller to send a OnDisplaysChanged event"
                 ));
             }
         }
@@ -597,7 +597,7 @@ impl FrameBuffer {
             fasync::spawn_local(
                 stream
                     .map_ok(move |request| match request {
-                        ControllerEvent::Vsync { display_id, timestamp, images } => {
+                        ControllerEvent::OnVsync { display_id, timestamp, images } => {
                             vsync_sender
                                 .unbounded_send(VSyncMessage { display_id, timestamp, images })
                                 .unwrap_or_else(|e| eprintln!("{:?}", e));

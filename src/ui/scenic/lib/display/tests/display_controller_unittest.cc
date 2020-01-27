@@ -11,8 +11,7 @@ namespace scenic_impl {
 namespace display {
 namespace test {
 
-class DisplayControllerTest : public gtest::TestLoopFixture {
-};
+class DisplayControllerTest : public gtest::TestLoopFixture {};
 
 TEST_F(DisplayControllerTest, Display2Test) {
   const uint64_t kDisplayId = 2;
@@ -28,7 +27,7 @@ TEST_F(DisplayControllerTest, Display2Test) {
 
   display.OnVsync(zx::time(1), {1});
   bool invoked_vsync_callback = false;
-  display.set_vsync_callback([&](zx::time timestamp, const std::vector<uint64_t>& images) {
+  display.set_on_vsync_callback([&](zx::time timestamp, const std::vector<uint64_t>& images) {
     invoked_vsync_callback = true;
     EXPECT_EQ(zx::time(2), timestamp);
     EXPECT_EQ(1u, images.size());

@@ -42,8 +42,8 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
 
  private:
   void ControllerError(zx_status_t status);
-  void ControllerDisplaysChanged(std::vector<fuchsia::hardware::display::Info>,
-                                 std::vector<uint64_t>);
+  void ControllerOnDisplaysChanged(std::vector<fuchsia::hardware::display::Info>,
+                                   std::vector<uint64_t>);
 
   bool WaitForAsyncMessage();
 

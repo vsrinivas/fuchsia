@@ -277,7 +277,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
 
   do {
     zx_status_t status = dc_client->HandleEvents(fhd::Controller::EventHandlers{
-        .displays_changed =
+        .on_displays_changed =
             [&has_display, &pixel_format, &mode](fidl::VectorView<fhd::Info> added,
                                                  fidl::VectorView<uint64_t> removed) {
               has_display = true;
@@ -288,9 +288,9 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
               // been notified of any displays to remove.
               return ZX_OK;
             },
-        .vsync = [](uint64_t display_id, uint64_t timestamp,
-                    fidl::VectorView<uint64_t> images) { return ZX_ERR_NEXT; },
-        .client_ownership_change = [](bool has_ownership) { return ZX_ERR_NEXT; },
+        .on_vsync = [](uint64_t display_id, uint64_t timestamp,
+                       fidl::VectorView<uint64_t> images) { return ZX_ERR_NEXT; },
+        .on_client_ownership_change = [](bool has_ownership) { return ZX_ERR_NEXT; },
         .unknown = []() { return ZX_ERR_STOP; }});
 
     if (status != ZX_OK && status != ZX_ERR_NEXT) {

@@ -54,8 +54,8 @@ DisplayControllerListener::~DisplayControllerListener() {
 }
 
 void DisplayControllerListener::InitializeCallbacks(
-    fit::closure on_invalid, DisplaysChangedCallback displays_changed_cb,
-    ClientOwnershipChangeCallback client_ownership_change_cb) {
+    fit::closure on_invalid, OnDisplaysChangedCallback on_displays_changed_cb,
+    OnClientOwnershipChangeCallback on_client_ownership_change_cb) {
   FXL_CHECK(!initialized_callbacks_);
   initialized_callbacks_ = true;
 
@@ -64,24 +64,24 @@ void DisplayControllerListener::InitializeCallbacks(
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
   auto event_dispatcher =
       static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
-  event_dispatcher->DisplaysChanged = std::move(displays_changed_cb);
-  event_dispatcher->ClientOwnershipChange = std::move(client_ownership_change_cb);
+  event_dispatcher->OnDisplaysChanged = std::move(on_displays_changed_cb);
+  event_dispatcher->OnClientOwnershipChange = std::move(on_client_ownership_change_cb);
 }
 
 void DisplayControllerListener::ClearCallbacks() {
   auto event_dispatcher =
       static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
-  event_dispatcher->DisplaysChanged = nullptr;
-  event_dispatcher->ClientOwnershipChange = nullptr;
-  event_dispatcher->Vsync = nullptr;
+  event_dispatcher->OnDisplaysChanged = nullptr;
+  event_dispatcher->OnClientOwnershipChange = nullptr;
+  event_dispatcher->OnVsync = nullptr;
   on_invalid_cb_ = nullptr;
 }
 
-void DisplayControllerListener::SetVsyncCallback(VsyncCallback vsync_cb) {
+void DisplayControllerListener::SetOnVsyncCallback(OnVsyncCallback on_vsync_cb) {
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces support events.
   auto event_dispatcher =
       static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
-  event_dispatcher->Vsync = std::move(vsync_cb);
+  event_dispatcher->OnVsync = std::move(on_vsync_cb);
 }
 
 void DisplayControllerListener::OnPeerClosedAsync(async_dispatcher_t* dispatcher,

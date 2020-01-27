@@ -531,14 +531,14 @@ zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32
   ZX_DEBUG_ASSERT(signals & ZX_CHANNEL_READABLE);
 
   return dc_client->HandleEvents(fhd::Controller::EventHandlers{
-      .displays_changed =
+      .on_displays_changed =
           [](fidl::VectorView<fhd::Info> added, fidl::VectorView<uint64_t> removed) {
             handle_displays_changed(added, removed);
             return ZX_OK;
           },
-      .vsync = [](uint64_t display_id, uint64_t timestamp,
-                  fidl::VectorView<uint64_t> images) { return ZX_OK; },
-      .client_ownership_change =
+      .on_vsync = [](uint64_t display_id, uint64_t timestamp,
+                     fidl::VectorView<uint64_t> images) { return ZX_OK; },
+      .on_client_ownership_change =
           [](bool has_ownership) {
             handle_ownership_change(has_ownership);
             return ZX_OK;

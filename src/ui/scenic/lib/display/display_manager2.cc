@@ -162,7 +162,7 @@ DisplayControllerUniquePtr DisplayManager2::ClaimDisplay(zx_koid_t display_ref_k
       DisplayControllerPrivate* dc_private = weak->FindDisplayControllerPrivate(dc);
       if (dc_private) {
         dc_private->claimed_dc = nullptr;
-        dc_private->listener->SetVsyncCallback(nullptr);
+        dc_private->listener->SetOnVsyncCallback(nullptr);
       }
     }
     delete dc;
@@ -176,7 +176,7 @@ DisplayControllerUniquePtr DisplayManager2::ClaimDisplay(zx_koid_t display_ref_k
   dc_private->claimed_dc = display_controller.get();
 
   // This callback is cleared in the custom deleter above.
-  dc_private->listener->SetVsyncCallback(
+  dc_private->listener->SetOnVsyncCallback(
       [dc_private](uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> images) {
         if (!dc_private->claimed_dc) {
           FXL_LOG(WARNING)

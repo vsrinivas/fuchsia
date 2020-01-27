@@ -28,7 +28,7 @@ TestFidlClient::Display::Display(const fhd::Info& info) {
   image_config_.height = modes_[0].vertical_resolution;
   image_config_.width = modes_[0].horizontal_resolution;
   image_config_.pixel_format = pixel_formats_[0];
-  image_config_.type = fhd::typeSimple;
+  image_config_.type = fhd::TYPE_SIMPLE;
 }
 
 uint64_t TestFidlClient::display_id() const { return displays_[0].id_; }
@@ -74,16 +74,16 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
   while (displays_.is_empty() || !has_ownership_) {
     fbl::AutoLock lock(mtx());
     auto result = dc_->HandleEvents({
-        .displays_changed =
+        .on_displays_changed =
             [this](::fidl::VectorView<fhd::Info> added, ::fidl::VectorView<uint64_t> removed) {
               for (size_t i = 0; i < added.count(); i++) {
                 displays_.push_back(Display(added[i]));
               }
               return ZX_OK;
             },
-        .vsync = [](uint64_t display_id, uint64_t timestamp,
-                    ::fidl::VectorView<uint64_t> images) { return ZX_ERR_INVALID_ARGS; },
-        .client_ownership_change =
+        .on_vsync = [](uint64_t display_id, uint64_t timestamp,
+                       ::fidl::VectorView<uint64_t> images) { return ZX_ERR_INVALID_ARGS; },
+        .on_client_ownership_change =
             [this](bool owns) {
               has_ownership_ = owns;
               return ZX_OK;
@@ -131,15 +131,15 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
 
   fbl::AutoLock lock(mtx());
   auto result = dc_->HandleEvents({
-      .displays_changed = [](::fidl::VectorView<fhd::Info>,
-                             ::fidl::VectorView<uint64_t>) { return ZX_OK; },
+      .on_displays_changed = [](::fidl::VectorView<fhd::Info>,
+                                ::fidl::VectorView<uint64_t>) { return ZX_OK; },
       // The FIDL bindings do not know that the caller holds mtx(), so we can't TA_REQ(mtx()) here.
-      .vsync =
+      .on_vsync =
           [this](uint64_t, uint64_t, ::fidl::VectorView<uint64_t>) TA_NO_THREAD_SAFETY_ANALYSIS {
             vsync_count_++;
             return ZX_OK;
           },
-      .client_ownership_change = [](bool) { return ZX_OK; },
+      .on_client_ownership_change = [](bool) { return ZX_OK; },
       .unknown = []() { return ZX_ERR_STOP; },
   });
 
@@ -311,7 +311,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::ImageConfig& 
 
   auto import_result = dc_->ImportImage(image_config, display_collection_id, 0);
   if (!import_result.ok() || import_result->res != ZX_OK) {
-    *image_id = fhd::invalidId;
+    *image_id = fhd::INVALID_DISP_ID;
     zxlogf(ERROR, "Importing image failed (fidl=%d, res=%d)\n", import_result.status(),
            import_result->res);
     return import_result.ok() ? import_result->res : import_result.status();

@@ -122,8 +122,8 @@ class DisplaySwapchain : public Swapchain {
   // Displays |buffer| on |display|. Will wait for |render_finished_event_id| to be signaled before
   // presenting. Will signal |frame_signal_event_id| when the image is retired.
   //
-  // fuchsia::hardware::display::invalidId can be passed for any of the event_ids if there is no
-  // corresponding event to signal.
+  // fuchsia::hardware::display::INVALID_DISP_ID can be passed for any of the event_ids if there is
+  // no corresponding event to signal.
   void Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,
             uint64_t frame_signal_event_id);
 
@@ -134,7 +134,7 @@ class DisplaySwapchain : public Swapchain {
   Sysmem* sysmem_;
 
   display::Display* const display_;
-  uint64_t primary_layer_id_ = fuchsia::hardware::display::invalidId;
+  uint64_t primary_layer_id_ = fuchsia::hardware::display::INVALID_DISP_ID;
 
   // The display controller driver binding.
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
@@ -142,8 +142,8 @@ class DisplaySwapchain : public Swapchain {
 
   // Ids used to talk to display controller. If we use |display_controller_|
   // in multiple places, we'll have to centralize this logic.
-  uint64_t next_event_id_ = fuchsia::hardware::display::invalidId + 1;
-  uint64_t next_buffer_collection_id_ = fuchsia::hardware::display::invalidId + 1;
+  uint64_t next_event_id_ = fuchsia::hardware::display::INVALID_DISP_ID + 1;
+  uint64_t next_buffer_collection_id_ = fuchsia::hardware::display::INVALID_DISP_ID + 1;
 
   size_t next_frame_index_ = 0;
   size_t presented_frame_idx_ = 0;

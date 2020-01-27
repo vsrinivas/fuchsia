@@ -13,7 +13,6 @@ unlinted_libraries = [
   "fuchsia.device.manager",
   "fuchsia.device.manager.test",
   "fuchsia.hardware.block.partition",
-  "fuchsia.hardware.display",
   "fuchsia.hardware.ethernet",
   "fuchsia.hardware.ramdisk",
   "fuchsia.hardware.usb.peripheral",

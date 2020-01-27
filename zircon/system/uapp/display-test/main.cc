@@ -136,7 +136,7 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
     printf("Waiting for display\n");
     if (ZX_OK !=
         dc->HandleEvents({
-            .displays_changed =
+            .on_displays_changed =
                 [&displays](::fidl::VectorView<fhd::Info> added,
                             ::fidl::VectorView<uint64_t> removed) {
                   for (size_t i = 0; i < added.count(); i++) {
@@ -144,9 +144,9 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
                   }
                   return ZX_OK;
                 },
-            .vsync = [](uint64_t display_id, uint64_t timestamp,
-                        ::fidl::VectorView<uint64_t> images) { return ZX_ERR_INVALID_ARGS; },
-            .client_ownership_change =
+            .on_vsync = [](uint64_t display_id, uint64_t timestamp,
+                           ::fidl::VectorView<uint64_t> images) { return ZX_ERR_INVALID_ARGS; },
+            .on_client_ownership_change =
                 [](bool owns) {
                   has_ownership = owns;
                   return ZX_OK;
@@ -184,7 +184,7 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 
   for (auto& layer : layers) {
     uint64_t id = layer->id(display.id());
-    if (id != fhd::invalidId) {
+    if (id != fhd::INVALID_DISP_ID) {
       new_layers.push_back(id);
     }
   }
@@ -235,12 +235,12 @@ bool apply_config() {
 
 zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers) {
   fhd::Controller::EventHandlers handlers = {
-      .displays_changed =
+      .on_displays_changed =
           [](::fidl::VectorView<fhd::Info>, ::fidl::VectorView<uint64_t>) {
             printf("Display disconnected\n");
             return ZX_ERR_STOP;
           },
-      .vsync =
+      .on_vsync =
           [&layers](uint64_t display_id, uint64_t timestamp, ::fidl::VectorView<uint64_t> images) {
             for (auto& layer : layers) {
               uint64_t id = layer->image_id(display_id);
@@ -261,7 +261,7 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
             }
             return ZX_OK;
           },
-      .client_ownership_change =
+      .on_client_ownership_change =
           [](bool owned) {
             has_ownership = owned;
             return ZX_ERR_NEXT;
@@ -360,7 +360,7 @@ zx_status_t capture_setup() {
 
   // set buffer constraints
   fhd::ImageConfig image_config = {};
-  image_config.type = fhd::typeCapture;
+  image_config.type = fhd::TYPE_CAPTURE;
   auto constraints_resp = dc->SetBufferCollectionConstraints(kCollectionId, image_config);
   if (constraints_resp.status() != ZX_OK) {
     printf("Could not set capture constraints %s\n", constraints_resp.error());

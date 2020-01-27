@@ -28,7 +28,8 @@ using DisplayControllerUniquePtr =
     std::unique_ptr<DisplayController, std::function<void(DisplayController*)>>;
 using OnDisplayRemovedCallback = fit::function<void(/*display_id=*/uint64_t)>;
 using OnDisplayAddedCallback = fit::function<void(Display2*)>;
-using VsyncCallback = fit::function<void(zx::time timestamp, const std::vector<uint64_t>& images)>;
+using OnVsyncCallback =
+    fit::function<void(zx::time timestamp, const std::vector<uint64_t>& images)>;
 
 // Display metadata, as well as a registration point for vsync events for the display.
 class Display2 {
@@ -43,8 +44,8 @@ class Display2 {
     return display_modes_;
   };
   const std::vector<zx_pixel_format_t>& pixel_formats() const { return pixel_formats_; };
-  void set_vsync_callback(VsyncCallback vsync_callback) {
-    vsync_callback_ = std::move(vsync_callback);
+  void set_on_vsync_callback(OnVsyncCallback on_vsync_callback) {
+    on_vsync_callback_ = std::move(on_vsync_callback);
   }
 
   // Invokes vsync callback. Should only be called by DisplayManager or during testing.
@@ -54,15 +55,16 @@ class Display2 {
   uint64_t display_id_;
   std::vector<fuchsia::hardware::display::Mode> display_modes_;
   std::vector<zx_pixel_format_t> pixel_formats_;
-  VsyncCallback vsync_callback_;
+  OnVsyncCallback on_vsync_callback_;
 };
 
 // Wraps a display controller interface, and provides a live-updated list of displays
 // attached to the display controller.
 class DisplayController {
  public:
-  DisplayController(std::vector<Display2> displays,
-                    const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& controller);
+  DisplayController(
+      std::vector<Display2> displays,
+      const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& controller);
 
   const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& controller() {
     return controller_;

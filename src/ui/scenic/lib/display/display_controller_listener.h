@@ -20,10 +20,10 @@ namespace display {
 // registering for event callbacks.
 class DisplayControllerListener {
  public:
-  using DisplaysChangedCallback = std::function<void(
+  using OnDisplaysChangedCallback = std::function<void(
       std::vector<fuchsia::hardware::display::Info> added, std::vector<uint64_t> removed)>;
-  using ClientOwnershipChangeCallback = std::function<void(bool has_ownership)>;
-  using VsyncCallback =
+  using OnClientOwnershipChangeCallback = std::function<void(bool has_ownership)>;
+  using OnVsyncCallback =
       std::function<void(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> images)>;
 
   // Binds to a Display fuchsia::hardware::display::Controller with channels |device| and
@@ -41,13 +41,14 @@ class DisplayControllerListener {
 
   // If any of the channels gets disconnected, |on_invalid| is invoked and this object becomes
   // invalid.
-  void InitializeCallbacks(fit::closure on_invalid, DisplaysChangedCallback displays_changed_cb,
-                           ClientOwnershipChangeCallback client_ownership_change_cb);
+  void InitializeCallbacks(fit::closure on_invalid,
+                           OnDisplaysChangedCallback on_displays_changed_cb,
+                           OnClientOwnershipChangeCallback on_client_ownership_change_cb);
 
   // Removes all callbacks. Once this is done, there is no way to re-initialize the callbacks.
   void ClearCallbacks();
 
-  void SetVsyncCallback(VsyncCallback vsync_callback);
+  void SetOnVsyncCallback(OnVsyncCallback vsync_callback);
 
   // Whether the connection to the display controller driver is still valid.
   bool valid() { return valid_; }

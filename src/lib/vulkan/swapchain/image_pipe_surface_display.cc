@@ -76,8 +76,8 @@ bool ImagePipeSurfaceDisplay::Init() {
   display_controller_.set_error_handler(
       fit::bind_member(this, &ImagePipeSurfaceDisplay::ControllerError));
 
-  display_controller_.events().DisplaysChanged =
-      fit::bind_member(this, &ImagePipeSurfaceDisplay::ControllerDisplaysChanged);
+  display_controller_.events().OnDisplaysChanged =
+      fit::bind_member(this, &ImagePipeSurfaceDisplay::ControllerOnDisplaysChanged);
   while (!have_display_) {
     loop_.Run(zx::time::infinite(), true);
     if (display_connection_exited_)
@@ -98,7 +98,7 @@ bool ImagePipeSurfaceDisplay::WaitForAsyncMessage() {
   return !display_connection_exited_;
 }
 
-void ImagePipeSurfaceDisplay::ControllerDisplaysChanged(
+void ImagePipeSurfaceDisplay::ControllerOnDisplaysChanged(
     std::vector<fuchsia::hardware::display::Info> info, std::vector<uint64_t>) {
   if (info.size() == 0)
     return;
@@ -425,7 +425,7 @@ void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::ev
     return;
   }
 
-  uint64_t wait_event_id = fuchsia::hardware::display::invalidId;
+  uint64_t wait_event_id = fuchsia::hardware::display::INVALID_DISP_ID;
   if (wait_events.size()) {
     zx_info_handle_basic_t info;
     zx::event event = std::move(wait_events[0]);
@@ -443,7 +443,7 @@ void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::ev
     }
   }
 
-  uint64_t signal_event_id = fuchsia::hardware::display::invalidId;
+  uint64_t signal_event_id = fuchsia::hardware::display::INVALID_DISP_ID;
   if (signal_events.size()) {
     zx_info_handle_basic_t info;
     zx::event event = std::move(signal_events[0]);
@@ -464,11 +464,11 @@ void ImagePipeSurfaceDisplay::PresentImage(uint32_t image_id, std::vector<zx::ev
   display_controller_->SetLayerImage(layer_id_, iter->second, wait_event_id, signal_event_id);
   display_controller_->ApplyConfig();
 
-  if (wait_event_id != fuchsia::hardware::display::invalidId) {
+  if (wait_event_id != fuchsia::hardware::display::INVALID_DISP_ID) {
     display_controller_->ReleaseEvent(wait_event_id);
   }
 
-  if (signal_event_id != fuchsia::hardware::display::invalidId) {
+  if (signal_event_id != fuchsia::hardware::display::INVALID_DISP_ID) {
     display_controller_->ReleaseEvent(signal_event_id);
   }
 }

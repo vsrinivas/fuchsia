@@ -107,7 +107,7 @@ TEST_F(DisplayManagerTest, RemoveInvalidDisplayController) {
   });
 
   // Add display with id = 1
-  display_controller_objs.mock->events().DisplaysChanged(
+  display_controller_objs.mock->events().OnDisplaysChanged(
       /* added */ {CreateFakeDisplayInfo(/*display_id=*/1)},
       /* removed */ {});
   RunLoopUntilIdle();
@@ -122,7 +122,7 @@ TEST_F(DisplayManagerTest, RemoveInvalidDisplayController) {
   EXPECT_EQ(1u, displays_removed.size());
 }
 
-TEST_F(DisplayManagerTest, DisplaysChanged) {
+TEST_F(DisplayManagerTest, OnDisplaysChanged) {
   DisplayControllerObjects display_controller_objs = CreateMockDisplayController();
   {
     DisplayManager2 display_manager;
@@ -142,7 +142,7 @@ TEST_F(DisplayManagerTest, DisplaysChanged) {
         });
 
     // Add display with id = 1
-    display_controller_objs.mock->events().DisplaysChanged(
+    display_controller_objs.mock->events().OnDisplaysChanged(
         /* added */ {CreateFakeDisplayInfo(/*display_id=*/1)},
         /* removed */ {});
     RunLoopUntilIdle();
@@ -150,7 +150,7 @@ TEST_F(DisplayManagerTest, DisplaysChanged) {
     EXPECT_EQ(0u, displays_removed.size());
 
     // Add another display with id = 1. Expect error.
-    display_controller_objs.mock->events().DisplaysChanged(
+    display_controller_objs.mock->events().OnDisplaysChanged(
         /* added */ {CreateFakeDisplayInfo(/*display_id=*/1)},
         /* removed */ {});
     RunLoopUntilIdle();
@@ -160,7 +160,7 @@ TEST_F(DisplayManagerTest, DisplaysChanged) {
     EXPECT_EQ(0u, displays_removed.size());
 
     // Remove display that doesn't exist.
-    display_controller_objs.mock->events().DisplaysChanged(/* added */ {}, /* removed */ {2u});
+    display_controller_objs.mock->events().OnDisplaysChanged(/* added */ {}, /* removed */ {2u});
     RunLoopUntilIdle();
     EXPECT_EQ(display_manager.last_error(),
               "DisplayManager: Got a display removed event for invalid display=2");
@@ -168,13 +168,13 @@ TEST_F(DisplayManagerTest, DisplaysChanged) {
     EXPECT_EQ(0u, displays_removed.size());
 
     // Remove display that exists.
-    display_controller_objs.mock->events().DisplaysChanged(/* added */ {}, /* removed */ {1u});
+    display_controller_objs.mock->events().OnDisplaysChanged(/* added */ {}, /* removed */ {1u});
     RunLoopUntilIdle();
     EXPECT_EQ(1u, displays_added.size());
     EXPECT_EQ(1u, displays_removed.size());
 
     // Add display with id = 2
-    display_controller_objs.mock->events().DisplaysChanged(
+    display_controller_objs.mock->events().OnDisplaysChanged(
         /* added */ {CreateFakeDisplayInfo(/*display_id=*/2)},
         /* removed */ {});
     RunLoopUntilIdle();
@@ -189,17 +189,17 @@ TEST_F(DisplayManagerTest, DisplaysChanged) {
   // Expect no crashes during teardown.
 
   // Trigger display controller events after display manager is destroyed.
-  display_controller_objs.mock->events().DisplaysChanged(
+  display_controller_objs.mock->events().OnDisplaysChanged(
       /* added */ {CreateFakeDisplayInfo(/*display_id=*/3)},
       /* removed */ {});
-  display_controller_objs.mock->events().ClientOwnershipChange(true);
+  display_controller_objs.mock->events().OnClientOwnershipChange(true);
 
   // Invalidate display controller.
   display_controller_objs.mock.reset();
   RunLoopUntilIdle();
 }
 
-TEST_F(DisplayManagerTest, DisplaysChangedBeforeAdddingListener) {
+TEST_F(DisplayManagerTest, OnDisplaysChangedBeforeAdddingListener) {
   DisplayManager2 display_manager;
   DisplayControllerObjects display_controller_objs = CreateMockDisplayController();
   display_manager.AddDisplayController(display_controller_objs.interface_ptr,
@@ -210,17 +210,17 @@ TEST_F(DisplayManagerTest, DisplaysChangedBeforeAdddingListener) {
   bool has_ownership = false;
 
   // Add displays with id = 1 and id = 2
-  display_controller_objs.mock->events().DisplaysChanged(
+  display_controller_objs.mock->events().OnDisplaysChanged(
       /* added */ {CreateFakeDisplayInfo(/*display_id=*/1),
                    CreateFakeDisplayInfo(/*display_id=*/2)},
       /* removed */ {});
   RunLoopUntilIdle();
 
   // Remove display with id = 1.
-  display_controller_objs.mock->events().DisplaysChanged(/* added */ {}, /* removed */ {1u});
+  display_controller_objs.mock->events().OnDisplaysChanged(/* added */ {}, /* removed */ {1u});
   RunLoopUntilIdle();
 
-  display_controller_objs.mock->events().ClientOwnershipChange(true);
+  display_controller_objs.mock->events().OnClientOwnershipChange(true);
   RunLoopUntilIdle();
 
   // Add a listener and expect it to receive an DisplayAdded with id = 1 and a display ownership
@@ -278,23 +278,23 @@ TEST_F(DisplayManagerTest, DisplayOwnershipChanged) {
       });
 
   // Add displays with ids 1...4 from two display controllers.
-  display_controller_objs1.mock->events().DisplaysChanged(
+  display_controller_objs1.mock->events().OnDisplaysChanged(
       /*added=*/{CreateFakeDisplayInfo(/*display_id=*/1)},
       /*removed=*/{});
-  display_controller_objs1.mock->events().DisplaysChanged(
+  display_controller_objs1.mock->events().OnDisplaysChanged(
       /*added=*/{CreateFakeDisplayInfo(/*display_id=*/2)},
       /*removed=*/{});
   // Make sure the operations for the first display controller are finished first, because we rely
   // on the order displays are added below.
   RunLoopUntilIdle();
-  display_controller_objs2.mock->events().DisplaysChanged(
+  display_controller_objs2.mock->events().OnDisplaysChanged(
       /*added=*/{CreateFakeDisplayInfo(/*display_id=*/3)},
       /*removed=*/{});
-  display_controller_objs2.mock->events().DisplaysChanged(
+  display_controller_objs2.mock->events().OnDisplaysChanged(
       /*added=*/{CreateFakeDisplayInfo(/*display_id=*/4)},
       /*removed=*/{});
 
-  display_controller_objs1.mock->events().ClientOwnershipChange(true);
+  display_controller_objs1.mock->events().OnClientOwnershipChange(true);
   RunLoopUntilIdle();
   EXPECT_EQ(4u, displays_added.size());
   EXPECT_TRUE(has_ownership);
@@ -317,7 +317,7 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
   const uint64_t kTestImageId = 2u;
   const uint64_t kTestTimestamp = 111111u;
 
-  display_controller_objs.mock->events().DisplaysChanged(
+  display_controller_objs.mock->events().OnDisplaysChanged(
       /* added */ {CreateFakeDisplayInfo(kTestDisplayId1)},
       /* removed */ {});
 
@@ -354,7 +354,7 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
       EXPECT_EQ(kTestDisplayId1, display_id);
     });
 
-    display_controller_objs.mock->events().DisplaysChanged(
+    display_controller_objs.mock->events().OnDisplaysChanged(
         /* added */ {CreateFakeDisplayInfo(kTestDisplayId2)},
         /* removed */ {kTestDisplayId1});
     RunLoopUntilIdle();
@@ -365,7 +365,7 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
 
     // Test vsync delivery.
     bool vsync_received = false;
-    display_controller->displays()->at(0).set_vsync_callback(
+    display_controller->displays()->at(0).set_on_vsync_callback(
         [&](zx::time timestamp, const std::vector<uint64_t>& images) {
           vsync_received = true;
           EXPECT_EQ(zx::time(kTestTimestamp), timestamp);
@@ -373,7 +373,7 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
           EXPECT_EQ(kTestImageId, images[0]);
         });
 
-    display_controller_objs.mock->events().Vsync(kTestDisplayId2, kTestTimestamp, {kTestImageId});
+    display_controller_objs.mock->events().OnVsync(kTestDisplayId2, kTestTimestamp, {kTestImageId});
     RunLoopUntilIdle();
     EXPECT_TRUE(vsync_received);
   }
@@ -381,10 +381,10 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
   // The display is now unclaimed.
 
   // Trigger a few events to check that we don't need a claimed display.
-  display_controller_objs.mock->events().DisplaysChanged(
+  display_controller_objs.mock->events().OnDisplaysChanged(
       /* added */ {CreateFakeDisplayInfo(kTestDisplayId3)},
       /* removed */ {kTestDisplayId2});
-  display_controller_objs.mock->events().Vsync(kTestDisplayId3, kTestTimestamp, {kTestImageId});
+  display_controller_objs.mock->events().OnVsync(kTestDisplayId3, kTestTimestamp, {kTestImageId});
   RunLoopUntilIdle();
 
   // Claim the display again.

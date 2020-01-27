@@ -11,11 +11,13 @@ namespace display {
 
 Display2::Display2(uint64_t display_id, std::vector<fuchsia::hardware::display::Mode> display_modes,
                    std::vector<zx_pixel_format_t> pixel_formats)
-    : display_id_(display_id), display_modes_(std::move(display_modes)), pixel_formats_(std::move(pixel_formats)) {}
+    : display_id_(display_id),
+      display_modes_(std::move(display_modes)),
+      pixel_formats_(std::move(pixel_formats)) {}
 
 void Display2::OnVsync(zx::time timestamp, const std::vector<uint64_t>& images) {
-  if (vsync_callback_) {
-    vsync_callback_(timestamp, images);
+  if (on_vsync_callback_) {
+    on_vsync_callback_(timestamp, images);
   }
 }
 

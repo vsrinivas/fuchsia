@@ -227,7 +227,7 @@ TEST_F(DisplayControllerListenerTest, DisconnectControllerAndDeviceChannel) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DisplayControllerListenerTest, DisplaysChanged) {
+TEST_F(DisplayControllerListenerTest, OnDisplaysChanged) {
   std::vector<fuchsia::hardware::display::Info> displays_added;
   std::vector<uint64_t> displays_removed;
   auto displays_changed_cb = [&displays_added, &displays_removed](
@@ -254,8 +254,8 @@ TEST_F(DisplayControllerListenerTest, DisplaysChanged) {
   test_display.monitor_name = "fake_monitor_name";
   test_display.monitor_serial = "fake_monitor_serial";
 
-  mock_display_controller()->events().DisplaysChanged(/*added=*/{test_display},
-                                                      /*removed=*/{2u});
+  mock_display_controller()->events().OnDisplaysChanged(/*added=*/{test_display},
+                                                        /*removed=*/{2u});
   ASSERT_EQ(0u, displays_added.size());
   ASSERT_EQ(0u, displays_removed.size());
   RunLoopUntilIdle();
@@ -266,8 +266,8 @@ TEST_F(DisplayControllerListenerTest, DisplaysChanged) {
 
   // Verify we stop getting callbacks after ClearCallbacks().
   display_controller_listener()->ClearCallbacks();
-  mock_display_controller()->events().DisplaysChanged(/*added=*/{},
-                                                      /*removed=*/{3u});
+  mock_display_controller()->events().OnDisplaysChanged(/*added=*/{},
+                                                        /*removed=*/{3u});
   RunLoopUntilIdle();
 
   // Expect that nothing changed.
@@ -280,7 +280,7 @@ TEST_F(DisplayControllerListenerTest, DisplaysChanged) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DisplayControllerListenerTest, ClientOwnershipChangeCallback) {
+TEST_F(DisplayControllerListenerTest, OnClientOwnershipChangeCallback) {
   bool has_ownership = false;
   auto client_ownership_change_cb = [&has_ownership](bool ownership) { has_ownership = ownership; };
 
@@ -288,14 +288,14 @@ TEST_F(DisplayControllerListenerTest, ClientOwnershipChangeCallback) {
       /*on_invalid_cb=*/nullptr, /*displays_changed_cb=*/nullptr,
       std::move(client_ownership_change_cb));
 
-  mock_display_controller()->events().ClientOwnershipChange(true);
+  mock_display_controller()->events().OnClientOwnershipChange(true);
   EXPECT_FALSE(has_ownership);
   RunLoopUntilIdle();
   EXPECT_TRUE(has_ownership);
 
   // Verify we stop getting callbacks after ClearCallbacks().
   display_controller_listener()->ClearCallbacks();
-  mock_display_controller()->events().ClientOwnershipChange(false);
+  mock_display_controller()->events().OnClientOwnershipChange(false);
   RunLoopUntilIdle();
   // Expect that nothing changed.
   EXPECT_TRUE(has_ownership);
@@ -305,7 +305,7 @@ TEST_F(DisplayControllerListenerTest, ClientOwnershipChangeCallback) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DisplayControllerListenerTest, VsyncCallback) {
+TEST_F(DisplayControllerListenerTest, OnVsyncCallback) {
   uint64_t last_display_id = 0u;
   uint64_t last_timestamp = 0u;
   std::vector<uint64_t> last_images;
@@ -318,12 +318,12 @@ TEST_F(DisplayControllerListenerTest, VsyncCallback) {
   display_controller_listener()->InitializeCallbacks(/*on_invalid_cb=*/nullptr,
                                                      /*displays_changed_cb=*/nullptr,
                                                      /*client_ownership_change_cb=*/nullptr);
-  display_controller_listener()->SetVsyncCallback(std::move(vsync_cb));
+  display_controller_listener()->SetOnVsyncCallback(std::move(vsync_cb));
 
   const uint64_t kTestDisplayId = 1u;
   const uint64_t kTestTimestamp = 111111u;
   const uint64_t kTestImageId = 2u;
-  mock_display_controller()->events().Vsync(kTestDisplayId, kTestTimestamp, {kTestImageId});
+  mock_display_controller()->events().OnVsync(kTestDisplayId, kTestTimestamp, {kTestImageId});
   ASSERT_EQ(0u, last_images.size());
   RunLoopUntilIdle();
   EXPECT_EQ(kTestDisplayId, last_display_id);
@@ -333,7 +333,7 @@ TEST_F(DisplayControllerListenerTest, VsyncCallback) {
 
   // Verify we stop getting callbacks after ClearCallbacks().
   display_controller_listener()->ClearCallbacks();
-  mock_display_controller()->events().Vsync(kTestDisplayId + 1, kTestTimestamp, {kTestImageId});
+  mock_display_controller()->events().OnVsync(kTestDisplayId + 1, kTestTimestamp, {kTestImageId});
   // Expect that nothing changed.
   RunLoopUntilIdle();
   EXPECT_EQ(kTestDisplayId, last_display_id);

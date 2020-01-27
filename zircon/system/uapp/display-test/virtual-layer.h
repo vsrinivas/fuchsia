@@ -61,7 +61,7 @@ class VirtualLayer {
         return layers_[i].id;
       }
     }
-    return ::llcpp::fuchsia::hardware::display::invalidId;
+    return ::llcpp::fuchsia::hardware::display::INVALID_DISP_ID;
   }
 
   // Gets the ID of the image on the given display.
@@ -151,7 +151,7 @@ class PrimaryLayer : public VirtualLayer {
         return layers_[i].import_info[alt_image_].id;
       }
     }
-    return ::llcpp::fuchsia::hardware::display::invalidId;
+    return ::llcpp::fuchsia::hardware::display::INVALID_DISP_ID;
   }
 
  private:
@@ -202,7 +202,7 @@ class CursorLayer : public VirtualLayer {
         return layers_[i].import_info[0].id;
       }
     }
-    return ::llcpp::fuchsia::hardware::display::invalidId;
+    return ::llcpp::fuchsia::hardware::display::INVALID_DISP_ID;
   }
 
  private:
@@ -226,7 +226,7 @@ class ColorLayer : public VirtualLayer {
   void* GetCurrentImageBuf() override { return nullptr; }
   size_t GetCurrentImageSize() override { return 0; }
   uint64_t image_id(uint64_t display_id) const override {
-    return ::llcpp::fuchsia::hardware::display::invalidId;
+    return ::llcpp::fuchsia::hardware::display::INVALID_DISP_ID;
   }
   virtual bool is_done() const override { return true; }
 };

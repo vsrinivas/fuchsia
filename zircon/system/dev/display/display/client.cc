@@ -1605,9 +1605,9 @@ void Client::SetOwnership(bool is_owner) {
 
   is_owner_ = is_owner;
 
-  fuchsia_hardware_display_ControllerClientOwnershipChangeEvent msg = {};
+  fuchsia_hardware_display_ControllerOnClientOwnershipChangeEvent msg = {};
   fidl_init_txn_header(&msg.hdr, 0,
-                       fuchsia_hardware_display_ControllerClientOwnershipChangeGenOrdinal);
+                       fuchsia_hardware_display_ControllerOnClientOwnershipChangeGenOrdinal);
   msg.has_ownership = is_owner;
 
   zx_status_t status = zx_channel_write(server_handle_, 0, &msg, sizeof(msg), nullptr, 0);
@@ -1625,9 +1625,10 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
 
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
-  auto req = builder.New<fuchsia_hardware_display_ControllerDisplaysChangedEvent>();
+  auto req = builder.New<fuchsia_hardware_display_ControllerOnDisplaysChangedEvent>();
   zx_status_t status;
-  fidl_init_txn_header(&req->hdr, 0, fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal);
+  fidl_init_txn_header(&req->hdr, 0,
+                       fuchsia_hardware_display_ControllerOnDisplaysChangedGenOrdinal);
   req->added.count = 0;
   req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
   req->removed.count = 0;
@@ -1762,11 +1763,11 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     }
 
     populate_fidl_string(&coded_configs[i].manufacturer_name, &builder, manufacturer_name,
-                         fuchsia_hardware_display_identifierMaxLen);
+                         fuchsia_hardware_display_IDENTIFIER_MAX_LEN);
     populate_fidl_string(&coded_configs[i].monitor_name, &builder, monitor_name,
-                         fuchsia_hardware_display_identifierMaxLen);
+                         fuchsia_hardware_display_IDENTIFIER_MAX_LEN);
     populate_fidl_string(&coded_configs[i].monitor_serial, &builder, monitor_serial,
-                         fuchsia_hardware_display_identifierMaxLen);
+                         fuchsia_hardware_display_IDENTIFIER_MAX_LEN);
   }
 
   if (req->removed.count > 0) {
@@ -1786,7 +1787,8 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     fidl::Message msg(builder.Finalize(), fidl::HandlePart());
     const char* err;
     ZX_DEBUG_ASSERT_MSG(
-        msg.Validate(&fuchsia_hardware_display_ControllerDisplaysChangedEventTable, &err) == ZX_OK,
+        msg.Validate(&fuchsia_hardware_display_ControllerOnDisplaysChangedEventTable, &err) ==
+            ZX_OK,
         "Failed to validate \"%s\"", err);
 
     if ((status = msg.Write(server_handle_, 0)) != ZX_OK) {
@@ -2060,13 +2062,13 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   if (!enable_vsync_) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  uint32_t size = static_cast<uint32_t>(sizeof(fuchsia_hardware_display_ControllerVsyncEvent) +
+  uint32_t size = static_cast<uint32_t>(sizeof(fuchsia_hardware_display_ControllerOnVsyncEvent) +
                                         sizeof(uint64_t) * count);
   uint8_t data[size];
 
-  fuchsia_hardware_display_ControllerVsyncEvent* msg =
-      reinterpret_cast<fuchsia_hardware_display_ControllerVsyncEvent*>(data);
-  fidl_init_txn_header(&msg->hdr, 0, fuchsia_hardware_display_ControllerVsyncGenOrdinal);
+  fuchsia_hardware_display_ControllerOnVsyncEvent* msg =
+      reinterpret_cast<fuchsia_hardware_display_ControllerOnVsyncEvent*>(data);
+  fidl_init_txn_header(&msg->hdr, 0, fuchsia_hardware_display_ControllerOnVsyncGenOrdinal);
   msg->display_id = display_id;
   msg->timestamp = timestamp;
   msg->images.count = count;
