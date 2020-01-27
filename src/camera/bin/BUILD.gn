@@ -3,5 +3,8 @@
 # found in the LICENSE file.
 
 group("bin") {
-  public_deps = [ "device_watcher" ]
+  public_deps = [
+    "device",
+    "device_watcher",
+  ]
 }

@@ -39,6 +39,7 @@ group("tests") {
 
 test_package("camera_tests") {
   deps = [
+    "//src/camera/bin/device/test",
     "//src/camera/bin/device_watcher/test",
     "//src/camera/calibration/algorithms/test:algorithms_test",
     "//src/camera/calibration/factory_protocol/test:factory_protocol_test",
@@ -214,6 +215,11 @@ test_package("camera_tests") {
       name = "device_watcher_test"
       manifest = "//src/camera/bin/device_watcher/test/test.cmx"
       environments = [ sherlock_env ]
+    },
+    {
+      name = "device_test"
+      manifest = "//src/camera/bin/device/test/test.cmx"
+      environments = basic_envs
     },
 
     # Put additional camera tests here

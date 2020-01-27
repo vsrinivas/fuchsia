@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/device_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
