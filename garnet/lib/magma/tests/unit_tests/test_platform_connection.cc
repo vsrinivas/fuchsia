@@ -212,11 +212,11 @@ std::unique_ptr<magma::PlatformSemaphore> TestPlatformConnection::test_semaphore
 bool TestPlatformConnection::got_null_notification;
 std::vector<magma_system_exec_resource> TestPlatformConnection::test_resources = {
     {.buffer_id = 10, .offset = 11, .length = 12}, {.buffer_id = 13, .offset = 14, .length = 15}};
-std::vector<uint64_t> TestPlatformConnection::test_semaphores = {{1000, 1001, 1002}};
+std::vector<uint64_t> TestPlatformConnection::test_semaphores = {{1000, 1001, 1010, 1011, 1012}};
 magma_system_command_buffer TestPlatformConnection::test_command_buffer = {
     .num_resources = 2,
     .wait_semaphore_count = 2,
-    .signal_semaphore_count = 1,
+    .signal_semaphore_count = 3,
 };
 
 class TestDelegate : public magma::PlatformConnection::Delegate {

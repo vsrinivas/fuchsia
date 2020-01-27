@@ -121,7 +121,7 @@ bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out) {
 bool MagmaSystemConnection::ReleaseBuffer(uint64_t id) {
   auto iter = buffer_map_.find(id);
   if (iter == buffer_map_.end())
-    return DRETF(false, "Attempting to free invalid buffer id");
+    return DRETF(false, "Attempting to free invalid buffer id %lu", id);
 
   if (--iter->second.refcount > 0)
     return true;
@@ -136,7 +136,7 @@ bool MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va, uint64_t 
                                          uint64_t page_count, uint64_t flags) {
   auto iter = buffer_map_.find(id);
   if (iter == buffer_map_.end())
-    return DRETF(false, "Attempting to gpu map invalid buffer id");
+    return DRETF(false, "Attempting to gpu map invalid buffer id %lu", id);
   if (msd_connection_map_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va,
                                     page_offset, page_count, flags) != MAGMA_STATUS_OK)
     return DRETF(false, "msd_connection_map_buffer_gpu failed");

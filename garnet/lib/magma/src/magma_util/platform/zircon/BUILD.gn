@@ -133,8 +133,7 @@ source_set("connection_client") {
     "$zircon_build_root/public/lib/zx",
     "..:connection_client_header",
     "..:trace",
-    "//sdk/fidl/fuchsia.gpu.magma",
-    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
   ]
 }
 
@@ -147,9 +146,10 @@ source_set("connection") {
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/fidl-async-cpp",
     "$zircon_build_root/public/lib/zx",
     "..:connection_header",
-    "//sdk/fidl/fuchsia.gpu.magma",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
   ]
 }
 
@@ -162,7 +162,7 @@ source_set("device_client") {
     "..:device_client_header",
     "//garnet/lib/magma/include:msd_abi",
     "//garnet/lib/magma/src/magma_util:macros",
-    "//sdk/fidl/fuchsia.gpu.magma",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
     "//zircon/public/lib/zx",
   ]
 }

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/gpu/magma/cpp/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
-#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/profile.h>
 #include <zircon/status.h>
@@ -18,7 +18,8 @@
 
 namespace magma {
 
-class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu::magma::Primary {
+class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Interface,
+                                 public PlatformConnection {
  public:
   struct AsyncWait : public async_wait {
     AsyncWait(ZirconPlatformConnection* connection, zx_handle_t object, zx_signals_t trigger) {
@@ -47,8 +48,7 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
   };
 
   ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, msd_client_id_t client_id,
-                           zx::channel server_endpoint, zx::channel client_endpoint,
-                           zx::channel server_notification_endpoint,
+                           zx::channel client_endpoint, zx::channel server_notification_endpoint,
                            zx::channel client_notification_endpoint,
                            std::shared_ptr<magma::PlatformEvent> shutdown_event,
                            std::unique_ptr<magma::PlatformHandle> thread_profile)
@@ -60,13 +60,27 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
         async_loop_(&kAsyncLoopConfigNeverAttachToThread),
         async_wait_shutdown_(
             this, static_cast<magma::ZirconPlatformEvent*>(shutdown_event.get())->zx_handle(),
-            ZX_EVENT_SIGNALED),
-        binding_(this, std::move(server_endpoint), async_loop_.dispatcher()) {
-    binding_.set_error_handler([this](zx_status_t status) { async_loop()->Quit(); });
+            ZX_EVENT_SIGNALED) {
     delegate_->SetNotificationCallback(NotificationCallbackStatic, this);
   }
 
   ~ZirconPlatformConnection() { delegate_->SetNotificationCallback(nullptr, 0); }
+
+  bool Bind(zx::channel server_endpoint) {
+    fidl::OnChannelClosedFn<llcpp::fuchsia::gpu::magma::Primary::Interface>
+        channel_closed_callback = [](llcpp::fuchsia::gpu::magma::Primary::Interface* interface) {
+          static_cast<ZirconPlatformConnection*>(interface)->async_loop()->Quit();
+        };
+
+    llcpp::fuchsia::gpu::magma::Primary::Interface* interface = this;
+    zx_status_t status = fidl::Bind(async_loop()->dispatcher(), std::move(server_endpoint),
+                                    interface, std::move(channel_closed_callback));
+
+    if (status != ZX_OK)
+      return DRETF(false, "fidl::Bind failed: %d", status);
+
+    return true;
+  }
 
   bool HandleRequest() override {
     zx_status_t status = async_loop_.Run(zx::time::infinite(), true /* once */);
@@ -155,60 +169,62 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
     return DRETF(false, "Unhandled notification type: %d", task->notification.type);
   }
 
-  void ImportBuffer(zx::vmo vmo) override {
+  void ImportBuffer(::zx::vmo buffer, ImportBufferCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection - ImportBuffer");
     uint64_t buffer_id;
-    if (!delegate_->ImportBuffer(vmo.release(), &buffer_id)) {
+    if (!delegate_->ImportBuffer(buffer.release(), &buffer_id)) {
       SetError(MAGMA_STATUS_INVALID_ARGS);
     }
   }
 
-  void ReleaseBuffer(uint64_t buffer_id) override {
+  void ReleaseBuffer(uint64_t buffer_id, ReleaseBufferCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: ReleaseBuffer");
     if (!delegate_->ReleaseBuffer(buffer_id))
       SetError(MAGMA_STATUS_INVALID_ARGS);
   }
 
-  void ImportObject(zx::handle handle, uint32_t object_type) override {
+  void ImportObject(zx::handle handle, uint32_t object_type,
+                    ImportObjectCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: ImportObject");
     if (!delegate_->ImportObject(handle.release(), static_cast<PlatformObject::Type>(object_type)))
       SetError(MAGMA_STATUS_INVALID_ARGS);
   }
 
-  void ReleaseObject(uint64_t object_id, uint32_t object_type) override {
+  void ReleaseObject(uint64_t object_id, uint32_t object_type,
+                     ReleaseObjectCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: ReleaseObject");
     if (!delegate_->ReleaseObject(object_id, static_cast<PlatformObject::Type>(object_type)))
       SetError(MAGMA_STATUS_INVALID_ARGS);
   }
 
-  void CreateContext(uint32_t context_id) override {
+  void CreateContext(uint32_t context_id, CreateContextCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: CreateContext");
     if (!delegate_->CreateContext(context_id))
       SetError(MAGMA_STATUS_INTERNAL_ERROR);
   }
 
-  void DestroyContext(uint32_t context_id) override {
+  void DestroyContext(uint32_t context_id, DestroyContextCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: DestroyContext");
     if (!delegate_->DestroyContext(context_id))
       SetError(MAGMA_STATUS_INTERNAL_ERROR);
   }
 
-  void ExecuteCommandBufferWithResources(uint32_t context_id,
-                                         fuchsia::gpu::magma::CommandBuffer fidl_command_buffer,
-                                         std::vector<fuchsia::gpu::magma::Resource> fidl_resources,
-                                         std::vector<uint64_t> wait_semaphores,
-                                         std::vector<uint64_t> signal_semaphores) override {
+  void ExecuteCommandBufferWithResources(
+      uint32_t context_id, llcpp::fuchsia::gpu::magma::CommandBuffer fidl_command_buffer,
+      ::fidl::VectorView<llcpp::fuchsia::gpu::magma::Resource> fidl_resources,
+      ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
+      ExecuteCommandBufferWithResourcesCompleter::Sync _completer) override {
     auto command_buffer = std::make_unique<magma_system_command_buffer>();
     *command_buffer = {
         .batch_buffer_resource_index = fidl_command_buffer.batch_buffer_resource_index,
         .batch_start_offset = fidl_command_buffer.batch_start_offset,
-        .num_resources = static_cast<uint32_t>(fidl_resources.size()),
-        .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.size()),
-        .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.size()),
+        .num_resources = static_cast<uint32_t>(fidl_resources.count()),
+        .wait_semaphore_count = static_cast<uint32_t>(wait_semaphores.count()),
+        .signal_semaphore_count = static_cast<uint32_t>(signal_semaphores.count()),
     };
 
     std::vector<magma_system_exec_resource> resources;
-    resources.reserve(fidl_resources.size());
+    resources.reserve(fidl_resources.count());
 
     for (auto& resource : fidl_resources) {
       resources.push_back({
@@ -219,46 +235,57 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
     }
 
     // Merge semaphores into one vector
-    wait_semaphores.insert(wait_semaphores.end(), signal_semaphores.begin(),
-                           signal_semaphores.end());
+    std::vector<uint64_t> semaphores;
+    semaphores.reserve(wait_semaphores.count() + signal_semaphores.count());
+
+    for (uint64_t semaphore_id : wait_semaphores) {
+      semaphores.push_back(semaphore_id);
+    }
+    for (uint64_t semaphore_id : signal_semaphores) {
+      semaphores.push_back(semaphore_id);
+    }
 
     magma::Status status = delegate_->ExecuteCommandBufferWithResources(
-        context_id, std::move(command_buffer), std::move(resources), std::move(wait_semaphores));
+        context_id, std::move(command_buffer), std::move(resources), std::move(semaphores));
 
     if (!status)
       SetError(status.get());
   }
 
-  void ExecuteImmediateCommands(uint32_t context_id, ::std::vector<uint8_t> command_data_vec,
-                                ::std::vector<uint64_t> semaphore_vec) override {
+  void ExecuteImmediateCommands(uint32_t context_id, ::fidl::VectorView<uint8_t> command_data_vec,
+                                ::fidl::VectorView<uint64_t> semaphore_vec,
+                                ExecuteImmediateCommandsCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: ExecuteImmediateCommands");
     magma::Status status = delegate_->ExecuteImmediateCommands(
-        context_id, command_data_vec.size(), command_data_vec.data(), semaphore_vec.size(),
-        semaphore_vec.data());
+        context_id, command_data_vec.count(), command_data_vec.mutable_data(),
+        semaphore_vec.count(), semaphore_vec.mutable_data());
     if (!status)
       SetError(status.get());
   }
 
-  void GetError(fuchsia::gpu::magma::Primary::GetErrorCallback error_callback) override {
+  void GetError(GetErrorCompleter::Sync _completer) override {
+    DLOG("ZirconPlatformConnection: GetError");
     magma_status_t result = error_;
     error_ = 0;
-    error_callback(result);
+    _completer.Reply(result);
   }
 
   void MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
-                    uint64_t flags) override {
+                    uint64_t flags, MapBufferGpuCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: MapBufferGpuFIDL");
     if (!delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags))
       SetError(MAGMA_STATUS_INVALID_ARGS);
   }
 
-  void UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override {
+  void UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
+                      UnmapBufferGpuCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: UnmapBufferGpuFIDL");
     if (!delegate_->UnmapBufferGpu(buffer_id, gpu_va))
       SetError(MAGMA_STATUS_INVALID_ARGS);
   }
 
-  void CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) override {
+  void CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count,
+                    CommitBufferCompleter::Sync _completer) override {
     DLOG("ZirconPlatformConnection: CommitBufferFIDL");
     if (!delegate_->CommitBuffer(buffer_id, page_offset, page_count))
       SetError(MAGMA_STATUS_INVALID_ARGS);
@@ -283,8 +310,6 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
   zx::channel client_notification_endpoint_;
   async::Loop async_loop_;
   AsyncWait async_wait_shutdown_;
-
-  fidl::Binding<fuchsia::gpu::magma::Primary> binding_;
 };
 
 std::shared_ptr<PlatformConnection> PlatformConnection::Create(
@@ -310,9 +335,12 @@ std::shared_ptr<PlatformConnection> PlatformConnection::Create(
     return DRETP(nullptr, "Failed to create shutdown event");
 
   auto connection = std::make_shared<ZirconPlatformConnection>(
-      std::move(delegate), client_id, std::move(server_endpoint), std::move(client_endpoint),
+      std::move(delegate), client_id, std::move(client_endpoint),
       std::move(server_notification_endpoint), std::move(client_notification_endpoint),
       std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)), std::move(thread_profile));
+
+  if (!connection->Bind(std::move(server_endpoint)))
+    return DRETP(nullptr, "fidl::Bind failed: %d", status);
 
   if (!connection->BeginShutdownWait())
     return DRETP(nullptr, "Failed to begin shutdown wait");
