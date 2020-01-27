@@ -252,4 +252,6 @@ zx_status_t ObjectProvider::ListHandleRights(zx_handle_t handle, std::string* ou
   return ZX_OK;
 }
 
+zx_status_t ObjectProvider::Kill(zx_handle_t handle) { return zx_task_kill(handle); }
+
 }  // namespace debug_agent

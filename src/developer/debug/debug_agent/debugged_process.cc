@@ -124,7 +124,8 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateI
       debug_agent_(debug_agent),
       koid_(create_info.koid),
       handle_(std::move(create_info.handle)),
-      name_(std::move(create_info.name)) {
+      name_(std::move(create_info.name)),
+      from_limbo_(create_info.from_limbo) {
   // If no overriden memory accessor was given, we create one that's geared towards this process.
   // See DebuggedProcessCreateInfo on the header for more information.
   if (!memory_accessor_)
@@ -291,7 +292,7 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request, debug_ipc::K
   // threads. This makes cleanup code more straightforward, as there are no
   // threads to resume/handle.
   threads_.clear();
-  reply->status = handle_.kill();
+  reply->status = object_provider_->Kill(handle_);
 }
 
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) const {

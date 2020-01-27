@@ -244,6 +244,14 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillRe
   }
 
   debug_process->OnKill(request, reply);
+
+  // We check if this was a limbo "kill". If so, we mark this process to be removed from limbo when
+  // it re-enters it and tell the client that we successfully killed it.
+  if (reply->status == ZX_ERR_ACCESS_DENIED && debug_process->from_limbo()) {
+    killed_limbo_procs_.insert(debug_process->koid());
+    reply->status = ZX_OK;
+  }
+
   RemoveDebuggedProcess(request.process_koid);
 }
 
@@ -702,6 +710,7 @@ zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t tr
   create_info.handle = std::move(*exception.mutable_process());
   create_info.arch_provider = arch_provider_;
   create_info.object_provider = object_provider_;
+  create_info.from_limbo = true;
 
   DebuggedProcess* process = nullptr;
   status = AddDebuggedProcess(std::move(create_info), &process);
@@ -960,6 +969,14 @@ void DebugAgent::OnComponentTerminated(int64_t return_code, const ComponentDescr
 void DebugAgent::OnProcessesEnteredLimbo(
     std::vector<fuchsia::exception::ProcessExceptionMetadata> processes) {
   for (auto& process : processes) {
+    // We first check if we were to "kill" this process.
+    auto it = killed_limbo_procs_.find(process.info().process_koid);
+    if (it != killed_limbo_procs_.end()) {
+      limbo_provider_->ReleaseProcess(process.info().process_koid);
+      killed_limbo_procs_.erase(it);
+      continue;
+    }
+
     std::string process_name = object_provider_->NameForObject(process.process());
     DEBUG_LOG(Agent) << "Process " << process_name << " (" << process.info().process_koid
                      << ") entered limbo.";

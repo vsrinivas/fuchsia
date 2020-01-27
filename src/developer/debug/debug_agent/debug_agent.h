@@ -165,6 +165,30 @@ class DebugAgent : public RemoteAPI,
   std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
 
+  // Processes obtained through limbo do not have the ZX_RIGHT_DESTROY right, so cannot be killed
+  // by the debugger. Instead what we do is detach from them and mark those as "waiting to be
+  // killed". When they re-enter the limbo, the debugger will then detect that is one of those
+  // processes and release it from limbo, effectively killing it.
+  //
+  // NOTE(01/2020): The reason for this is because the limbo gets the exception from crashsvc,
+  //                which has an exception channel upon the root job handle. Exceptions obtained
+  //                through an exception channel will hold the same rights as the origin handle (the
+  //                root job one in this case). Now, the root job handle svchost receives doesn't
+  //                have the ZX_RIGHT_DESTROY right, as you don't really want to be able to kill
+  //                the root job. This means that all the handles obtained through an exception
+  //                will not have the destroy right, thus making the debugger jump through this
+  //                hoop.
+  //
+  //                See zircon/system/core/svchost/crashsvc.cc for more details.
+  //
+  //                Note that if the situation changes and the svchost actually gets destroy rights
+  //                on the exception channel, that situation will seamlessly work here. This is
+  //                because the debug agent will only track "limbo killed processes" if trying
+  //                to kill results in ZX_ERR_ACCESS_DENIED *and* they came from limbo. If the limbo
+  //                process handles now have destroy rights, killing them will work, thus skipping
+  //                this dance.
+  std::set<zx_koid_t> killed_limbo_procs_;
+
   std::map<uint32_t, Breakpoint> breakpoints_;
 
   // Normally the debug agent would be attached to the root job or the

@@ -98,6 +98,8 @@ class MockObjectProvider : public ObjectProvider {
   zx::job GetRootJob() const override;
   zx_koid_t GetRootJobKoid() const override;
 
+  zx_status_t Kill(zx_handle_t) override;
+
   MockJobObject* root() const { return root_.get(); }
   MockObject* ObjectByKoid(zx_koid_t koid) const;
 
@@ -150,6 +152,9 @@ class MockObjectProvider : public ObjectProvider {
 //            t: 22 initial-thread
 //            t: 22 second-thread
 //            t: 23 third-thread
+void FillInMockObjectProvider(MockObjectProvider*);
+
+// Creates a new MockObjectProvider and calls |FillInMockObjectProvider|.
 std::unique_ptr<MockObjectProvider> CreateDefaultMockObjectProvider();
 
 }  // namespace debug_agent

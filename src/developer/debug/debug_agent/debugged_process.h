@@ -58,6 +58,12 @@ struct DebuggedProcessCreateInfo {
   std::string name;
   zx::socket out;  // stdout.
   zx::socket err;  // stderr.
+
+  // Whether this process was obtained via a process limbo.
+  // This is relevant when attempting to kill the process, as handles obtained via the limbo do not
+  // have the ZX_RIGHT_DESTROY right. The way to "kill" them is to re send them to the limbo and
+  // then release it from it.
+  bool from_limbo = false;
 };
 
 // Creates a CreateInfo struct from only the required fields.
@@ -178,6 +184,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
 
   const WatchpointMap& watchpoints() const { return watchpoints_; }
 
+  bool from_limbo() const { return from_limbo_; }
+
  protected:
   std::shared_ptr<arch::ArchProvider> arch_provider_;
   std::shared_ptr<ObjectProvider> object_provider_;
@@ -244,6 +252,11 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
 
   debug_ipc::BufferedZxSocket stdout_;
   debug_ipc::BufferedZxSocket stderr_;
+
+  // Whether this process was obtained from limbo or not. The agent will check this information
+  // when it tries to kill this process in order to determine whether the ZX_ERR_BAD_ACCESS is
+  // expected (limbo handles do not have ZX_RIGHT_DESTROY right) or it is an actual error.
+  bool from_limbo_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedProcess);
 };

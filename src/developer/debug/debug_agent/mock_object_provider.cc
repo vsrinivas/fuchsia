@@ -123,10 +123,17 @@ zx::job MockObjectProvider::GetRootJob() const { return zx::job(GetRootJobKoid()
 
 zx_koid_t MockObjectProvider::GetRootJobKoid() const { return root()->koid; }
 
+zx_status_t MockObjectProvider::Kill(zx_handle_t handle) {
+  zx_koid_t koid = static_cast<zx_koid_t>(handle);
+  auto it = object_map_.find(koid);
+  if (it == object_map_.end())
+    return ZX_ERR_NOT_FOUND;
+  return ZX_OK;
+}
+
 // Test Setup Implementation.
 
-std::unique_ptr<MockObjectProvider> CreateDefaultMockObjectProvider() {
-  auto provider = std::make_unique<MockObjectProvider>();
+void FillInMockObjectProvider(MockObjectProvider* provider) {
   MockJobObject* root = provider->AppendJob(nullptr, "root");
 
   provider->AppendProcess(root, "root-p1");
@@ -147,7 +154,11 @@ std::unique_ptr<MockObjectProvider> CreateDefaultMockObjectProvider() {
   process = provider->AppendProcess(job121, "job121-p2");
   provider->AppendThread(process, "second-thread");
   provider->AppendThread(process, "third-thread");
+}
 
+std::unique_ptr<MockObjectProvider> CreateDefaultMockObjectProvider() {
+  auto provider = std::make_unique<MockObjectProvider>();
+  FillInMockObjectProvider(provider.get());
   return provider;
 }
 

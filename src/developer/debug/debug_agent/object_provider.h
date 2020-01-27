@@ -70,6 +70,12 @@ class ObjectProvider {
   zx_status_t ListHandleRights(const zx::object<T>& object, std::string* out) const {
     return ListHandleRights(object.get(), out);
   }
+
+  virtual zx_status_t Kill(zx_handle_t);
+  template <typename T>
+  zx_status_t Kill(const zx::object<T>& object) {
+    return Kill(object.get());
+  }
 };
 
 }  // namespace debug_agent

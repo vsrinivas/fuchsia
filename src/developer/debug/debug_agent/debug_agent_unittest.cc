@@ -185,6 +185,16 @@ class MockLimboProvider : public LimboProvider {
   std::vector<zx_koid_t> release_calls_;
 };
 
+class TestObjectProvider : public MockObjectProvider {
+ public:
+  zx_status_t Kill(zx_handle_t) override { return next_kill_status_; }
+
+  void set_next_kill_status(zx_status_t status) { next_kill_status_ = status; }
+
+ private:
+  zx_status_t next_kill_status_ = ZX_OK;
+};
+
 std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
     const MockObjectProvider& object_provider, const std::string& process_name,
     const std::string& thread_name) {
@@ -200,7 +210,7 @@ struct TestContext {
   DebugAgentMessageLoop loop;
   DebugAgentStreamBackend stream_backend;
 
-  std::shared_ptr<MockObjectProvider> object_provider;
+  std::shared_ptr<TestObjectProvider> object_provider;
   std::shared_ptr<MockLimboProvider> limbo_provider;
   std::shared_ptr<arch::ArchProvider> arch_provider;
 };
@@ -218,7 +228,8 @@ std::unique_ptr<TestContext> CreateTestContext() {
   auto context = std::make_unique<TestContext>();
   context->arch_provider = std::make_shared<ArchProviderImpl>();
   context->limbo_provider = std::make_shared<MockLimboProvider>();
-  context->object_provider = CreateDefaultMockObjectProvider();
+  context->object_provider = std::make_unique<TestObjectProvider>();
+  FillInMockObjectProvider(context->object_provider.get());
   return context;
 }
 
@@ -656,6 +667,8 @@ TEST_F(DebugAgentTests, Kill) {
 
     // There should be a process.
     ASSERT_EQ(debug_agent.procs_.size(), 1u);
+    // Should not come from limbo.
+    EXPECT_FALSE(debug_agent.procs_.begin()->second->from_limbo());
   }
 
   // Killing now should work.
@@ -696,6 +709,55 @@ TEST_F(DebugAgentTests, Kill) {
     // Killing again should not find it.
     remote_api->OnKill(kill_request, &kill_reply);
     ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
+  }
+
+  test_context->limbo_provider->AppendException(proc_object, thread_object,
+                                                ExceptionType::FATAL_PAGE_FAULT);
+
+  // This is a limbo process, so we cannot kill it.
+  test_context->object_provider->set_next_kill_status(ZX_ERR_ACCESS_DENIED);
+
+  debug_ipc::AttachRequest attach_request = {};
+  attach_request.type = debug_ipc::TaskType::kProcess;
+  attach_request.koid = proc_object->koid;
+  remote_api->OnAttach(transaction_id++, attach_request);
+
+  // There should be a process.
+  ASSERT_EQ(debug_agent.procs_.size(), 1u);
+
+  {
+    auto it = debug_agent.procs_.find(proc_object->koid);
+    ASSERT_NE(it, debug_agent.procs_.end());
+    EXPECT_TRUE(debug_agent.procs_.begin()->second->from_limbo());
+
+    // Killing it should free the process.
+    debug_ipc::KillRequest kill_request = {};
+    kill_request.process_koid = proc_object->koid;
+
+    debug_ipc::KillReply kill_reply = {};
+    remote_api->OnKill(kill_request, &kill_reply);
+    ASSERT_ZX_EQ(kill_reply.status, ZX_OK);
+
+    ASSERT_EQ(debug_agent.procs_.size(), 0u);
+
+    // There should be a limbo process to be killed.
+    ASSERT_EQ(debug_agent.killed_limbo_procs_.size(), 1u);
+    EXPECT_EQ(debug_agent.killed_limbo_procs_.count(proc_object->koid), 1u);
+
+    // There should've have been more release calls (yet).
+    ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 1u);
+
+    // When the process "re-enters" the limbo, it should be removed.
+    test_context->limbo_provider->AppendException(proc_object, thread_object,
+                                                  ExceptionType::FATAL_PAGE_FAULT);
+    test_context->limbo_provider->CallOnEnterLimbo();
+
+    // There should not be an additional proc in the agent.
+    ASSERT_EQ(debug_agent.procs_.size(), 0u);
+
+    // There should've been a release call.
+    ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 2u);
+    EXPECT_EQ(test_context->limbo_provider->release_calls()[1], proc_object->koid);
   }
 }
 
