@@ -8,6 +8,8 @@
 #include <netinet/in.h>
 #include <poll.h>
 
+#include <safemath/safe_conversions.h>
+
 #include "private-socket.h"
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -600,7 +602,7 @@ static fdio_ops_t fdio_stream_socket_ops = {
     .listen =
         [](fdio_t* io, int backlog, int16_t* out_code) {
           auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
-          auto response = sio->client.Listen(static_cast<int16_t>(backlog));
+          auto response = sio->client.Listen(safemath::saturated_cast<int16_t>(backlog));
           zx_status_t status = response.status();
           if (status != ZX_OK) {
             return status;

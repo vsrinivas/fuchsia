@@ -471,6 +471,9 @@ func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
 }
 
 func (eps *endpointWithSocket) Listen(backlog int16) (socket.StreamSocketListenResult, error) {
+	if backlog < 0 {
+		backlog = 0
+	}
 	if err := eps.ep.Listen(int(backlog)); err != nil {
 		return socket.StreamSocketListenResultWithErr(tcpipErrorToCode(err)), nil
 	}
