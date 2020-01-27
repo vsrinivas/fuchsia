@@ -90,6 +90,7 @@ class Reporter {
   void SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& renderer, float gain_db,
                                    zx::duration duration,
                                    fuchsia::media::audio::RampType ramp_type);
+  void SettingRendererFinalGain(const fuchsia::media::AudioRenderer& renderer, float gain_db);
   void SettingRendererMute(const fuchsia::media::AudioRenderer& renderer, bool muted);
   void SettingRendererMinLeadTime(const fuchsia::media::AudioRenderer& renderer,
                                   zx::duration min_lead_time);
@@ -184,9 +185,11 @@ class Reporter {
     Renderer(inspect::Node node) : ClientPort(std::move(node)) {
       min_lead_time_ns_ = node_.CreateUint("min lead time (ns)", 0);
       pts_continuity_threshold_seconds_ = node_.CreateDouble("pts continuity threshold (s)", 0.0);
+      final_stream_gain_ = node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0);
     }
     inspect::UintProperty min_lead_time_ns_;
     inspect::DoubleProperty pts_continuity_threshold_seconds_;
+    inspect::DoubleProperty final_stream_gain_;
   };
 
   struct Capturer : ClientPort {

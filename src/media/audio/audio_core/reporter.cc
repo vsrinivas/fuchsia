@@ -214,6 +214,17 @@ void Reporter::SettingRendererGainWithRamp(const fuchsia::media::AudioRenderer& 
   r->set_gain_with_ramp_calls_.Add(1);
 }
 
+void Reporter::SettingRendererFinalGain(const fuchsia::media::AudioRenderer& renderer,
+                                        float gain_db) {
+  Renderer* r = FindRenderer(renderer);
+  if (r == nullptr) {
+    FX_LOGS(ERROR) << kRendererNotFound;
+    return;
+  }
+
+  r->final_stream_gain_.Set(gain_db);
+}
+
 void Reporter::SettingRendererMute(const fuchsia::media::AudioRenderer& renderer, bool muted) {
   Renderer* r = FindRenderer(renderer);
   if (r == nullptr) {

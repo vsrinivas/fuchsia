@@ -743,11 +743,13 @@ fuchsia::media::Usage AudioRendererImpl::GetStreamUsage() const {
 }
 
 void AudioRendererImpl::RealizeVolume(VolumeCommand volume_command) {
-  ForEachDestLink([stream_gain_db = stream_gain_db_, &volume_command](auto& link) {
+  ForEachDestLink([this, stream_gain_db = stream_gain_db_, &volume_command](auto& link) {
     float gain_db = link.volume_curve().VolumeToDb(volume_command.volume);
 
     gain_db = Gain::CombineGains(gain_db, stream_gain_db);
     gain_db = Gain::CombineGains(gain_db, volume_command.gain_db_adjustment);
+
+    REP(SettingRendererFinalGain(*this, gain_db));
 
     if (volume_command.ramp.has_value()) {
       link.gain().SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
