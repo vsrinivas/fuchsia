@@ -16,6 +16,5 @@ group("audio") {
     "mt8167-tdm-output",
     "sherlock-pdm-input",
     "sherlock-tdm-output",
-    "usb-audio",
   ]
 }

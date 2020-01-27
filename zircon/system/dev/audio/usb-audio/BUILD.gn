@@ -2,7 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("usb-audio") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+config("Wno-unused-function") {
+  cflags = [ "-Wno-unused-function" ]
+}
+
+driver_module("usb-audio") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [
     "midi.cc",
     "usb-audio-control-interface.cc",
@@ -17,25 +41,29 @@ zx_driver("usb-audio") {
     "usb-midi-source.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-midi:llcpp",
-    "$zx/system/ulib/audio-driver-proto",
-    "$zx/system/ulib/audio-proto-utils",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/digest",
-    "$zx/system/ulib/dispatcher-pool",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/uboringssl",
+    "//src/devices:driver",
+    "//zircon/public/lib/audio-driver-proto",
+    "//zircon/public/lib/audio-proto-utils",
+    "//zircon/public/lib/boringssl",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/dispatcher-pool",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-midi:llcpp",
   ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+  public_configs = [ ":Wno-unused-function" ]
+}
+
+migrated_manifest("usb-audio-manifest") {
+  deps = [ ":usb-audio" ]
 }
