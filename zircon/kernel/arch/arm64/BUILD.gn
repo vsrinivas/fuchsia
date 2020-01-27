@@ -49,9 +49,8 @@ if (current_toolchain == default_toolchain) {
 
     if (!is_gcc) {
       cflags += [
-        # Clang needs -mcmodel=kernel to tell it to use the right
-        # thread-pointer ABI for the kernel.
-        "-mcmodel=kernel",
+        # Use the right thread-pointer ABI for the kernel.
+        "-mtp=el1",
 
         # Use shadow-call-stack rather than safe-stack for the kernel,
         # regardless of the compiler's default.

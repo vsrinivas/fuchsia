@@ -10,7 +10,7 @@
 /* use the cpu local thread context pointer to store current_thread */
 static inline thread_t* get_current_thread(void) {
 #ifdef __clang__
-  // Clang with --target=aarch64-fuchsia -mcmodel=kernel reads
+  // Clang with --target=aarch64-fuchsia -mtp=el1 reads
   // TPIDR_EL1 for __builtin_thread_pointer (instead of the usual
   // TPIDR_EL0 for user mode).  Using the intrinsic instead of asm
   // lets the compiler understand what it's doing a little better,

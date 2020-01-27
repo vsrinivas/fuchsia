@@ -41,10 +41,10 @@ struct fpstate {
 struct arm64_percpu;
 
 struct arch_thread {
-  // The compiler (when it's Clang with -mcmodel=kernel) knows
-  // the position of these two fields relative to TPIDR_EL1,
-  // which is what __builtin_thread_pointer() returns.  TPIDR_EL1
-  // points just past these, i.e. to &abi[1].
+  // The compiler (when it's Clang with -mtp=el1) knows the position of these
+  // two fields relative to TPIDR_EL1, which is what
+  // __builtin_thread_pointer() returns.  TPIDR_EL1 points just past these,
+  // i.e. to &abi[1].
   uintptr_t stack_guard;
   vaddr_t unsafe_sp;
   union {
