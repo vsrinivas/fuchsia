@@ -31,7 +31,8 @@ class TestMsdVslDevice : public drm_test_info {
     this->dev = &device_;
     this->stream = &command_stream_;
 
-    device_.msd_vsl_device = MsdVslDevice::Create(GetTestDeviceHandle());
+    device_.msd_vsl_device = MsdVslDevice::Create(GetTestDeviceHandle(),
+                                                  true /* start_device_thread */);
     if (!device_.msd_vsl_device)
       return DRETF(false, "no test device");
 

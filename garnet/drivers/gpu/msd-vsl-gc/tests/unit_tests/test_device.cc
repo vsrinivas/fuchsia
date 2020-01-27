@@ -16,7 +16,7 @@
 class MsdVslDeviceTest : public ::testing::Test {
  public:
   void SetUp() override {
-    device_ = MsdVslDevice::Create(GetTestDeviceHandle());
+    device_ = MsdVslDevice::Create(GetTestDeviceHandle(), false /* start_device_thread */);
     EXPECT_NE(device_, nullptr);
   }
 
@@ -130,7 +130,8 @@ TEST_F(MsdVslDeviceTest, LoadAddressSpace) {
 
   // Ensure we can do this > once
   for (uint32_t i = 0; i < 2; i++) {
-    std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle());
+    std::unique_ptr<MsdVslDevice> device = MsdVslDevice::Create(GetTestDeviceHandle(),
+                                                                false /* start_device_thread */);
     ASSERT_NE(device, nullptr);
 
     EXPECT_TRUE(device->IsIdle());

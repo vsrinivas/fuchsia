@@ -19,7 +19,17 @@
 
 static constexpr uint32_t kInterruptIndex = 0;
 
+class MsdVslDevice::InterruptRequest : public DeviceRequest {
+ public:
+  InterruptRequest() {}
+
+ protected:
+  magma::Status Process(MsdVslDevice* device) override { return device->ProcessInterrupt(); }
+};
+
 MsdVslDevice::~MsdVslDevice() {
+  CHECK_THREAD_NOT_CURRENT(device_thread_id_);
+
   DisableInterrupts();
 
   stop_interrupt_thread_ = true;
@@ -30,13 +40,28 @@ MsdVslDevice::~MsdVslDevice() {
     interrupt_thread_.join();
     DLOG("Joined interrupt thread");
   }
+
+  stop_device_thread_ = true;
+
+  if (device_request_semaphore_) {
+    device_request_semaphore_->Signal();
+  }
+
+  if (device_thread_.joinable()) {
+    DLOG("joining device thread");
+    device_thread_.join();
+    DLOG("joined");
+  }
 }
 
-std::unique_ptr<MsdVslDevice> MsdVslDevice::Create(void* device_handle) {
+std::unique_ptr<MsdVslDevice> MsdVslDevice::Create(void* device_handle, bool start_device_thread) {
   auto device = std::make_unique<MsdVslDevice>();
 
   if (!device->Init(device_handle))
     return DRETP(nullptr, "Failed to initialize device");
+
+  if (start_device_thread)
+    device->StartDeviceThread();
 
   return device;
 }
@@ -95,12 +120,12 @@ bool MsdVslDevice::Init(void* device_handle) {
   buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED);
   ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0 /* start_offset */);
 
+  device_request_semaphore_ = magma::PlatformSemaphore::Create();
+
   Reset();
   if (!HardwareInit()) {
     return DRETF(false, "Failed to initialize hardware");
   }
-
-  interrupt_thread_ = std::thread([this] { this->InterruptThreadLoop(); });
 
   return true;
 }
@@ -137,6 +162,68 @@ void MsdVslDevice::DisableInterrupts() {
   reg.WriteTo(register_io_.get());
 }
 
+void MsdVslDevice::StartDeviceThread() {
+  DASSERT(!device_thread_.joinable());
+  device_thread_ = std::thread([this] { this->DeviceThreadLoop(); });
+  interrupt_thread_ = std::thread([this] { this->InterruptThreadLoop(); });
+}
+
+int MsdVslDevice::DeviceThreadLoop() {
+  magma::PlatformThreadHelper::SetCurrentThreadName("DeviceThread");
+
+  device_thread_id_ = std::make_unique<magma::PlatformThreadId>();
+  CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+  DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
+
+  std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetSchedulerProfile(
+      magma::PlatformDevice::kPriorityHigher, "msd-vsl-gc/device-thread");
+  if (!profile) {
+    return DRETF(false, "Failed to get higher priority");
+  }
+  if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+    return DRETF(false, "Failed to set priority");
+  }
+
+  std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
+
+  while (!stop_device_thread_) {
+    // TODO(fxb/44651): add a timeout to detect when the hardware is hung.
+    auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::duration::max());
+    magma::Status status = device_request_semaphore_->Wait(timeout.count());
+    switch (status.get()) {
+      case MAGMA_STATUS_OK:
+        break;
+      default:
+        MAGMA_LOG(WARNING, "device_request_semaphore_ Wait failed: %d", status.get());
+        DASSERT(false);
+        // TODO(fxb/44475): handle wait errors.
+    }
+
+    while (true) {
+      lock.lock();
+      if (!device_request_list_.size()) {
+        lock.unlock();
+        break;
+      }
+      auto request = std::move(device_request_list_.front());
+      device_request_list_.pop_front();
+      lock.unlock();
+      request->ProcessAndReply(this);
+    }
+  }
+
+  DLOG("DeviceThreadLoop exit");
+  return 0;
+}
+
+void MsdVslDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request) {
+  std::unique_lock<std::mutex> lock(device_request_mutex_);
+  device_request_list_.emplace_back(std::move(request));
+  device_request_semaphore_->Signal();
+}
+
 int MsdVslDevice::InterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("VSL InterruptThread");
   DLOG("VSL Interrupt thread started");
@@ -157,29 +244,38 @@ int MsdVslDevice::InterruptThreadLoop() {
       break;
     }
 
-    auto irq_status = registers::IrqAck::Get().ReadFrom(register_io_.get());
-    auto mmu_exception = irq_status.mmu_exception().get();
-    auto bus_error = irq_status.bus_error().get();
-    auto value = irq_status.value().get();
-    if (mmu_exception) {
-      DMESSAGE("Interrupt thread received mmu_exception");
-    }
-    if (bus_error) {
-      DMESSAGE("Interrupt thread received bus error");
-    }
-    // Check which bits are set and complete the corresponding event.
-    for (unsigned int i = 0; i < kNumEvents; i++) {
-      if (value & (1 << i)) {
-        // TODO(fxb/43235): this should be processed on the driver device thread once it exists.
-        if (!CompleteInterruptEvent(i)) {
-          DLOG("Failed to complete event %u\n", i);
-        }
-      }
-    }
-    interrupt_->Complete();
+    auto request = std::make_unique<InterruptRequest>();
+    auto reply = request->GetReply();
+    EnqueueDeviceRequest(std::move(request));
+    reply->Wait();
   }
   DLOG("VSL Interrupt thread exiting");
   return 0;
+}
+
+magma::Status MsdVslDevice::ProcessInterrupt() {
+  CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+  auto irq_status = registers::IrqAck::Get().ReadFrom(register_io_.get());
+  auto mmu_exception = irq_status.mmu_exception().get();
+  auto bus_error = irq_status.bus_error().get();
+  auto value = irq_status.value().get();
+  if (mmu_exception) {
+    DMESSAGE("Interrupt thread received mmu_exception");
+  }
+  if (bus_error) {
+    DMESSAGE("Interrupt thread received bus error");
+  }
+  // Check which bits are set and complete the corresponding event.
+  for (unsigned int i = 0; i < kNumEvents; i++) {
+    if (value & (1 << i)) {
+      if (!CompleteInterruptEvent(i)) {
+        DMESSAGE("Failed to complete event %u", i);
+      }
+    }
+  }
+  interrupt_->Complete();
+  return MAGMA_STATUS_OK;
 }
 
 bool MsdVslDevice::AllocInterruptEvent(uint32_t* out_event_id) {

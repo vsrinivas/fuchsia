@@ -12,7 +12,7 @@ class TestEvents : public ::testing::Test {
   static constexpr uint32_t kAddressSpaceIndex = 1;
 
   void SetUp() override {
-    device_ = MsdVslDevice::Create(GetTestDeviceHandle());
+    device_ = MsdVslDevice::Create(GetTestDeviceHandle(), true /* start_device_thread */);
     EXPECT_NE(device_, nullptr);
 
     address_space_owner_ =

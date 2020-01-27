@@ -5,13 +5,16 @@
 #ifndef MSD_VSL_DEVICE_H
 #define MSD_VSL_DEVICE_H
 
+#include <list>
 #include <memory>
 #include <mutex>
 #include <thread>
 
+#include "device_request.h"
 #include "gpu_features.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
+#include "magma_util/thread.h"
 #include "magma_vsl_gc_types.h"
 #include "msd.h"
 #include "msd_vsl_connection.h"
@@ -24,8 +27,12 @@
 
 class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
  public:
+  using DeviceRequest = DeviceRequest<MsdVslDevice>;
+
   // Creates a device for the given |device_handle| and returns ownership.
-  static std::unique_ptr<MsdVslDevice> Create(void* device_handle);
+  // If |start_device_thread| is false, then StartDeviceThread should be called
+  // to enable device request processing.
+  static std::unique_ptr<MsdVslDevice> Create(void* device_handle, bool start_device_thread);
 
   MsdVslDevice() { magic_ = kMagic; }
 
@@ -57,12 +64,25 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
     std::shared_ptr<magma::PlatformSemaphore> signal;
   };
 
+#define CHECK_THREAD_IS_CURRENT(x) \
+  if (x)                           \
+  DASSERT(magma::ThreadIdCheck::IsCurrent(*x))
+
+#define CHECK_THREAD_NOT_CURRENT(x) \
+  if (x)                            \
+  DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
+
   bool Init(void* device_handle);
   bool HardwareInit();
   void Reset();
   void DisableInterrupts();
-  // Processes the hardware interrupts.
+
+  void StartDeviceThread();
+  int DeviceThreadLoop();
+  void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request);
+
   int InterruptThreadLoop();
+  magma::Status ProcessInterrupt();
 
   // Events for triggering interrupts.
   bool AllocInterruptEvent(uint32_t* out_event_id);
@@ -125,6 +145,17 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   std::thread interrupt_thread_;
   std::unique_ptr<magma::PlatformInterrupt> interrupt_;
   std::atomic_bool stop_interrupt_thread_{false};
+
+  std::thread device_thread_;
+  std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
+  std::atomic_bool stop_device_thread_{false};
+
+  class InterruptRequest;
+
+  // Thread-shared data members
+  std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
+  std::mutex device_request_mutex_;
+  std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
 
   MAGMA_GUARDED(events_mutex_) Event events_[kNumEvents] = {};
   // TODO(fxb/43235): this can be removed once we process events on the device thread.
