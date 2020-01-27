@@ -99,6 +99,10 @@ class PropertyListMatcher : public ::testing::MatcherInterface<const NodeValue&>
 ::testing::Matcher<const PropertyValue&> DoubleIs(const std::string& name,
                                                   ::testing::Matcher<double> matcher);
 
+// Matches a particular BoolProperty with the given name using the given matcher.
+::testing::Matcher<const PropertyValue&> BoolIs(const std::string& name,
+                                                ::testing::Matcher<bool> matcher);
+
 // Matches the values of an integer array.
 ::testing::Matcher<const PropertyValue&> IntArrayIs(const std::string& name,
                                                     ::testing::Matcher<std::vector<int64_t>>);

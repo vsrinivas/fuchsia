@@ -28,6 +28,7 @@ enum class BlockType : uint8_t {
   kTombstone = 10,
   kArrayValue = 11,
   kLinkValue = 12,
+  kBoolValue = 13,
 };
 
 enum class PropertyBlockFormat : uint8_t {

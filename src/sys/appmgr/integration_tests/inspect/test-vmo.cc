@@ -112,7 +112,8 @@ TEST_F(InspectTest, ReadHierarchy) {
                                       PropertyList(UnorderedElementsAre(
                                           StringIs("version", "1.0"),
                                           ByteVectorIs("frame", std::vector<uint8_t>({0, 0, 0})),
-                                          IntIs("value", -10))))),
+                                          IntIs("value", -10),
+                                          BoolIs("active", true))))),
                     ChildrenMatch(UnorderedElementsAre(
                         NodeMatches(AllOf(NameMatches("item-0x0"),
                                           PropertyList(UnorderedElementsAre(IntIs("value", 10))))),
@@ -124,7 +125,8 @@ TEST_F(InspectTest, ReadHierarchy) {
                                       PropertyList(UnorderedElementsAre(
                                           StringIs("version", "1.0"),
                                           ByteVectorIs("frame", std::vector<uint8_t>({0, 0, 0})),
-                                          IntIs("value", -10))))),
+                                          IntIs("value", -10),
+                                          BoolIs("active", true))))),
                     ChildrenMatch(UnorderedElementsAre(
                         NodeMatches(AllOf(NameMatches("item-0x2"),
                                           PropertyList(UnorderedElementsAre(IntIs("value", 4)))))))

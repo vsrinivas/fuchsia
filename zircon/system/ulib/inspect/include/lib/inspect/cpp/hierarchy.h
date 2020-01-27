@@ -254,11 +254,13 @@ enum class PropertyFormat : uint8_t {
   kDoubleArray = 6,
   kString = 7,
   kBytes = 8,
+  kBool = 9,
 };
 
 using IntPropertyValue = internal::Value<int64_t, static_cast<size_t>(PropertyFormat::kInt)>;
 using UintPropertyValue = internal::Value<uint64_t, static_cast<size_t>(PropertyFormat::kUint)>;
 using DoublePropertyValue = internal::Value<double, static_cast<size_t>(PropertyFormat::kDouble)>;
+using BoolPropertyValue = internal::Value<bool, static_cast<size_t>(PropertyFormat::kBool)>;
 using IntArrayValue = internal::Array<int64_t, static_cast<size_t>(PropertyFormat::kIntArray)>;
 using UintArrayValue = internal::Array<uint64_t, static_cast<size_t>(PropertyFormat::kUintArray)>;
 using DoubleArrayValue = internal::Array<double, static_cast<size_t>(PropertyFormat::kDoubleArray)>;
@@ -271,7 +273,7 @@ using ByteVectorPropertyValue =
 using PropertyValue = internal::NamedValue<
     fit::internal::variant<fit::internal::monostate, IntPropertyValue, UintPropertyValue,
                            DoublePropertyValue, IntArrayValue, UintArrayValue, DoubleArrayValue,
-                           StringPropertyValue, ByteVectorPropertyValue>,
+                           StringPropertyValue, ByteVectorPropertyValue, BoolPropertyValue>,
     PropertyFormat>;
 
 // A Node parsed from a Hierarchy.

@@ -264,6 +264,22 @@ DoubleProperty State::CreateDoubleProperty(const std::string& name, BlockIndex p
   return DoubleProperty(weak_self_ptr_.lock(), name_index, value_index);
 }
 
+BoolProperty State::CreateBoolProperty(const std::string& name, BlockIndex parent, bool value) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
+
+  BlockIndex name_index, value_index;
+  zx_status_t status;
+  status = InnerCreateValue(name, BlockType::kBoolValue, parent, &name_index, &value_index);
+  if (status != ZX_OK) {
+    return BoolProperty();
+  }
+
+  auto* block = heap_->GetBlock(value_index);
+  block->payload.u64 = value;
+  return BoolProperty(weak_self_ptr_.lock(), name_index, value_index);
+}
+
 IntArray State::CreateIntArray(const std::string& name, BlockIndex parent, size_t slots,
                                ArrayBlockFormat format) {
   return InnerCreateArray<int64_t, IntArray, BlockType::kIntValue>(name, parent, slots, format);
@@ -422,6 +438,17 @@ void State::SetDoubleProperty(DoubleProperty* metric, double value) {
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kDoubleValue, "Expected double metric, got %d",
                       static_cast<int>(GetType(block)));
   block->payload.f64 = value;
+}
+
+void State::SetBoolProperty(BoolProperty* metric, bool value) {
+  ZX_ASSERT(metric->state_.get() == this);
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
+
+  auto* block = heap_->GetBlock(metric->value_index_);
+  ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kBoolValue, "Expected bool metric, got %d",
+                      static_cast<int>(GetType(block)));
+  block->payload.u64 = value;
 }
 
 void State::SetIntArray(IntArray* array, size_t index, int64_t value) {
@@ -628,6 +655,22 @@ void State::FreeUintProperty(UintProperty* metric) {
 
 void State::FreeDoubleProperty(DoubleProperty* metric) {
   ZX_DEBUG_ASSERT_MSG(metric->state_.get() == this, "Property being freed from the wrong state");
+  if (metric->state_.get() != this) {
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
+
+  DecrementParentRefcount(metric->value_index_);
+
+  heap_->Free(metric->name_index_);
+  heap_->Free(metric->value_index_);
+  metric->state_ = nullptr;
+}
+
+void State::FreeBoolProperty(BoolProperty* metric) {
+  ZX_DEBUG_ASSERT_MSG(metric->state_.get() == this, "Property being freed from wrong state");
   if (metric->state_.get() != this) {
     return;
   }

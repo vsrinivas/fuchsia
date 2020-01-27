@@ -280,6 +280,7 @@ class Property final {
 using IntProperty = internal::NumericProperty<int64_t>;
 using UintProperty = internal::NumericProperty<uint64_t>;
 using DoubleProperty = internal::NumericProperty<double>;
+using BoolProperty = internal::Property<bool>;
 
 using IntArray = internal::ArrayValue<int64_t>;
 using UintArray = internal::ArrayValue<uint64_t>;
@@ -434,6 +435,20 @@ class Node final {
   template <typename T>
   void CreateDouble(const std::string& name, double value, T* list) {
     list->emplace(CreateDouble(name, value));
+  }
+
+  // Create a new |BoolProperty| with the given name that is a child of this node.
+  // If this node is not stored in a buffer, the created metric will
+  // also not be stored in a buffer.
+  BoolProperty CreateBool(const std::string& name, bool value) __WARN_UNUSED_RESULT;
+
+  // Same as CreateBool, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(BoolProperty).
+  // inspect::ValueList is recommended for most use cases.
+  template <typename T>
+  void CreateBool(const std::string& name, bool value, T* list) {
+    list->emplace(CreateBool(name, value));
   }
 
   // Create a new |StringProperty| with the given name and value that is a child of this node.

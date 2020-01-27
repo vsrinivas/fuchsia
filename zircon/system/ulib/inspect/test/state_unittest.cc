@@ -19,6 +19,7 @@
 
 namespace {
 
+using inspect::BoolProperty;
 using inspect::ByteVectorProperty;
 using inspect::DoubleArray;
 using inspect::DoubleProperty;
@@ -49,10 +50,14 @@ using inspect::internal::ScanBlocks;
 using inspect::internal::State;
 using inspect::internal::ValueBlockFields;
 
-zx::vmo MakeVmo(size_t size) {
-  zx::vmo ret;
-  EXPECT_OK(zx::vmo::create(size, 0, &ret));
-  return ret;
+std::shared_ptr<State> InitState(size_t size) {
+  zx::vmo vmo;
+  EXPECT_OK(zx::vmo::create(size, 0, &vmo));
+  if (!bool(vmo)) {
+    return NULL;
+  }
+  auto heap = std::make_unique<Heap>(std::move(vmo));
+  return State::Create(std::move(heap));
 }
 
 // Container for scanned blocks from the buffer.
@@ -117,6 +122,13 @@ Block MakeIntBlock(uint64_t header, int64_t payload) {
   return ret;
 }
 
+Block MakeBoolBlock(uint64_t header, bool payload) {
+  Block ret;
+  ret.header = header;
+  ret.payload.u64 = payload;
+  return ret;
+}
+
 Block MakeDoubleBlock(uint64_t header, double payload) {
   Block ret;
   ret.header = header;
@@ -178,10 +190,8 @@ TEST(State, CreateAndCopy) {
 }
 
 TEST(State, CreateIntProperty) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   IntProperty a = state->CreateIntProperty("a", 0, 0);
   IntProperty b = state->CreateIntProperty("b", 0, 0);
@@ -225,10 +235,8 @@ TEST(State, CreateIntProperty) {
 }
 
 TEST(State, CreateUintProperty) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   UintProperty a = state->CreateUintProperty("a", 0, 0);
   UintProperty b = state->CreateUintProperty("b", 0, 0);
@@ -272,10 +280,8 @@ TEST(State, CreateUintProperty) {
 }
 
 TEST(State, CreateDoubleProperty) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   DoubleProperty a = state->CreateDoubleProperty("a", 0, 0);
   DoubleProperty b = state->CreateDoubleProperty("b", 0, 0);
@@ -318,11 +324,40 @@ TEST(State, CreateDoubleProperty) {
                                                 "c\0\0\0\0\0\0\0"));
 }
 
+TEST(State, CreateBoolProperty) {
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
+  BoolProperty t = state->CreateBoolProperty("t", 0, true);
+  BoolProperty f = state->CreateBoolProperty("f", 0, false);
+
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
+  size_t free_blocks, allocated_blocks;
+  auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  EXPECT_EQ(5u, allocated_blocks);
+  EXPECT_EQ(7u, free_blocks);
+
+  CompareBlock(blocks.find(0)->block, MakeHeader(4));
+  CompareBlock(blocks.find(1)->block,
+               MakeBoolBlock(ValueBlockFields::Type::Make(BlockType::kBoolValue) |
+                                 ValueBlockFields::NameIndex::Make(2),
+                             true));
+  CompareBlock(blocks.find(2)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
+                                                    NameBlockFields::Length::Make(1),
+                                                "t\0\0\0\0\0\0\0"));
+  CompareBlock(blocks.find(3)->block,
+               MakeBoolBlock(ValueBlockFields::Type::Make(BlockType::kBoolValue) |
+                                 ValueBlockFields::NameIndex::Make(4),
+                             false));
+  CompareBlock(blocks.find(4)->block, MakeBlock(NameBlockFields::Type::Make(BlockType::kName) |
+                                                    NameBlockFields::Length::Make(1),
+                                                "f\0\0\0\0\0\0\0"));
+}
+
 TEST(State, CreateArrays) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   IntArray a = state->CreateIntArray("a", 0, 10, ArrayBlockFormat::kDefault);
   UintArray b = state->CreateUintArray("b", 0, 10, ArrayBlockFormat::kDefault);
@@ -412,10 +447,8 @@ TEST(State, CreateArrays) {
 }
 
 TEST(State, CreateArrayChildren) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   Node root = state->CreateNode("root", 0);
 
@@ -496,10 +529,8 @@ TEST(State, CreateArrayChildren) {
 }
 
 TEST(State, CreateLinearHistogramChildren) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   Node root = state->CreateNode("root", 0);
 
@@ -608,10 +639,8 @@ TEST(State, CreateLinearHistogramChildren) {
 }
 
 TEST(State, CreateExponentialHistogramChildren) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   Node root = state->CreateNode("root", 0);
 
@@ -723,10 +752,8 @@ TEST(State, CreateExponentialHistogramChildren) {
 }
 
 TEST(State, CreateSmallProperties) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   std::vector<uint8_t> temp = {'8', '8', '8', '8', '8', '8', '8', '8'};
   StringProperty a = state->CreateStringProperty("a", 0, "Hello");
@@ -773,10 +800,8 @@ TEST(State, CreateSmallProperties) {
 }
 
 TEST(State, CreateLargeSingleExtentProperties) {
-  auto vmo = MakeVmo(2 * 4096);  // Need to extend to 2 pages to store both properties.
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(2 * 4096);  // Need to extend to 2 pages to store both properties.
+  ASSERT_TRUE(state != NULL);
 
   char input[] = "abcdefg";
   size_t input_size = 7;
@@ -836,10 +861,8 @@ TEST(State, CreateLargeSingleExtentProperties) {
 }
 
 TEST(State, CreateMultiExtentProperty) {
-  auto vmo = MakeVmo(2 * 4096);  // Need 4 pages to store 12K of properties.
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(2 * 4096);  // Need 4 pages to store 12K of properties.
+  ASSERT_TRUE(state != NULL);
 
   char input[] = "abcdefg";
   size_t input_size = 7;
@@ -891,10 +914,8 @@ TEST(State, CreateMultiExtentProperty) {
 }
 
 TEST(State, SetSmallStringProperty) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   StringProperty a = state->CreateStringProperty("a", 0, "Hello");
 
@@ -927,10 +948,8 @@ TEST(State, SetSmallStringProperty) {
 }
 
 TEST(State, SetSmallBinaryProperty) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   ByteVectorProperty a = state->CreateByteVectorProperty("a", 0, {'a', 'b', 'c', 'd'});
 
@@ -963,10 +982,8 @@ TEST(State, SetSmallBinaryProperty) {
 }
 
 TEST(State, SetLargeProperty) {
-  auto vmo = MakeVmo(2 * 4096);  // Need space for 6K of contents.
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(2 * 4096);  // Need space for 6K of contents.
+  ASSERT_TRUE(state != NULL);
 
   char input[] = "abcdefg";
   size_t input_size = 7;
@@ -1005,10 +1022,8 @@ TEST(State, SetLargeProperty) {
 }
 
 TEST(State, SetPropertyOutOfMemory) {
-  auto vmo = MakeVmo(16 * 1024);  // Only 16K of space, property will not fit.
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(16 * 1024);  // Only 16K of space, property will not fit.
+  ASSERT_TRUE(state != NULL);
 
   std::vector<uint8_t> vec;
   for (int i = 0; i < 65000; i++) {
@@ -1031,10 +1046,8 @@ TEST(State, SetPropertyOutOfMemory) {
 }
 
 TEST(State, CreateNodeHierarchy) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   Node root = state->CreateNode("objects", 0);
   auto req = root.CreateChild("requests");
@@ -1112,10 +1125,8 @@ TEST(State, CreateNodeHierarchy) {
 }
 
 TEST(State, TombstoneTest) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   std::unique_ptr<Node> requests;
   {
@@ -1159,10 +1170,8 @@ TEST(State, TombstoneTest) {
 }
 
 TEST(State, TombstoneCleanup) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   IntProperty metric = state->CreateIntProperty("a", 0, 0);
 
@@ -1227,10 +1236,8 @@ TEST(State, TombstoneCleanup) {
 }
 
 TEST(State, LinkTest) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   // root will be at block index 1
   Node root = state->CreateNode("root", 0);
@@ -1284,10 +1291,8 @@ TEST(State, LinkTest) {
 }
 
 TEST(State, LinkContentsAllocationFailure) {
-  auto vmo = MakeVmo(4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
 
   // root will be at block index 1
   Node root = state->CreateNode("root", 0);
@@ -1347,10 +1352,8 @@ int ChildThread(void* input) {
 }
 
 TEST(State, MultithreadingTest) {
-  auto vmo = MakeVmo(10 * 4096);
-  ASSERT_TRUE(!!vmo);
-  auto heap = std::make_unique<Heap>(std::move(vmo));
-  auto state = State::Create(std::move(heap));
+  auto state = InitState(10 * 4096);
+  ASSERT_TRUE(state != NULL);
 
   size_t per_thread_times_operation_count = 0;
   size_t other_operation_count = 0;

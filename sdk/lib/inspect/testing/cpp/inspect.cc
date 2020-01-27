@@ -18,6 +18,8 @@ void PrintTo(const PropertyValue& property, std::ostream* os) {
     *os << "Uint";
   if (property.format() == PropertyFormat::kDouble)
     *os << "Double";
+  if (property.format() == PropertyFormat::kBool)
+    *os << "Bool";
   if (property.format() == PropertyFormat::kIntArray)
     *os << "IntArray";
   if (property.format() == PropertyFormat::kUintArray)
@@ -35,6 +37,8 @@ void PrintTo(const PropertyValue& property, std::ostream* os) {
     *os << ::testing::PrintToString(property.Get<UintPropertyValue>().value());
   if (property.format() == PropertyFormat::kDouble)
     *os << ::testing::PrintToString(property.Get<DoublePropertyValue>().value());
+  if (property.format() == PropertyFormat::kBool)
+    *os << ::testing::PrintToString(property.Get<BoolPropertyValue>().value());
   if (property.format() == PropertyFormat::kIntArray)
     *os << ::testing::PrintToString(property.Get<IntArrayValue>().value());
   if (property.format() == PropertyFormat::kUintArray)
@@ -148,6 +152,15 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
       ::testing::Property(&PropertyValue::format, PropertyFormat::kDouble),
       ::testing::Property(&PropertyValue::Get<DoublePropertyValue>,
                           ::testing::Property(&DoublePropertyValue::value, std::move(matcher))));
+}
+
+::testing::Matcher<const PropertyValue&> BoolIs(const std::string& name,
+                                               ::testing::Matcher<bool> matcher) {
+  return ::testing::AllOf(
+      ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
+      ::testing::Property(&PropertyValue::format, PropertyFormat::kBool),
+      ::testing::Property(&PropertyValue::Get<BoolPropertyValue>,
+                          ::testing::Property(&BoolPropertyValue::value, std::move(matcher))));
 }
 
 ::testing::Matcher<const PropertyValue&> IntArrayIs(

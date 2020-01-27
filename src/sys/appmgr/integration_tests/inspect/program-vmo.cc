@@ -26,6 +26,7 @@ class Table {
     version_ = node_.CreateString("version", "1.0");
     frame_ = node_.CreateByteVector("frame", std::vector<uint8_t>({0, 0, 0}));
     metric_ = node_.CreateInt("value", -10);
+    isActive_ = node_.CreateBool("active", true);
   }
 
   std::shared_ptr<Item> NewItem(int64_t value) {
@@ -40,6 +41,7 @@ class Table {
   inspect::StringProperty version_;
   inspect::ByteVectorProperty frame_;
   inspect::IntProperty metric_;
+  inspect::BoolProperty isActive_;
   std::vector<std::shared_ptr<Item>> items_;
 };
 

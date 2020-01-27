@@ -77,6 +77,10 @@ class State final {
   // the property when destroyed.
   DoubleProperty CreateDoubleProperty(const std::string& name, BlockIndex parent, double value);
 
+  // Create a new |BoolProperty| in the Inspect VMO. The returned value releases
+  // the property when destroyed.
+  BoolProperty CreateBoolProperty(const std::string& name, BlockIndex parent, bool value);
+
   // Create a new |IntArray| in the Inspect VMO. The returned value releases
   // the array when destroyed.
   IntArray CreateIntArray(const std::string& name, BlockIndex parent, size_t slots,
@@ -132,6 +136,7 @@ class State final {
   void SetIntProperty(IntProperty* property, int64_t value);
   void SetUintProperty(UintProperty* property, uint64_t value);
   void SetDoubleProperty(DoubleProperty* property, double value);
+  void SetBoolProperty(BoolProperty* property, bool value);
   void SetIntArray(IntArray* array, size_t index, int64_t value);
   void SetUintArray(UintArray* array, size_t index, uint64_t value);
   void SetDoubleArray(DoubleArray* array, size_t index, double value);
@@ -158,6 +163,7 @@ class State final {
   void FreeIntProperty(IntProperty* property);
   void FreeUintProperty(UintProperty* property);
   void FreeDoubleProperty(DoubleProperty* property);
+  void FreeBoolProperty(BoolProperty* property);
   void FreeIntArray(IntArray* array);
   void FreeUintArray(UintArray* array);
   void FreeDoubleArray(DoubleArray* array);

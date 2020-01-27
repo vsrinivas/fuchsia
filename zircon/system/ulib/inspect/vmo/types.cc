@@ -276,6 +276,7 @@ void internal::ArrayValue<double>::Subtract(size_t index, double value) {
 
 PROPERTY_METHODS(String, std::string)
 PROPERTY_METHODS(ByteVector, std::vector<uint8_t>)
+PROPERTY_METHODS(Bool, bool)
 
 Node::~Node() {
   if (state_) {
@@ -319,6 +320,13 @@ DoubleProperty Node::CreateDouble(const std::string& name, double value) {
     return state_->CreateDoubleProperty(name, value_index_, value);
   }
   return DoubleProperty();
+}
+
+BoolProperty Node::CreateBool(const std::string& name, bool value) {
+  if (state_) {
+    return state_->CreateBoolProperty(name, value_index_, value);
+  }
+  return BoolProperty();
 }
 
 StringProperty Node::CreateString(const std::string& name, const std::string& value) {
