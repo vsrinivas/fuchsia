@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [
@@ -11,52 +24,86 @@ group("test") {
   ]
 }
 
-zx_test("usb-request-cpp-test") {
+test("usb-request-cpp-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   output_name = "usb-request-cpp-test"
   sources = [ "request-cpp-test.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.function",
-    "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.function",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
 }
 
-zx_test("usb-wrapper-test") {
+test("usb-wrapper-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   output_name = "usb-wrapper-test"
   sources = [ "usb-wrapper-test.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.hidbus",
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.hidbus",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
   ]
 }
 
-zx_test("usb-desc-lib-test") {
+test("usb-desc-lib-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   output_name = "usb-desc-lib-test"
   sources = [ "usb-desc-lib-test.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
   ]
+}
+
+migrated_manifest("usb-request-cpp-test-manifest") {
+  deps = [ ":usb-request-cpp-test" ]
+}
+
+migrated_manifest("usb-wrapper-test-manifest") {
+  deps = [ ":usb-wrapper-test" ]
+}
+
+migrated_manifest("usb-desc-lib-test-manifest") {
+  deps = [ ":usb-desc-lib-test" ]
 }
