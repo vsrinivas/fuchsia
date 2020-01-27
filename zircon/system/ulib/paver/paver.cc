@@ -798,6 +798,8 @@ void BootManager::QueryConfigurationStatus(Configuration configuration,
 
 void BootManager::SetConfigurationActive(Configuration configuration,
                                          SetConfigurationActiveCompleter::Sync completer) {
+  LOG("Setting configuration %d as active\n", static_cast<uint32_t>(configuration));
+
   abr::Data data = abr_client_->Data();
 
   abr::SlotData *primary, *secondary;
@@ -829,11 +831,15 @@ void BootManager::SetConfigurationActive(Configuration configuration,
     return;
   }
 
+  LOG("Set active configuration to %d\n", static_cast<uint32_t>(configuration));
+
   completer.Reply(ZX_OK);
 }
 
 void BootManager::SetConfigurationUnbootable(Configuration configuration,
                                              SetConfigurationUnbootableCompleter::Sync completer) {
+  LOG("Setting configuration %d as unbootable\n", static_cast<uint32_t>(configuration));
+
   auto data = abr_client_->Data();
 
   abr::SlotData* slot;
@@ -859,11 +865,15 @@ void BootManager::SetConfigurationUnbootable(Configuration configuration,
     return;
   }
 
+  LOG("Set %d configuration as unbootable\n", static_cast<uint32_t>(configuration));
+
   completer.Reply(ZX_OK);
 }
 
 void BootManager::SetActiveConfigurationHealthy(
     SetActiveConfigurationHealthyCompleter::Sync completer) {
+  LOG("Setting active configuration as healthy\n");
+
   abr::Data data = abr_client_->Data();
 
   std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
@@ -893,6 +903,8 @@ void BootManager::SetActiveConfigurationHealthy(
     completer.Reply(status);
     return;
   }
+
+  LOG("Set active configuration as healthy\n");
 
   completer.Reply(ZX_OK);
 }
