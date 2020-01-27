@@ -1,0 +1,94 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io.test;
+
+using fuchsia.mem;
+
+// TODO(fxb/33880): Implement full testing framework. For now, we are
+// hard-coding the desired directory layout manually in separate "Get"
+// functions. In the next step, we would want to have a protocol to describe
+// the intended directory layout setup, and integrate io2 connections.
+
+/// Conformance test harnesses will implement this protocol to setup its
+/// associated filesystem servers with the described directory layout,
+/// allowing their implementation of `fuchsia.io` and `fuchsia.io2` protocols
+/// to be verified by a common test suite.
+///
+/// Different test cases will not interact with one another during the
+/// conformance test, and only one test case will be active at a time per
+/// tested filesystem. So it is possible to host all cases as different
+/// sub-directories under a common filesystem instance, to simplify the
+/// lifecycle and implementation.
+///
+/// If a test case has mutable bits, each method call should be implemented
+/// to obtain the directory in its original state. In other words, repeated
+/// test case set up should "as-if" yield new directories.
+///
+/// See `src/storage/conformance/README.md` for an overview of io conformance
+/// testing.
+[Discoverable]
+protocol TestCases {
+    /// Prepares a test case with an empty directory. The directory metadata
+    /// and directory entires should be read-only.
+    ///
+    /// + `directory_request` the server end of the root directory connection.
+    ///
+    ///   In io v1 mode, this connection should have the following rights:
+    ///
+    ///     * [`fuchsia.io/OPEN_RIGHT_READABLE`].
+    ///     * [`fuchsia.io/OPEN_RIGHT_WRITABLE`].
+    ///
+    ///   In io v2 mode, this connection should have the following rights:
+    ///
+    ///     * [`fuchsia.io2/Rights.CONNECT`].
+    ///     * [`fuchsia.io2/Rights.ENUMERATE`].
+    ///     * [`fuchsia.io2/Rights.TRAVERSE`].
+    ///     * [`fuchsia.io2/Rights.READ_BYTES`].
+    ///     * [`fuchsia.io2/Rights.WRITE_BYTES`].
+    ///     * [`fuchsia.io2/Rights.GET_ATTRIBUTES`].
+    ///     * [`fuchsia.io2/Rights.UPDATE_ATTRIBUTES`].
+    ///
+    GetEmptyDirectory(handle<channel> directory_request);
+
+    /// Prepares a test case with a directory containing a single vmo file.
+    /// The directory metadata and directory entires should be read-only.
+    /// The directory layout is:
+    ///
+    /// ```
+    /// /           --> root
+    /// /vmo_file   --> a read-only VMO file backed by the `buffer` parameter.
+    /// ```
+    ///
+    /// + `buffer` the buffer object backing the `vmo_file` node.
+    /// + `directory_request` the server end of the root directory connection.
+    ///
+    ///   In io v1 mode, this connection should have the following rights:
+    ///
+    ///     * [`fuchsia.io/OPEN_RIGHT_READABLE`].
+    ///     * [`fuchsia.io/OPEN_RIGHT_WRITABLE`].
+    ///
+    ///   In io v2 mode, this connection should have the following rights:
+    ///
+    ///     * [`fuchsia.io2/Rights.CONNECT`].
+    ///     * [`fuchsia.io2/Rights.ENUMERATE`].
+    ///     * [`fuchsia.io2/Rights.TRAVERSE`].
+    ///     * [`fuchsia.io2/Rights.READ_BYTES`].
+    ///     * [`fuchsia.io2/Rights.WRITE_BYTES`].
+    ///     * [`fuchsia.io2/Rights.GET_ATTRIBUTES`].
+    ///     * [`fuchsia.io2/Rights.UPDATE_ATTRIBUTES`].
+    ///
+    GetDirectoryWithVmoFile(fuchsia.mem.Range buffer,
+                            handle<channel> directory_request);
+};
+
+/// The test harness service. Test cases can be accessed in both
+/// `fuchsia.io` v1 and v2 modes.
+service Harness {
+    /// Set up test cases and serve the `fuchsia.io` protocol.
+    TestCases v1;
+
+    /// Set up test cases and serve the `fuchsia.io2` protocol.
+    TestCases v2;
+};
