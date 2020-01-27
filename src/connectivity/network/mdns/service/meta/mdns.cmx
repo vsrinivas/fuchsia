@@ -7,6 +7,7 @@
             "config-data"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.device.NameProvider",
