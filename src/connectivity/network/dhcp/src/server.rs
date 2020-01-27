@@ -159,31 +159,30 @@ impl Server {
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
             arp_probe: false,
         };
-        Server::from_config(params, &rand_string, DEFAULT_STASH_PREFIX).await
-    }
-
-    /// Instantiates a `Server` value from the provided `ServerConfig`.
-    pub async fn from_config<'a>(
-        params: ServerParameters,
-        stash_id: &'a str,
-        stash_prefix: &'a str,
-    ) -> Result<Server, Error> {
-        let stash = Stash::new(stash_id, stash_prefix).context("failed to instantiate stash")?;
-        let cache = match stash.load().await {
-            Ok(c) => c,
-            Err(e) => {
-                log::info!("attempted to load stored leases from an empty stash: {}", e);
-                HashMap::new()
-            }
-        };
-        let server = Server {
-            cache,
+        let stash = Stash::new(&rand_string, DEFAULT_STASH_PREFIX)?;
+        Ok(Self {
+            cache: HashMap::new(),
             pool: AddressPool::new(params.managed_addrs.pool_range()),
             params,
             stash,
             options_repo: HashMap::new(),
-        };
-        Ok(server)
+        })
+    }
+
+    /// Instantiates a new `Server` value from the provided parts.
+    pub fn new(
+        stash: Stash,
+        params: ServerParameters,
+        options_repo: HashMap<OptionCode, DhcpOption>,
+        cache: CachedClients,
+    ) -> Self {
+        Self {
+            cache,
+            pool: AddressPool::new(params.managed_addrs.pool_range()),
+            params,
+            stash,
+            options_repo,
+        }
     }
 
     /// Returns true if the server has a populated address pool and is therefore serving requests.
@@ -320,7 +319,9 @@ impl Server {
             std::time::SystemTime::now(),
             lease_length_seconds,
         )?;
-        self.stash.store(&client_mac, &config).context("failed to store client in stash")?;
+        self.stash
+            .store_client_config(&client_mac, &config)
+            .context("failed to store client in stash")?;
         self.cache.insert(client_mac, config);
         // This should NEVER return an `Err`. If it does it indicates
         // server's state has changed in the middle of request handling.
@@ -719,6 +720,11 @@ impl ServerDispatcher for Server {
             Status::INVALID_ARGS
         })?;
         let _old = self.options_repo.insert(option.code(), option);
+        let opts: Vec<DhcpOption> = self.options_repo.values().cloned().collect();
+        let () = self.stash.store_options(&opts).map_err(|e| {
+            log::warn!("store_options({:?}) in stash failed: {}", opts, e);
+            fuchsia_zircon::Status::INTERNAL
+        })?;
         Ok(())
     }
 
@@ -726,7 +732,7 @@ impl ServerDispatcher for Server {
         &mut self,
         value: fidl_fuchsia_net_dhcp::Parameter,
     ) -> Result<(), Status> {
-        Ok(match value {
+        let () = match value {
             fidl_fuchsia_net_dhcp::Parameter::IpAddrs(ip_addrs) => {
                 self.params.server_ips = Vec::<Ipv4Addr>::from_fidl(ip_addrs)
             }
@@ -777,7 +783,12 @@ impl ServerDispatcher for Server {
             fidl_fuchsia_net_dhcp::Parameter::__UnknownVariant { .. } => {
                 return Err(Status::INVALID_ARGS)
             }
-        })
+        };
+        let () = self.stash.store_parameters(&self.params).map_err(|e| {
+            log::warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
+            fuchsia_zircon::Status::INTERNAL
+        })?;
+        Ok(())
     }
 
     fn dispatch_list_options(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, Status> {
@@ -2877,6 +2888,63 @@ pub mod tests {
         let code = stored_option.code();
         let result = server.options_repo.get(&code);
         assert_eq!(result, Some(&stored_option));
+        Ok(())
+    }
+
+    enum StashSetArg {
+        Option(fidl_fuchsia_net_dhcp::Option_),
+        Parameter(fidl_fuchsia_net_dhcp::Parameter),
+    }
+
+    async fn test_dispatch_set_to_stash(arg: StashSetArg) -> Result<String, Error> {
+        let mut server = new_test_minimal_server().await?;
+        let key = match arg {
+            StashSetArg::Option(opt) => {
+                let () = server.dispatch_set_option(opt)?;
+                "options"
+            }
+            StashSetArg::Parameter(param) => {
+                let () = server.dispatch_set_parameter(param)?;
+                "parameters"
+            }
+        };
+        let proxy = server.stash.clone_proxy();
+        let raw_opts =
+            proxy.get_value(key).await?.ok_or(anyhow::anyhow!("failed to get value from stash"))?;
+        match *raw_opts {
+            fidl_fuchsia_stash::Value::Stringval(json) => Ok(json),
+            invalid_val => {
+                return Err(anyhow::anyhow!("invalid value found in stash: {:?}", invalid_val));
+            }
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_set_option_saves_to_stash() -> Result<(), Error> {
+        let mask = [255, 255, 255, 0];
+        let json = test_dispatch_set_to_stash(StashSetArg::Option(
+            fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
+                addr: mask,
+            }),
+        ))
+        .await?;
+        let opts: Vec<DhcpOption> = serde_json::from_str(&json)?;
+        assert!(opts.into_iter().any(|opt| opt == DhcpOption::SubnetMask(Ipv4Addr::from(mask))));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_set_parameter_saves_to_stash() -> Result<(), Error> {
+        let (default, max) = (42, 100);
+        let json = test_dispatch_set_to_stash(StashSetArg::Parameter(
+            fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+                default: Some(default),
+                max: Some(max),
+            }),
+        ))
+        .await?;
+        let params: ServerParameters = serde_json::from_str(&json)?;
+        assert_eq!(params.lease_length, LeaseLength { default_seconds: default, max_seconds: max });
         Ok(())
     }
 

@@ -40,12 +40,16 @@ enum IncomingService {
 #[derive(Debug, FromArgs)]
 #[argh(name = "dhcpd")]
 pub struct Args {
-    /// flag to enable test only mode, where dhcpd implements fuchsia.net.dhcp.Server but does not
-    /// serve DHCP transactions.
-    #[argh(switch, long = "test", short = 't')]
-    pub test_only: bool,
+    /// the identifier used to access fuchsia.stash.Store. dhcpd will attempt to access its
+    /// configuration parameters, saved DHCP option values, and saved leases from the
+    /// fuchsia.stash.Store instance specified by this identifier. If there are no configuration
+    /// parameters etc. at the specified fuchsia.stash.Store instance, then dhcpd will fallback to
+    /// parameters stored in the default configuration file.
+    #[argh(option, default = "DEFAULT_STASH_ID.to_string()")]
+    pub stash: String,
 
-    /// the path to configuration file consumed by dhcpd.
+    /// the path to the default configuration file consumed by dhcpd if it was unable to access a
+    /// fuchsia.stash.Store instance.
     #[argh(option, default = "DEFAULT_CONFIG_PATH.to_string()")]
     pub config: String,
 }
@@ -54,12 +58,23 @@ pub struct Args {
 async fn main() -> Result<(), Error> {
     fx_syslog::init_with_tags(&["dhcpd"])?;
 
-    let args: Args = argh::from_env();
-    let config = configuration::load_server_config_from_file(args.config)?;
-    let server = Server::from_config(config, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX)
-        .await
-        .context("failed to create server")?;
-    let server = RefCell::new(server);
+    let Args { config, stash } = argh::from_env();
+    let stash = dhcp::stash::Stash::new(&stash, DEFAULT_STASH_PREFIX)
+        .context("failed to instantiate stash")?;
+    let params = stash.load_parameters().await.or_else(|e| {
+        fx_syslog::fx_log_warn!("failed to load parameters from stash: {}", e);
+        configuration::load_server_params_from_file(&config)
+            .context("failed to load server parameters from configuration file")
+    })?;
+    let options = stash.load_options().await.unwrap_or_else(|e| {
+        fx_syslog::fx_log_warn!("failed to load options from stash: {}", e);
+        std::collections::HashMap::new()
+    });
+    let cache = stash.load_client_configs().await.unwrap_or_else(|e| {
+        fx_syslog::fx_log_warn!("failed to load cached client config from stash: {}", e);
+        std::collections::HashMap::new()
+    });
+    let server = RefCell::new(Server::new(stash, params, options, cache));
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Server);
@@ -74,8 +89,8 @@ async fn main() -> Result<(), Error> {
             }
         });
 
-    if args.test_only || !server.borrow().is_serving() {
-        fx_log_info!("starting server in test only mode");
+    if !server.borrow().is_serving() {
+        fx_log_info!("starting server in configuration only mode");
         let () = admin_fut.await?;
     } else {
         let udp_socket =

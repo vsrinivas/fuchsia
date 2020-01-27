@@ -14,14 +14,14 @@ use std::net::Ipv4Addr;
 use thiserror::Error;
 
 /// Attempts to load a `ServerParameters` from the json file at the provided path.
-pub fn load_server_config_from_file(path: String) -> Result<ServerParameters, ConfigError> {
+pub fn load_server_params_from_file(path: &str) -> Result<ServerParameters, ConfigError> {
     let json = fs::read_to_string(path)?;
     let config = serde_json::from_str(&json)?;
     Ok(config)
 }
 
 /// A collection of the basic configuration parameters needed by the server.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct ServerParameters {
     /// The IPv4 addresses of the host running the server.
     pub server_ips: Vec<Ipv4Addr>,
@@ -159,7 +159,7 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
 }
 
 /// A list of MAC addresses which are permitted to request a lease.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PermittedMacs(pub Vec<fidl_fuchsia_net_ext::MacAddress>);
 
 impl FidlCompatible<Vec<fidl_fuchsia_net::MacAddress>> for PermittedMacs {

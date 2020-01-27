@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use futures::{FutureExt, StreamExt};
+use rand::Rng;
 
 struct Command<'a> {
     args: Vec<&'a str>,
@@ -13,10 +14,19 @@ struct Command<'a> {
 #[cfg(test)]
 async fn test_cli(commands: Vec<Command<'_>>) {
     let mut fs = fuchsia_component::server::ServiceFs::new_local();
+    //TODO(atait): Why can't two component proxies establish a connection with one another? It would be
+    // preferable to have both fuchsia.net.dhcp.Server and fuchsia.stash.Store added as component
+    // proxies, ensuring new component instances per test case for both services. However, when both
+    // are added as component proxies, dhcpd return ZX_ERR_PEER_CLOSED when it connects to stash. As
+    // a work around, a random stash identifier is generated per test case, ensuring that one test
+    // case does not pollute another.
     fs.add_proxy_service::<fidl_fuchsia_stash::StoreMarker, _>()
         .add_component_proxy_service::<fidl_fuchsia_net_dhcp::Server_Marker, _>(
         fuchsia_component::fuchsia_single_component_package_url!("dhcpd").to_string(),
-        Some(vec!["--test".to_string()]),
+        Some(vec![
+            "--stash".to_string(),
+            rand::thread_rng().sample_iter(&rand::distributions::Alphanumeric).take(8).collect(),
+        ]),
     );
     let env =
         fs.create_salted_nested_environment("test_cli").expect("failed to create environment");

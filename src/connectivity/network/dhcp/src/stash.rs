@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::configuration::ServerParameters;
+use crate::protocol::{DhcpOption, OptionCode};
 use crate::server::{CachedClients, CachedConfig};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress;
+use std::collections::HashMap;
 use std::str::FromStr;
 
 /// A wrapper around a `fuchsia.stash.StoreAccessor` proxy.
@@ -19,6 +22,9 @@ pub struct Stash {
     prefix: String,
     proxy: fidl_fuchsia_stash::StoreAccessorProxy,
 }
+
+const OPTIONS_KEY: &'static str = "options";
+const PARAMETERS_KEY: &'static str = "parameters";
 
 impl Stash {
     /// Instantiates a new `Stash` value.
@@ -43,18 +49,39 @@ impl Stash {
     /// Stores the `client_config` value with the `client_mac` key in `fuchsia.stash`.
     ///
     /// This function stores the `client_config` as a serialized JSON string.
-    pub fn store<'a>(
+    pub fn store_client_config<'a>(
         &'a self,
         client_mac: &'a fidl_fuchsia_hardware_ethernet_ext::MacAddress,
         client_config: &'a CachedConfig,
     ) -> Result<(), Error> {
         let key = format!("{}-{}", self.prefix, client_mac);
-        let val = serde_json::to_string(client_config)
-            .context("failed to serialize client configuration")?;
+        self.store(&key, client_config)
+    }
+
+    /// Stores `opts` in `fuchsia.stash`.
+    ///
+    /// This function stores the `opts` as a serialized JSON string.
+    pub fn store_options(&self, opts: &[DhcpOption]) -> Result<(), Error> {
+        self.store(OPTIONS_KEY, opts)
+    }
+
+    /// Stores `params` in `fuchsia.stash`.
+    ///
+    /// This function stores the `params` as a serialized JSON string.
+    pub fn store_parameters(&self, params: &ServerParameters) -> Result<(), Error> {
+        self.store(PARAMETERS_KEY, params)
+    }
+
+    fn store<T>(&self, key: &str, v: &T) -> Result<(), Error>
+    where
+        T: serde::Serialize + std::fmt::Debug + ?Sized,
+    {
+        let v = serde_json::to_string(v)
+            .with_context(|| format!("failed to serialize {} to json, {} = {:?}", key, key, v))?;
         let () = self
             .proxy
-            .set_value(&key, &mut fidl_fuchsia_stash::Value::Stringval(val))
-            .context("failed to store client in stash")?;
+            .set_value(key, &mut fidl_fuchsia_stash::Value::Stringval(v))
+            .with_context(|| format!("failed to store {} in stash", key))?;
         let () = self.proxy.commit().context("failed to commit stash state change")?;
         Ok(())
     }
@@ -65,7 +92,7 @@ impl Stash {
     /// the JSON string values, and load the resulting structured data into a `CachedClients`
     /// hashmap. Any key-value pair which could not be parsed or deserialized will be removed and
     /// skipped.
-    pub async fn load(&self) -> Result<CachedClients, Error> {
+    pub async fn load_client_configs(&self) -> Result<CachedClients, Error> {
         let (iter, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_stash::GetIteratorMarker>()
                 .context("failed to create iterator")?;
@@ -101,6 +128,48 @@ impl Stash {
             cache.insert(key, val);
         }
         Ok(cache)
+    }
+
+    /// Loads a map of `OptionCode`s to `DhcpOption`s from data stored in `fuchsia.stash`.
+    pub async fn load_options(&self) -> Result<HashMap<OptionCode, DhcpOption>, Error> {
+        let val = self
+            .proxy
+            .get_value(&OPTIONS_KEY.to_string())
+            .await
+            .context("failed to get json for options from stash")?;
+        let val = match val {
+            Some(v) => v,
+            None => return Ok(HashMap::new()),
+        };
+        match *val {
+            fidl_fuchsia_stash::Value::Stringval(v) => {
+                Ok(serde_json::from_str::<Vec<DhcpOption>>(&v)
+                    .with_context(|| {
+                        format!("failed to deserialize options from json, json = {}", v)
+                    })?
+                    .into_iter()
+                    .map(|opt| (opt.code(), opt))
+                    .collect())
+            }
+            v => Err(anyhow::anyhow!("invalid value variant stored in stash: {:?}", v)),
+        }
+    }
+
+    /// Loads a new instance of `ServerParameters` from data stored in `fuchsia.stash`.
+    pub async fn load_parameters(&self) -> Result<ServerParameters, Error> {
+        let val = self
+            .proxy
+            .get_value(&PARAMETERS_KEY.to_string())
+            .await?
+            .ok_or(anyhow::anyhow!("failed to get parameters from stash"))?;
+        match *val {
+            fidl_fuchsia_stash::Value::Stringval(v) => {
+                Ok(serde_json::from_str(&v).with_context(|| {
+                    format!("failed to deserialize server parameters from json, json = {}", v)
+                })?)
+            }
+            v => Err(anyhow::anyhow!("invalid value variant stored in stash: {:?}", v)),
+        }
     }
 
     fn rm_key(&self, key: &str) -> Result<(), Error> {
@@ -145,7 +214,9 @@ impl Stash {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::configuration::{LeaseLength, ManagedAddresses};
     use std::collections::HashMap;
+    use std::convert::TryFrom;
 
     fn new_stash(test_prefix: &str) -> Result<(Stash, String), Error> {
         use rand::Rng;
@@ -167,7 +238,7 @@ mod tests {
         let client_mac = crate::server::tests::random_mac_generator();
         let client_config = CachedConfig::default();
         let () = stash
-            .store(&client_mac, &client_config)
+            .store_client_config(&client_mac, &client_config)
             .with_context(|| format!("failed to store client in {}", id))?;
 
         // Verify value actually stored in stash.
@@ -181,6 +252,59 @@ mod tests {
         };
         let value: CachedConfig = serde_json::from_str(&value)?;
         assert_eq!(value, client_config);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn store_options_succeeds() -> Result<(), Error> {
+        let (stash, _id) = new_stash("store_options_succeeds")?;
+        let accessor_client = stash.proxy.clone();
+
+        let opts = vec![
+            DhcpOption::SubnetMask(std::net::Ipv4Addr::new(255, 255, 255, 0)),
+            DhcpOption::DomainNameServer(vec![
+                std::net::Ipv4Addr::new(8, 8, 8, 8),
+                std::net::Ipv4Addr::new(8, 8, 4, 4),
+            ]),
+        ];
+        let () = stash.store_options(&opts)?;
+        let value = accessor_client.get_value(&OPTIONS_KEY.to_string()).await?;
+        let value = match *value.unwrap() {
+            fidl_fuchsia_stash::Value::Stringval(v) => v,
+            v => panic!("stored value is not a string: {:?}", v),
+        };
+        let value: Vec<DhcpOption> = serde_json::from_str(&value)?;
+        assert_eq!(value, opts);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn store_parameters_succeeds() -> Result<(), Error> {
+        let (stash, _id) = new_stash("store_parameters_succeeds")?;
+        let accessor_client = stash.proxy.clone();
+
+        let params = ServerParameters {
+            server_ips: vec![std::net::Ipv4Addr::new(192, 168, 0, 1)],
+            lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
+            managed_addrs: ManagedAddresses {
+                network_id: std::net::Ipv4Addr::new(192, 168, 0, 0),
+                broadcast: std::net::Ipv4Addr::new(192, 168, 0, 255),
+                mask: crate::configuration::SubnetMask::try_from(24)?,
+                pool_range_start: std::net::Ipv4Addr::new(192, 168, 0, 10),
+                pool_range_stop: std::net::Ipv4Addr::new(192, 168, 0, 254),
+            },
+            permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
+            static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
+            arp_probe: false,
+        };
+        let () = stash.store_parameters(&params)?;
+        let value = accessor_client.get_value(&PARAMETERS_KEY.to_string()).await?;
+        let value = match *value.unwrap() {
+            fidl_fuchsia_stash::Value::Stringval(v) => v,
+            v => panic!("stored value is not a string: {:?}", v),
+        };
+        let value: ServerParameters = serde_json::from_str(&value)?;
+        assert_eq!(value, params);
         Ok(())
     }
 
@@ -204,7 +328,7 @@ mod tests {
             .with_context(|| format!("failed to commit stash state change in {}", id))?;
 
         let loaded_cache = stash
-            .load()
+            .load_client_configs()
             .await
             .with_context(|| format!("failed to load map from stash in {}", id))?;
 
@@ -212,6 +336,80 @@ mod tests {
         cached_clients.insert(client_mac, client_config);
         assert_eq!(loaded_cache, cached_clients);
 
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn load_options_with_stashed_options_returns_options() -> Result<(), Error> {
+        let (stash, _id) = new_stash("load_options_with_stashed_options_returns_options")?;
+        let accessor = stash.proxy.clone();
+
+        let opts = vec![
+            DhcpOption::SubnetMask(std::net::Ipv4Addr::new(255, 255, 255, 0)),
+            DhcpOption::DomainNameServer(vec![
+                std::net::Ipv4Addr::new(8, 8, 8, 8),
+                std::net::Ipv4Addr::new(8, 8, 4, 4),
+            ]),
+        ];
+        let serialized_opts = serde_json::to_string(&opts)?;
+        let opts = opts.into_iter().map(|o| (o.code(), o)).collect();
+        let () = accessor.set_value(
+            &OPTIONS_KEY.to_string(),
+            &mut fidl_fuchsia_stash::Value::Stringval(serialized_opts),
+        )?;
+        let () = accessor.commit()?;
+
+        let loaded_opts = stash.load_options().await?;
+        assert_eq!(loaded_opts, opts);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn load_options_with_no_stashed_options_returns_empty_map() -> Result<(), Error> {
+        let (stash, _id) = new_stash("load_options_with_no_stashed_options_returns_empty_vec")?;
+
+        let opts = stash.load_options().await?;
+        assert_eq!(opts, HashMap::new());
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn load_parameters_with_stashed_parameters_returns_parameters() -> Result<(), Error> {
+        let (stash, _id) = new_stash("load_parameters_with_stashed_parameters_returns_parameters")?;
+        let accessor = stash.proxy.clone();
+
+        let params = ServerParameters {
+            server_ips: vec![std::net::Ipv4Addr::new(192, 168, 0, 1)],
+            lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
+            managed_addrs: ManagedAddresses {
+                network_id: std::net::Ipv4Addr::new(192, 168, 0, 0),
+                broadcast: std::net::Ipv4Addr::new(192, 168, 0, 255),
+                mask: crate::configuration::SubnetMask::try_from(24)?,
+                pool_range_start: std::net::Ipv4Addr::new(192, 168, 0, 10),
+                pool_range_stop: std::net::Ipv4Addr::new(192, 168, 0, 254),
+            },
+            permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
+            static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
+            arp_probe: false,
+        };
+        let serialized_params = serde_json::to_string(&params)?;
+        let () = accessor.set_value(
+            &PARAMETERS_KEY.to_string(),
+            &mut fidl_fuchsia_stash::Value::Stringval(serialized_params),
+        )?;
+        let () = accessor.commit()?;
+
+        let loaded_params = stash.load_parameters().await?;
+        assert_eq!(loaded_params, params);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn load_parameters_with_no_stashed_parameters_returns_err() -> Result<(), Error> {
+        let (stash, _id) = new_stash("load_parameters_with_no_stashed_parameters_returns_err")?;
+
+        let e = stash.load_parameters().await;
+        assert!(e.is_err());
         Ok(())
     }
 
@@ -240,7 +438,7 @@ mod tests {
             .with_context(|| format!("failed to commit stash state change in {}", id))?;
 
         let loaded_cache = stash
-            .load()
+            .load_client_configs()
             .await
             .with_context(|| format!("failed to load map from stash in {}", id))?;
 
@@ -259,7 +457,7 @@ mod tests {
         let client_mac = crate::server::tests::random_mac_generator();
         let client_config = CachedConfig::default();
         let () = stash
-            .store(&client_mac, &client_config)
+            .store_client_config(&client_mac, &client_config)
             .with_context(|| format!("failed to store client in {}", id))?;
 
         // Verify value actually stored in stash.
