@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_SERVICE_IMPL_H_
 #define GARNET_LIB_SYSTEM_MONITOR_DOCKYARD_DOCKYARD_SERVICE_IMPL_H_
 
-#include "garnet/lib/system_monitor/proto/dockyard.grpc.pb.h"
+#include "src/developer/system_monitor/lib/proto/dockyard.grpc.pb.h"
 
 #include <grpc++/grpc++.h>
 

@@ -588,15 +588,14 @@ group("log_listener") {
 
 group("system_monitor_fuchsia") {
   testonly = true
-  public_deps =
-      [ "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests" ]
+  public_deps = [ "//src/developer/system_monitor/bin/harvester:system_monitor_harvester_tests" ]
 }
 
 group("system_monitor_host") {
   testonly = true
   public_deps = [
-    "//garnet/bin/system_monitor/dockyard_host/tests:dockyard_host_test($host_toolchain)",
-    "//garnet/lib/system_monitor:system_monitor_tests($host_toolchain)",
+    "//src/developer/system_monitor/bin/dockyard_host/tests:dockyard_host_test($host_toolchain)",
+    "//src/developer/system_monitor/lib:system_monitor_tests($host_toolchain)",
   ]
 }
 

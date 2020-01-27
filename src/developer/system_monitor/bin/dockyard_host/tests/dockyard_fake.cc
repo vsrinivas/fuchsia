@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/system_monitor/dockyard/dockyard.h"
-#include "garnet/lib/system_monitor/dockyard/dockyard_service_impl.h"
-#include "garnet/lib/system_monitor/gt_log.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard_service_impl.h"
+#include "src/developer/system_monitor/lib/gt_log.h"
 
 // The code below is not the real Dockyard. They are test/mock functions.
-// See //garnet/lib/system_monitor/dockyard/dockyard.cc for the actual code.
+// See //src/developer/system_monitor/lib/dockyard/dockyard.cc for the actual
+// code.
 namespace dockyard {
 
 uint64_t MessageRequest::next_request_id_ = 0u;

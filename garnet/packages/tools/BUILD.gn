@@ -22,8 +22,8 @@ group("scenic") {
 group("system_monitor") {
   testonly = true
   public_deps = [
-    "//garnet/bin/system_monitor/dockyard_host:host_tools",
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
+    "//src/developer/system_monitor/bin/dockyard_host:host_tools",
+    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
   ]
 }
 

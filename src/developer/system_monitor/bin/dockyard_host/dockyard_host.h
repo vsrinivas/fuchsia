@@ -10,7 +10,7 @@
 #include <optional>
 #include <string>
 
-#include "garnet/lib/system_monitor/dockyard/dockyard.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard.h"
 
 class SystemMonitorDockyardHostTest;
 

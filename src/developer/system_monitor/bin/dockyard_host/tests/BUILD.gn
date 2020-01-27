@@ -13,10 +13,10 @@ if (is_host) {
     ]
 
     deps = [
-      "//garnet/bin/system_monitor/dockyard_host:lib",
-      "//garnet/lib/system_monitor:lib",
-      "//garnet/lib/system_monitor/dockyard:headers",
-      "//garnet/lib/system_monitor/dockyard:proto",
+      "//src/developer/system_monitor/bin/dockyard_host:lib",
+      "//src/developer/system_monitor/lib:lib",
+      "//src/developer/system_monitor/lib/dockyard:headers",
+      "//src/developer/system_monitor/lib/dockyard:proto",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",
       "//third_party/grpc:grpc++",

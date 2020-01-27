@@ -11,8 +11,8 @@
 #include <string>
 
 #include "dockyard_proxy.h"
-#include "garnet/lib/system_monitor/proto/dockyard.grpc.pb.h"
 #include "sample_bundle.h"
+#include "src/developer/system_monitor/lib/proto/dockyard.grpc.pb.h"
 #include "src/lib/fxl/logging.h"
 
 namespace harvester {

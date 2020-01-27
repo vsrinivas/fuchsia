@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/system_monitor/harvester/dockyard_proxy.h"
+#include "src/developer/system_monitor/bin/harvester/dockyard_proxy.h"
 
 #include "src/lib/fxl/logging.h"
 

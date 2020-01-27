@@ -5,8 +5,8 @@
 #include <chrono>
 #include <thread>
 
-#include "garnet/bin/system_monitor/dockyard_host/dockyard_host.h"
-#include "garnet/lib/system_monitor/gt_log.h"
+#include "src/developer/system_monitor/bin/dockyard_host/dockyard_host.h"
+#include "src/developer/system_monitor/lib/gt_log.h"
 
 int main(int argc, const char* const* argv) {
   if (!gt::SetUpLogging(argc, argv)) {

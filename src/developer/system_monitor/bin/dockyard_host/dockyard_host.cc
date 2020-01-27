@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/system_monitor/dockyard_host/dockyard_host.h"
+#include "src/developer/system_monitor/bin/dockyard_host/dockyard_host.h"
 
 #include <time.h>
 
@@ -11,7 +11,7 @@
 #include <future>
 #include <thread>
 
-#include "garnet/lib/system_monitor/gt_log.h"
+#include "src/developer/system_monitor/lib/gt_log.h"
 
 namespace {
 

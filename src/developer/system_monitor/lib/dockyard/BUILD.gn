@@ -16,7 +16,7 @@ source_set("headers") {
 
   public_deps = [
     ":proto",
-    "//garnet/lib/system_monitor:lib",
+    "//src/developer/system_monitor/lib:lib",
     "//third_party/grpc:grpc++",
   ]
 }

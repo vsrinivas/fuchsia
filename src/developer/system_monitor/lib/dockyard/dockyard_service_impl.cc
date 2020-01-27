@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/system_monitor/dockyard/dockyard_service_impl.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard_service_impl.h"
 
-#include "garnet/lib/system_monitor/dockyard/dockyard.h"
-#include "garnet/lib/system_monitor/gt_log.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard.h"
+#include "src/developer/system_monitor/lib/gt_log.h"
 
 namespace dockyard {
 

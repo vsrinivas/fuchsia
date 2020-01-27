@@ -10,7 +10,7 @@
 #include <iostream>
 #include <string>
 
-#include "garnet/lib/system_monitor/dockyard/dockyard.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard.h"
 
 namespace harvester {
 
@@ -33,7 +33,7 @@ std::string DockyardErrorString(const std::string& cmd,
 std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status);
 
 // A proxy for a remote Dockyard.
-// See //garnet/lib/system_monitor/dockyard/dockyard.h
+// See //src/developer/system_monitor/lib/dockyard/dockyard.h
 class DockyardProxy {
  public:
   virtual ~DockyardProxy() {}

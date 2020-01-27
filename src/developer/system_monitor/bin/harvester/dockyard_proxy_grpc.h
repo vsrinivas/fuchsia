@@ -6,8 +6,8 @@
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_GRPC_H_
 
 #include "dockyard_proxy.h"
-#include "garnet/lib/system_monitor/dockyard/dockyard.h"
-#include "garnet/lib/system_monitor/proto/dockyard.grpc.pb.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard.h"
+#include "src/developer/system_monitor/lib/proto/dockyard.grpc.pb.h"
 
 #include <grpc++/grpc++.h>
 

@@ -15,8 +15,8 @@
 #include <string>
 
 #include "dockyard_proxy.h"
-#include "garnet/lib/system_monitor/dockyard/dockyard.h"
 #include "harvester.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard.h"
 
 namespace harvester {
 

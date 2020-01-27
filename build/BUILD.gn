@@ -106,8 +106,8 @@ group("rootresource_svc_allowlist") {
   # out a very powerful capability. Do not add yourself to this unless this is the only
   # way to accomplish your goal and you have talked to the security team about this.
   visibility = [
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
+    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
+    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester_tests",
     "//garnet/bin/thermd:thermd",
     "//src/sys/component_manager:component_manager_tests",
     "//src/testing/loadbench:loadbench",
@@ -129,8 +129,8 @@ group("rootjob_svc_allowlist") {
   # out a very powerful capability. Do not add yourself to this unless this is the only
   # way to accomplish your goal and you have talked to the security team about this.
   visibility = [
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
+    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
+    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester_tests",
     "//garnet/bin/ktrace_provider:ktrace_provider",
     "//garnet/bin/trace/tests:trace_tests",
     "//garnet/lib/debugger_utils:debugger_utils_tests",

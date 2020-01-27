@@ -12,7 +12,7 @@ if (is_host) {
     ]
 
     public_deps = [
-      "//garnet/lib/system_monitor/dockyard:headers",
+      "//src/developer/system_monitor/lib/dockyard:headers",
       "//src/lib/fxl",
     ]
   }
@@ -22,7 +22,7 @@ if (is_host) {
 
     deps = [
       ":lib",
-      "//garnet/lib/system_monitor/dockyard:lib",
+      "//src/developer/system_monitor/lib/dockyard:lib",
     ]
   }
 }

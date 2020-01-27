@@ -6,7 +6,6 @@
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_H_
 
 #include "dockyard_proxy.h"
-#include "garnet/lib/system_monitor/dockyard/dockyard.h"
 #include "gather_cpu.h"
 #include "gather_inspectable.h"
 #include "gather_introspection.h"
@@ -15,6 +14,7 @@
 #include "gather_processes_and_memory.h"
 #include "gather_tasks.h"
 #include "gather_threads_and_cpu.h"
+#include "src/developer/system_monitor/lib/dockyard/dockyard.h"
 
 class SystemMonitorHarvesterTest;
 

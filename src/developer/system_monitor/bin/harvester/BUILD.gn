@@ -50,9 +50,9 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/system_monitor/dockyard:lib",
-    "//garnet/lib/system_monitor/dockyard:proto",
     "//src/developer/memory/metrics",
+    "//src/developer/system_monitor/lib/dockyard:lib",
+    "//src/developer/system_monitor/lib/dockyard:proto",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated/query",
     "//zircon/public/lib/async-cpp",
