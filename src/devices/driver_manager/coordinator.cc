@@ -106,15 +106,12 @@ const char* kComponentDriverPath = "/boot/driver/component.so";
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
-Coordinator::Coordinator(CoordinatorConfig config)
-    : config_(std::move(config)), outgoing_services_(config_.dispatcher) {
+Coordinator::Coordinator(CoordinatorConfig config) : config_(std::move(config)) {
   if (config_.lowmem_event) {
     wait_on_oom_event_.set_object(config_.lowmem_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
     wait_on_oom_event_.Begin(config_.dispatcher);
   }
-
-  InitOutgoingServices();
 }
 
 Coordinator::~Coordinator() { drivers_.clear(); }
@@ -1746,9 +1743,7 @@ void Coordinator::Suspend(
       std::move(callback));
 }
 
-void Coordinator::InitOutgoingServices() {
-  const auto& svc_dir = outgoing_services_.svc_dir();
-
+zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto admin = [this](zx::channel request) {
     static_assert(fuchsia_device_manager_SUSPEND_FLAG_REBOOT == DEVICE_SUSPEND_FLAG_REBOOT);
     static_assert(fuchsia_device_manager_SUSPEND_FLAG_POWEROFF == DEVICE_SUSPEND_FLAG_POWEROFF);
@@ -1768,7 +1763,7 @@ void Coordinator::InitOutgoingServices() {
             },
     };
 
-    const auto status =
+    zx_status_t status =
         fidl_bind(this->config_.dispatcher, request.release(),
                   reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_Administrator_dispatch),
                   this, &kOps);
@@ -1777,8 +1772,11 @@ void Coordinator::InitOutgoingServices() {
     }
     return status;
   };
-  svc_dir->AddEntry(fuchsia_device_manager_Administrator_Name,
-                    fbl::MakeRefCounted<fs::Service>(admin));
+  zx_status_t status = svc_dir->AddEntry(fuchsia_device_manager_Administrator_Name,
+                                         fbl::MakeRefCounted<fs::Service>(admin));
+  if (status != ZX_OK) {
+    return status;
+  }
 
   const auto admin2 = [this](zx::channel request) {
     auto status = fidl::Bind(this->config_.dispatcher, std::move(request), this);
@@ -1788,8 +1786,11 @@ void Coordinator::InitOutgoingServices() {
     return status;
   };
 
-  svc_dir->AddEntry(power_fidl::statecontrol::Admin::Name,
-                    fbl::MakeRefCounted<fs::Service>(admin2));
+  status = svc_dir->AddEntry(power_fidl::statecontrol::Admin::Name,
+                             fbl::MakeRefCounted<fs::Service>(admin2));
+  if (status != ZX_OK) {
+    return status;
+  }
 
   const auto debug = [this](zx::channel request) {
     static constexpr fuchsia_device_manager_DebugDumper_ops_t kOps = {
@@ -1825,17 +1826,13 @@ void Coordinator::InitOutgoingServices() {
     }
     return status;
   };
-  svc_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
-                    fbl::MakeRefCounted<fs::Service>(debug));
+  return svc_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
+                           fbl::MakeRefCounted<fs::Service>(debug));
 }  // namespace devmgr
 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal) {
   this->ShutdownFilesystems();
-}
-
-zx_status_t Coordinator::BindOutgoingServices(zx::channel listen_on) {
-  return outgoing_services_.Serve(std::move(listen_on));
 }
 
 }  // namespace devmgr

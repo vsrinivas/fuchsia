@@ -200,6 +200,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   explicit Coordinator(CoordinatorConfig config);
   ~Coordinator();
 
+  zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx_status_t InitCoreDevices(const char* sys_device_driver);
   bool InSuspend() const;
   bool InResume() const;
@@ -319,8 +320,6 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   zx_status_t BindFidlServiceProxy(zx::channel listen_on);
 
-  zx_status_t BindOutgoingServices(zx::channel listen_on);
-
   const Driver* component_driver() const { return component_driver_; }
 
   void ReleaseDevhost(Devhost* dh);
@@ -338,9 +337,6 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   bool system_available_ = false;
   bool system_loaded_ = false;
   LoaderServiceConnector loader_service_connector_;
-
-  // Services offered to the rest of the system.
-  svc::Outgoing outgoing_services_;
 
   // All Drivers
   fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;
@@ -408,7 +404,6 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                  size_t buflen, size_t* size);
-  void InitOutgoingServices();
 
   // Shut down all filesystems (and fshost itself) by calling
   // fuchsia.fshost.Admin.Shutdown(). Note that this is called from multiple

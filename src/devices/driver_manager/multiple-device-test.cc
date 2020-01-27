@@ -115,7 +115,9 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   zx::channel services, services_remote;
   ASSERT_OK(zx::channel::create(0, &services, &services_remote));
 
-  ASSERT_OK(coordinator()->BindOutgoingServices(std::move(services_remote)));
+  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
+  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
+  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
 
   zx::channel channel, channel_remote;
   ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
@@ -167,7 +169,9 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   zx::channel services, services_remote;
   ASSERT_OK(zx::channel::create(0, &services, &services_remote));
 
-  ASSERT_OK(coordinator()->BindOutgoingServices(std::move(services_remote)));
+  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
+  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
+  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
 
   zx::channel channel, channel_remote;
   ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));

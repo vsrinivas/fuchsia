@@ -115,8 +115,8 @@ zx_status_t SystemInstance::PrepareChannels() {
   return ZX_OK;
 }
 
-zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_system,
-                                         devmgr::Coordinator* coordinator) {
+zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
+                                         bool require_system, devmgr::Coordinator* coordinator) {
   zx::channel dir_request, svchost_local;
   zx_status_t status = zx::channel::create(0, &dir_request, &svchost_local);
   if (status != ZX_OK) {
@@ -151,24 +151,13 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, bool require_s
 
   zx::channel coordinator_client;
   {
-    zx::channel root_server, root_client;
-    status = zx::channel::create(0, &root_server, &root_client);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = coordinator->BindOutgoingServices(std::move(root_server));
-    if (status != ZX_OK) {
-      return status;
-    }
-
     zx::channel coordinator_server;
     status = zx::channel::create(0, &coordinator_server, &coordinator_client);
     if (status != ZX_OK) {
       return status;
     }
 
-    status = fdio_service_connect_at(root_client.get(), "svc", coordinator_server.release());
+    status = fdio_service_connect_at(root_dir.get(), "svc", coordinator_server.release());
     if (status != ZX_OK) {
       return status;
     }

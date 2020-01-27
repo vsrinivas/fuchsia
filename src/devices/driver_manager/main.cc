@@ -240,6 +240,28 @@ int main(int argc, char** argv) {
   }
 
   devmgr::Coordinator coordinator(std::move(config));
+
+  // Services offered to the rest of the system.
+  svc::Outgoing outgoing{loop.dispatcher()};
+  status = coordinator.InitOutgoingServices(outgoing.svc_dir());
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to initialize outgoing services\n");
+    return 1;
+  }
+
+  // Check if whatever launched devcoordinator gave a channel to be connected to the
+  // outgoing services directory. This is for use in tests to let the test environment see
+  // outgoing services.
+  zx::channel outgoing_svc_dir_client(
+      zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND));
+  if (outgoing_svc_dir_client.is_valid()) {
+    status = outgoing.Serve(std::move(outgoing_svc_dir_client));
+    if (status != ZX_OK) {
+      fprintf(stderr, "devcoordinator: failed to bind outgoing services\n");
+      return 1;
+    }
+  }
+
   status = coordinator.InitCoreDevices(devmgr_args.sys_device_driver);
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: failed to initialize core devices\n");
@@ -271,7 +293,17 @@ int main(int argc, char** argv) {
   }
 
   if (devmgr_args.start_svchost) {
-    status = system_instance.StartSvchost(root_job, require_system, &coordinator);
+    zx::channel root_server, root_client;
+    status = zx::channel::create(0, &root_server, &root_client);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = outgoing.Serve(std::move(root_server));
+    if (status != ZX_OK) {
+      fprintf(stderr, "devcoordinator: failed to bind outgoing services\n");
+      return 1;
+    }
+    status = system_instance.StartSvchost(root_job, root_client, require_system, &coordinator);
     if (status != ZX_OK) {
       fprintf(stderr, "devcoordinator: failed to start svchost: %s\n",
               zx_status_get_string(status));
@@ -282,19 +314,6 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       fprintf(stderr, "devcoordinator: failed to reuse existing svchost: %s\n",
               zx_status_get_string(status));
-      return 1;
-    }
-  }
-
-  // Check if whatever launched devcoordinator gave a channel to be connected to the
-  // outgoing services directory. This is for use in tests to let the test environment see
-  // outgoing services.
-  zx::channel outgoing_svc_dir_client(
-      zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND));
-  if (outgoing_svc_dir_client.is_valid()) {
-    status = coordinator.BindOutgoingServices(std::move(outgoing_svc_dir_client));
-    if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to bind outgoing services\n");
       return 1;
     }
   }

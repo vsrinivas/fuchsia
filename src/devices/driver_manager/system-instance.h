@@ -35,8 +35,8 @@ class SystemInstance : public devmgr::FsProvider {
   zx_status_t CreateSvcJob(const zx::job& root_job);
   zx_status_t PrepareChannels();
 
-  zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
-                           devmgr::Coordinator* coordinator);
+  zx_status_t StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
+                           bool require_system, devmgr::Coordinator* coordinator);
   zx_status_t ReuseExistingSvchost();
 
   void devmgr_vfs_init();
