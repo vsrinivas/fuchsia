@@ -136,6 +136,7 @@ void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
 
   ARM64_DBGWCR_E_SET(&to_write->hw_wps[0].dbgwcr, 1);
   ARM64_DBGWCR_BAS_SET(&to_write->hw_wps[0].dbgwcr, 0xf);
+  ARM64_DBGWCR_LSC_SET(&to_write->hw_wps[0].dbgwcr, 0b11);
   ARM64_DBGWCR_E_SET(&to_write->hw_wps[1].dbgwcr, 1);
   ARM64_DBGWCR_BAS_SET(&to_write->hw_wps[1].dbgwcr, 0xf0);
   to_write->hw_wps[0].dbgwvr = base;
@@ -148,10 +149,10 @@ void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
   ARM64_DBGBCR_BAS_SET(&expected->hw_bps[1].dbgbcr, 0xf);
 
   ARM64_DBGWCR_PAC_SET(&expected->hw_wps[0].dbgwcr, 0b10);
-  ARM64_DBGWCR_LSC_SET(&expected->hw_wps[0].dbgwcr, 0b10);
+  ARM64_DBGWCR_LSC_SET(&expected->hw_wps[0].dbgwcr, 0b11);
   ARM64_DBGWCR_SSC_SET(&expected->hw_wps[0].dbgwcr, 1);
   ARM64_DBGWCR_PAC_SET(&expected->hw_wps[1].dbgwcr, 0b10);
-  ARM64_DBGWCR_LSC_SET(&expected->hw_wps[1].dbgwcr, 0b10);
+  ARM64_DBGWCR_LSC_SET(&expected->hw_wps[1].dbgwcr, 0);
   ARM64_DBGWCR_SSC_SET(&expected->hw_wps[1].dbgwcr, 1);
 #else
 #error Unsupported architecture

@@ -140,7 +140,6 @@ void SetWatchpointFlags(uint32_t* dbgwcr, debug_ipc::BreakpointType type, uint64
   }
 
   // Set type.
-  // TODO(donosoc): Support other types. This is only write for now.
   ARM64_DBGWCR_LSC_SET(dbgwcr, GetWatchpointWriteFlag(type));
 
   // Set enabled.

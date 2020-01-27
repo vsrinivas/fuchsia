@@ -37,17 +37,20 @@ enum class WarningType {
   kUninstall,
 };
 
-void Warn(WarningType type, zx_koid_t thread_koid, uint64_t address, zx_status_t status) {
+void Warn(debug_ipc::FileLineFunction origin, WarningType type, zx_koid_t thread_koid,
+          uint64_t address, zx_status_t status) {
   // This happens normally when we receive a ZX_EXCP_THREAD_EXITING exception,
   // making the system ignore our uninstall requests.
   if (status == ZX_ERR_NOT_FOUND)
     return;
 
   const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
-  FXL_LOG(WARNING) << fxl::StringPrintf(
-      "Could not %s HW breakpoint for thread %u at "
-      "%" PRIX64 ": %s",
-      verb, static_cast<uint32_t>(thread_koid), address, zx_status_get_string(status));
+  printf(
+      "[%s:%d][%s] Could not %s HW breakpoint for thread %u at "
+      "%" PRIX64 ": %s\n",
+      origin.file().c_str(), origin.line(), origin.function().c_str(), verb,
+      static_cast<uint32_t>(thread_koid), address, zx_status_get_string(status));
+  fflush(stdout);
 }
 
 std::set<zx_koid_t> ThreadsTargeted(const Watchpoint& watchpoint) {
@@ -198,7 +201,7 @@ zx_status_t Watchpoint::Update() {
 
 zx_status_t Watchpoint::Install(DebuggedThread* thread) {
   if (!thread) {
-    Warn(WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
+    Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -210,7 +213,7 @@ zx_status_t Watchpoint::Install(DebuggedThread* thread) {
   // Do the actual installation.
   auto result = arch_provider_->InstallWatchpoint(type_, thread->handle(), range_);
   if (result.status != ZX_OK) {
-    Warn(WarningType::kInstall, thread->koid(), address(), result.status);
+    Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), result.status);
     return result.status;
   }
 
@@ -245,7 +248,7 @@ zx_status_t Watchpoint::Uninstall() {
 
 zx_status_t Watchpoint::Uninstall(DebuggedThread* thread) {
   if (!thread) {
-    Warn(WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
+    Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -256,7 +259,7 @@ zx_status_t Watchpoint::Uninstall(DebuggedThread* thread) {
 
   zx_status_t status = arch_provider_->UninstallWatchpoint(thread->handle(), range_);
   if (status != ZX_OK) {
-    Warn(WarningType::kInstall, thread->koid(), address(), status);
+    Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), status);
     return status;
   }
 

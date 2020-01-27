@@ -361,10 +361,6 @@ WatchpointInstallationResult ArchProvider::InstallWatchpoint(debug_ipc::Breakpoi
   if (!debug_ipc::IsWatchpointType(type))
     return WatchpointInstallationResult(ZX_ERR_INVALID_ARGS);
 
-  // Read is not yet supported in arm64 installation.
-  if (type == debug_ipc::BreakpointType::kReadWrite)
-    return WatchpointInstallationResult(ZX_ERR_NOT_SUPPORTED);
-
   zx_thread_state_debug_regs_t debug_regs;
   if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
     return WatchpointInstallationResult(status);
@@ -373,7 +369,7 @@ WatchpointInstallationResult ArchProvider::InstallWatchpoint(debug_ipc::Breakpoi
                        << DebugRegistersToString(debug_regs);
 
   WatchpointInstallationResult result =
-      SetupWatchpoint(&debug_regs, debug_ipc::BreakpointType::kWrite, range, watchpoint_count());
+      SetupWatchpoint(&debug_regs, type, range, watchpoint_count());
   if (result.status != ZX_OK) {
     DEBUG_LOG(ArchArm64) << "Could not install watchpoint: " << zx_status_get_string(result.status);
     return result;

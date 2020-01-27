@@ -106,9 +106,6 @@ static bool arm64_validate_hw_watchpoints(arm64_debug_state_t* state,
       ARM64_DBGWCR_PAC_SET(&dbgwcr, 0b10);
       ARM64_DBGWCR_SSC_SET(&dbgwcr, 0b01);
 
-      // TODO(donosoc): Expose this field to userspace.
-      ARM64_DBGWCR_LSC_SET(&dbgwcr, 0b10);
-
       watchpoint_count++;
     }
   }

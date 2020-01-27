@@ -70,8 +70,8 @@
 #define ARM64_DBGBVR_USER_MASK (0xfffffffffffcu)
 
 // The actual fields userspace can write to.
-// TODO: Add LSC here.
-#define ARM64_DBGWCR_ACTIVE_MASK ((ARM64_DBGWCR_E_MASK) | (ARM64_DBGWCR_BAS_MASK))
+#define ARM64_DBGWCR_ACTIVE_MASK \
+  ((ARM64_DBGWCR_E_MASK) | (ARM64_DBGWCR_LSC_MASK) | (ARM64_DBGWCR_BAS_MASK))
 
 // The DBGWVR format is as follows (x = writeable):
 //
