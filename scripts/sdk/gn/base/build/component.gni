@@ -1,0 +1,87 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Define a Fuchsia component() target.
+#
+# The target generates a json file defining the component contents. This
+# component is used to assemble components into distributions, such as packages.
+#
+# Parameters
+#
+#   deps
+#     Optional: Dependencies for this component. These dependencies are external
+#       to the component, such as other components that are used via FIDL.
+#
+#   data_deps
+#     Required: Dependencies examined for metadata. These dependencies define
+#     the contents of the component. These are executables and libraries.
+#
+#   manifest
+#     Required: The manifest file for this component.
+#
+#   resources
+#     Optional: Non-executable resources to include in the component.
+#
+template("fuchsia_component") {
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "data_deps",
+                             "friend",
+                             "manifest",
+                             "resources",
+                             "visibility",
+                           ])
+
+    assert(defined(data_deps),
+           "data_deps required to define contents of this component")
+    assert(defined(manifest),
+           "manifest file (.cmx) required for this component")
+
+    if (!defined(resources)) {
+      resources = []
+    }
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    component_manifest = []
+
+    # TODO(fxb/42370): add cmx validation
+
+    foreach(dep, data_deps) {
+      component_manifest += [
+        {
+          type = "dep"
+          source = rebase_path(dep)
+        },
+      ]
+    }
+
+    foreach(resource, resources) {
+      component_manifest += [
+        {
+          type = "resource"
+          source = rebase_path(resource.path)
+        },
+      ]
+    }
+
+    component_manifest += [
+      {
+        type = "manifest"
+        source = rebase_path(manifest)
+      },
+    ]
+
+    # The contents of the component are enumerated in the
+    # metadata. The metadata is processed by the package
+    # template, or the distribution rule.
+    metadata = {
+      contents = [ component_manifest ]
+    }
+  }
+}
