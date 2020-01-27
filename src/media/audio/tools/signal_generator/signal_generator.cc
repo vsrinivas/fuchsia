@@ -28,6 +28,7 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
 
   SetupPayloadCoefficients();
   DisplayConfigurationSettings();
+  SetAudioCoreSettings(app_context);
   AcquireAudioRenderer(app_context);
   SetStreamType();
 
@@ -120,6 +121,11 @@ bool MediaApp::ParameterRangeChecks() {
   stream_gain_db_ = fbl::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
                                       fuchsia::media::audio::MAX_GAIN_DB);
 
+  usage_gain_db_ =
+      fbl::clamp<float>(usage_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB, kUnityGainDb);
+  usage_volume_ = fbl::clamp<float>(usage_volume_, fuchsia::media::audio::MIN_VOLUME,
+                                    fuchsia::media::audio::MAX_VOLUME);
+
   return ret_val;
 }
 
@@ -170,9 +176,17 @@ void MediaApp::DisplayConfigurationSettings() {
     printf("\nSetting device settings to %s.", (settings_enabled_ ? "ON" : "OFF"));
   }
 
-  printf("\nAudioRenderer configured for %d-channel %s at %u Hz.\nContent is ", num_channels_,
-         (use_int24_ ? "int24" : (use_int16_ ? "int16" : "float32")), frame_rate_);
+  auto it = std::find_if(kRenderUsageOptions.cbegin(), kRenderUsageOptions.cend(),
+                         [usage = usage_](auto usage_string_and_usage) {
+                           return usage == usage_string_and_usage.second;
+                         });
+  FX_DCHECK(it != kRenderUsageOptions.cend());
+  auto usage_str = it->first;
 
+  printf("\nAudioRenderer configured for %d-channel %s at %u Hz with the %s usage.", num_channels_,
+         (use_int24_ ? "int24" : (use_int16_ ? "int16" : "float32")), frame_rate_, usage_str);
+
+  printf("\nContent is ");
   if (output_signal_type_ == kOutputTypeNoise) {
     printf("white noise");
   } else {
@@ -200,25 +214,57 @@ void MediaApp::DisplayConfigurationSettings() {
       duration_secs_, total_num_mapped_payloads_, (!use_pts_ ? "non-" : ""), frames_per_payload_);
 
   if (set_continuity_threshold_) {
-    printf(", having set the PTS continuity threshold to %f seconds",
+    printf(",\nhaving set the PTS continuity threshold to %f seconds",
            pts_continuity_threshold_secs_);
+  }
+
+  if (set_usage_gain_ || set_usage_volume_) {
+    printf(",\nafter setting ");
+    if (set_usage_gain_) {
+      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_, (set_usage_volume_ ? " and " : ""));
+    }
+    if (set_usage_volume_) {
+      printf("%s volume to %.1f", usage_str, usage_volume_);
+    }
   }
 
   printf(".\n\n");
 }
 
+// AudioCore interface is used to enable/disable the creation/update of device settings files,
+// and to change the gain/volume of usages.
+void MediaApp::SetAudioCoreSettings(sys::ComponentContext* app_context) {
+  if (set_device_settings_ || set_usage_gain_ || set_usage_volume_) {
+    fuchsia::media::AudioCorePtr audio_core;
+    app_context->svc()->Connect(audio_core.NewRequest());
+
+    if (set_device_settings_) {
+      audio_core->EnableDeviceSettings(settings_enabled_);
+    }
+
+    if (set_usage_gain_) {
+      audio_core->SetRenderUsageGain(usage_, usage_gain_db_);
+    }
+
+    if (set_usage_volume_) {
+      fuchsia::media::Usage usage;
+      usage.set_render_usage(usage_);
+      audio_core->BindUsageVolumeControl(std::move(usage), usage_volume_control_.NewRequest());
+
+      usage_volume_control_.set_error_handler([this](zx_status_t status) {
+        FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.audio.VolumeControl failed";
+        Shutdown();
+      });
+    }
+
+    // ... now just let the instance of audio_core go out of scope.
+  }
+}
+
 // Use ComponentContext to acquire AudioPtr; use that to acquire AudioRendererPtr in turn. Set
 // AudioRenderer error handler, in case of channel closure.
 void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
-  if (set_device_settings_) {
-    // The AudioCore interface is used to enable or disable the creation and update of device
-    // settings files.
-    fuchsia::media::AudioCorePtr audio_core;
-    app_context->svc()->Connect(audio_core.NewRequest());
-    audio_core->EnableDeviceSettings(settings_enabled_);
-  }
-
-  // Audio interface is needed to create AudioRenderer, set routing policy and set system gain/mute.
+  // Audio interface is needed to create AudioRenderer and set routing policy.
   fuchsia::media::AudioPtr audio;
   app_context->svc()->Connect(audio.NewRequest());
 
@@ -230,11 +276,11 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
   gain_control_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.GainControl failed";
+    FX_PLOGS(ERROR, status) << "Client connection to fuchsia.media.audio.GainControl failed";
     Shutdown();
   });
 
-  // ... now just let the instances of audio and audio_core go out of scope.
+  // ... now just let the instance of audio go out of scope.
 }
 
 // Set the AudioRenderer's audio format to stereo 48kHz 16-bit (LPCM).
@@ -259,6 +305,11 @@ void MediaApp::SetStreamType() {
   audio_renderer_->SetUsage(usage_);
 
   audio_renderer_->SetPcmStreamType(format);
+
+  // Set usage volume, if specified.
+  if (set_usage_volume_) {
+    usage_volume_control_->SetVolume(usage_volume_);
+  }
 
   // Set stream gain and mute, if specified.
   if (set_stream_mute_) {
@@ -298,8 +349,8 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 // uniformly-sized zones, called payloads.
 //
 // We round robin packets across each buffer, wrapping around to the start of each buffer once the
-// end is encountered. For example, with 2 buffers that can each hold 2 payloads each, we would send
-// audio packets in the following order:
+// end is encountered. For example, with 2 buffers that can each hold 2 payloads each, we would
+// send audio packets in the following order:
 //
 //  ------------------------
 // | buffer_id | payload_id |

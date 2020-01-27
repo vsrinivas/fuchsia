@@ -11,7 +11,8 @@
 
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
-namespace media::tools {
+namespace {
+constexpr float kUnityGainDb = 0.0f;
 
 typedef enum {
   kOutputTypeNoise,
@@ -22,6 +23,19 @@ typedef enum {
 // TODO(mpuryear): refactor the signal-generation section to make it easier for new generators to be
 // added.
 
+constexpr std::array<std::pair<const char*, fuchsia::media::AudioRenderUsage>,
+                     fuchsia::media::RENDER_USAGE_COUNT>
+    kRenderUsageOptions = {{
+        {"BACKGROUND", fuchsia::media::AudioRenderUsage::BACKGROUND},
+        {"MEDIA", fuchsia::media::AudioRenderUsage::MEDIA},
+        {"INTERRUPTION", fuchsia::media::AudioRenderUsage::INTERRUPTION},
+        {"SYSTEM_AGENT", fuchsia::media::AudioRenderUsage::SYSTEM_AGENT},
+        {"COMMUNICATION", fuchsia::media::AudioRenderUsage::COMMUNICATION},
+    }};
+
+}  // namespace
+
+namespace media::tools {
 class MediaApp {
  public:
   MediaApp(fit::closure quit_callback);
@@ -68,6 +82,15 @@ class MediaApp {
   void set_ramp_duration_nsec(zx_duration_t duration_nsec) { ramp_duration_nsec_ = duration_nsec; }
   void set_ramp_target_gain_db(float gain_db) { ramp_target_gain_db_ = gain_db; }
 
+  void set_usage_gain(float gain_db) {
+    set_usage_gain_ = true;
+    usage_gain_db_ = gain_db;
+  }
+  void set_usage_volume(float volume) {
+    set_usage_volume_ = true;
+    usage_volume_ = volume;
+  }
+
   void set_device_settings(bool settings_enabled) {
     set_device_settings_ = true;
     settings_enabled_ = settings_enabled;
@@ -79,6 +102,7 @@ class MediaApp {
   bool ParameterRangeChecks();
   void SetupPayloadCoefficients();
   void DisplayConfigurationSettings();
+  void SetAudioCoreSettings(sys::ComponentContext* app_context);
   void AcquireAudioRenderer(sys::ComponentContext* app_context);
   void SetStreamType();
 
@@ -115,6 +139,7 @@ class MediaApp {
   uint32_t frame_size_;
 
   fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
+  fuchsia::media::audio::VolumeControlPtr usage_volume_control_;  // for usage volume
 
   OutputSignalType output_signal_type_;
 
@@ -148,13 +173,18 @@ class MediaApp {
   bool wav_writer_is_initialized_ = false;
 
   bool set_stream_gain_ = false;
-  float stream_gain_db_ = 0.0;
+  float stream_gain_db_ = kUnityGainDb;
   bool set_stream_mute_ = false;
   bool stream_mute_ = false;
 
   bool ramp_stream_gain_ = false;
-  float ramp_target_gain_db_ = 0.0;
+  float ramp_target_gain_db_ = kUnityGainDb;
   zx_duration_t ramp_duration_nsec_;
+
+  bool set_usage_gain_ = false;
+  float usage_gain_db_ = kUnityGainDb;
+  bool set_usage_volume_ = false;
+  float usage_volume_;
 
   bool set_device_settings_ = false;
   bool settings_enabled_ = true;
