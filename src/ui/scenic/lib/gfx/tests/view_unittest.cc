@@ -50,7 +50,7 @@ void VerifyViewState(const fuchsia::ui::scenic::Event& event, bool is_rendering_
   EXPECT_EQ(is_rendering_expected, view_state.is_rendering);
 }
 
-} // namespace
+}  // namespace
 
 class ViewTest : public SessionTest {
  public:

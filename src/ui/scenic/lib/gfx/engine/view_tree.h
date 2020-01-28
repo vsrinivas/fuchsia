@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_ENGINE_VIEW_TREE_H_
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_VIEW_TREE_H_
 
+#include <fuchsia/ui/annotation/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <zircon/types.h>
@@ -20,6 +21,9 @@
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
 namespace scenic_impl::gfx {
+
+// Forward declaration to avoid circular include.
+class ViewHolder;
 
 // Represent the tree of ViewRefs in a scene graph, and maintain the global "focus chain".
 //
@@ -80,6 +84,9 @@ class ViewTree {
     // Park a callback that returns the current global transform of the node.
     fit::function<std::optional<glm::mat4>()> global_transform;
 
+    // Park a function that creates an annotation ViewHolder using given ViewHolderToken.
+    fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
+
     scheduling::SessionId session_id = 0u;  // Default value: an invalid ID.
   };
 
@@ -117,7 +124,6 @@ class ViewTree {
   // Note that a valid and tracked koid may still return null, or later become null.
   EventReporterWeakPtr EventReporterOf(zx_koid_t koid) const;
 
-
   // Return the global transform of the node attached to a tracked |koid|.
   // Returns std::nullopt if no node was found or the node had no valid global transform.
   std::optional<glm::mat4> GlobalTransformOf(zx_koid_t koid) const;
@@ -146,6 +152,10 @@ class ViewTree {
   // NOTE: Scene connectivity is not required.
   bool MayReceiveFocus(zx_koid_t koid) const;
 
+  // Try creating an annotation ViewHolder as the child of the View "koid" refers to.
+  // Return the creation result enum.
+  zx_status_t AddAnnotationViewHolder(zx_koid_t koid, fxl::RefPtr<ViewHolder> view_holder) const;
+
   // Debug-only check for state validity.  See "Invariants" section in class comment.
   // - Runtime is O(N^2), chiefly due to the "AttachNode, when a parent, has one child" check.
   bool IsStateValid() const;
@@ -165,6 +175,7 @@ class ViewTree {
   void NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWeakPtr reporter,
                   fit::function<bool()> may_receive_focus,
                   fit::function<std::optional<glm::mat4>()> global_transform,
+                  fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder,
                   scheduling::SessionId session_id = 0u);
 
   // Pre: koid is a valid KOID
@@ -245,6 +256,7 @@ struct ViewTreeNewRefNode {
   EventReporterWeakPtr event_reporter;
   fit::function<bool()> may_receive_focus;
   fit::function<std::optional<glm::mat4>()> global_transform;
+  fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
   scheduling::SessionId session_id = 0u;
 };
 

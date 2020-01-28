@@ -52,6 +52,9 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
     fit::function<std::optional<glm::mat4>()> global_transform = [weak_ptr = GetWeakPtr()] {
       return weak_ptr ? std::optional<glm::mat4>{weak_ptr->GetGlobalTransform()} : std::nullopt;
     };
+    fit::function<void(ViewHolderPtr)> add_annotation_view_holder = [](auto) {
+      FXL_NOTREACHED() << "Cannot create Annotation ViewHolder for Scene.";
+    };
 
     FXL_DCHECK(session_id != 0u) << "GFX-side invariant for ViewTree";
     if (view_tree_updater_) {
@@ -60,6 +63,7 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
                              .event_reporter = std::move(event_reporter),
                              .may_receive_focus = std::move(may_receive_focus),
                              .global_transform = std::move(global_transform),
+                             .add_annotation_view_holder = std::move(add_annotation_view_holder),
                              .session_id = session_id});
     }
   }

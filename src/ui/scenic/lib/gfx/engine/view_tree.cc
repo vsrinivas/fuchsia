@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 
 namespace scenic_impl::gfx {
 
@@ -128,6 +129,20 @@ std::optional<glm::mat4> ViewTree::GlobalTransformOf(zx_koid_t koid) const {
   }
 
   return std::get_if<RefNode>(&nodes_.at(koid))->global_transform();
+}
+
+zx_status_t ViewTree::AddAnnotationViewHolder(zx_koid_t koid, ViewHolderPtr annotation) const {
+  if (!IsValid(koid)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (!IsTracked(koid)) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (!IsRefNode(koid)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  std::get_if<RefNode>(&nodes_.at(koid))->add_annotation_view_holder(std::move(annotation));
+  return ZX_OK;
 }
 
 bool ViewTree::IsStateValid() const {
@@ -380,12 +395,14 @@ ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t request
 void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWeakPtr reporter,
                           fit::function<bool()> may_receive_focus,
                           fit::function<std::optional<glm::mat4>()> global_transform,
+                          fit::function<void(ViewHolderPtr)> add_annotation_view_holder,
                           scheduling::SessionId session_id) {
   const zx_koid_t koid = ExtractKoid(view_ref);
   FXL_DCHECK(IsValid(koid)) << "precondition";
   FXL_DCHECK(!IsTracked(koid)) << "precondition";
-  FXL_DCHECK(may_receive_focus) << "precondition";  // Callback exists.
-  FXL_DCHECK(global_transform) << "precondition";   // Callback exists.
+  FXL_DCHECK(may_receive_focus) << "precondition";           // Callback exists.
+  FXL_DCHECK(global_transform) << "precondition";            // Callback exists.
+  FXL_DCHECK(add_annotation_view_holder) << "precondition";  // Callback exists.
   FXL_DCHECK(session_id != scheduling::kInvalidSessionId) << "precondition";
 
   if (!IsValid(koid) || IsTracked(koid))
@@ -395,6 +412,7 @@ void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWea
                          .event_reporter = reporter,
                          .may_receive_focus = std::move(may_receive_focus),
                          .global_transform = std::move(global_transform),
+                         .add_annotation_view_holder = std::move(add_annotation_view_holder),
                          .session_id = session_id};
 
   ref_node_koids_.insert({session_id, koid});

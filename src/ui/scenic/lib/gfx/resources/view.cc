@@ -12,17 +12,21 @@
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
+#include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
 namespace scenic_impl {
 namespace gfx {
 
+using fuchsia::ui::views::ViewHolderToken;
+using fuchsia::ui::views::ViewRef;
+using fuchsia::ui::views::ViewRefControl;
+
 const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 
-View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl control_ref,
-           fuchsia::ui::views::ViewRef view_ref, std::string debug_name,
-           std::shared_ptr<ErrorReporter> error_reporter,
+View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef view_ref,
+           std::string debug_name, std::shared_ptr<ErrorReporter> error_reporter,
            fxl::WeakPtr<ViewTreeUpdater> view_tree_updater, EventReporterWeakPtr event_reporter)
     : Resource(session, session->id(), id, View::kTypeInfo),
       control_ref_(std::move(control_ref)),
@@ -40,7 +44,7 @@ View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl c
 
   {
     TRACE_DURATION_BEGIN("gfx", "ResourceCtorViewRefClone");
-    fuchsia::ui::views::ViewRef clone;
+    ViewRef clone;
     fidl::Clone(view_ref_, &clone);
     TRACE_DURATION_END("gfx", "ResourceCtorViewRefClone");
 
@@ -62,6 +66,12 @@ View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl c
                  : std::nullopt;
     };
 
+    fit::function<void(ViewHolderPtr)> create_callback =
+        [weak_ptr = GetWeakPtr()](ViewHolderPtr annotation_view_holder) {
+          FXL_CHECK(weak_ptr);
+          weak_ptr->AddAnnotationViewHolder(std::move(annotation_view_holder));
+        };
+
     FXL_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";
     if (view_tree_updater_) {
       view_tree_updater_->AddUpdate(
@@ -69,6 +79,7 @@ View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl c
                              .event_reporter = std::move(reporter),
                              .may_receive_focus = std::move(may_receive_focus),
                              .global_transform = std::move(global_transform),
+                             .add_annotation_view_holder = std::move(create_callback),
                              .session_id = session->id()});
     }
   }

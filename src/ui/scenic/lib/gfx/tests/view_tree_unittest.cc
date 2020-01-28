@@ -5,11 +5,13 @@
 #include "src/ui/scenic/lib/gfx/engine/view_tree.h"
 
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "gtest/gtest.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
+#include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace lib_ui_gfx_engine_tests {
@@ -18,6 +20,7 @@ using fuchsia::ui::focus::FocusChain;
 using fuchsia::ui::views::ViewRef;
 using scenic_impl::EventReporterWeakPtr;
 using scenic_impl::gfx::ExtractKoid;
+using scenic_impl::gfx::ViewHolderPtr;
 using scenic_impl::gfx::ViewTree;
 
 const scenic_impl::SessionId kOne = 1u, kTwo = 2u, kThree = 3u, kFour = 4u, kFive = 5u;
@@ -28,6 +31,11 @@ fit::function<bool()> MayReceiveFocus() {
 
 fit::function<std::optional<glm::mat4>()> NoGlobalTransform() {
   return [] { return std::nullopt; };  // Global transform is not used by these tests.
+}
+
+fit::function<void(ViewHolderPtr)> DummyAddAnnotation() {
+  // Annotation is not used by these tests.
+  return [](auto) {};
 }
 
 TEST(ViewTreeLifecycle, EmptyScene) {
@@ -48,7 +56,7 @@ TEST(ViewTreeLifecycle, SceneCreateThenDestroy) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(koid);
 
   ASSERT_EQ(tree.focus_chain().size(), 1u);
@@ -78,14 +86,14 @@ TEST(ViewTreeLifecycle, SceneCreateThenReplace) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   // Replace it with another scene node.
   scenic::ViewRefPair pair_b = scenic::ViewRefPair::New();
   zx_koid_t scene_koid_b = ExtractKoid(pair_b.view_ref);
   tree.NewRefNode(std::move(pair_b.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid_b);
 
   EXPECT_EQ(tree.focus_chain().size(), 1u);
@@ -106,7 +114,7 @@ TEST(ViewTreeLifecycle, ConnectedSceneWithFocusTransfer) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   // Create an attach node for view 1, connect to scene.
@@ -122,7 +130,7 @@ TEST(ViewTreeLifecycle, ConnectedSceneWithFocusTransfer) {
   scenic::ViewRefPair pair_1 = scenic::ViewRefPair::New();
   zx_koid_t view_1_koid = ExtractKoid(pair_1.view_ref);
   tree.NewRefNode(std::move(pair_1.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kTwo);
+                  DummyAddAnnotation(), kTwo);
   tree.ConnectToParent(view_1_koid, attach_1_koid);
 
   ASSERT_EQ(tree.focus_chain().size(), 1u);
@@ -142,7 +150,7 @@ TEST(ViewTreeLifecycle, ConnectedSceneWithFocusTransfer) {
   scenic::ViewRefPair pair_2 = scenic::ViewRefPair::New();
   zx_koid_t view_2_koid = ExtractKoid(pair_2.view_ref);
   tree.NewRefNode(std::move(pair_2.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kThree);
+                  DummyAddAnnotation(), kThree);
   tree.ConnectToParent(view_2_koid, attach_2_koid);
 
   // Transfer focus: scene to view 2.
@@ -186,7 +194,7 @@ TEST(ViewTreeLifecycle, SlowlyDestroyedScene) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_1_koid = 1111u;
@@ -196,7 +204,7 @@ TEST(ViewTreeLifecycle, SlowlyDestroyedScene) {
   scenic::ViewRefPair pair_1 = scenic::ViewRefPair::New();
   zx_koid_t view_1_koid = ExtractKoid(pair_1.view_ref);
   tree.NewRefNode(std::move(pair_1.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kTwo);
+                  DummyAddAnnotation(), kTwo);
   tree.ConnectToParent(view_1_koid, attach_1_koid);
 
   zx_koid_t attach_2_koid = 2222u;
@@ -206,7 +214,7 @@ TEST(ViewTreeLifecycle, SlowlyDestroyedScene) {
   scenic::ViewRefPair pair_2 = scenic::ViewRefPair::New();
   zx_koid_t view_2_koid = ExtractKoid(pair_2.view_ref);
   tree.NewRefNode(std::move(pair_2.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kThree);
+                  DummyAddAnnotation(), kThree);
   tree.ConnectToParent(view_2_koid, attach_2_koid);
 
   EXPECT_TRUE(tree.IsStateValid());
@@ -251,7 +259,7 @@ TEST(ViewTreeLifecycle, SlowlyDisconnectedScene) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_1_koid = 1111u;
@@ -261,7 +269,7 @@ TEST(ViewTreeLifecycle, SlowlyDisconnectedScene) {
   scenic::ViewRefPair pair_1 = scenic::ViewRefPair::New();
   zx_koid_t view_1_koid = ExtractKoid(pair_1.view_ref);
   tree.NewRefNode(std::move(pair_1.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kTwo);
+                  DummyAddAnnotation(), kTwo);
   tree.ConnectToParent(view_1_koid, attach_1_koid);
 
   zx_koid_t attach_2_koid = 2222u;
@@ -271,7 +279,7 @@ TEST(ViewTreeLifecycle, SlowlyDisconnectedScene) {
   scenic::ViewRefPair pair_2 = scenic::ViewRefPair::New();
   zx_koid_t view_2_koid = ExtractKoid(pair_2.view_ref);
   tree.NewRefNode(std::move(pair_2.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kThree);
+                  DummyAddAnnotation(), kThree);
   tree.ConnectToParent(view_2_koid, attach_2_koid);
 
   EXPECT_TRUE(tree.IsStateValid());
@@ -317,7 +325,7 @@ TEST(ViewTreeLifecycle, ReleaseBypassesUnfocusableNodes) {
   scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
   tree.NewRefNode(std::move(scene_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kOne);
+                  NoGlobalTransform(), DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_koid_1 = 1111u;
@@ -328,7 +336,7 @@ TEST(ViewTreeLifecycle, ReleaseBypassesUnfocusableNodes) {
   zx_koid_t view_koid_1 = ExtractKoid(view_pair_1.view_ref);
   tree.NewRefNode(
       std::move(view_pair_1.view_ref), no_reporter, [] { return false; }, NoGlobalTransform(),
-      kTwo);
+      DummyAddAnnotation(), kTwo);
   tree.ConnectToParent(view_koid_1, attach_koid_1);
 
   zx_koid_t attach_koid_2 = 2222u;
@@ -339,7 +347,7 @@ TEST(ViewTreeLifecycle, ReleaseBypassesUnfocusableNodes) {
   zx_koid_t view_koid_2 = ExtractKoid(view_pair_2.view_ref);
   tree.NewRefNode(
       std::move(view_pair_2.view_ref), no_reporter, [] { return false; }, NoGlobalTransform(),
-      kThree);
+      DummyAddAnnotation(), kThree);
   tree.ConnectToParent(view_koid_2, attach_koid_2);
 
   zx_koid_t attach_koid_3 = 3333u;
@@ -349,7 +357,7 @@ TEST(ViewTreeLifecycle, ReleaseBypassesUnfocusableNodes) {
   scenic::ViewRefPair view_pair_3 = scenic::ViewRefPair::New();
   zx_koid_t view_koid_3 = ExtractKoid(view_pair_3.view_ref);
   tree.NewRefNode(std::move(view_pair_3.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kFour);
+                  NoGlobalTransform(), DummyAddAnnotation(), kFour);
   tree.ConnectToParent(view_koid_3, attach_koid_3);
 
   ASSERT_EQ(tree.RequestFocusChange(scene_koid, view_koid_3), ViewTree::FocusChangeStatus::kAccept);
@@ -373,7 +381,7 @@ TEST(ViewTreePrimitive, NewRefNode) {
   scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
   zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
   tree.NewRefNode(std::move(view_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kOne);
+                  NoGlobalTransform(), DummyAddAnnotation(), kOne);
 
   EXPECT_TRUE(tree.IsTracked(view_koid));
 }
@@ -394,7 +402,7 @@ TEST(ViewTreePrimitive, DeleteNode) {
   scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
   tree.NewRefNode(std::move(scene_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kOne);
+                  NoGlobalTransform(), DummyAddAnnotation(), kOne);
 
   zx_koid_t attach_koid = 1111u;
   tree.NewAttachNode(attach_koid);
@@ -402,7 +410,7 @@ TEST(ViewTreePrimitive, DeleteNode) {
   scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
   zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
   tree.NewRefNode(std::move(view_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kTwo);
+                  NoGlobalTransform(), DummyAddAnnotation(), kTwo);
 
   tree.DeleteNode(scene_koid);
   tree.DeleteNode(attach_koid);
@@ -424,7 +432,7 @@ TEST(ViewTreePrimitive, MakeGlobalRoot) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   EXPECT_FALSE(tree.focus_chain().empty());
@@ -434,7 +442,7 @@ TEST(ViewTreePrimitive, MakeGlobalRoot) {
   scenic::ViewRefPair pair_2 = scenic::ViewRefPair::New();
   zx_koid_t scene_koid_2 = ExtractKoid(pair_2.view_ref);
   tree.NewRefNode(std::move(pair_2.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid_2);
 
   EXPECT_FALSE(tree.focus_chain().empty());
@@ -454,7 +462,7 @@ TEST(ViewTreePrimitive, IsConnected) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   EXPECT_TRUE(tree.IsConnected(scene_koid));
@@ -463,7 +471,7 @@ TEST(ViewTreePrimitive, IsConnected) {
   scenic::ViewRefPair pair_2 = scenic::ViewRefPair::New();
   zx_koid_t scene_koid_2 = ExtractKoid(pair_2.view_ref);
   tree.NewRefNode(std::move(pair_2.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid_2);
 
   EXPECT_FALSE(tree.IsConnected(scene_koid));
@@ -493,7 +501,7 @@ TEST(ViewTreePrimitive, IsRefNode) {
   scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
   zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
   tree.NewRefNode(std::move(view_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kOne);
+                  NoGlobalTransform(), DummyAddAnnotation(), kOne);
 
   EXPECT_TRUE(tree.IsRefNode(view_koid));
 
@@ -501,6 +509,35 @@ TEST(ViewTreePrimitive, IsRefNode) {
   tree.NewAttachNode(attach_koid);
 
   EXPECT_FALSE(tree.IsRefNode(attach_koid));
+}
+
+TEST(ViewTreePrimitive, AddAnnotationHolder) {
+  ViewTree tree{};
+  EventReporterWeakPtr no_reporter{};
+
+  {
+    scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
+    zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
+    bool is_called = false;
+    tree.NewRefNode(
+        std::move(view_pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
+        [&is_called](auto) { is_called = true; }, kOne);
+    EXPECT_EQ(ZX_OK, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
+    EXPECT_TRUE(is_called);
+  }
+
+  {
+    scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
+    zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
+    tree.NewAttachNode(view_koid);
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
+  }
+
+  {
+    scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
+    zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, tree.AddAnnotationViewHolder(view_koid, ViewHolderPtr()));
+  }
 }
 
 TEST(ViewTreePrimitive, MayReceiveFocus) {
@@ -517,7 +554,7 @@ TEST(ViewTreePrimitive, MayReceiveFocus) {
           is_called = true;
           return true;
         },
-        NoGlobalTransform(), kOne);
+        NoGlobalTransform(), DummyAddAnnotation(), kOne);
     EXPECT_TRUE(tree.MayReceiveFocus(view_koid));
     EXPECT_TRUE(is_called);
   }
@@ -532,7 +569,7 @@ TEST(ViewTreePrimitive, MayReceiveFocus) {
           is_called = true;
           return false;
         },
-        NoGlobalTransform(), kOne);
+        NoGlobalTransform(), DummyAddAnnotation(), kOne);
     EXPECT_FALSE(tree.MayReceiveFocus(view_koid));
     EXPECT_TRUE(is_called);
   }
@@ -545,7 +582,7 @@ TEST(ViewTreePrimitive, ConnectAndDisconnect) {
   scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
   tree.NewRefNode(std::move(scene_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kOne);
+                  NoGlobalTransform(), DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_koid = 1111u;
@@ -554,7 +591,7 @@ TEST(ViewTreePrimitive, ConnectAndDisconnect) {
   scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
   zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
   tree.NewRefNode(std::move(view_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kTwo);
+                  NoGlobalTransform(), DummyAddAnnotation(), kTwo);
 
   EXPECT_FALSE(tree.ParentOf(scene_koid).has_value());
   EXPECT_FALSE(tree.ParentOf(attach_koid).has_value());
@@ -596,7 +633,7 @@ TEST(ViewTreePrimitive, DisconnectUnconnectedChild) {
   scenic::ViewRefPair ref_pair = scenic::ViewRefPair::New();
   zx_koid_t ref_koid = ExtractKoid(ref_pair.view_ref);
   tree.NewRefNode(std::move(ref_pair.view_ref), no_reporter, MayReceiveFocus(), NoGlobalTransform(),
-                  kOne);
+                  DummyAddAnnotation(), kOne);
 
   tree.DisconnectFromParent(ref_koid);
 
@@ -621,7 +658,7 @@ TEST(ViewTreePrimitive, DeleteParentThenDisconnectChild) {
     scenic::ViewRefPair ref_pair = scenic::ViewRefPair::New();
     zx_koid_t ref_koid = ExtractKoid(ref_pair.view_ref);
     tree.NewRefNode(std::move(ref_pair.view_ref), no_reporter, MayReceiveFocus(),
-                    NoGlobalTransform(), kOne);
+                    NoGlobalTransform(), DummyAddAnnotation(), kOne);
 
     zx_koid_t attach_koid = 1111u;
     tree.NewAttachNode(attach_koid);
@@ -647,7 +684,7 @@ TEST(ViewTreePrimitive, DeleteParentThenDisconnectChild) {
     scenic::ViewRefPair ref_pair = scenic::ViewRefPair::New();
     zx_koid_t ref_koid = ExtractKoid(ref_pair.view_ref);
     tree.NewRefNode(std::move(ref_pair.view_ref), no_reporter, MayReceiveFocus(),
-                    NoGlobalTransform(), kOne);
+                    NoGlobalTransform(), DummyAddAnnotation(), kOne);
     tree.ConnectToParent(ref_koid, attach_koid);
 
     EXPECT_EQ(tree.ParentOf(ref_koid), attach_koid);
@@ -679,7 +716,7 @@ TEST(ViewTreePrimitive, RequestFocusChange) {
   scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
   tree.NewRefNode(std::move(scene_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kOne);
+                  NoGlobalTransform(), DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_koid_1 = 1111u;
@@ -689,7 +726,7 @@ TEST(ViewTreePrimitive, RequestFocusChange) {
   scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
   zx_koid_t view_koid_1 = ExtractKoid(view_pair.view_ref);
   tree.NewRefNode(std::move(view_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kTwo);
+                  NoGlobalTransform(), DummyAddAnnotation(), kTwo);
   tree.ConnectToParent(view_koid_1, attach_koid_1);
 
   zx_koid_t attach_koid_2 = 2222u;
@@ -699,7 +736,7 @@ TEST(ViewTreePrimitive, RequestFocusChange) {
   scenic::ViewRefPair view_pair_2 = scenic::ViewRefPair::New();
   zx_koid_t view_koid_2 = ExtractKoid(view_pair_2.view_ref);
   tree.NewRefNode(std::move(view_pair_2.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kThree);
+                  NoGlobalTransform(), DummyAddAnnotation(), kThree);
   tree.ConnectToParent(view_koid_2, attach_koid_2);
 
   zx_koid_t attach_koid_3 = 3333u;
@@ -709,7 +746,7 @@ TEST(ViewTreePrimitive, RequestFocusChange) {
   scenic::ViewRefPair view_pair_3 = scenic::ViewRefPair::New();
   zx_koid_t view_koid_3 = ExtractKoid(view_pair_3.view_ref);
   tree.NewRefNode(std::move(view_pair_3.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kFour);
+                  NoGlobalTransform(), DummyAddAnnotation(), kFour);
   tree.ConnectToParent(view_koid_3, attach_koid_3);
 
   zx_koid_t attach_koid_4 = 4444u;
@@ -719,7 +756,7 @@ TEST(ViewTreePrimitive, RequestFocusChange) {
   scenic::ViewRefPair view_pair_4 = scenic::ViewRefPair::New();
   zx_koid_t view_koid_4 = ExtractKoid(view_pair_4.view_ref);
   tree.NewRefNode(std::move(view_pair_4.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kFive);
+                  NoGlobalTransform(), DummyAddAnnotation(), kFive);
   tree.ConnectToParent(view_koid_4, attach_koid_4);
 
   // Transfer requests.
@@ -798,7 +835,7 @@ TEST(ViewTreePrimitive, RequestFocusChangeDeniedIfUnfocusable) {
   scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
   tree.NewRefNode(std::move(scene_pair.view_ref), no_reporter, MayReceiveFocus(),
-                  NoGlobalTransform(), kOne);
+                  NoGlobalTransform(), DummyAddAnnotation(), kOne);
   tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_koid = 1111u;
@@ -808,7 +845,8 @@ TEST(ViewTreePrimitive, RequestFocusChangeDeniedIfUnfocusable) {
   scenic::ViewRefPair view_pair = scenic::ViewRefPair::New();
   zx_koid_t view_koid = ExtractKoid(view_pair.view_ref);
   tree.NewRefNode(
-      std::move(view_pair.view_ref), no_reporter, [] { return false; }, NoGlobalTransform(), kTwo);
+      std::move(view_pair.view_ref), no_reporter, [] { return false; }, NoGlobalTransform(),
+      DummyAddAnnotation(), kTwo);
   tree.ConnectToParent(view_koid, attach_koid);
 
   ASSERT_EQ(tree.focus_chain().size(), 1u);
