@@ -598,6 +598,10 @@ func (s *WithAndWithoutRequestResponseService) Add(impl WithAndWithoutRequestRes
 	return s.BindingSet.Add(&WithAndWithoutRequestResponseStub{Impl: impl}, c, onError)
 }
 
+func (s *WithAndWithoutRequestResponseService) AddWithCtx(impl WithAndWithoutRequestResponseWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&WithAndWithoutRequestResponseWithCtxStub{Impl: impl}, c, onError)
+}
+
 func (s *WithAndWithoutRequestResponseService) EventProxyFor(key _bindings.BindingKey) (*WithAndWithoutRequestResponseEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*WithAndWithoutRequestResponseEventProxy)(pxy), err
@@ -751,6 +755,10 @@ type WithErrorSyntaxService struct {
 
 func (s *WithErrorSyntaxService) Add(impl WithErrorSyntax, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
 	return s.BindingSet.Add(&WithErrorSyntaxStub{Impl: impl}, c, onError)
+}
+
+func (s *WithErrorSyntaxService) AddWithCtx(impl WithErrorSyntaxWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&WithErrorSyntaxWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *WithErrorSyntaxService) EventProxyFor(key _bindings.BindingKey) (*WithErrorSyntaxEventProxy, bool) {
@@ -931,6 +939,10 @@ type ChannelProtocolService struct {
 
 func (s *ChannelProtocolService) Add(impl ChannelProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
 	return s.BindingSet.Add(&ChannelProtocolStub{Impl: impl}, c, onError)
+}
+
+func (s *ChannelProtocolService) AddWithCtx(impl ChannelProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&ChannelProtocolWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *ChannelProtocolService) EventProxyFor(key _bindings.BindingKey) (*ChannelProtocolEventProxy, bool) {

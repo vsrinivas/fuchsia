@@ -257,6 +257,10 @@ func (s *InterfaceService) Add(impl Interface, c _zx.Channel, onError func(error
 	return s.BindingSet.Add(&InterfaceStub{Impl: impl}, c, onError)
 }
 
+func (s *InterfaceService) AddWithCtx(impl InterfaceWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&InterfaceWithCtxStub{Impl: impl}, c, onError)
+}
+
 func (s *InterfaceService) EventProxyFor(key _bindings.BindingKey) (*InterfaceEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*InterfaceEventProxy)(pxy), err

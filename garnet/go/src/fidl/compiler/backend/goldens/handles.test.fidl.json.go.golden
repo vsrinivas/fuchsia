@@ -130,6 +130,10 @@ func (s *SomeProtocolService) Add(impl SomeProtocol, c _zx.Channel, onError func
 	return s.BindingSet.Add(&SomeProtocolStub{Impl: impl}, c, onError)
 }
 
+func (s *SomeProtocolService) AddWithCtx(impl SomeProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&SomeProtocolWithCtxStub{Impl: impl}, c, onError)
+}
+
 func (s *SomeProtocolService) EventProxyFor(key _bindings.BindingKey) (*SomeProtocolEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*SomeProtocolEventProxy)(pxy), err

@@ -355,6 +355,10 @@ func (s *{{ .ServerName }}) Add(impl {{ .Name }}, c _zx.Channel, onError func(er
 	return s.BindingSet.Add(&{{ .StubName }}{Impl: impl}, c, onError)
 }
 
+func (s *{{ .ServerName }}) AddWithCtx(impl {{ .WithCtxName }}, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&{{ .StubWithCtxName }}{Impl: impl}, c, onError)
+}
+
 func (s *{{ .ServerName }}) EventProxyFor(key _bindings.BindingKey) (*{{ .EventProxyName }}, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*{{ .EventProxyName }})(pxy), err

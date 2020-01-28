@@ -128,6 +128,10 @@ func (s *SwitchingOrdinalsService) Add(impl SwitchingOrdinals, c _zx.Channel, on
 	return s.BindingSet.Add(&SwitchingOrdinalsStub{Impl: impl}, c, onError)
 }
 
+func (s *SwitchingOrdinalsService) AddWithCtx(impl SwitchingOrdinalsWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&SwitchingOrdinalsWithCtxStub{Impl: impl}, c, onError)
+}
+
 func (s *SwitchingOrdinalsService) EventProxyFor(key _bindings.BindingKey) (*SwitchingOrdinalsEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*SwitchingOrdinalsEventProxy)(pxy), err

@@ -116,6 +116,10 @@ func (s *ChildService) Add(impl Child, c _zx.Channel, onError func(error)) (_bin
 	return s.BindingSet.Add(&ChildStub{Impl: impl}, c, onError)
 }
 
+func (s *ChildService) AddWithCtx(impl ChildWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&ChildWithCtxStub{Impl: impl}, c, onError)
+}
+
 func (s *ChildService) EventProxyFor(key _bindings.BindingKey) (*ChildEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*ChildEventProxy)(pxy), err
@@ -294,6 +298,10 @@ type ParentService struct {
 
 func (s *ParentService) Add(impl Parent, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
 	return s.BindingSet.Add(&ParentStub{Impl: impl}, c, onError)
+}
+
+func (s *ParentService) AddWithCtx(impl ParentWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&ParentWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *ParentService) EventProxyFor(key _bindings.BindingKey) (*ParentEventProxy, bool) {

@@ -465,6 +465,10 @@ func (s *TestProtocolService) Add(impl TestProtocol, c _zx.Channel, onError func
 	return s.BindingSet.Add(&TestProtocolStub{Impl: impl}, c, onError)
 }
 
+func (s *TestProtocolService) AddWithCtx(impl TestProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&TestProtocolWithCtxStub{Impl: impl}, c, onError)
+}
+
 func (s *TestProtocolService) EventProxyFor(key _bindings.BindingKey) (*TestProtocolEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*TestProtocolEventProxy)(pxy), err

@@ -92,6 +92,10 @@ func (s *FirstProtocolService) Add(impl FirstProtocol, c _zx.Channel, onError fu
 	return s.BindingSet.Add(&FirstProtocolStub{Impl: impl}, c, onError)
 }
 
+func (s *FirstProtocolService) AddWithCtx(impl FirstProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&FirstProtocolWithCtxStub{Impl: impl}, c, onError)
+}
+
 func (s *FirstProtocolService) EventProxyFor(key _bindings.BindingKey) (*FirstProtocolEventProxy, bool) {
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*FirstProtocolEventProxy)(pxy), err
@@ -180,6 +184,10 @@ type SecondProtocolService struct {
 
 func (s *SecondProtocolService) Add(impl SecondProtocol, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
 	return s.BindingSet.Add(&SecondProtocolStub{Impl: impl}, c, onError)
+}
+
+func (s *SecondProtocolService) AddWithCtx(impl SecondProtocolWithCtx, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&SecondProtocolWithCtxStub{Impl: impl}, c, onError)
 }
 
 func (s *SecondProtocolService) EventProxyFor(key _bindings.BindingKey) (*SecondProtocolEventProxy, bool) {
