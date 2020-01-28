@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
@@ -28,19 +29,22 @@ std::string GetJobContextName(const JobContext* job_context) {
 }  // namespace
 
 OutputBuffer FormatJobContext(ConsoleContext* context, const JobContext* job_context) {
-  int id = context->IdForJobContext(job_context);
-  const char* state = JobContextStateToString(job_context->GetState());
+  OutputBuffer out("Job ");
+  out.Append(Syntax::kSpecial, std::to_string(context->IdForJobContext(job_context)));
 
-  // Koid string. This includes a trailing space when present so it can be
-  // concat'd even when not present and things look nice.
-  std::string koid_str;
+  out.Append(Syntax::kVariable, " state");
+  out.Append(std::string("=") +
+             FormatConsoleString(JobContextStateToString(job_context->GetState())) + " ");
+
   if (job_context->GetState() == JobContext::State::kAttached) {
-    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ", job_context->GetJob()->GetKoid());
+    out.Append(Syntax::kVariable, "koid");
+    out.Append("=" + std::to_string(job_context->GetJob()->GetKoid()) + " ");
   }
 
-  std::string result = fxl::StringPrintf("Job %d [%s] %s", id, state, koid_str.c_str());
-  result += GetJobContextName(job_context);
-  return result;
+  out.Append(Syntax::kVariable, "name");
+  out.Append(std::string("=") + FormatConsoleString(GetJobContextName(job_context)));
+
+  return out;
 }
 
 OutputBuffer FormatJobList(ConsoleContext* context, int indent) {

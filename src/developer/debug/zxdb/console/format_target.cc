@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
@@ -35,19 +36,21 @@ std::string GetTargetName(const Target* target) {
 }  // namespace
 
 OutputBuffer FormatTarget(ConsoleContext* context, const Target* target) {
-  int id = context->IdForTarget(target);
-  const char* state = TargetStateToString(target->GetState());
+  OutputBuffer out("Process ");
+  out.Append(Syntax::kSpecial, std::to_string(context->IdForTarget(target)));
 
-  // Koid string. This includes a trailing space when present so it can be
-  // concat'd even when not present and things look nice.
-  std::string koid_str;
+  out.Append(Syntax::kVariable, " state");
+  out.Append(std::string("=") + FormatConsoleString(TargetStateToString(target->GetState())) + " ");
+
   if (target->GetState() == Target::State::kRunning) {
-    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ", target->GetProcess()->GetKoid());
+    out.Append(Syntax::kVariable, "koid");
+    out.Append("=" + std::to_string(target->GetProcess()->GetKoid()) + " ");
   }
 
-  std::string result = fxl::StringPrintf("Process %d [%s] %s", id, state, koid_str.c_str());
-  result += GetTargetName(target);
-  return result;
+  out.Append(Syntax::kVariable, "name");
+  out.Append(std::string("=") + FormatConsoleString(GetTargetName(target)));
+
+  return out;
 }
 
 OutputBuffer FormatTargetList(ConsoleContext* context, int indent) {
@@ -75,12 +78,12 @@ OutputBuffer FormatTargetList(ConsoleContext* context, int indent) {
       row.push_back(indent_str);
 
     // ID.
-    row.push_back(fxl::StringPrintf("%d", pair.first));
+    row.push_back(std::to_string(pair.first));
 
     // State and koid (if running).
     row.push_back(TargetStateToString(pair.second->GetState()));
     if (pair.second->GetState() == Target::State::kRunning) {
-      row.push_back(fxl::StringPrintf("%" PRIu64, pair.second->GetProcess()->GetKoid()));
+      row.push_back(std::to_string(pair.second->GetProcess()->GetKoid()));
     } else {
       row.emplace_back();
     }

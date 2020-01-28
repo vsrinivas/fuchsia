@@ -48,7 +48,7 @@ TEST_F(VerbAttach, Koid) {
 
   auto event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Process 2 [Running] koid=7890 some process", event.output.AsString());
+  EXPECT_EQ("Process 2 state=Running koid=7890 name=\"some process\"", event.output.AsString());
 }
 
 TEST_F(VerbAttach, Filter) {

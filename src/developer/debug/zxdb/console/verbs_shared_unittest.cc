@@ -67,7 +67,7 @@ TEST_F(VerbsSharedTest, NewRm) {
   console.ProcessInputLine("job new");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Job 2 [Not attached] ", event.output.AsString());
+  EXPECT_EQ("Job 2 state=\"Not attached\" name=\"\"", event.output.AsString());
 
   // Create a new filter specifically for the new job.
   console.ProcessInputLine("job 2 attach ninjas");
@@ -92,7 +92,7 @@ TEST_F(VerbsSharedTest, NewRm) {
   console.ProcessInputLine("job rm");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Removed Job 2 [Not attached] ", event.output.AsString());
+  EXPECT_EQ("Removed Job 2 state=\"Not attached\" name=\"\"", event.output.AsString());
 
   // The associated filter should have been automatically deleted.
   console.ProcessInputLine("filter");

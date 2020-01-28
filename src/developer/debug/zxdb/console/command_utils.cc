@@ -466,6 +466,9 @@ std::string FormatConsoleString(const std::string& input) {
   //  - A C-style string (raw or not) with quotes and C-style escape sequences.
   //  - A whitespace-separated string with no escape character handling.
 
+  if (input.empty())
+    return std::string("\"\"");  // Empty strings need quotes.
+
   // Determine which of the cases is required.
   bool has_space = false;
   bool has_special = false;

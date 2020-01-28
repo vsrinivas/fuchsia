@@ -53,7 +53,7 @@ TEST_F(VerbAttachJob, Good) {
 
   auto event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Job 1 [Attached] koid=7890 some job", event.output.AsString());
+  EXPECT_EQ("Job 1 state=Attached koid=7890 name=\"some job\"", event.output.AsString());
 
   // Attaching a job with some filters. Since the current job is already attached, this should make
   // a new job (#2).
@@ -79,7 +79,7 @@ TEST_F(VerbAttachJob, Good) {
 
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Job 2 [Attached] koid=5555 other job", event.output.AsString());
+  EXPECT_EQ("Job 2 state=Attached koid=5555 name=\"other job\"", event.output.AsString());
 
   // The single update should contain both filters since it should be sent after the job attach
   // callback is run (so both filters will be applied at once even though they were created in

@@ -242,7 +242,7 @@ TEST(CommandUtils, FormatFilter) {
 }
 
 TEST(CommandUtils, FormatConsoleString) {
-  EXPECT_EQ("", FormatConsoleString(""));
+  EXPECT_EQ("\"\"", FormatConsoleString(""));
 
   // Doesn't need any escaping or quoting.
   EXPECT_EQ("foobar", FormatConsoleString("foobar"));

@@ -28,10 +28,10 @@ TEST_F(VerbsSymbolTest, SymStat) {
   // TODO(bug 43528) The messages should not be duplicated.
   auto event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Process 1 [Running] koid=1234 <mock>", event.output.AsString());
+  ASSERT_EQ("Process 1 state=Running koid=1234 name=<mock>", event.output.AsString());
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Attached Process 1 [Running] koid=1234 <mock>", event.output.AsString());
+  ASSERT_EQ("Attached Process 1 state=Running koid=1234 name=<mock>", event.output.AsString());
 
   auto target = console.context().GetActiveTarget();
   ASSERT_NE(nullptr, target);
