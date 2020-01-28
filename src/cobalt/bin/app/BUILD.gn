@@ -15,11 +15,17 @@ declare_args() {
   cobalt_environment = "PROD"
 }
 
-# Generates the global_metrics_registry.pb file. This may be selectively
-# overriden by callers who supply their own copy of their project's
-# registry.
+# Generates the global_metrics_registry.pb file.
 metrics_registry("global_metrics_registry") {
   global = true
+}
+
+# Include the global_metrics_registry.pb in the config data for Cobalt.
+config_data("cobalt_registry") {
+  for_pkg = "cobalt"
+  deps = [ ":global_metrics_registry" ]
+  sources = [ "$target_gen_dir/global_metrics_registry.pb" ]
+  outputs = [ "global_metrics_registry.pb" ]
 }
 
 source_set("lib") {
@@ -103,10 +109,7 @@ config_data("user_config") {
 }
 
 package("cobalt") {
-  deps = [
-    ":app",
-    ":global_metrics_registry",
-  ]
+  deps = [ ":app" ]
 
   binary = "cobalt"
 
@@ -152,12 +155,6 @@ package("cobalt") {
       path = rebase_path(
               "//third_party/cobalt/keys/shuffler_prod_public.cobalt_key")
       dest = "keys/shuffler_prod_public"
-    },
-    {
-      path = rebase_path(
-              get_label_info(":global_metrics_registry", "target_gen_dir") +
-              "/global_metrics_registry.pb")
-      dest = "global_metrics_registry.pb"
     },
   ]
 }
