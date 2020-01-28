@@ -96,6 +96,24 @@ zx_status_t __sanitizer_get_configuration(const char* config_name, zx_handle_t* 
 // TODO(phosek) removes this when the proper debugging interface exists.
 zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len, bool writable);
 
+// This stops all other threads in the process so memory should be quiescent.
+// Then it makes callbacks for memory regions containing non-const global
+// variables, thread stacks, thread registers, and thread-local storage
+// regions (this includes thread_local variables as well as tss_set or
+// pthread_setspecific values).  Each callback is optional; no such callbacks
+// are made if a null function pointer is given.  The memory region passed to
+// each callback can be accessed only during that single callback and might no
+// longer be valid once the callback returns.  Then it makes a final callback
+// before allowing other threads to resume running normally.  If there are
+// problems stopping threads, no memory callbacks will be made and the
+// argument to the final callback will get an error code rather than ZX_OK.
+typedef void sanitizer_memory_snapshot_callback_t(void* mem, size_t len, void* arg);
+void __sanitizer_memory_snapshot(sanitizer_memory_snapshot_callback_t* globals,
+                                 sanitizer_memory_snapshot_callback_t* stacks,
+                                 sanitizer_memory_snapshot_callback_t* regs,
+                                 sanitizer_memory_snapshot_callback_t* tls,
+                                 void (*done)(zx_status_t, void*), void* arg);
+
 // The "hook" interfaces are functions that the sanitizer runtime library
 // can define and libc will call.  There are default definitions in libc
 // which do nothing, but any other definitions will override those.  These

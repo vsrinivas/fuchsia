@@ -1,5 +1,6 @@
 #include <limits.h>
 
+#include "atomic.h"
 #include "stdio_impl.h"
 #include "threads_impl.h"
 

@@ -1,3 +1,4 @@
+// -*- C++ -*-
 #pragma once
 
 #include <assert.h>
@@ -14,9 +15,10 @@
 #include <runtime/thread.h>
 #include <runtime/tls.h>
 
-#include "atomic.h"
 #include "libc.h"
 #include "pthread_arch.h"
+
+__BEGIN_CDECLS
 
 #define pthread __pthread
 
@@ -45,9 +47,9 @@ struct tls_dtor;
 // aspect of the Fuchsia ABI for the machine.  That is an implementation
 // detail of a particular build of the C library code.
 #ifdef __aarch64__
-# define HAVE_SHADOW_CALL_STACK 1
+#define HAVE_SHADOW_CALL_STACK 1
 #else
-# define HAVE_SHADOW_CALL_STACK 0
+#define HAVE_SHADOW_CALL_STACK 0
 #endif
 
 struct pthread {
@@ -58,6 +60,9 @@ struct pthread {
 #endif
 
   zxr_thread_t zxr_thread;
+
+  struct pthread* next;
+  struct pthread** prevp;
 
   // The *_region fields describe whole memory regions reserved,
   // including guard pages (for deallocation).  safe_stack and
@@ -226,7 +231,7 @@ extern volatile size_t __pthread_tsd_size;
 
 void* __tls_get_new(size_t*) ATTR_LIBC_VISIBILITY;
 
-static inline pthread_t __pthread_self(void) { return tp_to_pthread(zxr_tp_get()); }
+static inline struct pthread* __pthread_self(void) { return tp_to_pthread(zxr_tp_get()); }
 
 static inline thrd_t __thrd_current(void) { return (thrd_t)__pthread_self(); }
 
@@ -300,3 +305,70 @@ thrd_t __allocate_thread(size_t guard_size, size_t stack_size, const char* threa
 pthread_t __init_main_thread(zx_handle_t thread_self) ATTR_LIBC_VISIBILITY;
 
 int __clock_gettime(clockid_t, struct timespec*) ATTR_LIBC_VISIBILITY;
+
+// Returns the head of the pthread::next, pthread::prevp doubly-linked list,
+// i.e. where the first thread's prevp points to.  The list can be used and
+// mutated until __thread_list_release is called.
+struct pthread** __thread_list_acquire(void) ATTR_LIBC_VISIBILITY;
+void __thread_list_release(void) ATTR_LIBC_VISIBILITY;
+
+// Removes the (dead) thread from the list, taking the lock.
+// The argument type is void* for the zxr_thread_exit_unmap_if_detached API.
+void __thread_list_erase(void* pthread_t_arg) ATTR_LIBC_VISIBILITY;
+
+__END_CDECLS
+
+#ifdef __cplusplus
+namespace {
+
+class LockedThreadList {
+ public:
+  LockedThreadList() = delete;
+  LockedThreadList(const LockedThreadList&) = default;
+
+  class iterator {
+   public:
+    iterator() = default;
+    iterator(const iterator&) = default;
+    iterator(iterator&&) = default;
+
+    bool operator==(const iterator& other) const { return next_ == other.next_; }
+    bool operator!=(const iterator& other) const { return !(*this == other); }
+
+    pthread* operator*() const { return next_; }
+
+    iterator& operator++() {  // prefix
+      next_ = next_->next;
+      return *this;
+    }
+
+    iterator operator++(int) {  // postfix
+      iterator old = *this;
+      ++*this;
+      return old;
+    }
+
+   private:
+    pthread* next_ = nullptr;
+
+    friend LockedThreadList;
+    explicit iterator(pthread* head) : next_(head) {}
+  };
+
+  iterator begin() { return iterator(head_); }
+  iterator end() { return iterator(); }
+
+ protected:
+  explicit LockedThreadList(pthread** head) : head_(*head) {}
+
+ private:
+  pthread*& head_;
+};
+
+struct ScopedThreadList : public LockedThreadList {
+  ScopedThreadList() : LockedThreadList(__thread_list_acquire()) {}
+  ~ScopedThreadList() { __thread_list_release(); }
+};
+
+}  // namespace
+#endif

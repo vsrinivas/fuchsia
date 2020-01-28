@@ -11,6 +11,7 @@ zx_test("sanitizer-utils") {
   test_group = "libc"
   sources = [ "sanitizer-utils.cc" ]
   deps = [
+    ":memory-snapshot-test",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/async-loop",
@@ -19,7 +20,6 @@ zx_test("sanitizer-utils") {
     "$zx/system/ulib/ldmsg",
     "$zx/system/ulib/loader-service",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
   data_deps = [ ":sanitizer-exit-hook-test-helper" ]
@@ -29,4 +29,39 @@ zx_executable("sanitizer-exit-hook-test-helper") {
   visibility = [ ":*" ]
   testonly = true
   sources = [ "exit-hook-test-helper.cc" ]
+}
+
+source_set("memory-snapshot-test") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [ "memory-snapshot-test.cc" ]
+  deps = [
+    ":sanitizer-memory-snapshot-test-needed-dso",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+  data_deps = [ ":sanitizer-memory-snapshot-test-dlopen-dso" ]
+
+  if (current_cpu == "arm64") {
+    cflags = [ "-ffixed-x28" ]
+  }
+}
+
+# These should be just shared_library(), but must be zx_library() for
+# the //build/unification magic to work.
+
+zx_library("sanitizer-memory-snapshot-test-needed-dso") {
+  visibility = [ ":*" ]
+  testonly = true
+  shared = true
+  static = false
+  sources = [ "sanitizer-memory-snapshot-test-needed-dso.cc" ]
+}
+
+zx_library("sanitizer-memory-snapshot-test-dlopen-dso") {
+  visibility = [ ":*" ]
+  testonly = true
+  shared = true
+  static = false
+  sources = [ "sanitizer-memory-snapshot-test-dlopen-dso.cc" ]
 }

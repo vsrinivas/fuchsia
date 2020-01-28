@@ -1,5 +1,6 @@
 #include <errno.h>
 
+#include "atomic.h"
 #include "threads_impl.h"
 
 int pthread_spin_lock(pthread_spinlock_t* s) {

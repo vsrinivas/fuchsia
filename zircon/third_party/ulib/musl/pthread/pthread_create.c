@@ -1,5 +1,4 @@
 #include <pthread.h>
-#include <stdatomic.h>
 #include <stddef.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -98,6 +97,7 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
                                  status == ZX_ERR_ACCESS_DENIED ? thrd_error : thrd_nomem);
 
 fail_after_alloc:
+  __thread_list_erase(new);
   deallocate_region(&new->safe_stack_region);
   deallocate_region(&new->unsafe_stack_region);
   deallocate_region(&new->tcb_region);
@@ -118,8 +118,9 @@ static __NO_SAFESTACK NO_ASAN void final_exit(pthread_t self) {
 
   // This deallocates the TCB region too for the detached case.
   // If not detached, pthread_join will deallocate it.
-  zxr_thread_exit_unmap_if_detached(&self->zxr_thread, _zx_vmar_root_self(),
-                                    (uintptr_t)self->tcb_region.iov_base, self->tcb_region.iov_len);
+  zxr_thread_exit_unmap_if_detached(&self->zxr_thread, __thread_list_erase, self,
+                                    _zx_vmar_root_self(), (uintptr_t)self->tcb_region.iov_base,
+                                    self->tcb_region.iov_len);
 }
 
 static NO_ASAN _Noreturn void finish_exit(pthread_t self) {

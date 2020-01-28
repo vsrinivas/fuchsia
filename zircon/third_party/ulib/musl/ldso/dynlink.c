@@ -28,6 +28,7 @@
 #include <zircon/dlfcn.h>
 #include <zircon/fidl.h>
 #include <zircon/process.h>
+#include <zircon/sanitizer.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 
@@ -158,6 +159,10 @@ struct r_debug* _dl_debug_addr = &debug;
 // This is used by Intel PT (Processor Trace) support for example when
 // post-processing the h/w trace.
 static bool trace_maps = false;
+
+void _dl_rdlock(void) { pthread_rwlock_rdlock(&lock); }
+void _dl_unlock(void) { pthread_rwlock_unlock(&lock); }
+static void _dl_wrlock(void) { pthread_rwlock_wrlock(&lock); }
 
 NO_ASAN __NO_SAFESTACK static int dl_strcmp(const char* l, const char* r) {
   for (; *l == *r && *l; l++, r++)
@@ -949,8 +954,8 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
         dso->tls.size = ph->p_memsz;
         break;
       case PT_GNU_RELRO:
-        dso->relro_start = ph->p_vaddr & -PAGE_SIZE;
-        dso->relro_end = (ph->p_vaddr + ph->p_memsz) & -PAGE_SIZE;
+        dso->relro_start = ph->p_vaddr;
+        dso->relro_end = ph->p_vaddr + ph->p_memsz;
         break;
       case PT_NOTE:
         if (first_note == NULL)
@@ -1418,9 +1423,14 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
     do_relocs(p, laddr(p, dyn[DT_REL]), dyn[DT_RELSZ], 2);
     do_relocs(p, laddr(p, dyn[DT_RELA]), dyn[DT_RELASZ], 3);
 
-    if (head != &ldso && p->relro_start != p->relro_end) {
-      zx_status_t status = _zx_vmar_protect(p->vmar, ZX_VM_PERM_READ, saddr(p, p->relro_start),
-                                            p->relro_end - p->relro_start);
+    // _dl_locked_report_globals needs the precise relro bounds so those are
+    // what get stored.  But actually applying them requires page truncation.
+    const size_t relro_start = p->relro_start & -PAGE_SIZE;
+    const size_t relro_end = p->relro_end & -PAGE_SIZE;
+
+    if (head != &ldso && relro_start != relro_end) {
+      zx_status_t status = _zx_vmar_protect(p->vmar, ZX_VM_PERM_READ, saddr(p, relro_start),
+                                            relro_end - relro_start);
       if (status == ZX_ERR_BAD_HANDLE && p == &ldso && p->vmar == ZX_HANDLE_INVALID) {
         debugmsg(
             "No VMAR_LOADED handle received;"
@@ -1430,7 +1440,7 @@ __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
         error(
             "Error relocating %s: RELRO protection"
             " %p+%#zx failed: %s",
-            p->l_map.l_name, laddr(p, p->relro_start), p->relro_end - p->relro_start,
+            p->l_map.l_name, laddr(p, relro_start), relro_end - relro_start,
             _zx_status_get_string(status));
         if (runtime)
           longjmp(*rtld_fail, 1);
@@ -1464,8 +1474,8 @@ __NO_SAFESTACK NO_ASAN static void kernel_mapped_dso(struct dso* p) {
         p->l_map.l_ld = laddr(p, ph->p_vaddr);
         break;
       case PT_GNU_RELRO:
-        p->relro_start = ph->p_vaddr & -PAGE_SIZE;
-        p->relro_end = (ph->p_vaddr + ph->p_memsz) & -PAGE_SIZE;
+        p->relro_start = ph->p_vaddr;
+        p->relro_end = ph->p_vaddr + ph->p_memsz;
         break;
       case PT_NOTE:
         if (p->build_id_note == NULL)
@@ -2204,7 +2214,9 @@ static void set_global(struct dso* p, int global) {
 }
 
 static void* dlopen_internal(zx_handle_t vmo, const char* file, int mode) {
-  pthread_rwlock_wrlock(&lock);
+  // N.B. This lock order must be consistent with other uses such as
+  // ThreadSuspender in the __sanitizer_memory_snapshot implementation.
+  _dl_wrlock();
   __thread_allocation_inhibit();
 
   struct dso* orig_tail = tail;
@@ -2217,7 +2229,7 @@ static void* dlopen_internal(zx_handle_t vmo, const char* file, int mode) {
     error("Error loading shared library %s: %s", file, _zx_status_get_string(status));
   fail:
     __thread_allocation_release();
-    pthread_rwlock_unlock(&lock);
+    _dl_unlock();
     return NULL;
   }
 
@@ -2296,7 +2308,7 @@ static void* dlopen_internal(zx_handle_t vmo, const char* file, int mode) {
   // head up through new_tail.  Most fields will never change again.
   atomic_store_explicit(&unlogged_tail, (uintptr_t)new_tail, memory_order_release);
 
-  pthread_rwlock_unlock(&lock);
+  _dl_unlock();
 
   if (log_libs)
     _dl_log_unlogged();
@@ -2322,10 +2334,10 @@ void* dlopen_vmo(zx_handle_t vmo, int mode) {
 
 zx_handle_t dl_set_loader_service(zx_handle_t new_svc) {
   zx_handle_t old_svc;
-  pthread_rwlock_wrlock(&lock);
+  _dl_wrlock();
   old_svc = loader_svc;
   loader_svc = new_svc;
-  pthread_rwlock_unlock(&lock);
+  _dl_unlock();
   return old_svc;
 }
 
@@ -2409,9 +2421,9 @@ failed:
 int dladdr(const void* addr, Dl_info* info) {
   struct dso* p;
 
-  pthread_rwlock_rdlock(&lock);
+  _dl_rdlock();
   p = addr2dso((size_t)addr);
-  pthread_rwlock_unlock(&lock);
+  _dl_unlock();
 
   if (!p)
     return 0;
@@ -2444,9 +2456,9 @@ int dladdr(const void* addr, Dl_info* info) {
 
 void* dlsym(void* restrict p, const char* restrict s) {
   void* res;
-  pthread_rwlock_rdlock(&lock);
+  _dl_rdlock();
   res = do_dlsym(p, s, __builtin_return_address(0));
-  pthread_rwlock_unlock(&lock);
+  _dl_unlock();
   return res;
 }
 
@@ -2470,9 +2482,9 @@ int dl_iterate_phdr(int (*callback)(struct dl_phdr_info* info, size_t size, void
     if (ret != 0)
       break;
 
-    pthread_rwlock_rdlock(&lock);
+    _dl_rdlock();
     current = dso_next(current);
-    pthread_rwlock_unlock(&lock);
+    _dl_unlock();
   }
   return ret;
 }
@@ -2714,9 +2726,9 @@ zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len, bool 
   }
 
   struct dso* p;
-  pthread_rwlock_rdlock(&lock);
+  _dl_rdlock();
   p = addr2dso((size_t)__builtin_return_address(0));
-  pthread_rwlock_unlock(&lock);
+  _dl_unlock();
 
   if (!p) {
     return ZX_ERR_OUT_OF_RANGE;
@@ -2734,6 +2746,33 @@ zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len, bool 
              _zx_status_get_string(status));
   }
   return status;
+}
+
+// The _dl_rdlock is held or equivalent.
+void _dl_locked_report_globals(sanitizer_memory_snapshot_callback_t* callback, void* callback_arg) {
+  for (struct dso* mod = head; mod != NULL; mod = dso_next(mod)) {
+    for (unsigned int i = 0; i < mod->phnum; ++i) {
+      const Phdr* ph = &mod->phdr[i];
+      // Report every nonempty writable segment.
+      if (ph->p_type == PT_LOAD && (ph->p_flags & PF_W)) {
+        uintptr_t start = ph->p_vaddr;
+        uintptr_t end = start + ph->p_memsz;
+        // If this segment contains the RELRO region, exclude that leading
+        // range of the segment.  With lld behavior, that's the entire segment
+        // because RELRO gets a separate aligned segment.  With GNU behavior,
+        // it's just a leading portion of the main writable segment.  lld uses
+        // a page-rounded p_memsz for PT_GNU_RELRO (with the actual size in
+        // p_filesz) unlike GNU linkers (where p_memsz==p_filesz), so
+        // relro_end might actually be past end.
+        if (mod->relro_start >= start && mod->relro_start <= end) {
+          start = mod->relro_end < end ? mod->relro_end : end;
+        }
+        if (start < end) {
+          callback(laddr(mod, start), end - start, callback_arg);
+        }
+      }
+    }
+  }
 }
 
 #ifdef __clang__

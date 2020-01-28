@@ -1,3 +1,4 @@
+#include <stdatomic.h>
 #include <stddef.h>
 #include <string.h>
 #include <zircon/process.h>
@@ -6,6 +7,42 @@
 #include "libc.h"
 #include "threads_impl.h"
 #include "zircon_impl.h"
+
+#ifdef __aarch64__
+// Clang's <arm_acle.h> has __yield() but GCC doesn't (nor the intrinsic).
+__NO_SAFESTACK static inline void relax(void) { __asm__("yield"); }
+#elif defined(__x86_64__)
+// GCC's <x86intrin.h> has __pause() but not Clang though it has the intrinsic.
+__NO_SAFESTACK static inline void relax(void) { __builtin_ia32_pause(); }
+#else
+__NO_SAFESTACK static inline void relax(void) {}
+#endif
+
+static struct pthread* all_threads;
+static atomic_flag all_threads_lock = ATOMIC_FLAG_INIT;
+
+__NO_SAFESTACK struct pthread** __thread_list_acquire(void) {
+  while (atomic_flag_test_and_set_explicit(&all_threads_lock, memory_order_acquire)) {
+    relax();
+  }
+  return &all_threads;
+}
+
+__NO_SAFESTACK void __thread_list_release(void) {
+  atomic_flag_clear_explicit(&all_threads_lock, memory_order_release);
+}
+
+// A detached thread has to remove itself from the list.
+// Joinable threads get removed only in pthread_join.
+__NO_SAFESTACK void __thread_list_erase(void* arg) {
+  struct pthread* t = arg;
+  __thread_list_acquire();
+  *t->prevp = t->next;
+  if (t->next != NULL) {
+    t->next->prevp = t->prevp;
+  }
+  __thread_list_release();
+}
 
 static pthread_rwlock_t allocation_lock = PTHREAD_RWLOCK_INITIALIZER;
 
@@ -270,5 +307,15 @@ __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requ
   td->head.tp = (uintptr_t)pthread_to_tp(td);
   td->abi.stack_guard = __stack_chk_guard;
   td->abi.unsafe_sp = (uintptr_t)td->unsafe_stack.iov_base + td->unsafe_stack.iov_len;
+
+  struct pthread** prevp = __thread_list_acquire();
+  td->prevp = prevp;
+  td->next = *prevp;
+  if (td->next != NULL) {
+    td->next->prevp = &td->next;
+  }
+  *prevp = td;
+  __thread_list_release();
+
   return td;
 }

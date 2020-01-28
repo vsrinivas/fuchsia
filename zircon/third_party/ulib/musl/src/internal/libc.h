@@ -1,13 +1,19 @@
 #pragma once
 
 #include <limits.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#ifdef __cplusplus
+#include <atomic>
+using std::atomic_int;
+#else
+#include <stdatomic.h>
+#endif
 
 __BEGIN_CDECLS
 

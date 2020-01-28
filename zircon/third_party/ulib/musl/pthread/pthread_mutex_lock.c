@@ -1,3 +1,4 @@
+#include "atomic.h"
 #include "threads_impl.h"
 
 int pthread_mutex_lock(pthread_mutex_t* m) {

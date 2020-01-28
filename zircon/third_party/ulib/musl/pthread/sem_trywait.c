@@ -1,5 +1,6 @@
 #include <semaphore.h>
 
+#include "atomic.h"
 #include "threads_impl.h"
 
 int sem_trywait(sem_t* sem) {

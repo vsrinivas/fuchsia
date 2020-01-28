@@ -1,3 +1,4 @@
+#include "atomic.h"
 #include "threads_impl.h"
 
 int pthread_mutex_timedlock(pthread_mutex_t* restrict m, const struct timespec* restrict at) {

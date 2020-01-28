@@ -5,8 +5,12 @@
 #include <link.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/sanitizer.h>
 
 #include "libc.h"
+
+__BEGIN_CDECLS
 
 typedef Elf64_Ehdr Ehdr;
 typedef Elf64_Phdr Phdr;
@@ -68,3 +72,11 @@ extern ElfW(Dyn) _DYNAMIC[] ATTR_LIBC_VISIBILITY;
 
 void _dl_log_unlogged(void) ATTR_LIBC_VISIBILITY;
 void _dl_log_write(const char* buffer, size_t len) ATTR_LIBC_VISIBILITY;
+
+void _dl_rdlock(void) ATTR_LIBC_VISIBILITY;
+void _dl_unlock(void) ATTR_LIBC_VISIBILITY;
+
+void _dl_locked_report_globals(sanitizer_memory_snapshot_callback_t* callback,
+                               void* callback_arg) ATTR_LIBC_VISIBILITY;
+
+__END_CDECLS

@@ -6,6 +6,7 @@ source_set("sanitizers") {
   deps = [
     "$zx/system/fidl/fuchsia-debugdata:c.headers",
     "$zx/system/fidl/fuchsia-io:c.headers",
+    "$zx/system/ulib/zx",
     "$zx/third_party/ulib/musl:musl_internal",
   ]
   sources = [
@@ -14,6 +15,7 @@ source_set("sanitizers") {
     "debugdata.cc",
     "hooks.c",
     "log.c",
+    "memory-snapshot.cc",
     "ubsan-stubs.cc",
   ]
 

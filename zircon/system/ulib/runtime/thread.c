@@ -109,11 +109,14 @@ static _Noreturn void thread_trampoline(uintptr_t ctx, uintptr_t arg) {
   __builtin_trap();
 }
 
-_Noreturn void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, zx_handle_t vmar,
-                                                 uintptr_t addr, size_t len) {
+_Noreturn void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, void (*if_detached)(void*),
+                                                 void* if_detached_arg,
+
+                                                 zx_handle_t vmar, uintptr_t addr, size_t len) {
   int old_state = begin_exit(to_internal(thread));
   switch (old_state) {
     case DETACHED: {
+      (*if_detached)(if_detached_arg);
       zx_handle_t handle = take_handle(to_internal(thread));
       _zx_vmar_unmap_handle_close_thread_exit(vmar, addr, len, handle);
       break;
