@@ -23,7 +23,6 @@ group("uapp") {
     "nand-loader",
     "nand-util",
     "psutils",
-    "spiutil",
     "syscall-check",
     "xdc-test",
   ]

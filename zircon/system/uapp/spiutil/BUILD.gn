@@ -2,11 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("spiutil") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("spiutil") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [ "spiutil.cc" ]
   deps = [
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/spi",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/spi",
   ]
+}
+
+migrated_manifest("spiutil-manifest") {
+  deps = [ ":spiutil" ]
 }
