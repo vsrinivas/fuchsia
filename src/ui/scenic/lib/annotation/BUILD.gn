@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("annotation_registry") {
+  sources = [
+    "annotation_registry.cc",
+    "annotation_registry.h",
+    "annotation_registry_handler.cc",
+    "annotation_registry_handler.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.annotation",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/ui/scenic/lib/gfx",
+  ]
+}

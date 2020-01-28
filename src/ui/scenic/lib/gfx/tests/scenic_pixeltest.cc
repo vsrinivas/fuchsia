@@ -16,6 +16,7 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/images/cpp/images.h>
 #include <lib/zx/clock.h>
 #include <zircon/types.h>
@@ -1213,9 +1214,7 @@ TEST_F(ScenicPixelTest, ProtectedImage) {
   test_session->SetUpCamera().SetProjection(0);
 
   fuchsia::images::ImagePipe2Ptr image_pipe;
-  image_pipe.set_error_handler([](zx_status_t status) {
-    GTEST_FAIL() << "ImagePipe terminated.";
-  });
+  image_pipe.set_error_handler([](zx_status_t status) { GTEST_FAIL() << "ImagePipe terminated."; });
   const uint32_t kImagePipeId = session->next_resource_id();
   session->Enqueue(scenic::NewCreateImagePipe2Cmd(kImagePipeId, image_pipe.NewRequest()));
 
@@ -1510,6 +1509,161 @@ VK_TEST_F(ScenicPixelTest, UseExternalImage) {
   // This assert is written this way so that, when it fails, it prints out all
   // the unexpected colors
   EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+}
+
+// Create the following Scene:
+// ----------------------------------
+// |            View 1              |
+// |             red                |
+// |--------------------------------|
+// |    blue    View 2   green      |
+// |              :                 |
+// ----------------------------------
+//
+// This test case creates three Views: View 1 (containing one red ShapeNode),
+// View 2 (containing one blue ShapeNode), Annotation View (containing one green
+// ShapeNode).
+//
+// This test case uses fuchsia.ui.annotation.Registry FIDL API to create
+// ViewHolder of Annotation View and attach Annotation View to scene later when
+// we call Present() on any Session.
+//
+// View 2 and Annotation View should have the same View properties.
+//
+TEST_F(ScenicPixelTest, AnnotationTest) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+
+  // Initialize second session
+  auto unique_session_view1 = std::make_unique<scenic::Session>(scenic());
+  auto unique_session_view2 = std::make_unique<scenic::Session>(scenic());
+  auto unique_session_annotation = std::make_unique<scenic::Session>(scenic());
+
+  auto session_view1 = unique_session_view1.get();
+  auto session_view2 = unique_session_view2.get();
+  auto session_annotation = unique_session_annotation.get();
+
+  session_view1->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+  session_view2->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+  session_annotation->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Annotation Session terminated.";
+    QuitLoop();
+  });
+
+  test_session->SetUpCamera().SetProjection(0);
+  scenic::EntityNode entity_node(session);
+  entity_node.SetTranslation(0, 0, 0);
+  test_session->scene.AddChild(entity_node);
+
+  // Create two sets of view/view-holder token pairs.
+  auto [view_token_1, view_holder_token_1] = scenic::ViewTokenPair::New();
+  auto [view_token_2, view_holder_token_2] = scenic::ViewTokenPair::New();
+  auto [view_control_ref_2, view_ref_2] = scenic::ViewRefPair::New();
+  auto [view_token_annotation, view_holder_token_annotation] = scenic::ViewTokenPair::New();
+
+  fuchsia::ui::views::ViewRef view_ref_2_create;
+  view_ref_2.Clone(&view_ref_2_create);
+  scenic::View view1(session_view1, std::move(view_token_1), "View 1");
+  scenic::View view2(session_view2, std::move(view_token_2), std::move(view_control_ref_2),
+                     std::move(view_ref_2_create), "View 2");
+  scenic::View view_annotation(session_annotation, std::move(view_token_annotation),
+                               "View Annotation");
+  scenic::ViewHolder view_holder1(session, std::move(view_holder_token_1), "ViewHolder 1");
+  scenic::ViewHolder view_holder2(session, std::move(view_holder_token_2), "ViewHolder 2");
+
+  // Bounds of each view should be the size of a quarter of the display with
+  // origin at 0,0 relative to its transform node.
+  const std::array<float, 3> bmin = {0.f, 0.f, -2.f};
+  const std::array<float, 3> bmax = {display_width, display_height / 2, 1.f};
+  const std::array<float, 3> imin = {0, 0, 0};
+  const std::array<float, 3> imax = {0, 0, 0};
+  view_holder1.SetViewProperties(bmin, bmax, imin, imax);
+  view_holder2.SetViewProperties(bmin, bmax, imin, imax);
+  view_holder2.SetTranslation(0, display_height / 2, 0);
+
+  // Pane extends across the entire right-side of the display, even though
+  // its containing view is only in the top-right corner.
+  int32_t pane_width = display_width;
+  int32_t pane_height = display_height / 2;
+  FXL_LOG(ERROR) << pane_width << " " << pane_height;
+  scenic::Rectangle pane_shape(session_view1, pane_width, pane_height);
+  scenic::Rectangle pane_shape2(session_view2, pane_width / 2, pane_height);
+  scenic::Rectangle pane_shape_annotation(session_annotation, pane_width / 2, pane_height);
+
+  // Create pane materials.
+  scenic::Material pane_material_view1(session_view1);
+  scenic::Material pane_material_view2(session_view2);
+  scenic::Material pane_material_annotation(session_annotation);
+  pane_material_view1.SetColor(255, 0, 0, 255);       // Red
+  pane_material_view2.SetColor(0, 0, 255, 255);       // Blue
+  pane_material_annotation.SetColor(0, 255, 0, 255);  // Green
+
+  scenic::ShapeNode pane_node(session_view1);
+  pane_node.SetShape(pane_shape);
+  pane_node.SetMaterial(pane_material_view1);
+  pane_node.SetTranslation(pane_width / 2, pane_height / 2, 0);
+
+  scenic::ShapeNode pane_node2(session_view2);
+  pane_node2.SetShape(pane_shape2);
+  pane_node2.SetMaterial(pane_material_view2);
+  pane_node2.SetTranslation(pane_width / 4, pane_height / 2, 0);
+
+  scenic::ShapeNode pane_node_annotation(session_annotation);
+  pane_node_annotation.SetShape(pane_shape_annotation);
+  pane_node_annotation.SetMaterial(pane_material_annotation);
+  pane_node_annotation.SetTranslation(pane_width * 3 / 4, pane_height / 2, 0);
+
+  // Add view holders to the transform.
+  entity_node.AddChild(view_holder1);
+  view1.AddChild(pane_node);
+  entity_node.AddChild(view_holder2);
+  view2.AddChild(pane_node2);
+  view_annotation.AddChild(pane_node_annotation);
+
+  Present(session);
+  Present(session_view1);
+  Present(session_view2);
+  Present(session_annotation);
+
+  bool view_holder_annotation_created = false;
+  fuchsia::ui::views::ViewRef view_ref_2_annotation;
+  view_ref_2.Clone(&view_ref_2_annotation);
+  annotation_registry()->CreateAnnotationViewHolder(
+      std::move(view_ref_2_annotation), std::move(view_holder_token_annotation),
+      [&view_holder_annotation_created]() { view_holder_annotation_created = true; });
+
+  RunLoopWithTimeout(zx::msec(100));
+  EXPECT_FALSE(view_holder_annotation_created);
+
+  {
+    scenic::Screenshot screenshot = TakeScreenshot();
+    scenic::Color red_color = screenshot.ColorAt(0.5, 0.25);
+    scenic::Color blue_color = screenshot.ColorAt(0.25, 0.75);
+    scenic::Color black_color = screenshot.ColorAt(0.75, 0.75);
+    EXPECT_EQ(red_color, scenic::Color(255, 0, 0, 255));
+    EXPECT_EQ(blue_color, scenic::Color(0, 0, 255, 255));
+    EXPECT_EQ(black_color, scenic::Color(0, 0, 0, 0));
+  }
+
+  Present(session_view2);
+  EXPECT_TRUE(view_holder_annotation_created);
+
+  {
+    scenic::Screenshot screenshot = TakeScreenshot();
+    scenic::Color red_color = screenshot.ColorAt(0.5, 0.25);
+    scenic::Color blue_color = screenshot.ColorAt(0.25, 0.75);
+    scenic::Color green_color = screenshot.ColorAt(0.75, 0.75);
+    EXPECT_EQ(red_color, scenic::Color(255, 0, 0, 255));
+    EXPECT_EQ(blue_color, scenic::Color(0, 0, 255, 255));
+    EXPECT_EQ(green_color, scenic::Color(0, 255, 0, 255));
+  }
 }
 
 }  // namespace

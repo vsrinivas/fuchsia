@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_PIXEL_TEST_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_PIXEL_TEST_H_
 
+#include <fuchsia/ui/annotation/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -68,6 +69,8 @@ class PixelTest : public sys::testing::TestWithEnvironment {
 
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
+  fuchsia::ui::annotation::Registry* annotation_registry() { return annotation_registry_.get(); }
+
   // Sets up the enclosing environment, calling |CreateServices()| to configure services.
   // |testing::Test|
   void SetUp() override;
@@ -112,6 +115,7 @@ class PixelTest : public sys::testing::TestWithEnvironment {
  private:
   const std::string environment_label_;
 
+  fuchsia::ui::annotation::RegistryPtr annotation_registry_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 };
 

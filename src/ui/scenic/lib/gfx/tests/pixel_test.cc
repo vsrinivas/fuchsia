@@ -39,6 +39,7 @@ const std::map<std::string, std::string> kServices = {
     {"fuchsia.ui.policy.Presenter",
      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
     {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+    {"fuchsia.ui.annotation.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
     {"fuchsia.ui.shortcut.Manager",
      "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"}};
 
@@ -76,6 +77,11 @@ void PixelTest::SetUp() {
   environment_->ConnectToService(scenic_.NewRequest());
   scenic_.set_error_handler([](zx_status_t status) {
     FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+  });
+
+  environment_->ConnectToService(annotation_registry_.NewRequest());
+  annotation_registry_.set_error_handler([](zx_status_t status) {
+    FAIL() << "Lost connection to Annotation Registry: " << zx_status_get_string(status);
   });
 }
 

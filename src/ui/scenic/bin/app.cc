@@ -114,6 +114,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated:
                   strong->Shutdown(LifecycleControllerImpl::kShutdownTimeout);
                 }
               }),
+      annotation_registry_(app_context_.get()),
       lifecycle_controller_impl_(app_context_.get(),
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
   FXL_DCHECK(!device_watcher_);
@@ -179,11 +180,11 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
                   scenic_.inspect_node()->CreateChild("Engine"));
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   scenic_.SetFrameScheduler(frame_scheduler_);
+  annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), escher_->GetWeakPtr(),
                                                     &sysmem_, &display_manager_);
-
   FXL_DCHECK(gfx);
 
   frame_scheduler_->AddSessionUpdater(gfx->GetWeakPtr());

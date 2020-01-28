@@ -12,6 +12,7 @@
 
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/scenic/lib/annotation/annotation_registry.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
@@ -58,6 +59,8 @@ class App {
   std::optional<gfx::Engine> engine_;
   Scenic scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
+
+  AnnotationRegistry annotation_registry_;
 
   LifecycleControllerImpl lifecycle_controller_impl_;
 };
