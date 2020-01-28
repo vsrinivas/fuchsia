@@ -11,8 +11,15 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
+#include "third_party/cobalt/src/lib/util/clock.h"
+#include "third_party/cobalt/src/lib/util/encrypted_message_util.h"
+#include "third_party/cobalt/src/local_aggregation/event_aggregator.h"
+#include "third_party/cobalt/src/logger/encoder.h"
+#include "third_party/cobalt/src/logger/observation_writer.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
-#include "third_party/cobalt/src/public/cobalt_service.h"
+#include "third_party/cobalt/src/logger/undated_event_manager.h"
+#include "third_party/cobalt/src/observation_store/observation_store.h"
+#include "third_party/cobalt/src/uploader/shipping_manager.h"
 
 namespace cobalt {
 
@@ -20,7 +27,12 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
   LoggerFactoryImpl(
       std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
-      TimerManager* timer_manager, CobaltService* cobalt_service);
+      encoder::ClientSecret client_secret, TimerManager* timer_manager,
+      logger::Encoder* logger_encoder, logger::ObservationWriter* observation_writer,
+      local_aggregation::EventAggregator* event_aggregator,
+      util::ValidatedClockInterface* validated_clock,
+      std::weak_ptr<logger::UndatedEventManager> undated_event_manager,
+      logger::Logger* internal_logger, encoder::SystemDataInterface* system_data);
 
  private:
   // Constructs a new LoggerImpl based on |project_context|, binds it to
@@ -68,14 +80,21 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
       CreateLoggerSimpleFromProjectIdCallback callback);
 
+  encoder::ClientSecret client_secret_;
   fidl::BindingSet<fuchsia::cobalt::Logger, std::unique_ptr<fuchsia::cobalt::Logger>>
       logger_bindings_;
   fidl::BindingSet<fuchsia::cobalt::LoggerSimple, std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
       logger_simple_bindings_;
 
   std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory_;
-  TimerManager* timer_manager_;    // not owned
-  CobaltService* cobalt_service_;  // not owned
+  TimerManager* timer_manager_;                                       // not owned
+  logger::Encoder* logger_encoder_;                                   // not owned
+  logger::ObservationWriter* observation_writer_;                     // not owned
+  local_aggregation::EventAggregator* event_aggregator_;              // not owned
+  util::ValidatedClockInterface* validated_clock_;                    // not owned
+  std::weak_ptr<logger::UndatedEventManager> undated_event_manager_;  // not owned
+  logger::Logger* internal_logger_;                                   // not owned
+  encoder::SystemDataInterface* system_data_;                         // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoggerFactoryImpl);
 };

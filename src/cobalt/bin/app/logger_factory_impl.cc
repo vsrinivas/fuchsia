@@ -42,20 +42,40 @@ bool ExtractCobaltRegistryBytes(ProjectProfile profile, std::string* metrics_reg
 
 LoggerFactoryImpl::LoggerFactoryImpl(
     std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
-    TimerManager* timer_manager, CobaltService* cobalt_service)
-    : global_project_context_factory_(std::move(global_project_context_factory)),
+    encoder::ClientSecret client_secret, TimerManager* timer_manager,
+    logger::Encoder* logger_encoder, logger::ObservationWriter* observation_writer,
+    local_aggregation::EventAggregator* event_aggregator,
+    util::ValidatedClockInterface* validated_clock,
+    std::weak_ptr<logger::UndatedEventManager> undated_event_manager,
+    logger::Logger* internal_logger, encoder::SystemDataInterface* system_data)
+    : client_secret_(std::move(client_secret)),
+      global_project_context_factory_(std::move(global_project_context_factory)),
       timer_manager_(timer_manager),
-      cobalt_service_(cobalt_service) {}
+      logger_encoder_(logger_encoder),
+      observation_writer_(observation_writer),
+      event_aggregator_(event_aggregator),
+      validated_clock_(validated_clock),
+      undated_event_manager_(std::move(undated_event_manager)),
+      internal_logger_(internal_logger),
+      system_data_(system_data) {}
 
 template <typename LoggerInterface>
 void LoggerFactoryImpl::BindNewLogger(
     std::unique_ptr<logger::ProjectContext> project_context,
     fidl::InterfaceRequest<LoggerInterface> request,
     fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set) {
-  binding_set->AddBinding(
-      std::make_unique<LoggerImpl>(cobalt_service_->NewLogger(std::move(project_context)),
-                                   timer_manager_),
-      std::move(request));
+  std::unique_ptr<logger::Logger> logger;
+  if (undated_event_manager_.expired()) {
+    logger = std::make_unique<logger::Logger>(std::move(project_context), logger_encoder_,
+                                              event_aggregator_, observation_writer_, system_data_,
+                                              internal_logger_);
+  } else {
+    logger = std::make_unique<logger::Logger>(
+        std::move(project_context), logger_encoder_, event_aggregator_, observation_writer_,
+        system_data_, validated_clock_, undated_event_manager_, internal_logger_);
+  }
+  binding_set->AddBinding(std::make_unique<LoggerImpl>(std::move(logger), timer_manager_),
+                          std::move(request));
 }
 
 template <typename LoggerInterface, typename Callback>

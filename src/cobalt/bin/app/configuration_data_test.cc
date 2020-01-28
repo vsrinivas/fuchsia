@@ -26,10 +26,11 @@ TEST(ConfigTest, Empty) {
 
   FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
-  EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "prod"));
-  auto env = config_data.GetBackendEnvironment();
-  EXPECT_EQ(config::Environment::PROD, env);
-  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(), "prod"));
+  EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "devel"));
+  auto envs = config_data.GetBackendEnvironments();
+  ASSERT_EQ(1, envs.size());
+  EXPECT_EQ(config::Environment::DEVEL, envs[0]);
+  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[0]), "devel"));
   EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
 }
 
@@ -42,9 +43,10 @@ TEST(ConfigTest, OneValidFile) {
   FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
   EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "prod"));
-  auto env = config_data.GetBackendEnvironment();
-  EXPECT_EQ(config::Environment::PROD, env);
-  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(), "prod"));
+  auto envs = config_data.GetBackendEnvironments();
+  ASSERT_EQ(1, envs.size());
+  EXPECT_EQ(config::Environment::PROD, envs[0]);
+  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[0]), "prod"));
   EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
 }
 
@@ -56,10 +58,28 @@ TEST(ConfigTest, OneInvalidFile) {
 
   FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
-  EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "prod"));
-  auto env = config_data.GetBackendEnvironment();
-  EXPECT_EQ(config::Environment::PROD, env);
-  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(), "prod"));
+  EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "devel"));
+  auto envs = config_data.GetBackendEnvironments();
+  ASSERT_EQ(1, envs.size());
+  EXPECT_EQ(config::Environment::DEVEL, envs[0]);
+  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[0]), "devel"));
+  EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
+}
+
+// Tests behavior when there are multiple backends.
+TEST(ConfigTest, MultipleBackends) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("cobalt_environment", "DEVEL_AND_PROD"));
+
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
+
+  EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "devel"));
+  auto envs = config_data.GetBackendEnvironments();
+  EXPECT_EQ(std::vector({config::Environment::PROD, config::Environment::DEVEL}), envs);
+  ASSERT_EQ(2, envs.size());
+  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[0]), "prod"));
+  EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[1]), "devel"));
   EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
 }
 
