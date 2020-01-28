@@ -11,8 +11,6 @@
             "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.modular.ComponentContext",
-            "fuchsia.modular.ModuleContext",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",

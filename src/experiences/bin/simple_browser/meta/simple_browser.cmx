@@ -1,21 +1,4 @@
 {
-    "facets": {
-        "fuchsia.modular": {
-            "@version": 2,
-            "binary": "simple_browser",
-            "intent_filters": [
-                {
-                    "action": "NavigateToUrl",
-                    "parameters": [
-                        {
-                            "name": "url",
-                            "type": "string"
-                        }
-                    ]
-                }
-            ]
-        }
-    },
     "program": {
         "data": "data/simple_browser"
     },
@@ -29,8 +12,6 @@
             "fuchsia.media.Audio",
             "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.modular.ComponentContext",
-            "fuchsia.modular.ModuleContext",
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
