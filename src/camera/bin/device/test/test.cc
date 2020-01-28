@@ -7,6 +7,7 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/camera/bin/device/device_impl.h"
+#include "src/camera/bin/device/stream_impl.h"
 #include "src/camera/bin/device/test/fake_controller.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
@@ -35,5 +36,7 @@ class DeviceTest : public gtest::TestLoopFixture {
   std::unique_ptr<FakeController> controller_;
 };
 
-// Placeholder for future tests. For now this just exercises SetUp and TearDown.
-TEST_F(DeviceTest, Placeholder) {}
+TEST_F(DeviceTest, CreateStreamNullConnection) {
+  auto result = StreamImpl::Create(nullptr);
+  EXPECT_TRUE(result.is_ok());
+}

@@ -9,6 +9,8 @@ source_set("lib") {
   sources = [
     "device_impl.cc",
     "device_impl.h",
+    "stream_impl.cc",
+    "stream_impl.h",
     "util.h",
   ]
 

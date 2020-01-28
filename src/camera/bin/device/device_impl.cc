@@ -13,6 +13,7 @@
 
 #include <sstream>
 
+#include "lib/async/default.h"
 #include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/util.h"
 
@@ -51,7 +52,7 @@ fidl::InterfaceRequestHandler<fuchsia::camera3::Device> DeviceImpl::GetHandler()
 
 void DeviceImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
   if (!clients_.empty()) {
-    FX_PLOGS(INFO, ZX_ERR_ALREADY_BOUND) << Messages::kAlreadyBound;
+    FX_PLOGS(INFO, ZX_ERR_ALREADY_BOUND) << Messages::kDeviceAlreadyBound;
     request.Close(ZX_ERR_ALREADY_BOUND);
   }
 
@@ -206,8 +207,34 @@ void DeviceImpl::PostRemoveClient(uint64_t id) {
     }
   });
   if (status != ZX_OK) {
-    FX_PLOGS(WARNING, status);
+    FX_PLOGS(ERROR, status);
   }
+}
+
+void DeviceImpl::PostSetConfiguration(uint32_t index) {
+  zx_status_t status = async::PostTask(loop_.dispatcher(), [=]() { SetConfiguration(index); });
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status);
+  }
+}
+
+void DeviceImpl::SetConfiguration(uint32_t index) {
+  std::vector<std::unique_ptr<StreamImpl>> streams;
+
+  for (uint32_t stream_index = 0; stream_index < configurations_[index].streams.size();
+       ++stream_index) {
+    auto result = StreamImpl::Create(nullptr);
+    if (result.is_error()) {
+      FX_PLOGS(ERROR, result.error())
+          << "Failed to connect to controller config " << index << " stream " << stream_index;
+      clients_.clear();
+      return;
+    }
+    streams.push_back(result.take_value());
+  }
+
+  streams_ = std::move(streams);
+  current_configuration_index_ = index;
 }
 
 DeviceImpl::Client::Client(DeviceImpl& device)
@@ -267,7 +294,8 @@ void DeviceImpl::Client::SetCurrentConfiguration(uint32_t index) {
   if (index < 0 || index >= device_.configurations_.size()) {
     CloseConnection(ZX_ERR_OUT_OF_RANGE);
   }
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+
+  device_.PostSetConfiguration(index);
 }
 
 void DeviceImpl::Client::WatchMuteState(WatchMuteStateCallback callback) {

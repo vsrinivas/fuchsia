@@ -7,9 +7,13 @@
 
 namespace Messages {
 
-constexpr auto kAlreadyBound =
+constexpr auto kDeviceAlreadyBound =
     "This device already has active clients. New clients may connect via existing clients using "
-    "the camera3::Rebind method.";
+    "the camera3.Device.Rebind method.";
+
+constexpr auto kStreamAlreadyBound =
+    "This stream already has active clients. New clients may connect via existing clients using "
+    "the camera3.Stream.Rebind method.";
 
 }  // namespace Messages
 

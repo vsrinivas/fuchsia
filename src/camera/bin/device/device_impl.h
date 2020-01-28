@@ -16,6 +16,8 @@
 #include <memory>
 #include <vector>
 
+#include "src/camera/bin/device/stream_impl.h"
+
 class DeviceImpl {
  public:
   DeviceImpl();
@@ -30,6 +32,12 @@ class DeviceImpl {
 
   // Posts a task to remove the client with the given id.
   void PostRemoveClient(uint64_t id);
+
+  // Posts a task to update the current configuration.
+  void PostSetConfiguration(uint32_t index);
+
+  // Sets the current configuration to the provided index.
+  void SetConfiguration(uint32_t index);
 
   class Client : public fuchsia::camera3::Device {
    public:
@@ -67,6 +75,9 @@ class DeviceImpl {
   std::vector<fuchsia::camera3::Configuration> configurations_;
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
+
+  uint32_t current_configuration_index_ = 0;
+  std::vector<std::unique_ptr<StreamImpl>> streams_;
 
   friend class Client;
 };
