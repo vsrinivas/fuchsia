@@ -148,6 +148,10 @@ table CreateContextParams {
     /// https://www.w3.org/TR/powerful-features/#is-origin-trustworthy.
     /// Example value: `{"http://a.com", "http://b.com"}`.
     9: vector<UrlSchemeAndHostName>:100 unsafely_treat_insecure_origins_as_secure;
+
+    /// Specifies a set of header names for which [Cross-Origin Resource Sharing
+    /// (CORS)](https://www.w3.org/TR/cors/) checks should not be enforced.
+    10: vector<bytes:MAX>:MAX cors_exempt_headers;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with a set of
