@@ -5,14 +5,12 @@
 use super::*;
 
 #[derive(Debug)]
-#[allow(dead_code)]
 /// AVRCP 1.6.1 section 6.8 Continuation PDUs - RequestContinuingResponse
 pub struct RequestContinuingResponseCommand {
     pdu_id: u8,
 }
 
 impl RequestContinuingResponseCommand {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn new(pdu_id: u8) -> Self {
         Self { pdu_id }
     }

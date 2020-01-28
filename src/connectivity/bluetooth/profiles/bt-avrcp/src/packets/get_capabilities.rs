@@ -19,12 +19,10 @@ pub struct GetCapabilitiesCommand {
 }
 
 impl GetCapabilitiesCommand {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn new(capability_id: GetCapabilitiesCapabilityId) -> GetCapabilitiesCommand {
         GetCapabilitiesCommand { capability_id }
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn capability_id(&self) -> GetCapabilitiesCapabilityId {
         self.capability_id
     }

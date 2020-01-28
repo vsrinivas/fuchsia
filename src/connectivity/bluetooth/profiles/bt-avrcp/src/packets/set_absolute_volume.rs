@@ -12,7 +12,6 @@ pub struct SetAbsoluteVolumeCommand {
 }
 
 impl SetAbsoluteVolumeCommand {
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn new(requested_volume: u8) -> Result<SetAbsoluteVolumeCommand, Error> {
         if requested_volume >= 0x80 {
             return Err(Error::OutOfRange);
