@@ -6,7 +6,7 @@ use {
     core::ops::{Deref, DerefMut},
     derivative::Derivative,
     fuchsia_inspect::{Node, Property, StringProperty},
-    std::borrow::Borrow,
+    std::{borrow::Borrow, collections::HashSet},
 };
 
 /// Generic wrapper for exporting variables via Inspect. Mutations to
@@ -116,23 +116,42 @@ where
     }
 }
 
-/// Exports via an Inspect `UintProperty` the `len` of the wrapped `Vec`.
+/// Exports via an Inspect `UintProperty` the `len` of the wrapped container.
 #[derive(Debug)]
-pub struct InspectableVectorSizeWatcher {
+pub struct InspectableLenWatcher {
     len: fuchsia_inspect::UintProperty,
 }
 
-impl<V> Watch<Vec<V>> for InspectableVectorSizeWatcher {
-    fn new(value: &Vec<V>, node: &Node, name: impl AsRef<str>) -> Self {
+pub trait Len {
+    fn len(&self) -> usize;
+}
+
+impl<V> Watch<V> for InspectableLenWatcher
+where
+    V: Len,
+{
+    fn new(value: &V, node: &Node, name: impl AsRef<str>) -> Self {
         Self { len: node.create_uint(name, value.len() as u64) }
     }
 
-    fn watch(&mut self, vec: &Vec<V>) {
-        self.len.set(vec.len() as u64);
+    fn watch(&mut self, value: &V) {
+        self.len.set(value.len() as u64);
     }
 }
 
-pub type InspectableVectorSize<V> = Inspectable<Vec<V>, InspectableVectorSizeWatcher>;
+pub type InspectableLen<V> = Inspectable<V, InspectableLenWatcher>;
+
+impl<V> Len for Vec<V> {
+    fn len(&self) -> usize {
+        self.len()
+    }
+}
+
+impl<V> Len for HashSet<V> {
+    fn len(&self) -> usize {
+        self.len()
+    }
+}
 
 /// Exports via an Inspect `StringProperty` the `Debug` representation of
 /// the wrapped `value`.
@@ -259,14 +278,14 @@ mod test {
 }
 
 #[cfg(test)]
-mod test_inspectable_vector_size {
+mod test_inspectable_len {
     use super::*;
     use fuchsia_inspect::assert_inspect_tree;
 
     #[test]
     fn test_initialization() {
         let inspector = fuchsia_inspect::Inspector::new();
-        let _inspectable = InspectableVectorSize::new(vec![0], inspector.root(), "test-property");
+        let _inspectable = InspectableLen::new(vec![0], inspector.root(), "test-property");
 
         assert_inspect_tree!(
             inspector,
@@ -279,8 +298,7 @@ mod test_inspectable_vector_size {
     #[test]
     fn test_watcher() {
         let inspector = fuchsia_inspect::Inspector::new();
-        let mut inspectable =
-            InspectableVectorSize::new(vec![0], inspector.root(), "test-property");
+        let mut inspectable = InspectableLen::new(vec![0], inspector.root(), "test-property");
 
         inspectable.get_mut().push(1);
 

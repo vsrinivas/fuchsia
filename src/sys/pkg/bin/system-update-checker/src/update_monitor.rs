@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fidl_fuchsia_update::ManagerState,
-    fuchsia_inspect_contrib::inspectable::{InspectableDebugString, InspectableVectorSize},
+    fuchsia_inspect_contrib::inspectable::{InspectableDebugString, InspectableLen},
 };
 
 pub trait StateChangeCallback: Clone + Send + Sync + 'static {
@@ -29,8 +29,8 @@ pub struct UpdateMonitor<S>
 where
     S: StateChangeCallback,
 {
-    permanent_callbacks: InspectableVectorSize<S>,
-    temporary_callbacks: InspectableVectorSize<S>,
+    permanent_callbacks: InspectableLen<Vec<S>>,
+    temporary_callbacks: InspectableLen<Vec<S>>,
     manager_state: InspectableDebugString<ManagerState>,
     version_available: InspectableDebugString<Option<String>>,
     inspect_node: fuchsia_inspect::Node,
@@ -42,16 +42,8 @@ where
 {
     pub fn from_inspect_node(node: fuchsia_inspect::Node) -> Self {
         UpdateMonitor {
-            permanent_callbacks: InspectableVectorSize::new(
-                vec![],
-                &node,
-                "permanent-callbacks-count",
-            ),
-            temporary_callbacks: InspectableVectorSize::new(
-                vec![],
-                &node,
-                "temporary-callbacks-count",
-            ),
+            permanent_callbacks: InspectableLen::new(vec![], &node, "permanent-callbacks-count"),
+            temporary_callbacks: InspectableLen::new(vec![], &node, "temporary-callbacks-count"),
             manager_state: InspectableDebugString::new(ManagerState::Idle, &node, "manager-state"),
             version_available: InspectableDebugString::new(None, &node, "version-available"),
             inspect_node: node,
