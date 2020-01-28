@@ -138,3 +138,31 @@ async fn scoped_breakpoints_test() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn nested_breakpoint_test() -> Result<(), Error> {
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/nested_reporter.cm",
+    )
+    .await?;
+
+    let breakpoint_system =
+        test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
+
+    let (capability, mut echo_rx) = EchoCapability::new();
+    breakpoint_system.install_injector(capability).await?;
+
+    breakpoint_system.start_component_tree().await?;
+
+    let mut children = vec![];
+    for _ in 1..=3 {
+        let child = echo_rx.next().await.unwrap();
+        println!("child: {}", child.message);
+        children.push(child.message.clone());
+        child.resume();
+    }
+    children.sort_unstable();
+    assert_eq!(vec!["./child_a:0", "./child_b:0", "./child_c:0"], children);
+
+    Ok(())
+}
