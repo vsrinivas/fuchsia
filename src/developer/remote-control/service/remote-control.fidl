@@ -9,6 +9,15 @@ library fuchsia.developer.remotecontrol;
 // because this protocol needs to build on the host.
 const uint16 MAX_URL_LENGTH = 2083;
 
+enum RebootType {
+    // Standard reboot.
+    REBOOT = 1;
+    // Reboots into recovery mode.
+    RECOVERY = 2;
+    // Reboots into the bootloader.
+    BOOTLOADER = 3;
+};
+
 // TODO(fxb/42833): improve this API by making it async.
 table RunComponentResponse {
     // Component's exit code.
@@ -35,5 +44,5 @@ protocol FdbRemoteControl {
     // nothing in Overnet.
     // TODO(fxb/43011) look into this.
     // TODO(fxb/43046) Add parameters for other reboot types.
-    RebootDevice() -> ();
+    RebootDevice(RebootType reboot_type) -> ();
 };

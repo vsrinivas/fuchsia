@@ -32,8 +32,8 @@ impl RemoteControlService {
                 let response = self.spawn_component(&component_url, args).await?;
                 responder.send(response).context("sending RunComponent response")?;
             }
-            Some(rcs::FdbRemoteControlRequest::RebootDevice { responder }) => {
-                self.reboot_device(responder).await?;
+            Some(rcs::FdbRemoteControlRequest::RebootDevice { reboot_type, responder }) => {
+                self.reboot_device(reboot_type, responder).await?;
             }
             None => {
                 log::info!("empty stream!");
@@ -70,12 +70,18 @@ impl RemoteControlService {
 
     pub async fn reboot_device<'a>(
         &'a self,
+        reboot_type: rcs::RebootType,
         responder: rcs::FdbRemoteControlRebootDeviceResponder,
     ) -> Result<(), Error> {
         responder.send().context("failed to send successful reboot response.")?;
 
-        log::info!("got remote control request to reboot device.");
-        self.admin_proxy.suspend(fdevmgr::SUSPEND_FLAG_REBOOT).await?;
+        log::info!("got remote control request to reboot: {:?}", reboot_type);
+        let suspend_flag = match reboot_type {
+            rcs::RebootType::Reboot => fdevmgr::SUSPEND_FLAG_REBOOT,
+            rcs::RebootType::Recovery => fdevmgr::SUSPEND_FLAG_REBOOT_RECOVERY,
+            rcs::RebootType::Bootloader => fdevmgr::SUSPEND_FLAG_REBOOT_BOOTLOADER,
+        };
+        self.admin_proxy.suspend(suspend_flag).await?;
         Ok(())
     }
 }
@@ -100,12 +106,38 @@ mod tests {
                     }) => {
                         let _ = responder.send(zx::Status::OK.into_raw());
                     }
+                    Some(fdevmgr::AdministratorRequest::Suspend {
+                        flags: fdevmgr::SUSPEND_FLAG_REBOOT_RECOVERY,
+                        responder,
+                    }) => {
+                        let _ = responder.send(zx::Status::OK.into_raw());
+                    }
+                    Some(fdevmgr::AdministratorRequest::Suspend {
+                        flags: fdevmgr::SUSPEND_FLAG_REBOOT_BOOTLOADER,
+                        responder,
+                    }) => {
+                        let _ = responder.send(zx::Status::OK.into_raw());
+                    }
                     _ => assert!(false),
                 }
             }
         });
 
         proxy
+    }
+
+    async fn run_reboot_test(reboot_type: rcs::RebootType) {
+        let (rcs_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<rcs::FdbRemoteControlMarker>().unwrap();
+        fasync::spawn(async move {
+            RemoteControlService::new_with_proxies(setup_fake_admin_service())
+                .serve_stream(stream)
+                .await
+                .unwrap();
+        });
+
+        let response = rcs_proxy.reboot_device(reboot_type).await.unwrap();
+        assert_eq!(response, ());
     }
 
     async fn run_component_test(component_url: &str, argv: Vec<&str>) -> rcs::RunComponentResponse {
@@ -148,18 +180,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_reboot() -> Result<(), Error> {
-        let (rcs_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<rcs::FdbRemoteControlMarker>().unwrap();
-        fasync::spawn(async move {
-            RemoteControlService::new_with_proxies(setup_fake_admin_service())
-                .serve_stream(stream)
-                .await
-                .unwrap();
-        });
+        run_reboot_test(rcs::RebootType::Reboot).await;
+        Ok(())
+    }
 
-        let response = rcs_proxy.reboot_device().await.unwrap();
+    #[fasync::run_singlethreaded(test)]
+    async fn test_reboot_recovery() -> Result<(), Error> {
+        run_reboot_test(rcs::RebootType::Recovery).await;
+        Ok(())
+    }
 
-        assert_eq!(response, ());
+    #[fasync::run_singlethreaded(test)]
+    async fn test_reboot_bootloader() -> Result<(), Error> {
+        run_reboot_test(rcs::RebootType::Bootloader).await;
         Ok(())
     }
 }
