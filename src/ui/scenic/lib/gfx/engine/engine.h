@@ -22,6 +22,7 @@
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
+#include "src/ui/scenic/lib/gfx/engine/annotation_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
@@ -120,6 +121,10 @@ class Engine : public scheduling::FrameRenderer {
   // Compositors) would just be able to schedule a frame for themselves.
   SceneGraphWeakPtr scene_graph() { return scene_graph_.GetWeakPtr(); }
 
+  ViewLinker* view_linker() { return &view_linker_; }
+
+  AnnotationManager* annotation_manager() { return annotation_manager_.get(); }
+
   SessionContext session_context() {
     return SessionContext{vk_device(),
                           escher(),
@@ -147,6 +152,9 @@ class Engine : public scheduling::FrameRenderer {
                                             zx::time presentation_time) override;
 
  private:
+  // Initialize annotation session and annotation manager.
+  void InitializeAnnotationManager();
+
   // Initialize all inspect_deprecated::Nodes, so that the Engine state can be observed.
   void InitializeInspectObjects();
 
@@ -202,6 +210,8 @@ class Engine : public scheduling::FrameRenderer {
   bool first_frame_ = true;
 
   bool last_frame_uses_protected_memory_ = false;
+
+  std::unique_ptr<AnnotationManager> annotation_manager_;
 
   inspect_deprecated::Node inspect_node_;
   inspect_deprecated::LazyStringProperty inspect_scene_dump_;

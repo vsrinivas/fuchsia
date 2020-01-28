@@ -69,7 +69,21 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
     fit::function<void(ViewHolderPtr)> create_callback =
         [weak_ptr = GetWeakPtr()](ViewHolderPtr annotation_view_holder) {
           FXL_CHECK(weak_ptr);
-          weak_ptr->AddAnnotationViewHolder(std::move(annotation_view_holder));
+          FXL_DCHECK(annotation_view_holder);
+          weak_ptr->AddAnnotationViewHolder(annotation_view_holder);
+
+          // If View has valid properties, initialize ViewProperties for the
+          // annotation ViewHolder, otherwise we will defer it until the View
+          // is attached to Scene. We inherit the parent View's bounding box and
+          // inset, but suppress all focus changes and hit testing behaviors.
+          ViewHolder* view_holder = weak_ptr->view_holder();
+          if (view_holder &&
+              !fidl::Equals(view_holder->GetViewProperties(), fuchsia::ui::gfx::ViewProperties())) {
+            auto annotation_view_properties = view_holder->GetViewProperties();
+            annotation_view_properties.focus_change = false;
+            annotation_view_holder->SetViewProperties(annotation_view_properties,
+                                                      weak_ptr->error_reporter_.get());
+          }
         };
 
     FXL_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";

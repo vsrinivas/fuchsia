@@ -57,6 +57,8 @@ source_set("gfx") {
   sources = [
     "api/internal_snapshot_impl.cc",
     "api/internal_snapshot_impl.h",
+    "engine/annotation_manager.cc",
+    "engine/annotation_manager.h",
     "engine/engine.cc",
     "engine/engine.h",
     "engine/engine_renderer.cc",

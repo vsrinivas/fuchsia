@@ -242,6 +242,10 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
     }
   }
 
+  // If annotation manager has annotation view holder creation requests, try
+  // fulfilling them by adding the annotation ViewHolders to the SceneGraph.
+  engine_->annotation_manager()->FulfillCreateRequests();
+
   // Run through compositors, find the active Scene, stage it as the view tree root.
   {
     std::set<Scene*> scenes;

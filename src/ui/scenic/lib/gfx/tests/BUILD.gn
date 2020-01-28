@@ -36,6 +36,8 @@ source_set("testing_deps") {
     "session_handler_test.h",
     "session_test.cc",
     "session_test.h",
+    "view_tree_session_test.cc",
+    "view_tree_session_test.h",
     "vk_session_handler_test.cc",
     "vk_session_handler_test.h",
     "vk_session_test.cc",
@@ -79,6 +81,7 @@ source_set("pixel_test") {
   sources = [ "pixel_test.cc" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.ui.annotation",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp/testing:integration",
@@ -137,6 +140,7 @@ executable("unittests") {
 
   testonly = true
   sources = [
+    "annotation_manager_unittest.cc",
     "camera_unittest.cc",
     "compositor_unittest.cc",
     "dump_visitor_unittest.cc",

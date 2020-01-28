@@ -13,6 +13,10 @@ namespace scenic_impl::gfx {
 
 class ViewHolder;
 
+namespace test {
+class ViewTreeSessionTest;
+}  // namespace test
+
 // Used to track accumulated ViewHolder/ViewRef updates.
 class ViewTreeUpdater {
  public:
@@ -28,6 +32,8 @@ class ViewTreeUpdater {
   void UntrackViewHolder(zx_koid_t koid);
 
   friend class Session;
+  friend class test::ViewTreeSessionTest;
+
   void UpdateViewHolderConnections();
 
   // Notify SceneGraph about accumulated ViewHolder/ViewRef updates, but do not apply them yet.

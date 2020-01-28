@@ -52,6 +52,7 @@ Engine::Engine(sys::ComponentContext* app_context,
   FXL_DCHECK(escher_);
 
   InitializeInspectObjects();
+  InitializeAnnotationManager();
 }
 
 Engine::Engine(sys::ComponentContext* app_context,
@@ -68,6 +69,14 @@ Engine::Engine(sys::ComponentContext* app_context,
       scene_graph_(app_context),
       weak_factory_(this) {
   InitializeInspectObjects();
+  InitializeAnnotationManager();
+}
+
+void Engine::InitializeAnnotationManager() {
+  constexpr SessionId kAnnotationSessionId = 0U;
+  auto annotation_session = std::make_unique<Session>(kAnnotationSessionId, session_context());
+  annotation_manager_ = std::make_unique<AnnotationManager>(scene_graph(), view_linker(),
+                                                            std::move(annotation_session));
 }
 
 void Engine::InitializeInspectObjects() {
