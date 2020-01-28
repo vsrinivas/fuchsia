@@ -1,0 +1,25 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input3;
+
+/// A Fuchsia key represents a control that can be pressed or released such as a button
+/// on a keyboard.
+///
+/// Ordinal index for enum elements is derived from the USB HID Usage Tables at the time
+/// of definition and is a 32 bit unsigned integer representing the USB HID Usage
+/// where the low 16 bits are the USB HID Usage ID and the high 16 bits are the
+/// USB HID Usage Page.
+///
+/// The descriptions for each value in the enum assume a US English keyboard layout.
+/// Actual behavior varies by layout.
+enum Key : uint32 {
+    /// Keyboard a and A
+    A = 0x00070004;
+
+    /// Keyboard b and B
+    B = 0x00070005;
+
+    // TODO: Define additional key codes as needed.
+};

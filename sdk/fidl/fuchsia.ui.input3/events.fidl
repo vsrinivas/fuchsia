@@ -1,9 +1,38 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 library fuchsia.ui.input3;
 
+using zx;
+
+/// Type of the keyboard key input event.
+enum KeyEventType {
+    /// Key is pressed down.
+    PRESSED = 0;
+
+    /// Key is released.
+    RELEASED = 1;
+
+    /// Key was pressed while the client wasn't able to receive it, e.g new device connected
+    /// with a key held down or before system was started.
+    /// Client should not handle this as a key press.
+    SYNC = 2;
+
+    /// Key was released while the client wasn't able to receive it, e.g device was disconnected
+    /// or focus lost.
+    /// Client should not handle this as a key release.
+    CANCEL = 3;
+};
+
 /// Keyboard event is generated to reflect key input.
 table KeyEvent {
+    /// Time in nanoseconds when the event was recorded.
+    1: zx.time timestamp;
+
+    /// Type of event.
+    2: KeyEventType type;
+
+    /// Identifies the key ignoring modifiers, layout, prior key events, etc.
+    3: Key key;
 };

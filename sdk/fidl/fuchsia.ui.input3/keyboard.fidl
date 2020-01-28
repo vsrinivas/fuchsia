@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,29 +6,30 @@ library fuchsia.ui.input3;
 
 using fuchsia.ui.views;
 
-/// Components may request this service from their namespace to
-/// be notified of physical key events.
+/// Components may request this service from their namespace to be notified of
+/// physical key events.
 [Discoverable]
 protocol Keyboard {
     /// Set key event listener for the specified View.
-    SetListener(fuchsia.ui.views.ViewRef view_ref, KeyListener listener) -> ();
+    SetListener(fuchsia.ui.views.ViewRef view_ref, KeyboardListener listener) -> ();
 };
 
 /// Client should implement this protocol to get notified of key events.
-/// Returning HANDLED will stop event propagation to other clients.
-/// This notification is triggered on the following conditions:
-/// 1. Component is focused (ViewRef is on FocusChain).
-/// 2. Parent Views get the event first, child views last.
-/// 3. Client returning HANDLED stops the propagation to subsequent clients.
-protocol KeyListener {
-    /// Called when a key event takes place.
-    /// Clients must respond to acknowledge the event. Clients that do not acknowledge their
-    /// events will eventually be disconnected.
+protocol KeyboardListener {
+    /// Called when a key event takes place, such as key press or release.
+    /// Clients must respond to acknowledge the event by returning Status in a timely manner.
+    /// Clients that do not acknowledge their events will eventually be disconnected.
+    /// Notification is only dispatched when the View is focused (ViewRef is on FocusChain).
+    /// Parent Views receive the notification first, child Views last.
+    /// Returning HANDLED will stop event propagation to other clients.
     OnKeyEvent(KeyEvent event) -> (Status result);
 };
 
 /// Return type for clients key events listener.
 enum Status {
+    /// The key event was handled and its further propagation should be stopped.
     HANDLED = 1;
+
+    /// The key event wasn't handled and should be delivered to other clients.
     NOT_HANDLED = 2;
 };
