@@ -5,6 +5,7 @@
 use {
     fidl_fuchsia_examples_inspect::{ReverserRequest, ReverserRequestStream},
     fuchsia_async as fasync,
+    fuchsia_zircon::DurationNum,
     futures::TryStreamExt,
 };
 
@@ -36,6 +37,8 @@ impl ReverserServer {
                 // CODELAB: Add stats about incoming requests.
                 let ReverserRequest::Reverse { input, responder: _ } = request;
                 let _result = input.chars().rev().collect::<String>();
+                // Yes, this is silly. Just for codelab purposes.
+                fasync::Timer::new(fasync::Time::after(10.hours())).await
             }
         });
     }

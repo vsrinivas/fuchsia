@@ -110,8 +110,6 @@ command line arguments as strings to Reverse:
       fx shell run inspect_cpp_codelab_client 1 Hello
       ```
 
-      This command hangs.
-
    * {Rust}
 
       ```
@@ -126,7 +124,7 @@ command line arguments as strings to Reverse:
       fx shell run inspect_dart_codelab_client 1 Hello
       ```
 
-      This command prints no outputs.
+   These commands hang.
 
 3. Press Ctrl+C to stop the client and try running with
    more arguments:
@@ -137,15 +135,11 @@ command line arguments as strings to Reverse:
       fx shell run inspect_cpp_codelab_client 1 Hello World
       ```
 
-      This command also hangs.
-
    * {Rust}
 
       ```
       fx shell run inspect_rust_codelab_client 1 Hello World
       ```
-
-      This command also prints errors.
 
    * {Dart}
 
@@ -154,6 +148,8 @@ command line arguments as strings to Reverse:
       ```
 
       This command also prints no outputs.
+
+   These commands also hang.
 
 You are now ready to look through the code to troubleshoot the issue.
 
@@ -620,15 +616,11 @@ Now that you have added Inspect to your component, you can read what it says:
       fx shell run inspect_cpp_codelab_client 1 Hello
       ```
 
-      Note that this should still hang.
-
    * {Rust}
 
       ```
       fx shell run inspect_rust_codelab_client 1 Hello
       ```
-
-      Note that this should still print errors.
 
    * {Dart}
 
@@ -636,7 +628,7 @@ Now that you have added Inspect to your component, you can read what it says:
       fx shell run inspect_dart_codelab_client 1 Hello
       ```
 
-      Note that this should still not show the desired output.
+   Note that these should still hang.
 
 3. Use `iquery` (Inspect query) to view your output:
 
@@ -1204,13 +1196,14 @@ You will need to diagnose and solve this problem.
       context.incoming.connectToService(fizzBuzz);
 
       // CODELAB: Instrument our connection to FizzBuzz using Inspect. Is there an error?
-      try {
-        final result = await fizzBuzz.execute(30);
+      fizzBuzz.execute(30).timeout(const Duration(seconds: 2), onTimeout: () {
+        throw Exception('timeout');
+      }).then((result) {
         // CODELAB: Add Inspect here to see if there is a response.
         log.info('Got FizzBuzz: $result');
-      } on Exception {
-        // CODELAB: Add Inspect here to see if there is an error
-      }
+      }).catchError((e) {
+        // CODELAB: Instrument our connection to FizzBuzz using Inspect. Is there an error?
+      });
       ```
 
 **Exercise**: Add Inspect to the FizzBuzz connection to identify the problem
