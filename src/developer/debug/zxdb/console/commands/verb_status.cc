@@ -87,7 +87,7 @@ OutputBuffer FormatProcessRecords(std::vector<debug_ipc::ProcessRecord> records,
     row.reserve(4);
 
     row.push_back(indent_str);
-    row.push_back(fxl::StringPrintf("%" PRIu64, record.process_koid));
+    row.push_back(std::to_string(record.process_koid));
     row.push_back(record.process_name);
   }
 

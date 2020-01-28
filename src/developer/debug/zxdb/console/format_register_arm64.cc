@@ -8,6 +8,7 @@
 
 #include "src/developer/debug/shared/arch_arm64.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -98,7 +99,7 @@ std::vector<OutputBuffer> FormatDBGBCR(const Register& reg, TextForegroundColor 
   row.emplace_back(RegisterIDToString(reg.id), color);
 
   uint64_t value = reg.GetValue();
-  row.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
+  row.emplace_back(to_hex_string(value, 8), color);
 
   row.emplace_back(
       fxl::StringPrintf("E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d",
@@ -118,7 +119,7 @@ std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const Register& reg, TextForegrou
   row.emplace_back(RegisterIDToString(reg.id), color);
 
   uint64_t value = static_cast<uint64_t>(reg.GetValue());
-  row.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
+  row.emplace_back(to_hex_string(value, 8), color);
 
   row.emplace_back(fxl::StringPrintf("DV=%d, TV=%d, PMUV=%d, BRP=%d, WRP=%d, CTX_CMP=%d, PMSV=%d",
                                      ARM64_FLAG_VALUE(value, ID_AA64DFR0_EL1, DV),
@@ -141,7 +142,7 @@ std::vector<OutputBuffer> FormatMDSCR(const Register& reg, TextForegroundColor c
   row.emplace_back(RegisterIDToString(reg.id), color);
 
   uint64_t value = static_cast<uint64_t>(reg.GetValue());
-  row.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
+  row.emplace_back(to_hex_string(value, 8), color);
 
   row.emplace_back(
       fxl::StringPrintf(

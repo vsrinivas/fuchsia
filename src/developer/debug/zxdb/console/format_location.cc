@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -86,7 +87,7 @@ OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& op
       printed_name = true;
     } else if (!opts.always_show_addresses) {
       // Unnamed symbol, use the address (unless it was printed above already).
-      result.Append(fxl::StringPrintf("0x%" PRIx64, loc.address()));
+      result.Append(to_hex_string(loc.address()));
       printed_name = true;
     }
 
@@ -123,7 +124,7 @@ std::string DescribeFileLine(const TargetSymbols* optional_target_symbols,
   if (file_line.line() == 0)
     result.push_back('?');
   else
-    result.append(fxl::StringPrintf("%d", file_line.line()));
+    result.append(std::to_string(file_line.line()));
 
   return result;
 }

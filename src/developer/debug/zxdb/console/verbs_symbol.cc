@@ -682,7 +682,7 @@ void DumpIndexOverview(SystemSymbols* system_symbols, OutputBuffer* out) {
       auto syntax = pair.second ? Syntax::kNormal : Syntax::kError;
 
       if (pair.second != BuildIDIndex::kStatusIsFolder) {
-        row.emplace_back(syntax, fxl::StringPrintf("%d", pair.second));
+        row.emplace_back(syntax, std::to_string(pair.second));
       } else {
         row.emplace_back(syntax, "(folder)");
       }

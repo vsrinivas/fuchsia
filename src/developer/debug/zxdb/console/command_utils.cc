@@ -24,6 +24,7 @@
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
@@ -414,7 +415,7 @@ OutputBuffer FormatInputLocation(const InputLocation& location) {
       return FormatIdentifier(location.name, opts);
     }
     case InputLocation::Type::kAddress: {
-      return OutputBuffer(fxl::StringPrintf("0x%" PRIx64, location.address));
+      return OutputBuffer(to_hex_string(location.address));
     }
   }
   FXL_NOTREACHED();

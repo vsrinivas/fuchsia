@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/format.h"
 
 #include "src/developer/debug/zxdb/common/adapters.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
@@ -106,12 +107,12 @@ void FormatUnsignedInt(FormatNode* node, const FormatOptions& options) {
   } else if (options.num_format == NumFormat::kHex) {
     if (options.zero_pad_hex) {
       int pad_to = node->value().data().size() * 2;
-      node->set_description(fxl::StringPrintf("0x%0*" PRIx64, pad_to, int_val));
+      node->set_description(to_hex_string(int_val, pad_to));
     } else {
-      node->set_description(fxl::StringPrintf("0x%" PRIx64, int_val));
+      node->set_description(to_hex_string(int_val));
     }
   } else {
-    node->set_description(fxl::StringPrintf("%" PRIu64, int_val));
+    node->set_description(std::to_string(int_val));
   }
 }
 
@@ -333,7 +334,7 @@ void FormatReference(FormatNode* node, const FormatOptions& options,
   }
 
   // The address goes in the description (see note above).
-  node->set_description(fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
+  node->set_description(to_hex_string(node->value().GetAs<TargetPointer>()));
 
   auto deref_node = std::make_unique<FormatNode>(
       std::string(),
@@ -379,7 +380,7 @@ void FormatFunctionPointer(FormatNode* node, const FormatOptions& options,
   }
   if (function_name.empty()) {
     // No function name, just print out the address.
-    node->set_description(fxl::StringPrintf("0x%" PRIx64, address));
+    node->set_description(to_hex_string(address));
   } else {
     node->set_description("&" + function_name);
   }
@@ -409,7 +410,7 @@ void FormatMemberPtr(FormatNode* node, const MemberPtr* type, const FormatOption
     //
     // TODO(brettw) it would be nice if this interrogated the type and figured out the name of the
     // member being pointed to. The address is not very helpful.
-    node->set_description(fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
+    node->set_description(to_hex_string(node->value().GetAs<TargetPointer>()));
   }
 }
 
@@ -492,7 +493,7 @@ void FormatUnspecified(FormatNode* node) {
   if (node->value().PromoteTo64(&unspecified_value).has_error())
     node->set_description("<unspecified>");
   else
-    node->set_description(fxl::StringPrintf("0x%" PRIx64, unspecified_value));
+    node->set_description(to_hex_string(unspecified_value));
 }
 
 // Given a node with a value already filled, fills the description.
@@ -856,7 +857,7 @@ void FormatPointerNode(FormatNode* node, const ExprValue& value, const FormatOpt
 
   // The address goes in the description.
   TargetPointer pointer_value = value.GetAs<TargetPointer>();
-  node->set_description(fxl::StringPrintf("0x%" PRIx64, pointer_value));
+  node->set_description(to_hex_string(pointer_value));
 
   // Make a child node that's the dereferenced pointer value. If/when we support GUIs, we should
   // probably remove the intermediate node and put the dereferenced struct members directly as

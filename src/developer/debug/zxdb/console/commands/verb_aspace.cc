@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -73,9 +74,8 @@ void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map)
   std::vector<std::vector<std::string>> rows;
   for (const auto& region : map) {
     rows.push_back(std::vector<std::string>{
-        fxl::StringPrintf("0x%" PRIx64, region.base),
-        fxl::StringPrintf("0x%" PRIx64, region.base + region.size), PrintRegionSize(region.size),
-        PrintRegionName(region.depth, region.name)});
+        to_hex_string(region.base), to_hex_string(region.base + region.size),
+        PrintRegionSize(region.size), PrintRegionName(region.depth, region.name)});
   }
 
   OutputBuffer out;

@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
@@ -300,7 +301,7 @@ Err FormatSourceContext(const std::string& file_name_for_display, const std::str
     }
     row.push_back(std::move(margin));
 
-    std::string number = fxl::StringPrintf("%d", line_number);
+    std::string number = std::to_string(line_number);
     if (line_number == opts.highlight_line) {
       // This is the line to mark.
       row.emplace_back(Syntax::kHeading, std::move(number));
@@ -379,7 +380,7 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const Fo
     out_row.push_back(std::move(margin));
 
     if (opts.emit_addresses)
-      out_row.emplace_back(Syntax::kComment, fxl::StringPrintf("0x%" PRIx64, row.address));
+      out_row.emplace_back(Syntax::kComment, to_hex_string(row.address));
     if (opts.emit_bytes) {
       std::string bytes_str;
       for (size_t i = 0; i < row.bytes.size(); i++) {

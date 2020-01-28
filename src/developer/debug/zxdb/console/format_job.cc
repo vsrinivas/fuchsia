@@ -73,7 +73,7 @@ OutputBuffer FormatJobList(ConsoleContext* context, int indent) {
       row.push_back(indent_str);
 
     // ID.
-    row.push_back(fxl::StringPrintf("%d", pair.first));
+    row.push_back(std::to_string(pair.first));
 
     // State and koid (if running).
     row.push_back(JobContextStateToString(pair.second->GetState()));

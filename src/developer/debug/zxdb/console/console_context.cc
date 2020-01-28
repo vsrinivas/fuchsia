@@ -751,7 +751,7 @@ void ConsoleContext::OnBreakpointMatched(Breakpoint* breakpoint, bool user_reque
   size_t matched_locs = breakpoint->GetLocations().size();
 
   OutputBuffer out("Breakpoint ");
-  out.Append(Syntax::kSpecial, fxl::StringPrintf("%d", IdForBreakpoint(breakpoint)));
+  out.Append(Syntax::kSpecial, std::to_string(IdForBreakpoint(breakpoint)));
   out.Append(fxl::StringPrintf(" now matching %zu addrs for ", matched_locs));
   out.Append(FormatInputLocations(settings.locations));
 

@@ -4,7 +4,6 @@
 
 #include "src/developer/debug/zxdb/console/format_register.h"
 
-#include <inttypes.h>
 #include <stdlib.h>
 
 #include <algorithm>
@@ -13,6 +12,7 @@
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_register_arm64.h"
 #include "src/developer/debug/zxdb/console/format_register_x64.h"
@@ -174,7 +174,7 @@ std::vector<OutputBuffer> DescribeRegister(const Register& reg, TextForegroundCo
   if (reg.data.size() <= 8) {
     // Treat <= 64 bit registers as numbers.
     uint64_t value = static_cast<uint64_t>(reg.GetValue());
-    result.emplace_back(fxl::StringPrintf("0x%" PRIx64, value), color);
+    result.emplace_back(to_hex_string(value), color);
 
     // For plausible small integers, show the decimal value also. This size check is intended to
     // avoid cluttering up the results with large numbers corresponding to pointers.

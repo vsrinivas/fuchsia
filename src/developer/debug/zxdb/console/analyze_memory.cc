@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
@@ -149,13 +150,13 @@ void MemoryAnalysis::DoAnalysis() {
     uint64_t address = begin_address_ + offset;
 
     // Address.
-    row.emplace_back(Syntax::kComment, fxl::StringPrintf("0x%" PRIx64, address));
+    row.emplace_back(Syntax::kComment, to_hex_string(address));
 
     // Data
     uint64_t data_value = 0;
     bool has_data = GetData(address, &data_value);
     if (has_data) {
-      row.emplace_back(fxl::StringPrintf("0x%016" PRIx64, data_value));
+      row.emplace_back(to_hex_string(data_value, 16));
     } else {
       row.emplace_back("<invalid memory>");
     }

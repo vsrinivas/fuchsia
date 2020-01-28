@@ -65,6 +65,7 @@ source_set("tests") {
     "file_util_unittest.cc",
     "inet_util_unittest.cc",
     "largest_less_or_equal_unittest.cc",
+    "string_util_unittest.cc",
   ]
 
   deps = [

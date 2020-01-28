@@ -135,7 +135,7 @@ OutputBuffer FormatSettingValue(ConsoleContext* context, const SettingValue& val
       return OutputBuffer(BoolToString(value.get_bool()));
     }
     case SettingType::kInteger: {
-      return fxl::StringPrintf("%d", value.get_int());
+      return std::to_string(value.get_int());
     }
     case SettingType::kString: {
       auto string = value.get_string();

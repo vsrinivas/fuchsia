@@ -8,6 +8,7 @@
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -46,8 +47,7 @@ void OnLibsComplete(const Err& err, std::vector<debug_ipc::Module> modules) {
 
   std::vector<std::vector<std::string>> rows;
   for (const auto& module : modules) {
-    rows.push_back(
-        std::vector<std::string>{fxl::StringPrintf("0x%" PRIx64, module.base), module.name});
+    rows.push_back(std::vector<std::string>{to_hex_string(module.base), module.name});
   }
 
   OutputBuffer out;
