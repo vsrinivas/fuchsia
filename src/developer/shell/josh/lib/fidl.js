@@ -74,6 +74,21 @@ const libraries = new Map();
 var internalLibrary = null;
 
 /**
+ * Converts the given string to JSON, converting 64-bit ordinals to
+ * strings.
+ *
+ * @param {String} str the string containing the IR to convert.
+ */
+function stringToJsonIr(str) {
+  // Hack: replace 64-bit ordinals with strings.  Better support for BigInts would be better.
+  let regex = /("ordinal"\s*:\s*)([0-9]+)\s*,/gi;
+  str = str.replace(regex, '$1"$2",');
+  regex = /("generated_ordinal"\s*:\s*)([0-9]+)\s*,/gi;
+  str = str.replace(regex, '$1"$2",');
+  return JSON.parse(str);
+}
+
+/**
  * Loads the IR for a given library.
  * libraryName should be of the form library.protocol
  *
@@ -99,12 +114,7 @@ function loadIR(libraryName) {
     const f = std.open(irPath, 'r');
     let str = f.readAsString();
     f.close();
-    // Hack: replace 64-bit ordinals with strings.  Better support for BigInts would be better.
-    let regex = /("ordinal"\s*:\s*)([0-9]+)\s*,/gi;
-    str = str.replace(regex, '$1"$2",');
-    regex = /("generated_ordinal"\s*:\s*)([0-9]+)\s*,/gi;
-    str = str.replace(regex, '$1"$2",');
-    let ir = JSON.parse(str);
+    let ir = stringToJsonIr(str);
     libraries.set(ir.name, new Library(ir));
   } catch {
     throw 'FIDL definition for ' + libraryName + ' not found in ' + irPath;
@@ -136,11 +146,19 @@ function loadLibrary(libraryName) {
 }
 
 /**
- * Loads the given FIDL JSON IR as a library.
+ * Loads the given string containing FIDL JSON IR as a library.
  */
-function loadLibraryIr(ir) {
+function loadLibraryIr(irString) {
+  let ir = stringToJsonIr(irString);
   if (!libraries.has(ir.name)) {
     libraries.set(ir.name, new Library(ir));
+    // Load for C++ level operations, like encoding and decoding.
+    if (internalLibrary == null) {
+      internalLibrary = fidl_internal.newLibrary();
+    }
+    if (!internalLibrary.loadLibraryFromString(ir.name, JSON.stringify(ir))) {
+      throw 'Internal error: Unable to load libraries for ' + ir.name;
+    }
   }
 }
 
@@ -436,12 +454,11 @@ class ProtocolClientImpl {
               zx.ZX_CHANNEL_READABLE | zx.ZX_CHANNEL_PEER_CLOSED, () => this._readable(method));
           txid = this._nextTxId();
         }
-        const encoder = new MessageEncoder(txid, method.ordinal);
-        encoder.encodeArgs(method.maybe_request, method.maybe_request_size, args);
+        const encoded = internalLibrary.encodeRequest(txid, method.ordinal, args);
         if (method.has_response) {
           this._pending.set(txid, [method, resolve, reject]);
         }
-        this._channel.write(encoder.bytes, encoder.handles);
+        this._channel.write(encoded.bytes, encoded.handles);
         if (!method.has_response) {
           resolve();
         }  // otherwise, gets resolved when we invoke _readable.
@@ -488,163 +505,6 @@ class ProtocolClientImpl {
     this._channel.close();
   }
 }
-
-/**
- * Enough of a message encoder to tide us over until fidl_codec supports message encoding.
- * TODO(jeremymanson): Delete me!
- */
-class MessageEncoder {
-  constructor(txid, ordinal) {
-    this.txid = txid;
-    this.buf = new ArrayBuffer(MSG_MAX_BYTES);
-    this.view = new DataView(this.buf);
-    this.length = 0;
-    this.handles = [];
-    this.offset = 0;
-    // encode the header
-    this.view.setUint32(0, txid, true);
-    this.view.setUint32(4, 0, true);  // uint8_t flags[3], plus one more which we overwrite:
-    this.view.setUint32(7, 1, true);  // The current magic number.
-    this.view.setBigUint64(8, BigInt(ordinal), true);
-  }
-  encodeArgs(args, size, values) {
-    this.length = size;
-    this.offset = 16;
-    let typelist = Array.from(args);
-    let valuelist = Array.from(values);
-    typelist.push({'type': {'kind': 'pad_to_boundary'}, 'size': '-1'});
-    valuelist.push(null);
-    for (let i = 0; i < typelist.length; i++) {
-      const arg = typelist[i];
-      const value = valuelist[i];
-      const val = this.encode(arg.type, this.offset, arg.size, value);
-      this.offset = val.offset
-      for (let i = 0; i < val.more.length; i++) {
-        typelist.push(val.more[i].arg);
-        valuelist.push(val.more[i].value);
-      }
-    }
-    this.length = this.offset;
-  }
-  encode(type, offset, size, value) {
-    let val = {'offset': offset, 'more': []};
-    switch (type.kind) {
-      case 'primitive':
-        switch (type.subtype) {
-          case 'bool':
-            this.view.setUint8(offset, value ? 1 : 0);
-            val.offset = offset + 1;
-            break;
-          case 'int8':
-            this.view.setInt8(offset, value);
-            val.offset = offset + 1;
-            break;
-          case 'uint8':
-            this.view.setUint8(offset, value);
-            val.offset = offset + 1;
-            break;
-          case 'int16':
-            this.view.setInt16(offset, value, true);
-            val.offset = offset + 2;
-            break;
-          case 'uint16':
-            this.view.setUint16(offset, value, true);
-            val.offset = offset + 2;
-            break;
-          case 'int32':
-            this.view.setInt32(offset, value, true);
-            val.offset = offset + 4;
-            break;
-          case 'uint32':
-            this.view.setUint32(offset, value, true);
-            val.offset = offset + 4;
-            break;
-          case 'int64':
-            this.view.setBigInt64(offset, BigInt(value), true);
-            val.offset = offset + 8;
-            break;
-          case 'uint64':
-            this.view.setBigUint64(offset, BigInt(value), true);
-            val.offset = offset + 8;
-            break;
-          case 'float32':
-            this.view.setFloat32(offset, value, true);
-            val.offset = offset + 4;
-            break;
-          case 'float64':
-            this.view.setFloat64(offset, value, true);
-            val.offset = offset + 8;
-            break;
-          default:
-            throw new Error('Don\'t know how to encode primitive: ' + JSON.stringify(type));
-            break;
-        }
-        break;
-      case 'string':
-        // convert to byte array of utf-8
-        var array = MessageEncoder._stringToUtf8ByteArray(value);
-        this.view.setBigUint64(offset, BigInt(array.length), true);
-        offset += 8;
-        for (var i = 0; i < 8; i++) {
-          this.view.setUint8(offset + i, 0xff, true);
-        }
-        val.offset = offset + 8
-        val.more = [{'arg': {'type': {'kind': 'string_contents'}, 'size': '-1'}, 'value': array}];
-        break;
-      case 'string_contents':
-        for (var i = 0; i < value.length; i++) {
-          this.view.setUint8(val.offset++, value[i], true);
-        }
-        val.more = [{'arg': {'type': {'kind': 'pad_to_boundary'}, 'size': '-1'}, 'value': null}];
-        break;
-      case 'request':
-        // FIDL_HANDLE_ABSENT = 0
-        // FIDL_HANDLE_PRESENT = UINT32_MAX
-        let handleIndicator = (value == null) ? 0 : 0xFFFFFFFF;
-        this.view.setUint32(val.offset, handleIndicator, true);
-        val.offset += 4;
-        if (value != null) {
-          this.handles.push(value);
-        }
-        break;
-      case 'pad_to_boundary':
-        // Pad the end of the structure to an 8-byte boundary.
-        while (val.offset % 8 != 0) {
-          this.view.setUint8(val.offset++, 0, true);
-        }
-        break;
-      default:
-        throw new Error('Don\'t know how to encode: ' + JSON.stringify(type));
-    }
-    return val;
-  }
-  get bytes() {
-    return this.buf.slice(0, this.length);
-  }
-
-  static _stringToUtf8ByteArray(str) {
-    let out = [];
-    for (let i = 0; i < str.length; i++) {
-      let ch = str.charCodeAt(i);
-      if (ch < 0x80) {
-        out.push(ch);
-      } else if (ch < 0x800) {
-        out.push((ch >> 6) | 0xC0, (ch & 63) | 0x80);
-      } else if (
-          ((ch & 0xFC00) == 0xD800) && (i + 1) < str.length &&
-          ((str.charCodeAt(i + 1) & 0xFC00) == 0xDC00)) {
-        // Surrogate Pair
-        ch = 0x10000 + ((ch & 0x03FF) << 10) + (str.charCodeAt(++i) & 0x03FF);
-        out.push(
-            (ch >> 18) | 0xF0, ((ch >> 12) & 0x3F) | 0x80, ((ch >> 6) & 0x3F) | 0x80,
-            (ch & 63) | 0x80);
-      } else {
-        out.push((ch >> 12) | 0xE0, ((ch >> 6) & 0x3F) | 0x80, (ch & 0x3F) | 0x80);
-      }
-    }
-    return out;
-  }
-};
 
 /**
  * A convenience class that allows a user to say something like:

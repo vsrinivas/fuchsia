@@ -10,6 +10,8 @@ static_library("lib") {
     "fdio.h",
     "fidl.cc",
     "fidl.h",
+    "object_converter.cc",
+    "object_converter.h",
     "qjs_util.h",
     "runtime.cc",
     "runtime.h",

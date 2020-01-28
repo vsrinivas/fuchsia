@@ -11,8 +11,11 @@
 #include <set>
 #include <vector>
 
+#include "lib/fidl/txn_header.h"
+#include "src/developer/shell/josh/lib/object_converter.h"
 #include "src/developer/shell/josh/lib/qjs_util.h"
 #include "src/developer/shell/josh/lib/zx.h"
+#include "src/lib/fidl_codec/encoder.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/wire_parser.h"
 #include "third_party/quickjs/quickjs.h"
@@ -64,6 +67,108 @@ JSValue LoadLibrary(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
   loader->Add(&path_ptr, &loader_err);
 
   return JS_NewBool(ctx, loader_err.value == fidl_codec::LibraryReadError::kOk);
+}
+
+// Loads a FIDL library from a string containing its JSON.
+// argv[0] A string name of the library (e.g., "fuchsia.io")
+// argv[1] A string containing the IR of the library.
+// Returns a boolean indicating success.
+JSValue LoadLibraryFromString(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+  if (argc != 2) {
+    return JS_ThrowSyntaxError(ctx,
+                               "Wrong number of arguments to fidl.loadLibraryFromString(), "
+                               "was %d, expected 2",
+                               argc);
+  }
+  auto loader =
+      reinterpret_cast<fidl_codec::LibraryLoader*>(JS_GetOpaque(this_val, fidl_class_id_));
+  if (loader == nullptr) {
+    return JS_EXCEPTION;
+  }
+
+  CStringHolder val(ctx, argv[0]);
+  const char* path = val.get();
+  if (!path) {
+    return JS_EXCEPTION;
+  }
+  fidl_codec::LibraryReadError loader_err;
+  CStringHolder contents(ctx, argv[1]);
+  std::unique_ptr<std::istream> string_ptr(new std::istringstream(contents.get()));
+  loader->Add(&string_ptr, &loader_err);
+
+  return JS_NewBool(ctx, loader_err.value == fidl_codec::LibraryReadError::kOk);
+}
+
+// Returns an object with a "bytes" and "handles" field containing the encoded version of a fidl
+// request.
+// argv[0] = Transaction ID.
+// argv[1] = Ordinal.
+// argv[2] = Object.
+JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+  const uint8_t kFidlMagic = 1;
+  const uint8_t kFlags[3] = {FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG, 0, 0};
+
+  if (argc != 3) {
+    return JS_ThrowSyntaxError(ctx,
+                               "Wrong number of arguments to fidl.encodeRequest(), "
+                               "was %d, expected 3",
+                               argc);
+  }
+  auto loader =
+      reinterpret_cast<fidl_codec::LibraryLoader*>(JS_GetOpaque(this_val, fidl_class_id_));
+  if (loader == nullptr) {
+    return JS_EXCEPTION;
+  }
+
+  int32_t txn_id_signed;
+  if (JS_ToInt32(ctx, &txn_id_signed, argv[0]) == -1) {
+    return JS_EXCEPTION;
+  }
+  auto txn_id = static_cast<uint32_t>(txn_id_signed);
+
+  int64_t ordinal_signed;
+  if (JS_ToInt64(ctx, &ordinal_signed, argv[1]) == -1) {
+    return JS_EXCEPTION;
+  }
+  auto ordinal = static_cast<fidl_codec::Ordinal64>(ordinal_signed);
+
+  const std::vector<const fidl_codec::InterfaceMethod*>* methods = loader->GetByOrdinal(ordinal);
+
+  if (!methods || methods->empty()) {
+    return JS_ThrowInternalError(ctx, "Method not found for ordinal %zu", ordinal);
+  }
+
+  auto method = (*methods)[0];
+  auto request = method->request();
+  if (request == nullptr) {
+    return JS_ThrowInternalError(ctx, "Method missing request.");
+  }
+
+  auto ast = ObjectConverter::Convert(ctx, request, argv[2]);
+
+  if (!ast || !ast->AsStructValue()) {
+    return JS_EXCEPTION;
+  }
+
+  auto result = fidl_codec::Encoder::EncodeMessage(txn_id, ordinal, kFlags, kFidlMagic,
+                                                   *ast->AsStructValue());
+
+  auto bytes = JS_NewArrayBufferCopy(ctx, result.bytes.data(), result.bytes.size());
+  auto handles = JS_NewArray(ctx);
+  JS_SetPropertyStr(ctx, handles, "length",
+                    JS_NewInt32(ctx, static_cast<int32_t>(result.handles.size())));
+
+  for (uint32_t i = 0; i < result.handles.size(); i++) {
+    JSValue opaque_handle = zx::HandleCreate(ctx, result.handles[i].handle, result.handles[i].type);
+    JSValue user_handle = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, user_handle, "_handle", opaque_handle);
+    JS_SetPropertyUint32(ctx, handles, i, user_handle);
+  }
+
+  auto ret = JS_NewObject(ctx);
+  JS_SetPropertyStr(ctx, ret, "bytes", bytes);
+  JS_SetPropertyStr(ctx, ret, "handles", handles);
+  return ret;
 }
 
 // Returns a string with the JSON representation of this FIDL message.
@@ -158,6 +263,8 @@ JSValue Close(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* /*a
 
 const JSCFunctionListEntry fidl_proto_funcs_[] = {
     JS_CFUNC_DEF("loadLibrary", 1, LoadLibrary),
+    JS_CFUNC_DEF("loadLibraryFromString", 1, LoadLibraryFromString),
+    JS_CFUNC_DEF("encodeRequest", 1, EncodeRequest),
     JS_CFUNC_DEF("decodeResponse", 1, DecodeResponse),
     JS_CFUNC_DEF("close", 1, Close),
 };

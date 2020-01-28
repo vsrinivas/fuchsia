@@ -20,8 +20,8 @@ class Encoder : public Visitor {
     std::vector<zx_handle_info_t> handles;
   };
 
-  static Result EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t flags[3], uint8_t magic,
-                              const StructValue& object);
+  static Result EncodeMessage(uint32_t tx_id, uint64_t ordinal, const uint8_t flags[3],
+                              uint8_t magic, const StructValue& object);
 
   // Write a literal value into our buffer.
   template <typename T>

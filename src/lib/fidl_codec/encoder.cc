@@ -50,7 +50,7 @@ class NullVisitor : public TypeVisitor {
   Encoder* encoder_;
 };
 
-Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t flags[3],
+Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, const uint8_t flags[3],
                                        uint8_t magic, const StructValue& object) {
   Encoder encoder;
 

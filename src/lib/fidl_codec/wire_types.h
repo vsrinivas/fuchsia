@@ -411,6 +411,8 @@ class ArrayType : public ElementSequenceType {
   ArrayType(std::unique_ptr<Type> component_type, uint32_t count)
       : ElementSequenceType(std::move(component_type)), count_(count) {}
 
+  uint32_t count() const { return count_; }
+
   bool IsArray() const override;
 
   std::string Name() const override;

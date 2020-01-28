@@ -84,7 +84,7 @@ TEST_F(FidlTest, SimpleFrobinator) {
       frob_fidl = element.second;
     }
   }
-  std::string load = "fidl.loadLibraryIr(" + frob_fidl + ");\n";
+  std::string load = "fidl.loadLibraryIr(`" + frob_fidl + "`);\n";
 
   // Set up a channel to call over.
   zx_handle_t out0, out1;
@@ -100,6 +100,8 @@ TEST_F(FidlTest, SimpleFrobinator) {
   fidl::test::FrobinatorImpl impl;
   fidl::Binding<fidl::test::frobinator::Frobinator> binding(&impl, ::zx::channel(out1));
 
+  binding.set_error_handler(
+      [](zx_status_t status) { FAIL() << "Frob call failed with status " << status; });
   // Send a message from a JS client.
   std::string test_string = load + R"(
 if (globalThis.outHandle == undefined) {

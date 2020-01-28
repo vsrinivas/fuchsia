@@ -41,6 +41,11 @@ class Value {
   // point value. For integer values, we can lost precision during the conversion.
   virtual bool GetDoubleValue(double* result) const { return false; }
 
+  // Methods to downcast a value to a StructValue. Returns a StructValue-type pointer to this object
+  // when this object is a StructValue and nullptr in all other cases.
+  virtual StructValue* AsStructValue() { return nullptr; }
+  virtual const StructValue* AsStructValue() const { return nullptr; }
+
   // Returns the size needed to display the value. If the needed size is
   // greater than |remaining_size|, the return value can be anything greater
   // than |remaining_size| and the only useful information is that the value
@@ -260,6 +265,9 @@ class StructValue : public Value {
   void AddField(const StructMember* member, std::unique_ptr<Value> value) {
     fields_.emplace(std::make_pair(member, std::move(value)));
   }
+
+  StructValue* AsStructValue() override { return this; }
+  const StructValue* AsStructValue() const override { return this; }
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 

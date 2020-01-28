@@ -200,7 +200,7 @@ JSValue ChannelWrite(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
     JSValue item = JS_GetPropertyUint32(ctx, argv[2], i);
     auto ih = reinterpret_cast<JSFuchsiaHandle *>(JS_GetOpaque2(ctx, item, handle_class_id_));
     if (!ih) {
-      return JS_ThrowTypeError(ctx, "Expected a Handle at index %d", i);
+      return JS_ThrowTypeError(ctx, "Expected a handle at index %d into handle array", i);
     }
     handles[i] = ih->handle;
     ih->handle = ZX_HANDLE_INVALID;
