@@ -293,8 +293,6 @@ template("escher_library") {
       "scene/camera.h",
       "scene/directional_light.cc",
       "scene/directional_light.h",
-      "scene/displacement.cc",
-      "scene/displacement.h",
       "scene/model.cc",
       "scene/model.h",
       "scene/object.cc",
