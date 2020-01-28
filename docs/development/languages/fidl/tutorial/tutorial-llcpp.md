@@ -110,6 +110,7 @@ Continuing with the FIDL protocol:
 protocol SpaceShip {
     SetHeading(int16 heading);
     ScanForPlanets() -> (vector<Planet> planets);
+    DirectedScan(int16 heading) -> (vector<Planet> planets);
 };
 ```
 
@@ -129,6 +130,15 @@ class SpaceShip final {
     fidl::VectorView<Planet> planets;
   };
   using ScanForPlanetsRequest = fidl::AnyZeroArgMessage;
+
+  struct DirectedScanRequest final {
+    fidl_message_header_t _hdr;
+    int16_t heading;
+  };
+  struct DirectedScanResponse final {
+    fidl_message_header_t _hdr;
+    fidl::VectorView<Planet> planets;
+  };
 
   class SyncClient final { /* ... */ };
   class Call final { /* ... */ };
@@ -190,6 +200,11 @@ class SyncClient final {
   // FIDL: ScanForPlanets() -> (vector<Planet> planets);
   ResultOf::ScanForPlanets ScanForPlanets();
   UnownedResultOf::ScanForPlanets ScanForPlanets(fidl::BytePart response_buffer);
+
+  // FIDL: DirectedScan(int16 heading) -> (vector<Planet> planets);
+  ResultOf::DirectedScan DirectedScan(int16_t heading);
+  UnownedResultOf::DirectedScan DirectedScan(fidl::BytePart request_buffer, int16_t heading,
+                                             fidl::BytePart response_buffer);
 };
 ```
 
@@ -338,6 +353,12 @@ class Call final {
   ScanForPlanets(zx::unowned_channel client_end);
   static UnownedResultOf::ScanForPlanets
   ScanForPlanets(zx::unowned_channel client_end, fidl::BytePart response_buffer);
+
+  static ResultOf::DirectedScan
+  DirectedScan(zx::unowned_channel client_end, int16_t heading);
+  static UnownedResultOf::DirectedScan
+  DirectedScan(zx::unowned_channel client_end, fidl::BytePart request_buffer, int16_t heading,
+               fidl::BytePart response_buffer);
 };
 ```
 
@@ -430,6 +451,11 @@ class InPlace final {
   ScanForPlanets(zx::unowned_channel client_end,
                  fidl::DecodedMessage<ScanForPlanetsRequest> params,
                  fidl::BytePart response_buffer);
+
+  static ::fidl::DecodeResult<DirectedScan>
+  DirectedScan(zx::unowned_channel client_end,
+               fidl::DecodedMessage<DirectedScanRequest> params,
+               fidl::BytePart response_buffer);
 };
 ```
 
@@ -494,6 +520,17 @@ class Interface {
   using ScanForPlanetsCompleter = fidl::Completer<ScanForPlanetsCompleterBase>;
 
   virtual void ScanForPlanets(ScanForPlanetsCompleter::Sync completer) = 0;
+
+  class DirectedScanCompleterBase {
+   public:
+    void Reply(fidl::VectorView<Planet> planets);
+    void Reply(fidl::BytePart buffer, fidl::VectorView<Planet> planets);
+    void Reply(fidl::DecodedMessage<DirectedScanResponse> params);
+  };
+
+  using DirectedScanCompleter = fidl::Completer<DirectedScanCompleterBase>;
+
+  virtual void DirectedScan(int16_t heading, DirectedScanCompleter::Sync completer) = 0;
 };
 
 bool TryDispatch(Interface* impl, fidl_msg_t* msg, fidl::Transaction* txn);
@@ -514,6 +551,11 @@ class MyServer final : fuchsia::fleet::SpaceShip::Interface {
   }
   void ScanForPlanets(ScanForPlanetsCompleter::Sync completer) override {
     fidl::VectorView<Planet> discovered_planets = /* perform planet scan */;
+    // Send the |discovered_planets| vector as the response.
+    completer.Reply(discovered_planets);
+  }
+  void DirectedScan(int16_t heading, DirectedScanCompleter::Sync completer) override {
+    fidl::VectorView<Planet> discovered_planets = /* perform a directed planet scan */;
     // Send the |discovered_planets| vector as the response.
     completer.Reply(discovered_planets);
   }
@@ -550,6 +592,30 @@ void ScanForPlanets(ScanForPlanetsCompleter::Sync completer) override {
         // Here the type of |completer| is |ScanForPlanetsCompleter::Async|.
         completer.Reply(planets);
       });
+}
+```
+
+### Parallel Message Handling
+
+NOTE: This use-case is currently possible only using the
+[lib/fidl-async](/zircon/system/ulib/fidl-async) bindings.
+
+By default, messages from a single binding are handled sequentially, i.e. a
+single thread attached to the dispatcher (run loop) is woken up if necessary,
+reads the message, executes the handler, and returns back to the dispatcher. The
+`::Sync` completer provides an additional API, `EnableNextDispatch()`, which may
+be used to selectively break this restriction. Specifically, a call to this API
+will enable another thread waiting on the dispatcher to handle the next message
+on the binding while the first thread is still in the handler. Note that
+repeated calls to `EnableNextDispatch()` on the same `Completer` are idempotent.
+
+```cpp
+void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync completer) override {
+  // Suppose directed scans can be done in parallel. It would be suboptimal to block one scan until
+  // another has completed.
+  completer.EnableNextDispatch();
+  fidl::VectorView<Planet> discovered_planets = /* perform a directed planet scan */;
+  completer.Reply(discovered_planets);
 }
 ```
 

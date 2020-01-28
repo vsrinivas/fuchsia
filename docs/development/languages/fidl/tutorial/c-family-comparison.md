@@ -82,6 +82,7 @@ Category                           | Simple C                          | Low-lev
 **implementing protocol methods**  | manual dispatch or via ops table  | manual dispatch or implement stub interface   | implement stub object, invoke callbacks
 **async client**                   | no                                | no (planned)                                  | yes
 **async server**                   | limited [2]                       | yes (unbounded) [3]                           | yes (unbounded)
+**parallel server dispatch**       | no                                | yes [4]                                       | no
 **generated code footprint**       | small                             | moderate                                      | large
 
 Notes:
@@ -92,6 +93,9 @@ Notes:
    `fidl::DecodedMessage` object to manage all handles associated with a call.
 2. The bindings library can dispatch at most one in-flight transaction.
 3. The bindings library defined in [lib/fidl-async](/zircon/system/ulib/fidl-async) can dispatch an unbounded number of in-flight transactions via `fidl::AsyncBind` defined in [lib/fidl-async/cpp/async_bind.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/async_bind.h).
+4. The bindings library [lib/fidl-async](/zircon/system/ulib/fidl-async) enables
+parallel dispatch using the `EnableNextDispatch()` API defined in
+[lib/fidl-async/cpp/async_transaction.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/async_transaction.h).
 
 ## Migrating From C Bindings To Low-Level C++
 
