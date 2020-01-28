@@ -9,6 +9,7 @@
 #include <threads.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/syscalls/smc.h>
 #include <zircon/types.h>
 
 #include <utility>
@@ -97,14 +98,14 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   ddk::PDev pdev(component);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "aml-cpufreq: failed to get pdev protocol\n");
+    zxlogf(ERROR, "aml-thermal: failed to get pdev protocol\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_device_info_t device_info;
   zx_status_t status = pdev.GetDeviceInfo(&device_info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to get GetDeviceInfo \n");
+    zxlogf(ERROR, "aml-thermal: failed to get GetDeviceInfo \n");
     return status;
   }
 
@@ -123,6 +124,13 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
                                sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo), &actual);
   if (status != ZX_OK || actual != sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo)) {
     zxlogf(ERROR, "aml-thermal: Could not get thermal config metadata %d\n", status);
+    return status;
+  }
+
+  zx::resource smc_resource;
+  pdev.GetSmc(0, &smc_resource);
+  status = PopulateDvfsTable(smc_resource, thermal_info, &thermal_config);
+  if (status != ZX_OK) {
     return status;
   }
 
@@ -287,6 +295,52 @@ void AmlThermal::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlThermal::DdkRelease() { delete this; }
 
+zx_status_t AmlThermal::PopulateClusterDvfsTable(
+    const zx::resource& smc_resource, const aml_thermal_info_t& aml_info,
+    fuchsia_hardware_thermal_PowerDomain cluster,
+    fuchsia_hardware_thermal_ThermalDeviceInfo* thermal_info) {
+  zx_smc_parameters_t smc_params = {};
+  smc_params.func_id = AMLOGIC_SMC_GET_DVFS_TABLE_INDEX;
+  smc_params.arg1 = aml_info.cluster_id_map[cluster];
+
+  zx_smc_result_t smc_result;
+  zx_status_t status = zx_smc_call(smc_resource.get(), &smc_params, &smc_result);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-thermal: zx_smc_call failed: %d\n", status);
+    return status;
+  }
+
+  if (smc_result.arg0 >= fbl::count_of(aml_info.opps[0])) {
+    zxlogf(ERROR, "aml-thermal: DVFS table index out of range: %lu\n", smc_result.arg0);
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  thermal_info->opps[cluster] = aml_info.opps[cluster][smc_result.arg0];
+
+  return ZX_OK;
+}
+
+zx_status_t AmlThermal::PopulateDvfsTable(
+    const zx::resource& smc_resource, const aml_thermal_info_t& aml_info,
+    fuchsia_hardware_thermal_ThermalDeviceInfo* thermal_info) {
+  if (!smc_resource.is_valid()) {
+    // No SMC resource was specified, so expect the operating points to be in ThermalDeviceInfo.
+    return ZX_OK;
+  }
+
+  zx_status_t status = PopulateClusterDvfsTable(
+      smc_resource, aml_info, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
+      thermal_info);
+
+  if (status == ZX_OK && thermal_info->big_little) {
+    status = PopulateClusterDvfsTable(
+        smc_resource, aml_info, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
+        thermal_info);
+  }
+
+  return status;
+}
+
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
@@ -297,10 +351,11 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace thermal
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 6)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D3),
 ZIRCON_DRIVER_END(aml_thermal)

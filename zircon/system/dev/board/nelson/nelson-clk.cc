@@ -33,6 +33,8 @@ constexpr clock_id_t clock_ids[] = {
 
   // For audio driver.
   {sm1_clk::CLK_HIFI_PLL},
+  {sm1_clk::CLK_SYS_PLL_DIV16},
+  {sm1_clk::CLK_SYS_CPU_CLK_DIV16},
 };
 
 constexpr pbus_metadata_t clock_metadata[] = {

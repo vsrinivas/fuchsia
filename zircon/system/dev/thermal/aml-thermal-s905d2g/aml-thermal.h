@@ -57,6 +57,14 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   zx_status_t SetTarget(uint32_t opp_idx, fuchsia_hardware_thermal_PowerDomain power_domain);
 
  private:
+  static zx_status_t PopulateClusterDvfsTable(
+      const zx::resource& smc_resource, const aml_thermal_info_t& aml_info,
+      fuchsia_hardware_thermal_PowerDomain cluster,
+      fuchsia_hardware_thermal_ThermalDeviceInfo* thermal_info);
+  static zx_status_t PopulateDvfsTable(const zx::resource& smc_resource,
+                                       const aml_thermal_info_t& aml_info,
+                                       fuchsia_hardware_thermal_ThermalDeviceInfo* thermal_info);
+
   zx_status_t GetInfo(fidl_txn_t* txn);
   zx_status_t GetDeviceInfo(fidl_txn_t* txn);
   zx_status_t GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain, fidl_txn_t* txn);

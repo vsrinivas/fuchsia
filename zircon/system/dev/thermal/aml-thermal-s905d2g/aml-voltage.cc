@@ -25,14 +25,12 @@ constexpr uint32_t kSleep = 200;
 constexpr int kSteps = 3;
 // Invalid index in the voltage-table
 constexpr int kInvalidIndex = -1;
-// Init period
-constexpr int kPwmPeriodNs = 1250;
 
 }  // namespace
 
 zx_status_t AmlVoltageRegulator::Create(
     zx_device_t* parent, const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
-    aml_thermal_info_t* thermal_info) {
+    const aml_thermal_info_t* thermal_info) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
     zxlogf(ERROR, "aml-voltage: failed to get composite protocol\n");
@@ -90,7 +88,7 @@ zx_status_t AmlVoltageRegulator::Create(
 zx_status_t AmlVoltageRegulator::Init(
     const pwm_protocol_t* big_cluster_pwm, const pwm_protocol_t* little_cluster_pwm,
     const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
-    aml_thermal_info_t* thermal_info) {
+    const aml_thermal_info_t* thermal_info) {
   zx_status_t status = ZX_OK;
   big_little_ = thermal_config.big_little;
 
@@ -113,7 +111,7 @@ zx_status_t AmlVoltageRegulator::Init(
 
 zx_status_t AmlVoltageRegulator::Init(
     const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
-    aml_thermal_info_t* thermal_info) {
+    const aml_thermal_info_t* thermal_info) {
   ZX_DEBUG_ASSERT(thermal_info);
   zx_status_t status = ZX_OK;
 
@@ -174,7 +172,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
   if (*current_voltage_index < 0) {
     // Update new duty cycle.
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
-    pwm_config_t cfg = {false, kPwmPeriodNs,
+    pwm_config_t cfg = {false, thermal_info_.voltage_pwm_period_ns,
                         static_cast<float>(thermal_info_.voltage_table[target_index].duty_cycle),
                         &on, sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
@@ -206,7 +204,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
     // Update new duty cycle.
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
     pwm_config_t cfg = {
-        false, kPwmPeriodNs,
+        false, thermal_info_.voltage_pwm_period_ns,
         static_cast<float>(thermal_info_.voltage_table[*current_voltage_index].duty_cycle), &on,
         sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {

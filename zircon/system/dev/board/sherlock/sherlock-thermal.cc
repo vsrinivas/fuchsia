@@ -176,6 +176,9 @@ aml_thermal_info_t aml_thermal_info = {
             [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
             [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
         },
+    .voltage_pwm_period_ns = 1250,
+    .opps = {},
+    .cluster_id_map = {},
 };
 
 const pbus_metadata_t thermal_metadata[] = {

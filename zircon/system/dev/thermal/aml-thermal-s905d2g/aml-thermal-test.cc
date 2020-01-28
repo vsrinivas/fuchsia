@@ -35,14 +35,13 @@ constexpr size_t kRegSize = 0x00002000 / sizeof(uint32_t);  // in 32 bits chunks
 // Temperature Sensor
 // Copied from sherlock-thermal.cc
 constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
+                                                                    float hysteresis_c,
                                                                     uint16_t cpu_opp_big,
                                                                     uint16_t cpu_opp_little,
                                                                     uint16_t gpu_opp) {
-  constexpr float kHysteresis = 2.0f;
-
   return {
-      .up_temp_celsius = temp_c + kHysteresis,
-      .down_temp_celsius = temp_c - kHysteresis,
+      .up_temp_celsius = temp_c + hysteresis_c,
+      .down_temp_celsius = temp_c - hysteresis_c,
       .fan_level = 0,
       .big_cluster_dvfs_opp = cpu_opp_big,
       .little_cluster_dvfs_opp = cpu_opp_little,
@@ -50,61 +49,67 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
   };
 }
 
-constexpr fuchsia_hardware_thermal_ThermalDeviceInfo sherlock_thermal_config =
-    {
-        .active_cooling = false,
-        .passive_cooling = true,
-        .gpu_throttling = true,
-        .num_trip_points = 6,
-        .big_little = true,
-        .critical_temp_celsius = 102.0f,
-        .trip_point_info =
-            {
-                TripPoint(55.0f, 9, 10, 4), TripPoint(75.0f, 8, 9, 4), TripPoint(80.0f, 7, 8, 3),
-                TripPoint(90.0f, 6, 7, 3), TripPoint(95.0f, 5, 6, 3), TripPoint(100.0f, 4, 5, 2),
-                TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
-            },
-        .opps =
-            {
-                [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-                    {
-                        .opp =
-                            {
-                                [0] = {.freq_hz = 100000000, .volt_uv = 751000},
-                                [1] = {.freq_hz = 250000000, .volt_uv = 751000},
-                                [2] = {.freq_hz = 500000000, .volt_uv = 751000},
-                                [3] = {.freq_hz = 667000000, .volt_uv = 751000},
-                                [4] = {.freq_hz = 1000000000, .volt_uv = 771000},
-                                [5] = {.freq_hz = 1200000000, .volt_uv = 771000},
-                                [6] = {.freq_hz = 1398000000, .volt_uv = 791000},
-                                [7] = {.freq_hz = 1512000000, .volt_uv = 821000},
-                                [8] = {.freq_hz = 1608000000, .volt_uv = 861000},
-                                [9] = {.freq_hz = 1704000000, .volt_uv = 891000},
-                                [10] = {.freq_hz = 1704000000, .volt_uv = 891000},
-                            },
-                        .latency = 0,
-                        .count = 11,
-                    },
-                [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
-                    {
-                        .opp =
-                            {
-                                [0] = {.freq_hz = 100000000, .volt_uv = 731000},
-                                [1] = {.freq_hz = 250000000, .volt_uv = 731000},
-                                [2] = {.freq_hz = 500000000, .volt_uv = 731000},
-                                [3] = {.freq_hz = 667000000, .volt_uv = 731000},
-                                [4] = {.freq_hz = 1000000000, .volt_uv = 731000},
-                                [5] = {.freq_hz = 1200000000, .volt_uv = 731000},
-                                [6] = {.freq_hz = 1398000000, .volt_uv = 761000},
-                                [7] = {.freq_hz = 1512000000, .volt_uv = 791000},
-                                [8] = {.freq_hz = 1608000000, .volt_uv = 831000},
-                                [9] = {.freq_hz = 1704000000, .volt_uv = 861000},
-                                [10] = {.freq_hz = 1896000000, .volt_uv = 1011000},
-                            },
-                        .latency = 0,
-                        .count = 11,
-                    },
-            },
+constexpr fuchsia_hardware_thermal_ThermalDeviceInfo
+    sherlock_thermal_config =
+        {
+            .active_cooling = false,
+            .passive_cooling = true,
+            .gpu_throttling = true,
+            .num_trip_points = 6,
+            .big_little = true,
+            .critical_temp_celsius = 102.0f,
+            .trip_point_info =
+                {
+                    TripPoint(55.0f, 2.0f, 9, 10, 4),
+                    TripPoint(75.0f, 2.0f, 8, 9, 4),
+                    TripPoint(80.0f, 2.0f, 7, 8, 3),
+                    TripPoint(90.0f, 2.0f, 6, 7, 3),
+                    TripPoint(95.0f, 2.0f, 5, 6, 3),
+                    TripPoint(100.0f, 2.0f, 4, 5, 2),
+                    // 0 Kelvin is impossible, marks end of TripPoints
+                    TripPoint(-273.15f, 2.0f, 0, 0, 0),
+                },
+            .opps =
+                {
+                    [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+                        {
+                            .opp =
+                                {
+                                    [0] = {.freq_hz = 100000000, .volt_uv = 751000},
+                                    [1] = {.freq_hz = 250000000, .volt_uv = 751000},
+                                    [2] = {.freq_hz = 500000000, .volt_uv = 751000},
+                                    [3] = {.freq_hz = 667000000, .volt_uv = 751000},
+                                    [4] = {.freq_hz = 1000000000, .volt_uv = 771000},
+                                    [5] = {.freq_hz = 1200000000, .volt_uv = 771000},
+                                    [6] = {.freq_hz = 1398000000, .volt_uv = 791000},
+                                    [7] = {.freq_hz = 1512000000, .volt_uv = 821000},
+                                    [8] = {.freq_hz = 1608000000, .volt_uv = 861000},
+                                    [9] = {.freq_hz = 1704000000, .volt_uv = 891000},
+                                    [10] = {.freq_hz = 1704000000, .volt_uv = 891000},
+                                },
+                            .latency = 0,
+                            .count = 11,
+                        },
+                    [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
+                        {
+                            .opp =
+                                {
+                                    [0] = {.freq_hz = 100000000, .volt_uv = 731000},
+                                    [1] = {.freq_hz = 250000000, .volt_uv = 731000},
+                                    [2] = {.freq_hz = 500000000, .volt_uv = 731000},
+                                    [3] = {.freq_hz = 667000000, .volt_uv = 731000},
+                                    [4] = {.freq_hz = 1000000000, .volt_uv = 731000},
+                                    [5] = {.freq_hz = 1200000000, .volt_uv = 731000},
+                                    [6] = {.freq_hz = 1398000000, .volt_uv = 761000},
+                                    [7] = {.freq_hz = 1512000000, .volt_uv = 791000},
+                                    [8] = {.freq_hz = 1608000000, .volt_uv = 831000},
+                                    [9] = {.freq_hz = 1704000000, .volt_uv = 861000},
+                                    [10] = {.freq_hz = 1896000000, .volt_uv = 1011000},
+                                },
+                            .latency = 0,
+                            .count = 11,
+                        },
+                },
 };
 
 constexpr fuchsia_hardware_thermal_ThermalDeviceInfo astro_thermal_config = {
@@ -116,10 +121,15 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo astro_thermal_config = {
     .critical_temp_celsius = 102.0f,
     .trip_point_info =
         {
-            TripPoint(0.0f, 10, 0, 5), TripPoint(75.0f, 9, 0, 4), TripPoint(80.0f, 8, 0, 3),
-            TripPoint(85.0f, 7, 0, 3), TripPoint(90.0f, 6, 0, 2), TripPoint(95.0f, 5, 0, 1),
-            TripPoint(100.0f, 4, 0, 0),
-            TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
+            TripPoint(0.0f, 2.0f, 10, 0, 5),
+            TripPoint(75.0f, 2.0f, 9, 0, 4),
+            TripPoint(80.0f, 2.0f, 8, 0, 3),
+            TripPoint(85.0f, 2.0f, 7, 0, 3),
+            TripPoint(90.0f, 2.0f, 6, 0, 2),
+            TripPoint(95.0f, 2.0f, 5, 0, 1),
+            TripPoint(100.0f, 2.0f, 4, 0, 0),
+            // 0 Kelvin is impossible, marks end of TripPoints
+            TripPoint(-273.15f, 2.0f, 0, 0, 0),
         },
     .opps =
         {
@@ -145,6 +155,48 @@ constexpr fuchsia_hardware_thermal_ThermalDeviceInfo astro_thermal_config = {
         },
 };
 
+constexpr fuchsia_hardware_thermal_ThermalDeviceInfo nelson_thermal_config = {
+    .active_cooling = false,
+    .passive_cooling = true,
+    .gpu_throttling = true,
+    .num_trip_points = 5,
+    .big_little = false,
+    .critical_temp_celsius = 110.0f,
+    .trip_point_info =
+        {
+            TripPoint(0.0f, 5.0f, 11, 0, 5),
+            TripPoint(60.0f, 5.0f, 9, 0, 4),
+            TripPoint(75.0f, 5.0f, 8, 0, 3),
+            TripPoint(80.0f, 5.0f, 7, 0, 2),
+            TripPoint(110.0f, 1.0f, 0, 0, 0),
+            // 0 Kelvin is impossible, marks end of TripPoints
+            TripPoint(-273.15f, 2.0f, 0, 0, 0),
+        },
+    .opps =
+        {
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+                {
+                    .opp =
+                        {
+                            [0] = {.freq_hz = 100'000'000, .volt_uv = 760'000},
+                            [1] = {.freq_hz = 250'000'000, .volt_uv = 760'000},
+                            [2] = {.freq_hz = 500'000'000, .volt_uv = 760'000},
+                            [3] = {.freq_hz = 667'000'000, .volt_uv = 780'000},
+                            [4] = {.freq_hz = 1'000'000'000, .volt_uv = 800'000},
+                            [5] = {.freq_hz = 1'200'000'000, .volt_uv = 810'000},
+                            [6] = {.freq_hz = 1'404'000'000, .volt_uv = 820'000},
+                            [7] = {.freq_hz = 1'512'000'000, .volt_uv = 830'000},
+                            [8] = {.freq_hz = 1'608'000'000, .volt_uv = 860'000},
+                            [9] = {.freq_hz = 1'704'000'000, .volt_uv = 900'000},
+                            [10] = {.freq_hz = 1'800'000'000, .volt_uv = 940'000},
+                            [11] = {.freq_hz = 1'908'000'000, .volt_uv = 970'000},
+                        },
+                    .latency = 0,
+                    .count = 12,
+                },
+        },
+};
+
 // Voltage Regulator
 // Copied from sherlock-thermal.cc
 static aml_thermal_info_t fake_thermal_info = {
@@ -162,6 +214,30 @@ static aml_thermal_info_t fake_thermal_info = {
             [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
             [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
         },
+    .voltage_pwm_period_ns = 1250,
+    .opps = {},
+    .cluster_id_map = {},
+};
+
+constexpr aml_thermal_info_t nelson_thermal_info = {
+    .voltage_table =
+        {
+            {1'050'000, 0},  {1'040'000, 3}, {1'030'000, 6}, {1'020'000, 8}, {1'010'000, 11},
+            {1'000'000, 14}, {990'000, 17},  {980'000, 20},  {970'000, 23},  {960'000, 26},
+            {950'000, 29},   {940'000, 31},  {930'000, 34},  {920'000, 37},  {910'000, 40},
+            {900'000, 43},   {890'000, 45},  {880'000, 48},  {870'000, 51},  {860'000, 54},
+            {850'000, 56},   {840'000, 59},  {830'000, 62},  {820'000, 65},  {810'000, 68},
+            {800'000, 70},   {790'000, 73},  {780'000, 76},  {770'000, 79},  {760'000, 81},
+            {750'000, 84},   {740'000, 87},  {730'000, 89},  {720'000, 92},  {710'000, 95},
+            {700'000, 98},   {690'000, 100},
+        },
+    .initial_cluster_frequencies =
+        {
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
+        },
+    .voltage_pwm_period_ns = 1500,
+    .opps = {},
+    .cluster_id_map = {},
 };
 
 }  // namespace
@@ -729,7 +805,9 @@ class FakeAmlThermal : public AmlThermal {
       mmio_buffer_t cpufreq_scaling_mock_hiu_internal_mmio, uint32_t pid) {
     fbl::AllocChecker ac;
 
-    const auto& config = (pid == 4 ? sherlock_thermal_config : astro_thermal_config);
+    const auto& config = (pid == 4 ? sherlock_thermal_config
+                                   : (pid == 5 ? nelson_thermal_config : astro_thermal_config));
+    const auto& info = (pid == 5 ? nelson_thermal_info : fake_thermal_info);
 
     // Temperature Sensor
     auto tsensor = fbl::make_unique_checked<AmlTSensor>(
@@ -745,8 +823,7 @@ class FakeAmlThermal : public AmlThermal {
     if (!ac.check() || (status != ZX_OK)) {
       return nullptr;
     }
-    EXPECT_OK(
-        voltage_regulator->Init(big_cluster_pwm, little_cluster_pwm, config, &fake_thermal_info));
+    EXPECT_OK(voltage_regulator->Init(big_cluster_pwm, little_cluster_pwm, config, &info));
 
     // CPU Frequency and Scaling
     auto cpufreq_scaling = fbl::make_unique_checked<AmlCpuFrequency>(
@@ -957,6 +1034,36 @@ class AmlThermalTest : public zxtest::Test {
         tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x245251);  // set thresholds 1, fall
         break;
       }
+      case 5: {  // Nelson
+        // Voltage Regulator
+        big_cluster_pwm_.ExpectEnable(ZX_OK);
+        cfg.period_ns = 1500;
+        cfg.duty_cycle = 23;
+        big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
+
+        // CPU Frequency and Scaling
+        (*cpufreq_scaling_mock_hiu_mmio_)[412]
+            .ExpectRead(0x00000000)
+            .ExpectRead(0x00000000);  // WaitForBusyCpu
+        (*cpufreq_scaling_mock_hiu_mmio_)[412]
+            .ExpectRead(0x00000000)
+            .ExpectWrite(0x00010400);  // Dynamic mux 0 is in use
+
+        // SetTarget
+        (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
+        (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
+
+        // InitTripPoints
+        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x00029D);  // set thresholds 4, rise
+        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x000299);  // set thresholds 4, fall
+        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x26329D);  // set thresholds 3, rise
+        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x24A299);  // set thresholds 3, fall
+        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x000257);  // set thresholds 2, rise
+        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x00023F);  // set thresholds 2, fall
+        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x236257);  // set thresholds 1, rise
+        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x21F23F);  // set thresholds 1, fall
+        break;
+      }
       default:
         zxlogf(ERROR, "AmlThermalTest::Create: unsupported SOC PID %u\n", pid);
         return;
@@ -1012,5 +1119,7 @@ TEST_F(AmlThermalTest, AstroInitTest) {
   Create(3);
   ASSERT_TRUE(true);
 }
+
+TEST_F(AmlThermalTest, NelsonInitTest) { Create(5); }
 
 }  // namespace thermal

@@ -30,6 +30,7 @@ static const hhi_pll_rate_t s905d2_hiu_pll_rates[] = {
     HHI_PLL_RATE(1704000000, 1, 142, 0, 1), /*DCO=3408M*/
     HHI_PLL_RATE(1800000000, 1, 150, 0, 1), /*DCO=3600M*/
     HHI_PLL_RATE(1896000000, 1, 158, 0, 1), /*DCO=3792M*/
+    HHI_PLL_RATE(1908000000, 1, 159, 0, 1), /*DCO=3816M*/
     HHI_PLL_RATE(3072000000, 1, 128, 0, 0), /*DCO=3072M*/
 };
 

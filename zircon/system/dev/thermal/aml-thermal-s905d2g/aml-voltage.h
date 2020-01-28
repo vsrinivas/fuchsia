@@ -28,13 +28,13 @@ class AmlVoltageRegulator {
   AmlVoltageRegulator() = default;
   zx_status_t Create(zx_device_t* parent,
                      const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
-                     aml_thermal_info_t* thermal_info);
+                     const aml_thermal_info_t* thermal_info);
   // For testing
   zx_status_t Init(const pwm_protocol_t* big_cluster_pwm, const pwm_protocol_t* little_cluster_pwm,
                    const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
-                   aml_thermal_info_t* thermal_info);
+                   const aml_thermal_info_t* thermal_info);
   zx_status_t Init(const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
-                   aml_thermal_info_t* thermal_info);
+                   const aml_thermal_info_t* thermal_info);
   uint32_t GetVoltage(fuchsia_hardware_thermal_PowerDomain power_domain) {
     if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
       return thermal_info_.voltage_table[current_big_cluster_voltage_index_].microvolt;
