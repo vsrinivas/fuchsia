@@ -40,6 +40,21 @@ KCOUNTER(port_dequeue_spurious_count, "port.dequeue.spurious.count")
 KCOUNTER(dispatcher_port_create_count, "dispatcher.port.create")
 KCOUNTER(dispatcher_port_destroy_count, "dispatcher.port.destroy")
 
+// This tracks the pending signal |count| value as reported to usermode in
+// zx_packet_signal_t. This is effectively 1 except for channels.
+KCOUNTER(port_signal_pending_2_4, "port.signal.pending.count.2_4")
+KCOUNTER(port_signal_pending_5_10, "port.signal.pending.count.5_10")
+KCOUNTER(port_signal_pending_11p, "port.signal.pending.count.11p")
+
+void kcounter_record_pending_signal(uint64_t count) {
+  switch (count) {
+    case 1: break;
+    case 2 ... 4: kcounter_add(port_signal_pending_2_4, 1u); break;
+    case 5 ... 10: kcounter_add(port_signal_pending_5_10, 1u); break;
+    default: kcounter_add(port_signal_pending_11p, 1u); break;
+  }
+}
+
 class ArenaPortAllocator final : public PortAllocator {
  public:
   zx_status_t Init();
@@ -117,6 +132,9 @@ StateObserver::Flags PortObserver::OnInitialize(zx_signals_t initial_state,
       }
     }
   }
+
+  kcounter_record_pending_signal(count);
+
   return MaybeQueue(initial_state, count);
 }
 
