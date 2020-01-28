@@ -1,8 +1,6 @@
-// Copyright 2019 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 #ifndef FFL_SATURATING_ARITHMETIC_H_
 #define FFL_SATURATING_ARITHMETIC_H_
 
