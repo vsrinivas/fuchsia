@@ -22,14 +22,6 @@ declare_args() {
     kernel_base = "0xffffffff80100000"  # Has KERNEL_LOAD_OFFSET baked into it.
   }
 
-  # Virtual address where the kernel address space begins.
-  # Below this is the user address space.
-  if (current_cpu == "arm64") {
-    kernel_aspace_base = "0xffff000000000000"
-  } else if (current_cpu == "x64") {
-    kernel_aspace_base = "0xffffff8000000000UL"  # -512GB
-  }
-
   # Enable kernel lock dependency tracking.
   enable_lock_dep = false
 

@@ -9,6 +9,7 @@
 #include <lib/unittest/unittest.h>
 #include <zircon/types.h>
 
+#include <arch/kernel_aspace.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>

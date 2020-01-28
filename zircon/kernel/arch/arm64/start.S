@@ -9,6 +9,7 @@
 #include <arch/arm64.h>
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
+#include <arch/kernel_aspace.h>
 #include <zircon/tls.h>
 
 #ifndef __has_feature

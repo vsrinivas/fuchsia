@@ -20,6 +20,7 @@
 #include <zircon/tls.h>
 
 #include <arch/arm64/registers.h>
+#include <arch/kernel_aspace.h>
 
 // Bit 63 of the data_fault_resume field is used to indicate whether a data fault should first
 // handle the fault, or immediately return the resume location. The 63'rd bit is selected as this

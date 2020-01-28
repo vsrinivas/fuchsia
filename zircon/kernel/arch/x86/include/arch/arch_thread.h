@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
+#include <arch/kernel_aspace.h>
 #include <arch/x86/registers.h>
 
 // Bit 63 of the page_fault_resume field is used to indicate whether a data fault should first

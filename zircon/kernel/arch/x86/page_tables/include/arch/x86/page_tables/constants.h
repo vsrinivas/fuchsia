@@ -9,6 +9,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PAGE_TABLES_INCLUDE_ARCH_X86_PAGE_TABLES_CONSTANTS_H_
 #define ZIRCON_KERNEL_ARCH_X86_PAGE_TABLES_INCLUDE_ARCH_X86_PAGE_TABLES_CONSTANTS_H_
 
+#include <arch/kernel_aspace.h>
+
 #define X86_MMU_PG_P 0x0001         /* P    Valid                   */
 #define X86_MMU_PG_RW 0x0002        /* R/W  Read/Write              */
 #define X86_MMU_PG_U 0x0004         /* U/S  User/Supervisor         */

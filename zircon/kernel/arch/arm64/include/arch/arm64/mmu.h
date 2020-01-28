@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MMU_H_
 
 #include <arch/defines.h>
+#include <arch/kernel_aspace.h>
 
 // clang-format off
 #define IFTE(c,t,e) (!!(c) * (t) | !(c) * (e))

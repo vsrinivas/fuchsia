@@ -37,16 +37,6 @@ config("kernel") {
 
   defines = [
     "ARCH_X86",
-    "KERNEL_ASPACE_BASE=$kernel_aspace_base",
-    "KERNEL_ASPACE_SIZE=0x0000008000000000UL",
-
-    "USER_ASPACE_BASE=0x0000000001000000UL",  # 16MB
-
-    # We set the top of user address space to be (1 << 47) - 4k.  See
-    # docs/sysret_problem.md for why we subtract 4k here.  Subtracting
-    # USER_ASPACE_BASE from that value gives the value for USER_ASPACE_SIZE
-    # below.
-    "USER_ASPACE_SIZE=0x00007ffffefff000UL",
 
     "KERNEL_LOAD_OFFSET=0x00100000",  # 1MB
   ]

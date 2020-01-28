@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <arch/kernel_aspace.h>
 #include <arch/x86.h>
 #include <platform/console.h>
 #include <platform/pc.h>

@@ -10,7 +10,7 @@ source_set("bad-syscall") {
     "bad-syscall.cc",
     "syscall.S",
   ]
-  defines = [ "KERNEL_ASPACE_BASE=$kernel_aspace_base" ]
+  include_dirs = [ "$zx/kernel/arch/$zircon_cpu/include" ]
   deps = [
     "$zx/kernel/syscalls:syscall-abi",
     "$zx/system/ulib/fdio",

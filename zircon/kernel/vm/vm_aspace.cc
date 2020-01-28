@@ -17,6 +17,7 @@
 #include <trace.h>
 #include <zircon/types.h>
 
+#include <arch/kernel_aspace.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_double_list.h>

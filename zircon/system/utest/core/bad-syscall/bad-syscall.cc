@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <arch/kernel_aspace.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <zircon/zx-syscall-numbers.h>

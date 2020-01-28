@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_
 
 #include <arch.h>
+#include <arch/kernel_aspace.h>
 #include <assert.h>
 #include <list.h>
 #include <stdint.h>

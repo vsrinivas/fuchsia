@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PHYSMAP_H_
 
 #include <arch/defines.h>
+#include <arch/kernel_aspace.h>
 
 // The kernel physmap is a region of the kernel where all of useful physical memory
 // is mapped in one large chunk. It's up to the individual architecture to decide
