@@ -84,6 +84,10 @@ ExecutionScope ExecutionScopeForCommand(const Command& cmd);
 
 const char* BreakpointEnabledToString(bool enabled);
 
+// Validates that the current command has a breakpoint associated with it and no additional
+// arguments. Used for enable/disable/clear that do one thing to a breakpoint
+Err ValidateNoArgBreakpointModification(const Command& cmd, const char* command_name);
+
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 
 // The |show_context| flag will cause some source code to be included annotated with the breakpoint,

@@ -257,6 +257,30 @@ ExecutionScope ExecutionScopeForCommand(const Command& cmd) {
 
 const char* BreakpointEnabledToString(bool enabled) { return enabled ? "Enabled" : "Disabled"; }
 
+Err ValidateNoArgBreakpointModification(const Command& cmd, const char* command_name) {
+  Err err = cmd.ValidateNouns({Noun::kBreakpoint});
+  if (err.has_error())
+    return err;
+
+  // Expect no args. If an arg was specified, most likely they're trying to use GDB syntax of
+  // e.g. "clear 2".
+  if (cmd.args().size() > 0) {
+    return Err(
+        fxl::StringPrintf("\"%s\" takes no arguments. To specify an explicit "
+                          "breakpoint to %s,\nuse \"bp <index> %s\"",
+                          command_name, command_name, command_name));
+  }
+
+  if (!cmd.breakpoint()) {
+    return Err(
+        fxl::StringPrintf("There is no active breakpoint and no breakpoint was given.\n"
+                          "Use \"bp <index> %s\" to specify one.\n",
+                          command_name));
+  }
+
+  return Err();
+}
+
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread) {
   return fxl::StringPrintf(
       "Thread %d [%s] koid=%" PRIu64 " %s", context->IdForThread(thread),

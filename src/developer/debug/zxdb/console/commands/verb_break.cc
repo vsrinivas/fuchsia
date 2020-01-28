@@ -1,6 +1,8 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include "src/developer/debug/zxdb/console/commands/verb_break.h"
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_location.h"
@@ -12,13 +14,9 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
-#include "src/developer/debug/zxdb/console/format_context.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
-#include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
-#include "src/developer/debug/zxdb/symbols/location.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -29,47 +27,6 @@ constexpr int kStopSwitch = 2;
 constexpr int kDisabledSwitch = 3;
 constexpr int kTypeSwitch = 4;
 constexpr int kOneShotSwitch = 5;
-
-// Validates that the current command has a breakpoint associated with it and no additional
-// arguments. Used for enable/disable/clear that do one thing to a breakpoint
-Err ValidateNoArgBreakpointModification(const Command& cmd, const char* command_name) {
-  Err err = cmd.ValidateNouns({Noun::kBreakpoint});
-  if (err.has_error())
-    return err;
-
-  // Expect no args. If an arg was specified, most likely they're trying to use GDB syntax of
-  // e.g. "clear 2".
-  if (cmd.args().size() > 0) {
-    return Err(
-        fxl::StringPrintf("\"%s\" takes no arguments. To specify an explicit "
-                          "breakpoint to %s,\nuse \"bp <index> %s\"",
-                          command_name, command_name, command_name));
-  }
-
-  if (!cmd.breakpoint()) {
-    return Err(
-        fxl::StringPrintf("There is no active breakpoint and no breakpoint was given.\n"
-                          "Use \"bp <index> %s\" to specify one.\n",
-                          command_name));
-  }
-
-  return Err();
-}
-
-// General output for Callback for when updating a breakpoint is done. This will output a
-// description of the breakpoint with a type-specific prefix.
-void CreateOrEditBreakpointComplete(Breakpoint* breakpoint, const char* message_prefix) {
-  Console* console = Console::get();
-
-  OutputBuffer out;
-  out.Append(message_prefix);
-  out.Append(" ");
-  out.Append(FormatBreakpoint(&console->context(), breakpoint, true));
-
-  console->Output(out);
-}
-
-// break -------------------------------------------------------------------------------------------
 
 const char kBreakShortHelp[] = "break / b: Create a breakpoint.";
 const char kBreakHelp[] =
@@ -234,7 +191,14 @@ Examples
       Break at line 23 of the file referenced by the current frame and use a
       hardware breakpoint.
 )";
-Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
+
+void OutputCreatedMessage(ConsoleContext* context, Breakpoint* breakpoint) {
+  OutputBuffer out("Created ");
+  out.Append(FormatBreakpoint(context, breakpoint, true));
+  Console::get()->Output(out);
+}
+
+Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame, Noun::kBreakpoint});
   if (err.has_error())
     return err;
@@ -317,7 +281,7 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
     context->SetActiveBreakpoint(breakpoint);
 
     breakpoint->SetSettings(settings);
-    CreateOrEditBreakpointComplete(breakpoint, "Created");
+    OutputCreatedMessage(context, breakpoint);
     if (cb)
       cb(err);
     return Err();
@@ -351,7 +315,8 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
 
         settings.locations = locs.take_value();
         breakpoint->SetSettings(settings);
-        CreateOrEditBreakpointComplete(breakpoint, "Created");
+
+        OutputCreatedMessage(context, breakpoint);
         if (cb)
           cb(Err());
       });
@@ -359,156 +324,23 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
   return Err();
 }
 
-// clear -------------------------------------------------------------------------------------------
-
-const char kClearShortHelp[] = "clear / cl: Clear a breakpoint.";
-const char kClearHelp[] =
-    R"(clear
-
-  Alias: "cl"
-
-  By itself, "clear" will delete the current active breakpoint.
-
-  Clear a named breakpoint by specifying the breakpoint context for the
-  command. Unlike GDB, the context comes first, so instead of "clear 2" to
-  clear breakpoint #2, use "breakpoint 2 clear" (or "bp 2 cl" for short).
-
-See also
-
-  "help break": To create breakpoints.
-  "help breakpoint": To manage the current breakpoint context.
-
-Examples
-
-  breakpoint 2 clear
-  bp 2 cl
-  clear
-  cl
-)";
-Err DoClear(ConsoleContext* context, const Command& cmd) {
-  if (Err err = ValidateNoArgBreakpointModification(cmd, "clear"); err.has_error())
-    return err;
-
-  OutputBuffer desc("Deleted ");
-  desc.Append(FormatBreakpoint(context, cmd.breakpoint(), false));
-
-  context->session()->system().DeleteBreakpoint(cmd.breakpoint());
-
-  Console::get()->Output(desc);
-  return Err();
-}
-
-// enable ------------------------------------------------------------------------------------------
-
-const char kEnableShortHelp[] = "enable: Enable a breakpoint.";
-const char kEnableHelp[] =
-    R"(enable
-
-  By itself, "enable" will enable the current active breakpoint. It is the
-  opposite of "disable".
-
-  It can be combined with an explicit breakpoint prefix to indicate a specific
-  breakpoint to enable.
-
-  It is an alias for:
-
-    bp set enabled = true
-
-See also
-
-  "help break": To create breakpoints.
-  "help breakpoint": To manage the current breakpoint context.
-  "help disable": To disable breakpoints.
-
-Examples
-
-  breakpoint 2 enable
-  bp 2 enable
-      Enable a specific breakpoint.
-
-  enable
-      Enable the current breakpoint.
-)";
-Err DoEnable(ConsoleContext* context, const Command& cmd) {
-  if (Err err = ValidateNoArgBreakpointModification(cmd, "enable"); err.has_error())
-    return err;
-
-  BreakpointSettings settings = cmd.breakpoint()->GetSettings();
-  settings.enabled = true;
-
-  cmd.breakpoint()->SetSettings(settings);
-  CreateOrEditBreakpointComplete(cmd.breakpoint(), "Enabled");
-  return Err();
-}
-
-// disable -----------------------------------------------------------------------------------------
-
-const char kDisableShortHelp[] = "disable: Disable a breakpoint.";
-const char kDisableHelp[] =
-    R"(disable
-
-  By itself, "disable" will disable the current active breakpoint. It is the
-  opposite of "enable".
-
-  It can be combined with an explicit breakpoint prefix to indicate a specific
-  breakpoint to disable.
-
-  It is an alias for:
-
-    bp set enabled = false
-
-See also
-
-  "help break": To create breakpoints.
-  "help breakpoint": To manage the current breakpoint context.
-  "help enable": To enable breakpoints.
-
-Examples
-
-  breakpoint 2 disable
-  bp 2 disable
-      Disable a specific breakpoint.
-
-  disable
-      Disable the current breakpoint.
-)";
-Err DoDisable(ConsoleContext* context, const Command& cmd) {
-  if (Err err = ValidateNoArgBreakpointModification(cmd, "enable"); err.has_error())
-    return err;
-
-  BreakpointSettings settings = cmd.breakpoint()->GetSettings();
-  settings.enabled = false;
-
-  cmd.breakpoint()->SetSettings(settings);
-  CreateOrEditBreakpointComplete(cmd.breakpoint(), "Disabled");
-  return Err();
-}
-
 }  // namespace
 
-void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
+VerbRecord GetBreakVerbRecord() {
   SwitchRecord disabled_switch(kDisabledSwitch, false, "disabled", 'd');
   SwitchRecord one_shot_switch(kOneShotSwitch, false, ClientSettings::Breakpoint::kOneShot, 'o');
   SwitchRecord size_switch(kSizeSwitch, true, ClientSettings::Breakpoint::kSize, 's');
   SwitchRecord stop_switch(kStopSwitch, true, ClientSettings::Breakpoint::kStopMode, 'p');
   SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
 
-  VerbRecord break_record(&DoBreak, &CompleteInputLocation, {"break", "b"}, kBreakShortHelp,
+  VerbRecord break_record(&RunVerbBreak, &CompleteInputLocation, {"break", "b"}, kBreakShortHelp,
                           kBreakHelp, CommandGroup::kBreakpoint);
   break_record.switches.push_back(disabled_switch);
   break_record.switches.push_back(one_shot_switch);
   break_record.switches.push_back(size_switch);
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
-  (*verbs)[Verb::kBreak] = std::move(break_record);
-
-  (*verbs)[Verb::kClear] =
-      VerbRecord(&DoClear, {"clear", "cl"}, kClearShortHelp, kClearHelp, CommandGroup::kBreakpoint);
-
-  (*verbs)[Verb::kEnable] =
-      VerbRecord(&DoEnable, {"enable"}, kEnableShortHelp, kEnableHelp, CommandGroup::kBreakpoint);
-  (*verbs)[Verb::kDisable] = VerbRecord(&DoDisable, {"disable"}, kDisableShortHelp, kDisableHelp,
-                                        CommandGroup::kBreakpoint);
+  return break_record;
 }
 
 }  // namespace zxdb

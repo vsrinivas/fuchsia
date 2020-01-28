@@ -7,11 +7,15 @@
 #include "src/developer/debug/zxdb/console/commands/verb_aspace.h"
 #include "src/developer/debug/zxdb/console/commands/verb_attach.h"
 #include "src/developer/debug/zxdb/console/commands/verb_attach_job.h"
+#include "src/developer/debug/zxdb/console/commands/verb_break.h"
+#include "src/developer/debug/zxdb/console/commands/verb_clear.h"
 #include "src/developer/debug/zxdb/console/commands/verb_cls.h"
 #include "src/developer/debug/zxdb/console/commands/verb_connect.h"
 #include "src/developer/debug/zxdb/console/commands/verb_detach.h"
+#include "src/developer/debug/zxdb/console/commands/verb_disable.h"
 #include "src/developer/debug/zxdb/console/commands/verb_disassemble.h"
 #include "src/developer/debug/zxdb/console/commands/verb_disconnect.h"
+#include "src/developer/debug/zxdb/console/commands/verb_enable.h"
 #include "src/developer/debug/zxdb/console/commands/verb_help.h"
 #include "src/developer/debug/zxdb/console/commands/verb_kill.h"
 #include "src/developer/debug/zxdb/console/commands/verb_libs.h"
@@ -80,7 +84,6 @@ VerbRecord::~VerbRecord() = default;
 const std::map<Verb, VerbRecord>& GetVerbs() {
   static std::map<Verb, VerbRecord> all_verbs;
   if (all_verbs.empty()) {
-    AppendBreakpointVerbs(&all_verbs);
     AppendSettingsVerbs(&all_verbs);
     AppendSharedVerbs(&all_verbs);
     AppendSymbolVerbs(&all_verbs);
@@ -89,11 +92,15 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kAspace] = GetAspaceVerbRecord();
     all_verbs[Verb::kAttach] = GetAttachVerbRecord();
     all_verbs[Verb::kAttachJob] = GetAttachJobVerbRecord();
+    all_verbs[Verb::kBreak] = GetBreakVerbRecord();
+    all_verbs[Verb::kClear] = GetClearVerbRecord();
     all_verbs[Verb::kCls] = GetClsVerbRecord();
     all_verbs[Verb::kConnect] = GetConnectVerbRecord();
     all_verbs[Verb::kDetach] = GetDetachVerbRecord();
+    all_verbs[Verb::kDisable] = GetDisableVerbRecord();
     all_verbs[Verb::kDisconnect] = GetDisconnectVerbRecord();
     all_verbs[Verb::kDisassemble] = GetDisassembleVerbRecord();
+    all_verbs[Verb::kEnable] = GetEnableVerbRecord();
     all_verbs[Verb::kHelp] = GetHelpVerbRecord();
     all_verbs[Verb::kKill] = GetKillVerbRecord();
     all_verbs[Verb::kLibs] = GetLibsVerbRecord();

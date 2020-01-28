@@ -12,11 +12,11 @@ namespace zxdb {
 
 namespace {
 
-class VerbsBreakpointTest : public BreakpointCommandTest {};
+class VerbBreak : public BreakpointCommandTest {};
 
 }  // namespace
 
-TEST_F(VerbsBreakpointTest, Break) {
+TEST_F(VerbBreak, Break) {
   // Process starts out as running. Make an expression breakpoint.
   console().ProcessInputLine("break \"*0x1230 + 4\"");
 
@@ -50,7 +50,7 @@ TEST_F(VerbsBreakpointTest, Break) {
       event.output.AsString());
 }
 
-TEST_F(VerbsBreakpointTest, WriteBreakpoint) {
+TEST_F(VerbBreak, WriteBreakpoint) {
   // Creates a specifically-sized write breakpoint at a manual address.
   console().ProcessInputLine("break -t write *(uint16_t*)0x1234");
 
@@ -95,7 +95,7 @@ TEST_F(VerbsBreakpointTest, WriteBreakpoint) {
 
 // This is a more end-to-end-type test that tests that breakpoints that hit backend errors issue
 // the proper notification and those notifications are caught and printed out on the screen.
-TEST_F(VerbsBreakpointTest, TransportError) {
+TEST_F(VerbBreak, TransportError) {
   // Create a breakpoint.
   console().ProcessInputLine("break 0x1234");
   auto event = console().GetOutputEvent();
@@ -116,7 +116,7 @@ TEST_F(VerbsBreakpointTest, TransportError) {
       event.output.AsString());
 }
 
-TEST_F(VerbsBreakpointTest, BackendError) {
+TEST_F(VerbBreak, BackendError) {
   // Create a breakpoint.
   console().ProcessInputLine("break 0x2345");
   auto event = console().GetOutputEvent();
