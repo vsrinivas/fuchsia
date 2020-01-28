@@ -385,25 +385,53 @@ VK_TEST_F(RectangleCompositorTest, TransparencyTest) {
   // both so that the test is robust regardless of platform.
   constexpr ColorBgra kBlend(102, 0, 153, 255);
   constexpr ColorBgra kBlend2(102, 0, 152, 255);
-
   size_t pixels_per_color = 100 * 100;
   EXPECT_EQ(2U, histogram.size());
   EXPECT_EQ(histogram[kRed], 0U);
   EXPECT_EQ(histogram[kBlue], 0U);
   EXPECT_TRUE(histogram[kBlend] == pixels_per_color || histogram[kBlend2] == pixels_per_color);
   EXPECT_EQ(histogram[kBlack], 512U * 512U - pixels_per_color);
+}
 
-  // Turn the transparency flag off and try again, now even though the color has transparency,
-  // it should still render as opaque.
-  renderables[1].is_transparent = false;
+// Turn the transparency flag off and try rendering with transparency again. Now
+// even though the color has transparency, it should still render as opaque.
+VK_TEST_F(RectangleCompositorTest, TransparencyFlagOffTest) {
+  frame_setup();
+  EXPECT_TRUE(ren_);
+
+  std::vector<RectangleRenderable> renderables;
+  vec4 colors[2] = {vec4{1, 0, 0, 1}, vec4(0, 0, 1, 0.6)};
+  for (uint32_t i = 0; i < 2; i++) {
+    RectangleDestinationSpec dest = {
+        .origin = vec2(200, 200),
+        .extent = vec2(100, 100),
+    };
+
+    RectangleRenderable renderable = {
+        .source = RectangleSourceSpec(),
+        .dest = dest,
+        .texture = default_texture_.get(),
+        .color = colors[i],
+        .is_transparent = false,  // Transparency turned OFF.
+    };
+
+    renderables.push_back(renderable);
+  }
+
+  auto cmd_buf = frame_data_.frame->cmds();
+  auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
 
-  bytes = ReadbackFromColorAttachment(frame_data_.frame,
-                                      frame_data_.color_attachment->swapchain_layout(),
-                                      vk::ImageLayout::eColorAttachmentOptimal);
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram2(bytes.data(), kFramebufferWidth * kFramebufferHeight);
   constexpr ColorBgra kBlue2(0, 0, 255, 153);
+  constexpr ColorBgra kBlend(102, 0, 153, 255);
+  constexpr ColorBgra kBlend2(102, 0, 152, 255);
+
+  size_t pixels_per_color = 100 * 100;
   EXPECT_EQ(2U, histogram2.size());
   EXPECT_EQ(histogram2[kRed], 0U);
   EXPECT_EQ(histogram2[kBlue2], pixels_per_color);
