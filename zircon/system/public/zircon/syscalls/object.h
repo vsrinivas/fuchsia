@@ -38,6 +38,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_VMO                     ((zx_object_info_topic_t) 23u) // zx_info_vmo_t[1]
 #define ZX_INFO_JOB                     ((zx_object_info_topic_t) 24u) // zx_info_job_t[1]
 #define ZX_INFO_TIMER                   ((zx_object_info_topic_t) 25u) // zx_info_timer_t[1]
+#define ZX_INFO_STREAM                  ((zx_object_info_topic_t) 26u) // zx_info_stream_t[1]
 
 typedef uint32_t zx_obj_props_t;
 #define ZX_OBJ_PROP_NONE                ((zx_obj_props_t) 0u)
@@ -149,6 +150,24 @@ typedef struct zx_info_timer {
     // This value will be zero if the timer is not set to fire.
     zx_duration_t slack;
 } zx_info_timer_t;
+
+typedef struct zx_info_stream {
+    // The options passed to zx_stream_create().
+    uint32_t options;
+
+    // The current seek offset.
+    //
+    // Used by zx_stream_readv and zx_stream_writev to determine where to read
+    // and write the stream.
+    zx_off_t seek;
+
+    // The current size of the stream.
+    //
+    // The number of bytes in the stream that store data. The stream itself
+    // might have a larger capacity to avoid reallocating the underlying storage
+    // as the stream grows or shrinks.
+    uint64_t content_size;
+} zx_info_stream_t;
 
 typedef uint32_t zx_thread_state_t;
 
@@ -536,6 +555,9 @@ typedef struct zx_info_resource {
 
 // Exception close behavior.
 #define ZX_PROP_EXCEPTION_STATE             16u
+
+// Argument is a uint64_t.
+#define ZX_PROP_VMO_CONTENT_SIZE            17u
 
 // Basic thread states, in zx_info_thread_t.state.
 #define ZX_THREAD_STATE_NEW                 ((zx_thread_state_t) 0x0000u)

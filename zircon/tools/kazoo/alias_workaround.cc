@@ -85,6 +85,10 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypeSizeT{}, Constness::kUnspecified, Optionality::kOutputOptional);
     return true;
   }
+  if (name == "optional_off") {
+    *type = Type(TypeZxBasicAlias("off"), Constness::kUnspecified, Optionality::kOutputOptional);
+    return true;
+  }
   if (name == "vector_HandleInfo_u32size") {
     *type = Type(
         TypeVector(Type(library.TypeFromIdentifier("zz/HandleInfo")), UseUint32ForVectorSizeTag{}),
@@ -102,6 +106,10 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
   }
   if (name == "vector_void") {
     *type = Type(TypeVector(Type(TypeVoid{})), Constness::kConst);
+    return true;
+  }
+  if (name == "vector_iovec") {
+    *type = Type(TypeVector(Type(TypeZxBasicAlias("iovec"))), Constness::kConst);
     return true;
   }
   if (name == "vector_void_u32size") {

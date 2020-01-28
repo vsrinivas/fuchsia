@@ -381,6 +381,7 @@ var handleSubtypes = map[types.HandleSubtype]string{
 	types.Profile:      "Profile",
 	types.Resource:     "Resource",
 	types.Socket:       "Socket",
+	types.Stream:       "Stream",
 	types.SuspendToken: "SuspendToken",
 	types.Thread:       "Thread",
 	types.Time:         "Timer",

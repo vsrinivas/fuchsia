@@ -1,0 +1,44 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/39732): This should be read as "library zx".
+library zz;
+
+enum stream_seek_origin : uint32 {
+    START = 0;
+    CURRENT = 1;
+    END = 2;
+};
+
+[Transport = "Syscall"]
+protocol stream {
+    /// Create a stream from a VMO.
+    stream_create(uint32 options, handle<vmo> vmo, off seek)
+        -> (status status, handle<stream> out_stream);
+
+    /// Write data to a stream at the current seek offset.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
+    stream_writev(handle<stream> handle, uint32 options, vector_iovec vector)
+        -> (status status, optional_usize actual);
+
+    /// Write data to a stream at the given offset.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
+    stream_writev_at(handle<stream> handle, uint32 options, off offset, vector_iovec vector)
+        -> (status status, optional_usize actual);
+
+    /// Read data from a stream at the current seek offset.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
+    stream_readv(handle<stream> handle, uint32 options)
+        -> (status status, vector_iovec vector, optional_usize actual);
+
+    /// Read data from a stream at the given offset.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
+    stream_readv_at(handle<stream> handle, uint32 options, off offset)
+        -> (status status, vector_iovec vector, optional_usize actual);
+
+    /// Modify the seek offset.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ or ZX_RIGHT_WRITE.
+    stream_seek(handle<stream> handle, stream_seek_origin whence, off offset)
+        -> (status status, optional_off out_offset);
+};

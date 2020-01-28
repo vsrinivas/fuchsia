@@ -1204,10 +1204,10 @@
                     "description": "Selection of a constant value (using a literal)",
                     "$ref": "#/definitions/literal-constant"
                 },
-		{
-		    "description": "Selection of a constant value (using a binary operator)",
-		    "$ref": "#/definitions/binary-operator-constant"
-		}
+                {
+                    "description": "Selection of a constant value (using a binary operator)",
+                    "$ref": "#/definitions/binary-operator-constant"
+                }
             ]
         },
         "identifier-constant": {
@@ -1216,12 +1216,12 @@
             "required": [
                 "kind",
                 "identifier",
-		"value",
-		"expression"
+                "value",
+                "expression"
             ],
             "properties": {
                 "kind": {
-                "description": "Selection of constant value using an identifier",
+                    "description": "Selection of constant value using an identifier",
                     "type": "string",
                     "enum": [
                         "identifier"
@@ -1231,11 +1231,11 @@
                     "description": "Identifier used as constant value",
                     "$ref": "#/definitions/compound-identifier"
                 },
-		"value": {
-		    "description": "Evaluated value of the constant",
-		    "type": "string"
-		},
-		"expression": {
+                "value": {
+                    "description": "Evaluated value of the constant",
+                    "type": "string"
+                },
+                "expression": {
                     "description": "Expression used in source code to define the constant",
                     "type": "string"
                 }
@@ -1246,8 +1246,8 @@
             "type": "object",
             "required": [
                 "kind",
-		"value",
-		"expression"
+                "value",
+                "expression"
             ],
             "properties": {
                 "kind": {
@@ -1257,11 +1257,11 @@
                         "binary_operator"
                     ]
                 },
-		"value": {
-		    "description": "Evaluated value of the constant",
-		    "type": "string"
-		},
-		"expression": {
+                "value": {
+                    "description": "Evaluated value of the constant",
+                    "type": "string"
+                },
+                "expression": {
                     "description": "Expression used in source code to define the constant",
                     "type": "string"
                 }
@@ -1273,8 +1273,8 @@
             "required": [
                 "kind",
                 "literal",
-		"value",
-		"expression"
+                "value",
+                "expression"
             ],
             "properties": {
                 "kind": {
@@ -1288,11 +1288,11 @@
                     "description": "Literal used as constant value",
                     "$ref": "#/definitions/literal-value"
                 },
-		"value": {
-		    "description": "Evaluated value of the constant",
-		    "type": "string"
-		},
-		"expression": {
+                "value": {
+                    "description": "Evaluated value of the constant",
+                    "type": "string"
+                },
+                "expression": {
                     "description": "Expression used in source code to define the constant",
                     "type": "string"
                 }
@@ -1390,6 +1390,7 @@
                 "profile",
                 "resource",
                 "socket",
+                "stream",
                 "suspendtoken",
                 "thread",
                 "timer",

@@ -5,6 +5,7 @@
 #![allow(non_camel_case_types)]
 
 pub type zx_addr_t = usize;
+pub type zx_stream_seek_origin_t = u32;
 pub type zx_clock_t = u32;
 pub type zx_duration_t = i64;
 pub type zx_futex_t = i32;
@@ -361,6 +362,12 @@ multiconst!(zx_clock_t, [
     ZX_CLOCK_THREAD       = 2;
 ]);
 
+multiconst!(zx_stream_seek_origin_t, [
+    ZX_STREAM_SEEK_ORIGIN_START        = 0;
+    ZX_STREAM_SEEK_ORIGIN_CURRENT      = 1;
+    ZX_STREAM_SEEK_ORIGIN_END          = 2;
+]);
+
 // Buffer size limits on the cprng syscalls
 pub const ZX_CPRNG_DRAW_MAX_LEN: usize = 256;
 pub const ZX_CPRNG_ADD_ENTROPY_MAX_LEN: usize = 256;
@@ -450,6 +457,13 @@ pub struct zx_handle_disposition_t {
     pub rights: zx_rights_t,
     pub type_: zx_obj_type_t,
     pub result: zx_status_t,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct zx_iovec_t {
+    pub buffer: *const u8,
+    pub capacity: usize,
 }
 
 pub type zx_pci_irq_swizzle_lut_t = [[[u32; 4]; 8]; 32];

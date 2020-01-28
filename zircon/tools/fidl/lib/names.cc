@@ -165,6 +165,8 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
       return "resource";
     case types::HandleSubtype::kSocket:
       return "socket";
+    case types::HandleSubtype::kStream:
+      return "stream";
     case types::HandleSubtype::kSuspendToken:
       return "suspendtoken";
     case types::HandleSubtype::kThread:
@@ -295,6 +297,8 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
       return "ZX_OBJ_TYPE_RESOURCE";
     case types::HandleSubtype::kSocket:
       return "ZX_OBJ_TYPE_SOCKET";
+    case types::HandleSubtype::kStream:
+      return "ZX_OBJ_TYPE_STREAM";
     case types::HandleSubtype::kSuspendToken:
       return "ZX_OBJ_TYPE_SUSPEND_TOKEN";
     case types::HandleSubtype::kThread:

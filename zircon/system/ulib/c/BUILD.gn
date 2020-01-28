@@ -146,6 +146,7 @@ zx_library("c") {
             "../../syscalls/rights.fidl",
             "../../syscalls/smc.fidl",
             "../../syscalls/socket.fidl",
+            "../../syscalls/stream.fidl",
             "../../syscalls/syscall.fidl",
             "../../syscalls/system.fidl",
             "../../syscalls/task.fidl",

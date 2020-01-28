@@ -140,6 +140,7 @@ const (
 	Profile                    = "profile"
 	Resource                   = "resource"
 	Socket                     = "socket"
+	Stream                     = "stream"
 	SuspendToken               = "suspendtoken"
 	Thread                     = "thread"
 	Time                       = "timer"

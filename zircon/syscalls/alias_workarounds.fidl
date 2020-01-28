@@ -70,6 +70,9 @@ using optional_uint32 = uint32;
 // TODO(fidlc): optional<usize>
 using optional_usize = usize;
 
+// TODO(fidlc): optional<usize>
+using optional_off = off;
+
 // TODO(fidlc): uint32 size
 // TODO(fidlc): vector<HandleInfo>
 using vector_HandleInfo_u32size = vector<HandleInfo>;
@@ -82,6 +85,9 @@ using vector_paddr = vector<paddr>;
 
 // TODO(fidlc): vector<void>
 using vector_void = vector<byte>;
+
+// TODO(fidlc): vector<iovec>
+using vector_iovec = vector<byte>;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): vector<void>

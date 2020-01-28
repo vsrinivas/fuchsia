@@ -44,6 +44,7 @@ enum struct HandleSubtype : zx_obj_type_t {
   kProfile = ZX_OBJ_TYPE_PROFILE,
   kResource = ZX_OBJ_TYPE_RESOURCE,
   kSocket = ZX_OBJ_TYPE_SOCKET,
+  kStream = ZX_OBJ_TYPE_STREAM,
   kSuspendToken = ZX_OBJ_TYPE_SUSPEND_TOKEN,
   kThread = ZX_OBJ_TYPE_THREAD,
   kTimer = ZX_OBJ_TYPE_TIMER,
