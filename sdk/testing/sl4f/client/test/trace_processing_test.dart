@@ -488,4 +488,29 @@ void main(List<String> args) {
 
     expect(computeMean(results[0].values), _closeTo(77.39932275));
   });
+
+  test('Integral timestamp and duration', () async {
+    final model = createModelFromJsonString('''
+{
+  "displayTimeUnit": "ns",
+  "traceEvents": [
+    {
+      "cat": "test",
+      "name": "integral",
+      "ts": 12345,
+      "pid": 35204,
+      "tid": 323993,
+      "ph": "X",
+      "dur": 200
+    }
+  ],
+  "systemTraceEvents": {
+    "events": [],
+    "type": "fuchsia"
+  }
+}
+''');
+
+    expect(getAllEvents(model), isNotEmpty);
+  });
 }

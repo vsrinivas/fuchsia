@@ -252,9 +252,10 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
     if (phase == 'X') {
       final durationEvent = DurationEvent();
       _fromJsonCommon(durationEvent, traceEvent);
-      if (!(traceEvent.containsKey('dur') && traceEvent['dur'] is double)) {
+      if (!(traceEvent.containsKey('dur') &&
+          (traceEvent['dur'] is double || traceEvent['dur'] is int))) {
         throw FormatException(
-            'Expected $traceEvent to have field "dur" of type double');
+            'Expected $traceEvent to have field "dur" of type double or int');
       }
       durationEvent.duration = TimeDelta.fromMicroseconds(traceEvent['dur']);
       addToDurationStack(durationEvent, durationStack);
