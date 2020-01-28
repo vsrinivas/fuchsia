@@ -360,10 +360,10 @@ async fn users_can_watch_session_status() -> Result<()> {
     let mut player2 = TestPlayer::new(&service).await?;
 
     let (session1, session1_request) = create_proxy()?;
-    service.discovery.connect_to_session(player1.id, session1_request)?;
-
     player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
     let _updates = watcher.wait_for_n_updates(1).await?;
+
+    service.discovery.connect_to_session(player1.id, session1_request)?;
     let status1 = session1.watch_status().await.context("Watching session status (1st time)")?;
     assert_matches!(
         status1.player_status,
