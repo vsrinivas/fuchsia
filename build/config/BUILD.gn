@@ -5,6 +5,7 @@
 import("//build/config/clang/clang.gni")
 import("//build/config/compiler.gni")
 import("//build/rust/config.gni")
+import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 
 declare_args() {
@@ -377,6 +378,22 @@ config("no-shadow-call-stack") {
 # Useful for changing behavior of code based on panic behavior.
 config("rust_panic_cfg") {
   rustflags = [ "--cfg=rust_panic=\"${rust_panic}\"" ]
+}
+
+config("werror") {
+  if (!use_ccache) {
+    cflags = [
+      "-Werror",
+
+      # Declarations marked as deprecated should cause build failures, rather
+      # they should emit warnings to notify developers about the use of
+      # deprecated interfaces.
+      "-Wno-error=deprecated-declarations",
+
+      # Do not add additional -Wno-error to this config.
+    ]
+    rustflags = [ "-Dwarnings" ]
+  }
 }
 
 config("temporarily_disable_ubsan_do_not_use") {

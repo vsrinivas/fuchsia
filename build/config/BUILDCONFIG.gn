@@ -195,12 +195,15 @@ if (is_fuchsia) {
     "//build/config/fuchsia:icf",
     "//build/config/fuchsia:large_rust_stack",
     "//build/config/fuchsia:thread_safety_annotations",
+    # TODO(44795): Change to using //build/config:werror here.
     "//build/config/fuchsia:werror",
 
     # TODO(mcgrathr): Perhaps restrict this to only affected code.
     # For now, safest to do it everywhere.
     "//build/config/fuchsia:zircon_asserts",
   ]
+} else {
+  default_common_binary_configs += [ "//build/config:werror" ]
 }
 
 default_common_binary_configs += [ "//build/config/lto:default" ]

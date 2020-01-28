@@ -7,20 +7,10 @@ import("//build/toolchain/ccache.gni")
 
 assert(current_os == "fuchsia")
 
+# Deprecated.
+# TODO(44795): Remove once none of the petals depend on this.
 config("werror") {
-  if (!use_ccache) {
-    cflags = [
-      "-Werror",
-
-      # Declarations marked as deprecated should cause build failures, rather
-      # they should emit warnings to notify developers about the use of
-      # deprecated interfaces.
-      "-Wno-error=deprecated-declarations",
-
-      # Do not add additional -Wno-error to this config.
-    ]
-    rustflags = [ "-Dwarnings" ]
-  }
+  configs = [ "//build/config:werror" ]
 }
 
 config("icf") {
