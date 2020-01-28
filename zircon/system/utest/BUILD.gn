@@ -118,7 +118,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/digest/test",
       "$zx/system/ulib/disk_inspector/test",
       "$zx/system/ulib/driver-integration-test/test",
-      "$zx/system/ulib/driver-unit-test/test",
       "$zx/system/ulib/elf-search/test",
       "$zx/system/ulib/elfload/test",
       "$zx/system/ulib/fdio/test",
