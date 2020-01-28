@@ -45,11 +45,9 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
   BufferCollectionHelper output_buffer_collection_helper(output_buffers_hlcpp);
   BufferCollectionHelper input_buffer_collection_helper(input_buffers_hlcpp);
 
-  // Convert the formats to C type
   std::vector<fuchsia_sysmem_ImageFormat_2> output_image_formats_c;
-  for (uint32_t i = 0; i < internal_ge2d_node.image_formats.size(); i++) {
-    auto image_format_hlcpp = internal_ge2d_node.image_formats[i];
-    output_image_formats_c.push_back(ConvertHlcppImageFormat2toCType(&image_format_hlcpp));
+  for (auto& format : internal_ge2d_node.image_formats) {
+    output_image_formats_c.push_back(ConvertHlcppImageFormat2toCType(format));
   }
 
   fuchsia_sysmem_ImageFormat_2 input_image_formats_c;
@@ -58,14 +56,14 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
       // In this case the input format index is the same as previous nodes first
       // image format.
       input_image_formats_c =
-          ConvertHlcppImageFormat2toCType(&parent_node->output_image_formats()[0]);
+          ConvertHlcppImageFormat2toCType(parent_node->output_image_formats()[0]);
 
       break;
     }
     case Ge2DConfig::GE2D_WATERMARK: {
       // In this case the input format index is the one requested by client.
       input_image_formats_c = ConvertHlcppImageFormat2toCType(
-          &parent_node->output_image_formats()[info->image_format_index]);
+          parent_node->output_image_formats()[info->image_format_index]);
 
       // TODO(braval): Load Watermark VMO here.
       break;

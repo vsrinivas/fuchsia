@@ -7,26 +7,26 @@
 namespace camera {
 
 fuchsia_sysmem_ImageFormat_2 ConvertHlcppImageFormat2toCType(
-    fuchsia::sysmem::ImageFormat_2* hlcpp_image_format2) {
+    const fuchsia::sysmem::ImageFormat_2& hlcpp_image_format2) {
   return {
       .pixel_format =
           {
               .type = *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
-                  &hlcpp_image_format2->pixel_format.type),
-              .has_format_modifier = hlcpp_image_format2->pixel_format.has_format_modifier,
-              .format_modifier.value = hlcpp_image_format2->pixel_format.format_modifier.value,
+                  &hlcpp_image_format2.pixel_format.type),
+              .has_format_modifier = hlcpp_image_format2.pixel_format.has_format_modifier,
+              .format_modifier.value = hlcpp_image_format2.pixel_format.format_modifier.value,
           },
-      .coded_width = hlcpp_image_format2->coded_width,
-      .coded_height = hlcpp_image_format2->coded_height,
-      .bytes_per_row = hlcpp_image_format2->bytes_per_row,
-      .display_width = hlcpp_image_format2->display_width,
-      .display_height = hlcpp_image_format2->display_height,
-      .layers = hlcpp_image_format2->layers,
+      .coded_width = hlcpp_image_format2.coded_width,
+      .coded_height = hlcpp_image_format2.coded_height,
+      .bytes_per_row = hlcpp_image_format2.bytes_per_row,
+      .display_width = hlcpp_image_format2.display_width,
+      .display_height = hlcpp_image_format2.display_height,
+      .layers = hlcpp_image_format2.layers,
       .color_space = *reinterpret_cast<const fuchsia_sysmem_ColorSpace*>(
-          &hlcpp_image_format2->color_space.type),
-      .has_pixel_aspect_ratio = hlcpp_image_format2->has_pixel_aspect_ratio,
-      .pixel_aspect_ratio_width = hlcpp_image_format2->pixel_aspect_ratio_width,
-      .pixel_aspect_ratio_height = hlcpp_image_format2->pixel_aspect_ratio_height,
+          &hlcpp_image_format2.color_space.type),
+      .has_pixel_aspect_ratio = hlcpp_image_format2.has_pixel_aspect_ratio,
+      .pixel_aspect_ratio_width = hlcpp_image_format2.pixel_aspect_ratio_width,
+      .pixel_aspect_ratio_height = hlcpp_image_format2.pixel_aspect_ratio_height,
   };
 }
 

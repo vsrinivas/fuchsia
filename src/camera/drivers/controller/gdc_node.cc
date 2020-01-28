@@ -80,16 +80,15 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 
   // Convert the formats to C type
   std::vector<fuchsia_sysmem_ImageFormat_2> output_image_formats_c;
-  for (uint32_t i = 0; i < internal_gdc_node.image_formats.size(); i++) {
-    auto image_format_hlcpp = internal_gdc_node.image_formats[i];
-    output_image_formats_c.push_back(ConvertHlcppImageFormat2toCType(&image_format_hlcpp));
+  for (auto& format : internal_gdc_node.image_formats) {
+    output_image_formats_c.push_back(ConvertHlcppImageFormat2toCType(format));
   }
 
   // GDC only supports one input format and multiple output format at the
   // moment. So we take the first format from the previous node.
   // All existing usecases we support have only 1 format going into GDC.
   auto input_image_formats_c =
-      ConvertHlcppImageFormat2toCType(&parent_node->output_image_formats()[0]);
+      ConvertHlcppImageFormat2toCType(parent_node->output_image_formats()[0]);
 
   // Get the GDC configurations loaded
   std::vector<gdc_config_info> config_vmos_info;

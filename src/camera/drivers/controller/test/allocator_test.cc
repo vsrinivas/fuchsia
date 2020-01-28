@@ -287,8 +287,7 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertImageFormat2TypeTest) {
   auto vector_image_formats = internal_config.image_formats;
   fuchsia::sysmem::ImageFormat_2 hlcpp_image_format = vector_image_formats[0];
 
-  fuchsia_sysmem_ImageFormat_2 c_image_format =
-      ConvertHlcppImageFormat2toCType(&hlcpp_image_format);
+  fuchsia_sysmem_ImageFormat_2 c_image_format = ConvertHlcppImageFormat2toCType(hlcpp_image_format);
 
   EXPECT_EQ(c_image_format.pixel_format.type,
             *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(

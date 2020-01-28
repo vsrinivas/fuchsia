@@ -40,7 +40,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
   // between buffer collection representations.
   BufferCollectionHelper buffer_collection_helper(buffers);
 
-  auto image_format = ConvertHlcppImageFormat2toCType(&info->node.image_formats[0]);
+  auto image_format = ConvertHlcppImageFormat2toCType(info->node.image_formats[0]);
 
   // Create Input Node
   auto processing_node = std::make_unique<camera::InputNode>(

@@ -12,7 +12,7 @@
 namespace camera {
 
 fuchsia_sysmem_ImageFormat_2 ConvertHlcppImageFormat2toCType(
-    fuchsia::sysmem::ImageFormat_2* hlcpp_image_format2);
+    const fuchsia::sysmem::ImageFormat_2& hlcpp_image_format2);
 
 void ConvertToOldCTypeBufferCollectionInfo(
     const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection,
