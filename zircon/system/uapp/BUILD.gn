@@ -25,7 +25,6 @@ group("uapp") {
     "psutils",
     "spiutil",
     "syscall-check",
-    "usb-fwloader",
     "xdc-test",
   ]
 }

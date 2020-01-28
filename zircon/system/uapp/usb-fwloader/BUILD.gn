@@ -2,19 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("usb-fwloader") {
-  testonly = true
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("usb-fwloader") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
   sources = [ "usb-fwloader.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-fwloader:c",
-    "$zx/system/fidl/fuchsia-hardware-usb-tester:c",
-    "$zx/system/fidl/fuchsia-mem:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device:c",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-fwloader:c",
+    "//zircon/system/fidl/fuchsia-hardware-usb-tester:c",
+    "//zircon/system/fidl/fuchsia-mem:c",
   ]
+}
+
+migrated_manifest("usb-fwloader-manifest") {
+  deps = [ ":usb-fwloader" ]
 }
