@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errors::{PackageNameError, PackageVariantError, ResourcePathError};
+use crate::errors::{
+    PackageNameError, PackagePathError, PackageVariantError, ParsePackagePathError,
+    ResourcePathError,
+};
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -86,6 +89,56 @@ pub fn check_package_variant(input: &str) -> Result<&str, PackageVariantError> {
         return Err(PackageVariantError::InvalidCharacter { invalid_variant: input.to_string() });
     }
     Ok(input)
+}
+
+/// A Fuchsia Package Path. Paths must currently be "{name}/{variant}".
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct PackagePath {
+    name: String,
+    variant: String,
+}
+
+impl PackagePath {
+    pub fn from_name_and_variant(
+        name: impl Into<String>,
+        variant: impl Into<String>,
+    ) -> Result<Self, PackagePathError> {
+        let name = name.into();
+        check_package_name(&name)?;
+        let variant = variant.into();
+        check_package_variant(&variant)?;
+        Ok(Self { name, variant })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn variant(&self) -> &str {
+        &self.variant
+    }
+}
+
+impl std::str::FromStr for PackagePath {
+    type Err = ParsePackagePathError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (name, variant_with_leading_slash) = match (s.find('/'), s.rfind('/')) {
+            (Option::Some(l), Option::Some(r)) if l == r => s.split_at(l),
+            (Option::Some(_), Option::Some(_)) => {
+                return Err(Self::Err::TooManySegments);
+            }
+            _ => {
+                return Err(Self::Err::TooFewSegments);
+            }
+        };
+        Ok(Self::from_name_and_variant(name, &variant_with_leading_slash[1..])?)
+    }
+}
+
+impl std::fmt::Display for PackagePath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.name, self.variant)
+    }
 }
 
 #[cfg(test)]
@@ -223,7 +276,8 @@ mod check_package_name_tests {
         {
             prop_assert_eq!(
                 check_package_name(s),
-                Err(PackageNameError::TooLong{invalid_name: s.to_string()}));
+                Err(PackageNameError::TooLong{invalid_name: s.to_string()})
+            );
         }
 
         // FIXME(PKG-757): '_' should be considered to be an invalid character.
@@ -232,7 +286,8 @@ mod check_package_name_tests {
         {
             prop_assert_eq!(
                 check_package_name(s),
-                Err(PackageNameError::InvalidCharacter{invalid_name: s.to_string()}));
+                Err(PackageNameError::InvalidCharacter{invalid_name: s.to_string()})
+            );
         }
 
         #[test]
@@ -240,7 +295,8 @@ mod check_package_name_tests {
         {
             prop_assert_eq!(
                 check_package_name(s),
-                Ok(s.as_str()));
+                Ok(s.as_str())
+            );
         }
     }
 }
@@ -262,7 +318,8 @@ mod check_package_variant_tests {
         {
             prop_assert_eq!(
                 check_package_variant(s),
-                Err(PackageVariantError::TooLong{invalid_variant: s.to_string()}));
+                Err(PackageVariantError::TooLong{invalid_variant: s.to_string()})
+            );
         }
 
         #[test]
@@ -270,7 +327,8 @@ mod check_package_variant_tests {
         {
             prop_assert_eq!(
                 check_package_variant(s),
-                Err(PackageVariantError::InvalidCharacter{invalid_variant: s.to_string()}));
+                Err(PackageVariantError::InvalidCharacter{invalid_variant: s.to_string()})
+            );
         }
 
         #[test]
@@ -278,7 +336,65 @@ mod check_package_variant_tests {
         {
             prop_assert_eq!(
                 check_package_variant(s),
-                Ok(s.as_str()));
+                Ok(s.as_str())
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod check_package_path_tests {
+    use {super::*, crate::test::random_package_path, proptest::prelude::*};
+
+    #[test]
+    fn reject_invalid_name() {
+        let res: Result<PackagePath, _> = "/0".parse();
+        assert_eq!(
+            res,
+            Err(ParsePackagePathError::PackagePath(PackagePathError::PackageName(
+                PackageNameError::Empty
+            )))
+        );
+    }
+
+    #[test]
+    fn reject_invalid_variant() {
+        let res: Result<PackagePath, _> = "valid_name/".parse();
+        assert_eq!(
+            res,
+            Err(ParsePackagePathError::PackagePath(PackagePathError::PackageVariant(
+                PackageVariantError::Empty
+            )))
+        );
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(
+            format!(
+                "{}",
+                PackagePath::from_name_and_variant("package-name", "package-variant").unwrap()
+            ),
+            "package-name/package-variant"
+        );
+    }
+
+    #[test]
+    fn accessors() {
+        let name = "package-name";
+        let variant = "package-variant";
+        let path = PackagePath::from_name_and_variant(name, variant).unwrap();
+        assert_eq!(path.name(), name);
+        assert_eq!(path.variant(), variant);
+    }
+
+    proptest! {
+        #[test]
+        fn display_from_str_round_trip(path in random_package_path()) {
+            prop_assert_eq!(
+                path.clone(),
+                path.to_string().parse().unwrap()
+            );
         }
     }
 }

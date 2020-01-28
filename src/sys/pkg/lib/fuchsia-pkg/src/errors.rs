@@ -160,3 +160,24 @@ impl From<MetaPackageError> for BuildError {
         BuildError::MetaPackage(err)
     }
 }
+
+#[derive(Debug, Error, Eq, PartialEq)]
+pub enum ParsePackagePathError {
+    #[error("package path has more than two segments")]
+    TooManySegments,
+
+    #[error("package path has fewer than two segments")]
+    TooFewSegments,
+
+    #[error("invalid package path: {0}")]
+    PackagePath(#[from] PackagePathError),
+}
+
+#[derive(Debug, Error, Eq, PartialEq)]
+pub enum PackagePathError {
+    #[error("invalid package name: {0}")]
+    PackageName(#[from] PackageNameError),
+
+    #[error("invalid package variant: {0}")]
+    PackageVariant(#[from] PackageVariantError),
+}

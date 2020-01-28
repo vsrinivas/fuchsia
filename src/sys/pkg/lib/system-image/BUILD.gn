@@ -1,0 +1,38 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("system-image") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+test_package("system-image-tests") {
+  deps = [ ":system-image_test" ]
+
+  tests = [
+    {
+      name = "system_image_lib_test"
+      dest = "system-image-lib-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":system-image-tests" ]
+}

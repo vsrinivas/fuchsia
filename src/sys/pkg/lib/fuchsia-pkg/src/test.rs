@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::CreationManifest;
-use proptest::prelude::*;
+use {
+    crate::{CreationManifest, PackagePath},
+    proptest::prelude::*,
+};
 
 /// Helper to assist asserting a single match branch.
 ///
@@ -11,6 +13,7 @@ use proptest::prelude::*;
 ///
 /// let arg = Arg::Uint(8);
 /// assert_matches!(arg, Arg::Uint(x) => assert_eq!(x, 8));
+#[cfg(test)]
 macro_rules! assert_matches(
     ($e:expr, $p:pat => $a:expr) => (
         match $e {
@@ -21,7 +24,7 @@ macro_rules! assert_matches(
 );
 
 // TODO(PKG-597) allow newline once meta/contents supports it in blob paths
-pub const ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE: &str = "[^/\0\\.\n]";
+pub(crate) const ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE: &str = "[^/\0\\.\n]";
 
 prop_compose! {
     pub fn always_valid_resource_path_char()(c in ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE) -> String {
@@ -128,5 +131,14 @@ prop_compose! {
         CreationManifest::from_external_and_far_contents(
             external_content, far_content)
             .unwrap()
+    }
+}
+
+prop_compose! {
+    pub fn random_package_path()(
+        name in random_package_name(),
+        variant in random_package_variant()
+    ) -> PackagePath {
+        PackagePath::from_name_and_variant(name, variant).unwrap()
     }
 }

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/system-image-lib-test"
+    }
+}

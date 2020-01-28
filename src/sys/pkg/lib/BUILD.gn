@@ -16,6 +16,7 @@ group("lib") {
     "pkgfs",
     "repo",
     "system-health-check",
+    "system-image",
     "tuf",
   ]
 }
@@ -34,6 +35,7 @@ group("tests") {
     "pkgfs:tests",
     "repo:tests",
     "system-health-check:tests",
+    "system-image:tests",
     "tuf:tests",
   ]
 }
