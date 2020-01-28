@@ -235,10 +235,12 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   // Used to implement fuchsia::device::manager::Coordinator.
   // TODO(fxb/43370): remove |always_init| once init tasks can be enabled for all devices.
   zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
-                        zx::channel coordinator, const uint64_t* props_data, size_t props_count,
-                        fbl::StringPiece name, uint32_t protocol_id, fbl::StringPiece driver_path,
-                        fbl::StringPiece args, bool invisible, bool has_init, bool always_init,
-                        zx::channel client_remote, fbl::RefPtr<Device>* new_device);
+                        zx::channel coordinator,
+                        const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
+                        size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
+                        fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
+                        bool has_init, bool always_init, zx::channel client_remote,
+                        fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);
   // This is for scheduling the initial unbind task as a result of a devhost's |ScheduleRemove|

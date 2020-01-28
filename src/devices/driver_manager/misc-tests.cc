@@ -493,4 +493,56 @@ TEST(MiscTestCase, TestOutput) {
   loop.RunUntilIdle();
 }
 
+// Adds a device with the given properties to the device coordinator, then checks that the
+// coordinator contains the device, and that its properties are correct.
+void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
+                             size_t props_count) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+
+  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+
+  zx::channel coordinator_local, coordinator_remote;
+  zx_status_t status = zx::channel::create(0, &coordinator_local, &coordinator_remote);
+  ASSERT_OK(status);
+
+  zx::channel controller_local, controller_remote;
+  status = zx::channel::create(0, &controller_local, &controller_remote);
+  ASSERT_OK(status);
+
+  fbl::RefPtr<devmgr::Device> device;
+  status = coordinator.AddDevice(
+      coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
+      props_data, props_count, "mock-device", ZX_PROTOCOL_TEST, nullptr /* driver_path */,
+      nullptr /* args */, false /* invisible */, false /* has_init */, true /* always_init */,
+      zx::channel() /* client_remote */, &device);
+  ASSERT_OK(status);
+
+  // Check that the device has been added to the coordinator, with the correct properties.
+  ASSERT_EQ(1, coordinator.devices().size_slow());
+  const devmgr::Device& dev = coordinator.devices().front();
+  ASSERT_EQ(dev.props().size(), props_count);
+  for (size_t i = 0; i < props_count; i++) {
+    ASSERT_EQ(dev.props()[i].id, props_data[i].id);
+    ASSERT_EQ(dev.props()[i].reserved, props_data[i].reserved);
+    ASSERT_EQ(dev.props()[i].value, props_data[i].value);
+  }
+
+  controller_remote.reset();
+  coordinator_remote.reset();
+  loop.RunUntilIdle();
+}
+
+TEST(MiscTestCase, DeviceProperties) {
+  // No properties.
+  AddDeviceWithProperties(nullptr, 0);
+
+  // Multiple properties.
+  llcpp::fuchsia::device::manager::DeviceProperty props[] = {
+      llcpp::fuchsia::device::manager::DeviceProperty{1, 0, 1},
+      llcpp::fuchsia::device::manager::DeviceProperty{2, 0, 1},
+  };
+  AddDeviceWithProperties(props, std::size(props));
+}
+
 int main(int argc, char** argv) { return RUN_ALL_TESTS(argc, argv); }

@@ -8,11 +8,12 @@ library fuchsia.device.manager;
 
 using zx;
 
-// This definition must be the same size as zx_device_prop_t and is checked by
-// static assert.  Once the bindings better handle vectors of structs (FIDL-323)
-// and we can move the binding struct definition into a more generate-able form,
-// we can make this reflect the actual structure.
-using DeviceProperty = uint64;
+/// This has the same structure as zx_device_prop_t.
+struct DeviceProperty {
+    uint16 id;
+    uint16 reserved;
+    uint32 value;
+};
 
 // TODO(bwb): Make this descriptive of binding, not zx_bind_inst_t
 // currently a magic bitfield defined in binding.h

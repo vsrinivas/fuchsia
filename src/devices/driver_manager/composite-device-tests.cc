@@ -94,8 +94,14 @@ void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bu
     components.push_back(component);
   }
 
-  auto prop_view = ::fidl::VectorView<uint64_t>(
-      reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)), props_count);
+  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props_list = {};
+  for (size_t i = 0; i < props_count; i++) {
+    props_list.push_back(llcpp::fuchsia::device::manager::DeviceProperty{
+        .id = props[i].id,
+        .reserved = props[i].reserved,
+        .value = props[i].value,
+    });
+  }
 
   std::vector<llcpp::fuchsia::device::manager::DeviceMetadata> metadata_list = {};
   for (size_t i = 0; i < metadata_count; i++) {
@@ -107,7 +113,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bu
   }
 
   llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc = {
-      .props = prop_view,
+      .props = ::fidl::VectorView(props_list),
       .components = ::fidl::VectorView(components),
       .coresident_device_index = 0,
       .metadata = ::fidl::VectorView(metadata_list),

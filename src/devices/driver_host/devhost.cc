@@ -528,6 +528,15 @@ static void devhost_io_init() {
   dup2(1, 2);
 }
 
+static llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(
+    const zx_device_prop_t& prop) {
+  return llcpp::fuchsia::device::manager::DeviceProperty{
+      .id = prop.id,
+      .reserved = prop.reserved,
+      .value = prop.value,
+  };
+}
+
 // Send message to devcoordinator asking to add child device to
 // parent device.  Called under devhost api lock.
 zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
@@ -562,6 +571,11 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
     return status;
   }
 
+  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props_list = {};
+  for (size_t i = 0; i < prop_count; i++) {
+    props_list.push_back(convert_device_prop(props[i]));
+  }
+
   const zx::channel& rpc = *parent->coordinator_rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
@@ -573,9 +587,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
   if (add_invisible) {
     auto response = fuchsia::device::manager::Coordinator::Call::AddDeviceInvisible(
         zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote),
-        ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)),
-                           prop_count),
+        std::move(device_controller_remote), ::fidl::VectorView(props_list),
         ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
         ::fidl::StringView(child->driver->libname()),
         ::fidl::StringView(proxy_args, proxy_args_len), child->ops->init /* has_init */,
@@ -591,9 +603,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
   } else {
     auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
         zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote),
-        ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)),
-                           prop_count),
+        std::move(device_controller_remote), ::fidl::VectorView(props_list),
         ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
         ::fidl::StringView(child->driver->libname()),
         ::fidl::StringView(proxy_args, proxy_args_len), add_device_config,
@@ -1025,10 +1035,13 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
     metadata.push_back(meta);
   }
 
+  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props = {};
+  for (size_t i = 0; i < comp_desc->props_count; i++) {
+    props.push_back(convert_device_prop(comp_desc->props[i]));
+  }
+
   fuchsia::device::manager::CompositeDeviceDescriptor comp_dev = {
-      .props = ::fidl::VectorView(
-          reinterpret_cast<uint64_t*>(const_cast<zx_device_prop*>(comp_desc->props)),
-          comp_desc->props_count),
+      .props = ::fidl::VectorView(props),
       .components = ::fidl::VectorView(compvec),
       .coresident_device_index = comp_desc->coresident_device_index,
       .metadata = ::fidl::VectorView(metadata)};

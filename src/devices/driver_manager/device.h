@@ -88,8 +88,9 @@ class Device : public fbl::RefCounted<Device>,
                public AsyncLoopRefCountedRpcHandler<Device> {
  public:
   void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
-                 ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id,
-                 ::fidl::StringView driver_path, ::fidl::StringView args,
+                 ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
+                 ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
+                 ::fidl::StringView args,
                  llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init,
                  ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) override;
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) override;
@@ -100,9 +101,10 @@ class Device : public fbl::RefCounted<Device>,
                        ::fidl::VectorView<uint8_t> data,
                        PublishMetadataCompleter::Sync _completer) override;
   void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller,
-                          ::fidl::VectorView<uint64_t> props, ::fidl::StringView name,
-                          uint32_t protocol_id, ::fidl::StringView driver_path,
-                          ::fidl::StringView args, bool has_init, ::zx::channel client_remote,
+                          ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
+                          ::fidl::StringView name, uint32_t protocol_id,
+                          ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init,
+                          ::zx::channel client_remote,
                           AddDeviceInvisibleCompleter::Sync _completer) override;
   void MakeVisible(MakeVisibleCompleter::Sync _completer) override;
   void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync _completer) override;

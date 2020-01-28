@@ -507,12 +507,12 @@ void Coordinator::ReleaseDevhost(Devhost* dh) {
 // Add a new device to a parent device (same devhost)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
-zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
-                                   zx::channel coordinator, const uint64_t* props_data,
-                                   size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
-                                   fbl::StringPiece driver_path, fbl::StringPiece args,
-                                   bool invisible, bool has_init, bool always_init,
-                                   zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
+zx_status_t Coordinator::AddDevice(
+    const fbl::RefPtr<Device>& parent, zx::channel device_controller, zx::channel coordinator,
+    const llcpp::fuchsia::device::manager::DeviceProperty* props_data, size_t props_count,
+    fbl::StringPiece name, uint32_t protocol_id, fbl::StringPiece driver_path,
+    fbl::StringPiece args, bool invisible, bool has_init, bool always_init,
+    zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
   static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
@@ -542,8 +542,13 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
   if (!props) {
     return ZX_ERR_NO_MEMORY;
   }
-  static_assert(sizeof(zx_device_prop_t) == sizeof(props_data[0]));
-  memcpy(props.data(), props_data, props_count * sizeof(zx_device_prop_t));
+  for (uint32_t i = 0; i < props_count; i++) {
+    props[i] = zx_device_prop_t{
+        .id = props_data[i].id,
+        .reserved = props_data[i].reserved,
+        .value = props_data[i].value,
+    };
+  }
 
   fbl::AllocChecker ac;
   fbl::String name_str(name, &ac);

@@ -22,8 +22,9 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
   }
 
   void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
-                 ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id,
-                 ::fidl::StringView driver_path, ::fidl::StringView args,
+                 ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
+                 ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path,
+                 ::fidl::StringView args,
                  llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init,
                  ::zx::channel client_remote, AddDeviceCompleter::Sync completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result response;
@@ -49,9 +50,10 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
     completer.Reply(std::move(response));
   }
   void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller,
-                          ::fidl::VectorView<uint64_t> props, ::fidl::StringView name,
-                          uint32_t protocol_id, ::fidl::StringView driver_path,
-                          ::fidl::StringView args, bool has_init, ::zx::channel client_remote,
+                          ::fidl::VectorView<llcpp::fuchsia::device::manager::DeviceProperty> props,
+                          ::fidl::StringView name, uint32_t protocol_id,
+                          ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init,
+                          ::zx::channel client_remote,
                           AddDeviceInvisibleCompleter::Sync completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
