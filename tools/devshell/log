@@ -20,7 +20,7 @@ function listen {
   while true; do
     fx-command-run wait || return
     fx-command-run shell log_listener "$@"
-    echo "Connection lost, reconnecting..."
+    echo "$(date '+%Y-%m-%d %H:%M:%S %Z'): Connection lost, reconnecting..."
   done
 }
 
