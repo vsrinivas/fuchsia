@@ -128,6 +128,8 @@ class PmmNode {
   thread_t* request_thread_ = nullptr;
   ktl::atomic<bool> request_thread_live_ = true;
 
+  void AllocPageHelper(vm_page_t* page);
+
 #if PMM_ENABLE_FREE_FILL
   void FreeFill(vm_page_t* page);
   void CheckFreeFill(vm_page_t* page);

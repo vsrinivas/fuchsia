@@ -109,7 +109,7 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
   LTRACEF("free count now %" PRIu64 "\n", free_count_);
 }
 
-static void alloc_page_helper(vm_page* page) {
+void PmmNode::AllocPageHelper(vm_page_t* page) {
   LTRACEF("allocating page %p, pa %#" PRIxPTR ", prev state %s\n", page, page->paddr(),
           page_state_to_string(page->state()));
 
@@ -118,7 +118,7 @@ static void alloc_page_helper(vm_page* page) {
   page->set_state(VM_PAGE_STATE_ALLOC);
 
 #if PMM_ENABLE_FREE_FILL
-  CheckFreeFill(page);
+  PmmNode::CheckFreeFill(page);
 #endif
 }
 
@@ -137,7 +137,7 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
     return ZX_ERR_NO_MEMORY;
   }
 
-  alloc_page_helper(page);
+  AllocPageHelper(page);
 
   DecrementFreeCountLocked(1);
 
@@ -188,7 +188,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
   auto node = &free_list_;
   while (count-- > 0) {
     node = list_next(&free_list_, node);
-    alloc_page_helper(containerof(node, vm_page, queue_node));
+    AllocPageHelper(containerof(node, vm_page, queue_node));
   }
 
   list_node tmp_list = LIST_INITIAL_VALUE(tmp_list);
