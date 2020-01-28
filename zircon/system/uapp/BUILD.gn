@@ -15,7 +15,6 @@ group("uapp") {
     "ihda",
     "kcounter",
     "kstress",
-    "ktrace",
     "lsusb",
     "lz4",
     "minfs",
