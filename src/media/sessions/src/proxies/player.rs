@@ -240,7 +240,7 @@ impl Player {
                                     SessionControlRequest::WatchStatus { responder } => {
                                         if hanging_get.is_some() {
                                             fx_log_warn!(
-                                                tag: "player",
+                                                tag: "player_proxy",
                                                 "Session observer sent duplicate watch"
                                             );
                                             // Close the channel.

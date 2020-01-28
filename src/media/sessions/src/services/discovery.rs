@@ -125,6 +125,7 @@ impl Discovery {
                                         recv.filter_map(move |(id, event)| {
                                             if !(id == session_id) {
                                                 fx_log_warn!(
+                                                    tag: "discovery",
                                                     "Watcher did not filter sessions by id"
                                                 );
                                                 future::ready(None)
@@ -157,7 +158,7 @@ impl Discovery {
                                 },
                                 Err(e) => {
                                     fx_log_warn!(
-                                        tag: "mediasession",
+                                        tag: "discovery",
                                         "Client tried to watch session with invalid watcher: {:?}",
                                         e
                                     );

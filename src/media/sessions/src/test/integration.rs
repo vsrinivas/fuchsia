@@ -11,9 +11,16 @@ use fuchsia_async as fasync;
 use fuchsia_component as comp;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::stream::TryStreamExt;
+use lazy_static::lazy_static;
 use test_util::assert_matches;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
+
+lazy_static! {
+    static ref LOGGER: () = {
+        fuchsia_syslog::init_with_tags(&["mediasession_tests"]).expect("Initializing syslogger");
+    };
+}
 
 struct TestService {
     // This needs to stay alive to keep the service running.
@@ -136,9 +143,17 @@ fn delta_with_state(state: PlayerState) -> PlayerInfoDelta {
     }
 }
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn can_publish_players() -> Result<()> {
+macro_rules! test {
+    ($name:ident, $test:expr) => {
+        #[fasync::run_singlethreaded(test)]
+        async fn $name() -> Result<()> {
+            *LOGGER;
+            $test().await
+        }
+    };
+}
+
+test!(can_publish_players, || async {
     let service = TestService::new()?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -151,11 +166,9 @@ async fn can_publish_players() -> Result<()> {
     assert_eq!(delta.domain, Some(test_domain()));
 
     Ok(())
-}
+});
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn can_receive_deltas() -> Result<()> {
+test!(can_receive_deltas, || async {
     let service = TestService::new()?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -197,11 +210,9 @@ async fn can_receive_deltas() -> Result<()> {
     );
 
     Ok(())
-}
+});
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn active_status() -> Result<()> {
+test!(active_status, || async {
     let service = TestService::new()?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -225,11 +236,9 @@ async fn active_status() -> Result<()> {
     assert_ne!(new_active_id, active_id);
 
     Ok(())
-}
+});
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn player_controls_are_proxied() -> Result<()> {
+test!(player_controls_are_proxied, || async {
     let service = TestService::new()?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -263,11 +272,9 @@ async fn player_controls_are_proxied() -> Result<()> {
             _ => false,
         })
         .await
-}
+});
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn player_disconnection_propagates() -> Result<()> {
+test!(player_disconnection_propagates, || async {
     let service = TestService::new()?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -288,11 +295,9 @@ async fn player_disconnection_propagates() -> Result<()> {
     session_channel.wait_handle(zx::Signals::CHANNEL_PEER_CLOSED, zx::Time::INFINITE)?;
 
     Ok(())
-}
+});
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn watch_filter_active() -> Result<()> {
+test!(watch_filter_active, || async {
     let service = TestService::new()?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -316,11 +321,9 @@ async fn watch_filter_active() -> Result<()> {
     assert_eq!(active_watcher.wait_for_removal().await?, player1_id);
 
     Ok(())
-}
+});
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn disconnected_player_results_in_removal_event() -> Result<()> {
+test!(disconnected_player_results_in_removal_event, || async {
     let service = TestService::new()?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -335,11 +338,9 @@ async fn disconnected_player_results_in_removal_event() -> Result<()> {
     assert_eq!(removed_id, expected_id);
 
     Ok(())
-}
+});
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn players_get_ids() -> Result<()> {
+test!(players_get_ids, || async {
     let service = TestService::new()?;
 
     let player1 = TestPlayer::new(&service).await?;
@@ -348,11 +349,9 @@ async fn players_get_ids() -> Result<()> {
     assert_ne!(player1.id, player2.id);
 
     Ok(())
-}
+});
 
-#[fasync::run_singlethreaded]
-#[test]
-async fn users_can_watch_session_status() -> Result<()> {
+test!(users_can_watch_session_status, || async {
     let service = TestService::new()?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
 
@@ -380,4 +379,4 @@ async fn users_can_watch_session_status() -> Result<()> {
     );
 
     Ok(())
-}
+});
