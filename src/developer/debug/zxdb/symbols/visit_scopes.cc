@@ -6,12 +6,14 @@
 
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/inheritance_path.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 
 namespace zxdb {
 
 namespace {
 
+// TODO(brettw) remove this version when all callers have switched to the "InheritancePath" version.
 VisitResult DoVisitClassHierarchy(
     const Collection* current, uint64_t offset,
     fit::function<VisitResult(const Collection*, uint64_t offset)>& cb) {
@@ -32,6 +34,31 @@ VisitResult DoVisitClassHierarchy(
     result = DoVisitClassHierarchy(from_coll, offset + inherited_from->offset(), cb);
     if (result != VisitResult::kContinue)
       return result;
+  }
+
+  return VisitResult::kContinue;
+}
+
+VisitResult DoVisitClassHierarchy(
+    InheritancePath* path,
+    fit::function<VisitResult(const InheritancePath& path)>& cb) {
+  if (VisitResult result = cb(*path); result != VisitResult::kContinue)
+    return result;
+
+  // Iterate through base classes.
+  for (const auto& lazy_from : path->path().back().collection->inherited_from()) {
+    const InheritedFrom* inherited_from = lazy_from.Get()->AsInheritedFrom();
+    if (!inherited_from)
+      continue;
+
+    const Collection* from_coll = inherited_from->from().Get()->AsCollection();
+    if (!from_coll)
+      continue;
+
+    path->path().emplace_back(RefPtrTo(inherited_from), RefPtrTo(from_coll));
+    if (VisitResult result = DoVisitClassHierarchy(path, cb); result != VisitResult::kContinue)
+      return result;
+    path->path().pop_back();
   }
 
   return VisitResult::kContinue;
@@ -59,6 +86,12 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
 VisitResult VisitClassHierarchy(const Collection* starting,
                                 fit::function<VisitResult(const Collection*, uint64_t offset)> cb) {
   return DoVisitClassHierarchy(starting, 0, cb);
+}
+
+VisitResult VisitClassHierarchy(const Collection* starting,
+                                fit::function<VisitResult(const InheritancePath& path)> cb) {
+  InheritancePath path(RefPtrTo(starting));
+  return DoVisitClassHierarchy(&path, cb);
 }
 
 }  // namespace zxdb

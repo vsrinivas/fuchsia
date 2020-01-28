@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/inheritance_path.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 
 namespace zxdb {
@@ -16,18 +17,18 @@ TEST(VisitScopes, ClassHierarchy) {
   auto mid2 = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   auto derived = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
 
-  // Stores the collections and their offsets visited.
-  using VisitLog = std::vector<std::pair<const Collection*, uint64_t>>;
+  // Stores the collections and their paths visited.
+  using VisitLog = std::vector<InheritancePath>;
   VisitLog visited;
 
   // A single class with no hierarchy.
   VisitResult result =
-      VisitClassHierarchy(derived.get(), [&visited](const Collection* c, uint64_t o) {
-        visited.emplace_back(c, o);
+      VisitClassHierarchy(derived.get(), [&visited](const InheritancePath& path) {
+        visited.push_back(path);
         return VisitResult::kContinue;
       });
   EXPECT_EQ(VisitResult::kContinue, result);
-  VisitLog expected{{derived.get(), 0}};
+  VisitLog expected{{{derived}}};
   EXPECT_EQ(expected, visited);
 
   // Complex hierarchy:
@@ -47,25 +48,26 @@ TEST(VisitScopes, ClassHierarchy) {
   // convenient for the implementation, it can be changed in the future if there's a reason for a
   // specific different order).
   visited = VisitLog();
-  result = VisitClassHierarchy(derived.get(), [&visited](const Collection* c, uint64_t o) {
-    visited.emplace_back(c, o);
+  result = VisitClassHierarchy(derived.get(), [&visited](const InheritancePath& path) {
+    visited.push_back(path);
     return VisitResult::kContinue;
   });
   EXPECT_EQ(VisitResult::kContinue, result);
-  expected = VisitLog{{derived.get(), 0},
-                      {mid1.get(), mid1_offset},
-                      {base1.get(), mid1_offset + base1_offset},
-                      {mid2.get(), mid2_offset}};
+  expected = VisitLog{{{derived}},
+                      {{derived}, {mid1_inh, mid1}},
+                      {{derived}, {mid1_inh, mid1}, {base1_inh, base1}},
+                      {{derived}, {mid2_inh, mid2}}};
   EXPECT_EQ(expected, visited);
 
   // Test early termination at mid1.
   visited = VisitLog();
-  result = VisitClassHierarchy(derived.get(), [&visited, mid1](const Collection* c, uint64_t o) {
-    visited.emplace_back(c, o);
-    return c == mid1.get() ? VisitResult::kDone : VisitResult::kContinue;
+  result = VisitClassHierarchy(derived.get(), [&visited, mid1](const InheritancePath& path) {
+    visited.emplace_back(path);
+    return path.base() == mid1.get() ? VisitResult::kDone : VisitResult::kContinue;
   });
   EXPECT_EQ(VisitResult::kDone, result);  // Should have found mid1.
-  expected = VisitLog{{derived.get(), 0}, {mid1.get(), mid1_offset}};
+  expected = VisitLog{{{derived}},
+                      {{derived}, {mid1_inh, mid1}}};
   EXPECT_EQ(expected, visited);
 }
 

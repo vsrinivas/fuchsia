@@ -11,6 +11,7 @@ namespace zxdb {
 
 class CodeBlock;
 class Collection;
+class InheritancePath;
 class Symbol;
 
 // Return value for the callback for visiting the different scopes. The return for the whole
@@ -35,8 +36,12 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
 //
 // The callback takes the current collection being iterated, as well as the offset of that
 // collection from the beginning of the starting collection.
+//
+// TODO(brettw) remove the version that takes an offset.
 VisitResult VisitClassHierarchy(const Collection* starting,
                                 fit::function<VisitResult(const Collection*, uint64_t offset)> cb);
+VisitResult VisitClassHierarchy(const Collection* starting,
+                                fit::function<VisitResult(const InheritancePath& path)> cb);
 
 }  // namespace zxdb
 
