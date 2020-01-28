@@ -32,7 +32,7 @@ fn make_repo() -> RepositoryConfig {
     RepositoryConfigBuilder::new("fuchsia-pkg://example.com".parse().unwrap()).build()
 }
 
-async fn get_repos(repository_manager: &RepositoryManagerProxy) -> Vec<RepositoryConfig> {
+pub async fn get_repos(repository_manager: &RepositoryManagerProxy) -> Vec<RepositoryConfig> {
     let (repo_iterator, repo_iterator_server) =
         fidl::endpoints::create_proxy().expect("create repo iterator proxy");
     repository_manager.list(repo_iterator_server).expect("list repos");

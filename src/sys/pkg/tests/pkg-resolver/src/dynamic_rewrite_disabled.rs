@@ -33,7 +33,7 @@ fn make_rule() -> Rule {
     Rule::new("example.com", "example.com", "/", "/").unwrap()
 }
 
-async fn get_rules(rewrite_engine: &RewriteEngineProxy) -> Vec<Rule> {
+pub async fn get_rules(rewrite_engine: &RewriteEngineProxy) -> Vec<Rule> {
     let (rule_iterator, rule_iterator_server) =
         fidl::endpoints::create_proxy().expect("create rule iterator proxy");
     rewrite_engine.list(rule_iterator_server).expect("list rules");

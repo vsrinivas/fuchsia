@@ -40,6 +40,7 @@ mod mock_filesystem;
 mod resolve_propagates_pkgfs_failure;
 mod resolve_recovers_from_http_errors;
 mod resolve_succeeds;
+mod resolve_succeeds_with_broken_minfs;
 
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
@@ -171,7 +172,7 @@ where
 struct Apps {
     _amber: App,
     _pkg_cache: App,
-    _pkg_resolver: App,
+    pkg_resolver: App,
 }
 
 struct Proxies {
@@ -179,6 +180,25 @@ struct Proxies {
     resolver: PackageResolverProxy,
     repo_manager: RepositoryManagerProxy,
     rewrite_engine: RewriteEngineProxy,
+}
+
+impl Proxies {
+    fn from_app(app: &App) -> Self {
+        Proxies {
+            resolver: app
+                .connect_to_service::<PackageResolverMarker>()
+                .expect("connect to package resolver"),
+            resolver_admin: app
+                .connect_to_service::<PackageResolverAdminMarker>()
+                .expect("connect to package resolver admin"),
+            repo_manager: app
+                .connect_to_service::<RepositoryManagerMarker>()
+                .expect("connect to repository manager"),
+            rewrite_engine: app
+                .connect_to_service::<RewriteEngineMarker>()
+                .expect("connect to rewrite engine"),
+        }
+    }
 }
 
 struct TestEnv<P = PkgfsRamdisk> {
@@ -219,16 +239,13 @@ impl<P: PkgFs> TestEnv<P> {
             pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
         );
 
-        let mut pkg_resolver = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver.cmx"
-                .to_owned(),
-        )
-        .add_handle_to_namespace(
-            "/pkgfs".to_owned(),
-            pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
-        )
-        .add_dir_or_proxy_to_namespace("/data", &mounts.pkg_resolver_data)
-        .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data);
+        let pkg_resolver = AppBuilder::new(RESOLVER_MANIFEST_URL.to_owned())
+            .add_handle_to_namespace(
+                "/pkgfs".to_owned(),
+                pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
+            )
+            .add_dir_or_proxy_to_namespace("/data", &mounts.pkg_resolver_data)
+            .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data);
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
@@ -236,15 +253,6 @@ impl<P: PkgFs> TestEnv<P> {
             .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
             .add_proxy_service_to::<PackageCacheMarker, _>(
                 pkg_cache.directory_request().unwrap().clone(),
-            )
-            .add_proxy_service_to::<RepositoryManagerMarker, _>(
-                pkg_resolver.directory_request().unwrap().clone(),
-            )
-            .add_proxy_service_to::<PackageResolverAdminMarker, _>(
-                pkg_resolver.directory_request().unwrap().clone(),
-            )
-            .add_proxy_service_to::<PackageResolverMarker, _>(
-                pkg_resolver.directory_request().unwrap().clone(),
             );
 
         if include_amber {
@@ -263,28 +271,11 @@ impl<P: PkgFs> TestEnv<P> {
         let pkg_cache = pkg_cache.spawn(env.launcher()).expect("package cache to launch");
         let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
 
-        let resolver_proxy =
-            env.connect_to_service::<PackageResolverMarker>().expect("connect to package resolver");
-        let resolver_admin_proxy = env
-            .connect_to_service::<PackageResolverAdminMarker>()
-            .expect("connect to package resolver admin");
-        let repo_manager_proxy = env
-            .connect_to_service::<RepositoryManagerMarker>()
-            .expect("connect to repository manager");
-        let rewrite_engine_proxy = pkg_resolver
-            .connect_to_service::<RewriteEngineMarker>()
-            .expect("connect to rewrite engine");
-
         Self {
             env,
             pkgfs,
-            apps: Apps { _amber: amber, _pkg_cache: pkg_cache, _pkg_resolver: pkg_resolver },
-            proxies: Proxies {
-                resolver: resolver_proxy,
-                resolver_admin: resolver_admin_proxy,
-                repo_manager: repo_manager_proxy,
-                rewrite_engine: rewrite_engine_proxy,
-            },
+            proxies: Proxies::from_app(&pkg_resolver),
+            apps: Apps { _amber: amber, _pkg_cache: pkg_cache, pkg_resolver },
             _mounts: mounts,
             nested_environment_label: environment_label,
         }
@@ -305,8 +296,39 @@ impl<P: PkgFs> TestEnv<P> {
         self.proxies.repo_manager.add(repo_config.into()).await.unwrap();
     }
 
+    pub async fn restart_pkg_resolver(&mut self) {
+        // Start a new package resolver component
+        let pkg_resolver = AppBuilder::new(RESOLVER_MANIFEST_URL.to_owned())
+            .add_handle_to_namespace(
+                "/pkgfs".to_owned(),
+                self.pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
+            )
+            .add_dir_or_proxy_to_namespace("/data", &self._mounts.pkg_resolver_data)
+            .add_dir_or_proxy_to_namespace("/config/data", &self._mounts.pkg_resolver_config_data);
+        let pkg_resolver =
+            pkg_resolver.spawn(self.env.launcher()).expect("package resolver to launch");
+
+        // Previous pkg-resolver terminated when its app goes out of scope
+        self.proxies = Proxies::from_app(&pkg_resolver);
+        self.apps.pkg_resolver = pkg_resolver;
+
+        self.wait_for_pkg_resolver_to_start().await;
+    }
+
+    pub async fn wait_for_pkg_resolver_to_start(&self) {
+        self.proxies
+            .rewrite_engine
+            .test_apply("fuchsia-pkg://test")
+            .await
+            .expect("fidl call succeeds")
+            .expect("test apply result is ok");
+    }
+
     fn connect_to_resolver(&self) -> PackageResolverProxy {
-        self.env.connect_to_service::<PackageResolverMarker>().expect("connect to package resolver")
+        self.apps
+            .pkg_resolver
+            .connect_to_service::<PackageResolverMarker>()
+            .expect("connect to package resolver")
     }
 
     fn resolve_package(&self, url: &str) -> impl Future<Output = Result<DirectoryProxy, Status>> {
@@ -364,6 +386,8 @@ impl<P: PkgFs> TestEnv<P> {
 }
 
 const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
+const RESOLVER_MANIFEST_URL: &str =
+    "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver.cmx";
 
 // The following functions generate unique test package dummy content. Callers are recommended
 // to pass in the name of the test case.

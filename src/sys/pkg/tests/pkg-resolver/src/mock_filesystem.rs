@@ -50,7 +50,7 @@ async fn handle_directory_request(req: DirectoryRequest, open_counts: OpenCounte
     }
 }
 
-fn describe_dir(flags: u32, stream: &DirectoryRequestStream) {
+pub fn describe_dir(flags: u32, stream: &DirectoryRequestStream) {
     let ch = stream.control_handle();
     if flags & OPEN_FLAG_DESCRIBE != 0 {
         let mut ni = fidl_fuchsia_io::NodeInfo::Directory(DirectoryObject);

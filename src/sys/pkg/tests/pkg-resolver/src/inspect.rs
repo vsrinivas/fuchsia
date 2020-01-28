@@ -21,12 +21,7 @@ use {
 async fn test_initial_inspect_state() {
     let env = TestEnvBuilder::new().build();
     // Wait for inspect to be created
-    env.proxies
-        .rewrite_engine
-        .test_apply("fuchsia-pkg://test")
-        .await
-        .expect("fidl call succeeds")
-        .expect("test apply result is ok");
+    env.wait_for_pkg_resolver_to_start().await;
 
     // Obtain inspect hierarchy
     let hierarchy = env.pkg_resolver_inspect_hierarchy().await;

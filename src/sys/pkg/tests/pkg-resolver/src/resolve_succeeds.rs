@@ -674,10 +674,8 @@ async fn test_concurrent_blob_writes() {
     env.register_repo(&served_repository).await;
 
     // Construct the resolver proxies (clients)
-    let resolver_proxy_1 =
-        env.env.connect_to_service::<PackageResolverMarker>().expect("connect to package resolver");
-    let resolver_proxy_2 =
-        env.env.connect_to_service::<PackageResolverMarker>().expect("connect to package resolver");
+    let resolver_proxy_1 = env.connect_to_resolver();
+    let resolver_proxy_2 = env.connect_to_resolver();
 
     // Create a GET request to the hyper server for the duplicate blob
     let package1_resolution_fut =
@@ -783,17 +781,11 @@ async fn dedup_concurrent_content_blob_fetches() {
     // Start resolving both packages using distinct proxies, which should block waiting for the
     // meta FAR responses.
     let pkg1_fut = {
-        let proxy = env
-            .env
-            .connect_to_service::<PackageResolverMarker>()
-            .expect("connect to package resolver");
+        let proxy = env.connect_to_resolver();
         resolve_package(&proxy, "fuchsia-pkg://test/package1")
     };
     let pkg2_fut = {
-        let proxy = env
-            .env
-            .connect_to_service::<PackageResolverMarker>()
-            .expect("connect to package resolver");
+        let proxy = env.connect_to_resolver();
         resolve_package(&proxy, "fuchsia-pkg://test/package2")
     };
 
