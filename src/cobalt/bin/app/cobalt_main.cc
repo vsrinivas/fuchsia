@@ -34,6 +34,10 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "third_party/cobalt/src/lib/util/posix_file_system.h"
+#include "third_party/cobalt/src/observation_store/file_observation_store.h"
+#include "third_party/cobalt/src/observation_store/memory_observation_store.h"
+#include "third_party/cobalt/src/system_data/system_data.h"
 
 // Command-line flags
 

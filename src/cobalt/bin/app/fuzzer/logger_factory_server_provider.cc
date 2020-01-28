@@ -18,8 +18,14 @@
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/src/lib/clearcut/uploader.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
+#include "third_party/cobalt/src/local_aggregation/event_aggregator_mgr.h"
+#include "third_party/cobalt/src/logger/observation_writer.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
-#include "third_party/cobalt/src/public/cobalt_service.h"
+#include "third_party/cobalt/src/observation_store/memory_observation_store.h"
+#include "third_party/cobalt/src/observation_store/observation_store.h"
+#include "third_party/cobalt/src/system_data/client_secret.h"
+#include "third_party/cobalt/src/uploader/shipping_manager.h"
+#include "third_party/cobalt/src/uploader/upload_scheduler.h"
 
 // Source of cobalt::logger::kConfig
 #include "third_party/cobalt/src/logger/internal_metrics_config.cb.h"
@@ -29,32 +35,49 @@ namespace {
 ::fidl::fuzzing::ServerProvider<::fuchsia::cobalt::LoggerFactory, ::cobalt::LoggerFactoryImpl>*
     fuzzer_server_provider;
 
-cobalt::CobaltConfig cfg = {
-    .file_system = std::make_unique<cobalt::util::PosixFileSystem>(),
-    .use_memory_observation_store = true,
-    .max_bytes_per_event = 100,
-    .max_bytes_per_envelope = 100,
-    .max_bytes_total = 1000,
+auto secret = cobalt::encoder::ClientSecret::GenerateNewSecret();
+cobalt::logger::Encoder encoder(secret, nullptr);
+auto observation_store =
+    std::make_unique<cobalt::observation_store::MemoryObservationStore>(100, 100, 1000);
 
-    .local_aggregate_proto_store_path = "/tmp/local_agg",
-    .obs_history_proto_store_path = "/tmp/obs_hist",
+class NoOpHTTPClient : public cobalt::lib::clearcut::HTTPClient {
+  std::future<cobalt::lib::statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse>> Post(
+      cobalt::lib::clearcut::HTTPRequest request,
+      std::chrono::steady_clock::time_point deadline) override {
+    return std::async(
+        std::launch::async,
+        []() mutable -> cobalt::lib::statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse> {
+          return cobalt::util::Status::CANCELLED;
+        });
+  }
+};
 
-    .target_interval = std::chrono::seconds(10),
-    .min_interval = std::chrono::seconds(10),
-    .initial_interval = std::chrono::seconds(10),
+std::unique_ptr<cobalt::util::EncryptedMessageMaker> encrypt_to_analyzer =
+    cobalt::util::EncryptedMessageMaker::MakeUnencrypted();
 
-    .target_pipeline = std::make_unique<cobalt::LocalPipeline>(),
+cobalt::encoder::ClearcutV1ShippingManager clearcut_shipping_manager(
+    cobalt::encoder::UploadScheduler(std::chrono::seconds(10), std::chrono::seconds(10)),
+    observation_store.get(), encrypt_to_analyzer.get(),
+    std::make_unique<cobalt::lib::clearcut::ClearcutUploader>("http://test.com",
+                                                              std::make_unique<NoOpHTTPClient>()),
+    nullptr, 5, "");
 
-    .api_key = "",
-    .client_secret = cobalt::encoder::ClientSecret::GenerateNewSecret(),
-    .internal_logger_project_context = nullptr,
+cobalt::logger::ObservationWriter observation_writer(observation_store.get(),
+                                                     &clearcut_shipping_manager,
+                                                     encrypt_to_analyzer.get());
 
-    .local_aggregation_backfill_days = 4,
-};  // namespace
+cobalt::util::ConsistentProtoStore local_aggregate_proto_store(
+    "/tmp/local_agg", std::make_unique<cobalt::util::PosixFileSystem>());
+cobalt::util::ConsistentProtoStore obs_history_proto_store(
+    "/tmp/obs_hist", std::make_unique<cobalt::util::PosixFileSystem>());
 
-cobalt::CobaltService cobalt_service(std::move(cfg));
+cobalt::local_aggregation::EventAggregatorManager event_aggregator_manager(
+    &encoder, &observation_writer, &local_aggregate_proto_store, &obs_history_proto_store, 4);
 
-cobalt::TimerManager timer_manager(nullptr);
+auto undated_event_manager = std::make_shared<cobalt::logger::UndatedEventManager>(
+    &encoder, event_aggregator_manager.GetEventAggregator(), &observation_writer, nullptr);
+
+cobalt::TimerManager manager(nullptr);
 
 }  // namespace
 
@@ -72,17 +95,19 @@ zx_status_t fuzzer_init() {
   auto global_project_context_factory =
       std::make_shared<cobalt::logger::ProjectContextFactory>(config);
 
-  return fuzzer_server_provider->Init(global_project_context_factory, &timer_manager,
-                                      &cobalt_service);
+  return fuzzer_server_provider->Init(global_project_context_factory, secret, &manager, &encoder,
+                                      &observation_writer,
+                                      event_aggregator_manager.GetEventAggregator(), nullptr,
+                                      undated_event_manager, nullptr, nullptr);
 }
 
 zx_status_t fuzzer_connect(zx_handle_t channel_handle, async_dispatcher_t* dispatcher) {
-  timer_manager.UpdateDispatcher(dispatcher);
+  manager.UpdateDispatcher(dispatcher);
   return fuzzer_server_provider->Connect(channel_handle, dispatcher);
 }
 
 zx_status_t fuzzer_disconnect(zx_handle_t channel_handle, async_dispatcher_t* dispatcher) {
-  timer_manager.UpdateDispatcher(nullptr);
+  manager.UpdateDispatcher(nullptr);
   return fuzzer_server_provider->Disconnect(channel_handle, dispatcher);
 }
 
