@@ -671,10 +671,6 @@ static void infostring(const char* prefix, uint8_t* str, size_t len) {
 
 #define IO_PAGE_COUNT (IDX_UTXN_POOL + UTXN_COUNT)
 
-static inline uint64_t U64(uint8_t* x) { return *((uint64_t*)(void*)x); }
-static inline uint32_t U32(uint8_t* x) { return *((uint32_t*)(void*)x); }
-static inline uint32_t U16(uint8_t* x) { return *((uint16_t*)(void*)x); }
-
 #define WAIT_MS 5000
 
 static zx_status_t nvme_init(nvme_device_t* nvme) {

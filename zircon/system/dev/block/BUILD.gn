@@ -9,7 +9,6 @@ group("block") {
     "as370-sdhci",
     "bootpart",
     "ftl",
-    "nvme",
     "pci-sdhci",
     "ramdisk",
     "sdhci",
