@@ -306,7 +306,7 @@ bool MsdVslDevice::FreeInterruptEvent(uint32_t event_id) {
 
 // Writes an event into the end of the ringbuffer.
 bool MsdVslDevice::WriteInterruptEvent(uint32_t event_id,
-                                       std::shared_ptr<magma::PlatformSemaphore> signal) {
+                                       std::unique_ptr<MappedBatch> mapped_batch) {
   std::lock_guard<std::mutex> lock(events_mutex_);
 
   if (event_id >= kNumEvents) {
@@ -319,7 +319,7 @@ bool MsdVslDevice::WriteInterruptEvent(uint32_t event_id,
     return DRETF(false, "Event id %u was already submitted", event_id);
   }
   events_[event_id].submitted = true;
-  events_[event_id].signal = signal;
+  events_[event_id].mapped_batch = std::move(mapped_batch);
   MiEvent::write(ringbuffer_.get(), event_id);
   return true;
 }
@@ -334,11 +334,8 @@ bool MsdVslDevice::CompleteInterruptEvent(uint32_t event_id) {
     return DRETF(false, "Cannot complete event %u, allocated %u submitted %u",
                  event_id, events_[event_id].allocated, events_[event_id].submitted);
   }
-  if (events_[event_id].signal) {
-    events_[event_id].signal->Signal();
-  }
   events_[event_id].submitted = false;
-  events_[event_id].signal = nullptr;
+  events_[event_id].mapped_batch = nullptr;
   return true;
 }
 
@@ -579,10 +576,9 @@ bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
 //  3) modify the penultimate WAIT in the ringbuffer to LINK to the command buffer
 bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
                                        uint32_t address_space_index,
-                                       magma::PlatformBuffer* buf, uint32_t gpu_addr,
-                                       uint32_t length, uint32_t event_id,
-                                       std::shared_ptr<magma::PlatformSemaphore> signal,
-                                       uint16_t* prefetch_out) {
+                                       magma::PlatformBuffer* buf,
+                                       std::unique_ptr<MappedBatch> mapped_batch,
+                                       uint32_t event_id, uint16_t* prefetch_out) {
   // Check if we have loaded an address space and enabled the MMU.
   if (!page_table_arrays_->IsEnabled(register_io())) {
     if (!LoadInitialAddressSpace(address_space, address_space_index)) {
@@ -608,7 +604,8 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   if (!res) {
     return DRETF(false, "Failed to get ringbuffer gpu address");
   }
-  length = magma::round_up(length, sizeof(uint64_t));
+  uint32_t gpu_addr = mapped_batch->GetGpuAddress();
+  uint32_t length = magma::round_up(mapped_batch->GetLength(), sizeof(uint64_t));
 
   // Number of new commands to be added to the ringbuffer - EVENT WAIT LINK.
   const uint16_t kRbPrefetch = 3;
@@ -636,7 +633,7 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
 
   // Write the new commands to the end of the ringbuffer.
   // Add an EVENT to the end to the ringbuffer.
-  if (!WriteInterruptEvent(event_id, signal)) {
+  if (!WriteInterruptEvent(event_id, std::move(mapped_batch))) {
     return DRETF(false, "Failed to write interrupt event %u\n", event_id);
   }
   // Add a new WAIT-LINK to the end of the ringbuffer.

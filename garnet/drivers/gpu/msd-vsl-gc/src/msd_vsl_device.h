@@ -16,6 +16,7 @@
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
 #include "magma_vsl_gc_types.h"
+#include "mapped_batch.h"
 #include "msd.h"
 #include "msd_vsl_connection.h"
 #include "page_table_arrays.h"
@@ -60,8 +61,7 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   struct Event {
     bool allocated = false;
     bool submitted = false;
-    // TODO(fxb/43238): this should link to the command buffer which stores the semaphores.
-    std::shared_ptr<magma::PlatformSemaphore> signal;
+    std::unique_ptr<MappedBatch> mapped_batch;
   };
 
 #define CHECK_THREAD_IS_CURRENT(x) \
@@ -89,7 +89,7 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   bool FreeInterruptEvent(uint32_t event_id);
   // Writes a new interrupt event to the end of the ringbuffer. The event must have been allocated
   // using |AllocInterruptEvent|.
-  bool WriteInterruptEvent(uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal);
+  bool WriteInterruptEvent(uint32_t event_id, std::unique_ptr<MappedBatch> mapped_batch);
   bool CompleteInterruptEvent(uint32_t event_id);
 
   // Returns true if starting the ringbuffer succeeded, or the ringbuffer was already running.
@@ -113,10 +113,11 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   // to the device.
   bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
                                 uint16_t* prefetch_out = nullptr);
-  bool SubmitCommandBuffer(std::shared_ptr<AddressSpace>, uint32_t address_space_index,
-                           magma::PlatformBuffer* buf, uint32_t gpu_addr, uint32_t length,
-                           uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal,
-                           uint16_t* prefetch_out);
+  bool SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
+                           uint32_t address_space_index,
+                           magma::PlatformBuffer* buf,
+                           std::unique_ptr<MappedBatch> mapped_batch,
+                           uint32_t event_id, uint16_t* prefetch_out);
 
   magma::RegisterIo* register_io() { return register_io_.get(); }
 

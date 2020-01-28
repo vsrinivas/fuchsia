@@ -4,6 +4,7 @@
 
 #include "garnet/drivers/gpu/msd-vsl-gc/src/instructions.h"
 #include "garnet/drivers/gpu/msd-vsl-gc/src/msd_vsl_device.h"
+#include "garnet/drivers/gpu/msd-vsl-gc/tests/mock/mock_mapped_batch.h"
 #include "gtest/gtest.h"
 #include "helper/platform_device_helper.h"
 
@@ -103,7 +104,8 @@ TEST_F(TestEvents, Write) {
     for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
       auto copy = semaphores[j]->Clone();
       ASSERT_NE(copy, nullptr);
-      ASSERT_TRUE(device_->WriteInterruptEvent(event_ids[j], std::move(copy)));
+      auto mapped_batch = std::make_unique<MockMappedBatch>(std::move(copy));
+      ASSERT_TRUE(device_->WriteInterruptEvent(event_ids[j], std::move(mapped_batch)));
       // Should not be able to submit the same event while it is still pending.
       ASSERT_FALSE(device_->WriteInterruptEvent(event_ids[j], nullptr));
     }
@@ -135,10 +137,11 @@ TEST_F(TestEvents, Submit) {
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_NE(semaphore, nullptr);
 
+    auto mapped_batch = std::make_unique<MockMappedBatch>(semaphore->Clone());
     uint16_t prefetch_out;
     ASSERT_TRUE(device_->SubmitCommandBuffer(address_space_, kAddressSpaceIndex,
-                                             nullptr /* buf */, 0 /* gpu_addr */, 0 /* length */,
-                                             event_id, semaphore->Clone(), &prefetch_out));
+                                             nullptr /* buf */, std::move(mapped_batch),
+                                             event_id, &prefetch_out));
 
     constexpr uint64_t kTimeoutMs = 1000;
     ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());

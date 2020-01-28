@@ -1,0 +1,18 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+source_set("mock") {
+  testonly = true
+
+  public_deps = [
+    "//garnet/drivers/gpu/msd-vsl-gc/src",
+    "//garnet/lib/magma/src/magma_util:mapped_batch",
+    "//garnet/lib/magma/src/magma_util/platform:buffer",
+    "//garnet/lib/magma/src/magma_util/platform:semaphore",
+  ]
+
+  sources = [ "mock_mapped_batch.h" ]
+}

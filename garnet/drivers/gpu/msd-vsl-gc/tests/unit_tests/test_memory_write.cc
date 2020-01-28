@@ -13,6 +13,7 @@ int etnaviv_cl_test_gc7000(int argc, char* argv[]);
 #include "garnet/drivers/gpu/msd-vsl-gc/src/address_space.h"
 #include "garnet/drivers/gpu/msd-vsl-gc/src/instructions.h"
 #include "garnet/drivers/gpu/msd-vsl-gc/src/msd_vsl_device.h"
+#include "garnet/drivers/gpu/msd-vsl-gc/tests/mock/mock_mapped_batch.h"
 #include "gtest/gtest.h"
 #include "helper/platform_device_helper.h"
 #include "magma_util/macros.h"
@@ -111,9 +112,11 @@ class TestMsdVslDevice : public drm_test_info {
   bool SubmitCommandBuffer(TestMsdVslDevice::EtnaBuffer* etna_buf, uint32_t length,
                            uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal,
                            uint16_t* prefetch_out) {
-    return device_.msd_vsl_device->SubmitCommandBuffer(address_space_, kAddressSpaceIndex,
-                                                       etna_buf->buffer.get(), etna_buf->gpu_addr,
-                                                       length, event_id, signal, prefetch_out);
+    auto mapped_batch =
+        std::make_unique<MockMappedBatch>(etna_buf->gpu_addr, length, std::move(signal));
+    return device_.msd_vsl_device->SubmitCommandBuffer(
+        address_space_, kAddressSpaceIndex, etna_buf->buffer.get(), std::move(mapped_batch),
+        event_id, prefetch_out);
   }
 
   uint32_t next_gpu_addr(uint32_t size) {
