@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//zircon/prebuilt/config.gni")
+
 # This is the directory populated by //zircon/scripts/download-prebuilt.
 # Currently all Zircon firmware blobs are stored there.
 firmware_dir = "//zircon/prebuilt/downloads/firmware"
@@ -25,7 +27,9 @@ template("firmware") {
 
   group(target_name) {
     metadata = {
-      migrated_manifest_lines = mappings
+      if (have_firmware) {
+        migrated_manifest_lines = mappings
+      }
     }
   }
 }
