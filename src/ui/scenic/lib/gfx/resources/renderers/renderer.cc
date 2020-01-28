@@ -7,7 +7,6 @@
 #include <trace/event.h>
 
 #include "src/ui/lib/escher/scene/model.h"
-#include "src/ui/lib/escher/scene/stage.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"

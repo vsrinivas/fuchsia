@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_LIB_GFX_RESOURCES_CAMERA_H_
 
 #include "src/ui/lib/escher/scene/camera.h"
-#include "src/ui/lib/escher/scene/stage.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"

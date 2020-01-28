@@ -301,8 +301,6 @@ template("escher_library") {
       "scene/object.h",
       "scene/shape.cc",
       "scene/shape.h",
-      "scene/stage.cc",
-      "scene/stage.h",
       "scene/viewing_volume.cc",
       "scene/viewing_volume.h",
       "shaders/util/spirv_file_util.cc",

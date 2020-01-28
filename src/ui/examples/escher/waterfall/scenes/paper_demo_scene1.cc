@@ -11,7 +11,6 @@
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/scene/model.h"
-#include "src/ui/lib/escher/scene/stage.h"
 #include "src/ui/lib/escher/util/alloca.h"
 #include "src/ui/lib/escher/util/stopwatch.h"
 #include "src/ui/lib/escher/vk/image.h"

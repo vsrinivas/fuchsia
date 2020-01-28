@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/lib/escher/util/epsilon_compare.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
