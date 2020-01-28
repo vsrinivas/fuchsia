@@ -9,7 +9,6 @@ group("uapp") {
     "blktest",
     "blobfs",
     "disk-pave",
-    "display-test",
     "fvm-check",
     "hid",
     "ihda",

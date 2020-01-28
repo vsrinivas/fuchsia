@@ -20,9 +20,13 @@ zx_library("image-format-llcpp") {
   sdk_headers = [ "lib/image-format-llcpp/image-format-llcpp.h" ]
   sources = [ "image-format-llcpp.cc" ]
   public_deps = [
-    ":image-format",
+    ":image-format.headers",
     "$zx/system/fidl/fuchsia-sysmem:c.headers",
-    "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/fidl/fuchsia-sysmem:llcpp.headers",
+  ]
+  deps = [
+    ":image-format",
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
   ]
 }

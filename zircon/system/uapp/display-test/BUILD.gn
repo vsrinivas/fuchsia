@@ -2,7 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("display-test") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("display-test") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [
     "display.cc",
     "image.cc",
@@ -10,16 +25,19 @@ zx_executable("display-test") {
     "virtual-layer.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.display.controller",
-    "$zx/system/fidl/fuchsia-hardware-display:llcpp",
-    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
-    "$zx/system/fidl/fuchsia-sysmem:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/image-format:image-format-llcpp",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/image-format-llcpp",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.display.controller",
+    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
+    "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
+}
+
+migrated_manifest("display-test-manifest") {
+  deps = [ ":display-test" ]
 }

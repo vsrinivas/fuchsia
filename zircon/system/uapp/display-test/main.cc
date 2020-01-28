@@ -77,20 +77,6 @@ fbl::StringBuffer<sysinfo::SYSINFO_BOARD_NAME_LEN> board_name;
 Platforms GetPlatform();
 void Usage();
 
-static bool wait_for_driver_event(zx_time_t deadline) {
-  zx_handle_t observed;
-  uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-  if (zx_object_wait_one(dc->channel().get(), signals, ZX_TIME_INFINITE, &observed) != ZX_OK) {
-    printf("Wait failed\n");
-    return false;
-  }
-  if (observed & ZX_CHANNEL_PEER_CLOSED) {
-    printf("Display controller died\n");
-    return false;
-  }
-  return true;
-}
-
 static bool bind_display(const char* controller, fbl::Vector<Display>* displays) {
   printf("Opening controller\n");
   fbl::unique_fd fd(open(controller, O_RDWR));
