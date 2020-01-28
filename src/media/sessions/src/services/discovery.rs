@@ -29,7 +29,6 @@ use std::{collections::HashMap, marker::Unpin, pin::Pin};
 use streammap::StreamMap;
 
 struct WatcherClient<F, S> {
-    id: usize,
     event_forward: F,
     disconnect_signal: S,
 }
@@ -68,7 +67,7 @@ impl Discovery {
         watcher_sink: impl Sink<(u64, SessionsWatcherEvent), Error = Error> + Unpin,
         player_events: impl Stream<Item = FilterApplicant<(u64, PlayerEvent)>> + Unpin,
         filter: Filter,
-    ) -> WatcherClient<impl Future<Output = Result<()>> + Unpin, S> {
+    ) -> (usize, WatcherClient<impl Future<Output = Result<()>> + Unpin, S>) {
         let id = self.next_watcher_id;
         self.next_watcher_id += 1;
 
@@ -79,7 +78,7 @@ impl Discovery {
 
         let event_forward = event_stream.map(Ok).forward(watcher_sink);
 
-        WatcherClient { id, event_forward, disconnect_signal }
+        (id, WatcherClient { event_forward, disconnect_signal })
     }
 
     pub async fn serve(
@@ -105,7 +104,7 @@ impl Discovery {
                         } => {
                             if let Ok(requests) = session_control_request.into_stream() {
                                 let (watcher_send, recv) = mpsc::channel(CHANNEL_BUFFER_SIZE);
-                                let watcher_client = self.new_watcher_client(
+                                let (watcher_id, watcher_client) = self.new_watcher_client(
                                     stream::pending(),
                                     watcher_send.sink_map_err(Error::from),
                                     sender.new_receiver(),
@@ -116,7 +115,7 @@ impl Discovery {
                                 );
 
                                 session_watchers.insert(
-                                    watcher_client.id,
+                                    watcher_id,
                                     stream::once(watcher_client).fuse()
                                 ).await;
                                 player_updates.with_elem(session_id, move |player: &mut Player| {
@@ -145,14 +144,14 @@ impl Discovery {
                         DiscoveryRequest::WatchSessions { watch_options, session_watcher, ..} => {
                             match session_watcher.into_proxy() {
                                 Ok(proxy) => {
-                                    let watcher_client = self.new_watcher_client(
+                                    let (watcher_id, watcher_client) = self.new_watcher_client(
                                         proxy.take_event_stream().map(drop),
                                         FlowControlledProxySink::from(proxy),
                                         sender.new_receiver(),
                                         Filter::new(watch_options)
                                     );
                                     collection_watchers.insert(
-                                        watcher_client.id,
+                                        watcher_id,
                                         stream::once(watcher_client).fuse()
                                     ).await;
                                 },
