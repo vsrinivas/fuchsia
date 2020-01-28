@@ -327,7 +327,7 @@ fn check_user_types(fields: &FieldList, errors: &mut Vec<Error>) {
                         };
 
                         let field_len = if start_value <= end_value {
-                            (end_value - start_value + 1)
+                            end_value - start_value + 1
                         } else {
                             continue;
                         };

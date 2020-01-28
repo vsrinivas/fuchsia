@@ -189,7 +189,7 @@ impl ImeState {
         s.extent = s.extent.max(0).min(self.text_state.text.len() as i64);
         let start = s.base.min(s.extent) as usize;
         let end = s.base.max(s.extent) as usize;
-        (start..end)
+        start..end
     }
 
     /// Return bool indicates if transaction was successful and valid

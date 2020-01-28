@@ -22,7 +22,7 @@ const ZBI_BOOTFS_HEADER_SIZE: usize = size_of::<zbi_bootfs_header_t>();
 // Each directory entry has a variable size of [16,268] bytes that
 // must be a multiple of 4 bytes.
 fn zbi_bootfs_dirent_size(name_len: u32) -> u32 {
-    ((ZBI_BOOTFS_DIRENT_SIZE as u32 + name_len + 3) & !3u32)
+    (ZBI_BOOTFS_DIRENT_SIZE as u32 + name_len + 3) & !3u32
 }
 
 fn zbi_bootfs_page_align(size: u32) -> u32 {

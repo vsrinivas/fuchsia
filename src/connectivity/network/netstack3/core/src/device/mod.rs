@@ -1385,8 +1385,8 @@ pub(crate) fn is_router_device<D: EventDispatcher, I: Ip>(
     ctx: &Context<D>,
     device: DeviceId,
 ) -> bool {
-    (crate::ip::is_routing_enabled::<_, I>(ctx)
-        && crate::device::is_routing_enabled::<_, I>(ctx, device))
+    crate::ip::is_routing_enabled::<_, I>(ctx)
+        && crate::device::is_routing_enabled::<_, I>(ctx, device)
 }
 
 /// Insert a static entry into this device's ARP table.

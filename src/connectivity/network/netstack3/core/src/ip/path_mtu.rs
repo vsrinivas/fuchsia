@@ -385,7 +385,7 @@ impl<I: Ip, C: PmtuContext<I>> TimerHandler<C, PmtuTimerId<I>> for PmtuTimerHand
             //               Considering the use case, PMTU value changes may be
             //               infrequent so it may be enough to just use a long stale
             //               timer.
-            (curr_time.duration_since(v.last_updated) < PMTU_STALE_TIMEOUT)
+            curr_time.duration_since(v.last_updated) < PMTU_STALE_TIMEOUT
         });
 
         // Only attempt to create the next maintenance task if we still have PMTU

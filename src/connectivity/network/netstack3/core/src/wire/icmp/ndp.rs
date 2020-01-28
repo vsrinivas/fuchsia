@@ -204,17 +204,17 @@ impl NeighborAdvertisement {
 
     /// Returns the router flag.
     pub(crate) fn router_flag(&self) -> bool {
-        ((self.flags_rso & Self::FLAG_ROUTER) != 0)
+        (self.flags_rso & Self::FLAG_ROUTER) != 0
     }
 
     /// Returns the solicited flag.
     pub(crate) fn solicited_flag(&self) -> bool {
-        ((self.flags_rso & Self::FLAG_SOLICITED) != 0)
+        (self.flags_rso & Self::FLAG_SOLICITED) != 0
     }
 
     /// Returns the override flag.
     pub(crate) fn override_flag(&self) -> bool {
-        ((self.flags_rso & Self::FLAG_OVERRIDE) != 0)
+        (self.flags_rso & Self::FLAG_OVERRIDE) != 0
     }
 }
 
@@ -336,12 +336,12 @@ pub(crate) mod options {
         /// prefix; nodes MUST NOT conclude that an address derived
         /// from this prefix is off-link if `false`.
         pub(crate) fn on_link_flag(&self) -> bool {
-            ((self.flags_la & ON_LINK_FLAG) != 0)
+            (self.flags_la & ON_LINK_FLAG) != 0
         }
 
         /// Can this prefix be used for stateless address configuration?
         pub(crate) fn autonomous_address_configuration_flag(&self) -> bool {
-            ((self.flags_la & AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG) != 0)
+            (self.flags_la & AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG) != 0
         }
 
         /// Get the length of time in seconds (relative to the time the

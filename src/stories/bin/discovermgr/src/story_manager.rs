@@ -234,7 +234,7 @@ impl StoryManager {
             .map_err(StoryManager::error_mapping)?
             .iter()
             .map(|(name, title)| {
-                (StoryMetadata::new(name, title, time_map.remove(name).unwrap_or(0)))
+                StoryMetadata::new(name, title, time_map.remove(name).unwrap_or(0))
             })
             .collect())
     }

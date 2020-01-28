@@ -624,12 +624,12 @@ pub(crate) struct FragmentData<'a> {
 impl<'a> FragmentData<'a> {
     pub(crate) fn fragment_offset(&self) -> u16 {
         debug_assert!(self.bytes.len() == 6);
-        ((u16::from(self.bytes[0]) << 5) | (u16::from(self.bytes[1]) >> 3))
+        (u16::from(self.bytes[0]) << 5) | (u16::from(self.bytes[1]) >> 3)
     }
 
     pub(crate) fn m_flag(&self) -> bool {
         debug_assert!(self.bytes.len() == 6);
-        ((self.bytes[1] & 0x1) == 0x01)
+        (self.bytes[1] & 0x1) == 0x01
     }
 
     pub(crate) fn identification(&self) -> u32 {

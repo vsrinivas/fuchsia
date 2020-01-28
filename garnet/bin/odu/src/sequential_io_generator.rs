@@ -171,7 +171,7 @@ impl Generator for SequentialIoGenerator {
             end = self.offset_range.end;
         }
 
-        (cur..end)
+        cur..end
     }
 
     fn fill_buffer(&self, buf: &mut Vec<u8>, sequence_number: u64, offset_range: Range<u64>) {
