@@ -820,13 +820,11 @@ group("terminal") {
   public_deps = [ "//garnet/bin/terminal:tests" ]
 }
 
-# WARNING: Known to topaz.
 group("run_test_component") {
   testonly = true
   public_deps = [
     "//garnet/bin/run_test_component:run_test_component_unittests",
     "//garnet/bin/run_test_component/test:run_test_component_test",
-    "//garnet/packages/testing:run_test_component",
   ]
 }
 

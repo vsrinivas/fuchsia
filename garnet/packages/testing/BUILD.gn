@@ -25,6 +25,7 @@ group("views") {
   public_deps = [ "//src/ui/testing/views:test_views" ]
 }
 
+# WARNING: Known to topaz.
 group("run_test_component") {
   testonly = true
   public_deps = [ "//garnet/bin/run_test_component" ]
