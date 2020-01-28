@@ -45,22 +45,19 @@ class AskModel extends ChangeNotifier {
   StreamSubscription<Iterable<Suggestion>> _suggestionStream;
 
   // List of built-in suggestions show when ask box is empty.
-  static final List<Suggestion> builtInSuggestions = <Suggestion>[
-    Suggestion(
-      id: 'simple_browser:${DateTime.now().millisecondsSinceEpoch}',
-      url: 'fuchsia-pkg://fuchsia.com/simple_browser#meta/simple_browser.cmx',
-      title: 'simple_browser',
-    ),
-    Suggestion(
-      id: 'terminal:${DateTime.now().millisecondsSinceEpoch}',
-      url: 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx',
-      title: 'terminal',
-    ),
-    Suggestion(
-      id: 'settings:${DateTime.now().millisecondsSinceEpoch}',
-      url: 'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx',
-      title: 'settings',
-    ),
+  static final List<Map<String, String>> builtInSuggestions = [
+    {
+      'title': 'simple_browser',
+      'url': 'fuchsia-pkg://fuchsia.com/simple_browser#meta/simple_browser.cmx',
+    },
+    {
+      'title': 'terminal',
+      'url': 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx',
+    },
+    {
+      'title': 'settings',
+      'url': 'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx',
+    },
   ];
 
   /// Constructor.
@@ -97,7 +94,13 @@ class AskModel extends ChangeNotifier {
 
       suggestions.value = result.isNotEmpty || _currentQuery.isNotEmpty
           ? result.toList()
-          : builtInSuggestions;
+          : builtInSuggestions
+              .map((o) => Suggestion(
+                    id: '${o['title']}:${DateTime.now().millisecondsSinceEpoch}',
+                    url: o['url'],
+                    title: o['title'],
+                  ))
+              .toList();
 
       // Insert the suggestion in [AnimatedListState].
       for (int index = 0; index < suggestions.value.length; index++) {
