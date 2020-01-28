@@ -22,6 +22,11 @@ class DdkVolume final : public Volume {
   static zx_status_t Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot_t slot,
                             std::unique_ptr<DdkVolume>* out);
 
+  // Opens a zxcrypt volume on the block device described by |dev|, but does not
+  // do any operations involving a key.  This is to make it possible to call Shred()
+  // without necessarily holding the key.
+  static zx_status_t OpenOpaque(zx_device_t* dev, std::unique_ptr<DdkVolume>* out);
+
   // Uses the data key material to initialize |cipher| for the given |direction|.
   zx_status_t Bind(crypto::Cipher::Direction direction, crypto::Cipher* cipher) const;
 

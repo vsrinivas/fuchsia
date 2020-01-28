@@ -36,4 +36,13 @@ protocol DeviceManager {
     /// Returns `ZX_ERR_BAD_STATE` if the device is already sealed.
     /// Returns `ZX_OK` on success.
     Seal() -> (zx.status status);
+
+    /// Shreds the device, permanently overwriting the keys that would allow
+    /// `Unseal()`ing the device again in the future.  This call does *not*
+    /// impact the current sealed/unsealed state of the device -- if currently
+    /// unsealed, the device will remain in that state until `Seal()` is called
+    /// or the device is unbound.
+    /// Returns `ZX_OK` on success.
+    /// Returns other errors if operations on the underlying block device return errors.
+    Shred() -> (zx.status status);
 };

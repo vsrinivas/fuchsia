@@ -86,6 +86,12 @@ class __EXPORT FdioVolumeManager {
   // calls with this FdioVolumeManager.
   zx_status_t Seal();
 
+  // Request that the volume provided by the manager represented by |chan| be
+  // shredded, permanently rendering the device unable to be |Unseal|ed again in
+  // the future.  This renders all data on the volume permanently inaccessible
+  // once it is sealed.
+  zx_status_t Shred();
+
  private:
   // The underlying zxcrypt device, accessed over FDIO
   zx::channel chan_;

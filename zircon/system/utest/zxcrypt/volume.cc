@@ -261,6 +261,54 @@ bool TestShred(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(TestShred)
 
+bool TestShredThroughDriver(Volume::Version version, bool fvm) {
+  BEGIN_TEST;
+
+  TestDevice device;
+  ASSERT_TRUE(device.SetupDevmgr());
+  ASSERT_TRUE(device.Bind(version, fvm));
+
+  std::unique_ptr<FdioVolume> volume;
+  ASSERT_OK(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume));
+
+  zx::channel driver_chan;
+  ASSERT_OK(volume->OpenManager(zx::duration::infinite(), driver_chan.reset_and_get_address()));
+  FdioVolumeManager zxc_manager(std::move(driver_chan));
+  EXPECT_OK(zxc_manager.Shred());
+  EXPECT_OK(zxc_manager.Seal());
+
+  // Key should no longer work
+  EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume),
+            ZX_ERR_ACCESS_DENIED);
+
+  END_TEST;
+}
+DEFINE_EACH_DEVICE(TestShredThroughDriver)
+
+bool TestShredThroughDriverLocked(Volume::Version version, bool fvm) {
+  BEGIN_TEST;
+
+  TestDevice device;
+  ASSERT_TRUE(device.SetupDevmgr());
+  ASSERT_TRUE(device.Bind(version, fvm));
+
+  std::unique_ptr<FdioVolume> volume;
+  ASSERT_OK(FdioVolume::Init(device.parent(), device.devfs_root(), &volume));
+
+  zx::channel driver_chan;
+  ASSERT_OK(volume->OpenManager(zx::duration::infinite(), driver_chan.reset_and_get_address()));
+  FdioVolumeManager zxc_manager(std::move(driver_chan));
+  EXPECT_OK(zxc_manager.Shred());
+
+  // Key should no longer work
+  EXPECT_ZX(FdioVolume::Unlock(device.parent(), device.devfs_root(), device.key(), 0, &volume),
+            ZX_ERR_ACCESS_DENIED);
+
+  END_TEST;
+}
+DEFINE_EACH_DEVICE(TestShredThroughDriverLocked)
+
+
 BEGIN_TEST_CASE(VolumeTest)
 RUN_EACH_DEVICE(TestInit)
 RUN_EACH_DEVICE(TestCreate)
@@ -268,6 +316,8 @@ RUN_EACH_DEVICE(TestUnlock)
 RUN_EACH_DEVICE(TestEnroll)
 RUN_EACH_DEVICE(TestRevoke)
 RUN_EACH_DEVICE(TestShred)
+RUN_EACH_DEVICE(TestShredThroughDriver)
+RUN_EACH_DEVICE(TestShredThroughDriverLocked)
 END_TEST_CASE(VolumeTest)
 
 bool CheckOneCreatePolicy(KeySourcePolicy policy, fbl::Vector<KeySource> expected) {

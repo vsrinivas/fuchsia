@@ -230,6 +230,20 @@ zx_status_t FdioVolumeManager::Seal() {
   return call_status;
 }
 
+zx_status_t FdioVolumeManager::Shred() {
+  zx_status_t rc;
+  zx_status_t call_status;
+  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerShred(chan_.get(),
+                                                                &call_status)) != ZX_OK) {
+    xprintf("failed to call Shred: %s\n", zx_status_get_string(rc));
+    return rc;
+  }
+  if (call_status != ZX_OK) {
+    xprintf("failed to Shred: %s\n", zx_status_get_string(call_status));
+  }
+  return call_status;
+}
+
 FdioVolume::FdioVolume(fbl::unique_fd&& block_dev_fd, fbl::unique_fd&& devfs_root_fd)
     : Volume(), block_dev_fd_(std::move(block_dev_fd)), devfs_root_fd_(std::move(devfs_root_fd)) {}
 

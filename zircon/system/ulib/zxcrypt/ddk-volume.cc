@@ -125,6 +125,22 @@ zx_status_t DdkVolume::Bind(crypto::Cipher::Direction direction, crypto::Cipher*
 zx_status_t DdkVolume::Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot_t slot,
                               std::unique_ptr<DdkVolume>* out) {
   zx_status_t rc;
+  std::unique_ptr<DdkVolume> volume;
+  if ((rc = DdkVolume::OpenOpaque(dev, &volume)) != ZX_OK) {
+    return rc;
+  }
+
+  if ((rc = volume->Unlock(key, slot)) != ZX_OK) {
+    xprintf("volume->Unlock() failed: %s\n", zx_status_get_string(rc));
+    return rc;
+  }
+
+  *out = std::move(volume);
+  return ZX_OK;
+}
+
+zx_status_t DdkVolume::OpenOpaque(zx_device_t* dev, std::unique_ptr<DdkVolume>* out) {
+  zx_status_t rc;
 
   if (!dev || !out) {
     xprintf("bad parameter(s): dev=%p, out=%p\n", dev, out);
@@ -138,10 +154,6 @@ zx_status_t DdkVolume::Unlock(zx_device_t* dev, const crypto::Secret& key, key_s
   }
   if ((rc = volume->Init()) != ZX_OK) {
     xprintf("volume->Init() failed: %s\n", zx_status_get_string(rc));
-    return rc;
-  }
-  if ((rc = volume->Unlock(key, slot)) != ZX_OK) {
-    xprintf("volume->Unlock() failed: %s\n", zx_status_get_string(rc));
     return rc;
   }
 

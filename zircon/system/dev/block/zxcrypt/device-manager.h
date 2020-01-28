@@ -47,33 +47,29 @@ class DeviceManager final : public DeviceManagerType {
   // Removes the unsealed |zxcrypt::Device|, if present.
   zx_status_t Seal() __TA_EXCLUDES(mtx_);
 
-  // Calls |Unseal| with a fixed key.
-  // TODO(security): ZX-3257.  This stopgap should be removed when the zxcrypt FIDL interface is
-  // available.
-  void AutoUnseal() __TA_EXCLUDES(mtx_);
+  // Clobbers the superblock (and any backup superblocks), preventing future
+  // Unseal operations from succeeding (provided no other program is
+  // manipulating the underlying block device).
+  zx_status_t Shred() __TA_EXCLUDES(mtx_);
 
  private:
   // Represents the state of this device.
-  // TODO(security): ZX-3257. When |AutoUnseal| is removed, this can be reduced to a simple
-  // boolean indicating un/sealed.
   enum State {
     kBinding,
     kSealed,
     kUnsealed,
+    kShredded,
     kUnbinding,
     kRemoved,
   };
 
   // Unseals the zxcrypt volume and adds it as a |zxcrypt::Device| to the device tree.
-  // TODO(security): ZX-3257. When |AutoUnseal| is removed, this can be merged into |Unseal|.
   zx_status_t UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) __TA_REQUIRES(mtx_);
 
-  // Used to ensure calls to |Unseal|, |Seal|,|Unbind|, an |AutoUnseal| are exclusive to each
+  // Used to ensure calls to |Unseal|, |Seal|, and |Unbind| are exclusive to each
   // other, and protects access to |state_|.
-  // TODO(security): ZX-3257. Update comment when |AutoUnseal|, |state_| are removed.
   fbl::Mutex mtx_;
 
-  // TODO(security): ZX-3257. See commnt on |State| above.
   State state_ __TA_GUARDED(mtx_);
 };
 

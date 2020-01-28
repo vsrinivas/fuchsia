@@ -68,7 +68,7 @@ void DeviceManager::DdkUnbindDeprecated() {
   fbl::AutoLock lock(&mtx_);
   if (state_ == kBinding) {
     state_ = kUnbinding;
-  } else if (state_ == kSealed || state_ == kUnsealed) {
+  } else if (state_ == kSealed || state_ == kUnsealed || state_ == kShredded) {
     state_ = kRemoved;
     DdkRemoveDeprecated();
   }
@@ -90,7 +90,17 @@ zx_status_t Seal(void* ctx, fidl_txn_t* txn) {
   return fuchsia_hardware_block_encrypted_DeviceManagerSeal_reply(txn, status);
 }
 
-static fuchsia_hardware_block_encrypted_DeviceManager_ops_t fidl_ops = {.Unseal = Unseal, .Seal = Seal};
+zx_status_t Shred(void* ctx, fidl_txn_t* txn) {
+  DeviceManager* device = reinterpret_cast<DeviceManager*>(ctx);
+  zx_status_t status = device->Shred();
+  return fuchsia_hardware_block_encrypted_DeviceManagerShred_reply(txn, status);
+}
+
+static fuchsia_hardware_block_encrypted_DeviceManager_ops_t fidl_ops = {
+  .Unseal = Unseal,
+  .Seal = Seal,
+  .Shred = Shred
+};
 
 zx_status_t DeviceManager::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_block_encrypted_DeviceManager_dispatch(this, txn, msg, &fidl_ops);
@@ -109,7 +119,7 @@ zx_status_t DeviceManager::Seal() {
   zx_status_t rc;
   fbl::AutoLock lock(&mtx_);
 
-  if (state_ != kUnsealed) {
+  if (state_ != kUnsealed && state_ != kShredded) {
     zxlogf(ERROR, "can't seal zxcrypt, state=%d\n", state_);
     return ZX_ERR_BAD_STATE;
   }
@@ -119,6 +129,32 @@ zx_status_t DeviceManager::Seal() {
   }
 
   state_ = kSealed;
+  return ZX_OK;
+}
+
+zx_status_t DeviceManager::Shred() {
+  fbl::AutoLock lock(&mtx_);
+
+  // We want to shred the underlying volume, but if we have an unsealed device,
+  // we don't mind letting it keep working for now.  Other parts of the system
+  // would rather we shut down gracefully than immediately stop permitting reads
+  // or acking writes.  So we instantiate a new DdkVolume here, quietly shred
+  // it, and let child devices carry on as if nothing happened.
+  std::unique_ptr<DdkVolume> volume_to_shred;
+  zx_status_t rc;
+  rc = DdkVolume::OpenOpaque(parent(), &volume_to_shred);
+  if (rc != ZX_OK) {
+    zxlogf(ERROR, "failed to open volume to shred: %s\n", zx_status_get_string(rc));
+    return rc;
+  }
+
+  rc = volume_to_shred->Shred();
+  if (rc != ZX_OK) {
+    zxlogf(ERROR, "failed to shred volume: %s\n", zx_status_get_string(rc));
+    return rc;
+  }
+
+  state_ = kShredded;
   return ZX_OK;
 }
 
