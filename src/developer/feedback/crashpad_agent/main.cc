@@ -23,14 +23,16 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
+  const timekeeper::SystemClock clock;
+
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
-  const timekeeper::SystemClock clock;
+
   auto info_context =
       std::make_shared<feedback::InfoContext>(&root_node, clock, loop.dispatcher(), context->svc());
 
   std::unique_ptr<feedback::CrashpadAgent> agent = feedback::CrashpadAgent::TryCreate(
-      loop.dispatcher(), context->svc(), std::move(info_context));
+      loop.dispatcher(), context->svc(), clock, std::move(info_context));
   if (!agent) {
     return EXIT_FAILURE;
   }

@@ -48,11 +48,6 @@ void StubUtc::WatchState(WatchStateCallback callback) {
   ++next_reponse_;
 }
 
-void StubUtc::SetResponses(const std::vector<Response>& new_responses) {
-  responses_ = new_responses;
-  next_reponse_ = responses_.cbegin();
-}
-
 bool StubUtc::Done() { return next_reponse_ == responses_.cend(); }
 
 }  // namespace feedback

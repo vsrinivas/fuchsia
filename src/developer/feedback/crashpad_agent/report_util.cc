@@ -9,7 +9,6 @@
 
 #include <string>
 
-#include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -62,6 +61,7 @@ const char kDartExceptionStackTraceKey[] = "DartError";
 constexpr char kReportTimeMillis[] = "reportTimeMillis";
 
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
+                                      std::optional<zx::time_utc> current_time,
                                       std::map<std::string, std::string>* annotations,
                                       std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                       std::optional<fuchsia::mem::Buffer>* minidump,
@@ -81,9 +81,6 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   if (report.has_event_id()) {
     (*annotations)[kEventIdKey] = report.event_id();
   }
-
-  const timekeeper::SystemClock clock;
-  auto current_time = CurrentUTCTimeRaw(clock);
 
   if (current_time.has_value()) {
     (*annotations)[kReportTimeMillis] =
@@ -197,6 +194,7 @@ void AddFeedbackAttachments(fuchsia::feedback::Data feedback_data,
 
 void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                     fuchsia::feedback::Data feedback_data,
+                                    std::optional<zx::time_utc> current_time,
                                     std::map<std::string, std::string>* annotations,
                                     std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                     std::optional<fuchsia::mem::Buffer>* minidump) {
@@ -205,8 +203,8 @@ void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   bool should_process = false;
 
   // Optional annotations and attachments filled by the client.
-  ExtractAnnotationsAndAttachments(std::move(report), annotations, attachments, minidump,
-                                   &should_process);
+  ExtractAnnotationsAndAttachments(std::move(report), current_time, annotations, attachments,
+                                   minidump, &should_process);
 
   // Crash server annotations common to all crash reports.
   AddCrashServerAnnotations(program_name, should_process, annotations);

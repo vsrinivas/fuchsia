@@ -45,7 +45,7 @@ constexpr zx::duration kFeedbackDataCollectionTimeout = zx::sec(30) + /*some sla
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    std::shared_ptr<InfoContext> info_context) {
+    const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context) {
   Config config;
 
   // We use the default config included in the package of this component if no override config was
@@ -72,24 +72,24 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     }
   }
 
-  return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(info_context),
+  return CrashpadAgent::TryCreate(dispatcher, std::move(services), clock, std::move(info_context),
                                   std::move(config));
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    std::shared_ptr<InfoContext> info_context, Config config) {
+    const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context, Config config) {
   std::unique_ptr<CrashServer> crash_server;
   if (config.crash_server.url) {
     crash_server = std::make_unique<CrashServer>(*config.crash_server.url);
   }
-  return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(info_context),
+  return CrashpadAgent::TryCreate(dispatcher, std::move(services), clock, std::move(info_context),
                                   std::move(config), std::move(crash_server));
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    std::shared_ptr<InfoContext> info_context, Config config,
+    const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context, Config config,
     std::unique_ptr<CrashServer> crash_server) {
   auto queue = Queue::TryCreate(dispatcher, info_context, crash_server.get());
   if (!queue) {
@@ -97,12 +97,13 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     return nullptr;
   }
   return std::unique_ptr<CrashpadAgent>(
-      new CrashpadAgent(dispatcher, std::move(services), std::move(info_context), std::move(config),
-                        std::move(crash_server), std::move(queue)));
+      new CrashpadAgent(dispatcher, std::move(services), clock, std::move(info_context),
+                        std::move(config), std::move(crash_server), std::move(queue)));
 }
 
 CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
                              std::shared_ptr<sys::ServiceDirectory> services,
+                             const timekeeper::Clock& clock,
                              std::shared_ptr<InfoContext> info_context, Config config,
                              std::unique_ptr<CrashServer> crash_server,
                              std::unique_ptr<Queue> queue)
@@ -110,6 +111,7 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
       executor_(dispatcher),
       services_(services),
       config_(std::move(config)),
+      utc_provider_(services_, clock),
       queue_(std::move(queue)),
       crash_server_(std::move(crash_server)),
       info_(std::move(info_context)),
@@ -156,7 +158,8 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
                        std::map<std::string, fuchsia::mem::Buffer> attachments;
                        std::optional<fuchsia::mem::Buffer> minidump;
                        BuildAnnotationsAndAttachments(std::move(report), std::move(feedback_data),
-                                                      &annotations, &attachments, &minidump);
+                                                      utc_provider_.CurrentTime(), &annotations,
+                                                      &attachments, &minidump);
 
                        if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
                                         annotations)) {

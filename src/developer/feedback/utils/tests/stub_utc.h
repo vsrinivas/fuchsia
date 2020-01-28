@@ -23,9 +23,9 @@ struct Response {
     kNoResponse,
   };
 
-  explicit Response(Value value) : value(value), delay(zx::nsec(0)) {}
+  constexpr explicit Response(Value value) : value(value), delay(zx::nsec(0)) {}
 
-  Response(Value value, zx::duration delay) : value(value), delay(delay) {}
+  constexpr Response(Value value, zx::duration delay) : value(value), delay(delay) {}
 
   Value value;
   zx::duration delay;
@@ -48,8 +48,6 @@ class StubUtc : public fuchsia::time::Utc {
       binding_ = std::make_unique<fidl::Binding<fuchsia::time::Utc>>(this, std::move(request));
     };
   }
-
-  void SetResponses(const std::vector<Response>& new_responses);
 
   void WatchState(WatchStateCallback callback) override;
 

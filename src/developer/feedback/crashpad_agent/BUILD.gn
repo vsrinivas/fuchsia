@@ -91,7 +91,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crashpad_agent/info",
-    "//src/developer/feedback/utils:time",
+    "//src/developer/feedback/utils:utc_time_provider",
     "//src/lib/fxl",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",

@@ -19,11 +19,13 @@ group("tests") {
 
     # Packages for the components that we are injecting in the integration tests.
     "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/connectivity/network/netstack",
     "//src/developer/feedback/crashpad_agent",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_invalid_override_config",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_valid_override_config",
     "//src/developer/feedback/feedback_agent",
     "//src/diagnostics/archivist",
+    "//src/sys/timekeeper",
   ]
 }
 
@@ -163,6 +165,8 @@ executable("crashpad_agent_unittest") {
   testonly = true
 
   sources = [
+    "//src/developer/feedback/utils/tests/stub_utc.cc",
+    "//src/developer/feedback/utils/tests/stub_utc.h",
     "crashpad_agent_unittest.cc",
     "fake_privacy_settings.cc",
     "fake_privacy_settings.h",
@@ -188,6 +192,7 @@ executable("crashpad_agent_unittest") {
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/sys/timekeeper:fuchsia.time",
     "//third_party/crashpad/util",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

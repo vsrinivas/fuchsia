@@ -37,6 +37,7 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/tests/stub_utc.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -88,6 +89,8 @@ constexpr char kSingleAttachmentValue[] = "attachment.value";
 constexpr bool kUserOptInDataSharing = true;
 constexpr bool kUserOptOutDataSharing = false;
 
+constexpr Response kExternalResponse = Response(Response::Value::kExternal, zx::nsec(0));
+
 Attachment BuildAttachment(const std::string& key, const std::string& value) {
   Attachment attachment;
   attachment.key = key;
@@ -125,8 +128,8 @@ class CrashpadAgentTest : public UnitTestFixture, public CobaltTestFixture {
     inspector_ = std::make_unique<inspect::Inspector>();
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
-    agent_ = CrashpadAgent::TryCreate(dispatcher(), services(), info_context_, std::move(config),
-                                      std::move(crash_server));
+    agent_ = CrashpadAgent::TryCreate(dispatcher(), services(), clock_, info_context_,
+                                      std::move(config), std::move(crash_server));
     FXL_CHECK(agent_);
   }
 
@@ -162,6 +165,12 @@ class CrashpadAgentTest : public UnitTestFixture, public CobaltTestFixture {
     if (privacy_settings_) {
       InjectServiceProvider(privacy_settings_.get());
     }
+  }
+
+  // Sets up the underlying time server and registers it in the |service_directory_provider_|.
+  void SetUpStubUtc(const std::vector<Response>& responses) {
+    stub_time_ = std::make_unique<StubUtc>(dispatcher(), responses);
+    InjectServiceProvider(stub_time_.get());
   }
 
   // Checks that in the local Crashpad database there is:
@@ -411,11 +420,12 @@ class CrashpadAgentTest : public UnitTestFixture, public CobaltTestFixture {
 
  protected:
   std::unique_ptr<CrashpadAgent> agent_;
+  StubCrashServer* crash_server_;
+  std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
 
  private:
-  std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
   std::unique_ptr<FakePrivacySettings> privacy_settings_;
-  StubCrashServer* crash_server_;
+  std::unique_ptr<StubUtc> stub_time_;
   std::string attachments_dir_;
   std::unique_ptr<inspect::Inspector> inspector_;
   timekeeper::TestClock clock_;
@@ -425,6 +435,7 @@ class CrashpadAgentTest : public UnitTestFixture, public CobaltTestFixture {
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAttachmentsInDatabase();
@@ -432,9 +443,26 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {
   CheckAttachmentsOnServer();
 }
 
+TEST_F(CrashpadAgentTest, Check_UTCTimeIsNotReady) {
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({
+      Response(Response::Value::kBackstop),
+      Response(Response::Value::kNoResponse),
+  });
+
+  ASSERT_TRUE(FileOneCrashReport().is_ok());
+  CheckAttachmentsInDatabase();
+  CheckAttachmentsOnServer();
+
+  EXPECT_EQ(crash_server_->latest_annotations().find("reportTimeMillis"),
+            crash_server_->latest_annotations().end());
+}
+
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
   std::vector<Attachment> attachments;
   attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, kSingleAttachmentValue));
 
@@ -455,6 +483,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
   CrashReport report;
   report.set_program_name(kProgramName);
   report.set_event_id("some-event-id");
@@ -470,6 +499,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithProgramUptime) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
   CrashReport report;
   report.set_program_name(kProgramName);
   const zx::duration uptime =
@@ -487,6 +517,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithProgramUptime) {
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
 
   ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
@@ -497,6 +528,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithSignature) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
 
   ASSERT_TRUE(FileOneGenericCrashReport("some-signature").is_ok());
   CheckAttachmentsInDatabase();
@@ -509,6 +541,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReportWithSignature) {
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
   fuchsia::mem::Buffer minidump;
   fsl::VmoFromString("minidump", &minidump);
 
@@ -523,6 +556,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReport) {
 TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
@@ -535,6 +569,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
 TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
   fuchsia::mem::Buffer stack_trace;
   fsl::VmoFromString("#0", &stack_trace);
 
@@ -554,6 +589,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReport) {
 TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
 
   ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_ok());
   CheckAttachmentsInDatabase();
@@ -572,6 +608,7 @@ TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
 TEST_F(CrashpadAgentTest, Upload_OnUserAlreadyOptedInDataSharing) {
   SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
   SetPrivacySettings(kUserOptInDataSharing);
+  SetUpStubUtc({kExternalResponse});
   SetUpAgent(
       Config{/*crash_server=*/
              {
@@ -613,6 +650,7 @@ TEST_F(CrashpadAgentTest, Upload_OnceUserOptInDataSharing) {
              }},
       std::make_unique<StubCrashServer>(std::vector<bool>({kUploadSuccessful})));
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  SetUpStubUtc({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAttachmentsInDatabase();
@@ -672,6 +710,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAttachments) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAttachment>());
+  SetUpStubUtc({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
@@ -682,6 +721,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAttachments) {
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAnnotations) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoAnnotation>());
+  SetUpStubUtc({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
@@ -692,6 +732,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackAnnotations) {
 TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackData) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
+  SetUpStubUtc({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
@@ -703,6 +744,10 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   SetUpFeedbackDataProvider(nullptr);
+  SetUpStubUtc({kExternalResponse});
+
+  // Run the loop so crashpad_agent can confirm the UTC time is correct.
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
@@ -713,6 +758,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
 TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
+  SetUpStubUtc({kExternalResponse});
 
   fit::result<void, zx_status_t> result = FileOneCrashReportWithSingleAttachment();
   RunLoopFor(zx::sec(30) + zx::sec(5));
@@ -762,6 +808,7 @@ TEST_F(CrashpadAgentTest, Check_CobaltAfterInvalidInputCrashReport) {
 
 TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
   SetUpAgentDefaultConfig();
+  SetUpStubUtc({});
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(UnorderedElementsAre(

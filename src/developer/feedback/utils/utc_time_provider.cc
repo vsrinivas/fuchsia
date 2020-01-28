@@ -19,7 +19,7 @@ UTCTimeProvider::UTCTimeProvider(std::shared_ptr<sys::ServiceDirectory> services
   WatchForAccurateUtcTime();
 }
 
-std::optional<zx::time_utc> UTCTimeProvider::CurrentTime() {
+std::optional<zx::time_utc> UTCTimeProvider::CurrentTime() const {
   if (!is_utc_time_accurate_) {
     return std::nullopt;
   }
