@@ -20,3 +20,8 @@ protocol CastProvider {
 protocol KronkProvider {
     compose Provider;
 };
+
+[Discoverable]
+protocol DisplayProvider {
+    compose Provider;
+};
