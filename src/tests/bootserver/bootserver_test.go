@@ -40,10 +40,10 @@ func toolPath(t *testing.T, name string) string {
 		return ""
 	}
 	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "test_data", "pave_no_bind", name)
+	return filepath.Join(exPath, "test_data", "bootserver_tools", name)
 }
 
-func matchPattern(pattern string, reader *bufio.Reader) bool {
+func matchPattern(t *testing.T, pattern string, reader *bufio.Reader) bool {
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil && err == io.EOF {
@@ -90,7 +90,7 @@ func cmdSearchLog(t *testing.T, logPatterns []logMatch,
 	}
 
 	for _, logPattern := range logPatterns {
-		match := matchPattern(logPattern.pattern, readerErr)
+		match := matchPattern(t, logPattern.pattern, readerErr)
 		if match != logPattern.shouldMatch {
 			found = false
 			t.Errorf("Log pattern \"%s\" mismatch. Expected - %t, actual - %t",
@@ -111,39 +111,6 @@ func cmdSearchLog(t *testing.T, logPatterns []logMatch,
 	} else {
 		t.Logf("%s worked as expected", name)
 	}
-}
-
-func attemptPaveNoBind(t *testing.T, i *qemu.Instance, shouldWork bool) {
-	// Get the node ipv6 address
-	out := cmdWithOutput(t, toolPath(t, "netls"))
-	// Extract the ipv6 from the netls output
-	regexString := defaultNodename + ` \((?P<ipv6>.*)\)`
-	match := regexp.MustCompile(regexString).FindStringSubmatch(string(out))
-	if len(match) != 2 {
-		t.Errorf("Node %s not found in netls output - %s", defaultNodename, out)
-		return
-	}
-
-	var logPattern []logMatch
-	if shouldWork {
-		paveWorksPattern := []logMatch{{"Sending request to ", true},
-			{"Received request from ", true},
-			{"Proceeding with nodename ", true},
-			{"Transfer starts", true}}
-		logPattern = paveWorksPattern
-	} else {
-		paveFailsPattern := []logMatch{{"Sending request to ", true},
-			{"Received request from ", false},
-			{"Proceeding with nodename ", false},
-			{"Transfer starts", false}}
-		logPattern = paveFailsPattern
-	}
-
-	cmdSearchLog(
-		t, logPattern,
-		toolPath(t, "bootserver"), "--fvm", "\"dummy.blk\"",
-		"--no-bind", "-a", match[1], "-1", "--fail-fast")
-
 }
 
 func setupQemu(t *testing.T, appendCmdline string, modeString string) (*qemu.Instance, func()) {
@@ -180,6 +147,39 @@ func setupQemu(t *testing.T, appendCmdline string, modeString string) (*qemu.Ins
 	}
 }
 
+func attemptPaveNoBind(t *testing.T, i *qemu.Instance, shouldWork bool) {
+	// Get the node ipv6 address
+	out := cmdWithOutput(t, toolPath(t, "netls"))
+	// Extract the ipv6 from the netls output
+	regexString := defaultNodename + ` \((?P<ipv6>.*)\)`
+	match := regexp.MustCompile(regexString).FindStringSubmatch(string(out))
+	if len(match) != 2 {
+		t.Errorf("Node %s not found in netls output - %s", defaultNodename, out)
+		return
+	}
+
+	var logPattern []logMatch
+	if shouldWork {
+		paveWorksPattern := []logMatch{{"Sending request to ", true},
+			{"Received request from ", true},
+			{"Proceeding with nodename ", true},
+			{"Transfer starts", true}}
+		logPattern = paveWorksPattern
+	} else {
+		paveFailsPattern := []logMatch{{"Sending request to ", true},
+			{"Received request from ", false},
+			{"Proceeding with nodename ", false},
+			{"Transfer starts", false}}
+		logPattern = paveFailsPattern
+	}
+
+	cmdSearchLog(
+		t, logPattern,
+		toolPath(t, "bootserver"), "--fvm", "\"dummy.blk\"",
+		"--no-bind", "-a", match[1], "-1", "--fail-fast")
+
+}
+
 func TestPaveNoBind(t *testing.T) {
 	i, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
 	defer cleanup()
@@ -196,4 +196,20 @@ func TestPaveNoBindFailure(t *testing.T) {
 	// Test that advertise request is NOT serviced and paving does NOT start
 	// as netsvc.netboot=false
 	attemptPaveNoBind(t, i, false)
+}
+
+func TestInitPartitionTables(t *testing.T) {
+	_, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
+	defer cleanup()
+
+	logPattern := []logMatch{{"Received request from ", true},
+			{"Proceeding with nodename ", true},
+			{"Transfer starts", true},
+			{"Transfer ends successfully", true},
+			{"Issued reboot command to", false}}
+
+	cmdSearchLog(
+		t, logPattern,
+		toolPath(t, "bootserver"), "-n", defaultNodename,
+		"--init-partition-tables", "/dev/class/block/000", "-1", "--fail-fast")
 }

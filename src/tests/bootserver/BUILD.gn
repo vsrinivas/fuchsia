@@ -11,7 +11,7 @@ group("tests") {
   deps = []
 
   if (host_os == "linux") {
-    deps += [ ":pave_no_bind_tests($host_toolchain)" ]
+    deps += [ ":bootserver_tests($host_toolchain)" ]
   }
 }
 
@@ -19,7 +19,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/pave_no_bind"
+    name = "fuchsia.googlesource.com/tests/bootserver"
 
     deps = [ "//src/testing/qemu" ]
   }
@@ -30,30 +30,30 @@ if (is_linux) {
     }
   }
 
-  copy("copy_netsvc_tools") {
+  copy("copy_bootserver_tools") {
     visibility = [ ":*" ]
 
     sources = [
       "$zircon_root_build_dir/tools/bootserver",
       "$zircon_root_build_dir/tools/netls",
     ]
-    outputs = [ "$root_out_dir/test_data/pave_no_bind/{{source_file_part}}" ]
+    outputs = [ "$root_out_dir/test_data/bootserver_tools/{{source_file_part}}" ]
   }
 
-  group("netsvc_user_tools") {
-    deps = [ ":copy_netsvc_tools" ]
+  group("bootserver_user_tools") {
+    deps = [ ":copy_bootserver_tools" ]
 
     metadata = {
       test_runtime_deps = [
-        "$root_out_dir/test_data/pave_no_bind/bootserver",
-        "$root_out_dir/test_data/pave_no_bind/netls",
+        "$root_out_dir/test_data/bootserver_tools/bootserver",
+        "$root_out_dir/test_data/bootserver_tools/netls",
       ]
     }
   }
 
-  # TODO(scottmg): Colocate this test with netsvc when it moves out of //zircon.
-  go_test("pave_no_bind_tests") {
-    gopackages = [ "fuchsia.googlesource.com/tests/pave_no_bind" ]
+  # TODO(scottmg): Colocate this test with bootserver/netsvc when it moves out of //zircon.
+  go_test("bootserver_tests") {
+    gopackages = [ "fuchsia.googlesource.com/tests/bootserver" ]
     deps = [
       ":lib",
       "//tools/net/netutil",
@@ -61,7 +61,7 @@ if (is_linux) {
     ]
     non_go_deps = [
       ":main_zbi",
-      ":netsvc_user_tools",
+      ":bootserver_user_tools",
     ]
   }
 }

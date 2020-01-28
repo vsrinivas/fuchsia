@@ -1,0 +1,26 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### run bootserver for wiping partition tables
+
+## usage: fx wipe-partition-tables <BLOCK_DEVICE_PATH>
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+if [ $# -ne 1 ]; then
+  echo >&2 "<BLOCK_DEVICE_PATH> argument is required"
+  fx-command-help
+  exit 1
+fi
+name_args=()
+name="$(get-device-name)"
+if [[ -n "$name" ]]; then
+  name_args+=("-n" "${name}")
+fi
+
+exec "${ZIRCON_TOOLS_DIR}/bootserver" "${name_args[@]}" --wipe-partition-tables "$1" -1 --fail-fast

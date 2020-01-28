@@ -254,6 +254,8 @@ void usage(void) {
       "  --vbmetab <file>         use the supplied file as a AVB vbmeta_b image\n"
       "  --vbmetar <file>         use the supplied file as a AVB vbmeta_r image\n"
       "  --authorized-keys <file> use the supplied file as an authorized_keys file\n"
+      "  --init-partition-tables <path>  initialize block device specified with partition tables\n"
+      "  --wipe-partition-tables <path>  wipe partition tables from block device specified\n"
       "  --fail-fast  exit on first error\n"
       "  --netboot    use the netboot protocol\n"
       "  --tftp       use the tftp protocol (default)\n"
@@ -373,6 +375,8 @@ int main(int argc, char** argv) {
   int s = 1;
   size_t num_fvms = 0;
   char board_info_template[] = "/tmp/board_info.XXXXXX";
+  const char block_device_path_template[] = "/tmp/block_device_path.XXXXXX";
+  char block_device_path[] = "/tmp/block_device_path.XXXXXX";
   const char* board_name = NULL;
   const char* board_info_file = NULL;
   const char* bootloader_image = NULL;
@@ -386,6 +390,8 @@ int main(int argc, char** argv) {
   const char* fvm_images[MAX_FVM_IMAGES] = {NULL, NULL, NULL, NULL};
   const char* kernel_fn = NULL;
   const char* ramdisk_fn = NULL;
+  const char* init_partition_tables_device_path = NULL;
+  const char* wipe_partition_tables_device_path = NULL;
   int once = 0;
   bool allow_zedboot_version_mismatch = false;
   int status;
@@ -498,80 +504,80 @@ int main(int argc, char** argv) {
     } else if (!strcmp(argv[1], "-1")) {
       once = 1;
     } else if (!strcmp(argv[1], "-b")) {
+      argc--;
+      argv++;
       if (argc <= 1) {
         fprintf(stderr, "'-b' option requires an argument (tftp block size)\n");
         return -1;
       }
       errno = 0;
       static uint16_t block_size;
-      block_size = strtoll(argv[2], NULL, 10);
+      block_size = strtoll(argv[1], NULL, 10);
       if (errno != 0 || block_size <= 0) {
-        fprintf(stderr, "invalid arg for -b: %s\n", argv[2]);
+        fprintf(stderr, "invalid arg for -b: %s\n", argv[1]);
         return -1;
       }
       tftp_block_size = &block_size;
+    } else if (!strcmp(argv[1], "-w")) {
       argc--;
       argv++;
-    } else if (!strcmp(argv[1], "-w")) {
       if (argc <= 1) {
         fprintf(stderr, "'-w' option requires an argument (tftp window size)\n");
         return -1;
       }
       errno = 0;
       static uint16_t window_size;
-      window_size = strtoll(argv[2], NULL, 10);
+      window_size = strtoll(argv[1], NULL, 10);
       if (errno != 0 || window_size <= 0) {
-        fprintf(stderr, "invalid arg for -w: %s\n", argv[2]);
+        fprintf(stderr, "invalid arg for -w: %s\n", argv[1]);
         return -1;
       }
       tftp_window_size = &window_size;
+    } else if (!strcmp(argv[1], "-i")) {
       argc--;
       argv++;
-    } else if (!strcmp(argv[1], "-i")) {
       if (argc <= 1) {
         fprintf(stderr, "'-i' option requires an argument (micros between packets)\n");
         return -1;
       }
       errno = 0;
-      us_between_packets = strtoll(argv[2], NULL, 10);
+      us_between_packets = strtoll(argv[1], NULL, 10);
       if (errno != 0 || us_between_packets <= 0) {
-        fprintf(stderr, "invalid arg for -i: %s\n", argv[2]);
+        fprintf(stderr, "invalid arg for -i: %s\n", argv[1]);
         return -1;
       }
       fprintf(stderr, "packet spacing set to %" PRId64 " microseconds\n", us_between_packets);
+    } else if (!strcmp(argv[1], "-a")) {
       argc--;
       argv++;
-    } else if (!strcmp(argv[1], "-a")) {
       if (argc <= 1) {
         fprintf(stderr, "'-a' option requires a valid ipv6 address\n");
         return -1;
       }
 
-      char* token = strchr(argv[2], '/');
+      char* token = strchr(argv[1], '/');
       if (token) {
         allowed_scope_id = atoi(token + 1);
         char temp_ifname[IF_NAMESIZE] = "";
         if (!token[1] || if_indextoname(allowed_scope_id, temp_ifname) == NULL) {
-          fprintf(stderr, "%s: invalid interface specified\n", argv[2]);
+          fprintf(stderr, "%s: invalid interface specified\n", argv[1]);
           return -1;
         }
-        argv[2][token - argv[2]] = '\0';
+        argv[1][token - argv[1]] = '\0';
       }
 
-      if (inet_pton(AF_INET6, argv[2], &allowed_addr) != 1) {
-        fprintf(stderr, "%s: invalid ipv6 address specified\n", argv[2]);
+      if (inet_pton(AF_INET6, argv[1], &allowed_addr) != 1) {
+        fprintf(stderr, "%s: invalid ipv6 address specified\n", argv[1]);
         return -1;
       }
+    } else if (!strcmp(argv[1], "-n")) {
       argc--;
       argv++;
-    } else if (!strcmp(argv[1], "-n")) {
       if (argc <= 1) {
         fprintf(stderr, "'-n' option requires a valid nodename\n");
         return -1;
       }
-      nodename = argv[2];
-      argc--;
-      argv++;
+      nodename = argv[1];
     } else if (!strcmp(argv[1], "--netboot")) {
       use_tftp = false;
     } else if (!strcmp(argv[1], "--tftp")) {
@@ -579,20 +585,38 @@ int main(int argc, char** argv) {
     } else if (!strcmp(argv[1], "--nocolor")) {
       use_color = false;
     } else if (!strcmp(argv[1], "--board_name")) {
+      argc--;
+      argv++;
       if (argc <= 1) {
         fprintf(stderr, "'--board_name' option requires a valid board name\n");
         return -1;
       }
-      board_name = argv[2];
-      argc--;
-      argv++;
+      board_name = argv[1];
     } else if (!strcmp(argv[1], "--allow-zedboot-version-mismatch")) {
       allow_zedboot_version_mismatch = true;
     } else if (!strcmp(argv[1], "--no-bind")) {
       no_bind = true;
+    } else if (!strcmp(argv[1], "--init-partition-tables")) {
+      argc--;
+      argv++;
+      if (argc <= 1) {
+        fprintf(stderr, "'--init-partition-tables' option requires a valid board name\n");
+        return -1;
+      }
+      init_partition_tables_device_path = argv[1];
+    } else if (!strcmp(argv[1], "--wipe-partition-tables")) {
+      argc--;
+      argv++;
+      if (argc <= 1) {
+        fprintf(stderr, "'--wipe-partition-tables' option requires a valid board name\n");
+        return -1;
+      }
+      wipe_partition_tables_device_path = argv[1];
     } else if (!strcmp(argv[1], "--")) {
       while (argc > 2) {
-        size_t len = strlen(argv[2]);
+        argc--;
+        argv++;
+        size_t len = strlen(argv[1]);
         if (len > (sizeof(cmdline) - 2 - (cmdnext - cmdline))) {
           fprintf(stderr, "[%s] commandline too large\n", appname);
           return -1;
@@ -600,10 +624,8 @@ int main(int argc, char** argv) {
         if (cmdnext != cmdline) {
           *cmdnext++ = ' ';
         }
-        memcpy(cmdnext, argv[2], len + 1);
+        memcpy(cmdnext, argv[1], len + 1);
         cmdnext += len;
-        argc--;
-        argv++;
       }
       break;
     } else {
@@ -613,7 +635,8 @@ int main(int argc, char** argv) {
     argv++;
   }
   if (!kernel_fn && !bootloader_image && !zircona_image && !zirconb_image && !zirconr_image &&
-      !vbmetaa_image && !vbmetab_image && !fvm_images[0]) {
+      !vbmetaa_image && !vbmetab_image && !fvm_images[0] && !init_partition_tables_device_path &&
+      !wipe_partition_tables_device_path) {
     usage();
   }
   if (!nodename) {
@@ -799,10 +822,34 @@ int main(int argc, char** argv) {
     if (status == 0 && cmdline[0]) {
       status = xfer(&ra, "(cmdline)", cmdline);
     }
-    if (status == 0) {
-      if (ramdisk_fn) {
-        status = xfer(&ra, ramdisk_fn, NB_RAMDISK_FILENAME);
+    if (status == 0 && ramdisk_fn) {
+      status = xfer(&ra, ramdisk_fn, NB_RAMDISK_FILENAME);
+    }
+    // Wipe partition tables before writing anything to persistent storage.
+    if (status == 0 && wipe_partition_tables_device_path) {
+      strcpy(block_device_path, block_device_path_template);
+      int fd = mkstemp(block_device_path);
+      modify_partition_table_info_t info = {};
+      strncpy(info.block_device_path, wipe_partition_tables_device_path, ZX_MAX_NAME_LEN);
+      int written = write(fd, &info, sizeof(info));
+      status = written == sizeof(info) ? 0 : -1;
+      if (status == 0) {
+        status = xfer(&ra, block_device_path, NB_WIPE_PARTITION_TABLES_FILENAME);
       }
+      close(fd);
+    }
+    // Initialize partition tables before writing anything to persistent storage.
+    if (status == 0 && init_partition_tables_device_path) {
+      strcpy(block_device_path, block_device_path_template);
+      int fd = mkstemp(block_device_path);
+      modify_partition_table_info_t info = {};
+      strncpy(info.block_device_path, init_partition_tables_device_path, ZX_MAX_NAME_LEN);
+      int written = write(fd, &info, sizeof(info));
+      status = written == sizeof(info) ? 0 : -1;
+      if (status == 0) {
+        status = xfer(&ra, block_device_path, NB_INIT_PARTITION_TABLES_FILENAME);
+      }
+      close(fd);
     }
     for (size_t i = 0; i < num_fvms; i++) {
       if (status == 0 && fvm_images[i]) {
@@ -838,10 +885,14 @@ int main(int argc, char** argv) {
     }
     if (status == 0) {
       log("Transfer ends successfully.");
-      if (kernel_fn) {
-        send_boot_command(&ra);
-      } else {
-        send_reboot_command(&ra);
+      // Only reboot if we actually paved an image.
+      if (kernel_fn || bootloader_image || zircona_image || zirconb_image || zirconr_image ||
+          vbmetaa_image || vbmetab_image || fvm_images[0]) {
+        if (kernel_fn) {
+          send_boot_command(&ra);
+        } else {
+          send_reboot_command(&ra);
+        }
       }
       if (once) {
         close(s);
