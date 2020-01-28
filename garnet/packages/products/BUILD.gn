@@ -8,37 +8,11 @@
 group("interactive_minimal") {
   testonly = true
   public_deps = [
-    "//garnet/packages/config:shortcut",
-    "//garnet/packages/products:base_with_mdns",
-    "//src/fonts",
-    "//src/ui/a11y",
-  ]
-}
-
-group("devtools") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:cmdutils",
-    "//garnet/packages/prod:debug_agent",
-    "//garnet/packages/prod:far",
-    "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:pm",
-    "//garnet/packages/prod:run",
-    "//garnet/packages/prod:ssh",
-    "//garnet/packages/prod:tracing",
-    "//garnet/packages/testing:all",
-    "//garnet/packages/tools:all",
-    "//src/developer/memory/mem",
-  ]
-}
-
-group("base") {
-  testonly = true
-  public_deps = [
     "//build/info:build-info",
     "//garnet/packages/config:amber",
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
+    "//garnet/packages/config:shortcut",
     "//garnet/packages/config:thermd",
     "//garnet/packages/prod:amber",
     "//garnet/packages/prod:auth",
@@ -60,16 +34,28 @@ group("base") {
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:thermd",
     "//garnet/packages/prod:timezone",
+    "//src/connectivity/network/mdns/bundles:config",
+    "//src/connectivity/network/mdns/bundles:services",
+    "//src/fonts",
     "//src/security/root_ssl_certificates",
     "//src/sys/pkg/bin/amber:pkgfs",
+    "//src/ui/a11y",
   ]
 }
 
-group("base_with_mdns") {
+group("devtools") {
   testonly = true
   public_deps = [
-    "//garnet/packages/products:base",
-    "//src/connectivity/network/mdns/bundles:config",
-    "//src/connectivity/network/mdns/bundles:services",
+    "//garnet/packages/prod:cmdutils",
+    "//garnet/packages/prod:debug_agent",
+    "//garnet/packages/prod:far",
+    "//garnet/packages/prod:iquery",
+    "//garnet/packages/prod:pm",
+    "//garnet/packages/prod:run",
+    "//garnet/packages/prod:ssh",
+    "//garnet/packages/prod:tracing",
+    "//garnet/packages/testing:all",
+    "//garnet/packages/tools:all",
+    "//src/developer/memory/mem",
   ]
 }
