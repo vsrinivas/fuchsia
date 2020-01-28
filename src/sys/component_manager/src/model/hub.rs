@@ -680,7 +680,7 @@ mod tests {
             startup,
         },
         cm_rust::{
-            self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
+            self, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
             UseProtocolDecl, UseSource,
         },
@@ -689,7 +689,7 @@ mod tests {
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
-        fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_io2 as fio2,
         fuchsia_async::EHandle,
         fuchsia_vfs_pseudo_fs_mt::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -812,20 +812,16 @@ mod tests {
             vec![
                 ComponentDescriptor {
                     name: "root".to_string(),
-                    decl: ComponentDecl {
-                        children: vec![ChildDecl {
-                            name: "a".to_string(),
-                            url: "test:///a".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        }],
-                        ..default_component_decl()
-                    },
+                    decl: ComponentDeclBuilder::new()
+                        .add_lazy_child("a")
+                        .offer_runner_to_children(TEST_RUNNER_NAME)
+                        .build(),
                     host_fn: None,
                     runtime_host_fn: None,
                 },
                 ComponentDescriptor {
                     name: "a".to_string(),
-                    decl: ComponentDecl { children: vec![], ..default_component_decl() },
+                    decl: component_decl_with_test_runner(),
                     host_fn: None,
                     runtime_host_fn: None,
                 },
@@ -857,14 +853,10 @@ mod tests {
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
-                decl: ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
                 host_fn: Some(foo_out_dir_fn()),
                 runtime_host_fn: None,
             }],
@@ -885,14 +877,10 @@ mod tests {
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
-                decl: ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
                 host_fn: None,
                 runtime_host_fn: Some(bleep_runtime_dir_fn()),
             }],
@@ -910,21 +898,17 @@ mod tests {
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
-                decl: ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    uses: vec![UseDecl::Directory(UseDirectoryDecl {
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Framework,
                         source_path: CapabilityPath::try_from("/hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         subdir: None,
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -998,35 +982,29 @@ mod tests {
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
-                decl: ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source: UseSource::Framework,
-                            source_path: CapabilityPath::try_from("/hub/exec").unwrap(),
-                            target_path: CapabilityPath::try_from("/hub").unwrap(),
-                            rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
-                            subdir: None,
-                        }),
-                        UseDecl::Protocol(UseProtocolDecl {
-                            source: UseSource::Realm,
-                            source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source: UseSource::Realm,
-                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
-                            subdir: None,
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Framework,
+                        source_path: CapabilityPath::try_from("/hub/exec").unwrap(),
+                        target_path: CapabilityPath::try_from("/hub").unwrap(),
+                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        subdir: None,
+                    }))
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }))
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
+                        subdir: None,
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -1060,30 +1038,24 @@ mod tests {
             root_component_url.clone(),
             vec![ComponentDescriptor {
                 name: "root".to_string(),
-                decl: ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    exposes: vec![
-                        ExposeDecl::Protocol(ExposeProtocolDecl {
-                            source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                            target: ExposeTarget::Realm,
-                        }),
-                        ExposeDecl::Directory(ExposeDirectoryDecl {
-                            source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            target: ExposeTarget::Realm,
-                            rights: Some(fio2::Operations::Connect),
-                            subdir: None,
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target: ExposeTarget::Realm,
+                    }))
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
                 host_fn: None,
                 runtime_host_fn: None,
             }],
