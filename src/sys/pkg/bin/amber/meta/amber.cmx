@@ -18,6 +18,7 @@
             "fuchsia.cobalt.SystemDataUpdater",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
+            "fuchsia.net.stack.Stack",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher"
         ]
