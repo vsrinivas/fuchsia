@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart' hide Intent;
-import 'package:fuchsia_modular/module.dart';
 
+import 'models/embedded_module.dart';
 import 'models/settings_model.dart';
 
 /// [SettingEntry] defines a setting that can be displayed and launched from
@@ -86,11 +86,7 @@ class ComponentSettingEntry implements SettingEntry {
 
   @override
   Future<EmbeddedModule> embedModule() async {
-    final intent = Intent(
-      action: '',
-      handler: componentPath,
-    );
-    return await Module().embedModule(name: _title, intent: intent);
+    return EmbeddedModule(name: _title, componentUrl: componentPath);
   }
 
   String get componentPath =>
@@ -140,11 +136,11 @@ class ComponentSettingEntry implements SettingEntry {
         SettingsModel settingsModel,
       ) =>
           Scaffold(
-            appBar: AppBar(
-              title: Text(title),
-            ),
-            body: getModView(),
-          ),
+        appBar: AppBar(
+          title: Text(title),
+        ),
+        body: getModView(),
+      ),
     );
   }
 }

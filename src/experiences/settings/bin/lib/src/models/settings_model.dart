@@ -9,13 +9,13 @@ import 'dart:io';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart' hide Intent;
 import 'package:fuchsia_logger/logger.dart';
-import 'package:fuchsia_modular/module.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:lib.settings/device_info.dart';
 import 'package:lib.widgets/model.dart';
 
 import '../setting_entry.dart';
+import 'embedded_module.dart';
 import 'settings_status.dart';
 
 export 'package:lib.widgets/model.dart'
@@ -41,8 +41,6 @@ class SettingsModel extends Model {
   // Exposed for testing.
   void initialize() {
     _cachedModules = HashMap();
-    // Explicitly ignore intents
-    Module().registerIntentHandler(NoopIntentHandler());
     _settingsStatus = SettingsStatus()..addListener(notifyListeners);
     _setNetworkAddresses();
   }
