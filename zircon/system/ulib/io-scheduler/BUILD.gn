@@ -15,7 +15,6 @@ zx_library("io-scheduler") {
   static = true
   defines = [ "_ALL_SOURCE" ]
   sources = [
-    "queue.cc",
     "scheduler.cc",
     "stream.cc",
     "worker.cc",

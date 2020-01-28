@@ -16,7 +16,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <io-scheduler/queue.h>
 #include <io-scheduler/scheduler-client.h>
 #include <io-scheduler/stream-op.h>
 #include <io-scheduler/stream.h>
@@ -53,7 +52,7 @@ constexpr uint32_t kDefaultPriority = 8;
 
 class Scheduler {
  public:
-  Scheduler() : queue_(this) {}
+  Scheduler() = default;
   ~Scheduler();
   DISALLOW_COPY_ASSIGN_AND_MOVE(Scheduler);
 
@@ -108,48 +107,38 @@ class Scheduler {
   // Insert a list of ops into the scheduler queue.
   //
   // Ownership:
-  //    Ops are exclusively retained by the Scheduler if they were successfully enqueued. Ops that
-  // encounter enqueueing errors will be added to |out_list| for caller to release.
+  //    Ops are retained by the Scheduler if they were successfully enqueued. They are held until
+  // ReleaseOp() has been called. Ops that encounter enqueueing errors will be added to |out_list|
+  // for caller to release.
   //
   // |in_list| and |out_list| may point to the same buffer.
-  zx_status_t Enqueue(UniqueOp* in_list, size_t in_count, UniqueOp* out_list, size_t* out_actual)
-      __TA_EXCLUDES(lock_);
+  zx_status_t Enqueue(UniqueOp* in_list, size_t in_count, UniqueOp* out_list, size_t* out_actual);
 
-  // Remove an op from the scheduler queue.
+  // Remove an op from the scheduler queue for execution.
   //
   // Ownership:
-  //    If successful, ownership of the op is transferred to the caller.
+  //    Ownership of the op is maintained by the scheduler.
   //
   // If no ops are available:
   //      returns ZX_ERR_CANCELED if shutdown has started.
   //      returns ZX_ERR_SHOULD_WAIT if |wait| is false.
   //      otherwise returns ZX_ERR_SHOULD_WAIT.
-  zx_status_t Dequeue(UniqueOp* op_out, bool wait) __TA_EXCLUDES(lock_);
+  zx_status_t Dequeue(bool wait, UniqueOp* out) __TA_EXCLUDES(lock_);
 
-  // Returns true if shutdown has begun and workers should exit.
-  bool ShutdownInitiated() __TA_EXCLUDES(lock_);
-
-  // API invokded by streams.
-  // --------------------------------
-  // Mark a stream as having more ops to be issued. The stream is added to the issue queue.
-  void SetActive(StreamRef stream) { queue_.SetActive(std::move(stream)); }
-
-  // Mark a stream as empty and closed. Releases all references to the stream held by the
-  // scheduler.
-  void StreamRelease(uint32_t id) __TA_EXCLUDES(lock_);
+  // Returns ownership of an op to the client.
+  // This call is required for all ops that were inserted via Enqueue(), including those fetched
+  // by Dequeue().
+  void ReleaseOp(UniqueOp op) __TA_EXCLUDES(lock_);
 
  private:
-  using StreamRefIdMap = Stream::WAVLTreeSortById;
-
   // Find an open stream by ID.
-  zx_status_t FindStream(uint32_t id, StreamRef* out = nullptr) __TA_EXCLUDES(lock_);
   zx_status_t FindLocked(uint32_t id, StreamRef* out = nullptr) __TA_REQUIRES(lock_);
+
+  // Insert a single op into a stream.
+  zx_status_t InsertOp(UniqueOp op, UniqueOp* op_err) __TA_EXCLUDES(lock_);
 
   SchedulerClient* client_ = nullptr;  // Client-supplied callback interface.
   uint32_t options_ = 0;               // Ordering options.
-
-  // Priority queue of streams that contain ops ready to be issued.
-  Queue queue_;
 
   fbl::Mutex lock_;
   // Set when shutdown has been called and workers should exit.
@@ -157,6 +146,12 @@ class Scheduler {
 
   // Map of id to stream ref.
   Stream::WAVLTreeSortById all_streams_ __TA_GUARDED(lock_);
+
+  // List of all streams that have ops ready to be issued, in priority order.
+  Stream::ReadyStreamList ready_streams_ __TA_GUARDED(lock_);
+
+  // Event notifying waiters that there are ops ready for processing.
+  fbl::ConditionVariable ops_available_ __TA_GUARDED(lock_);
 
   fbl::Vector<std::unique_ptr<Worker>> workers_;
 };

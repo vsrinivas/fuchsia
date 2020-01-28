@@ -130,8 +130,7 @@ class StreamOp {
         group_members_(group_members),
         result_(ZX_OK),
         cookie_(cookie),
-        flags_(0),
-        stream_(nullptr) {}
+        flags_(0) {}
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(StreamOp);
 
@@ -155,38 +154,17 @@ class StreamOp {
 
   uint32_t flags() { return flags_; }
   void set_flags(uint32_t flags) { flags_ = flags; }
-
-  Stream* stream() { return stream_; }
-  void set_stream(Stream* stream) { stream_ = stream; }
   bool is_deferred() { return flags_ & kOpFlagDeferred; }
 
   // List support.
   using ListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
-  struct AllListTraits {
-    static ListNodeState& node_state(StreamOp& s) { return s.all_node_; }
+  struct OpListTraits {
+    static ListNodeState& node_state(StreamOp& s) { return s.node_; }
   };
-  using AllList = fbl::DoublyLinkedList<StreamOp*, AllListTraits>;
-
-  struct ReadyListTraits {
-    static ListNodeState& node_state(StreamOp& s) { return s.ready_node_; }
-  };
-  using ReadyList = fbl::DoublyLinkedList<StreamOp*, ReadyListTraits>;
-
-  struct IssuedListTraits {
-    static ListNodeState& node_state(StreamOp& s) { return s.issued_node_; }
-  };
-  using IssuedList = fbl::DoublyLinkedList<StreamOp*, IssuedListTraits>;
-
-  struct DeferredListTraits {
-    static ListNodeState& node_state(StreamOp& s) { return s.deferred_node_; }
-  };
-  using DeferredList = fbl::DoublyLinkedList<StreamOp*, DeferredListTraits>;
+  using OpList = fbl::DoublyLinkedList<StreamOp*, OpListTraits>;
 
  private:
-  ListNodeState all_node_;
-  ListNodeState ready_node_;
-  ListNodeState issued_node_;
-  ListNodeState deferred_node_;
+  ListNodeState node_;
 
   OpType type_;             // Type of operation.
   uint32_t stream_id_;      // Stream into which this op is queued.
@@ -194,12 +172,7 @@ class StreamOp {
   uint32_t group_members_;  // Number of members in the group.
   zx_status_t result_;      // Status code of the released operation.
   void* cookie_;            // User-defined per-op cookie.
-
   uint32_t flags_;
-  // Pointer to stream containing this op.
-  // This pointer is valid as long as the op is retained by the stream, from insertion to release.
-  // Effectively this is the lifetime of the op inside the io scheduler.
-  Stream* stream_;
 };
 
 }  // namespace ioscheduler

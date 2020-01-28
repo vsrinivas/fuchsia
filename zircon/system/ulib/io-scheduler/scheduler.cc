@@ -11,6 +11,13 @@
 
 namespace ioscheduler {
 
+Scheduler::~Scheduler() {
+  Shutdown();
+  ZX_DEBUG_ASSERT(all_streams_.is_empty());
+  ZX_DEBUG_ASSERT(ready_streams_.is_empty());
+  ZX_DEBUG_ASSERT(workers_.is_empty());
+}
+
 zx_status_t Scheduler::Init(SchedulerClient* client, uint32_t options) {
   client_ = client;
   options_ = options;
@@ -35,10 +42,10 @@ void Scheduler::Shutdown() {
     for (auto& stream : all_streams_) {
       stream.Close();
     }
-  }
 
-  // Wake all workers blocking on the queue. They will observe shutdown_initiated_ and exit.
-  queue_.SignalAvailable();
+    // Wake all workers blocking on the queue. They will observe shutdown_initiated_ and exit.
+    ops_available_.Broadcast();
+  }
 
   // Block until all worker threads exit.
   workers_.reset();
@@ -63,7 +70,7 @@ zx_status_t Scheduler::StreamOpen(uint32_t id, uint32_t priority) {
   }
 
   fbl::AllocChecker ac;
-  StreamRef stream = fbl::AdoptRef(new (&ac) Stream(id, priority, this));
+  StreamRef stream = fbl::AdoptRef(new (&ac) Stream(id, priority));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -78,7 +85,8 @@ zx_status_t Scheduler::StreamClose(uint32_t id) {
   if (status != ZX_OK) {
     return status;
   }
-  if (stream->Close() == ZX_OK) {
+  stream->set_flags(kStreamFlagIsClosed);
+  if (stream->IsEmpty()) {
     // Stream has no more ops. No more ops can be added since it is now closed.
     // Stream will be deleted when all references are released.
     all_streams_.erase(id);
@@ -90,7 +98,9 @@ zx_status_t Scheduler::StreamClose(uint32_t id) {
 }
 
 zx_status_t Scheduler::Serve() {
-  ZX_DEBUG_ASSERT(client_ != nullptr);
+  if (client_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   // Create a single thread for now.
   const uint32_t num_workers = 1;
@@ -109,13 +119,32 @@ zx_status_t Scheduler::Serve() {
 }
 
 void Scheduler::AsyncComplete(StreamOp* sop) {
-  Stream* stream = sop->stream();
   // TODO(ZX-4741): call async-friendly completion deferral instead of doing it in the
   // caller context.
-  stream->ReleaseOp(UniqueOp(sop), client_);
+  ReleaseOp(UniqueOp(sop));
 }
 
-Scheduler::~Scheduler() { Shutdown(); }
+zx_status_t Scheduler::InsertOp(UniqueOp op, UniqueOp* op_err) {
+  fbl::AutoLock lock(&lock_);
+  StreamRef stream;
+  zx_status_t status = FindLocked(op->stream_id(), &stream);
+  if (status != ZX_OK) {
+    op->set_result(ZX_ERR_INVALID_ARGS);
+    *op_err = std::move(op);
+    return status;
+  }
+  bool was_ready = stream->HasReady();
+  status = stream->Insert(std::move(op), op_err);
+  if (status != ZX_OK) {
+    // Insertion failed. Op result is set by Insert().
+    return status;
+  }
+  if (!was_ready) {
+    ready_streams_.push_back(std::move(stream));
+  }
+  ops_available_.Signal();
+  return ZX_OK;
+}
 
 // Enqueue - file a list of ops into their respective streams and schedule those streams.
 zx_status_t Scheduler::Enqueue(UniqueOp* in_list, size_t in_count, UniqueOp* out_list,
@@ -123,45 +152,66 @@ zx_status_t Scheduler::Enqueue(UniqueOp* in_list, size_t in_count, UniqueOp* out
   size_t out_num = 0;
   for (size_t i = 0; i < in_count; i++) {
     UniqueOp op = std::move(in_list[i]);
-
     // Initialize op fields modified by scheduler.
     op->set_result(ZX_OK);
-
-    StreamRef stream;
-    if (FindStream(op->stream_id(), &stream) != ZX_OK) {
-      op->set_result(ZX_ERR_INVALID_ARGS);
-      out_list[out_num++] = std::move(op);
-      continue;
-    }
-    zx_status_t status = stream->Insert(std::move(op), &out_list[out_num]);
+    zx_status_t status = InsertOp(std::move(op), &out_list[out_num]);
     if (status != ZX_OK) {
-      // Stream is closed, cannot add ops. Op has been added to out_list[out_num]
+      // Op was added to out_list with an error result.
       out_num++;
-      continue;
     }
   }
   *out_actual = out_num;
   return ZX_OK;
 }
 
-zx_status_t Scheduler::Dequeue(UniqueOp* op_out, bool wait) {
-  StreamRef stream;
-  zx_status_t status = queue_.GetNextStream(wait, &stream);
-  if (status != ZX_OK) {
-    return status;
+zx_status_t Scheduler::Dequeue(bool wait, UniqueOp* out) {
+    fbl::AutoLock lock(&lock_);
+  for (;;) {
+    StreamRef stream = ready_streams_.pop_front();
+    if (stream != nullptr) {
+      stream->GetNext(out);
+      ZX_DEBUG_ASSERT(*out != nullptr);
+      if (stream->HasReady()) {
+        // Stream has more ops, return to tail of ready stream queue.
+        ready_streams_.push_back(std::move(stream));
+      }
+      return ZX_OK;
+    }
+
+    // No more ops available.
+    if (shutdown_initiated_) {
+      return ZX_ERR_CANCELED;
+    }
+    if (!wait) {
+      return ZX_ERR_SHOULD_WAIT;
+    }
+    ops_available_.Wait(&lock_);
   }
-  stream->GetNext(op_out);
-  return ZX_OK;
 }
 
-bool Scheduler::ShutdownInitiated() {
-  fbl::AutoLock lock(&lock_);
-  return shutdown_initiated_;
-}
+void Scheduler::ReleaseOp(UniqueOp op) {
+  bool stream_done = false;
+  uint32_t sid;
+  {
+    fbl::AutoLock lock(&lock_);
+    StreamRef stream;
+    sid = op->stream_id();
+    zx_status_t status = FindLocked(sid, &stream);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    if (stream == nullptr) {
+      fprintf(stderr, "Scheduler: Releasing op with invalid stream id\n");
+    } else {
+      stream->Complete(op.get());
+      stream_done = stream->is_closed() && stream->IsEmpty();
+    }
+  }
 
-zx_status_t Scheduler::FindStream(uint32_t id, StreamRef* out) {
-  fbl::AutoLock lock(&lock_);
-  return FindLocked(id, out);
+  client_->Release(op.release());
+
+  if (stream_done) {
+    fbl::AutoLock lock(&lock_);
+    all_streams_.erase(sid);
+  }
 }
 
 zx_status_t Scheduler::FindLocked(uint32_t id, StreamRef* out) {
@@ -173,11 +223,6 @@ zx_status_t Scheduler::FindLocked(uint32_t id, StreamRef* out) {
     *out = StreamRef(iter.CopyPointer());
   }
   return ZX_OK;
-}
-
-void Scheduler::StreamRelease(uint32_t id) {
-  fbl::AutoLock lock(&lock_);
-  all_streams_.erase(id);
 }
 
 }  // namespace ioscheduler

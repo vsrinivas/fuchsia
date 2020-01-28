@@ -87,7 +87,7 @@ void Worker::ExecuteLoop() {
   for (;;) {
     // Fetch an op.
     UniqueOp op;
-    status = sched_->Dequeue(&op, false);
+    status = sched_->Dequeue(false, &op);
     if (status == ZX_ERR_SHOULD_WAIT) {
       // No more ops in scheduler, acquire more.
       break;
@@ -98,11 +98,9 @@ void Worker::ExecuteLoop() {
     }
     ZX_DEBUG_ASSERT(status == ZX_OK);
 
-    Stream* stream;
     if (op->is_deferred()) {
       // Op completion has been deferred. Release it now.
-      stream = op->stream();
-      stream->ReleaseOp(std::move(op), client);
+      sched_->ReleaseOp(std::move(op));
       continue;
     }
 
@@ -119,8 +117,7 @@ void Worker::ExecuteLoop() {
       // Mark op as failed.
       op->set_result(ZX_ERR_IO);
     }
-    stream = op->stream();
-    stream->ReleaseOp(std::move(op), client);
+    sched_->ReleaseOp(std::move(op));
   }
 }
 

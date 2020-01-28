@@ -18,6 +18,8 @@
 
 namespace ioscheduler {
 
+constexpr uint32_t kStreamFlagIsClosed = (1u << 0);
+
 class Scheduler;
 class Stream;
 using StreamRef = fbl::RefPtr<Stream>;
@@ -26,12 +28,21 @@ using StreamRef = fbl::RefPtr<Stream>;
 // The Stream class is not thread safe, streams depend on the scheduler for synchronization.
 class Stream : public fbl::RefCounted<Stream> {
  public:
-  Stream(uint32_t id, uint32_t pri, Scheduler* sched);
+  Stream() = delete;
+  Stream(uint32_t id, uint32_t pri);
   ~Stream();
   DISALLOW_COPY_ASSIGN_AND_MOVE(Stream);
 
   uint32_t id() { return id_; }
   uint32_t priority() { return priority_; }
+  bool is_closed() { return (flags_ & kStreamFlagIsClosed); }
+
+  inline uint32_t flags() { return flags_; }
+  inline void set_flags(uint32_t flags) { flags_ |= flags; }
+  inline void clear_flags(uint32_t flags) { flags_ &= ~flags; }
+
+  inline bool IsEmpty() { return ready_ops_.is_empty() && issued_ops_.is_empty(); }
+  inline bool HasReady() { return !ready_ops_.is_empty(); }
 
   // Close a stream.
   // Returns:
@@ -42,14 +53,15 @@ class Stream : public fbl::RefCounted<Stream> {
 
   // Insert an op into the tail of the stream (subject to reordering).
   // On error op's error status is set and it is moved to |*op_err|.
-  zx_status_t Insert(UniqueOp op, UniqueOp* op_err) __TA_EXCLUDES(lock_);
+  zx_status_t Insert(UniqueOp op, UniqueOp* op_err);
 
   // Fetch a pointer to an op from the head of the stream.
   // The stream maintains ownership of the op. All fetched op must be returned via ReleaseOp().
-  void GetNext(UniqueOp* op_out) __TA_EXCLUDES(lock_);
+  void GetNext(UniqueOp* op_out);
 
-  // Releases an op obtained via GetNext().
-  void ReleaseOp(UniqueOp op, SchedulerClient* client);
+  // Marks an op obtained via GetNext() as complete.
+  // Op is not consumed.
+  void Complete(StreamOp* op);
 
   // WAVL Tree support.
   using WAVLTreeNodeState = fbl::WAVLTreeNodeState<StreamRef>;
@@ -68,35 +80,27 @@ class Stream : public fbl::RefCounted<Stream> {
 
   // List support.
   using ListNodeState = fbl::DoublyLinkedListNodeState<StreamRef>;
-  struct ListTraitsUnsorted {
-    static ListNodeState& node_state(Stream& s) { return s.list_node_; }
-  };
 
-  using ListUnsorted = fbl::DoublyLinkedList<StreamRef, ListTraitsUnsorted>;
+  struct ReadyListTraits {
+    static ListNodeState& node_state(Stream& s) { return s.ready_node_; }
+  };
+  using ReadyStreamList = fbl::DoublyLinkedList<StreamRef, ReadyListTraits>;
+
 
  private:
   friend struct WAVLTreeNodeTraitsSortById;
   friend struct KeyTraitsSortById;
 
-  bool IsEmptyLocked() __TA_REQUIRES(lock_);
-
   uint32_t id_;
   uint32_t priority_;
 
-  // Used by the scheduler's stream maps. Access is protected by the scheduler lock.
   WAVLTreeNodeState map_node_;
 
-  // Used by the queue's priority list. Access is protected by the queue lock.
-  ListNodeState list_node_;
+  ListNodeState ready_node_;
 
-  // Pointer to the scheduler. Streams may not exist beyond the lifetime of the scheduler, so
-  // this pointer must always be valid.
-  Scheduler* sched_ = nullptr;
-
-  fbl::Mutex lock_;
-  bool open_ __TA_GUARDED(lock_) = true;                  // Stream is open, can accept more ops.
-  StreamOp::ReadyList ready_ops_ __TA_GUARDED(lock_);     // Ops ready to be issued.
-  StreamOp::IssuedList issued_ops_ __TA_GUARDED(lock_);   // Issued ops.
+  uint32_t flags_ = 0;
+  StreamOp::OpList ready_ops_;        // Ops ready to be issued.
+  StreamOp::OpList issued_ops_;       // Issued ops pending completion.
 };
 
 }  // namespace ioscheduler
