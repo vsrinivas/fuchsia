@@ -84,7 +84,6 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             match ty {
-                CapabilityType::Service => panic!("service capability unsupported"),
                 CapabilityType::Protocol => {
                     fasync::spawn(async move {
                         let server_end: ServerEnd<EchoMarker> =
@@ -111,10 +110,8 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                         server_end,
                     );
                 }
-                CapabilityType::Runner => {
-                    // TODO(fxb/4761): Implement routing for runner caps.
-                    panic!("runner capability unsupported");
-                }
+                CapabilityType::Service => panic!("service capability unsupported"),
+                CapabilityType::Runner => panic!("runner capability unsupported"),
             }
         },
     )
