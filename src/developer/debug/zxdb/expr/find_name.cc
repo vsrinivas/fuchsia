@@ -83,7 +83,7 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNam
   if (const DataMember* dm = symbol->AsDataMember()) {
     FXL_DCHECK(dm->is_external());  // Only static ("external") members should be in the index.
     if (options.find_vars)
-      return FoundName(nullptr, FoundMember(dm));
+      return FoundName(nullptr, FoundMember(nullptr, dm));
     return FoundName();
   }
 
@@ -346,19 +346,18 @@ VisitResult FindInIndexLevelRecursiveNs(const FindNameOptions& options,
 // This takes one additional parameter over FindMember: the |cur_offset| which is the offset of
 // the current collection being iterated over in whatever contains it.
 VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& options,
-                         const Collection* collection, uint64_t cur_offset,
-                         const ParsedIdentifier& looking_for, const Variable* optional_object_ptr,
-                         std::vector<FoundName>* result) {
+                         const InheritancePath& path, const ParsedIdentifier& looking_for,
+                         const Variable* optional_object_ptr, std::vector<FoundName>* result) {
   // Data member iteration.
   if (const std::string* looking_for_name = GetSingleComponentIdentifierName(looking_for);
       looking_for_name && options.find_vars) {
-    for (const auto& lazy : collection->data_members()) {
+    for (const auto& lazy : path.base()->data_members()) {
       if (const DataMember* data = lazy.Get()->AsDataMember()) {
         // TODO(brettw) allow "BaseClass::foo" syntax for specifically naming a member of a base
         // class. Watch out: the base class could be qualified (or not) in various ways:
         // ns::BaseClass::foo, BaseClass::foo, etc.
         if (NameMatches(options, data->GetAssignedName(), *looking_for_name)) {
-          result->emplace_back(optional_object_ptr, data, cur_offset + data->member_location());
+          result->emplace_back(optional_object_ptr, path, data);
           if (result->size() >= options.max_results)
             return VisitResult::kDone;
         }
@@ -368,9 +367,15 @@ VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& 
           // Recursively search into anonymous unions. We assume this is C++ and anonymous
           // collections can't have base classes so we don't need to VisitClassHierarchy().
           if (const Collection* member_coll = data->type().Get()->AsCollection()) {
-            VisitResult visit_result =
-                FindMemberOn(context, options, member_coll, cur_offset + data->member_location(),
-                             looking_for, optional_object_ptr, result);
+            // Construct a new inheritance path with a synthetic InheritedFrom member to represent
+            // the offset of the anonymous collection within the containing one.
+            InheritancePath synthetic_path(path);
+            synthetic_path.path().emplace_back(
+                fxl::MakeRefCounted<InheritedFrom>(RefPtrTo(member_coll), data->member_location()),
+                RefPtrTo(member_coll));
+
+            VisitResult visit_result = FindMemberOn(context, options, synthetic_path, looking_for,
+                                                    optional_object_ptr, result);
             if (visit_result != VisitResult::kContinue)
               return visit_result;
           }
@@ -381,7 +386,7 @@ VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& 
 
   // Index node iteration for this class' scope.
   if (OptionsRequiresIndex(options)) {
-    ParsedIdentifier container_name = ToParsedIdentifier(collection->GetIdentifier());
+    ParsedIdentifier container_name = ToParsedIdentifier(path.base()->GetIdentifier());
 
     // Don't search previous scopes (pass |search_containing| = false). If a class derives from a
     // class in another namespace, that doesn't bring the other namespace in the current scope.
@@ -503,11 +508,10 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
                 const Variable* optional_object_ptr, std::vector<FoundName>* result) {
   FXL_DCHECK(options.search_mode == FindNameOptions::kLexical);
 
-  VisitClassHierarchy(object, [&context, &options, &looking_for, optional_object_ptr, result](
-                                  const Collection* cur_collection, uint64_t cur_offset) {
+  VisitClassHierarchy(object, [&context, &options, &looking_for, optional_object_ptr,
+                               result](const InheritancePath& path) {
     // Called for each collection in the class hierarchy.
-    return FindMemberOn(context, options, cur_collection, cur_offset, looking_for,
-                        optional_object_ptr, result);
+    return FindMemberOn(context, options, path, looking_for, optional_object_ptr, result);
   });
 }
 

@@ -107,7 +107,7 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
                  ExprValueSource(kBaseAddr));
 
   // Resolve A.
-  ErrOrValue out = ResolveNonstaticMember(eval_context_, base, FoundMember(a_data));
+  ErrOrValue out = ResolveNonstaticMember(eval_context_, base, FoundMember(sc.get(), a_data));
   ASSERT_TRUE(out.ok()) << out.err().msg();
   EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
   EXPECT_EQ(4u, out.value().data().size());
@@ -120,7 +120,7 @@ TEST_F(ResolveCollectionTest, GoodMemberAccess) {
   EXPECT_EQ(out.value(), out_by_name.value());
 
   // Resolve B.
-  out = ResolveNonstaticMember(eval_context_, base, FoundMember(b_data));
+  out = ResolveNonstaticMember(eval_context_, base, FoundMember(sc.get(), b_data));
   ASSERT_TRUE(out.ok()) << out.err().msg();
   EXPECT_EQ("int32_t", out.value().type()->GetAssignedName());
   EXPECT_EQ(4u, out.value().data().size());
@@ -296,7 +296,8 @@ TEST_F(ResolveCollectionTest, BadMemberArgs) {
   auto sc = GetTestClassType(&a_data, &b_data);
 
   // Test null base class pointer.
-  ErrOrValue out = ResolveNonstaticMember(eval_context_, ExprValue(), FoundMember(a_data));
+  ErrOrValue out =
+      ResolveNonstaticMember(eval_context_, ExprValue(), FoundMember(sc.get(), a_data));
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ("Can't resolve data member on non-struct/class value.", out.err().msg());
 
@@ -328,7 +329,7 @@ TEST_F(ResolveCollectionTest, BadMemberAccess) {
   bad_member->set_type(MakeInt32Type());
   bad_member->set_member_location(5);
 
-  out = ResolveNonstaticMember(eval_context_, base, FoundMember(bad_member.get()));
+  out = ResolveNonstaticMember(eval_context_, base, FoundMember(sc.get(), bad_member.get()));
   ASSERT_TRUE(out.has_error());
   EXPECT_EQ("Invalid data offset 5 in object of size 8.", out.err().msg());
 }

@@ -34,12 +34,8 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
 // works backwards, first calling the callback with the |starting| input, then a depth-first
 // traversal of the inheritance tree.
 //
-// The callback takes the current collection being iterated, as well as the offset of that
-// collection from the beginning of the starting collection.
-//
-// TODO(brettw) remove the version that takes an offset.
-VisitResult VisitClassHierarchy(const Collection* starting,
-                                fit::function<VisitResult(const Collection*, uint64_t offset)> cb);
+// The callback gives the path from the input derived class to the current base class being
+// iterated over.
 VisitResult VisitClassHierarchy(const Collection* starting,
                                 fit::function<VisitResult(const InheritancePath& path)> cb);
 

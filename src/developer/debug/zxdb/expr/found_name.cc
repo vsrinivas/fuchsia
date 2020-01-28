@@ -25,11 +25,11 @@ FoundName::FoundName(const Function* function) : kind_(kFunction), function_(Ref
 FoundName::FoundName(const Variable* object_ptr, FoundMember member)
     : kind_(kMemberVariable), object_ptr_(RefPtrTo(object_ptr)), member_(std::move(member)) {}
 
-FoundName::FoundName(const Variable* object_ptr, const DataMember* data_member,
-                     uint32_t data_member_offset)
+FoundName::FoundName(const Variable* object_ptr, InheritancePath path,
+                     const DataMember* data_member)
     : kind_(kMemberVariable),
       object_ptr_(RefPtrTo(object_ptr)),
-      member_(data_member, data_member_offset) {}
+      member_(std::move(path), data_member) {}
 
 FoundName::FoundName(fxl::RefPtr<Type> type) : kind_(kType), type_(std::move(type)) {}
 

@@ -85,45 +85,47 @@ TEST_F(Bitfield, Bitfield) {
 
   // Validate each one for the zero case. Note that the size we get out should be the size of
   // the variable it was declared with (not the bitfield size).
-  auto out = ResolveBitfieldMember(eval_context, all_zero, FoundMember(b1.get()));
+  auto out =
+      ResolveBitfieldMember(eval_context, all_zero, FoundMember(test_class_type.get(), b1.get()));
   ASSERT_FALSE(out.has_error());
   EXPECT_EQ(ExprValue(false), out.value());
   EXPECT_EQ(ExprValueSource(kAddress, 1, 0), out.value().source());
 
-  out = ResolveBitfieldMember(eval_context, all_zero, FoundMember(b2.get()));
+  out = ResolveBitfieldMember(eval_context, all_zero, FoundMember(test_class_type.get(), b2.get()));
   ASSERT_FALSE(out.has_error());
   EXPECT_EQ(ExprValue(false), out.value());
   EXPECT_EQ(ExprValueSource(kAddress, 1, 1), out.value().source());
 
-  out = ResolveBitfieldMember(eval_context, all_zero, FoundMember(j.get()));
+  out = ResolveBitfieldMember(eval_context, all_zero, FoundMember(test_class_type.get(), j.get()));
   ASSERT_FALSE(out.has_error()) << out.err().msg();
   EXPECT_EQ(ExprValue(static_cast<int64_t>(0)), out.value());
   EXPECT_EQ(ExprValueSource(kAddress, 3, 40), out.value().source());
 
-  out = ResolveBitfieldMember(eval_context, all_zero, FoundMember(k.get()));
+  out = ResolveBitfieldMember(eval_context, all_zero, FoundMember(test_class_type.get(), k.get()));
   ASSERT_FALSE(out.has_error());
   EXPECT_EQ(ExprValue(static_cast<uint32_t>(0)), out.value());
   EXPECT_EQ(ExprValueSource(kAddress + 4, 17, 11), out.value().source());
 
   // Set bits to one one-at-a-time to make sure we find the right thing.
   out = ResolveBitfieldMember(eval_context, ExprValue(test_class_type, {1, 0, 0, 0, 0, 0, 0, 0}),
-                              FoundMember(b1.get()));
+                              FoundMember(test_class_type.get(), b1.get()));
   ASSERT_FALSE(out.has_error());
   EXPECT_EQ(ExprValue(true), out.value());
 
   out = ResolveBitfieldMember(eval_context, ExprValue(test_class_type, {2, 0, 0, 0, 0, 0, 0, 0}),
-                              FoundMember(b2.get()));
+                              FoundMember(test_class_type.get(), b2.get()));
   ASSERT_FALSE(out.has_error());
   EXPECT_EQ(ExprValue(true), out.value());
 
   // This one gets sign-extended because all bits are set.
   out = ResolveBitfieldMember(eval_context, ExprValue(test_class_type, {0, 0, 0, 0, 0, 7, 0, 0}),
-                              FoundMember(j.get()));
+                              FoundMember(test_class_type.get(), j.get()));
   ASSERT_FALSE(out.has_error());
   EXPECT_EQ(ExprValue(static_cast<int64_t>(-1)), out.value());
 
   ExprValue saturated_k(test_class_type, {0, 0, 0, 0, 0, 0xf8, 0xff, 0x0f});
-  out = ResolveBitfieldMember(eval_context, saturated_k, FoundMember(k.get()));
+  out =
+      ResolveBitfieldMember(eval_context, saturated_k, FoundMember(test_class_type.get(), k.get()));
   ASSERT_FALSE(out.has_error());
   constexpr uint32_t kSaturatedK = 0x1ffff;
   EXPECT_EQ(ExprValue(kSaturatedK), out.value());
@@ -135,7 +137,7 @@ TEST_F(Bitfield, Bitfield) {
   ExprValue ptr_value(kAddress, test_class_ptr_type);
 
   bool called = false;
-  ResolveMemberByPointer(eval_context, ptr_value, FoundMember(k.get(), k->member_location()),
+  ResolveMemberByPointer(eval_context, ptr_value, FoundMember(test_class_type.get(), k.get()),
                          [&called, &out](ErrOrValue value) {
                            called = true;
                            out = std::move(value);

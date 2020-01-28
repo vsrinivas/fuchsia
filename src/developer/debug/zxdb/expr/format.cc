@@ -212,7 +212,7 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
   }
 
   fxl::RefPtr<Variant> variant;
-  Err err = ResolveVariant(eval_context, node->value(), variant_part, &variant);
+  Err err = ResolveVariant(eval_context, node->value(), coll, variant_part, &variant);
   if (err.has_error()) {
     node->set_err(err);
     return;
@@ -232,10 +232,10 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
       enum_name = member->GetAssignedName();
 
     // In the error case, still append a child so that the child can have the error associated with
-    // it. Note that Rust enums are never static so we can use the synchronous variant.
+    // it. Note that Rust enums are never static nor virtual so we can use the synchronous variant.
     node->children().push_back(std::make_unique<FormatNode>(
         member->GetAssignedName(),
-        ResolveNonstaticMember(eval_context, node->value(), FoundMember(member))));
+        ResolveNonstaticMember(eval_context, node->value(), FoundMember(coll, member))));
   }
 
   // Name for the whole node.
@@ -269,8 +269,8 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
 
     // Some base classes are empty. Only show if this base class or any of its base classes have
     // member values.
-    VisitResult has_members_result = VisitClassHierarchy(from, [](const Collection* cur, uint64_t) {
-      if (cur->data_members().empty())
+    VisitResult has_members_result = VisitClassHierarchy(from, [](const InheritancePath& path) {
+      if (path.base()->data_members().empty())
         return VisitResult::kContinue;
       return VisitResult::kDone;
     });
@@ -305,7 +305,7 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
 
     node->children().push_back(std::make_unique<FormatNode>(
         member->GetAssignedName(),
-        ResolveNonstaticMember(eval_context, node->value(), FoundMember(member))));
+        ResolveNonstaticMember(eval_context, node->value(), FoundMember(coll, member))));
   }
 
   node->set_description_kind(FormatNode::kCollection);

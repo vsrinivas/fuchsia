@@ -8,14 +8,14 @@
 #include <stdint.h>
 
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/inheritance_path.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
 // The result of finding a member in a collection.
 //
-// This class consists of a DataMember and a possible offset within the containing object of that
-// DataMember.
+// This class consists of a DataMember and how to find it from a given class.
 //
 // To actually resolve the value when the data_member is not static, the containing object needs to
 // be known. Typically one would have an object, find a member on it (producing a FoundMember), and
@@ -26,42 +26,48 @@ class FoundMember {
  public:
   FoundMember();
 
-  // Constructs from a data member with no additional offset. This means the DataMember must be
-  // a direct member of the collection it's referring to or it's external.
-  explicit FoundMember(const DataMember* data_member);
+  // Constructs from a data member on a class with no inheritance. This means the DataMember must be
+  // a direct member of the collection it's referring to.
+  //
+  // The collection can be null for static data members.
+  FoundMember(const Collection* collection, const DataMember* data_member);
 
-  // Constructs from a data member and a computed offset. The data_member_offset will be used
-  // instead of the data_member->member_location() which allows it to refer to members of derived
-  // classes which may have an additional ofsfet within the containing structure.
-  FoundMember(const DataMember* data_member, uint32_t data_member_offset);
+  // Constructs from a data member and an object path.
+  FoundMember(InheritancePath path, const DataMember* data_member);
 
   ~FoundMember();
 
   bool is_null() const { return !data_member_; }
 
-  const DataMember* data_member() const { return data_member_.get(); }
-  fxl::RefPtr<DataMember> data_member_ref() const { return data_member_; }
-
-  // Offset of this member in the containing object.
+  // The inheritance path is used to find the member data only for nonstatic members.
   //
-  // This is valid only for non-static members.
+  // Static members will have data_member()->is_external() set and the expression will not depend on
+  // the object. In this case, the object_path() will be empty.
   //
-  // Static members will have data_member()->is_external() set and this offset will not apply
-  // (because there's no underlying object).
-  uint32_t data_member_offset() const { return data_member_offset_; }
+  // This path can contain synthetic items not strictly in the inheritance tree in the case of
+  // anonymous structs or unions. An InheritedFrom object will be synthesized to represent the
+  // offset of the anonymous struct/union in its enclosing collection.
+  const InheritancePath& object_path() const { return object_path_; }
 
- private:
-  // Variable member of the object_var_ that this class represents.
+  // Variable member of the object_var_ that this class represents. Can be null to represent
+  // "not found". Check is_null().
   //
   // NOTE: that this DataMember isn't necessarily a member of the original object that was queried.
   // It could be on a base class. In this case, the offset specified on the DataMember data member
   // will be incorrect since it refers to the offset within its enclosing class. Therefore, one
   // should always use the data_member_offset_ below.
-  fxl::RefPtr<DataMember> data_member_;
+  const DataMember* data_member() const { return data_member_.get(); }
+  fxl::RefPtr<DataMember> data_member_ref() const { return data_member_; }
 
-  // The offset within object_var_ of the data_member_. This will take into account all derived
-  // classes.
-  uint32_t data_member_offset_ = 0;
+  // Helper to extract the offset of the data member in the class. This can fail if there is virtual
+  // inheritance or the data member is static (in both cases the data member isn't at a fixed
+  // offset from the collection).
+  std::optional<uint32_t> GetDataMemberOffset() const;
+
+ private:
+  // See documentation above.
+  InheritancePath object_path_;
+  fxl::RefPtr<DataMember> data_member_;
 };
 
 }  // namespace zxdb

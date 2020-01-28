@@ -192,7 +192,7 @@ TEST(FindName, FindMember) {
   FindMember(context, exact_var, d.derived_type.get(), b_ident, nullptr, &results);
   ASSERT_EQ(1u, results.size());
   ASSERT_EQ(FoundName::kMemberVariable, results[0].kind());
-  EXPECT_EQ(d.kBase1Offset, results[0].member().data_member_offset());
+  EXPECT_EQ(d.kBase1Offset, results[0].member().object_path().BaseOffsetInDerived());
   EXPECT_EQ("b", results[0].GetName().GetFullNameNoQual());
 
   // Increase the limit, it should find both in order of Base1, Base2.
@@ -202,8 +202,8 @@ TEST(FindName, FindMember) {
   ASSERT_EQ(2u, results.size());
   ASSERT_EQ(FoundName::kMemberVariable, results[0].kind());
   ASSERT_EQ(FoundName::kMemberVariable, results[1].kind());
-  EXPECT_EQ(d.kBase1Offset, results[0].member().data_member_offset());
-  EXPECT_EQ(d.kBase2Offset, results[1].member().data_member_offset());
+  EXPECT_EQ(d.kBase1Offset, results[0].member().object_path().BaseOffsetInDerived());
+  EXPECT_EQ(d.kBase2Offset, results[1].member().object_path().BaseOffsetInDerived());
 }
 
 TEST(FindName, FindAnonUnion) {
@@ -239,7 +239,7 @@ TEST(FindName, FindAnonUnion) {
 
   // The found value should be at the correct offset, accounting for both the union and integer
   // offsets.
-  EXPECT_EQ(kInnerOffset + kUnionOffset, result[0].member().data_member_offset());
+  EXPECT_EQ(kInnerOffset + kUnionOffset, result[0].member().GetDataMemberOffset());
   EXPECT_EQ(kInnerName, result[0].member().data_member()->GetAssignedName());
 }
 

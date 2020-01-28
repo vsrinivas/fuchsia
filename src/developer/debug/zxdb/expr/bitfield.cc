@@ -49,9 +49,13 @@ ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const 
 
   // Use the FoundMember's offset (not DataMember's) because FoundMember's takes into account base
   // classes and their offsets.
-  size_t byte_offset = found_member.data_member_offset();
-  if (byte_offset > base.data().size())
-    return Err("Bitfield starts off the end of the type.");
+  // TODO(bug 41503) handle virtual inheritance.
+  auto opt_byte_offset = found_member.GetDataMemberOffset();
+  if (!opt_byte_offset) {
+    return Err(
+        "The debugger does not yet support bitfield access on virtually inherited base "
+        "classes (bug 41503) or static members.");
+  }
 
   if (data_member->bit_size() + data_member->bit_offset() > sizeof(uint128_t) * 8) {
     // If the total coverage of this bitfield is more than out number size we can't do the
@@ -74,8 +78,8 @@ ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const 
   // about that reading off the end of byte_size() and can just do the masking math.
   //
   // This computation assumes little-endian.
-  memcpy(&bits, &base.data()[byte_offset],
-         std::min(sizeof(bits), base.data().size() - byte_offset));
+  memcpy(&bits, &base.data()[*opt_byte_offset],
+         std::min(sizeof(bits), base.data().size() - *opt_byte_offset));
 
   // Bits count from the high bit within byte_size(). Current compilers seem to always write
   // byte_size == sizeof(declared type) and count the high bit of the result from the high bit of
@@ -99,7 +103,7 @@ ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const 
   }
 
   ExprValueSource source =
-      base.source().GetOffsetInto(byte_offset, data_member->bit_size(), shift_amount);
+      base.source().GetOffsetInto(*opt_byte_offset, data_member->bit_size(), shift_amount);
 
   // Save the data back to the desired size (assume little-endian so truncation from the right is
   // correct).

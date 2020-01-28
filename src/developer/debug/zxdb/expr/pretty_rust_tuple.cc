@@ -38,7 +38,7 @@ void PrettyRustTuple::Format(FormatNode* node, const FormatOptions& options,
     // In the error case, still append a child so that the child can have the error associated
     // with it.
     node->children().push_back(std::make_unique<FormatNode>(
-        name, ResolveNonstaticMember(context, node->value(), FoundMember(member))));
+        name, ResolveNonstaticMember(context, node->value(), FoundMember(collection, member))));
   }
 }
 
@@ -77,7 +77,7 @@ void PrettyRustZirconStatus::Format(FormatNode* node, const FormatOptions& optio
 
   if (const DataMember* member = members[0].Get()->AsDataMember()) {
     auto child = std::make_unique<FormatNode>(
-        "0", ResolveNonstaticMember(context, node->value(), FoundMember(member)));
+        "0", ResolveNonstaticMember(context, node->value(), FoundMember(collection, member)));
 
     // The status formatter can return immediately, meaning this node gets printed before this
     // function is done, so we have to share the return callback, not just pass it along.

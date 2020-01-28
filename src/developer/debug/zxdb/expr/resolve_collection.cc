@@ -125,8 +125,12 @@ void DoResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const Exp
       return cb(err);
 
     TargetPointer base_address = base_ptr.GetAs<TargetPointer>();
-    ResolvePointer(context, base_address + member.data_member_offset(), std::move(member_type),
-                   std::move(cb));
+    // TODO(bug 41503) handle virtual inheritance.
+    if (auto opt_offset = member.GetDataMemberOffset()) {
+      ResolvePointer(context, base_address + *opt_offset, std::move(member_type), std::move(cb));
+    } else {
+      return cb(Err("Virtual inheritance is not supported yet (bug 41503)."));
+    }
   }
 }
 
@@ -193,7 +197,10 @@ ErrOrValue DoResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, con
   if (err.has_error())
     return err;
 
-  return ExtractSubType(context, base, std::move(member_type), member.data_member_offset());
+  // TODO(bug 41503) handle virtual inheritance.
+  if (auto opt_offset = member.GetDataMemberOffset())
+    return ExtractSubType(context, base, std::move(member_type), *opt_offset);
+  return Err("Virtual inheritance is not supported yet (bug 41503).");
 }
 
 // As with DoResolveNonstaticMember, this takes a precomputed offset. It is asynchronous to handle

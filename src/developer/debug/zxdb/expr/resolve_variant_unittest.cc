@@ -21,6 +21,9 @@ namespace zxdb {
 TEST(ResolveVariant, TwoValues) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
+  // Random collection to serve as the enclosing struct.
+  auto coll = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "Foo");
+
   auto a = fxl::MakeRefCounted<Variant>(0, std::vector<LazySymbol>{});
   auto b = fxl::MakeRefCounted<Variant>(1, std::vector<LazySymbol>{});
 
@@ -34,25 +37,28 @@ TEST(ResolveVariant, TwoValues) {
   // A value.
   ExprValue a_value(rust_enum, {0});
   fxl::RefPtr<Variant> output;
-  Err err = ResolveVariant(eval_context, a_value, variant_part, &output);
+  Err err = ResolveVariant(eval_context, a_value, coll.get(), variant_part, &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(a.get(), output.get());
 
   // B value.
   ExprValue b_value(rust_enum, {1});
-  err = ResolveVariant(eval_context, b_value, variant_part, &output);
+  err = ResolveVariant(eval_context, b_value, coll.get(), variant_part, &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(b.get(), output.get());
 
   // Invalid value.
   ExprValue invalid_value(rust_enum, {2});
-  err = ResolveVariant(eval_context, invalid_value, variant_part, &output);
+  err = ResolveVariant(eval_context, invalid_value, coll.get(), variant_part, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(err.msg(), "Discriminant value of 0x2 does not match any of the Variants.");
 }
 
 TEST(ResolveVariant, DefaultValue) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+
+  // Random collection to serve as the enclosing struct.
+  auto coll = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "Foo");
 
   // Here b has no discriminant value, making it the default.
   auto a = fxl::MakeRefCounted<Variant>(0, std::vector<LazySymbol>{});
@@ -68,13 +74,13 @@ TEST(ResolveVariant, DefaultValue) {
   // A value.
   ExprValue a_value(rust_enum, {0});
   fxl::RefPtr<Variant> output;
-  Err err = ResolveVariant(eval_context, a_value, variant_part, &output);
+  Err err = ResolveVariant(eval_context, a_value, coll.get(), variant_part, &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(a.get(), output.get());
 
   // Any other value should give B.
   ExprValue b_value(rust_enum, {99});
-  err = ResolveVariant(eval_context, b_value, variant_part, &output);
+  err = ResolveVariant(eval_context, b_value, coll.get(), variant_part, &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(b.get(), output.get());
 }

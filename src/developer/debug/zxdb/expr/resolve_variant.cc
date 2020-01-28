@@ -16,14 +16,16 @@
 namespace zxdb {
 
 Err ResolveVariant(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
-                   const VariantPart* variant_part, fxl::RefPtr<Variant>* result) {
+                   const Collection* collection, const VariantPart* variant_part,
+                   fxl::RefPtr<Variant>* result) {
   // Resolve the discriminant value. It is effectively a member of the enclosing structure.
   const DataMember* discr_member = variant_part->discriminant().Get()->AsDataMember();
   if (!discr_member)
     return Err("Missing discriminant for variant.");
 
-  // Variants don't have static variant members.
-  ErrOrValue discr_value = ResolveNonstaticMember(context, value, FoundMember(discr_member));
+  // Variants don't have static variant members or virtual inheritance.
+  ErrOrValue discr_value =
+      ResolveNonstaticMember(context, value, FoundMember(collection, discr_member));
   if (discr_value.has_error())
     return discr_value.err();
 

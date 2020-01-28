@@ -250,14 +250,14 @@ std::optional<uint64_t> GetDerivedClassOffset(const Type* base, const Type* deri
   std::string base_name = base_collection->GetFullName();
 
   std::optional<uint64_t> result;
-  VisitClassHierarchy(derived_collection,
-                      [&result, &base_name](const Collection* cur, uint64_t offset) {
-                        if (cur->GetFullName() == base_name) {
-                          result = offset;
-                          return VisitResult::kDone;
-                        }
-                        return VisitResult::kContinue;
-                      });
+  VisitClassHierarchy(derived_collection, [&result, &base_name](const InheritancePath& path) {
+    if (path.base()->GetFullName() == base_name) {
+      // TODO(bug 41503) handle non-constant offsets.
+      result = path.BaseOffsetInDerived();
+      return VisitResult::kDone;
+    }
+    return VisitResult::kContinue;
+  });
   return result;
 }
 

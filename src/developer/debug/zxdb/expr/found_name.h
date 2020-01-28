@@ -43,7 +43,7 @@ class FoundName {
   // Constructor for data member variables. The object_ptr may be null if this represents a query on
   // a type with no corresponding variable).
   FoundName(const Variable* object_ptr, FoundMember member);
-  FoundName(const Variable* object_ptr, const DataMember* data_member, uint32_t data_member_offset);
+  FoundName(const Variable* object_ptr, InheritancePath path, const DataMember* data_member);
 
   // Constructor for types.
   explicit FoundName(fxl::RefPtr<Type> type);
