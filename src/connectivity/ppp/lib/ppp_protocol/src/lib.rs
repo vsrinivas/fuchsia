@@ -16,3 +16,16 @@ pub mod ipv6;
 pub mod link;
 
 mod test;
+
+use packet_new::{Buf, Either, EmptyBuf};
+
+/// Flatten an `Either<EmptyBuf, Buf<Vec<u8>>>` into a `Buf<Vec<u8>>`.
+///
+/// `flatten_either` either unwraps the `B` variant or, if the `A` variant is
+/// present, returns `Buf::new(Vec::new())`.
+fn flatten_either(buf: Either<EmptyBuf, Buf<Vec<u8>>>) -> Buf<Vec<u8>> {
+    match buf {
+        Either::A(_) => Buf::new(Vec::new(), ..),
+        Either::B(buf) => buf,
+    }
+}

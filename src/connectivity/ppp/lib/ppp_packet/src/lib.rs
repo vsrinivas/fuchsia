@@ -16,8 +16,9 @@ pub mod records;
 
 use {
     byteorder::NetworkEndian,
-    packet::{
-        BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
+    packet_new::{
+        BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
+        SerializeBuffer,
     },
     std::convert::TryInto,
     thiserror::Error,
@@ -91,29 +92,15 @@ impl PppPacketBuilder {
 }
 
 impl PacketBuilder for PppPacketBuilder {
-    fn header_len(&self) -> usize {
-        std::mem::size_of::<PppHeader>()
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(std::mem::size_of::<PppHeader>(), 0, 0, usize::max_value())
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        usize::max_value()
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer<'_>) {
-        let (mut header, body, _) = buffer.parts();
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+        let (mut header, _, _) = buffer.parts();
         let mut header = &mut header;
-        let header = header.take_obj_front_zero::<PppHeader>().unwrap();
-
-        let mut packet = PppPacket { header, body };
-        packet.header.protocol = U16::new(self.protocol);
+        let mut header = header.take_obj_front_zero::<PppHeader>().unwrap();
+        header.protocol = U16::new(self.protocol);
     }
 }
 
@@ -198,38 +185,30 @@ impl ControlProtocolPacketBuilder {
 }
 
 impl PacketBuilder for ControlProtocolPacketBuilder {
-    fn header_len(&self) -> usize {
-        std::mem::size_of::<ControlProtocolHeader>()
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(
+            std::mem::size_of::<ControlProtocolHeader>(),
+            0,
+            0,
+            usize::max_value(),
+        )
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        usize::max_value()
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer<'_>) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         let mut header = &mut header;
-        let header = header.take_obj_front_zero::<ControlProtocolHeader>().unwrap();
+        let mut header = header.take_obj_front_zero::<ControlProtocolHeader>().unwrap();
 
         let length = body
             .len()
             .try_into()
             .ok()
-            .and_then(|c: u16| c.checked_add(self.header_len() as u16))
+            .and_then(|c: u16| c.checked_add(self.constraints().header_len() as u16))
             .unwrap();
 
-        let mut packet = ControlProtocolPacket { header, body };
-        packet.header.code = self.code;
-        packet.header.identifier = self.identifier;
-        packet.header.length = U16::new(length);
+        header.code = self.code;
+        header.identifier = self.identifier;
+        header.length = U16::new(length);
     }
 }
 
@@ -262,23 +241,11 @@ impl ConfigurationPacketBuilder {
 }
 
 impl PacketBuilder for ConfigurationPacketBuilder {
-    fn header_len(&self) -> usize {
-        0
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(0, 0, 0, usize::max_value())
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        usize::max_value()
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, _buffer: SerializeBuffer<'_>) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
 }
 
 /// Wrapper around a parsed on-the-wire termination packet header and the rest of the packet.
@@ -310,23 +277,11 @@ impl TerminationPacketBuilder {
 }
 
 impl PacketBuilder for TerminationPacketBuilder {
-    fn header_len(&self) -> usize {
-        0
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(0, 0, 0, usize::max_value())
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        usize::max_value()
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, _buffer: SerializeBuffer<'_>) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
 }
 
 /// Wrapper around a parsed on-the-wire code reject packet header and the rest of the packet.
@@ -358,23 +313,11 @@ impl CodeRejectPacketBuilder {
 }
 
 impl PacketBuilder for CodeRejectPacketBuilder {
-    fn header_len(&self) -> usize {
-        0
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(0, 0, 0, usize::max_value())
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        usize::max_value()
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, _buffer: SerializeBuffer<'_>) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
 }
 
 #[derive(FromBytes, AsBytes, Unaligned)]
@@ -430,29 +373,21 @@ impl ProtocolRejectPacketBuilder {
 }
 
 impl PacketBuilder for ProtocolRejectPacketBuilder {
-    fn header_len(&self) -> usize {
-        std::mem::size_of::<ProtocolRejectHeader>()
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(
+            std::mem::size_of::<ProtocolRejectHeader>(),
+            0,
+            0,
+            usize::max_value(),
+        )
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        usize::max_value()
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer<'_>) {
-        let (mut header, body, _) = buffer.parts();
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+        let (mut header, _, _) = buffer.parts();
         let mut header = &mut header;
-        let header = header.take_obj_front_zero::<ProtocolRejectHeader>().unwrap();
+        let mut header = header.take_obj_front_zero::<ProtocolRejectHeader>().unwrap();
 
-        let mut packet = ProtocolRejectPacket { header, body };
-        packet.header.rejected_protocol = U16::new(self.rejected_protocol);
+        header.rejected_protocol = U16::new(self.rejected_protocol);
     }
 }
 
@@ -509,28 +444,15 @@ impl EchoDiscardPacketBuilder {
 }
 
 impl PacketBuilder for EchoDiscardPacketBuilder {
-    fn header_len(&self) -> usize {
-        std::mem::size_of::<EchoDiscardHeader>()
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(std::mem::size_of::<EchoDiscardHeader>(), 0, 0, usize::max_value())
     }
 
-    fn min_body_len(&self) -> usize {
-        0
-    }
-
-    fn max_body_len(&self) -> usize {
-        usize::max_value()
-    }
-
-    fn footer_len(&self) -> usize {
-        0
-    }
-
-    fn serialize(self, mut buffer: SerializeBuffer<'_>) {
-        let (mut header, body, _) = buffer.parts();
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
+        let (mut header, _, _) = buffer.parts();
         let mut header = &mut header;
-        let header = header.take_obj_front_zero::<EchoDiscardHeader>().unwrap();
-        let mut packet = EchoDiscardPacket { header, body };
-        packet.header.magic_number = U32::new(self.magic_number);
+        let mut header = header.take_obj_front_zero::<EchoDiscardHeader>().unwrap();
+        header.magic_number = U32::new(self.magic_number);
     }
 }
 
@@ -542,7 +464,7 @@ mod tests {
             ipv4, ipv6, link,
             records::options::{Options, OptionsSerializer},
         },
-        packet::{Buf, ParseBuffer, Serializer},
+        packet_new::{Buf, InnerPacketBuilder, ParseBuffer, Serializer},
         std::sync::Once,
     };
 
@@ -597,9 +519,10 @@ mod tests {
         let buffer = OptionsSerializer::<link::ControlOptionsImpl, link::ControlOption, _>::new(
             options.iter(),
         )
+        .into_serializer()
         .encapsulate(ControlProtocolPacketBuilder::new(3, identifier))
         .encapsulate(PppPacketBuilder::new(protocol))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
 
@@ -653,9 +576,10 @@ mod tests {
         let buffer = OptionsSerializer::<ipv4::ControlOptionsImpl, ipv4::ControlOption, _>::new(
             options.iter(),
         )
+        .into_serializer()
         .encapsulate(ControlProtocolPacketBuilder::new(4, identifier))
         .encapsulate(PppPacketBuilder::new(protocol))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
 
@@ -710,9 +634,10 @@ mod tests {
         let buffer = OptionsSerializer::<ipv6::ControlOptionsImpl, ipv6::ControlOption, _>::new(
             options.iter(),
         )
+        .into_serializer()
         .encapsulate(ControlProtocolPacketBuilder::new(2, identifier))
         .encapsulate(PppPacketBuilder::new(protocol))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
 

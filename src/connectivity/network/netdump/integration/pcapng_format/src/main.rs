@@ -10,7 +10,7 @@ use {
     fuchsia_async as fasync,
     helper::*,
     net_types::ip::IpVersion,
-    packet::BufferView,
+    packet_new::BufferView,
     std::net::Ipv4Addr,
     std::net::UdpSocket,
     std::path::Path,

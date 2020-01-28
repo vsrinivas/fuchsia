@@ -14,7 +14,7 @@ use {
             CODE_TERMINATE_REQUEST, PROTOCOL_IPV6_CONTROL,
         },
     },
-    packet::{Buffer, ParsablePacket, ParseBuffer, Serializer},
+    packet_new::{GrowBuffer, InnerPacketBuilder, ParsablePacket, ParseBuffer, Serializer},
     ppp_packet::{
         ipv6,
         records::options::{Options, OptionsSerializer},
@@ -47,11 +47,16 @@ impl ppp::ControlProtocol for ControlProtocol {
             .map(|options| options.iter().collect())
     }
 
-    fn serialize_options(options: &[ipv6::ControlOption]) -> ::packet::Buf<Vec<u8>> {
-        OptionsSerializer::<ipv6::ControlOptionsImpl, ipv6::ControlOption, _>::new(options.iter())
-            .serialize_outer()
+    fn serialize_options(options: &[ipv6::ControlOption]) -> ::packet_new::Buf<Vec<u8>> {
+        crate::flatten_either(
+            OptionsSerializer::<ipv6::ControlOptionsImpl, ipv6::ControlOption, _>::new(
+                options.iter(),
+            )
+            .into_serializer()
+            .serialize_vec_outer()
             .ok()
-            .unwrap()
+            .unwrap(),
+        )
     }
 }
 
@@ -80,7 +85,7 @@ pub async fn receive<'a, T, B>(
     resumable_state: ProtocolState<ControlProtocol>,
     _link_opened: &'a Opened<link::ControlProtocol>,
     transmitter: &'a T,
-    mut buf: ::packet::Buf<B>,
+    mut buf: ::packet_new::Buf<B>,
     time: std::time::Instant,
 ) -> Result<ProtocolState<ControlProtocol>, ProtocolError<ControlProtocol>>
 where

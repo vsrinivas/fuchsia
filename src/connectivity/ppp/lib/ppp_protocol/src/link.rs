@@ -11,7 +11,7 @@ use {
         CODE_CONFIGURE_REJECT, CODE_CONFIGURE_REQUEST, CODE_TERMINATE_ACK, CODE_TERMINATE_REQUEST,
         DEFAULT_MAX_FRAME, PROTOCOL_LINK_CONTROL,
     },
-    packet::{Buf, Buffer, BufferSerializer, ParsablePacket, ParseBuffer, Serializer},
+    packet_new::{Buf, GrowBuffer, InnerPacketBuilder, ParsablePacket, ParseBuffer, Serializer},
     ppp_packet::{
         link,
         records::options::{Options, OptionsSerializer},
@@ -55,11 +55,16 @@ impl ppp::ControlProtocol for ControlProtocol {
             .map(|options| options.iter().collect())
     }
 
-    fn serialize_options(options: &[link::ControlOption]) -> ::packet::Buf<Vec<u8>> {
-        OptionsSerializer::<link::ControlOptionsImpl, link::ControlOption, _>::new(options.iter())
-            .serialize_outer()
+    fn serialize_options(options: &[link::ControlOption]) -> ::packet_new::Buf<Vec<u8>> {
+        crate::flatten_either(
+            OptionsSerializer::<link::ControlOptionsImpl, link::ControlOption, _>::new(
+                options.iter(),
+            )
+            .into_serializer()
+            .serialize_vec_outer()
             .ok()
-            .unwrap()
+            .unwrap(),
+        )
     }
 }
 
@@ -80,7 +85,7 @@ where
 pub async fn receive<T, B>(
     resumable_state: ProtocolState<ControlProtocol>,
     transmitter: &T,
-    mut buf: ::packet::Buf<B>,
+    mut buf: ::packet_new::Buf<B>,
     time: std::time::Instant,
 ) -> Result<ProtocolState<ControlProtocol>, ProtocolError<ControlProtocol>>
 where
@@ -189,13 +194,13 @@ pub async fn tx_protocol_rej<T, B>(
 ) -> Result<(), FrameError>
 where
     T: FrameTransmitter,
-    B: ::packet::BufferMut,
+    B: ::packet_new::BufferMut,
 {
-    let frame = ::packet::BufferSerializer::new_vec(buf)
+    let frame = buf
         .encapsulate(ProtocolRejectPacketBuilder::new(rejected_protocol))
         .encapsulate(ControlProtocolPacketBuilder::new(CODE_PROTOCOL_REJECT, identifier))
         .encapsulate(PppPacketBuilder::new(PROTOCOL_LINK_CONTROL))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
     // truncate the end bytes
@@ -213,11 +218,11 @@ async fn tx_echo_reply<T>(
 where
     T: FrameTransmitter,
 {
-    let frame = BufferSerializer::new_vec(Buf::new(&mut [], ..))
+    let frame = Buf::new(&mut [], ..)
         .encapsulate(EchoDiscardPacketBuilder::new(magic_number))
         .encapsulate(ControlProtocolPacketBuilder::new(CODE_ECHO_REPLY, identifier))
         .encapsulate(PppPacketBuilder::new(PROTOCOL_LINK_CONTROL))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
     transmitter.tx_frame(frame.as_ref()).await

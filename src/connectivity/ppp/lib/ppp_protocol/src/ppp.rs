@@ -6,7 +6,7 @@
 
 use {
     fuchsia_async::futures::future::BoxFuture,
-    packet::{Buf, BufferMut, BufferSerializer, Serializer},
+    packet_new::{Buf, BufferMut, Serializer},
     ppp_packet::{
         CodeRejectPacketBuilder, ConfigurationPacketBuilder, ControlProtocolPacketBuilder,
         PppPacketBuilder, TerminationPacketBuilder,
@@ -327,11 +327,11 @@ where
     T: FrameTransmitter,
     P: ControlProtocol,
 {
-    let frame = BufferSerializer::new_vec(P::serialize_options(options))
+    let frame = P::serialize_options(options)
         .encapsulate(ConfigurationPacketBuilder::new())
         .encapsulate(ControlProtocolPacketBuilder::new(CODE_CONFIGURE_REQUEST, identifier))
         .encapsulate(PppPacketBuilder::new(P::PROTOCOL_IDENTIFIER))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
     transmitter.tx_frame(frame.as_ref()).await
@@ -347,11 +347,11 @@ where
     T: FrameTransmitter,
     P: ControlProtocol,
 {
-    let frame = BufferSerializer::new_vec(P::serialize_options(options))
+    let frame = P::serialize_options(options)
         .encapsulate(ConfigurationPacketBuilder::new())
         .encapsulate(ControlProtocolPacketBuilder::new(CODE_CONFIGURE_ACK, identifier))
         .encapsulate(PppPacketBuilder::new(P::PROTOCOL_IDENTIFIER))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
     transmitter.tx_frame(frame.as_ref()).await
@@ -367,11 +367,11 @@ where
     T: FrameTransmitter,
     P: ControlProtocol,
 {
-    let frame = BufferSerializer::new_vec(P::serialize_options(options))
+    let frame = P::serialize_options(options)
         .encapsulate(ConfigurationPacketBuilder::new())
         .encapsulate(ControlProtocolPacketBuilder::new(CODE_CONFIGURE_REJECT, identifier))
         .encapsulate(PppPacketBuilder::new(P::PROTOCOL_IDENTIFIER))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
     transmitter.tx_frame(frame.as_ref()).await
@@ -383,11 +383,11 @@ where
     T: FrameTransmitter,
     P: ControlProtocol,
 {
-    let frame = BufferSerializer::new_vec(Buf::new(&mut [], ..))
+    let frame = Buf::new(&mut [], ..)
         .encapsulate(TerminationPacketBuilder::new())
         .encapsulate(ControlProtocolPacketBuilder::new(CODE_TERMINATE_REQUEST, identifier))
         .encapsulate(PppPacketBuilder::new(P::PROTOCOL_IDENTIFIER))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
     transmitter.tx_frame(frame.as_ref()).await
@@ -399,11 +399,11 @@ where
     T: FrameTransmitter,
     P: ControlProtocol,
 {
-    let frame = BufferSerializer::new_vec(Buf::new(&mut [], ..))
+    let frame = Buf::new(&mut [], ..)
         .encapsulate(TerminationPacketBuilder::new())
         .encapsulate(ControlProtocolPacketBuilder::new(CODE_TERMINATE_ACK, identifier))
         .encapsulate(PppPacketBuilder::new(P::PROTOCOL_IDENTIFIER))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
     transmitter.tx_frame(frame.as_ref()).await
@@ -421,11 +421,11 @@ where
     B: BufferMut,
 {
     buf.shrink_front_to(0);
-    let frame = BufferSerializer::new_vec(buf)
+    let frame = buf
         .encapsulate(CodeRejectPacketBuilder::new())
         .encapsulate(ControlProtocolPacketBuilder::new(CODE_CODE_REJECT, identifier))
         .encapsulate(PppPacketBuilder::new(P::PROTOCOL_IDENTIFIER))
-        .serialize_outer()
+        .serialize_vec_outer()
         .ok()
         .unwrap();
     // truncate the end bytes

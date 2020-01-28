@@ -17,7 +17,7 @@
 //! [`options`]: crate::wire::util::records::options
 
 use fuchsia_syslog::macros::*;
-use packet::{BufferView, BufferViewMut, InnerPacketBuilder};
+use packet_new::{BufferView, BufferViewMut, InnerPacketBuilder};
 use std::marker::PhantomData;
 use std::ops::Deref;
 use zerocopy::ByteSlice;
@@ -285,9 +285,9 @@ where
     /// `serialize_records` expects that `buffer` has enough bytes to serialize
     /// the contained records (as obtained from `records_bytes_len`, otherwise
     /// it's considered a violation of the API contract and the call will panic.
-    fn serialize_records(self, buffer: &mut [u8]) {
+    fn serialize_records(&self, buffer: &mut [u8]) {
         let mut b = &mut &mut buffer[..];
-        for r in self.records {
+        for r in self.records.clone() {
             // SECURITY: Take a zeroed buffer from b to prevent leaking
             // information from packets previously stored in this buffer.
             S::serialize(b.take_front_zero(S::record_length(r)).unwrap(), r);
@@ -304,7 +304,7 @@ where
         self.records_bytes_len()
     }
 
-    fn serialize(self, buffer: &mut [u8]) {
+    fn serialize(&self, buffer: &mut [u8]) {
         self.serialize_records(buffer)
     }
 }
@@ -511,7 +511,7 @@ impl<'a> AsRef<[u8]> for LongLivedBuff<'a> {
     }
 }
 
-impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
+impl<'a> packet_new::BufferView<&'a [u8]> for LongLivedBuff<'a> {
     fn take_front(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
             let (prefix, rest) = std::mem::replace(&mut self.0, &[]).split_at(n);
@@ -540,7 +540,7 @@ impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use packet::BufferView;
+    use packet_new::BufferView;
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     const DUMMY_BYTES: [u8; 16] = [
@@ -957,7 +957,7 @@ mod test {
 /// can be implemented using the same utility with a bit of customization.
 pub mod options {
     use super::*;
-    use packet::BufferView;
+    use packet_new::BufferView;
 
     /// A parsed set of header options.
     ///
@@ -1188,7 +1188,7 @@ pub mod options {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use packet::Serializer;
+        use packet_new::Serializer;
 
         #[derive(Debug)]
         struct DummyOptionsImpl;
@@ -1420,7 +1420,7 @@ pub mod options {
                 .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
             let ser = OptionsSerializer::<DummyOptionsImpl, _, _>::new(collected.iter());
 
-            let serialized = ser.serialize_outer().unwrap().as_ref().to_vec();
+            let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
 
             assert_eq!(serialized, bytes);
         }
@@ -1443,7 +1443,7 @@ pub mod options {
                 .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
             let ser = OptionsSerializer::<DummyNdpOptionsImpl, _, _>::new(collected.iter());
 
-            let serialized = ser.serialize_outer().unwrap().as_ref().to_vec();
+            let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
 
             assert_eq!(serialized, bytes);
         }
