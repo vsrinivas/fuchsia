@@ -43,6 +43,9 @@ use crate::factory_store::facade::FactoryStoreFacade;
 // File related includes
 use crate::file::facade::FileFacade;
 
+// Hwinfo related includes
+use crate::hwinfo::facade::HwinfoFacade;
+
 // Logging related includes
 use crate::logging::facade::LoggingFacade;
 
@@ -108,6 +111,7 @@ impl Sl4f {
                 "file_facade" => FileFacade::new(),
                 "gatt_client_facade" => GattClientFacade::new(),
                 "gatt_server_facade" => GattServerFacade::new(),
+                "hwinfo_facade" => HwinfoFacade::new(),
                 "logging_facade" => LoggingFacade::new(),
                 "netstack_facade" => NetstackFacade::new(),
                 "paver" => PaverFacade::new(),
