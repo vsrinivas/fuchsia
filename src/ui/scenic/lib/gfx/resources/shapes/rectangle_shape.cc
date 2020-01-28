@@ -21,18 +21,5 @@ bool RectangleShape::ContainsPoint(const escher::vec2& point) const {
   return pt.x >= 0.f && pt.y >= 0.f && pt.x <= width_ && pt.y <= height_;
 }
 
-escher::Object RectangleShape::GenerateRenderObject(const escher::mat4& transform,
-                                                    const escher::MaterialPtr& material) {
-  // Scale Escher's built-in rect mesh to have bounds (0,0),(width,height), then
-  // translate it so that it is centered at (0,0).
-  // TODO: optimize.
-  escher::mat4 rect_transform(1);
-  rect_transform[0][0] = width_;
-  rect_transform[1][1] = height_;
-  rect_transform[3][0] = -0.5 * width_;
-  rect_transform[3][1] = -0.5 * height_;
-  return escher::Object::NewRect(transform * rect_transform, material);
-}
-
 }  // namespace gfx
 }  // namespace scenic_impl

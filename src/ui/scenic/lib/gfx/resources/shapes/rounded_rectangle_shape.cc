@@ -20,10 +20,5 @@ bool RoundedRectangleShape::ContainsPoint(const escher::vec2& point) const {
   return spec_.ContainsPoint(point);
 }
 
-escher::Object RoundedRectangleShape::GenerateRenderObject(const escher::mat4& transform,
-                                                           const escher::MaterialPtr& material) {
-  return escher::Object(transform, nullptr, material);
-}
-
 }  // namespace gfx
 }  // namespace scenic_impl

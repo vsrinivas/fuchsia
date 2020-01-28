@@ -16,11 +16,6 @@ const ResourceTypeInfo MeshShape::kTypeInfo = {ResourceType::kShape | ResourceTy
 MeshShape::MeshShape(Session* session, SessionId session_id, ResourceId id)
     : Shape(session, session_id, id, MeshShape::kTypeInfo) {}
 
-escher::Object MeshShape::GenerateRenderObject(const escher::mat4& transform,
-                                               const escher::MaterialPtr& material) {
-  return escher::Object(transform, mesh_, material);
-}
-
 bool MeshShape::GetIntersection(const escher::ray4& ray, float* out_distance) const {
   FXL_DCHECK(out_distance);
   // TODO(SCN-274): implement mesh-ray intersection.

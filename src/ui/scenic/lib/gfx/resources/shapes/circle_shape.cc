@@ -18,10 +18,6 @@ bool CircleShape::ContainsPoint(const escher::vec2& point) const {
   return point.x * point.x + point.y * point.y <= radius_ * radius_;
 }
 
-escher::Object CircleShape::GenerateRenderObject(const escher::mat4& transform,
-                                                 const escher::MaterialPtr& material) {
-  return escher::Object::NewCircle(transform, radius_, material);
-}
 
 }  // namespace gfx
 }  // namespace scenic_impl

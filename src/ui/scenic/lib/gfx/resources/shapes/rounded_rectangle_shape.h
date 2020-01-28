@@ -32,10 +32,6 @@ class RoundedRectangleShape final : public PlanarShape {
   // |PlanarShape|.
   bool ContainsPoint(const escher::vec2& point) const override;
 
-  // |Shape|.
-  escher::Object GenerateRenderObject(const escher::mat4& transform,
-                                      const escher::MaterialPtr& material) override;
-
   const escher::RoundedRectSpec& spec() const { return spec_; }
 
  private:

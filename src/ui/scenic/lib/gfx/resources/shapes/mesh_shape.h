@@ -36,10 +36,6 @@ class MeshShape final : public Shape {
   // |Shape|.
   bool GetIntersection(const escher::ray4& ray, float* out_distance) const override;
 
-  // |Shape|.
-  escher::Object GenerateRenderObject(const escher::mat4& transform,
-                                      const escher::MaterialPtr& material) override;
-
   const escher::MeshPtr& escher_mesh() const { return mesh_; }
   const BufferPtr& index_buffer() const { return index_buffer_; }
   const BufferPtr& vertex_buffer() const { return vertex_buffer_; }
