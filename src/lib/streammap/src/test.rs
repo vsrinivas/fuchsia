@@ -13,6 +13,7 @@ use futures::{
     task::{Context, Poll},
 };
 use futures_test::task::new_count_waker;
+use maplit::hashset;
 use std::collections::HashSet;
 use test_util::assert_matches;
 
@@ -170,4 +171,68 @@ async fn ended_stream_is_removed_from_map() -> Result<(), anyhow::Error> {
     assert_eq!(stream_count().await, 0);
 
     Ok(())
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Ord, Eq, Hash)]
+struct TestStream(Option<usize>);
+
+impl FusedStream for TestStream {
+    fn is_terminated(&self) -> bool {
+        self.0.is_none()
+    }
+}
+
+impl Stream for TestStream {
+    type Item = usize;
+    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Option<Self::Item>> {
+        Poll::Ready(self.0.take())
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn for_each_stream() {
+    let mut stream_map: StreamMap<usize, TestStream> = StreamMap::new();
+
+    stream_map.insert(0, TestStream(Some(0))).await;
+    stream_map.insert(1, TestStream(Some(1))).await;
+    stream_map.insert(2, TestStream(Some(2))).await;
+
+    let mut seen = hashset! {};
+    stream_map
+        .for_each_stream(|key: usize, stream: &TestStream| {
+            seen.insert((key, *stream));
+        })
+        .await;
+
+    assert_eq!(
+        seen,
+        hashset! {(0, TestStream(Some(0))), (1, TestStream(Some(1))), (2, TestStream(Some(2)))}
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn for_each_stream_mut() {
+    let mut stream_map = StreamMap::new();
+
+    stream_map.insert(0, TestStream(Some(0))).await;
+    stream_map.insert(1, TestStream(Some(1))).await;
+    stream_map.insert(2, TestStream(Some(2))).await;
+
+    stream_map
+        .for_each_stream_mut(|k, v| {
+            *v = TestStream(Some(k + 1));
+        })
+        .await;
+
+    let mut seen = hashset! {};
+    stream_map
+        .for_each_stream(|key: usize, stream: &TestStream| {
+            seen.insert((key, *stream));
+        })
+        .await;
+
+    assert_eq!(
+        seen,
+        hashset! {(0, TestStream(Some(1))), (1, TestStream(Some(2))), (2, TestStream(Some(3)))}
+    );
 }

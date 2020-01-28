@@ -18,8 +18,8 @@ use futures::{
     Stream,
 };
 use rental::*;
-use std::future::Future;
 use std::collections::HashMap;
+use std::future::Future;
 use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -141,6 +141,16 @@ impl<K: Copy + Eq + Hash + 'static, St: Stream + FusedStream + Unpin + 'static> 
             }
             None => false,
         }
+    }
+
+    /// Execute `f` on an immutable reference to every stream.
+    pub async fn for_each_stream(&self, mut f: impl FnMut(K, &St)) {
+        self.store.lock().await.iter().for_each(move |(k, st)| f(*k, st));
+    }
+
+    /// Execute `f` on a mutable reference to every stream.
+    pub async fn for_each_stream_mut(&mut self, mut f: impl FnMut(K, &mut St)) {
+        self.store.lock().await.iter_mut().for_each(move |(k, st)| f(*k, st));
     }
 
     #[cfg(test)]
