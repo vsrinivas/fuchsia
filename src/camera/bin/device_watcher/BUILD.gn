@@ -4,10 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
-
-declare_args() {
-  camera_debug = false
-}
+import("//src/camera/debug.gni")
 
 executable("bin") {
   output_name = "device_watcher"
@@ -34,13 +31,7 @@ executable("bin") {
     "//zircon/system/fidl/fuchsia-hardware-camera",
   ]
 
-  if (camera_debug) {
-    fx_log_debug = "(0)"
-  } else {
-    fx_log_debug = "(-1)"
-  }
-
-  defines = [ "FX_LOG_DEBUG=${fx_log_debug}" ]
+  defines = [ camera_debug_define ]
 }
 
 fidl("fuchsia.camera.test") {
