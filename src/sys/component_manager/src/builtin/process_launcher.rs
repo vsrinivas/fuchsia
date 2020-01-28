@@ -26,6 +26,7 @@ use {
     std::{
         convert::{TryFrom, TryInto},
         ffi::CString,
+        path::PathBuf,
         sync::{Arc, Weak},
     },
     thiserror::Error,
@@ -305,7 +306,7 @@ impl CapabilityProvider for ProcessLauncherCapabilityProvider {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<fproc::LauncherMarker>::new(server_end);
@@ -381,9 +382,7 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Framework {
-            capability: FrameworkCapability::Protocol(
-                PROCESS_LAUNCHER_CAPABILITY_PATH.clone(),
-            ),
+            capability: FrameworkCapability::Protocol(PROCESS_LAUNCHER_CAPABILITY_PATH.clone()),
             scope_moniker: None,
         };
 
@@ -400,7 +399,7 @@ mod tests {
 
         let capability_provider = capability_provider.lock().await.take();
         if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, String::new(), server).await?;
+            capability_provider.open(0, 0, PathBuf::new(), server).await?;
         }
 
         let launcher_proxy = ClientEnd::<fproc::LauncherMarker>::new(client)

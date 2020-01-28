@@ -95,6 +95,7 @@ mod tests {
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         futures::lock::Mutex,
+        std::path::PathBuf,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -117,7 +118,7 @@ mod tests {
 
         let (client, server) = zx::Channel::create()?;
         if let Some(provider) = provider.lock().await.take() {
-            provider.open(0, 0, String::new(), server).await?;
+            provider.open(0, 0, PathBuf::new(), server).await?;
         }
 
         // We do not call get, as we passed an invalid handle to RootResource,

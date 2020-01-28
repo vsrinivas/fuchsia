@@ -10,7 +10,7 @@ use {
     async_trait::async_trait,
     cm_rust::*,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    std::collections::HashSet,
+    std::{collections::HashSet, path::PathBuf},
     thiserror::Error,
 };
 
@@ -174,7 +174,7 @@ pub trait CapabilityProvider: Send + Sync {
         self: Box<Self>,
         flags: u32,
         open_mode: u32,
-        relative_path: String,
+        relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError>;
 }
@@ -184,6 +184,8 @@ pub trait CapabilityProvider: Send + Sync {
 pub enum ComponentCapability {
     Use(UseDecl),
     Expose(ExposeDecl),
+    /// Models a capability hosted from the exposed dir which is used at runtime.
+    UsedExpose(ExposeDecl),
     Offer(OfferDecl),
     Storage(StorageDecl),
     Runner(RunnerDecl),
@@ -203,6 +205,21 @@ impl ComponentCapability {
                 ExposeDecl::Directory(ExposeDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
+            ComponentCapability::UsedExpose(expose) => {
+                // A UsedExpose needs to be matched to the ExposeDecl the UsedExpose wraps at the
+                // same component. This is accomplished by returning the ExposeDecl's target path.
+                // Effectively, it's as if the UsedExposed were a UseDecl with both the source and
+                // target path equal to `target_path`.
+                match expose {
+                    ExposeDecl::Protocol(ExposeProtocolDecl { target_path, .. }) => {
+                        Some(target_path)
+                    }
+                    ExposeDecl::Directory(ExposeDirectoryDecl { target_path, .. }) => {
+                        Some(target_path)
+                    }
+                    _ => None,
+                }
+            }
             ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Protocol(OfferProtocolDecl { source_path, .. }) => Some(source_path),
                 OfferDecl::Directory(OfferDirectoryDecl { source_path, .. }) => Some(source_path),
@@ -227,6 +244,14 @@ impl ComponentCapability {
         }
     }
 
+    /// Returns the source path or name of the capability as a string, useful for debugging.
+    pub fn source_id(&self) -> String {
+        self.source_path()
+            .map(|p| format!("{}", p))
+            .or_else(|| self.source_name().map(|n| format!("{}", n)))
+            .unwrap_or_default()
+    }
+
     /// Returns the `ExposeDecl` that exposes the capability, if it exists.
     pub fn find_expose_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a ExposeDecl> {
         decl.exposes.iter().find(|&expose| match (self, expose) {
@@ -239,6 +264,10 @@ impl ComponentCapability {
                 ComponentCapability::Expose(ExposeDecl::Protocol(parent_expose)),
                 ExposeDecl::Protocol(expose),
             ) => parent_expose.source_path == expose.target_path,
+            (
+                ComponentCapability::UsedExpose(ExposeDecl::Protocol(used_expose)),
+                ExposeDecl::Protocol(expose),
+            ) => used_expose.target_path == expose.target_path,
             // Directory exposed to me that matches a directory `expose` or `offer`.
             (
                 ComponentCapability::Offer(OfferDecl::Directory(parent_offer)),
@@ -248,6 +277,10 @@ impl ComponentCapability {
                 ComponentCapability::Expose(ExposeDecl::Directory(parent_expose)),
                 ExposeDecl::Directory(expose),
             ) => parent_expose.source_path == expose.target_path,
+            (
+                ComponentCapability::UsedExpose(ExposeDecl::Directory(used_expose)),
+                ExposeDecl::Directory(expose),
+            ) => used_expose.target_path == expose.target_path,
             // Runner exposed to me that has a matching `expose` or `offer`.
             (
                 ComponentCapability::Offer(OfferDecl::Runner(parent_offer)),

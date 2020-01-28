@@ -23,6 +23,7 @@ use {
         lock::Mutex,
         FutureExt,
     },
+    log::*,
     std::sync::Arc,
 };
 
@@ -61,7 +62,6 @@ impl Model {
                 .collect();
             (decl, live_child_descriptors)
         };
-        let runner = Realm::resolve_runner(&realm, self).await?;
 
         // Pre-flight check: if the component is already started, return now (and don't invoke the
         // hook).
@@ -82,6 +82,13 @@ impl Model {
                 return res;
             }
         }
+        let runner = {
+            let res = Realm::resolve_runner(&realm, self).await;
+            res.map_err(|e| {
+                error!("failed to resolve runner for {}: {:?}", realm.abs_moniker, e);
+                e
+            })?
+        };
 
         // Generate the Runtime which will be set in the Execution.
         let (pending_runtime, start_info, controller_server) =

@@ -28,6 +28,7 @@ use {
     log::*,
     std::{
         convert::{TryFrom, TryInto},
+        path::{Path, PathBuf},
         sync::{Arc, Weak},
     },
 };
@@ -56,7 +57,7 @@ async fn use_framework_service() {
             self: Box<Self>,
             _flags: u32,
             _open_mode: u32,
-            _relative_path: String,
+            _relative_path: PathBuf,
             server_end: zx::Channel,
         ) -> Result<(), ModelError> {
             let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
@@ -264,11 +265,7 @@ async fn use_from_parent() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["b:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -354,11 +351,7 @@ async fn use_from_grandparent() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["b:0", "c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -505,11 +498,7 @@ async fn use_from_sibling_no_root() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["b:0", "c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -589,11 +578,7 @@ async fn use_from_sibling_root() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -697,11 +682,7 @@ async fn use_from_niece() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -875,21 +856,13 @@ async fn use_kitchen_sink() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["b:0", "e:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["b:0", "e:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["b:0", "e:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
-    test.check_use(
-        vec!["c:0", "f:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["c:0", "f:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["c:0", "f:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -913,7 +886,7 @@ async fn use_from_component_manager_namespace() {
                 source_path: CapabilityPath::try_from("/use_from_cm_namespace/data/foo").unwrap(),
                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                 rights: fio2::Operations::Connect,
-                    subdir: None,
+                subdir: None,
             }))
             .use_(UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Realm,
@@ -925,11 +898,7 @@ async fn use_from_component_manager_namespace() {
     )];
     let test = RoutingTest::new("a", components).await;
     test.install_hippo_dir("/use_from_cm_namespace");
-    test.check_use(
-        vec![].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec![].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec![].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -994,11 +963,7 @@ async fn offer_from_component_manager_namespace() {
     ];
     let test = RoutingTest::new("a", components).await;
     test.install_hippo_dir("/offer_from_cm_namespace");
-    test.check_use(
-        vec!["b:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -1042,11 +1007,7 @@ async fn use_not_offered() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["b:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
-    )
-    .await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(false)).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
@@ -1108,11 +1069,7 @@ async fn use_offer_source_not_exposed() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
-    )
-    .await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(false)).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
@@ -1181,11 +1138,7 @@ async fn use_offer_source_not_offered() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["b:0", "c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
-    )
-    .await;
+    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(false)).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
@@ -1254,11 +1207,7 @@ async fn use_from_expose() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["b:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
-    )
-    .await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(false)).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
@@ -1338,11 +1287,7 @@ async fn use_from_expose_to_framework() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
-    )
-    .await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(false)).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
@@ -1402,11 +1347,7 @@ async fn offer_from_non_executable() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["b:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
-    )
-    .await;
+    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(false)).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
@@ -1520,11 +1461,7 @@ async fn use_in_collection() {
         },
     )
     .await;
-    test.check_use(
-        vec!["b:0", "coll:c:1"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use(vec!["b:0", "coll:c:1"].into(), CheckUse::default_directory(true)).await;
     test.check_use(
         vec!["b:0", "coll:d:2"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -1607,11 +1544,7 @@ async fn use_in_collection_not_offered() {
         },
     )
     .await;
-    test.check_use(
-        vec!["b:0", "coll:c:1"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
-    )
-    .await;
+    test.check_use(vec!["b:0", "coll:c:1"].into(), CheckUse::default_directory(false)).await;
     test.check_use(
         vec!["b:0", "coll:c:1"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
@@ -1630,6 +1563,220 @@ async fn wait_for_runner_request(
         recv.next().await.expect("Channel closed before request was received.");
     responder.send(&mut Ok(())).expect("Failed to send response over channel.");
     start_info
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: offers directory /data/foo from self with subdir 's1/s2'
+/// b: offers directory /data/foo from realm with subdir 's3'
+/// c: uses /data/foo as /data/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_directory_with_subdir_from_grandparent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Self_,
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: Some(PathBuf::from("s1/s2")),
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Realm,
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target: OfferTarget::Child("c".to_string()),
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: Some(PathBuf::from("s3")),
+                }))
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Realm,
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                    subdir: Some(PathBuf::from("s4")),
+                }))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.create_static_file(Path::new("foo/s1/s2/s3/s4/inner"), "hippo")
+        .await
+        .expect("failed to create file");
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Directory {
+            path: default_directory_capability(),
+            file: PathBuf::from("inner"),
+            should_succeed: true,
+        },
+    )
+    .await;
+    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(false)).await;
+}
+
+///   a
+///  / \
+/// b   c
+///
+///
+/// b: exposes directory /data/foo from self with subdir 's1/s2'
+/// a: offers directory /data/foo from `b` to `c` with subdir 's3'
+/// c: uses /data/foo as /data/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_directory_with_subdir_from_sibling() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Child("b".to_string()),
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target: OfferTarget::Child("c".to_string()),
+                    target_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: Some(PathBuf::from("s3")),
+                }))
+                .add_lazy_child("b")
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target: ExposeTarget::Realm,
+                    target_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: Some(PathBuf::from("s1/s2")),
+                }))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Realm,
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                    subdir: None,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.create_static_file(Path::new("foo/s1/s2/s3/inner"), "hippo")
+        .await
+        .expect("failed to create file");
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::Directory {
+            path: default_directory_capability(),
+            file: PathBuf::from("inner"),
+            should_succeed: true,
+        },
+    )
+    .await;
+    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(false)).await;
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// c: exposes /data/foo from self
+/// b: exposes /data/foo from `c` with subdir `s1/s2`
+/// a: exposes /data/foo from `b` with subdir `s3` as /data/hippo
+/// use /data/hippo from a's exposed dir
+#[fuchsia_async::run_singlethreaded(test)]
+async fn expose_directory_with_subdir() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Child("b".to_string()),
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    target: ExposeTarget::Realm,
+                    rights: None,
+                    subdir: Some(PathBuf::from("s3")),
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Child("c".to_string()),
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target: ExposeTarget::Realm,
+                    rights: None,
+                    subdir: Some(PathBuf::from("s1/s2")),
+                }))
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target: ExposeTarget::Realm,
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.create_static_file(Path::new("foo/s1/s2/s3/inner"), "hippo")
+        .await
+        .expect("failed to create file");
+    test.check_use_exposed_dir(
+        vec![].into(),
+        CheckUse::Directory {
+            path: "/data/hippo".try_into().unwrap(),
+            file: PathBuf::from("inner"),
+            should_succeed: true,
+        },
+    )
+    .await;
+    test.check_use_exposed_dir(vec![].into(), CheckUse::default_directory(false)).await;
 }
 
 ///   a
@@ -1826,22 +1973,19 @@ async fn expose_from_self_and_child() {
     let test = RoutingTest::new("a", components).await;
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
-        CheckUse::Directory { path: "/data/bar/hippo".try_into().unwrap(), should_succeed: true },
-    )
-    .await;
-    test.check_use_exposed_dir(
-        vec!["b:0"].into(),
-        CheckUse::Protocol {
-            path: "/svc/bar/hippo".try_into().unwrap(),
+        CheckUse::Directory {
+            path: "/data/bar/hippo".try_into().unwrap(),
+            file: PathBuf::from("hippo"),
             should_succeed: true,
         },
     )
     .await;
     test.check_use_exposed_dir(
-        vec!["b:0", "c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
+        vec!["b:0"].into(),
+        CheckUse::Protocol { path: "/svc/bar/hippo".try_into().unwrap(), should_succeed: true },
     )
     .await;
+    test.check_use_exposed_dir(vec!["b:0", "c:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
@@ -1889,21 +2033,13 @@ async fn use_not_exposed() {
     ];
     let test = RoutingTest::new("a", components).await;
     // Capability is only exposed from "c", so it only be usable from there.
-    test.check_use_exposed_dir(
-        vec!["b:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
-    )
-    .await;
+    test.check_use_exposed_dir(vec!["b:0"].into(), CheckUse::default_directory(false)).await;
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
-    test.check_use_exposed_dir(
-        vec!["b:0", "c:0"].into(),
-        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
-    )
-    .await;
+    test.check_use_exposed_dir(vec!["b:0", "c:0"].into(), CheckUse::default_directory(true)).await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
         CheckUse::Protocol { path: default_service_capability(), should_succeed: true },

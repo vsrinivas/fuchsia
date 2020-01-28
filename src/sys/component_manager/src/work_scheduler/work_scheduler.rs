@@ -745,7 +745,7 @@ mod connect_tests {
         fidl_fuchsia_sys2::WorkSchedulerControlMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::lock::Mutex,
-        std::sync::Arc,
+        std::{path::PathBuf, sync::Arc},
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -778,7 +778,7 @@ mod connect_tests {
 
         let capability_provider = capability_provider.lock().await.take();
         if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, String::new(), server).await?;
+            capability_provider.open(0, 0, PathBuf::new(), server).await?;
         }
 
         let work_scheduler_control = ClientEnd::<WorkSchedulerControlMarker>::new(client)

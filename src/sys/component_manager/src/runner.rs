@@ -16,7 +16,10 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::stream::TryStreamExt,
-    std::sync::{Arc, Weak},
+    std::{
+        path::PathBuf,
+        sync::{Arc, Weak},
+    },
 };
 
 /// Provides a hook for routing built-in runners to realms.
@@ -87,7 +90,7 @@ impl CapabilityProvider for RunnerCapabilityProvider {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         let runner = Arc::clone(&self.runner);
@@ -169,7 +172,7 @@ mod tests {
         let (client, server) = fidl::endpoints::create_proxy::<fsys::ComponentRunnerMarker>()?;
         let (_, server_controller) =
             fidl::endpoints::create_endpoints::<fsys::ComponentControllerMarker>()?;
-        provider.open(0, 0, ".".to_string(), server.into_channel()).await?;
+        provider.open(0, 0, PathBuf::from("."), server.into_channel()).await?;
 
         // Start the client.
         client
@@ -195,7 +198,7 @@ mod tests {
 
         // Open a connection to the provider.
         let (client, server) = fidl::endpoints::create_proxy::<fsys::ComponentRunnerMarker>()?;
-        provider.open(0, 0, ".".to_string(), server.into_channel()).await?;
+        provider.open(0, 0, PathBuf::from("."), server.into_channel()).await?;
 
         // Ensure errors are propagated back to the caller.
         //

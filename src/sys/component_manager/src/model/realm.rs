@@ -17,7 +17,7 @@ use {
     },
     anyhow::format_err,
     clonable_error::ClonableError,
-    cm_rust::{self, CapabilityPath, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
+    cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -36,6 +36,7 @@ use {
         clone::Clone,
         collections::{HashMap, HashSet},
         fmt, i64,
+        path::PathBuf,
         sync::{Arc, Weak},
     },
 };
@@ -450,7 +451,7 @@ impl Realm {
         &self,
         flags: u32,
         open_mode: u32,
-        path: &CapabilityPath,
+        path: PathBuf,
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = ServerEnd::new(server_chan);
@@ -471,8 +472,8 @@ impl Realm {
             &runtime.outgoing_dir.as_ref().ok_or(ModelError::capability_discovery_error(
                 format_err!("component hosting capability is non-executable: {}", self.abs_moniker),
             ))?;
-        let path = path.to_string();
-        let path = io_util::canonicalize_path(&path);
+        let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
+        let path = io_util::canonicalize_path(path);
         out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
             ModelError::capability_discovery_error(format_err!(
                 "failed to open outgoing dir for {}: {}",

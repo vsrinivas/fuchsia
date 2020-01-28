@@ -44,7 +44,7 @@ use {
         convert::{TryFrom, TryInto},
         default::Default,
         ffi::CString,
-        path::Path,
+        path::{Path, PathBuf},
         ptr,
         sync::Arc,
     },
@@ -68,6 +68,7 @@ pub enum CheckUse {
     },
     Directory {
         path: CapabilityPath,
+        file: PathBuf,
         should_succeed: bool,
     },
     Storage {
@@ -80,6 +81,16 @@ pub enum CheckUse {
         // test's isolated test directory.
         from_cm_namespace: bool,
     },
+}
+
+impl CheckUse {
+    pub fn default_directory(should_succeed: bool) -> Self {
+        Self::Directory {
+            path: default_directory_capability(),
+            file: PathBuf::from("hippo"),
+            should_succeed,
+        }
+    }
 }
 
 /// Builder for setting up a new `RoutingTest` instance with a non-standard setup.
@@ -194,7 +205,7 @@ impl RoutingTest {
             io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .expect("failed to open temp directory");
-        create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hippo")
+        capability_util::create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hippo")
             .await
             .expect("could not create test file");
 
@@ -281,6 +292,15 @@ impl RoutingTest {
         out_dir.host_fn()(ServerEnd::new(server_chan));
     }
 
+    /// Creates a static file at the given path in the temp directory.
+    pub async fn create_static_file(
+        &self,
+        path: &Path,
+        contents: &str,
+    ) -> Result<(), anyhow::Error> {
+        capability_util::create_static_file(&self.test_dir_proxy, path, contents).await
+    }
+
     /// Set up the given OutDir, installing a set of files assumed to exist by
     /// many tests:
     ///   - A file `/svc/foo` implementing `fidl.examples.echo.Echo`.
@@ -342,8 +362,9 @@ impl RoutingTest {
                 capability_util::call_echo_svc_from_namespace(&namespace, path, should_succeed)
                     .await;
             }
-            CheckUse::Directory { path, should_succeed } => {
-                capability_util::read_data_from_namespace(&namespace, path, should_succeed).await
+            CheckUse::Directory { path, file, should_succeed } => {
+                capability_util::read_data_from_namespace(&namespace, path, &file, should_succeed)
+                    .await
             }
             CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation, .. } => {
                 capability_util::write_file_to_meta_storage(
@@ -405,9 +426,10 @@ impl RoutingTest {
                 )
                 .await;
             }
-            CheckUse::Directory { path, should_succeed } => {
+            CheckUse::Directory { path, file, should_succeed } => {
                 capability_util::read_data_from_exposed_dir(
                     path,
+                    &file,
                     &moniker,
                     &self.model,
                     should_succeed,
@@ -592,7 +614,7 @@ impl RoutingTest {
             .open_outgoing(
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
                 fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
-                &CapabilityPath::try_from("/.").unwrap(), // Root directory.
+                PathBuf::from("/."),
                 server_end.into_channel(),
             )
             .await
@@ -617,13 +639,13 @@ pub mod capability_util {
     pub async fn read_data_from_namespace(
         namespace: &ManagedNamespace,
         path: CapabilityPath,
+        file: &Path,
         should_succeed: bool,
     ) {
         let path = path.to_string();
         let dir_proxy = get_dir_from_namespace(namespace, &path).await;
-        let file = Path::new("hippo");
-        let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
-            .expect("failed to open file");
+        let file_proxy =
+            io_util::open_file(&dir_proxy, file, OPEN_RIGHT_READABLE).expect("failed to open file");
         let res = io_util::read_file(&file_proxy).await;
 
         match should_succeed {
@@ -674,6 +696,30 @@ pub mod capability_util {
             (Ok((s, _)),false) => panic!("we shouldn't be able to access storage, but we opened a file! failed write with status {}", zx::Status::from_raw(s)),
             (Err(e),true) => panic!("failed to write to file when we expected to be able to! {:?}", e),
         }
+    }
+
+    /// Create a file with the given contents in the test dir, along with any subdirectories
+    /// required.
+    pub(super) async fn create_static_file(
+        root: &DirectoryProxy,
+        path: &Path,
+        contents: &str,
+    ) -> Result<(), anyhow::Error> {
+        // Open file, and create subdirectories if required.
+        let file_proxy = if let Some(directory) = path.parent() {
+            let subdir = io_util::create_sub_directories(root, directory)
+                .map_err(|e| e.context(format!("failed to create subdirs for {:?}", path)))?;
+            io_util::open_file(
+                &subdir,
+                &PathBuf::from(path.file_name().unwrap()),
+                OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
+            )?
+        } else {
+            io_util::open_file(root, path, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)?
+        };
+
+        // Write contents.
+        io_util::write_file(&file_proxy, contents).await
     }
 
     pub async fn check_file_in_storage(
@@ -749,6 +795,7 @@ pub mod capability_util {
     /// contain the string "hippo".
     pub async fn read_data_from_exposed_dir<'a>(
         path: CapabilityPath,
+        file: &Path,
         abs_moniker: &'a AbsoluteMoniker,
         model: &'a Model,
         should_succeed: bool,
@@ -756,7 +803,6 @@ pub mod capability_util {
         let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
         open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_DIRECTORY, server_end).await;
         let dir_proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
-        let file = Path::new("hippo");
         let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE);
 
         match file_proxy {
@@ -956,25 +1002,6 @@ pub mod capability_util {
         fvfs::path::Path::validate_and_split(split_string.join("/"))
             .expect("Failed to validate and split path")
     }
-}
-
-/// Create a file with the given contents, along with any subdirectories
-/// required.
-async fn create_static_file(
-    root: &DirectoryProxy,
-    path: &Path,
-    contents: &str,
-) -> Result<(), anyhow::Error> {
-    // Create subdirectories if required.
-    if let Some(directory) = path.parent() {
-        let _ = io_util::create_sub_directories(root, directory)?;
-    }
-
-    // Open file.
-    let file_proxy = io_util::open_file(root, path, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)?;
-
-    // Write contents.
-    io_util::write_file(&file_proxy, contents).await
 }
 
 /// OutDir is used to construct and then host an out directory.

@@ -11,6 +11,7 @@ use {
     },
     anyhow::Error,
     clonable_error::ClonableError,
+    std::path::PathBuf,
     thiserror::Error,
 };
 
@@ -31,6 +32,8 @@ pub enum ModelError {
     Unsupported { feature: String },
     #[error("component declaration invalid")]
     ComponentInvalid,
+    #[error("path is not utf-8: {:?}", path)]
+    PathIsNotUtf8 { path: PathBuf },
     #[error("component manifest invalid {}: {}", url, err)]
     ManifestInvalid {
         url: String,
@@ -112,6 +115,10 @@ impl ModelError {
 
     pub fn unsupported(feature: impl Into<String>) -> ModelError {
         ModelError::Unsupported { feature: feature.into() }
+    }
+
+    pub fn path_is_not_utf8(path: PathBuf) -> ModelError {
+        ModelError::PathIsNotUtf8 { path }
     }
 
     pub fn namespace_creation_failed(err: impl Into<Error>) -> ModelError {

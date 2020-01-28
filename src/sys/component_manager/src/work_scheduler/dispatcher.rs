@@ -104,7 +104,12 @@ async fn dispatch(
         .bind(&target_moniker)
         .await
         .map_err(|err| Error::Model(err))?
-        .open_outgoing(OPEN_RIGHT_READABLE, MODE_TYPE_SERVICE, &*WORKER_CAPABILITY_PATH, server_end)
+        .open_outgoing(
+            OPEN_RIGHT_READABLE,
+            MODE_TYPE_SERVICE,
+            WORKER_CAPABILITY_PATH.to_path_buf(),
+            server_end,
+        )
         .await
         .map_err(|err| Error::Model(err))?;
 

@@ -20,7 +20,10 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, TryStreamExt},
     log::warn,
-    std::sync::{Arc, Weak},
+    std::{
+        path::PathBuf,
+        sync::{Arc, Weak},
+    },
 };
 
 // TODO(markdittmer): Establish
@@ -171,7 +174,7 @@ impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
@@ -237,7 +240,7 @@ impl CapabilityProvider for WorkSchedulerCapabilityProvider {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);

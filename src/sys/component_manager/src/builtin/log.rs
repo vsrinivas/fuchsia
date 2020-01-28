@@ -171,6 +171,7 @@ mod tests {
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
+        std::path::PathBuf,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -214,7 +215,7 @@ mod tests {
 
         let (client, server) = zx::Channel::create()?;
         if let Some(provider) = provider.lock().await.take() {
-            provider.open(0, 0, String::new(), server).await?;
+            provider.open(0, 0, PathBuf::new(), server).await?;
         }
 
         let client = ClientEnd::<fboot::ReadOnlyLogMarker>::new(client)
@@ -277,7 +278,7 @@ mod tests {
 
         let (client, server) = zx::Channel::create()?;
         if let Some(provider) = provider.lock().await.take() {
-            provider.open(0, 0, String::new(), server).await?;
+            provider.open(0, 0, PathBuf::new(), server).await?;
         }
 
         let client = ClientEnd::<fboot::WriteOnlyLogMarker>::new(client)

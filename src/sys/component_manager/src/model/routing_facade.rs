@@ -17,6 +17,7 @@ use {
     fidl_fuchsia_io::NodeMarker,
     fuchsia_async as fasync,
     log::*,
+    std::path::PathBuf,
 };
 
 /// A facade over `Model` that provides factories for routing functions.
@@ -108,7 +109,7 @@ fn route_capability_source(
                         &model,
                         flags,
                         mode,
-                        relative_path,
+                        PathBuf::from(relative_path),
                         source,
                         &target_realm,
                         server_end.into_channel(),
@@ -126,7 +127,7 @@ fn route_capability_source(
 
 fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDecl) -> RoutingFn {
     Box::new(
-        move |flags: u32, mode: u32, _relative_path: String, server_end: ServerEnd<NodeMarker>| {
+        move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let model = model.clone();
             let abs_moniker = abs_moniker.clone();
             let expose = expose.clone();
@@ -138,6 +139,7 @@ fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDec
                         &model,
                         flags,
                         mode,
+                        relative_path,
                         &expose,
                         &target_realm,
                         server_end.into_channel(),

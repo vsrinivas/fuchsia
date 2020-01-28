@@ -24,6 +24,7 @@ use {
     log::warn,
     std::{
         convert::TryInto,
+        path::PathBuf,
         sync::{Arc, Weak},
     },
 };
@@ -152,7 +153,7 @@ impl CapabilityProvider for SystemControllerCapabilityProvider {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<SystemControllerMarker>::new(server_end);
@@ -232,7 +233,7 @@ mod tests {
             endpoints::create_endpoints::<fsys::SystemControllerMarker>()
                 .expect("failed creating channel endpoints");
         sys_controller
-            .open(0, 0, "".to_string(), server_channel.into_channel())
+            .open(0, 0, PathBuf::new(), server_channel.into_channel())
             .await
             .expect("failed to open capability");
         let controller_proxy =

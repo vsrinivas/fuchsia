@@ -18,6 +18,7 @@ use {
             realm::Runtime,
             routing_facade::RoutingFacade,
         },
+        path::PathBufExt,
     },
     async_trait::async_trait,
     cm_rust::ComponentDecl,
@@ -35,6 +36,7 @@ use {
     futures::{future::BoxFuture, lock::Mutex},
     std::{
         collections::HashMap,
+        path::PathBuf,
         sync::{Arc, Weak},
     },
 };
@@ -64,20 +66,22 @@ impl CapabilityProvider for HubCapabilityProvider {
         self: Box<Self>,
         flags: u32,
         open_mode: u32,
-        relative_path: String,
+        in_relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         // Append relative_path to the back of the local relative_path vector, then convert it to a
         // pfsPath.
-        let mut rel_path = self.relative_path.clone();
-        rel_path.push(relative_path.clone());
-        let dir_path = pfsPath::validate_and_split(rel_path.join("/"));
-        if dir_path.is_err() {
-            return Err(ModelError::open_directory_error(self.abs_moniker.clone(), relative_path));
-        };
-        self.hub_inner
-            .open(&self.abs_moniker, flags, open_mode, dir_path.unwrap(), server_end)
-            .await?;
+        let base_path: PathBuf = self.relative_path.iter().collect();
+        let mut relative_path = base_path
+            .attach(in_relative_path.clone())
+            .to_str()
+            .ok_or_else(|| ModelError::path_is_not_utf8(in_relative_path))?
+            .to_string();
+        relative_path.push('/');
+        let dir_path = pfsPath::validate_and_split(relative_path.clone()).map_err(|_| {
+            ModelError::open_directory_error(self.abs_moniker.clone(), relative_path)
+        })?;
+        self.hub_inner.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
 
         Ok(())
     }

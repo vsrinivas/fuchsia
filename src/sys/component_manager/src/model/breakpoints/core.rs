@@ -24,6 +24,7 @@ use {
     std::{
         collections::HashMap,
         convert::TryInto,
+        path::PathBuf,
         sync::{Arc, Weak},
     },
 };
@@ -215,7 +216,7 @@ impl CapabilityProvider for BreakpointSystem {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let stream = ServerEnd::<fbreak::BreakpointSystemMarker>::new(server_end)

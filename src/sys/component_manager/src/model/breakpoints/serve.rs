@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt},
-    std::sync::Arc,
+    std::{path::PathBuf, sync::Arc},
 };
 
 pub async fn serve_system(
@@ -178,7 +178,7 @@ impl CapabilityProvider for ExternalCapabilityProvider {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         self.proxy
@@ -226,7 +226,7 @@ async fn serve_routing_protocol(
                     // TODO(xbhatnag): We should be passing in the flags, mode and path
                     // to open the existing provider with. For a service, it doesn't matter
                     // but it would for other kinds of capabilities.
-                    if let Err(e) = existing_provider.open(0, 0, String::new(), server_end).await {
+                    if let Err(e) = existing_provider.open(0, 0, PathBuf::new(), server_end).await {
                         panic!("Could not open existing provider -> {}", e);
                     }
                 } else {

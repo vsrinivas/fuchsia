@@ -15,7 +15,10 @@ use {
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     log::warn,
-    std::sync::{Arc, Weak},
+    std::{
+        path::PathBuf,
+        sync::{Arc, Weak},
+    },
 };
 
 #[async_trait]
@@ -72,7 +75,7 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<B::Marker>::new(server_end);

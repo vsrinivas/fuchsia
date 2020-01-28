@@ -11,6 +11,7 @@ pub mod builtin_environment;
 pub mod capability;
 pub mod klog;
 pub mod model;
+pub mod path;
 pub mod startup;
 
 pub(crate) mod elf_runner;

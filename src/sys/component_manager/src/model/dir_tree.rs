@@ -46,6 +46,9 @@ impl CapabilityUsageTree {
         };
         let basename = path.basename.to_string();
         let tree = self.to_directory_node(path, abs_moniker).await?;
+        // TODO(44746): This is probably not correct. The capability source lacks crucial
+        // information about the capability routing, such as rights to apply on a directory.  Could
+        // possibly use `route_use_fn_factory` instead.
         let routing_factory = tree.routing_facade.route_capability_source_fn_factory();
         let routing_fn = routing_factory(abs_moniker.clone(), source);
 

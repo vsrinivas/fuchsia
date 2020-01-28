@@ -76,7 +76,7 @@ impl FuchsiaPkgResolver {
                 .open_outgoing(
                     OPEN_RIGHT_READABLE,
                     MODE_TYPE_DIRECTORY,
-                    &capability_path,
+                    capability_path.to_path_buf(),
                     pkgfs_server.into_channel(),
                 )
                 .await

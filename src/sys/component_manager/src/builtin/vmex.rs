@@ -22,6 +22,7 @@ use {
     log::warn,
     std::{
         convert::TryInto,
+        path::PathBuf,
         sync::{Arc, Weak},
     },
 };
@@ -123,7 +124,7 @@ impl CapabilityProvider for VmexCapabilityProvider {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<fsec::VmexMarker>::new(server_end);
@@ -239,7 +240,7 @@ mod tests {
 
         let capability_provider = capability_provider.lock().await.take();
         if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, String::new(), server).await?;
+            capability_provider.open(0, 0, PathBuf::new(), server).await?;
         }
 
         let vmex_client = ClientEnd::<fsec::VmexMarker>::new(client)

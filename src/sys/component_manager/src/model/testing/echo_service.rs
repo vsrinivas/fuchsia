@@ -15,6 +15,7 @@ use {
     lazy_static::lazy_static,
     std::{
         convert::TryInto,
+        path::PathBuf,
         sync::{Arc, Weak},
     },
 };
@@ -37,7 +38,7 @@ impl CapabilityProvider for EchoCapabilityProvider {
         self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
-        _relative_path: String,
+        _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<EchoMarker>::new(server_end);
@@ -84,7 +85,6 @@ impl EchoServiceInner {
         capability: &'a FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        println!("Capability_path: {:?}", capability.path());
         match capability {
             FrameworkCapability::Protocol(capability_path)
                 if *capability_path == *ECHO_CAPABILITY_PATH =>

@@ -115,7 +115,12 @@ pub async fn open_isolated_storage(
                     e,
                 )
             })?
-            .open_outgoing(FLAGS, open_mode, dir_source_path, local_server_end.into_channel())
+            .open_outgoing(
+                FLAGS,
+                open_mode,
+                dir_source_path.to_path_buf(),
+                local_server_end.into_channel(),
+            )
             .await
             .map_err(|e| {
                 StorageError::open(
@@ -176,7 +181,7 @@ pub async fn delete_isolated_storage(
             .open_outgoing(
                 FLAGS,
                 MODE_TYPE_DIRECTORY,
-                dir_source_path,
+                dir_source_path.to_path_buf(),
                 local_server_end.into_channel(),
             )
             .await

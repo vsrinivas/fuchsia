@@ -12,6 +12,7 @@ use {
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
         },
+        path::PathBufExt,
     },
     async_trait::async_trait,
     directory_broker,
@@ -20,7 +21,7 @@ use {
     fuchsia_async::EHandle,
     fuchsia_vfs_pseudo_fs_mt::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, path::Path,
+        execution_scope::ExecutionScope, path::Path as pfsPath,
     },
     fuchsia_zircon as zx,
     futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
@@ -29,6 +30,7 @@ use {
         collections::HashMap,
         fmt,
         ops::Deref,
+        path::PathBuf,
         pin::Pin,
         sync::{Arc, Weak},
     },
@@ -374,11 +376,11 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
         self: Box<Self>,
         flags: u32,
         open_mode: u32,
-        relative_path: String,
+        in_relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
-        self.intercepted_capability.open(flags, open_mode, String::new(), server_chan).await?;
+        self.intercepted_capability.open(flags, open_mode, PathBuf::new(), server_chan).await?;
 
         let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
             .into_proxy()
@@ -390,10 +392,12 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
             directory_broker::DirectoryBroker::from_directory_proxy(hub_proxy),
             &self.abs_moniker,
         )?;
-        let mut rel_path = self.relative_path.clone();
-        rel_path.push(relative_path);
-        let path = Path::validate_and_split(rel_path.join("/"))
-            .expect("Failed to split and validate path");
+        let relative_path: PathBuf = self.relative_path.iter().collect();
+        let mut relative_path =
+            relative_path.attach(in_relative_path).to_str().expect("path is not utf8").to_string();
+        relative_path.push('/');
+        let path =
+            pfsPath::validate_and_split(relative_path).expect("failed to split and validate path");
         dir.open(
             ExecutionScope::from_executor(Box::new(EHandle::local())),
             flags,
