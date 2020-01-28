@@ -479,6 +479,13 @@ template("library") {
     }
     not_needed([ "dep_suffix" ])
 
+    local_include_dirs = []
+    if (defined(invoker.include_dirs)) {
+      foreach(dir, invoker.include_dirs) {
+        local_include_dirs += [ "//zircon/" + rebase_path(dir, "$zx/") ]
+      }
+    }
+
     legacy_metadata = {
       legacy_barrier = []
       legacy_dirs = [ "lib/$_library_name$name_suffix" ]
@@ -492,6 +499,7 @@ template("library") {
           target_name = "$_library_name$name_suffix"
           dir = "//zircon/" + rebase_path(".", "//")
           include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
+          compilation_include_dirs = local_include_dirs
           headers = sdk_headers
           publishable = sdk_publishable
           if (sdk == "source") {

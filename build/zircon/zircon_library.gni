@@ -164,6 +164,11 @@ template("zircon_library") {
   # A prebuilt library() (`sdk != "source"`) has a library they must link in.
   config("$library.config") {
     include_dirs = include
+    if (!is_prebuilt) {
+      include_dirs += invoker.compilation_include_dirs
+    } else {
+      not_needed(invoker, [ "compilation_include_dirs" ])
+    }
     if (is_fuchsia) {
       libs = library_libs
       lib_dirs = zx_lib_dirs
