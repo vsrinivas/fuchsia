@@ -312,7 +312,12 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
 
         // Execute initialization agents sequentially
         if let Ok(Ok(())) = agent_authority
-            .execute_lifespan(Lifespan::Initialization, service_context_handle.clone(), true)
+            .execute_lifespan(
+                Lifespan::Initialization,
+                components.clone(),
+                service_context_handle.clone(),
+                true,
+            )
             .await
         {
             response_tx.send(Ok(())).ok();
@@ -322,7 +327,12 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
 
         // Execute service agents concurrently
         agent_authority
-            .execute_lifespan(Lifespan::Service, service_context_handle.clone(), false)
+            .execute_lifespan(
+                Lifespan::Service,
+                components.clone(),
+                service_context_handle.clone(),
+                false,
+            )
             .await
             .ok();
     });

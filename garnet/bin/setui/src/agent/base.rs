@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::service_context::ServiceContextHandle;
+use crate::switchboard::base::SettingType;
 use anyhow::{format_err, Error};
 use core::fmt::Debug;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
 use futures::lock::Mutex;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// An InvocationTuple is sent to an agent for a given lifespan event. The first
@@ -30,8 +32,7 @@ pub enum Lifespan {
 /// Struct of information passed to the agent during each invocation.
 #[derive(Clone)]
 pub struct Invocation {
-    pub lifespan: Lifespan,
-    pub service_context: ServiceContextHandle,
+    pub context: InvocationContext,
     pub ack_sender: Arc<Mutex<Option<Sender<InvocationAck>>>>,
 }
 
@@ -47,6 +48,13 @@ impl Invocation {
             }
         }
     }
+}
+
+#[derive(Clone)]
+pub struct InvocationContext {
+    pub lifespan: Lifespan,
+    pub available_components: HashSet<SettingType>,
+    pub service_context: ServiceContextHandle,
 }
 
 pub trait Agent: Debug {

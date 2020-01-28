@@ -7,6 +7,7 @@ use crate::agent::base::*;
 use crate::create_environment;
 use crate::registry::device_storage::testing::*;
 use crate::service_context::ServiceContext;
+use crate::switchboard::base::SettingType;
 use anyhow::{format_err, Error};
 use core::fmt::{Debug, Formatter};
 use fuchsia_component::server::ServiceFs;
@@ -14,6 +15,7 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use rand::Rng;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Agent provides a test agent to interact with the authority impl. It is
@@ -35,7 +37,7 @@ struct TestAgent {
 
 impl Agent for TestAgent {
     fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
-        if invocation.lifespan != self.lifespan {
+        if invocation.context.lifespan != self.lifespan {
             return Ok(false);
         }
 
@@ -160,7 +162,7 @@ async fn test_sequential() {
 
     // Execute the lifespan sequentially.
     let completion_ack =
-        authority.execute_lifespan(Lifespan::Initialization, service_context, true);
+        authority.execute_lifespan(Lifespan::Initialization, HashSet::new(), service_context, true);
 
     // Process the agent callbacks, making sure they are received in the right
     // order and acknowledging the acks. Note that this is a chain reaction.
@@ -199,8 +201,12 @@ async fn test_simultaneous() {
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
 
     // Execute lifespan non-sequentially.
-    let completion_ack =
-        authority.execute_lifespan(Lifespan::Initialization, service_context, false);
+    let completion_ack = authority.execute_lifespan(
+        Lifespan::Initialization,
+        HashSet::new(),
+        service_context,
+        false,
+    );
 
     // Ensure that each agent has received the invocation. Note that we are not
     // acknowledging the invocations here. Each agent should be notified
@@ -248,7 +254,7 @@ async fn test_err_handling() {
 
     // Execute lifespan sequentially
     let completion_ack =
-        authority.execute_lifespan(Lifespan::Initialization, service_context, true);
+        authority.execute_lifespan(Lifespan::Initialization, HashSet::new(), service_context, true);
 
     // Ensure the first agent received an invocation, acknowledge with an error.
     if let Some((id, invocation)) = rx.next().await {
@@ -271,6 +277,44 @@ async fn test_err_handling() {
     }
 
     assert!(agent2_lock.lock().await.last_invocation().is_none());
+}
+
+/// Checks to see if available components are passed properly from
+/// execute_lifespan.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_available_components() {
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let mut authority = AuthorityImpl::new();
+    let service_context = ServiceContext::create(None);
+    let mut rng = rand::thread_rng();
+
+    let agent_id =
+        TestAgent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone())
+            .unwrap()
+            .lock()
+            .await
+            .id();
+
+    let mut available_components = HashSet::new();
+
+    available_components.insert(SettingType::Display);
+    available_components.insert(SettingType::Intl);
+
+    // Execute lifespan sequentially
+    let _ = authority.execute_lifespan(
+        Lifespan::Initialization,
+        available_components.clone(),
+        service_context,
+        true,
+    );
+
+    // Ensure the first agent received an invocation and verify components match
+    if let Some((id, invocation)) = rx.next().await {
+        assert_eq!(agent_id, id);
+        assert_eq!(available_components, invocation.context.available_components);
+    } else {
+        panic!("did not receive expected response from agent");
+    }
 }
 
 fn create_agents(
