@@ -67,7 +67,7 @@ TEST_F(DeviceWatcherTest, WatchDevicesFindsCameras) {
 
   // Wait until the watcher has discovered the real camera and the injected fake camera.
   constexpr uint32_t kExpectedCameras = 2;
-  while (cameras.size() < kExpectedCameras) {
+  while (!HasFailure() && cameras.size() < kExpectedCameras) {
     bool watch_devices_returned = false;
     watcher_->WatchDevices([&](std::vector<fuchsia::camera3::WatchDevicesEvent> events) {
       for (auto& event : events) {

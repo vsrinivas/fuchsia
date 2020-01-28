@@ -36,7 +36,6 @@ class DeviceWatcherImpl {
   static fit::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create();
   fit::result<PersistentDeviceId, zx_status_t> AddDevice(
       fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller);
-  zx_status_t RemoveDevice(PersistentDeviceId id);
   void UpdateClients();
   fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> GetHandler();
 
@@ -69,8 +68,7 @@ class DeviceWatcherImpl {
 
   async::Loop loop_;
   TransientDeviceId device_id_next_ = 1;
-  std::mutex devices_lock_;
-  DevicesMap devices_ __TA_GUARDED(devices_lock_);
+  DevicesMap devices_;
   ClientId client_id_next_ = 1;
   std::unordered_map<ClientId, std::unique_ptr<Client>> clients_;
 };

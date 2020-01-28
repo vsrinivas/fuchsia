@@ -6,6 +6,7 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
@@ -87,45 +88,22 @@ fit::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   PersistentDeviceId persistent_id =
       (static_cast<uint64_t>(info_return.vendor_id()) << kVendorShift) | info_return.product_id();
 
-  ctrl.set_error_handler([this, persistent_id](zx_status_t status) {
-    FX_PLOGS(INFO, status) << "Camera " << persistent_id << " disconnected";
-    std::lock_guard<std::mutex> lock(devices_lock_);
-    devices_[persistent_id].controller = nullptr;
-    for (auto& client : clients_) {
-      client.second->UpdateDevices(devices_);
-    }
+  async::PostTask(loop_.dispatcher(), [this, persistent_id, ctrl = std::move(ctrl)]() mutable {
+    devices_[persistent_id] = {.id = device_id_next_, .controller = ctrl.Unbind()};
+
+    FX_LOGS(DEBUG) << "Added device " << persistent_id << " as device ID " << device_id_next_;
+    ++device_id_next_;
   });
-
-  std::lock_guard<std::mutex> lock(devices_lock_);
-  devices_[persistent_id] = {.id = device_id_next_, .controller = ctrl.Unbind()};
-
-  FX_LOGS(DEBUG) << "Added device " << persistent_id << " as device ID " << device_id_next_;
-  ++device_id_next_;
 
   return fit::ok(persistent_id);
 }
 
-zx_status_t DeviceWatcherImpl::RemoveDevice(PersistentDeviceId id) {
-  FX_LOGS(DEBUG) << "RemoveDevice(" << id << ")";
-
-  std::lock_guard<std::mutex> lock(devices_lock_);
-  auto it = devices_.find(id);
-  if (it == devices_.end()) {
-    FX_PLOGS(ERROR, ZX_ERR_NOT_FOUND);
-    return ZX_ERR_NOT_FOUND;
-  }
-  devices_.erase(it);
-
-  return ZX_OK;
-}
-
 void DeviceWatcherImpl::UpdateClients() {
-  FX_LOGS(DEBUG) << "UpdateClients()";
-
-  std::lock_guard<std::mutex> lock(devices_lock_);
-  for (auto& client : clients_) {
-    client.second->UpdateDevices(devices_);
-  }
+  async::PostTask(loop_.dispatcher(), [this]() {
+    for (auto& client : clients_) {
+      client.second->UpdateDevices(devices_);
+    }
+  });
 }
 
 fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> DeviceWatcherImpl::GetHandler() {
