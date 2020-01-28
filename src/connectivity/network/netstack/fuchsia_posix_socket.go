@@ -898,6 +898,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			if len(v) == 0 {
 				break
 			}
+			eps.ep.ModerateRecvBuf(n)
 		}
 	}
 }
