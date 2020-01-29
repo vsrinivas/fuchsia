@@ -30,7 +30,6 @@ group("dev") {
     "shareddma",
     "spi",
     "sysmem",
-    "tee",
 
     # test/ allows drivers to be used by IsolateDevmgr
     "$zx/system/utest/platform-bus:test",

@@ -142,6 +142,7 @@ group("ulib") {
     "sysmem-connector",
     "task-utils",
     "tee-client-api",
+    "tee-client-api:tee-client-api-headers",
     "test-exceptions",
     "test-utils",
     "tftp",

@@ -24,3 +24,12 @@ zx_library("tee-client-api") {
     "$zx/system/ulib/zx",
   ]
 }
+
+zx_library("tee-client-api-headers") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/tee-client-api/tee_client_api.h",
+    "lib/tee-client-api/tee-client-types.h",
+  ]
+  sources = []
+}
