@@ -184,7 +184,6 @@ group("all") {
     "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:overnetstack",
     "//garnet/packages/prod:pkg_cache",
-    "//garnet/packages/prod:pkg_ctl",
     "//garnet/packages/prod:pkg_resolver",
     "//garnet/packages/prod:pm",
     "//garnet/packages/prod:ralink",
@@ -354,11 +353,6 @@ group("cmdutils") {
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:vim",
   ]
-}
-
-group("pkg_ctl") {
-  testonly = true
-  public_deps = [ "//src/sys/pkg/bin/pkgctl" ]
 }
 
 group("bluetooth_drivers") {
