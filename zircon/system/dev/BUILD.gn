@@ -39,7 +39,6 @@ group("dev") {
     "test/ddk-schedule-work:ddk-schedule-work-test",
     "test/fidl-async-llcpp-driver",
     "test/fidl-llcpp-driver",
-    "test/isolateddevmgr:isolateddevmgr-test",
     "test/mock-device",
     "test/sysdev",
     "thermal",

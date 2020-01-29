@@ -10,7 +10,6 @@ group("test") {
     "ddk-lifecycle",
     "ddk-power",
     "ddk-schedule-work",
-    "isolateddevmgr",
     "mock-device",
     "sysdev",
   ]
