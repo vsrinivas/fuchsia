@@ -77,9 +77,18 @@ class PrettyPrinter {
   }
 
   PrettyPrinter& operator<<(uint64_t data) {
-    std::streampos start = os_.tellp();
     os_ << data;
-    remaining_size_ -= os_.tellp() - start;
+    int base = 10;
+    if ((os_.flags() & os_.basefield) == os_.hex) {
+      base = 16;
+    }
+    int data_size = 1;
+    data /= base;
+    while (data > 0) {
+      data /= base;
+      data_size++;
+    }
+    remaining_size_ -= data_size;
     return *this;
   }
 
