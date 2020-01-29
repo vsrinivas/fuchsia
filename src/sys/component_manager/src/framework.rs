@@ -665,25 +665,39 @@ mod tests {
         // being destroyed.
         let mut child_ref =
             fsys::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
-        let res = test.realm_proxy.destroy_child(&mut child_ref).await;
-        let _ = res.expect("failed to destroy child a").expect("failed to destroy child a");
+        let (f, destroy_handle) = test.realm_proxy.destroy_child(&mut child_ref).remote_handle();
+        fasync::spawn(f);
 
         let invocation = breakpoint_receiver
             .wait_until(EventType::PreDestroyInstance, vec!["system:0", "coll:a:1"].into())
             .await;
 
-        let actual_children = get_live_children(&test.realm).await;
-        let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
-        expected_children.insert("coll:b".into());
-        assert_eq!(actual_children, expected_children);
-        assert_eq!("(system(coll:b))", hook.print());
+        // Child is not marked deleted yet.
+        {
+            let actual_children = get_live_children(&test.realm).await;
+            let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
+            expected_children.insert("coll:a".into());
+            expected_children.insert("coll:b".into());
+            assert_eq!(actual_children, expected_children);
+        }
 
         // The destruction of "a" was arrested during `PreDestroy`. The old "a" should still exist,
         // although it's not live.
         assert!(has_child(&test.realm, "coll:a:1").await);
 
-        // Move past the 'PreDestroy' event for "a"
+        // Move past the 'PreDestroy' event for "a", and wait for destroy_child to return.
         invocation.resume();
+        let res = destroy_handle.await;
+        let _ = res.expect("failed to destroy child a").expect("failed to destroy child a");
+
+        // Child is marked deleted now.
+        {
+            let actual_children = get_live_children(&test.realm).await;
+            let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
+            expected_children.insert("coll:b".into());
+            assert_eq!(actual_children, expected_children);
+            assert_eq!("(system(coll:b))", hook.print());
+        }
 
         // Wait until 'PostDestroy' event for "a"
         breakpoint_receiver

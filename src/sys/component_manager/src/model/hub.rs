@@ -500,12 +500,19 @@ impl HubInner {
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_pre_destroy_instance_async");
-        let instance_map = self.instances.lock().await;
-
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
+        let instance_map = self.instances.lock().await;
+        if !instance_map.contains_key(&parent_moniker) {
+            // Evidently this a duplicate dispatch of PreDestroyInstance.
+            return Ok(());
+        }
+
         let leaf = target_moniker.leaf().expect("A root component cannot be destroyed");
 
         // In the children directory, the child's instance id is not used
+        // TODO: It's possible for the PreDestroyInstance event to be dispatched twice if there
+        // are two concurrent `DestroyChild` operations. In such cases we should probably cause
+        // this update to no-op instead of returning an error.
         let partial_moniker = leaf.to_partial();
         let directory = instance_map[&parent_moniker]
             .children_directory

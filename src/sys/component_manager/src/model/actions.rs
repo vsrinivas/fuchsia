@@ -207,19 +207,16 @@ async fn do_delete_child(
     realm: Arc<Realm>,
     moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
+    let partial_moniker = moniker.to_partial();
+    realm.mark_child_deleting(&partial_moniker).await?;
     let child_realm = {
         let mut state = realm.lock_state().await;
         let state = state.as_mut().expect("do_delete_child: not resolved");
-        state.mark_child_realm_deleting(&moniker.to_partial());
         state.all_child_realms().get(&moniker).map(|r| r.clone())
     };
 
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     if let Some(child_realm) = child_realm {
-        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::PreDestroyInstance);
-
-        child_realm.hooks.dispatch(&event).await?;
-
         ActionSet::register(child_realm.clone(), model.clone(), Action::Destroy).await.await?;
 
         {

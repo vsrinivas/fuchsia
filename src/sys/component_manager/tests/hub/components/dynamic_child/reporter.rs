@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    futures::prelude::*,
     hub_report::HubReport,
 };
 
@@ -84,11 +85,8 @@ async fn main() -> Result<(), Error> {
         name: "simple_instance".to_string(),
         collection: Some("coll".to_string()),
     };
-    realm
-        .destroy_child(&mut child_ref)
-        .await
-        .context("delete_child failed")?
-        .expect("failed to delete child");
+    let (f, destroy_handle) = realm.destroy_child(&mut child_ref).remote_handle();
+    fasync::spawn(f);
 
     // Wait for the dynamic child to begin deletion
     let invocation =
@@ -97,6 +95,9 @@ async fn main() -> Result<(), Error> {
     hub_report.report_directory_contents("/hub/deleting").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
     invocation.resume().await?;
+
+    // Wait for the destroy call to return
+    destroy_handle.await.context("delete_child failed")?.expect("failed to delete child");
 
     // Wait for the dynamic child to stop
     let invocation = receiver.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;

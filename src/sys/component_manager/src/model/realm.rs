@@ -315,25 +315,43 @@ impl Realm {
         partial_moniker: &PartialMoniker,
     ) -> Result<Notification, ModelError> {
         Realm::resolve_decl(&realm).await?;
-        let mut state = realm.lock_state().await;
-        let state = state.as_mut().expect("remove_dynamic_child: not resolved");
-        if let Some(tup) = state.live_child_realms.get(&partial_moniker).map(|t| t.clone()) {
-            let (instance, _) = tup;
-
-            state.mark_child_realm_deleting(&partial_moniker);
-            let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            let nf = ActionSet::register(
-                realm.clone(),
-                model,
-                Action::DeleteChild(child_moniker.clone()),
-            )
-            .await;
+        if let Some(child_moniker) = realm.mark_child_deleting(&partial_moniker).await? {
+            let nf =
+                ActionSet::register(realm.clone(), model, Action::DeleteChild(child_moniker)).await;
             Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
                 realm.abs_moniker.clone(),
                 partial_moniker.clone(),
             ))
+        }
+    }
+
+    /// Marks a child realm deleting, and dispatches the PreDestroyInstance event. Returns the
+    /// child moniker if the child was alive.
+    pub async fn mark_child_deleting(
+        &self,
+        partial_moniker: &PartialMoniker,
+    ) -> Result<Option<ChildMoniker>, ModelError> {
+        let tup = {
+            let mut state = self.lock_state().await;
+            let state = state.as_mut().expect("remove_dynamic_child: not resolved");
+            state.live_child_realms.get(&partial_moniker).map(|t| t.clone())
+        };
+        if let Some(tup) = tup {
+            let (instance, child_realm) = tup;
+            {
+                let event =
+                    Event::new(child_realm.abs_moniker.clone(), EventPayload::PreDestroyInstance);
+                child_realm.hooks.dispatch(&event).await?;
+            }
+            let mut state = self.lock_state().await;
+            let state = state.as_mut().expect("remove_dynamic_child: not resolved");
+            state.mark_child_realm_deleting(&partial_moniker);
+            let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
+            Ok(Some(child_moniker))
+        } else {
+            Ok(None)
         }
     }
 
