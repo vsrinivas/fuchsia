@@ -8,7 +8,9 @@ use {
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
+        SwitchboardError,
     },
+    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
@@ -81,7 +83,15 @@ pub fn spawn_accessibility_controller(
                                     continue;
                                 }
                             }
-                            _ => panic!("Unexpected command to accessibility"),
+                            _ => {
+                                responder
+                                    .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                        setting_type: SettingType::Accessibility,
+                                        request: request,
+                                    })))
+                                    .ok();
+                                continue;
+                            }
                         }
 
                         // Notify listeners of value change.
@@ -112,8 +122,9 @@ async fn persist_accessibility_info(
     let write_request = storage_lock.write(&info, false).await;
     let _ = match write_request {
         Ok(_) => responder.send(Ok(None)),
-        Err(err) => {
-            responder.send(Err(anyhow::format_err!("failed to persist accessibility_info:{}", err)))
-        }
+        Err(err) => responder.send(Err(Error::new(SwitchboardError::StorageFailure {
+            setting_type: SettingType::Accessibility,
+            storage_error: err,
+        }))),
     };
 }

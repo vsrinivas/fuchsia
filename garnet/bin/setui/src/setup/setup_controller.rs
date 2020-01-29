@@ -6,9 +6,9 @@ use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingRequestResponder, SettingResponse,
-    SettingType, SetupInfo,
+    SettingType, SetupInfo, SwitchboardError,
 };
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -66,7 +66,12 @@ impl SetupController {
                     self.get(responder);
                 }
                 _ => {
-                    responder.send(Err(format_err!("unimplemented"))).ok();
+                    responder
+                        .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                            setting_type: SettingType::Setup,
+                            request: request,
+                        })))
+                        .ok();
                 }
             },
             Command::ChangeState(state) => match state {

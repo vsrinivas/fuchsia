@@ -4,7 +4,7 @@
 
 use {
     crate::registry::base::Command, crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::*, fuchsia_async as fasync, futures::StreamExt,
+    crate::switchboard::base::*, anyhow::Error, fuchsia_async as fasync, futures::StreamExt,
 };
 
 async fn reboot(service_context_handle: ServiceContextHandle) {
@@ -34,7 +34,14 @@ pub fn spawn_power_controller(
                             reboot(service_context_handle.clone()).await;
                             responder.send(Ok(None)).ok();
                         }
-                        _ => panic!("Unexpected request to power"),
+                        _ => {
+                            responder
+                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                    setting_type: SettingType::Power,
+                                    request: request,
+                                })))
+                                .ok();
+                        }
                     }
                 }
                 // Ignore unsupported commands

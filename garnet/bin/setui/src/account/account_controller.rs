@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::registry::base::Command,
-    crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::*,
-    anyhow::{format_err, Error},
-    fuchsia_async as fasync,
-    futures::StreamExt,
+    crate::registry::base::Command, crate::service_context::ServiceContextHandle,
+    crate::switchboard::base::*, anyhow::Error, fuchsia_async as fasync, futures::StreamExt,
 };
 
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
@@ -22,11 +18,16 @@ async fn schedule_clear_accounts(
         .connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>(
     )?;
 
-    if device_settings_manager.set_integer(FACTORY_RESET_FLAG, 1).await.is_ok() {
-        return Ok(());
-    } else {
-        return Err(format_err!("could not set value in device settings"));
+    if let Err(error) = device_settings_manager.set_integer(FACTORY_RESET_FLAG, 1).await {
+        return Err(Error::new(SwitchboardError::ExternalFailure {
+            setting_type: SettingType::Account,
+            dependency: "device_settings_manager".to_string(),
+            request: "set factory reset integer".to_string(),
+            error: Error::new(error),
+        }));
     }
+
+    return Ok(());
 }
 
 pub fn spawn_account_controller(
@@ -53,7 +54,14 @@ pub fn spawn_account_controller(
                                 }
                             }
                         }
-                        _ => panic!("Unexpected request to account"),
+                        _ => {
+                            responder
+                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                    setting_type: SettingType::Account,
+                                    request: request,
+                                })))
+                                .ok();
+                        }
                     }
                 }
                 // Ignore unsupported commands

@@ -11,10 +11,13 @@ use futures::stream::StreamExt;
 use futures::TryFutureExt;
 use parking_lot::RwLock;
 
+use anyhow::Error;
+
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::switchboard::base::{
     NightModeInfo, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
+    SwitchboardError,
 };
 
 type NightModeStorage = Arc<Mutex<DeviceStorage<NightModeInfo>>>;
@@ -136,8 +139,10 @@ impl NightModeController {
             let write_request = storage_lock.write(&info, false).await;
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
-                Err(err) => responder
-                    .send(Err(anyhow::format_err!("failed to persist night_mode_info: {}", err))),
+                Err(err) => responder.send(Err(Error::new(SwitchboardError::StorageFailure {
+                    setting_type: SettingType::NightMode,
+                    storage_error: err,
+                }))),
             };
         });
     }

@@ -11,6 +11,7 @@ use futures::lock::Mutex;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
+use thiserror::Error;
 
 pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
 
@@ -23,6 +24,30 @@ pub type ListenCallback = Arc<dyn Fn(SettingType) + Send + Sync>;
 /// [Option::or](std::option::Option::or) on each field in the struct and substructs.
 pub trait Merge {
     fn merge(&self, other: Self) -> Self;
+}
+
+#[derive(Error, Debug)]
+pub enum SwitchboardError {
+    #[error("Unimplemented Request:{request:?} for setting type: {setting_type:?}")]
+    UnimplementedRequest { setting_type: SettingType, request: SettingRequest },
+
+    #[error("Storage failure for setting type: {setting_type:?}")]
+    StorageFailure { setting_type: SettingType, storage_error: anyhow::Error },
+
+    #[error(
+        "Invalid argument for setting type: {setting_type:?} argument:{argument:?} value:{value:?}"
+    )]
+    InvalidArgument { setting_type: SettingType, argument: String, value: String },
+
+    #[error(
+        "External failure for setting type:{setting_type:?} dependency: {dependency:?} reqeust:{request:?}"
+    )]
+    ExternalFailure {
+        setting_type: SettingType,
+        dependency: String,
+        request: String,
+        error: anyhow::Error,
+    },
 }
 
 /// The setting types supported by the messaging system. This is used as a key

@@ -5,7 +5,10 @@ use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::{DisplayInfo, SettingRequest, SettingResponse, SettingType},
+    crate::switchboard::base::{
+        DisplayInfo, SettingRequest, SettingResponse, SettingType, SwitchboardError,
+    },
+    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
@@ -114,7 +117,14 @@ pub fn spawn_display_controller(
                                 ))))
                                 .unwrap();
                         }
-                        _ => panic!("Unexpected command to brightness"),
+                        _ => {
+                            responder
+                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                    setting_type: SettingType::Display,
+                                    request: request,
+                                })))
+                                .ok();
+                        }
                     }
                 }
             }

@@ -6,6 +6,7 @@ use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::switchboard::base::*,
+    anyhow::Error,
     fuchsia_async as fasync,
     futures::lock::Mutex,
     futures::StreamExt,
@@ -71,7 +72,14 @@ pub fn spawn_system_controller(
                                 .send(Ok(Some(SettingResponse::System(stored_value))))
                                 .unwrap();
                         }
-                        _ => panic!("Unexpected command to system"),
+                        _ => {
+                            responder
+                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                    setting_type: SettingType::System,
+                                    request: request,
+                                })))
+                                .ok();
+                        }
                     }
                 }
             }

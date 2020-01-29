@@ -5,7 +5,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
@@ -18,7 +18,7 @@ use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
-    Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
+    Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType, SwitchboardError,
 };
 use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
 
@@ -119,7 +119,12 @@ impl IntlController {
                     self.get(responder);
                 }
                 _ => {
-                    responder.send(Err(format_err!("unimplemented"))).ok();
+                    responder
+                        .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                            setting_type: SettingType::Intl,
+                            request: request,
+                        })))
+                        .ok();
                 }
             },
         }
@@ -145,7 +150,11 @@ impl IntlController {
         if let Some(time_zone_id) = info.time_zone_id {
             // Make sure the given time zone ID is valid.
             if !self.time_zone_ids.contains(time_zone_id.as_str()) {
-                return Err(format_err!("invalid time zone id: {}", time_zone_id.as_str()));
+                return Err(Error::new(SwitchboardError::InvalidArgument {
+                    setting_type: SettingType::Intl,
+                    argument: "timezone id".to_string(),
+                    value: time_zone_id.as_str().to_string(),
+                }));
             }
         }
 
@@ -220,9 +229,10 @@ impl IntlController {
             let write_request = storage_lock.write(&info, false).await;
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
-                Err(err) => {
-                    responder.send(Err(anyhow::format_err!("failed to persist intl_info: {}", err)))
-                }
+                Err(err) => responder.send(Err(Error::new(SwitchboardError::StorageFailure {
+                    setting_type: SettingType::Intl,
+                    storage_error: err,
+                }))),
             };
         });
     }

@@ -2,8 +2,10 @@ use crate::switchboard::base::SettingRequestResponder;
 use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
-    crate::switchboard::base::{DoNotDisturbInfo, SettingRequest, SettingResponse, SettingType},
-    anyhow::{format_err, Error},
+    crate::switchboard::base::{
+        DoNotDisturbInfo, SettingRequest, SettingResponse, SettingType, SwitchboardError,
+    },
+    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
@@ -76,7 +78,14 @@ pub fn spawn_do_not_disturb_controller(
                                 storage_lock.get().await,
                             ))));
                         }
-                        _ => panic!("Unexpected command to do not disturb"),
+                        _ => {
+                            responder
+                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                    setting_type: SettingType::DoNotDisturb,
+                                    request: request,
+                                })))
+                                .ok();
+                        }
                     }
                 }
             }
@@ -94,9 +103,13 @@ async fn write_value(
 ) {
     let mut storage_lock = storage.lock().await;
     let write_result = storage_lock.write(&request_info, false).await;
-    if write_result.is_err() {
+    if let Err(error) = write_result {
         responder
-            .send(Err(format_err!("Failed to write {} to persistent storage", setting_name)))
+            .send(Err(Error::new(SwitchboardError::StorageFailure {
+                setting_type: SettingType::DoNotDisturb,
+                storage_error: error,
+            })
+            .context(setting_name.to_string())))
             .ok();
         return;
     }

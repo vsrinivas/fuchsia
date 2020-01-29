@@ -8,7 +8,7 @@ use {
     crate::registry::device_storage::DeviceStorage,
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{Context as _, Error},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_media::{
         AudioRenderUsage,
@@ -223,7 +223,14 @@ pub fn spawn_audio_controller(
                                 }))))
                                 .ok();
                         }
-                        _ => panic!("Unexpected command to audio"),
+                        _ => {
+                            responder
+                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                    setting_type: SettingType::Audio,
+                                    request: request,
+                                })))
+                                .ok();
+                        }
                     }
                 }
             }
@@ -263,7 +270,12 @@ async fn watch_background_usage(
                 );
             }
             Err(e) => {
-                return Err(format_err!("Error watching AudioRender usage events: {}", e));
+                return Err(Error::new(SwitchboardError::ExternalFailure {
+                    setting_type: SettingType::Audio,
+                    dependency: "UseageReporterProxy".to_string(),
+                    request: "watch".to_string(),
+                    error: Error::new(e),
+                }));
             }
         }
     }
