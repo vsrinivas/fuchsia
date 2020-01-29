@@ -373,7 +373,6 @@ impl Realm {
                 let was_running = execution.runtime.is_some();
 
                 if let Some(runtime) = &mut execution.runtime {
-                    let mut runtime = runtime.lock().await;
                     let timer = Box::pin(fasync::Timer::new(fasync::Time::after(
                         // TODO(jmatt) the plan is to read this from somewhere
                         // in the component manifest, likely a field in the
@@ -480,12 +479,7 @@ impl Realm {
                 self.abs_moniker
             )));
         }
-        let runtime = execution
-            .runtime
-            .as_ref()
-            .expect("bind_instance_open_outgoing: no runtime")
-            .lock()
-            .await;
+        let runtime = execution.runtime.as_ref().expect("bind_instance_open_outgoing: no runtime");
         let out_dir =
             &runtime.outgoing_dir.as_ref().ok_or(ModelError::capability_discovery_error(
                 format_err!("component hosting capability is non-executable: {}", self.abs_moniker),
@@ -515,8 +509,6 @@ impl Realm {
             .runtime
             .as_ref()
             .expect("bind_instance_open_exposed: no runtime")
-            .lock()
-            .await
             .exposed_dir;
 
         // TODO(fxb/36541): Until directory capabilities specify rights, we always open
@@ -551,11 +543,7 @@ pub struct ExecutionState {
     shut_down: bool,
     /// Runtime support for the component. From component manager's point of view, the component
     /// instance is running iff this field is set.
-    // TODO: Making this Arc<Mutex> is a bit unfortunate. It's currently necessary because
-    // `EventPayload` is `Clonable`, which in particular is needed for breakpoints. Instead of
-    // cloning `runtime`, we could pass the BeforeStart hook the information it needs in a separate
-    // struct.
-    pub runtime: Option<Arc<Mutex<Runtime>>>,
+    pub runtime: Option<Runtime>,
 }
 
 impl ExecutionState {
@@ -796,7 +784,7 @@ impl Runtime {
         controller: Option<fsys::ComponentControllerProxy>,
     ) -> Result<Self, ModelError> {
         Ok(Runtime {
-            resolved_url: resolved_url,
+            resolved_url,
             namespace,
             outgoing_dir,
             runtime_dir,

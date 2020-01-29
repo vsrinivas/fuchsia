@@ -12,10 +12,9 @@ use {
             binding::ComponentDescriptor,
             dir_tree::{CapabilityUsageTree, DirTree},
             error::ModelError,
-            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
             model::Model,
             moniker::AbsoluteMoniker,
-            realm::Runtime,
             routing_facade::RoutingFacade,
         },
         path::PathBufExt,
@@ -287,7 +286,7 @@ impl HubInner {
     fn add_in_directory(
         execution_directory: Directory,
         component_decl: ComponentDecl,
-        runtime: &Runtime,
+        package_dir: Option<DirectoryProxy>,
         routing_facade: &RoutingFacade,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -298,8 +297,7 @@ impl HubInner {
         );
         let mut in_dir = pfs::simple();
         tree.install(abs_moniker, &mut in_dir)?;
-        let pkg_dir = runtime.namespace.as_ref().and_then(|n| n.package_dir.as_ref());
-        if let Some(pkg_dir) = Self::clone_dir(pkg_dir) {
+        if let Some(pkg_dir) = package_dir {
             in_dir.add_node(
                 "pkg",
                 directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
@@ -330,11 +328,11 @@ impl HubInner {
 
     fn add_out_directory(
         execution_directory: Directory,
-        runtime: &Runtime,
+        outgoing_dir: Option<DirectoryProxy>,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_out_directory");
-        if let Some(out_dir) = Self::clone_dir(runtime.outgoing_dir.as_ref()) {
+        if let Some(out_dir) = outgoing_dir {
             execution_directory.add_node(
                 "out",
                 directory_broker::DirectoryBroker::from_directory_proxy(out_dir),
@@ -346,11 +344,11 @@ impl HubInner {
 
     fn add_runtime_directory(
         execution_directory: Directory,
-        runtime: &Runtime,
+        runtime_dir: Option<DirectoryProxy>,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_runtime_directory");
-        if let Some(runtime_dir) = Self::clone_dir(runtime.runtime_dir.as_ref()) {
+        if let Some(runtime_dir) = runtime_dir {
             execution_directory.add_node(
                 "runtime",
                 directory_broker::DirectoryBroker::from_directory_proxy(runtime_dir),
@@ -363,7 +361,7 @@ impl HubInner {
     async fn on_before_start_instance_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
-        runtime: &Arc<Mutex<Runtime>>,
+        runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
         live_children: &'a Vec<ComponentDescriptor>,
         routing_facade: RoutingFacade,
@@ -371,7 +369,6 @@ impl HubInner {
         trace::duration!("component_manager", "hub:on_start_instance_async");
         let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
         let realm = model.look_up_realm(target_moniker).await?;
-        let runtime = runtime.lock().await;
         let component_url = realm.component_url.clone();
 
         let mut instances_map = self.instances.lock().await;
@@ -412,7 +409,7 @@ impl HubInner {
             Self::add_in_directory(
                 execution_directory.clone(),
                 component_decl.clone(),
-                &runtime,
+                Self::clone_dir(runtime.package_dir.as_ref()),
                 &routing_facade,
                 target_moniker,
             )?;
@@ -425,9 +422,17 @@ impl HubInner {
             )?;
 
             execution_directory.add_node("used", used, &target_moniker)?;
-            Self::add_out_directory(execution_directory.clone(), &runtime, &target_moniker)?;
+            Self::add_out_directory(
+                execution_directory.clone(),
+                Self::clone_dir(runtime.outgoing_dir.as_ref()),
+                &target_moniker,
+            )?;
 
-            Self::add_runtime_directory(execution_directory.clone(), &runtime, &target_moniker)?;
+            Self::add_runtime_directory(
+                execution_directory.clone(),
+                Self::clone_dir(runtime.runtime_dir.as_ref()),
+                &target_moniker,
+            )?;
 
             instance.directory.add_node("exec", execution_directory, &target_moniker)?;
         }
@@ -626,7 +631,7 @@ impl Hook for HubInner {
                 } => {
                     self.on_before_start_instance_async(
                         &event.target_moniker,
-                        runtime,
+                        &runtime,
                         &component_decl,
                         &live_children,
                         routing_facade.clone(),

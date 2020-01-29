@@ -6,7 +6,7 @@ use {
     crate::model::{
         error::ModelError,
         exposed_dir::ExposedDir,
-        hooks::{Event, EventPayload},
+        hooks::{self, Event, EventPayload},
         model::Model,
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
@@ -20,7 +20,6 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         future::{join_all, BoxFuture},
-        lock::Mutex,
         FutureExt,
     },
     log::*,
@@ -104,7 +103,7 @@ impl Model {
             let event = Event::new(
                 realm.abs_moniker.clone(),
                 EventPayload::BeforeStartInstance {
-                    runtime: pending_runtime.clone(),
+                    runtime: hooks::RuntimeInfo::from_runtime(&pending_runtime),
                     component_decl: decl.clone(),
                     live_children: live_child_descriptors,
                     routing_facade,
@@ -181,7 +180,7 @@ impl Model {
         package: Option<fsys::Package>,
         decl: &cm_rust::ComponentDecl,
     ) -> Result<
-        (Arc<Mutex<Runtime>>, fsys::ComponentStartInfo, ServerEnd<fsys::ComponentControllerMarker>),
+        (Runtime, fsys::ComponentStartInfo, ServerEnd<fsys::ComponentControllerMarker>),
         ModelError,
     > {
         // Create incoming/outgoing directories, and populate them.
@@ -199,7 +198,7 @@ impl Model {
         let controller =
             controller_client.into_proxy().expect("failed to create ComponentControllerProxy");
         // Set up channels into/out of the new component.
-        let runtime = Arc::new(Mutex::new(Runtime::start_from(
+        let runtime = Runtime::start_from(
             url.clone(),
             Some(namespace),
             Some(DirectoryProxy::from_channel(
@@ -210,7 +209,7 @@ impl Model {
             )),
             exposed_dir,
             Some(controller),
-        )?));
+        )?;
         let start_info = fsys::ComponentStartInfo {
             resolved_url: Some(url),
             program: data::clone_option_dictionary(&decl.program),
@@ -279,16 +278,18 @@ mod tests {
     use {
         crate::{
             builtin_environment::BuiltinEnvironment,
-            model::testing::{mocks::*, test_helpers::*, test_hook::TestHook},
             model::{
-                hooks::HooksRegistration,
+                breakpoints::registry::BreakpointRegistry,
+                hooks::{EventType, Hook, HooksRegistration},
                 model::{ComponentManagerConfig, ModelParams},
                 moniker::PartialMoniker,
                 resolver::ResolverRegistry,
+                testing::{mocks::*, test_helpers::*, test_hook::TestHook},
             },
             startup,
         },
         std::collections::HashSet,
+        std::sync::Weak,
     };
 
     async fn new_model(
@@ -357,6 +358,87 @@ mod tests {
         let actual_urls = mock_runner.urls_run();
         let expected_urls: Vec<String> = vec!["test:///root_resolved".to_string()];
         assert_eq!(actual_urls, expected_urls);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn bind_concurrent() {
+        // Test binding twice concurrently to the same component. The component should only be
+        // started once.
+
+        let mock_runner = Arc::new(MockRunner::new());
+        let mut mock_resolver = MockResolver::new();
+        mock_resolver.add_component(
+            "root",
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        );
+        mock_resolver.add_component("system", component_decl_with_test_runner());
+
+        let breakpoint_events = vec![EventType::BeforeStartInstance];
+        let breakpoint_registry = Arc::new(BreakpointRegistry::new());
+        let mut breakpoint_receiver = breakpoint_registry
+            .set_breakpoints(Some(AbsoluteMoniker::root()), breakpoint_events.clone())
+            .await;
+        let hooks = vec![HooksRegistration::new(
+            "bind_concurrent",
+            breakpoint_events,
+            Arc::downgrade(&breakpoint_registry) as Weak<dyn Hook>,
+        )];
+        let (model, _builtin_environment) =
+            new_model_with(mock_resolver, mock_runner.clone(), hooks).await;
+
+        // Bind to "system", pausing before it starts.
+        let model_copy = model.clone();
+        let (f, bind_handle) = async move {
+            let m: AbsoluteMoniker = vec!["system:0"].into();
+            model_copy.bind(&m).await.expect("failed to bind 1");
+        }
+        .remote_handle();
+        fasync::spawn(f);
+        let invocation =
+            breakpoint_receiver.wait_until(EventType::BeforeStartInstance, vec![].into()).await;
+        invocation.resume();
+        let invocation = breakpoint_receiver
+            .wait_until(EventType::BeforeStartInstance, vec!["system:0"].into())
+            .await;
+        {
+            let expected_urls: Vec<String> = vec!["test:///root_resolved".to_string()];
+            assert_eq!(mock_runner.urls_run(), expected_urls);
+        }
+
+        // While the bind() is paused, bind again. Allow the component to start for the second
+        // bind.
+        {
+            let model_copy = model.clone();
+            let (f, bind_handle) = async move {
+                let m: AbsoluteMoniker = vec!["system:0"].into();
+                model_copy.bind(&m).await.expect("failed to bind 2");
+            }
+            .remote_handle();
+            fasync::spawn(f);
+
+            let invocation = breakpoint_receiver
+                .wait_until(EventType::BeforeStartInstance, vec!["system:0"].into())
+                .await;
+            invocation.resume();
+            bind_handle.await;
+            let expected_urls: Vec<String> =
+                vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
+            assert_eq!(mock_runner.urls_run(), expected_urls);
+        }
+
+        // Now allow the first bind to proceed.
+        invocation.resume();
+        bind_handle.await;
+
+        // Verify that the component was started only once.
+        {
+            let expected_urls: Vec<String> =
+                vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
+            assert_eq!(mock_runner.urls_run(), expected_urls);
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

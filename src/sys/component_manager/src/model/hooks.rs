@@ -11,8 +11,10 @@ use {
         },
     },
     cm_rust::ComponentDecl,
+    fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
+    io_util,
     rand::random,
     std::{
         collections::HashMap,
@@ -88,7 +90,7 @@ pub enum EventPayload {
         component_url: String,
     },
     BeforeStartInstance {
-        runtime: Arc<Mutex<Runtime>>,
+        runtime: RuntimeInfo,
         component_decl: ComponentDecl,
         live_children: Vec<ComponentDescriptor>,
         routing_facade: RoutingFacade,
@@ -106,6 +108,32 @@ pub enum EventPayload {
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
     StopInstance,
+}
+
+/// Information about a component's runtime provided to `BeforeStartInstance`.
+#[derive(Clone)]
+pub struct RuntimeInfo {
+    pub resolved_url: String,
+    pub package_dir: Option<DirectoryProxy>,
+    pub outgoing_dir: Option<DirectoryProxy>,
+    pub runtime_dir: Option<DirectoryProxy>,
+}
+
+impl RuntimeInfo {
+    pub fn from_runtime(runtime: &Runtime) -> Self {
+        Self {
+            resolved_url: runtime.resolved_url.clone(),
+            package_dir: runtime.namespace.as_ref().and_then(|n| clone_dir(n.package_dir.as_ref())),
+            outgoing_dir: clone_dir(runtime.outgoing_dir.as_ref()),
+            runtime_dir: clone_dir(runtime.runtime_dir.as_ref()),
+        }
+    }
+}
+
+// TODO(fsamuel): We should probably preserve the original error messages
+// instead of dropping them.
+fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
+    dir.and_then(|d| io_util::clone_directory(d, CLONE_FLAG_SAME_RIGHTS).ok())
 }
 
 impl EventPayload {
