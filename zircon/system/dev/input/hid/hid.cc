@@ -26,13 +26,6 @@
 
 namespace hid_driver {
 
-// Until we do full HID parsing, we put mouse and keyboard devices into boot
-// protocol mode. In particular, a mouse will always send 3 byte reports (see
-// ddk/protocol/input.h for the format). This macro sets FIDL return values for
-// boot mouse devices to reflect the boot protocol, rather than what the device
-// itself reports.
-#define BOOT_KBD_HACK 1
-
 static constexpr input_report_size_t BitsToBytes(input_report_size_t bits) {
   return static_cast<input_report_size_t>(((bits + 7) / 8));
 }
@@ -400,18 +393,6 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
 
   snprintf(name_.data(), name_.size(), "hid-device-%03d", info_.dev_num);
   name_[ZX_DEVICE_NAME_MAX] = 0;
-
-  if (info_.boot_device) {
-#if BOOT_KBD_HACK
-    if (info_.device_class == HID_DEVICE_CLASS_KBD) {
-      status = hidbus_.SetProtocol(HID_PROTOCOL_BOOT);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "hid: could not put HID device into boot protocol: %d\n", status);
-        return status;
-      }
-    }
-#endif
-  }
 
   status = SetReportDescriptor();
   if (status != ZX_OK) {
