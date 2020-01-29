@@ -9,9 +9,11 @@
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+#include <zircon/threads.h>
 #include <zircon/types.h>
 
 #include <ddk/binding.h>
+#include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/composite.h>
@@ -889,6 +891,29 @@ zx_status_t AstroDisplay::Bind() {
   if (status != ZX_OK) {
     DISP_ERROR("Could not create capture_thread\n");
     return status;
+  }
+
+  // Set profile for vsync thread.
+  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  {
+    const zx_duration_t capacity = ZX_USEC(500);
+    const zx_duration_t deadline = ZX_MSEC(8);
+    const zx_duration_t period = deadline;
+
+    zx_handle_t profile = ZX_HANDLE_INVALID;
+    if ((status = device_get_deadline_profile(this->zxdev(), capacity, deadline, period,
+                                              "dev/display/astro-display/vsync_thread",
+                                              &profile)) != ZX_OK) {
+      DISP_ERROR("Failed to get deadline profile: %d\n", status);
+    } else {
+      const zx_handle_t thread_handle = thrd_get_zx_handle(vsync_thread_);
+      status = zx_object_set_profile(thread_handle, profile, 0);
+      if (status != ZX_OK) {
+        DISP_ERROR("Failed to set deadline profile: %d\n", status);
+      }
+      zx_handle_close(profile);
+    }
   }
 
   auto cleanup = fbl::MakeAutoCall([&]() { DdkRelease(); });

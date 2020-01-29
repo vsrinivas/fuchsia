@@ -6,6 +6,8 @@
 
 #include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <zircon/threads.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -949,6 +951,29 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
     zxlogf(ERROR, "Failed to add display core device %d\n", status);
     return status;
   }
+
+  // Set the display controller looper thread to use a deadline profile.
+  // TODO(40858): Migrate to the role-based API when available, instead of hard
+  // coding parameters.
+  {
+    const zx_duration_t capacity = ZX_USEC(500);
+    const zx_duration_t deadline = ZX_MSEC(8);
+    const zx_duration_t period = deadline;
+
+    zx_handle_t profile = ZX_HANDLE_INVALID;
+    if ((status = device_get_deadline_profile(this->zxdev(), capacity, deadline, period,
+                                              "dev/display/controller", &profile)) != ZX_OK) {
+      zxlogf(ERROR, "Failed to get deadline profile %d\n", status);
+    } else {
+      zx_handle_t thread_handle = thrd_get_zx_handle(loop_thread_);
+      status = zx_object_set_profile(thread_handle, profile, 0);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to set deadline profile %d\n", status);
+      }
+      zx_handle_close(profile);
+    }
+  }
+
   __UNUSED auto ptr = device_ptr->release();
 
   dc_.SetDisplayControllerInterface(this, &display_controller_interface_protocol_ops_);
