@@ -33,38 +33,42 @@ class FakeGe2d {
   }
 
   // ZX_PROTOCOL_GE2DC (Refer to ge2d.banjo for documentation).
-  zx_status_t Ge2dInitTaskResize(const buffer_collection_info_2_t* input_buffer_collection,
-                                 const buffer_collection_info_2_t* output_buffer_collection,
-                                 const resize_info_t* info,
-                                 const image_format_2_t* input_image_format,
-                                 const image_format_2_t* output_image_format_table_list,
-                                 size_t output_image_format_table_count,
-                                 uint32_t output_image_format_index,
-                                 const hw_accel_frame_callback_t* frame_callback,
-                                 const hw_accel_res_change_callback_t* res_callback,
-                                 const hw_accel_remove_task_callback_t* task_remove_callback,
-                                 uint32_t* out_task_index) {
+  zx_status_t Ge2dInitTaskResize(const buffer_collection_info_2_t* /*input_buffer_collection*/,
+                                 const buffer_collection_info_2_t* /*output_buffer_collection*/,
+                                 const resize_info_t* /*info*/,
+                                 const image_format_2_t* /*input_image_format*/,
+                                 const image_format_2_t* /*output_image_format_table_list*/,
+                                 size_t /*output_image_format_table_count*/,
+                                 uint32_t /*output_image_format_index*/,
+                                 const hw_accel_frame_callback_t* /*frame_callback*/,
+                                 const hw_accel_res_change_callback_t* /*res_callback*/,
+                                 const hw_accel_remove_task_callback_t* /*task_remove_callback*/,
+                                 uint32_t* /*out_task_index*/) {
     return ZX_OK;
   }
-  zx_status_t Ge2dInitTaskWaterMark(const buffer_collection_info_2_t* input_buffer_collection,
-                                    const buffer_collection_info_2_t* output_buffer_collection,
-                                    const water_mark_info_t* info, zx::vmo watermark_vmo,
-                                    const image_format_2_t* image_format_table_list,
-                                    size_t image_format_table_count, uint32_t image_format_index,
-                                    const hw_accel_frame_callback_t* frame_callback,
-                                    const hw_accel_res_change_callback_t* res_callback,
-                                    const hw_accel_remove_task_callback_t* task_remove_callback,
-                                    uint32_t* out_task_index) {
+  zx_status_t Ge2dInitTaskWaterMark(const buffer_collection_info_2_t* /*input_buffer_collection*/,
+                                    const buffer_collection_info_2_t* /*output_buffer_collection*/,
+                                    const water_mark_info_t* /*info*/, zx::vmo /*watermark_vmo*/,
+                                    const image_format_2_t* /*image_format_table_list*/,
+                                    size_t /*image_format_table_count*/,
+                                    uint32_t /*image_format_index*/,
+                                    const hw_accel_frame_callback_t* /*frame_callback*/,
+                                    const hw_accel_res_change_callback_t* /*res_callback*/,
+                                    const hw_accel_remove_task_callback_t* /*task_remove_callback*/,
+                                    uint32_t* /*out_task_index*/) {
     return ZX_OK;
   }
-  zx_status_t Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index) { return ZX_OK; }
+  zx_status_t Ge2dProcessFrame(uint32_t /*task_index*/, uint32_t /*input_buffer_index*/) {
+    return ZX_OK;
+  }
   void Ge2dRemoveTask(uint32_t task_index) {}
   void Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index) {}
-  zx_status_t Ge2dSetInputAndOutputResolution(uint32_t task_index,
-                                              uint32_t new_image_format_index) {
+  zx_status_t Ge2dSetInputAndOutputResolution(uint32_t /*task_index*/,
+                                              uint32_t /*new_image_format_index*/) {
     return ZX_OK;
   }
-  zx_status_t Ge2dSetOutputResolution(uint32_t task_index, uint32_t new_output_image_format_index) {
+  zx_status_t Ge2dSetOutputResolution(uint32_t /*task_index*/,
+                                      uint32_t /*new_output_image_format_index*/) {
     return ZX_OK;
   }
 

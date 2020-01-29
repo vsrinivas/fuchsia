@@ -30,7 +30,7 @@ void OnGe2dTaskRemoved(void* ctx, task_remove_status_t status) {
 }
 
 fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
-    ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
+    const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
     zx_device_t* device, const ddk::Ge2dProtocolClient& ge2d, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_ge2d_node) {
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();

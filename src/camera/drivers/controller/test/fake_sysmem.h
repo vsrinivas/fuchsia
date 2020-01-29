@@ -21,13 +21,13 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
   }
 
   // |ZX_PROTOCOL_SYSMEM|
-  zx_status_t SysmemConnect(zx::channel allocator_request) { return ZX_OK; }
+  zx_status_t SysmemConnect(zx::channel /*allocator_request*/) { return ZX_OK; }
 
-  zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
+  zx_status_t SysmemRegisterHeap(uint64_t /*heap*/, zx::channel /*heap_connection*/) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
+  zx_status_t SysmemRegisterSecureMem(zx::channel /*secure_mem_connection*/) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

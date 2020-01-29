@@ -101,8 +101,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
   // This helper API does the basic validation of an Input Node.
   fit::result<std::unique_ptr<camera::InputNode>, zx_status_t> GetInputNode(
-      const ControllerMemoryAllocator& allocator,
-      const fuchsia::camera2::CameraStreamType stream_type, StreamCreationData* info) {
+      const ControllerMemoryAllocator& allocator, StreamCreationData* info) {
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
     buffer_collection.buffer_count = kNumBuffers;
     EXPECT_NE(nullptr, info);
@@ -121,7 +120,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   // Returns |true| if all |streams| are present in the
   // vector |streams_to_validate|.
   bool HasAllStreams(const std::vector<fuchsia::camera2::CameraStreamType>& streams_to_validate,
-                     const std::vector<fuchsia::camera2::CameraStreamType>& streams) {
+                     const std::vector<fuchsia::camera2::CameraStreamType>& streams) const {
     if (streams_to_validate.size() != streams.size()) {
       return false;
     }
@@ -151,7 +150,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     ControllerMemoryAllocator allocator(std::move(sysmem_allocator2_));
 
     // Testing successful creation of |OutputNode|.
-    auto input_result = GetInputNode(allocator, stream_type, &info);
+    auto input_result = GetInputNode(allocator, &info);
     auto output_result = OutputNode::CreateOutputNode(loop_.dispatcher(), &info,
                                                       input_result.value().get(), info.node);
     EXPECT_TRUE(output_result.is_ok());
@@ -182,7 +181,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info.node = *stream_config_node;
     ControllerMemoryAllocator allocator(std::move(sysmem_allocator2_));
 
-    auto input_result = GetInputNode(allocator, kStreamTypeDS | kStreamTypeML, &info);
+    auto input_result = GetInputNode(allocator, &info);
     // Testing successful creation of |GdcNode|.
     auto next_node_internal = GetNextNodeInPipeline(kStreamTypeDS | kStreamTypeML, info.node);
     ASSERT_NE(nullptr, next_node_internal);
@@ -290,7 +289,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_NE(nullptr, output_node->client_stream());
   }
 
-  void TestConfigure_MonitorConfig_MultiStreamFR() {
+  void TestMonitorMultiStreamFR() {
     fuchsia::camera2::StreamPtr stream1;
     fuchsia::camera2::StreamPtr stream2;
 
@@ -345,7 +344,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_FALSE(ds_ml_output_node->enabled());
   }
 
-  void TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering() {
+  void TestMonitorMultiStreamFRBadOrder() {
     auto stream_type1 = kStreamTypeDS | kStreamTypeML;
     auto stream_type2 = kStreamTypeFR | kStreamTypeML;
     fuchsia::camera2::StreamPtr stream1;
@@ -632,7 +631,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, ds_result.error());
 
     bool fr_stream_alive = true;
-    fr_stream.set_error_handler([&](zx_status_t status) { fr_stream_alive = false; });
+    fr_stream.set_error_handler([&](zx_status_t /*status*/) { fr_stream_alive = false; });
 
     bool fr_frame_received = false;
     uint32_t fr_frame_index = 0;
@@ -642,7 +641,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     };
 
     bool ds_stream_alive = true;
-    ds_stream.set_error_handler([&](zx_status_t status) { ds_stream_alive = false; });
+    ds_stream.set_error_handler([&](zx_status_t /*status*/) { ds_stream_alive = false; });
 
     bool ds_frame_received = false;
     uint32_t ds_frame_index = 0;
@@ -787,13 +786,11 @@ TEST_F(ControllerProtocolTest, TestNextNodeInPipeline) { TestGetNextNodeInPipeli
 
 TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) { TestMultipleStartStreaming(); }
 
-TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering) {
-  TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering();
+TEST_F(ControllerProtocolTest, TestMonitorMultiStreamFRBadOrder) {
+  TestMonitorMultiStreamFRBadOrder();
 }
 
-TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_MultiStreamFR) {
-  TestConfigure_MonitorConfig_MultiStreamFR();
-}
+TEST_F(ControllerProtocolTest, TestMonitorMultiStreamFR) { TestMonitorMultiStreamFR(); }
 
 TEST_F(ControllerProtocolTest, TestInUseBufferCounts) { TestInUseBufferCounts(); }
 

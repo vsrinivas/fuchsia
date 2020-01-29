@@ -33,15 +33,15 @@ class FakeIsp {
 
   zx_status_t Start() { return ZX_OK; }
   zx_status_t Stop() { return ZX_OK; }
-  zx_status_t ReleaseFrame(uint32_t buffer_index) {
+  zx_status_t ReleaseFrame(uint32_t /*buffer_index*/) {
     frame_released_ = true;
     return ZX_OK;
   }
 
   // |ZX_PROTOCOL_ISP|
-  zx_status_t IspCreateOutputStream(const buffer_collection_info_2_t* buffer_collection,
-                                    const image_format_2_t* image_format, const frame_rate_t* rate,
-                                    stream_type_t type,
+  zx_status_t IspCreateOutputStream(const buffer_collection_info_2_t* /*buffer_collection*/,
+                                    const image_format_2_t* /*image_format*/,
+                                    const frame_rate_t* /*rate*/, stream_type_t /*type*/,
                                     const hw_accel_frame_callback_t* frame_callback,
                                     output_stream_protocol_t* out_s) {
     frame_callback_ = frame_callback;
@@ -52,7 +52,7 @@ class FakeIsp {
     return ZX_OK;
   }
 
-  bool frame_released() { return frame_released_; }
+  bool frame_released() const { return frame_released_; }
 
  private:
   static zx_status_t IspCreateOutputStream(void* ctx,

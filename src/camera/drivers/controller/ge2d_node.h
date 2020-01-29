@@ -9,6 +9,8 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <zircon/assert.h>
 
+#include <utility>
+
 #include <ddktl/protocol/ge2d.h>
 
 #include "src/camera/drivers/controller/processing_node.h"
@@ -38,9 +40,9 @@ class Ge2dNode : public ProcessNode {
            fuchsia::camera2::CameraStreamType current_stream_type,
            std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
            fuchsia::camera2::FrameRate frame_rate, const resize_info_t& info)
-      : ProcessNode(NodeType::kGe2d, parent_node, output_image_formats,
-                    std::move(output_buffer_collection), current_stream_type, supported_streams,
-                    dispatcher, frame_rate),
+      : ProcessNode(NodeType::kGe2d, parent_node, std::move(output_image_formats),
+                    std::move(output_buffer_collection), current_stream_type,
+                    std::move(supported_streams), dispatcher, frame_rate),
         ge2d_(ge2d),
         info_(info),
         frame_callback_{OnGe2dFrameAvailable, this},
@@ -57,7 +59,7 @@ class Ge2dNode : public ProcessNode {
   // |parent_node| : pointer to the node to which we need to append this |OutputNode|.
   // |internal_output_node| : InternalConfigNode corresponding to this node.
   static fit::result<ProcessNode*, zx_status_t> CreateGe2dNode(
-      ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
+      const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
       zx_device_t* device, const ddk::Ge2dProtocolClient& ge2d, StreamCreationData* info,
       ProcessNode* parent_node, const InternalConfigNode& internal_ge2d_node);
 
@@ -69,7 +71,7 @@ class Ge2dNode : public ProcessNode {
   const hw_accel_remove_task_callback_t* remove_task_callback() { return &remove_task_callback_; }
 
   // Notifies that a frame is done processing by this node.
-  virtual void OnFrameAvailable(const frame_available_info_t* info) override;
+  void OnFrameAvailable(const frame_available_info_t* info) override;
 
   // Notifies that a frame is ready to be sent to the client.
   void OnReadyToProcess(const frame_available_info_t* info) override;

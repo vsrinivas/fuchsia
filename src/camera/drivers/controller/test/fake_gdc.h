@@ -52,12 +52,14 @@ class FakeGdc {
     frame_callback_->frame_ready(frame_callback_->ctx, &info);
     return ZX_OK;
   }
-  void GdcRemoveTask(uint32_t task_index) {
+  void GdcRemoveTask(uint32_t /*task_index*/) {
     remove_task_callback_->task_removed(remove_task_callback_->ctx, ZX_OK);
   }
-  void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) { frame_released_ = true; }
+  void GdcReleaseFrame(uint32_t /*task_index*/, uint32_t /*buffer_index*/) {
+    frame_released_ = true;
+  }
 
-  bool frame_released() { return frame_released_; }
+  bool frame_released() const { return frame_released_; }
 
  private:
   static zx_status_t GdcInitTask(void* ctx,

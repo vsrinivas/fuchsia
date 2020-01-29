@@ -85,18 +85,19 @@ void StreamImpl::AcknowledgeFrameError() {
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
-                                     SetRegionOfInterestCallback callback) {
+void StreamImpl::SetRegionOfInterest(float /*x_min*/, float /*y_min*/, float /*x_max*/,
+                                     float /*y_max*/, SetRegionOfInterestCallback /*callback*/) {
   FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) {
+void StreamImpl::SetImageFormat(uint32_t /*image_format_index*/,
+                                SetImageFormatCallback /*callback*/) {
   FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void StreamImpl::GetImageFormats(GetImageFormatsCallback callback) {
+void StreamImpl::GetImageFormats(GetImageFormatsCallback /*callback*/) {
   FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }

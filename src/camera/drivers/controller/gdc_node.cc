@@ -92,8 +92,8 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 
   // Get the GDC configurations loaded
   std::vector<gdc_config_info> config_vmos_info;
-  for (uint32_t i = 0; i < internal_gdc_node.gdc_info.config_type.size(); i++) {
-    auto gdc_config = LoadGdcConfiguration(device, internal_gdc_node.gdc_info.config_type[i]);
+  for (auto& config : internal_gdc_node.gdc_info.config_type) {
+    auto gdc_config = LoadGdcConfiguration(device, config);
     if (gdc_config.is_error()) {
       FX_LOGST(ERROR, kTag) << "Failed to load GDC configuration";
       return fit::error(gdc_config.error());

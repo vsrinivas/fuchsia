@@ -26,7 +26,7 @@ ControllerImpl::ControllerImpl(zx_device_t* device,
       pipeline_manager_(device, dispatcher, isp, gdc, ge2d, std::move(sysmem_allocator),
                         shutdown_event) {
   binding_.set_error_handler(
-      [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
+      [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
   binding_.Bind(std::move(control), dispatcher);
 }
 
@@ -45,7 +45,7 @@ void ControllerImpl::GetConfigs(GetConfigsCallback callback) {
   callback(fidl::Clone(configs_), ZX_OK);
 }
 
-InternalConfigNode* ControllerImpl::GetStreamConfigNode(
+static InternalConfigNode* GetStreamConfigNode(
     InternalConfigInfo* internal_config, fuchsia::camera2::CameraStreamType stream_config_type) {
   // Internal API, assuming the pointer will be valid always.
   for (auto& stream_info : internal_config->streams_info) {

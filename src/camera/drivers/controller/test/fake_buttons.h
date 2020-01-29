@@ -19,14 +19,14 @@ class ButtonsImpl : public fuchsia::buttons::Buttons {
               async_dispatcher_t* dispatcher, fit::closure on_connection_closed)
       : binding_(this) {
     binding_.set_error_handler(
-        [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
+        [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
     binding_.Bind(std::move(buttons_interface), dispatcher);
   }
 
  private:
   // FIDL Interface Functions.
   void GetState(fuchsia::buttons::ButtonType type, GetStateCallback callback) override {}
-  void RegisterNotify(uint8_t types, RegisterNotifyCallback callback) override {
+  void RegisterNotify(uint8_t /*types*/, RegisterNotifyCallback callback) override {
     fuchsia::buttons::Buttons_RegisterNotify_Result status;
     status.set_err(ZX_OK);
     callback(std::move(status));

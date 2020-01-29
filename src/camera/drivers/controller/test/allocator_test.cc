@@ -93,7 +93,7 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
 }
 
 // Validate FR --> GDC1
-TEST_F(ControllerMemoryAllocatorTest, VideoConfigFR_GDC1) {
+TEST_F(ControllerMemoryAllocatorTest, VideoConfigFRGDC1) {
   auto internal_config = VideoConfigFullRes();
   auto fr_constraints = internal_config.output_constraints;
   auto gdc1_constraints = internal_config.child_nodes[0].input_constraints;
@@ -124,7 +124,7 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigFR_GDC1) {
 // Validate GDC1 ---> GDC2
 //               |
 //               ---> GE2D
-TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1_GDC2) {
+TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1GDC2) {
   auto input_node = VideoConfigFullRes();
   auto gdc1_node = input_node.child_nodes[0];
   auto gdc2_node = gdc1_node.child_nodes[0];
