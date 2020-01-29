@@ -10,8 +10,6 @@
             "packages"
         ],
         "services": [
-            "fuchsia.app.discover.SessionDiscoverContext",
-            "fuchsia.app.discover.Suggestions",
             "fuchsia.accessibility.semantics.SemanticsManager",
             "fuchsia.bluetooth.control.Control",
             "fuchsia.cobalt.LoggerFactory",
