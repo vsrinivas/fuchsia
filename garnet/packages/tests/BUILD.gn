@@ -289,7 +289,6 @@ group("all") {
     ":inspect_tests",
     ":intl",
     ":json",
-    ":kms",
     ":libc",
     ":linux_runner",
     ":log_listener",
@@ -681,14 +680,6 @@ group("timezone") {
 group("scenic_cpp") {
   testonly = true
   public_deps = [ "//sdk/lib/ui/scenic/cpp/tests:scenic_cpp_tests" ]
-}
-
-group("kms") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/kms:kms_tests",
-    "//garnet/bin/kms_test_client:kms_test_client_pkg",
-  ]
 }
 
 group("run_tests") {

@@ -8,11 +8,9 @@
 group("all") {
   testonly = true
   public_deps = [
-    "//garnet/packages/experimental:kms",
     "//garnet/packages/experimental:linux_runner",
     "//garnet/packages/experimental:network_settings_server",
     "//garnet/packages/experimental:sys",
-    "//garnet/packages/experimental:tennis",
   ]
 }
 
@@ -41,20 +39,4 @@ group("sys") {
 group("linux_runner") {
   testonly = true
   public_deps = [ "//src/virtualization/packages/biscotti_guest/linux_runner" ]
-}
-
-group("kms") {
-  testonly = true
-  public_deps = [ "//garnet/bin/kms:kms" ]
-}
-
-group("tennis") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/tennis:tennis_service",
-    "//garnet/bin/tennis:tennis_sysmgr_config",
-    "//garnet/bin/tennis:tennis_viewer",
-    "//garnet/bin/tennis/bots/example_ai:tennis_example_ai",
-    "//garnet/bin/tennis/bots/manual_player:tennis_manual_player",
-  ]
 }
