@@ -5,25 +5,82 @@
 #ifndef SRC_CAMERA_BIN_DEVICE_UTIL_H_
 #define SRC_CAMERA_BIN_DEVICE_UTIL_H_
 
+#include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fit/result.h>
+#include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 
 // Safely unbinds a client connection, doing so on the connection's thread if it differs from the
 // caller's thread.
 template <class T>
-inline zx_status_t Unbind(fidl::InterfacePtr<T>& p) {
+inline void Unbind(fidl::InterfacePtr<T>& p) {
   if (!p) {
-    return ZX_OK;
+    return;
   }
 
   if (p.dispatcher() == async_get_default_dispatcher()) {
     p.Unbind();
-    return ZX_OK;
+    return;
   }
 
-  return async::PostTask(p.dispatcher(), [&]() { p.Unbind(); });
+  async::PostTask(p.dispatcher(), [&]() { p.Unbind(); });
+}
+
+// Converts a camera2.hal.Config to a camera3.Configuration
+inline fit::result<fuchsia::camera3::Configuration, zx_status_t> Convert(
+    const fuchsia::camera2::hal::Config& config) {
+  if (config.stream_configs.empty()) {
+    FX_PLOGS(ERROR, ZX_ERR_INTERNAL) << "Config reported no streams.";
+    return fit::error(ZX_ERR_INTERNAL);
+  }
+  fuchsia::camera3::Configuration ret{};
+  for (const auto& stream_config : config.stream_configs) {
+    if (stream_config.image_formats.empty()) {
+      FX_PLOGS(ERROR, ZX_ERR_INTERNAL) << "Stream reported no image formats.";
+      return fit::error(ZX_ERR_INTERNAL);
+    }
+    fuchsia::camera3::StreamProperties stream_properties{};
+    stream_properties.frame_rate.numerator = stream_config.frame_rate.frames_per_sec_numerator;
+    stream_properties.frame_rate.denominator = stream_config.frame_rate.frames_per_sec_denominator;
+    stream_properties.image_format = stream_config.image_formats[0];
+    for (const auto& format : stream_config.image_formats) {
+      fuchsia::camera3::Resolution resolution{
+          .coded_size{
+              .width = static_cast<int32_t>(format.coded_width),
+              .height = static_cast<int32_t>(format.coded_height),
+          },
+          .bytes_per_row = format.bytes_per_row,
+      };
+      stream_properties.supported_resolutions.push_back(resolution);
+    }
+    ret.streams.push_back(std::move(stream_properties));
+  }
+  return fit::ok(std::move(ret));
+}
+
+// Waits until |deadline| for |event| to signal all bits in |signals_all| or any bits in
+// |signals_any|, accumulating signaled bits into |pending|.
+inline zx_status_t WaitMixed(const zx::event& event, zx_signals_t signals_all,
+                             zx_signals_t signals_any, zx::time deadline, zx_signals_t* pending) {
+  ZX_ASSERT(pending);
+  *pending = ZX_SIGNAL_NONE;
+  zx_status_t status = ZX_OK;
+  while (status == ZX_OK) {
+    zx_signals_t signaled{};
+    status = event.wait_one(signals_all | signals_any, deadline, &signaled);
+    *pending |= signaled;
+    if ((*pending & signals_all) == signals_all) {
+      return status;
+    }
+    if ((*pending & signals_any) != ZX_SIGNAL_NONE) {
+      return status;
+    }
+  }
+  return status;
 }
 
 #endif  // SRC_CAMERA_BIN_DEVICE_UTIL_H_

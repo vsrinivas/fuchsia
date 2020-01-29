@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <map>
 #include <memory>
@@ -18,16 +19,29 @@
 
 #include "src/camera/bin/device/stream_impl.h"
 
+// Represents a physical camera device, and serves multiple clients of the camera3.Device protocol.
 class DeviceImpl {
  public:
   DeviceImpl();
   ~DeviceImpl();
+
+  // Creates a DeviceImpl using the given |controller|.
   static fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
       fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller);
+
+  // Returns a service handler for use with a service directory.
   fidl::InterfaceRequestHandler<fuchsia::camera3::Device> GetHandler();
 
+  // Returns a waitable event that will signal ZX_EVENT_SIGNALED in the event this class becomes
+  // unusable, for example, due to the disconnection of the underlying controller channel.
+  zx::event GetBadStateEvent();
+
  private:
+  // Called by the request handler returned by GetHandler, i.e. when a new client connects to the
+  // published service.
   void OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request);
+
+  // Called if the underlying controller disconnects.
   void OnControllerDisconnected(zx_status_t status);
 
   // Posts a task to remove the client with the given id.
@@ -39,15 +53,19 @@ class DeviceImpl {
   // Sets the current configuration to the provided index.
   void SetConfiguration(uint32_t index);
 
+  // Represents a single client connection to the DeviceImpl class.
   class Client : public fuchsia::camera3::Device {
    public:
-    Client(DeviceImpl& device);
+    Client(DeviceImpl& device, uint64_t id,
+           fidl::InterfaceRequest<fuchsia::camera3::Device> request);
     ~Client();
-    static fit::result<std::unique_ptr<Client>, zx_status_t> Create(
-        DeviceImpl& device, uint64_t id, fidl::InterfaceRequest<fuchsia::camera3::Device> request);
 
    private:
+    // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
+    // the parent |clients_| map.
     void CloseConnection(zx_status_t status);
+
+    // Called when the client endpoint of |binding_| is closed.
     void OnClientDisconnected(zx_status_t status);
 
     // |fuchsia::camera3::Device|
@@ -69,6 +87,7 @@ class DeviceImpl {
   };
 
   async::Loop loop_;
+  zx::event bad_state_event_;
   fuchsia::camera2::hal::ControllerPtr controller_;
   fuchsia::camera2::DeviceInfo device_info_;
   std::vector<fuchsia::camera2::hal::Config> configs_;

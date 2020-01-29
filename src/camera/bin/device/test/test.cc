@@ -9,7 +9,11 @@
 #include "src/camera/bin/device/device_impl.h"
 #include "src/camera/bin/device/stream_impl.h"
 #include "src/camera/bin/device/test/fake_controller.h"
+#include "src/camera/bin/device/util.h"
+#include "src/camera/lib/fake_stream/fake_stream.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+
+namespace camera {
 
 class DeviceTest : public gtest::TestLoopFixture {
  protected:
@@ -36,7 +40,28 @@ class DeviceTest : public gtest::TestLoopFixture {
   std::unique_ptr<FakeController> controller_;
 };
 
-TEST_F(DeviceTest, CreateStreamNullConnection) {
-  auto result = StreamImpl::Create(nullptr);
-  EXPECT_TRUE(result.is_ok());
+TEST_F(DeviceTest, CreateStreamNullConnection) { StreamImpl stream(nullptr); }
+
+TEST_F(DeviceTest, CreateStreamFakeConnection) {
+  fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
+  auto result = FakeStream::Create(handle.NewRequest());
+  ASSERT_TRUE(result.is_ok());
+  { StreamImpl stream(std::move(handle)); }
 }
+
+TEST_F(DeviceTest, ConvertConfig) {
+  auto configs = FakeController::GetDefaultConfigs();
+  ASSERT_FALSE(configs.empty());
+  auto& a = configs[0];
+  ASSERT_FALSE(a.stream_configs.empty());
+  ASSERT_FALSE(a.stream_configs[0].image_formats.empty());
+  auto result = Convert(a);
+  ASSERT_TRUE(result.is_ok());
+  auto b = result.take_value();
+  EXPECT_EQ(a.stream_configs.size(), b.streams.size());
+  ASSERT_FALSE(b.streams[0].supported_resolutions.empty());
+  EXPECT_EQ(a.stream_configs[0].image_formats[0].bytes_per_row,
+            b.streams[0].supported_resolutions[0].bytes_per_row);
+}
+
+}  // namespace camera

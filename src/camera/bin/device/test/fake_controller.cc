@@ -76,6 +76,10 @@ fit::result<std::unique_ptr<FakeController>, zx_status_t> FakeController::Create
   return fit::ok(std::move(controller));
 }
 
+std::vector<fuchsia::camera2::hal::Config> FakeController::GetDefaultConfigs() {
+  return DefaultConfigs();
+}
+
 FakeController::FakeController()
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), binding_(this) {}
 

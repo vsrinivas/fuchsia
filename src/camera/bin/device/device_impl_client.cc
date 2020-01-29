@@ -9,36 +9,19 @@
 
 #include "src/camera/bin/device/device_impl.h"
 
-DeviceImpl::Client::Client(DeviceImpl& device)
-    : device_(device), loop_(&kAsyncLoopConfigNoAttachToCurrentThread), binding_(this) {}
-
-DeviceImpl::Client::~Client() { loop_.Shutdown(); }
-
-fit::result<std::unique_ptr<DeviceImpl::Client>, zx_status_t> DeviceImpl::Client::Create(
-    DeviceImpl& device, uint64_t id, fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
+DeviceImpl::Client::Client(DeviceImpl& device, uint64_t id,
+                           fidl::InterfaceRequest<fuchsia::camera3::Device> request)
+    : device_(device),
+      id_(id),
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      binding_(this, std::move(request), loop_.dispatcher()) {
   FX_LOGS(DEBUG) << "Device client " << id << " connected.";
-
-  auto client = std::make_unique<Client>(device);
-
   std::ostringstream oss;
   oss << "Camera Device Thread (Client ID = " << id << ")";
-  zx_status_t status = client->loop_.StartThread(oss.str().c_str());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    request.Close(ZX_ERR_INTERNAL);
-    return fit::error(status);
-  }
-
-  status = client->binding_.Bind(std::move(request), client->loop_.dispatcher());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fit::error(status);
-  }
-
-  client->id_ = id;
-
-  return fit::ok(std::move(client));
+  ZX_ASSERT(loop_.StartThread(oss.str().c_str()) == ZX_OK);
 }
+
+DeviceImpl::Client::~Client() { loop_.Shutdown(); }
 
 void DeviceImpl::Client::OnClientDisconnected(zx_status_t status) {
   FX_PLOGS(DEBUG, status) << "Device client " << id_ << " disconnected.";
@@ -67,7 +50,7 @@ void DeviceImpl::Client::SetCurrentConfiguration(uint32_t index) {
     CloseConnection(ZX_ERR_OUT_OF_RANGE);
   }
 
-  device_.PostSetConfiguration(index);
+  CloseConnection(ZX_ERR_NOT_SUPPORTED);
 }
 
 void DeviceImpl::Client::WatchMuteState(WatchMuteStateCallback callback) {

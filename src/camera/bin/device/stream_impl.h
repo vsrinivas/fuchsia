@@ -15,29 +15,37 @@
 #include <memory>
 #include <vector>
 
+// Represents a specific stream in a camera device's configuration. Serves multiple clients of the
+// camera3.Stream protocol.
 class StreamImpl {
  public:
-  StreamImpl();
+  StreamImpl(fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream);
   ~StreamImpl();
-  static fit::result<std::unique_ptr<StreamImpl>, zx_status_t> Create(
-      fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream);
-  zx_status_t Bind(fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
+
+  // Posts a task to bind a new client to this stream. Closes the request with ZX_ERR_ALREADY_BOUND
+  // if any clients already exist.
+  void PostBind(fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
 
  private:
+  // Called if the underlying legacy stream disconnects.
   void OnLegacyStreamDisconnected(zx_status_t status);
 
   // Posts a task to remove the client with the given id.
   void PostRemoveClient(uint64_t id);
 
+  // Represents a single client connection to the StreamImpl class.
   class Client : public fuchsia::camera3::Stream {
    public:
-    Client(StreamImpl& stream);
+    Client(StreamImpl& stream, uint64_t id,
+           fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
     ~Client();
-    static fit::result<std::unique_ptr<Client>, zx_status_t> Create(
-        StreamImpl& device, uint64_t id, fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
 
    private:
+    // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
+    // the parent |clients_| map.
     void CloseConnection(zx_status_t status);
+
+    // Called when the client endpoint of |binding_| is closed.
     void OnClientDisconnected(zx_status_t status);
 
     // |fuchsia::camera3::Stream|
