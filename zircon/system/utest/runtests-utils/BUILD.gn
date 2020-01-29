@@ -2,9 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/resource.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-zx_test("runtests-utils") {
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("runtests-utils") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [
     "fuchsia-run-test.cc",
     "log-exporter-test.cc",
@@ -12,10 +31,10 @@ zx_test("runtests-utils") {
     "runtests-utils-test.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/memfs",
-    "$zx/system/ulib/runtests-utils",
-    "$zx/system/ulib/unittest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/runtests-utils",
+    "//zircon/public/lib/unittest",
   ]
   data_deps = [
     ":packaged-publish-data-helper",
@@ -24,15 +43,18 @@ zx_test("runtests-utils") {
   ]
 }
 
-zx_executable("publish-data-helper") {
-  testonly = true
+executable("publish-data-helper") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  # TODO(44278): restore to true when properly convert to GN idioms.
+  testonly = false
   visibility = [ ":*" ]
   sources = [ "helper/publish-data-helper.cc" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
 
   # TODO: Don't instrument the helper until we have a way to route sinks
@@ -40,17 +62,38 @@ zx_executable("publish-data-helper") {
   # into summary.json.
 }
 
-resource("packaged-publish-data-helper") {
-  testonly = true
-  deps = [ ":publish-data-helper" ]
-  outputs = [ "testdata/runtests-utils/publish-data/publish-data-helper" ]
-  sources = [ "$target_out_dir/publish-data-helper" ]
+template("resource") {
+  if (defined(invoker.source)) {
+    source = invoker.source
+  } else if (defined(invoker.contents)) {
+    source = "$target_gen_dir/$target_name"
+    write_file(source, invoker.contents)
+  } else {
+    assert(false, "Need to specify 'source' or 'contents'")
+  }
+  source = rebase_path(source)
+  group(target_name) {
+    forward_variables_from(invoker, ["deps", "testonly"])
+    metadata = {
+      migrated_manifest_lines = [ "${invoker.dest}=$source" ]
+      migrated_manifest_barrier = []
+    }
+  }
 }
 
-generated_resource("test-data") {
-  testonly = true
+resource("packaged-publish-data-helper") {
+  # TODO(44278): restore to true when properly convert to GN idioms.
+  testonly = false
+  deps = [ ":publish-data-helper" ]
+  dest = "testdata/runtests-utils/publish-data/publish-data-helper"
+  source = "$root_out_dir/publish-data-helper"
+}
+
+resource("test-data") {
+  # TODO(44278): restore to true when properly convert to GN idioms.
+  testonly = false
   contents = [ "Hello world!" ]
-  outputs = [ "testdata/runtests-utils/test-data" ]
+  dest = "testdata/runtests-utils/test-data"
 }
 
 # Generates a build script with a sensible #! depending on what our target is.
@@ -74,21 +117,24 @@ template("runtests_test_script") {
 
   genfile =
       "$target_out_dir/testdata/runtests-utils/${subdirectory}${target_name}"
+  rebased_genfile = rebase_path(genfile)
 
   action("${target_name}.txt") {
-    testonly = true
+    # TODO(44278): restore to true when properly convert to GN idioms.
+    testonly = false
     script = "/bin/bash"
     args = [ "-c" ]
     shebang = "#!/boot/bin/sh"
-    args += [ "printf '${shebang}\n\n${invoker.contents}\n' > $genfile && chmod a+x $genfile" ]
+    args += [ "printf '${shebang}\n\n${invoker.contents}\n' > $rebased_genfile && chmod a+x $rebased_genfile" ]
     outputs = [ "$genfile" ]
   }
 
   resource("${target_name}") {
-    testonly = true
+    # TODO(44278): restore to true when properly convert to GN idioms.
+    testonly = false
     deps = [ ":${target_name}.txt" ]
-    outputs = [ "testdata/runtests-utils/${subdirectory}${target_name}" ]
-    sources = [ "$genfile" ]
+    dest = "testdata/runtests-utils/${subdirectory}${target_name}"
+    source = genfile
   }
 }
 
@@ -162,7 +208,8 @@ runtests_test_script("test-inf-loop.sh") {
 }
 
 group("test-scripts") {
-  testonly = true
+  # TODO(44278): restore to true when properly convert to GN idioms.
+  testonly = false
   deps = [
     # Used by RunTestRootDir in fuchsia-run-test.cc
     ":test-root-dir.sh",
@@ -203,4 +250,12 @@ group("test-scripts") {
     ":test-with-output-fail.sh",
     ":test-with-output-succeed.sh",
   ]
+}
+
+migrated_manifest("runtests-utils-manifest") {
+  deps = [ ":runtests-utils" ]
+}
+
+migrated_manifest("publish-data-helper-manifest") {
+  deps = [ ":publish-data-helper" ]
 }

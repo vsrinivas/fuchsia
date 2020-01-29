@@ -187,7 +187,6 @@ if (current_cpu != "") {
       "noop-fuzzer",
       "platform-bus",
       "policy",
-      "runtests-utils",
       "service:test",
       "stdio",
       "timers",
