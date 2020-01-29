@@ -27,8 +27,8 @@ group("garnet") {
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",
-    "//garnet/packages/config:ui_policy",
     "//garnet/packages/prod:all",
     "//src/connectivity/wlan:service",
+    "//src/ui/policy:configs",
   ]
 }

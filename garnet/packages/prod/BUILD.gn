@@ -61,11 +61,11 @@ group("scenic") {
   public_deps = [
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:sysmem_connector",
-    "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:vulkan",
     "//src/ui/bin/activity",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
+    "//src/ui/policy:configs",
     "//src/ui/scenic",
   ]
 }
@@ -207,7 +207,6 @@ group("all") {
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:timezone",
     "//garnet/packages/prod:tracing",
-    "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
     "//garnet/packages/prod:wlan_drivers",
@@ -781,9 +780,4 @@ group("factory_reset") {
     "//src/recovery/factory_reset",
     "//src/recovery/factory_reset:configs",
   ]
-}
-
-group("ui_policy") {
-  testonly = true
-  public_deps = [ "//src/ui/policy:configs" ]
 }
