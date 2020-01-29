@@ -102,7 +102,7 @@ Enable kernel lock dependency tracking.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:34
+From //kernel/params.gni:26
 
 ### enable_lock_dep_tests
 Enable kernel lock dependency tracking tests.  By default this is
@@ -112,7 +112,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:70
+From //kernel/params.gni:62
 
 ### enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -131,7 +131,7 @@ Enable userspace PCI and disable kernel PCI.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:50
+From //kernel/params.gni:42
 
 ### environment_args
 List of clauses to apply other GN build arguments to specific compilation
@@ -241,7 +241,7 @@ If true, excludes syscalls with the [testonly] attribute.
 
 **Current value (from the default):** `false`
 
-From //kernel/syscalls/kazoo.gni:13
+From //kernel/syscalls/kazoo.gni:15
 
 ### fidl_write_v1_wireformat
 
@@ -293,12 +293,6 @@ From //public/gn/toolchain/goma.gni:13
 
 **Current value (from the default):** `"linux"`
 
-### kernel_aspace_base
-
-**Current value (from the default):** `"0xffff000000000000"`
-
-From //kernel/params.gni:28
-
 ### kernel_base
 
 **Current value (from the default):** `"0xffffffff00000000"`
@@ -315,7 +309,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:62
+From //kernel/params.gni:54
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -323,7 +317,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:54
+From //kernel/params.gni:46
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version`.
@@ -368,7 +362,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //kernel/params.gni:47
+From //kernel/params.gni:39
 
 ### select_scheduler
 Select an available scheduler.
@@ -376,7 +370,7 @@ Valid values are: "legacy", "fair", "unified"
 
 **Current value (from the default):** `"fair"`
 
-From //kernel/params.gni:38
+From //kernel/params.gni:30
 
 ### smp_max_cpus
 
