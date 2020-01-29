@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/zircon_images.gni")
+import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 
 zircon_extras_manifest("zircon_test_manifest") {
@@ -55,7 +56,31 @@ group("zircon_test_metadata") {
   }
 }
 
-package("zircon_fuzzers") {
+# When migrating Zircon fuzzers to the Fuchsia build, add them to this list.
+_migrated_fuzzers = []
+
+# Emits a JSON manifest similar to the one used to incorporate Zircon fuzzers into the Fuchsia GN
+# build pre-unification. This is used to validate that the list of Zircon fuzzers is the unchanged
+# as fuzzers are being migrated. Post-unification, this target can be removed.
+generated_file("migrated_fuzzers_manifest") {
+  outputs = [ "$root_build_dir/migrated_zircon_fuzzers.json" ]
+  contents = []
+  foreach(fuzzer, _migrated_fuzzers) {
+    fuzzer_name = get_label_info(fuzzer, "name")
+    foreach(variant,
+            [
+              "asan",
+              "asan-ubsan",
+              "ubsan",
+            ]) {
+      contents += [ "$fuzzer_name.$variant" ]
+    }
+  }
+  output_conversion = "json"
+}
+
+fuzzers_package("zircon_fuzzers") {
+  # Zircon fuzzers built using Zircon GN.
   deps = [ ":zircon_fuzzers_manifest" ]
   extra = get_target_outputs(":zircon_fuzzers_manifest")
   metadata = {
@@ -69,6 +94,10 @@ package("zircon_fuzzers") {
       },
     ]
   }
+
+  # Zircon fuzzers built using Fuchsia GN.
+  fuzzers = _migrated_fuzzers
+  deps += [ ":migrated_fuzzers_manifest" ]
 }
 
 # This tells the infra recipes how to run ZBI tests.  These are defined in

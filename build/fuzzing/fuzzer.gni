@@ -178,9 +178,6 @@ set_defaults("fuzzer") {
 #     [boolean] Indicates whether to skip the Fuchsia fuzzers package. Implies `fuzz_host`.
 #     Defaults to false.
 #
-#   generated_test_package (optional)
-#     [string] The name of a package of fuzzer tests to create.
-#
 #   meta (optional)
 #   binaries (optional)
 #   components (optional)
@@ -232,21 +229,19 @@ template("fuzzers_package") {
   # Collect the selected fuzzers listed in this package based on the variants
   # selected in args.gn and filtered by the package's list of supported
   # sanitizers.
-  foreach(fuzzer, invoker.fuzzers) {
-    selected = false
-    fuzzer_name = get_label_info(fuzzer, "name")
-    fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
-    fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
-    foreach(sanitizer, sanitizers) {
+  foreach(sanitizer, sanitizers) {
+    foreach(fuzzer, invoker.fuzzers) {
       foreach(selector, select_variant_canonical) {
-        if (!selected && selector.variant == "${sanitizer}-fuzzer" &&
+        if (!pkg.is_fuzzed && selector.variant == "${sanitizer}-fuzzer" &&
             ((defined(selector.target_type) &&
               selector.target_type == [ "fuzzed_executable" ]) ||
              (defined(selector.name) && selector.name == [ fuzzer ]) ||
              (defined(selector.output_name) &&
               selector.output_name == [ fuzzer ]))) {
-          selected = true
           pkg.is_fuzzed = true
+          fuzzer_name = get_label_info(fuzzer, "name")
+          fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
+          fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
 
           # Package details.
           pkg.meta += [
@@ -284,8 +279,13 @@ template("fuzzers_package") {
         }
       }
     }
+  }
 
-    # Fuzzer tests
+  # Fuzzer tests
+  foreach(fuzzer, invoker.fuzzers) {
+    fuzzer_name = get_label_info(fuzzer, "name")
+    fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
+    fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
     pkg.tests += [
       {
         name = "${fuzzer_name}_test"
@@ -301,7 +301,6 @@ template("fuzzers_package") {
       "${fuzzer_label}_test",
       "${fuzzer_label}_test.cmx",
     ]
-    not_needed([ "selected" ])
   }
 
   if (pkg.host) {
@@ -335,8 +334,7 @@ template("fuzzers_package") {
       testonly = true
       deps = [ ":host_${pkg.name}" ]
     }
-  } else if (pkg.is_fuzzed) {
-    # Fuzzed build: Assemble the Fuchsia package
+  } else {
     package(target_name) {
       meta = []
       binaries = []
@@ -346,7 +344,6 @@ template("fuzzers_package") {
                              "*",
                              [
                                "fuzzers",
-                               "generated_test_package",
                                "metadata",
                                "sanitizers",
                                "visibility",
@@ -355,35 +352,36 @@ template("fuzzers_package") {
       # Explicitly forward visibility for nested scopes.
       forward_variables_from(invoker, [ "visibility" ])
       testonly = true
-      meta += pkg.meta
-      binaries = pkg.binaries
-      resources = pkg.resources
-      deps = pkg.deps
 
-      # This metadata will be used to generate out/default/fuzzers.json
-      metadata = {
-        if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, "*", [ "fuzz_spec" ])
+      if (pkg.is_fuzzed) {
+        # Fuzzed build: Assemble the Fuchsia package
+        meta += pkg.meta
+        binaries += pkg.binaries
+        resources += pkg.resources
+        deps += pkg.deps
+
+        # This metadata will be used to generate out/default/fuzzers.json
+        metadata = {
+          fuzz_spec = []
+          if (defined(invoker.metadata)) {
+            forward_variables_from(invoker.metadata, "*")
+          }
+          fuzz_spec += [
+            {
+              fuzzers_package = pkg.name
+              fuzzers = pkg.fuzzers
+              fuzz_host = pkg.host
+            },
+          ]
         }
-        fuzz_spec = [
-          {
-            fuzzers_package = pkg.name
-            fuzzers = pkg.fuzzers
-            fuzz_host = pkg.host
-          },
-        ]
+      } else {
+        # Non-fuzzed build: Assemble the fuzzer test package. This uses `package` instead of
+        #`test_package`, as the latter only provides an inconvenient constraint on where the cmx file
+        # must come from.
+        meta = pkg.test_meta
+        tests = pkg.tests
+        deps += pkg.test_deps
       }
-    }
-  } else {
-    # Non-fuzzed build: Assemble the fuzzer test package. This uses `package` instead of
-    #`test_package`, as the latter only provides an inconvenient constraint on where the cmx file
-    # must come from.
-    package(target_name) {
-      forward_variables_from(invoker, [ "visibility" ])
-      testonly = true
-      meta = pkg.test_meta
-      tests = pkg.tests
-      deps = pkg.test_deps
     }
   }
 }
@@ -494,7 +492,7 @@ template("fidl_protocol_fuzzer") {
   }
 }
 
-# TODO(aarongreen): Complete soft transition and remove.
+# TODO(44458): Complete soft transition and remove.
 # These templates are the old names for `fuzzer` and `fuzzers_package`. They
 # are included to allow third_party projects to transition softly.
 template("fuzz_target") {
