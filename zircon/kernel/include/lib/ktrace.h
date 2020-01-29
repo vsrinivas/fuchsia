@@ -256,7 +256,7 @@ inline void ktrace_end_duration(TraceEnabled<enabled>, TraceContext context, uin
 
 template <bool enabled>
 inline void ktrace_flow_begin(TraceEnabled<enabled>, TraceContext context, uint32_t group,
-                              StringRef* string_ref, uint64_t flow_id) {
+                              StringRef* string_ref, uint64_t flow_id, uint64_t a = 0) {
   if constexpr (enabled) {
     const uint32_t tag = TAG_FLOW_BEGIN(string_ref->GetId(), group);
     const uint32_t effective_tag =
@@ -266,18 +266,20 @@ inline void ktrace_flow_begin(TraceEnabled<enabled>, TraceContext context, uint3
     uint64_t* const args = static_cast<uint64_t*>(payload);
     if (args) {
       args[0] = flow_id;
+      args[1] = a;
     }
   } else {
     (void)context;
     (void)group;
     (void)string_ref;
     (void)flow_id;
+    (void)a;
   }
 }
 
 template <bool enabled>
 inline void ktrace_flow_end(TraceEnabled<enabled>, TraceContext context, uint32_t group,
-                            StringRef* string_ref, uint64_t flow_id) {
+                            StringRef* string_ref, uint64_t flow_id, uint64_t a = 0) {
   if constexpr (enabled) {
     const uint32_t tag = TAG_FLOW_END(string_ref->GetId(), group);
     const uint32_t effective_tag =
@@ -287,12 +289,14 @@ inline void ktrace_flow_end(TraceEnabled<enabled>, TraceContext context, uint32_
     uint64_t* const args = static_cast<uint64_t*>(payload);
     if (args) {
       args[0] = flow_id;
+      args[1] = a;
     }
   } else {
     (void)context;
     (void)group;
     (void)string_ref;
     (void)flow_id;
+    (void)a;
   }
 }
 
