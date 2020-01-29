@@ -28,7 +28,8 @@
 
 #include "payload-streamer.h"
 
-#define ERROR(fmt, ...) fprintf(stderr, "disk-pave:[%s] " fmt, __FUNCTION__, ##__VA_ARGS__);
+// Print a message to stderr, along with the program name and function name.
+#define ERROR(fmt, ...) fprintf(stderr, "disk-pave:[%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
 
 namespace {
 
@@ -69,11 +70,12 @@ enum class Command {
 
 struct Flags {
   Command cmd;
+  const char *cmd_name = nullptr;
   ::llcpp::fuchsia::paver::Configuration configuration;
   ::llcpp::fuchsia::paver::Asset asset;
   fbl::unique_fd payload_fd;
-  char* path = nullptr;
-  char* block_device = nullptr;
+  const char* path = nullptr;
+  const char* block_device = nullptr;
 };
 
 bool ParseFlags(int argc, char** argv, Flags* flags) {
@@ -136,6 +138,7 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     ERROR("Invalid command: %s\n", argv[0]);
     return false;
   }
+  flags->cmd_name = argv[0];
   SHIFT_ARGS;
 
   // Parse options.
@@ -248,7 +251,13 @@ zx_status_t RealMain(Flags flags) {
       loop.StartThread("payload-stream");
 
       auto result = data_sink.WriteVolumes(std::move(client));
-      return result.ok() ? result.value().status : result.status();
+      status = result.ok() ? result.value().status : result.status();
+      if (status != ZX_OK) {
+        ERROR("Failed to write volumes: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      return ZX_OK;
     }
     case Command::kWipe: {
       zx::channel block_device, block_device_remote;
@@ -275,10 +284,16 @@ zx_status_t RealMain(Flags flags) {
 
       auto result = data_sink.WipeVolume();
       if (!result.ok()) {
-        return result.status();
+        status = result.status();
+      } else {
+        status = !result->result.is_response() ? ZX_OK : result->result.err();
+      }
+      if (status != ZX_OK) {
+        ERROR("Failed to wipe block device: %s\n", zx_status_get_string(status));
+        return status;
       }
 
-      return result->result.is_response() ? ZX_OK : result->result.err();
+      return ZX_OK;
     }
     case Command::kInitPartitionTables: {
       if (flags.block_device == nullptr) {
@@ -303,7 +318,13 @@ zx_status_t RealMain(Flags flags) {
       ::llcpp::fuchsia::paver::DynamicDataSink::SyncClient data_sink(std::move(data_sink_svc));
 
       auto result = data_sink.InitializePartitionTables();
-      return result.ok() ? result.value().status : result.status();
+      status = result.ok() ? result.value().status : result.status();
+      if (status != ZX_OK) {
+        ERROR("Failed to initialize partition tables: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      return ZX_OK;
     }
     case Command::kWipePartitionTables: {
       if (flags.block_device == nullptr) {
@@ -327,7 +348,13 @@ zx_status_t RealMain(Flags flags) {
       ::llcpp::fuchsia::paver::DynamicDataSink::SyncClient data_sink(std::move(data_sink_svc));
 
       auto result = data_sink.WipePartitionTables();
-      return result.ok() ? result.value().status : result.status();
+      status = result.ok() ? result.value().status : result.status();
+      if (status != ZX_OK) {
+        ERROR("Failed to wipe partition tables: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      return ZX_OK;
     }
     default:
       break;
@@ -352,23 +379,36 @@ zx_status_t RealMain(Flags flags) {
       auto result = data_sink.WriteDataFile(fidl::StringView(flags.path, strlen(flags.path)),
                                                std::move(payload));
       status = result.ok() ? result.value().status : result.status();
-      break;
+      if (status != ZX_OK) {
+        ERROR("install-data-file failed: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      return ZX_OK;
     }
     case Command::kBootloader: {
       auto result = data_sink.WriteBootloader(std::move(payload));
       status = result.ok() ? result.value().status : result.status();
-      break;
+      if (status != ZX_OK) {
+        ERROR("Installing bootloader partition failed: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      return ZX_OK;
     }
     case Command::kAsset: {
       auto result = data_sink.WriteAsset(flags.configuration, flags.asset, std::move(payload));
       status = result.ok() ? result.value().status : result.status();
-      break;
+      if (status != ZX_OK) {
+        ERROR("Writing asset failed: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      return ZX_OK;
     }
     default:
       return ZX_ERR_INTERNAL;
   }
-
-  return status;
 }
 
 }  // namespace
@@ -379,5 +419,13 @@ int main(int argc, char** argv) {
     PrintUsage();
     return -1;
   }
-  return RealMain(std::move(flags)) ? 1 : 0;
+  const char* cmd_name = flags.cmd_name;
+
+  zx_status_t status = RealMain(std::move(flags));
+  if (status != ZX_OK) {
+    return 1;
+  }
+
+  fprintf(stderr, "disk-pave: %s operation succeeded.\n", cmd_name);
+  return 0;
 }
