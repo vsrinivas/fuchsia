@@ -11,6 +11,7 @@ zx_test("zxio") {
   sources = [
     "c-compilation-test.c",
     "debuglog-test.cc",
+    "dir_v2-test.cc",
     "dirent-test.cc",
     "file-test.cc",
     "file_v2-test.cc",
@@ -28,6 +29,7 @@ zx_test("zxio") {
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxio",
     "$zx/system/ulib/zxtest",
