@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -21,6 +22,20 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/mdns"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 )
+
+const defaultIPResponseNAT = "192.168.0.42"
+const defaultIPTarget = "192.168.1.92"
+const defaultIPv6ResponseNAT = "fe80::ae68:3cff:3e9f:7317"
+const defaultIPv6Target = "fe80::ae68:3cff:3e9f:beef"
+const defaultIPv6MDNSZone = "mdnsIface0"
+
+const fuchsiaMDNSNodename1 = "fuchsia-domain-name-1"
+const fuchsiaMDNSNodename2 = "fuchsia-domain-name-2"
+
+const defaultIPv6NetbootAddr = "fe80::ae68:3cff:3e9f:7319"
+const defaultIPv6NetbootZone = "netbootIface0"
+
+const defaultNetbootNodename = "this-is-a-netboot-device-1"
 
 type nbDiscoverFunc func(chan<- *netboot.Target, string, bool) (func() error, error)
 
@@ -41,9 +56,12 @@ type fakeMDNS struct {
 }
 
 type fakeAnswer struct {
-	ip      string
-	ipv6    string
-	domains []string
+	ip             string
+	ipTargetAddr   string
+	ipv6           string
+	ipv6TargetAddr string
+	zone           string
+	domains        []string
 }
 
 func (m *fakeMDNS) AddHandler(f func(net.Interface, net.Addr, mdns.Packet)) {
@@ -55,9 +73,9 @@ func (m *fakeMDNS) SendTo(mdns.Packet, *net.UDPAddr) error  { return nil }
 func (m *fakeMDNS) Send(packet mdns.Packet) error {
 	if m.answer != nil {
 		go func() {
-			ifc := net.Interface{Name: "eno2"}
+			ifc := net.Interface{Name: defaultIPv6MDNSZone}
 			ip := net.IPAddr{IP: net.ParseIP(m.answer.ip).To4()}
-			// ipv6 := net.IPAddr{IP: net.ParseIP(m.answer.ipv6).To16()}
+			ipv6 := net.IPAddr{IP: net.ParseIP(m.answer.ipv6).To16(), Zone: m.answer.zone}
 			for _, q := range packet.Questions {
 				switch {
 				case q.Type == mdns.PTR && q.Class == mdns.IN:
@@ -66,15 +84,15 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 						additionalRecords := []mdns.Record{}
 						additionalRecords = append(additionalRecords, mdns.Record{
 							Class:  mdns.IN,
-							Type:   mdns.AAAA,
+							Type:   mdns.A,
 							Domain: fmt.Sprintf("%s.local", domain),
-							Data:   net.ParseIP(m.answer.ipv6).To16(),
+							Data:   net.ParseIP(m.answer.ipTargetAddr).To4(),
 						})
 						additionalRecords = append(additionalRecords, mdns.Record{
 							Class:  mdns.IN,
-							Type:   mdns.A,
+							Type:   mdns.AAAA,
 							Domain: fmt.Sprintf("%s.local", domain),
-							Data:   net.ParseIP(m.answer.ip).To4(),
+							Data:   net.ParseIP(m.answer.ipv6TargetAddr).To16(),
 						})
 						var answer mdns.Record
 						// Cases for malformed response.
@@ -109,7 +127,11 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 							Additional: additionalRecords,
 						}
 						for _, h := range m.handlers {
+							// Important: changing the order of these function calls will likely
+							// cause failures for tests that are looking for both IPv4 and IPv6
+							// addresses simultaneously.
 							h(ifc, &ip, pkt)
+							h(ifc, &ipv6, pkt)
 						}
 					}
 				case q.Type == mdns.A && q.Class == mdns.IN:
@@ -119,20 +141,24 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 					for _, d := range m.answer.domains {
 						answers = append(answers, mdns.Record{
 							Class:  mdns.IN,
-							Type:   mdns.AAAA,
-							Data:   net.ParseIP(m.answer.ipv6).To16(),
+							Type:   mdns.A,
+							Data:   net.ParseIP(m.answer.ipTargetAddr).To4(),
 							Domain: d,
 						})
 						answers = append(answers, mdns.Record{
 							Class:  mdns.IN,
-							Type:   mdns.A,
-							Data:   net.ParseIP(m.answer.ip).To4(),
+							Type:   mdns.AAAA,
+							Data:   net.ParseIP(m.answer.ipv6TargetAddr).To16(),
 							Domain: d,
 						})
 					}
 					pkt := mdns.Packet{Answers: answers}
 					for _, h := range m.handlers {
+						// Important: changing the order of these function calls will likely
+						// cause failures for tests that are looking for both IPv4 and IPv6
+						// addresses simultaneously.
 						h(ifc, &ip, pkt)
+						h(ifc, &ipv6, pkt)
 					}
 				}
 			}
@@ -142,22 +168,36 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 }
 func (m *fakeMDNS) Start(context.Context, int) error { return nil }
 
-func newDevFinderCmd(handler mDNSHandler, answerDomains []string, sendEmptyData bool, sendTooShortData bool, nbDiscover nbDiscoverFunc) devFinderCmd {
+func newDevFinderCmd(
+	handler mDNSHandler,
+	answerDomains []string,
+	sendEmptyData bool,
+	sendTooShortData bool,
+	st subtest,
+	nbDiscover nbDiscoverFunc) devFinderCmd {
 	cmd := devFinderCmd{
 		mdnsHandler: handler,
-		mdnsAddrs:   "224.0.0.251",
+		mdnsAddrs:   "ff02::fb,224.0.0.251",
 		mdnsPorts:   "5353",
 		timeout:     10 * time.Millisecond,
 		netboot:     true,
 		mdns:        true,
-		ipv6:        true,
-		ipv4:        true,
+		ipv6:        st.ipv6,
+		ipv4:        st.ipv4,
+		ignoreNAT:   st.ignoreNAT,
 		newMDNSFunc: func(addr string) mdnsInterface {
 			return &fakeMDNS{
+				// Every device is behind a NAT, so the target
+				// address (the address the target sees) is
+				// different from the SRC address (the address
+				// we see when the device responds).
 				answer: &fakeAnswer{
-					ip:      "192.168.0.42",
-					ipv6:    "fe80::ae68:3cff:3e9f:7317",
-					domains: answerDomains,
+					ip:             defaultIPResponseNAT,
+					ipTargetAddr:   defaultIPTarget,
+					ipv6:           defaultIPv6ResponseNAT,
+					ipv6TargetAddr: defaultIPv6Target,
+					zone:           defaultIPv6MDNSZone,
+					domains:        answerDomains,
 				},
 				sendEmptyData:    sendEmptyData,
 				sendTooShortData: sendTooShortData,
@@ -169,8 +209,12 @@ func newDevFinderCmd(handler mDNSHandler, answerDomains []string, sendEmptyData 
 	}
 	cmd.finders = append(
 		cmd.finders,
-		&mdnsFinder{deviceFinderBase{cmd: &cmd}},
-		&netbootFinder{deviceFinderBase{cmd: &cmd}})
+		&mdnsFinder{deviceFinderBase{cmd: &cmd}})
+	if st.ipv6 {
+		cmd.finders = append(
+			cmd.finders,
+			&netbootFinder{deviceFinderBase{cmd: &cmd}})
+	}
 	return cmd
 }
 
@@ -189,6 +233,94 @@ func makeDNSSDFinderForTest(nodename string) *dnsSDFinder {
 	return f
 }
 
+type subtest struct {
+	ipv4      bool
+	ipv6      bool
+	ignoreNAT bool
+	node      string
+}
+
+func (s *subtest) defaultMDNSIP() net.IP {
+	if s.ignoreNAT {
+		// When parsing the additional records (for getting the target
+		// address), the last record is IPv6. If the order of outputs
+		// changes for the fake MDNS implementation it may break this
+		// code, as having IPv4 and IPv6 enabled could return a v4
+		// address in some cases. This also applies to the lower
+		// `if s.ipv6` statement.
+		if s.ipv6 {
+			return net.ParseIP(defaultIPv6Target).To16()
+		}
+		if s.ipv4 {
+			return net.ParseIP(defaultIPTarget).To4()
+		}
+	}
+
+	if s.ipv6 {
+		return net.ParseIP(defaultIPv6ResponseNAT).To16()
+	}
+	if s.ipv4 {
+		return net.ParseIP(defaultIPResponseNAT).To4()
+	}
+	return nil
+}
+
+func (s *subtest) defaultNetbootDevice() *fuchsiaDevice {
+	if !s.ipv6 {
+		return nil
+	}
+	return &fuchsiaDevice{
+		addr:   net.ParseIP(defaultIPv6NetbootAddr).To16(),
+		domain: defaultNetbootNodename,
+		zone:   defaultIPv6NetbootZone,
+	}
+}
+
+func (s *subtest) defaultMDNSZone() string {
+	if !s.ipv6 {
+		return ""
+	}
+	return defaultIPv6MDNSZone
+}
+
+func (s *subtest) String() string {
+	b := strings.Builder{}
+	if len(s.node) > 0 {
+		b.WriteString("node=\"")
+		b.WriteString(s.node)
+		b.WriteByte('"')
+		b.WriteByte('_')
+	}
+	b.WriteString("ipv4=")
+	b.WriteString(strconv.FormatBool(s.ipv4))
+	b.WriteString("_ipv6=")
+	b.WriteString(strconv.FormatBool(s.ipv6))
+	b.WriteString("_ignore-nat=")
+	b.WriteString(strconv.FormatBool(s.ignoreNAT))
+	return b.String()
+}
+
+func runSubTests(t *testing.T, node string, f func(*testing.T, subtest)) {
+	for _, ipv6 := range []bool{true, false} {
+		for _, ipv4 := range []bool{true, false} {
+			if !ipv4 && !ipv6 {
+				continue
+			}
+			for _, nat := range []bool{true, false} {
+				s := subtest{
+					ipv4:      ipv4,
+					ipv6:      ipv6,
+					ignoreNAT: nat,
+					node:      node,
+				}
+				t.Run(s.String(), func(t *testing.T) {
+					f(t, s)
+				})
+			}
+		}
+	}
+}
+
 //// Tests for the `list` command.
 
 func TestListDevices(t *testing.T) {
@@ -203,155 +335,84 @@ func TestListDevices(t *testing.T) {
 		}
 		go func() {
 			target <- &netboot.Target{
-				TargetAddress: net.ParseIP("192.168.1.2").To4(),
-				Nodename:      "this-is-a-netboot-device",
-			}
-			target <- &netboot.Target{
-				TargetAddress: net.ParseIP("192.168.0.42").To4(),
-				Nodename:      "some.domain",
+				TargetAddress: net.ParseIP(defaultIPv6NetbootAddr).To16(),
+				Nodename:      defaultNetbootNodename,
+				Interface:     &net.Interface{Name: defaultIPv6NetbootZone},
 			}
 		}()
 		return func() error { return nil }, nil
-
-	}
-	cmd := listCmd{
-		devFinderCmd: newDevFinderCmd(
-			listMDNSHandler,
-			[]string{
-				"some.domain",
-				"another.domain",
-			}, false, false, nbDiscover),
 	}
 
-	got, err := cmd.listDevices(context.Background())
-	if err != nil {
-		t.Fatalf("listDevices: %v", err)
+	for _, filter := range []string{"", "-1"} {
+		filter := filter
+		t.Run(fmt.Sprintf("domainFilter=%q", filter), func(t *testing.T) {
+			runSubTests(t, "", func(t *testing.T, s subtest) {
+				cmd := listCmd{
+					devFinderCmd: newDevFinderCmd(
+						listMDNSHandler,
+						[]string{
+							fuchsiaMDNSNodename1,
+							fuchsiaMDNSNodename2,
+						},
+						false,
+						false,
+						s,
+						nbDiscover),
+					domainFilter: filter,
+				}
+				got, err := cmd.listDevices(context.Background())
+				if err != nil {
+					t.Fatalf("listDevices: %v", err)
+				}
+				want := []*fuchsiaDevice{
+					{
+						addr:   s.defaultMDNSIP(),
+						zone:   s.defaultMDNSZone(),
+						domain: fuchsiaMDNSNodename1,
+					},
+				}
+				// If not filtering, add the remaining MDNS device that
+				// would not have been filtered.
+				if len(filter) == 0 {
+					want = append(want,
+						&fuchsiaDevice{
+							addr:   s.defaultMDNSIP(),
+							zone:   s.defaultMDNSZone(),
+							domain: fuchsiaMDNSNodename2,
+						},
+					)
+				}
+				if s.ipv6 {
+					want = append(want, s.defaultNetbootDevice())
+				}
+				if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+					t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+				}
+			})
+		})
 	}
-	want := []*fuchsiaDevice{
-		{
-			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "another.domain",
-		},
-		{
-			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "some.domain",
-		},
-		{
-			addr:   net.ParseIP("192.168.1.2").To4(),
-			domain: "this-is-a-netboot-device",
-		},
-	}
-	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
-	}
-
 }
 
-func TestListDevices_ipv6Only(t *testing.T) {
-	nbDiscover := func(target chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
-		t.Helper()
-		if !fuchsia {
-			t.Fatalf("fuchsia set to false")
-		}
-		nodenameWant := netboot.NodenameWildcard
-		if nodename != nodenameWant {
-			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)
-		}
-		go func() {
-			target <- &netboot.Target{
-				TargetAddress: net.ParseIP("fe80::ae68:3cff:3e9f:7319").To16(),
-				Nodename:      "this-is-a-netboot-device",
-				Interface:     &net.Interface{Name: "eno1"},
-			}
-			target <- &netboot.Target{
-				TargetAddress: net.ParseIP("192.168.1.2").To4(),
-				Nodename:      "some.domain",
-			}
-		}()
-		return func() error { return nil }, nil
-
-	}
-	cmd := listCmd{
-		devFinderCmd: newDevFinderCmd(
-			listMDNSHandler,
-			[]string{
-				"some.domain",
-				"another.domain",
-			}, false, false, nbDiscover),
-	}
-	cmd.ipv4 = false
-
-	got, err := cmd.listDevices(context.Background())
-	if err != nil {
-		t.Fatalf("listDevices: %v", err)
-	}
-	want := []*fuchsiaDevice{
-		{
-			addr:   net.ParseIP("fe80::ae68:3cff:3e9f:7317").To16(),
-			domain: "another.domain",
-			zone:   "eno2",
-		},
-		{
-			addr:   net.ParseIP("fe80::ae68:3cff:3e9f:7317").To16(),
-			domain: "some.domain",
-			zone:   "eno2",
-		},
-		{
-			addr:   net.ParseIP("fe80::ae68:3cff:3e9f:7319").To16(),
-			domain: "this-is-a-netboot-device",
-			zone:   "eno1",
-		},
-	}
-	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
-	}
-
-}
-
-func TestListDevices_domainFilter(t *testing.T) {
-	nbDiscover := func(target chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
-		t.Helper()
-		if !fuchsia {
-			t.Fatalf("fuchsia set to false")
-		}
-		nodenameWant := netboot.NodenameWildcard
-		if nodename != nodenameWant {
-			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)
-		}
-		go func() {
-			target <- &netboot.Target{
-				TargetAddress: net.ParseIP("192.168.1.2").To4(),
-				Nodename:      "this-is-some-netboot-device",
-			}
-		}()
+func TestListDevice_allProtocolsDisabled(t *testing.T) {
+	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
 		return func() error { return nil }, nil
 	}
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
 			[]string{
-				"some.domain",
-				"another.domain",
-			}, false, false, nbDiscover),
-		domainFilter: "some",
+				fuchsiaMDNSNodename1,
+				fuchsiaMDNSNodename2,
+			},
+			false,
+			false,
+			subtest{},
+			nbDiscover,
+		),
 	}
-
-	got, err := cmd.listDevices(context.Background())
-	if err != nil {
-		t.Fatalf("listDevices: %v", err)
-	}
-	want := []*fuchsiaDevice{
-		{
-			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "some.domain",
-		},
-		{
-			addr:   net.ParseIP("192.168.1.2").To4(),
-			domain: "this-is-some-netboot-device",
-		},
-	}
-	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+	_, err := cmd.listDevices(context.Background())
+	if err == nil {
+		t.Error("listDevice error expected")
 	}
 }
 
@@ -363,53 +424,59 @@ func TestListDevices_emptyData(t *testing.T) {
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
 			[]string{
-				"some.domain",
-				"another.domain",
+				fuchsiaMDNSNodename1,
+				fuchsiaMDNSNodename2,
 			},
 			true, // sendEmptyData
-			false, nbDiscover),
+			false,
+			subtest{ipv4: true},
+			nbDiscover),
 	}
-
 	// Must not crash.
 	cmd.listDevices(context.Background())
 }
 
 func TestListDevices_duplicateDevices(t *testing.T) {
-	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
-		return func() error { return nil }, nil
-	}
-	cmd := listCmd{
-		devFinderCmd: newDevFinderCmd(
-			listMDNSHandler,
-			[]string{
-				"some.domain",
-				"some.domain",
-				"some.domain",
-				"some.domain",
-				"some.domain",
-				"another.domain",
+	runSubTests(t, "", func(t *testing.T, s subtest) {
+		nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
+			return func() error { return nil }, nil
+		}
+		cmd := listCmd{
+			devFinderCmd: newDevFinderCmd(
+				listMDNSHandler,
+				[]string{
+					fuchsiaMDNSNodename1,
+					fuchsiaMDNSNodename1,
+					fuchsiaMDNSNodename1,
+					fuchsiaMDNSNodename1,
+					fuchsiaMDNSNodename1,
+					fuchsiaMDNSNodename2,
+				},
+				false,
+				false,
+				s,
+				nbDiscover),
+		}
+		got, err := cmd.listDevices(context.Background())
+		if err != nil {
+			t.Fatalf("listDevices: %v", err)
+		}
+		want := []*fuchsiaDevice{
+			{
+				addr:   s.defaultMDNSIP(),
+				domain: fuchsiaMDNSNodename1,
+				zone:   s.defaultMDNSZone(),
 			},
-			false,
-			false,
-			nbDiscover),
-	}
-	got, err := cmd.listDevices(context.Background())
-	if err != nil {
-		t.Fatalf("listDevices: %v", err)
-	}
-	want := []*fuchsiaDevice{
-		{
-			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "another.domain",
-		},
-		{
-			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "some.domain",
-		},
-	}
-	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
-	}
+			{
+				addr:   s.defaultMDNSIP(),
+				domain: fuchsiaMDNSNodename2,
+				zone:   s.defaultMDNSZone(),
+			},
+		}
+		if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+			t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+		}
+	})
 }
 
 func TestListDevices_tooShortData(t *testing.T) {
@@ -420,11 +487,12 @@ func TestListDevices_tooShortData(t *testing.T) {
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
 			[]string{
-				"some.domain",
-				"another.domain",
+				fuchsiaMDNSNodename1,
+				fuchsiaMDNSNodename2,
 			},
 			false,
 			true, // sendTooShortData
+			subtest{ipv4: true},
 			nbDiscover,
 		),
 	}
@@ -436,13 +504,13 @@ func TestListDevices_tooShortData(t *testing.T) {
 //// Tests for the `resolve` command.
 
 func TestResolveDevices(t *testing.T) {
-	resolveNode := "some.domain"
+	node := fuchsiaMDNSNodename1
 	nbDiscover := func(target chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
 		t.Helper()
 		if !fuchsia {
 			t.Fatalf("fuchsia set to false")
 		}
-		nodenameWant := resolveNode
+		nodenameWant := node
 		if nodename != nodenameWant {
 			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)
 		}
@@ -454,27 +522,55 @@ func TestResolveDevices(t *testing.T) {
 		}()
 		return func() error { return nil }, nil
 	}
+	runSubTests(t, node, func(t *testing.T, s subtest) {
+		cmd := resolveCmd{
+			devFinderCmd: newDevFinderCmd(
+				resolveMDNSHandler,
+				[]string{
+					fmt.Sprintf("%s.local", fuchsiaMDNSNodename1),
+					fmt.Sprintf("%s.local", fuchsiaMDNSNodename2),
+				},
+				false,
+				false,
+				s,
+				nbDiscover),
+		}
+		got, err := cmd.resolveDevices(context.Background(), s.node)
+		if err != nil {
+			t.Fatalf("listDevices: %v", err)
+		}
+		want := []*fuchsiaDevice{
+			{
+				addr:   s.defaultMDNSIP(),
+				zone:   s.defaultMDNSZone(),
+				domain: s.node,
+			},
+		}
+		if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+			t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+		}
+	})
+}
+
+func TestResolveDevices_allProtocolsDisabled(t *testing.T) {
+	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
+		return func() error { return nil }, nil
+	}
 	cmd := resolveCmd{
 		devFinderCmd: newDevFinderCmd(
 			resolveMDNSHandler,
 			[]string{
-				"some.domain.local",
-				"another.domain.local",
-			}, false, false, nbDiscover),
+				fmt.Sprintf("%s.local", fuchsiaMDNSNodename1),
+			},
+			false,
+			false,
+			subtest{},
+			nbDiscover,
+		),
 	}
-
-	got, err := cmd.resolveDevices(context.Background(), "some.domain")
-	if err != nil {
-		t.Fatalf("resolveDevices: %v", err)
-	}
-	want := []*fuchsiaDevice{
-		{
-			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "some.domain",
-		},
-	}
-	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-		t.Errorf("resolveDevices mismatch: (-want +got):\n%s", d)
+	_, err := cmd.resolveDevices(context.Background(), fuchsiaMDNSNodename1)
+	if err == nil {
+		t.Error("resolveDevice error expected")
 	}
 }
 
@@ -695,67 +791,43 @@ func TestDNSSDFinder_resolveCallbackBadIP(t *testing.T) {
 	}
 }
 
-func TestDNSSDFinder_resolveCallbackIPv6(t *testing.T) {
-	c := make(chan *fuchsiaDevice)
-	f := &dnsSDFinder{
-		deviceFinderBase: deviceFinderBase{
-			cmd: &devFinderCmd{},
-		},
-		deviceChannel: c,
-	}
-	ctx := &dnsSDContext{
-		finder: f,
-	}
-	fakeIface := &net.Interface{
-		Name: "en2",
-	}
-	resolveCallback(0, "whatever-my-dude.local.", "::4", fakeIface, ctx)
-	target := <-c
-	if target.err != nil {
-		t.Errorf("unexpected error: %v", target.err)
-	}
-	domainWant := "whatever-my-dude"
-	addrWant := net.ParseIP("::4").To16()
-	zoneWant := fakeIface.Name
-	if domainWant != target.domain {
-		t.Errorf("expected domain %q, got %q", domainWant, target.domain)
-	}
-	if addrWant.String() != target.addr.String() {
-		t.Errorf("expected addr %v, got %v", addrWant, target.addr)
-	}
-	if zoneWant != target.zone {
-		t.Errorf("expected zone %q, got %q", zoneWant, target.zone)
-	}
-}
-
-func TestDNSSDFinder_resolveCallbackIPv4(t *testing.T) {
-	c := make(chan *fuchsiaDevice)
-	f := &dnsSDFinder{
-		deviceFinderBase: deviceFinderBase{
-			cmd: &devFinderCmd{},
-		},
-		deviceChannel: c,
-	}
-	ctx := &dnsSDContext{
-		finder: f,
-	}
-	resolveCallback(0, "whatever-my-dude.local.", "129.168.1.8", nil, ctx)
-	target := <-c
-	if target.err != nil {
-		t.Errorf("unexpected error: %v", target.err)
-	}
-	domainWant := "whatever-my-dude"
-	addrWant := net.ParseIP("129.168.1.8").To4()
-	zoneWant := ""
-	if domainWant != target.domain {
-		t.Errorf("expected domain %q, got %q", domainWant, target.domain)
-	}
-	if addrWant.String() != target.addr.String() {
-		t.Errorf("expected addr %v, got %v", addrWant, target.addr)
-	}
-	if zoneWant != target.zone {
-		t.Errorf("expected zone %q, got %q", zoneWant, target.zone)
-	}
+func TestDNSSDFinder_resolveCallback(t *testing.T) {
+	runSubTests(t, "", func(t *testing.T, s subtest) {
+		c := make(chan *fuchsiaDevice)
+		f := &dnsSDFinder{
+			deviceFinderBase: deviceFinderBase{
+				cmd: &devFinderCmd{},
+			},
+			deviceChannel: c,
+		}
+		ctx := &dnsSDContext{
+			finder: f,
+		}
+		var fakeIface *net.Interface
+		var zoneWant string
+		if s.ipv6 {
+			zoneWant = s.defaultMDNSZone()
+			fakeIface = &net.Interface{
+				Name: zoneWant,
+			}
+		}
+		resolveCallback(0, fmt.Sprintf("%s.local.", fuchsiaMDNSNodename1), s.defaultMDNSIP().String(), fakeIface, ctx)
+		target := <-c
+		if target.err != nil {
+			t.Errorf("unexpected error: %v", target.err)
+		}
+		domainWant := fuchsiaMDNSNodename1
+		addrWant := s.defaultMDNSIP()
+		if domainWant != target.domain {
+			t.Errorf("expected domain %q, got %q", domainWant, target.domain)
+		}
+		if addrWant.String() != target.addr.String() {
+			t.Errorf("expected addr %v, got %v", addrWant, target.addr)
+		}
+		if zoneWant != target.zone {
+			t.Errorf("expected zone %q, got %q", zoneWant, target.zone)
+		}
+	})
 }
 
 func TestDNSContextStoreAndLookup(t *testing.T) {
@@ -779,7 +851,7 @@ func TestDNSContextStoreAndLookup(t *testing.T) {
 }
 
 func TestDNSContextStoreAndLookup_badAllocCall(t *testing.T) {
-	f := makeDNSSDFinderForTest("some-domain")
+	f := makeDNSSDFinderForTest(fuchsiaMDNSNodename1)
 	<-f.deviceChannel // flush out unused value.
 	ctx := newDNSSDContext(f, func(_ unsafe.Pointer) int { return -1 })
 	if ctx != nil {

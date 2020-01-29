@@ -25,7 +25,7 @@ type mdnsFinder struct {
 
 const fuchsiaMDNSService = "_fuchsia._udp.local"
 
-func parseAnswer(cmd *devFinderCmd, a mdns.Record, iface net.Interface) *fuchsiaDevice {
+func parseAnswer(cmd *devFinderCmd, a mdns.Record, resp mDNSResponse) *fuchsiaDevice {
 	if a.Class == mdns.IN && (a.Type == mdns.A || a.Type == mdns.AAAA) &&
 		(len(a.Data) == net.IPv4len || len(a.Data) == net.IPv6len) {
 		localStr := ".local"
@@ -41,12 +41,21 @@ func parseAnswer(cmd *devFinderCmd, a mdns.Record, iface net.Interface) *fuchsia
 		}
 		var zone string
 		if isIPv6LinkLocal(a.Data) {
-			zone = iface.Name
+			zone = resp.rxIface.Name
 		}
 		fdev := &fuchsiaDevice{
 			addr:   net.IP(a.Data),
 			domain: fuchsiaDomain,
 			zone:   zone,
+		}
+		// If not ignoring a NAT, update the address to use the source addr.
+		if !cmd.ignoreNAT {
+			ip, zone, err := addrToIP(resp.devAddr)
+			if err != nil {
+				return &fuchsiaDevice{err: err}
+			}
+			fdev.addr = ip
+			fdev.zone = zone
 		}
 		if cmd.localResolve {
 			var err error
@@ -80,7 +89,7 @@ func listMDNSHandler(cmd *devFinderCmd, resp mDNSResponse, f chan<- *fuchsiaDevi
 	}
 
 	for _, a := range resp.rxPacket.Additional {
-		fdev := parseAnswer(cmd, a, resp.rxIface)
+		fdev := parseAnswer(cmd, a, resp)
 		if fdev != nil {
 			f <- fdev
 		}
@@ -107,7 +116,7 @@ func resolveMDNSHandler(cmd *devFinderCmd, resp mDNSResponse, f chan<- *fuchsiaD
 		if a.Type == mdns.A && !cmd.ipv4 || a.Type == mdns.AAAA && !cmd.ipv6 {
 			continue
 		}
-		fdev := parseAnswer(cmd, a, resp.rxIface)
+		fdev := parseAnswer(cmd, a, resp)
 		if fdev != nil {
 			f <- fdev
 		}

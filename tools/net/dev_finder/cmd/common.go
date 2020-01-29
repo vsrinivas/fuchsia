@@ -85,8 +85,11 @@ type devFinderCmd struct {
 	// If set to true, uses the netsvc address instead of the netstack
 	// address.
 	useNetsvcAddress bool
-	ipv4             bool
-	ipv6             bool
+	// If set to true, ignores NAT and instead uses the additional records
+	// section of the mDNS response to determine the device address.
+	ignoreNAT bool
+	ipv4      bool
+	ipv6      bool
 
 	mdnsHandler mDNSHandler
 	finders     []deviceFinder
@@ -146,6 +149,7 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.netboot, "netboot", false, "Determines whether to use netboot protocol")
 	f.BoolVar(&cmd.mdns, "mdns", true, "Determines whether to use mDNS protocol")
 	f.BoolVar(&cmd.useNetsvcAddress, "netsvc-address", false, "Determines whether to use the Fuchsia netsvc address. Ignored if |netboot| is set to false.")
+	f.BoolVar(&cmd.ignoreNAT, "ignore-nat", false, "[linux only] Determines whether to ignore possible NAT. Returns the target's address as it sees itself behind a NAT.")
 	f.BoolVar(&cmd.ipv6, "ipv6", true, "Set whether to query using IPv6. Disabling IPv6 will also disable netboot.")
 	f.BoolVar(&cmd.ipv4, "ipv4", true, "Set whether to query using IPv4")
 }
