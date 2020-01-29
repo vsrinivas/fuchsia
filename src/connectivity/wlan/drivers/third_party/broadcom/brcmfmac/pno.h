@@ -30,23 +30,6 @@
 struct brcmf_pno_info;
 
 /**
- * brcmf_pno_start_sched_scan - initiate scheduled scan on device.
- *
- * @ifp: interface object used.
- * @req: configuration parameters for scheduled scan.
- */
-zx_status_t brcmf_pno_start_sched_scan(struct brcmf_if* ifp,
-                                       struct cfg80211_sched_scan_request* req);
-
-/**
- * brcmf_pno_stop_sched_scan - terminate scheduled scan on device.
- *
- * @ifp: interface object used.
- * @reqid: unique identifier of scan to be stopped.
- */
-zx_status_t brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, uint64_t reqid);
-
-/**
  * brcmf_pno_attach - allocate and attach module information.
  *
  * @cfg: cfg80211 context used.
