@@ -6,7 +6,6 @@ group("bundles") {
   testonly = true
   deps = [
     ":framework",
-    ":framework_experimental",
     ":tools",
   ]
 }
@@ -31,15 +30,6 @@ group("framework") {
   ]
 }
 
-# Framework bundle including experimental functionality.
-group("framework_experimental") {
-  testonly = true
-  public_deps = [
-    ":framework",
-    "//src/stories/bin/discovermgr",
-  ]
-}
-
 # Packages used for authoring and running integration tests.
 group("testing") {
   testonly = true
@@ -53,7 +43,7 @@ group("testing") {
 group("integration_testing") {
   testonly = true
   public_deps = [
-    ":framework_experimental",
+    ":framework",
     ":testing",
     "//garnet/packages/prod:test_runner",
     "//src/modular/bin/basemgr:auto_login_base_shell",

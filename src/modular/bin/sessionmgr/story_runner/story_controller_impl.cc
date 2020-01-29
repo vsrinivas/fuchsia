@@ -4,7 +4,6 @@
 
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 
-#include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -287,7 +286,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
     service_list->names.push_back(fuchsia::intl::PropertyProvider::Name_);
-    service_list->names.push_back(fuchsia::app::discover::StoryModule::Name_);
     service_list->provider = std::move(module_context_provider);
 
     RunningModInfo running_mod_info;
@@ -323,7 +321,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     ModuleContextInfo module_context_info = {
         story_controller_impl_->story_provider_impl_->component_context_info(),
         story_controller_impl_,
-        story_controller_impl_->story_provider_impl_->discover_registry(),
         story_controller_impl_->story_provider_impl_->session_environment(),
     };
 

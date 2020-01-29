@@ -40,7 +40,6 @@ source_set("sessionmgr_lib") {
 
   public_deps = [
     ":startup_agent_launcher",
-    "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",

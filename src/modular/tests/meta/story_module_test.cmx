@@ -4,7 +4,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.app.discover.StoryModule",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.modular.ModuleContext"

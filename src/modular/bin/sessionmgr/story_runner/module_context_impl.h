@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_MODULE_CONTEXT_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_MODULE_CONTEXT_IMPL_H_
 
-#include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -29,7 +28,6 @@ class StoryControllerImpl;
 struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
-  fuchsia::app::discover::DiscoverRegistry* const discover_registry;
   Environment* session_environment;
 };
 
@@ -81,8 +79,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   Environment* session_environment_;
 
   ComponentContextImpl component_context_impl_;
-
-  fuchsia::app::discover::DiscoverRegistry* const discover_registry_;  // Not owned
 
   fidl::BindingSet<fuchsia::modular::ModuleContext> bindings_;
 

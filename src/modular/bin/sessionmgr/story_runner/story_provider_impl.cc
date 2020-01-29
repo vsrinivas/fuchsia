@@ -256,19 +256,19 @@ class StoryProviderImpl::GetStoryEntityProviderCall : public Operation<StoryEnti
   inspect::Node* session_inspect_node_;
 };
 
-StoryProviderImpl::StoryProviderImpl(
-    Environment* const session_environment, std::string device_id,
-    SessionStorage* const session_storage, fuchsia::modular::AppConfig story_shell_config,
-    fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
-    const ComponentContextInfo& component_context_info,
-    fuchsia::modular::FocusProviderPtr focus_provider,
-    AgentServicesFactory* const agent_services_factory,
-    fuchsia::app::discover::DiscoverRegistry* const discover_registry,
-    fuchsia::modular::ModuleResolver* const module_resolver,
-    EntityProviderRunner* const entity_provider_runner,
-    modular::ModuleFacetReader* const module_facet_reader,
-    PresentationProvider* const presentation_provider, const bool enable_story_shell_preload,
-    inspect::Node* root_node)
+StoryProviderImpl::StoryProviderImpl(Environment* const session_environment, std::string device_id,
+                                     SessionStorage* const session_storage,
+                                     fuchsia::modular::AppConfig story_shell_config,
+                                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
+                                     const ComponentContextInfo& component_context_info,
+                                     fuchsia::modular::FocusProviderPtr focus_provider,
+                                     AgentServicesFactory* const agent_services_factory,
+                                     fuchsia::modular::ModuleResolver* const module_resolver,
+                                     EntityProviderRunner* const entity_provider_runner,
+                                     modular::ModuleFacetReader* const module_facet_reader,
+                                     PresentationProvider* const presentation_provider,
+                                     const bool enable_story_shell_preload,
+                                     inspect::Node* root_node)
     : session_environment_(session_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
@@ -277,7 +277,6 @@ StoryProviderImpl::StoryProviderImpl(
       enable_story_shell_preload_(enable_story_shell_preload),
       component_context_info_(component_context_info),
       agent_services_factory_(agent_services_factory),
-      discover_registry_(discover_registry),
       module_resolver_(module_resolver),
       entity_provider_runner_(entity_provider_runner),
       module_facet_reader_(module_facet_reader),

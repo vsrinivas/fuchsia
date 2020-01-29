@@ -160,7 +160,6 @@ executable("story_module_test") {
   sources = [ "story_module_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fsl",

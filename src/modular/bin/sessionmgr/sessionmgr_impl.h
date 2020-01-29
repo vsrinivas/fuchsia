@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_SESSIONMGR_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_SESSIONMGR_IMPL_H_
 
-#include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
@@ -87,7 +86,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeModular(const fidl::StringPtr& session_shell_url,
                          fuchsia::modular::AppConfig story_shell_config,
                          bool use_session_shell_for_story_shell_factory);
-  void InitializeDiscovermgr();
   void InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
                               fuchsia::ui::views::ViewToken view_token);
 
@@ -195,7 +193,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   fuchsia::modular::auth::AccountPtr account_;
 
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> discovermgr_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_shell_app_;
   std::unique_ptr<ViewHost> session_shell_view_host_;
 
@@ -216,10 +213,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<StartupAgentLauncher> startup_agent_launcher_;
 
   std::unique_ptr<modular::LocalModuleResolver> local_module_resolver_;
-
-  // Services we provide to the discovermgr's namespace.
-  component::ServiceProviderImpl discovermgr_ns_services_;
-  fuchsia::app::discover::DiscoverRegistryPtr discover_registry_service_;
 
   class PresentationProviderImpl;
   std::unique_ptr<PresentationProviderImpl> presentation_provider_impl_;

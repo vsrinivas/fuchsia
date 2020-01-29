@@ -26,8 +26,7 @@ ModuleContextImpl::ModuleContextImpl(
       component_context_impl_(
           info.component_context_info,
           EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId().value_or("")),
-          EncodeModulePath(module_data_->module_path()), module_data_->module_url()),
-      discover_registry_(info.discover_registry) {
+          EncodeModulePath(module_data_->module_path()), module_data_->module_url()) {
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
         component_context_impl_.Connect(std::move(request));
@@ -36,12 +35,6 @@ ModuleContextImpl::ModuleContextImpl(
       [this](fidl::InterfaceRequest<fuchsia::modular::ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
       });
-  service_provider_impl_.AddService<fuchsia::app::discover::StoryModule>([this](auto request) {
-    fuchsia::app::discover::ModuleIdentifier module_scope;
-    module_scope.set_story_id(story_controller_impl_->GetStoryId().value_or(""));
-    module_scope.set_module_path(module_data_->module_path());
-    discover_registry_->RegisterStoryModule(std::move(module_scope), std::move(request));
-  });
 
   // Forward sessionmgr service requests to the session environment's service provider.
   // See SessionmgrImpl::InitializeSessionEnvironment.

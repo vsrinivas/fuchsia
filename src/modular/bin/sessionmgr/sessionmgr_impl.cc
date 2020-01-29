@@ -46,8 +46,6 @@ namespace {
 
 constexpr char kAppId[] = "modular_sessionmgr";
 
-constexpr char kDiscovermgrUrl[] = "fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx";
-
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
 
 constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
@@ -183,7 +181,6 @@ void SessionmgrImpl::Initialize(
 
     InitializeLedger();
     InitializeIntlPropertyProvider();
-    InitializeDiscovermgr();
     InitializeModular(std::move(session_shell_url), std::move(story_shell_config),
                       use_session_shell_for_story_shell_factory);
     ConnectSessionShellToStoryProvider();
@@ -440,7 +437,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       session_environment_.get(), LoadDeviceID(session_id_), session_storage_.get(),
       std::move(story_shell_config), std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
-      discover_registry_service_.get(),
       static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
       (config_.enable_story_shell_preload()), &inspect_root_node_));
@@ -484,44 +480,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_story_provider));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_puppet_master));
   AtEnd(Reset(&focus_handler_));
-}
-
-// TODO(MI4-2416): pass additional configuration.
-void SessionmgrImpl::InitializeDiscovermgr() {
-  auto service_list = fuchsia::sys::ServiceList::New();
-  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
-  service_list->names.push_back(fuchsia::modular::EntityResolver::Name_);
-  service_list->names.push_back(fuchsia::ledger::Ledger::Name_);
-  discovermgr_ns_services_.AddService<fuchsia::modular::PuppetMaster>([this](auto request) {
-    if (terminating_) {
-      return;
-    }
-    puppet_master_impl_->Connect(std::move(request));
-  });
-  discovermgr_ns_services_.AddService<fuchsia::modular::EntityResolver>([this](auto request) {
-    if (terminating_) {
-      return;
-    }
-    entity_provider_runner_->ConnectEntityResolver(std::move(request));
-  });
-  discovermgr_ns_services_.AddService<fuchsia::ledger::Ledger>([this](auto request) {
-    if (terminating_) {
-      return;
-    }
-    ledger_repository_->GetLedger(to_array(kDiscovermgrUrl), std::move(request));
-  });
-  discovermgr_ns_services_.AddBinding(service_list->provider.NewRequest());
-
-  fuchsia::modular::AppConfig discovermgr_config;
-  discovermgr_config.url = kDiscovermgrUrl;
-
-  discovermgr_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      sessionmgr_context_launcher_.get(), std::move(discovermgr_config), "" /* data_origin */,
-      std::move(service_list));
-  discovermgr_app_->services().ConnectToService(discover_registry_service_.NewRequest());
-  AtEnd(Reset(&discover_registry_service_));
-  AtEnd(Reset(&discovermgr_app_));
-  AtEnd(Teardown(kBasicTimeout, "Discovermgr", discovermgr_app_.get()));
 }
 
 void SessionmgrImpl::InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
@@ -573,25 +531,6 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
     finish_initialization_();
     puppet_master_impl_->Connect(std::move(request));
   });
-
-  service_list->names.push_back(fuchsia::app::discover::Suggestions::Name_);
-  session_shell_services_.AddService<fuchsia::app::discover::Suggestions>([this](auto request) {
-    if (terminating_) {
-      return;
-    }
-    finish_initialization_();
-    discovermgr_app_->services().ConnectToService(std::move(request));
-  });
-
-  service_list->names.push_back(fuchsia::app::discover::SessionDiscoverContext::Name_);
-  session_shell_services_.AddService<fuchsia::app::discover::SessionDiscoverContext>(
-      [this](auto request) {
-        if (terminating_) {
-          return;
-        }
-        finish_initialization_();
-        discovermgr_app_->services().ConnectToService(std::move(request));
-      });
 
   // The services in |session_shell_services_| are provided through the
   // connection held in |session_shell_service_provider| connected to

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 
 #include "src/lib/fsl/vmo/strings.h"
@@ -23,8 +22,7 @@ class StoryModuleTest : public modular_testing::TestHarnessFixture {
     test_module_ = std::make_unique<modular_testing::FakeModule>(
         modular_testing::FakeComponent::Args{
             .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl(),
-            .sandbox_services = {"fuchsia.app.discover.StoryModule",
-                                 "fuchsia.modular.ModuleContext"}},
+            .sandbox_services = {"fuchsia.modular.ModuleContext"}},
         [](fuchsia::modular::Intent intent) {});
     builder_.InterceptComponent(test_module_->BuildInterceptOptions());
     builder_.BuildAndRun(test_harness());
@@ -52,19 +50,6 @@ TEST_F(StoryModuleTest, ModuleWritesToOutput) {
       [&reference](fidl::StringPtr entity_reference) { reference = std::move(entity_reference); });
 
   RunLoopUntil([&] { return reference.has_value(); });
-
-  fuchsia::app::discover::StoryModulePtr story_module;
-  test_module_->component_context()->svc()->Connect(story_module.NewRequest());
-  bool output_written{false};
-  story_module->WriteOutput("output_name", reference, [&output_written](auto result) {
-    // TODO: once the discover service generates
-    // suggestions, we should ensure they are generated
-    // based on this modules output.
-    ASSERT_TRUE(result.is_response());
-    output_written = true;
-  });
-
-  RunLoopUntil([&output_written] { return output_written; });
 }
 
 }  // namespace

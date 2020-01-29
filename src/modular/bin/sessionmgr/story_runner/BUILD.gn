@@ -33,7 +33,6 @@ source_set("story_runner") {
 
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.ui.policy",
