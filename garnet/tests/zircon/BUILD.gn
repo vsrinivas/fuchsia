@@ -81,23 +81,14 @@ generated_file("migrated_fuzzers_manifest") {
 
 fuzzers_package("zircon_fuzzers") {
   # Zircon fuzzers built using Zircon GN.
-  deps = [ ":zircon_fuzzers_manifest" ]
-  extra = get_target_outputs(":zircon_fuzzers_manifest")
-  metadata = {
-    fuzz_spec = [
-      {
-        fuzzers_package = target_name
-        fuzzers =
-            read_file("$zircon_root_build_dir/legacy_fuzzers-$target_cpu.json",
-                      "json")
-        fuzz_host = false
-      },
-    ]
+  fuzzers_manifest = {
+    target = ":zircon_fuzzers_manifest"
+    output = "$zircon_root_build_dir/legacy_fuzzers-$target_cpu.json"
   }
 
   # Zircon fuzzers built using Fuchsia GN.
   fuzzers = _migrated_fuzzers
-  deps += [ ":migrated_fuzzers_manifest" ]
+  deps = [ ":migrated_fuzzers_manifest" ]
 }
 
 # This tells the infra recipes how to run ZBI tests.  These are defined in

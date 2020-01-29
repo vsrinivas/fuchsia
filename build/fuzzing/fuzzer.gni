@@ -212,6 +212,7 @@ template("fuzzers_package") {
     binaries = []
     resources = []
     deps = []
+    extra = []
     fuzzers = []
     host = defined(invoker.fuzz_host) && invoker.fuzz_host
     host_only = defined(invoker.host_only) && invoker.host_only
@@ -303,6 +304,15 @@ template("fuzzers_package") {
     ]
   }
 
+  # Include fuzzers passed by manifest, i.e. Zircon fuzzers
+  if (defined(invoker.fuzzers_manifest)) {
+    fuzzers_manifest = invoker.fuzzers_manifest
+    pkg.deps += [ fuzzers_manifest.target ]
+    pkg.extra += get_target_outputs(fuzzers_manifest.target)
+    pkg.fuzzers += read_file(fuzzers_manifest.output, "json")
+    pkg.is_fuzzed = true
+  }
+
   if (pkg.host) {
     if (pkg.is_fuzzed) {
       # Fuzzed build: Treat host fuzzers as tools. If we get to the point of having name collisions,
@@ -339,6 +349,7 @@ template("fuzzers_package") {
       meta = []
       binaries = []
       resources = []
+      extra = []
       deps = []
       forward_variables_from(invoker,
                              "*",
@@ -358,6 +369,7 @@ template("fuzzers_package") {
         meta += pkg.meta
         binaries += pkg.binaries
         resources += pkg.resources
+        extra += pkg.extra
         deps += pkg.deps
 
         # This metadata will be used to generate out/default/fuzzers.json
