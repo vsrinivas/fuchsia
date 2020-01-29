@@ -33,6 +33,8 @@ prebuilt_package("web_engine_pkg") {
 
   package_name = "web_engine"
   archive = "//prebuilt/third_party/chromium/arch/$target_cpu/web_engine.far"
+  debug_archive =
+      "//prebuilt/build_ids/$target_cpu/chromium/web_engine.symbols.tar.bz2"
 }
 
 group("web_runner") {

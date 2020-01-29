@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package runner provides implementations for running commands in different environments.
 package runner
 
 import (
@@ -40,14 +39,15 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		// meaning the process and any of its children.
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
-	logger.Infof(ctx, "environment of subprocess:\n%v", cmd.Env)
-	logger.Infof(ctx, "starting:\n%v", cmd.Args)
+	logger.Tracef(ctx, "environment of subprocess:\n%v", cmd.Env)
+	logger.Tracef(ctx, "starting:\n%v", cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	done := make(chan error)
 	go func() {
 		done <- cmd.Wait()
+		logger.Tracef(ctx, "finished:\n%v", cmd.Args)
 	}()
 	select {
 	case err := <-done:

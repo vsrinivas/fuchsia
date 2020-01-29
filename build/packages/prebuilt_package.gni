@@ -48,16 +48,18 @@ template("prebuilt_package") {
   }
 
   unpack_action_name = target_name + ".debug-archive"
+
   if (defined(invoker.debug_archive) && unpack_debug_archives) {
     compiled_action(unpack_action_name) {
       tool = "//tools/debug/unpack_debug_symbols"
       manifest = "$target_gen_dir/${target_name}_binaries.json"
-      outputs = [
-        manifest,
-      ]
-      inputs = [
-        invoker.debug_archive,
-      ]
+      outputs = [ manifest ]
+
+      # Ideally we'd have the input be invoker.debug_archive but because
+      # we want to transisition away from such archives that won't work.
+      # Instead we assume that jiri keeps everything in sync and if
+      # the package is updated then we should re-run.
+      inputs = [ invoker.archive ]
       args = [
         "-build-id-dir",
         ".build-id",
@@ -69,6 +71,10 @@ template("prebuilt_package") {
         rebase_path(invoker.debug_archive, root_build_dir),
         "-output-manifest",
         rebase_path(manifest, root_build_dir),
+        "-dump-syms",
+        rebase_path(
+            "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
+            root_build_dir),
       ]
       metadata = {
         prebuilt_packages = [
@@ -84,6 +90,9 @@ template("prebuilt_package") {
       }
     }
   } else {
+    if (defined(invoker.debug_archive)) {
+      not_needed(invoker, [ "debug_archive" ])
+    }
     group(unpack_action_name) {
       metadata = {
         prebuilt_packages = [
@@ -129,9 +138,7 @@ template("prebuilt_package") {
       "--system-rsp",
       rebase_path(system_rsp, root_build_dir),
     ]
-    inputs = [
-      archive,
-    ]
+    inputs = [ archive ]
     outputs = [
       blobs_manifest,
       system_rsp,
@@ -181,8 +188,6 @@ template("prebuilt_package") {
 
   group(manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
-    public_deps = [
-      ":$pkg_target_name",
-    ]
+    public_deps = [ ":$pkg_target_name" ]
   }
 }

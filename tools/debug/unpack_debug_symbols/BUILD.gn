@@ -12,6 +12,7 @@ go_library("main") {
     "//tools/debug/elflib",
     "//tools/lib/color",
     "//tools/lib/logger",
+    "//tools/lib/runner",
   ]
 }
 
