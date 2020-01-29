@@ -4,9 +4,10 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl_fuchsia_bluetooth_bredr::{self as bredr, ProfileEvent, ProfileMarker, ProfileProxy},
+    fidl_fuchsia_bluetooth_bredr::{
+        self as bredr, Channel, ProfileEvent, ProfileMarker, ProfileProxy,
+    },
     fuchsia_bluetooth::expectation::asynchronous::{ExpectableState, ExpectationHarness},
-    fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::{FutureExt, StreamExt},
     std::sync::Arc,
@@ -40,7 +41,7 @@ impl TestHarness for ProfileHarness {
 pub struct ConnectedChannel {
     pub device_id: String,
     pub service_id: u64,
-    pub channel: Arc<zx::Socket>,
+    pub channel: Arc<Channel>,
     pub protocol: Arc<bredr::ProtocolDescriptor>,
 }
 

@@ -4,7 +4,8 @@
 
 use {
     bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpoint, StreamEndpointId},
-    fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, ProfileProxy, PSM_AVDTP},
+    fidl::encoding::Decodable,
+    fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
@@ -168,22 +169,26 @@ impl Peer {
             }
 
             let (status, channel) = profile
-                .connect_l2cap(&peer_id.to_string(), PSM_AVDTP as u16)
+                .connect_l2cap(
+                    &peer_id.to_string(),
+                    PSM_AVDTP as u16,
+                    ChannelParameters::new_empty(),
+                )
                 .await
                 .expect("FIDL error: {}");
             if let Some(e) = status.error {
                 fx_log_warn!("Couldn't connect media transport {}: {:?}", peer_id, e);
                 return Err(avdtp::Error::PeerDisconnected);
             }
-            if channel.is_none() {
-                fx_log_warn!("Couldn't connect media transport {}: no channel", peer_id);
+            if channel.socket.is_none() {
+                fx_log_warn!("Couldn't connect media transport {}: no socket", peer_id);
                 return Err(avdtp::Error::PeerDisconnected);
             }
 
             {
                 let strong_peer = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
                 let mut strong_peer = strong_peer.lock();
-                strong_peer.receive_channel(channel.unwrap())?;
+                strong_peer.receive_channel(channel.socket.unwrap())?;
             }
 
             let to_start = &[remote_id];
@@ -413,7 +418,7 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth::{Error, ErrorCode, Status};
     use fidl_fuchsia_bluetooth_bredr::{
-        ProfileMarker, ProfileRequest, ServiceClassProfileIdentifier,
+        Channel, ChannelMode, ProfileMarker, ProfileRequest, ServiceClassProfileIdentifier,
     };
     use futures::pin_mut;
     use std::convert::TryInto;
@@ -923,12 +928,20 @@ mod tests {
         // Should connect the media socket after open.
         let (_, transport) =
             zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
+
         let request = exec.run_until_stalled(&mut profile_request_stream.next());
         match request {
-            Poll::Ready(Some(Ok(ProfileRequest::ConnectL2cap { peer_id, psm: _, responder }))) => {
+            Poll::Ready(Some(Ok(ProfileRequest::ConnectL2cap { peer_id, responder, .. }))) => {
                 assert_eq!(PeerId(1), peer_id.parse().expect("peer_id parses"));
                 responder
-                    .send(&mut Status { error: None }, Some(transport))
+                    .send(
+                        &mut Status { error: None },
+                        Channel {
+                            socket: Some(transport),
+                            channel_mode: Some(ChannelMode::Basic),
+                            max_tx_sdu_size: Some(672),
+                        },
+                    )
                     .expect("responder sends");
             }
             x => panic!("Should have sent a open l2cap request, but got {:?}", x),
@@ -999,7 +1012,7 @@ mod tests {
         // Should connect the media socket after open.
         let request = exec.run_until_stalled(&mut profile_request_stream.next());
         match request {
-            Poll::Ready(Some(Ok(ProfileRequest::ConnectL2cap { peer_id, psm: _, responder }))) => {
+            Poll::Ready(Some(Ok(ProfileRequest::ConnectL2cap { peer_id, responder, .. }))) => {
                 assert_eq!(PeerId(1), peer_id.parse().expect("peer_id parses"));
                 responder
                     .send(
@@ -1010,7 +1023,7 @@ mod tests {
                                 description: None,
                             })),
                         },
-                        None,
+                        Channel::new_empty(),
                     )
                     .expect("responder sends");
             }

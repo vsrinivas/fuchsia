@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     bitflags::bitflags,
+    fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth as bt,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -177,7 +178,11 @@ impl ProfileServiceImpl {
 
         let mut service_def = make_profile_service_definition();
         let (status, service_id) = profile_svc
-            .add_service(&mut service_def, SecurityLevel::EncryptionOptional, false)
+            .add_service(
+                &mut service_def,
+                SecurityLevel::EncryptionOptional,
+                ChannelParameters::new_empty(),
+            )
             .await?;
 
         fx_log_info!("Registered Service ID {}", service_id);
@@ -197,16 +202,16 @@ impl ProfileService for ProfileServiceImpl {
     ) -> BoxFuture<Result<zx::Socket, Error>> {
         let peer_id = peer_id.clone();
         async move {
-            let (status, socket) = self
+            let (status, channel) = self
                 .profile_svc
-                .connect_l2cap(&peer_id, psm)
+                .connect_l2cap(&peer_id, psm, ChannelParameters::new_empty())
                 .await
                 .map_err(|e| format_err!("Profile service error: {:?}", e))?;
             let status: bt::Status = status;
             if let Some(error) = status.error {
                 return Err(format_err!("Error connecting to device: {} {:?}", peer_id, *error));
             }
-            match socket {
+            match channel.socket {
                 Some(sock) => Ok(sock),
                 // Hopefully we should have an error if we don't have a socket.
                 None => Err(format_err!("No socket returned from profile service {}", peer_id)),
@@ -230,11 +235,14 @@ impl ProfileService for ProfileServiceImpl {
                         if expected_service_id != service_id {
                             fx_log_err!("Unexpected service id received {}", service_id);
                             None
-                        } else {
+                        } else if let Some(channel) = channel.socket {
                             Some(Ok(AvrcpProfileEvent::IncomingControlConnection {
                                 peer_id: PeerId::from(peer_id),
                                 channel,
                             }))
+                        } else {
+                            fx_log_err!("Received OnConnected event without a socket");
+                            None
                         }
                     }
                     Ok(ProfileEvent::OnServiceFound { peer_id, profile, attributes }) => {

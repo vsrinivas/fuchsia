@@ -10,6 +10,7 @@ use {
     bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
+    fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC},
     fuchsia_async as fasync,
@@ -445,8 +446,14 @@ async fn main() -> Result<(), Error> {
         .context("Failed to connect to Bluetooth Profile service")?;
 
     let mut service_def = make_profile_service_definition();
-    let (status, service_id) =
-        profile_svc.add_service(&mut service_def, SecurityLevel::EncryptionOptional, false).await?;
+
+    let (status, service_id) = profile_svc
+        .add_service(
+            &mut service_def,
+            SecurityLevel::EncryptionOptional,
+            ChannelParameters::new_empty(),
+        )
+        .await?;
 
     let attrs: Vec<u16> = vec![
         ATTR_PROTOCOL_DESCRIPTOR_LIST,
@@ -480,7 +487,14 @@ async fn main() -> Result<(), Error> {
             Ok(ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol }) => {
                 fx_log_info!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
                 let peer_id = device_id.parse().expect("peer ids from profile should parse");
-                peers.connected(&inspect, peer_id, channel);
+                let socket = match channel.socket {
+                    Some(s) => s,
+                    None => {
+                        fx_log_warn!("socket in OnConnected event missing");
+                        continue;
+                    }
+                };
+                peers.connected(&inspect, peer_id, socket);
                 if let Some(peer) = peers.get(&peer_id) {
                     // Add the controller to the peers
                     controller_pool.lock().peer_connected(peer_id, peer.read().avdtp_peer());

@@ -16,6 +16,37 @@ enum SecurityLevel {
     HIGH_STRENGTH = 4; // 128-bit or equivalent key required using FIPS algorithms
 };
 
+/// Used to specify preferred and accepted L2CAP channel modes.
+/// If the peer rejects a non-BASIC mode, the Bluetooth system will attempt to
+/// open the channel in BASIC mode instead.
+/// For a description of each mode, see Core Spec v5.2, Volume 3, Part A, Sec 2.4,
+/// "Modes of Operation".
+enum ChannelMode {
+    BASIC = 1;
+    ENHANCED_RETRANSMISSION = 2;
+};
+
+/// Used to specify preferred L2CAP channel parameters.
+table ChannelParameters {
+    /// Optional. If not provided, BASIC will be used.
+    1: ChannelMode channel_mode;
+    /// Maximum SDU size this profile is capable of accepting. Must be >= 48.
+    /// Optional. If not provided, the size will be determined by the Bluetooth system.
+    /// No guarantees are given regarding the size selected.
+    2: uint16 max_rx_sdu_size;
+};
+
+/// Used to return an opened channel. If there was an error in opening the channel,
+/// `Channel` will be empty. Otherwise, all fields will be present.
+table Channel {
+    /// Socket interface for sending/receiving SDUs on the channel.
+    1: handle<socket> socket;
+    /// Channel mode accepted by the peer.
+    2: ChannelMode channel_mode;
+    /// Maximum SDU size the peer is capable of accepting.
+    3: uint16 max_tx_sdu_size;
+};
+
 /// Profile provides Bluetooth services a way to register a service definition,
 /// making that service discoverable by remote peers.  Registered services will receive
 /// L2CAP connections made to the services advertised in the definition, and can open
@@ -29,9 +60,11 @@ protocol Profile {
     /// established.
     /// If `devices` is true, connections to the service's channels will create a
     /// device instead of producing an OnConnected event.
+    /// `parameters` indicates what channel parameters the host should
+    /// attempt to negotiate on behalf of the profile when a channel for this service is created.
     /// Returns `status` for success or error.
     /// If successful, a unique `service_id` is returned to identify this service.
-    AddService(ServiceDefinition definition, SecurityLevel sec_level, bool devices)
+    AddService(ServiceDefinition definition, SecurityLevel sec_level, ChannelParameters parameters)
         -> (fuchsia.bluetooth.Status status, uint64 service_id);
 
     /// Register a search for services on remote devices.  An `OnServiceFound`
@@ -47,20 +80,20 @@ protocol Profile {
     RemoveService(uint64 service_id);
 
     /// Connect a channel to the connected remote device `peer_id` using the
-    /// protocol and channel listed. For L2CAP, dynamic PSMs can be specified.
+    /// protocol and desired channel `parameters` listed. For L2CAP, dynamic PSMs can be specified.
     /// See the defined PSMs in `service.fidl`
     /// Returns the channel after it has been connected. `status` will indicate
-    /// an error if the channel could not be connected.
-    ConnectL2cap(string peer_id, uint16 psm)
-        -> (fuchsia.bluetooth.Status status, handle<socket>? channel);
+    /// an error if the channel could not be connected, in which case `channel` will be empty.
+    ConnectL2cap(string:16 peer_id, uint16 psm, ChannelParameters parameters)
+        -> (fuchsia.bluetooth.Status status, Channel channel);
 
     /// Produced when a protocol channel is connected for this profile.
     /// `channel` contains the channel connected to, and information about the
-    /// protocol is provided in `protocol`. All protocols supported internally will
-    /// be handled, for example an RFCOMM socket will be provided instead of an
-    /// L2CAP socket if the services protocol descriptor includes it.
+    /// protocol is provided in `protocol`. All protocols supported internally will be handled, for
+    /// example an RFCOMM socket will be provided instead of an L2CAP socket if the services protocol
+    /// descriptor includes it.
     -> OnConnected(string device_id, uint64 service_id,
-                   handle<socket> channel, ProtocolDescriptor protocol);
+                   Channel channel, ProtocolDescriptor protocol);
 
     /// Produced when a search this client added finds a matching service on a remote
     /// device.  `peer_id` is the device the service was found on, and `profile` includes the

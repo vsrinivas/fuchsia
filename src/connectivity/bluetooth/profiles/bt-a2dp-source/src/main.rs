@@ -9,6 +9,7 @@ use {
     argh::FromArgs,
     bt_a2dp::media_types::*,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
+    fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
@@ -136,16 +137,18 @@ impl Peers {
             }
             return Ok(());
         }
-        let (status, channel) =
-            self.profile.connect_l2cap(&id.to_string(), PSM_AVDTP as u16).await?;
+        let (status, channel) = self
+            .profile
+            .connect_l2cap(&id.to_string(), PSM_AVDTP as u16, ChannelParameters::new_empty())
+            .await?;
 
         if let Some(e) = status.error {
             fx_log_warn!("Couldn't connect to {}: {:?}", id, e);
             return Ok(());
         }
-        match channel {
-            Some(channel) => self.connected(id, channel, Some(desc))?,
-            None => fx_log_warn!("Couldn't connect {}: no channel", id),
+        match channel.socket {
+            Some(socket) => self.connected(id, socket, Some(desc))?,
+            None => fx_log_warn!("Couldn't connect {}: no socket", id),
         };
         Ok(())
     }
@@ -292,8 +295,14 @@ async fn main() -> Result<(), Error> {
         .context("Failed to connect to Bluetooth profile service")?;
 
     let mut service_def = make_profile_service_definition();
-    let (status, _) =
-        profile_svc.add_service(&mut service_def, SecurityLevel::EncryptionOptional, false).await?;
+
+    let (status, _) = profile_svc
+        .add_service(
+            &mut service_def,
+            SecurityLevel::EncryptionOptional,
+            ChannelParameters::new_empty(),
+        )
+        .await?;
 
     if let Some(e) = status.error {
         return Err(format_err!("Couldn't add A2DP source service: {:?}", e));
@@ -316,7 +325,8 @@ async fn main() -> Result<(), Error> {
             ProfileEvent::OnConnected { device_id, channel, .. } => {
                 fx_log_info!("Connected sink {}", device_id);
                 let peer_id = device_id.parse().expect("peer ids from profile should parse");
-                let connected_res = peers.connected(device_id.parse()?, channel, None);
+                let socket = channel.socket.expect("socket from profile should not be None");
+                let connected_res = peers.connected(device_id.parse()?, socket, None);
                 if let Some(peer) = peers.get(&peer_id) {
                     controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
                 }

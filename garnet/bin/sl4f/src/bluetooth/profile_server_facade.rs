@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
+use fidl::encoding::Decodable;
 use fidl_fuchsia_bluetooth_bredr::{
-    Attribute, DataElement, DataElementData, DataElementType, Information, ProfileDescriptor,
-    ProfileEvent, ProfileEventStream, ProfileMarker, ProfileProxy, ProtocolDescriptor,
-    ProtocolIdentifier, SecurityLevel, ServiceClassProfileIdentifier, ServiceDefinition,
+    Attribute, ChannelParameters, DataElement, DataElementData, DataElementType, Information,
+    ProfileDescriptor, ProfileEvent, ProfileEventStream, ProfileMarker, ProfileProxy,
+    ProtocolDescriptor, ProtocolIdentifier, SecurityLevel, ServiceClassProfileIdentifier,
+    ServiceDefinition,
 };
 use fuchsia_async as fasync;
 use fuchsia_component as component;
@@ -14,8 +17,6 @@ use fuchsia_syslog::macros::*;
 use futures::stream::StreamExt;
 use parking_lot::RwLock;
 use serde_json::value::Value;
-
-use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 
 #[derive(Debug)]
 struct InnerProfileServerFacade {
@@ -538,7 +539,11 @@ impl ProfileServerFacade {
         let (status, service_id) = match &self.inner.read().profile_server_proxy {
             Some(server) => {
                 server
-                    .add_service(&mut service_def, SecurityLevel::EncryptionOptional, false)
+                    .add_service(
+                        &mut service_def,
+                        SecurityLevel::EncryptionOptional,
+                        ChannelParameters::new_empty(),
+                    )
                     .await?
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
@@ -665,7 +670,7 @@ impl ProfileServerFacade {
     pub async fn connect_l2cap(&self, id: String, psm: u16) -> Result<(), Error> {
         let tag = "ProfileServerFacade::connect_l2cap";
         let connect_l2cap_future = match &self.inner.read().profile_server_proxy {
-            Some(server) => server.connect_l2cap(&id, psm),
+            Some(server) => server.connect_l2cap(&id, psm, ChannelParameters::new_empty()),
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 

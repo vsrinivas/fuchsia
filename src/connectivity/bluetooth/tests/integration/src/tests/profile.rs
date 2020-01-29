@@ -4,9 +4,10 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::{
-        DataElement, DataElementData, DataElementType, ProtocolDescriptor, ProtocolIdentifier,
-        SecurityLevel, ServiceDefinition, PSM_AVDTP,
+        ChannelParameters, DataElement, DataElementData, DataElementType, ProtocolDescriptor,
+        ProtocolIdentifier, SecurityLevel, ServiceDefinition, PSM_AVDTP,
     },
     fuchsia_bluetooth::error::Error as BTError,
 };
@@ -34,7 +35,11 @@ fn service_definition_for_testing() -> ServiceDefinition {
 
 async fn add_service(profile: &ProfileHarness) -> Result<u64, anyhow::Error> {
     let mut service_def = service_definition_for_testing();
-    let fut = profile.aux().add_service(&mut service_def, SecurityLevel::EncryptionOptional, false);
+    let fut = profile.aux().add_service(
+        &mut service_def,
+        SecurityLevel::EncryptionOptional,
+        ChannelParameters::new_empty(),
+    );
     let (status, id) = fut.await?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
@@ -66,13 +71,17 @@ async fn test_add_and_remove_profile(profile: ProfileHarness) -> Result<(), Erro
 }
 
 async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> {
-    let fut = profile.aux().connect_l2cap("unknown_peer", PSM_AVDTP as u16);
-    let (status, socket) = fut.await?;
+    let fut = profile.aux().connect_l2cap(
+        "unknown_peer",
+        PSM_AVDTP as u16,
+        ChannelParameters::new_empty(),
+    );
+    let (status, channel) = fut.await?;
     // Should be an error
     if status.error.is_none() {
         return Err(format_err!("Expected an error from connecting to an unknown peer"));
     }
-    if socket.is_some() {
+    if channel.socket.is_some() {
         return Err(format_err!("Should not have a socket when we don't connect"));
     }
     Ok(())
