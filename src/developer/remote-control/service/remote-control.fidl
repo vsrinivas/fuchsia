@@ -30,6 +30,19 @@ table RunComponentResponse {
     3: string:MAX component_stderr;
 };
 
+protocol ComponentController {
+    // Wait for an already started component to terminate and return its exit code.
+    // TODO(fxb/43734) allow waiting on arbitrary components
+    -> OnTerminated(int64 exit_code);
+
+    // Kills a component.
+    // Note that currently only components started by this service
+    // can be killed with this method.
+    // TODO(fxb/43734): allow killing arbitrary components.
+    // TODO(fxb/44119): replace the bool with an error enum.
+    Kill() -> (bool success);
+};
+
 [Discoverable, FragileBase]
 protocol FdbRemoteControl {
     // Starts a component and waits for it finish.
@@ -39,6 +52,15 @@ protocol FdbRemoteControl {
         // Arguments to pass to the component.
         vector<string:MAX>:MAX args
         ) -> (RunComponentResponse response);
+
+    // Starts a component asynchronously.
+    StartComponent(
+        // Name of the component to start.
+        string:MAX_URL_LENGTH component_url,
+        // Arguments to pass to the component.
+        vector<string:MAX>:MAX args,
+        request<ComponentController> controller
+        ) -> (bool success);
 
     // This should be a fire-and-forget, but that seems to do
     // nothing in Overnet.

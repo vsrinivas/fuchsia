@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     futures::prelude::*,
     remote_control::RemoteControlService,
+    std::sync::Arc,
 };
 
 async fn exec_server() -> Result<(), Error> {
@@ -19,6 +20,7 @@ async fn exec_server() -> Result<(), Error> {
     hoist::publish_service(rcs::FdbRemoteControlMarker::NAME, ClientEnd::new(p))?;
 
     log::info!("published remote control service to overnet");
+    let service = Arc::new(RemoteControlService::new().unwrap());
 
     while let Some(ServiceProviderRequest::ConnectToService {
         chan,
@@ -28,10 +30,10 @@ async fn exec_server() -> Result<(), Error> {
     {
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
+        let service_clone = Arc::clone(&service);
 
         hoist::spawn(async move {
-            let service = RemoteControlService::new().unwrap();
-            service
+            service_clone
                 .serve_stream(rcs::FdbRemoteControlRequestStream::from_channel(chan))
                 .await
                 .unwrap();
