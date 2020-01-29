@@ -4,16 +4,7 @@
 
 group("block") {
   deps = [
-    "ahci",
-    "aml-sd-emmc",
-    "as370-sdhci",
-    "bootpart",
     "ftl",
-    "ramdisk",
-    "sdhci",
-    "sdmmc",
-    "ums-function",
-    "usb-mass-storage",
     "zxcrypt",
   ]
 }

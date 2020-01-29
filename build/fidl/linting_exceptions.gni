@@ -15,6 +15,7 @@ unlinted_libraries = [
   "fuchsia.hardware.block.partition",
   "fuchsia.hardware.ethernet",
   "fuchsia.hardware.ramdisk",
+  "fuchsia.hardware.usb.peripheral.block",
   "fuchsia.hardware.usb.virtual.bus",
   "fuchsia.sysmem",
 ]

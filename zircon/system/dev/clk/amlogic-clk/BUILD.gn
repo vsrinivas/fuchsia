@@ -39,6 +39,7 @@ zx_test("amlogic-clk-test") {
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-clock:c",
     "$zx/system/ulib/ddk",

@@ -40,7 +40,9 @@ zx_status_t DecodeCid(const uint8_t* raw_cid) {
          raw_cid[MMC_CID_PRODUCT_NAME_START + 5]);
   zxlogf(INFO, "       revision=%u.%u\n", (raw_cid[MMC_CID_REVISION] >> 4) & 0xf,
          raw_cid[MMC_CID_REVISION] & 0xf);
-  zxlogf(INFO, "       serial=%u\n", *reinterpret_cast<const uint32_t*>(&raw_cid[MMC_CID_SERIAL]));
+  uint32_t serial;
+  memcpy(&serial, reinterpret_cast<const uint32_t*>(&raw_cid[MMC_CID_SERIAL]), sizeof(uint32_t));
+  zxlogf(INFO, "       serial=%u\n", serial);
   return ZX_OK;
 }
 

@@ -2,25 +2,47 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("ramdisk") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("ramdisk") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "ramdisk-controller.cc",
     "ramdisk.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.block",
-    "$zx/system/banjo/ddk.protocol.block.partition",
-    "$zx/system/dev/lib/dev-operation",
-    "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/fidl/fuchsia-mem:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/dev-operation",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.block",
+    "//zircon/system/banjo/ddk.protocol.block.partition",
+    "//zircon/system/fidl/fuchsia-hardware-ramdisk:c",
+    "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/fidl/fuchsia-mem:c",
   ]
+}
+
+migrated_manifest("ramdisk-manifest") {
+  deps = [ ":ramdisk" ]
 }

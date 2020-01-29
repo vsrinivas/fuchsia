@@ -180,6 +180,8 @@ bool UmsBlockDeviceFlushTest() {
 }  // namespace
 
 BEGIN_TEST_CASE(usb_mass_storage_tests)
+RUN_TEST(UmsBlockDeviceAddTest)
+RUN_TEST(UmsBlockDeviceGetSizeTest)
 RUN_NAMED_TEST("UMS block device constructor sets paramaters appropriately",
                UmsBlockDeviceConstructorTest)
 RUN_NAMED_TEST("BlockImplQueue with invalid OPCODE type returns an error",
