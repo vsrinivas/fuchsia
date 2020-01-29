@@ -62,26 +62,28 @@ class StringCombiner {
 //  std::move(bad_type));
 //}
 
-TEST_F(PromiseTest, Check_WillDieIfNotKeptAlive) {
-  ASSERT_DEATH(
-      {
-        fit::promise<> promise;
-        std::string result;
-        {
-          auto combiner = std::make_unique<StringCombiner>(std::vector<std::string>({
-              "s1, ",
-              "s2, ",
-              "s3",
-          }));
-          promise = combiner->Combine([&result](std::string* str) { result = *str; });
-        }
-
-        executor_.schedule_task(std::move(promise));
-        RunLoopUntilIdle();
-        EXPECT_EQ(result, "s1, s2, s3");
-      },
-      testing::HasSubstr(""));
-}
+// This test will trigger ASAN every so often so it needs to be left commented out.
+//
+// TEST_F(PromiseTest, Check_WillDieIfNotKeptAlive) {
+//  ASSERT_DEATH(
+//      {
+//        fit::promise<> promise;
+//        std::string result;
+//        {
+//          auto combiner = std::make_unique<StringCombiner>(std::vector<std::string>({
+//              "s1, ",
+//              "s2, ",
+//              "s3",
+//          }));
+//          promise = combiner->Combine([&result](std::string* str) { result = *str; });
+//        }
+//
+//        executor_.schedule_task(std::move(promise));
+//        RunLoopUntilIdle();
+//        EXPECT_EQ(result, "s1, s2, s3");
+//      },
+//      testing::HasSubstr(""));
+//}
 
 TEST_F(PromiseTest, Check_UniquePtrStaysAlive) {
   fit::promise<> promise;
