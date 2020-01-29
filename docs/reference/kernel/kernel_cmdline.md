@@ -330,42 +330,48 @@ mexec syscall to place the ramdisk for the following kernel in high memory
 ## kernel.oom.behavior=\<string>
 
 This option can be used to configure the behavior of the kernel when
-encountering an OOM situation. Valid values are `jobkill`, and `reboot`. If
-unset or set to an invalid value, defaults to `reboot`.
+encountering an out-of-memory (OOM) situation. Valid values are `jobkill`, and
+`reboot`. If unset or set to an invalid value, defaults to `reboot`.
 
 If set to `jobkill`, when encountering OOM, the kernel attempts to kill jobs that
 have the `ZX_PROP_JOB_KILL_ON_OOM` bit set to recover memory.
 
-If set to `reboot`, when encountering OOM, the kernel signals an event (see
-`zx_system_get_event()`), delays briefly, and then reboots the system.
+If set to `reboot`, when encountering OOM, the kernel signals an out-of-memory
+event (see `zx_system_get_event()`), delays briefly, and then reboots the system.
 
 ## kernel.oom.enable=\<bool>
 
 This option (true by default) turns on the out-of-memory (OOM) kernel thread,
-which kills processes when the PMM has less than `kernel.oom.redline_mb` free
-memory, sleeping for `kernel.oom.sleep_sec` between checks.
+which kills processes or reboots the system (per `kernel.oom.behavior`), when the
+PMM has less than `kernel.oom.outofmemory-mb` free memory.
 
-The OOM thread can be manually started/stopped at runtime with the `k oom start`
-and `k oom stop` commands, and `k oom info` will show the current state.
+An OOM can be manually triggered by the command `k pmm oom`, which will cause
+free memory to fall below the `kernel.oom.outofmemory-mb` threshold. An
+allocation rate can be provided with `k pmm oom <rate>`, where `<rate>` is in MB.
+This will cause the specified amount of memory to be allocated every second,
+which can be useful for observing memory pressure state transitions.
 
-See `k oom` for a list of all OOM kernel commands.
+Refer to `kernel.oom.outofmemory-mb`, `kernel.oom.critical-mb`,
+`kernel.oom.warning-mb`, and `zx_system_get_event()` for further details on
+memory pressure state transitions.
 
-## kernel.oom.redline-mb=\<num>
+## kernel.oom.outofmemory-mb=\<num>
 
 This option (50 MB by default) specifies the free-memory threshold at which the
-out-of-memory (OOM) thread will trigger a low-memory event and begin killing
-processes.
+out-of-memory (OOM) thread will trigger an out-of-memory event and begin killing
+processes, or rebooting the system.
 
-The `k oom info` command will show the current value of this and other
-parameters.
+## kernel.oom.critical-mb=\<num>
 
-## kernel.oom.sleep-sec=\<num>
+This option (150 MB by default) specifies the free-memory threshold at which the
+out-of-memory (OOM) thread will trigger a critical memory pressure event,
+signaling that processes should free up memory.
 
-This option (1 second by default) specifies how long the out-of-memory (OOM)
-kernel thread should sleep between checks.
+## kernel.oom.warning-mb=\<num>
 
-The `k oom info` command will show the current value of this and other
-parameters.
+This option (300 MB by default) specifies the free-memory threshold at which the
+out-of-memory (OOM) thread will trigger a warning memory pressure event,
+signaling that processes should slow down memory allocations.
 
 ## kernel.root-job.behavior=\<string>
 

@@ -28,6 +28,6 @@ class EventDispatcher final
   explicit EventDispatcher(uint32_t options);
 };
 
-fbl::RefPtr<EventDispatcher> GetLowMemEvent();
+fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind);
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EVENT_DISPATCHER_H_

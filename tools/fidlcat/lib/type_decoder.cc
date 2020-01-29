@@ -527,7 +527,7 @@ void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostre
 
 void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os) {
   switch (type) {
-    SystemEventTypeNameCase(ZX_SYSTEM_EVENT_LOW_MEMORY);
+    SystemEventTypeNameCase(ZX_SYSTEM_EVENT_OUT_OF_MEMORY);
     default:
       os << type;
       return;

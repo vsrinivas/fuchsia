@@ -507,12 +507,14 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
 zx_status_t sys_system_get_event(zx_handle_t root_job, uint32_t kind, user_out_handle* out) {
   auto up = ProcessDispatcher::GetCurrent();
 
-  if (kind != ZX_SYSTEM_EVENT_LOW_MEMORY) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   fbl::RefPtr<JobDispatcher> job;
-  zx_status_t status = up->GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
+  zx_status_t status;
+  if (kind == ZX_SYSTEM_EVENT_OUT_OF_MEMORY) {
+    status = up->GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
+  } else {
+    // We check for the root job below. We should not need to enforce rights beyond that.
+    status = up->GetDispatcherWithRights(root_job, ZX_RIGHT_NONE, &job);
+  }
   if (status != ZX_OK) {
     return status;
   }
@@ -522,7 +524,16 @@ zx_status_t sys_system_get_event(zx_handle_t root_job, uint32_t kind, user_out_h
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  // Do not grant default event rights, as we don't want userspace to, for
-  // example, be able to signal this event.
-  return out->make(GetLowMemEvent(), ZX_DEFAULT_SYSTEM_EVENT_LOW_MEMORY_RIGHTS);
+  switch (kind) {
+    case ZX_SYSTEM_EVENT_OUT_OF_MEMORY:
+    case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL:
+    case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING:
+    case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL:
+      // Do not grant default event rights, as we don't want userspace to, for
+      // example, be able to signal this event.
+      return out->make(GetMemPressureEvent(kind), ZX_DEFAULT_SYSTEM_EVENT_LOW_MEMORY_RIGHTS);
+
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
 }

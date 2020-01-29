@@ -128,7 +128,10 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     printf("%s dump                 : dump pmm info \n", argv[0].str);
     if (!is_panic) {
       printf("%s free                 : periodically dump free mem count\n", argv[0].str);
-      printf("%s oom                  : leak memory until oom is triggered\n", argv[0].str);
+      printf(
+          "%s oom [<rate>]         : leak memory until oom is triggered, optionally "
+          "specify the rate at which to leak (in MB per second)\n",
+          argv[0].str);
       printf("%s mem_avail_state info : dump memstate info\n", argv[0].str);
       printf("%s drop_user_pt         : drop all user hardware page tables\n", argv[0].str);
       printf(
@@ -162,13 +165,30 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       show_mem = false;
     }
   } else if (!strcmp(argv[1].str, "oom")) {
+    uint64_t rate = 0;
+    if (argc > 2) {
+      rate = atoi(argv[2].str) * 1024 * 1024 / PAGE_SIZE;
+    }
+
     uint64_t pages_till_oom;
     // In case we are racing with someone freeing pages we will leak in a loop until we are sure
     // we have hit the oom state.
     while ((pages_till_oom = pmm_node.DebugNumPagesTillOomState()) > 0) {
       list_node list = LIST_INITIAL_VALUE(list);
-      if (pmm_node.AllocPages(pages_till_oom, 0, &list) == ZX_OK) {
-        printf("Leaking %lu pages\n", pages_till_oom);
+      if (rate > 0) {
+        uint64_t pages_leaked = 0;
+        while (pages_leaked < pages_till_oom) {
+          uint64_t alloc_pages = fbl::min(rate, pages_till_oom - pages_leaked);
+          if (pmm_node.AllocPages(alloc_pages, 0, &list) == ZX_OK) {
+            pages_leaked += alloc_pages;
+            printf("Leaked %lu pages\n", pages_leaked);
+          }
+          thread_sleep_relative(ZX_SEC(1));
+        }
+      } else {
+        if (pmm_node.AllocPages(pages_till_oom, 0, &list) == ZX_OK) {
+          printf("Leaked %lu pages\n", pages_till_oom);
+        }
       }
       // Ignore any errors under the assumption we had a racy allocation and try again next time
       // around the loop.

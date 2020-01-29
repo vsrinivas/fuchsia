@@ -107,8 +107,8 @@ const char* kComponentDriverPath = "/boot/driver/component.so";
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 Coordinator::Coordinator(CoordinatorConfig config) : config_(std::move(config)) {
-  if (config_.lowmem_event) {
-    wait_on_oom_event_.set_object(config_.lowmem_event.get());
+  if (config_.oom_event) {
+    wait_on_oom_event_.set_object(config_.oom_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
     wait_on_oom_event_.Begin(config_.dispatcher);
   }

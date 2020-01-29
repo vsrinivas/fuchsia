@@ -160,7 +160,7 @@ struct CoordinatorConfig {
   // Job for all devhosts.
   zx::job devhost_job;
   // Event that is signaled by the kernel in OOM situation.
-  zx::event lowmem_event;
+  zx::event oom_event;
   // Async dispatcher for the coordinator.
   async_dispatcher_t* dispatcher;
   // Boot arguments from the Arguments service.

@@ -229,14 +229,14 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  zx_handle_t lowmem_event;
-  status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_LOW_MEMORY, &lowmem_event);
+  zx_handle_t oom_event;
+  status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
   if (status != ZX_OK) {
     fprintf(stderr,
-            "devcoordinator: failed to get lowmem event, assuming test "
+            "devcoordinator: failed to get oom event, assuming test "
             "environment and continuing\n");
   } else {
-    config.lowmem_event = zx::event(lowmem_event);
+    config.oom_event = zx::event(oom_event);
   }
 
   devmgr::Coordinator coordinator(std::move(config));

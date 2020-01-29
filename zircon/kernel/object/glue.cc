@@ -91,13 +91,38 @@ class RootJobObserver final : public StateObserver {
 
 static ktl::unique_ptr<RootJobObserver> root_job_observer;
 
-// Kernel-owned event that is used to signal userspace before taking action in OOM situation.
-static fbl::RefPtr<EventDispatcher> low_mem_event;
-// Event used for communicating lowmem state between the lowmem callback and the oom thread.
-static Event mem_state_signal(EVENT_FLAG_AUTOUNSIGNAL);
-static ktl::atomic<uint8_t> mem_event_idx = 1;
+enum PressureLevel : uint8_t {
+  kOutOfMemory = 0,
+  kCritical,
+  kWarning,
+  kNormal,
+  kNumLevels,
+};
 
-fbl::RefPtr<EventDispatcher> GetLowMemEvent() { return low_mem_event; }
+// Kernel-owned events used to signal userspace at different levels of memory pressure.
+static ktl::array<fbl::RefPtr<EventDispatcher>, PressureLevel::kNumLevels> mem_pressure_events;
+
+// Event used for communicating memory state between the mem_avail_state_updated_cb callback and the
+// oom thread.
+static Event mem_state_signal(EVENT_FLAG_AUTOUNSIGNAL);
+
+static ktl::atomic<uint8_t> mem_event_idx = PressureLevel::kNormal;
+static uint8_t prev_mem_event_idx = mem_event_idx;
+
+fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind) {
+  switch (kind) {
+    case ZX_SYSTEM_EVENT_OUT_OF_MEMORY:
+      return mem_pressure_events[PressureLevel::kOutOfMemory];
+    case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL:
+      return mem_pressure_events[PressureLevel::kCritical];
+    case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING:
+      return mem_pressure_events[PressureLevel::kWarning];
+    case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL:
+      return mem_pressure_events[PressureLevel::kNormal];
+    default:
+      return nullptr;
+  }
+}
 
 // Callback used with |pmm_init_reclamation|.
 // This is a very minimal save idx and signal an event as we are called under the pmm lock and must
@@ -108,7 +133,7 @@ static void mem_avail_state_updated_cb(uint8_t idx) {
 }
 
 // Helper called by the oom thread when low memory mode is entered.
-static void on_lowmem() {
+static void on_oom() {
   const char* oom_behavior_str = gCmdline.GetString("kernel.oom.behavior");
 
   // Default to reboot if not set or set to an unexpected value. See fxbug.dev/33429 for the product
@@ -152,28 +177,33 @@ static void on_lowmem() {
 
 static int oom_thread(void* unused) {
   while (true) {
-    // Check if the current index is 0. After observing this we know that if it should change to
-    // zero that the event will get signaled and we would immediately wake back up.
-    if (mem_event_idx != 0) {
-      zx_status_t status = low_mem_event->user_signal_self(ZX_EVENT_SIGNALED, 0);
-      if (status != ZX_OK) {
-        printf("OOM: unsignal low mem failed: %d\n", status);
-      }
-      mem_state_signal.Wait(Deadline::infinite());
-    }
-    // get local copy of the atomic. It's possible by the time we read this that we've already
-    // exited low mem mode, but that's fine as we're happy to not have to invoke the oom killer.
+    // Get a local copy of the atomic. It's possible by the time we read this that we've already
+    // exited the last observed state, but that's fine as we don't necessarily need to signal every
+    // transient state.
     uint8_t idx = mem_event_idx;
     printf("OOM: memory availability state %u\n", idx);
 
-    if (idx == 0) {
-      // Tell the user we're in low memory mode and then run our oom handler
-      zx_status_t status = low_mem_event->user_signal_self(0, ZX_EVENT_SIGNALED);
-      if (status != ZX_OK) {
-        printf("OOM: signal low mem failed: %d\n", status);
-      }
-      on_lowmem();
+    // Unsignal the last event that was signaled.
+    zx_status_t status =
+        mem_pressure_events[prev_mem_event_idx]->user_signal_self(ZX_EVENT_SIGNALED, 0);
+    if (status != ZX_OK) {
+      panic("OOM: unsignal memory event %d failed: %d\n", prev_mem_event_idx, status);
     }
+
+    // Signal event corresponding to the new memory state.
+    status = mem_pressure_events[idx]->user_signal_self(0, ZX_EVENT_SIGNALED);
+    if (status != ZX_OK) {
+      panic("OOM: signal memory event %d failed: %d\n", idx, status);
+    }
+    prev_mem_event_idx = idx;
+
+    // If we're below the out-of-memory watermark, trigger OOM behavior.
+    if (idx == 0) {
+      on_oom();
+    }
+
+    // Wait for the memory state to change again.
+    mem_state_signal.Wait(Deadline::infinite());
   }
 }
 
@@ -189,17 +219,31 @@ static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
   }
   root_job->AddObserver(root_job_observer.get());
 
-  KernelHandle<EventDispatcher> event;
-  zx_rights_t rights;
-  zx_status_t status = EventDispatcher::Create(0, &event, &rights);
-  if (status != ZX_OK) {
-    panic("low mem event create: %d\n", status);
+  for (uint8_t i = 0; i < PressureLevel::kNumLevels; i++) {
+    KernelHandle<EventDispatcher> event;
+    zx_rights_t rights;
+    zx_status_t status = EventDispatcher::Create(0, &event, &rights);
+    if (status != ZX_OK) {
+      panic("mem pressure event %d create: %d\n", i, status);
+    }
+    mem_pressure_events[i] = event.release();
   }
-  low_mem_event = event.release();
 
   if (gCmdline.GetBool("kernel.oom.enable", true)) {
-    auto redline = gCmdline.GetUInt64("kernel.oom.redline-mb", 50) * MB;
-    zx_status_t status = pmm_init_reclamation(&redline, 1, MB, mem_avail_state_updated_cb);
+    constexpr auto kNumWatermarks = PressureLevel::kNumLevels - 1;
+    ktl::array<uint64_t, kNumWatermarks> mem_watermarks;
+
+    // TODO(rashaeqbal): The watermarks chosen below are arbitrary. Tune them based on memory usage
+    // patterns. Consider moving to percentages of total memory instead of absolute numbers - will
+    // be easier to maintain across platforms.
+    mem_watermarks[PressureLevel::kOutOfMemory] =
+        gCmdline.GetUInt64("kernel.oom.outofmemory-mb", 50) * MB;
+    mem_watermarks[PressureLevel::kCritical] =
+        gCmdline.GetUInt64("kernel.oom.critical-mb", 150) * MB;
+    mem_watermarks[PressureLevel::kWarning] = gCmdline.GetUInt64("kernel.oom.warning-mb", 300) * MB;
+
+    zx_status_t status = pmm_init_reclamation(&mem_watermarks[PressureLevel::kOutOfMemory],
+                                              kNumWatermarks, MB, mem_avail_state_updated_cb);
     if (status != ZX_OK) {
       panic("failed to initialize pmm reclamation: %d\n", status);
     }

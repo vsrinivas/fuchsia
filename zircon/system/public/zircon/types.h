@@ -388,7 +388,10 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_UPPER_BOUND     ((zx_obj_type_t)64u)
 
 typedef uint32_t zx_system_event_type_t;
-#define ZX_SYSTEM_EVENT_LOW_MEMORY  ((zx_system_event_type_t)1u)
+#define ZX_SYSTEM_EVENT_OUT_OF_MEMORY               ((zx_system_event_type_t)1u)
+#define ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL    ((zx_system_event_type_t)2u)
+#define ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING     ((zx_system_event_type_t)3u)
+#define ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL      ((zx_system_event_type_t)4u)
 
 // Used in channel_read_etc.
 typedef struct zx_handle_info {

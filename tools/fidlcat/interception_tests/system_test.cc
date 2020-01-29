@@ -134,11 +134,12 @@ std::unique_ptr<SystemCallTest> ZxSystemGetEvent(int64_t result, std::string_vie
   return value;
 }
 
-#define SYSTEM_GET_EVENT_DISPLAY_TEST_CONTENT(result, expected) \
-  zx_handle_t event = kHandleOut;                               \
-  PerformDisplayTest(                                           \
-      "zx_system_get_event@plt",                                \
-      ZxSystemGetEvent(result, #result, kHandle, ZX_SYSTEM_EVENT_LOW_MEMORY, &event), expected);
+#define SYSTEM_GET_EVENT_DISPLAY_TEST_CONTENT(result, expected)                          \
+  zx_handle_t event = kHandleOut;                                                        \
+  PerformDisplayTest(                                                                    \
+      "zx_system_get_event@plt",                                                         \
+      ZxSystemGetEvent(result, #result, kHandle, ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &event), \
+      expected);
 
 #define SYSTEM_GET_EVENT_DISPLAY_TEST(name, result, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                 \
@@ -154,7 +155,7 @@ SYSTEM_GET_EVENT_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_system_get_event("
     "root_job:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "kind:\x1B[32mzx_system_event_type_t\x1B[0m: \x1B[34mZX_SYSTEM_EVENT_LOW_MEMORY\x1B[0m)\n"
+    "kind:\x1B[32mzx_system_event_type_t\x1B[0m: \x1B[34mZX_SYSTEM_EVENT_OUT_OF_MEMORY\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (event:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");
 
 // zx_system_get_features tests.
