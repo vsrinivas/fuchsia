@@ -316,7 +316,7 @@ void pc_init_debug(void) {
     return;
   }
 
-  if ((uart_irq == 0) || gCmdline.GetBool("kernel.debug_uart_poll", false) || dlog_bypass()) {
+  if ((uart_irq == 0) || gCmdline.GetBool("kernel.debug_uart_poll", false)) {
     printf("debug-uart: polling enabled\n");
     platform_debug_start_uart_timer();
   } else {
@@ -331,7 +331,7 @@ void pc_init_debug(void) {
     const uint8_t mcr = uart_read(4);
     uart_write(4, mcr | 0x8);
     printf("UART: started IRQ driven RX\n");
-    tx_irq_driven = true;
+    tx_irq_driven = !dlog_bypass();
   }
   if (tx_irq_driven) {
     // start up tx driven output
@@ -412,7 +412,8 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
          * We want to Tx more and FIFO is empty, re-enable
          * Tx interrupts before blocking.
          */
-        uart_write(1, (1 << 0) | (1 << 1));  // rx and tx interrupt enable
+        uart_write(1, static_cast<uint8_t>((1 << 0) | ((uart_tx_irq_enabled ? 1 : 0)
+                                                       << 1)));  // rx and tx interrupt enable
         spin_unlock_irqrestore(&uart_spinlock, state);
         event_wait(&uart_dputc_event);
       } else {
@@ -426,7 +427,8 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
     str = debug_platform_tx_FIFO_bytes(str, &len, &copied_CR, &wrote, map_NL);
     if (block && wrote > 0) {
       // If blocking/irq driven wakeps, enable rx/tx intrs
-      uart_write(1, (1 << 0) | (1 << 1));  // rx and tx interrupt enable
+      uart_write(1, static_cast<uint8_t>((1 << 0) | ((uart_tx_irq_enabled ? 1 : 0)
+                                                     << 1)));  // rx and tx interrupt enable
     }
   }
   spin_unlock_irqrestore(&uart_spinlock, state);
