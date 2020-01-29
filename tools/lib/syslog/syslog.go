@@ -49,7 +49,9 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer, sinceNow bool)
 
 		// Note: Fuchsia's log_listener does not write to stderr.
 		err := s.r.Run(ctx, cmd, output, nil)
-		if err == nil || !sshutil.IsConnectionError(err) {
+		// We need not attempt to reconnect if the context was canceled or if we
+		// hit an error unrelated to the connection.
+		if err == nil || ctx.Err() != nil || !sshutil.IsConnectionError(err) {
 			return err
 		}
 		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)

@@ -38,6 +38,9 @@ func NewSSHRunner(client *ssh.Client, config *ssh.ClientConfig) *SSHRunner {
 // connection has become unresponsive.
 func (r *SSHRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
 	if err := r.run(ctx, command, stdout, stderr); err != nil {
+		if ctx.Err() != nil {
+			return err
+		}
 		r.Lock()
 		checkErr := sshutil.CheckConnection(r.client)
 		r.Unlock()
