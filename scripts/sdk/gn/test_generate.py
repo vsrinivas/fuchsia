@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import filecmp
 import generate
 import os
 import shutil
@@ -42,10 +43,25 @@ class GNGenerateTest(unittest.TestCase):
         self.verify_contents(TMP_DIR_NAME)
 
     def verify_contents(self, outdir):
-        self.assertTrue(os.path.exists(os.path.join(outdir, 'README.md')))
-        self.assertTrue(
-            os.path.exists(os.path.join(outdir, 'meta', 'manifest.json')))
+        dcmp = filecmp.dircmp(outdir, os.path.join(SCRIPT_DIR, 'golden'))
+        self.verify_contents_recursive(dcmp)
 
+    def verify_contents_recursive(self, dcmp):
+        """Recursively checks for differences between two directories.
+
+        Fails if the directories do not appear to be deeply identical in
+        structure and content.
+
+        Args:
+            dcmp (filecmp.dircmp): A dircmp of the directories.
+        """
+        if dcmp.left_only or dcmp.right_only or dcmp.diff_files:
+            self.fail(f"Generated SDK does not match golden files.\n"
+                f"Only in {dcmp.left}:\n{dcmp.left_only}\n\n"
+                f"Only in {dcmp.right}:\n{dcmp.right_only}\n\n"
+                f"Common different files:\n{dcmp.diff_files}")
+        for sub_dcmp in dcmp.subdirs.values():
+            self.verify_contents_recursive(sub_dcmp)
 
 def TestMain():
     unittest.main()
