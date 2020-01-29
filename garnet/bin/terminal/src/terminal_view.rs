@@ -18,8 +18,11 @@ use {
     std::{cell::RefCell, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
     term_model::{
         ansi::Processor,
+        clipboard::Clipboard,
         config::Config,
-        term::{SizeInfo, Term},
+        event::{self, EventListener},
+        term::SizeInfo,
+        Term,
     },
 };
 
@@ -104,11 +107,30 @@ impl Write for PtyContext {
     }
 }
 
+struct EmptyEventProxy;
+impl EventListener for EmptyEventProxy {
+    fn send_event(&self, _event: event::Event) {
+        // Intentionally blank
+    }
+}
+
+/// Empty type for term model config
+struct UIConfig;
+
+impl Default for UIConfig {
+    fn default() -> UIConfig {
+        UIConfig
+    }
+}
+
+type TerminalConfig = Config<UIConfig>;
+
 pub struct TerminalViewAssistant {
     last_known_size: Size,
+    last_known_size_info: SizeInfo,
     pty_context: Option<PtyContext>,
     terminal_scene: TerminalScene,
-    term: Rc<RefCell<Term>>,
+    term: Rc<RefCell<Term<EmptyEventProxy>>>,
     app_context: AppContextWrapper,
     view_key: ViewKey,
 
@@ -120,22 +142,30 @@ impl TerminalViewAssistant {
     /// Creates a new instance of the TerminalViewAssistant.
     pub fn new(app_context: &AppContext, view_key: ViewKey) -> TerminalViewAssistant {
         let cell_size = Size::new(12.0, 22.0);
+        let size_info = SizeInfo {
+            // set the initial size/width to be that of the cell size which prevents
+            // the term from panicing if a byte is received before a resize event.
+            width: cell_size.width,
+            height: cell_size.height,
+            cell_width: cell_size.width,
+            cell_height: cell_size.height,
+            padding_x: 0.0,
+            padding_y: 0.0,
+            dpr: 1.0,
+        };
+
         let term = Term::new(
-            &Config::default(),
-            SizeInfo {
-                // set the initial size/width to be that of the cell size which prevents
-                // the term from panicing if a byte is received before a resize event.
-                width: cell_size.width,
-                height: cell_size.height,
-                cell_width: cell_size.width,
-                cell_height: cell_size.height,
-                padding_x: 0.0,
-                padding_y: 0.0,
-            },
+            &TerminalConfig::default(),
+            &size_info,
+            Clipboard::new(),
+            // The term sends events via an event proxy, we do not support this
+            // yet so we just ignore the events.
+            EmptyEventProxy,
         );
 
         TerminalViewAssistant {
             last_known_size: Size::zero(),
+            last_known_size_info: size_info,
             pty_context: None,
             term: Rc::new(RefCell::new(term)),
             terminal_scene: TerminalScene::default(),
@@ -173,12 +203,13 @@ impl TerminalViewAssistant {
             // in single threaded mode. If we do move to a multithreaded model we will
             // get a compiler error since we are using spawn_local in our pty_loop.
             let mut term = self.term.borrow_mut();
-            let last_size_info = term.size_info().clone();
+            let last_size_info = self.last_known_size_info.clone();
 
             let cell_width = last_size_info.cell_width;
             let cell_height = last_size_info.cell_height;
             let padding_x = last_size_info.padding_x;
             let padding_y = last_size_info.padding_y;
+            let dpr = last_size_info.dpr;
 
             let term_size_info = SizeInfo {
                 width: term_size.width,
@@ -187,6 +218,7 @@ impl TerminalViewAssistant {
                 cell_height,
                 padding_x,
                 padding_y,
+                dpr,
             };
 
             term.resize(&term_size_info);
@@ -199,6 +231,7 @@ impl TerminalViewAssistant {
                 .context("unable to queue outgoing pty message")?;
 
             self.last_known_size = floored_size;
+            self.last_known_size_info = term_size_info;
             self.terminal_scene.update_size(floored_size);
             self.terminal_scene.update_cell_size(Size::new(cell_width, cell_height));
         }
@@ -320,12 +353,12 @@ impl ViewAssistant for TerminalViewAssistant {
 
         // Tell the termnial scene to render the values
         let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
-        let config = Config::default();
+        let config = TerminalConfig::default();
         let term = self.term.borrow();
 
         let iter = {
             ftrace::duration!("terminal", "TerminalViewAssistant:update:renderable_cells");
-            term.renderable_cells(&config, None /* selection */, true /* focused */)
+            term.renderable_cells(&config)
         };
 
         self.terminal_scene.render(canvas, iter);
@@ -401,9 +434,7 @@ mod tests {
         let new_size = Size::new(100.5, 100.9);
         view.resize_if_needed(&new_size, &Size::zero()).expect("call to resize failed");
 
-        let term = view.term.borrow();
-
-        let size_info = term.size_info();
+        let size_info = view.last_known_size_info.clone();
         let expected_size = TerminalScene::calculate_term_size_from_size(&view.last_known_size);
 
         // we want to make sure that the values are floored and that they

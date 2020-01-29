@@ -1,4 +1,3 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Copyright 2016 Joe Wilm, The Alacritty Project Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +17,11 @@
 /// Indexing types and implementations for Grid and Line
 use std::cmp::{Ord, Ordering};
 use std::fmt;
-use std::ops::{self, Add, Deref, Range};
+use std::ops::{self, Add, AddAssign, Deref, Range, Sub, SubAssign};
+
+use serde_derive::{Deserialize, Serialize};
+
+use crate::term::RenderableCell;
 
 /// The side of a cell
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -29,14 +32,46 @@ pub enum Side {
 
 /// Index in the grid using row, column notation
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, PartialOrd)]
-pub struct Point {
-    pub line: Line,
+pub struct Point<L = Line> {
+    pub line: L,
     pub col: Column,
 }
 
-impl Point {
-    pub fn new(line: Line, col: Column) -> Point {
+impl<L> Point<L> {
+    pub fn new(line: L, col: Column) -> Point<L> {
         Point { line, col }
+    }
+
+    #[inline]
+    #[must_use = "this returns the result of the operation, without modifying the original"]
+    pub fn sub(mut self, num_cols: usize, length: usize, absolute_indexing: bool) -> Point<L>
+    where
+        L: Copy + Add<usize, Output = L> + Sub<usize, Output = L>,
+    {
+        let line_changes = f32::ceil(length.saturating_sub(self.col.0) as f32 / num_cols as f32);
+        if absolute_indexing {
+            self.line = self.line + line_changes as usize;
+        } else {
+            self.line = self.line - line_changes as usize;
+        }
+        self.col = Column((num_cols + self.col.0 - length % num_cols) % num_cols);
+        self
+    }
+
+    #[inline]
+    #[must_use = "this returns the result of the operation, without modifying the original"]
+    pub fn add(mut self, num_cols: usize, length: usize, absolute_indexing: bool) -> Point<L>
+    where
+        L: Copy + Add<usize, Output = L> + Sub<usize, Output = L>,
+    {
+        let line_changes = (length + self.col.0) / num_cols;
+        if absolute_indexing {
+            self.line = self.line - line_changes;
+        } else {
+            self.line = self.line + line_changes;
+        }
+        self.col = Column((self.col.0 + length) % num_cols);
+        self
     }
 }
 
@@ -52,10 +87,40 @@ impl Ord for Point {
     }
 }
 
+impl From<Point<usize>> for Point<isize> {
+    fn from(point: Point<usize>) -> Self {
+        Point::new(point.line as isize, point.col)
+    }
+}
+
+impl From<Point<usize>> for Point<Line> {
+    fn from(point: Point<usize>) -> Self {
+        Point::new(Line(point.line), point.col)
+    }
+}
+
+impl From<Point<isize>> for Point<usize> {
+    fn from(point: Point<isize>) -> Self {
+        Point::new(point.line as usize, point.col)
+    }
+}
+
+impl From<Point> for Point<usize> {
+    fn from(point: Point) -> Self {
+        Point::new(point.line.0, point.col)
+    }
+}
+
+impl From<RenderableCell> for Point<Line> {
+    fn from(cell: RenderableCell) -> Self {
+        Point::new(cell.line, cell.column)
+    }
+}
+
 /// A line
 ///
 /// Newtype to avoid passing values incorrectly
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Ord, PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Line(pub usize);
 
 impl fmt::Display for Line {
@@ -67,7 +132,7 @@ impl fmt::Display for Line {
 /// A column
 ///
 /// Newtype to avoid passing values incorrectly
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Ord, PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Column(pub usize);
 
 impl fmt::Display for Column {
@@ -79,8 +144,18 @@ impl fmt::Display for Column {
 /// A linear index
 ///
 /// Newtype to avoid passing values incorrectly
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Ord, PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Linear(pub usize);
+
+impl Linear {
+    pub fn new(columns: Column, column: Column, line: Line) -> Self {
+        Linear(line.0 * columns.0 + column.0)
+    }
+
+    pub fn from_point(columns: Column, point: Point<usize>) -> Self {
+        Linear(point.line * columns.0 + point.col.0)
+    }
+}
 
 impl fmt::Display for Linear {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -210,117 +285,6 @@ impl<T> From<Range<T>> for IndexRange<T> {
     }
 }
 
-pub enum RangeInclusive<Idx> {
-    Empty { at: Idx },
-    NonEmpty { start: Idx, end: Idx },
-}
-
-impl<Idx> RangeInclusive<Idx> {
-    pub fn new(from: Idx, to: Idx) -> Self {
-        RangeInclusive::NonEmpty {
-            start: from,
-            end: to,
-        }
-    }
-}
-
-macro_rules! inclusive {
-    ($ty:ty, $steps_add_one:expr) => {
-        // impl copied from stdlib, can be removed when inclusive_range is stabilized
-        impl Iterator for RangeInclusive<$ty> {
-            type Item = $ty;
-
-            #[inline]
-            fn next(&mut self) -> Option<$ty> {
-                use index::RangeInclusive::*;
-
-                // this function has a sort of odd structure due to borrowck issues
-                // we may need to replace self.range, so borrows of start and end need to end early
-
-                let at_end;
-                match *self {
-                    Empty { .. } => return None, // empty iterators yield no values
-
-                    NonEmpty {
-                        ref mut start,
-                        ref mut end,
-                    } => {
-                        // march start towards (maybe past!) end and yield the old value
-                        if start <= end {
-                            let old = *start;
-                            *start = old + 1;
-                            return Some(old);
-                        }
-                        at_end = *end;
-                    }
-                };
-
-                // got this far; the range is empty, replace it
-                *self = Empty { at: at_end };
-                None
-            }
-
-            #[inline]
-            fn size_hint(&self) -> (usize, Option<usize>) {
-                use index::RangeInclusive::*;
-
-                match *self {
-                    Empty { .. } => (0, Some(0)),
-
-                    NonEmpty { start, end } => {
-                        let added = $steps_add_one(start, end);
-                        match added {
-                            Some(hint) => (hint.saturating_add(1), hint.checked_add(1)),
-                            None => (0, None),
-                        }
-                    }
-                }
-            }
-        }
-    };
-}
-
-fn steps_add_one_u8(start: u8, end: u8) -> Option<usize> {
-    if start < end {
-        Some((end - start) as usize)
-    } else {
-        None
-    }
-}
-inclusive!(u8, steps_add_one_u8);
-
-#[test]
-fn test_range() {
-    assert_eq!(
-        RangeInclusive::new(1, 10).collect::<Vec<_>>(),
-        vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    );
-}
-
-// can be removed if range_contains is stabilized
-pub trait Contains {
-    type Content;
-    fn contains_(&self, item: Self::Content) -> bool;
-}
-
-impl<T: PartialOrd<T>> Contains for Range<T> {
-    type Content = T;
-    fn contains_(&self, item: Self::Content) -> bool {
-        (self.start <= item) && (item < self.end)
-    }
-}
-
-impl<T: PartialOrd<T>> Contains for RangeInclusive<T> {
-    type Content = T;
-    fn contains_(&self, item: Self::Content) -> bool {
-        if let RangeInclusive::NonEmpty { ref start, ref end } = *self {
-            (*start <= item) && (item <= *end)
-        } else {
-            false
-        }
-    }
-}
-
 macro_rules! ops {
     ($ty:ty, $construct:expr) => {
         add!($ty, $construct);
@@ -330,11 +294,8 @@ macro_rules! ops {
 
         impl $ty {
             #[inline]
-            #[allow(trivial_numeric_casts)]
             fn steps_between(start: $ty, end: $ty, by: $ty) -> Option<usize> {
-                if by == $construct(0) {
-                    return None;
-                }
+                if by == $construct(0) { return None; }
                 if start < end {
                     // Note: We assume $t <= usize here
                     let diff = (end - start).0;
@@ -371,12 +332,10 @@ macro_rules! ops {
             fn size_hint(&self) -> (usize, Option<usize>) {
                 match Self::Item::steps_between_by_one(self.0.start, self.0.end) {
                     Some(hint) => (hint, Some(hint)),
-                    None => (0, None),
+                    None => (0, None)
                 }
             }
         }
-
-        inclusive!($ty, <$ty>::steps_between_by_one);
 
         impl DoubleEndedIterator for IndexRange<$ty> {
             #[inline]
@@ -390,28 +349,28 @@ macro_rules! ops {
                 }
             }
         }
-        impl ops::AddAssign<$ty> for $ty {
+        impl AddAssign<$ty> for $ty {
             #[inline]
             fn add_assign(&mut self, rhs: $ty) {
                 self.0 += rhs.0
             }
         }
 
-        impl ops::SubAssign<$ty> for $ty {
+        impl SubAssign<$ty> for $ty {
             #[inline]
             fn sub_assign(&mut self, rhs: $ty) {
                 self.0 -= rhs.0
             }
         }
 
-        impl ops::AddAssign<usize> for $ty {
+        impl AddAssign<usize> for $ty {
             #[inline]
             fn add_assign(&mut self, rhs: usize) {
                 self.0 += rhs
             }
         }
 
-        impl ops::SubAssign<usize> for $ty {
+        impl SubAssign<usize> for $ty {
             #[inline]
             fn sub_assign(&mut self, rhs: usize) {
                 self.0 -= rhs
@@ -425,7 +384,7 @@ macro_rules! ops {
             }
         }
 
-        impl ops::Add<usize> for $ty {
+        impl Add<usize> for $ty {
             type Output = $ty;
 
             #[inline]
@@ -434,7 +393,7 @@ macro_rules! ops {
             }
         }
 
-        impl ops::Sub<usize> for $ty {
+        impl Sub<usize> for $ty {
             type Output = $ty;
 
             #[inline]
@@ -442,7 +401,7 @@ macro_rules! ops {
                 $construct(self.0 - rhs)
             }
         }
-    };
+    }
 }
 
 ops!(Line, Line);

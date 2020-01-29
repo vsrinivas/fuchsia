@@ -7,8 +7,15 @@ use {
         Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, Point, Rect, Size,
     },
     fuchsia_trace as ftrace,
-    term_model::term::RenderableCellsIter,
+    term_model::{
+        ansi::CursorStyle,
+        term::{CursorKey, RenderableCellContent, RenderableCellsIter},
+    },
 };
+
+const UNDERLINE_CURSOR_CHAR: char = '\u{10a3e2}';
+const BEAM_CURSOR_CHAR: char = '\u{10a3e3}';
+const BOX_CURSOR_CHAR: char = '\u{10a3e4}';
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
@@ -52,19 +59,25 @@ impl Default for GridView {
 }
 
 impl GridView {
-    pub fn render<'a>(
+    pub fn render<'a, C>(
         &self,
         canvas: &mut Canvas<MappingPixelSink>,
-        cells: RenderableCellsIter<'a>,
+        cells: RenderableCellsIter<'a, C>,
     ) {
         ftrace::duration!("terminal", "Views:GridView:render");
         let mut font_description = FontDescription { face: &self.font, size: 20, baseline: 18 };
 
         let size = self.cell_size;
+
         for cell in cells {
-            let mut buffer = [0u8; 32];
+            let character = match maybe_char_for_renderable_cell_content(cell.inner) {
+                Some(character) => character,
+                None => continue,
+            };
+
+            let mut buffer = [0u8; 4];
             canvas.fill_text_cells(
-                cell.c.encode_utf8(&mut buffer),
+                character.encode_utf8(&mut buffer),
                 Point::new(size.width * cell.column.0 as f32, size.height * cell.line.0 as f32),
                 size,
                 &mut font_description,
@@ -74,6 +87,26 @@ impl GridView {
                 },
             )
         }
+    }
+}
+
+// The term-model library gives us zero-width characters in our array of chars. However,
+// we do not support this at thsi point so we just pull out the first char for rendering.
+fn maybe_char_for_renderable_cell_content(content: RenderableCellContent) -> Option<char> {
+    match content {
+        RenderableCellContent::Cursor(cursor_key) => chars_for_cursor(cursor_key),
+        RenderableCellContent::Chars(chars) => Some(chars[0]),
+    }
+}
+
+fn chars_for_cursor(cursor: CursorKey) -> Option<char> {
+    match cursor.style {
+        CursorStyle::Block => Some(BOX_CURSOR_CHAR),
+        CursorStyle::Underline => Some(UNDERLINE_CURSOR_CHAR),
+        CursorStyle::Beam => Some(BEAM_CURSOR_CHAR),
+        //TODO add support for HollowBlock style
+        CursorStyle::HollowBlock => Some(UNDERLINE_CURSOR_CHAR),
+        CursorStyle::Hidden => None,
     }
 }
 

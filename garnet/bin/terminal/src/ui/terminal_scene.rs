@@ -39,10 +39,10 @@ impl TerminalScene {
         Size::new(size.width - SCROLL_BAR_WIDTH, size.height)
     }
 
-    pub fn render<'a>(
+    pub fn render<'a, C>(
         &self,
         canvas: &mut Canvas<MappingPixelSink>,
-        cells: RenderableCellsIter<'a>,
+        cells: RenderableCellsIter<'a, C>,
     ) {
         ftrace::duration!("terminal", "Scene:TerminalScene:render");
         self.background_view.render(canvas);

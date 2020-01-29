@@ -18,382 +18,421 @@
 //! finalized when the button is released. The selection should be cleared
 //! when text is added/removed/scrolled on the screen. The selection should
 //! also be cleared if the user clicks off of the selection.
-use std::cmp::{min, max};
+use std::convert::TryFrom;
+use std::mem;
+use std::ops::Range;
 
-use index::{Point, Column, RangeInclusive, Side, Linear, Line};
-use grid::ToRange;
-
-/// Describes a region of a 2-dimensional area
-///
-/// Used to track a text selection. There are three supported modes, each with its own constructor:
-/// [`simple`], [`semantic`], and [`lines`]. The [`simple`] mode precisely tracks which cells are
-/// selected without any expansion. [`semantic`] mode expands the initial selection to the nearest
-/// semantic escape char in either direction. [`lines`] will always select entire lines.
-///
-/// Calls to [`update`] operate different based on the selection kind. The [`simple`] mode does
-/// nothing special, simply tracks points and sides. [`semantic`] will continue to expand out to
-/// semantic boundaries as the selection point changes. Similarly, [`lines`] will always expand the
-/// new point to encompass entire lines.
-///
-/// [`simple`]: enum.Selection.html#method.simple
-/// [`semantic`]: enum.Selection.html#method.semantic
-/// [`lines`]: enum.Selection.html#method.lines
-pub enum Selection {
-    Simple {
-        /// The region representing start and end of cursor movement
-        region: Region<Anchor>,
-    },
-    Semantic {
-        /// The region representing start and end of cursor movement
-        region: Region<Point>,
-
-        /// When beginning a semantic selection, the grid is searched around the
-        /// initial point to find semantic escapes, and this initial expansion
-        /// marks those points.
-        initial_expansion: Region<Point>
-    },
-    Lines {
-        /// The region representing start and end of cursor movement
-        region: Region<Point>,
-
-        /// The line under the initial point. This is always selected regardless
-        /// of which way the cursor is moved.
-        initial_line: Line
-    }
-}
-
-pub struct Region<T> {
-    start: T,
-    end: T
-}
+use crate::index::{Column, Line, Point, Side};
+use crate::term::cell::Flags;
+use crate::term::{Search, Term};
 
 /// A Point and side within that point.
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Anchor {
-    point: Point,
+    point: Point<usize>,
     side: Side,
 }
 
 impl Anchor {
-    fn new(point: Point, side: Side) -> Anchor {
+    fn new(point: Point<usize>, side: Side) -> Anchor {
         Anchor { point, side }
     }
 }
 
-/// A type that can expand a given point to a region
-///
-/// Usually this is implemented for some 2-D array type since
-/// points are two dimensional indices.
-pub trait SemanticSearch {
-    /// Find the nearest semantic boundary _to the left_ of provided point.
-    fn semantic_search_left(&self, _: Point) -> Point;
-    /// Find the nearest semantic boundary _to the point_ of provided point.
-    fn semantic_search_right(&self, _: Point) -> Point;
+/// Represents a range of selected cells.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct SelectionRange<L = usize> {
+    /// Start point, top left of the selection.
+    pub start: Point<L>,
+    /// End point, bottom right of the selection.
+    pub end: Point<L>,
+    /// Whether this selection is a block selection.
+    pub is_block: bool,
 }
 
-/// A type that has 2-dimensional boundaries
-pub trait Dimensions {
-    /// Get the size of the area
-    fn dimensions(&self) -> Point;
+impl<L> SelectionRange<L> {
+    pub fn new(start: Point<L>, end: Point<L>, is_block: bool) -> Self {
+        Self { start, end, is_block }
+    }
+
+    pub fn contains(&self, col: Column, line: L) -> bool
+    where
+        L: PartialEq + PartialOrd,
+    {
+        self.start.line <= line
+            && self.end.line >= line
+            && (self.start.col <= col || (self.start.line != line && !self.is_block))
+            && (self.end.col >= col || (self.end.line != line && !self.is_block))
+    }
+}
+
+/// Different kinds of selection.
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum SelectionType {
+    Simple,
+    Block,
+    Semantic,
+    Lines,
+}
+
+/// Describes a region of a 2-dimensional area.
+///
+/// Used to track a text selection. There are four supported modes, each with its own constructor:
+/// [`simple`], [`block`], [`semantic`], and [`lines`]. The [`simple`] mode precisely tracks which
+/// cells are selected without any expansion. [`block`] will select rectangular regions.
+/// [`semantic`] mode expands the initial selection to the nearest semantic escape char in either
+/// direction. [`lines`] will always select entire lines.
+///
+/// Calls to [`update`] operate different based on the selection kind. The [`simple`] and [`block`]
+/// mode do nothing special, simply track points and sides. [`semantic`] will continue to expand
+/// out to semantic boundaries as the selection point changes. Similarly, [`lines`] will always
+/// expand the new point to encompass entire lines.
+///
+/// [`simple`]: enum.Selection.html#method.simple
+/// [`block`]: enum.Selection.html#method.block
+/// [`semantic`]: enum.Selection.html#method.semantic
+/// [`lines`]: enum.Selection.html#method.lines
+/// [`update`]: enum.Selection.html#method.update
+#[derive(Debug, Clone, PartialEq)]
+pub struct Selection {
+    region: Range<Anchor>,
+    ty: SelectionType,
 }
 
 impl Selection {
-    pub fn simple(location: Point, side: Side) -> Selection {
-        Selection::Simple {
-            region: Region {
-                start: Anchor::new(location, side),
-                end: Anchor::new(location, side)
-            }
+    pub fn simple(location: Point<usize>, side: Side) -> Selection {
+        Self {
+            region: Range { start: Anchor::new(location, side), end: Anchor::new(location, side) },
+            ty: SelectionType::Simple,
         }
     }
 
-    pub fn semantic<G: SemanticSearch>(point: Point, grid: &G) -> Selection {
-        let (start, end) = (grid.semantic_search_left(point), grid.semantic_search_right(point));
-        Selection::Semantic {
-            region: Region {
-                start: point,
-                end: point,
+    pub fn block(location: Point<usize>, side: Side) -> Selection {
+        Self {
+            region: Range { start: Anchor::new(location, side), end: Anchor::new(location, side) },
+            ty: SelectionType::Block,
+        }
+    }
+
+    pub fn semantic(location: Point<usize>) -> Selection {
+        Self {
+            region: Range {
+                start: Anchor::new(location, Side::Left),
+                end: Anchor::new(location, Side::Right),
             },
-            initial_expansion: Region {
-                start,
-                end,
-            }
+            ty: SelectionType::Semantic,
         }
     }
 
-    pub fn lines(point: Point) -> Selection {
-        Selection::Lines {
-            region: Region {
-                start: point,
-                end: point
+    pub fn lines(location: Point<usize>) -> Selection {
+        Self {
+            region: Range {
+                start: Anchor::new(location, Side::Left),
+                end: Anchor::new(location, Side::Right),
             },
-            initial_line: point.line
+            ty: SelectionType::Lines,
         }
     }
 
-    pub fn update(&mut self, location: Point, side: Side) {
-        // Always update the `end`; can normalize later during span generation.
-        match *self {
-            Selection::Simple { ref mut region } => {
-                region.end = Anchor::new(location, side);
-            },
-            Selection::Semantic { ref mut region, .. } |
-                Selection::Lines { ref mut region, .. } =>
-            {
-                region.end = location;
-            },
-        }
+    pub fn update(&mut self, location: Point<usize>, side: Side) {
+        self.region.end.point = location;
+        self.region.end.side = side;
     }
 
-    pub fn to_span<G: SemanticSearch + Dimensions>(&self, grid: &G) -> Option<Span> {
-        match *self {
-            Selection::Simple { ref region } => {
-                Selection::span_simple(grid, region)
-            },
-            Selection::Semantic { ref region, ref initial_expansion } => {
-                Selection::span_semantic(grid, region, initial_expansion)
-            },
-            Selection::Lines { ref region, initial_line } => {
-                Selection::span_lines(grid, region, initial_line)
-            }
-        }
-    }
-    fn span_semantic<G>(
-        grid: &G,
-        region: &Region<Point>,
-        initial_expansion: &Region<Point>
-    ) -> Option<Span>
-        where G: SemanticSearch + Dimensions
-    {
-        let mut start = initial_expansion.start;
-        let mut end = initial_expansion.end;
+    pub fn rotate(
+        mut self,
+        num_lines: usize,
+        num_cols: usize,
+        scrolling_region: &Range<Line>,
+        offset: isize,
+    ) -> Option<Selection> {
+        // Convert scrolling region from viewport to buffer coordinates
+        let region_start = num_lines - scrolling_region.start.0;
+        let region_end = num_lines - scrolling_region.end.0;
 
-        // Normalize ordering of selected cells
-        let (front, tail) = if region.start < region.end {
-            (region.start, region.end)
-        } else {
-            (region.end, region.start)
-        };
-
-        // Update start of selection *if* front has moved beyond initial start
-        if front < start {
-            start = grid.semantic_search_left(front);
+        let (mut start, mut end) = (&mut self.region.start, &mut self.region.end);
+        if Self::points_need_swap(start.point, end.point) {
+            mem::swap(&mut start, &mut end);
         }
 
-        // Update end of selection *if* tail has moved beyond initial end.
-        if tail > end {
-            end = grid.semantic_search_right(tail);
-        }
+        // Rotate start of selection
+        if (start.point.line < region_start || region_start == num_lines)
+            && start.point.line >= region_end
+        {
+            start.point.line = usize::try_from(start.point.line as isize + offset).unwrap_or(0);
 
-        Some(Span {
-            cols: grid.dimensions().col,
-            front: start,
-            tail: end,
-            ty: SpanType::Inclusive,
-        })
-    }
-
-    fn span_lines<G>(grid: &G, region: &Region<Point>, initial_line: Line) -> Option<Span>
-        where G: Dimensions
-    {
-        // First, create start and end points based on initial line and the grid
-        // dimensions.
-        let mut start = Point {
-            col: Column(0),
-            line: initial_line
-        };
-        let mut end = Point {
-            col: grid.dimensions().col - 1,
-            line: initial_line
-        };
-
-        // Now, expand lines based on where cursor started and ended.
-        if region.start.line < region.end.line {
-            // Start is above end
-            start.line = min(start.line, region.start.line);
-            end.line = max(end.line, region.end.line);
-        } else {
-            // Start is below end
-            start.line = min(start.line, region.end.line);
-            end.line = max(end.line, region.start.line);
-        }
-
-        Some(Span {
-            cols: grid.dimensions().col,
-            front: start,
-            tail: end,
-            ty: SpanType::Inclusive
-        })
-    }
-
-    fn span_simple<G: Dimensions>(grid: &G, region: &Region<Anchor>) -> Option<Span> {
-        let start = region.start.point;
-        let start_side = region.start.side;
-        let end = region.end.point;
-        let end_side = region.end.side;
-        let cols = grid.dimensions().col;
-
-        let (front, tail, front_side, tail_side) = if start > end {
-            // Selected upward; start/end are swapped
-            (end, start, end_side, start_side)
-        } else {
-            // Selected downward; no swapping
-            (start, end, start_side, end_side)
-        };
-
-        debug_assert!(!(tail < front));
-
-        // Single-cell selections are a special case
-        if start == end {
-            if start_side == end_side {
+            // If end is within the same region, delete selection once start rotates out
+            if start.point.line < region_end && end.point.line >= region_end {
                 return None;
-            } else {
-                return Some(Span {
-                    cols,
-                    ty: SpanType::Inclusive,
-                    front,
-                    tail,
-                });
+            }
+
+            // Clamp selection to start of region
+            if start.point.line >= region_start && region_start != num_lines {
+                if self.ty != SelectionType::Block {
+                    start.point.col = Column(0);
+                    start.side = Side::Left;
+                }
+                start.point.line = region_start - 1;
             }
         }
 
-        // The other special case is two adjacent cells with no
-        // selection: [ B][E ] or [ E][B ]
-        let adjacent = tail.line == front.line && tail.col - front.col == Column(1);
-        if adjacent && front_side == Side::Right && tail_side == Side::Left {
+        // Rotate end of selection
+        if (end.point.line < region_start || region_start == num_lines)
+            && end.point.line >= region_end
+        {
+            end.point.line = usize::try_from(end.point.line as isize + offset).unwrap_or(0);
+
+            // Delete selection if end has overtaken the start
+            if end.point.line > start.point.line {
+                return None;
+            }
+
+            // Clamp selection to end of region
+            if end.point.line < region_end {
+                if self.ty != SelectionType::Block {
+                    end.point.col = Column(num_cols - 1);
+                    end.side = Side::Right;
+                }
+                end.point.line = region_end;
+            }
+        }
+
+        Some(self)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self.ty {
+            SelectionType::Simple => {
+                let (mut start, mut end) = (self.region.start, self.region.end);
+                if Selection::points_need_swap(start.point, end.point) {
+                    mem::swap(&mut start, &mut end);
+                }
+
+                // Simple selection is empty when the points are identical
+                // or two adjacent cells have the sides right -> left
+                start == end
+                    || (start.side == Side::Right
+                        && end.side == Side::Left
+                        && (start.point.line == end.point.line)
+                        && start.point.col + 1 == end.point.col)
+            }
+            SelectionType::Block => {
+                let (start, end) = (self.region.start, self.region.end);
+
+                // Block selection is empty when the points' columns and sides are identical
+                // or two cells with adjacent columns have the sides right -> left,
+                // regardless of their lines
+                (start.point.col == end.point.col && start.side == end.side)
+                    || (start.point.col + 1 == end.point.col
+                        && start.side == Side::Right
+                        && end.side == Side::Left)
+                    || (end.point.col + 1 == start.point.col
+                        && start.side == Side::Left
+                        && end.side == Side::Right)
+            }
+            SelectionType::Semantic | SelectionType::Lines => false,
+        }
+    }
+
+    /// Convert selection to grid coordinates.
+    pub fn to_range<T>(&self, term: &Term<T>) -> Option<SelectionRange> {
+        let grid = term.grid();
+        let num_cols = grid.num_cols();
+
+        // Order start above the end
+        let (mut start, mut end) = (self.region.start, self.region.end);
+        if Self::points_need_swap(start.point, end.point) {
+            mem::swap(&mut start, &mut end);
+        }
+
+        // Clamp to inside the grid buffer
+        let is_block = self.ty == SelectionType::Block;
+        let (start, end) = Self::grid_clamp(start, end, is_block, grid.len()).ok()?;
+
+        let range = match self.ty {
+            SelectionType::Simple => self.range_simple(start, end, num_cols),
+            SelectionType::Block => self.range_block(start, end),
+            SelectionType::Semantic => Self::range_semantic(term, start.point, end.point),
+            SelectionType::Lines => Self::range_lines(term, start.point, end.point),
+        };
+
+        // Expand selection across fullwidth cells
+        range.map(|range| Self::range_expand_fullwidth(term, range))
+    }
+
+    /// Expand the start/end of the selection range to account for fullwidth glyphs.
+    fn range_expand_fullwidth<T>(term: &Term<T>, mut range: SelectionRange) -> SelectionRange {
+        let grid = term.grid();
+        let num_cols = grid.num_cols();
+
+        // Helper for checking if cell at `point` contains `flag`
+        let flag_at = |point: Point<usize>, flag: Flags| -> bool {
+            grid[point.line][point.col].flags.contains(flag)
+        };
+
+        // Include all double-width cells and placeholders at top left of selection
+        if range.start.col < num_cols {
+            // Expand from wide char spacer to wide char
+            if range.start.line + 1 != grid.len() || range.start.col.0 != 0 {
+                let prev = range.start.sub(num_cols.0, 1, true);
+                if flag_at(range.start, Flags::WIDE_CHAR_SPACER) && flag_at(prev, Flags::WIDE_CHAR)
+                {
+                    range.start = prev;
+                }
+            }
+
+            // Expand from wide char to wide char spacer for linewrapping
+            if range.start.line + 1 != grid.len() || range.start.col.0 != 0 {
+                let prev = range.start.sub(num_cols.0, 1, true);
+                if (prev.line + 1 != grid.len() || prev.col.0 != 0)
+                    && flag_at(prev, Flags::WIDE_CHAR_SPACER)
+                    && !flag_at(prev.sub(num_cols.0, 1, true), Flags::WIDE_CHAR)
+                {
+                    range.start = prev;
+                }
+            }
+        }
+
+        // Include all double-width cells and placeholders at bottom right of selection
+        if range.end.line != 0 || range.end.col < num_cols {
+            // Expand from wide char spacer for linewrapping to wide char
+            if (range.end.line + 1 != grid.len() || range.end.col.0 != 0)
+                && flag_at(range.end, Flags::WIDE_CHAR_SPACER)
+                && !flag_at(range.end.sub(num_cols.0, 1, true), Flags::WIDE_CHAR)
+            {
+                range.end = range.end.add(num_cols.0, 1, true);
+            }
+
+            // Expand from wide char to wide char spacer
+            if flag_at(range.end, Flags::WIDE_CHAR) {
+                range.end = range.end.add(num_cols.0, 1, true);
+            }
+        }
+
+        range
+    }
+
+    // Bring start and end points in the correct order
+    fn points_need_swap(start: Point<usize>, end: Point<usize>) -> bool {
+        start.line < end.line || start.line == end.line && start.col > end.col
+    }
+
+    /// Clamp selection inside grid to prevent OOB.
+    fn grid_clamp(
+        mut start: Anchor,
+        end: Anchor,
+        is_block: bool,
+        lines: usize,
+    ) -> Result<(Anchor, Anchor), ()> {
+        // Clamp selection inside of grid to prevent OOB
+        if start.point.line >= lines {
+            // Remove selection if it is fully out of the grid
+            if end.point.line >= lines {
+                return Err(());
+            }
+
+            // Clamp to grid if it is still partially visible
+            if !is_block {
+                start.side = Side::Left;
+                start.point.col = Column(0);
+            }
+            start.point.line = lines - 1;
+        }
+
+        Ok((start, end))
+    }
+
+    fn range_semantic<T>(
+        term: &Term<T>,
+        mut start: Point<usize>,
+        mut end: Point<usize>,
+    ) -> Option<SelectionRange> {
+        if start == end {
+            if let Some(matching) = term.bracket_search(start) {
+                if (matching.line == start.line && matching.col < start.col)
+                    || (matching.line > start.line)
+                {
+                    start = matching;
+                } else {
+                    end = matching;
+                }
+
+                return Some(SelectionRange { start, end, is_block: false });
+            }
+        }
+
+        start = term.semantic_search_left(start);
+        end = term.semantic_search_right(end);
+
+        Some(SelectionRange { start, end, is_block: false })
+    }
+
+    fn range_lines<T>(
+        term: &Term<T>,
+        mut start: Point<usize>,
+        mut end: Point<usize>,
+    ) -> Option<SelectionRange> {
+        start = term.line_search_left(start);
+        end = term.line_search_right(end);
+
+        Some(SelectionRange { start, end, is_block: false })
+    }
+
+    fn range_simple(
+        &self,
+        mut start: Anchor,
+        mut end: Anchor,
+        num_cols: Column,
+    ) -> Option<SelectionRange> {
+        if self.is_empty() {
             return None;
         }
 
-        Some(match (front_side, tail_side) {
-            // [FX][XX][XT]
-            (Side::Left, Side::Right) => Span {
-                cols,
-                front,
-                tail,
-                ty: SpanType::Inclusive
-            },
-            // [ F][XX][T ]
-            (Side::Right, Side::Left) => Span {
-                cols,
-                front,
-                tail,
-                ty: SpanType::Exclusive
-            },
-            // [FX][XX][T ]
-            (Side::Left, Side::Left) => Span {
-                cols,
-                front,
-                tail,
-                ty: SpanType::ExcludeTail
-            },
-            // [ F][XX][XT]
-            (Side::Right, Side::Right) => Span {
-                cols,
-                front,
-                tail,
-                ty: SpanType::ExcludeFront
-            },
-        })
-    }
-}
-
-/// How to interpret the locations of a Span.
-#[derive(Debug, Eq, PartialEq)]
-pub enum SpanType {
-    /// Includes the beginning and end locations
-    Inclusive,
-
-    /// Exclude both beginning and end
-    Exclusive,
-
-    /// Excludes last cell of selection
-    ExcludeTail,
-
-    /// Excludes first cell of selection
-    ExcludeFront,
-}
-
-/// Represents a span of selected cells
-#[derive(Debug, Eq, PartialEq)]
-pub struct Span {
-    front: Point,
-    tail: Point,
-    cols: Column,
-
-    /// The type says whether ends are included or not.
-    ty: SpanType,
-}
-
-impl Span {
-    pub fn to_locations(&self) -> (Point, Point) {
-        match self.ty {
-            SpanType::Inclusive => (self.front, self.tail),
-            SpanType::Exclusive => {
-                (Span::wrap_start(self.front, self.cols), Span::wrap_end(self.tail, self.cols))
-            },
-            SpanType::ExcludeFront => (Span::wrap_start(self.front, self.cols), self.tail),
-            SpanType::ExcludeTail => (self.front, Span::wrap_end(self.tail, self.cols))
-        }
-    }
-
-    fn wrap_start(mut start: Point, cols: Column) -> Point {
-        if start.col == cols - 1 {
-            Point {
-                line: start.line + 1,
-                col: Column(0),
-            }
-        } else {
-            start.col += 1;
-            start
-        }
-    }
-
-    fn wrap_end(end: Point, cols: Column) -> Point {
-        if end.col == Column(0) && end.line != Line(0) {
-            Point {
-                line: end.line - 1,
-                col: cols
-            }
-        } else {
-            Point {
-                line: end.line,
-                col: end.col - 1
+        // Remove last cell if selection ends to the left of a cell
+        if end.side == Side::Left && start.point != end.point {
+            // Special case when selection ends to left of first cell
+            if end.point.col == Column(0) {
+                end.point.col = num_cols - 1;
+                end.point.line += 1;
+            } else {
+                end.point.col -= 1;
             }
         }
-    }
 
-    #[inline]
-    fn exclude_start(start: Linear) -> Linear {
-        start + 1
-    }
-
-    #[inline]
-    fn exclude_end(end: Linear) -> Linear {
-        if end > Linear(0) {
-            end - 1
-        } else {
-            end
+        // Remove first cell if selection starts at the right of a cell
+        if start.side == Side::Right && start.point != end.point {
+            start.point.col += 1;
         }
+
+        Some(SelectionRange { start: start.point, end: end.point, is_block: false })
+    }
+
+    fn range_block(&self, mut start: Anchor, mut end: Anchor) -> Option<SelectionRange> {
+        if self.is_empty() {
+            return None;
+        }
+
+        // Always go top-left -> bottom-right
+        if start.point.col > end.point.col {
+            mem::swap(&mut start.side, &mut end.side);
+            mem::swap(&mut start.point.col, &mut end.point.col);
+        }
+
+        // Remove last cell if selection ends to the left of a cell
+        if end.side == Side::Left && start.point != end.point && end.point.col.0 > 0 {
+            end.point.col -= 1;
+        }
+
+        // Remove first cell if selection starts at the right of a cell
+        if start.side == Side::Right && start.point != end.point {
+            start.point.col += 1;
+        }
+
+        Some(SelectionRange { start: start.point, end: end.point, is_block: true })
     }
 }
 
-impl ToRange for Span {
-    fn to_range(&self) -> RangeInclusive<Linear> {
-        let cols = self.cols;
-        let start = Linear(self.front.line.0 * cols.0 + self.front.col.0);
-        let end = Linear(self.tail.line.0 * cols.0 + self.tail.col.0);
-
-        let (start, end) = match self.ty {
-            SpanType::Inclusive => (start, end),
-            SpanType::Exclusive => (Span::exclude_start(start), Span::exclude_end(end)),
-            SpanType::ExcludeFront => (Span::exclude_start(start), end),
-            SpanType::ExcludeTail => (start, Span::exclude_end(end))
-        };
-
-        RangeInclusive::new(start, end)
-    }
-}
-
-/// Tests for selection
+/// Tests for selection.
 ///
 /// There are comments on all of the tests describing the selection. Pictograms
 /// are used to avoid ambiguity. Grid cells are represented by a [  ]. Only
@@ -404,118 +443,96 @@ impl ToRange for Span {
 /// look like [ B] and [E ].
 #[cfg(test)]
 mod test {
-    use index::{Line, Column, Side, Point};
-    use super::{Selection, Span, SpanType};
+    use std::mem;
 
-    struct Dimensions(Point);
-    impl super::Dimensions for Dimensions {
-        fn dimensions(&self) -> Point {
-            self.0
-        }
+    use super::{Selection, SelectionRange};
+    use crate::clipboard::Clipboard;
+    use crate::config::MockConfig;
+    use crate::event::{Event, EventListener};
+    use crate::grid::Grid;
+    use crate::index::{Column, Line, Point, Side};
+    use crate::term::cell::{Cell, Flags};
+    use crate::term::{SizeInfo, Term};
+
+    struct Mock;
+    impl EventListener for Mock {
+        fn send_event(&self, _event: Event) {}
     }
 
-    impl Dimensions {
-        pub fn new(line: usize, col: usize) -> Self {
-            Dimensions(Point {
-                line: Line(line),
-                col: Column(col)
-            })
-        }
+    fn term(width: usize, height: usize) -> Term<Mock> {
+        let size = SizeInfo {
+            width: width as f32,
+            height: height as f32,
+            cell_width: 1.0,
+            cell_height: 1.0,
+            padding_x: 0.0,
+            padding_y: 0.0,
+            dpr: 1.0,
+        };
+        Term::new(&MockConfig::default(), &size, Clipboard::new_nop(), Mock)
     }
 
-    impl super::SemanticSearch for Dimensions {
-        fn semantic_search_left(&self, _: Point) -> Point { unimplemented!(); }
-        fn semantic_search_right(&self, _: Point) -> Point { unimplemented!(); }
-    }
-
-    /// Test case of single cell selection
+    /// Test case of single cell selection.
     ///
     /// 1. [  ]
     /// 2. [B ]
     /// 3. [BE]
     #[test]
     fn single_cell_left_to_right() {
-        let location = Point { line: Line(0), col: Column(0) };
+        let location = Point { line: 0, col: Column(0) };
         let mut selection = Selection::simple(location, Side::Left);
         selection.update(location, Side::Right);
 
-        assert_eq!(selection.to_span(&Dimensions::new(1, 1)).unwrap(), Span {
-            cols: Column(1),
-            ty: SpanType::Inclusive,
-            front: location,
-            tail: location
-        });
+        assert_eq!(
+            selection.to_range(&term(1, 1)).unwrap(),
+            SelectionRange { start: location, end: location, is_block: false }
+        );
     }
 
-    /// Test case of single cell selection
+    /// Test case of single cell selection.
     ///
     /// 1. [  ]
     /// 2. [ B]
     /// 3. [EB]
     #[test]
     fn single_cell_right_to_left() {
-        let location = Point { line: Line(0), col: Column(0) };
+        let location = Point { line: 0, col: Column(0) };
         let mut selection = Selection::simple(location, Side::Right);
         selection.update(location, Side::Left);
 
-        assert_eq!(selection.to_span(&Dimensions::new(1, 1)).unwrap(), Span {
-            cols: Column(1),
-            ty: SpanType::Inclusive,
-            front: location,
-            tail: location
-        });
+        assert_eq!(
+            selection.to_range(&term(1, 1)).unwrap(),
+            SelectionRange { start: location, end: location, is_block: false }
+        );
     }
 
-    /// Test adjacent cell selection from left to right
+    /// Test adjacent cell selection from left to right.
     ///
     /// 1. [  ][  ]
     /// 2. [ B][  ]
     /// 3. [ B][E ]
     #[test]
     fn between_adjacent_cells_left_to_right() {
-        let mut selection = Selection::simple(Point::new(Line(0), Column(0)), Side::Right);
-        selection.update(Point::new(Line(0), Column(1)), Side::Left);
+        let mut selection = Selection::simple(Point::new(0, Column(0)), Side::Right);
+        selection.update(Point::new(0, Column(1)), Side::Left);
 
-        assert_eq!(selection.to_span(&Dimensions::new(1, 2)), None);
+        assert_eq!(selection.to_range(&term(2, 1)), None);
     }
 
-    /// Test adjacent cell selection from right to left
+    /// Test adjacent cell selection from right to left.
     ///
     /// 1. [  ][  ]
     /// 2. [  ][B ]
     /// 3. [ E][B ]
     #[test]
     fn between_adjacent_cells_right_to_left() {
-        let mut selection = Selection::simple(Point::new(Line(0), Column(1)), Side::Left);
-        selection.update(Point::new(Line(0), Column(0)), Side::Right);
+        let mut selection = Selection::simple(Point::new(0, Column(1)), Side::Left);
+        selection.update(Point::new(0, Column(0)), Side::Right);
 
-        assert_eq!(selection.to_span(&Dimensions::new(1, 2)), None);
+        assert_eq!(selection.to_range(&term(2, 1)), None);
     }
 
-    /// Test selection across adjacent lines
-    ///
-    ///
-    /// 1.  [  ][  ][  ][  ][  ]
-    ///     [  ][  ][  ][  ][  ]
-    /// 2.  [  ][  ][  ][  ][  ]
-    ///     [  ][ B][  ][  ][  ]
-    /// 3.  [  ][ E][XX][XX][XX]
-    ///     [XX][XB][  ][  ][  ]
-    #[test]
-    fn across_adjacent_lines_upward_final_cell_exclusive() {
-        let mut selection = Selection::simple(Point::new(Line(1), Column(1)), Side::Right);
-        selection.update(Point::new(Line(0), Column(1)), Side::Right);
-
-        assert_eq!(selection.to_span(&Dimensions::new(2, 5)).unwrap(), Span {
-            cols: Column(5),
-            front: Point::new(Line(0), Column(1)),
-            tail: Point::new(Line(1), Column(1)),
-            ty: SpanType::ExcludeFront
-        });
-    }
-
-    /// Test selection across adjacent lines
-    ///
+    /// Test selection across adjacent lines.
     ///
     /// 1.  [  ][  ][  ][  ][  ]
     ///     [  ][  ][  ][  ][  ]
@@ -523,19 +540,222 @@ mod test {
     ///     [  ][  ][  ][  ][  ]
     /// 3.  [  ][ B][XX][XX][XX]
     ///     [XX][XE][  ][  ][  ]
-    /// 4.  [  ][ B][XX][XX][XX]
-    ///     [XE][  ][  ][  ][  ]
+    #[test]
+    fn across_adjacent_lines_upward_final_cell_exclusive() {
+        let mut selection = Selection::simple(Point::new(1, Column(1)), Side::Right);
+        selection.update(Point::new(0, Column(1)), Side::Right);
+
+        assert_eq!(
+            selection.to_range(&term(5, 2)).unwrap(),
+            SelectionRange {
+                start: Point::new(1, Column(2)),
+                end: Point::new(0, Column(1)),
+                is_block: false,
+            }
+        );
+    }
+
+    /// Test selection across adjacent lines.
+    ///
+    /// 1.  [  ][  ][  ][  ][  ]
+    ///     [  ][  ][  ][  ][  ]
+    /// 2.  [  ][  ][  ][  ][  ]
+    ///     [  ][ B][  ][  ][  ]
+    /// 3.  [  ][ E][XX][XX][XX]
+    ///     [XX][XB][  ][  ][  ]
+    /// 4.  [ E][XX][XX][XX][XX]
+    ///     [XX][XB][  ][  ][  ]
     #[test]
     fn selection_bigger_then_smaller() {
-        let mut selection = Selection::simple(Point::new(Line(0), Column(1)), Side::Right);
-        selection.update(Point::new(Line(1), Column(1)), Side::Right);
-        selection.update(Point::new(Line(1), Column(0)), Side::Right);
+        let mut selection = Selection::simple(Point::new(0, Column(1)), Side::Right);
+        selection.update(Point::new(1, Column(1)), Side::Right);
+        selection.update(Point::new(1, Column(0)), Side::Right);
 
-        assert_eq!(selection.to_span(&Dimensions::new(2, 5)).unwrap(), Span {
-            cols: Column(5),
-            front: Point::new(Line(0), Column(1)),
-            tail: Point::new(Line(1), Column(0)),
-            ty: SpanType::ExcludeFront
-        });
+        assert_eq!(
+            selection.to_range(&term(5, 2)).unwrap(),
+            SelectionRange {
+                start: Point::new(1, Column(1)),
+                end: Point::new(0, Column(1)),
+                is_block: false,
+            }
+        );
+    }
+
+    #[test]
+    fn line_selection() {
+        let num_lines = 10;
+        let num_cols = 5;
+        let mut selection = Selection::lines(Point::new(0, Column(1)));
+        selection.update(Point::new(5, Column(1)), Side::Right);
+        selection = selection.rotate(num_lines, num_cols, &(Line(0)..Line(num_lines)), 7).unwrap();
+
+        assert_eq!(
+            selection.to_range(&term(num_cols, num_lines)).unwrap(),
+            SelectionRange {
+                start: Point::new(9, Column(0)),
+                end: Point::new(7, Column(4)),
+                is_block: false,
+            }
+        );
+    }
+
+    #[test]
+    fn semantic_selection() {
+        let num_lines = 10;
+        let num_cols = 5;
+        let mut selection = Selection::semantic(Point::new(0, Column(3)));
+        selection.update(Point::new(5, Column(1)), Side::Right);
+        selection = selection.rotate(num_lines, num_cols, &(Line(0)..Line(num_lines)), 7).unwrap();
+
+        assert_eq!(
+            selection.to_range(&term(num_cols, num_lines)).unwrap(),
+            SelectionRange {
+                start: Point::new(9, Column(0)),
+                end: Point::new(7, Column(3)),
+                is_block: false,
+            }
+        );
+    }
+
+    #[test]
+    fn simple_selection() {
+        let num_lines = 10;
+        let num_cols = 5;
+        let mut selection = Selection::simple(Point::new(0, Column(3)), Side::Right);
+        selection.update(Point::new(5, Column(1)), Side::Right);
+        selection = selection.rotate(num_lines, num_cols, &(Line(0)..Line(num_lines)), 7).unwrap();
+
+        assert_eq!(
+            selection.to_range(&term(num_cols, num_lines)).unwrap(),
+            SelectionRange {
+                start: Point::new(9, Column(0)),
+                end: Point::new(7, Column(3)),
+                is_block: false,
+            }
+        );
+    }
+
+    #[test]
+    fn block_selection() {
+        let num_lines = 10;
+        let num_cols = 5;
+        let mut selection = Selection::block(Point::new(0, Column(3)), Side::Right);
+        selection.update(Point::new(5, Column(1)), Side::Right);
+        selection = selection.rotate(num_lines, num_cols, &(Line(0)..Line(num_lines)), 7).unwrap();
+
+        assert_eq!(
+            selection.to_range(&term(num_cols, num_lines)).unwrap(),
+            SelectionRange {
+                start: Point::new(9, Column(2)),
+                end: Point::new(7, Column(3)),
+                is_block: true
+            }
+        );
+    }
+
+    #[test]
+    fn double_width_expansion() {
+        let mut term = term(10, 1);
+        let mut grid = Grid::new(Line(1), Column(10), 0, Cell::default());
+        grid[Line(0)][Column(0)].flags.insert(Flags::WIDE_CHAR);
+        grid[Line(0)][Column(1)].flags.insert(Flags::WIDE_CHAR_SPACER);
+        grid[Line(0)][Column(8)].flags.insert(Flags::WIDE_CHAR);
+        grid[Line(0)][Column(9)].flags.insert(Flags::WIDE_CHAR_SPACER);
+        mem::swap(term.grid_mut(), &mut grid);
+
+        let mut selection = Selection::simple(Point::new(0, Column(1)), Side::Left);
+        selection.update(Point::new(0, Column(8)), Side::Right);
+
+        assert_eq!(
+            selection.to_range(&term).unwrap(),
+            SelectionRange {
+                start: Point::new(0, Column(0)),
+                end: Point::new(0, Column(9)),
+                is_block: false,
+            }
+        );
+    }
+
+    #[test]
+    fn simple_is_empty() {
+        let mut selection = Selection::simple(Point::new(0, Column(0)), Side::Right);
+        assert!(selection.is_empty());
+        selection.update(Point::new(0, Column(1)), Side::Left);
+        assert!(selection.is_empty());
+        selection.update(Point::new(1, Column(0)), Side::Right);
+        assert!(!selection.is_empty());
+    }
+
+    #[test]
+    fn block_is_empty() {
+        let mut selection = Selection::block(Point::new(0, Column(0)), Side::Right);
+        assert!(selection.is_empty());
+        selection.update(Point::new(0, Column(1)), Side::Left);
+        assert!(selection.is_empty());
+        selection.update(Point::new(0, Column(1)), Side::Right);
+        assert!(!selection.is_empty());
+        selection.update(Point::new(1, Column(0)), Side::Right);
+        assert!(selection.is_empty());
+        selection.update(Point::new(1, Column(1)), Side::Left);
+        assert!(selection.is_empty());
+        selection.update(Point::new(1, Column(1)), Side::Right);
+        assert!(!selection.is_empty());
+    }
+
+    #[test]
+    fn rotate_in_region_up() {
+        let num_lines = 10;
+        let num_cols = 5;
+        let mut selection = Selection::simple(Point::new(2, Column(3)), Side::Right);
+        selection.update(Point::new(5, Column(1)), Side::Right);
+        selection =
+            selection.rotate(num_lines, num_cols, &(Line(1)..Line(num_lines - 1)), 4).unwrap();
+
+        assert_eq!(
+            selection.to_range(&term(num_cols, num_lines)).unwrap(),
+            SelectionRange {
+                start: Point::new(8, Column(0)),
+                end: Point::new(6, Column(3)),
+                is_block: false,
+            }
+        );
+    }
+
+    #[test]
+    fn rotate_in_region_down() {
+        let num_lines = 10;
+        let num_cols = 5;
+        let mut selection = Selection::simple(Point::new(5, Column(3)), Side::Right);
+        selection.update(Point::new(8, Column(1)), Side::Left);
+        selection =
+            selection.rotate(num_lines, num_cols, &(Line(1)..Line(num_lines - 1)), -5).unwrap();
+
+        assert_eq!(
+            selection.to_range(&term(num_cols, num_lines)).unwrap(),
+            SelectionRange {
+                start: Point::new(3, Column(1)),
+                end: Point::new(1, Column(num_cols - 1)),
+                is_block: false,
+            }
+        );
+    }
+
+    #[test]
+    fn rotate_in_region_up_block() {
+        let num_lines = 10;
+        let num_cols = 5;
+        let mut selection = Selection::block(Point::new(2, Column(3)), Side::Right);
+        selection.update(Point::new(5, Column(1)), Side::Right);
+        selection =
+            selection.rotate(num_lines, num_cols, &(Line(1)..Line(num_lines - 1)), 4).unwrap();
+
+        assert_eq!(
+            selection.to_range(&term(num_cols, num_lines)).unwrap(),
+            SelectionRange {
+                start: Point::new(8, Column(2)),
+                end: Point::new(6, Column(3)),
+                is_block: true,
+            }
+        );
     }
 }

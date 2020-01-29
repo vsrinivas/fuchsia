@@ -13,22 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate log;
-
-extern crate base64;
-extern crate unicode_width;
-extern crate vte;
-
 pub mod ansi;
-pub mod cell;
-pub mod color;
+pub mod clipboard;
 pub mod config;
-pub mod font;
+pub mod event;
 pub mod grid;
 pub mod index;
-pub mod rgb;
+pub mod message_bar;
 pub mod selection;
 pub mod term;
+
+pub use crate::grid::Grid;
+pub use crate::term::Term;
