@@ -17,6 +17,7 @@
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
+            "fuchsia.hwinfo.Product",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",

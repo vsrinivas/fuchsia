@@ -29,6 +29,10 @@ async fn hwinfo_method_to_fidl(
             let result = facade.get_device_info().await?;
             Ok(to_value(result)?)
         }
+        "HwinfoGetProductInfo" => {
+            let result = facade.get_product_info().await?;
+            Ok(to_value(result)?)
+        }
         _ => bail!("Invalid Hwinfo FIDL method: {:?}", method_name),
     }
 }

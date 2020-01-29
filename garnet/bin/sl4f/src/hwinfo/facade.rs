@@ -4,10 +4,10 @@
 
 use crate::{
     common_utils::common::macros::{fx_err_and_bail, with_line},
-    hwinfo::types::SerializableDeviceInfo,
+    hwinfo::types::{SerializableDeviceInfo, SerializableProductInfo},
 };
 use anyhow::Error;
-use fidl_fuchsia_hwinfo::DeviceMarker;
+use fidl_fuchsia_hwinfo::{DeviceMarker, ProductMarker};
 use fuchsia_component as app;
 use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
 
@@ -28,14 +28,34 @@ impl HwinfoFacade {
     pub async fn get_device_info(&self) -> Result<SerializableDeviceInfo, Error> {
         let tag = "HwinfoFacade::get_info";
 
-        let hwinfo_proxy = app::client::connect_to_service::<DeviceMarker>();
+        let device_info_proxy = app::client::connect_to_service::<DeviceMarker>();
 
-        match hwinfo_proxy {
+        match device_info_proxy {
             Ok(p) => {
                 let device_info = p.get_info().await?;
                 let device_info_string = format!("Device info found: {:?}", device_info);
                 fx_log_info!(tag: &with_line!(tag), "{}", device_info_string);
                 Ok(SerializableDeviceInfo::new(&device_info))
+            }
+            Err(err) => fx_err_and_bail!(
+                &with_line!(tag),
+                format_err!("Failed to create hwinfo proxy: {}", err)
+            ),
+        }
+    }
+
+    /// Returns the device info of the product info proxy service.
+    pub async fn get_product_info(&self) -> Result<SerializableProductInfo, Error> {
+        let tag = "HwinfoFacade::get_product_info";
+
+        let product_info_proxy = app::client::connect_to_service::<ProductMarker>();
+
+        match product_info_proxy {
+            Ok(p) => {
+                let product_info = p.get_info().await?;
+                let product_info_string = format!("Product info found: {:?}", product_info);
+                fx_log_info!(tag: &with_line!(tag), "{}", product_info_string);
+                Ok(SerializableProductInfo::new(&product_info))
             }
             Err(err) => fx_err_and_bail!(
                 &with_line!(tag),
