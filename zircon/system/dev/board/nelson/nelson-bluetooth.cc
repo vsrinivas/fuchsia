@@ -9,31 +9,29 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/init-step.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
 #include <hw/reg.h>
-#include <soc/aml-s905d2/s905d2-gpio.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-gpio.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
 
 namespace nelson {
 
-#define SOC_WIFI_LPO_32k768 S905D2_GPIOX(16)
-#define SOC_BT_REG_ON S905D2_GPIOX(17)
-
 static const pbus_mmio_t bt_uart_mmios[] = {
     {
-        .base = S905D2_UART_A_BASE,
-        .length = S905D2_UART_A_LENGTH,
+        .base = S905D3_UART_A_BASE,
+        .length = S905D3_UART_A_LENGTH,
     },
 };
 
 static const pbus_irq_t bt_uart_irqs[] = {
     {
-        .irq = S905D2_UART_A_IRQ,
+        .irq = S905D3_UART_A_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -59,16 +57,6 @@ static const pbus_boot_metadata_t bt_uart_boot_metadata[] = {
     },
 };
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
-static const device_component_part_t uart_component[] = {
-    {countof(root_match), root_match},
-};
-static const device_component_t uart_components[] = {
-    {countof(uart_component), uart_component},
-};
-
 static pbus_dev_t bt_uart_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "bt-uart";
@@ -86,78 +74,43 @@ static pbus_dev_t bt_uart_dev = []() {
   return dev;
 }();
 
-// Enables and configures PWM_E on the SOC_WIFI_LPO_32k768 line for the
-// Wifi/Bluetooth module
-zx_status_t Nelson::EnableWifi32K() {
-  // Configure SOC_WIFI_LPO_32k768 pin for PWM_E
-  zx_status_t status = gpio_impl_.SetAltFunction(SOC_WIFI_LPO_32k768, 1);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx::bti bti;
-  status = iommu_.GetBti(BTI_BOARD, 0, &bti);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBti failed: %d\n", __func__, status);
-    return status;
-  }
-
-  std::optional<ddk::MmioBuffer> pwm_base;
-
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  zx::unowned_resource resource(get_root_resource());
-  status = ddk::MmioBuffer::Create(S905D2_PWM_BASE, 0x1a000, *resource,
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &pwm_base);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Create(pwm_base) error: %d\n", __func__, status);
-  }
-  // these magic numbers were gleaned by instrumenting
-  // drivers/amlogic/pwm/pwm_meson.c
-  // TODO(voydanoff) write a proper PWM driver
-  pwm_base->Write32(0x016d016e, S905D2_PWM_PWM_E << 2);
-  pwm_base->Write32(0x016d016d, S905D2_PWM_E2 << 2);
-  pwm_base->Write32(0x0a0a0609, S905D2_PWM_TIME_EF << 2);
-  pwm_base->Write32(0x02808003, S905D2_PWM_MISC_REG_EF << 2);
-
-  return ZX_OK;
-}
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+constexpr zx_bind_inst_t pwm_e_match[] = {
+    BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
+};
+constexpr device_component_part_t pwm_e_component[] = {
+    {countof(root_match), root_match},
+    {countof(pwm_e_match), pwm_e_match},
+};
+static const device_component_t uart_components[] = {
+    {countof(pwm_e_component), pwm_e_component},
+};
 
 zx_status_t Nelson::BluetoothInit() {
   zx_status_t status;
 
   // set alternate functions to enable Bluetooth UART
-  status = gpio_impl_.SetAltFunction(S905D2_UART_TX_A, S905D2_UART_TX_A_FN);
+  status = gpio_impl_.SetAltFunction(S905D3_UART_TX_A, S905D3_UART_TX_A_FN);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = gpio_impl_.SetAltFunction(S905D2_UART_RX_A, S905D2_UART_RX_A_FN);
+  status = gpio_impl_.SetAltFunction(S905D3_UART_RX_A, S905D3_UART_RX_A_FN);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = gpio_impl_.SetAltFunction(S905D2_UART_CTS_A, S905D2_UART_CTS_A_FN);
+  status = gpio_impl_.SetAltFunction(S905D3_UART_CTS_A, S905D3_UART_CTS_A_FN);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = gpio_impl_.SetAltFunction(S905D2_UART_RTS_A, S905D2_UART_RTS_A_FN);
+  status = gpio_impl_.SetAltFunction(S905D3_UART_RTS_A, S905D3_UART_RTS_A_FN);
   if (status != ZX_OK) {
     return status;
   }
-
-  // Configure the SOC_WIFI_LPO_32k768 PWM, which is needed for the
-  // Bluetooth module to work properly
-  status = EnableWifi32K();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // set GPIO to reset Bluetooth module
-  gpio_impl_.ConfigOut(SOC_BT_REG_ON, 0);
-  usleep(10 * 1000);
-  gpio_impl_.Write(SOC_BT_REG_ON, 1);
-  usleep(100 * 1000);
 
   // Bind UART for Bluetooth HCI
   status = pbus_.CompositeDeviceAdd(&bt_uart_dev, uart_components, 1, UINT32_MAX);

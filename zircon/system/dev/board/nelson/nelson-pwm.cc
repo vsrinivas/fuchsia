@@ -64,12 +64,71 @@ static pbus_dev_t pwm_dev = []() {
   return dev;
 }();
 
+// Composite binding rules for wifi driver.
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t pwm_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
+    BI_MATCH_IF(EQ, BIND_PWM_ID, S905D3_PWM_E),
+};
+static const zx_bind_inst_t wifi_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_WIFI_LPO_32k768),
+};
+static const zx_bind_inst_t bt_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_BT_REG_ON),
+};
+static const device_component_part_t pwm_component[] = {
+    {countof(root_match), root_match},
+    {countof(pwm_match), pwm_match},
+};
+static const device_component_part_t wifi_gpio_component[] = {
+    {countof(root_match), root_match},
+    {countof(wifi_gpio_match), wifi_gpio_match},
+};
+static const device_component_part_t bt_gpio_component[] = {
+    {countof(root_match), root_match},
+    {countof(bt_gpio_match), bt_gpio_match},
+};
+static const device_component_t composite[] = {
+    {countof(pwm_component), pwm_component},
+    {countof(wifi_gpio_component), wifi_gpio_component},
+    {countof(bt_gpio_component), bt_gpio_component},
+};
+
 zx_status_t Nelson::PwmInit() {
   zx_status_t status = pbus_.DeviceAdd(&pwm_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
     return status;
   }
+
+  // Add a composite device for pwm init driver.
+  const zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_S905D3},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_PWM_INIT},
+  };
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = composite,
+      .components_count = countof(composite),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  status = DdkAddComposite("pwm-init", &comp_desc);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAddComposite failed: %d\n", __func__, status);
+    return status;
+  }
+
+  zxlogf(INFO, "Added PwmInitDevice\n");
 
   return ZX_OK;
 }

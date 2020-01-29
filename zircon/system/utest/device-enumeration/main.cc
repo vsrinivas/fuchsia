@@ -257,6 +257,10 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "class/pwm/007",
       "class/pwm/008",
       "class/pwm/009",
+      "aml-sdio/aml-sd-emmc/sdmmc",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/component",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

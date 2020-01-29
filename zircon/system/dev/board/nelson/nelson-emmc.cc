@@ -13,9 +13,10 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
 #include <soc/aml-common/aml-sd-emmc.h>
-#include <soc/aml-s905d2/s905d2-gpio.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-gpio.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
+#include "nelson-gpios.h"
 #include "nelson.h"
 
 namespace nelson {
@@ -24,14 +25,14 @@ namespace {
 
 constexpr pbus_mmio_t emmc_mmios[] = {
     {
-        .base = S905D2_EMMC_C_SDIO_BASE,
-        .length = S905D2_EMMC_C_SDIO_LENGTH,
+        .base = S905D3_EMMC_C_SDIO_BASE,
+        .length = S905D3_EMMC_C_SDIO_LENGTH,
     },
 };
 
 constexpr pbus_irq_t emmc_irqs[] = {
     {
-        .irq = S905D2_EMMC_C_SDIO_IRQ,
+        .irq = S905D3_EMMC_C_SDIO_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -106,7 +107,7 @@ static const zx_bind_inst_t root_match[] = {
 };
 static const zx_bind_inst_t gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, S905D2_GPIOBOOT(12)),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_EMMC_RESET),
 };
 static const device_component_part_t gpio_component[] = {
     {countof(root_match), root_match},
@@ -120,18 +121,18 @@ static const device_component_t components[] = {
 
 zx_status_t Nelson::EmmcInit() {
   // set alternate functions to enable EMMC
-  gpio_impl_.SetAltFunction(S905D2_EMMC_D0, S905D2_EMMC_D0_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_D1, S905D2_EMMC_D1_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_D2, S905D2_EMMC_D2_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_D3, S905D2_EMMC_D3_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_D4, S905D2_EMMC_D4_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_D5, S905D2_EMMC_D5_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_D6, S905D2_EMMC_D6_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_D7, S905D2_EMMC_D7_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_CLK, S905D2_EMMC_CLK_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_RST, S905D2_EMMC_RST_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_CMD, S905D2_EMMC_CMD_FN);
-  gpio_impl_.SetAltFunction(S905D2_EMMC_DS, S905D2_EMMC_DS_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_D0, S905D3_EMMC_D0_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_D1, S905D3_EMMC_D1_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_D2, S905D3_EMMC_D2_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_D3, S905D3_EMMC_D3_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_D4, S905D3_EMMC_D4_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_D5, S905D3_EMMC_D5_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_D6, S905D3_EMMC_D6_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_D7, S905D3_EMMC_D7_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_CLK, S905D3_EMMC_CLK_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_RST, S905D3_EMMC_RST_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_CMD, S905D3_EMMC_CMD_FN);
+  gpio_impl_.SetAltFunction(S905D3_EMMC_DS, S905D3_EMMC_DS_FN);
 
   auto status = pbus_.CompositeDeviceAdd(&emmc_dev, components, countof(components), UINT32_MAX);
   if (status != ZX_OK) {

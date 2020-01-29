@@ -9,8 +9,8 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
-#include <soc/aml-s905d2/s905d2-gpio.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-gpio.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson-gpios.h"
 #include "nelson.h"
@@ -22,50 +22,50 @@ namespace nelson {
 
 static const pbus_mmio_t gpio_mmios[] = {
     {
-        .base = S905D2_GPIO_BASE,
-        .length = S905D2_GPIO_LENGTH,
+        .base = S905D3_GPIO_BASE,
+        .length = S905D3_GPIO_LENGTH,
     },
     {
-        .base = S905D2_GPIO_A0_BASE,
-        .length = S905D2_GPIO_AO_LENGTH,
+        .base = S905D3_GPIO_A0_BASE,
+        .length = S905D3_GPIO_AO_LENGTH,
     },
     {
-        .base = S905D2_GPIO_INTERRUPT_BASE,
-        .length = S905D2_GPIO_INTERRUPT_LENGTH,
+        .base = S905D3_GPIO_INTERRUPT_BASE,
+        .length = S905D3_GPIO_INTERRUPT_LENGTH,
     },
 };
 
 static const pbus_irq_t gpio_irqs[] = {
     {
-        .irq = S905D2_GPIO_IRQ_0,
+        .irq = S905D3_GPIO_IRQ_0,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
-        .irq = S905D2_GPIO_IRQ_1,
+        .irq = S905D3_GPIO_IRQ_1,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
-        .irq = S905D2_GPIO_IRQ_2,
+        .irq = S905D3_GPIO_IRQ_2,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
-        .irq = S905D2_GPIO_IRQ_3,
+        .irq = S905D3_GPIO_IRQ_3,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
-        .irq = S905D2_GPIO_IRQ_4,
+        .irq = S905D3_GPIO_IRQ_4,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
-        .irq = S905D2_GPIO_IRQ_5,
+        .irq = S905D3_GPIO_IRQ_5,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
-        .irq = S905D2_GPIO_IRQ_6,
+        .irq = S905D3_GPIO_IRQ_6,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
     {
-        .irq = S905D2_GPIO_IRQ_7,
+        .irq = S905D3_GPIO_IRQ_7,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
 };
@@ -73,7 +73,7 @@ static const pbus_irq_t gpio_irqs[] = {
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
-    {S905D2_WIFI_SDIO_WAKE_HOST},
+    {S905D3_WIFI_SDIO_WAKE_HOST},
     // For display.
     {GPIO_PANEL_DETECT},
     {GPIO_LCD_RESET},
@@ -91,9 +91,14 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_VOLUME_BOTH},
     {GPIO_MIC_PRIVACY},
     // For SDIO.
-    {GPIO_SD_EMMC_RESET},
+    {GPIO_WIFI_REG_ON},
     // For SPI.
     {GPIO_SPICC1_SS0},
+    // For eMMC.
+    {GPIO_EMMC_RESET},
+    // For Bluetooth.
+    {GPIO_SOC_WIFI_LPO_32k768},
+    {GPIO_SOC_BT_REG_ON},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
@@ -133,7 +138,7 @@ zx_status_t Nelson::GpioInit() {
   }
 
   // Enable mute LED so it will be controlled by mute switch.
-  status = gpio_impl_.ConfigOut(S905D2_GPIOAO(11), 1);
+  status = gpio_impl_.ConfigOut(S905D3_GPIOAO(11), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
   }
@@ -141,11 +146,11 @@ zx_status_t Nelson::GpioInit() {
 #ifdef GPIO_TEST
   static const pbus_gpio_t gpio_test_gpios[] = {{
                                                     // SYS_LED
-                                                    .gpio = S905D2_GPIOAO(11),
+                                                    .gpio = S905D3_GPIOAO(11),
                                                 },
                                                 {
                                                     // JTAG Adapter Pin
-                                                    .gpio = S905D2_GPIOAO(6),
+                                                    .gpio = S905D3_GPIOAO(6),
                                                 }};
 
   const pbus_dev_t gpio_test_dev = []() {
