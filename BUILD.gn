@@ -105,6 +105,7 @@ declare_args() {
     variants = zircon_variants
     default_deps = [
                      "//:legacy-$target_cpu",
+                     "//:legacy_host_targets-$host_os-$host_cpu",
                      "//:legacy_unification-$target_cpu",
                      "//tools:all-hosts",
                    ] + zircon_extra_deps

@@ -169,7 +169,7 @@ template("zircon_library") {
     } else {
       not_needed(invoker, [ "compilation_include_dirs" ])
     }
-    if (is_fuchsia) {
+    if (is_fuchsia || is_prebuilt) {
       libs = library_libs
       lib_dirs = zx_lib_dirs
       not_needed([ "zx_libs" ])
@@ -181,7 +181,8 @@ template("zircon_library") {
                  ])
     }
     if (defined(invoker.libs) && invoker.libs != []) {
-      assert(is_fuchsia, "Prebuilt $library used for host")
+      is_host_library = string_replace(library, "-host", "") + "-host" == library
+      assert(is_fuchsia != is_host_library, "Prebuilt $library used in wrong toolchain")
       libs += rebase_path(invoker.libs, ".", zircon_root_build_dir)
     }
   }
