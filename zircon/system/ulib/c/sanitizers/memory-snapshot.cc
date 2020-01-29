@@ -502,29 +502,22 @@ auto CurrentThreadRegs() {
   __asm__("mrs %0, nzcv" : "=r"(regs.cpsr));
   __asm__("mrs %0, tpidr_el0" : "=r"(regs.tpidr));
 #elif defined(__x86_64__)
-  __asm__ volatile(
-      "mov %%rax, %[rax]\n"
-      "mov %%rbx, %[rbx]\n"
-      "mov %%rcx, %[rcx]\n"
-      "mov %%rdx, %[rdx]\n"
-      "mov %%rsi, %[rsi]\n"
-      "mov %%rdi, %[rdi]\n"
-      "mov %%rbp, %[rbp]\n"
-      "mov %%rsp, %[rsp]\n"
-      "mov %%rsp, %[rsp]\n"
-      "mov %%r8, %[r8]\n"
-      "mov %%r9, %[r9]\n"
-      "mov %%r10, %[r10]\n"
-      "mov %%r11, %[r11]\n"
-      "mov %%r12, %[r12]\n"
-      "mov %%r13, %[r13]\n"
-      "mov %%r14, %[r14]\n"
-      "mov %%r15, %[r15]\n"
-      : [ rax ] "=m"(regs.rax), [ rbx ] "=m"(regs.rbx), [ rcx ] "=m"(regs.rcx),
-        [ rdx ] "=m"(regs.rdx), [ rsi ] "=m"(regs.rsi), [ rdi ] "=m"(regs.rdi),
-        [ rbp ] "=m"(regs.rbp), [ rsp ] "=m"(regs.rsp), [ r8 ] "=m"(regs.r8), [ r9 ] "=m"(regs.r9),
-        [ r10 ] "=m"(regs.r10), [ r11 ] "=m"(regs.r11), [ r12 ] "=m"(regs.r12),
-        [ r13 ] "=m"(regs.r13), [ r14 ] "=m"(regs.r14), [ r15 ] "=m"(regs.r15));
+  __asm__ volatile("mov %%rax, %0" : "=m"(regs.rax));
+  __asm__ volatile("mov %%rbx, %0" : "=m"(regs.rbx));
+  __asm__ volatile("mov %%rcx, %0" : "=m"(regs.rcx));
+  __asm__ volatile("mov %%rdx, %0" : "=m"(regs.rdx));
+  __asm__ volatile("mov %%rsi, %0" : "=m"(regs.rsi));
+  __asm__ volatile("mov %%rdi, %0" : "=m"(regs.rdi));
+  __asm__ volatile("mov %%rbp, %0" : "=m"(regs.rbp));
+  __asm__ volatile("mov %%rsp, %0" : "=m"(regs.rsp));
+  __asm__ volatile("mov %%r8, %0" : "=m"(regs.r8));
+  __asm__ volatile("mov %%r9, %0" : "=m"(regs.r9));
+  __asm__ volatile("mov %%r10, %0" : "=m"(regs.r10));
+  __asm__ volatile("mov %%r11, %0" : "=m"(regs.r11));
+  __asm__ volatile("mov %%r12, %0" : "=m"(regs.r12));
+  __asm__ volatile("mov %%r13, %0" : "=m"(regs.r13));
+  __asm__ volatile("mov %%r14, %0" : "=m"(regs.r14));
+  __asm__ volatile("mov %%r15, %0" : "=m"(regs.r15));
   __asm__(
       "pushf\n"
       ".cfi_adjust_cfa_offset 8\n"
