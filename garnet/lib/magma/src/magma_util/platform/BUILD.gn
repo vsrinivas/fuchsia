@@ -220,9 +220,6 @@ source_set("connection_client") {
   if (is_linux) {
     deps = [ "linux:connection_client" ]
   }
-
-  # Fidl bindings should not introduce a dep on libasync-default.so
-  assert_no_deps = [ "//zircon/public/lib/async-default" ]
 }
 
 source_set("connection_header") {
@@ -251,9 +248,6 @@ source_set("connection") {
   if (is_linux) {
     deps = [ "linux:connection" ]
   }
-
-  # Fidl bindings should not introduce a dep on libasync-default.so
-  assert_no_deps = [ "//zircon/public/lib/async-default" ]
 }
 
 source_set("device_client_header") {
@@ -501,5 +495,6 @@ source_set("sysmem_connection_header") {
 
 source_set("sysmem_connection") {
   public_deps = [ ":sysmem_connection_header" ]
+
   deps = [ "zircon:sysmem_connection" ]
 }
