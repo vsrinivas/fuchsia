@@ -15,16 +15,6 @@ group("interactive_minimal") {
   ]
 }
 
-group("network_wifi_devtools") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/products:devtools",
-    "//garnet/packages/products:network_wifi",
-    "//src/connectivity/network/netstack:tools",
-    "//src/connectivity/wlan:tools",
-  ]
-}
-
 group("devtools") {
   testonly = true
   public_deps = [
@@ -39,16 +29,6 @@ group("devtools") {
     "//garnet/packages/testing:all",
     "//garnet/packages/tools:all",
     "//src/developer/memory/mem",
-  ]
-}
-
-group("network_wifi") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/config:network",
-    "//garnet/packages/prod:netstack",
-    "//garnet/packages/prod:runtime",
-    "//src/connectivity/wlan:service",
   ]
 }
 
