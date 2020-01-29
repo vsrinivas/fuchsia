@@ -307,6 +307,7 @@ class PcieDevice {
   uint bar_count() const { return bar_count_; }
   uint8_t legacy_irq_pin() const { return irq_.legacy.pin; }
   const CapabilityList& capabilities() const { return caps_.detected; }
+  const pcie_irq_mode_t& irq_mode() { return irq_.mode; }
   // TODO(cja): This doesn't really make sense in a pcie capability optional world.
   // It is only used by bridge and debug code, so it might make sense to just have those check if
   // the device is pcie first, then use dev->pcie()->devtype().

@@ -552,13 +552,16 @@ static bool dump_pcie_device(const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint
     params->indent_level++;
     LSPCI_PRINTF("IRQ Information:\n");
     params->indent_level++;
+    LSPCI_PRINTF("Current mode: %s\n", IRQ_MODE_LABELS[dev->irq_mode()]);
+    LSPCI_PRINTF("Supported modes:\n");
+    params->indent_level++;
     for (auto irq : irq_info) {
       if (irq.status == ZX_OK) {
         LSPCI_PRINTF("%s (max_irqs = %u, pvm = %s)\n", irq.label, irq.caps.max_irqs,
                      (irq.caps.per_vector_masking_supported) ? "true" : "false");
       }
     }
-    params->indent_level -= 2;
+    params->indent_level -= 3;
   }
 
   if (params->cfg_dump_amt) {
