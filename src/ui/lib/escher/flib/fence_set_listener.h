@@ -5,6 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 #define SRC_UI_LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
@@ -43,6 +44,10 @@ class FenceSetListener {
   // Each wait corresponds to an |zx::event| with the same
   // index in |fences_|. The size of this array must match that of |fences_|.
   std::vector<std::unique_ptr<async::Wait>> waiters_;
+  // The TaskClosure has to be a unique pointer because Tasks are neither copyable nor movable, and
+  // we need to transfer it out of the class and onto the stack before executing the closure stored
+  // within.
+  std::unique_ptr<async::TaskClosure> task_;
 
   fit::closure ready_callback_;
 

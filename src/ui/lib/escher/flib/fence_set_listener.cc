@@ -4,7 +4,6 @@
 
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 
-#include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 
@@ -23,7 +22,13 @@ void FenceSetListener::WaitReadyAsync(fit::closure ready_callback) {
   FXL_DCHECK(!ready_callback_);
 
   if (ready()) {
-    async::PostTask(async_get_default_dispatcher(), std::move(ready_callback));
+    // We store the task object so that, if we are deleted, the task is cancelled.
+    task_ = std::make_unique<async::TaskClosure>([this, callback = std::move(ready_callback)]() {
+      auto task = std::move(task_);
+      callback();
+    });
+    task_->Post(async_get_default_dispatcher());
+
     return;
   }
 

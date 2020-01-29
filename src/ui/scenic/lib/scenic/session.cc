@@ -179,19 +179,23 @@ void Session::ProcessQueuedPresents() {
   fence_listener_ = std::make_unique<escher::FenceSetListener>(
       std::move(presents_to_schedule_.front().acquire_fences));
   presents_to_schedule_.front().acquire_fences.clear();
-  fence_listener_->WaitReadyAsync([this] {
+  fence_listener_->WaitReadyAsync([weak = weak_factory_.GetWeakPtr()] {
+    FXL_CHECK(weak);
+
     TRACE_DURATION("gfx", "scenic_impl::Session::ProcessQueuedPresents");
-    TRACE_FLOW_END("gfx", "wait for acquire fences", ++queue_processing_id_end_);
+    TRACE_FLOW_END("gfx", "wait for acquire fences", ++(weak->queue_processing_id_end_));
+
+    weak->ScheduleNextPresent();
 
     // Lambda won't fire if the object is destroyed, but the session can be killed inside of
     // SchedulePresent, so we need to guard against that.
-    auto weak = weak_factory_.GetWeakPtr();
-    ScheduleNextPresent();
-
     if (weak) {
       // Keep going until all queued presents have been scheduled.
-      fence_listener_.reset();
-      ProcessQueuedPresents();
+      weak->fence_listener_.reset();
+
+      // After we delete the fence listener, this closure may be deleted. In that case, we should no
+      // longer access closed variables, including the this pointer.
+      weak->ProcessQueuedPresents();
     }
   });
 }

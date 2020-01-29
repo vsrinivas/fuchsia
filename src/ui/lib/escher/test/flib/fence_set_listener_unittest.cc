@@ -77,19 +77,19 @@ TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
 
 TEST_F(FenceSetListenerTest, DestroyWhileWaiting) {
   // Create an FenceSetListener.
-  std::vector<zx::event> fence_listeners;
+  std::vector<zx::event> fences;
   zx::event fence1;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
-  fence_listeners.push_back(CopyEvent(fence1));
+  fences.push_back(CopyEvent(fence1));
   zx::event fence2;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &fence2));
-  fence_listeners.push_back(CopyEvent(fence2));
+  fences.push_back(CopyEvent(fence2));
 
+  bool signalled = false;
   {
-    FenceSetListener fence_set_listener(std::move(fence_listeners));
+    FenceSetListener fence_set_listener(std::move(fences));
 
     // Start waiting for signal events.
-    bool signalled = false;
     fence_set_listener.WaitReadyAsync([&signalled]() { signalled = true; });
 
     // Expect that the set is not ready initially. Briefly pump the message
@@ -108,6 +108,118 @@ TEST_F(FenceSetListenerTest, DestroyWhileWaiting) {
     ASSERT_FALSE(signalled);
   }
   // We expect there to be no errors while tearing down |fence_set_listener|.
+  // We also expect the callbacks to not fire, even if we signal the fences and pump the message
+  // loop.
+  fence2.signal(0u, kFenceSignalled);
+  RunLoopUntilIdle();
+  ASSERT_FALSE(signalled);
+}
+
+TEST_F(FenceSetListenerTest, DestroyWhileNotWaiting) {
+  bool signalled = false;
+  {
+    // Create an FenceSetListener.
+    std::vector<zx::event> fences;
+    FenceSetListener fence_set_listener(std::move(fences));
+
+    // Start waiting for signal events.
+    fence_set_listener.WaitReadyAsync([&signalled]() { signalled = true; });
+  }
+  // We expect there to be no errors while tearing down |fence_set_listener|.
+  // We also expect the callbacks to not fire, even if we signal the fences and pump the message
+  // loop.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(signalled);
+}
+
+TEST_F(FenceSetListenerTest, DestroyInClosureWithEmptyFenceList) {
+  bool signalled = false;
+  bool deleted = false;
+  {
+    // Create an FenceSetListener.
+    std::vector<zx::event> fences;
+    auto fence_set_listener =
+        std::unique_ptr<FenceSetListener, std::function<void(FenceSetListener*)>>(
+            new FenceSetListener(std::move(fences)), [&deleted](FenceSetListener* listener) {
+              delete listener;
+              deleted = true;
+            });
+    fence_set_listener->WaitReadyAsync(
+        [&signalled, listener = std::move(fence_set_listener)]() mutable {
+          listener.reset();
+          // If deleting the listener causes the closure to be deallocated, then trying to interact
+          // with the local variables in the closure will trigger a use-after-free error on ASAN
+          // tests.
+          auto asan_check = std::move(listener);
+          signalled = true;
+        });
+  }
+  RunLoopUntilIdle();
+  ASSERT_TRUE(signalled);
+  ASSERT_TRUE(deleted);
+}
+
+TEST_F(FenceSetListenerTest, DestroyInClosureWithUnsignalledFence) {
+  bool signalled = false;
+  bool deleted = false;
+  {
+    // Create an FenceSetListener with one fence.
+    std::vector<zx::event> fences;
+    zx::event fence;
+    ASSERT_EQ(ZX_OK, zx::event::create(0, &fence));
+    fences.push_back(CopyEvent(fence));
+    auto fence_set_listener =
+        std::unique_ptr<FenceSetListener, std::function<void(FenceSetListener*)>>(
+            new FenceSetListener(std::move(fences)), [&deleted](FenceSetListener* listener) {
+              delete listener;
+              deleted = true;
+            });
+    fence_set_listener->WaitReadyAsync(
+        [&signalled, listener = std::move(fence_set_listener)]() mutable {
+          listener.reset();
+          // If deleting the listener causes the closure to be deallocated, then trying to interact
+          // with the local variables in the closure will trigger a use-after-free error on ASAN
+          // tests.
+          auto asan_check = std::move(listener);
+          signalled = true;
+        });
+
+    fence.signal(0u, kFenceSignalled);
+  }
+  RunLoopUntilIdle();
+  ASSERT_TRUE(signalled);
+  ASSERT_TRUE(deleted);
+}
+
+TEST_F(FenceSetListenerTest, DestroyInClosureWithSignalledFence) {
+  bool signalled = false;
+  bool deleted = false;
+  {
+    // Create an FenceSetListener with one fence.
+    std::vector<zx::event> fences;
+    zx::event fence;
+    ASSERT_EQ(ZX_OK, zx::event::create(0, &fence));
+    fence.signal(0u, kFenceSignalled);
+    fences.push_back(CopyEvent(fence));
+    auto fence_set_listener =
+        std::unique_ptr<FenceSetListener, std::function<void(FenceSetListener*)>>(
+            new FenceSetListener(std::move(fences)), [&deleted](FenceSetListener* listener) {
+              delete listener;
+              deleted = true;
+            });
+    fence_set_listener->WaitReadyAsync(
+        [&signalled, listener = std::move(fence_set_listener)]() mutable {
+          listener.reset();
+          // If deleting the listener causes the closure to be deallocated, then trying to interact
+          // with the local variables in the closure will trigger a use-after-free error on ASAN
+          // tests.
+          auto asan_check = std::move(listener);
+          signalled = true;
+        });
+  }
+  RunLoopUntilIdle();
+  ASSERT_TRUE(signalled);
+  ASSERT_TRUE(deleted);
 }
 
 }  // namespace test

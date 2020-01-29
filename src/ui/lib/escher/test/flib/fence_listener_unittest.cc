@@ -21,7 +21,7 @@ TEST_F(FenceListenerTest, SimpleFenceListenerSignalling) {
   ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
   FenceListener buffer_fence1(CopyEvent(fence1));
 
-  // Expect that it is not signalled initially.
+  // Expect that it is not signaled initially.
   EXPECT_FALSE(buffer_fence1.ready());
   EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
 
@@ -31,7 +31,7 @@ TEST_F(FenceListenerTest, SimpleFenceListenerSignalling) {
   // Signal the fence.
   fence1.signal(0u, kFenceSignalled);
 
-  // Expect that it is signalled now.
+  // Expect that it is signaled now.
   EXPECT_TRUE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
   EXPECT_TRUE(buffer_fence1.ready());
 }
@@ -42,12 +42,12 @@ TEST_F(FenceListenerTest, AsyncFenceListenerSignalling) {
   ASSERT_EQ(ZX_OK, zx::event::create(0, &fence1));
   FenceListener buffer_fence1(CopyEvent(fence1));
 
-  // Expect that it is not signalled initially.
+  // Expect that it is not signaled initially.
   EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
   EXPECT_FALSE(buffer_fence1.ready());
 
   bool signalled = false;
-  // Expect that it is signalled now.
+  // Expect that it is signaled now.
   buffer_fence1.WaitReadyAsync([&signalled]() { signalled = true; });
 
   // Signal the fence.
@@ -56,6 +56,114 @@ TEST_F(FenceListenerTest, AsyncFenceListenerSignalling) {
   RunLoopUntilIdle();
   EXPECT_TRUE(buffer_fence1.ready());
   EXPECT_TRUE(signalled);
+}
+
+TEST_F(FenceListenerTest, DestroyWhileWaiting) {
+  zx::event fence;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence));
+
+  bool signalled = false;
+  {
+    // Create a FenceSetListener.
+    FenceListener fence_listener(CopyEvent(fence));
+
+    // Start waiting for signal events.
+    fence_listener.WaitReadyAsync([&signalled]() { signalled = true; });
+
+    // Expect that the set is not ready initially. Briefly pump the message
+    // loop, although we don't expect anything to be handled.
+    RunLoopUntilIdle();
+    EXPECT_FALSE(fence_listener.ready());
+    EXPECT_FALSE(signalled);
+
+    // Signal one fence, then delete the the listener.
+    fence.signal(0u, kFenceSignalled);
+  }
+  // We expect there to be no errors while tearing down |fence_listener|. We also expect the
+  // callbacks to not fire, even if we pump the message loop again.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(signalled);
+}
+
+TEST_F(FenceListenerTest, DestroyWhileNotWaiting) {
+  zx::event fence;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence));
+  // Signal the fence immediately.
+  fence.signal(0u, kFenceSignalled);
+
+  bool signalled = false;
+  {
+    // Create a FenceSetListener.
+    FenceListener fence_listener(CopyEvent(fence));
+    // Start waiting for signal events.
+    fence_listener.WaitReadyAsync([&signalled]() { signalled = true; });
+    // Delete the the listener.
+  }
+  // We expect there to be no errors while tearing down |fence_listener|. We also expect the
+  // callbacks to not fire, even if we pump the message loop again.
+  RunLoopUntilIdle();
+  EXPECT_FALSE(signalled);
+}
+
+TEST_F(FenceListenerTest, DestroyInClosurePresignalled) {
+  zx::event fence;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence));
+  // Signal the fence immediately.
+  fence.signal(0u, kFenceSignalled);
+
+  bool signalled = false;
+  bool deleted = false;
+  {
+    // This is a unique pointer with a custom deleter, so we can detect that deletion has occurred
+    // in this test.
+    auto fence_listener = std::unique_ptr<FenceListener, std::function<void(FenceListener*)>>(
+        new FenceListener(CopyEvent(fence)), [&deleted](FenceListener* listener) {
+          delete listener;
+          deleted = true;
+        });
+    fence_listener->WaitReadyAsync([&signalled, listener = std::move(fence_listener)]() mutable {
+      listener.reset();
+      // If deleting the listener causes the closure to be deallocated, then trying to interact with
+      // the local variables in the closure will trigger a use-after-free error on ASAN tests.
+      auto asan_check = std::move(listener);
+      signalled = true;
+    });
+  }
+  RunLoopUntilIdle();
+  EXPECT_TRUE(signalled);
+  EXPECT_TRUE(deleted);
+}
+
+TEST_F(FenceListenerTest, DestroyInClosurePostsignalled) {
+  zx::event fence;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &fence));
+  // Signal the fence immediately.
+
+  bool signalled = false;
+  bool deleted = false;
+  {
+    // This is a unique pointer with a custom deleter, so we can detect that deletion has occurred
+    // in this test.
+    auto fence_listener = std::unique_ptr<FenceListener, std::function<void(FenceListener*)>>(
+        new FenceListener(CopyEvent(fence)), [&deleted](FenceListener* listener) {
+          delete listener;
+          deleted = true;
+        });
+    fence_listener->WaitReadyAsync([&signalled, listener = std::move(fence_listener)]() mutable {
+      listener.reset();
+      // If deleting the listener causes the closure to be deallocated, then trying to interact
+      // with the local variables in the closure will trigger a use-after-free error on ASAN
+      // tests.
+      auto asan_check = std::move(listener);
+      signalled = true;
+    });
+
+    // Signal the fence after calling WaitReadyAsync().
+    fence.signal(0u, kFenceSignalled);
+  }
+  RunLoopUntilIdle();
+  EXPECT_TRUE(signalled);
+  EXPECT_TRUE(deleted);
 }
 
 }  // namespace test
