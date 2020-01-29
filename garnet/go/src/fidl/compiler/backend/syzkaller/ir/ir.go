@@ -203,7 +203,7 @@ var handleSubtypes = map[types.HandleSubtype]string{
 	types.Resource:     "zx_resource",
 	types.Socket:       "zx_socket",
 	types.Stream:       "zx_stream",
-	types.SuspendToken: "zx_suspendtokenn",
+	types.SuspendToken: "zx_suspendtoken",
 	types.Thread:       "zx_thread",
 	types.Time:         "zx_timer",
 	types.Vcpu:         "zx_vcpu",

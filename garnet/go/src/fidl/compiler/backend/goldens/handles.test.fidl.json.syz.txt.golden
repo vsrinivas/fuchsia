@@ -58,7 +58,7 @@ test_name_HandlesHandles {
        profile_handle zx_profile
        resource_handle zx_resource
        socket_handle zx_socket
-       suspendtoken_handle zx_suspendtokenn
+       suspendtoken_handle zx_suspendtoken
        thread_handle zx_thread
        timer_handle zx_timer
        vcpu_handle zx_vcpu
