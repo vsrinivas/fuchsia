@@ -29,9 +29,8 @@ public dependency on any rust program that uses ICU.
 
 # Modifying the time zone information on a system
 
-In development you may need to check or set the time zone ID.  The program `tz-util`
-allows you to do exactly this.  See more information about `tz-util` on [tz-util README
-page](/src/sys/tz-util/README.md).
+In development you may need to check or set the time zone ID.  The program `setui_client`
+allows you to do exactly this.  See more information about `setui_client` by running `run setui_client.cmx intl --help` on a target.
 
 # Using the ICU data
 

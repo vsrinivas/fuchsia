@@ -5,11 +5,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("tz-util") {
-  testonly = true
-  public_deps = [ "//garnet/bin/tz-util" ]
-}
-
 group("broadcom") {
   testonly = true
   public_deps = [
@@ -215,7 +210,6 @@ group("all") {
     "//garnet/packages/prod:timezone",
     "//garnet/packages/prod:tracing",
     "//garnet/packages/prod:tts",
-    "//garnet/packages/prod:tz-util",
     "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",

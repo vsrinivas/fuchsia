@@ -31,11 +31,6 @@ icu_tzdata_config_data("icu_tzdata_for_flutter_runner_tests") {
   data_version = "44"
 }
 
-icu_tzdata_config_data("icu_tzdata_for_tz_util_test") {
-  for_pkg = "tz-util_test"
-  data_version = "44"
-}
-
 # This config package is intended for the test named 'base_icu_fuchsia_unittests'
 # in out-of-tree, in Chromium.  The test must have this package available when
 # running in a Fuchsia environment, as it will attempt to load the appropriate
@@ -77,6 +72,5 @@ group("config") {
     ":icu_tzdata_for_flutter_jit_product_runner",
     ":icu_tzdata_for_flutter_jit_runner",
     ":icu_tzdata_for_flutter_runner_tests",
-    ":icu_tzdata_for_tz_util_test",
   ]
 }

@@ -32,6 +32,5 @@ group("tests") {
     "test_runners:tests",
     "timekeeper:tests",
     "tools/cs2:tests",
-    "tz-util:tests",
   ]
 }

@@ -49,7 +49,6 @@ group("bin") {
     "trace_manager",
     "trace_stress",
     "traceutil",
-    "tz-util",
     "ui",
     "uname",
     "vsock_service",
