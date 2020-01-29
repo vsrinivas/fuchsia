@@ -730,7 +730,7 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
   }
 
   usb_function_set_interface(&ums->function, ums, &ums_device_ops);
-  thrd_create(&ums->thread, usb_ums_thread, ums);
+  thrd_create_with_name(&ums->thread, usb_ums_thread, ums, "ums_worker");
   return ZX_OK;
 
 fail:
