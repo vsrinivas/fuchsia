@@ -28,6 +28,12 @@ struct SuspendReplyAction {
     uint64 action_id;
 };
 
+/// Marker struct for resume reply action
+struct ResumeReplyAction {
+    /// Value that will be echoed back in the completion message
+    uint64 action_id;
+};
+
 const uint32 MAX_PROPERTIES_LEN = 32;
 const uint32 MAX_NAME_LEN = 32;
 
@@ -76,6 +82,9 @@ union Action {
 
     /// Signal that the suspend has completed.
     7: SuspendReplyAction suspend_reply;
+
+    // Signal that the suspend has completed.
+    8: ResumeReplyAction resume_reply;
 };
 
 const uint32 MAX_ACTIONS = 10;
@@ -97,7 +106,7 @@ protocol MockDevice {
     Write(HookInvocation record, vector<uint8>:MAX_WRITE_BYTES buffer, zx.off off) -> (vector<Action>:MAX_ACTIONS actions);
     GetSize(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
     Suspend(HookInvocation record, uint8 requested_state, bool enable_wake, uint8 suspend_reason) -> (vector<Action>:MAX_ACTIONS actions);
-    Resume(HookInvocation record, uint32 flags) -> (vector<Action>:MAX_ACTIONS actions);
+    Resume(HookInvocation record, uint32 requested_state) -> (vector<Action>:MAX_ACTIONS actions);
 
     Message(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
     Rxrpc(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
@@ -106,6 +115,7 @@ protocol MockDevice {
     AddDeviceDone(uint64 action_id);
     UnbindReplyDone(uint64 action_id);
     SuspendReplyDone(uint64 action_id);
+    ResumeReplyDone(uint64 action_id);
 };
 
 /// Interface for requesting a mock device thread do something.  The mock device implements
@@ -118,4 +128,5 @@ protocol MockDeviceThread {
     -> AddDeviceDone(uint64 action_id);
     -> UnbindReplyDone(uint64 action_id);
     -> SuspendReplyDone(uint64 action_id);
+    -> ResumeReplyDone(uint64 action_id);
 };

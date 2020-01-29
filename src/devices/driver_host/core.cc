@@ -28,6 +28,7 @@
 #include <fbl/auto_lock.h>
 
 #include "composite-device.h"
+#include "ddktl/resume-txn.h"
 #include "devhost.h"
 #include "log.h"
 
@@ -73,6 +74,7 @@ static zx_status_t default_close(void* ctx, uint32_t flags) { return ZX_OK; }
 static void default_unbind(void* ctx) {}
 static void default_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
                             uint8_t suspend_reason) {}
+static void default_resume(void* ctx, uint32_t requested_state) {}
 static void default_release(void* ctx) {}
 
 static zx_status_t default_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
@@ -86,9 +88,6 @@ static zx_status_t default_write(void* ctx, const void* buf, size_t count, zx_of
 
 static zx_off_t default_get_size(void* ctx) { return 0; }
 
-static zx_status_t default_resume(void* ctx, uint32_t target_system_state) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
 static zx_status_t default_set_performance_state(void* ctx, uint32_t requested_state,
                                                  uint32_t* out_state) {
   return ZX_ERR_NOT_SUPPORTED;
@@ -113,8 +112,8 @@ zx_protocol_device_t device_default_ops = []() {
   ops.read = default_read;
   ops.write = default_write;
   ops.get_size = default_get_size;
-  ops.resume = default_resume;
   ops.suspend_new = default_suspend;
+  ops.resume_new = default_resume;
   ops.rxrpc = default_rxrpc;
   ops.message = default_message;
   ops.set_performance_state = default_set_performance_state;
@@ -134,6 +133,7 @@ static zx_protocol_device_t device_invalid_ops = []() {
   ops.unbind = +[](void* ctx) { device_invalid_fatal(ctx); };
   ops.suspend_new = +[](void* ctx, uint8_t requested_state, bool enable_wake,
                         uint8_t suspend_reason) { device_invalid_fatal(ctx); };
+  ops.resume_new = +[](void* ctx, uint32_t) { device_invalid_fatal(ctx); };
   ops.release = +[](void* ctx) { device_invalid_fatal(ctx); };
   ops.read =
       +[](void* ctx, void*, size_t, size_t, size_t*) -> zx_status_t { device_invalid_fatal(ctx); };
@@ -141,7 +141,6 @@ static zx_protocol_device_t device_invalid_ops = []() {
     device_invalid_fatal(ctx);
   };
   ops.get_size = +[](void* ctx) -> zx_off_t { device_invalid_fatal(ctx); };
-  ops.resume = +[](void* ctx, uint32_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.rxrpc = +[](void* ctx, zx_handle_t) -> zx_status_t { device_invalid_fatal(ctx); };
   ops.message =
       +[](void* ctx, fidl_msg_t*, fidl_txn_t*) -> zx_status_t { device_invalid_fatal(ctx); };
@@ -771,11 +770,11 @@ void devhost_device_system_resume(const fbl::RefPtr<zx_device>& dev,
                                      fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
     log(INFO, "Devhost: system resume overriding auto suspend for %s\n", dev->name);
   }
-  enum_lock_acquire();
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new resume hook is implemented, prefer that.
   if (dev->ops->resume_new) {
+    enum_lock_acquire();
     {
       ApiAutoRelock relock;
       auto& sys_power_states = dev->GetSystemPowerStateMapping();
@@ -785,13 +784,7 @@ void devhost_device_system_resume(const fbl::RefPtr<zx_device>& dev,
     }
     enum_lock_release();
     return;
-  } else if (dev->ops->resume) {
-    // Invoke resume hook otherwise.
-    ApiAutoRelock relock;
-    status = dev->ops->resume(dev->ctx, target_system_state);
   }
-
-  enum_lock_release();
 
   // default_resume() returns ZX_ERR_NOT_SUPPORTED
   if (status == ZX_ERR_NOT_SUPPORTED) {

@@ -289,9 +289,6 @@ typedef struct zx_protocol_device {
   // This hook assumes that the drivers are aware of their current state.
   //
   // This hook will only be executed on the devhost's main thread.
-  //
-  // TODO(ravoorir): Remove the old resume when all the drivers are moved to
-  // new suspend and resume.
   void (*resume_new)(void* ctx, uint32_t requested_state);
 
   //@ ## set_performance_state
@@ -329,10 +326,6 @@ typedef struct zx_protocol_device {
   //
 
   zx_status_t (*configure_auto_suspend)(void* ctx, bool enable, uint8_t deepest_sleep_state);
-
-  // This hook is never invoked.
-  // DEPRECATED: Use resume_new instead.
-  zx_status_t (*resume)(void* ctx, uint32_t flags);
 
   //@ ## rxrpc
   // Only called for bus devices.

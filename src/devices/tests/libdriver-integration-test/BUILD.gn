@@ -73,7 +73,7 @@ fidl("mock-device") {
 
   name = "fuchsia.device.mock"
 
-  sources = [ "//zircon/system/dev/test/mock-device/mock-device.fidl" ]
+  sources = [ "//zircon/system/dev/test/mock-device/mock-device.test.fidl" ]
 
   public_deps = []
 }

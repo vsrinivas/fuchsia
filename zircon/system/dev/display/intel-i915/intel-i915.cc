@@ -2029,7 +2029,7 @@ void Controller::DdkSuspendNew(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
-zx_status_t Controller::DdkResume(uint32_t hint) {
+void Controller::DdkResumeNew(ddk::ResumeTxn txn) {
   fbl::AutoLock lock(&display_lock_);
   BringUpDisplayEngine(true);
 
@@ -2057,7 +2057,7 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
 
   interrupts_.Resume();
 
-  return ZX_OK;
+  txn.Reply(ZX_OK, DEV_POWER_STATE_D0, txn.requested_state());
 }
 
 // TODO(stevensd): Move this back into ::Bind once long-running binds don't

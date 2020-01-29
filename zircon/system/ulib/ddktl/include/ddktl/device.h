@@ -13,8 +13,8 @@
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/init-txn.h>
-#include <ddktl/suspend-txn.h>
 #include <ddktl/resume-txn.h>
+#include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
 
 // ddk::Device<D, ...>
@@ -350,20 +350,6 @@ class ResumableNew : public base_mixin {
 };
 
 template <typename D>
-class Resumable : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckResumable<D>();
-    proto->resume = Resume;
-  }
-
- private:
-  static zx_status_t Resume(void* ctx, uint32_t flags) {
-    return static_cast<D*>(ctx)->DdkResume(flags);
-  }
-};
-
-template <typename D>
 class Rxrpcable : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
@@ -545,7 +531,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 // zx_protocol_device_t methods.
 template <class D>
 using FullDevice = Device<D, GetProtocolable, Initializable, Openable, Closable, UnbindableNew,
-                          Readable, Writable, GetSizable, SuspendableNew, Resumable, Rxrpcable>;
+                          Readable, Writable, GetSizable, SuspendableNew, ResumableNew, Rxrpcable>;
 
 }  // namespace ddk
 

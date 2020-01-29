@@ -197,7 +197,7 @@ tx_done:
   device_suspend_reply(edev->zxdev, ZX_OK, requested_state);
 }
 
-static zx_status_t eth_resume(void* ctx, uint32_t flags) {
+static void eth_resume(void* ctx, uint32_t requested_perf_state) {
   ethernet_device_t* edev = ctx;
   mtx_lock(&edev->lock);
   eth_enable_phy(&edev->eth);
@@ -205,7 +205,7 @@ static zx_status_t eth_resume(void* ctx, uint32_t flags) {
   eth_enable_tx(&edev->eth);
   edev->state = ETH_RUNNING;
   mtx_unlock(&edev->lock);
-  return ZX_OK;
+  device_resume_reply(edev->zxdev, ZX_OK, DEV_POWER_STATE_D0, requested_perf_state);
 }
 
 static void eth_release(void* ctx) {
@@ -224,7 +224,7 @@ static void eth_release(void* ctx) {
 static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
     .suspend_new = eth_suspend,
-    .resume = eth_resume,
+    .resume_new = eth_resume,
     .release = eth_release,
 };
 

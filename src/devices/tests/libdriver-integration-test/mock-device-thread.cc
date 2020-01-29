@@ -12,6 +12,7 @@ MockDeviceThread::MockDeviceThread(fidl::InterfacePtr<Interface> interface)
   interface_.events().AddDeviceDone = handler;
   interface_.events().UnbindReplyDone = handler;
   interface_.events().SuspendReplyDone = handler;
+  interface_.events().ResumeReplyDone = handler;
 }
 
 void MockDeviceThread::EventDone(uint64_t action_id) {

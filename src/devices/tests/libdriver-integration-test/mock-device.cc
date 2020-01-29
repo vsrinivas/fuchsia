@@ -55,8 +55,8 @@ void MockDevice::Suspend(HookInvocation record, uint8_t requested_state, bool en
   hooks_->Suspend(record, requested_state, enable_wake, suspend_reason, std::move(callback));
 }
 
-void MockDevice::Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) {
-  hooks_->Resume(record, flags, std::move(callback));
+void MockDevice::Resume(HookInvocation record, uint32_t requested_state, ResumeCallback callback) {
+  hooks_->Resume(record, requested_state, std::move(callback));
 }
 
 void MockDevice::Message(HookInvocation record, MessageCallback callback) {
@@ -76,8 +76,8 @@ void MockDevice::AddDeviceDone(uint64_t action_id) {
 }
 
 void MockDevice::UnbindReplyDone(uint64_t action_id) { AddDeviceDone(action_id); }
-
 void MockDevice::SuspendReplyDone(uint64_t action_id) { AddDeviceDone(action_id); }
+void MockDevice::ResumeReplyDone(uint64_t action_id) { AddDeviceDone(action_id); }
 
 std::vector<ActionList::Action> MockDevice::FinalizeActionList(ActionList action_list) {
   return action_list.FinalizeActionList(&pending_actions_, &next_action_id_);

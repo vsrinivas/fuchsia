@@ -53,7 +53,7 @@ class MockDevice : public MockDeviceType {
   zx_off_t DdkGetSize();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkSuspendNew(ddk::SuspendTxn txn);
-  zx_status_t DdkResume(uint32_t flags);
+  void DdkResumeNew(ddk::ResumeTxn txn);
   zx_status_t DdkRxrpc(zx_handle_t channel);
 
   // Generate an invocation record for a hook RPC
@@ -117,6 +117,8 @@ struct ProcessActionsContext {
   std::optional<ddk::UnbindTxn> pending_unbind_txn = std::nullopt;
   // IN: The txn used to reply to the suspend hook.
   std::optional<ddk::SuspendTxn> pending_suspend_txn = std::nullopt;
+  // IN: The txn used to reply to the resume hook.
+  std::optional<ddk::ResumeTxn> pending_resume_txn = std::nullopt;
 };
 
 // Execute the actions returned by a hook
@@ -307,13 +309,13 @@ void MockDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
   ZX_ASSERT(status == ZX_OK);
 }
 
-zx_status_t MockDevice::DdkResume(uint32_t flags) {
-  auto result = controller_.Resume(ConstructHookInvocation(), flags);
+void MockDevice::DdkResumeNew(ddk::ResumeTxn txn) {
+  auto result = controller_.Resume(ConstructHookInvocation(), txn.requested_state());
   ZX_ASSERT(result.ok());
   ProcessActionsContext ctx(controller_.channel(), true, this, zxdev());
+  ctx.pending_resume_txn = std::move(txn);
   zx_status_t status = ProcessActions(std::move(result->actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
-  return ctx.hook_status;
 }
 
 zx_status_t MockDevice::DdkRxrpc(zx_handle_t channel) {
@@ -404,7 +406,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
 
       case device_mock::Action::Tag::kSuspendReply: {
         if (!ctx->pending_suspend_txn) {
-          printf("MockDevice::SuspendReply: asked to reply to unbind but no unbind is pending\n");
+          printf("MockDevice::SuspendReply: asked to reply to suspend but no suspend is pending\n");
           return ZX_ERR_INVALID_ARGS;
         }
         ctx->pending_suspend_txn->Reply(ZX_OK, 0);
@@ -415,6 +417,25 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         } else {
           status = device_mock::MockDevice::Call::SuspendReplyDone(
                        zx::unowned_channel(*ctx->channel), action.suspend_reply().action_id)
+                       .status();
+        }
+        ZX_ASSERT(status == ZX_OK);
+        break;
+      }
+
+      case device_mock::Action::Tag::kResumeReply: {
+        if (!ctx->pending_resume_txn) {
+          printf("MockDevice::ResumeReply: asked to reply to resume but no resume is pending\n");
+          return ZX_ERR_INVALID_ARGS;
+        }
+        ctx->pending_resume_txn->Reply(ZX_OK, 0, 0);
+        zx_status_t status;
+        if (ctx->is_thread) {
+          status = device_mock::MockDeviceThread::SendResumeReplyDoneEvent(
+              zx::unowned_channel(*ctx->channel), action.resume_reply().action_id);
+        } else {
+          status = device_mock::MockDevice::Call::ResumeReplyDone(
+                       zx::unowned_channel(*ctx->channel), action.resume_reply().action_id)
                        .status();
         }
         ZX_ASSERT(status == ZX_OK);

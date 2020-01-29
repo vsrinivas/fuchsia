@@ -218,10 +218,6 @@ void DevfsConnection::SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags
   completer.Reply(ZX_OK);
 }
 
-void DevfsConnection::DebugResume(DebugResumeCompleter::Sync completer) {
-  completer.Reply(this->dev->ResumeOp(0));
-}
-
 void DevfsConnection::RunCompatibilityTests(int64_t hook_wait_time,
                                             RunCompatibilityTestsCompleter::Sync completer) {
   auto status = device_run_compatibility_tests(dev, hook_wait_time);

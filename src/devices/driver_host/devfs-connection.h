@@ -86,7 +86,6 @@ class DevfsConnection : public fbl::RefCounted<DevfsConnection>,
   void GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync completer) override;
   void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
                          SetDriverLogFlagsCompleter::Sync _completer) override;
-  void DebugResume(DebugResumeCompleter::Sync _completer) override;
   void RunCompatibilityTests(int64_t hook_wait_time,
                              RunCompatibilityTestsCompleter::Sync _completer) override;
   void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync _completer) override;

@@ -63,7 +63,7 @@ class MockDeviceHooks : public fuchsia::device::mock::MockDevice {
     Fail(__FUNCTION__);
   }
 
-  void Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) override {
+  void Resume(HookInvocation record, uint32_t requested_state, ResumeCallback callback) override {
     Fail(__FUNCTION__);
   }
 
@@ -74,6 +74,7 @@ class MockDeviceHooks : public fuchsia::device::mock::MockDevice {
   void AddDeviceDone(uint64_t action_id) final { ZX_ASSERT(false); }
   void UnbindReplyDone(uint64_t action_id) final { ZX_ASSERT(false); }
   void SuspendReplyDone(uint64_t action_id) final { ZX_ASSERT(false); }
+  void ResumeReplyDone(uint64_t action_id) final { ZX_ASSERT(false); }
 
   virtual ~MockDeviceHooks() = default;
 
@@ -231,7 +232,9 @@ class UnorderedHooks : public MockDeviceHooks {
   fit::function<ActionList(HookInvocation, uint64_t, zx_off_t)> read_;
   fit::function<ActionList(HookInvocation, std::vector<uint8_t>, zx_off_t)> write_;
   fit::function<ActionList(HookInvocation)> get_size_;
-  fit::function<ActionList(HookInvocation, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason)> suspend_;
+  fit::function<ActionList(HookInvocation, uint8_t requested_state, bool enable_wake,
+                           uint8_t suspend_reason)>
+      suspend_;
   fit::function<ActionList(HookInvocation, uint32_t)> resume_;
   fit::function<ActionList(HookInvocation)> message_;
   fit::function<ActionList(HookInvocation)> rxrpc_;

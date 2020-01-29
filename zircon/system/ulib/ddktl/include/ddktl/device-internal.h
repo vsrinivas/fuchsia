@@ -9,8 +9,8 @@
 
 #include <ddk/device.h>
 #include <ddktl/init-txn.h>
-#include <ddktl/suspend-txn.h>
 #include <ddktl/resume-txn.h>
+#include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
 #include <fbl/macros.h>
 
@@ -294,10 +294,9 @@ DECLARE_HAS_MEMBER_FN(has_ddk_resume_new, DdkResumeNew);
 template <typename D>
 constexpr void CheckResumableNew() {
   static_assert(has_ddk_resume_new<D>::value, "ResumableNew classes must implement DdkResumeNew");
-  static_assert(
-      std::is_same<decltype(&D::DdkResumeNew), void (D::*)(ResumeTxn txn)>::value,
-      "DdkResumeNew must be a public non-static member function with signature "
-      "'void DdkResumeNew(ResumeTxn)'.");
+  static_assert(std::is_same<decltype(&D::DdkResumeNew), void (D::*)(ResumeTxn txn)>::value,
+                "DdkResumeNew must be a public non-static member function with signature "
+                "'void DdkResumeNew(ResumeTxn)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_set_performance_state, DdkSetPerformanceState);
@@ -310,16 +309,6 @@ constexpr void CheckPerformanceTunable() {
                              zx_status_t (D::*)(uint32_t, uint32_t*)>::value,
                 "DdkSetPerformanceState must be a public non-static member function with signature "
                 "'zx_status_t DdkSetPerformanceState(uint32_t, uint32_t*)'.");
-}
-
-DECLARE_HAS_MEMBER_FN(has_ddk_resume, DdkResume);
-
-template <typename D>
-constexpr void CheckResumable() {
-  static_assert(has_ddk_resume<D>::value, "Resumable classes must implement DdkResume");
-  static_assert(std::is_same<decltype(&D::DdkResume), zx_status_t (D::*)(uint32_t)>::value,
-                "DdkResume must be a public non-static member function with signature "
-                "'zx_status_t DdkResume(uint32_t)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_rxrpc, DdkRxrpc);

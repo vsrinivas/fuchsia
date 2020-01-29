@@ -102,11 +102,12 @@ void UnorderedHooks::Suspend(HookInvocation record, uint8_t requested_state, boo
   TryFinish();
 }
 
-void UnorderedHooks::Resume(HookInvocation record, uint32_t flags, ResumeCallback callback) {
+void UnorderedHooks::Resume(HookInvocation record, uint32_t requested_state,
+                            ResumeCallback callback) {
   if (!resume_) {
     return Fail(__FUNCTION__);
   }
-  callback(action_list_finalizer_(resume_(record, flags)));
+  callback(action_list_finalizer_(resume_(record, requested_state)));
   resume_ = nullptr;
   TryFinish();
 }

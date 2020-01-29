@@ -160,9 +160,6 @@ protocol Controller {
     /// Each set bit in `set_flags` will then be set in the log flags state.
     SetDriverLogFlags(uint32 clear_flags, uint32 set_flags) -> (zx.status status);
 
-    /// Debug command: execute the device's resume hook
-    DebugResume() -> (zx.status status);
-
     /// Runs compatibility tests for the driver that binds to this device.
     /// The |hook_wait_time| is the time that the driver expects to take for
     /// each device hook in nanoseconds.
