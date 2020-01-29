@@ -21,6 +21,7 @@ fidl("fuchsia.virtualization") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.sys",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet",
     "//zircon/system/fidl/fuchsia-io",
   ]
 }

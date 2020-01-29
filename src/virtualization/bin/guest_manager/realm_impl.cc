@@ -43,7 +43,6 @@ void RealmImpl::LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
   fuchsia::sys::ComponentControllerPtr component_controller;
   fuchsia::sys::LaunchInfo info;
   info.url = launch_info.url;
-  info.arguments = std::move(launch_info.args);
   auto services = sys::ServiceDirectory::CreateWithRequest(&info.directory_request);
   info.flat_namespace = std::move(launch_info.flat_namespace);
   std::string label = launch_info.label.has_value() ? launch_info.label.value() : launch_info.url;

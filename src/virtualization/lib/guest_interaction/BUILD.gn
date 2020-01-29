@@ -108,6 +108,7 @@ source_set("integration_test_lib") {
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/tests:fake_netstack",
     "//src/virtualization/tests:guest_console",
     "//third_party/googletest:gtest_main",

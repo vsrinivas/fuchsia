@@ -28,6 +28,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
+    "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/lib/vsh:util",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vsh_cc_proto",
     "//third_party/protobuf:protobuf_lite",

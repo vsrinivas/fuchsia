@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "src/lib/fxl/logging.h"
+#include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/ports.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
@@ -191,7 +192,7 @@ void Guest::StartGuest() {
 
   fuchsia::virtualization::LaunchInfo launch_info;
   launch_info.url = kLinuxGuestPackage;
-  launch_info.args.emplace({"--virtio-gpu=false"});
+  launch_info.guest_config.set_virtio_gpu(false);
   launch_info.block_devices = GetBlockDevices(config_.stateful_image_size);
   launch_info.wayland_device = fuchsia::virtualization::WaylandDevice::New();
   launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();

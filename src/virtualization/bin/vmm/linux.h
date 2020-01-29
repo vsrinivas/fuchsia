@@ -5,14 +5,14 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_LINUX_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_LINUX_H_
 
+#include <fuchsia/virtualization/cpp/fidl.h>
+
 #include "src/virtualization/bin/vmm/dev_mem.h"
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
 #include "src/virtualization/bin/vmm/platform_device.h"
 
-class GuestConfig;
-
-zx_status_t setup_linux(const GuestConfig& cfg, const PhysMem& phys_mem, const DevMem& dev_mem,
-                        const std::vector<PlatformDevice*>& devices, uintptr_t* guest_ip,
-                        uintptr_t* boot_ptr);
+zx_status_t setup_linux(const fuchsia::virtualization::GuestConfig& cfg, const PhysMem& phys_mem,
+                        const DevMem& dev_mem, const std::vector<PlatformDevice*>& devices,
+                        uintptr_t* guest_ip, uintptr_t* boot_ptr);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_LINUX_H_

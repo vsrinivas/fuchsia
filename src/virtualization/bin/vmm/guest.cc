@@ -47,16 +47,16 @@ static zx_status_t get_hypervisor_resource(const fuchsia::sysinfo::SysInfoSyncPt
   return fidl_status;
 }
 
-static constexpr uint32_t cache_policy(MemoryPolicy policy) {
+static constexpr uint32_t cache_policy(fuchsia::virtualization::MemoryPolicy policy) {
   switch (policy) {
-    case MemoryPolicy::HOST_DEVICE:
+    case fuchsia::virtualization::MemoryPolicy::HOST_DEVICE:
       return ZX_CACHE_POLICY_UNCACHED_DEVICE;
     default:
       return ZX_CACHE_POLICY_CACHED;
   }
 }
 
-zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
+zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& memory) {
   fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
   zx::resource hypervisor_resource;
   zx_status_t status = get_hypervisor_resource(sysinfo, &hypervisor_resource);
@@ -71,18 +71,18 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
   }
 
   zx::resource root_resource;
-  for (const MemorySpec& spec : memory) {
+  for (const fuchsia::virtualization::MemorySpec& spec : memory) {
     zx::vmo vmo;
     switch (spec.policy) {
-      case MemoryPolicy::GUEST_CACHED:
+      case fuchsia::virtualization::MemoryPolicy::GUEST_CACHED:
         status = zx::vmo::create(spec.size, 0, &vmo);
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to create VMO " << status;
           return status;
         }
         break;
-      case MemoryPolicy::HOST_CACHED:
-      case MemoryPolicy::HOST_DEVICE:
+      case fuchsia::virtualization::MemoryPolicy::HOST_CACHED:
+      case fuchsia::virtualization::MemoryPolicy::HOST_DEVICE:
         if (!root_resource) {
           status = get_root_resource(&root_resource);
           if (status != ZX_OK) {
@@ -121,7 +121,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
       FXL_LOG(ERROR) << "Failed to map guest physical memory " << status;
       return status;
     }
-    if (!phys_mem_.vmo() && spec.policy == MemoryPolicy::GUEST_CACHED) {
+    if (!phys_mem_.vmo() && spec.policy == fuchsia::virtualization::MemoryPolicy::GUEST_CACHED) {
       status = phys_mem_.Init(std::move(vmo));
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to initialize guest physical memory " << status;

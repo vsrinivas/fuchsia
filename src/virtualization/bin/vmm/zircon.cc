@@ -4,9 +4,8 @@
 
 #include "src/virtualization/bin/vmm/zircon.h"
 
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
-#include <libzbi/zbi.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,9 +16,11 @@
 #include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 
+#include <fbl/unique_fd.h>
+#include <libzbi/zbi.h>
+
 #include "src/virtualization/bin/vmm/dev_mem.h"
 #include "src/virtualization/bin/vmm/guest.h"
-#include "src/virtualization/bin/vmm/guest_config.h"
 
 #if __aarch64__
 // This address works for direct-mapping of host memory. This address is chosen
@@ -161,8 +162,8 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
   return ZX_OK;
 }
 
-static zx_status_t build_data_zbi(const GuestConfig& cfg, const PhysMem& phys_mem,
-                                  const DevMem& dev_mem,
+static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cfg,
+                                  const PhysMem& phys_mem, const DevMem& dev_mem,
                                   const std::vector<PlatformDevice*>& devices, uintptr_t zbi_off) {
   auto container_hdr = phys_mem.as<zbi_header_t>(zbi_off);
   const size_t zbi_max = phys_mem.size() - zbi_off;
@@ -203,9 +204,9 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg, const PhysMem& phys_me
         .type = ZBI_MEM_RANGE_RAM,
     });
   };
-  for (const MemorySpec& spec : cfg.memory()) {
+  for (const fuchsia::virtualization::MemorySpec& spec : cfg.memory()) {
     // Do not use device memory when yielding normal memory.
-    if (spec.policy != MemoryPolicy::HOST_DEVICE) {
+    if (spec.policy != fuchsia::virtualization::MemoryPolicy::HOST_DEVICE) {
       dev_mem.YieldInverseRange(spec.base, spec.size, yield);
     }
   }
@@ -285,9 +286,9 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg, const PhysMem& phys_me
   return ZX_OK;
 }
 
-zx_status_t setup_zircon(const GuestConfig& cfg, const PhysMem& phys_mem, const DevMem& dev_mem,
-                         const std::vector<PlatformDevice*>& devices, uintptr_t* guest_ip,
-                         uintptr_t* boot_ptr) {
+zx_status_t setup_zircon(const fuchsia::virtualization::GuestConfig& cfg, const PhysMem& phys_mem,
+                         const DevMem& dev_mem, const std::vector<PlatformDevice*>& devices,
+                         uintptr_t* guest_ip, uintptr_t* boot_ptr) {
   zx_status_t status =
       read_unified_zbi(cfg.kernel_path(), kKernelOffset, kRamdiskOffset, phys_mem, guest_ip);
 

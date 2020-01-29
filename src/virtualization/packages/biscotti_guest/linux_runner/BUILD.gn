@@ -60,6 +60,7 @@ source_set("lib") {
     "//sdk/lib/virtualization",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/lib/grpc",
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
     "//third_party/grpc:grpc++",

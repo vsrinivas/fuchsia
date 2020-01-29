@@ -7,7 +7,6 @@
 
 #include <mutex>
 
-#include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/bin/vmm/io.h"
 #include "src/virtualization/bin/vmm/platform_device.h"
 

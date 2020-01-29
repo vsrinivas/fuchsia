@@ -69,6 +69,7 @@ source_set("src") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
+    "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
     "//src/virtualization/tests:guest_console",
     "//third_party/rapidjson",

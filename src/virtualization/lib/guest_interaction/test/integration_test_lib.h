@@ -12,6 +12,7 @@
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+#include <src/virtualization/bin/vmm/guest_config.h>
 #include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
 
@@ -50,7 +51,7 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     fuchsia::virtualization::LaunchInfo guest_launch_info;
     guest_launch_info.url = kDebianGuestUrl;
     guest_launch_info.label = kGuestLabel;
-    guest_launch_info.args.emplace({"--virtio-gpu=false"});
+    guest_launch_info.guest_config.set_virtio_gpu(false);
 
     fuchsia::virtualization::ManagerPtr guest_environment_manager;
     fuchsia::virtualization::GuestPtr guest_instance_controller;

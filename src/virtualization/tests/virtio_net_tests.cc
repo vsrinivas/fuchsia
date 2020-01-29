@@ -18,6 +18,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/inet/ip_address.h"
+#include "src/virtualization/bin/vmm/guest_config.h"
 
 using ::testing::Each;
 using ::testing::HasSubstr;
@@ -34,6 +35,9 @@ static constexpr fuchsia::hardware::ethernet::MacAddress kDefaultMacAddress = {
 static constexpr fuchsia::hardware::ethernet::MacAddress kSecondNicMacAddress = {
     .octets = {0x02, 0x1a, 0x11, 0x00, 0x01, 0x01},
 };
+static constexpr fuchsia::virtualization::NetSpec kSecondNicNetSpec = {
+    .mac_address = kSecondNicMacAddress,
+};
 static constexpr char kDefaultMacString[] = "02:1a:11:00:01:00";
 static constexpr char kSecondNicMacString[] = "02:1a:11:00:01:01";
 static constexpr char kHostMacString[] = "02:1a:11:00:00:00";
@@ -42,13 +46,11 @@ class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kZirconGuestUrl;
-    launch_info->args = {
-        "--virtio-gpu=false",
-        "--cmdline-add=kernel.serial=none",
-        // Disable netsvc to avoid spamming the net device with logs.
-        "--cmdline-add=netsvc.disable=true",
-        fxl::StringPrintf("--net=%s", kSecondNicMacString),
-    };
+    launch_info->guest_config.set_virtio_gpu(false);
+    // Disable netsvc to avoid spamming the net device with logs.
+    launch_info->guest_config.mutable_cmdline_add()->push_back(
+        "kernel.serial=none netsvc.disable=true");
+    launch_info->guest_config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
     return ZX_OK;
   }
 };
@@ -57,10 +59,8 @@ class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kDebianGuestUrl;
-    launch_info->args = {
-        "--virtio-gpu=false",
-        fxl::StringPrintf("--net=%s", kSecondNicMacString),
-    };
+    launch_info->guest_config.set_virtio_gpu(false);
+    launch_info->guest_config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
     return ZX_OK;
   }
 };

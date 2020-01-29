@@ -14,7 +14,6 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
-#include "src/virtualization/bin/vmm/guest_config.h"
 
 __BEGIN_CDECLS;
 #include <libfdt.h>
@@ -328,7 +327,8 @@ static zx_status_t add_memory_entry(void* dtb, int memory_off, zx_gpaddr_t addr,
   return ZX_OK;
 }
 
-static zx_status_t load_device_tree(const int dtb_fd, const GuestConfig& cfg,
+static zx_status_t load_device_tree(const int dtb_fd,
+                                    const fuchsia::virtualization::GuestConfig& cfg,
                                     const PhysMem& phys_mem, const DevMem& dev_mem,
                                     const std::vector<PlatformDevice*>& devices,
                                     const std::string& cmdline, const int dtb_overlay_fd,
@@ -443,9 +443,9 @@ static zx_status_t load_device_tree(const int dtb_fd, const GuestConfig& cfg,
     }
     status = add_memory_entry(dtb, memory_off, addr, size);
   };
-  for (const MemorySpec& spec : cfg.memory()) {
+  for (const fuchsia::virtualization::MemorySpec& spec : cfg.memory()) {
     // Do not use device memory when yielding normal memory.
-    if (spec.policy != MemoryPolicy::HOST_DEVICE) {
+    if (spec.policy != fuchsia::virtualization::MemoryPolicy::HOST_DEVICE) {
       dev_mem.YieldInverseRange(spec.base, spec.size, yield);
       if (status != ZX_OK) {
         return status;
@@ -472,9 +472,9 @@ static std::string linux_cmdline(std::string cmdline) {
 #endif
 }
 
-zx_status_t setup_linux(const GuestConfig& cfg, const PhysMem& phys_mem, const DevMem& dev_mem,
-                        const std::vector<PlatformDevice*>& devices, uintptr_t* guest_ip,
-                        uintptr_t* boot_ptr) {
+zx_status_t setup_linux(const fuchsia::virtualization::GuestConfig& cfg, const PhysMem& phys_mem,
+                        const DevMem& dev_mem, const std::vector<PlatformDevice*>& devices,
+                        uintptr_t* guest_ip, uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);
   if (status != ZX_OK) {
@@ -482,7 +482,7 @@ zx_status_t setup_linux(const GuestConfig& cfg, const PhysMem& phys_mem, const D
   }
 
   size_t initrd_size = 0;
-  if (!cfg.ramdisk_path().empty()) {
+  if (cfg.has_ramdisk_path()) {
     fbl::unique_fd initrd_fd(open(cfg.ramdisk_path().c_str(), O_RDONLY));
     if (!initrd_fd) {
       FXL_LOG(ERROR) << "Failed to open initial RAM disk " << cfg.ramdisk_path();
@@ -497,7 +497,7 @@ zx_status_t setup_linux(const GuestConfig& cfg, const PhysMem& phys_mem, const D
   }
 
   fbl::unique_fd dtb_overlay_fd;
-  if (!cfg.dtb_overlay_path().empty()) {
+  if (cfg.has_dtb_overlay_path()) {
     dtb_overlay_fd.reset(open(cfg.dtb_overlay_path().c_str(), O_RDONLY));
     if (!dtb_overlay_fd) {
       FXL_LOG(ERROR) << "Failed to open device tree overlay " << cfg.dtb_overlay_path();

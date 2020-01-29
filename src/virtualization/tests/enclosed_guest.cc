@@ -23,6 +23,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/tests/logger.h"
 #include "src/virtualization/tests/periodic_logger.h"
@@ -192,7 +193,7 @@ zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<st
 
 zx_status_t ZirconEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kZirconGuestUrl;
-  launch_info->args.emplace({"--cmdline-add=kernel.serial=none"});
+  launch_info->guest_config.mutable_cmdline_add()->push_back("kernel.serial=none");
   return ZX_OK;
 }
 
@@ -260,7 +261,7 @@ std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
 
 zx_status_t TerminaEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kTerminaGuestUrl;
-  launch_info->args.emplace({"--virtio-gpu=false"});
+  launch_info->guest_config.set_virtio_gpu(false);
 
   // Add the block device that contains the test binaries.
   int fd = open("/pkg/data/linux_tests.img", O_RDONLY);

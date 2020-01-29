@@ -4,6 +4,7 @@
 
 library fuchsia.virtualization;
 
+using fuchsia.hardware.ethernet;
 using fuchsia.io;
 using fuchsia.sys;
 
@@ -37,6 +38,81 @@ struct BlockDevice {
     BlockFormat format;
     /// The underlying file that stores the drive contents.
     fuchsia.io.File file;
+};
+
+struct BlockSpec {
+    string path;
+    BlockFormat format;
+    BlockMode mode;
+};
+
+enum Kernel {
+    ZIRCON = 0;
+    LINUX = 1;
+};
+
+enum MemoryPolicy {
+    /// Map a VMO as cached memory into the guest physical address space.
+    GUEST_CACHED = 0;
+    /// Map a VMO with 1:1 correspondence with host memory as cached memory into
+    /// the guest physical address space.
+    HOST_CACHED = 1;
+    /// Map a VMO with 1:1 correspondence with host memory as device memory into
+    /// the guest physical address space.
+    HOST_DEVICE = 2;
+};
+
+struct MemorySpec {
+    uint64 base;
+    uint64 size;
+    MemoryPolicy policy;
+};
+
+struct NetSpec {
+    fuchsia.hardware.ethernet.MacAddress mac_address;
+};
+
+/// The configuration required to start up a guest.
+table GuestConfig {
+    /// Which kernel to use. Cannot be changed from the command-line.
+    1: Kernel kernel;
+    // TODO(fxb/42889): Make kernel_path, ramdisk_path, and block_devices into a fuchsia.io.File
+    /// The path to load the kernel from. Cannot be changed from the command-line.
+    2: string kernel_path;
+    /// Load the ramdisk_path as an initial RAM disk. Cannot be changed from the command-line.
+    3: string ramdisk_path;
+    /// The file path to the dtb overlay for a linux kernel. Cannot be changed from the
+    /// command-line.
+    4: string dtb_overlay_path;
+    /// A list of block devices to give the guest. Cannot be changed from the command-line.
+    5: vector<BlockSpec> block_devices;
+
+    /// The command to start the client with.
+    6: string cmdline;
+    /// Any additional arguments to add to the cmdline.
+    7: vector<string> cmdline_add;
+    /// The layout of memory to be mapped into the guest.
+    8: vector<MemorySpec> memory;
+    /// A list of interrupt vectors.
+    9: vector<uint32> interrupts;
+    /// The number of CPUs to provide to the guest.
+    10: uint8 cpus;
+    /// A list of specifications for network devices.
+    11: vector<NetSpec> net_devices;
+    /// Whether to add a default network device (default).
+    12: bool default_net;
+    /// Enable virtio-balloon (default).
+    13: bool virtio_balloon;
+    /// Enable virtio-console (default).
+    14: bool virtio_console;
+    /// Enable virtio-gpu (default).
+    15: bool virtio_gpu;
+    /// Enable virtio-magma (default).
+    16: bool virtio_magma;
+    /// Enable virtio-rng (default).
+    17: bool virtio_rng;
+    /// Enable virtio-vsock (default).
+    18: bool virtio_vsock;
 };
 
 /// An interface that will receive channels for Wayland connections.
@@ -78,10 +154,11 @@ struct LaunchInfo {
     /// The URL of the package to launch.
     string url;
 
-    /// Arguments that will be passed to the VMM binary when launching this guest.
+    // TODO(fxb/42888): pass the configuration to the guest launcher instead.
+    /// Configuration that will be passed to the VMM binary when launching this guest.
     ///
-    /// See ///src/virtualization/bin/vmm/guest_config.cc for valid options.
-    vector<string>? args;
+    /// See //src/virtualization/bin/vmm/guest_config.cc for valid options.
+    GuestConfig guest_config;
 
     /// A diagnostic string to associate with this instance.
     string? label;

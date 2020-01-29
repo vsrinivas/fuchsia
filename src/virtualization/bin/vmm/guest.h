@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_GUEST_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_GUEST_H_
 
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/guest.h>
@@ -15,7 +16,6 @@
 #include <shared_mutex>
 
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
-#include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/bin/vmm/io.h"
 #include "src/virtualization/bin/vmm/vcpu.h"
 
@@ -38,7 +38,7 @@ class Guest {
   using VcpuArray = std::array<std::unique_ptr<Vcpu>, kMaxVcpus>;
   using IoMappingList = std::forward_list<IoMapping>;
 
-  zx_status_t Init(const std::vector<MemorySpec>& memory);
+  zx_status_t Init(const std::vector<fuchsia::virtualization::MemorySpec>& memory);
 
   const PhysMem& phys_mem() const { return phys_mem_; }
   const zx::guest& object() { return guest_; }

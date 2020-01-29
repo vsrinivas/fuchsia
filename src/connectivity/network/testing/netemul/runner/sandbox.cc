@@ -21,6 +21,7 @@
 #include <zircon/status.h>
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
+#include <src/virtualization/bin/vmm/guest_config.h>
 #include <src/virtualization/tests/guest_console.h>
 
 #include "src/lib/cmx/cmx.h"
@@ -490,16 +491,23 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
            fuchsia::virtualization::LaunchInfo guest_launch_info;
            guest_launch_info.label = guest.guest_label();
            guest_launch_info.url = guest.guest_image_url();
-           guest_launch_info.args.emplace({"--virtio-gpu=false"});
+           guest_launch_info.guest_config.set_virtio_gpu(false);
 
            if (!guest.macs().empty()) {
              for (const std::pair<std::string, std::string>& mac_ethertap_mapping : guest.macs()) {
-               guest_launch_info.args->push_back("--net=" + mac_ethertap_mapping.first);
+               fuchsia::virtualization::NetSpec out;
+               uint32_t bytes[6];
+               std::sscanf(mac_ethertap_mapping.first.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x",
+                           &bytes[0], &bytes[1], &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
+               for (size_t i = 0; i != 6; ++i) {
+                 out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
+               }
+               guest_launch_info.guest_config.mutable_net_devices()->push_back(out);
              }
 
              // Prevent the guest from receiving a default MAC address from the VirtioNet
              // internals.
-             guest_launch_info.args->push_back("--default-net=false");
+             guest_launch_info.guest_config.set_default_net(false);
            }
 
            fuchsia::virtualization::GuestPtr guest_controller;

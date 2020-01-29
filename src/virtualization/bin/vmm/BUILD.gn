@@ -11,6 +11,25 @@ group("tests") {
   deps = [ ":vmm_tests" ]
 }
 
+source_set("guest_config") {
+  sources = [
+    "guest.h",
+    "guest_config.cc",
+    "guest_config.h",
+    "io.h",
+    "vcpu.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.virtualization",
+    "//src/lib/fxl",
+    "//src/virtualization/bin/vmm/device",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+  ]
+}
+
 source_set("lib") {
   visibility = [ ":*" ]
 
@@ -36,13 +55,9 @@ source_set("lib") {
     "controller/virtio_wl.h",
     "dev_mem.h",
     "guest.cc",
-    "guest.h",
-    "guest_config.cc",
-    "guest_config.h",
     "guest_impl.cc",
     "guest_impl.h",
     "io.cc",
-    "io.h",
     "linux.cc",
     "linux.h",
     "pci.cc",
@@ -50,7 +65,6 @@ source_set("lib") {
     "platform_device.h",
     "sysinfo.h",
     "vcpu.cc",
-    "vcpu.h",
     "virtio_device.h",
     "virtio_pci.cc",
     "virtio_pci.h",
@@ -96,13 +110,13 @@ source_set("lib") {
   defines = [ "_ALL_SOURCE=1" ]
 
   deps = [
+    ":guest_config",
     "//garnet/lib/magma/include/virtio",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
     "//src/virtualization/third_party/fdt",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/libzbi",
@@ -128,6 +142,7 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
+    ":guest_config",
     ":lib",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -198,6 +213,7 @@ executable("vmm_unittests") {
   }
 
   deps = [
+    ":guest_config",
     ":lib",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",

@@ -4,12 +4,12 @@
 
 #include "src/virtualization/bin/guest/launch.h"
 
-#include <fuchsia/virtualization/cpp/fidl.h>
-
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/guest/serial.h"
 
-void handle_launch(int argc, const char* argv[], async::Loop* loop,
+void handle_launch(int argc, const char** argv, async::Loop* loop,
+                   fuchsia::virtualization::GuestConfig guest_config,
                    sys::ComponentContext* context) {
   // Create environment.
   fuchsia::virtualization::ManagerPtr manager;
@@ -20,10 +20,7 @@ void handle_launch(int argc, const char* argv[], async::Loop* loop,
   // Launch guest.
   fuchsia::virtualization::LaunchInfo launch_info;
   launch_info.url = fxl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", argv[0], argv[0]);
-  launch_info.args.emplace();
-  for (int i = 0; i < argc - 1; ++i) {
-    launch_info.args->push_back(argv[i + 1]);
-  }
+  launch_info.guest_config = std::move(guest_config);
   fuchsia::virtualization::GuestPtr guest;
   realm->LaunchInstance(std::move(launch_info), guest.NewRequest(), [](...) {});
 

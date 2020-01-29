@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/vmm/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -71,20 +72,15 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 // allocator that starts fairly high in the guest physical address space.
 static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
 
-static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv, GuestConfig* cfg) {
-  GuestConfigParser parser(cfg);
+static zx_status_t read_guest_cfg(const char* cfg_path, fuchsia::virtualization::GuestConfig* cfg) {
   std::string cfg_str;
   if (files::ReadFileToString(cfg_path, &cfg_str)) {
-    zx_status_t status = parser.ParseConfig(cfg_str);
+    zx_status_t status = guest_config::ParseConfig(cfg_str, cfg);
     if (status != ZX_OK) {
       return status;
     }
+    guest_config::SetDefaults(cfg);
   }
-  zx_status_t status = parser.ParseArgcArgv(argc, argv);
-  if (status != ZX_OK) {
-    return status;
-  }
-  parser.SetDefaults();
   return ZX_OK;
 }
 
@@ -116,28 +112,29 @@ int main(int argc, char** argv) {
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
 
-  GuestConfig cfg;
-  status = read_guest_cfg("/guest/data/guest.cfg", argc, argv, &cfg);
+  fuchsia::virtualization::GuestConfig* cfg = &launch_info.guest_config;
+  status = read_guest_cfg("/guest/data/guest.cfg", cfg);
   if (status != ZX_OK) {
     return status;
   }
 
   DevMem dev_mem;
-  for (const MemorySpec& spec : cfg.memory()) {
+  for (const fuchsia::virtualization::MemorySpec& spec : cfg->memory()) {
     // Avoid a collision between static and dynamic address assignment.
     if (spec.base + spec.size > kFirstDynamicDeviceAddr) {
       FXL_LOG(ERROR) << "Requested memory should be less than " << kFirstDynamicDeviceAddr;
       return ZX_ERR_INVALID_ARGS;
     }
     // Add device memory range.
-    if (spec.policy == MemoryPolicy::HOST_DEVICE && !dev_mem.AddRange(spec.base, spec.size)) {
+    if (spec.policy == fuchsia::virtualization::MemoryPolicy::HOST_DEVICE &&
+        !dev_mem.AddRange(spec.base, spec.size)) {
       FXL_LOG(ERROR) << "Failed to add device memory at 0x" << std::hex << spec.base;
       return ZX_ERR_INTERNAL;
     }
   }
 
   Guest guest;
-  status = guest.Init(cfg.memory());
+  status = guest.Init(cfg->memory());
   if (status != ZX_OK) {
     return status;
   }
@@ -155,7 +152,7 @@ int main(int argc, char** argv) {
   // Setup interrupt controller.
   InterruptController interrupt_controller(&guest);
 #if __aarch64__
-  status = interrupt_controller.Init(cfg.cpus(), cfg.interrupts());
+  status = interrupt_controller.Init(cfg->cpus(), cfg->interrupts());
 #elif __x86_64__
   status = interrupt_controller.Init();
 #endif
@@ -195,7 +192,7 @@ int main(int argc, char** argv) {
 
   // Setup balloon device.
   VirtioBalloon balloon(guest.phys_mem());
-  if (cfg.virtio_balloon()) {
+  if (cfg->virtio_balloon()) {
     status = bus.Connect(balloon.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
@@ -212,8 +209,8 @@ int main(int argc, char** argv) {
   // We first add the devices specified in the package config file, followed by
   // the devices in the launch_info.
   std::vector<fuchsia::virtualization::BlockDevice> block_infos;
-  for (size_t i = 0; i < cfg.block_devices().size(); i++) {
-    const auto& block_spec = cfg.block_devices()[i];
+  for (size_t i = 0; i < cfg->block_devices().size(); i++) {
+    const auto& block_spec = cfg->block_devices()[i];
     if (block_spec.path.empty()) {
       FXL_LOG(ERROR) << "Block spec missing path attribute " << status;
       return ZX_ERR_INVALID_ARGS;
@@ -260,7 +257,7 @@ int main(int argc, char** argv) {
 
   // Setup console device.
   VirtioConsole console(guest.phys_mem());
-  if (cfg.virtio_console()) {
+  if (cfg->virtio_console()) {
     status = bus.Connect(console.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
@@ -275,7 +272,7 @@ int main(int argc, char** argv) {
 
   VirtioGpu gpu(guest.phys_mem());
   VirtioInput input(guest.phys_mem());
-  if (cfg.virtio_gpu()) {
+  if (cfg->virtio_gpu()) {
     // Setup input device.
     status = bus.Connect(input.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
@@ -302,7 +299,7 @@ int main(int argc, char** argv) {
 
   // Setup net device.
   std::vector<std::unique_ptr<VirtioNet>> net_devices;
-  for (auto net_device : cfg.net_devices()) {
+  for (auto net_device : cfg->net_devices()) {
     auto net = std::make_unique<VirtioNet>(guest.phys_mem());
     status = bus.Connect(net->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
@@ -319,7 +316,7 @@ int main(int argc, char** argv) {
 
   // Setup RNG device.
   VirtioRng rng(guest.phys_mem());
-  if (cfg.virtio_rng()) {
+  if (cfg->virtio_rng()) {
     status = bus.Connect(rng.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
@@ -335,7 +332,7 @@ int main(int argc, char** argv) {
   // until it is moved out of process.
   async::Loop vsock_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   VirtioVsock vsock(context.get(), guest.phys_mem(), vsock_loop.dispatcher());
-  if (cfg.virtio_vsock()) {
+  if (cfg->virtio_vsock()) {
     status = bus.Connect(vsock.pci_device(), vsock_loop.dispatcher(), false);
     if (status != ZX_OK) {
       return status;
@@ -378,7 +375,7 @@ int main(int argc, char** argv) {
 
   // Setup magma device.
   VirtioMagma magma(guest.phys_mem());
-  if (launch_info.magma_device || cfg.virtio_magma()) {
+  if (launch_info.magma_device || cfg->virtio_magma()) {
     // TODO(MAC-259): simplify vmm launch configs
     size_t magma_dev_mem_size = 16 * 1024 * 1024 * 1024ull;
     if (launch_info.magma_device) {
@@ -430,7 +427,7 @@ int main(int argc, char** argv) {
       .dsdt_path = kDsdtPath,
       .mcfg_path = kMcfgPath,
       .io_apic_addr = IoApic::kPhysBase,
-      .cpus = cfg.cpus(),
+      .cpus = cfg->cpus(),
   };
   status = create_acpi_table(acpi_cfg, guest.phys_mem());
   if (status != ZX_OK) {
@@ -451,19 +448,19 @@ int main(int argc, char** argv) {
   // Setup kernel.
   uintptr_t entry = 0;
   uintptr_t boot_ptr = 0;
-  switch (cfg.kernel()) {
-    case Kernel::ZIRCON:
-      status = setup_zircon(cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
+  switch (cfg->kernel()) {
+    case fuchsia::virtualization::Kernel::ZIRCON:
+      status = setup_zircon(*cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
-    case Kernel::LINUX:
-      status = setup_linux(cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
+    case fuchsia::virtualization::Kernel::LINUX:
+      status = setup_linux(*cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
     default:
       FXL_LOG(ERROR) << "Unknown kernel";
       return ZX_ERR_INVALID_ARGS;
   }
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load kernel " << cfg.kernel_path() << " " << status;
+    FXL_LOG(ERROR) << "Failed to load kernel " << cfg->kernel_path() << " " << status;
     return status;
   }
 

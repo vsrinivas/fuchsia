@@ -133,7 +133,8 @@ class SingleCpuEnclosedGuest : public EnclosedGuestImpl {
     if (status != ZX_OK) {
       return status;
     }
-    launch_info->args.emplace({"--virtio-gpu=false", "--cpus=1"});
+    launch_info->guest_config.set_virtio_gpu(false);
+    launch_info->guest_config.set_cpus(1);
     return ZX_OK;
   }
 };
