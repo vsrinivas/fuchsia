@@ -4,7 +4,6 @@
 
 group("codec") {
   deps = [
-    "alc5514",
     "alc5663",
     "max98927",
   ]
