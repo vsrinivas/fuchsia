@@ -17,7 +17,6 @@ import (
 	"syscall/zx/fidl"
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
-	"unsafe"
 
 	"syslog"
 
@@ -43,13 +42,6 @@ import (
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
-
-// wire format for datagram messages
-typedef struct fdio_socket_msg {
-  struct sockaddr_storage addr;
-  socklen_t addrlen;
-  int32_t flags;
-} fdio_socket_msg_t;
 */
 import "C"
 
@@ -591,29 +583,8 @@ func (eps *endpointWithSocket) loopWrite() {
 		}
 		v = v[:n]
 
-		var opts tcpip.WriteOptions
-		if eps.transProto != tcp.ProtocolNumber {
-			const size = C.sizeof_struct_fdio_socket_msg
-			var fdioSocketMsg C.struct_fdio_socket_msg
-			if n := copy((*[size]byte)(unsafe.Pointer(&fdioSocketMsg))[:], v); n != size {
-				syslog.Errorf("truncated datagram: %d/%d", n, size)
-				closeFn()
-				return
-			}
-			if fdioSocketMsg.addrlen != 0 {
-				addr, err := fdioSocketMsg.addr.Decode()
-				if err != nil {
-					syslog.Errorf("malformed datagram: %s", err)
-					closeFn()
-					return
-				}
-				opts.To = &addr
-			}
-			v = v[size:]
-		}
-
 		for {
-			n, resCh, err := eps.ep.Write(tcpip.SlicePayload(v), opts)
+			n, resCh, err := eps.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
 			if resCh != nil {
 				if err != tcpip.ErrNoLinkAddress {
 					panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
@@ -657,11 +628,7 @@ func (eps *endpointWithSocket) loopWrite() {
 				closeFn()
 				return
 			default:
-				optsStr := "<TCP>"
-				if to := opts.To; to != nil {
-					optsStr = fmt.Sprintf("%+v", *to)
-				}
-				syslog.Errorf("Endpoint.Write(%s): %s", optsStr, err)
+				syslog.Errorf("TCP Endpoint.Write(): %s", err)
 			}
 			break
 		}
@@ -834,14 +801,6 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			break
 		}
 
-		if eps.transProto != tcp.ProtocolNumber {
-			var fdioSocketMsg C.struct_fdio_socket_msg
-			fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(eps.netProto, sender))
-
-			const size = C.sizeof_struct_fdio_socket_msg
-			v = append((*[size]byte)(unsafe.Pointer(&fdioSocketMsg))[:], v...)
-		}
-
 		for {
 			n, err := eps.local.Write(v, 0)
 			if err != nil {
@@ -900,185 +859,6 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			}
 			eps.ep.ModerateRecvBuf(n)
 		}
-	}
-}
-
-type controlImpl struct {
-	*endpointWithSocket
-	bindingKey fidl.BindingKey
-	service    *socket.ControlService
-}
-
-var _ socket.Control = (*controlImpl)(nil)
-
-func newControl(eps *endpointWithSocket, service *socket.ControlService) (socket.ControlInterface, error) {
-	localC, peerC, err := zx.NewChannel(0)
-	if err != nil {
-		return socket.ControlInterface{}, err
-	}
-	s := &controlImpl{
-		endpointWithSocket: eps,
-		service:            service,
-	}
-	if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
-		s.close()
-		return socket.ControlInterface{}, err
-	}
-	return socket.ControlInterface{Channel: peerC}, nil
-}
-
-func (s *controlImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
-	clones := atomic.AddInt64(&s.clones, 1)
-	{
-		sCopy := *s
-		s := &sCopy
-		bindingKey, err := s.service.Add(s, object.Channel, func(error) { s.close() })
-		sCopy.bindingKey = bindingKey
-
-		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithSocket, clones, flags, bindingKey, err)
-
-		return err
-	}
-}
-
-func (s *controlImpl) Describe() (io.NodeInfo, error) {
-	var info io.NodeInfo
-	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
-	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpointWithSocket, err)
-	if err != nil {
-		return info, err
-	}
-	info.SetSocket(io.Socket{Socket: zx.Socket(h)})
-	return info, nil
-}
-
-func (s *controlImpl) close() {
-	clones := s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone)
-
-	removed := s.service.Remove(s.bindingKey)
-
-	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpointWithSocket, clones, s.bindingKey, removed)
-}
-
-func (s *controlImpl) Close() (int32, error) {
-	s.close()
-	return int32(zx.ErrOk), nil
-}
-
-func (s *controlImpl) Bind(sockaddr []uint8) (int16, error) {
-	result, err := s.endpointWithSocket.Bind(sockaddr)
-	if err != nil {
-		return 0, err
-	}
-	switch w := result.Which(); w {
-	case socket.BaseSocketBindResultResponse:
-		return 0, nil
-	case socket.BaseSocketBindResultErr:
-		return int16(result.Err), nil
-	default:
-		panic(fmt.Sprintf("unknown variant %d", w))
-	}
-}
-
-func (s *controlImpl) Connect(sockaddr []uint8) (int16, error) {
-	result, err := s.endpointWithSocket.Connect(sockaddr)
-	if err != nil {
-		return 0, err
-	}
-	switch w := result.Which(); w {
-	case socket.BaseSocketConnectResultResponse:
-		return 0, nil
-	case socket.BaseSocketConnectResultErr:
-		return int16(result.Err), nil
-	default:
-		panic(fmt.Sprintf("unknown variant %d", w))
-	}
-}
-
-func (s *controlImpl) Accept(int16) (int16, socket.ControlInterface, error) {
-	code, eps, err := s.endpointWithSocket.Accept()
-	if err != nil {
-		return 0, socket.ControlInterface{}, err
-	}
-	if code != 0 {
-		return int16(code), socket.ControlInterface{}, nil
-	}
-	controlInterface, err := newControl(eps, s.service)
-	return 0, controlInterface, err
-}
-
-func (s *controlImpl) Listen(backlog int16) (int16, error) {
-	result, err := s.endpointWithSocket.Listen(backlog)
-	if err != nil {
-		return 0, err
-	}
-	switch w := result.Which(); w {
-	case socket.StreamSocketListenResultResponse:
-		return 0, nil
-	case socket.StreamSocketListenResultErr:
-		return int16(result.Err), nil
-	default:
-		panic(fmt.Sprintf("unknown variant %d", w))
-	}
-}
-
-func (s *controlImpl) GetSockName() (int16, []uint8, error) {
-	result, err := s.endpointWithSocket.GetSockName()
-	if err != nil {
-		return 0, nil, err
-	}
-	switch w := result.Which(); w {
-	case socket.BaseSocketGetSockNameResultResponse:
-		return 0, result.Response.Addr, nil
-	case socket.BaseSocketGetSockNameResultErr:
-		return int16(result.Err), nil, nil
-	default:
-		panic(fmt.Sprintf("unknown variant %d", w))
-	}
-}
-
-func (s *controlImpl) GetPeerName() (int16, []uint8, error) {
-	result, err := s.endpointWithSocket.GetPeerName()
-	if err != nil {
-		return 0, nil, err
-	}
-	switch w := result.Which(); w {
-	case socket.BaseSocketGetPeerNameResultResponse:
-		return 0, result.Response.Addr, nil
-	case socket.BaseSocketGetPeerNameResultErr:
-		return int16(result.Err), nil, nil
-	default:
-		panic(fmt.Sprintf("unknown variant %d", w))
-	}
-}
-
-func (s *controlImpl) SetSockOpt(level, optName int16, optVal []uint8) (int16, error) {
-	result, err := s.endpointWithSocket.SetSockOpt(level, optName, optVal)
-	if err != nil {
-		return 0, err
-	}
-	switch w := result.Which(); w {
-	case socket.BaseSocketSetSockOptResultResponse:
-		return 0, nil
-	case socket.BaseSocketSetSockOptResultErr:
-		return int16(result.Err), nil
-	default:
-		panic(fmt.Sprintf("unknown variant %d", w))
-	}
-}
-
-func (s *controlImpl) GetSockOpt(level, optName int16) (int16, []uint8, error) {
-	result, err := s.endpointWithSocket.GetSockOpt(level, optName)
-	if err != nil {
-		return 0, nil, err
-	}
-	switch w := result.Which(); w {
-	case socket.BaseSocketGetSockOptResultResponse:
-		return 0, result.Response.Optval, nil
-	case socket.BaseSocketGetSockOptResultErr:
-		return int16(result.Err), nil, nil
-	default:
-		panic(fmt.Sprintf("unknown variant %d", w))
 	}
 }
 
@@ -1301,7 +1081,6 @@ func (ns *Netstack) onRemoveEndpoint(handle zx.Handle) {
 }
 
 type providerImpl struct {
-	controlService        socket.ControlService
 	datagramSocketService socket.DatagramSocketService
 	streamSocketService   socket.StreamSocketService
 	ns                    *Netstack
@@ -1342,32 +1121,6 @@ func toNetProto(domain int16) (int32, tcpip.NetworkProtocolNumber) {
 		return C.EPERM, 0
 	default:
 		return C.EPFNOSUPPORT, 0
-	}
-}
-
-func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.ControlInterface, error) {
-	code, netProto := toNetProto(domain)
-	if code != 0 {
-		return int16(code), socket.ControlInterface{}, nil
-	}
-	code, transProto := toTransProto(typ, protocol)
-	if code != 0 {
-		return int16(code), socket.ControlInterface{}, nil
-	}
-	wq := new(waiter.Queue)
-	sp.ns.mu.Lock()
-	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
-	sp.ns.mu.Unlock()
-	if err != nil {
-		return int16(tcpipErrorToCode(err)), socket.ControlInterface{}, nil
-	}
-	{
-		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, sp.ns)
-		if err != nil {
-			return 0, socket.ControlInterface{}, err
-		}
-		controlInterface, err := newControl(ep, &sp.controlService)
-		return 0, controlInterface, err
 	}
 }
 

@@ -19,8 +19,7 @@ union NodeInfo {
     5: Vmofile vmofile;
     6: Device device;
     7: Tty tty;
-    // TODO(tamird): remove socket and Socket when fuchsia.posix.socket.Control is removed.
-    8: Socket socket;
+    8: reserved;
     9: DatagramSocket datagram_socket;
     10: StreamSocket stream_socket;
 };
@@ -90,11 +89,6 @@ struct Device {
 /// The object may be cast to interface 'Tty'
 struct Tty {
     handle<eventpair>? event;
-};
-
-/// The object may be cast to interface [`fuchsia.posix.socket.Control`].
-struct Socket {
-    handle<socket> socket;
 };
 
 /// The object may be cast to interface [`fuchsia.posix.socket.DatagramSocket`].

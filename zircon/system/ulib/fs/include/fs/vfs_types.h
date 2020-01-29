@@ -108,7 +108,6 @@ enum class VnodeProtocol : uint32_t {
   kMemory,
   kDevice,
   kTty,
-  kSocket,
   kDatagramSocket,
   kStreamSocket,
   // Note: when appending more members, adjust |kVnodeProtocolCount| accordingly.
@@ -398,10 +397,6 @@ class VnodeRepresentation {
     zx::eventpair event = {};
   };
 
-  struct Socket {
-    zx::socket socket = {};
-  };
-
   struct DatagramSocket {
     zx::eventpair event = {};
   };
@@ -415,7 +410,7 @@ class VnodeRepresentation {
   // Forwards the constructor arguments into the underlying |std::variant|.
   // This allows |VnodeRepresentation| to be constructed directly from one of the variants, e.g.
   //
-  //     VnodeRepresentation repr = VnodeRepresentation::Socket{.socket = zx::socket(...)};
+  //     VnodeRepresentation repr = VnodeRepresentation::Tty{.event = zx::event(...)};
   //
   template <typename T>
   VnodeRepresentation(T&& v) : variants_(std::forward<T>(v)) {}
@@ -456,20 +451,17 @@ class VnodeRepresentation {
 
   bool is_tty() const { return std::holds_alternative<Tty>(variants_); }
 
-  Socket& socket() { return std::get<Socket>(variants_); }
-
-  bool is_socket() const { return std::holds_alternative<Socket>(variants_); }
-
   DatagramSocket& datagram_socket() { return std::get<DatagramSocket>(variants_); }
 
   bool is_datagram_socket() const { return std::holds_alternative<DatagramSocket>(variants_); }
 
   StreamSocket& stream_socket() { return std::get<StreamSocket>(variants_); }
+
   bool is_stream_socket() const { return std::holds_alternative<StreamSocket>(variants_); }
 
  private:
   using Variants = std::variant<std::monostate, Connector, File, Directory, Pipe, Memory, Device,
-                                Tty, Socket, DatagramSocket, StreamSocket>;
+                                Tty, DatagramSocket, StreamSocket>;
 
   Variants variants_ = {};
 };

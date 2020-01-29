@@ -69,9 +69,6 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
     case VnodeProtocol::kTty:
       ZX_DEBUG_ASSERT(info->is_tty());
       break;
-    case VnodeProtocol::kSocket:
-      ZX_DEBUG_ASSERT(info->is_socket());
-      break;
     case VnodeProtocol::kDatagramSocket:
       ZX_DEBUG_ASSERT(info->is_datagram_socket());
       break;

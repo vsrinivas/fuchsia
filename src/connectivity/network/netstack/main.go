@@ -203,7 +203,6 @@ func Main() {
 	ns.stats = stats{
 		Stats: stk.Stats(),
 		SocketCount: bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
-			&socketProviderImpl.controlService.BindingSet,
 			&socketProviderImpl.datagramSocketService.BindingSet,
 			&socketProviderImpl.streamSocketService.BindingSet,
 		}},

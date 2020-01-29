@@ -132,7 +132,6 @@ where
     /// Handles a `fuchsia.posix.socket.Provider` FIDL request in `req`.
     async fn handle_fidl_socket_provider_request(&self, req: psocket::ProviderRequest) {
         match req {
-            psocket::ProviderRequest::Socket { .. } => {}
             psocket::ProviderRequest::Socket2 { domain, type_, protocol: _, responder } => {
                 responder_send!(responder, &mut self.socket(domain, type_));
             }

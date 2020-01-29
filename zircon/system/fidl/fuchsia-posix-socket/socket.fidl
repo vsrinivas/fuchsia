@@ -14,37 +14,6 @@ using sockaddr = bytes:128;
 //TODO(fxbug.dev/20966): link to description of supported socket options.
 using sockopt = bytes:900;
 
-/// The control plane for a network socket.
-///
-/// Once a socket has been retrieved from a `Provider`, this interface is then used to further
-/// configure and use the socket. This interface is essentially POSIX. Its implementation must
-/// support Linux-specific arguments to {Get,Set}SockOpt.
-///
-/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
-/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
-/// and clients that couple directly to this protocol will make those changes more difficult.
-protocol Control {
-    compose fuchsia.io.Node;
-
-    /// Sets the local address used for the socket.
-    Bind(sockaddr addr) -> (int16 code);
-    /// Initiates a connection to a remote address.
-    Connect(sockaddr addr) -> (int16 code);
-    /// Begins listening for new incoming connections. At most `backlog` connections will be
-    /// buffered.
-    Listen(int16 backlog) -> (int16 code);
-    /// Accepts a buffered incoming connection.
-    Accept(int16 flags) -> (int16 code, Control? s);
-    /// Retrieves the local socket address.
-    GetSockName() -> (int16 code, sockaddr addr);
-    /// Retrieves the remote socket address.
-    GetPeerName() -> (int16 code, sockaddr addr);
-    /// Sets the value of a socket option.
-    SetSockOpt(int16 level, int16 optname, sockopt optval) -> (int16 code);
-    /// Retrieves the value of a socket option.
-    GetSockOpt(int16 level, int16 optname) -> (int16 code, sockopt optval);
-};
-
 /// A network socket.
 ///
 /// Once a socket has been retrieved from a `Provider`, this interface is then used to further
@@ -112,9 +81,6 @@ protocol StreamSocket {
 /// Provider implements the POSIX sockets API.
 [Discoverable]
 protocol Provider {
-    /// Requests a socket with the specified parameters. Values for `code` are defined in errno.h.
-    Socket(int16 domain, int16 type, int16 protocol) -> (int16 code, Control? s);
-
     /// Requests a socket with the specified parameters. Error values are defined in errno.h.
     Socket2(int16 domain, int16 type, int16 protocol) -> (BaseSocket s) error int32;
 };

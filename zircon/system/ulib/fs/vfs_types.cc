@@ -175,10 +175,6 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
       fio::Tty tty = {.event = std::move(repr.event)};
       info.set_tty(&tty);
       callback(info);
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Socket>) {
-      fio::Socket socket = {.socket = std::move(repr.socket)};
-      info.set_socket(&socket);
-      callback(info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
       fio::DatagramSocket datagram_socket = {.event = std::move(repr.event)};
       info.set_datagram_socket(&datagram_socket);

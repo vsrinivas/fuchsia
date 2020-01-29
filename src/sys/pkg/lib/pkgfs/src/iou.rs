@@ -57,7 +57,6 @@ pub enum NodeKind {
     Vmofile,
     Device,
     Tty,
-    Socket,
     DatagramSocket,
     StreamSocket,
 }
@@ -72,7 +71,6 @@ impl NodeKind {
             NodeInfo::Vmofile(_) => NodeKind::Vmofile,
             NodeInfo::Device(_) => NodeKind::Device,
             NodeInfo::Tty(_) => NodeKind::Tty,
-            NodeInfo::Socket(_) => NodeKind::Socket,
             NodeInfo::DatagramSocket(_) => NodeKind::DatagramSocket,
             NodeInfo::StreamSocket(_) => NodeKind::StreamSocket,
         }
