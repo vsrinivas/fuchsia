@@ -44,6 +44,7 @@ source_set("common") {
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.serial",
     "//zircon/system/banjo/ddk.protocol.serialimpl.async",
     "//zircon/system/fidl/fuchsia-hardware-serial:llcpp",
   ]

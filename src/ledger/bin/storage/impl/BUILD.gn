@@ -31,6 +31,8 @@ flatbuffer("commit_storage") {
 flatbuffer("file_index") {
   sources = [ "file_index.fbs" ]
 
+  public_deps = [ ":object_identifier" ]
+
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
 

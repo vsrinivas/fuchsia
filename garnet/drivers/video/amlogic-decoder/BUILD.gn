@@ -135,6 +135,7 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/zx",
       "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
       "//zircon/system/banjo/ddk.protocol.composite",
+      "//zircon/system/banjo/ddk.protocol.platform.device",
       "//zircon/system/banjo/ddk.protocol.sysmem",
       "//zircon/system/banjo/ddk.protocol.tee",
     ]

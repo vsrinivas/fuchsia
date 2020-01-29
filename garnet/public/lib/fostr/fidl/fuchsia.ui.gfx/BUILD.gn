@@ -17,6 +17,7 @@ fostr_fidl("fuchsia.ui.gfx") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
+    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.views",
   ]
 }
