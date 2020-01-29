@@ -136,13 +136,16 @@ template("font_collection") {
   pkg_resolver_config_data_label =
       "${target_name}_pkg_resolver_font_packages_config_data"
 
+  _group_visibility = ":${target_name}"
   generated_file(pkg_resolver_registry_label) {
     forward_variables_from(invoker, [ "testonly" ])
     deps = font_packages
     if (generate_pkg_resolver_config_data) {
       visibility = [ ":${pkg_resolver_config_data_label}" ]
+      not_needed([ "_group_visibility" ])
     } else {
-      visibility = [ ":${target_name}" ]
+      visibility = [ _group_visibility ]
+      not_needed([ "pkg_resolver_config_data_label" ])
     }
     data_keys = [ "fuchsia_package_urls" ]
     walk_keys = [ "font_barrier" ]
@@ -197,6 +200,7 @@ template("font_collection") {
   manifest_file_label = "${target_name}_manifest_file"
   manifest_file_path = "${target_out_dir}/${target_name}_all.font_manifest.json"
   font_manifest(manifest_file_label) {
+    forward_variables_from(invoker, [ "testonly" ])
     all_fonts_path = _all_fonts_json_path
     local_fonts_path = _local_fonts_json_path
     font_files = all_font_file_paths
@@ -211,6 +215,7 @@ template("font_collection") {
   # Will appear at "/config/data/${manifest_prefix}.font_manifest.json"
   font_manifest_config_data_label = "${target_name}_font_manifest_config_data"
   config_data(font_manifest_config_data_label) {
+    forward_variables_from(invoker, [ "testonly" ])
     for_pkg = "fonts"
     deps = [ ":${manifest_file_label}" ]
     sources = get_target_outputs(":${manifest_file_label}")
