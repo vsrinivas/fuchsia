@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -26,7 +26,7 @@
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 
-namespace ot_radio {
+namespace ot {
 
 enum {
   COMPONENT_PDEV,
@@ -40,6 +40,7 @@ enum {
   PORT_KEY_RADIO_IRQ,
   PORT_KEY_TX_TO_APP,
   PORT_KEY_RX_FROM_APP,
+  PORT_KEY_TX_TO_RADIO,
   PORT_KEY_EXIT_THREAD,
 };
 
@@ -122,12 +123,52 @@ zx_status_t OtRadioDevice::Init() {
     return status == ZX_OK ? ZX_ERR_INTERNAL : status;
   }
 
+  spinel_framer_ = std::make_unique<ot::SpinelFramer>();
+  spinel_framer_->Init(spi_);
+
   return ZX_OK;
+}
+
+zx_status_t OtRadioDevice::ReadRadioPacket(void) {
+  if (spinel_framer_->IsPacketPresent()) {
+    spinel_framer_->ReceivePacketFromRadio(spi_rx_buffer_, &spi_rx_buffer_len_);
+    if (spi_rx_buffer_len_ > 0) {
+      async::PostTask(loop_.dispatcher(), [this, pkt = std::move(spi_rx_buffer_),
+                                           len = std::move(spi_rx_buffer_len_)]() {
+        this->HandleRadioRxFrame(pkt, len);
+      });
+
+      // Signal to driver test, waiting for a response
+      sync_completion_signal(&spi_rx_complete_);
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t length) {
+  zxlogf(INFO, "ot-radio: received frame of len:%d\n", length);
+  return ZX_OK;
+}
+
+zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) {
+  zxlogf(INFO, "ot-radio: RadioPacketTx\n");
+  zx_port_packet packet = {PORT_KEY_TX_TO_RADIO, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  if (!port_.is_valid()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  memcpy(spi_tx_buffer_, frameBuffer, length);
+  spi_tx_buffer_len_ = length;
+  return port_.queue(&packet);
+}
+
+zx_status_t OtRadioDevice::GetNCPVersion() {
+  uint8_t get_ncp_version_cmd[] = {0x81, 0x02, 0x02};  // HEADER, CMD ID, PROPERTY ID
+  return RadioPacketTx(get_ncp_version_cmd, sizeof(get_ncp_version_cmd));
 }
 
 zx_status_t OtRadioDevice::Reset() {
   zx_status_t status = ZX_OK;
-  zxlogf(TRACE, "#s: reset\n");
+  zxlogf(TRACE, "ot-radio: reset\n");
 
   status = gpio_[OT_RADIO_RESET_PIN].Write(0);
   if (status != ZX_OK) {
@@ -141,7 +182,7 @@ zx_status_t OtRadioDevice::Reset() {
     zxlogf(ERROR, "ot-radio: gpio write failed\n");
     return status;
   }
-  zx::nanosleep(zx::deadline_after(zx::msec(50)));
+  zx::nanosleep(zx::deadline_after(zx::msec(400)));
   return status;
 }
 
@@ -151,9 +192,12 @@ zx_status_t OtRadioDevice::RadioThread(void) {
 
   while (true) {
     zx_port_packet_t packet = {};
-    auto status = port_.wait(zx::time::infinite(), &packet);
+    int timeout_ms = spinel_framer_->GetTimeoutMs();
+    auto status = port_.wait(zx::deadline_after(zx::msec(timeout_ms)), &packet);
 
     if (status == ZX_ERR_TIMED_OUT) {
+      spinel_framer_->TrySpiTransaction();
+      ReadRadioPacket();
       continue;
     } else if (status != ZX_OK) {
       zxlogf(ERROR, "ot-radio: port wait failed: %d\n", status);
@@ -165,17 +209,10 @@ zx_status_t OtRadioDevice::RadioThread(void) {
     } else if (packet.key == PORT_KEY_RADIO_IRQ) {
       interrupt_.ack();
       zxlogf(TRACE, "ot-radio: interrupt\n");
-      // Read packet
-      uint8_t i;
-      size_t rx_actual;
-      size_t read_length = 10;
-      spi_.Receive(read_length, &spi_rx_buffer_[0], read_length, &rx_actual);
-      // Printing to cross check with bytes seen with a scope
-      zxlogf(TRACE, "ot-radio: rx_actual %lu\n", rx_actual);
-      for (i = 0; i < read_length; i++) {
-        zxlogf(TRACE, "ot-radio: RX %2X\n", spi_rx_buffer_[i]);
-      }
-      sync_completion_signal(&spi_rx_complete);
+      spinel_framer_->HandleInterrupt();
+      ReadRadioPacket();
+    } else if (packet.key == PORT_KEY_TX_TO_RADIO) {
+      spinel_framer_->SendPacketToRadio(spi_tx_buffer_, spi_tx_buffer_len_);
     }
   }
   zxlogf(TRACE, "ot-radio: exiting\n");
@@ -292,12 +329,12 @@ static constexpr zx_driver_ops_t driver_ops = []() {
   return ops;
 }();
 
-}  // namespace ot_radio
+}  // namespace ot
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(ot_radio, ot_radio::driver_ops, "ot_radio", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(ot, ot::driver_ops, "ot_radio", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_OT_RADIO),
-ZIRCON_DRIVER_END(ot_radio)
+ZIRCON_DRIVER_END(ot)
     // clang-format on

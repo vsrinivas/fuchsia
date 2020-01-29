@@ -24,13 +24,15 @@
 #include <ddktl/protocol/spi.h>
 #include <fbl/mutex.h>
 
+#include "spinel_framer.h"
+
 enum {
   OT_RADIO_INT_PIN,
   OT_RADIO_RESET_PIN,
   OT_RADIO_PIN_COUNT,
 };
 
-namespace ot_radio {
+namespace ot {
 class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::UnbindableNew> {
  public:
   explicit OtRadioDevice(zx_device_t* device);
@@ -48,21 +50,30 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::UnbindableNew> {
   void RemoveDevice();
   void FreeDevice();
   zx_status_t Reset();
+  zx_status_t GetNCPVersion();
 
   zx::port port_;
   zx::interrupt interrupt_;
   ddk::SpiProtocolClient spi_;
-  std::array<uint8_t, 100> spi_rx_buffer_;
-  sync_completion_t spi_rx_complete;
+  sync_completion_t spi_rx_complete_;
+
+  uint8_t spi_rx_buffer_[2048];
 
  private:
   zx_status_t RadioThread();
   zx_status_t StartLoopThread();
+  zx_status_t ReadRadioPacket();
+  zx_status_t HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t length);
+  zx_status_t RadioPacketTx(uint8_t* frameBuffer, uint16_t length);
 
   std::array<ddk::GpioProtocolClient, OT_RADIO_PIN_COUNT> gpio_;
   thrd_t thread_;
   async::Loop loop_;
+  std::unique_ptr<ot::SpinelFramer> spinel_framer_;
+  uint16_t spi_rx_buffer_len_ = 0;
+  uint16_t spi_tx_buffer_len_ = 0;
+  uint8_t spi_tx_buffer_[2048];
 };
-}  // namespace ot_radio
+}  // namespace ot
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_DRIVERS_OT_RADIO_OT_RADIO_H_

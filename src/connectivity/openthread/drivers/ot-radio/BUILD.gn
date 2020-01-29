@@ -14,7 +14,9 @@ driver_module("ot-radio") {
   ]
 
   deps = [
+    "//src/connectivity/openthread/third_party",
     "//src/devices:driver",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
@@ -29,6 +31,9 @@ driver_module("ot-radio") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.spi",
   ]
+
+  include_dirs =
+      [ "//src/connectivity/openthread/third_party/openthread/spinel-framer" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
