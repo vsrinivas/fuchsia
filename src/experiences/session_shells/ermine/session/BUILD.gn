@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/session/build/session_config.gni")
 
 rustc_binary("bin") {
   name = "workstation_session"
@@ -19,9 +20,9 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/ui/input-synthesis",
@@ -49,4 +50,8 @@ package("workstation_session") {
       name = "workstation_session"
     },
   ]
+}
+
+session_config("session_config") {
+  config = "//src/experiences/session_shells/ermine/session/session_config.json"
 }
