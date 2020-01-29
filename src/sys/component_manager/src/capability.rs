@@ -525,21 +525,21 @@ mod tests {
         let capability = ComponentCapability::Expose(ExposeDecl::Service(ExposeServiceDecl {
             sources: vec![
                 ServiceSource {
-                    source: ExposeSource::Self_,
+                    source: ExposeServiceSource::Self_,
                     source_path: CapabilityPath {
                         dirname: "/svc".to_string(),
                         basename: "net".to_string(),
                     },
                 },
                 ServiceSource {
-                    source: ExposeSource::Self_,
+                    source: ExposeServiceSource::Self_,
                     source_path: CapabilityPath {
                         dirname: "/svc".to_string(),
                         basename: "log".to_string(),
                     },
                 },
                 ServiceSource {
-                    source: ExposeSource::Self_,
+                    source: ExposeServiceSource::Self_,
                     source_path: CapabilityPath {
                         dirname: "/svc".to_string(),
                         basename: "unmatched-source".to_string(),

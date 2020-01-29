@@ -368,11 +368,28 @@
           },
           "from": {
             "title": "Exposed capability source component",
-            "pattern": "^(self|framework|#[0-9a-z_\\-\\.]+)$",
-            "description": "The component which has the capability to expose. Either \"self\" or \"#$CHILD\".",
-            "allOf": [
+            "description": "The component which has the capability to expose.",
+            "oneOf": [
               {
-                "$ref": "#/definitions/relative-ref-clause"
+                "pattern": "^(self|framework|#[0-9a-z_\\-\\.]+)$",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/relative-ref-clause"
+                  }
+                ]
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "pattern": "^(self|framework|#[0-9a-z_\\-\\.]+)$",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/relative-ref-clause"
+                    }
+                  ]
+                }
               }
             ],
             "examples": [
@@ -546,10 +563,27 @@
           "from": {
             "title": "Offered capability source component",
             "description": "The component which has the capability to offer. For services, directories, and runners one of \"framework\", \"realm\", \"self\" or \"#$CHILD\"; for storage either \"realm\" or \"#$STORAGE_SECTION_NAME\".",
-            "pattern": "^(realm|framework|self|#[0-9a-z_\\-\\.]+)$",
-            "allOf": [
+            "oneOf": [
               {
-                "$ref": "#/definitions/relative-ref-clause"
+                "pattern": "^(realm|framework|self|#[0-9a-z_\\-\\.]+)$",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/relative-ref-clause"
+                  }
+                ]
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "pattern": "^(realm|framework|self|#[0-9a-z_\\-\\.]+)$",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/relative-ref-clause"
+                    }
+                  ]
+                }
               }
             ],
             "examples": [

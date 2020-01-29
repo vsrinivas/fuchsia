@@ -61,7 +61,7 @@ macro_rules! fidl_translations_identical {
 /// - `into_type` is the name of the struct and the into type for the conversion.
 /// - `into_ident` must be identical to `into_type`.
 /// - `from_type` is the from type for the conversion.
-/// - `from_ident` must be identical to `from_type`.
+/// - `from_path` must be identical to `from_type`.
 /// - `field: type` form a list of fields and their types for the generated struct.
 macro_rules! fidl_into_struct {
     ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path,
@@ -183,7 +183,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::ExposeDecl::Service(s) => services
                         .entry((s.target.fidl_into_native(), s.target_path.fidl_into_native()))
                         .or_default()
-                        .push(ServiceSource::<ExposeSource> {
+                        .push(ServiceSource::<ExposeServiceSource> {
                             source: s.source.fidl_into_native(),
                             source_path: s.source_path.fidl_into_native(),
                         }),
@@ -382,7 +382,7 @@ pub enum ExposeDecl {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExposeServiceDecl {
-    pub sources: Vec<ServiceSource<ExposeSource>>,
+    pub sources: Vec<ServiceSource<ExposeServiceSource>>,
     pub target: ExposeTarget,
     pub target_path: CapabilityPath,
 }
@@ -973,6 +973,40 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferServiceSource {
             OfferServiceSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
             OfferServiceSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             OfferServiceSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+        })
+    }
+}
+
+/// The valid sources of a service protocol's expose declaration.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExposeServiceSource {
+    /// The service is exposed from the component manager itself.
+    Framework,
+    /// The service is exposed by the component itself.
+    Self_,
+    /// The service is exposed by a named child component.
+    Child(String),
+}
+
+impl FidlIntoNative<ExposeServiceSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> ExposeServiceSource {
+        match self.unwrap() {
+            fsys::Ref::Framework(_) => ExposeServiceSource::Framework,
+            fsys::Ref::Self_(_) => ExposeServiceSource::Self_,
+            fsys::Ref::Child(c) => ExposeServiceSource::Child(c.name),
+            _ => panic!("invalid ExposeServiceSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for ExposeServiceSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            ExposeServiceSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+            ExposeServiceSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            ExposeServiceSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
         })
@@ -1588,12 +1622,12 @@ mod tests {
                         }),
                         ExposeDecl::Service(ExposeServiceDecl {
                             sources: vec![
-                                ServiceSource::<ExposeSource> {
-                                    source: ExposeSource::Child("netstack".to_string()),
+                                ServiceSource::<ExposeServiceSource> {
+                                    source: ExposeServiceSource::Child("netstack".to_string()),
                                     source_path: "/svc/netstack1".try_into().unwrap(),
                                 },
-                                ServiceSource::<ExposeSource> {
-                                    source: ExposeSource::Child("netstack".to_string()),
+                                ServiceSource::<ExposeServiceSource> {
+                                    source: ExposeServiceSource::Child("netstack".to_string()),
                                     source_path: "/svc/netstack2".try_into().unwrap(),
                                 },
                             ],

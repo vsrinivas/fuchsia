@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cm_json::cm;
-use lazy_static::lazy_static;
-use regex::Regex;
-use serde_derive::Deserialize;
-use serde_json::{Map, Value};
-use std::collections::HashMap;
-use std::fmt;
+use {
+    crate::one_or_many::{OneOrMany, OneOrManyBorrow},
+    cm_json::cm,
+    lazy_static::lazy_static,
+    regex::Regex,
+    serde_derive::Deserialize,
+    serde_json::{Map, Value},
+    std::{collections::HashMap, fmt},
+};
 
 pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
@@ -243,22 +245,6 @@ impl Document {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(untagged)]
-pub enum OneOrMany<T> {
-    One(T),
-    Many(Vec<T>),
-}
-
-impl<T: Clone> OneOrMany<T> {
-    pub fn to_vec(&self) -> Vec<T> {
-        match self {
-            OneOrMany::One(x) => return vec![x.clone()],
-            OneOrMany::Many(xs) => return xs.to_vec(),
-        }
-    }
-}
-
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum EnvironmentExtends {
@@ -296,7 +282,7 @@ pub struct Expose {
     pub protocol: Option<OneOrMany<String>>,
     pub directory: Option<String>,
     pub runner: Option<String>,
-    pub from: Ref,
+    pub from: OneOrMany<Ref>,
     pub r#as: Option<String>,
     pub to: Option<Ref>,
     pub rights: Option<Vec<String>>,
@@ -310,7 +296,7 @@ pub struct Offer {
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub runner: Option<String>,
-    pub from: Ref,
+    pub from: OneOrMany<Ref>,
     pub to: Vec<Ref>,
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
@@ -345,7 +331,7 @@ pub struct Runner {
 }
 
 pub trait FromClause {
-    fn from(&self) -> &Ref;
+    fn from(&self) -> OneOrManyBorrow<Ref>;
 }
 
 pub trait CapabilityClause {
@@ -354,6 +340,10 @@ pub trait CapabilityClause {
     fn directory(&self) -> &Option<String>;
     fn storage(&self) -> &Option<String>;
     fn runner(&self) -> &Option<String>;
+
+    /// Returns the name of the capability for display purposes.
+    /// If `service()` returns `Some`, the capability name must be "service", etc.
+    fn capability_name(&self) -> &'static str;
 }
 
 pub trait AsClause {
@@ -376,6 +366,21 @@ impl CapabilityClause for Use {
     fn runner(&self) -> &Option<String> {
         &self.runner
     }
+    fn capability_name(&self) -> &'static str {
+        if self.service.is_some() {
+            "service"
+        } else if self.protocol.is_some() {
+            "protocol"
+        } else if self.directory.is_some() {
+            "directory"
+        } else if self.storage.is_some() {
+            "storage"
+        } else if self.runner.is_some() {
+            "runner"
+        } else {
+            ""
+        }
+    }
 }
 
 impl AsClause for Use {
@@ -385,8 +390,8 @@ impl AsClause for Use {
 }
 
 impl FromClause for Expose {
-    fn from(&self) -> &Ref {
-        &self.from
+    fn from(&self) -> OneOrManyBorrow<Ref> {
+        self.from.as_ref()
     }
 }
 
@@ -408,6 +413,19 @@ impl CapabilityClause for Expose {
     fn runner(&self) -> &Option<String> {
         &self.runner
     }
+    fn capability_name(&self) -> &'static str {
+        if self.service.is_some() {
+            "service"
+        } else if self.protocol.is_some() {
+            "protocol"
+        } else if self.directory.is_some() {
+            "directory"
+        } else if self.runner.is_some() {
+            "runner"
+        } else {
+            ""
+        }
+    }
 }
 
 impl AsClause for Expose {
@@ -417,8 +435,8 @@ impl AsClause for Expose {
 }
 
 impl FromClause for Offer {
-    fn from(&self) -> &Ref {
-        &self.from
+    fn from(&self) -> OneOrManyBorrow<Ref> {
+        self.from.as_ref()
     }
 }
 
@@ -438,6 +456,21 @@ impl CapabilityClause for Offer {
     fn runner(&self) -> &Option<String> {
         &self.runner
     }
+    fn capability_name(&self) -> &'static str {
+        if self.service.is_some() {
+            "service"
+        } else if self.protocol.is_some() {
+            "protocol"
+        } else if self.directory.is_some() {
+            "directory"
+        } else if self.storage.is_some() {
+            "storage"
+        } else if self.runner.is_some() {
+            "runner"
+        } else {
+            ""
+        }
+    }
 }
 
 impl AsClause for Offer {
@@ -447,14 +480,14 @@ impl AsClause for Offer {
 }
 
 impl FromClause for Storage {
-    fn from(&self) -> &Ref {
-        &self.from
+    fn from(&self) -> OneOrManyBorrow<Ref> {
+        OneOrManyBorrow::One(&self.from)
     }
 }
 
 impl FromClause for Runner {
-    fn from(&self) -> &Ref {
-        &self.from
+    fn from(&self) -> OneOrManyBorrow<Ref> {
+        OneOrManyBorrow::One(&self.from)
     }
 }
 

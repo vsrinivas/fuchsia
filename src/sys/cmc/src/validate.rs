@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::cml::{self, OneOrMany};
+use crate::{cml, one_or_many::OneOrMany};
 use cm_json::{self, Error, JsonSchema, CML_SCHEMA, CMX_SCHEMA};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Display;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::Read;
 use std::iter;
 use std::path::Path;
@@ -234,7 +236,7 @@ impl<'a> ValidationContext<'a> {
             self.document.all_runner_names().into_iter().zip(iter::repeat("runners"));
         let all_environment_names =
             self.document.all_environment_names().into_iter().zip(iter::repeat("environments"));
-        ensure_no_duplicates(
+        ensure_no_duplicate_names(
             all_children_names
                 .chain(all_collection_names)
                 .chain(all_storage_names)
@@ -335,11 +337,12 @@ impl<'a> ValidationContext<'a> {
         expose: &'a cml::Expose,
         used_ids: &mut HashSet<CapabilityId<'a>>,
     ) -> Result<(), Error> {
-        self.validate_component_ref("\"expose\" source", &expose.from)?;
+        self.validate_from_clause("expose", expose)?;
 
         // Ensure directory rights are specified if exposing from self.
         if expose.directory.is_some() {
-            if expose.from == cml::Ref::Self_ || expose.rights.is_some() {
+            // Directories can only have a single `from` clause.
+            if *expose.from.one().unwrap() == cml::Ref::Self_ || expose.rights.is_some() {
                 match &expose.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => return Err(Error::validate(
@@ -370,18 +373,12 @@ impl<'a> ValidationContext<'a> {
         offer: &'a cml::Offer,
         used_ids: &mut HashMap<&'a cml::Name, HashSet<CapabilityId<'a>>>,
     ) -> Result<(), Error> {
-        // If offered cap is a storage type, then "from" should be interpreted
-        // as a storage name. Otherwise, it should be interpreted as a child
-        // or collection.
-        if offer.storage.is_some() {
-            self.validate_storage_ref("\"offer\" source", &offer.from)?;
-        } else {
-            self.validate_component_ref("\"offer\" source", &offer.from)?;
-        }
+        self.validate_from_clause("offer", offer)?;
 
         // Ensure directory rights are specified if offering from self.
         if offer.directory.is_some() {
-            if offer.from == cml::Ref::Self_ || offer.rights.is_some() {
+            // Directories can only have a single `from` clause.
+            if *offer.from.one().unwrap() == cml::Ref::Self_ || offer.rights.is_some() {
                 match &offer.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => {
@@ -433,32 +430,73 @@ impl<'a> ValidationContext<'a> {
             }
 
             // Ensure we are not offering a capability back to its source.
-            if let cml::Ref::Named(name) = &offer.from {
-                match offer.storage {
-                    None => {
-                        if name == to_target {
+            if offer.storage.is_some() {
+                // Storage can only have a single `from` clause and this has been
+                // verified.
+                if let cml::Ref::Named(name) = &offer.from.one().unwrap() {
+                    if let Some(cml::Ref::Named(source)) = self.all_storage_and_sources.get(name) {
+                        if to_target == source {
+                            return Err(Error::validate(format!(
+                                "Storage offer target \"{}\" is same as source",
+                                to
+                            )));
+                        }
+                    }
+                }
+            } else {
+                for reference in &offer.from {
+                    match reference {
+                        cml::Ref::Named(name) if name == to_target => {
                             return Err(Error::validate(format!(
                                 "Offer target \"{}\" is same as source",
                                 to
                             )));
                         }
-                    }
-                    Some(_) => {
-                        if let Some(cml::Ref::Named(source)) =
-                            self.all_storage_and_sources.get(name)
-                        {
-                            if to_target == source {
-                                return Err(Error::validate(format!(
-                                    "Storage offer target \"{}\" is same as source",
-                                    to
-                                )));
-                            }
-                        }
+                        _ => {}
                     }
                 }
             }
         }
 
+        Ok(())
+    }
+
+    /// Validates that the from clause:
+    ///
+    /// - is applicable to the capability type,
+    /// - does not contain duplicates,
+    /// - references names that exist.
+    ///
+    /// `verb` is used in any error messages and is expected to be "offer", "expose", etc.
+    fn validate_from_clause<T>(&self, verb: &str, cap: &T) -> Result<(), Error>
+    where
+        T: cml::CapabilityClause + cml::FromClause,
+    {
+        let from = cap.from();
+        if cap.service().is_none() && from.is_many() {
+            return Err(Error::validate(format!(
+                "\"{}\" capabilities cannot have multiple \"from\" clauses",
+                cap.capability_name()
+            )));
+        }
+
+        if from.is_many() {
+            ensure_no_duplicate_values(&cap.from())?;
+        }
+
+        // If offered cap is a storage type, then "from" should be interpreted
+        // as a storage name. Otherwise, it should be interpreted as a child
+        // or collection.
+        let reference_description = format!("\"{}\" source", verb);
+        if cap.storage().is_some() {
+            for from_clause in &from {
+                self.validate_storage_ref(&reference_description, from_clause)?;
+            }
+        } else {
+            for from_clause in &from {
+                self.validate_component_ref(&reference_description, from_clause)?;
+            }
+        }
         Ok(())
     }
 
@@ -512,7 +550,7 @@ impl<'a> ValidationContext<'a> {
     }
 
     /// Validates that directory rights for all route types are valid, i.e that it does not
-    /// contain duplicate rights and exists if the FromClause originates at "self".
+    /// contain duplicate rights and exists if the from clause originates at "self".
     /// - `keyword` is the keyword for the clause ("offer", "expose", or "use").
     /// - `source_obj` is the object containing the directory.
     fn validate_directory_rights(&self, rights_clause: &Vec<String>) -> Result<(), Error> {
@@ -544,7 +582,7 @@ impl<'a> ValidationContext<'a> {
 
 /// Given an iterator with `(key, name)` tuples, ensure that `key` doesn't
 /// appear twice. `name` is used in generated error messages.
-fn ensure_no_duplicates<'a, I>(values: I) -> Result<(), Error>
+fn ensure_no_duplicate_names<'a, I>(values: I) -> Result<(), Error>
 where
     I: Iterator<Item = (&'a cml::Name, &'a str)>,
 {
@@ -555,6 +593,21 @@ where
                 "identifier \"{}\" is defined twice, once in \"{}\" and once in \"{}\"",
                 key, name, preexisting_name
             )));
+        }
+    }
+    Ok(())
+}
+
+/// Returns an error if the iterator contains duplicate values.
+fn ensure_no_duplicate_values<'a, I, V>(values: I) -> Result<(), Error>
+where
+    I: IntoIterator<Item = &'a V>,
+    V: 'a + Hash + Eq + Display,
+{
+    let mut seen = HashSet::new();
+    for value in values {
+        if !seen.insert(value) {
+            return Err(Error::validate(format!("Found duplicate value \"{}\" in array.", value)));
         }
     }
     Ok(())
@@ -825,6 +878,23 @@ mod tests {
             }),
             result = Ok(()),
         },
+        test_cml_expose_service_multiple_from => {
+            input = json!({
+                "expose": [
+                    {
+                        "service": "/loggers/fuchsia.logger.Log",
+                        "from": [ "#logger", "self" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
         test_cml_expose_all_valid_chars => {
             input = json!({
                 "expose": [
@@ -871,13 +941,28 @@ mod tests {
                     "\"/thing\" is a duplicate \"expose\" target path for \"realm\""
             )),
         },
+        test_cml_expose_invalid_multiple_from => {
+            input = json!({
+                    "expose": [ {
+                        "protocol": "/svc/fuchsua.logger.Log",
+                        "from": [ "self", "#logger" ],
+                    } ],
+                    "children": [
+                        {
+                            "name": "logger",
+                            "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                        },
+                    ]
+                }),
+            result = Err(Error::validate("\"protocol\" capabilities cannot have multiple \"from\" clauses")),
+        },
         test_cml_expose_bad_from => {
             input = json!({
                 "expose": [ {
                     "service": "/loggers/fuchsia.logger.Log", "from": "realm"
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/from")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/from")),
         },
         // if "as" is specified, only 1 "protocol" array item is allowed.
         test_cml_expose_bad_as => {
@@ -1022,6 +1107,28 @@ mod tests {
             }),
             result = Ok(()),
         },
+        test_cml_offer_service_multiple_from => {
+            input = json!({
+                "offer": [
+                    {
+                        "service": "/loggers/fuchsia.logger.Log",
+                        "from": [ "#logger", "self" ],
+                        "to": [ "#echo_server" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    },
+                    {
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
         test_cml_offer_all_valid_chars => {
             input = json!({
                 "offer": [
@@ -1090,7 +1197,27 @@ mod tests {
                         "to": [ "#echo_server" ],
                     } ]
                 }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/from")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0/from")),
+        },
+        test_cml_offer_invalid_multiple_from => {
+            input = json!({
+                    "offer": [ {
+                        "protocol": "/svc/fuchsia.logger.Log",
+                        "from": [ "self", "#logger" ],
+                        "to": [ "#echo_server" ],
+                    } ],
+                    "children": [
+                        {
+                            "name": "logger",
+                            "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                        },
+                        {
+                            "name": "echo_server",
+                            "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                        },
+                    ]
+                }),
+            result = Err(Error::validate("\"protocol\" capabilities cannot have multiple \"from\" clauses")),
         },
         test_cml_storage_offer_bad_to => {
             input = json!({
@@ -1890,7 +2017,7 @@ mod tests {
                     },
                 ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /expose/0/from")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/from")),
         },
         test_cml_child_name => {
             input = json!({
@@ -2274,7 +2401,7 @@ mod tests {
             directory: None,
             storage: None,
             runner: None,
-            from: cml::Ref::Self_,
+            from: OneOrMany::One(cml::Ref::Self_),
             to: vec![],
             r#as: None,
             rights: None,

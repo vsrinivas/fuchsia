@@ -16,6 +16,7 @@ mod cml;
 mod compile;
 mod format;
 mod merge;
+mod one_or_many;
 mod opts;
 mod validate;
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::cml::{self, CapabilityClause, OneOrMany};
+use crate::cml::{self, CapabilityClause};
+use crate::one_or_many::{OneOrMany, OneOrManyBorrow};
 use crate::validate;
 use cm_json::{self, cm, Error};
 use serde::ser::Serialize;
@@ -96,12 +97,11 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             }));
         } else if let Some(p) = use_.protocol() {
             let source = extract_use_source(use_)?;
-            let target_ids = all_target_capability_ids(use_, use_)
-                .ok_or(Error::internal("no capability"))?
-                .to_vec();
+            let target_ids =
+                all_target_capability_ids(use_, use_).ok_or(Error::internal("no capability"))?;
             let source_ids = p.to_vec();
             for target_id in target_ids {
-                let target_path = cm::Path::new(target_id)?;
+                let target_path = cm::Path::new(target_id.clone())?;
                 // When multiple source paths are provided, there is no way to alias each one, so
                 // source_path == target_path.
                 // When one source path is provided, source_path may be aliased to a different
@@ -150,26 +150,28 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     Ok(out_uses)
 }
 
-/// `expose` rules route a single capability from one source (self|framework) to one target
-/// (realm|framework).
+/// `expose` rules route a single capability from one or more sources (self|framework|#<child>) to one or
+/// more targets (realm|framework).
 fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
-        let source = extract_expose_source(expose)?;
         let target = extract_expose_target(expose)?;
         if let Some(p) = expose.service() {
+            let sources = extract_all_expose_sources(expose)?;
             let target_id = one_target_capability_id(expose, expose)?;
-            out_exposes.push(cm::Expose::Service(cm::ExposeService {
-                source,
-                source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_id)?,
-                target,
-            }))
+            for source in sources {
+                out_exposes.push(cm::Expose::Service(cm::ExposeService {
+                    source,
+                    source_path: cm::Path::new(p.clone())?,
+                    target_path: cm::Path::new(target_id.clone())?,
+                    target: target.clone(),
+                }))
+            }
         } else if let Some(p) = expose.protocol() {
+            let source = extract_single_expose_source(expose)?;
             let source_ids = p.to_vec();
             let target_ids = all_target_capability_ids(expose, expose)
-                .ok_or(Error::internal("no capability"))?
-                .to_vec();
+                .ok_or(Error::internal("no capability"))?;
             for target_id in target_ids {
                 let target_path = cm::Path::new(target_id)?;
                 // When multiple source paths are provided, there is no way to alias each one, so
@@ -189,6 +191,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 }))
             }
         } else if let Some(p) = expose.directory() {
+            let source = extract_single_expose_source(expose)?;
             let target_id = one_target_capability_id(expose, expose)?;
             let rights = extract_expose_rights(expose)?;
             let subdir = extract_expose_subdir(expose)?;
@@ -201,6 +204,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 subdir,
             }))
         } else if let Some(p) = expose.runner() {
+            let source = extract_single_expose_source(expose)?;
             let target_id = one_target_capability_id(expose, expose)?;
             out_exposes.push(cm::Expose::Runner(cm::ExposeRunner {
                 source,
@@ -215,7 +219,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
     Ok(out_exposes)
 }
 
-/// `offer` rules route multiple capabilities from one source to multiple targets.
+/// `offer` rules route multiple capabilities from multiple sources to multiple targets.
 fn translate_offer(
     offer_in: &Vec<cml::Offer>,
     all_children: &HashSet<&cml::Name>,
@@ -224,18 +228,20 @@ fn translate_offer(
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
         if let Some(p) = offer.service() {
-            let source = extract_offer_source(offer)?;
+            let sources = extract_all_offer_sources(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
-                out_offers.push(cm::Offer::Service(cm::OfferService {
-                    source_path: cm::Path::new(p.clone())?,
-                    source: source.clone(),
-                    target,
-                    target_path: cm::Path::new(target_id)?,
-                }));
+                for source in &sources {
+                    out_offers.push(cm::Offer::Service(cm::OfferService {
+                        source_path: cm::Path::new(p.clone())?,
+                        source: source.clone(),
+                        target: target.clone(),
+                        target_path: cm::Path::new(target_id.clone())?,
+                    }));
+                }
             }
         } else if let Some(p) = offer.protocol() {
-            let source = extract_offer_source(offer)?;
+            let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             let source_ids = p.to_vec();
             for (target, target_id) in targets {
@@ -256,7 +262,7 @@ fn translate_offer(
                 }));
             }
         } else if let Some(p) = offer.directory() {
-            let source = extract_offer_source(offer)?;
+            let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 out_offers.push(cm::Offer::Directory(cm::OfferDirectory {
@@ -270,7 +276,7 @@ fn translate_offer(
             }
         } else if let Some(p) = offer.storage() {
             let type_ = str_to_storage_type(p.as_str())?;
-            let source = extract_offer_storage_source(offer)?;
+            let source = extract_single_offer_storage_source(offer)?;
             let targets = extract_storage_targets(offer, all_children, all_collections)?;
             for target in targets {
                 out_offers.push(cm::Offer::Storage(cm::OfferStorage {
@@ -280,7 +286,7 @@ fn translate_offer(
                 }));
             }
         } else if let Some(p) = offer.runner() {
-            let source = extract_offer_source(offer)?;
+            let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 out_offers.push(cm::Offer::Runner(cm::OfferRunner {
@@ -341,7 +347,7 @@ fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>,
             Ok(cm::Storage {
                 name: cm::Name::new(storage.name.to_string())?,
                 source_path: cm::Path::new(storage.path.clone())?,
-                source: extract_offer_source(storage)?,
+                source: extract_single_offer_source(storage)?,
             })
         })
         .collect()
@@ -354,7 +360,7 @@ fn translate_runners(runners_in: &Vec<cml::Runner>) -> Result<Vec<cm::Runner>, E
             Ok(cm::Runner {
                 name: cm::Name::new(runner.name.to_string())?,
                 source_path: cm::Path::new(runner.path.clone())?,
-                source: extract_offer_source(runner)?,
+                source: extract_single_offer_source(runner)?,
             })
         })
         .collect()
@@ -432,18 +438,37 @@ fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<cm::Rights>, Err
     }
 }
 
-fn extract_expose_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
-where
-    T: cml::FromClause,
-{
-    match in_obj.from() {
+fn expose_source_from_ref(reference: &cml::Ref) -> Result<cm::Ref, Error> {
+    match reference {
         cml::Ref::Named(name) => {
             Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
         }
         cml::Ref::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
         cml::Ref::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
-        _ => Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", in_obj.from()))),
+        _ => Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", reference))),
     }
+}
+
+fn extract_single_expose_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
+where
+    T: cml::FromClause,
+{
+    match in_obj.from() {
+        OneOrManyBorrow::One(reference) => expose_source_from_ref(reference),
+        many => {
+            return Err(Error::internal(format!(
+                "multiple unexpected \"from\" clauses for \"expose\": {}",
+                many
+            )))
+        }
+    }
+}
+
+fn extract_all_expose_sources<T>(in_obj: &T) -> Result<Vec<cm::Ref>, Error>
+where
+    T: cml::FromClause,
+{
+    in_obj.from().iter().map(expose_source_from_ref).collect()
 }
 
 fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<cm::Rights>, Error> {
@@ -456,11 +481,8 @@ fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<cm::Rights>, Error
     }
 }
 
-fn extract_offer_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
-where
-    T: cml::FromClause,
-{
-    match in_obj.from() {
+fn offer_source_from_ref(reference: &cml::Ref) -> Result<cm::Ref, Error> {
+    match reference {
         cml::Ref::Named(name) => {
             Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
         }
@@ -470,11 +492,40 @@ where
     }
 }
 
-fn extract_offer_storage_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
+fn extract_single_offer_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
     match in_obj.from() {
+        OneOrManyBorrow::One(reference) => offer_source_from_ref(reference),
+        many => {
+            return Err(Error::internal(format!(
+                "multiple unexpected \"from\" clauses for \"offer\": {}",
+                many
+            )))
+        }
+    }
+}
+
+fn extract_all_offer_sources<T>(in_obj: &T) -> Result<Vec<cm::Ref>, Error>
+where
+    T: cml::FromClause,
+{
+    in_obj.from().iter().map(offer_source_from_ref).collect()
+}
+
+fn extract_single_offer_storage_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
+where
+    T: cml::FromClause,
+{
+    let from = in_obj.from();
+    let reference = from.one().ok_or_else(|| {
+        Error::internal(format!(
+            "multiple unexpected \"from\" clauses for \"offer\": {}",
+            in_obj.from()
+        ))
+    })?;
+    match reference {
         cml::Ref::Realm => Ok(cm::Ref::Realm(cm::RealmRef {})),
         cml::Ref::Named(storage_name) => {
             Ok(cm::Ref::Storage(cm::StorageRef { name: cm::Name::new(storage_name.to_string())? }))
@@ -523,14 +574,13 @@ fn extract_all_targets_for_each_child(
     let mut out_targets = vec![];
 
     let target_ids = all_target_capability_ids(in_obj, in_obj)
-        .ok_or(Error::internal("no capability".to_string()))?
-        .to_vec();
+        .ok_or(Error::internal("no capability".to_string()))?;
 
     // Validate the "to" references.
-    for to in in_obj.to.iter() {
-        for target_id in target_ids.clone() {
+    for to in &in_obj.to {
+        for target_id in &target_ids {
             let target = translate_child_or_collection_ref(to, all_children, all_collections)?;
-            out_targets.push((target, target_id))
+            out_targets.push((target, target_id.clone()))
         }
     }
     Ok(out_targets)
@@ -778,6 +828,10 @@ mod tests {
                       "as": "/svc/fuchsia.logger.Log"
                     },
                     {
+                      "service": "/svc/my.service.Service",
+                      "from": ["#logger", "self"],
+                    },
+                    {
                       "protocol": "/loggers/fuchsia.logger.LegacyLog",
                       "from": "#logger",
                       "as": "/svc/fuchsia.logger.LegacyLog",
@@ -817,6 +871,28 @@ mod tests {
                 },
                 "source_path": "/loggers/fuchsia.logger.Log",
                 "target_path": "/svc/fuchsia.logger.Log",
+                "target": "realm"
+            }
+        },
+        {
+            "service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/my.service.Service",
+                "target_path": "/svc/my.service.Service",
+                "target": "realm"
+            }
+        },
+        {
+            "service": {
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/svc/my.service.Service",
+                "target_path": "/svc/my.service.Service",
                 "target": "realm"
             }
         },
@@ -926,6 +1002,11 @@ mod tests {
                         "from": "#logger",
                         "to": [ "#modular" ],
                         "as": "/svc/fuchsia.logger.SysLog"
+                    },
+                    {
+                        "service": "/svc/my.service.Service",
+                        "from": ["#logger", "self"],
+                        "to": [ "#netstack" ]
                     },
                     {
                         "protocol": "/svc/fuchsia.logger.LegacyLog",
@@ -1040,6 +1121,36 @@ mod tests {
                     }
                 },
                 "target_path": "/svc/fuchsia.logger.SysLog"
+            }
+        },
+        {
+            "service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/my.service.Service",
+                "target": {
+                    "child": {
+                        "name": "netstack"
+                    }
+                },
+                "target_path": "/svc/my.service.Service"
+            }
+        },
+        {
+            "service": {
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/svc/my.service.Service",
+                "target": {
+                    "child": {
+                        "name": "netstack"
+                    }
+                },
+                "target_path": "/svc/my.service.Service"
             }
         },
         {
@@ -1670,7 +1781,7 @@ mod tests {
             let result = compile(&tmp_in_path, false, Some(tmp_out_path.clone()));
             let expected_result: Result<(), Error> = Err(Error::validate_schema(
                 CML_SCHEMA,
-                "Pattern condition is not met at /expose/0/from",
+                "OneOf conditions are not met at /expose/0/from",
             ));
             assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
         }

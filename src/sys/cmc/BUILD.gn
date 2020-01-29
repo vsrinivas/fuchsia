@@ -30,9 +30,7 @@ rustc_binary("cmc") {
     "//third_party/rust_crates:valico",
   ]
 
-  non_rust_deps = [
-    ":cmc_test_schemas",
-  ]
+  non_rust_deps = [ ":cmc_test_schemas" ]
 
   test_deps = [ "//src/lib/test_util" ]
 }
