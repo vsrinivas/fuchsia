@@ -1001,29 +1001,6 @@ bool paged_vmo_shutdown_test() {
   END_TEST;
 }
 
-uint32_t get_thread_state(zx_handle_t thread) {
-  zx_info_thread_t info;
-  __UNUSED zx_status_t status =
-      zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-  return info.state;
-}
-
-zx_koid_t get_koid(zx_handle_t handle) {
-  zx_info_handle_basic_t info;
-  __UNUSED zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-  return info.koid;
-}
-
-zx_status_t create_thread(zx_handle_t* out_thread) {
-  static const char kThreadName[] = "crasher";
-  // Use zx_thread_create() so that the only cleanup we need to do is
-  // zx_task_kill/zx_handle_close.
-  return zx_thread_create(zx_process_self(), kThreadName, strlen(kThreadName), 0, out_thread);
-}
-
 class GetDefaultDispatcherTask : public QuitTask {
  public:
   async_dispatcher_t* last_default_dispatcher;
