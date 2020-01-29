@@ -86,6 +86,10 @@ Err ParseLocalInputLocation(const Frame* optional_frame, const std::string& inpu
 // The callback follows "expression" rules in that it will be evaluted from within the stack of this
 // function if the result is synchronously available.
 void EvalLocalInputLocation(
+    const fxl::RefPtr<EvalContext>& eval_context, const Frame* optional_frame,
+    const std::string& input,
+    fit::callback<void(ErrOr<std::vector<InputLocation>>, std::optional<uint32_t> size)> cb);
+void EvalLocalInputLocation(
     const fxl::RefPtr<EvalContext>& eval_context, const Location& location,
     const std::string& input,
     fit::callback<void(ErrOr<std::vector<InputLocation>>, std::optional<uint32_t> size)> cb);
@@ -170,19 +174,19 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
 
 // Append this to LOCATION_ARG_HELP(cmd) if the command supports expressions via
 // Eval*InputLocation().
-#define LOCATION_EXPRESSION_HELP(cmd)                                              \
-  "  \"*<expression>\"\n"                                                          \
-  "      " cmd " *0x7d12362f0\n"                                                   \
-  "      " cmd " *&my_thing\n"                                                     \
-  "      " cmd " \"*my_array[0]->some_pointer\"\n"                                 \
-  "\n"                                                                             \
-  "      ▷ An arbitrary expression can be evaluated and the result will be\n"      \
-  "        interpreted as an address. If the result is a pointer, that\n"          \
-  "        pointer's value will be used. If the result is an integer or a\n"       \
-  "        reference to an integer, the referenced integer will be interpreted\n"  \
-  "        as a memory address.\n"                                                 \
-  "\n"                                                                             \
-  "        Anything with a space requires quotes.\n"                               \
+#define LOCATION_EXPRESSION_HELP(cmd)                                                \
+  "  \"*<expression>\"\n"                                                            \
+  "      " cmd " *0x7d12362f0\n"                                                     \
+  "      " cmd " *&my_thing\n"                                                       \
+  "      " cmd " *my_array[0]->some_pointer\n"                                       \
+  "\n"                                                                               \
+  "      ▷ An arbitrary expression can be evaluated and the result will be\n"        \
+  "        interpreted as an address. If the result is a pointer, that\n"            \
+  "        pointer's value will be used. If the result is an integer or a\n"         \
+  "        reference to an integer, the referenced integer will be interpreted\n"    \
+  "        as a memory address.\n"                                                   \
+  "\n"                                                                               \
+  "        The * denotes a expression follows but is not part of the expression.\n"  \
   "\n"
 // clang-format on
 

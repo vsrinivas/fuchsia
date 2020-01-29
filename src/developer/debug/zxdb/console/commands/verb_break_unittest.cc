@@ -18,7 +18,7 @@ class VerbBreak : public BreakpointCommandTest {};
 
 TEST_F(VerbBreak, Break) {
   // Process starts out as running. Make an expression breakpoint.
-  console().ProcessInputLine("break \"*0x1230 + 4\"");
+  console().ProcessInputLine("break *0x1230 + 4");
 
   // Validate the set request.
   ASSERT_TRUE(breakpoint_remote_api()->last_request);

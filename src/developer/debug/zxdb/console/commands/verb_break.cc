@@ -172,7 +172,8 @@ Examples
   break MyClass::MyFunc
       Breakpoint in all processes that have a function with this name.
 
-  break *0x123c9df
+  break 0x123c9df
+  break *$rip + 0x10
       Process-specific breakpoint at the given address.
 
   process 3 break MyClass::MyFunc
@@ -252,13 +253,6 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
   // Scope.
   settings.scope = ExecutionScopeForCommand(cmd);
 
-  // Location.
-  if (cmd.args().size() > 1u) {
-    return Err(ErrType::kInput,
-               "Expecting only one arg for the location.\n"
-               "Formats: <function>, <file>:<line#>, <line#>, or *<expression>");
-  }
-
   if (cmd.args().empty()) {
     // Creating a breakpoint with no location implicitly uses the current frame's current
     // location.
@@ -288,12 +282,8 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
   }
 
   // Parse the given input location in args[0]. This may require async evaluation.
-  Location cur_location;
-  if (cmd.frame())
-    cur_location = cmd.frame()->GetLocation();
-
   EvalLocalInputLocation(
-      GetEvalContextForCommand(cmd), cur_location, cmd.args()[0],
+      GetEvalContextForCommand(cmd), cmd.frame(), cmd.args()[0],
       [settings, has_explicit_size, cb = std::move(cb)](ErrOr<std::vector<InputLocation>> locs,
                                                         std::optional<uint32_t> expr_size) mutable {
         if (locs.has_error()) {
@@ -335,6 +325,8 @@ VerbRecord GetBreakVerbRecord() {
 
   VerbRecord break_record(&RunVerbBreak, &CompleteInputLocation, {"break", "b"}, kBreakShortHelp,
                           kBreakHelp, CommandGroup::kBreakpoint);
+  break_record.param_type = VerbRecord::kOneParam;  // Don't require quoting for expressions.
+
   break_record.switches.push_back(disabled_switch);
   break_record.switches.push_back(one_shot_switch);
   break_record.switches.push_back(size_switch);

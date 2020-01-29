@@ -184,6 +184,16 @@ Err ParseLocalInputLocation(const Frame* optional_frame, const std::string& inpu
 }
 
 void EvalLocalInputLocation(
+    const fxl::RefPtr<EvalContext>& eval_context, const Frame* optional_frame,
+    const std::string& input,
+    fit::callback<void(ErrOr<std::vector<InputLocation>>, std::optional<uint32_t> size)> cb) {
+  Location cur_location;
+  if (optional_frame)
+    cur_location = optional_frame->GetLocation();
+  return EvalLocalInputLocation(eval_context, cur_location, input, std::move(cb));
+}
+
+void EvalLocalInputLocation(
     const fxl::RefPtr<EvalContext>& eval_context, const Location& location,
     const std::string& input,
     fit::callback<void(ErrOr<std::vector<InputLocation>>, std::optional<uint32_t> size)> cb) {

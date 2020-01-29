@@ -91,7 +91,7 @@ void MockRemoteAPI::ReadMemory(const debug_ipc::ReadMemoryRequest& request,
                                                 auto& block = reply.blocks[0];
 
                                                 block.address = request.address;
-                                                block.valid = request.size == result.size();
+                                                block.valid = request.size > 0;
                                                 block.size = request.size;
                                                 if (block.valid)
                                                   block.data = std::move(result);

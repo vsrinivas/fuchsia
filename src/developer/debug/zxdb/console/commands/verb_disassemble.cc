@@ -39,8 +39,12 @@ const char kDisassembleHelp[] =
 
 Location arguments
 
-)" LOCATION_ARG_HELP("mem-analyze")
-        R"(
+)" LOCATION_ARG_HELP("disassemble") LOCATION_EXPRESSION_HELP("disassemble")
+        R"(        It is the user's responsibility to make sure that the starting address
+        expression is appropriately aligned on an instruction boundary. For ARM
+        this will be multiples of 4 bytes. For Intel, you will have to know
+        some other way.
+
 Arguments
 
   --num=<lines> | -n <lines>
@@ -70,43 +74,9 @@ Examples
       (which will be the call return address).
 
   process 1 disassemble 0x7b851239a0
+  disassemble *$pc - 0x10
       Disassembles instructions in process 1 starting at the given address.
 )";
-
-// Converts argument 0 (required or it will produce an error) and converts it to a unique location
-// (or error). If the input indicates a thing that has an intrinsic size like a function name, the
-// size will be placed in *location_size. Otherwise, *location_size will be 0.
-//
-// The command_name is used for writing the current command to error messages.
-Err ReadLocation(const Command& cmd, const char* command_name, Location* location,
-                 uint64_t* location_size) {
-  *location_size = 0;
-  if (cmd.args().size() != 1)
-    return Err("%s requires exactly one argument specifying a location.", command_name);
-
-  // We need to check the type of the parsed input location so parse and resolve in two steps.
-  std::vector<InputLocation> input_locations;
-  if (Err err = ParseLocalInputLocation(cmd.frame(), cmd.args()[0], &input_locations);
-      err.has_error())
-    return err;
-  FXL_DCHECK(!input_locations.empty());
-
-  if (Err err = ResolveUniqueInputLocation(cmd.target()->GetProcess()->GetSymbols(),
-                                           input_locations, true, location);
-      err.has_error())
-    return err;
-
-  // Some symbols can give us sizes. All input locations will have the same type (matching the user
-  // input type).
-  if (input_locations[0].type == InputLocation::Type::kName) {
-    if (location->symbol()) {
-      if (const CodeBlock* block = location->symbol().Get()->AsCodeBlock()) {
-        *location_size = block->GetFullRange(location->symbol_context()).size();
-      }
-    }
-  }
-  return Err();
-}
 
 // Completion callback after reading process memory.
 void CompleteDisassemble(const Err& err, MemoryDump dump, fxl::WeakPtr<Process> weak_process,
@@ -135,35 +105,11 @@ void CompleteDisassemble(const Err& err, MemoryDump dump, fxl::WeakPtr<Process> 
 Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
   // Can take process overrides (to specify which process to read) and thread and frame ones (to
   // specify which thread to read the instruction pointer from).
-  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
-  if (err.has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame}); err.has_error())
     return err;
 
-  err = AssertRunningTarget(context, "disassemble", cmd.target());
-  if (err.has_error())
+  if (Err err = AssertRunningTarget(context, "disassemble", cmd.target()); err.has_error())
     return err;
-
-  Location location;
-  uint64_t location_size = 0;
-  if (cmd.args().empty()) {
-    // No args: implicitly read the frame's instruction pointer.
-    //
-    // TODO(brettw) by default it would be nice if this showed a few lines of disassembly before the
-    // given address. Going backwards in x86 can be dicey though, the formatter may have to
-    // guess-and-check about a good starting boundary for the dump.
-    Frame* frame = cmd.frame();
-    if (!frame) {
-      return Err(
-          "There is no frame to read the instruction pointer from. The thread\n"
-          "must be stopped to use the implicit current address. Otherwise,\n"
-          "you must supply an explicit address to disassemble.");
-    }
-    location = frame->GetLocation();
-  } else {
-    err = ReadLocation(cmd, "disassemble", &location, &location_size);
-    if (err.has_error())
-      return err;
-  }
 
   FormatAsmOpts options;
   options.emit_addresses = true;
@@ -179,32 +125,91 @@ Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
   // When there is no known byte size, compute the max bytes requires to get the requested
   // instructions. It doesn't matter if we request more memory than necessary so use a high bound.
   size_t size = 0;
+  bool size_is_default = false;  // Indicates size may be overridden below.
   if (cmd.HasSwitch(kNumSwitch)) {
     // Num lines explicitly given.
     uint64_t num_instr = 0;
-    err = StringToUint64(cmd.GetSwitchValue(kNumSwitch), &num_instr);
-    if (err.has_error())
+    if (Err err = StringToUint64(cmd.GetSwitchValue(kNumSwitch), &num_instr); err.has_error())
       return err;
     options.max_instructions = num_instr;
     size = options.max_instructions * context->session()->arch_info()->max_instr_len();
-  } else if (location_size > 0) {
-    // Byte size is known.
-    size = location_size;
   } else {
     // Default instruction count when no symbol and no explicit size is given.
     options.max_instructions = 16;
     size = options.max_instructions * context->session()->arch_info()->max_instr_len();
+    size_is_default = true;
   }
 
   // Show bytes.
   options.emit_bytes = cmd.HasSwitch(kRawSwitch);
 
-  // Schedule memory request.
   Process* process = cmd.target()->GetProcess();
-  process->ReadMemory(location.address(), size,
-                      [options, process = process->GetWeakPtr()](const Err& err, MemoryDump dump) {
-                        CompleteDisassemble(err, std::move(dump), std::move(process), options);
-                      });
+  auto weak_process = process->GetWeakPtr();
+
+  if (cmd.args().size() > 1) {
+    return Err("\"disassemble\" requires exactly one argument specifying a location.");
+  } else if (cmd.args().empty()) {
+    // No args: implicitly read the frame's instruction pointer.
+    //
+    // TODO(brettw) by default it would be nice if this showed a few lines of disassembly before the
+    // given address. Going backwards in x86 can be dicey though, the formatter may have to
+    // guess-and-check about a good starting boundary for the dump.
+    Frame* frame = cmd.frame();
+    if (!frame) {
+      return Err(
+          "There is no frame to read the instruction pointer from. The thread\n"
+          "must be stopped to use the implicit current address. Otherwise,\n"
+          "you must supply an explicit address to disassemble.");
+    }
+    Location location = frame->GetLocation();
+
+    // Schedule memory request.
+    process->ReadMemory(
+        location.address(), size, [options, weak_process](const Err& err, MemoryDump dump) {
+          CompleteDisassemble(err, std::move(dump), std::move(weak_process), options);
+        });
+  } else {
+    // One arg: parse as an input location.
+    EvalLocalInputLocation(
+        GetEvalContextForCommand(cmd), cmd.frame(), cmd.args()[0],
+        [options, size, size_is_default, weak_process](ErrOr<std::vector<InputLocation>> locs,
+                                                       std::optional<uint32_t> expr_size) mutable {
+          Console* console = Console::get();
+          if (locs.has_error()) {
+            console->Output(locs.err());
+            return;
+          }
+          if (!weak_process) {
+            console->Output(Err("Process terminated."));
+            return;
+          }
+
+          Location location;
+          if (Err err = ResolveUniqueInputLocation(weak_process->GetSymbols(), locs.value(), true,
+                                                   &location);
+              err.has_error()) {
+            console->Output(err);
+            return;
+          }
+
+          // Some symbols can give us sizes which we will prefer to use instead of the default size.
+          // All input locations will have the same type (matching the user input type).
+          if (size_is_default && locs.value()[0].type == InputLocation::Type::kName) {
+            if (location.symbol()) {
+              if (const CodeBlock* block = location.symbol().Get()->AsCodeBlock()) {
+                size = block->GetFullRange(location.symbol_context()).size();
+                options.max_instructions = 0;  // No instruction limit.
+              }
+            }
+          }
+
+          // Schedule memory request.
+          weak_process->ReadMemory(
+              location.address(), size, [options, weak_process](const Err& err, MemoryDump dump) {
+                CompleteDisassemble(err, std::move(dump), std::move(weak_process), options);
+              });
+        });
+  }
   return Err();
 }
 
@@ -214,6 +219,8 @@ VerbRecord GetDisassembleVerbRecord() {
   VerbRecord disass(&RunDisassembleVerb, &CompleteInputLocation, {"disassemble", "di"},
                     kDisassembleShortHelp, kDisassembleHelp, CommandGroup::kAssembly,
                     SourceAffinity::kAssembly);
+  disass.param_type = VerbRecord::kOneParam;  // Don't require quoting for expressions.
+
   disass.switches.emplace_back(kNumSwitch, true, "num", 'n');
   disass.switches.emplace_back(kRawSwitch, false, "raw", 'r');
   return disass;
