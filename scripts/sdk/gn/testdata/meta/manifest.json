@@ -1,0 +1,12 @@
+{
+  "arch": {
+    "host": "x86_64-linux-gnu",
+    "target": [
+      "arm64",
+      "x64"
+    ]
+  },
+  "id": "0",
+  "parts": [],
+  "schema_version": "1"
+}
