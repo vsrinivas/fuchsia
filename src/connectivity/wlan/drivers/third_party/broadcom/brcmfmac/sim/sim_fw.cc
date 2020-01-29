@@ -52,6 +52,8 @@ SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
   }
 }
 
+SimFirmware::~SimFirmware() = default;
+
 void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
   *chip = BRCM_CC_4356_CHIP_ID;
   *chiprev = 2;
@@ -67,8 +69,15 @@ zx_status_t SimFirmware::BusPreinit() {
 void SimFirmware::BusStop() { ZX_PANIC("%s unimplemented", __FUNCTION__); }
 
 zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
-  ZX_PANIC("%s unimplemented", __FUNCTION__);
-  return ZX_ERR_NOT_SUPPORTED;
+  // For now we just save data and len and ignore bcdc header, further operations will be added
+  // soon.
+  uint32_t data_size = netbuf->len - BCDC_HEADER_LEN;
+  last_pkt_buf_.data.reset(new uint8_t[data_size]);
+
+  memcpy(last_pkt_buf_.data.get(), netbuf->data + BCDC_HEADER_LEN, data_size);
+  last_pkt_buf_.len = data_size;
+  last_pkt_buf_.allocated_size_of_buf_in = netbuf->allocated_size;
+  return ZX_OK;
 }
 
 // Returns a bufer that can be used for BCDC-formatted communications, with the requested

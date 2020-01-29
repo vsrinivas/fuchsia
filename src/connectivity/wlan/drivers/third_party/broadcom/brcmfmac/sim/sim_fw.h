@@ -121,8 +121,17 @@ class SimFirmware {
     uint64_t assoc_timer_id;
   };
 
+  struct PacketBuf {
+    std::unique_ptr<uint8_t[]> data;
+    uint32_t len;
+    // this is just to remember the coming netbuf's allocated_size, this, if the usage of
+    // brmcf_netbuf is removed, this can be removed as well.
+    uint32_t allocated_size_of_buf_in;
+  };
+
   SimFirmware() = delete;
   explicit SimFirmware(brcmf_simdev* simdev, simulation::Environment* env);
+  ~SimFirmware();
 
   void GetChipInfo(uint32_t* chip, uint32_t* chiprev);
   int32_t GetPM();
@@ -144,6 +153,9 @@ class SimFirmware {
   zx_status_t BusGetMemdump(void* data, size_t len);
   zx_status_t BusGetFwName(uint chip, uint chiprev, unsigned char* fw_name, size_t* fw_name_size);
   zx_status_t BusGetBootloaderMacAddr(uint8_t* mac_addr);
+
+  // Need to be verified by sim_test.
+  struct PacketBuf last_pkt_buf_;
 
  private:
   /* This structure contains the variables related to an iface entry in SIM FW.

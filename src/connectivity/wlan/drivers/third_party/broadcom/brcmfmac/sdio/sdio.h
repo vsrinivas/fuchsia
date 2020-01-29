@@ -348,17 +348,8 @@ uint32_t brcmf_sdiod_func1_rl(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
 void brcmf_sdiod_func1_wl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data,
                           zx_status_t* result_out);
 
-/* SDIO buffer transfer functions. Returns status.
- * _fifo means read repeatedly from the same address (don't increment).
- */
-zx_status_t brcmf_sdiod_read(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
-                             void* data, size_t size);
-
-zx_status_t brcmf_sdiod_write(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
-                              void* data, size_t size);
-
-zx_status_t brcmf_sdiod_read_fifo(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
-                                  void* data, size_t size);
+zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint32_t addr,
+                                 bool write, void* data, size_t size, bool fifo);
 
 /* Buffer transfer to/from device (client) core via cmd53.
  *   fn:       function number

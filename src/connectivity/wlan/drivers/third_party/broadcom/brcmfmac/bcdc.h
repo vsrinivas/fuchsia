@@ -41,6 +41,21 @@ struct brcmf_proto_bcdc_header {
   uint8_t data_offset;
 };
 
+/* Must be atleast SDPCM_RESERVE
+ * (amount of header tha might be added)
+ * plus any space that might be needed
+ * for bus alignment padding.
+ */
+#define BUS_HEADER_LEN (16 + 64)
+struct brcmf_bcdc {
+  uint16_t reqid;
+  uint8_t bus_header[BUS_HEADER_LEN];
+  struct brcmf_proto_bcdc_dcmd msg;
+  // buf must be packed right after msg; see brcmf_proto_bcdc_msg
+  unsigned char buf[BRCMF_DCMD_MAXLEN];
+  struct brcmf_fws_info* fws;
+};
+
 // clang-format off
 
 /* BCDC flag definitions */

@@ -65,6 +65,13 @@ Netbuf::~Netbuf() { brcmf_netbuf_free(buf); }
 
 TEST_F(Netbuf, CanAllocate) { EXPECT_NE(buf, nullptr); }
 
+TEST_F(Netbuf, AllocSizeAligned) {
+  struct brcmf_netbuf* buf = brcmf_netbuf_allocate(SMALL_SIZE);
+  EXPECT_NE(buf, nullptr);
+  EXPECT_EQ(buf->allocated_size, (SMALL_SIZE + 3) & ~3);
+  brcmf_netbuf_free(buf);
+}
+
 TEST_F(Netbuf, HasRightSize) {
   EXPECT_EQ(brcmf_netbuf_tail_space(buf), BIG_SIZE);
   EXPECT_EQ(brcmf_netbuf_head_space(buf), 0u);

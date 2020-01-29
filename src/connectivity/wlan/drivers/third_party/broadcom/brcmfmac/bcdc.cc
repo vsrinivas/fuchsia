@@ -43,20 +43,6 @@
 #define BRCMF_PROT_FW_SIGNAL_MAX_TXBYTES 12
 
 #define RETRIES 2 /* # of retries to retrieve matching dcmd response */
-/* Must be atleast SDPCM_RESERVE
- * (amount of header tha might be added)
- * plus any space that might be needed
- * for bus alignment padding.
- */
-#define BUS_HEADER_LEN (16 + 64)
-struct brcmf_bcdc {
-  uint16_t reqid;
-  uint8_t bus_header[BUS_HEADER_LEN];
-  struct brcmf_proto_bcdc_dcmd msg;
-  // buf must be packed right after msg; see brcmf_proto_bcdc_msg
-  unsigned char buf[BRCMF_DCMD_MAXLEN];
-  struct brcmf_fws_info* fws;
-};
 
 struct brcmf_fws_info* drvr_to_fws(struct brcmf_pub* drvr) {
   struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
@@ -239,7 +225,6 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
 
   /* Push BDC header used to convey priority for buses that don't */
   brcmf_netbuf_grow_head(pktbuf, BCDC_HEADER_LEN);
-
   h = (struct brcmf_proto_bcdc_header*)(pktbuf->data);
 
   h->flags = (BCDC_PROTO_VER << BCDC_FLAG_VER_SHIFT);
