@@ -37,10 +37,10 @@ void USBVirtualBus::InitUsbCdcAcm(fbl::String* devpath) {
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
 
   usb_peripheral::DeviceDescriptor device_desc = {};
-  device_desc.bcdUSB = htole16(0x0200);
-  device_desc.bMaxPacketSize0 = 64;
-  device_desc.bcdDevice = htole16(0x0100);
-  device_desc.bNumConfigurations = 1;
+  device_desc.bcd_usb = htole16(0x0200);
+  device_desc.b_max_packet_size0 = 64;
+  device_desc.bcd_device = htole16(0x0100);
+  device_desc.b_num_configurations = 1;
 
   usb_peripheral::FunctionDescriptor usb_cdc_acm_function_desc = {
       .interface_class = USB_CLASS_COMM,

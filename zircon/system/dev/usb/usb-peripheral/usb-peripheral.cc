@@ -777,21 +777,21 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
 }
 
 zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
-  if (desc.bNumConfigurations != 1) {
+  if (desc.b_num_configurations != 1) {
     zxlogf(ERROR, "usb_device_ioctl: bNumConfigurations: %u, only 1 supported\n",
-           desc.bNumConfigurations);
+           desc.b_num_configurations);
     return ZX_ERR_INVALID_ARGS;
   } else {
     device_desc_.bLength = sizeof(usb_device_descriptor_t);
     device_desc_.bDescriptorType = USB_DT_DEVICE;
-    device_desc_.bcdUSB = desc.bcdUSB;
-    device_desc_.bDeviceClass = desc.bDeviceClass;
-    device_desc_.bDeviceSubClass = desc.bDeviceSubClass;
-    device_desc_.bDeviceProtocol = desc.bDeviceProtocol;
-    device_desc_.bMaxPacketSize0 = desc.bMaxPacketSize0;
-    device_desc_.idVendor = desc.idVendor;
-    device_desc_.idProduct = desc.idProduct;
-    device_desc_.bcdDevice = desc.bcdDevice;
+    device_desc_.bcdUSB = desc.bcd_usb;
+    device_desc_.bDeviceClass = desc.b_device_class;
+    device_desc_.bDeviceSubClass = desc.b_device_sub_class;
+    device_desc_.bDeviceProtocol = desc.b_device_protocol;
+    device_desc_.bMaxPacketSize0 = desc.b_max_packet_size0;
+    device_desc_.idVendor = desc.id_vendor;
+    device_desc_.idProduct = desc.id_product;
+    device_desc_.bcdDevice = desc.bcd_device;
     zx_status_t status =
         AllocStringDesc(fbl::String(desc.manufacturer.data(), desc.manufacturer.size()),
                         &device_desc_.iManufacturer);
@@ -808,7 +808,7 @@ zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
     if (status != ZX_OK) {
       return status;
     }
-    device_desc_.bNumConfigurations = desc.bNumConfigurations;
+    device_desc_.bNumConfigurations = desc.b_num_configurations;
     return ZX_OK;
   }
 }

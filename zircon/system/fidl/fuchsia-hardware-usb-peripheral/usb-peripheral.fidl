@@ -20,18 +20,18 @@ struct FunctionDescriptor {
 /// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification,
 /// except for the string fields.
 struct DeviceDescriptor {
-    uint16 bcdUSB;
-    uint8 bDeviceClass;
-    uint8 bDeviceSubClass;
-    uint8 bDeviceProtocol;
-    uint8 bMaxPacketSize0;
-    uint16 idVendor;
-    uint16 idProduct;
-    uint16 bcdDevice;
+    uint16 bcd_usb;
+    uint8 b_device_class;
+    uint8 b_device_sub_class;
+    uint8 b_device_protocol;
+    uint8 b_max_packet_size0;
+    uint16 id_vendor;
+    uint16 id_product;
+    uint16 bcd_device;
     string:MAX_STRING_LENGTH manufacturer;
     string:MAX_STRING_LENGTH product;
     string:MAX_STRING_LENGTH serial;
-    uint8 bNumConfigurations;
+    uint8 b_num_configurations;
 };
 
 /// Events protocol that is used as a callback to inform the client

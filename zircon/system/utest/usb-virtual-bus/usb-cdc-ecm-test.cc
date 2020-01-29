@@ -102,20 +102,20 @@ void USBVirtualBus::InitUsbCdcEcm(std::string* peripheral_path, std::string* hos
   namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
 
   usb_peripheral::DeviceDescriptor device_desc = {};
-  device_desc.bcdUSB = htole16(0x0200);
-  device_desc.bDeviceClass = 0;
-  device_desc.bDeviceSubClass = 0;
-  device_desc.bDeviceProtocol = 0;
-  device_desc.bMaxPacketSize0 = 64;
-  device_desc.bcdDevice = htole16(0x0100);
-  device_desc.bNumConfigurations = 1;
+  device_desc.bcd_usb = htole16(0x0200);
+  device_desc.b_device_class = 0;
+  device_desc.b_device_sub_class = 0;
+  device_desc.b_device_protocol = 0;
+  device_desc.b_max_packet_size0 = 64;
+  device_desc.bcd_device = htole16(0x0100);
+  device_desc.b_num_configurations = 1;
 
   device_desc.manufacturer = fidl::StringView(kManufacturer);
   device_desc.product = fidl::StringView(kProduct);
   device_desc.serial = fidl::StringView(kSerial);
 
-  device_desc.idVendor = htole16(0x18D1);
-  device_desc.idProduct = htole16(0xA020);
+  device_desc.id_vendor = htole16(0x18D1);
+  device_desc.id_product = htole16(0xA020);
 
   usb_peripheral::FunctionDescriptor usb_cdc_ecm_function_desc = {
       .interface_class = USB_CLASS_COMM,

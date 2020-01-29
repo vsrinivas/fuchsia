@@ -115,15 +115,15 @@ static const usb_config_t cdc_test_function = {
 };
 
 static peripheral::DeviceDescriptor device_desc = {
-    .bcdUSB = htole16(0x0200),
-    .bDeviceClass = 0,
-    .bDeviceSubClass = 0,
-    .bDeviceProtocol = 0,
-    .bMaxPacketSize0 = 64,
+    .bcd_usb = htole16(0x0200),
+    .b_device_class = 0,
+    .b_device_sub_class = 0,
+    .b_device_protocol = 0,
+    .b_max_packet_size0 = 64,
     //   idVendor and idProduct are filled in later
-    .bcdDevice = htole16(0x0100),
+    .bcd_device = htole16(0x0100),
     //    iManufacturer, iProduct and iSerialNumber are filled in later
-    .bNumConfigurations = 1,
+    .b_num_configurations = 1,
 };
 
 static int open_usb_device(void) {
@@ -153,8 +153,8 @@ static int open_usb_device(void) {
 }
 
 static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
-  device_desc.idVendor = htole16(config->vid);
-  device_desc.idProduct = htole16(config->pid);
+  device_desc.id_vendor = htole16(config->vid);
+  device_desc.id_product = htole16(config->pid);
   device_desc.manufacturer = fidl::StringView(MANUFACTURER_STRING);
   device_desc.product = fidl::StringView(config->product_string, strlen(config->product_string));
   device_desc.serial = fidl::StringView(SERIAL_STRING);
