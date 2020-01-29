@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -19,6 +20,7 @@
 #include <lib/zx/vmo.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/hw/gpt.h>
+#include <zxcrypt/fdio-volume.h>
 
 #include "gtest/gtest.h"
 
@@ -32,7 +34,8 @@ const uint32_t kBlockSize = 512;
 const uint32_t kSliceSize = (1 << 20);
 const size_t kDeviceSize = kBlockCount * kBlockSize;
 const char* kDataName = "fdr-data";
-const char* kRamdiskPath = "misc/ramctl";
+const char* kRamCtlPath = "misc/ramctl";
+const size_t kKeyBytes = 32; // Generate a 256-bit key for the zxcrypt volume
 
 class MockAdmin : public fuchsia::device::manager::Administrator {
  public:
@@ -56,7 +59,7 @@ class FactoryResetTest : public Test {
   void SetUp() {
     devmgr_.reset(new IsolatedDevmgr());
     auto args = IsolatedDevmgr::DefaultArgs();
-    args.disable_block_watcher = false;
+    args.disable_block_watcher = true;
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
@@ -64,7 +67,7 @@ class FactoryResetTest : public Test {
 
     CreateRamdisk();
     CreateFvmPartition();
-    WaitForZxcrypt();
+    CreateZxcrypt();
   }
 
   bool PartitionHasFormat(disk_format_t format) {
@@ -92,13 +95,35 @@ class FactoryResetTest : public Test {
     ASSERT_GE(fd, 0);
     ASSERT_EQ(fvm_init_with_size(fd, kDeviceSize, kSliceSize), ZX_OK);
 
-    fbl::unique_fd ramdisk;
-    WaitForDevice(kRamdiskPath, &ramdisk);
+    fbl::unique_fd ramctl;
+    WaitForDevice(kRamCtlPath, &ramctl);
     ASSERT_EQ(ramdisk_create_at_from_vmo(devfs_root().get(), disk.release(), &ramdisk_client_),
               ZX_OK);
   }
 
+  zx_status_t AttachDriver(const fbl::unique_fd& fd, const fbl::StringPiece& driver) {
+    fzl::UnownedFdioCaller connection(fd.get());
+    zx_status_t call_status = ZX_OK;
+    auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+        zx::unowned_channel(connection.borrow_channel()),
+        ::fidl::StringView(driver.data(), driver.length()));
+    zx_status_t io_status = resp.status();
+    if (io_status != ZX_OK) {
+      return io_status;
+    }
+    if (resp->result.is_err()) {
+      call_status = resp->result.err();
+    }
+    return call_status;
+  }
+
+  void BindFvm() {
+    fbl::unique_fd ramdisk_fd(ramdisk_get_block_fd(ramdisk_client_));
+    ASSERT_EQ(AttachDriver(ramdisk_fd, "/boot/driver/fvm.so"), ZX_OK);
+  }
+
   void CreateFvmPartition() {
+    BindFvm();
     fbl::unique_fd fvm_fd;
     char fvm_path[PATH_MAX];
     snprintf(fvm_path, PATH_MAX, "%s/fvm", ramdisk_get_path(ramdisk_client_));
@@ -129,6 +154,26 @@ class FactoryResetTest : public Test {
     snprintf(fvm_block_path_, sizeof(fvm_block_path_), "%s/%s-p-1/block", fvm_path, kDataName);
     fbl::unique_fd fd;
     WaitForDevice(fvm_block_path_, &fd);
+  }
+
+  void CreateZxcrypt() {
+    std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
+
+    fbl::unique_fd fd;
+    WaitForDevice(fvm_block_path_, &fd);
+    // Use an explicit key for this test volume.  Other key sources may not be
+    // available in the isolated test environment.
+    crypto::Secret key;
+    ASSERT_EQ(key.Generate(kKeyBytes), ZX_OK);
+    ASSERT_EQ(zxcrypt::FdioVolume::Create(fd.duplicate(), devfs_root(), key, &zxcrypt_volume), ZX_OK);
+
+    zx::channel zxc_manager_chan;
+    ASSERT_EQ(zxcrypt_volume->OpenManager(zx::duration::infinite(),
+                                          zxc_manager_chan.reset_and_get_address()),
+              ZX_OK);
+    zxcrypt::FdioVolumeManager volume_manager(std::move(zxc_manager_chan));
+    ASSERT_EQ(volume_manager.Unseal(key.get(), key.len(), 0), ZX_OK);
+    WaitForZxcrypt();
   }
 
   void WaitForDevice(const char* path, fbl::unique_fd* fd) {
