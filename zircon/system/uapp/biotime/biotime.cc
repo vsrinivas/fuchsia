@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fit/defer.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/xorshiftrand.h>
 #include <stdio.h>
@@ -93,7 +93,7 @@ static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* 
 
   auto cleanup = fit::defer([blk]() { blkdev_close(blk); });
 
-  fzl::UnownedFdioCaller caller(fd);
+  fdio_cpp::UnownedFdioCaller caller(fd);
   zx_status_t status;
   zx_status_t io_status =
       fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &blk->info);

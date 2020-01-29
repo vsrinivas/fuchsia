@@ -53,6 +53,7 @@ zx_test("ram-nand-test") {
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/sync",

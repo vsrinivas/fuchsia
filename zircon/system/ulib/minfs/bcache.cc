@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,7 +89,7 @@ zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::Bl
   if (status != ZX_OK) {
     return status;
   }
-  fzl::UnownedFdioCaller caller(fd.get());
+  fdio_cpp::UnownedFdioCaller caller(fd.get());
   status = ::llcpp::fuchsia::io::Node::Call::Clone(zx::unowned_channel(caller.borrow_channel()),
                                                    ::llcpp::fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
                                                    std::move(server))

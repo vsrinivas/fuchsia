@@ -8,7 +8,7 @@
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -409,7 +409,7 @@ void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto query_result =
       fio::DirectoryAdmin::Call::QueryFilesystem(zx::unowned_channel(caller.borrow_channel()));
   ASSERT_OK(query_result.status());
@@ -456,7 +456,7 @@ void GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) {
   ASSERT_TRUE(fd);
   zx_status_t status;
   zx_handle_t vmo_handle;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_OK(fuchsia_blobfs_BlobfsGetAllocatedRegions(caller.borrow_channel(), &status, &vmo_handle,
                                                      out_count));
   ASSERT_OK(status);
@@ -1155,7 +1155,7 @@ TEST_F(BlobfsTest, MultipleWrites) { RunMultipleWritesTest(); }
 TEST_F(BlobfsTestWithFvm, MultipleWrites) { RunMultipleWritesTest(); }
 
 zx_status_t DirectoryAdminGetDevicePath(fbl::unique_fd directory, std::string* path) {
-  fzl::FdioCaller caller(std::move(directory));
+  fdio_cpp::FdioCaller caller(std::move(directory));
   auto result =
       fio::DirectoryAdmin::Call::GetDevicePath(zx::unowned_channel(caller.borrow_channel()));
   if (result.status() != ZX_OK) {
@@ -1228,7 +1228,7 @@ void OpenBlockDevice(const std::string& path,
 
   zx::channel channel, server;
   ASSERT_OK(zx::channel::create(0, &channel, &server));
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_OK(fio::Node::Call::Clone(zx::unowned_channel(caller.borrow_channel()),
                                    fio::CLONE_FLAG_SAME_RIGHTS, std::move(server))
                 .status());

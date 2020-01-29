@@ -11,7 +11,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <limits.h>
 #include <stdio.h>
@@ -43,7 +43,7 @@ zx_status_t WriteRandomBlock(int fd, ssize_t block_size) {
 // Determines the block size of the passed in fd.
 zx_status_t FindBlockSize(int fd, ssize_t* block_size) {
   zx_status_t rc, call_status;
-  fzl::UnownedFdioCaller caller(fd);
+  fdio_cpp::UnownedFdioCaller caller(fd);
   if (!caller) {
     return ZX_ERR_BAD_STATE;
   }

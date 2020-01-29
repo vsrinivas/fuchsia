@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zircon-internal/xorshiftrand.h>
 #include <lib/zx/fifo.h>
@@ -110,7 +110,7 @@ class WorkContext {
     fuchsia_hardware_skipblock_PartitionInfo info = {};
   } skip;
   // Connection to device being tested.
-  fzl::FdioCaller caller;
+  fdio_cpp::FdioCaller caller;
   // Protects |iochk_failure| and |progress|
   fbl::Mutex lock;
   bool iochk_failure = false;
@@ -185,7 +185,7 @@ class Checker {
 
 class BlockChecker : public Checker {
  public:
-  static zx_status_t Initialize(fzl::FdioCaller& caller, fuchsia_hardware_block_BlockInfo info,
+  static zx_status_t Initialize(fdio_cpp::FdioCaller& caller, fuchsia_hardware_block_BlockInfo info,
                                 block_client::Client& client, std::unique_ptr<Checker>* checker) {
     fzl::OwnedVmoMapper mapping;
     zx_status_t status = mapping.CreateAndMap(block_size, "");
@@ -298,7 +298,7 @@ std::atomic<uint16_t> BlockChecker::next_txid_;
 
 class SkipBlockChecker : public Checker {
  public:
-  static zx_status_t Initialize(fzl::FdioCaller& caller,
+  static zx_status_t Initialize(fdio_cpp::FdioCaller& caller,
                                 fuchsia_hardware_skipblock_PartitionInfo info,
                                 std::unique_ptr<Checker>* checker) {
     fzl::VmoMapper mapping;
@@ -383,7 +383,7 @@ class SkipBlockChecker : public Checker {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(SkipBlockChecker);
 
  private:
-  SkipBlockChecker(fzl::VmoMapper mapper, zx::vmo vmo, fzl::FdioCaller& caller,
+  SkipBlockChecker(fzl::VmoMapper mapper, zx::vmo vmo, fdio_cpp::FdioCaller& caller,
                    fuchsia_hardware_skipblock_PartitionInfo info)
       : Checker(mapper.start()),
         mapper_(std::move(mapper)),
@@ -394,7 +394,7 @@ class SkipBlockChecker : public Checker {
 
   fzl::VmoMapper mapper_;
   zx::vmo vmo_;
-  fzl::FdioCaller& caller_;
+  fdio_cpp::FdioCaller& caller_;
   fuchsia_hardware_skipblock_PartitionInfo info_;
 };
 

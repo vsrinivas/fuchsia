@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>

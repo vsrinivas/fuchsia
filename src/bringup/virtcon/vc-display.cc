@@ -12,7 +12,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/coding.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/statusor/endpoint-or-error.h>
 #include <lib/statusor/status-macros.h>
@@ -586,7 +586,7 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
     return status;
   }
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto open_rsp = fhd::Provider::Call::OpenVirtconController(
       caller.channel(), std::move(device_server), std::move(dc_server));
   if (!open_rsp.ok()) {

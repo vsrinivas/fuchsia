@@ -25,7 +25,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>

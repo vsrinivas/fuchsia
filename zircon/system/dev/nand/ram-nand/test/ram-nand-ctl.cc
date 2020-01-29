@@ -12,7 +12,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
 
@@ -45,7 +45,7 @@ class NandDevice {
 
  private:
   std::optional<ramdevice_client::RamNand> ram_nand_;
-  fzl::FdioCaller caller_;
+  fdio_cpp::FdioCaller caller_;
   DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
 

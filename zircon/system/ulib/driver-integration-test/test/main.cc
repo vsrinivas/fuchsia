@@ -8,7 +8,6 @@
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>

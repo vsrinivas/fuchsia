@@ -12,7 +12,7 @@
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/channel.h>
 #include <unistd.h>
@@ -429,7 +429,7 @@ zx_status_t FdioVolume::Revoke(key_slot_t slot) {
 zx_status_t FdioVolume::Init() { return Volume::Init(); }
 
 zx_status_t FdioVolume::OpenManager(const zx::duration& timeout, zx_handle_t* out) {
-  fzl::UnownedFdioCaller caller(block_dev_fd_.get());
+  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     xprintf("could not convert fd to io\n");
     return ZX_ERR_BAD_STATE;
@@ -441,7 +441,7 @@ zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
   zx_status_t rc;
   fbl::String path_base;
 
-  fzl::UnownedFdioCaller caller(block_dev_fd_.get());
+  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     xprintf("could not convert fd to io\n");
     return ZX_ERR_BAD_STATE;
@@ -480,7 +480,7 @@ zx_status_t FdioVolume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
 zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
   zx_status_t rc;
   zx_status_t call_status;
-  fzl::UnownedFdioCaller caller(block_dev_fd_.get());
+  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     return ZX_ERR_BAD_STATE;
   }
@@ -501,7 +501,7 @@ zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
 zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
   zx_status_t rc;
   zx_status_t call_status;
-  fzl::UnownedFdioCaller caller(block_dev_fd_.get());
+  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     return ZX_ERR_BAD_STATE;
   }
@@ -542,7 +542,7 @@ zx_status_t FdioVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
                 "block volume slice response count must match");
   zx_status_t rc;
   zx_status_t call_status;
-  fzl::UnownedFdioCaller caller(block_dev_fd_.get());
+  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     return ZX_ERR_BAD_STATE;
   }
@@ -575,7 +575,7 @@ zx_status_t FdioVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
 zx_status_t FdioVolume::DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) {
   zx_status_t rc;
   zx_status_t call_status;
-  fzl::UnownedFdioCaller caller(block_dev_fd_.get());
+  fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     return ZX_ERR_BAD_STATE;
   }
@@ -629,7 +629,7 @@ zx_status_t FdioVolume::Write() {
   return ZX_OK;
 }
 
-zx_status_t FdioVolume::OpenManagerWithCaller(fzl::UnownedFdioCaller& caller,
+zx_status_t FdioVolume::OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& caller,
                                               const zx::duration& timeout, zx_handle_t* out) {
   zx_status_t rc;
   fbl::String path_base;
@@ -680,7 +680,7 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fzl::UnownedFdioCaller& caller,
   return ZX_OK;
 }
 
-zx_status_t FdioVolume::RelativeTopologicalPath(fzl::UnownedFdioCaller& caller, fbl::String* out) {
+zx_status_t FdioVolume::RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& caller, fbl::String* out) {
   zx_status_t rc;
 
   // Get the full device path

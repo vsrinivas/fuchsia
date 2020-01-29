@@ -16,7 +16,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/memfs/memfs.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -173,7 +173,7 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
 }
 
 void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
-  fzl::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
+  fdio_cpp::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
 
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(
       zx::unowned_channel(disk_caller.borrow_channel()),
@@ -214,7 +214,7 @@ enum class ValidationResult {
 
 void ValidateFVM(fbl::unique_fd fd, ValidationResult result = ValidationResult::Valid) {
   ASSERT_TRUE(fd);
-  fzl::UnownedFdioCaller disk_caller(fd.get());
+  fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t status;
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &block_info),
@@ -304,7 +304,7 @@ class VmoBuf {
     zx::vmo xfer_vmo;
     ASSERT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
 
-    fzl::UnownedFdioCaller disk_connection(client->fd());
+    fdio_cpp::UnownedFdioCaller disk_connection(client->fd());
     zx::unowned_channel channel(disk_connection.borrow_channel());
     fuchsia_hardware_block_VmoId vmoid;
     zx_status_t status;
@@ -344,7 +344,7 @@ class VmoBuf {
 void VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
   fbl::RefPtr<VmoClient> vc = fbl::AdoptRef(new VmoClient());
 
-  fzl::UnownedFdioCaller disk_connection(fd);
+  fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
 
@@ -362,7 +362,7 @@ void VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
 }
 
 VmoClient::~VmoClient() {
-  fzl::UnownedFdioCaller disk_connection(fd());
+  fdio_cpp::UnownedFdioCaller disk_connection(fd());
   zx_status_t status;
   fuchsia_hardware_block_BlockCloseFifo(disk_connection.borrow_channel(), &status);
   block_fifo_release_client(client_);
@@ -455,7 +455,7 @@ void CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
 }
 
 void CheckWriteReadBlock(int fd, size_t block, size_t count) {
-  fzl::UnownedFdioCaller disk_connection(fd);
+  fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx_status_t status;
   fuchsia_hardware_block_BlockInfo block_info;
   ASSERT_EQ(
@@ -470,7 +470,7 @@ void CheckWriteReadBlock(int fd, size_t block, size_t count) {
 }
 
 void CheckNoAccessBlock(int fd, size_t block, size_t count) {
-  fzl::UnownedFdioCaller disk_connection(fd);
+  fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx_status_t status;
   fuchsia_hardware_block_BlockInfo block_info;
   ASSERT_EQ(
@@ -493,7 +493,7 @@ void CheckDeadConnection(int fd) {
   ASSERT_EQ(EBADF, errno);
 }
 
-void Upgrade(const fzl::FdioCaller& caller, const uint8_t* old_guid, const uint8_t* new_guid,
+void Upgrade(const fdio_cpp::FdioCaller& caller, const uint8_t* old_guid, const uint8_t* new_guid,
              zx_status_t result) {
   fuchsia_hardware_block_partition_GUID old_guid_fidl;
   memcpy(&old_guid_fidl.value, old_guid, fuchsia_hardware_block_partition_GUID_LENGTH);
@@ -534,7 +534,7 @@ TEST_F(FvmTest, TestLarge) {
   size_t slice_size = 16 * (1 << 10);
   size_t metadata_size = fvm::MetadataSize(block_size * block_count, slice_size);
 
-  fzl::UnownedFdioCaller disk_connection(fd.get());
+  fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   fuchsia_hardware_block_BlockInfo block_info;
@@ -586,7 +586,7 @@ TEST_F(FvmTest, TestAllocateOne) {
 
   // Check that the name matches what we provided
   char name[fvm::kMaxVPartitionNameLength + 1];
-  fzl::UnownedFdioCaller partition_connection(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_connection(vp_fd.get());
 
   zx_status_t status;
   size_t actual;
@@ -686,7 +686,7 @@ TEST_F(FvmTest, TestVPartitionExtend) {
   FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
 
   // Confirm that the disk reports the correct number of slices
-  fzl::FdioCaller partition_caller(std::move(vp_fd));
+  fdio_cpp::FdioCaller partition_caller(std::move(vp_fd));
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t status;
@@ -789,7 +789,7 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
   ASSERT_EQ(bno / (kSliceSize / kBlockSize), (fvm::kMaxVSlices - 1), "bno overflowed");
   ASSERT_EQ((bno * kBlockSize) / kBlockSize, bno, "block access will overflow");
 
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   zx_status_t status;
 
@@ -856,7 +856,7 @@ TEST_F(FvmTest, TestVPartitionShrink) {
   ASSERT_TRUE(vp_fd, "Couldn't open Volume");
   slices_left--;
 
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   zx_status_t status;
 
@@ -975,7 +975,7 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   ASSERT_TRUE(vp_fd);
   slices_left--;
 
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
   // Confirm that the disk reports the correct number of slices
@@ -1124,21 +1124,21 @@ TEST_F(FvmTest, TestVPartitionDestroy) {
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
   fbl::unique_fd data_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
   ASSERT_TRUE(data_fd);
-  fzl::UnownedFdioCaller data_caller(data_fd.get());
+  fdio_cpp::UnownedFdioCaller data_caller(data_fd.get());
   zx::unowned_channel data_channel(data_caller.borrow_channel());
 
   strcpy(request.name, kTestPartName2);
   memcpy(request.type, kTestPartGUIDBlob, BLOCK_GUID_LEN);
   fbl::unique_fd blob_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
   ASSERT_TRUE(blob_fd);
-  fzl::UnownedFdioCaller blob_caller(blob_fd.get());
+  fdio_cpp::UnownedFdioCaller blob_caller(blob_fd.get());
   zx::unowned_channel blob_channel(blob_caller.borrow_channel());
 
   strcpy(request.name, kTestPartName3);
   memcpy(request.type, kTestPartGUIDSystem, BLOCK_GUID_LEN);
   fbl::unique_fd sys_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
   ASSERT_TRUE(sys_fd);
-  fzl::UnownedFdioCaller sys_caller(sys_fd.get());
+  fdio_cpp::UnownedFdioCaller sys_caller(sys_fd.get());
   zx::unowned_channel sys_channel(sys_caller.borrow_channel());
 
   // We can access all three...
@@ -1186,7 +1186,7 @@ TEST_F(FvmTest, TestVPartitionQuery) {
   memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
   fbl::unique_fd part_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
   ASSERT_TRUE(part_fd);
-  fzl::FdioCaller partition_caller(std::move(part_fd));
+  fdio_cpp::FdioCaller partition_caller(std::move(part_fd));
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
   // Create non-contiguous extent.
@@ -1295,7 +1295,7 @@ TEST_F(FvmTest, TestSliceAccessContiguous) {
   fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t status;
@@ -1366,7 +1366,7 @@ TEST_F(FvmTest, TestSliceAccessMany) {
   fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t status;
@@ -1463,7 +1463,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     ASSERT_TRUE(vparts[i].fd);
   }
 
-  fzl::UnownedFdioCaller partition_caller(vparts[0].fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vparts[0].fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t status;
@@ -1490,7 +1490,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
     CheckNoAccessBlock(vfd, last_block + 1, 1);
 
     // Attempt to access the next contiguous slice
-    fzl::UnownedFdioCaller partition_caller(vfd);
+    fdio_cpp::UnownedFdioCaller partition_caller(vfd);
     zx::unowned_channel partition_channel(partition_caller.borrow_channel());
     uint64_t offset = vparts[i].slices_used;
     uint64_t length = 1;
@@ -1610,7 +1610,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
     ASSERT_TRUE(vparts[i].fd);
   }
 
-  fzl::UnownedFdioCaller partition_caller(vparts[0].fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vparts[0].fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t status;
@@ -1631,7 +1631,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
     CheckNoAccessBlock(vfd, last_block + 1, 1);
 
     // Attempt to access a non-contiguous slice
-    fzl::UnownedFdioCaller partition_caller(vfd);
+    fdio_cpp::UnownedFdioCaller partition_caller(vfd);
     zx::unowned_channel partition_channel(partition_caller.borrow_channel());
     uint64_t offset = vparts[i].last_slice + 2;
     uint64_t length = 1;
@@ -1689,7 +1689,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_TRUE(vp_fd);
   slices_left--;
 
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
   // Check that the name matches what we provided
@@ -1828,7 +1828,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   // Avoid keping the "FdioCaller" in-scope across mount, as the caller prevents
   // the file descriptor from being transferred.
   {
-    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
     zx::unowned_channel partition_channel(partition_caller.borrow_channel());
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(
                   partition_channel->get(), query_request.vslice_start, query_request.count,
@@ -1873,7 +1873,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
                                           nullptr));
     ASSERT_TRUE(vp_fd);
 
-    fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+    fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
     zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
     // Grow back the slice we shrunk earlier.
@@ -1926,7 +1926,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   vp_fd.reset(
       open_partition_with_devfs(devfs_root.get(), kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
   ASSERT_TRUE(vp_fd);
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
 
   // Verify that slices were fixed on mount.
@@ -2004,7 +2004,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  fzl::FdioCaller volume_manager(std::move(fd));
+  fdio_cpp::FdioCaller volume_manager(std::move(fd));
 
   // Short-hand for asking if we can open a partition.
   auto openable = [this](const uint8_t* instanceGUID, const uint8_t* typeGUID) {
@@ -2120,7 +2120,7 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
                                         nullptr));
   ASSERT_TRUE(vp_fd, "Couldn't open volume");
-  fzl::FdioCaller partition_caller(std::move(vp_fd));
+  fdio_cpp::FdioCaller partition_caller(std::move(vp_fd));
   zx_status_t status;
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(), &status),
             ZX_OK);
@@ -2186,7 +2186,7 @@ TEST_F(FvmTest, TestMounting) {
   ASSERT_TRUE(rootfd);
   zx_status_t status;
   filesystem_info_t filesystem_info;
-  fzl::FdioCaller caller(std::move(rootfd));
+  fdio_cpp::FdioCaller caller(std::move(rootfd));
   ASSERT_EQ(
       fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &filesystem_info),
       ZX_OK);
@@ -2269,7 +2269,7 @@ TEST_F(FvmTest, TestMkfs) {
   ASSERT_TRUE(rootfd);
   zx_status_t status;
   filesystem_info_t filesystem_info;
-  fzl::FdioCaller caller(std::move(rootfd));
+  fdio_cpp::FdioCaller caller(std::move(rootfd));
   ASSERT_EQ(
       fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &filesystem_info),
       ZX_OK);
@@ -2314,7 +2314,7 @@ TEST_F(FvmTest, TestCorruptionOk) {
   ASSERT_TRUE(vp_fd);
 
   // Extend the vpart (writes to primary)
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   zx_status_t status;
   uint64_t offset = 1;
@@ -2396,7 +2396,7 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   zx_status_t status;
 
@@ -2470,7 +2470,7 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
   fbl::unique_fd vp_fd(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
-  fzl::UnownedFdioCaller partition_caller(vp_fd.get());
+  fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
   zx_status_t status;
 

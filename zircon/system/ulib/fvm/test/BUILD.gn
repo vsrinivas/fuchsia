@@ -23,6 +23,7 @@ zx_test("fvm-unit") {
     deps += [
       "$zx/system/ulib/block-client",
       "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fdio-caller",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
     ]
@@ -30,8 +31,8 @@ zx_test("fvm-unit") {
 }
 
 zx_library("fvm-devices") {
-   sdk = "source"
-   sdk_headers = [ "fvm/test/device-ref.h" ]
+  sdk = "source"
+  sdk_headers = [ "fvm/test/device-ref.h" ]
   testonly = true
   sources = [ "device-ref.cc" ]
   public_deps = [
@@ -48,6 +49,7 @@ zx_library("fvm-devices") {
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",

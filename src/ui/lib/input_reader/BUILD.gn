@@ -57,6 +57,7 @@ source_set("fdio") {
     ":device",
     "//sdk/fidl/fuchsia.ui.input",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
   ]
 }

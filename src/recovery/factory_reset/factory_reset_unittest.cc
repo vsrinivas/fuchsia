@@ -16,7 +16,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/vmo.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/hw/gpt.h>
@@ -102,7 +102,7 @@ class FactoryResetTest : public Test {
   }
 
   zx_status_t AttachDriver(const fbl::unique_fd& fd, const fbl::StringPiece& driver) {
-    fzl::UnownedFdioCaller connection(fd.get());
+    fdio_cpp::UnownedFdioCaller connection(fd.get());
     zx_status_t call_status = ZX_OK;
     auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
         zx::unowned_channel(connection.borrow_channel()),
@@ -143,7 +143,7 @@ class FactoryResetTest : public Test {
     fuchsia_hardware_block_partition_GUID instance_guid;
     memcpy(instance_guid.value, req.guid, BLOCK_GUID_LEN);
 
-    fzl::UnownedFdioCaller caller(fvm_fd.get());
+    fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
     zx_status_t status;
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
                   caller.borrow_channel(), req.slice_count, &type_guid, &instance_guid, req.name,

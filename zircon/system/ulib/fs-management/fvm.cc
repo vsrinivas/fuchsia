@@ -14,7 +14,7 @@
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -44,7 +44,7 @@ bool IsPartition(const fbl::unique_fd& fd, const uint8_t* uniqueGUID, const uint
   ZX_ASSERT(uniqueGUID || typeGUID);
 
   fuchsia_hardware_block_partition_GUID guid;
-  fzl::UnownedFdioCaller partition_connection(fd.get());
+  fdio_cpp::UnownedFdioCaller partition_connection(fd.get());
   zx::unowned_channel channel(partition_connection.borrow_channel());
   zx_status_t io_status, status;
   if (typeGUID) {
@@ -192,7 +192,7 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
   // The metadata layout of the FVM is dependent on the
   // size of the FVM's underlying partition.
   fuchsia_hardware_block_BlockInfo block_info;
-  fzl::UnownedFdioCaller disk_connection(fd);
+  fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx_status_t status;
   zx_status_t io_status =
       fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(), &status, &block_info);
@@ -210,7 +210,7 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
 // Helper function to overwrite FVM given the slice_size
 zx_status_t fvm_overwrite_impl(const fbl::unique_fd& fd, size_t slice_size) {
   fuchsia_hardware_block_BlockInfo block_info;
-  fzl::UnownedFdioCaller disk_connection(fd.get());
+  fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &block_info);
@@ -303,7 +303,7 @@ zx_status_t fvm_destroy_with_devfs(int devfs_root_fd, const char* relative_path)
 }
 
 int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
-  fzl::UnownedFdioCaller caller(fvm_fd);
+  fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
   fuchsia_hardware_block_partition_GUID type_guid;
   memcpy(type_guid.value, request->type, BLOCK_GUID_LEN);
@@ -342,7 +342,7 @@ int fvm_allocate_partition_with_devfs(int devfs_root_fd, int fvm_fd, const alloc
 
 __EXPORT
 zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out) {
-  fzl::UnownedFdioCaller caller(fvm_fd);
+  fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
   zx_status_t status;
   zx_status_t io_status =
@@ -432,7 +432,7 @@ int open_partition_with_devfs(int devfs_root_fd, const uint8_t* uniqueGUID, cons
 }
 
 zx_status_t destroy_partition_impl(fbl::unique_fd&& fd) {
-  fzl::FdioCaller partition_caller(std::move(fd));
+  fdio_cpp::FdioCaller partition_caller(std::move(fd));
 
   zx_status_t status;
   zx_status_t io_status =

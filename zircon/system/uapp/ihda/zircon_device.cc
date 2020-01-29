@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <lib/fdio/io.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <stdio.h>
 #include <zircon/device/intel-hda.h>
 
@@ -32,7 +32,7 @@ zx_status_t ZirconDevice::Connect() {
   if (!fd.is_valid())
     return ZX_ERR_NOT_FOUND;
 
-  fzl::FdioCaller dev(std::move(fd));
+  fdio_cpp::FdioCaller dev(std::move(fd));
   zx_status_t (*thunk)(zx_handle_t, zx_handle_t*);
 
   switch (type_) {

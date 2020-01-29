@@ -7,7 +7,7 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/clock.h>
 
 namespace devmgr_integration_test {
@@ -21,7 +21,7 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
   if (status != ZX_OK) {
     return status;
   }
-  fzl::FdioCaller caller(std::move(dir_fd));
+  fdio_cpp::FdioCaller caller(std::move(dir_fd));
   zx_status_t status2;
   status = fuchsia_io_DirectoryWatch(caller.borrow_channel(), fuchsia_io_WATCH_MASK_REMOVED, 0,
                                      server.release(), &status2);

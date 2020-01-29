@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>

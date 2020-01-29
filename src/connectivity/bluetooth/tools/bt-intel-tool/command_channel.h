@@ -9,7 +9,6 @@
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 

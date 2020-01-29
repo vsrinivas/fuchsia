@@ -11,7 +11,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/fifo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -181,7 +181,7 @@ bool RamdiskStatsTest(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, kBlockCount, &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -284,7 +284,7 @@ static bool RamdiskGrowTestDimensionsChange(void) {
 
   // Check new block count.
   fuchsia_hardware_block_BlockInfo info;
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx_status_t status;
   ASSERT_EQ(
       fuchsia_hardware_block_BlockGetInfo(ramdisk_connection.borrow_channel(), &status, &info),
@@ -364,7 +364,7 @@ static bool RamdiskTestGuid(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::CreateWithGuid(PAGE_SIZE / 2, 512, kGuid, sizeof(kGuid), &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   fuchsia_hardware_block_partition_GUID guid;
@@ -429,7 +429,7 @@ static bool RamdiskTestFilesystem(void) {
   name[name_end - name_start] = 0;
 
   // Verify the ramdisk name
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   size_t actual;
@@ -469,7 +469,7 @@ static bool RamdiskTestFilesystem(void) {
         return ZX_OK;
       }
 
-      fzl::FdioCaller ramdisk_connection(std::move(fd));
+      fdio_cpp::FdioCaller ramdisk_connection(std::move(fd));
       zx::unowned_channel channel(ramdisk_connection.borrow_channel());
       zx_status_t io_status, status;
       size_t actual;
@@ -526,7 +526,7 @@ static bool RamdiskTestRebind(void) {
   ASSERT_TRUE(RamdiskTest::Create(PAGE_SIZE / 2, 512, &ramdisk));
 
   // Rebind the ramdisk driver
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
 
@@ -652,7 +652,7 @@ bool RamdiskTestFifoNoOp(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(PAGE_SIZE / 2, 512, &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
 
   auto open_and_close_fifo = [&channel]() {
@@ -681,7 +681,7 @@ bool RamdiskTestFifoBasic(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(PAGE_SIZE, 512, &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -754,7 +754,7 @@ bool RamdiskTestFifoNoGroup(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(PAGE_SIZE, 512, &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo raw_fifo;
@@ -865,7 +865,7 @@ bool create_vmo_helper(int fd, TestVmoObject* obj, size_t kBlockSize) {
   fill_random(obj->buf.get(), obj->vmo_size);
   ASSERT_EQ(obj->vmo.write(obj->buf.get(), 0, obj->vmo_size), ZX_OK, "Failed to write to vmo");
 
-  fzl::UnownedFdioCaller ramdisk_connection(fd);
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(fd);
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::vmo xfer_vmo;
@@ -946,7 +946,7 @@ bool RamdiskTestFifoMultipleVmo(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1014,7 +1014,7 @@ bool RamdiskTestFifoMultipleVmoMultithreaded(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1062,7 +1062,7 @@ bool RamdiskTestFifoLargeOpsCount(void) {
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
 
   // Create a connection to the ramdisk
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1105,7 +1105,7 @@ bool RamdiskTestFifoLargeOpsCountShutdown(void) {
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
 
   // Create a connection to the ramdisk
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1160,7 +1160,7 @@ bool RamdiskTestFifoIntermediateOpFailure(void) {
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
 
   // Create a connection to the ramdisk
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1244,7 +1244,7 @@ bool RamdiskTestFifoBadClientVmoid(void) {
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
 
   // Create a connection to the ramdisk
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1282,7 +1282,7 @@ bool RamdiskTestFifoBadClientUnalignedRequest(void) {
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
 
   // Create a connection to the ramdisk
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1324,7 +1324,7 @@ bool RamdiskTestFifoBadClientOverflow(void) {
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, kBlockCount, &ramdisk));
 
   // Create a connection to the ramdisk
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1389,7 +1389,7 @@ bool RamdiskTestFifoBadClientBadVmo(void) {
   ASSERT_TRUE(RamdiskTest::Create(kBlockSize, 1 << 18, &ramdisk));
 
   // Create a connection to the ramdisk
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1440,7 +1440,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(PAGE_SIZE, 512, &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -1599,7 +1599,7 @@ bool RamdiskTestFifoSleepDeferred(void) {
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_TRUE(RamdiskTest::Create(PAGE_SIZE, 512, &ramdisk));
 
-  fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
   zx::unowned_channel channel(ramdisk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;

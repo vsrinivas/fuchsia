@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <sys/types.h>
 
 #include <src/lib/files/directory.h>
@@ -106,7 +106,7 @@ size_t StorageWatchdog::GetStorageUsage() {
 
   fuchsia_io_FilesystemInfo info;
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t io_status =
       fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info);
   if (io_status != ZX_OK || status != ZX_OK) {

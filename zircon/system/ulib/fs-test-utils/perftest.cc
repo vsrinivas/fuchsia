@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/time.h>
 #include <string.h>
@@ -138,7 +138,7 @@ bool HasEnoughSpace(const fbl::String& block_device_path, size_t required_space)
   }
 
   fbl::unique_fd fd(open(block_device_path.c_str(), O_RDONLY));
-  fzl::FdioCaller disk_caller(std::move(fd));
+  fdio_cpp::FdioCaller disk_caller(std::move(fd));
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t io_status, status;
   io_status =

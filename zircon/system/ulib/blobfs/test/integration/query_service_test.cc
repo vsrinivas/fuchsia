@@ -5,7 +5,6 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/fs/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
 
 #include <array>

@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/midi/c/fidl.h>
 #include <lib/fit/defer.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <poll.h>
 #include <unistd.h>
 
@@ -47,7 +47,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
 
     fuchsia_hardware_midi_Info info;
     {
-      fzl::UnownedFdioCaller fdio_caller(dev_fd.get());
+      fdio_cpp::UnownedFdioCaller fdio_caller(dev_fd.get());
       zx_status_t status = fuchsia_hardware_midi_DeviceGetInfo(fdio_caller.borrow_channel(), &info);
       if (status != ZX_OK) {
         FX_LOGS(WARNING) << "fuchsia.hardware.midi.Device/GetInfo failed for \"" << devname << "\"";

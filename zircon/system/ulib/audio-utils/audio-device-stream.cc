@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmar.h>

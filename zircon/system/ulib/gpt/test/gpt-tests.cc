@@ -10,7 +10,7 @@
 #include <memory>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/cksum.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/assert.h>
 #include <zxtest/zxtest.h>
@@ -347,7 +347,7 @@ void LibGptTest::InitDisk(const char* disk_path) {
   snprintf(disk_path_, PATH_MAX, "%s", disk_path);
   fbl::unique_fd fd(open(disk_path_, O_RDWR));
   ASSERT_TRUE(fd.is_valid(), "Could not open block device to fetch info");
-  fzl::UnownedFdioCaller disk_caller(fd.get());
+  fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t status;
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &block_info),

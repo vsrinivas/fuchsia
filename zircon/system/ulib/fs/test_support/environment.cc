@@ -11,7 +11,7 @@
 #include <getopt.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <zircon/status.h>
@@ -157,7 +157,7 @@ bool Environment::OpenDevice(const char* path) {
     printf("Could not open block device\n");
     return false;
   }
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
 
   path_.assign(GetTopologicalPath(caller.borrow_channel()));
   if (path_.empty()) {

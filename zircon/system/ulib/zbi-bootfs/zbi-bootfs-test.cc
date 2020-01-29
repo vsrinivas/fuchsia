@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <getopt.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
 #include <stdlib.h>
 #include <zircon/boot/image.h>

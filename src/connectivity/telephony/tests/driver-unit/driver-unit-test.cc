@@ -7,7 +7,6 @@
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/port.h>
 #include <unistd.h>

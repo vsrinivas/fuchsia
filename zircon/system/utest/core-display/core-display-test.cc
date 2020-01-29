@@ -10,7 +10,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -81,7 +81,7 @@ class CoreDisplayTest : public zxtest::Test {
   zx::channel dc_client_channel_;
   zx::channel sysinfo_client_channel_;
   zx::channel sysmem_client_channel_;
-  fzl::FdioCaller caller_;
+  fdio_cpp::FdioCaller caller_;
   fbl::Vector<fhd::Info> displays_;
   bool capture_supported_ = false;
 };
@@ -147,7 +147,7 @@ void CoreDisplayTest::SetUp() {
     SetCaptureSupported(false);
     return;
   }
-  fzl::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
+  fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
   auto result = sysinfo::SysInfo::Call::GetBoardName(caller_sysinfo.channel());
   if (!result.ok() || result.value().status != ZX_OK) {
     SetCaptureSupported(false);
@@ -325,7 +325,7 @@ TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
   status = zx::channel::create(0, &dc_server, &dc_client);
   ASSERT_EQ(status, ZX_OK);
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto open_status = fhd::Provider::Call::OpenController(caller.channel(), std::move(device_server),
                                                          std::move(dc_server));
   EXPECT_TRUE(open_status.ok());

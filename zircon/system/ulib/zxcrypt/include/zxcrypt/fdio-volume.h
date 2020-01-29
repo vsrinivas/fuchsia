@@ -6,7 +6,7 @@
 #define ZXCRYPT_FDIO_VOLUME_H_
 
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 
 #include <memory>
@@ -186,12 +186,12 @@ class __EXPORT FdioVolume final : public Volume {
   zx_status_t Write();
 
   // OpenManager, but using a pre-created fdio_t.
-  zx_status_t OpenManagerWithCaller(fzl::UnownedFdioCaller& caller, const zx::duration& timeout,
+  zx_status_t OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& caller, const zx::duration& timeout,
                                     zx_handle_t* out);
 
   // Returns the topological path of the underlying block device, relative to
   // |devfs_root_fd|
-  zx_status_t RelativeTopologicalPath(fzl::UnownedFdioCaller& caller, fbl::String* out);
+  zx_status_t RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& caller, fbl::String* out);
 
   // The underlying block device, accessed over FDIO
   fbl::unique_fd block_dev_fd_;

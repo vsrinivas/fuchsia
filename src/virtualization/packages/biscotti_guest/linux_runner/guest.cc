@@ -11,7 +11,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/vector.h>
-#include <lib/fzl/fdio.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <zircon/processargs.h>

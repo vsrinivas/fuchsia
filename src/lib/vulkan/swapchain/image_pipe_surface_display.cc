@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <zircon/pixelformat.h>
 #include <zircon/status.h>
@@ -56,7 +56,7 @@ bool ImagePipeSurfaceDisplay::Init() {
     return false;
   }
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
       caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
   if (fidl_status != ZX_OK) {

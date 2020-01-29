@@ -18,7 +18,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <libgen.h>
 #include <zircon/status.h>
 
@@ -170,7 +170,7 @@ zx_status_t OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
     if ((strcmp(filename, ".") == 0) || strcmp(filename, "..") == 0) {
       return ZX_OK;
     }
-    fzl::UnownedFdioCaller caller(dirfd);
+    fdio_cpp::UnownedFdioCaller caller(dirfd);
 
     zx::channel partition_local, partition_remote;
     if (zx::channel::create(0, &partition_local, &partition_remote) != ZX_OK) {
@@ -313,7 +313,7 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
 }
 
 zx_status_t IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_name) {
-  fzl::UnownedFdioCaller caller(devfs_root.get());
+  fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
@@ -429,7 +429,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     if (!fd) {
       continue;
     }
-    fzl::FdioCaller caller(std::move(fd));
+    fdio_cpp::FdioCaller caller(std::move(fd));
 
     auto result = block::Block::Call::GetInfo(caller.channel());
     if (!result.ok()) {
@@ -472,7 +472,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
 zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
     fbl::unique_fd devfs_root, fbl::unique_fd gpt_device,
     std::unique_ptr<GptDevicePartitioner>* gpt_out) {
-  fzl::UnownedFdioCaller caller(gpt_device.get());
+  fdio_cpp::UnownedFdioCaller caller(gpt_device.get());
   auto result = block::Block::Call::GetInfo(caller.channel());
   if (!result.ok()) {
     ERROR("Warning: Could not acquire GPT block info: %s\n", zx_status_get_string(result.status()));
@@ -530,7 +530,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
 
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
   for (auto& [_, gpt_device] : gpt_devices) {
-    fzl::UnownedFdioCaller caller(gpt_device.get());
+    fdio_cpp::UnownedFdioCaller caller(gpt_device.get());
     auto result = block::Block::Call::GetInfo(caller.channel());
     if (!result.ok()) {
       ERROR("Warning: Could not acquire GPT block info: %s\n",
@@ -1587,7 +1587,7 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
     ERROR("Warning: Failed to create channel pair: %s\n", zx_status_get_string(status));
     return status;
   }
-  fzl::UnownedFdioCaller caller(devfs_root_.get());
+  fdio_cpp::UnownedFdioCaller caller(devfs_root_.get());
   status = fdio_service_connect_at(caller.borrow_channel(), parent, remote.release());
   if (status != ZX_OK) {
     ERROR("Warning: Unable to open block parent device: %s\n", zx_status_get_string(status));

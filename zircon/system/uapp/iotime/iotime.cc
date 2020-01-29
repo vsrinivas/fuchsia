@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -103,7 +103,7 @@ static zx_duration_t iotime_fifo(char* dev, int is_read, int fd, size_t total, s
     return ZX_TIME_INFINITE;
   }
 
-  fzl::UnownedFdioCaller disk_connection(fd);
+  fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx::unowned_channel channel(disk_connection.borrow_channel());
   fuchsia_hardware_block_BlockInfo info;
 

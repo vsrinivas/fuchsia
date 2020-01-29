@@ -6,7 +6,7 @@
 #define SRC_UI_LIB_INPUT_READER_FDIO_HID_DECODER_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 
 #include <string>
 #include <vector>
@@ -58,7 +58,7 @@ class FdioHidDecoder : public HidDecoder {
   zx_status_t GetReport(ReportType type, uint8_t report_id, std::vector<uint8_t>* report) override;
 
  private:
-  fzl::FdioCaller caller_;
+  fdio_cpp::FdioCaller caller_;
   const std::string name_;
   BootMode boot_mode_ = BootMode::NONE;
   std::vector<uint8_t> report_descriptor_;

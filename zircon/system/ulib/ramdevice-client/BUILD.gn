@@ -28,6 +28,7 @@ zx_library("ramdevice-client") {
     "$zx/system/ulib/driver-integration-test:static",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

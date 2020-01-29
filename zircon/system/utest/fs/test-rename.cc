@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/handle.h>
 #include <limits.h>
 #include <stdio.h>
@@ -264,7 +264,7 @@ bool TestRenameRaw() {
 
   fbl::unique_fd fd(open("::alpha", O_RDONLY | O_DIRECTORY, 0644));
   ASSERT_TRUE(fd);
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
 
   auto token_result = fio::Directory::Call::GetToken(caller.channel());
   ASSERT_EQ(token_result.status(), ZX_OK);

@@ -28,6 +28,7 @@ zx_library("sysconfig-sync-client") {
     "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",

@@ -26,7 +26,6 @@
 #ifdef __Fuchsia__
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
 
 #include <block-client/cpp/block-device.h>

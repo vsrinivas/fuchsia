@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -43,7 +43,7 @@ static int get_testdev(uint64_t* blk_size, uint64_t* blk_count) {
     printf("OPENING BLKDEV (path=%s) FAILURE. Errno: %d\n", blkdev_path, errno);
   }
   ASSERT_GE(fd, 0, "Could not open block device");
-  fzl::UnownedFdioCaller disk_caller(fd);
+  fdio_cpp::UnownedFdioCaller disk_caller(fd);
   fuchsia_hardware_block_BlockInfo info;
   zx_status_t status;
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &info),
@@ -158,7 +158,7 @@ bool blkdev_test_fifo_no_op(void) {
   uint64_t blk_size, blk_count;
   fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
 
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -182,7 +182,7 @@ bool blkdev_test_fifo_basic(void) {
   uint64_t blk_size, blk_count;
   // Set up the initial handshake connection with the blkdev
   fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -257,7 +257,7 @@ bool blkdev_test_fifo_whole_disk(void) {
   uint64_t blk_size, blk_count;
   // Set up the initial handshake connection with the blkdev
   fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -409,7 +409,7 @@ bool blkdev_test_fifo_multiple_vmo(void) {
   // Set up the initial handshake connection with the blkdev
   uint64_t blk_size, blk_count;
   fbl::unique_fd fd(get_testdev(&blk_size, &blk_count));
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -477,7 +477,7 @@ bool blkdev_test_fifo_multiple_vmo_multithreaded(void) {
   // Set up the initial handshake connection with the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -529,7 +529,7 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
   fbl::Array<test_vmo_object_t> objs(new test_vmo_object_t[10](), 10);
   groupid_t group = 0;
   {
-    fzl::UnownedFdioCaller disk_connection(fd.get());
+    fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
     zx::unowned_channel channel(disk_connection.borrow_channel());
     zx_status_t status;
     zx::fifo fifo;
@@ -554,7 +554,7 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
 
   // The block server should still be functioning. We should be able to re-bind to it
   {
-    fzl::UnownedFdioCaller disk_connection(fd.get());
+    fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
     zx::unowned_channel channel(disk_connection.borrow_channel());
     zx_status_t status;
     zx::fifo fifo;
@@ -592,7 +592,7 @@ bool blkdev_test_fifo_bad_client_vmoid(void) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -630,7 +630,7 @@ bool blkdev_test_fifo_bad_client_unaligned_request(void) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -671,7 +671,7 @@ bool blkdev_test_fifo_bad_client_overflow(void) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;
@@ -736,7 +736,7 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
   // Set up the blkdev
   uint64_t kBlockSize, blk_count;
   fbl::unique_fd fd(get_testdev(&kBlockSize, &blk_count));
-  fzl::FdioCaller disk_connection(std::move(fd));
+  fdio_cpp::FdioCaller disk_connection(std::move(fd));
   zx::unowned_channel channel(disk_connection.borrow_channel());
   zx_status_t status;
   zx::fifo fifo;

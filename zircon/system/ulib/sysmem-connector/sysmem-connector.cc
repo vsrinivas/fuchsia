@@ -16,7 +16,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 
 #include <fcntl.h>
@@ -164,7 +164,7 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
 
   // We don't intend to close dirfd; all paths should release not close.
   fbl::unique_fd unique_dirfd(dirfd);
-  fzl::FdioCaller caller(std::move(unique_dirfd));
+  fdio_cpp::FdioCaller caller(std::move(unique_dirfd));
   status =
       fdio_service_connect_at(caller.borrow_channel(), filename, driver_connector_server.release());
   // Never close dirfd.

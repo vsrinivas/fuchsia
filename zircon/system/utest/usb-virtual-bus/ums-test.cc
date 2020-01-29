@@ -14,7 +14,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -232,7 +232,7 @@ TEST_F(UmsTest, CachedWriteWithNoFlushShouldBeDiscarded) {
 
   uint32_t blk_size;
   {
-    fzl::UnownedFdioCaller caller(fd.get());
+    fdio_cpp::UnownedFdioCaller caller(fd.get());
     auto result = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(caller.channel());
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
     blk_size = result->info->block_size;
@@ -270,7 +270,7 @@ TEST_F(UmsTest, UncachedWriteShouldBePersistedToBlockDevice) {
 
   uint32_t blk_size;
   {
-    fzl::UnownedFdioCaller caller(fd.get());
+    fdio_cpp::UnownedFdioCaller caller(fd.get());
     auto result = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(caller.channel());
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
     blk_size = result->info->block_size;

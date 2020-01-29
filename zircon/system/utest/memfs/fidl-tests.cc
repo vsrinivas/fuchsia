@@ -11,7 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/memfs/memfs.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -104,7 +104,7 @@ bool QueryInfo(const char* path, fio::FilesystemInfo* info) {
   BEGIN_HELPER;
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fio::DirectoryAdmin::Call::QueryFilesystem((caller.channel()));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result.Unwrap()->s, ZX_OK);

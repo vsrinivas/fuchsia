@@ -10,7 +10,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -201,7 +201,7 @@ bool CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
   BEGIN_HELPER;
 
   // Obtain the underlying connection behind |in_fd|.
-  fzl::FdioCaller fdio_caller(std::move(in_fd));
+  fdio_cpp::FdioCaller fdio_caller(std::move(in_fd));
   zx_handle_t foo_handle = fdio_caller.borrow_channel();
 
   // Clone |in_fd| as read-only; the entire tree under the new connection now becomes read-only
@@ -243,7 +243,7 @@ bool TestCloneWithBadFlags() {
     ASSERT_GT(foo_fd.get(), 0);
 
     // Obtain the underlying connection behind |foo_fd|.
-    fzl::FdioCaller fdio_caller(std::move(foo_fd));
+    fdio_cpp::FdioCaller fdio_caller(std::move(foo_fd));
     zx_handle_t foo_handle = fdio_caller.borrow_channel();
 
     zx::channel foo_clone_client_end, foo_clone_server_end;
@@ -274,7 +274,7 @@ bool TestCloneCannotIncreaseRights() {
     ASSERT_TRUE(CloneFdAsReadOnlyHelper(std::move(foo_fd), &foo_readonly));
 
     // Attempt to clone the read-only fd back to read-write.
-    fzl::FdioCaller fdio_caller(std::move(foo_readonly));
+    fdio_cpp::FdioCaller fdio_caller(std::move(foo_readonly));
     zx_handle_t foo_handle = fdio_caller.borrow_channel();
     zx::channel foo_clone_client_end, foo_clone_server_end;
     ASSERT_EQ(zx::channel::create(0, &foo_clone_client_end, &foo_clone_server_end), ZX_OK);

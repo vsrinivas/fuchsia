@@ -8,7 +8,7 @@
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -99,7 +99,7 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
     return false;
   }
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto open_response = fhd::Provider::Call::OpenController(
       caller.channel(), std::move(device_server), std::move(dc_server));
   if (!open_response.ok()) {
@@ -589,7 +589,7 @@ Platforms GetPlatform() {
   if (!sysinfo_fd) {
     return UNKNOWN_PLATFORM;
   }
-  fzl::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
+  fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
   auto result = sysinfo::SysInfo::Call::GetBoardName(caller_sysinfo.channel());
   if (!result.ok() || result.value().status != ZX_OK) {
     return UNKNOWN_PLATFORM;

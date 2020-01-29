@@ -7,7 +7,7 @@
 
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/timer.h>
 #include <stdint.h>
 #include <zircon/types.h>
@@ -96,7 +96,7 @@ class KeyboardWatcher {
   bool repeat_keys_ = true;
   keypress_handler_t handler_ = {};
 
-  fzl::FdioCaller dir_caller_;
+  fdio_cpp::FdioCaller dir_caller_;
   port_handler_t dir_handler_ = {};
 };
 

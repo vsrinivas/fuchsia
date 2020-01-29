@@ -11,7 +11,7 @@
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <lib/zx/clock.h>
@@ -51,7 +51,7 @@ struct DevicePaths {
 
 zx_status_t GetTopologicalPath(int fd, std::string* out) {
   size_t path_len;
-  fzl::UnownedFdioCaller connection(fd);
+  fdio_cpp::UnownedFdioCaller connection(fd);
   auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(connection.borrow_channel()));
   zx_status_t status = resp.status();

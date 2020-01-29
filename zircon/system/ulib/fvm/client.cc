@@ -8,7 +8,6 @@
 
 #include <fbl/algorithm.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <lib/fzl/fdio.h>
 #include <zircon/device/block.h>
 
 namespace fvm {

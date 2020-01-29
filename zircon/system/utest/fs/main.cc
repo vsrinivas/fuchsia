@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/memfs/memfs.h>
 #include <limits.h>
 #include <unistd.h>
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "[fs] Could not open block device\n");
         return -1;
       }
-      fzl::FdioCaller caller(std::move(fd));
+      fdio_cpp::FdioCaller caller(std::move(fd));
 
       size_t path_len;
       auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(

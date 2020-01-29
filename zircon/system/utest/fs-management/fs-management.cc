@@ -7,7 +7,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <stdalign.h>
 #include <stdio.h>
@@ -60,7 +60,7 @@ void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
 
   fuchsia_io_FilesystemInfo info;
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
@@ -218,7 +218,7 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
   fbl::unique_fd badfd(open(mount_path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(badfd);
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(badfd));
+  fdio_cpp::FdioCaller caller(std::move(badfd));
   ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
   ASSERT_EQ(close(caller.release().release()), 0);
@@ -269,7 +269,7 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   fbl::unique_fd weak_root_fd(open(mount_path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(weak_root_fd);
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(weak_root_fd));
+  fdio_cpp::FdioCaller caller(std::move(weak_root_fd));
   ASSERT_EQ(fuchsia_io_DirectoryAdminUnmount(caller.borrow_channel(), &status), ZX_OK);
   ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
   weak_root_fd.reset(caller.release().release());
@@ -401,7 +401,7 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   char* device_path = static_cast<char*>(device_buffer);
   zx_status_t status;
   size_t path_len;
-  fzl::FdioCaller caller(std::move(mountfd));
+  fdio_cpp::FdioCaller caller(std::move(mountfd));
   ASSERT_EQ(fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status, device_path,
                                                    sizeof(device_buffer), &path_len),
             ZX_OK);
@@ -686,7 +686,7 @@ TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
   ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options));
   fbl::unique_fd partition_fd(open(partition_path(), O_RDONLY));
   ASSERT_TRUE(partition_fd);
-  fzl::UnownedFdioCaller caller(partition_fd.get());
+  fdio_cpp::UnownedFdioCaller caller(partition_fd.get());
   ASSERT_NO_FATAL_FAILURES(
       GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &base_slices));
   options.fvm_data_slices += 10;

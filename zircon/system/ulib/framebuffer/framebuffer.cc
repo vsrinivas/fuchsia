@@ -10,7 +10,7 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zx/vmo.h>
@@ -230,7 +230,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
     return status;
   }
 
-  fzl::FdioCaller caller(std::move(dc_fd));
+  fdio_cpp::FdioCaller caller(std::move(dc_fd));
   auto open_status = fhd::Provider::Call::OpenController(caller.channel(), std::move(device_server),
                                                          std::move(dc_server));
   if (open_status.status() != ZX_OK) {

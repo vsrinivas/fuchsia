@@ -21,7 +21,7 @@
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/bootfs/parser.h>
 #include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/netboot.h>
@@ -106,7 +106,7 @@ static bool IsChromebook() {
   if (!gpt_fd) {
     return false;
   }
-  fzl::UnownedFdioCaller caller(gpt_fd.get());
+  fdio_cpp::UnownedFdioCaller caller(gpt_fd.get());
   auto result = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(caller.channel());
   if (!result.ok()) {
     fprintf(stderr, "netsvc: Could not acquire GPT block info: %s\n",

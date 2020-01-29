@@ -7,7 +7,7 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/nand/c/fidl.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -116,7 +116,7 @@ class NandDevice {
 
   ParentDevice* parent_ = g_parent_device_;
   fbl::String filename_;
-  fzl::FdioCaller caller_;
+  fdio_cpp::FdioCaller caller_;
   uint32_t num_blocks_ = 0;
   uint32_t first_block_ = 0;
   bool full_device_ = true;

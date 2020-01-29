@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <string.h>
@@ -40,7 +40,7 @@ void WaitForMinfs() {
     if (fd.is_valid()) {
       fuchsia_io_FilesystemInfo info;
       zx_status_t status, io_status;
-      fzl::FdioCaller caller{std::move(fd)};
+      fdio_cpp::FdioCaller caller{std::move(fd)};
       io_status = fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info);
       if (io_status == ZX_OK && status == ZX_OK) {
         const char* name = reinterpret_cast<const char*>(info.name);

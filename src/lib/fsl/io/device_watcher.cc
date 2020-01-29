@@ -9,7 +9,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/io.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <sys/types.h>
 #include <zircon/device/vfs.h>
 
@@ -51,7 +51,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
   if (zx::channel::create(0, &client, &server) != ZX_OK) {
     return nullptr;
   }
-  fzl::FdioCaller caller{std::move(dir_fd)};
+  fdio_cpp::FdioCaller caller{std::move(dir_fd)};
   uint32_t mask =
       fuchsia_io_WATCH_MASK_ADDED | fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE;
   zx_status_t status;

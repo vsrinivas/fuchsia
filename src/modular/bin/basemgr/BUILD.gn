@@ -91,6 +91,10 @@ source_set("wait_for_minfs") {
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]
+
+  deps = [
+    "//zircon/public/lib/fdio-caller",
+  ]
 }
 
 source_set("lib") {

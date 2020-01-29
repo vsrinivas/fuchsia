@@ -21,7 +21,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -97,7 +97,7 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
     }
     fd.reset(raw_fd);
   }
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
 
   // Retrieve and parse the report descriptor
   uint16_t desc_len = 0;
@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
   }
   dirfd.reset();
 
-  fzl::FdioCaller caller(std::move(info.fd));
+  fdio_cpp::FdioCaller caller(std::move(info.fd));
   uint16_t report_size = 0;
   if (fuchsia_hardware_input_DeviceGetMaxInputReportSize(caller.borrow_channel(), &report_size) !=
       ZX_OK) {

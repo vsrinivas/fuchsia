@@ -20,6 +20,7 @@ if (target_cpu == "x64") {
       "//zircon/public/lib/async-loop-default",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/fdio",
+      "//zircon/public/lib/fdio-caller",
       "//zircon/public/lib/fzl",
       "//zircon/public/lib/trace",
       "//zircon/public/lib/trace-provider-with-fdio",

@@ -15,6 +15,7 @@ zx_executable("ihda") {
     "$zx/system/fidl/fuchsia-hardware-intel-hda:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/intel-hda",
     "$zx/system/ulib/zircon",

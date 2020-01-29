@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/usb/debug/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -28,7 +28,7 @@ zx_status_t configure_xdc(uint32_t stream_id, fbl::unique_fd* out_fd) {
     if (fd < 0) {
       continue;
     }
-    fzl::FdioCaller caller{fbl::unique_fd(fd)};
+    fdio_cpp::FdioCaller caller{fbl::unique_fd(fd)};
     zx_status_t status;
     zx_status_t res =
         fuchsia_usb_debug_DeviceSetStream(caller.borrow_channel(), stream_id, &status);

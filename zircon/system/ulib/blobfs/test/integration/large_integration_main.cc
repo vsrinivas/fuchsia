@@ -6,7 +6,7 @@
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/memfs/memfs.h>
 
 #include <memory>
@@ -22,7 +22,7 @@ namespace {
 // TODO(39752): This should be controlled with build options.
 bool RunInThisPlatform() {
   fbl::unique_fd sysinfo(open("/svc/fuchsia.sysinfo.SysInfo", O_RDONLY));
-  fzl::FdioCaller caller(std::move(sysinfo));
+  fdio_cpp::FdioCaller caller(std::move(sysinfo));
   auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(caller.channel());
   if (result.status() != ZX_OK || result->status != ZX_OK) {
     return false;

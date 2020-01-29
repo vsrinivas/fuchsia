@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -91,7 +91,7 @@ bool TestWatcherAdd(void) {
   ASSERT_NONNULL(dir);
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
 
   auto watch_result =
       fio::Directory::Call::Watch(caller.channel(), fio::WATCH_MASK_ADDED, 0, std::move(server));
@@ -156,7 +156,7 @@ bool TestWatcherExisting(void) {
   // mechanism.
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
-  fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
   uint32_t mask = fio::WATCH_MASK_ADDED | fio::WATCH_MASK_EXISTING | fio::WATCH_MASK_IDLE;
   auto watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
@@ -227,7 +227,7 @@ bool TestWatcherRemoved(void) {
   zx::channel client, server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
   uint32_t mask = fio::WATCH_MASK_ADDED | fio::WATCH_MASK_REMOVED;
-  fzl::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
 
   auto watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);

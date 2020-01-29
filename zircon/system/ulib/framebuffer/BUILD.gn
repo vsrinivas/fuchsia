@@ -12,6 +12,7 @@ zx_library("framebuffer") {
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/image-format",

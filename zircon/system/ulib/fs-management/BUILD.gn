@@ -31,6 +31,7 @@ zx_library("fs-management") {
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",

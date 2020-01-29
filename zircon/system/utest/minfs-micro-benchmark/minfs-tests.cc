@@ -9,7 +9,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <getopt.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <stdalign.h>
 #include <stdio.h>
@@ -58,7 +58,7 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
     fbl::unique_fd fd(open(device_->Path(), O_RDONLY));
     ASSERT_TRUE(fd);
 
-    fzl::FdioCaller caller(std::move(fd));
+    fdio_cpp::FdioCaller caller(std::move(fd));
     zx_status_t status;
     zx_status_t io_status = fuchsia_hardware_block_BlockGetStats(
         caller.borrow_channel(), reset == Reset::kReset, &status, out_stats);

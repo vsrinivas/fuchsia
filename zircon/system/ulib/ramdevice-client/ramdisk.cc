@@ -14,7 +14,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -164,7 +164,7 @@ struct ramdisk_client {
   }
 
   zx_status_t Rebind() {
-    fzl::FdioCaller disk_client(std::move(block_fd_));
+    fdio_cpp::FdioCaller disk_client(std::move(block_fd_));
     zx_status_t io_status, status;
     io_status = fuchsia_hardware_block_BlockRebindDevice(disk_client.borrow_channel(), &status);
     if (io_status != ZX_OK) {

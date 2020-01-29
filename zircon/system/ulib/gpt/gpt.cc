@@ -9,7 +9,6 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
-#include <lib/fzl/fdio.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>

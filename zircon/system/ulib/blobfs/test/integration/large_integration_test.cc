@@ -4,7 +4,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/fzl/fdio.h>
 #include <sys/stat.h>
 
 #include <algorithm>
@@ -13,6 +12,7 @@
 #include <thread>
 
 #include <blobfs/common.h>
+#include <fbl/auto_call.h>
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
 

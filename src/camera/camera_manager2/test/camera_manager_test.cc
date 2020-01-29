@@ -10,7 +10,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fzl/fdio.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 

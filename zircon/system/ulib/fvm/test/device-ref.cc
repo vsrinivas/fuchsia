@@ -13,7 +13,7 @@
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/vector_view.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -72,7 +72,7 @@ zx::unowned_channel GetChannel(int fd) {
   if (fd < 0) {
     return zx::unowned_channel();
   }
-  fzl::UnownedFdioCaller caller(fd);
+  fdio_cpp::UnownedFdioCaller caller(fd);
   return zx::unowned_channel(caller.borrow_channel());
 }
 

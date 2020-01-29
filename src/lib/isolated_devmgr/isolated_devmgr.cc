@@ -9,7 +9,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
@@ -30,7 +30,7 @@ zx_status_t IsolatedDevmgr::WaitForFile(const char* path) {
 }
 
 void IsolatedDevmgr::Connect(zx::channel req) {
-  fzl::UnownedFdioCaller fd(devmgr_.devfs_root().get());
+  fdio_cpp::UnownedFdioCaller fd(devmgr_.devfs_root().get());
   fdio_service_clone_to(fd.borrow_channel(), req.release());
 }
 

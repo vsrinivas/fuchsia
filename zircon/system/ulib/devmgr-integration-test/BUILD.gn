@@ -35,6 +35,7 @@ zx_library("devmgr-integration-test") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fzl",

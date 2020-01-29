@@ -12,7 +12,7 @@
 #include <fuchsia/minfs/llcpp/fidl.h>
 #include <fuchsia/storage/metrics/c/fidl.h>
 #include <getopt.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <minfs/metrics.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,7 +71,7 @@ zx_status_t EnableFsMetrics(const char* path, bool enable) {
   }
 
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t rc = fuchsia_minfs_MinfsToggleMetrics(caller.borrow_channel(), enable, &status);
   if (rc != ZX_OK || status != ZX_OK) {
     fprintf(stderr, "Error toggling metrics for %s, status %d\n", path,
@@ -89,7 +89,7 @@ zx_status_t GetFsMetrics(const char* path, MinfsFidlMetrics* out_metrics) {
     return ZX_ERR_IO;
   }
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = llcpp::fuchsia::minfs::Minfs::Call::GetMetrics(caller.channel());
   if (!result.ok()) {
     fprintf(stderr, "Error getting metrics for %s, status %d\n", path, result.status());
@@ -124,7 +124,7 @@ zx_status_t GetBlockMetrics(const char* dev, bool clear, fuchsia_hardware_block_
     fprintf(stderr, "Error opening %s, errno %d (%s)\n", dev, errno, strerror(errno));
     return ZX_ERR_IO;
   }
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t status;
   zx_status_t io_status =
       fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear, &status, stats);
@@ -177,7 +177,7 @@ void RunFsMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetricOpt
 
   fuchsia_io_FilesystemInfo info;
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t io_status =
       fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info);
   if (io_status != ZX_OK || status != ZX_OK) {
@@ -244,7 +244,7 @@ void RunBlockMetrics(const fbl::StringBuffer<PATH_MAX> path, const StorageMetric
   char device_buffer[1024];
   size_t path_len;
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t io_status = fuchsia_io_DirectoryAdminGetDevicePath(
       caller.borrow_channel(), &status, device_buffer, sizeof(device_buffer) - 1, &path_len);
   const char* device_path = nullptr;

@@ -9,7 +9,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/unsafe.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>

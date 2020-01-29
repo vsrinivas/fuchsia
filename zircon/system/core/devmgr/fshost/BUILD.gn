@@ -63,6 +63,7 @@ source_set("block-watcher") {
     "$zx/system/fidl/fuchsia-fshost:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/memfs",

@@ -14,6 +14,7 @@ zx_library("sysmem-connector") {
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zx",
   ]

@@ -15,7 +15,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -106,7 +106,7 @@ zx_status_t BlockDevice::GetInfo(fuchsia_hardware_block_BlockInfo* out_info) {
     memcpy(out_info, &*info_, sizeof(*out_info));
     return ZX_OK;
   }
-  fzl::UnownedFdioCaller connection(fd_.get());
+  fdio_cpp::UnownedFdioCaller connection(fd_.get());
   zx_status_t io_status, call_status;
   io_status =
       fuchsia_hardware_block_BlockGetInfo(connection.borrow_channel(), &call_status, out_info);
@@ -118,7 +118,7 @@ zx_status_t BlockDevice::GetInfo(fuchsia_hardware_block_BlockInfo* out_info) {
 }
 
 zx_status_t BlockDevice::GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) {
-  fzl::UnownedFdioCaller connection(fd_.get());
+  fdio_cpp::UnownedFdioCaller connection(fd_.get());
   zx_status_t io_status, call_status;
   io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(connection.borrow_channel(),
                                                                     &call_status, out_guid);
@@ -130,7 +130,7 @@ zx_status_t BlockDevice::GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_
 
 zx_status_t BlockDevice::AttachDriver(const fbl::StringPiece& driver) {
   printf("fshost: Binding: %.*s\n", static_cast<int>(driver.length()), driver.data());
-  fzl::UnownedFdioCaller connection(fd_.get());
+  fdio_cpp::UnownedFdioCaller connection(fd_.get());
   zx_status_t call_status = ZX_OK;
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
       zx::unowned_channel(connection.borrow_channel()),
@@ -173,7 +173,7 @@ zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
   fbl::StringBuffer<PATH_MAX> path;
   path.Resize(path.capacity());
   size_t path_len;
-  fzl::UnownedFdioCaller disk_connection(fd_.get());
+  fdio_cpp::UnownedFdioCaller disk_connection(fd_.get());
   // Both the zxcrypt and minfs partitions have the same gpt guid, so here we
   // determine which it actually is. We do this by looking up the topological
   // path.
@@ -339,7 +339,7 @@ zx_status_t BlockDevice::MountFilesystem() {
   }
   zx::channel block_device;
   {
-    fzl::UnownedFdioCaller disk_connection(fd_.get());
+    fdio_cpp::UnownedFdioCaller disk_connection(fd_.get());
     zx::unowned_channel channel(disk_connection.borrow_channel());
     block_device.reset(fdio_service_clone(channel->get()));
   }

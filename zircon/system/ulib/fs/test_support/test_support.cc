@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <zircon/status.h>
 
@@ -20,7 +20,7 @@ std::string GetTopologicalPath(const std::string& path) {
     printf("Could not open block device\n");
     return std::string();
   }
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   return GetTopologicalPath(caller.borrow_channel());
 }
 

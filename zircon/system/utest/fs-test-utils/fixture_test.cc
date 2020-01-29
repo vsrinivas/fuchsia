@@ -11,7 +11,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-test-utils/fixture.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
@@ -23,7 +23,7 @@ namespace {
 zx_status_t GetBlockDeviceInfo(const fbl::String& block_device_path,
                                fuchsia_hardware_block_BlockInfo* blk_info) {
   fbl::unique_fd fd(open(block_device_path.c_str(), O_RDONLY));
-  fzl::FdioCaller disk_caller(std::move(fd));
+  fdio_cpp::FdioCaller disk_caller(std::move(fd));
   zx_status_t status;
   zx_status_t io_status =
       fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, blk_info);

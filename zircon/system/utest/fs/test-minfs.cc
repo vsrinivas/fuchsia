@@ -9,7 +9,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/fdio/vfs.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -47,7 +47,7 @@ bool QueryInfo(fio::FilesystemInfo* info) {
   // Sync before querying fs so that we can obtain an accurate number of used bytes. Otherwise,
   // blocks which are reserved but not yet allocated won't be counted.
   fsync(fd.get());
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fio::DirectoryAdmin::Call::QueryFilesystem((caller.channel()));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result.Unwrap()->s, ZX_OK);
@@ -134,7 +134,7 @@ bool ToggleMetrics(bool enabled) {
   BEGIN_HELPER;
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t status;
   ASSERT_EQ(fuchsia_minfs_MinfsToggleMetrics(caller.borrow_channel(), enabled, &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
@@ -146,7 +146,7 @@ bool GetMetricsUnavailable() {
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   fuchsia_minfs_Metrics metrics;
   ASSERT_EQ(fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, &metrics), ZX_OK);
   ASSERT_EQ(status, ZX_ERR_UNAVAILABLE);
@@ -158,7 +158,7 @@ bool GetMetrics(fuchsia_minfs_Metrics* metrics) {
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_EQ(fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, metrics), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
   END_HELPER;
@@ -570,7 +570,7 @@ bool GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) {
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   zx_status_t status;
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_handle_t vmo_handle;
   ASSERT_EQ(fuchsia_minfs_MinfsGetAllocatedRegions(caller.borrow_channel(), &status, &vmo_handle,
                                                    out_count),

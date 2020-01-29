@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <lib/bootfs/parser.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/hermetic-decompressor/hermetic-decompressor.h>
 #include <lib/zx/channel.h>
@@ -39,7 +39,7 @@ bool ZbiBootfsParser::IsSkipBlock(const char* path,
     return false;
   }
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
 
   // |status| is used for the status of the whole FIDL request. We expect
   // |status| to be ZX_OK if the channel connects to a skip-block driver.
@@ -232,7 +232,7 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
         .block_count = block_count,
     };
 
-    fzl::FdioCaller caller(std::move(fd));
+    fdio_cpp::FdioCaller caller(std::move(fd));
 
     fuchsia_hardware_skipblock_SkipBlockRead(caller.borrow_channel(), &op, &status);
 

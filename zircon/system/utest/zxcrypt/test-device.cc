@@ -13,7 +13,6 @@
 #include <inttypes.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>

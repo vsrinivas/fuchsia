@@ -27,6 +27,7 @@ executable("display-test") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/image-format-llcpp",

@@ -13,7 +13,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <poll.h>
 #include <stdio.h>
@@ -353,7 +353,7 @@ zx_status_t KeyboardWatcher::Setup(keypress_handler_t handler, bool repeat_keys)
     return status;
   }
 
-  dir_caller_ = fzl::FdioCaller(std::move(fd));
+  dir_caller_ = fdio_cpp::FdioCaller(std::move(fd));
   zx_status_t io_status = fuchsia_io_DirectoryWatch(
       dir_caller_.borrow_channel(), fuchsia_io_WATCH_MASK_ALL, 0, server.release(), &status);
   if (io_status != ZX_OK || status != ZX_OK) {

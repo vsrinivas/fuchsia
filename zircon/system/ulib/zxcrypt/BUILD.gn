@@ -55,9 +55,9 @@ zx_library("zxcrypt-fdio") {
     "volume.cc",
   ]
   public_deps = [
-    # <zxcrypt/fdio-volume.h> has #include <lib/fzl/fdio.h>
+    # <zxcrypt/fdio-volume.h> has #include <lib/fdio/cpp/caller.h>
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
-    "$zx/system/ulib/fzl:headers",
+    "$zx/system/ulib/fdio-caller:headers",
     "$zx/system/ulib/zircon-crypto:headers",
   ]
   configs += [ "$zx_build/public/gn/config:integer-paranoia" ]
@@ -68,6 +68,7 @@ zx_library("zxcrypt-fdio") {
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fs-management:headers",  # only used for zxcrypt_magic
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/kms-stateless",

@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/status.h>

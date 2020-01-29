@@ -18,7 +18,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include "lib/fzl/fdio.h"
+#include "lib/fdio/cpp/caller.h"
 #include "payload-streamer.h"
 #include "zircon/errors.h"
 
@@ -280,7 +280,7 @@ zx_status_t Paver::OpenDataSink(
     return status;
   }
 
-  fzl::UnownedFdioCaller caller(devfs_root_.get());
+  fdio_cpp::UnownedFdioCaller caller(devfs_root_.get());
 
   status = fdio_service_connect_at(caller.borrow_channel(), &partition_info.block_device_path[5],
                                    remote.release());

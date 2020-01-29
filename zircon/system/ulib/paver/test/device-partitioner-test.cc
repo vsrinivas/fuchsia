@@ -13,7 +13,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/syscalls.h>
@@ -558,7 +558,7 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializePartitionTable) {
   }
   ASSERT_OK(gpt->Sync());
 
-  fzl::UnownedFdioCaller caller(gpt_dev->fd());
+  fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
   auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
       caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
   ASSERT_TRUE(result.ok());

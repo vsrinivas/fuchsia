@@ -13,7 +13,7 @@
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <string.h>
@@ -66,7 +66,7 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
       return status;
     }
 
-    fzl::UnownedFdioCaller caller(dirfd);
+    fdio_cpp::UnownedFdioCaller caller(dirfd);
     status = fdio_service_connect_at(caller.borrow_channel(), filename, remote.release());
     if (status != ZX_OK) {
       return ZX_OK;
@@ -97,7 +97,7 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
 }
 
 zx_status_t CheckIfAstro(const fbl::unique_fd& devfs_root) {
-  fzl::UnownedFdioCaller caller(devfs_root.get());
+  fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {

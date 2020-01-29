@@ -6,7 +6,7 @@
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
@@ -97,7 +97,7 @@ class FsRecoveryTest {
     fuchsia_hardware_block_partition_GUID instance_guid;
     memcpy(instance_guid.value, req.guid, BLOCK_GUID_LEN);
 
-    fzl::UnownedFdioCaller caller(fvm_fd.get());
+    fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
     zx_status_t status;
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
                   caller.borrow_channel(), req.slice_count, &type_guid, &instance_guid, req.name,

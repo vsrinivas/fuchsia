@@ -29,6 +29,7 @@ zx_library("test_support") {
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs/transaction",
     "$zx/system/ulib/fvm",

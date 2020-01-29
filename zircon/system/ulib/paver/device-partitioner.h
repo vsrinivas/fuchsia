@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <stdbool.h>
 #include <zircon/types.h>
@@ -168,7 +168,7 @@ class GptDevicePartitioner {
                                  uint64_t blocks, uint8_t* out_guid) const;
 
   fbl::unique_fd devfs_root_;
-  fzl::FdioCaller caller_;
+  fdio_cpp::FdioCaller caller_;
   mutable std::unique_ptr<GptDevice> gpt_;
   ::llcpp::fuchsia::hardware::block::BlockInfo block_info_;
 };

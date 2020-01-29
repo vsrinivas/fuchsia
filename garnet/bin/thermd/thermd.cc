@@ -14,7 +14,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
 
   zx_status_t status2;
   float temp;

@@ -10,7 +10,7 @@
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/block/volume/llcpp/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
@@ -55,7 +55,7 @@ constexpr size_t kZxcryptExtraSlices = 1;
 // capcity of the buffer, including space for a null byte.
 // Upon success, |buf| will contain the null-terminated topological path.
 zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_len) {
-  fzl::UnownedFdioCaller caller(fd.get());
+  fdio_cpp::UnownedFdioCaller caller(fd.get());
   auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(caller.channel());
   if (!resp.ok()) {
     return resp.status();
@@ -104,7 +104,7 @@ inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size
 // Registers a FIFO
 zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vmoid_t* out_vmoid,
                                 block_client::Client* out_client) {
-  fzl::UnownedFdioCaller caller(fd.get());
+  fdio_cpp::UnownedFdioCaller caller(fd.get());
 
   auto result = block::Block::Call::GetFifo(caller.channel());
   if (!result.ok()) {
@@ -246,7 +246,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
     return fvm;
   }
 
-  fzl::UnownedFdioCaller caller(partition_fd.get());
+  fdio_cpp::UnownedFdioCaller caller(partition_fd.get());
   constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(caller.channel(),
                                                                  fidl::StringView(kFvmDriverLib));
@@ -287,9 +287,9 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
       fvm_fd = TryBindToFvmDriver(devfs_root, partition_fd, zx::sec(3));
       if (fvm_fd) {
         LOG("Found already formatted FVM.\n");
-        fzl::UnownedFdioCaller volume_manager(fvm_fd.get());
+        fdio_cpp::UnownedFdioCaller volume_manager(fvm_fd.get());
         auto result =
-            volume::VolumeManager::Call::GetInfo(fzl::UnownedFdioCaller(fvm_fd.get()).channel());
+            volume::VolumeManager::Call::GetInfo(fdio_cpp::UnownedFdioCaller(fvm_fd.get()).channel());
         if (result.status() == ZX_OK) {
           auto get_maximum_slice_count = [](const fvm::sparse_image_t& header) {
             return fvm::FormatInfo::FromDiskSize(header.maximum_disk_size, header.slice_size)
@@ -321,7 +321,7 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
       *format_result = FormatResult::kReformatted;
     }
 
-    fzl::UnownedFdioCaller partition_connection(partition_fd.get());
+    fdio_cpp::UnownedFdioCaller partition_connection(partition_fd.get());
     auto block_info_result = block::Block::Call::GetInfo(partition_connection.channel());
     if (!block_info_result.ok()) {
       ERROR("Failed to query block info: %s\n", zx_status_get_string(block_info_result.status()));
@@ -403,7 +403,7 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
   uint64_t offset = allocated - reserved;
   uint64_t length = needed - allocated;
   {
-    fzl::UnownedFdioCaller partition_connection(part->new_part.get());
+    fdio_cpp::UnownedFdioCaller partition_connection(part->new_part.get());
     auto result = volume::Volume::Call::Extend(partition_connection.channel(), offset, length);
     status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
@@ -460,7 +460,7 @@ zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uin
     // We're paving a partition that already exists within the FVM: let's
     // destroy it before we pave anew.
 
-    fzl::UnownedFdioCaller partition_connection(old_part.get());
+    fdio_cpp::UnownedFdioCaller partition_connection(old_part.get());
     auto result = volume::Volume::Call::Destroy(partition_connection.channel());
     zx_status_t status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
@@ -586,7 +586,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
       uint64_t offset = ext->slice_start;
       uint64_t length = ext->slice_count;
 
-      fzl::UnownedFdioCaller partition_connection((*parts)[p].new_part.get());
+      fdio_cpp::UnownedFdioCaller partition_connection((*parts)[p].new_part.get());
       auto result = volume::Volume::Call::Extend(partition_connection.channel(), offset, length);
       auto status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
@@ -707,7 +707,7 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     return ZX_ERR_NO_MEMORY;
   }
 
-  fzl::FdioCaller volume_manager(std::move(fvm_fd));
+  fdio_cpp::FdioCaller volume_manager(std::move(fvm_fd));
 
   // Now that all partitions are preallocated, begin streaming data to them.
   for (size_t p = 0; p < parts.size(); p++) {
@@ -719,7 +719,7 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
       return status;
     }
 
-    fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
+    fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
     auto result = block::Block::Call::GetInfo(partition_connection.channel());
     if (!result.ok()) {
       ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(result.status()));
@@ -753,7 +753,7 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   }
 
   for (size_t p = 0; p < parts.size(); p++) {
-    fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
+    fdio_cpp::UnownedFdioCaller partition_connection(parts[p].new_part.get());
     // Upgrade the old partition (currently active) to the new partition (currently
     // inactive) so the new partition persists.
     auto result = partition::Partition::Call::GetInstanceGuid(partition_connection.channel());

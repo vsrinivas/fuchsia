@@ -63,6 +63,7 @@ zx_test("minfs-integration") {
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs-test-utils",

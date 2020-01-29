@@ -11,6 +11,7 @@ zx_executable("xdc-test") {
     "$zx/system/fidl/fuchsia-usb-debug:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

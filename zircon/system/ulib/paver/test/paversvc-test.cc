@@ -13,7 +13,7 @@
 #include <lib/cksum.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
 #include <lib/zx/vmo.h>
@@ -848,7 +848,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {
 }
 
 void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
-  fzl::UnownedFdioCaller caller(device.get());
+  fdio_cpp::UnownedFdioCaller caller(device.get());
   auto result = partition::Partition::Call::GetTypeGuid(caller.channel());
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);

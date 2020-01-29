@@ -11,6 +11,7 @@ zx_executable("hid") {
     "$zx/system/fidl/fuchsia-hardware-input:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hid-parser",
     "$zx/system/ulib/zircon",

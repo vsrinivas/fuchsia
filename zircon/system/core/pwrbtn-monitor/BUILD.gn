@@ -10,6 +10,7 @@ zx_executable("pwrbtn-monitor") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hid-parser",
     "$zx/system/ulib/zircon",

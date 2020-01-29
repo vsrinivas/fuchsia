@@ -92,6 +92,7 @@ zx_library("minfs") {
       "$zx/system/ulib/async-loop:async-loop-cpp",
       "$zx/system/ulib/async-loop:async-loop-default.static",
       "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fdio-caller",
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/fidl-utils",
       "$zx/system/ulib/fs/journal",

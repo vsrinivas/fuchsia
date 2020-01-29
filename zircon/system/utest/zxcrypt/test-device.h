@@ -6,7 +6,7 @@
 #define ZIRCON_SYSTEM_UTEST_ZXCRYPT_TEST_DEVICE_H_
 
 #include <lib/devmgr-integration-test/fixture.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
@@ -248,9 +248,9 @@ class TestDevice final {
   // The pathname of the FVM partition.
   char fvm_part_path_[PATH_MAX];
   // A channel-exposing wrapper around the parent device.
-  fzl::UnownedFdioCaller parent_caller_;
+  fdio_cpp::UnownedFdioCaller parent_caller_;
   // A channel-exposing wrapper around the zxcrypt device.
-  fzl::UnownedFdioCaller zxcrypt_caller_;
+  fdio_cpp::UnownedFdioCaller zxcrypt_caller_;
   // File descriptor for the (optional) underlying FVM partition.
   fbl::unique_fd fvm_part_;
   // File descriptor for the zxcrypt volume.

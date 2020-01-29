@@ -13,6 +13,7 @@ zx_library("blktest") {
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",

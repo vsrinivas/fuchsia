@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <zircon/status.h>
 
 #include <fbl/unique_fd.h>
@@ -64,7 +64,7 @@ void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callb
     return;
   }
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
       caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
   if (fidl_status != ZX_OK) {

@@ -11,7 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 
 #include <fbl/unique_fd.h>
@@ -139,7 +139,7 @@ void FilesystemTest::GetFsInfo(::llcpp::fuchsia::io::FilesystemInfo* info) {
   fbl::unique_fd fd(open(mount_path(), O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = ::llcpp::fuchsia::io::DirectoryAdmin::Call::QueryFilesystem(
       zx::unowned_channel(caller.borrow_channel()));
   ASSERT_OK(result.status());
@@ -183,7 +183,7 @@ void FilesystemTestWithFvm::BindFvm() {
   ASSERT_TRUE(fd, "Could not open test disk");
   ASSERT_OK(fvm_init(fd.get(), GetSliceSize()));
 
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   zx_status_t status;
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
       zx::unowned_channel(caller.borrow_channel()),
@@ -208,7 +208,7 @@ void FilesystemTestWithFvm::CreatePartition() {
   ASSERT_TRUE(fd, "Could not open FVM driver");
 
   std::string name("fs-test-partition");
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto type = reinterpret_cast<const fuchsia_hardware_block_partition_GUID*>(kTestPartGUID);
   auto guid = reinterpret_cast<const fuchsia_hardware_block_partition_GUID*>(kTestUniqueGUID);
   zx_status_t status;

@@ -7,7 +7,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
 #include <inttypes.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -121,7 +121,7 @@ std::unique_ptr<GptDevice> Init(const char* dev) {
   }
 
   fuchsia_hardware_block_BlockInfo info;
-  fzl::UnownedFdioCaller disk_caller(fd.get());
+  fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
   zx_status_t status;
   zx_status_t io_status =
       fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &info);
@@ -153,7 +153,7 @@ constexpr void SetXY(unsigned yes, const char** X, const char** Y) {
 }
 
 zx_status_t BlockRrPart(int fd) {
-  fzl::UnownedFdioCaller caller(fd);
+  fdio_cpp::UnownedFdioCaller caller(fd);
   zx_status_t status, io_status;
   io_status = fuchsia_hardware_block_BlockRebindDevice(caller.borrow_channel(), &status);
   if (io_status != ZX_OK) {

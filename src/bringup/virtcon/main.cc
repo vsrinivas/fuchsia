@@ -13,7 +13,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zircon-internal/paths.h>
 #include <lib/zx/channel.h>
 #include <poll.h>

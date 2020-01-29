@@ -5,7 +5,7 @@
 #include "libgpt-tests.h"
 
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <zircon/assert.h>
 
 #include <memory>
@@ -307,7 +307,7 @@ bool LibGptTest::InitDisk(const char* disk_path) {
   fbl::unique_fd fd(open(disk_path_, O_RDWR));
   ASSERT_TRUE(fd.is_valid(), "Could not open block device to fetch info");
   fuchsia_hardware_block_BlockInfo block_info;
-  fzl::UnownedFdioCaller caller(fd.get());
+  fdio_cpp::UnownedFdioCaller caller(fd.get());
   zx_status_t status;
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &block_info),
             ZX_OK);

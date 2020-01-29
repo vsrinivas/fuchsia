@@ -7,7 +7,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/vfs.h>
-#include <lib/fzl/fdio.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <unistd.h>
 

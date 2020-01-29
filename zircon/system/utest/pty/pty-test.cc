@@ -8,7 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/time.h>
 #include <poll.h>
 #include <stdio.h>
@@ -133,7 +133,7 @@ static bool pty_test(void) {
     ASSERT_EQ(fcntl(ps.get(), F_SETFL, flags | O_NONBLOCK), 0);
   }
 
-  fzl::UnownedFdioCaller ps_io(ps.get());
+  fdio_cpp::UnownedFdioCaller ps_io(ps.get());
 
   int pc_fd;
   ASSERT_EQ(open_client(ps.get(), 0, &pc_fd), ZX_OK);
@@ -142,7 +142,7 @@ static bool pty_test(void) {
   fbl::unique_fd pc(pc_fd);
   ASSERT_EQ(bool(pc), true, "");
 
-  fzl::UnownedFdioCaller pc_io(pc.get());
+  fdio_cpp::UnownedFdioCaller pc_io(pc.get());
 
   char tmp[32];
 
@@ -260,7 +260,7 @@ static bool pty_test(void) {
   fbl::unique_fd pc1(pc1_fd);
   ASSERT_EQ(bool(pc1), true, "");
 
-  fzl::UnownedFdioCaller pc1_io(pc1.get());
+  fdio_cpp::UnownedFdioCaller pc1_io(pc1.get());
 
   // reads/writes to non-active client should block
   ASSERT_EQ(fd_signals(pc1, 0, zx::time{}), 0, "");
@@ -313,7 +313,7 @@ bool not_a_pty_test(void) {
   fbl::unique_fd root_dir(open("/", O_DIRECTORY | O_RDONLY));
   ASSERT_EQ(bool(root_dir), true, "");
 
-  fzl::UnownedFdioCaller io(root_dir.get());
+  fdio_cpp::UnownedFdioCaller io(root_dir.get());
 
   // Sending pty messages such as 'get window size' should fail
   // properly on things that are not ptys.

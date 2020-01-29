@@ -69,6 +69,7 @@ source_set("lib") {
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/inspector",

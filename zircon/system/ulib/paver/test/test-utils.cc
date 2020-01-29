@@ -7,7 +7,6 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
 #include <zircon/boot/image.h>

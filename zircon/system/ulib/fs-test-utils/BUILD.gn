@@ -39,6 +39,7 @@ zx_library("fs-test-utils") {
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",

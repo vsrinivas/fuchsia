@@ -11,7 +11,7 @@
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
@@ -111,7 +111,7 @@ static int cmd_list_blk(void) {
       fprintf(stderr, "Error opening %s\n", info.path);
       continue;
     }
-    fzl::FdioCaller caller(std::move(fd));
+    fdio_cpp::FdioCaller caller(std::move(fd));
 
     populate_topo_path(*caller.channel(), &info);
 
@@ -176,7 +176,7 @@ static int cmd_list_skip_blk(void) {
       fprintf(stderr, "Error opening %s\n", info.path);
       continue;
     }
-    fzl::FdioCaller caller(std::move(fd));
+    fdio_cpp::FdioCaller caller(std::move(fd));
 
     populate_topo_path(*caller.channel(), &info);
 
@@ -196,7 +196,7 @@ static int cmd_list_skip_blk(void) {
   return 0;
 }
 
-static int try_read_skip_blk(const fzl::UnownedFdioCaller& caller, off_t offset, size_t count) {
+static int try_read_skip_blk(const fdio_cpp::UnownedFdioCaller& caller, off_t offset, size_t count) {
   // check that count and offset are aligned to block size
   uint64_t blksize;
   zx_status_t status;
@@ -265,7 +265,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
     fprintf(stderr, "Error opening %s\n", dev);
     return -1;
   }
-  fzl::UnownedFdioCaller caller(fd.get());
+  fdio_cpp::UnownedFdioCaller caller(fd.get());
 
   // Try querying for block info on a new channel.
   // lsblk also supports reading from skip block devices, but guessing the "wrong" type
@@ -320,7 +320,7 @@ static int cmd_stats(const char* dev, bool clear) {
     fprintf(stderr, "Error opening %s\n", dev);
     return -1;
   }
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fuchsia_block::Block::Call::GetStats(caller.channel(), clear);
   if (!result.ok() || result->status != ZX_OK) {
     fprintf(stderr, "Error getting stats for %s\n", dev);

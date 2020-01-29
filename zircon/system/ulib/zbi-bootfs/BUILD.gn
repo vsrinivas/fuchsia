@@ -20,6 +20,7 @@ zx_library("zbi-bootfs") {
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hermetic-decompressor:headers",
     "$zx/third_party/ulib/lz4",

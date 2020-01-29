@@ -14,7 +14,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
-#include <lib/fzl/fdio.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>

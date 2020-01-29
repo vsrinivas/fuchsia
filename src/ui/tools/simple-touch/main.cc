@@ -10,7 +10,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/framebuffer/framebuffer.h>
-#include <lib/fzl/fdio.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

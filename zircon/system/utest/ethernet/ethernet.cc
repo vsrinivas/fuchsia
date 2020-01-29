@@ -12,7 +12,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fzl/fdio.h>
 #include <lib/fzl/fifo.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>

@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,7 +34,7 @@ bool QueryInfo(uint64_t* out_free_pool_size) {
   BEGIN_HELPER;
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   auto query_result = fio::DirectoryAdmin::Call::QueryFilesystem(caller.channel());
   ASSERT_EQ(query_result.status(), ZX_OK);
   ASSERT_NOT_NULL(query_result.Unwrap()->info);

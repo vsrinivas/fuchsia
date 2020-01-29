@@ -6,7 +6,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/errors.h>
@@ -37,7 +37,7 @@ bool VolumeCreate(const fbl::unique_fd& fd, const fbl::unique_fd& devfs_root,
   BEGIN_HELPER;
 
   char err[128];
-  fzl::UnownedFdioCaller caller(fd.get());
+  fdio_cpp::UnownedFdioCaller caller(fd.get());
   fuchsia_hardware_block_BlockInfo block_info;
   zx_status_t status;
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &status, &block_info),

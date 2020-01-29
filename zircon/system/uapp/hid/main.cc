@@ -9,7 +9,6 @@
 #include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
 #include <lib/zx/event.h>
 #include <limits.h>
 #include <stdio.h>

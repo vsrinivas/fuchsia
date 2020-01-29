@@ -7,7 +7,7 @@
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fzl/fdio.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/port.h>
@@ -95,7 +95,7 @@ TEST_F(UsbQmiTest, RequestImei) {
   fbl::unique_fd fd_qmi(openat(GetVirtBus().GetRootFd(), GetDevPath().c_str(), O_RDWR));
   ASSERT_GT(fd_qmi.get(), 0);
 
-  fzl::FdioCaller qmi_fdio_caller_;
+  fdio_cpp::FdioCaller qmi_fdio_caller_;
   qmi_fdio_caller_.reset(std::move(fd_qmi));
   zx::port channel_port;
   // set QMI channel to driver

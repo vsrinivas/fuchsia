@@ -9,7 +9,6 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fvm/format.h>
-#include <lib/fzl/fdio.h>
 #include <zxtest/zxtest.h>
 
 namespace {
