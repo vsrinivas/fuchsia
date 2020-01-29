@@ -19,8 +19,9 @@ use fuchsia_syslog::fx_log_warn;
 use futures::{
     self,
     channel::mpsc,
+    future::BoxFuture,
     prelude::*,
-    stream::{self, Stream},
+    stream::{self, BoxStream, Stream},
     task::{Context, Poll},
     StreamExt,
 };
@@ -28,16 +29,12 @@ use mpmc;
 use std::{collections::HashMap, marker::Unpin, pin::Pin};
 use streammap::StreamMap;
 
-struct WatcherClient<F, S> {
-    event_forward: F,
-    disconnect_signal: S,
+struct WatcherClient {
+    event_forward: BoxFuture<'static, Result<()>>,
+    disconnect_signal: BoxStream<'static, ()>,
 }
 
-impl<F, S> Future for WatcherClient<F, S>
-where
-    F: Future<Output = Result<()>> + Unpin,
-    S: Stream<Item = ()> + Unpin,
-{
+impl Future for WatcherClient {
     type Output = Result<()>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if Pin::new(&mut self.disconnect_signal).poll_next(cx).is_ready() {
@@ -61,13 +58,13 @@ impl Discovery {
         Self { player_stream, catch_up_events: HashMap::new(), next_watcher_id: 0 }
     }
 
-    fn new_watcher_client<S: Stream<Item = ()> + Unpin>(
+    fn new_watcher_client(
         &mut self,
-        disconnect_signal: S,
-        watcher_sink: impl Sink<(u64, SessionsWatcherEvent), Error = Error> + Unpin,
-        player_events: impl Stream<Item = FilterApplicant<(u64, PlayerEvent)>> + Unpin,
+        disconnect_signal: impl Stream<Item = ()> + Unpin + Send + 'static,
+        watcher_sink: impl Sink<(u64, SessionsWatcherEvent), Error = Error> + Unpin + Send + 'static,
+        player_events: impl Stream<Item = FilterApplicant<(u64, PlayerEvent)>> + Unpin + Send + 'static,
         filter: Filter,
-    ) -> (usize, WatcherClient<impl Future<Output = Result<()>> + Unpin, S>) {
+    ) -> (usize, WatcherClient) {
         let id = self.next_watcher_id;
         self.next_watcher_id += 1;
 
@@ -76,9 +73,9 @@ impl Discovery {
         let event_stream =
             stream::iter(queue).chain(player_events).filter_map(watcher_filter(filter));
 
-        let event_forward = event_stream.map(Ok).forward(watcher_sink);
+        let event_forward = event_stream.map(Ok).forward(watcher_sink).boxed();
 
-        (id, WatcherClient { event_forward, disconnect_signal })
+        (id, WatcherClient { event_forward, disconnect_signal: disconnect_signal.boxed() })
     }
 
     pub async fn serve(
