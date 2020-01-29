@@ -131,18 +131,16 @@ type Struct struct {
 	// Members is a list of the golang struct members.
 	Members []StructMember
 
-	// InlineSize is the FIDL-encoded size of the struct.
-	InlineSize int
-	// Alignment is the alignment of the FIDL-encoded struct.
-	Alignment int
+	Tags Tags
 }
 
-type Tag struct {
+// StackOfBoundsTag corresponds to the original "fidl" tag.
+type StackOfBoundsTag struct {
 	reverseOfBounds []int
 }
 
 // String generates a string representation for the tag.
-func (t Tag) String() string {
+func (t StackOfBoundsTag) String() string {
 	var (
 		elems    []string
 		allEmpty = true
@@ -162,6 +160,55 @@ func (t Tag) String() string {
 	return fmt.Sprintf(`%s`, strings.Join(elems, ","))
 }
 
+// Tag represents a go tag in the generated code.
+type Tag int32
+
+const (
+	_       Tag = iota
+	FidlTag     // "fidl" tag with value from StackOfBoundsTag
+	FidlSizeV1Tag
+	FidlOffsetV1Tag
+	FidlAlignmentV1Tag
+	FidlHashedOrdTag
+	FidlExplicitOrdTag
+	FidlHandleRightsTag
+	EndTag   // This value must be last in the list to allow iteration over all tags.
+	StartTag = FidlTag
+)
+
+func (t Tag) String() string {
+	switch t {
+	case FidlTag:
+		return "fidl"
+	case FidlSizeV1Tag:
+		return "fidl_size_v1"
+	case FidlOffsetV1Tag:
+		return "fidl_offset_v1"
+	case FidlAlignmentV1Tag:
+		return "fidl_alignment_v1"
+	case FidlHashedOrdTag:
+		return "fidl_hashed_ord"
+	case FidlExplicitOrdTag:
+		return "fidl_explicit_ord"
+	case FidlHandleRightsTag:
+		return "fidl_handle_rights"
+	}
+	panic("unknown tag")
+}
+
+// Tags is a collection containing the tag definitions.
+type Tags map[Tag]interface{}
+
+func (t Tags) String() string {
+	var tagPairs []string
+	for tag := StartTag; tag < EndTag; tag++ {
+		if val, ok := t[tag]; ok {
+			tagPairs = append(tagPairs, fmt.Sprintf("%s:%q", tag, fmt.Sprintf("%v", val)))
+		}
+	}
+	return strings.Join(tagPairs, " ")
+}
+
 // StructMember represents the member of a golang struct.
 type StructMember struct {
 	types.Attributes
@@ -176,42 +223,33 @@ type StructMember struct {
 	Type Type
 
 	// Corresponds to fidl tag in generated go.
-	FidlTag string
-
-	// Field offset for the V1 wire format, without efficient envelopes.
-	Offset int
+	Tags Tags
 }
 
 type XUnion struct {
 	types.Attributes
-	Name       string
-	TagName    string
-	Members    []XUnionMember
-	InlineSize int
-	Alignment  int
+	Name    string
+	TagName string
+	Members []XUnionMember
+	Tags    Tags
 	types.Strictness
 }
 
 type XUnionMember struct {
 	types.Attributes
-	Ordinal         uint64
-	ExplicitOrdinal uint64
-	HashedOrdinal   uint64
-	Name            string
-	PrivateName     string
-	Type            Type
-	FidlTag         string
+	Ordinal     uint64
+	Name        string
+	PrivateName string
+	Type        Type
+	Tags        Tags
 }
 
 // Table represents a FIDL table as a golang struct.
 type Table struct {
 	types.Attributes
-	Name          string
-	Members       []TableMember
-	InlineSizeOld int
-	AlignmentOld  int
-	InlineSize    int
-	Alignment     int
+	Name    string
+	Members []TableMember
+	Tags    Tags
 }
 
 // TableMember represents a FIDL table member as two golang struct members, one
@@ -251,7 +289,7 @@ type TableMember struct {
 	Type Type
 
 	// Corresponds to fidl: tag in generated go.
-	FidlTag string
+	Tags Tags
 }
 
 // Interface represents a FIDL interface in terms of golang structures.
@@ -513,6 +551,18 @@ func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
 	return false
 }
 
+// Handle rights annotations are added to fields that contain handles
+// or arrays and vectors of handles (recursively).
+func (c *compiler) computeHandleRights(t types.Type) *types.HandleRights {
+	switch t.Kind {
+	case types.HandleType:
+		return &t.HandleRights
+	case types.ArrayType, types.VectorType:
+		return c.computeHandleRights(*t.ElementType)
+	}
+	return nil
+}
+
 func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext string) string {
 	str := string(id)
 	if export {
@@ -581,7 +631,7 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	return Type(t)
 }
 
-func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
+func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
 	switch val.Kind {
 	case types.ArrayType:
 		e, et := c.compileType(*val.ElementType)
@@ -724,26 +774,38 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
-	ty, tag := c.compileType(val.Type)
+	ty, rbtag := c.compileType(val.Type)
 	// TODO(fxb/43783) this value is not used but needs to exist since the
 	// bindings will ignore the first element before looking for the bounds
-	tag.reverseOfBounds = append(tag.reverseOfBounds, val.FieldShapeV1.Offset)
+	rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, val.FieldShapeV1.Offset)
+	tags := Tags{
+		FidlTag:         rbtag.String(),
+		FidlOffsetV1Tag: val.FieldShapeV1.Offset,
+	}
+	if handleRights := c.computeHandleRights(val.Type); handleRights != nil {
+		tags[FidlHandleRightsTag] = int(*handleRights)
+	}
+
 	return StructMember{
 		Attributes:  val.Attributes,
 		Type:        ty,
 		Name:        c.compileIdentifier(val.Name, true, ""),
 		PrivateName: c.compileIdentifier(val.Name, false, ""),
-		FidlTag:     tag.String(),
-		Offset:      val.FieldShapeV1.Offset,
+		Tags:        tags,
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
+	tags := Tags{
+		FidlTag:            "s",
+		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
+		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
+	}
+
 	r := Struct{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		InlineSize: val.TypeShapeV1.InlineSize,
-		Alignment:  val.TypeShapeV1.Alignment,
+		Tags:       tags,
 	}
 
 	for _, v := range val.Members {
@@ -759,27 +821,41 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		if member.Reserved {
 			continue
 		}
-		ty, tag := c.compileType(member.Type)
-		tag.reverseOfBounds = append(tag.reverseOfBounds, member.Ordinal)
+		ty, rbtag := c.compileType(member.Type)
+		rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, member.Ordinal)
+		tags := Tags{
+			FidlTag:            rbtag,
+			FidlExplicitOrdTag: member.ExplicitOrdinal,
+			FidlHashedOrdTag:   member.HashedOrdinal,
+		}
+		if handleRights := c.computeHandleRights(member.Type); handleRights != nil {
+			tags[FidlHandleRightsTag] = *handleRights
+		}
 		members = append(members, XUnionMember{
-			Attributes:      member.Attributes,
-			Ordinal:         uint64(member.Ordinal),
-			ExplicitOrdinal: uint64(member.ExplicitOrdinal),
-			HashedOrdinal:   uint64(member.HashedOrdinal),
-			Type:            ty,
-			Name:            c.compileIdentifier(member.Name, true, ""),
-			PrivateName:     c.compileIdentifier(member.Name, false, ""),
-			FidlTag:         tag.String(),
+			Attributes:  member.Attributes,
+			Ordinal:     uint64(member.Ordinal),
+			Type:        ty,
+			Name:        c.compileIdentifier(member.Name, true, ""),
+			PrivateName: c.compileIdentifier(member.Name, false, ""),
+			Tags:        tags,
 		})
+	}
+	fidlTag := "x"
+	if val.Strictness == types.IsStrict {
+		fidlTag += "!"
+	}
+	tags := Tags{
+		FidlTag:            fidlTag,
+		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
+		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
 	}
 	return XUnion{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
 		TagName:    "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
-		InlineSize: val.TypeShapeV1.InlineSize,
-		Alignment:  val.TypeShapeV1.Alignment,
 		Members:    members,
 		Strictness: val.Strictness,
+		Tags:       tags,
 	}
 }
 
@@ -787,11 +863,17 @@ func (c *compiler) compileTable(val types.Table) Table {
 	var members []TableMember
 	for _, member := range val.SortedMembersNoReserved() {
 		var (
-			ty, tag     = c.compileType(member.Type)
+			ty, rbtag   = c.compileType(member.Type)
 			name        = c.compileIdentifier(member.Name, true, "")
 			privateName = c.compileIdentifier(member.Name, false, "")
 		)
-		tag.reverseOfBounds = append(tag.reverseOfBounds, member.Ordinal)
+		rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, member.Ordinal)
+		tags := Tags{
+			FidlTag: rbtag.String(),
+		}
+		if handleRights := c.computeHandleRights(member.Type); handleRights != nil {
+			tags[FidlHandleRightsTag] = *handleRights
+		}
 		members = append(members, TableMember{
 			Attributes:        member.Attributes,
 			DataField:         name,
@@ -803,15 +885,19 @@ func (c *compiler) compileTable(val types.Table) Table {
 			Haser:             "Has" + name,
 			Clearer:           "Clear" + name,
 			Type:              ty,
-			FidlTag:           tag.String(),
+			Tags:              tags,
 		})
+	}
+	tags := Tags{
+		FidlTag:            "t",
+		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
+		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
 	}
 	return Table{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		InlineSize: val.TypeShapeV1.InlineSize,
-		Alignment:  val.TypeShapeV1.Alignment,
 		Members:    members,
+		Tags:       tags,
 	}
 }
 

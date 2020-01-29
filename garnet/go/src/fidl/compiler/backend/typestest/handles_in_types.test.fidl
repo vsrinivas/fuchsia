@@ -1,0 +1,20 @@
+library test.name;
+
+table TableWithHandle {
+    1: handle<vmo> h;
+};
+
+xunion UnionWithHandle {
+    1: handle<vmo> h;
+};
+
+struct HandlesInTypes {
+    handle<vmo> normal_handle;
+
+    vector<handle<vmo>> handle_in_vec;
+    array<handle<vmo>>:5 handle_in_array;
+    vector<array<handle<vmo>>:5> handle_in_mixed_vec_array;
+
+    TableWithHandle table_with_handle;
+    UnionWithHandle union_with_handle;
+};

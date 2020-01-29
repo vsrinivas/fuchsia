@@ -149,6 +149,8 @@ const (
 	Vmo                        = "vmo"
 )
 
+type HandleRights uint32
+
 type LiteralKind string
 
 const (
@@ -194,6 +196,7 @@ type Type struct {
 	ElementType      *Type
 	ElementCount     *int
 	HandleSubtype    HandleSubtype
+	HandleRights     HandleRights
 	RequestSubtype   EncodedCompoundIdentifier
 	PrimitiveSubtype PrimitiveSubtype
 	Identifier       EncodedCompoundIdentifier
@@ -253,6 +256,10 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		}
 	case HandleType:
 		err = json.Unmarshal(*obj["subtype"], &t.HandleSubtype)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(*obj["rights"], &t.HandleRights)
 		if err != nil {
 			return err
 		}

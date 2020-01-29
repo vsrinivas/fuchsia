@@ -50,6 +50,16 @@ enum.test.fidl.json.rs.golden
 enum.test.fidl.json.syz.txt.golden
 enum.test.fidl.json_test_base.h.golden
 enum.test.fidl.tables.c.golden
+handles_in_types.test.fidl.json
+handles_in_types.test.fidl.json.cc.golden
+handles_in_types.test.fidl.json.go.golden
+handles_in_types.test.fidl.json.h.golden
+handles_in_types.test.fidl.json.llcpp.cc.golden
+handles_in_types.test.fidl.json.llcpp.h.golden
+handles_in_types.test.fidl.json.rs.golden
+handles_in_types.test.fidl.json.syz.txt.golden
+handles_in_types.test.fidl.json_test_base.h.golden
+handles_in_types.test.fidl.tables.c.golden
 handles.test.fidl.json
 handles.test.fidl.json.cc.golden
 handles.test.fidl.json.go.golden

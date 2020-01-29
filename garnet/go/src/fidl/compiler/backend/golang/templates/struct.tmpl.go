@@ -10,12 +10,12 @@ const Struct = `
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	_ struct{} ` + "`" + `fidl:"s" fidl_size_v1:"{{.InlineSize}}" fidl_alignment_v1:"{{.Alignment}}"` + "`" + `
+	_ struct{} ` + "`{{.Tags}}`" + `
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type -}} ` + "`" + `fidl:"{{ .FidlTag }}" fidl_offset_v1:"{{ .Offset }}"` + "`" + `
+	{{ .Name }} {{ .Type -}} ` + "`{{.Tags}}`" + `
 	{{- end }}
 }
 

@@ -20,7 +20,7 @@ const (
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	{{ .TagName }} ` + "`" + `fidl:"x{{ if .IsStrict }}!{{end}}" fidl_size_v1:"{{.InlineSize}}" fidl_alignment_v1:"{{.Alignment}}"` + "`" + `
+	{{ .TagName }} ` + "`{{.Tags}}`" + `
 	{{- if .IsFlexible }}
 	I_unknownData []byte
 	{{- end }}
@@ -28,7 +28,7 @@ type {{ .Name }} struct {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type }}  ` + "`" + `fidl:"{{ .FidlTag }}" fidl_hashed_ord:"{{ .HashedOrdinal }}" fidl_explicit_ord:"{{ .ExplicitOrdinal }}"` + "`" + `
+	{{ .Name }} {{ .Type }}  ` + "`{{.Tags}}`" + `
 	{{- end }}
 }
 

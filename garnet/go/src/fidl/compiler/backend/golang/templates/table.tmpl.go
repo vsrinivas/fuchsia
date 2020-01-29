@@ -10,12 +10,12 @@ const Table = `
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	_ struct{} ` + "`" + `fidl:"t" fidl_size_v1:"{{.InlineSize}}" fidl_alignment_v1:"{{.Alignment}}"` + "`" + `
+	_ struct{} ` + "`{{.Tags}}`" + `
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .DataField }} {{ .Type }} ` + "`" + `fidl:"{{ .FidlTag }}"` + "`" + `
+	{{ .DataField }} {{ .Type }} ` + "`{{.Tags}}`" + `
 	{{ .PresenceField }} bool
 	{{- end }}
 }
