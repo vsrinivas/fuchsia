@@ -29,8 +29,8 @@ func (a *argList) Set(value string) error {
 }
 
 const (
-	symbolCacheSize   = 100
-	cloudFetchTimeout = 5 * time.Second
+	symbolCacheSize = 100
+	defaultTimeout  = 5 * time.Second
 )
 
 var (
@@ -45,6 +45,7 @@ var (
 	level                    logger.LogLevel
 	llvmSymboPath            string
 	llvmSymboRestartInterval uint
+	cloudFetchTimeout        time.Duration
 )
 
 func init() {
@@ -62,6 +63,7 @@ func init() {
 	flag.BoolVar(&idsRel, "ids-rel", false, "tells the symbolizer to always use ids.txt relative paths")
 	flag.UintVar(&llvmSymboRestartInterval, "llvm-symbolizer-restart-interval", 15,
 		"How many queries to make to the llvm-symbolizer tool before restarting it. 0 means never restart it. Use to control memory usage. See fxbug.dev/42018.")
+	flag.DurationVar(&cloudFetchTimeout, "symbol-server-timeout", defaultTimeout, "Symbol server timeout for fetching an object from gs")
 }
 
 func main() {
@@ -97,7 +99,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		// Set a 5 second timeout to ensure we never wait too long.
+		// Set a timeout for fetching an object from gs, defaults to 5 seconds
 		cloudRepo.SetTimeout(cloudFetchTimeout)
 		repo.AddRepo(cloudRepo)
 	}

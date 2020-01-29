@@ -101,6 +101,9 @@ func (c *CloudRepo) GetBuildObject(buildID string) (FileCloser, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ctx.Err() == context.DeadlineExceeded {
+		return nil, fmt.Errorf("timed out while fetching %s", buildID)
+	}
 	return out, nil
 }
 
