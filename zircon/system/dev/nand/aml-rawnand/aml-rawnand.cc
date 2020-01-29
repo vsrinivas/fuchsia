@@ -218,18 +218,37 @@ void AmlRawNand::AmlCmdM2N(uint32_t ecc_pages, uint32_t ecc_pagesize) {
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
 }
 
+namespace {
+
+// Each copy of BL2 is prefixed by a single page of metadata telling us what
+// ECC settings to use for NAND. But since we're reading these settings from
+// NAND itself, the initial metadata read has to use fixed settings.
+//
+// These settings are exactly what the bootloader uses.
+constexpr int kPage0RandMode = 1;
+constexpr int kPage0BchMode = AML_ECC_BCH60_1K;
+constexpr int kPage0ShortpageMode = 1;
+constexpr int kPage0EccPageSize = 384;
+// Even though all the metadata currently fits in a single 384-byte ECC page,
+// read and write 8 pages for consistency with the bootloader code and to ensure
+// compatibility with future devices that may put additional info here.
+constexpr int kPage0NumEccPages = 8;
+
+}  // namespace
+
 void AmlRawNand::AmlCmdM2NPage0() {
-  // If we ever decide to write to Page0.
+  // When shortpage is turned on, page size is given in bytes/8.
+  static_assert(kPage0ShortpageMode == 1, "Fix pagesize calculation");
+  uint32_t cmd = CMDRWGEN(AML_CMD_M2N, kPage0RandMode, kPage0BchMode, kPage0ShortpageMode,
+                          kPage0EccPageSize / 8, kPage0NumEccPages);
+  mmio_nandreg_.Write32(cmd, P_NAND_CMD);
 }
 
 void AmlRawNand::AmlCmdN2MPage0() {
-  // For page0 reads, we must use AML_ECC_BCH60_1K,
-  // and rand-mode == 1.
-  uint32_t cmd = CMDRWGEN(AML_CMD_N2M,
-                          1,                 // Force rand_mode.
-                          AML_ECC_BCH60_1K,  // Force bch_mode.
-                          1,                 // shortm == 1.
-                          384 >> 3, 1);
+  // When shortpage is turned on, page size is given in bytes/8.
+  static_assert(kPage0ShortpageMode == 1, "Fix pagesize calculation");
+  uint32_t cmd = CMDRWGEN(AML_CMD_N2M, kPage0RandMode, kPage0BchMode, kPage0ShortpageMode,
+                          kPage0EccPageSize / 8, kPage0NumEccPages);
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
 }
 
@@ -273,17 +292,23 @@ zx_status_t AmlRawNand::AmlGetOOBByte(uint8_t* oob_buf, size_t* oob_actual) {
   return ZX_OK;
 }
 
-zx_status_t AmlRawNand::AmlSetOOBByte(const uint8_t* oob_buf, uint32_t ecc_pages) {
+zx_status_t AmlRawNand::AmlSetOOBByte(const uint8_t* oob_buf, size_t oob_size, uint32_t ecc_pages) {
   struct AmlInfoFormat* info;
-  int count = 0;
+  size_t count = 0;
 
   // user_mode is 2 in our case - 2 bytes of OOB for every ECC page.
   if (controller_params_.user_mode != 2)
     return ZX_ERR_NOT_SUPPORTED;
   for (uint32_t i = 0; i < ecc_pages; i++) {
     info = reinterpret_cast<struct AmlInfoFormat*>(AmlInfoPtr(i));
-    info->info_bytes = static_cast<uint16_t>(oob_buf[count] | (oob_buf[count + 1] << 8));
-    count += 2;
+
+    // If the caller didn't provide enough OOB bytes to fill all the pages,
+    // pad with zeros.
+    uint8_t low_byte = (count < oob_size) ? oob_buf[count] : 0x00;
+    count++;
+    uint8_t high_byte = (count < oob_size) ? oob_buf[count] : 0x00;
+    count++;
+    info->info_bytes = static_cast<uint16_t>(low_byte | (high_byte << 8));
   }
   return ZX_OK;
 }
@@ -448,7 +473,9 @@ void AmlRawNand::AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t 
   NandctrlSendCmd(1 << 31);
 }
 
-static bool IsPage0NandPage(uint32_t nand_page) {
+namespace {
+
+bool IsPage0NandPage(uint32_t nand_page) {
   // Backup copies of page0 are located every 128 pages,
   // with the last one at 896.
   static constexpr uint32_t AmlPage0Step = 128;
@@ -456,6 +483,24 @@ static bool IsPage0NandPage(uint32_t nand_page) {
 
   return ((nand_page <= AmlPage0MaxAddr) && ((nand_page % AmlPage0Step) == 0));
 }
+
+// The ROM bootloader looks in the OOB bytes for magic values so we need
+// to write them to all BL2 pages.
+//
+// Most NAND pages contain 8 bytes OOB userdata (4 ECC pages per NAND page x 2
+// userdata bytes per ECC page). Page0 metadata however uses shortpage mode with
+// 8 ECC pages per NAND page, so we need up to 16 OOB userdata bytes.
+constexpr uint8_t kRomMagicOobBuffer[] = {0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA,
+                                          0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA};
+constexpr size_t kRomMagicOobSize = sizeof(kRomMagicOobBuffer);
+
+// Returns true if the given page number requires writing magic OOB values.
+constexpr bool PageRequiresMagicOob(uint32_t nand_page) {
+  // BL2 lives in 0x0-0x3FFFFF, which is pages 0-1023.
+  return nand_page <= 1023;
+}
+
+}  // namespace
 
 zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, size_t data_size,
                                              size_t* data_actual, void* oob, size_t oob_size,
@@ -468,8 +513,9 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
   if (!page0) {
     ecc_pagesize = AmlGetEccPageSize(controller_params_.bch_mode);
     ecc_pages = writesize_ / ecc_pagesize;
-  } else
-    ecc_pages = 1;
+  } else {
+    ecc_pages = kPage0NumEccPages;
+  }
   // Send the page address into the controller.
   onfi_->OnfiCommand(NAND_CMD_READ0, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
                      (controller_params_.options & NAND_BUSWIDTH_16));
@@ -477,14 +523,18 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
   mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, data_buf_paddr_), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDIADDRL(AML_CMD_AIL, info_buf_paddr_), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDIADDRH(AML_CMD_AIH, info_buf_paddr_), P_NAND_CMD);
-  // page0 needs randomization. so force it for page0.
-  if (page0 || controller_params_.rand_mode)
+
+  if ((page0 && kPage0RandMode) || controller_params_.rand_mode) {
     // Only need to set the seed if randomizing is enabled.
     AmlCmdSeed(nand_page);
-  if (!page0)
+  }
+
+  if (!page0) {
     AmlCmdN2M(ecc_pages, ecc_pagesize);
-  else
+  } else {
     AmlCmdN2MPage0();
+  }
+
   status = AmlWaitDmaFinish();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AmlWaitDmaFinish failed %d\n", __func__, status);
@@ -533,13 +583,28 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
   if (!page0) {
     ecc_pagesize = AmlGetEccPageSize(controller_params_.bch_mode);
     ecc_pages = writesize_ / ecc_pagesize;
-  } else
-    ecc_pages = 1;
+  } else {
+    ecc_pages = kPage0NumEccPages;
+  }
   if (data != nullptr) {
     memcpy(data_buf_, data, writesize_);
   }
+
+  if (PageRequiresMagicOob(nand_page)) {
+    // Writing the wrong OOB bytes will brick the device, raise an error if
+    // the caller tried to provide their own here.
+    if (oob != nullptr) {
+      zxlogf(ERROR, "%s: Cannot write provided OOB, page %u requires specific OOB bytes\n",
+             __func__, nand_page);
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    oob = kRomMagicOobBuffer;
+    oob_size = kRomMagicOobSize;
+  }
+
   if (oob != nullptr) {
-    AmlSetOOBByte(reinterpret_cast<const uint8_t*>(oob), ecc_pages);
+    AmlSetOOBByte(reinterpret_cast<const uint8_t*>(oob), oob_size, ecc_pages);
   }
 
   onfi_->OnfiCommand(NAND_CMD_SEQIN, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
@@ -548,14 +613,18 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
   mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, data_buf_paddr_), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDIADDRL(AML_CMD_AIL, info_buf_paddr_), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDIADDRH(AML_CMD_AIH, info_buf_paddr_), P_NAND_CMD);
-  // page0 needs randomization. so force it for page0.
-  if (page0 || controller_params_.rand_mode)
+
+  if ((page0 && kPage0RandMode) || controller_params_.rand_mode) {
     // Only need to set the seed if randomizing is enabled.
     AmlCmdSeed(nand_page);
-  if (!page0)
+  }
+
+  if (!page0) {
     AmlCmdM2N(ecc_pages, ecc_pagesize);
-  else
+  } else {
     AmlCmdM2NPage0();
+  }
+
   status = AmlWaitDmaFinish();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: error from wait_dma_finish\n", __func__);

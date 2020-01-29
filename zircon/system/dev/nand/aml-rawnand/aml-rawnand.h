@@ -69,8 +69,11 @@ struct AmlInfoFormat {
 // gcc doesn't let us use __PACKED with fbl::BitFieldMember<>, but it shouldn't
 // make a difference practically in how the AmlInfoFormat struct is laid out
 // and this assertion will double-check that we don't need it.
-static_assert(sizeof(struct AmlInfoFormat) == 8,
-              "sizeof(struct AmlInfoFormat) must be exactly 8 bytes");
+static_assert(sizeof(AmlInfoFormat) == 8, "sizeof(AmlInfoFormat) must be exactly 8 bytes");
+
+// This should always be the case, but we also need an array of AmlInfoFormats
+// to have no padding between the items.
+static_assert(sizeof(AmlInfoFormat[2]) == 16, "AmlInfoFormat has unexpected padding");
 
 class AmlRawNand;
 using DeviceType = ddk::Device<AmlRawNand, ddk::UnbindableNew>;
@@ -176,7 +179,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   // ECC page. THIS ASSUMES user_mode == 2 (2 OOB bytes per ECC page).
   void* AmlInfoPtr(int i);
   zx_status_t AmlGetOOBByte(uint8_t* oob_buf, size_t* oob_actual);
-  zx_status_t AmlSetOOBByte(const uint8_t* oob_buf, uint32_t ecc_pages);
+  zx_status_t AmlSetOOBByte(const uint8_t* oob_buf, size_t oob_size, uint32_t ecc_pages);
   // Returns the maximum bitflips corrected on this NAND page
   // (the maximum bitflips across all of the ECC pages in this page).
   zx_status_t AmlGetECCCorrections(int ecc_pages, uint32_t nand_page, uint32_t* ecc_corrected);
