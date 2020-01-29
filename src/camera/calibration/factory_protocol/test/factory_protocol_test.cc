@@ -37,8 +37,10 @@ class FactoryProtocolTest : public testing::Test {
         ADD_FAILURE() << "Channel Failure: " << status;
     });
 
-    factory_impl_ = FactoryProtocol::Create(std::move(channel), loop_.dispatcher());
-    ASSERT_NE(nullptr, factory_impl_);
+    auto result = FactoryProtocol::Create(std::move(channel), loop_.dispatcher());
+    ASSERT_FALSE(result.is_error());
+
+    factory_impl_ = std::move(result.value());
     ASSERT_FALSE(factory_impl_->streaming());
   }
 

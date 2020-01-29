@@ -20,8 +20,8 @@ static constexpr const char* kControllerDevicePath =
     "/dev/camera-controller/camera-controller-device";
 static constexpr const char* kDirPath = "/calibration";
 
-std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
-                                                         async_dispatcher_t* dispatcher) {
+fit::result<std::unique_ptr<FactoryProtocol>, zx_status_t> FactoryProtocol::Create(
+    zx::channel channel, async_dispatcher_t* dispatcher) {
   auto factory_impl = std::make_unique<FactoryProtocol>(dispatcher);
   factory_impl->binding_.set_error_handler(
       [&factory_impl](zx_status_t status) { factory_impl->Shutdown(status); });
@@ -29,14 +29,14 @@ std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
   zx_status_t status = factory_impl->binding_.Bind(std::move(channel), factory_impl->dispatcher_);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status);
-    return nullptr;
+    return fit::error(status);
   }
 
   // Connect to the isp-tester device.
   int result = open(kIspDevicePath, O_RDONLY);
   if (result < 0) {
     FX_LOGST(ERROR, kTag) << "Error opening " << kIspDevicePath;
-    return nullptr;
+    return fit::error(ZX_ERR_IO);
   }
   fbl::unique_fd isp_fd_(result);
 
@@ -44,7 +44,7 @@ std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
   status = fdio_get_service_handle(isp_fd_.get(), isp_tester_channel.reset_and_get_address());
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to get service handle";
-    return nullptr;
+    return fit::error(status);
   }
 
   factory_impl->isp_tester_.Bind(std::move(isp_tester_channel));
@@ -53,7 +53,7 @@ std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
   result = open(kControllerDevicePath, O_RDONLY);
   if (result < 0) {
     FX_LOGST(ERROR, kTag) << "Error opening " << kControllerDevicePath;
-    return nullptr;
+    return fit::error(ZX_ERR_IO);
   }
   fbl::unique_fd controller_fd(result);
 
@@ -61,7 +61,7 @@ std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
   status = fdio_get_service_handle(controller_fd.get(), controller_channel.reset_and_get_address());
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to get service handle";
-    return nullptr;
+    return fit::error(status);
   }
 
   // TODO(nzo): Is there any harm to reusing the same dispatcher?
@@ -70,11 +70,11 @@ std::unique_ptr<FactoryProtocol> FactoryProtocol::Create(zx::channel channel,
 
   device->GetChannel2(factory_impl->controller_.NewRequest().TakeChannel());
   if (!factory_impl->controller_) {
-    FX_LOGST(ERROR, kTag) << "Failed to get controller interface from device";
-    return nullptr;
+    FX_LOGST(ERROR, kTag) << "Failed to get channel to controller device";
+    return fit::error(ZX_ERR_INTERNAL);
   }
 
-  return factory_impl;
+  return fit::ok(std::move(factory_impl));
 }
 
 zx_status_t FactoryProtocol::ConnectToStream() {

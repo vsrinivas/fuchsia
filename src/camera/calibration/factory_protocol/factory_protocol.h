@@ -31,8 +31,8 @@ class FactoryProtocol : public fuchsia::camera2::Stream_EventSender,
   //   |channel|: The channel to bind.
   // Returns:
   //  A FactoryProtocol object which acts as an interface to the factory calibrations API.
-  static std::unique_ptr<FactoryProtocol> Create(zx::channel channel,
-                                                 async_dispatcher_t* dispatcher);
+  static fit::result<std::unique_ptr<FactoryProtocol>, zx_status_t> Create(
+      zx::channel channel, async_dispatcher_t* dispatcher);
 
   // Binds a channel to the ISP Tester driver, creates a new Stream from the driver, and
   // instantiates an ImageWriterUtil to track the Stream's buffers.
