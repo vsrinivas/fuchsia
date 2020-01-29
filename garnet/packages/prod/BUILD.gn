@@ -190,7 +190,6 @@ group("all") {
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:run",
-    "//garnet/packages/prod:runtime",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:scenic",
     "//garnet/packages/prod:scenic_tools",
@@ -313,7 +312,8 @@ group("guest_runner") {
   public_deps = [
     "//garnet/packages/config:network",
     "//garnet/packages/prod:amber",
-    "//garnet/packages/prod:runtime",
+    "//garnet/packages/prod:appmgr",
+    "//garnet/packages/prod:sysmgr",
     "//src/virtualization/bin/guest:guest",
     "//src/virtualization/bin/guest_manager:guest_manager",
     "//src/virtualization/bin/guest_runner:guest_runner",
@@ -602,15 +602,6 @@ group("test_runner") {
   public_deps = [
     "//garnet/bin/test_runner:run_integration_tests",
     "//garnet/bin/test_runner:run_test",
-  ]
-}
-
-group("runtime") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:amber",
-    "//garnet/packages/prod:appmgr",
-    "//garnet/packages/prod:sysmgr",
   ]
 }
 

@@ -782,7 +782,8 @@ group("runtime") {
   public_deps = [
     "//garnet/bin/glob",
     "//garnet/examples/fidl/echo_server_cpp",
-    "//garnet/packages/prod:runtime",
+    "//garnet/packages/prod:appmgr",
+    "//garnet/packages/prod:sysmgr",
     "//src/sys/appmgr/integration_tests/sandbox/features/global-data:has_global_data",
     "//src/sys/appmgr/integration_tests/sandbox/features/global-data:no_global_data",
     "//src/sys/appmgr/integration_tests/sandbox/features/global-data:restricted_global_data",
