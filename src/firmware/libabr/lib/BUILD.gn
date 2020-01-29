@@ -1,0 +1,14 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("libabr_src") {
+  sources = [
+    "abr_flow.c",
+    "abr_util.c",
+  ]
+  public = [ "libabr.h" ]
+
+  # Define ABR_ENABLE_DEBUG because here we're building only for testing.
+  cflags = [ "-DABR_ENABLE_DEBUG" ]
+}

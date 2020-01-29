@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+test("libabr_unittests") {
+  testonly = true
+  sources = [ "libabr_test.cc" ]
+  deps = [
+    "lib:libabr_src",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/zlib:zlib_static",
+  ]
+}
+
+# Example usage:
+#   $ fx set core.x64 --with //src/firmware:host_tests
+#   $ fx run-host-tests libabr_unittests
+group("host_tests") {
+  testonly = true
+  deps = [ ":libabr_unittests($host_toolchain)" ]
+}
