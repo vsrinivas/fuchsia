@@ -106,11 +106,8 @@ pub(super) async fn route_expose_capability<'a>(
     target_realm: &'a Arc<Realm>,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    let (capability, cap_state) = {
-        let capability = ComponentCapability::UsedExpose(expose_decl.clone());
-        let cap_state = CapabilityState::new(&capability);
-        (capability, cap_state)
-    };
+    let capability = ComponentCapability::UsedExpose(expose_decl.clone());
+    let cap_state = CapabilityState::new(&capability);
     let mut pos = WalkPosition {
         capability,
         cap_state,
@@ -311,11 +308,8 @@ async fn route_storage_capability<'a>(
 
     // Storage capabilities are always require rw rights to be valid so this must be
     // explicitly encoded into its starting walk state.
-    let (capability, cap_state) = {
-        let capability = ComponentCapability::Use(UseDecl::Storage(use_decl.clone()));
-        let cap_state = CapabilityState::new(&capability);
-        (capability, cap_state)
-    };
+    let capability = ComponentCapability::Use(UseDecl::Storage(use_decl.clone()));
+    let cap_state = CapabilityState::new(&capability);
     let mut pos = WalkPosition {
         capability,
         cap_state,
@@ -544,12 +538,9 @@ pub async fn find_exposed_root_directory_capability(
             return Ok((expose_dir_decl.source_path.clone(), AbsoluteMoniker::root()))
         }
         cm_rust::ExposeSource::Child(_) => {
-            let (capability, cap_state) = {
-                let capability =
-                    ComponentCapability::UsedExpose(ExposeDecl::Directory(expose_dir_decl.clone()));
-                let cap_state = CapabilityState::new(&capability);
-                (capability, cap_state)
-            };
+            let capability =
+                ComponentCapability::UsedExpose(ExposeDecl::Directory(expose_dir_decl.clone()));
+            let cap_state = CapabilityState::new(&capability);
             let mut wp = WalkPosition {
                 capability,
                 cap_state,
@@ -583,10 +574,7 @@ async fn find_capability_source<'a>(
     target_realm: &'a Arc<Realm>,
 ) -> Result<(CapabilitySource, CapabilityState), ModelError> {
     let starting_realm = target_realm.try_get_parent()?;
-    let (capability, cap_state) = {
-        let cap_state = CapabilityState::new(&capability);
-        (capability, cap_state)
-    };
+    let cap_state = CapabilityState::new(&capability);
     let mut pos = WalkPosition {
         capability,
         cap_state,
