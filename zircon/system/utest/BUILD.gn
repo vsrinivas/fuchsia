@@ -102,7 +102,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/abs_clock:test",
       "$zx/system/ulib/affine/test",
       "$zx/system/ulib/async-loop/test",
-      "$zx/system/ulib/async/test",
       "$zx/system/ulib/bitmap/test",
       "$zx/system/ulib/blobfs/test",
       "$zx/system/ulib/block-client/test",
