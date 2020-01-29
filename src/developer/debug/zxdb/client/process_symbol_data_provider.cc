@@ -13,6 +13,9 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -100,6 +103,19 @@ void ProcessSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_
     return;
   }
   process_->WriteMemory(address, std::move(data), std::move(cb));
+}
+
+std::optional<uint64_t> ProcessSymbolDataProvider::GetDebugAddressForContext(
+    const SymbolContext& context) const {
+  if (process_) {
+    if (auto syms = process_->GetSymbols()) {
+      if (auto lms = syms->GetModuleForAddress(context.load_address())) {
+        return lms->debug_address();
+      }
+    }
+  }
+
+  return std::nullopt;
 }
 
 }  // namespace zxdb

@@ -20,6 +20,7 @@
 namespace zxdb {
 
 class Err;
+class SymbolContext;
 
 // This interface is how the debugger backend provides memory and register data to the symbol system
 // to evaluate expressions.
@@ -84,6 +85,10 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // Returns the canonical frame address of the current frame. Returns 0 if it is not known. See
   // Frame::GetCanonicalFrameAddress().
   virtual uint64_t GetCanonicalFrameAddress() const;
+
+  // Synchronously returns the debug address for a symbol context if available.
+  virtual std::optional<uint64_t> GetDebugAddressForContext(
+      const SymbolContext& context) const;
 
   // Request to retrieve a memory block from the debugged process. On success, the implementation
   // will call the callback with the retrieved data pointer.

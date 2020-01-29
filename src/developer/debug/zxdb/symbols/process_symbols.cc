@@ -216,11 +216,12 @@ ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(const debug_ipc::Modu
     // Error, but it may be expected.
     if (!ExpectSymbolsForName(module.name))
       *symbol_load_err = Err();
-    info.symbols = std::make_unique<LoadedModuleSymbols>(nullptr, module.build_id, module.base);
+    info.symbols = std::make_unique<LoadedModuleSymbols>(nullptr, module.build_id, module.base,
+                                                         module.debug_address);
   } else {
     // Success, make the LoadedModuleSymbols.
     info.symbols = std::make_unique<LoadedModuleSymbols>(std::move(module_symbols), module.build_id,
-                                                         module.base);
+                                                         module.base, module.debug_address);
   }
 
   auto inserted_iter = modules_
@@ -255,7 +256,8 @@ void ProcessSymbols::RetryLoadBuildID(const std::string& build_id, DebugSymbolFi
       return;
     }
 
-    mod.symbols = std::make_unique<LoadedModuleSymbols>(std::move(module_symbols), build_id, base);
+    mod.symbols = std::make_unique<LoadedModuleSymbols>(std::move(module_symbols), build_id, base,
+                                                        mod.symbols->debug_address());
 
     // If we can have multiple modules with the same build ID in the process
     // then this logic will be wrong. I don't see how that happens as of today,

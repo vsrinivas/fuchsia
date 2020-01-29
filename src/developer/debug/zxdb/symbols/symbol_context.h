@@ -30,6 +30,8 @@ class SymbolContext {
   // absolute.
   bool is_relative() const { return load_address_ == 0; }
 
+  uint64_t load_address() const { return load_address_; }
+
   bool operator==(const SymbolContext& other) const { return load_address_ == other.load_address_; }
   bool operator!=(const SymbolContext& other) const { return load_address_ != other.load_address_; }
 

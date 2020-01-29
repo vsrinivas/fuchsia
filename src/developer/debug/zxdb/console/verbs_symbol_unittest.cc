@@ -38,7 +38,7 @@ TEST_F(VerbsSymbolTest, SymStat) {
   ASSERT_NE(nullptr, target->GetProcess());
 
   target->GetProcess()->GetSymbols()->InjectModuleForTesting(
-      "fakelib", "abc123", std::make_unique<LoadedModuleSymbols>(nullptr, "abc123", 0));
+      "fakelib", "abc123", std::make_unique<LoadedModuleSymbols>(nullptr, "abc123", 0, 0));
 
   loop().RunUntilNoTasks();
   console.FlushOutputEvents();

@@ -43,6 +43,11 @@ void SymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback cb) {
 
 uint64_t SymbolDataProvider::GetCanonicalFrameAddress() const { return 0; }
 
+std::optional<uint64_t> SymbolDataProvider::GetDebugAddressForContext(
+    const SymbolContext& /*context*/) const {
+  return std::nullopt;
+}
+
 void SymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoProcessErr(), std::vector<uint8_t>()); });

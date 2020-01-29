@@ -21,7 +21,7 @@ void ProcessSymbolsTestSetup::InjectModule(const std::string& name, const std::s
                                            uint64_t base, fxl::RefPtr<ModuleSymbols> mod_sym) {
   system_.InjectModuleForTesting(build_id, mod_sym.get());
   process_.InjectModuleForTesting(
-      name, build_id, std::make_unique<LoadedModuleSymbols>(std::move(mod_sym), build_id, base));
+      name, build_id, std::make_unique<LoadedModuleSymbols>(std::move(mod_sym), build_id, base, 0));
 }
 
 MockModuleSymbols* ProcessSymbolsTestSetup::InjectMockModule() {

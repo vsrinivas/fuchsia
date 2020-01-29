@@ -29,7 +29,7 @@ class LineDetails;
 class LoadedModuleSymbols {
  public:
   LoadedModuleSymbols(fxl::RefPtr<ModuleSymbols> module, std::string build_id,
-                      uint64_t load_address);
+                      uint64_t load_address, uint64_t debug_address);
   ~LoadedModuleSymbols();
 
   // Returns the underlying ModuleSymbols object.
@@ -41,6 +41,9 @@ class LoadedModuleSymbols {
 
   // Base address for the module.
   uint64_t load_address() const { return load_address_; }
+
+  // Address of the link map for the module.
+  uint64_t debug_address() const { return debug_address_; }
 
   // Build ID for the module.
   const std::string& build_id() const { return build_id_; }
@@ -89,6 +92,7 @@ class LoadedModuleSymbols {
   fxl::RefPtr<ModuleSymbols> module_;
 
   uint64_t load_address_;
+  uint64_t debug_address_;
   std::string build_id_;
   SymbolContext symbol_context_;
 
