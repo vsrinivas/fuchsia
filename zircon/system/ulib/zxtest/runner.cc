@@ -246,7 +246,9 @@ bool MatchPatterns(fbl::StringPiece pattern, fbl::StringPiece str) {
     curr_pattern = strchr(curr_pattern, ':');
     has_next = (curr_pattern != nullptr);
     // Skip ':'
-    curr_pattern++;
+    if (has_next) {
+      curr_pattern++;
+    }
   }
 
   return false;

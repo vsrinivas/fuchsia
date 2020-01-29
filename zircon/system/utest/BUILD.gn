@@ -166,7 +166,6 @@ if (current_cpu != "") {
       "channel-fatal",
       "chromeos-disk-setup",
       "core",
-      "device-enumeration",
       "dlfcn",
       "fidl",
       "fidl-coding-tables",
