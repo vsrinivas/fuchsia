@@ -32,7 +32,7 @@ test("hid") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-hidctl:c",
-    "//zircon/system/fidl/fuchsia-hardware-input:c",
+    "//zircon/system/fidl/fuchsia-hardware-input:llcpp",
   ]
 }
 

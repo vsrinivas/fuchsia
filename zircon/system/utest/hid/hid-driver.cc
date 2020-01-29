@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/hidctl/c/fidl.h>
-#include <fuchsia/hardware/input/c/fidl.h>
+#include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -109,35 +109,43 @@ TEST_F(HidDriverTest, BootMouseTest) {
   status = zx_socket_write(hidctl_channel, 0, &mouse_report, sizeof(mouse_report), NULL);
   ASSERT_OK(status);
 
-  // Check that the report comes through
-  hid_boot_mouse_report_t test_report = {};
-  size_t bytes_read = read(fd_device.get(), (void*)&test_report, sizeof(test_report));
-  ASSERT_EQ(sizeof(test_report), bytes_read);
-  ASSERT_EQ(mouse_report.rel_x, test_report.rel_x);
-  ASSERT_EQ(mouse_report.rel_y, test_report.rel_y);
-
   // Open a FIDL channel to the HID device
-  zx_handle_t device_fdio_channel;
-  status = fdio_get_service_handle(fd_device.get(), &device_fdio_channel);
-  ASSERT_OK(status);
+  zx::channel chan;
+  ASSERT_OK(fdio_get_service_handle(fd_device.get(), chan.reset_and_get_address()));
+  auto sync_client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
+
+  // Check that the report comes through
+  {
+    hid_boot_mouse_report_t test_report = {};
+
+    auto response = sync_client.ReadReport();
+    ASSERT_OK(response.status());
+    ASSERT_OK(response->status);
+    ASSERT_EQ(response->data.count(), sizeof(test_report));
+
+    memcpy(&test_report, response->data.data(), sizeof(test_report));
+    ASSERT_EQ(mouse_report.rel_x, test_report.rel_x);
+    ASSERT_EQ(mouse_report.rel_y, test_report.rel_y);
+  }
 
   // Check that report descriptors have the same length
-  uint16_t len;
-  status = fuchsia_hardware_input_DeviceGetReportDescSize(device_fdio_channel, &len);
-  ASSERT_OK(status);
-  ASSERT_EQ(sizeof(kBootMouseReportDesc), len);
+  {
+    auto response = sync_client.GetReportDescSize();
+    ASSERT_OK(response.status());
+    ASSERT_EQ(sizeof(kBootMouseReportDesc), response->size);
+  }
 
   // Check that report descriptors match completely
-  uint8_t buf[sizeof(kBootMouseReportDesc)] = {};
-  size_t actual;
-  status = fuchsia_hardware_input_DeviceGetReportDesc(device_fdio_channel, buf, len, &actual);
-  ASSERT_OK(status);
-  ASSERT_EQ(sizeof(kBootMouseReportDesc), actual);
-  for (size_t i = 0; i < sizeof(kBootMouseReportDesc); i++) {
-    if (kBootMouseReportDesc[i] != buf[i]) {
-      printf("Index %ld of the report descriptor doesn't match\n", i);
+  {
+    auto response = sync_client.GetReportDesc();
+    ASSERT_OK(response.status());
+    ASSERT_EQ(response->desc.count(), sizeof(kBootMouseReportDesc));
+    for (size_t i = 0; i < sizeof(kBootMouseReportDesc); i++) {
+      if (kBootMouseReportDesc[i] != response->desc[i]) {
+        printf("Index %ld of the report descriptor doesn't match\n", i);
+      }
+      EXPECT_EQ(kBootMouseReportDesc[i], response->desc[i]);
     }
-    EXPECT_EQ(kBootMouseReportDesc[i], buf[i]);
   }
 }
 

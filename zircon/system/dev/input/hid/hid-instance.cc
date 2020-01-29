@@ -42,36 +42,6 @@ void HidInstance::ClearReadable() {
   fifo_event_.signal(DEV_STATE_READABLE, 0);
 }
 
-zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
-  TRACE_DURATION("input", "HID Read Instance");
-
-  if (flags_ & kHidFlagsDead) {
-    return ZX_ERR_PEER_CLOSED;
-  }
-
-  zx_status_t status = ZX_OK;
-  size_t buf_index = 0;
-  zx_time_t time;
-
-  {
-    fbl::AutoLock lock(&fifo_lock_);
-    while (status == ZX_OK) {
-      size_t report_size;
-      status = ReadReportFromFifo(static_cast<uint8_t*>(buf) + buf_index, count - buf_index, &time,
-                                  &report_size);
-      if (status == ZX_OK) {
-        buf_index += report_size;
-      }
-    }
-  }
-
-  if ((buf_index > 0) && ((status == ZX_ERR_BUFFER_TOO_SMALL) || (status == ZX_ERR_SHOULD_WAIT))) {
-    status = ZX_OK;
-  }
-  *actual = buf_index;
-  return status;
-}
-
 zx_status_t HidInstance::ReadReportFromFifo(uint8_t* buf, size_t buf_size, zx_time_t* time,
                                             size_t* report_size) {
   uint8_t rpt_id;
