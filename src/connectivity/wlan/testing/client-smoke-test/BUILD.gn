@@ -15,7 +15,6 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/connectivity-testing",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
@@ -33,6 +32,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
 

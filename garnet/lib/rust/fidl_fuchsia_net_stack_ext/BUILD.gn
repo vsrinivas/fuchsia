@@ -12,12 +12,12 @@ rustc_library("fidl_fuchsia_net_stack_ext") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
 

@@ -11,7 +11,6 @@ rustc_binary("easy_netstack_cfg") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
     "//src/lib/argh",
     "//src/lib/fidl/rust/fidl",
@@ -23,5 +22,6 @@ rustc_binary("easy_netstack_cfg") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }

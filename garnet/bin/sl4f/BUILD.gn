@@ -40,7 +40,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -91,6 +90,7 @@ rustc_library("lib") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
     "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]
 

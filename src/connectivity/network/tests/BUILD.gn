@@ -25,7 +25,6 @@ rustc_test("netstack_fidl_integration_test") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -43,6 +42,7 @@ rustc_test("netstack_fidl_integration_test") {
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
   ]
 }
@@ -52,7 +52,6 @@ rustc_test("netstack_cobalt_integration_test") {
   source_root = "src/cobalt.rs"
   deps = [
     "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/connectivity/network/netstack:networking_metrics_rustlib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -63,6 +62,7 @@ rustc_test("netstack_cobalt_integration_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
 

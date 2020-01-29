@@ -52,7 +52,6 @@ source_set("src") {
     "//garnet/lib/process",
     "//garnet/public/lib/json",
     "//garnet/public/lib/syslog/cpp",
-    "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
@@ -81,6 +80,7 @@ source_set("src") {
     "//zircon/public/lib/memfs-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net-stack",
     "//zircon/system/fidl/fuchsia-sysinfo",
   ]
 

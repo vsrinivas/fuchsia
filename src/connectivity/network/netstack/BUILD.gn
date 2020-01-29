@@ -113,7 +113,6 @@ go_library("netstack_lib") {
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
-    "//sdk/fidl/fuchsia.net.stack($go_toolchain)",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.stash($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
@@ -129,6 +128,7 @@ go_library("netstack_lib") {
     "//zircon/system/fidl/fuchsia-hardware-ethernet($go_toolchain)",
     "//zircon/system/fidl/fuchsia-inspect-deprecated($go_toolchain)",
     "//zircon/system/fidl/fuchsia-net($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-net-stack($go_toolchain)",
     "//zircon/system/fidl/fuchsia-posix-socket($go_toolchain)",
   ]
 }

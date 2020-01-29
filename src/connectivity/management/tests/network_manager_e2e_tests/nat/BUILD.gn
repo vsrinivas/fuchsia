@@ -7,7 +7,6 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("network_manager_e2e_nat") {
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.router.config:fuchsia.router.config-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -21,5 +20,6 @@ rustc_binary("network_manager_e2e_nat") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
