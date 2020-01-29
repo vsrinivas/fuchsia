@@ -33,7 +33,6 @@ base_package_labels += [
   "//garnet/packages/prod:vim",
   "//garnet/packages/prod:wlanif",
   "//garnet/packages/prod:wlanphy",
-  "//garnet/packages/tools:boringssl",
   "//src/connectivity/lowpan/tools",
   "//src/connectivity/management/network_manager",
   "//src/connectivity/management/network_manager:network_manager_sysmgr_config",

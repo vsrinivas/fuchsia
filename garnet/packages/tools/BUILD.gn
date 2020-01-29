@@ -19,78 +19,17 @@ group("scenic") {
   ]
 }
 
-group("system_monitor") {
-  testonly = true
-  public_deps = [
-    "//src/developer/system_monitor/bin/dockyard_host:host_tools",
-    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
-  ]
-}
-
-group("fidl_tools") {
-  testonly = true
-  public_deps = [
-    ":gidl",
-    "//garnet/go/src/fidl",
-  ]
-}
-
+# TODO(fxb/36227): sl4f is explicitly excluded here, we can consider adding it back once it
+# migrates off 'deprecated-shell'
 group("all") {
   testonly = true
   public_deps = [
-    ":banjo_toolchain",
+    "//garnet/go/src/fidl",
+    "//garnet/go/src/fidlmerge:host",
+    "//garnet/lib/magma:magma-tools",
     ":bluetooth",
-    ":boringssl",
-    ":crashpad_database_util",
-    ":cs",
-    ":curl",
-    ":fidl_tools",
-    ":fidlmerge",
-    ":iperf",
-    ":magma",
-    ":runmany",
     ":scenic",
-
-    # TODO(fxb/36227): sl4f is explicitly excluded here, we can consider adding it back once it
-    # migrates off 'deprecated-shell'
-    ":system_monitor",
-    ":tiles",
-    ":whereiscl",
-    "//src/connectivity/network/dhcpd-cli",
-    "//src/connectivity/network/netstack:tools",
-    "//src/connectivity/wlan:tools",
-    "//src/sys/locate",
   ]
-}
-
-group("iperf") {
-  testonly = true
-  public_deps = [ "//third_party/iperf" ]
-}
-
-group("crashpad_database_util") {
-  testonly = true
-  public_deps = [ "//third_party/crashpad:crashpad_database_util" ]
-}
-
-group("runmany") {
-  testonly = true
-  public_deps = [ "//garnet/bin/runmany" ]
-}
-
-group("curl") {
-  testonly = true
-  public_deps = [ "//third_party/curl" ]
-}
-
-group("tiles") {
-  testonly = true
-  public_deps = [ "//src/ui/tools/tiles_ctl" ]
-}
-
-group("magma") {
-  testonly = true
-  public_deps = [ "//garnet/lib/magma:magma-tools" ]
 }
 
 # WARNING: Known to infrastructure.
@@ -106,34 +45,4 @@ group("bluetooth") {
     "//src/connectivity/bluetooth/tools",
     "//src/connectivity/bluetooth/tools/bt-snoop",
   ]
-}
-
-group("banjo_toolchain") {
-  testonly = true
-  public_deps = [ "//src/devices/tools/banjo:banjo_bin" ]
-}
-
-group("cs") {
-  testonly = true
-  public_deps = [ "//garnet/bin/cs" ]
-}
-
-group("fidlmerge") {
-  testonly = true
-  public_deps = [ "//garnet/go/src/fidlmerge:host" ]
-}
-
-group("gidl") {
-  testonly = true
-  public_deps = [ "//tools/fidl/gidl:host" ]
-}
-
-group("boringssl") {
-  testonly = true
-  public_deps = [ "//third_party/boringssl:boringssl_tool" ]
-}
-
-group("whereiscl") {
-  testonly = true
-  public_deps = [ "//tools/whereiscl:host($host_toolchain)" ]
 }

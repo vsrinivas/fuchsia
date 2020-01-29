@@ -6,6 +6,9 @@
 group("tools") {
   testonly = true
   public_deps = [
+    "//garnet/go/src/fidl",
+    "//garnet/go/src/fidlmerge:host",
+    "//garnet/lib/magma:magma-tools",
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:factory_reset",
@@ -23,9 +26,24 @@ group("tools") {
     "//garnet/packages/testing:run_test_component",
     "//garnet/packages/tools:all",
     "//src/chromium",
+    "//src/connectivity/network/dhcpd-cli",
     "//src/connectivity/network/mdns/bundles:utils",
+    "//src/connectivity/network/netstack:tools",
+    "//src/connectivity/wlan:tools",
     "//src/dart",
     "//src/developer/memory/mem",
+    "//src/developer/system_monitor/bin/dockyard_host:host_tools",
+    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
+    "//src/devices/tools/banjo:banjo_bin",
+    "//src/sys/locate",
+    "//src/sys/tools/cs",
+    "//src/sys/tools/runmany",
+    "//src/ui/tools/tiles_ctl",
+    "//third_party/crashpad:crashpad_database_util",
+    "//third_party/curl",
+    "//third_party/iperf",
+    "//tools/fidl/gidl:host",
+    "//tools/whereiscl:host($host_toolchain)",
 
     # We don't include the AOT flutter tools due to ABI stability.
     # SDK customers should download the AOT tools directly from
