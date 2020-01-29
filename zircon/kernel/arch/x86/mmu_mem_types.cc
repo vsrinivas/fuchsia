@@ -109,7 +109,7 @@ void x86_mmu_mem_type_init(void) {
   x86_pat_sync(1 << 0);
 }
 
-/* @brief Give the specificed CPUs our Page Attribute Tables and
+/* @brief Give the specified CPUs our Page Attribute Tables and
  * Memory Type Range Registers.
  *
  * This operation is not safe to perform while a CPU may be

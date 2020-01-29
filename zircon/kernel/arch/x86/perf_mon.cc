@@ -70,7 +70,7 @@ static void x86_perfmon_reset_task(void* raw_context);
 #define PCI_CONFIG_VENDOR_ID 0x00
 #define PCI_CONFIG_DEVICE_ID 0x02
 
-// There's only a few misc events, and they're non-homogenous,
+// There's only a few misc events, and they're non-homogeneous,
 // so handle them directly.
 typedef enum {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, \

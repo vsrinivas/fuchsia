@@ -73,7 +73,7 @@ volatile pt_entry_t linear_map_pdp[(64ULL * GB) / (2 * MB)] __ALIGNED(PAGE_SIZE)
 
 // Static relocated base to prepare for KASLR. Used at early boot and by gdb
 // script to know the target relocated address.
-// TODO(thgarnie): Move to a dynamicly generated base address
+// TODO(thgarnie): Move to a dynamically generated base address
 #if DISABLE_KASLR
 uint64_t kernel_relocated_base = KERNEL_BASE - KERNEL_LOAD_OFFSET;
 #else

@@ -638,7 +638,7 @@ static bool test_x64_intel_ucode_patch_loader() {
 
   // This test can only run on physical Intel x86-64 hosts; x86_intel_get_patch_level
   // does not use an interface to access patch_level registers and those registers are
-  // only present/writeable on h/w.
+  // only present/writable on h/w.
   if (x86_vendor == X86_VENDOR_INTEL && !x86_feature_test(X86_FEATURE_HYPERVISOR)) {
     // Expect that a patch == current patch is not loaded.
     uint32_t current_patch_level = x86_intel_get_patch_level();
@@ -660,7 +660,7 @@ static bool test_x64_power_limits() {
   BEGIN_TEST;
   FakeMsrAccess fake_msrs = {};
   // defaults on Ava/Eve. They both use the same Intel chipset
-  // only diff is the WiFi. Ava uses Broadcomm vs Eve uses Intel
+  // only diff is the WiFi. Ava uses Broadcom vs Eve uses Intel
   fake_msrs.msrs_[0] = {X86_MSR_PKG_POWER_LIMIT, 0x1807800dd8038};
   fake_msrs.msrs_[1] = {X86_MSR_RAPL_POWER_UNIT, 0xA0E03};
   // This default value does not look right, but this is a RO MSR

@@ -697,7 +697,7 @@ bool x86_validate_debug_state(x86_debug_state_t* debug_state) {
 void x86_read_debug_status(uint64_t* dr6) {
   // NOTE: There is a difference in bit 16 between Intel64 and AMD64.
   //       In AMD, bit 16 is reserved and always set to 0.
-  //       In Intel, it can mean that an debug or breakpoint exception ocurrred during a RTM
+  //       In Intel, it can mean that an debug or breakpoint exception occurred during a RTM
   //       block. For now, we mask this bit to make both platforms uniform.
   uint64_t value = 0;
   asm("mov %%dr6, %0" : "=r"(value));
