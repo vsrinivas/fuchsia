@@ -473,13 +473,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/54bbd7d0d583de565b2f5d1719d5706d722c9b66/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/23a2da5e955809c52c694eb0d7031084c8bdff81/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/54bbd7d0d583de565b2f5d1719d5706d722c9b66/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/23a2da5e955809c52c694eb0d7031084c8bdff81/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -561,7 +561,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/74b62cda1d64ea5b49890fc01226a52c3b623d70/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/1fae115c6ffbb2dc4de7479f4d687dd1acfb87d7/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -576,7 +576,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/74b62cda1d64ea5b49890fc01226a52c3b623d70/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/1fae115c6ffbb2dc4de7479f4d687dd1acfb87d7/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -626,7 +626,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/74b62cda1d64ea5b49890fc01226a52c3b623d70/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/1fae115c6ffbb2dc4de7479f4d687dd1acfb87d7/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -857,7 +857,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:589
+From //build/config/BUILDCONFIG.gn:595
 
 ### fastboot_product
 
@@ -878,20 +878,20 @@ From //build/fidl/wireformat.gni:9
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/74b62cda1d64ea5b49890fc01226a52c3b623d70/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/1fae115c6ffbb2dc4de7479f4d687dd1acfb87d7/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/74b62cda1d64ea5b49890fc01226a52c3b623d70/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/1fae115c6ffbb2dc4de7479f4d687dd1acfb87d7/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/74b62cda1d64ea5b49890fc01226a52c3b623d70/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/1fae115c6ffbb2dc4de7479f4d687dd1acfb87d7/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1283,7 +1283,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:502
+From //build/config/BUILDCONFIG.gn:508
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1797,7 +1797,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:794
+From //build/config/BUILDCONFIG.gn:800
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1806,7 +1806,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:799
+From //build/config/BUILDCONFIG.gn:805
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1830,7 +1830,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:635
+From //build/config/BUILDCONFIG.gn:641
 
 ### signed_image
 
@@ -1980,7 +1980,7 @@ build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
 TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/5abd9b594033fa2109dfb090aab9761d481573b2/infra/test_durations/default.json)" after the recipes start
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/a258bba7248d93dae6d01eec9fa5b8f98354a4a0/infra/test_durations/default.json)" after the recipes start
 setting this arg.
 
 **Current value (from the default):** `"//integration/infra/test_durations.json"`
@@ -2058,7 +2058,7 @@ From //build/config/BUILDCONFIG.gn:98
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:609
+From //build/config/BUILDCONFIG.gn:615
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2328,7 +2328,7 @@ silently clobber the default value shown here.
 **Current value (from the default):**
 ```
 {
-  default_deps = ["//:legacy-arm64", "//:legacy_unification-arm64", "//tools:all-hosts"]
+  default_deps = ["//:legacy-arm64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-arm64", "//tools:all-hosts"]
   enable_netsvc_debugging_features = false
   goma_dir = "/home/swarming/goma"
   use_ccache = false
