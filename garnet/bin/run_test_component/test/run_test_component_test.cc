@@ -25,7 +25,7 @@ TEST(Run, TestHermeticEnv) {
   std::string hub_name;
   files::ReadFileToString("/hub/name", &hub_name);
   // if this was not executed as component, /hub/name would be sys
-  EXPECT_THAT(hub_name, testing::MatchesRegex("^env_for_test_[0-9a-f]{8}$"));
+  EXPECT_THAT(hub_name, testing::MatchesRegex("^test_env_[0-9a-f]{8}$"));
 }
 
 class FakeDebugData : public fuchsia::debugdata::DebugData {

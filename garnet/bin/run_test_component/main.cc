@@ -33,12 +33,12 @@
 using fuchsia::sys::TerminationReason;
 
 namespace {
-constexpr char kEnvPrefix[] = "env_for_test_";
+constexpr char kEnvPrefix[] = "test_env_";
 constexpr char kConfigPath[] = "/pkgfs/packages/run_test_component/0/data/environment.config";
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component [--static-realm-label=<label>] <test_url>|<test_matcher> [arguments...]
+Usage: run_test_component [--realm-label=<label>] <test_url>|<test_matcher> [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
@@ -55,7 +55,7 @@ Usage: run_test_component [--static-realm-label=<label>] <test_url>|<test_matche
 
        By default each test component will be run in an environment with
        transient storage and a randomly-generated identifier, ensuring that
-       the tests have no persisted side-effects. If --static-realm-label is
+       the tests have no persisted side-effects. If --realm-label is
        specified then the test will run in a persisted realm with that label,
        allowing files to be provide to, or retrieve from, the test, e.g. for
        diagnostic purposes.
@@ -250,6 +250,7 @@ int main(int argc, const char** argv) {
     enclosing_env = sys::testing::EnclosingEnvironment::Create(
         std::move(env_label), parent_env, std::move(test_env_services), std::move(env_opt));
     launcher = enclosing_env->launcher_ptr();
+    printf("Running test in realm: %s\n", env_label.c_str());
   }
 
   launcher->CreateComponent(std::move(parse_result.launch_info), controller.NewRequest());

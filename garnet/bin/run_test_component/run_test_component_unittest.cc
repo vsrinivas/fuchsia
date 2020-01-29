@@ -46,7 +46,7 @@ TEST(RunTest, ParseArgs) {
   }
 
   {
-    const char* argv[] = {kBinName, "--static-realm-label=kittens", component_url, "myarg1", "myarg2"};
+    const char* argv[] = {kBinName, "--realm-label=kittens", component_url, "myarg1", "myarg2"};
     auto result = ParseArgs(env_services, 5, argv);
     EXPECT_FALSE(result.error);
     EXPECT_EQ(component_url, result.launch_info.url);
@@ -58,7 +58,8 @@ TEST(RunTest, ParseArgs) {
   }
 
   {
-    const char* argv[] = {kBinName, "--unknown-argument=gives_error", component_url, "myarg1", "myarg2"};
+    const char* argv[] = {kBinName, "--unknown-argument=gives_error", component_url, "myarg1",
+                          "myarg2"};
     auto result = ParseArgs(env_services, 5, argv);
     EXPECT_TRUE(result.error);
   }

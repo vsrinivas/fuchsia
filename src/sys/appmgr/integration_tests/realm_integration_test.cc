@@ -268,7 +268,7 @@ TEST_F(RealmTest, RealmJobProvider) {
   char name[ZX_MAX_NAME_LEN];
   ASSERT_EQ(ZX_OK, job.get_property(ZX_PROP_NAME, name, sizeof(name)));
 
-  EXPECT_THAT(name, ::testing::StartsWith("env_for_test"));
+  EXPECT_THAT(name, ::testing::StartsWith("test_env"));
   zx_koid_t koid;
   size_t actual;
   size_t avail_count;

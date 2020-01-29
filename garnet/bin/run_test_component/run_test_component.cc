@@ -23,7 +23,7 @@ using fuchsia::sys::index::ComponentIndexSyncPtr;
 static constexpr char kComponentIndexerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx";
 
-static constexpr char kLabelArgPrefix[] = "--static-realm-label=";
+static constexpr char kLabelArgPrefix[] = "--realm-label=";
 
 ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
                           const char** argv) {
@@ -33,7 +33,7 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
 
   std::string url;
   while (true) {
-    if (argc < url_or_matcher_argi+1) {
+    if (argc < url_or_matcher_argi + 1) {
       result.error = true;
       result.error_msg = "Missing test URL, or matcher argument";
       return result;
@@ -107,7 +107,7 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
 
   result.launch_info.url = url;
   result.launch_info.arguments.emplace();
-  for (int i = url_or_matcher_argi+1; i < argc; i++) {
+  for (int i = url_or_matcher_argi + 1; i < argc; i++) {
     result.launch_info.arguments->push_back(argv[i]);
   }
   return result;
