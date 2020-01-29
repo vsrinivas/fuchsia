@@ -2,9 +2,7 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 '''A collection of storage classes to use with Mako templates.'''
-
 
 ARCH_MAP = {
     'arm64': 'aarch64',
@@ -73,7 +71,6 @@ class Crosstool(object):
                 self.arches.append(Arch(arch, ARCH_MAP[arch]))
             else:
                 print('Unknown target arch: %s' % arch)
-
 
 
 class DartLibrary(object):
