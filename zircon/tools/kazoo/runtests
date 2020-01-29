@@ -17,7 +17,7 @@ out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug --gtest
 
 out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
       --json /tmp/syscalls.json \
-      --files zircon/syscalls/*.fidl
+      --files zircon/vdso/*.fidl
 
 mkdir -p /tmp/kazoo-output
 

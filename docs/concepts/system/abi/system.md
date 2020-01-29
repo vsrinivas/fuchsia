@@ -47,7 +47,7 @@ for drivers is described in [drivers.md](drivers.md).
 The vDSO is a virtual shared library that provides access to the kernel.
 Concretely, the vDSO is an ELF shared library, called `libzircon.so`, that
 exports a number of symbols with a C calling convention. The source of truth for
-these symbols is [//zircon/syscalls](/zircon/syscalls/). Their semantics are
+these symbols is [//zircon/vdso](/zircon/vdso/). Their semantics are
 described in [the documentation](/docs/reference/syscalls/).
 
 Of particular importance are the semantics of the clocks defined by

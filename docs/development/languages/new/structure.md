@@ -15,7 +15,7 @@ calling functions in the [vDSO](/docs/concepts/kernel/vdso.md),
 which is loaded into newly created processes by their creator.
 
 The public entry points for the vDSO are defined in
-[//zircon/syscalls](/zircon/syscalls/).
+[//zircon/vdso](/zircon/vdso/).
 This file is processed by the [kazoo](/docs/concepts/kernel/vdso.md#kazoo-tool)
 tool.
 

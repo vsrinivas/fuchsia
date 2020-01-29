@@ -10,7 +10,7 @@ This tool uses the contents of the kazoo-generated syscalls/definitions.json
 to update docs/syscalls/.
 
 It is not run automatically as part of the build for now (to allow confirmation
-of what it does). So it should be run manually after updating //zircon/syscalls
+of what it does). So it should be run manually after updating //zircon/vdso
 and building zircon, followed by uploading the changes to docs/ as a CL. (It
 will attempt to do a build if it appears that definitions.json is out-of-date
 with respect to the syscall fidl.)
@@ -35,7 +35,7 @@ REFERENCES_COMMENT = \
         '<!-- References updated by update-docs-from-fidl, do not edit. -->'
 
 SYSCALLS_FIDL_DIR = os.path.normpath(
-    os.path.join(SCRIPT_DIR, os.pardir, 'syscalls'))
+    os.path.join(SCRIPT_DIR, os.pardir, 'vdso'))
 
 
 def parse_args():

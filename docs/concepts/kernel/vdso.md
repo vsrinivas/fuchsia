@@ -106,7 +106,7 @@ declarations that form the public [system
 call](/docs/reference/syscalls/README.md) API, and some C++ and assembly code
 used in the implementation of the vDSO. Both the public API and the private
 interface between the kernel and the vDSO code are specified by the .fidl files
-in [//zircon/syscalls](/zircon/syscalls).
+in [//zircon/vdso](/zircon/vdso).
 
 The syscalls fall into the following groups, distinguished by the
 presence of attributes after the system call name:
