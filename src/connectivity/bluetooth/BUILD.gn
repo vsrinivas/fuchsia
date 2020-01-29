@@ -39,6 +39,7 @@ group("tests") {
   testonly = true
   deps = [
     "core/bt-gap:tests",
+    "lib/async-helpers:async-helpers-tests",
     "lib/bt-avctp:tests",
     "lib/bt-avdtp:tests",
     "lib/bt-fidl-mocks:tests",
