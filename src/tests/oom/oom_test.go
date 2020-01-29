@@ -51,7 +51,7 @@ func TestOOM(t *testing.T) {
 	i.WaitForLogMessage("OOM: memory availability state 0")
 
 	// Make sure the file system is notified and unmounts.
-	i.WaitForLogMessage("devcoordinator: Successfully waited for VFS exit completion")
+	i.WaitForLogMessage("driver_manager: Successfully waited for VFS exit completion")
 
 	// Ensure the OOM thread reboots the target.
 	i.WaitForLogMessage("OOM: rebooting")

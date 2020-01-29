@@ -114,9 +114,9 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
 
     if (status) {
       if (status == ZX_ERR_NOT_FOUND) {
-        printf("devcoordinator: no driver info in '%s'\n", libname);
+        printf("driver_manager: no driver info in '%s'\n", libname);
       } else {
-        printf("devcoordinator: error reading info from '%s'\n", libname);
+        printf("driver_manager: error reading info from '%s'\n", libname);
       }
     }
   }
@@ -127,7 +127,7 @@ void load_driver(const char* path, DriverLoadCallback func) {
   // TODO: check for duplicate driver add
   int fd;
   if ((fd = open(path, O_RDONLY)) < 0) {
-    printf("devcoordinator: cannot open '%s'\n", path);
+    printf("driver_manager: cannot open '%s'\n", path);
     return;
   }
 
@@ -137,9 +137,9 @@ void load_driver(const char* path, DriverLoadCallback func) {
 
   if (status) {
     if (status == ZX_ERR_NOT_FOUND) {
-      printf("devcoordinator: no driver info in '%s'\n", path);
+      printf("driver_manager: no driver info in '%s'\n", path);
     } else {
-      printf("devcoordinator: error reading info from '%s'\n", path);
+      printf("driver_manager: error reading info from '%s'\n", path);
     }
   }
 }

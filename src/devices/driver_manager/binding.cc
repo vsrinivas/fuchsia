@@ -77,7 +77,7 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
           break;
         default:
           // illegal instruction: abort
-          printf("devcoordinator: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
+          printf("driver_manager: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
           return false;
       }
     } else {
@@ -97,7 +97,7 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
               goto next_instruction;
             }
           }
-          printf("devcoordinator: driver '%s' illegal GOTO\n", ctx->name);
+          printf("driver_manager: driver '%s' illegal GOTO\n", ctx->name);
           return false;
         }
         case OP_LABEL:
@@ -105,7 +105,7 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
           break;
         default:
           // illegal instruction: abort
-          printf("devcoordinator: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
+          printf("driver_manager: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
           return false;
       }
     }

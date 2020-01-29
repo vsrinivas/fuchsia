@@ -98,7 +98,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
   };
 
   auto print_usage_and_exit = [options]() {
-    printf("devcoordinator: supported arguments:\n");
+    printf("driver_manager: supported arguments:\n");
     for (const auto& option : options) {
       printf("  --%s\n", option.name);
     }
@@ -107,7 +107,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
 
   auto check_not_duplicated = [print_usage_and_exit](const char* arg) {
     if (arg != nullptr) {
-      printf("devcoordinator: duplicated argument\n");
+      printf("driver_manager: duplicated argument\n");
       print_usage_and_exit();
     }
   };
@@ -147,7 +147,7 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
   zx::job devhost_job;
   zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: unable to create devhost job\n");
+    log(ERROR, "driver_manager: unable to create devhost job\n");
     return status;
   }
   static const zx_policy_basic_v2_t policy[] = {
@@ -156,12 +156,12 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
   status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
                                   fbl::count_of(policy));
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: zx_job_set_policy() failed\n");
+    log(ERROR, "driver_manager: zx_job_set_policy() failed\n");
     return status;
   }
   status = devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: zx_job_set_property() failed\n");
+    log(ERROR, "driver_manager: zx_job_set_property() failed\n");
     return status;
   }
 
@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
   zx_status_t status = devmgr::BootArgs::CreateFromArgumentsService(&boot_args);
   if (status != ZX_OK) {
     fprintf(stderr,
-            "devcoordinator: failed to get boot arguments, assuming test "
+            "driver_manager: failed to get boot arguments, assuming test "
             "environment and continuing\n");
   }
 
@@ -213,19 +213,19 @@ int main(int argc, char** argv) {
   status = get_root_resource(&config.root_resource);
   if (status != ZX_OK) {
     fprintf(stderr,
-            "devcoordinator: failed to get root resource, assuming test "
+            "driver_manager: failed to get root resource, assuming test "
             "environment and continuing\n");
   }
   // TODO(ZX-4177): Remove all uses of the root job.
   zx::job root_job;
   status = get_root_job(&root_job);
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to get root job: %d\n", status);
+    fprintf(stderr, "driver_manager: failed to get root job: %d\n", status);
     return 1;
   }
   status = CreateDevhostJob(root_job, &config.devhost_job);
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to create devhost job: %d\n", status);
+    fprintf(stderr, "driver_manager: failed to create devhost job: %d\n", status);
     return 1;
   }
 
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
   if (status != ZX_OK) {
     fprintf(stderr,
-            "devcoordinator: failed to get oom event, assuming test "
+            "driver_manager: failed to get oom event, assuming test "
             "environment and continuing\n");
   } else {
     config.oom_event = zx::event(oom_event);
@@ -245,7 +245,7 @@ int main(int argc, char** argv) {
   svc::Outgoing outgoing{loop.dispatcher()};
   status = coordinator.InitOutgoingServices(outgoing.svc_dir());
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to initialize outgoing services\n");
+    fprintf(stderr, "driver_manager: failed to initialize outgoing services\n");
     return 1;
   }
 
@@ -257,14 +257,14 @@ int main(int argc, char** argv) {
   if (outgoing_svc_dir_client.is_valid()) {
     status = outgoing.Serve(std::move(outgoing_svc_dir_client));
     if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to bind outgoing services\n");
+      fprintf(stderr, "driver_manager: failed to bind outgoing services\n");
       return 1;
     }
   }
 
   status = coordinator.InitCoreDevices(devmgr_args.sys_device_driver);
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: failed to initialize core devices\n");
+    log(ERROR, "driver_manager: failed to initialize core devices\n");
     return 1;
   }
 
@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
 
   status = system_instance.PrepareChannels();
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to create other system channels %s\n",
+    fprintf(stderr, "driver_manager: failed to create other system channels %s\n",
             zx_status_get_string(status));
     return 1;
   }
@@ -300,19 +300,19 @@ int main(int argc, char** argv) {
     }
     status = outgoing.Serve(std::move(root_server));
     if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to bind outgoing services\n");
+      fprintf(stderr, "driver_manager: failed to bind outgoing services\n");
       return 1;
     }
     status = system_instance.StartSvchost(root_job, root_client, require_system, &coordinator);
     if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to start svchost: %s\n",
+      fprintf(stderr, "driver_manager: failed to start svchost: %s\n",
               zx_status_get_string(status));
       return 1;
     }
   } else {
     status = system_instance.ReuseExistingSvchost();
     if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to reuse existing svchost: %s\n",
+      fprintf(stderr, "driver_manager: failed to reuse existing svchost: %s\n",
               zx_status_get_string(status));
       return 1;
     }
@@ -328,7 +328,7 @@ int main(int argc, char** argv) {
   int ret = thrd_create_with_name(&t, SystemInstance::pwrbtn_monitor_starter,
                                   pwrbtn_starter_args.release(), "pwrbtn-monitor-starter");
   if (ret != thrd_success) {
-    log(ERROR, "devcoordinator: failed to create pwrbtn monitor starter thread\n");
+    log(ERROR, "driver_manager: failed to create pwrbtn monitor starter thread\n");
     return 1;
   }
   thrd_detach(t);
@@ -341,7 +341,7 @@ int main(int argc, char** argv) {
   ret = thrd_create_with_name(&t, SystemInstance::service_starter, service_starter_args.release(),
                               "service-starter");
   if (ret != thrd_success) {
-    log(ERROR, "devcoordinator: failed to create service starter thread\n");
+    log(ERROR, "driver_manager: failed to create service starter thread\n");
     return 1;
   }
   thrd_detach(t);
@@ -351,14 +351,14 @@ int main(int argc, char** argv) {
     status =
         devmgr::DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
     if (status != ZX_OK) {
-      log(ERROR, "devcoordinator: failed to create loader service\n");
+      log(ERROR, "driver_manager: failed to create loader service\n");
       return 1;
     }
     coordinator.set_loader_service_connector(
         [loader_service = std::move(loader_service)](zx::channel* c) {
           zx_status_t status = loader_service->Connect(c);
           if (status != ZX_OK) {
-            log(ERROR, "devcoordinator: failed to add devhost loader connection: %s\n",
+            log(ERROR, "driver_manager: failed to add devhost loader connection: %s\n",
                 zx_status_get_string(status));
           }
           return status;
@@ -367,7 +367,7 @@ int main(int argc, char** argv) {
     coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {
       zx_status_t status = system_instance.clone_fshost_ldsvc(c);
       if (status != ZX_OK) {
-        fprintf(stderr, "devcoordinator: failed to clone fshost loader for devhost: %s\n",
+        fprintf(stderr, "driver_manager: failed to clone fshost loader for driver_host: %s\n",
                 zx_status_get_string(status));
       }
       return status;
@@ -385,7 +385,7 @@ int main(int argc, char** argv) {
 
   if (coordinator.require_system() && !coordinator.system_loaded()) {
     printf(
-        "devcoordinator: full system required, ignoring fallback drivers until /system is "
+        "driver_manager: full system required, ignoring fallback drivers until /system is "
         "loaded\n");
   } else {
     coordinator.UseFallbackDrivers();
@@ -407,6 +407,6 @@ int main(int argc, char** argv) {
 
   coordinator.set_running(true);
   status = loop.Run();
-  fprintf(stderr, "devcoordinator: coordinator exited unexpectedly: %d\n", status);
+  fprintf(stderr, "driver_manager: coordinator exited unexpectedly: %d\n", status);
   return status == ZX_OK ? 0 : 1;
 }

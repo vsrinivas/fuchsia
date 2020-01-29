@@ -85,20 +85,20 @@ zx_status_t CompositeDevice::Create(
 bool CompositeDevice::TryMatchComponents(const fbl::RefPtr<Device>& dev, size_t* index_out) {
   for (auto itr = bound_.begin(); itr != bound_.end(); ++itr) {
     if (itr->TryMatch(dev)) {
-      log(ERROR, "devcoordinator: ambiguous composite bind! composite='%s', dev1='%s', dev2='%s'\n",
+      log(ERROR, "driver_manager: ambiguous composite bind! composite='%s', dev1='%s', dev2='%s'\n",
           name_.data(), itr->bound_device()->name().data(), dev->name().data());
       return false;
     }
   }
   for (auto itr = unbound_.begin(); itr != unbound_.end(); ++itr) {
     if (itr->TryMatch(dev)) {
-      log(SPEW, "devcoordinator: found match for composite='%s', dev='%s'\n", name_.data(),
+      log(SPEW, "driver_manager: found match for composite='%s', dev='%s'\n", name_.data(),
           dev->name().data());
       *index_out = itr->index();
       return true;
     }
   }
-  log(SPEW, "devcoordinator: no match for composite='%s', dev='%s'\n", name_.data(),
+  log(SPEW, "driver_manager: no match for composite='%s', dev='%s'\n", name_.data(),
       dev->name().data());
   return false;
 }
@@ -168,7 +168,7 @@ zx_status_t CompositeDevice::TryAssemble() {
     // where the proxies would need to be in different processes.
     if (devhost != nullptr && component_dev->proxy() != nullptr &&
         component_dev->proxy()->host() != nullptr && component_dev->proxy()->host() != devhost) {
-      log(ERROR, "devcoordinator: cannot create composite, proxies in different processes\n");
+      log(ERROR, "driver_manager: cannot create composite, proxies in different processes\n");
       return ZX_ERR_BAD_STATE;
     }
 
@@ -210,7 +210,7 @@ zx_status_t CompositeDevice::TryAssemble() {
                                            std::move(coordinator_rpc_remote),
                                            std::move(device_controller_rpc_local));
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: create composite device request failed: %s\n",
+    log(ERROR, "driver_manager: create composite device request failed: %s\n",
         zx_status_get_string(status));
     return status;
   }
@@ -225,7 +225,7 @@ zx_status_t CompositeDevice::TryAssemble() {
     status = coordinator->AddMetadata(device_, metadata_[i]->type, metadata_[i]->Data(),
                                       metadata_[i]->length);
     if (status != ZX_OK) {
-      log(ERROR, "devcoordinator: Failed to add metadata: %s\n", zx_status_get_string(status));
+      log(ERROR, "driver_manager: Failed to add metadata: %s\n", zx_status_get_string(status));
       return status;
     }
   }

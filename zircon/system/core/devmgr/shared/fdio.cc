@@ -175,10 +175,10 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
                             actions.data(), proc.reset_and_get_address(), err_msg);
   }
   if (status != ZX_OK) {
-    printf("devcoordinator: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
+    printf("fshost: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
     return status;
   }
-  printf("devcoordinator: launch %s (%s) OK\n", argv[0], name);
+  printf("fshost: launch %s (%s) OK\n", argv[0], name);
   if (out_proc != nullptr) {
     *out_proc = std::move(proc);
   }

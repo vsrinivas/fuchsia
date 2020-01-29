@@ -97,7 +97,7 @@ static zx_status_t default_rxrpc(void* ctx, zx_handle_t channel) { return ZX_ERR
 
 static zx_status_t default_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
   fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
-  printf("devhost: Unsupported FIDL operation: 0x%lx\n", hdr->ordinal);
+  printf("driver_host: Unsupported FIDL operation: 0x%lx\n", hdr->ordinal);
   zx_handle_close_many(msg->handles, msg->num_handles);
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -123,7 +123,7 @@ zx_protocol_device_t device_default_ops = []() {
 }();
 
 [[noreturn]] static void device_invalid_fatal(void* ctx) {
-  printf("devhost: FATAL: zx_device_t used after destruction.\n");
+  printf("driver_host: FATAL: zx_device_t used after destruction.\n");
   __builtin_trap();
 }
 
@@ -283,7 +283,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
                                   const zx_protocol_device_t* ops,
                                   fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK {
   if (!drv) {
-    printf("devhost: device_add could not find driver!\n");
+    printf("driver_host: device_add could not find driver!\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -297,7 +297,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
   dev->driver = drv;
 
   if (name == nullptr) {
-    printf("devhost: dev=%p has null name.\n", dev.get());
+    printf("driver_host: dev=%p has null name.\n", dev.get());
     name = "invalid";
     dev->magic = 0;
   }
@@ -306,7 +306,7 @@ zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
   // TODO(teisenbe): I think this is overly aggresive, and could be changed
   // to |len > ZX_DEVICE_NAME_MAX| and |len = ZX_DEVICE_NAME_MAX|.
   if (len >= ZX_DEVICE_NAME_MAX) {
-    printf("devhost: dev=%p name too large '%s'\n", dev.get(), name);
+    printf("driver_host: dev=%p name too large '%s'\n", dev.get(), name);
     len = ZX_DEVICE_NAME_MAX - 1;
     dev->magic = 0;
   }
@@ -387,13 +387,13 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
     creation_ctx = g_creation_context;
     // create() must create only one child
     if (creation_ctx->child != nullptr) {
-      printf("devhost: driver attempted to create multiple proxy devices!\n");
+      printf("driver_host: driver attempted to create multiple proxy devices!\n");
       return ZX_ERR_BAD_STATE;
     }
   }
 
 #if TRACE_ADD_REMOVE
-  printf("devhost: device add: %p(%s) parent=%p(%s)\n", dev.get(), dev->name, parent.get(),
+  printf("driver_host: device add: %p(%s) parent=%p(%s)\n", dev.get(), dev->name, parent.get(),
          parent->name);
 #endif
 
@@ -409,7 +409,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
   // proxy devices are created through this handshake process
   if (creation_ctx) {
     if (dev->flags & DEV_FLAG_INVISIBLE) {
-      printf("devhost: driver attempted to create invisible device in create()\n");
+      printf("driver_host: driver attempted to create invisible device in create()\n");
       return ZX_ERR_INVALID_ARGS;
     }
     dev->flags |= DEV_FLAG_ADDED;
@@ -430,7 +430,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
     // devhost_add always consumes the handle
     status = devhost_add(parent, dev, proxy_args, props, prop_count, std::move(client_remote));
     if (status < 0) {
-      printf("devhost: %p(%s): remote add failed %d\n", dev.get(), dev->name, status);
+      printf("driver_host: %p(%s): remote add failed %d\n", dev.get(), dev->name, status);
       dev->parent->children.erase(*dev);
       dev->parent.reset();
 

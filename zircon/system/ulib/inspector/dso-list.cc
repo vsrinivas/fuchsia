@@ -35,10 +35,10 @@ const char kDebugSuffix[] = ".debug";
 
 static inspector_dsoinfo_t* dsolist_add(inspector_dsoinfo_t** list, const char* name,
                                         uintptr_t base) {
-  if (!strncmp(name, "app:devhost:", 12)) {
-    // devhost processes use their name field to describe
+  if (!strncmp(name, "app:driver_host:", 12)) {
+    // driver_host processes use their name field to describe
     // the root of their device sub-tree.
-    name = "app:/boot/bin/devhost";
+    name = "app:/boot/bin/driver_host";
   }
   size_t len = strlen(name);
   auto dso =

@@ -101,7 +101,7 @@ void DevhostContext::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> event
                                               zx_status_t status,
                                               const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "devhost: event waiter error: %d\n", status);
+    log(ERROR, "driver_host: event waiter error: %d\n", status);
     return;
   }
 

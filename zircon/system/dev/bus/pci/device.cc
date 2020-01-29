@@ -156,7 +156,7 @@ zx_status_t Device::InitLocked() {
 
   st = CreateProxy();
   if (st != ZX_OK) {
-    pci_errorf("device %s couldn't spawn its proxy devhost: %d\n", cfg_->addr(), st);
+    pci_errorf("device %s couldn't spawn its proxy driver_host: %d\n", cfg_->addr(), st);
     return st;
   }
 

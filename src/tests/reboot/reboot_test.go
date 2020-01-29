@@ -52,7 +52,7 @@ func TestReboot(t *testing.T) {
 		i.RunCommand(cmd)
 
 		// Make sure the file system is notified and unmounts.
-		i.WaitForLogMessage("devcoordinator: Successfully waited for VFS exit completion")
+		i.WaitForLogMessage("driver_manager: Successfully waited for VFS exit completion")
 
 		// Is the target rebooting?
 		i.WaitForLogMessage("Shutting down debuglog")

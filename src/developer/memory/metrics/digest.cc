@@ -13,7 +13,7 @@ namespace memory {
 const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"ZBI Buffer", ".*", "uncompressed-bootfs"},
     {"Graphics", ".*", "magma_create_buffer"},
-    {"Video Buffer", "devhost:sys", "Sysmem.*"},
+    {"Video Buffer", "driver_host:sys", "Sysmem.*"},
     {"Fshost", "fshost", ".*"},
     {"Minfs", ".*minfs", ".*"},
     {"Blobfs", ".*blobfs", ".*"},
@@ -21,7 +21,7 @@ const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"Web", "web_engine_exe:.*|chromium.cmx", ".*"},
     {"Kronk", "kronk.cmx|kronk_for_testing.cmx", ".*"},
     {"Scenic", "scenic.cmx", ".*"},
-    {"Amlogic", "devhost:pdev:05:00:f", ".*"},
+    {"Amlogic", "driver_host:pdev:05:00:f", ".*"},
     {"Netstack", "netstack.cmx", ".*"},
     {"Amber", "amber.cmx", ".*"},
     {"Pkgfs", "pkgfs", ".*"},

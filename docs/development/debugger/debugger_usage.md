@@ -136,7 +136,7 @@ the KOID by running `ps` on the target Fuchsia system. zxdb also has a built-in
 [zxdb] ps
 j: 1030 root
   j: 1079 zircon-drivers
-    p: 1926 devhost:sys
+    p: 1926 driver_host:sys
 ...
 ```
 

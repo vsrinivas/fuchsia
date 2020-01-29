@@ -52,7 +52,7 @@ Device::~Device() {
   // holding a reference we shouldn't be able to hit that check, in which case
   // the flag is only used to modify the proxy library loading behavior.
 
-  log(DEVLC, "devcoordinator: destroy dev %p name='%s'\n", this, name_.data());
+  log(DEVLC, "driver_manager: destroy dev %p name='%s'\n", this, name_.data());
 
   devfs_unpublish(this);
 
@@ -183,7 +183,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
   dev->host_->AddRef();
   dev->host_->devices().push_back(dev.get());
 
-  log(DEVLC, "devcoordinator: composite dev created %p name='%s'\n", dev.get(), dev->name().data());
+  log(DEVLC, "driver_manager: composite dev created %p name='%s'\n", dev.get(), dev->name().data());
 
   *device = std::move(dev);
   return ZX_OK;
@@ -253,7 +253,7 @@ fbl::RefPtr<SuspendTask> Device::RequestSuspendTask(uint32_t suspend_flags) {
 zx_status_t Device::SendInit(InitCompletion completion) {
   ZX_ASSERT(!init_completion_);
 
-  log(DEVLC, "devcoordinator: init dev %p name='%s'\n", this, name_.data());
+  log(DEVLC, "driver_manager: init dev %p name='%s'\n", this, name_.data());
   zx_status_t status = dh_send_init(this);
   if (status != ZX_OK) {
     return status;
@@ -264,7 +264,7 @@ zx_status_t Device::SendInit(InitCompletion completion) {
 
 zx_status_t Device::CompleteInit(zx_status_t status) {
   if (!init_completion_ && status == ZX_OK) {
-    log(ERROR, "devcoordinator: rpc: unexpected init reply for '%s'\n", name_.data());
+    log(ERROR, "driver_manager: rpc: unexpected init reply for '%s'\n", name_.data());
     return ZX_ERR_IO;
   }
   if (init_completion_) {
@@ -290,7 +290,7 @@ zx_status_t Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
     // We already have a pending suspend
     return ZX_ERR_UNAVAILABLE;
   }
-  log(DEVLC, "devcoordinator: suspend dev %p name='%s'\n", this, name_.data());
+  log(DEVLC, "driver_manager: suspend dev %p name='%s'\n", this, name_.data());
   zx_status_t status = dh_send_suspend(this, flags);
   if (status != ZX_OK) {
     return status;
@@ -305,7 +305,7 @@ zx_status_t Device::SendResume(uint32_t target_system_state, ResumeCompletion co
     // We already have a pending resume
     return ZX_ERR_UNAVAILABLE;
   }
-  log(DEVLC, "devcoordinator: resume dev %p name='%s'\n", this, name_.data());
+  log(DEVLC, "driver_manager: resume dev %p name='%s'\n", this, name_.data());
   zx_status_t status = dh_send_resume(this, target_system_state);
   if (status != ZX_OK) {
     return status;
@@ -390,7 +390,7 @@ zx_status_t Device::SendUnbind(UnbindCompletion completion) {
     // We already have a pending unbind
     return ZX_ERR_UNAVAILABLE;
   }
-  log(DEVLC, "devcoordinator: unbind dev %p name='%s'\n", this, name_.data());
+  log(DEVLC, "driver_manager: unbind dev %p name='%s'\n", this, name_.data());
   state_ = Device::State::kUnbinding;
   unbind_completion_ = std::move(completion);
   zx_status_t status = dh_send_unbind(this);
@@ -405,7 +405,7 @@ zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
     // We already have a pending remove.
     return ZX_ERR_UNAVAILABLE;
   }
-  log(DEVLC, "devcoordinator: complete removal dev %p name='%s'\n", this, name_.data());
+  log(DEVLC, "driver_manager: complete removal dev %p name='%s'\n", this, name_.data());
   state_ = Device::State::kUnbinding;
   remove_completion_ = std::move(completion);
   zx_status_t status = dh_send_complete_removal(
@@ -418,7 +418,7 @@ zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
 
 zx_status_t Device::CompleteUnbind(zx_status_t status) {
   if (!unbind_completion_ && status == ZX_OK) {
-    log(ERROR, "devcoordinator: rpc: unexpected unbind reply for '%s'\n", name_.data());
+    log(ERROR, "driver_manager: rpc: unexpected unbind reply for '%s'\n", name_.data());
     return ZX_ERR_IO;
   }
   if (unbind_completion_) {
@@ -430,7 +430,7 @@ zx_status_t Device::CompleteUnbind(zx_status_t status) {
 
 zx_status_t Device::CompleteRemove(zx_status_t status) {
   if (!remove_completion_ && status == ZX_OK) {
-    log(ERROR, "devcoordinator: rpc: unexpected remove reply for '%s'\n", name_.data());
+    log(ERROR, "driver_manager: rpc: unexpected remove reply for '%s'\n", name_.data());
     return ZX_ERR_IO;
   }
   // If we received an error, it is because we are currently force removing the device.
@@ -453,7 +453,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
                        async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: Device::HandleRpc aborting, saw status %d\n", status);
+    log(ERROR, "driver_manager: Device::HandleRpc aborting, saw status %d\n", status);
     return;
   }
 
@@ -461,7 +461,7 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
     zx_status_t r;
     if ((r = dev->HandleRead()) < 0) {
       if (r != ZX_ERR_STOP) {
-        log(ERROR, "devcoordinator: device %p name='%s' rpc status: %d\n", dev.get(),
+        log(ERROR, "driver_manager: device %p name='%s' rpc status: %d\n", dev.get(),
             dev->name().data(), r);
       }
       // If this device isn't already dead (removed), remove it. RemoveDevice() may
@@ -478,14 +478,14 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
     // If the device is already dead, we are detecting an expected disconnect from the devhost.
     if (dev->state() != Device::State::kDead) {
-      log(ERROR, "devcoordinator: device %p name='%s' disconnected!\n", dev.get(),
+      log(ERROR, "driver_manager: device %p name='%s' disconnected!\n", dev.get(),
           dev->name().data());
       dev->coordinator->RemoveDevice(dev, true);
     }
     // Do not start waiting again on this device's channel again
     return;
   }
-  log(ERROR, "devcoordinator: no work? %08x\n", signal->observed);
+  log(ERROR, "driver_manager: no work? %08x\n", signal->observed);
   Device::BeginWait(std::move(dev), dispatcher);
 }
 
@@ -510,11 +510,11 @@ static const fuchsia_driver_test_Logger_ops_t kTestOps = {
 void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: dev '%s' test output error: %d\n", name_.data(), status);
+    log(ERROR, "driver_manager: dev '%s' test output error: %d\n", name_.data(), status);
     return;
   }
   if (!(signal->observed & ZX_CHANNEL_PEER_CLOSED)) {
-    log(ERROR, "devcoordinator: dev '%s' test output unexpected signal: %d\n", name_.data(),
+    log(ERROR, "driver_manager: dev '%s' test output unexpected signal: %d\n", name_.data(),
         signal->observed);
     return;
   }
@@ -534,7 +534,7 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
       test_reporter->TestFinished();
       break;
     } else if (r != ZX_OK) {
-      log(ERROR, "devcoordinator: dev '%s' failed to read test output: %d\n", name_.data(), r);
+      log(ERROR, "driver_manager: dev '%s' failed to read test output: %d\n", name_.data(), r);
       break;
     }
 
@@ -547,7 +547,7 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
 
     if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
       zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
-      log(ERROR, "devcoordinator: dev '%s' bad test output fidl message header: \n", name_.data());
+      log(ERROR, "driver_manager: dev '%s' bad test output fidl message header: \n", name_.data());
       break;
     }
 
@@ -555,7 +555,7 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
     FidlTxn txn(test_output_, header->txid);
     r = fuchsia_driver_test_Logger_dispatch(this, txn.fidl_txn(), &fidl_msg, &kTestOps);
     if (r != ZX_OK) {
-      log(ERROR, "devcoordinator: dev '%s' failed to dispatch test output: %d\n", name_.data(), r);
+      log(ERROR, "driver_manager: dev '%s' failed to dispatch test output: %d\n", name_.data(), r);
       break;
     }
   }
@@ -568,7 +568,7 @@ zx_status_t Device::HandleRead() {
   uint32_t hcount = fbl::count_of(hin);
 
   if (state_ == Device::State::kDead) {
-    log(ERROR, "devcoordinator: dev %p already dead (in read)\n", this);
+    log(ERROR, "driver_manager: dev %p already dead (in read)\n", this);
     return ZX_ERR_INTERNAL;
   }
 
@@ -606,7 +606,7 @@ zx_status_t Device::HandleRead() {
     }
   }
 
-  log(ERROR, "devcoordinator: rpc: dev '%s' received wrong unexpected protocol. Ordinal: %16lx\n",
+  log(ERROR, "driver_manager: rpc: dev '%s' received wrong unexpected protocol. Ordinal: %16lx\n",
       name_.data(), hdr->ordinal);
   zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
   return ZX_ERR_IO;
@@ -688,7 +688,7 @@ int Device::RunCompatibilityTests() {
   // Device should be bound for test to work
   if (!(flags & DEV_CTX_BOUND) || children().is_empty()) {
     log(ERROR,
-        "devcoordinator: Driver Compatibility test failed for %s: "
+        "driver_manager: Driver Compatibility test failed for %s: "
         "Parent Device not bound\n",
         test_driver_name);
     test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD;
@@ -697,7 +697,7 @@ int Device::RunCompatibilityTests() {
   zx_status_t status = zx::event::create(0, &test_event());
   if (status != ZX_OK) {
     log(ERROR,
-        "devcoordinator: Driver Compatibility test failed for %s: "
+        "driver_manager: Driver Compatibility test failed for %s: "
         "Event creation failed : %d\n",
         test_driver_name, status);
     test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
@@ -721,14 +721,14 @@ int Device::RunCompatibilityTests() {
     if (status == ZX_ERR_TIMED_OUT) {
       // The Remove did not complete.
       log(ERROR,
-          "devcoordinator: Driver Compatibility test failed for %s: "
+          "driver_manager: Driver Compatibility test failed for %s: "
           "Timed out waiting for device to be removed. Check if device_remove was "
           "called in the unbind routine of the driver: %d\n",
           test_driver_name, status);
       test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_UNBIND_TIMEOUT;
     } else {
       log(ERROR,
-          "devcoordinator: Driver Compatibility test failed for %s: "
+          "driver_manager: Driver Compatibility test failed for %s: "
           "Error waiting for device to be removed.\n",
           test_driver_name);
       test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
@@ -743,14 +743,14 @@ int Device::RunCompatibilityTests() {
     if (status == ZX_ERR_TIMED_OUT) {
       // The Bind did not complete.
       log(ERROR,
-          "devcoordinator: Driver Compatibility test failed for %s: "
+          "driver_manager: Driver Compatibility test failed for %s: "
           "Timed out waiting for driver to be bound. Check if Bind routine "
           "of the driver is doing blocking I/O: %d\n",
           test_driver_name, status);
       test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_TIMEOUT;
     } else {
       log(ERROR,
-          "devcoordinator: Driver Compatibility test failed for %s: "
+          "driver_manager: Driver Compatibility test failed for %s: "
           "Error waiting for driver to be bound: %d\n",
           test_driver_name, status);
       test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
@@ -760,14 +760,14 @@ int Device::RunCompatibilityTests() {
   this->set_test_state(Device::TestStateMachine::kTestBindDone);
   if (this->children().is_empty()) {
     log(ERROR,
-        "devcoordinator: Driver Compatibility test failed for %s: "
+        "driver_manager: Driver Compatibility test failed for %s: "
         "Driver Bind routine did not add a child. Check if Bind routine "
         "Called DdkAdd() at the end.\n",
         test_driver_name);
     test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD;
     return -1;
   }
-  log(ERROR, "devcoordinator: Driver Compatibility test succeeded for %s\n", test_driver_name);
+  log(ERROR, "driver_manager: Driver Compatibility test succeeded for %s\n", test_driver_name);
   // TODO(ravoorir): Test Suspend and Resume hooks
   test_status_ = fuchsia_device_manager_CompatibilityTestStatus_OK;
   return 0;
@@ -860,7 +860,7 @@ void Device::AddDeviceInvisible(
 void Device::ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
 
-  log(ERROR, "devcoordinator: schedule remove '%s'\n", dev->name().data());
+  log(ERROR, "driver_manager: schedule remove '%s'\n", dev->name().data());
 
   dev->coordinator->ScheduleDevhostRequestedRemove(dev, unbind_self);
 }
@@ -868,7 +868,7 @@ void Device::ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync comp
 void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
 
-  log(DEVLC, "devcoordinator: schedule unbind children '%s'\n", dev->name().data());
+  log(DEVLC, "driver_manager: schedule unbind children '%s'\n", dev->name().data());
 
   dev->coordinator->ScheduleDevhostRequestedUnbindChildren(dev);
 }
@@ -877,13 +877,13 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result response;
   if (dev->coordinator->InSuspend()) {
-    log(ERROR, "devcoordinator: rpc: make-visible '%s' forbidden in suspend\n", dev->name().data());
+    log(ERROR, "driver_manager: rpc: make-visible '%s' forbidden in suspend\n", dev->name().data());
     zx_status_t status = ZX_ERR_BAD_STATE;
     response.set_err(&status);
     completer.Reply(std::move(response));
     return;
   }
-  log(RPC_IN, "devcoordinator: rpc: make-visible '%s'\n", dev->name().data());
+  log(RPC_IN, "driver_manager: rpc: make-visible '%s'\n", dev->name().data());
   // TODO(teisenbe): MakeVisibile can return errors.  We should probably
   // act on it, but the existing code being migrated does not.
   dev->coordinator->MakeVisible(dev);
@@ -898,7 +898,7 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
 
   llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result response;
   if (dev->coordinator->InSuspend()) {
-    log(ERROR, "devcoordinator: rpc: bind-device '%s' forbidden in suspend\n", dev->name().data());
+    log(ERROR, "driver_manager: rpc: bind-device '%s' forbidden in suspend\n", dev->name().data());
     zx_status_t status = ZX_ERR_BAD_STATE;
     response.set_err(&status);
     completer.Reply(std::move(response));
@@ -907,7 +907,7 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
 
   // Made this log at ERROR instead of RPC_IN to help debug DNO-492; we should
   // take it back down when done with that bug.
-  log(ERROR, "devcoordinator: rpc: bind-device '%s'\n", dev->name().data());
+  log(ERROR, "driver_manager: rpc: bind-device '%s'\n", dev->name().data());
   zx_status_t status = dev->coordinator->BindDevice(dev, driver_path, false /* new device */);
   if (status != ZX_OK) {
     response.set_err(&status);

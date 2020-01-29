@@ -783,7 +783,7 @@ void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* di
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: DcIostate::HandleRpc aborting, saw status %d\n", status);
+    log(ERROR, "driver_manager: DcIostate::HandleRpc aborting, saw status %d\n", status);
     return;
   }
 
@@ -801,7 +801,7 @@ void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* di
       return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
     });
   } else {
-    log(ERROR, "devcoordinator: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
+    log(ERROR, "driver_manager: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
     abort();
   }
   // Do not start waiting again, and destroy |ios|
@@ -814,7 +814,7 @@ zx::channel devfs_root_clone() { return zx::channel(fdio_service_clone(g_devfs_r
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
   root_devnode = std::make_unique<Devnode>("");
   if (!root_devnode) {
-    printf("devcoordinator: failed to allocate devfs root node\n");
+    printf("driver_manager: failed to allocate devfs root node\n");
     return;
   }
   root_devnode->ino = 1;

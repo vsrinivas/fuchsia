@@ -94,35 +94,35 @@ zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_create(&ns);
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to create namespace %d\n", status);
+    fprintf(stderr, "driver_manager: failed to create namespace %d\n", status);
     return status;
   }
   auto defer = fit::defer([ns] { fdio_ns_destroy(ns); });
   zx::channel boot_client, boot_server;
   status = zx::channel::create(0, &boot_client, &boot_server);
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to create channel %d\n", status);
+    fprintf(stderr, "driver_manager: failed to create channel %d\n", status);
     return status;
   }
   status = fdio_open("/boot", FS_READONLY_DIR_FLAGS, boot_server.release());
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to connect to /boot %d\n", status);
+    fprintf(stderr, "driver_manager: failed to connect to /boot %d\n", status);
     return status;
   }
   status = fdio_ns_bind(ns, "/boot", boot_client.release());
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to bind namespace %d\n", status);
+    fprintf(stderr, "driver_manager: failed to bind namespace %d\n", status);
     return status;
   }
   fbl::unique_fd root(fdio_ns_opendir(ns));
   if (!root) {
-    fprintf(stderr, "devcoordinator: failed to open root directory %d\n", errno);
+    fprintf(stderr, "driver_manager: failed to open root directory %d\n", errno);
     return ZX_ERR_IO;
   }
   std::unique_ptr<DevhostLoaderService> ldsvc(new DevhostLoaderService);
   status = loader_service_create(dispatcher, &ops_, ldsvc.get(), &ldsvc->svc_);
   if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to create loader service %d\n", status);
+    fprintf(stderr, "driver_manager: failed to create loader service %d\n", status);
     return status;
   }
   ldsvc->root_ = std::move(root);

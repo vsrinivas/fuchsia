@@ -22,7 +22,7 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
     zx_status_t status = zx::channel::create(0, &client, &server);
     if (status != ZX_OK) {
       printf(
-          "devcoordinator: failed to create client for mock fshost admin, failed to create "
+          "driver_manager: failed to create client for mock fshost admin, failed to create "
           "channel: %s\n",
           zx_status_get_string(status));
       return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
@@ -30,7 +30,7 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
 
     status = fidl::Bind(dispatcher, std::move(server), this);
     if (status != ZX_OK) {
-      printf("devcoordinator: failed to create client for mock fshost admin, failed to bind: %s\n",
+      printf("driver_manager: failed to create client for mock fshost admin, failed to bind: %s\n",
              zx_status_get_string(status));
       return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
     }

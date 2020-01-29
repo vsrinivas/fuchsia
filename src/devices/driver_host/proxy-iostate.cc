@@ -60,7 +60,7 @@ void ProxyIostate::HandleRpc(std::unique_ptr<ProxyIostate> conn, async_dispatche
     log(RPC_SDW, "proxy-rpc: peer closed (ios=%p,dev=%p)\n", conn.get(), conn->dev.get());
     return handle_destroy();
   }
-  log(ERROR, "devhost: no work? %08x\n", signal->observed);
+  log(ERROR, "driver_host: no work? %08x\n", signal->observed);
   BeginWait(std::move(conn), dispatcher);
 }
 

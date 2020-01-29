@@ -320,7 +320,7 @@ void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispa
                                 async::WaitBase* wait, zx_status_t status,
                                 const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "devhost: devfs conn wait error: %d\n", status);
+    log(ERROR, "driver_host: devfs conn wait error: %d\n", status);
     return;
   }
 
@@ -349,7 +349,7 @@ void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispa
   // or close-due-to-error (non-ZX_OK), or if the channel was closed
   // out from under us.  In all cases, we are done with this connection, so we
   // will destroy it by letting it leave scope.
-  log(TRACE, "devhost: destroying devfs conn %p\n", conn.get());
+  log(TRACE, "driver_host: destroying devfs conn %p\n", conn.get());
 }
 
 zx_status_t DevfsConnection::ReadMessage(FidlDispatchFunction dispatch) {

@@ -100,7 +100,7 @@ zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
 zx_status_t dh_send_init(Device* dev_ptr) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Init([dev](zx_status_t status) {
-    log(ERROR, "devcoordinator: init done '%s'\n", dev->name().data());
+    log(ERROR, "driver_manager: init done '%s'\n", dev->name().data());
     dev->CompleteInit(status);
   });
   return ZX_OK;
@@ -109,7 +109,7 @@ zx_status_t dh_send_init(Device* dev_ptr) {
 zx_status_t dh_send_suspend(Device* dev_ptr, uint32_t flags) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Suspend(flags, [dev](zx_status_t status) {
-    log(INFO, "devcoordinator: suspended name='%s' status %d\n", dev->name().data(), status);
+    log(INFO, "driver_manager: suspended name='%s' status %d\n", dev->name().data(), status);
     dev->CompleteSuspend(status);
   });
   return ZX_OK;
@@ -118,7 +118,7 @@ zx_status_t dh_send_suspend(Device* dev_ptr, uint32_t flags) {
 zx_status_t dh_send_resume(Device* dev_ptr, uint32_t target_system_state) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev_ptr->device_controller()->Resume(target_system_state, [dev](zx_status_t status) {
-    log(INFO, "devcoordinator: resumed dev %p name='%s'\n", dev.get(), dev->name().data());
+    log(INFO, "driver_manager: resumed dev %p name='%s'\n", dev.get(), dev->name().data());
     dev->CompleteResume(status);
   });
   return ZX_OK;
@@ -134,7 +134,7 @@ zx_status_t dh_send_unbind(Device* dev_ptr) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Unbind(
       [dev](fuchsia::device::manager::DeviceController_Unbind_Result status) {
-        log(ERROR, "devcoordinator: unbind done '%s'\n", dev->name().data());
+        log(ERROR, "driver_manager: unbind done '%s'\n", dev->name().data());
         dev->CompleteUnbind();
       });
   return ZX_OK;
@@ -146,7 +146,7 @@ zx_status_t dh_send_complete_removal(Device* dev_ptr, fit::function<void()> cb) 
   dev->device_controller()->CompleteRemoval(
       [dev, cb = std::move(cb)](
           fuchsia::device::manager::DeviceController_CompleteRemoval_Result status) {
-        log(ERROR, "devcoordinator: remove done '%s'\n", dev->name().data());
+        log(ERROR, "driver_manager: remove done '%s'\n", dev->name().data());
         cb();
       });
   return ZX_OK;

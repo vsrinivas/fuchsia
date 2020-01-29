@@ -37,13 +37,13 @@ void ConnectionDestroyer::Handler(async_dispatcher_t* dispatcher, async::Receive
   switch (type) {
     case Type::DeviceController: {
       auto conn = reinterpret_cast<DeviceControllerConnection*>(ptr);
-      log(TRACE, "devhost: destroying devcoord conn '%p'\n", conn);
+      log(TRACE, "driver_host: destroying devcoord conn '%p'\n", conn);
       delete conn;
       break;
     }
     case Type::Proxy: {
       auto conn = reinterpret_cast<ProxyIostate*>(ptr);
-      log(TRACE, "devhost: destroying proxy conn '%p'\n", conn);
+      log(TRACE, "driver_host: destroying proxy conn '%p'\n", conn);
       delete conn;
       break;
     }

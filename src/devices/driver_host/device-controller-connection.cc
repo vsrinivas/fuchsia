@@ -141,12 +141,12 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
     zx::channel::create(0, &test_input, &test_output);
     bool tests_passed = drv->RunUnitTestsOp(dev, std::move(test_input));
     if (!tests_passed) {
-      log(ERROR, "devhost: driver '%s' unit tests failed\n", drv->name());
+      log(ERROR, "driver_host: driver '%s' unit tests failed\n", drv->name());
       drv->set_status(ZX_ERR_BAD_STATE);
       BindReply(dev, std::move(completer), ZX_ERR_BAD_STATE, std::move(test_output));
       return;
     }
-    log(INFO, "devhost: driver '%s' unit tests passed\n", drv->name());
+    log(INFO, "driver_host: driver '%s' unit tests passed\n", drv->name());
   }
 
   if (drv->has_bind_op()) {
@@ -157,7 +157,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
     r = drv->BindOp(&bind_ctx, dev);
 
     if ((r == ZX_OK) && (bind_ctx.child == nullptr)) {
-      printf("devhost: WARNING: driver '%.*s' did not add device in bind()\n",
+      printf("driver_host: WARNING: driver '%.*s' did not add device in bind()\n",
              static_cast<int>(driver_path.size()), driver_path.data());
     }
     if (r != ZX_OK) {
@@ -233,7 +233,7 @@ zx_status_t DeviceControllerConnection::Create(fbl::RefPtr<zx_device> dev,
 void DeviceControllerConnection::Open(uint32_t flags, uint32_t mode, ::fidl::StringView path,
                                       ::zx::channel object, OpenCompleter::Sync completer) {
   if (path.size() != 1 && path.data()[0] != '.') {
-    log(ERROR, "devhost: Tried to open path '%.*s'\n", static_cast<int>(path.size()), path.data());
+    log(ERROR, "driver_host: Tried to open path '%.*s'\n", static_cast<int>(path.size()), path.data());
   }
   devhost_device_connect(this->dev(), flags, std::move(object));
 }
@@ -242,7 +242,7 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
                                            async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                            zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "devhost: devcoord conn wait error: %d\n", status);
+    log(ERROR, "driver_host: devcoord conn wait error: %d\n", status);
     return;
   }
   if (signal->observed & ZX_CHANNEL_READABLE) {
@@ -257,7 +257,7 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
         __UNUSED auto r = conn.release();
         return;
       }
-      log(ERROR, "devhost: devmgr rpc unhandleable ios=%p r=%d. fatal.\n", conn.get(), r);
+      log(ERROR, "driver_host: devmgr rpc unhandleable ios=%p r=%d. fatal.\n", conn.get(), r);
       abort();
     }
     BeginWait(std::move(conn), dispatcher);
@@ -275,10 +275,10 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
       return;
     }
 
-    log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
+    log(ERROR, "driver_host: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
     abort();
   }
-  log(ERROR, "devhost: no work? %08x\n", signal->observed);
+  log(ERROR, "driver_host: no work? %08x\n", signal->observed);
   BeginWait(std::move(conn), dispatcher);
 }
 

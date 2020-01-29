@@ -175,21 +175,21 @@ zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx
 
   void* dl = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (dl == nullptr) {
-    log(ERROR, "devhost: cannot load '%s': %s\n", c_libname, dlerror());
+    log(ERROR, "driver_host: cannot load '%s': %s\n", c_libname, dlerror());
     new_driver->set_status(ZX_ERR_IO);
     return new_driver->status();
   }
 
   auto dn = static_cast<const zircon_driver_note_t*>(dlsym(dl, "__zircon_driver_note__"));
   if (dn == nullptr) {
-    log(ERROR, "devhost: driver '%s' missing __zircon_driver_note__ symbol\n", c_libname);
+    log(ERROR, "driver_host: driver '%s' missing __zircon_driver_note__ symbol\n", c_libname);
     new_driver->set_status(ZX_ERR_IO);
     return new_driver->status();
   }
   auto ops = static_cast<const zx_driver_ops_t**>(dlsym(dl, "__zircon_driver_ops__"));
   auto dr = static_cast<zx_driver_rec_t*>(dlsym(dl, "__zircon_driver_rec__"));
   if (dr == nullptr) {
-    log(ERROR, "devhost: driver '%s' missing __zircon_driver_rec__ symbol\n", c_libname);
+    log(ERROR, "driver_host: driver '%s' missing __zircon_driver_rec__ symbol\n", c_libname);
     new_driver->set_status(ZX_ERR_IO);
     return new_driver->status();
   }
@@ -199,13 +199,13 @@ zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx
     ops = &dr->ops;
   }
   if (!(*ops)) {
-    log(ERROR, "devhost: driver '%s' has nullptr ops\n", c_libname);
+    log(ERROR, "driver_host: driver '%s' has nullptr ops\n", c_libname);
     new_driver->set_status(ZX_ERR_INVALID_ARGS);
     return new_driver->status();
   }
   if ((*ops)->version != DRIVER_OPS_VERSION) {
     log(ERROR,
-        "devhost: driver '%s' has bad driver ops version %" PRIx64 ", expecting %" PRIx64 "\n",
+        "driver_host: driver '%s' has bad driver ops version %" PRIx64 ", expecting %" PRIx64 "\n",
         c_libname, (*ops)->version, DRIVER_OPS_VERSION);
     new_driver->set_status(ZX_ERR_INVALID_ARGS);
     return new_driver->status();
@@ -233,13 +233,13 @@ zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx
         break;
       }
     }
-    log(INFO, "devhost: driver '%s': log flags set to: 0x%x\n", new_driver->name(), dr->log_flags);
+    log(INFO, "driver_host: driver '%s': log flags set to: 0x%x\n", new_driver->name(), dr->log_flags);
   }
 
   if (new_driver->has_init_op()) {
     new_driver->set_status(new_driver->InitOp());
     if (new_driver->status() != ZX_OK) {
-      log(ERROR, "devhost: driver '%s' failed in init: %d\n", c_libname, new_driver->status());
+      log(ERROR, "driver_host: driver '%s' failed in init: %d\n", c_libname, new_driver->status());
     }
   } else {
     new_driver->set_status(ZX_OK);
@@ -260,7 +260,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   // since the newly created device is not visible to
   // any API surface until a driver is bound to it.
   // (which can only happen via another message on this thread)
-  log(ERROR, "devhost: create device drv='%.*s' args='%.*s'\n",
+  log(ERROR, "driver_host: create device drv='%.*s' args='%.*s'\n",
       static_cast<int>(driver_path.size()), driver_path.data(), static_cast<int>(proxy_args.size()),
       proxy_args.data());
 
@@ -268,18 +268,18 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   fbl::RefPtr<zx_driver_t> drv;
   zx_status_t r = dh_find_driver(driver_path, std::move(driver_vmo), &drv);
   if (r != ZX_OK) {
-    log(ERROR, "devhost: driver load failed: %d\n", r);
+    log(ERROR, "driver_host: driver load failed: %d\n", r);
     return;
   }
   if (!drv->has_create_op()) {
-    log(ERROR, "devhost: driver create() not supported\n");
+    log(ERROR, "driver_host: driver create() not supported\n");
     return;
   }
 
   // Create a dummy parent device for use in this call to Create
   fbl::RefPtr<zx_device> parent;
   if ((r = zx_device::Create(&parent)) != ZX_OK) {
-    log(ERROR, "devhost: device create() failed: %d\n", r);
+    log(ERROR, "driver_host: device create() failed: %d\n", r);
     return;
   }
   // magic cookie for device create handshake
@@ -303,13 +303,13 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   creation_context.parent->flags |= DEV_FLAG_DEAD;
 
   if (r != ZX_OK) {
-    log(ERROR, "devhost: driver create() failed: %d\n", r);
+    log(ERROR, "driver_host: driver create() failed: %d\n", r);
     return;
   }
 
   auto new_device = std::move(creation_context.child);
   if (new_device == nullptr) {
-    log(ERROR, "devhost: driver create() failed to create a device!");
+    log(ERROR, "driver_host: driver create() failed to create a device!");
     return;
   }
 
@@ -323,7 +323,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
   // TODO: inform devcoord
 
-  log(RPC_IN, "devhost: creating '%.*s' conn=%p\n", static_cast<int>(driver_path.size()),
+  log(RPC_IN, "driver_host: creating '%.*s' conn=%p\n", static_cast<int>(driver_path.size()),
       driver_path.data(), newconn.get());
   if ((r = DeviceControllerConnection::BeginWait(std::move(newconn),
                                                  DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
@@ -335,7 +335,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
     zx::channel coordinator_rpc, zx::channel device_controller_rpc,
     ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id,
     CreateCompositeDeviceCompleter::Sync completer) {
-  log(RPC_IN, "devhost: create composite device %.*s'\n", static_cast<int>(name.size()),
+  log(RPC_IN, "driver_host: create composite device %.*s'\n", static_cast<int>(name.size()),
       name.data());
 
   // Convert the component IDs into zx_device references
@@ -382,7 +382,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
     return;
   }
 
-  log(RPC_IN, "devhost: creating new composite conn=%p\n", newconn.get());
+  log(RPC_IN, "driver_host: creating new composite conn=%p\n", newconn.get());
   if ((status = DeviceControllerConnection::BeginWait(std::move(newconn),
                                                       DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
     completer.Reply(status);
@@ -395,7 +395,7 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
                                                    zx::channel device_controller_rpc,
                                                    uint32_t protocol_id, uint64_t local_device_id,
                                                    CreateDeviceStubCompleter::Sync completer) {
-  log(RPC_IN, "devhost: create device stub\n");
+  log(RPC_IN, "driver_host: create device stub\n");
 
   fbl::RefPtr<zx_device_t> dev;
   zx_status_t r = zx_device::Create(&dev);
@@ -416,7 +416,7 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
     return;
   }
 
-  log(RPC_IN, "devhost: creating new stub conn=%p\n", newconn.get());
+  log(RPC_IN, "driver_host: creating new stub conn=%p\n", newconn.get());
   if ((r = DeviceControllerConnection::BeginWait(std::move(newconn),
                                                  DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
     return;
@@ -458,13 +458,13 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
                                             async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    log(ERROR, "devhost: devcoord conn wait error: %d\n", status);
+    log(ERROR, "driver_host: devcoord conn wait error: %d\n", status);
     return;
   }
   if (signal->observed & ZX_CHANNEL_READABLE) {
     status = conn->HandleRead();
     if (status != ZX_OK) {
-      log(ERROR, "devhost: devmgr rpc unhandleable ios=%p r=%s. fatal.\n", conn.get(),
+      log(ERROR, "driver_host: devmgr rpc unhandleable ios=%p r=%s. fatal.\n", conn.get(),
           zx_status_get_string(status));
       abort();
     }
@@ -472,10 +472,10 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
     return;
   }
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
+    log(ERROR, "driver_host: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
     abort();
   }
-  log(ERROR, "devhost: no work? %08x\n", signal->observed);
+  log(ERROR, "driver_host: no work? %08x\n", signal->observed);
   BeginWait(std::move(conn), dispatcher);
 }
 
@@ -643,9 +643,9 @@ static void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
 static void log_rpc_result(const char* opname, zx_status_t status,
                            zx_status_t call_status = ZX_OK) {
   if (status != ZX_OK) {
-    log(ERROR, "devhost: rpc:%s sending failed: %d\n", opname, status);
+    log(ERROR, "driver_host: rpc:%s sending failed: %d\n", opname, status);
   } else if (call_status != ZX_OK) {
-    log(ERROR, "devhost: rpc:%s failed: %d\n", opname, call_status);
+    log(ERROR, "driver_host: rpc:%s failed: %d\n", opname, call_status);
   }
 }
 
@@ -892,12 +892,12 @@ zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
   }
 
   if (status != ZX_OK) {
-    log(ERROR, "devhost: rpc:get-metadata sending failed: %d\n", status);
+    log(ERROR, "driver_host: rpc:get-metadata sending failed: %d\n", status);
     return status;
   }
   if (call_status != ZX_OK) {
     if (call_status != ZX_ERR_NOT_FOUND) {
-      log(ERROR, "devhost: rpc:get-metadata failed: %d\n", call_status);
+      log(ERROR, "driver_host: rpc:get-metadata failed: %d\n", call_status);
     }
     return call_status;
   }
@@ -928,12 +928,12 @@ zx_status_t devhost_get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint3
     call_status = response.Unwrap()->result.err();
   }
   if (status != ZX_OK) {
-    log(ERROR, "devhost: rpc:get-metadata sending failed: %d\n", status);
+    log(ERROR, "driver_host: rpc:get-metadata sending failed: %d\n", status);
     return status;
   }
   if (call_status != ZX_OK) {
     if (call_status != ZX_ERR_NOT_FOUND) {
-      log(ERROR, "devhost: rpc:get-metadata failed: %d\n", call_status);
+      log(ERROR, "driver_host: rpc:get-metadata failed: %d\n", call_status);
     }
     return call_status;
   }
@@ -1079,16 +1079,16 @@ zx_status_t devhost_start_connection(fbl::RefPtr<DevfsConnection> conn, zx::chan
 int device_host_main(int argc, char** argv) {
   root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
   if (root_resource_handle == ZX_HANDLE_INVALID) {
-    log(TRACE, "devhost: no root resource handle!\n");
+    log(TRACE, "driver_host: no root resource handle!\n");
   }
 
   devhost_io_init();
 
-  log(TRACE, "devhost: main()\n");
+  log(TRACE, "driver_host: main()\n");
 
   zx::channel root_conn_channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
   if (!root_conn_channel.is_valid()) {
-    log(ERROR, "devhost: rpc handle invalid\n");
+    log(ERROR, "driver_host: rpc handle invalid\n");
     return -1;
   }
 
@@ -1097,29 +1097,29 @@ int device_host_main(int argc, char** argv) {
   if (getenv_bool("driver.tracing.enable", true)) {
     r = devhost_start_trace_provider();
     if (r != ZX_OK) {
-      log(INFO, "devhost: error registering as trace provider: %d\n", r);
+      log(INFO, "driver_host: error registering as trace provider: %d\n", r);
       // This is not a fatal error.
     }
   }
 
   r = devhost_connect_scheduler_profile_provider();
   if (r != ZX_OK) {
-    log(INFO, "devhost: error connecting to profile provider: %d\n", r);
+    log(INFO, "driver_host: error connecting to profile provider: %d\n", r);
     return -1;
   }
 
   if ((r = SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {
-    log(ERROR, "devhost: could not watch rpc channel: %d\n", r);
+    log(ERROR, "driver_host: could not watch rpc channel: %d\n", r);
     return -1;
   }
 
   if (r = DevhostCtx().SetupEventWaiter(); r != ZX_OK) {
-    log(ERROR, "devhost: could not setup event watcher: %d\n", r);
+    log(ERROR, "driver_host: could not setup event watcher: %d\n", r);
     return -1;
   }
 
   r = DevhostAsyncLoop()->Run(zx::time::infinite(), false /* once */);
-  log(ERROR, "devhost: async loop finished: %d\n", r);
+  log(ERROR, "driver_host: async loop finished: %d\n", r);
 
   return 0;
 }

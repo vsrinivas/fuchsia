@@ -56,7 +56,7 @@ class SystemInstanceFsProvider : public zxtest::Test {
     // We want to create an alternative namespace for this test to use, to keep
     // this test hermetic wrt. other running tests.
     zx_status_t status = fdio_ns_create(&ns_for_test_);
-    ZX_ASSERT_MSG(status == ZX_OK, "devcoordinator: cannot create namespace: %s\n",
+    ZX_ASSERT_MSG(status == ZX_OK, "driver_manager: cannot create namespace: %s\n",
                   zx_status_get_string(status));
 
     // Mock out an object that implements DirectoryOpen and records some state.

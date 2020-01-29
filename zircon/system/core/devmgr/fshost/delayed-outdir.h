@@ -46,9 +46,9 @@ class DelayedOutdir {
 
       fit::result<zx_status_t, void> result = fit::run_single_threaded(std::move(promise_shutdown));
       if (!result.is_ok()) {
-        printf("devcoordinator: error running fit executor to shutdown delayed outdir vfs\n");
+        printf("fshost: error running fit executor to shutdown delayed outdir vfs\n");
       } else if (result.value() != ZX_OK) {
-        printf("devcoordintor: error shutting down delayed outdir vfs: %s\n",
+        printf("fshost: error shutting down delayed outdir vfs: %s\n",
                zx_status_get_string(result.value()));
       }
     }

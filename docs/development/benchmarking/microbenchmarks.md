@@ -14,14 +14,14 @@ TASK                    PSS PRIVATE  SHARED NAME
 j:1029               796.8M  783.9M         root
   p:1044             558.8M  558.8M     28k bin/devmgr
   j:1078              48.1M   39.6M         zircon-drivers
-    p:1752           180.8k    180k     28k devhost:root
-    p:1791          1596.8k   1596k     28k devhost:acpi
-    p:1840           592.8k    592k     28k devhost:misc
-    p:4684            35.0M   26.7M   16.5M devhost:pci#1:8086:5916
-    p:4730          1420.8k   1420k     28k devhost:pci#3:8086:9d2f
-    p:4858          8540.8k   8540k     28k devhost:pci#6:8086:9d03
-    p:4979           532.8k    532k     28k devhost:pci#14:8086:9d71
-    p:5052           546.8k    380k    360k devhost:pci#16:8086:15d8
+    p:1752           180.8k    180k     28k driver_host:root
+    p:1791          1596.8k   1596k     28k driver_host:acpi
+    p:1840           592.8k    592k     28k driver_host:misc
+    p:4684            35.0M   26.7M   16.5M driver_host:pci#1:8086:5916
+    p:4730          1420.8k   1420k     28k driver_host:pci#3:8086:9d2f
+    p:4858          8540.8k   8540k     28k driver_host:pci#6:8086:9d03
+    p:4979           532.8k    532k     28k driver_host:pci#14:8086:9d71
+    p:5052           546.8k    380k    360k driver_host:pci#16:8086:15d8
   j:1179            5745.4k   1624k         zircon-services
     p:1182           256.8k    256k     28k crashlogger
     p:1330          4490.8k    440k   8128k virtual-console
