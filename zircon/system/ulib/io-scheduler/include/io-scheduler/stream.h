@@ -19,6 +19,7 @@
 namespace ioscheduler {
 
 constexpr uint32_t kStreamFlagIsClosed = (1u << 0);
+constexpr uint32_t kStreamFlagHasDeferred = (1u << 1);
 
 class Scheduler;
 class Stream;
@@ -43,6 +44,7 @@ class Stream : public fbl::RefCounted<Stream> {
 
   inline bool IsEmpty() { return ready_ops_.is_empty() && issued_ops_.is_empty(); }
   inline bool HasReady() { return !ready_ops_.is_empty(); }
+  inline bool HasDefered() { return !deferred_ops_.is_empty(); }
 
   // Close a stream.
   // Returns:
@@ -59,7 +61,13 @@ class Stream : public fbl::RefCounted<Stream> {
   // The stream maintains ownership of the op. All fetched op must be returned via ReleaseOp().
   void GetNext(UniqueOp* op_out);
 
-  // Marks an op obtained via GetNext() as complete.
+  // Set an op as deferred for later completion.
+  void Defer(UniqueOp op);
+
+  // Get an op pending completion.
+  void GetDeferred(UniqueOp* op_out);
+
+  // Marks an op obtained via GetNext() or GetDeferred() as complete.
   // Op is not consumed.
   void Complete(StreamOp* op);
 
@@ -86,6 +94,10 @@ class Stream : public fbl::RefCounted<Stream> {
   };
   using ReadyStreamList = fbl::DoublyLinkedList<StreamRef, ReadyListTraits>;
 
+  struct DeferredListTraits {
+    static ListNodeState& node_state(Stream& s) { return s.deferred_node_; }
+  };
+  using DeferredStreamList = fbl::DoublyLinkedList<StreamRef, DeferredListTraits>;
 
  private:
   friend struct WAVLTreeNodeTraitsSortById;
@@ -97,10 +109,12 @@ class Stream : public fbl::RefCounted<Stream> {
   WAVLTreeNodeState map_node_;
 
   ListNodeState ready_node_;
+  ListNodeState deferred_node_;
 
   uint32_t flags_ = 0;
-  StreamOp::OpList ready_ops_;        // Ops ready to be issued.
-  StreamOp::OpList issued_ops_;       // Issued ops pending completion.
+  StreamOp::OpList ready_ops_;            // Ops ready to be issued.
+  StreamOp::OpList issued_ops_;           // Issued ops pending completion.
+  StreamOp::DeferredList deferred_ops_;   // Ops whose completion has been deferred.
 };
 
 }  // namespace ioscheduler

@@ -137,6 +137,10 @@ class Scheduler {
   // Insert a single op into a stream.
   zx_status_t InsertOp(UniqueOp op, UniqueOp* op_err) __TA_EXCLUDES(lock_);
 
+  // Mark an op as deferred for later completion by a worker thread.
+  // This function is intended to be called by async callbacks.
+  void DeferOp(UniqueOp op) __TA_EXCLUDES(lock_);
+
   SchedulerClient* client_ = nullptr;  // Client-supplied callback interface.
   uint32_t options_ = 0;               // Ordering options.
 
@@ -149,6 +153,9 @@ class Scheduler {
 
   // List of all streams that have ops ready to be issued, in priority order.
   Stream::ReadyStreamList ready_streams_ __TA_GUARDED(lock_);
+
+  // List of streams that have deferred ops, in fifo order.
+  Stream::DeferredStreamList deferred_streams_ __TA_GUARDED(lock_);
 
   // Event notifying waiters that there are ops ready for processing.
   fbl::ConditionVariable ops_available_ __TA_GUARDED(lock_);

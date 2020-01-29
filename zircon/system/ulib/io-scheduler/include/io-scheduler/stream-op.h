@@ -163,8 +163,15 @@ class StreamOp {
   };
   using OpList = fbl::DoublyLinkedList<StreamOp*, OpListTraits>;
 
+  struct DeferredListTraits {
+    static ListNodeState& node_state(StreamOp& s) { return s.deferred_node_; }
+  };
+  using DeferredList = fbl::DoublyLinkedList<StreamOp*, DeferredListTraits>;
+
+
  private:
   ListNodeState node_;
+  ListNodeState deferred_node_;
 
   OpType type_;             // Type of operation.
   uint32_t stream_id_;      // Stream into which this op is queued.

@@ -15,6 +15,7 @@ Scheduler::~Scheduler() {
   Shutdown();
   ZX_DEBUG_ASSERT(all_streams_.is_empty());
   ZX_DEBUG_ASSERT(ready_streams_.is_empty());
+  ZX_DEBUG_ASSERT(deferred_streams_.is_empty());
   ZX_DEBUG_ASSERT(workers_.is_empty());
 }
 
@@ -118,11 +119,7 @@ zx_status_t Scheduler::Serve() {
   return ZX_OK;
 }
 
-void Scheduler::AsyncComplete(StreamOp* sop) {
-  // TODO(ZX-4741): call async-friendly completion deferral instead of doing it in the
-  // caller context.
-  ReleaseOp(UniqueOp(sop));
-}
+void Scheduler::AsyncComplete(StreamOp* sop) { DeferOp(UniqueOp(sop)); }
 
 zx_status_t Scheduler::InsertOp(UniqueOp op, UniqueOp* op_err) {
   fbl::AutoLock lock(&lock_);
@@ -167,7 +164,19 @@ zx_status_t Scheduler::Enqueue(UniqueOp* in_list, size_t in_count, UniqueOp* out
 zx_status_t Scheduler::Dequeue(bool wait, UniqueOp* out) {
     fbl::AutoLock lock(&lock_);
   for (;;) {
-    StreamRef stream = ready_streams_.pop_front();
+    StreamRef stream = deferred_streams_.pop_front();
+    if (stream != nullptr) {
+      stream->GetDeferred(out);
+      ZX_DEBUG_ASSERT(*out != nullptr);
+      // Temporary relisting on the deferred stream until deferred list can hold multiple entries
+      // per stream.
+      if (stream->HasDefered()) {
+        deferred_streams_.push_back(std::move(stream));
+      }
+      return ZX_OK;
+    }
+
+    stream = ready_streams_.pop_front();
     if (stream != nullptr) {
       stream->GetNext(out);
       ZX_DEBUG_ASSERT(*out != nullptr);
@@ -189,6 +198,25 @@ zx_status_t Scheduler::Dequeue(bool wait, UniqueOp* out) {
   }
 }
 
+void Scheduler::DeferOp(UniqueOp op) {
+  ZX_DEBUG_ASSERT((op->is_deferred()) == 0);
+  fbl::AutoLock lock(&lock_);
+  StreamRef stream;
+  zx_status_t status = FindLocked(op->stream_id(), &stream);
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+  if (stream == nullptr) {
+      fprintf(stderr, "Scheduler: Deferring op with invalid stream id\n");
+      client_->Fatal();
+      return;
+  }
+  bool was_deferred = stream->HasDefered();
+  stream->Defer(std::move(op));
+  if (!was_deferred) {
+    deferred_streams_.push_back(std::move(stream));
+  }
+  ops_available_.Signal();
+}
+
 void Scheduler::ReleaseOp(UniqueOp op) {
   bool stream_done = false;
   uint32_t sid;
@@ -200,10 +228,11 @@ void Scheduler::ReleaseOp(UniqueOp op) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     if (stream == nullptr) {
       fprintf(stderr, "Scheduler: Releasing op with invalid stream id\n");
-    } else {
-      stream->Complete(op.get());
-      stream_done = stream->is_closed() && stream->IsEmpty();
+      client_->Fatal();
+      return;
     }
+    stream->Complete(op.get());
+    stream_done = stream->is_closed() && stream->IsEmpty();
   }
 
   client_->Release(op.release());

@@ -14,6 +14,7 @@ Stream::~Stream() {
   ZX_DEBUG_ASSERT(is_closed());
   ZX_DEBUG_ASSERT(ready_ops_.is_empty());
   ZX_DEBUG_ASSERT(issued_ops_.is_empty());
+  ZX_DEBUG_ASSERT(deferred_ops_.is_empty());
 }
 
 zx_status_t Stream::Close() {
@@ -42,6 +43,19 @@ void Stream::GetNext(UniqueOp* op_out) {
   ZX_DEBUG_ASSERT(op != nullptr);
   issued_ops_.push_back(op.get());  // Add to issued list.
   *op_out = std::move(op);
+}
+
+void Stream::Defer(UniqueOp op) {
+  ZX_DEBUG_ASSERT(!IsEmpty());
+  ZX_DEBUG_ASSERT(op != nullptr);
+  ZX_DEBUG_ASSERT(op->stream_id() == id_);
+  op->set_flags(kOpFlagDeferred);
+  deferred_ops_.push_back(op.release());
+}
+
+void Stream::GetDeferred(UniqueOp* op_out) {
+  ZX_DEBUG_ASSERT(!deferred_ops_.is_empty());
+  *op_out = UniqueOp(deferred_ops_.pop_front());
 }
 
 void Stream::Complete(StreamOp* op) {
