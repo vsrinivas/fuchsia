@@ -9,7 +9,7 @@ use {
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
+        MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE,
     },
     fuchsia_async as fasync, fuchsia_zircon as zx,
     std::path::{Component, Path},
@@ -169,6 +169,16 @@ pub async fn write_file_bytes(file: &FileProxy, mut data: &[u8]) -> Result<(), E
 /// Write the given string as UTF-8 bytes into a file open for writing.
 pub async fn write_file(file: &FileProxy, data: &str) -> Result<(), Error> {
     write_file_bytes(file, data.as_bytes()).await
+}
+
+/// Write the given bytes into a file at `path`. The path must be an absolute path.
+/// * If the file already exists, replaces existing contents.
+/// * If the file does not exist, creates the file.
+pub async fn write_path_bytes(path: &str, data: &[u8]) -> Result<(), Error> {
+    let file =
+        open_file_in_namespace(path, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_TRUNCATE)
+            .map_err(|e| format_err!("failed to open file: {}", e))?;
+    write_file_bytes(&file, data).await.map_err(|e| format_err!("failed to write file: {}", e))
 }
 
 /// node_to_directory will convert the given NodeProxy into a DirectoryProxy. This is unsafe if the
@@ -366,5 +376,47 @@ mod tests {
         assert_eq!(&contents, &data, "File contents did not match");
 
         Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn write_path_bytes_create_test() {
+        // Create temp dir for test, and bind it to our namespace.
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        let _dir =
+            open_directory_in_namespace(tempdir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .expect("could not open tmp dir");
+        let path = tempdir.path().join(Path::new("write_path_bytes_create"));
+        let path_string = path.to_str().expect("converting path to string failed");
+
+        // Write contents.
+        let data = b"\x80"; // Non UTF-8 data: a continuation byte as the first byte.
+        write_path_bytes(&path_string, data).await.expect("could not write to path");
+
+        // Verify contents.
+        let contents = std::fs::read(path).unwrap();
+        assert_eq!(&contents, &data, "Contents did not match");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn write_path_bytes_replace_test() {
+        // Create temp dir for test, and bind it to our namespace.
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        let _dir =
+            open_directory_in_namespace(tempdir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .expect("could not open tmp dir");
+        let path = tempdir.path().join(Path::new("write_path_bytes_replace"));
+        let path_string = path.to_str().expect("converting path to string failed");
+
+        // Write contents.
+        let original_data = b"\x80\x81"; // Non UTF-8 data: a continuation byte as the first byte.
+        write_path_bytes(&path_string, original_data).await.expect("could not write to path");
+
+        // Over-write contents.
+        let new_data = b"\x82"; // Non UTF-8 data: a continuation byte as the first byte.
+        write_path_bytes(&path_string, new_data).await.expect("could not over-write to path");
+
+        // Verify contents.
+        let contents = std::fs::read(path).unwrap();
+        assert_eq!(&contents, &new_data, "Contents did not match");
     }
 }
