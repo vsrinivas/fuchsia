@@ -41,6 +41,10 @@ class WaterfallDemo : public Demo {
 
   escher::PaperRenderer* renderer() const { return renderer_.get(); }
 
+  // Return the list of MSAA sample counts which can be cycled through; these are known to be
+  // supported by the current Vulkan device.
+  const std::vector<uint8_t>& allowed_sample_counts() const { return allowed_sample_counts_; }
+
  private:
   void ProcessCommandLineArgs(int argc, char** argv);
 
@@ -74,6 +78,9 @@ class WaterfallDemo : public Demo {
   uint32_t animation_state_ = 0;
   escher::Stopwatch object_stopwatch_;
   escher::Stopwatch lighting_stopwatch_;
+
+  std::vector<uint8_t> allowed_sample_counts_;
+  size_t current_sample_count_index_ = 0;
 
   // Toggle debug overlays.
   bool show_debug_info_ = false;

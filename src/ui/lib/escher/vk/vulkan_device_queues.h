@@ -71,6 +71,8 @@ class VulkanDeviceQueues : public fxl::RefCountedThreadSafe<VulkanDeviceQueues> 
     std::set<vk::Format> GetAllMatchingDepthStencilFormats(
         const std::set<vk::Format>& formats) const;
 
+    std::set<size_t> GetAllMatchingSampleCounts(const std::set<size_t>& counts) const;
+
     Caps() = default;
     Caps(vk::PhysicalDevice device);
   };

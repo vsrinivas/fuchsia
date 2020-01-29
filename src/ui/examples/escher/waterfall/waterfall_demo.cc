@@ -39,10 +39,27 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, int argc, char** a
 
   renderer_ = escher::PaperRenderer::New(GetEscherWeakPtr());
 
+  // Determine the allowable MSAA sample counts to cycle through with "M" key.
+  {
+    auto filtered =
+        // TODO(44326): 8x MSAA causes a segfault on NVIDIA/Linux.
+        // escher()->device()->caps().GetAllMatchingSampleCounts({1U, 2U, 4U, 8});
+        escher()->device()->caps().GetAllMatchingSampleCounts({1U, 2U, 4U});
+    FXL_CHECK(!filtered.empty());
+    allowed_sample_counts_.reserve(filtered.size());
+    for (auto sample_count : filtered) {
+      // PaperRendererConfig expects uint8_t, not size_t.
+      allowed_sample_counts_.push_back(static_cast<uint8_t>(sample_count));
+    }
+    if (allowed_sample_counts_.size() >= 2) {
+      // Start with the cheapest available MSAA.
+      current_sample_count_index_ = 1;
+    }
+  }
+
   renderer_config_.debug_frame_number = true;
   renderer_config_.shadow_type = PaperRendererShadowType::kShadowVolume;
-  renderer_config_.msaa_sample_count =
-      ESCHER_CHECKED_VK_RESULT(escher()->device()->caps().GetMatchingSampleCount({2U, 4U, 1U}));
+  renderer_config_.msaa_sample_count = allowed_sample_counts_[current_sample_count_index_];
   renderer_config_.num_depth_buffers = 2;
   renderer_config_.depth_stencil_format =
       ESCHER_CHECKED_VK_RESULT(escher()->device()->caps().GetMatchingDepthStencilFormat(
@@ -151,16 +168,10 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       }
       // Cycle through MSAA sample counts.
       case 'M': {
-        auto sample_count = renderer_config_.msaa_sample_count;
-        if (sample_count == 1) {
-          sample_count = 2;
-        } else if (sample_count == 2) {
-          sample_count = 4;
-        } else {
-          sample_count = 1;
-        }
-        FXL_LOG(INFO) << "MSAA sample count: " << unsigned{sample_count};
-        renderer_config_.msaa_sample_count = sample_count;
+        current_sample_count_index_ =
+            (current_sample_count_index_ + 1) % allowed_sample_counts_.size();
+        renderer_config_.msaa_sample_count = allowed_sample_counts_[current_sample_count_index_];
+        FXL_LOG(INFO) << "MSAA sample count: " << unsigned{renderer_config_.msaa_sample_count};
         renderer_->SetConfig(renderer_config_);
         return true;
       }

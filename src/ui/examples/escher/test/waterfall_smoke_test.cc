@@ -61,28 +61,16 @@ VK_TEST_F(WaterfallDemoTest, KeyPresses) {
 
   // "M" means cycle through multisample sample count.
   {
-    // Start by cycling until sample count is 1.
-    for (auto sample_count = renderer->config().msaa_sample_count; sample_count != 1;) {
+    const std::set<uint8_t> expected_sample_counts(demo.allowed_sample_counts().begin(),
+                                                   demo.allowed_sample_counts().end());
+    EXPECT_EQ(expected_sample_counts.size(), demo.allowed_sample_counts().size());
+    EXPECT_FALSE(expected_sample_counts.empty());
+
+    std::set<uint8_t> observed_sample_counts;
+    for (size_t i = 0; i < expected_sample_counts.size(); ++i) {
       demo.HandleKeyPress("M");
-      auto next_sample_count = renderer->config().msaa_sample_count;
-      EXPECT_NE(sample_count, next_sample_count);
-      sample_count = next_sample_count;
+      observed_sample_counts.insert(renderer->config().msaa_sample_count);
     }
-    {
-      ::testing::internal::CaptureStderr();
-      demo.HandleKeyPress("M");
-      std::string output = ::testing::internal::GetCapturedStderr();
-      if (output.find("MSAA sample count (2) is not supported") == std::string::npos) {
-        EXPECT_EQ(2, renderer->config().msaa_sample_count);
-      }
-    }
-    {
-      ::testing::internal::CaptureStderr();
-      demo.HandleKeyPress("M");
-      std::string output = ::testing::internal::GetCapturedStderr();
-      if (output.find("MSAA sample count (2) is not supported") == std::string::npos) {
-        EXPECT_EQ(4, renderer->config().msaa_sample_count);
-      }
-    }
+    EXPECT_EQ(expected_sample_counts, observed_sample_counts);
   }
 }

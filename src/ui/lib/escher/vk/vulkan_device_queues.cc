@@ -63,6 +63,14 @@ std::set<vk::Format> VulkanDeviceQueues::Caps::GetAllMatchingDepthStencilFormats
   return result;
 }
 
+std::set<size_t> VulkanDeviceQueues::Caps::GetAllMatchingSampleCounts(
+    const std::set<size_t>& counts) const {
+  std::set<size_t> result;
+  std::set_intersection(counts.begin(), counts.end(), msaa_sample_counts.begin(),
+                        msaa_sample_counts.end(), std::inserter(result, result.begin()));
+  return result;
+}
+
 namespace {
 
 // Helper for PopulateProcAddrs().
