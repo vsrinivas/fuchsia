@@ -18,19 +18,6 @@ group("all") {
   ]
 }
 
-group("buildbot") {
-  testonly = true
-  public_deps = [
-    "//bundles:tools",
-    "//garnet/packages:all",
-    "//garnet/packages/config:amber",
-    "//garnet/packages/config:network",
-    "//garnet/packages/config:openssh_keys",
-    "//garnet/packages/config:thermd",
-    "//src/connectivity/wlan:service",
-  ]
-}
-
 # WARNING: Known to infrastructure.
 group("garnet") {
   testonly = true
