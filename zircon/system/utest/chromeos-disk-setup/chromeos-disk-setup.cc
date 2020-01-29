@@ -348,16 +348,6 @@ void resize_rootc_from_state(TestState* test, gpt_partition_t* rootc, gpt_partit
   state->first = rootc->last + 1;
 }
 
-// assumes that the base layout contains 12 partitions and that
-// partition 0 is the resizable state partition
-// the fvm partition will be created as the 13th partition
-bool create_test_layout_with_fvm(TestState* test) {
-  BEGIN_HELPER;
-  ASSERT_TRUE(create_test_layout(test));
-  ASSERT_TRUE(add_fvm_part(test, test->Device()->GetPartition(0)));
-  END_HELPER;
-}
-
 bool assert_required_partitions(GptDevice* gpt) {
   BEGIN_HELPER;
   gpt_partition_t* part;

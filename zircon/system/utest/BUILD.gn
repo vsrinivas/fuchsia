@@ -154,7 +154,6 @@ if (current_cpu != "") {
       "abi-type-validator",
       "blobfs-bench",
       "channel-fatal",
-      "chromeos-disk-setup",
       "core",
       "dlfcn",
       "fidl",

@@ -354,14 +354,19 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
     memset(mbr, 0, blocksize_);
     mbr[0x1fe] = 0x55;
     mbr[0x1ff] = 0xaa;
-    mbr_partition_t* mpart = reinterpret_cast<mbr_partition_t*>(mbr + 0x1be);
-    mpart->chs_first[1] = 0x1;
-    mpart->type = 0xee;  // gpt protective mbr
-    mpart->chs_last[0] = 0xfe;
-    mpart->chs_last[1] = 0xff;
-    mpart->chs_last[2] = 0xff;
-    mpart->lba = 1;
-    mpart->sectors = blocks_ & 0xffffffff;
+
+    mbr_partition_t part;
+    part.chs_first[1] = 0x1;
+    part.type = 0xee;  // gpt protective mbr
+    part.chs_last[0] = 0xfe;
+    part.chs_last[1] = 0xff;
+    part.chs_last[2] = 0xff;
+    part.lba = 1;
+    part.sectors = blocks_ & 0xffffffff;
+    // Written to stack and copied to avoid UBsan complaint about writing to
+    // unaligned struct.
+    memcpy(mbr + 0x1be, &part, sizeof(part));
+
     offset = 0;
     ret = pwrite(fd_.get(), mbr, blocksize_, offset);
     if (ret != static_cast<ssize_t>(blocksize_)) {

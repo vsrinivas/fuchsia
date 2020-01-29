@@ -8,6 +8,7 @@ zx_library("chromeos-disk-setup") {
   sources = [ "chromeos-disk-setup.cc" ]
   public_deps = [ "$zx/system/fidl/fuchsia-hardware-block:c" ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/zircon",
