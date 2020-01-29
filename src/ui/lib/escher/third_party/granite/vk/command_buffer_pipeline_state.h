@@ -27,13 +27,15 @@
 #define SRC_UI_LIB_ESCHER_THIRD_PARTY_GRANITE_VK_COMMAND_BUFFER_PIPELINE_STATE_H_
 
 #include <cstdint>
-#include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
+#include "src/ui/lib/escher/util/enum_cast.h"
 #include "src/ui/lib/escher/util/hash.h"
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -82,6 +84,31 @@ class CommandBufferPipelineState {
     render_pass_ = render_pass;
   }
 
+  // Static state setters; these match the setters on CommandBuffer.
+  void SetDepthTestAndWrite(bool depth_test, bool depth_write);
+  void SetWireframe(bool wireframe);
+  void SetDepthCompareOp(vk::CompareOp depth_compare);
+  void SetBlendEnable(bool blend_enable);
+  void SetBlendFactors(vk::BlendFactor src_color_blend, vk::BlendFactor src_alpha_blend,
+                       vk::BlendFactor dst_color_blend, vk::BlendFactor dst_alpha_blend);
+  void SetBlendFactors(vk::BlendFactor src_blend, vk::BlendFactor dst_blend);
+  void SetBlendOp(vk::BlendOp color_blend_op, vk::BlendOp alpha_blend_op);
+  void SetBlendOp(vk::BlendOp blend_op);
+  void SetColorWriteMask(uint32_t color_write_mask);
+  void SetDepthBias(bool depth_bias_enable);
+  void SetStencilTest(bool stencil_test);
+  void SetStencilFrontOps(vk::CompareOp stencil_front_compare_op, vk::StencilOp stencil_front_pass,
+                          vk::StencilOp stencil_front_fail, vk::StencilOp stencil_front_depth_fail);
+  void SetStencilBackOps(vk::CompareOp stencil_back_compare_op, vk::StencilOp stencil_back_pass,
+                         vk::StencilOp stencil_back_fail, vk::StencilOp stencil_back_depth_fail);
+  void SetStencilOps(vk::CompareOp stencil_compare_op, vk::StencilOp stencil_pass,
+                     vk::StencilOp stencil_fail, vk::StencilOp stencil_depth_fail);
+  void SetPrimitiveTopology(vk::PrimitiveTopology primitive_topology);
+  void SetPrimitiveRestart(bool primitive_restart);
+  void SetMultisampleState(bool alpha_to_coverage, bool alpha_to_one, bool sample_shading);
+  void SetFrontFace(vk::FrontFace front_face);
+  void SetCullMode(vk::CullModeFlags cull_mode);
+
   struct StaticState {
     static constexpr uint8_t kNumBooleanBits = 1;
     static constexpr uint8_t kNumCompareOpBits = 3;
@@ -90,7 +117,7 @@ class CommandBufferPipelineState {
     static constexpr uint8_t kNumBlendOpBits = 3;
     static constexpr uint8_t kNumCullModeBits = 2;
     static constexpr uint8_t kNumFrontFaceBits = 1;
-    static constexpr uint8_t kNumTopologyBits = 4;
+    static constexpr uint8_t kNumPrimitiveTopologyBits = 4;
 
     unsigned depth_write : kNumBooleanBits;
     unsigned depth_test : kNumBooleanBits;
@@ -123,12 +150,12 @@ class CommandBufferPipelineState {
     unsigned dst_alpha_blend : kNumBlendFactorBits;
     unsigned alpha_blend_op : kNumBlendOpBits;
     unsigned primitive_restart : kNumBooleanBits;
-    unsigned primitive_topology : kNumTopologyBits;
+    unsigned primitive_topology : kNumPrimitiveTopologyBits;
 
     unsigned wireframe : kNumBooleanBits;  // TODO: support all vk::PolygonMode
 
-    // Pad previous bits to 4 * sizeof(uint32_t).
-    unsigned padding : 26;
+    // The bits above total is < 3 * sizeof(uint32_t).  Pad to multiple of sizeof(uint32_t).
+    const unsigned padding : 26;
 
     uint32_t color_write_mask;
 
@@ -189,11 +216,30 @@ class CommandBufferPipelineState {
     }
 
     bool get_wireframe() const { return static_cast<bool>(wireframe); }
+
+    uint32_t get_color_write_mask() const { return color_write_mask; };
+
+    bool operator==(const StaticState& state) const {
+      return 0 == memcmp(this, &state, sizeof(StaticState));
+    }
   };
 
   struct PotentialStaticState {
     float blend_constants[4];
   };
+
+  // Helper for unpacking Vulkan enums into an unsigned which can be stored in a StaticState field,
+  // ensuring that it will fit in the alloted number of bits is not exceeded.  For example,
+  // VK_BLEND_OP_HARDLIGHT_EXT is 1000148019, which will not fit in kNumBlendOpBits == 3.  If
+  // such values become necessary in the future; this design will need to be revisited.
+  static unsigned UnpackEnum(vk::CompareOp val);
+  static unsigned UnpackEnum(vk::StencilOp val);
+  static unsigned UnpackEnum(vk::BlendFactor val);
+  static unsigned UnpackEnum(vk::BlendOp val);
+  static unsigned UnpackEnum(vk::FrontFace val);
+  static unsigned UnpackEnum(vk::PrimitiveTopology val);
+  // These are not enums, but this name allows CommandBuffer's SET_STATIC_STATE_ENUM macro to work.
+  static unsigned UnpackEnum(vk::CullModeFlags val);
 
  private:
   friend class VulkanTester;
@@ -246,6 +292,145 @@ class CommandBufferPipelineState {
   uint32_t active_vertex_bindings_ = 0;
   uint32_t dirty_vertex_bindings_ = 0;
 };
+
+// Inline function definitions - static state setters.
+
+// Macro to avoid typing boilerplate UnpackEnum() implementations.
+#define UNPACK_ENUM_IMPL(TYPE)                                           \
+  inline unsigned CommandBufferPipelineState::UnpackEnum(vk::TYPE val) { \
+    FXL_DCHECK(0 == (EnumCast(val) >> StaticState::kNum##TYPE##Bits))    \
+        << "enum does not fit: " << vk::to_string(val);                  \
+    return EnumCast(val);                                                \
+  }
+
+// Macro to avoid typing boilerplate UnpackEnum() implementations.
+#define UNPACK_FLAGS_ENUM_IMPL(TYPE)                                            \
+  inline unsigned CommandBufferPipelineState::UnpackEnum(vk::TYPE##Flags val) { \
+    unsigned result = static_cast<Vk##CullMode##Flags>(val);                    \
+    FXL_DCHECK(0 == (result >> StaticState::kNum##TYPE##Bits))                  \
+        << "enum does not fit: " << vk::to_string(val);                         \
+    return result;                                                              \
+  }
+
+UNPACK_ENUM_IMPL(CompareOp);
+UNPACK_ENUM_IMPL(StencilOp);
+UNPACK_ENUM_IMPL(BlendFactor);
+UNPACK_ENUM_IMPL(BlendOp);
+UNPACK_ENUM_IMPL(FrontFace);
+UNPACK_ENUM_IMPL(PrimitiveTopology);
+UNPACK_FLAGS_ENUM_IMPL(CullMode);
+
+#undef UNPACK_ENUM_IMPL
+#undef UNPACK_FLAGS_ENUM_IMPL
+
+inline void CommandBufferPipelineState::SetDepthTestAndWrite(bool depth_test, bool depth_write) {
+  static_state_.depth_test = depth_test;
+  static_state_.depth_write = depth_write;
+}
+
+inline void CommandBufferPipelineState::SetWireframe(bool wireframe) {
+  static_state_.wireframe = wireframe;
+}
+
+inline void CommandBufferPipelineState::SetDepthCompareOp(vk::CompareOp depth_compare) {
+  static_state_.depth_compare = UnpackEnum(depth_compare);
+}
+
+inline void CommandBufferPipelineState::SetBlendEnable(bool blend_enable) {
+  static_state_.blend_enable = blend_enable;
+}
+
+inline void CommandBufferPipelineState::SetBlendFactors(vk::BlendFactor src_color_blend,
+                                                        vk::BlendFactor src_alpha_blend,
+                                                        vk::BlendFactor dst_color_blend,
+                                                        vk::BlendFactor dst_alpha_blend) {
+  static_state_.src_color_blend = UnpackEnum(src_color_blend);
+  static_state_.src_alpha_blend = UnpackEnum(src_alpha_blend);
+  static_state_.dst_color_blend = UnpackEnum(dst_color_blend);
+  static_state_.dst_alpha_blend = UnpackEnum(dst_alpha_blend);
+}
+
+inline void CommandBufferPipelineState::SetBlendFactors(vk::BlendFactor src_blend,
+                                                        vk::BlendFactor dst_blend) {
+  SetBlendFactors(src_blend, src_blend, dst_blend, dst_blend);
+}
+
+inline void CommandBufferPipelineState::SetBlendOp(vk::BlendOp color_blend_op,
+                                                   vk::BlendOp alpha_blend_op) {
+  static_state_.color_blend_op = UnpackEnum(color_blend_op);
+  static_state_.alpha_blend_op = UnpackEnum(alpha_blend_op);
+}
+
+inline void CommandBufferPipelineState::SetBlendOp(vk::BlendOp blend_op) {
+  SetBlendOp(blend_op, blend_op);
+}
+
+inline void CommandBufferPipelineState::SetColorWriteMask(uint32_t color_write_mask) {
+  static_state_.color_write_mask = color_write_mask;
+}
+
+inline void CommandBufferPipelineState::SetDepthBias(bool depth_bias_enable) {
+  static_state_.depth_bias_enable = depth_bias_enable;
+}
+
+inline void CommandBufferPipelineState::SetStencilTest(bool stencil_test) {
+  static_state_.stencil_test = stencil_test;
+}
+
+inline void CommandBufferPipelineState::SetStencilFrontOps(vk::CompareOp stencil_front_compare_op,
+                                                           vk::StencilOp stencil_front_pass,
+                                                           vk::StencilOp stencil_front_fail,
+                                                           vk::StencilOp stencil_front_depth_fail) {
+  static_state_.stencil_front_compare_op = UnpackEnum(stencil_front_compare_op);
+  static_state_.stencil_front_pass = UnpackEnum(stencil_front_pass);
+  static_state_.stencil_front_fail = UnpackEnum(stencil_front_fail);
+  static_state_.stencil_front_depth_fail = UnpackEnum(stencil_front_depth_fail);
+}
+
+inline void CommandBufferPipelineState::SetStencilBackOps(vk::CompareOp stencil_back_compare_op,
+                                                          vk::StencilOp stencil_back_pass,
+                                                          vk::StencilOp stencil_back_fail,
+                                                          vk::StencilOp stencil_back_depth_fail) {
+  static_state_.stencil_back_compare_op = UnpackEnum(stencil_back_compare_op);
+  static_state_.stencil_back_pass = UnpackEnum(stencil_back_pass);
+  static_state_.stencil_back_fail = UnpackEnum(stencil_back_fail);
+  static_state_.stencil_back_depth_fail = UnpackEnum(stencil_back_depth_fail);
+}
+
+inline void CommandBufferPipelineState::SetStencilOps(vk::CompareOp stencil_compare_op,
+                                                      vk::StencilOp stencil_pass,
+                                                      vk::StencilOp stencil_fail,
+                                                      vk::StencilOp stencil_depth_fail) {
+  SetStencilFrontOps(stencil_compare_op, stencil_pass, stencil_fail, stencil_depth_fail);
+  SetStencilBackOps(stencil_compare_op, stencil_pass, stencil_fail, stencil_depth_fail);
+}
+
+inline void CommandBufferPipelineState::SetPrimitiveTopology(
+    vk::PrimitiveTopology primitive_topology) {
+  static_state_.primitive_topology = UnpackEnum(primitive_topology);
+}
+
+inline void CommandBufferPipelineState::SetPrimitiveRestart(bool primitive_restart) {
+  static_state_.primitive_restart = primitive_restart;
+}
+
+inline void CommandBufferPipelineState::SetMultisampleState(bool alpha_to_coverage,
+                                                            bool alpha_to_one,
+                                                            bool sample_shading) {
+  static_state_.alpha_to_coverage = alpha_to_coverage;
+  static_state_.alpha_to_one = alpha_to_one;
+  static_state_.sample_shading = sample_shading;
+}
+
+inline void CommandBufferPipelineState::SetFrontFace(vk::FrontFace front_face) {
+  static_state_.front_face = UnpackEnum(front_face);
+}
+
+inline void CommandBufferPipelineState::SetCullMode(vk::CullModeFlags cull_mode) {
+  static_state_.cull_mode = UnpackEnum(cull_mode);
+}
+
+#undef SET_STATIC_STATE_ENUM
 
 }  // namespace escher
 

@@ -566,27 +566,27 @@ class CommandBuffer : public Reffable {
 #error CommandBuffer state macros already defined.
 #endif
 
-#define SET_STATIC_STATE(value)                           \
+#define SET_STATIC_STATE(VALUE)                           \
   do {                                                    \
-    if (pipeline_state_.static_state()->value != value) { \
-      pipeline_state_.static_state()->value = value;      \
+    if (pipeline_state_.static_state()->VALUE != VALUE) { \
+      pipeline_state_.static_state()->VALUE = VALUE;      \
       SetDirty(kDirtyStaticStateBit);                     \
     }                                                     \
   } while (0)
 
-#define SET_STATIC_STATE_ENUM(value)                           \
-  do {                                                         \
-    auto enum_value = EnumCast(value);                         \
-    if (pipeline_state_.static_state()->value != enum_value) { \
-      pipeline_state_.static_state()->value = enum_value;      \
-      SetDirty(kDirtyStaticStateBit);                          \
-    }                                                          \
+#define SET_STATIC_STATE_ENUM(VALUE)                                 \
+  do {                                                               \
+    auto enum_value = CommandBufferPipelineState::UnpackEnum(VALUE); \
+    if (pipeline_state_.static_state()->VALUE != enum_value) {       \
+      pipeline_state_.static_state()->VALUE = enum_value;            \
+      SetDirty(kDirtyStaticStateBit);                                \
+    }                                                                \
   } while (0)
 
-#define SET_POTENTIALLY_STATIC_STATE(value)                         \
+#define SET_POTENTIALLY_STATIC_STATE(VALUE)                         \
   do {                                                              \
-    if (pipeline_state_.potential_static_state()->value != value) { \
-      pipeline_state_.potential_static_state()->value = value;      \
+    if (pipeline_state_.potential_static_state()->VALUE != VALUE) { \
+      pipeline_state_.potential_static_state()->VALUE = VALUE;      \
       SetDirty(kDirtyStaticStateBit);                               \
     }                                                               \
   } while (0)
@@ -709,9 +709,8 @@ inline void CommandBuffer::SetFrontFace(vk::FrontFace front_face) {
   SET_STATIC_STATE_ENUM(front_face);
 }
 
-inline void CommandBuffer::SetCullMode(vk::CullModeFlags vk_cull_mode) {
-  auto cull_mode = static_cast<VkCullModeFlags>(vk_cull_mode);
-  SET_STATIC_STATE(cull_mode);
+inline void CommandBuffer::SetCullMode(vk::CullModeFlags cull_mode) {
+  SET_STATIC_STATE_ENUM(cull_mode);
 }
 
 inline void CommandBuffer::SetBlendConstants(const float blend_constants[4]) {
