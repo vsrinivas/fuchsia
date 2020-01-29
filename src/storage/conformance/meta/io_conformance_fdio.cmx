@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/io_conformance_fdio"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

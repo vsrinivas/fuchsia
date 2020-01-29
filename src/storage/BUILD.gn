@@ -13,6 +13,8 @@ group("storage") {
 group("tests") {
   testonly = true
   deps = [
+    "conformance:tests",
+    "conformance_harness",
     "ext4:tests",
     "fs-management:tests",
     "ramdevice-client:tests",

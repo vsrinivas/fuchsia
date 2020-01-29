@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "io_conformance_harness_ulibfs"
+  sources = [ "harness.cc" ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+    "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io-test",
+  ]
+}
+
+package("io_conformance_harness_ulibfs") {
+  deps = [ ":bin" ]
+  meta = [
+    {
+      path = rebase_path("meta/io_conformance_harness_ulibfs.cmx")
+      dest = "io_conformance_harness_ulibfs.cmx"
+    },
+  ]
+  testonly = true
+  binary = "io_conformance_harness_ulibfs"
+}
