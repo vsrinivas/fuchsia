@@ -1,7 +1,6 @@
 {
     program: {
         binary: "bin/session_manager",
-           "args": [ "-s", "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_session.cm" ],
     },
     expose: [
         {

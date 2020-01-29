@@ -11,13 +11,6 @@ group("session") {
   ]
 }
 
-group("boot") {
-  deps = [
-    ":session",
-    "//src/session/bin/session_manager:session_manager.config",
-  ]
-}
-
 group("examples") {
   testonly = true
 
