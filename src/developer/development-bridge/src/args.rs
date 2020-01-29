@@ -6,7 +6,7 @@ use argh::FromArgs;
 
 #[derive(FromArgs, Debug, PartialEq)]
 /// Fuchsia Development Bridge
-pub struct Fdb {
+pub struct Ffx {
     #[argh(subcommand)]
     pub subcommand: Subcommand,
 }
@@ -55,14 +55,14 @@ pub enum Subcommand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const CMD_NAME: &'static [&'static str] = &["fdb"];
+    const CMD_NAME: &'static [&'static str] = &["ffx"];
 
     #[test]
     fn test_echo() {
         fn check(args: &[&str], expected_echo: &str) {
             assert_eq!(
-                Fdb::from_args(CMD_NAME, args),
-                Ok(Fdb {
+                Ffx::from_args(CMD_NAME, args),
+                Ok(Ffx {
                     subcommand: Subcommand::Echo(EchoCommand {
                         text: Some(expected_echo.to_string()),
                     })
@@ -79,8 +79,8 @@ mod tests {
     fn test_start() {
         fn check(args: &[&str]) {
             assert_eq!(
-                Fdb::from_args(CMD_NAME, args),
-                Ok(Fdb { subcommand: Subcommand::Start(StartCommand {}) })
+                Ffx::from_args(CMD_NAME, args),
+                Ok(Ffx { subcommand: Subcommand::Start(StartCommand {}) })
             )
         }
 
@@ -91,8 +91,8 @@ mod tests {
     fn test_daemon() {
         fn check(args: &[&str]) {
             assert_eq!(
-                Fdb::from_args(CMD_NAME, args),
-                Ok(Fdb { subcommand: Subcommand::Daemon(DaemonCommand {}) })
+                Ffx::from_args(CMD_NAME, args),
+                Ok(Ffx { subcommand: Subcommand::Daemon(DaemonCommand {}) })
             )
         }
 
@@ -103,8 +103,8 @@ mod tests {
     fn test_list() {
         fn check(args: &[&str]) {
             assert_eq!(
-                Fdb::from_args(CMD_NAME, args),
-                Ok(Fdb { subcommand: Subcommand::List(ListCommand {}) })
+                Ffx::from_args(CMD_NAME, args),
+                Ok(Ffx { subcommand: Subcommand::List(ListCommand {}) })
             )
         }
 
@@ -115,8 +115,8 @@ mod tests {
     fn test_run_component() {
         fn check(args: &[&str], expected_url: String, expected_args: Vec<String>) {
             assert_eq!(
-                Fdb::from_args(CMD_NAME, args),
-                Ok(Fdb {
+                Ffx::from_args(CMD_NAME, args),
+                Ok(Ffx {
                     subcommand: Subcommand::RunComponent(RunComponentCommand {
                         url: expected_url,
                         args: expected_args,

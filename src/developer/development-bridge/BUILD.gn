@@ -10,7 +10,7 @@ import("//build/testing/test_spec.gni")
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("bin") {
-    name = "fdb"
+    name = "ffx"
     edition = "2018"
     with_unit_tests = true
 
@@ -33,7 +33,7 @@ if (host_toolchain == current_toolchain) {
   }
 
   rustc_library("daemon") {
-    name = "fdb_daemon"
+    name = "ffx_daemon"
     edition = "2018"
     with_unit_tests = true
 
@@ -55,7 +55,7 @@ if (host_toolchain == current_toolchain) {
   }
 }
 
-group("fdb") {
+group("ffx") {
   deps = [
     ":bin($host_toolchain)",
     ":daemon($host_toolchain)",

@@ -4,11 +4,11 @@
 
 #![allow(unused)]
 use {
-    crate::args::{Fdb, Subcommand},
+    crate::args::{Ffx, Subcommand},
     crate::config::Config,
     crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
     anyhow::{Context, Error},
-    fdb_daemon::start as start_daemon,
+    ffx_daemon::start as start_daemon,
     fidl::endpoints::ServiceMarker,
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_developer_remotecontrol::RunComponentResponse,
@@ -79,7 +79,7 @@ impl Cli {
             .daemon_proxy
             .echo_string(match text {
                 Some(ref t) => t,
-                None => "Fdb",
+                None => "Ffx",
             })
             .await
         {
@@ -131,7 +131,7 @@ async fn exec_list() -> Result<(), Error> {
 // main
 
 async fn async_main() -> Result<(), Error> {
-    let app: Fdb = argh::from_env();
+    let app: Ffx = argh::from_env();
     let mut config: Config = Config::new();
     let _ = config.load_from_config_data(CONFIG_JSON_FILE);
     match app.subcommand {
@@ -168,7 +168,7 @@ async fn async_main() -> Result<(), Error> {
 
 fn main() {
     hoist::run(async move {
-        async_main().await.map_err(|e| log::error!("{}", e)).expect("could not start fdb");
+        async_main().await.map_err(|e| log::error!("{}", e)).expect("could not start ffx");
     })
 }
 

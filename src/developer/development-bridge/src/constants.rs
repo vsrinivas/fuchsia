@@ -6,7 +6,7 @@
 pub const SOCKET: &str = "/tmp/ascendd";
 pub const DAEMON: &str = "daemon";
 pub const ASCENDD: &str = "ascendd";
-pub const CONFIG_JSON_FILE: &str = "fdb_config.json";
+pub const CONFIG_JSON_FILE: &str = "ffx_config.json";
 pub const SOCAT: &str = "socat";
 pub const LOCAL_SOCAT: &str = "EXEC:\"./onet host-pipe\"";
 pub const TARGET_SOCAT: &str = "EXEC:\"fx shell onet host-pipe\"";
