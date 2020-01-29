@@ -458,8 +458,12 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   env_->Run();
 
+  uint32_t max_assoc_retries = 0;
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->IovarsGet("assoc_retry_max", &max_assoc_retries, sizeof(max_assoc_retries));
+  ASSERT_NE(max_assoc_retries, 0U);
   // We should have gotten a rejection from the fake AP
-  EXPECT_EQ(assoc_responses_.size(), 1U);
+  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
   EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
 
   // Make sure we got our response from the driver
@@ -671,5 +675,92 @@ TEST_F(AssocTest, DisassocFromAPTest) {
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.deauth_ind_count, 1U);
+}
+// Verify that association is retried as per the setting
+TEST_F(AssocTest, AssocMaxRetries) {
+  // Create our device instance
+  Init();
+
+  // Start up fake APs
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+
+  uint32_t max_assoc_retries = 5;
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->IovarsSet("assoc_retry_max", &max_assoc_retries, sizeof(max_assoc_retries));
+  ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
+
+  env_->Run();
+
+  uint32_t assoc_retries;
+  sim->sim_fw->IovarsGet("assoc_retry_max", &assoc_retries, sizeof(max_assoc_retries));
+  ASSERT_EQ(max_assoc_retries, assoc_retries);
+  // Should have received as many rejections as the configured # of retries.
+  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
+
+  // Make sure we got our response from the driver
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+}
+
+// Verify that association is retried as per the setting
+TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
+  // Create our device instance
+  Init();
+
+  // Start up fake APs
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  ap.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+
+  uint32_t max_assoc_retries = 5;
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->IovarsSet("assoc_retry_max", &max_assoc_retries, sizeof(max_assoc_retries));
+  ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
+
+  env_->Run();
+
+  // Should have not received any responses
+  EXPECT_EQ(assoc_responses_.size(), 0U);
+  // Make sure we got our response from the driver
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+}
+
+// Verify that association is attempted when retries is set to zero
+TEST_F(AssocTest, AssocNoRetries) {
+  // Create our device instance
+  Init();
+
+  // Start up fake APs
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  ap.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+
+  uint32_t max_assoc_retries = 0;
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->IovarsSet("assoc_retry_max", &max_assoc_retries, sizeof(max_assoc_retries));
+  ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
+
+  env_->Run();
+
+  uint32_t assoc_retries;
+  sim->sim_fw->IovarsGet("assoc_retry_max", &assoc_retries, sizeof(max_assoc_retries));
+  ASSERT_EQ(max_assoc_retries, assoc_retries);
+  // We should have gotten a rejection from the fake AP
+  EXPECT_EQ(assoc_responses_.size(), 1U);
+  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
+
+  // Make sure we got our response from the driver
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
 }  // namespace wlan::brcmfmac

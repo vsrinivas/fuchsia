@@ -173,7 +173,6 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     case BRCMF_C_SET_VAR:
     case BRCMF_C_GET_VAR:
       return BcdcVarOp(dcmd, data, len, dcmd->cmd == BRCMF_C_SET_VAR);
-      break;
     case BRCMF_C_GET_REVINFO: {
       struct brcmf_rev_info_le rev_info;
       hw_.GetRevInfo(&rev_info);
@@ -245,6 +244,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     case BRCMF_C_SET_ROAM_TRIGGER:
     case BRCMF_C_SET_ROAM_DELTA:
     case BRCMF_C_SET_INFRA:
+      status = ZX_OK;
       break;
     default:
       BRCMF_DBG(SIM, "Unimplemented firmware message %d\n", dcmd->cmd);
@@ -430,7 +430,10 @@ void SimFirmware::AssocScanDone() {
   assoc_opts->channel = ap.channel;
   assoc_opts->bssid = ap.bssid;
 
-  AssocStart(std::move(assoc_opts));
+  assoc_state_.state = AssocState::ASSOCIATING;
+  assoc_state_.opts = std::move(assoc_opts);
+  assoc_state_.num_attempts = 0;
+  AssocStart();
 }
 
 void SimFirmware::AssocClearContext() {
@@ -438,24 +441,25 @@ void SimFirmware::AssocClearContext() {
   assoc_state_.scan_results.clear();
 }
 
-void SimFirmware::AssocTimeout() {
-  ZX_ASSERT_MSG(assoc_state_.state == AssocState::ASSOCIATING,
-                "This timer should be enabled only in ASSOCIATING state\n");
-  SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL);
-  AssocClearContext();
-  assoc_state_.state = AssocState::NOT_ASSOCIATED;
+void SimFirmware::AssocHandleFailure() {
+  if (assoc_state_.num_attempts >= assoc_max_retries_) {
+    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL);
+    AssocClearContext();
+    assoc_state_.state = AssocState::NOT_ASSOCIATED;
+  } else {
+    assoc_state_.num_attempts++;
+    AssocStart();
+  }
 }
 
-void SimFirmware::AssocStart(std::unique_ptr<AssocOpts> opts) {
+void SimFirmware::AssocStart() {
   common::MacAddr srcAddr(mac_addr_);
-  assoc_state_.state = AssocState::ASSOCIATING;
-  assoc_state_.opts = std::move(opts);
 
   hw_.SetChannel(assoc_state_.opts->channel);
   hw_.EnableRx();
 
   auto callback = new std::function<void()>;
-  *callback = std::bind(&SimFirmware::AssocTimeout, this);
+  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
   hw_.RequestCallback(callback, kAssocTimeout, &assoc_state_.assoc_timer_id);
 
   // We can't use assoc_state_.opts->bssid directly because it may get free'd during TxAssocReq
@@ -492,10 +496,7 @@ void SimFirmware::RxAssocResp(const common::MacAddr& src, const common::MacAddr&
     SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, BRCMF_EVENT_MSG_LINK);
     SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, 0, assoc_state_.opts->bssid);
   } else {
-    // Notify the driver that association failed
-    assoc_state_.state = AssocState::NOT_ASSOCIATED;
-    AssocClearContext();
-    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL);
+    AssocHandleFailure();
   }
 }
 
@@ -707,6 +708,11 @@ zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t v
     return ZX_OK;
   }
 
+  if (!std::strcmp(name, "assoc_retry_max")) {
+    auto assoc_max_retries = static_cast<const uint32_t*>(value);
+    assoc_max_retries_ = *assoc_max_retries;
+    return ZX_OK;
+  }
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'\n", name);
   return ZX_OK;
@@ -738,6 +744,12 @@ zx_status_t SimFirmware::IovarsGet(const char* name, void* value_out, size_t val
       return ZX_ERR_INVALID_ARGS;
     } else {
       memcpy(value_out, pfn_mac_addr_.byte, ETH_ALEN);
+    }
+  } else if (!std::strcmp(name, "assoc_retry_max")) {
+    if (value_len < sizeof(assoc_max_retries_)) {
+      return ZX_ERR_INVALID_ARGS;
+    } else {
+      memcpy(value_out, &assoc_max_retries_, sizeof(assoc_max_retries_));
     }
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable

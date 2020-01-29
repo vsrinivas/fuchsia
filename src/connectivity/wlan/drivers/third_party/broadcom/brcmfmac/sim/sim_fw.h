@@ -34,7 +34,7 @@
 namespace wlan::brcmfmac {
 
 // The amount of time we will wait for an association response after an association request
-constexpr zx::duration kAssocTimeout = zx::sec(3);
+constexpr zx::duration kAssocTimeout = zx::sec(1);
 
 class SimFirmware {
   class BcdcResponse {
@@ -119,6 +119,9 @@ class SimFirmware {
 
     // Unique id of timer event used to timeout an association request
     uint64_t assoc_timer_id;
+
+    // Association attempt number
+    uint8_t num_attempts;
   };
 
   struct PacketBuf {
@@ -208,9 +211,9 @@ class SimFirmware {
   // Association operations
   void AssocScanResultSeen(const ScanResult& scan_result);
   void AssocScanDone();
-  void AssocStart(std::unique_ptr<AssocOpts> opts);  // Scan complete, start association process
-  void AssocTimeout();
+  void AssocStart();  // Scan complete, start association process
   void AssocClearContext();
+  void AssocHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
 
   // Handlers for events from hardware
@@ -264,6 +267,7 @@ class SimFirmware {
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
   int32_t power_mode_ = -1;             // -1 indicates value has not been set.
   struct brcmf_fil_country_le country_code_;
+  uint32_t assoc_max_retries_ = 0;
 };
 
 }  // namespace wlan::brcmfmac
