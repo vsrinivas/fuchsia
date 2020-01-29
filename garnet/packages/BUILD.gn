@@ -32,18 +32,3 @@ group("garnet") {
     "//src/connectivity/wlan:service",
   ]
 }
-
-group("default") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages:all",
-    "//garnet/packages/config:amber",
-    "//garnet/packages/config:factory_reset",
-    "//garnet/packages/config:network",
-    "//garnet/packages/config:openssh_keys",
-    "//garnet/packages/config:thermd",
-    "//garnet/packages/config:ui_policy",
-    "//src/connectivity/network/mdns/bundles:config",
-    "//src/connectivity/wlan:service",
-  ]
-}
