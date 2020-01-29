@@ -8,7 +8,7 @@ zx_executable("hid") {
     "report.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-input:c",
+    "$zx/system/fidl/fuchsia-hardware-input:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
