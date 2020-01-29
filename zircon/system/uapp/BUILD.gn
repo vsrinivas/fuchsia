@@ -20,7 +20,6 @@ group("uapp") {
     "mutex_pi_exerciser",
     "nand-loader",
     "nand-util",
-    "psutils",
     "syscall-check",
     "xdc-test",
   ]

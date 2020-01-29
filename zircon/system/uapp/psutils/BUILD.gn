@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
 group("psutils") {
   deps = [
     ":kill",
@@ -17,77 +29,88 @@ group("psutils") {
   ]
 }
 
-zx_executable("ps") {
-  sources = [
-    "ps.c",
-    "ps_internal.c",
-  ]
+source_set("ps_internal") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "ps_internal.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
-zx_executable("top") {
+executable("ps") {
+  output_dir = "$root_out_dir/zircon-migrated"
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "ps.c" ]
+  deps = [
+    ":ps_internal",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
+  ]
+}
+
+executable("top") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "top.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
-zx_executable("kill") {
+executable("kill") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "kill.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
-zx_executable("killall") {
+executable("killall") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "killall.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
-zx_executable("vmaps") {
+executable("vmaps") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vmaps.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
-zx_executable("vmos") {
+executable("vmos") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "vmo-utils.c",
     "vmos.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
-zx_executable("memgraph") {
+executable("memgraph") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "memgraph.cc",
     "resources.c",
@@ -96,10 +119,9 @@ zx_executable("memgraph") {
   include_dirs = [ target_gen_dir ]
   deps = [
     ":gen-memgraph-schema",
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
@@ -112,39 +134,79 @@ action("gen-memgraph-schema") {
          rebase_path(sources, root_build_dir)
 }
 
-zx_executable("kstats") {
+executable("kstats") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "kstats.c",
     "resources.c",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
-zx_executable("threads") {
+executable("threads") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "threads.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/inspector",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
-    "$zx/third_party/ulib/backtrace",
+    "//zircon/public/lib/backtrace",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/inspector",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
 }
 
-zx_executable("signal") {
+executable("signal") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "signal.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/task-utils",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/task-utils",
+    "//zircon/system/fidl/fuchsia-boot:c",
   ]
+}
+
+migrated_manifest("ps-manifest") {
+  deps = [ ":ps" ]
+}
+
+migrated_manifest("top-manifest") {
+  deps = [ ":top" ]
+}
+
+migrated_manifest("kill-manifest") {
+  deps = [ ":kill" ]
+}
+
+migrated_manifest("killall-manifest") {
+  deps = [ ":killall" ]
+}
+
+migrated_manifest("vmaps-manifest") {
+  deps = [ ":vmaps" ]
+}
+
+migrated_manifest("vmos-manifest") {
+  deps = [ ":vmos" ]
+}
+
+migrated_manifest("memgraph-manifest") {
+  deps = [ ":memgraph" ]
+}
+
+migrated_manifest("kstats-manifest") {
+  deps = [ ":kstats" ]
+}
+
+migrated_manifest("threads-manifest") {
+  deps = [ ":threads" ]
+}
+
+migrated_manifest("signal-manifest") {
+  deps = [ ":signal" ]
 }

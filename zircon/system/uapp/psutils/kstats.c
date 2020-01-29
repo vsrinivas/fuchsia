@@ -94,12 +94,6 @@ static zx_status_t cpustats(zx_handle_t root_resource, zx_duration_t delay) {
   return ZX_OK;
 }
 
-static void print_mem_stat(const char* label, size_t bytes) {
-  char buf[MAX_FORMAT_SIZE_LEN];
-  const char unit = 'M';
-  printf("%15s: %8sB / %10zuB\n", label, format_size_fixed(buf, sizeof(buf), bytes, unit), bytes);
-}
-
 static zx_status_t memstats(zx_handle_t root_resource) {
   zx_info_kmem_stats_t stats;
   zx_status_t err =
