@@ -129,16 +129,19 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
     fasync::spawn(async move {
         let mut previous_report: Option<InputReport> = None;
         if let Ok((_status, event)) = device_proxy.get_reports_event().await {
-            if let Ok(_) = fasync::OnSignals::new(&event, zx::Signals::USER_0).await {
-                while let Ok(input_reports) = device_proxy.get_reports().await {
-                    for report in input_reports {
-                        previous_report = process_reports(
-                            report,
-                            previous_report,
-                            &device_descriptor,
-                            &mut event_sender,
-                        );
+            while let Ok(_) = fasync::OnSignals::new(&event, zx::Signals::USER_0).await {
+                match device_proxy.get_reports().await {
+                    Ok(input_reports) => {
+                        for report in input_reports {
+                            previous_report = process_reports(
+                                report,
+                                previous_report,
+                                &device_descriptor,
+                                &mut event_sender,
+                            );
+                        }
                     }
+                    Err(_) => break,
                 }
             }
         }
