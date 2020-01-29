@@ -287,7 +287,7 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, Some(launcher));
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(component_url.to_string()) },
+                ElementSpec { component_url: Some(component_url.to_string()), annotations: None },
                 child_name,
                 child_collection,
             )
@@ -331,7 +331,7 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, Some(launcher));
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(a_component_url.to_string()) },
+                ElementSpec { component_url: Some(a_component_url.to_string()), annotations: None },
                 a_child_name,
                 a_child_collection,
             )
@@ -339,7 +339,7 @@ mod tests {
             .is_ok());
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(b_component_url.to_string()) },
+                ElementSpec { component_url: Some(b_component_url.to_string()), annotations: None },
                 b_child_name,
                 b_child_collection,
             )
@@ -378,7 +378,7 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, None);
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(component_url.to_string()) },
+                ElementSpec { component_url: Some(component_url.to_string()), annotations: None },
                 child_name,
                 child_collection,
             )
@@ -419,7 +419,7 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, Some(launcher));
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(component_url.to_string()) },
+                ElementSpec { component_url: Some(component_url.to_string()), annotations: None },
                 child_name,
                 child_collection,
             )
@@ -440,7 +440,9 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, None);
 
         assert_eq!(
-            element_manager.add_element(ElementSpec { component_url: None }, "", "").await,
+            element_manager
+                .add_element(ElementSpec { component_url: None, annotations: None }, "", "")
+                .await,
             Err(ElementManagerError::url_missing("", ""))
         );
     }
@@ -466,7 +468,10 @@ mod tests {
         assert_eq!(
             element_manager
                 .add_element(
-                    ElementSpec { component_url: Some(component_url.to_string()) },
+                    ElementSpec {
+                        component_url: Some(component_url.to_string()),
+                        annotations: None,
+                    },
                     "",
                     "",
                 )
@@ -496,7 +501,10 @@ mod tests {
         assert_eq!(
             element_manager
                 .add_element(
-                    ElementSpec { component_url: Some(component_url.to_string()) },
+                    ElementSpec {
+                        component_url: Some(component_url.to_string()),
+                        annotations: None,
+                    },
                     "",
                     "",
                 )
@@ -529,7 +537,10 @@ mod tests {
         assert_eq!(
             element_manager
                 .add_element(
-                    ElementSpec { component_url: Some(component_url.to_string()) },
+                    ElementSpec {
+                        component_url: Some(component_url.to_string()),
+                        annotations: None,
+                    },
                     "",
                     "",
                 )

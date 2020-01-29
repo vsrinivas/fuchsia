@@ -5,6 +5,13 @@
 library fuchsia.session;
 
 using fuchsia.sys2;
+using fuchsia.data;
+
+/// Describes the annotations which is metadata that describes an element.
+table Annotations {
+    /// The user-defined annotations.
+    1: fuchsia.data.Dictionary custom_annotations;
+};
 
 /// The ElementManager is responsible for service requests to add elements to a
 /// session.
@@ -28,7 +35,21 @@ protocol ElementManager {
     /// element until a more appropriate time.
     ///
     /// `spec` describes the Element to add.
-    ProposeElement(ElementSpec spec) -> () error ProposeElementError;
+    /// `element_controller` can be used to set and get annotations on the Element
+    ///     created by the `ElementManager`.
+    ProposeElement(ElementSpec spec, request<ElementController>? element_controller)
+        -> () error ProposeElementError;
+};
+
+protocol ElementController {
+    /// The server is expected to adhere to the following conventions:
+    /// * If a key is new, a new annotation is added.
+    /// * If a key already exists, the annotation is updated.
+    /// * If a key exists with a null value, the annotation is deleted.
+    SetAnnotations(Annotations annotations) -> () error AnnotationError;
+
+    /// Returns the current `annotations` for the controlled element.
+    GetAnnotations() -> (Annotations annotations);
 };
 
 /// Errors which can be returned when attempting to add elements to a session.
@@ -40,8 +61,17 @@ enum ProposeElementError {
     REJECTED = 2;
 };
 
+/// Error returned from calls to SetAnnotations().
+enum AnnotationError {
+    /// The session rejected the annotations to add to the controlled element.
+    REJECTED = 1;
+};
+
 /// Describes an Element to be added to a session.
 table ElementSpec {
     /// The component URL of the Element.
     1: string:fuchsia.sys2.MAX_URL_LENGTH component_url;
+
+    /// Initial `Annotations` on the element. Optional.
+    2: Annotations annotations;
 };

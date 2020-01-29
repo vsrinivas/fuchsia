@@ -97,7 +97,7 @@ async fn handle_element_manager_requests(
         stream.try_next().await.context("Error handling element manager request stream")?
     {
         match request {
-            ElementManagerRequest::ProposeElement { spec, responder } => {
+            ElementManagerRequest::ProposeElement { spec, element_controller: _, responder } => {
                 let mut child_name: String =
                     thread_rng().sample_iter(&Alphanumeric).take(16).collect();
                 child_name.make_ascii_lowercase();

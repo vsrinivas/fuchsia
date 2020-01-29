@@ -15,20 +15,28 @@ async fn main() -> Result<(), Error> {
         .context("Could not connect to element manager service.")?;
 
     element_manager
-        .propose_element(ElementSpec {
-            component_url: Some(
-                "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm".to_string(),
-            ),
-        })
+        .propose_element(
+            ElementSpec {
+                component_url: Some(
+                    "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm".to_string(),
+                ),
+                annotations: None,
+            },
+            None,
+        )
         .await?
         .map_err(|_| format_err!("Error sending ProposeElement message"))?;
 
     element_manager
-        .propose_element(ElementSpec {
-            component_url: Some(
-                "fuchsia-pkg://fuchsia.com/spinning_cube#meta/spinning_cube.cmx".to_string(),
-            ),
-        })
+        .propose_element(
+            ElementSpec {
+                component_url: Some(
+                    "fuchsia-pkg://fuchsia.com/spinning_cube#meta/spinning_cube.cmx".to_string(),
+                ),
+                annotations: None,
+            },
+            None,
+        )
         .await?
         .map_err(|_| format_err!("Error launching spinning_cube.cmx"))?;
 
