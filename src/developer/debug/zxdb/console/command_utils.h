@@ -112,10 +112,15 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd);
 // When there is an error during setup, the error will be returned and the callback will not be
 // called. After setup, all evaluation errors will come via the callback.
 //
+// The verbose_errors flag, if set, will wrap any expression evaluation errors with some
+// explanation that the expression has failed to evaluate. Most callers except "print" will want
+// verbose errors because short things like "Optimized out" make sense in the context of printing
+// a value, but not for e.g. the result of "watch foo".
+//
 // The |verb| string is used to format error messages showing command examples.
 Err EvalCommandExpression(const Command& cmd, const char* verb,
                           const fxl::RefPtr<EvalContext>& eval_context, bool follow_references,
-                          EvalCallback cb);
+                          bool verbose_errors, EvalCallback cb);
 
 // Like EvalCommandExpression but attempts to convert the result to an address. This is used for
 // commands that want to support expressions to compute addresses.
@@ -128,6 +133,11 @@ Err EvalCommandExpression(const Command& cmd, const char* verb,
 Err EvalCommandAddressExpression(
     const Command& cmd, const char* verb, const fxl::RefPtr<EvalContext>& eval_context,
     fit::callback<void(const Err& err, uint64_t address, std::optional<uint32_t> size)> cb);
+
+// Errors from the evaluation of expressions of commands often don't make sense without context.
+// This function wraps the given error in a message explaining it's from evaluating an expression
+// for the given verb. If the verb string is empty, it will be a generic command error.
+Err RewriteCommandExpressionError(const std::string& verb, const Err& err);
 
 // Formats an argument or setting value.
 //

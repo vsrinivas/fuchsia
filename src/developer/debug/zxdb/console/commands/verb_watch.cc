@@ -65,7 +65,7 @@ Err RunVerbWatch(ConsoleContext* context, const Command& cmd) {
 
   auto data_provider = eval_context->GetDataProvider();
   return EvalCommandExpression(
-      cmd, "watch", eval_context, true, [settings, eval_context](ErrOrValue result) mutable {
+      cmd, "watch", eval_context, true, true, [settings, eval_context](ErrOrValue result) mutable {
         Console* console = Console::get();
         if (result.has_error()) {
           console->Output(result.err());
@@ -77,8 +77,14 @@ Err RunVerbWatch(ConsoleContext* context, const Command& cmd) {
         const ExprValueSource& source = value.source();
         if (source.type() != ExprValueSource::Type::kMemory) {
           console->Output(
-              Err("This expression's value is stored in a %s location.\n"
-                  "Only values stored in memory can be watched.",
+              Err("This expression's value is stored in a %s location. Only values\n"
+                  "stored in memory can be watched.\n"
+                  "\n"
+                  "The watch command will implicitly take the address of the result of the\n"
+                  "expression. To set a breakpoint on a literal address you can do either:\n"
+                  "\n"
+                  "  watch *(uint32_t*)0x12345678\n"
+                  "  break --type=write --size=4 0x12345678\n",
                   ExprValueSource::TypeToString(source.type())));
           return;
         }
@@ -88,9 +94,22 @@ Err RunVerbWatch(ConsoleContext* context, const Command& cmd) {
           return;
         }
 
+        // Size errors are very common if the object is too big. Catch those early before trying
+        // to create a breakpoint.
+        uint32_t size = static_cast<uint32_t>(value.data().size());
+        if (Err err = BreakpointSettings::ValidateSize(console->context().session()->arch(),
+                                                       settings.type, size);
+            err.has_error()) {
+          // Rewrite the error to list the size that this produced. Since "watch" implicitly gets
+          // the size, the user may have no idea how much they requested.
+          console->Output("Attempting to watch a variable of size " + std::to_string(size) +
+                          ".\n\n" + err.msg());
+          return;
+        }
+
         // Fill in the breakpoint location and set it.
         settings.locations.emplace_back(source.address());
-        settings.byte_size = static_cast<uint32_t>(value.data().size());
+        settings.byte_size = size;
 
         Breakpoint* breakpoint = console->context().session()->system().CreateNewBreakpoint();
         console->context().SetActiveBreakpoint(breakpoint);

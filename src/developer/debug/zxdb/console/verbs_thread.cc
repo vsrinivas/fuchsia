@@ -917,7 +917,7 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
 
   auto data_provider = eval_context->GetDataProvider();
   return EvalCommandExpression(
-      cmd, "print", eval_context, false, [options, eval_context](ErrOrValue value) {
+      cmd, "print", eval_context, false, false, [options, eval_context](ErrOrValue value) {
         if (value.has_error())
           Console::get()->Output(value.err());
         else

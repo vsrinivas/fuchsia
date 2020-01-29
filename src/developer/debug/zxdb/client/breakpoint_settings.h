@@ -14,6 +14,7 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/execution_scope.h"
+#include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 
 namespace zxdb {
@@ -44,6 +45,9 @@ struct BreakpointSettings {
 
   // Returns whether the given breakpoint type supports a byte_size.
   static bool TypeHasSize(Type);
+
+  // This function will validate the size and return a error if it's invalid.
+  static Err ValidateSize(debug_ipc::Arch arch, Type type, uint32_t byte_size);
 
   // What kind of breakpoint implementation to use.
   Type type = Type::kSoftware;

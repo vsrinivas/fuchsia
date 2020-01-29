@@ -93,6 +93,23 @@ TEST_F(VerbBreak, WriteBreakpoint) {
             breakpoint_remote_api()->last_request->breakpoint.locations[0].address_range.size());
 }
 
+TEST_F(VerbBreak, ExpressionError) {
+  // This variable is not found.
+  console().ProcessInputLine("break -t write *&nonesitant_var");
+
+  // It might be nice if the error message mentioned the "break" command but the verb name isn't
+  // plumbed through to the error message currently so this is a generic "the command" error.
+  auto event = console().GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ(
+      "Unable to evaluate the expression for the command. The result was:\n"
+      "  No variable 'nonesitant_var' found.",
+      event.output.AsString());
+
+  // No breakpoint should have been created.
+  EXPECT_FALSE(breakpoint_remote_api()->last_request);
+}
+
 // This is a more end-to-end-type test that tests that breakpoints that hit backend errors issue
 // the proper notification and those notifications are caught and printed out on the screen.
 TEST_F(VerbBreak, TransportError) {

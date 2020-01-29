@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/index_test_support.h"
@@ -279,6 +280,44 @@ TEST_F(BreakpointImplTest, Watchpoint) {
   // For now, the debugger will send the same address as a range/begin.
   EXPECT_EQ(out.breakpoint.locations[0].address_range.begin(), kAddress);
   EXPECT_EQ(out.breakpoint.locations[0].address_range.end(), kAddress + kSize);
+}
+
+// Tests the SettingStore integration and error checking of sizes.
+TEST_F(BreakpointImplTest, SetSize) {
+  BreakpointImpl bp(&session(), false);
+
+  SettingStore& setting_store = bp.settings();
+  EXPECT_EQ(0, setting_store.GetInt(ClientSettings::Breakpoint::kSize));
+
+  // Setting the size at this point should be invalid because the type isn't hardware.
+  Err err = setting_store.SetInt(ClientSettings::Breakpoint::kSize, 1);
+  EXPECT_EQ("Breakpoints of type 'software' don't have sizes associated with them.", err.msg());
+  err = setting_store.SetInt(ClientSettings::Breakpoint::kSize, 0);
+  EXPECT_TRUE(err.ok());
+
+  // Se thte settings for a 4-byte write breakpoint.
+  BreakpointSettings in;
+  in.enabled = true;
+  in.type = debug_ipc::BreakpointType::kWrite;
+  in.byte_size = 4;
+  in.locations.emplace_back(0x1234);
+  bp.SetSettings(in);
+
+  // The setting store should provide the new value.
+  EXPECT_EQ(4, setting_store.GetInt(ClientSettings::Breakpoint::kSize));
+
+  // Odd size.
+  err = setting_store.SetInt(ClientSettings::Breakpoint::kSize, 3);
+  EXPECT_FALSE(err.ok());
+
+  // Large size.
+  err = setting_store.SetInt(ClientSettings::Breakpoint::kSize, 200);
+  EXPECT_FALSE(err.ok());
+
+  // Good new size.
+  err = setting_store.SetInt(ClientSettings::Breakpoint::kSize, 8);
+  EXPECT_TRUE(err.ok());
+  EXPECT_EQ(8, setting_store.GetInt(ClientSettings::Breakpoint::kSize));
 }
 
 }  // namespace zxdb

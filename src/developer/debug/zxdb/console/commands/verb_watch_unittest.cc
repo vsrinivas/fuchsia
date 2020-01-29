@@ -23,8 +23,29 @@ TEST_F(VerbWatch, Temporary) {
   auto event = console().GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      "This expression's value is stored in a temporary location.\n"
-      "Only values stored in memory can be watched.",
+      "This expression's value is stored in a temporary location. Only values\n"
+      "stored in memory can be watched.\n"
+      "\n"
+      "The watch command will implicitly take the address of the result of the\n"
+      "expression. To set a breakpoint on a literal address you can do either:\n"
+      "\n"
+      "  watch *(uint32_t*)0x12345678\n"
+      "  break --type=write --size=4 0x12345678\n",
+      event.output.AsString());
+
+  // No breakpoints should have been created.
+  EXPECT_TRUE(session().system().GetBreakpoints().empty());
+}
+
+TEST_F(VerbWatch, Nonexistant) {
+  // This variable is not found.
+  console().ProcessInputLine("break -t write *nonesitant_var");
+
+  auto event = console().GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ(
+      "Unable to evaluate the expression for the command. The result was:\n"
+      "  No variable 'nonesitant_var' found.",
       event.output.AsString());
 
   // No breakpoints should have been created.

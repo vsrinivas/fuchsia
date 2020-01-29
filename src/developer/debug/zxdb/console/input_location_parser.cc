@@ -142,7 +142,7 @@ void EvalGlobalInputLocation(
   EvalExpression(
       expr, eval_context, true, [eval_context, cb = std::move(cb)](ErrOrValue result) mutable {
         if (result.has_error())
-          return cb(result.err(), std::nullopt);
+          return cb(RewriteCommandExpressionError(std::string(), result.err()), std::nullopt);
 
         uint64_t address = 0;
         std::optional<uint32_t> size;

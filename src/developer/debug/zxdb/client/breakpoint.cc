@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/lib/fxl/logging.h"
@@ -147,6 +148,13 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
     FXL_DCHECK(type);  // Schema should have validated the input.
     settings.type = *type;
   } else if (key == ClientSettings::Breakpoint::kSize) {
+    // Validate the size. Providing the error here and failing to set is more clear to the user than
+    // getting a set error back asynchronously from the backend.
+    if (Err err = BreakpointSettings::ValidateSize(bp_->session()->arch(), settings.type,
+                                                   value.get_int());
+        err.has_error())
+      return err;
+
     settings.byte_size = value.get_int();
   } else {
     FXL_NOTREACHED();

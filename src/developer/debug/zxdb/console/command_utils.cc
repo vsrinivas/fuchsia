@@ -460,14 +460,22 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
 
 Err EvalCommandExpression(const Command& cmd, const char* verb,
                           const fxl::RefPtr<EvalContext>& eval_context, bool follow_references,
-                          EvalCallback cb) {
+                          bool verbose_errors, EvalCallback cb) {
   if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame}); err.has_error())
     return err;
 
   if (cmd.args().size() != 1)
     return Err("Usage: %s <expression>\nSee \"help %s\" for more.", verb, verb);
 
-  EvalExpression(cmd.args()[0], std::move(eval_context), follow_references, std::move(cb));
+  EvalExpression(
+      cmd.args()[0], std::move(eval_context), follow_references,
+      [verbose_errors, cb = std::move(cb), verb = std::string(verb)](ErrOrValue result) mutable {
+        if (verbose_errors && result.has_error()) {
+          cb(RewriteCommandExpressionError(verb, result.err()));
+        } else {
+          cb(std::move(result));
+        }
+      });
   return Err();
 }
 
@@ -475,15 +483,37 @@ Err EvalCommandAddressExpression(
     const Command& cmd, const char* verb, const fxl::RefPtr<EvalContext>& eval_context,
     fit::callback<void(const Err& err, uint64_t address, std::optional<uint32_t> size)> cb) {
   return EvalCommandExpression(
-      cmd, verb, eval_context, true, [eval_context, cb = std::move(cb)](ErrOrValue value) mutable {
-        Err err = value.err_or_empty();
+      cmd, verb, eval_context, true, true,
+      [eval_context, verb = std::string(verb), cb = std::move(cb)](ErrOrValue value) mutable {
+        if (value.has_error())
+          return cb(value.err(), 0, std::nullopt);
+
         uint64_t address = 0;
         std::optional<uint32_t> size;
 
-        if (err.ok())
-          err = ValueToAddressAndSize(eval_context, value.value(), &address, &size);
-        cb(err, address, size);
+        if (Err err = ValueToAddressAndSize(eval_context, value.value(), &address, &size);
+            err.has_error())
+          return cb(RewriteCommandExpressionError(verb, err), 0, std::nullopt);
+        cb(Err(), address, size);
       });
+}
+
+// Errors from the evaluation of expressions of commands oftem don't make sense without context.
+Err RewriteCommandExpressionError(const std::string& verb, const Err& err) {
+  if (err.type() == ErrType::kOptimizedOut) {
+    // The common error messagess "unavailable" and "optimized out" (both sharing kOptimizedOut) are
+    // very short because they're often included in long dumps of structures and local variables.
+    // But it makes this common class of errors very mysterious here.
+    return Err(
+        "This variable is %s. Nothing has happened.\n"
+        "See \"help expressions\" for more on what this means and what to do.",
+        err.msg().c_str());
+  }
+
+  // All other errors.
+  std::string effective_verb = verb.empty() ? std::string("the command") : verb;
+  return Err("Unable to evaluate the expression for " + effective_verb + ". The result was:\n  " +
+             err.msg());
 }
 
 std::string FormatConsoleString(const std::string& input) {
