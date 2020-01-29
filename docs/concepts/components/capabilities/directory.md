@@ -64,6 +64,63 @@ provider.
 See [`//examples/components/routing`][routing-example] for a working example of
 routing a directory capability from one component to another.
 
+## Directory capability rights
+
+As directories are [offered][offer] and [exposed][expose] throughout the system
+a user may want to restrict what components who have access to this
+directory may do. For example, a component could expose a directory as read-write to its parent
+realm which could expose that directory it to its children as read-write but to its parent as
+read-only.
+
+[Directory rights][directory-rights] allow any directory declaration to specify a rights field that
+indicates the set of rights that the directory would like to [offer][offer], [expose][expose] or
+[use][use].
+
+
+### Example
+
+This example shows component `A` requesting access to `/data` from its namespace with read-write rights:
+
+```
+A.cml
+{
+    "use": [{
+        "directory": "/data",
+        "rights": ["rw*"],
+    }],
+}
+```
+
+Furthermore, parent component `B` offers the directory `/data` to component A but with
+only read-only rights. In this case the routing fails and `/data` wouldn't be present in A's
+namespace.
+
+```
+B.cml
+{
+  "offer": [{
+      "directory": "/data",
+      "from": "self",
+      "rights": ["r*"],
+      "to": [{
+        { "dest": "#A"}
+      }],
+  }],
+}
+```
+
+### Inference Rules
+
+Directory rights are required in the following situations:
+- [use][use] - All directories use statements must specify their directory
+  rightsn.
+- [offer][offer] and [expose][expose] from `self` - All directories that are
+  provided by components must specify their directory rights.
+
+If an expose or offer directory declaration does not specify optional rights, it will inherit the
+rights from the source of the expose or offer. Rights specified in a `use`, `offer`, or `expose`
+declaration must be a subset of the rights set on the capability's source.
+
 ### Framework directory capabilities
 
 Some directory capabilities are available to all components through the
@@ -151,6 +208,7 @@ If any of the names didn't match in this chain, any attempts by `C` to list or
 open items in this directory would fail.
 
 [capability-routing]: ../component_manifests.md#capability-routing
+[directory-rights]: ../component_manifests.md#directory-rights
 [expose]: ../component_manifests.md#expose
 [glossary-directory]: ../../../glossary.md#directory-capability
 [glossary-fidl]: ../../../glossary.md#fidl
