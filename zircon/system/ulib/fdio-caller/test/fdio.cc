@@ -9,16 +9,17 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
 #include <lib/memfs/memfs.h>
-#include <lib/fzl/fdio.h>
+#include <lib/sync/completion.h>
 #include <unittest/unittest.h>
 
 #include <utility>
 
 namespace {
 
-bool TryFilesystemOperations(const fzl::FdioCaller& caller) {
+bool TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
   BEGIN_HELPER;
 
   const char* golden = "foobar";
@@ -85,7 +86,7 @@ bool FdioCallerFile() {
   auto fd = harness.fd();
 
   // Try some filesystem operations.
-  fzl::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_TRUE(caller);
   ASSERT_TRUE(TryFilesystemOperations(caller));
 
@@ -103,8 +104,8 @@ bool FdioCallerMoveAssignment() {
   ASSERT_TRUE(harness.Setup());
   auto fd = harness.fd();
 
-  fzl::FdioCaller caller(std::move(fd));
-  fzl::FdioCaller move_assignment_caller = std::move(caller);
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller move_assignment_caller = std::move(caller);
   ASSERT_TRUE(move_assignment_caller);
   ASSERT_FALSE(caller);
   ASSERT_TRUE(TryFilesystemOperations(move_assignment_caller));
@@ -119,8 +120,8 @@ bool FdioCallerMoveConstructor() {
   ASSERT_TRUE(harness.Setup());
   auto fd = harness.fd();
 
-  fzl::FdioCaller caller(std::move(fd));
-  fzl::FdioCaller move_ctor_caller(std::move(caller));
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  fdio_cpp::FdioCaller move_ctor_caller(std::move(caller));
   ASSERT_TRUE(move_ctor_caller);
   ASSERT_FALSE(caller);
   ASSERT_TRUE(TryFilesystemOperations(move_ctor_caller));

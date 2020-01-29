@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":fdio-caller" ]
+}
+
+zx_test("fdio-caller") {
+  sources = [ "fdio.cc" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
+    "$zx/system/ulib/memfs",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/unittest",
+  ]
+}

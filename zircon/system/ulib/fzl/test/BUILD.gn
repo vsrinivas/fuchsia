@@ -56,7 +56,6 @@ test("fzl") {
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
-    "fdio.cc",
     "fzl-test.cc",
     "memory_probe_tests.cc",
     "owned-vmo-mapper-tests.cc",

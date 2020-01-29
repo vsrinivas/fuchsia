@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("fdio-caller") {
+  sdk = "source"
+  sdk_headers = [ "lib/fdio/cpp/caller.h" ]
+  sources = []
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+  ]
+  public_deps = [
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/fdio:headers",
+    "$zx/system/ulib/zx:headers",
+  ]
+}

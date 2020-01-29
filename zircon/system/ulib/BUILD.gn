@@ -62,6 +62,7 @@ group("ulib") {
     "explicit-memory",
     "fbl",
     "fdio",
+    "fdio-caller",
     "ffl",
     "fidl",
     "fidl:fidl-llcpp",
