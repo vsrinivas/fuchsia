@@ -14,6 +14,7 @@ zx_library("fbl") {
     "fbl/confine_array_index.h",
     "fbl/deleter.h",
     "fbl/function.h",
+    "fbl/hard_int.h",
     "fbl/intrusive_container_utils.h",
     "fbl/intrusive_double_list.h",
     "fbl/intrusive_hash_table.h",

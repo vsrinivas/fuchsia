@@ -38,6 +38,7 @@ test("fbl") {
     "confine_array_index_tests.cc",
     "forward_tests.cc",
     "function_tests.cc",
+    "hard_int_tests.cc",
     "intrusive_container_tests.cc",
     "intrusive_doubly_linked_list_tests.cc",
     "intrusive_hash_table_dll_tests.cc",
