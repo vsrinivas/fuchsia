@@ -207,7 +207,6 @@ group("all") {
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:timezone",
     "//garnet/packages/prod:tracing",
-    "//garnet/packages/prod:tts",
     "//garnet/packages/prod:ui_policy",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
@@ -610,11 +609,6 @@ group("wlanif") {
     "//src/connectivity/wlan/drivers/wlan",
     "//src/connectivity/wlan/drivers/wlanif",
   ]
-}
-
-group("tts") {
-  testonly = true
-  public_deps = [ "//src/speech/tts:tts_service" ]
 }
 
 if (target_cpu == "arm64") {
