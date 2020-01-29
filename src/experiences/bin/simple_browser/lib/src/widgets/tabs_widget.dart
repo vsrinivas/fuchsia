@@ -172,9 +172,8 @@ class _TabWidgetState extends State<_TabWidget> {
           color:
               widget.selected ? baseTheme.accentColor : baseTheme.primaryColor,
           child: DefaultTextStyle(
-            style: baseTheme.textTheme.body1.copyWith(
-              color: widget.selected ? baseTheme.primaryColor : null,
-            ),
+            style: TextStyle(
+                color: widget.selected ? baseTheme.primaryColor : null),
             child: Stack(
               children: <Widget>[
                 Center(

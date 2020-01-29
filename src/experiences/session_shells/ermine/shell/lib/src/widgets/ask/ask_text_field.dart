@@ -44,13 +44,11 @@ class AskTextField extends StatelessWidget {
           cursorRadius: Radius.zero,
           cursorWidth: 10.0,
           enableInteractiveSelection: true,
-          style: Theme.of(context).textTheme.subhead.merge(
-                TextStyle(
-                  color: Colors.black,
-                  fontFamily: 'RobotoMono',
-                  fontSize: 18,
-                ),
-              ),
+          style: TextStyle(
+            color: Colors.black,
+            fontFamily: 'RobotoMono',
+            fontSize: 18,
+          ),
           focusNode: model.focusNode,
           onChanged: model.query,
           onSubmitted: model.submit,
@@ -63,12 +61,12 @@ class AskTextField extends StatelessWidget {
               padding: EdgeInsets.only(right: 20),
               child: Text(
                 Strings.typeToAsk.toUpperCase(),
-                style: Theme.of(context).textTheme.body1.copyWith(
-                      color: Colors.white,
-                      backgroundColor: Colors.black,
-                      fontFamily: 'RobotoMono',
-                      fontSize: 18,
-                    ),
+                style: TextStyle(
+                  color: Colors.white,
+                  backgroundColor: Colors.black,
+                  fontFamily: 'RobotoMono',
+                  fontSize: 18,
+                ),
               ),
             ),
             builder: (context, child) {

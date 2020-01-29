@@ -52,13 +52,10 @@ class KeyboardHelp extends StatelessWidget {
                           child: SingleChildScrollView(
                             child: Text(
                               model.keyboardShortcuts,
-                              style: Theme.of(context)
-                                  .primaryTextTheme
-                                  .title
-                                  .merge(TextStyle(
-                                    fontFamily: 'RobotoMono',
-                                    fontSize: 14.0,
-                                  )),
+                              style: TextStyle(
+                                fontFamily: 'RobotoMono',
+                                fontSize: 14.0,
+                              ),
                             ),
                           ),
                         ),
