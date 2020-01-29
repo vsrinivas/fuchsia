@@ -54,9 +54,17 @@ group("kitchen_sink") {
   testonly = true
   public_deps = [
     ":tests",
-    "//garnet/packages:kitchen_sink",
+    "//bundles:tools",
+    "//examples",
+    "//garnet/packages:all",
+    "//garnet/packages/config:amber",
+    "//garnet/packages/config:network",
+    "//garnet/packages/config:openssh_keys",
+    "//garnet/packages/config:thermd",
     "//src/connectivity/telephony",
+    "//src/connectivity/wlan:service",
     "//src/media/audio/bundles:virtual_audio_driver",
+    "//src/media/bundles:examples",
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
     "//topaz",
