@@ -217,15 +217,51 @@ fx build
 fx test
 ```
 
+### Converting from `run-test` or `run-host-tests`
+
+Note: Please file a bug with `fx` if you find any test invocations that cannot
+be converted.
+
+#### `run-test`
+
+For `run-test`, you should always be able to change `fx run-test` to `fx test`,
+for example:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx run-test ${<var>TEST_PACKAGE_NAME</var>}</code>
+</pre>
+
+Now becomes:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test ${<var>TEST_PACKAGE_NAME</var>}</code>
+</pre>
+
+
+#### `run-host-tests`
+
+For `run-host-tests`, you should always be able to change `fx run-host-tests` to
+`fx test`, for example:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx run-host-tests ${<var>PATH_TO_HOST_TEST</var>}</code>
+</pre>
+
+
+Now becomes:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test ${<var>PATH_TO_HOST_TEST</var>}</code>
+</pre>
 
 ## Running tests (Legacy)
 
 Tests can be exercised with the `fx run-test` command by providing the name of
 the package containing the tests.
 
-```bash
-$ fx run-test ${TEST_PACKAGE_NAME}
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx run-test ${<var>TEST_PACKAGE_NAME</var>}</code>
+</pre>
 
 This command will rebuild any modified files, push the named package to the
 device, and run it.
@@ -241,9 +277,9 @@ nor updated if a prefix is provided.
 In light of the above facts, the recommended way to run tests from a Fuchsia
 shell is:
 
-```bash
-$ run-test-component `locate ${TEST_PACKAGE_NAME}`
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">run-test-component `locate ${<var>TEST_PACKAGE_NAME</var>}`</code>
+</pre>
 
 The `locate` tool will search for and return fuchsia-pkg URLs based on a given
 search query. If there are multiple matches for the query the above command will
