@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls/log.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -343,6 +344,23 @@ zx_status_t device_get_metadata_size(zx_device_t* device, uint32_t type, size_t*
 __EXPORT
 void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
   // This is currently a no-op.
+}
+
+__EXPORT
+zx_status_t device_get_profile(zx_device_t* device, uint32_t priority, const char* name,
+                               zx_handle_t* out_profile) {
+  // This is currently a no-op.
+  *out_profile = ZX_HANDLE_INVALID;
+  return ZX_OK;
+}
+
+__EXPORT
+zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, uint64_t deadline,
+                                        uint64_t period, const char* name,
+                                        zx_handle_t* out_profile) {
+  // This is currently a no-op.
+  *out_profile = ZX_HANDLE_INVALID;
+  return ZX_OK;
 }
 
 __EXPORT
