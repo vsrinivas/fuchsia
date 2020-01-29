@@ -59,6 +59,12 @@ Format& Format::operator=(const Format& o) {
   return *this;
 }
 
+bool Format::operator==(const Format& other) const {
+  // All the other class members are derived from our stream_type, so we don't need to include them
+  // here.
+  return fidl::Equals(stream_type_, other.stream_type_);
+}
+
 // static
 fbl::RefPtr<Format> Format::Create(fuchsia::media::AudioStreamType format) {
   return fbl::MakeRefCounted<Format>(format);

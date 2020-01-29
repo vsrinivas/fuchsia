@@ -220,6 +220,7 @@ executable("unittest_bin") {
     "command_line_options_unittest.cc",
     "driver_output_unittest.cc",
     "effects_stage_unittest.cc",
+    "format_unittest.cc",
     "intermediate_buffer_unittest.cc",
     "link_matrix_unittest.cc",
     "loudness_transform_unittest.cc",

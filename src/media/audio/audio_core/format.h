@@ -24,6 +24,9 @@ class Format : public fbl::RefCounted<Format> {
   Format(const Format&);
   Format& operator=(const Format&);
 
+  bool operator==(const Format& other) const;
+  bool operator!=(const Format& other) const { return !(*this == other); }
+
   const fuchsia::media::AudioStreamType& stream_type() const { return stream_type_; }
   uint32_t channels() const { return stream_type_.channels; }
   uint32_t frames_per_second() const { return stream_type_.frames_per_second; }
