@@ -72,7 +72,9 @@ class MdnsInterfaceTransceiver {
 
  protected:
   static constexpr int kTimeToLive_ = 255;
-  static constexpr size_t kMaxPacketSize = 1500;
+  // RFC6762 suggests a max packet size of 1500, but we see bigger packets in the wild. 9000 is
+  // the maximum size for 'jumbo' packets.
+  static constexpr size_t kMaxPacketSize = 9000;
 
   MdnsInterfaceTransceiver(inet::IpAddress address, const std::string& name, uint32_t index);
 
