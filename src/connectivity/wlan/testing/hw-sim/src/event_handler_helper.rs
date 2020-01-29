@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::send_beacon,
+    crate::{create_rx_info, send_beacon},
     fidl_fuchsia_wlan_common::{Cbw, WlanChan},
     fidl_fuchsia_wlan_tap as wlantap,
     std::collections::hash_map::HashMap,
@@ -215,6 +215,26 @@ impl<'a> Action<wlantap::TxArgs> for MatchTx<'a> {
         if let Some(action) = self.frame_type_actions.get_mut(&fc.frame_type()) {
             action.run(&args.packet.data)
         }
+    }
+}
+
+/// Rx forwards packets to the Rx queue of a device.
+pub struct Rx<'a> {
+    proxy: &'a wlantap::WlantapPhyProxy,
+    channel: WlanChan,
+}
+
+impl<'a> Rx<'a> {
+    pub fn send(proxy: &'a wlantap::WlantapPhyProxy, channel: WlanChan) -> Self {
+        Self { proxy, channel }
+    }
+}
+
+impl<'a> Action<wlantap::TxArgs> for Rx<'a> {
+    fn run(&mut self, args: &wlantap::TxArgs) {
+        let frame = args.packet.data.clone();
+        let mut frame_iter = frame.into_iter();
+        self.proxy.rx(0, &mut frame_iter, &mut create_rx_info(&self.channel, 0)).expect("rx");
     }
 }
 

@@ -3,10 +3,37 @@
 // found in the LICENSE file.
 
 use {
+    crate::test_utils,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, QueryIfaceResponse},
-    fidl_fuchsia_wlan_sme::ApSmeProxy,
+    fidl_fuchsia_wlan_sme::{ApSmeProxy, ClientSmeProxy},
+    fidl_fuchsia_wlan_tap::WlantapPhyConfig,
     fuchsia_zircon::{sys::ZX_OK, DurationNum},
 };
+
+pub struct CreateDeviceHelper<'a> {
+    wlanstack_svc: &'a DeviceServiceProxy,
+    iface_ids: Vec<u16>,
+}
+
+impl<'a> CreateDeviceHelper<'a> {
+    pub fn new(wlanstack_svc: &'a DeviceServiceProxy) -> CreateDeviceHelper<'a> {
+        return CreateDeviceHelper { wlanstack_svc, iface_ids: vec![] };
+    }
+
+    pub async fn create_device(
+        &mut self,
+        config: WlantapPhyConfig,
+    ) -> Result<(test_utils::TestHelper, u16), anyhow::Error> {
+        let helper = test_utils::TestHelper::begin_test(config).await;
+        let iface_id = get_first_matching_iface_id(self.wlanstack_svc, |iface| {
+            !self.iface_ids.contains(&iface.id)
+        })
+        .await;
+        self.iface_ids.push(iface_id);
+
+        Ok((helper, iface_id))
+    }
+}
 
 /// Queries wlanstack service and return the first iface id that makes |filter(iface)| true.
 /// Panics after timeout expires.
@@ -38,6 +65,14 @@ pub async fn get_ap_sme(wlan_service: &DeviceServiceProxy, iface_id: u16) -> ApS
     let (proxy, remote) = fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");
     let status = wlan_service.get_ap_sme(iface_id, remote).await.expect("fail get_ap_sme");
     assert_eq!(status, ZX_OK, "fail getting ap sme status: {}", status);
+    proxy
+}
+
+/// Wrapper function to get a ClientSmeProxy from wlanstack with an |iface_id| assumed to be valid.
+pub async fn get_client_sme(wlan_service: &DeviceServiceProxy, iface_id: u16) -> ClientSmeProxy {
+    let (proxy, remote) = fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");
+    let status = wlan_service.get_client_sme(iface_id, remote).await.expect("fail get_client_sme");
+    assert_eq!(status, ZX_OK, "fail getting client sme status: {}", status);
     proxy
 }
 
