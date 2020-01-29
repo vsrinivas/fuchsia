@@ -89,18 +89,27 @@ impl Repository {
         mirror_config: &MirrorConfig,
         node: inspect::Node,
     ) -> Result<Self, anyhow::Error> {
-        let root_keys = config
-            .root_keys()
-            .iter()
-            .map(|key| match key {
+        let mut root_keys = vec![];
+
+        // FIXME(42863) we used keyid_hash_algorithms in order to verify compatibility with the
+        // TUF-1.0 spec against python-tuf. python-tuf is thinking about removing
+        // keyid_hash_algorithms, so there's no real reason for us to use them anymore. In order to
+        // do this in a forward-compatible way, we need to create 2 `tuf::PublicKey` keys, one with
+        // a keyid_hash_algorithms specified, and one without. This will let us migrate the
+        // metadata without needing to modify the resolver. Once everyone has migrated over, we can
+        // remove our use of `PublicKey::from_ed25519_with_keyid_hash_algorithms`.
+        for key in config.root_keys().iter() {
+            match key {
                 RepositoryKey::Ed25519(bytes) => {
-                    PublicKey::from_ed25519_with_keyid_hash_algorithms(
+                    root_keys.push(PublicKey::from_ed25519(bytes.clone())?);
+                    root_keys.push(PublicKey::from_ed25519_with_keyid_hash_algorithms(
                         bytes.clone(),
                         Some(vec!["sha256".to_string()]),
-                    )
+                    )?);
                 }
-            })
-            .collect::<Result<Vec<PublicKey>, _>>()?;
+            }
+        }
+
         Ok(Self {
             updating_client:
                 updating_tuf_client::UpdatingTufClient::from_tuf_client_and_mirror_config(
