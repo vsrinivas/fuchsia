@@ -2067,43 +2067,42 @@ async fn use_with_destroyed_parent() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                uses: vec![UseDecl::Protocol(UseProtocolDecl {
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
-                })],
-                offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target: OfferTarget::Collection("coll".to_string()),
-                })],
-                collections: vec![CollectionDecl {
-                    name: "coll".to_string(),
-                    durability: fsys::Durability::Transient,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_collection("coll", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
-                })],
-                children: vec![ChildDecl {
-                    name: "c".to_string(),
-                    url: "test:///c".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
-        ("c", ComponentDecl { uses: vec![use_decl.clone()], ..default_component_decl() }),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(use_decl.clone())
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
     ];
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
