@@ -188,7 +188,7 @@ mod tests {
             root.create_child(""),
         );
         assert!(!queue.eviction_size_minimum_reached(&0.into()));
-        assert_eq!(to_values(&mut queue), vec![]);
+        assert_eq!(to_values(&mut queue), Vec::<u64>::new());
         assert_eq!(queue.len(), 0);
         assert_eq!(queue.get_monotonic_count(), 0);
         queue.insert(0.into());
@@ -212,7 +212,7 @@ mod tests {
         let mut queue: BoundedQueue<Record> =
             BoundedQueue::new(0, Duration::new(2, 0), root.create_child(""));
         assert!(!queue.oldest_item_will_expire(&0.into()));
-        assert_eq!(to_values(&mut queue), vec![]);
+        assert_eq!(to_values(&mut queue), Vec::<u64>::new());
         queue.insert(0.into());
         assert!(!queue.oldest_item_will_expire(&1.into()));
         queue.insert(1.into());
@@ -231,7 +231,7 @@ mod tests {
             Duration::new(3, 0),
             root.create_child(""),
         );
-        assert_eq!(to_values(&mut queue), vec![]);
+        assert_eq!(to_values(&mut queue), Vec::<u64>::new());
         queue.insert(0.into());
         queue.insert(1.into());
         queue.insert(2.into());

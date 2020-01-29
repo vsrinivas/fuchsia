@@ -913,7 +913,7 @@ mod tests {
             assert_eq!(association_id, 0);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified);
             assert_eq!(cap, 0);
-            assert_eq!(rates, vec![]);
+            assert_eq!(rates, Vec::<u8>::new());
         });
     }
 

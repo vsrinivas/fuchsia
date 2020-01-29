@@ -469,7 +469,7 @@ mod tests {
             .expect("expected a ScanRequest");
 
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Passive);
-        assert_eq!(req.ssid, vec![]);
+        assert_eq!(req.ssid, Vec::<u8>::new());
     }
 
     #[test]
@@ -479,7 +479,7 @@ mod tests {
         let req = sched.enqueue_scan_to_discover(scan_cmd).expect("expected a ScanRequest");
 
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
-        assert_eq!(req.ssid, vec![]);
+        assert_eq!(req.ssid, Vec::<u8>::new());
     }
 
     #[test]
