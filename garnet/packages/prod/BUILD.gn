@@ -335,11 +335,6 @@ group("usb_video") {
   public_deps = [ "//src/camera/drivers/usb_video" ]
 }
 
-group("virtual_camera") {
-  testonly = true
-  public_deps = [ "//src/camera/drivers/virtual_camera" ]
-}
-
 group("bluetooth_atheros") {
   testonly = true
   public_deps = [
