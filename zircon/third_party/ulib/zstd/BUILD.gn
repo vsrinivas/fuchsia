@@ -9,6 +9,7 @@ config("zstd-config") {
   visibility = [ ":*" ]
 
   include_dirs = [
+    "$zstd/contrib/seekable_format",
     "$zstd/lib",
     "$zstd/lib/common",
     "$zstd/lib/compress",
@@ -74,6 +75,47 @@ zx_library("zstd") {
   ]
 
   configs += [ ":zstd-config" ]
+
+  # This code doesn't use the annotation attribute.
+  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+}
+
+config("zstd-seekable-config") {
+  visibility = [ ":*" ]
+
+  # TODO(markdittmer): Upstream fixes to uninitialized variables in zstd.
+  if (is_gcc) {
+    cflags = [ "-Wno-maybe-uninitialized" ]
+  } else {
+    cflags = [ "-Wno-sometimes-uninitialized" ]
+  }
+}
+
+config("zstd-seekable-public-config") {
+  visibility = [ ":*" ]
+
+  # Seekable library expects
+  #     #include "zstd.h"
+  # to load zstd's lib/zstd.h.
+  include_dirs = [ "$zstd/lib" ]
+}
+
+zx_library("zstdseek") {
+  host = true
+  sources = [
+    "$zstd/contrib/seekable_format/zstdseek_compress.c",
+    "$zstd/contrib/seekable_format/zstdseek_decompress.c",
+  ]
+
+  public_deps = [ ":zstd" ]
+
+  # Compilation units loading seekable must incorporate its config's include_dirs.
+  public_configs = [ ":zstd-seekable-public-config" ]
+
+  configs += [
+    ":zstd-config",
+    ":zstd-seekable-config",
+  ]
 
   # This code doesn't use the annotation attribute.
   configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]

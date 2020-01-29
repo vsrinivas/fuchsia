@@ -30,7 +30,7 @@
 
 #include "blobfs.h"
 #include "compression/lz4.h"
-#include "compression/zstd.h"
+#include "compression/zstd-plain.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/block-iterator.h"
 #include "iterator/extent-iterator.h"

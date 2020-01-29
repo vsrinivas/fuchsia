@@ -32,7 +32,7 @@
 #include <safemath/checked_math.h>
 
 #include "compression/compressor.h"
-#include "compression/zstd.h"
+#include "compression/zstd-plain.h"
 
 using digest::Digest;
 using digest::MerkleTreeCreator;
@@ -71,7 +71,7 @@ zx_status_t WriteBlockOffset(int fd, uint64_t bno, off_t offset, const void* dat
 // Merkle digest and the output merkle tree as a uint8_t array.
 zx_status_t buffer_create_merkle(const FileMapping& mapping, MerkleInfo* out_info) {
   zx_status_t status;
-  std::unique_ptr<uint8_t []> merkle_tree;
+  std::unique_ptr<uint8_t[]> merkle_tree;
   size_t merkle_size;
   if ((status = MerkleTreeCreator::Create(mapping.data(), mapping.length(), &merkle_tree,
                                           &merkle_size, &out_info->digest)) != ZX_OK) {

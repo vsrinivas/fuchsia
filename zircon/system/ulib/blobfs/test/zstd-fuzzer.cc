@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "compression/zstd.h"
+#include "compression/zstd-plain.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   size_t src_size = size;

@@ -15,7 +15,7 @@
 
 #include "compression/blob-compressor.h"
 #include "compression/lz4.h"
-#include "compression/zstd.h"
+#include "compression/zstd-plain.h"
 #include "zircon/errors.h"
 
 namespace blobfs {

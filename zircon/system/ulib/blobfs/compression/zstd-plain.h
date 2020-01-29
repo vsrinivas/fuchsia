@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_H_
-#define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_PLAIN_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_PLAIN_H_
 
 #include <zircon/types.h>
 
@@ -45,4 +45,4 @@ zx_status_t ZSTDDecompress(void* target_buf, size_t* target_size, const void* sr
 
 }  // namespace blobfs
 
-#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_COMPRESSION_ZSTD_PLAIN_H_

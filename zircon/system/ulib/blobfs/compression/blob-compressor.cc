@@ -14,7 +14,7 @@
 #include <fs/trace.h>
 
 #include "lz4.h"
-#include "zstd.h"
+#include "zstd-plain.h"
 
 namespace blobfs {
 

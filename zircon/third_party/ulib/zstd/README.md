@@ -1,7 +1,8 @@
 The actual source and header files come from the verbatim upstream checkout
 found at //third_party/zstd.  This directory just provides the BUILD.gn file
 to stitch it into the Zircon build, and include/zstd/ with wrapper headers
-to redirect <zstd/zstd.h> to the real source location.
+to redirect <zstd/zstd.h> and <zstd/zstd_seekable.h> to the real source
+location.
 
 TODO(BLD-353): After build unification, this might move to
 .../secondary/third_party/zstd so the //third_party/zstd path can be used
