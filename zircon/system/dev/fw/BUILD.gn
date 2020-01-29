@@ -3,5 +3,5 @@
 # found in the LICENSE file.
 
 group("fw") {
-  deps = [ "qcom-pil" ]
+  deps = []
 }
