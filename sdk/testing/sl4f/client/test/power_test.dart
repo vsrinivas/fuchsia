@@ -2,13 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert' show json;
 import 'dart:io' show File, Platform;
 
+import 'package:mockito/mockito.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
+import 'package:sl4f/sl4f.dart';
+
+class MockDump extends Mock implements Dump {}
+
+class MockPerformance extends Mock implements Performance {}
+
+class MockFile extends Mock implements File {}
+
 final _fakeZedmonPath =
     Platform.script.resolve('runtime_deps/fake_zedmon').toFilePath();
+
+const String _converterPath = '/path/to/catapult_converter';
 
 // Paths to files that specify stderr and stdout for the fake_zedmon binary.
 final _stderrPath = '$_fakeZedmonPath.stderr.testdata';
@@ -78,13 +90,29 @@ void main(List<String> args) {
     ];
     await _setupTestData(stderrLines);
 
-    final power = sl4f.Power(_fakeZedmonPath);
-    await power.startZedmon();
+    final dump = MockDump();
+    final performance = MockPerformance();
+    final power = sl4f.Power(_fakeZedmonPath, dump, performance);
+    await power.startRecording();
     await _waitForZedmon(power, 10000);
 
-    final summary = await power.stopZedmon();
-    expect(summary.averagePower, closeTo(2.0, 1e-8));
-    expect(summary.duration.inMicroseconds, equals(10000));
+    final mockFile = MockFile();
+    when(dump.writeAsString('power', 'fuchsiaperf.json', any))
+        .thenAnswer((_) => Future.value(mockFile));
+    await power.stopRecording(_converterPath);
+
+    // Make sure the average power written to power.fuchsiaperf.json is correct.
+    final encoded =
+        verify(dump.writeAsString('power', 'fuchsiaperf.json', captureAny))
+            .captured
+            .single;
+    final data = json.decode(encoded);
+    expect(data.length, 1);
+    expect(data[0]['values'].length, 1);
+    expect(data[0]['values'][0], closeTo(2.0, 1e-8));
+
+    verify(performance.convertResults(
+        _converterPath, argThat(same(mockFile)), any));
   });
 
   // Confirm that average power and duration are as expected when power readings
@@ -105,12 +133,28 @@ void main(List<String> args) {
     ];
     await _setupTestData(stderrLines);
 
-    final power = sl4f.Power(_fakeZedmonPath);
-    await power.startZedmon();
+    final dump = MockDump();
+    final performance = MockPerformance();
+    final power = sl4f.Power(_fakeZedmonPath, dump, performance);
+    await power.startRecording();
     await _waitForZedmon(power, 9000);
 
-    final summary = await power.stopZedmon();
-    expect(summary.averagePower, closeTo(2.4, 1e-8));
-    expect(summary.duration.inMicroseconds, equals(9000));
+    final mockFile = MockFile();
+    when(dump.writeAsString('power', 'fuchsiaperf.json', any))
+        .thenAnswer((_) => Future.value(mockFile));
+    await power.stopRecording(_converterPath);
+
+    // Make sure the average power written to power.fuchsiaperf.json is correct.
+    final encoded =
+        verify(dump.writeAsString('power', 'fuchsiaperf.json', captureAny))
+            .captured
+            .single;
+    final data = json.decode(encoded);
+    expect(data.length, 1);
+    expect(data[0]['values'].length, 1);
+    expect(data[0]['values'][0], closeTo(2.4, 1e-8));
+
+    verify(performance.convertResults(
+        _converterPath, argThat(same(mockFile)), any));
   });
 }

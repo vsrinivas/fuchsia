@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:convert' show LineSplitter, utf8;
-import 'dart:io' show Process, ProcessSignal;
+import 'dart:convert' show json, LineSplitter, utf8;
+import 'dart:io' show File, Platform, Process, ProcessSignal;
 
 import 'package:meta/meta.dart' show visibleForTesting;
+
+import 'dump.dart';
+import 'performance.dart';
+import 'trace_processing/metrics_results.dart';
 
 class ZedmonException implements Exception {
   final String message;
@@ -85,6 +89,9 @@ class _ZedmonProcess {
 
   /// Stops the zedmon client process and returns a summarized power
   /// measurement.
+  //
+  // TODO(fxb/44358): Implement downsampling to Zedmon client, and then provide
+  // access to the downsampled timeseries instead of just an average.
   Future<PowerSummary> stop() async {
     _stopped = true;
     _process.kill(ProcessSignal.sigint);
@@ -120,7 +127,7 @@ class _ZedmonProcess {
   }
 }
 
-/// Interface to the zedmon power-measurement device.
+/// Interface between the Zedmon power-measurement device and Catapult.
 ///
 /// Zedmon is a device for measuring power consumption designed for use within
 /// the Fuchsia project. Its schematic and source code are located at
@@ -133,13 +140,15 @@ class _ZedmonProcess {
 /// form.
 ///
 /// Sample usage:
-///   final power = Power('path/to/zedmon/client');
-///   power.startZedmon();
+///   final power = Power('path/to/zedmon/client', dump, performance);
+///   await power.startRecording();
 ///   ...do interesting things that consume power...
-///   final summary = power.stopZedmon();
-///   print(summary);
+///   final file = await power.stopRecording('path/to/catapult_converter');
+/// Then `file` contains power data formmatted for consumption by Catapult.
 class Power {
   final String _zedmonExecutablePath;
+  final Dump _dump;
+  final Performance _performance;
   _ZedmonProcess _zedmon;
 
   /// Provides access to the last timestamp seen by [_zedmon] to allow
@@ -149,19 +158,34 @@ class Power {
     return _zedmon?._prevRecord?.timestamp;
   }
 
-  Power(this._zedmonExecutablePath);
+  Power(this._zedmonExecutablePath, this._dump, this._performance);
 
   /// Start collecting power data.
-  Future<void> startZedmon() async {
+  Future<void> startRecording() async {
     _zedmon = _ZedmonProcess(_zedmonExecutablePath);
     await _zedmon.start();
   }
 
-  /// Stop collecting power data, and return a summary of power use since
-  /// collection started.
-  Future<PowerSummary> stopZedmon() async {
-    final result = await _zedmon.stop();
+  /// Stop collecting power data, and return a reference to a catapult.json file
+  /// containing the results.
+  Future<File> stopRecording(String converterPath) async {
+    final powerSummary = await _zedmon.stop();
     _zedmon = null;
-    return result;
+    final testCaseResults =
+        TestCaseResults('power', Unit.watts, [powerSummary.averagePower]);
+    final List<Map<String, dynamic>> results = [
+      {
+        'label': testCaseResults.label,
+        'test_suite': 'power_test',
+        'unit': unitToCatapultConverterString(testCaseResults.unit),
+        'values': testCaseResults.values,
+        'split_first': testCaseResults.splitFirst,
+      }
+    ];
+    final perfFile = await _dump.writeAsString(
+        'power', 'fuchsiaperf.json', json.encode(results));
+
+    return await _performance.convertResults(
+        converterPath, perfFile, Platform.environment);
   }
 }

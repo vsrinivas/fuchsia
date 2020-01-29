@@ -25,9 +25,10 @@
 #else
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
+
 #include <src/lib/files/file_descriptor.h>
 #include <src/lib/files/unique_fd.h>
-#include <unistd.h>
 #endif
 
 namespace {
@@ -159,6 +160,8 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
     return "n%_smallerIsBetter";
   } else if (strcmp(input_unit, "count") == 0) {
     return "count";
+  } else if (strcmp(input_unit, "Watts") == 0) {
+    return "W_smallerIsBetter";
   } else {
     fprintf(stderr, "Units not recognized: %s\n", input_unit);
     exit(1);

@@ -28,6 +28,9 @@ enum Unit {
 
   // Count-based units.
   count,
+
+  // Power-based units.
+  watts,
 }
 
 const _unitToCatapultConverterString = {
@@ -38,6 +41,7 @@ const _unitToCatapultConverterString = {
   Unit.framesPerSecond: 'frames/second',
   Unit.percent: 'percent',
   Unit.count: 'count',
+  Unit.watts: 'Watts',
 };
 
 /// Map [unit] to the corresponding string expected in catapult converter.

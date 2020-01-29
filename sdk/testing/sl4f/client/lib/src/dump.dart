@@ -59,6 +59,14 @@ class Dump {
   Future<File> writeAsBytes(String name, String suffix, List<int> bytes) =>
       createFile(name, suffix)?.writeAsBytes(bytes);
 
+  /// Writes the string to the dump directory under a timestamp, the
+  /// given topic name and the given file type suffix. Does nothing if
+  /// no dump directory is configured.
+  ///
+  /// Returns the [File] object of the newly created file.
+  Future<File> writeAsString(String name, String suffix, String contents) =>
+      createFile(name, suffix)?.writeAsString(contents);
+
   /// Opens the appropriate file for writing.
   ///
   /// Returns the [IOSink] object of the newly created file for writing.
