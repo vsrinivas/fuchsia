@@ -214,6 +214,10 @@ The set of currently known features are as follows:
   component's namespace at `/tmp`. This is isolated from the system temp and
   the temp directories of other component instances.
 
+- `system-temp`, which requests access to the system temp directory, located at
+  `/tmp` in the package's namespace. This feature is deprecated and will be
+  removed soon. Use `isolated-temp` if global state isn't absolutely mandatory.
+
 - `root-ssl-certificates`, which requests access to the root SSL certificates
   for the device. These certificates are provided in the `/config/ssl` directory
   in the package's namespace.
@@ -233,11 +237,6 @@ The set of currently known features are as follows:
   `/bin` in the requesters namespace. Running these commands may require the
   `fuchsia.process.Resolver` and `fuchsia.process.Launcher` services also
   be requested.
-
-- `system-temp`, which requests access to the system temp directory, located at
-  `/tmp` in the package's namespace. (Future work will likely remove access to
-  the system temp directory in favor of a local temp directory for each
-  process.)
 
 - `vulkan`, which requests access to the resources required to use the Vulkan
   graphics interface. This adds layer configuration data in the `/config/vulkan`
