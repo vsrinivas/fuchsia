@@ -409,7 +409,6 @@
 //! `as_buf_mut` call in order to break the cycle, pick the option which is the
 //! least in the hot path.
 
-
 mod fragmented;
 pub mod serialize;
 

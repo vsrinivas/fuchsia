@@ -8,9 +8,9 @@ rustc_binary("pcapng_format") {
   edition = "2018"
   deps = [
     "//src/connectivity/lib/net-types",
-    "//src/connectivity/lib/packet",
     "//src/connectivity/network/netdump/integration/helper",
     "//src/lib/fuchsia-async",
+    "//src/lib/network/packet",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

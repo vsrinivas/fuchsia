@@ -17,7 +17,7 @@ pub mod link;
 
 mod test;
 
-use packet_new::{Buf, Either, EmptyBuf};
+use packet::{Buf, Either, EmptyBuf};
 
 /// Flatten an `Either<EmptyBuf, Buf<Vec<u8>>>` into a `Buf<Vec<u8>>`.
 ///

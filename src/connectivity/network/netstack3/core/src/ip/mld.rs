@@ -453,8 +453,8 @@ mod tests {
     use std::convert::TryInto;
     use std::time::Instant;
 
-    use crate::packet::ParseBuffer;
     use net_types::ethernet::Mac;
+    use packet::ParseBuffer;
 
     use super::*;
     use crate::context::testutil::{DummyInstant, DummyTimerContextExt};

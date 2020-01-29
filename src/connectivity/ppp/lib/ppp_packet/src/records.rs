@@ -17,7 +17,7 @@
 //! [`options`]: crate::wire::util::records::options
 
 use fuchsia_syslog::macros::*;
-use packet_new::{BufferView, BufferViewMut, InnerPacketBuilder};
+use packet::{BufferView, BufferViewMut, InnerPacketBuilder};
 use std::marker::PhantomData;
 use std::ops::Deref;
 use zerocopy::ByteSlice;
@@ -511,7 +511,7 @@ impl<'a> AsRef<[u8]> for LongLivedBuff<'a> {
     }
 }
 
-impl<'a> packet_new::BufferView<&'a [u8]> for LongLivedBuff<'a> {
+impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
     fn take_front(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
             let (prefix, rest) = std::mem::replace(&mut self.0, &[]).split_at(n);
@@ -540,7 +540,7 @@ impl<'a> packet_new::BufferView<&'a [u8]> for LongLivedBuff<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use packet_new::BufferView;
+    use packet::BufferView;
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     const DUMMY_BYTES: [u8; 16] = [
@@ -957,7 +957,7 @@ mod test {
 /// can be implemented using the same utility with a bit of customization.
 pub mod options {
     use super::*;
-    use packet_new::BufferView;
+    use packet::BufferView;
 
     /// A parsed set of header options.
     ///
@@ -1188,7 +1188,7 @@ pub mod options {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use packet_new::Serializer;
+        use packet::Serializer;
 
         #[derive(Debug)]
         struct DummyOptionsImpl;

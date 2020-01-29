@@ -11,7 +11,7 @@ use {
         CODE_CONFIGURE_REJECT, CODE_CONFIGURE_REQUEST, CODE_TERMINATE_ACK, CODE_TERMINATE_REQUEST,
         DEFAULT_MAX_FRAME, PROTOCOL_LINK_CONTROL,
     },
-    packet_new::{Buf, GrowBuffer, InnerPacketBuilder, ParsablePacket, ParseBuffer, Serializer},
+    packet::{Buf, GrowBuffer, InnerPacketBuilder, ParsablePacket, ParseBuffer, Serializer},
     ppp_packet::{
         link,
         records::options::{Options, OptionsSerializer},
@@ -55,7 +55,7 @@ impl ppp::ControlProtocol for ControlProtocol {
             .map(|options| options.iter().collect())
     }
 
-    fn serialize_options(options: &[link::ControlOption]) -> ::packet_new::Buf<Vec<u8>> {
+    fn serialize_options(options: &[link::ControlOption]) -> ::packet::Buf<Vec<u8>> {
         crate::flatten_either(
             OptionsSerializer::<link::ControlOptionsImpl, link::ControlOption, _>::new(
                 options.iter(),
@@ -85,7 +85,7 @@ where
 pub async fn receive<T, B>(
     resumable_state: ProtocolState<ControlProtocol>,
     transmitter: &T,
-    mut buf: ::packet_new::Buf<B>,
+    mut buf: ::packet::Buf<B>,
     time: std::time::Instant,
 ) -> Result<ProtocolState<ControlProtocol>, ProtocolError<ControlProtocol>>
 where
@@ -194,7 +194,7 @@ pub async fn tx_protocol_rej<T, B>(
 ) -> Result<(), FrameError>
 where
     T: FrameTransmitter,
-    B: ::packet_new::BufferMut,
+    B: ::packet::BufferMut,
 {
     let frame = buf
         .encapsulate(ProtocolRejectPacketBuilder::new(rejected_protocol))

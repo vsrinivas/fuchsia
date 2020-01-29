@@ -16,7 +16,7 @@ pub mod records;
 
 use {
     byteorder::NetworkEndian,
-    packet_new::{
+    packet::{
         BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
         SerializeBuffer,
     },
@@ -464,7 +464,7 @@ mod tests {
             ipv4, ipv6, link,
             records::options::{Options, OptionsSerializer},
         },
-        packet_new::{Buf, InnerPacketBuilder, ParseBuffer, Serializer},
+        packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer},
         std::sync::Once,
     };
 

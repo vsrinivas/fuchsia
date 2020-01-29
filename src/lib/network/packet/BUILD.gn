@@ -7,12 +7,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("packet") {
-  # TODO(joshlf): Rename to "packet" once the old
-  # packet crate has been removed (having them both
-  # at the same time causes a build resource name
-  # collision between the .rlib files created by
-  # each crate).
-  name = "packet_new"
+  name = "packet"
   version = "0.1.0"
   with_unit_tests = true
   edition = "2018"
@@ -30,7 +25,7 @@ unittest_package("tests") {
 
   tests = [
     {
-      name = "packet_new_lib_test"
+      name = "packet_lib_test"
       environments = basic_envs
     },
   ]

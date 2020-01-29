@@ -6,7 +6,7 @@
 
 use {
     fuchsia_async::futures::future::BoxFuture,
-    packet_new::{Buf, BufferMut, Serializer},
+    packet::{Buf, BufferMut, Serializer},
     ppp_packet::{
         CodeRejectPacketBuilder, ConfigurationPacketBuilder, ControlProtocolPacketBuilder,
         PppPacketBuilder, TerminationPacketBuilder,

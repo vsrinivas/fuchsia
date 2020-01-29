@@ -362,11 +362,11 @@ pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
 mod tests {
     use super::*;
     use crate::ip::{IpProto, Ipv4Option, Ipv4OptionData};
-    use crate::packet::{ParseBuffer, Serializer};
     use crate::wire::igmp::messages::*;
     use crate::wire::ipv4::{
         Ipv4Header, Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
     };
+    use packet::{ParseBuffer, Serializer};
     use std::fmt::Debug;
 
     fn serialize_to_bytes<B: ByteSlice + Debug, M: MessageType<B, VariableBody = ()> + Debug>(

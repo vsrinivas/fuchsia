@@ -14,7 +14,7 @@ use {
             CODE_TERMINATE_REQUEST, PROTOCOL_IPV4_CONTROL,
         },
     },
-    packet_new::{GrowBuffer, InnerPacketBuilder, ParsablePacket, ParseBuffer, Serializer},
+    packet::{GrowBuffer, InnerPacketBuilder, ParsablePacket, ParseBuffer, Serializer},
     ppp_packet::{
         ipv4,
         records::options::{Options, OptionsSerializer},
@@ -47,7 +47,7 @@ impl ppp::ControlProtocol for ControlProtocol {
             .map(|options| options.iter().collect())
     }
 
-    fn serialize_options(options: &[ipv4::ControlOption]) -> ::packet_new::Buf<Vec<u8>> {
+    fn serialize_options(options: &[ipv4::ControlOption]) -> ::packet::Buf<Vec<u8>> {
         crate::flatten_either(
             OptionsSerializer::<ipv4::ControlOptionsImpl, ipv4::ControlOption, _>::new(
                 options.iter(),
@@ -84,7 +84,7 @@ pub async fn receive<'a, T, B>(
     resumable_state: ProtocolState<ControlProtocol>,
     _link_opened: &'a Opened<link::ControlProtocol>,
     transmitter: &'a T,
-    mut buf: ::packet_new::Buf<B>,
+    mut buf: ::packet::Buf<B>,
     time: std::time::Instant,
 ) -> Result<ProtocolState<ControlProtocol>, ProtocolError<ControlProtocol>>
 where

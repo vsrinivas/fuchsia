@@ -13,7 +13,7 @@ use {
         },
     },
     fuchsia_async::{self as fasync, futures::future::BoxFuture},
-    packet_new::{Buf, ParseBuffer},
+    packet::{Buf, ParseBuffer},
     ppp_packet::{
         ipv4::ControlOption as Ipv4ControlOption, ipv6::ControlOption as Ipv6ControlOption,
         link::ControlOption as LinkControlOption, PppPacket,

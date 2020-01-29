@@ -7,7 +7,6 @@ group("lib") {
   deps = [
     "internet-checksum",
     "net-types",
-    "packet",
   ]
 }
 
@@ -17,6 +16,5 @@ group("tests") {
   deps = [
     "//src/connectivity/lib/internet-checksum:tests",
     "//src/connectivity/lib/net-types:tests",
-    "//src/connectivity/lib/packet:tests",
   ]
 }
