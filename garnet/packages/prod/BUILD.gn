@@ -192,7 +192,6 @@ group("all") {
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:scenic",
-    "//garnet/packages/prod:scenic_tools",
     "//garnet/packages/prod:scpi",
     "//garnet/packages/prod:setui_client",
     "//garnet/packages/prod:setui_service",
@@ -417,11 +416,6 @@ group("bluetooth_profiles") {
     "//garnet/packages/prod:bluetooth_avrcp",
     "//garnet/packages/prod:bluetooth_hid",
   ]
-}
-
-group("scenic_tools") {
-  testonly = true
-  public_deps = [ "//garnet/packages/tools:scenic" ]
 }
 
 group("pkg_cache") {
