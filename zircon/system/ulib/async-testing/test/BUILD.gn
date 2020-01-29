@@ -2,22 +2,46 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":async-testing" ]
 }
 
-zx_test("async-testing") {
+test("async-testing") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [ "test_loop_tests.cc" ]
   deps = [
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-testing",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-testing",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
   ]
+}
+
+migrated_manifest("async-testing-manifest") {
+  deps = [ ":async-testing" ]
 }
