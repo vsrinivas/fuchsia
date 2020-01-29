@@ -4,9 +4,10 @@
 
 #include "driver_ctx.h"
 
-#include <ddk/driver.h>
 #include <stdarg.h>
 #include <stdio.h>
+
+#include <ddk/driver.h>
 
 #include "amlogic-video.h"
 #include "macros.h"

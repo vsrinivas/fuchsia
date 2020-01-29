@@ -5,10 +5,10 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MACROS_H_
 
-#include <ddk/debug.h>
-
 #include <chrono>
 #include <thread>
+
+#include <ddk/debug.h>
 
 // severity can be ERROR, WARN, INFO, TRACE, SPEW.  See ddk/debug.h.
 //

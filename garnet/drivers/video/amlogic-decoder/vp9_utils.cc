@@ -5,9 +5,10 @@
 #include "vp9_utils.h"
 
 #include <byteswap.h>
-#include <ddk/debug.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+
+#include <ddk/debug.h>
 
 std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data, uint32_t frame_size) {
   std::vector<uint32_t> frame_sizes;

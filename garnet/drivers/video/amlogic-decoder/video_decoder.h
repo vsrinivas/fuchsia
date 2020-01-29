@@ -82,9 +82,10 @@ class VideoDecoder {
     // Requires is_tee_available() true.
     [[nodiscard]] virtual zx_status_t TeeSmcLoadVideoFirmware(
         FirmwareBlob::FirmwareType index, FirmwareBlob::FirmwareVdecLoadMode vdec) = 0;
-    [[nodiscard]] virtual zx_status_t TeeVp9AddHeaders(
-        zx_paddr_t page_phys_base, uint32_t before_size, uint32_t max_after_size,
-        uint32_t *after_size) = 0;
+    [[nodiscard]] virtual zx_status_t TeeVp9AddHeaders(zx_paddr_t page_phys_base,
+                                                       uint32_t before_size,
+                                                       uint32_t max_after_size,
+                                                       uint32_t* after_size) = 0;
     virtual __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(
         io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height, uint32_t wrap,
         uint32_t blockmode) = 0;

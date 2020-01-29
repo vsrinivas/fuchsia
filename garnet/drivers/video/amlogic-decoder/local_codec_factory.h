@@ -5,9 +5,10 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_LOCAL_CODEC_FACTORY_H_
 
-#include <fbl/macros.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+
+#include <fbl/macros.h>
 
 // TODO(dustingreen): Concider pulling LocalCodecFactory out into a source_set
 // that can be used by other HW codec drivers (in contrast to CodecImpl source

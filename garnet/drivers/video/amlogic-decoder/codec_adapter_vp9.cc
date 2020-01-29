@@ -155,8 +155,9 @@ void CodecAdapterVp9::CoreCodecSetSecureMemoryMode(
   secure_memory_mode_set_[port] = true;
   if (port == kOutputPort) {
     // Check output secure mode (not input), since overall secure vs. not-secure setup is based on
-    // output secure memory mode.  In particular, when output is secure, the stream buffer is secure, which means we
-    // can't use the CPU to copy into the stream buffer.  Using parser, input can be non-secure or secure.
+    // output secure memory mode.  In particular, when output is secure, the stream buffer is
+    // secure, which means we can't use the CPU to copy into the stream buffer.  Using parser, input
+    // can be non-secure or secure.
     //
     // If output non-secure and input secure:
     //   * by design, this doesn't work for vp9 decode
@@ -907,13 +908,13 @@ CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   }  // ~lock
 }
 
-void CodecAdapterVp9::SubmitDataToStreamBuffer(
-    zx_paddr_t paddr_base, uint32_t paddr_size, const std::vector<uint8_t>& data) {
+void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t paddr_size,
+                                               const std::vector<uint8_t>& data) {
   ZX_DEBUG_ASSERT(paddr_size == 0 || use_parser_);
   video_->AssertVideoDecoderLockHeld();
   if (use_parser_) {
-    if (ZX_OK != video_->SetProtected(
-        VideoDecoder::Owner::ProtectableHardwareUnit::kParser, IsPortSecure(kInputPort))) {
+    if (ZX_OK != video_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser,
+                                      IsPortSecure(kInputPort))) {
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }

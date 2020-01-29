@@ -5,16 +5,16 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <lib/zx/vmo.h>
 
 #include <map>
 #include <string>
 
+#include <ddk/device.h>
+#include <ddk/driver.h>
+
 class FirmwareBlob {
  public:
-
   // Some of these values are used in communicating with the TEE to switch firmware; these values
   // must not change (other than possibly adding more at the end as appropriate).  These values are
   // for the first parameter to the SMC call that switches firmware via the TEE.
@@ -76,8 +76,8 @@ class FirmwareBlob {
   // firmware is specified to the HW by the TEE.
   enum class FirmwareVdecLoadMode {
     kCompatible = 0,  // Used by h264 decoder.
-    kLegacy = 1,  // Not used so far.  Spelled "legency" in some other places.
-    kHevc = 2,  // Used by VP9 decoder.
+    kLegacy = 1,      // Not used so far.  Spelled "legency" in some other places.
+    kHevc = 2,        // Used by VP9 decoder.
   };
 
   ~FirmwareBlob();

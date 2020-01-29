@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
+#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
 
 #include <optional>
 
@@ -24,3 +25,5 @@ class VideoFirmwareSession {
   TEEC_Context* context_ = {};
   std::optional<TEEC_Session> session_ = {};
 };
+
+#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_

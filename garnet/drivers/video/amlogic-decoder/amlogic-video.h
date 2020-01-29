@@ -58,18 +58,18 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   [[nodiscard]] bool is_tee_available() override { return is_tee_available_; }
   [[nodiscard]] zx_status_t TeeSmcLoadVideoFirmware(
       FirmwareBlob::FirmwareType index, FirmwareBlob::FirmwareVdecLoadMode vdec) override;
-  [[nodiscard]] zx_status_t TeeVp9AddHeaders(
-      zx_paddr_t page_phys_base, uint32_t before_size, uint32_t max_after_size,
-      uint32_t *after_size) override;
+  [[nodiscard]] zx_status_t TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t before_size,
+                                             uint32_t max_after_size,
+                                             uint32_t* after_size) override;
   [[nodiscard]] std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
-                                                                    uint32_t offset, uint32_t width,
-                                                                    uint32_t height, uint32_t wrap,
-                                                                    uint32_t blockmode) override;
+                                                             uint32_t offset, uint32_t width,
+                                                             uint32_t height, uint32_t wrap,
+                                                             uint32_t blockmode) override;
 
   [[nodiscard]] DecoderCore* core() override { return core_; }
   [[nodiscard]] zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
-                                                    uint32_t alignment_log2, uint32_t flags,
-                                                    const char* name) override;
+                                             uint32_t alignment_log2, uint32_t flags,
+                                             const char* name) override;
   [[nodiscard]] fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override;
 
   [[nodiscard]] bool IsDecoderCurrent(VideoDecoder* decoder) override {
@@ -77,8 +77,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     assert(decoder);
     return decoder == video_decoder_;
   }
-  [[nodiscard]] zx_status_t SetProtected(ProtectableHardwareUnit unit,
-                                                bool protect) override;
+  [[nodiscard]] zx_status_t SetProtected(ProtectableHardwareUnit unit, bool protect) override;
   // This tries to schedule the next runnable decoder. It may leave the current
   // decoder scheduled if no other decoder is runnable.
   void TryToReschedule() override __TA_REQUIRES(video_decoder_lock_);
@@ -87,8 +86,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   }
 
   // DecoderCore::Owner implementation.
-  [[nodiscard]]
-  MmioRegisters* mmio() override { return registers_.get(); }
+  [[nodiscard]] MmioRegisters* mmio() override { return registers_.get(); }
   void UngateClocks() override;
   void GateClocks() override;
 
@@ -116,18 +114,16 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // running.
   void RemoveDecoder(VideoDecoder* decoder);
 
-  [[nodiscard]]
-  zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure);
-  [[nodiscard]]
-  zx_status_t InitializeEsParser();
+  [[nodiscard]] zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure);
+  [[nodiscard]] zx_status_t InitializeEsParser();
 
   [[nodiscard]] Parser* parser() { return parser_.get(); }
 
   void UngateParserClock();
   void GateParserClock();
 
-  [[nodiscard]]
-  zx_status_t ProcessVideoNoParser(const void* data, uint32_t len, uint32_t* written_out = nullptr);
+  [[nodiscard]] zx_status_t ProcessVideoNoParser(const void* data, uint32_t len,
+                                                 uint32_t* written_out = nullptr);
 
   [[nodiscard]] uint32_t GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset);
 
@@ -144,12 +140,12 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // For single-instance decoders, set the default instance.
   void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder, bool hevc)
       __TA_REQUIRES(video_decoder_lock_);
-  [[nodiscard]]
-  std::mutex* video_decoder_lock() __TA_RETURN_CAPABILITY(video_decoder_lock_) {
+  [[nodiscard]] std::mutex* video_decoder_lock() __TA_RETURN_CAPABILITY(video_decoder_lock_) {
     return &video_decoder_lock_;
   }
-  [[nodiscard]]
-  VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) { return video_decoder_; }
+  [[nodiscard]] VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) {
+    return video_decoder_;
+  }
   [[nodiscard]] DecoderInstance* current_instance() __TA_REQUIRES(video_decoder_lock_) {
     return current_instance_.get();
   }
@@ -160,7 +156,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void AssertVideoDecoderLockHeld() __TA_ASSERT(video_decoder_lock_) {}
 
   [[nodiscard]] zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
-                                                        bool use_parser, bool is_secure);
+                                                 bool use_parser, bool is_secure);
 
   // This gets started connecting to sysmem, but returns an InterfaceHandle
   // instead of InterfacePtr so that the caller can bind to the dispatcher.
@@ -175,11 +171,10 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   [[nodiscard]] zx_status_t InitTeecContext(TeecContext* teec_context);
   void InitializeStreamInput(bool use_parser);
 
-  [[nodiscard]]
-  zx_status_t ProcessVideoNoParserAtOffset(const void* data, uint32_t len, uint32_t current_offset,
-                                           uint32_t* written_out = nullptr);
-  [[nodiscard]]
-  zx_status_t InitSecmemClientSession();
+  [[nodiscard]] zx_status_t ProcessVideoNoParserAtOffset(const void* data, uint32_t len,
+                                                         uint32_t current_offset,
+                                                         uint32_t* written_out = nullptr);
+  [[nodiscard]] zx_status_t InitSecmemClientSession();
   zx_status_t PreloadFirmwareViaTee();
   void InitializeInterrupts();
   void SwapOutCurrentInstance() __TA_REQUIRES(video_decoder_lock_);

@@ -590,16 +590,15 @@ zx_status_t AmlogicVideo::TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType ind
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::TeeVp9AddHeaders(
-    zx_paddr_t page_phys_base, uint32_t before_size, uint32_t max_after_size,
-    uint32_t *after_size) {
+zx_status_t AmlogicVideo::TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t before_size,
+                                           uint32_t max_after_size, uint32_t* after_size) {
   ZX_DEBUG_ASSERT(after_size);
   ZX_DEBUG_ASSERT(is_tee_available());
   ZX_DEBUG_ASSERT(secmem_client_session_);
   zx_status_t status;
   for (uint32_t i = 0; i < 20; ++i) {
-    status = secmem_client_session_->GetVp9HeaderSize(
-      page_phys_base, before_size, max_after_size, after_size);
+    status = secmem_client_session_->GetVp9HeaderSize(page_phys_base, before_size, max_after_size,
+                                                      after_size);
     if (status != ZX_OK) {
       LOG(ERROR, "secmem_client_session_->GetVp9HeaderSize() failed - status: %d", status);
       secmem_client_session_.reset();

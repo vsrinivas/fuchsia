@@ -76,15 +76,15 @@ zx_status_t SecmemClientSession::Init() {
   // Crashes happen about 10% of the time, so 10 retries should greatly reduce the probability.
   constexpr uint32_t kRetryCount = 10;
   for (uint32_t i = 0; i < kRetryCount; i++) {
-    result = TEEC_OpenSession(context_, &session_.value(), &kSecmemUuid,
-                              TEEC_LOGIN_PUBLIC, NULL, NULL, &return_origin);
+    result = TEEC_OpenSession(context_, &session_.value(), &kSecmemUuid, TEEC_LOGIN_PUBLIC, NULL,
+                              NULL, &return_origin);
     if (result == TEEC_SUCCESS) {
       break;
     } else {
       // fxb/37747 - The TA sometimes crashes when opening a session on sherlock. The crashes seem
       // uncorrelated, so retrying works.
       LOG(ERROR, "TEEC_OpenSession failed - Retrying - result: %" PRIx32 " origin: %" PRIu32,
-        result, return_origin);
+          result, return_origin);
     }
   }
   if (result != TEEC_SUCCESS) {
@@ -153,8 +153,8 @@ bool SecmemClientSession::UnpackUint32Parameter(uint32_t* value, size_t* offset_
   return true;
 }
 
-zx_status_t SecmemClientSession::GetVp9HeaderSize(
-    zx_paddr_t vp9_paddr, uint32_t before_size, uint32_t max_after_size, uint32_t* after_size) {
+zx_status_t SecmemClientSession::GetVp9HeaderSize(zx_paddr_t vp9_paddr, uint32_t before_size,
+                                                  uint32_t max_after_size, uint32_t* after_size) {
   ZX_DEBUG_ASSERT(after_size);
   if (vp9_paddr > std::numeric_limits<uint32_t>::max()) {
     LOG(ERROR, "vp9_paddr > 0xFFFFFFFF");
@@ -192,8 +192,7 @@ zx_status_t SecmemClientSession::GetVp9HeaderSize(
   }
   uint32_t header_size = 0;
   if (!UnpackUint32Parameter(&header_size, &output_offset)) {
-    LOG(ERROR,
-        "UnpackUint32Parameter() after kSecmemCommandIdGetVp9HeaderSize failed");
+    LOG(ERROR, "UnpackUint32Parameter() after kSecmemCommandIdGetVp9HeaderSize failed");
     return ZX_ERR_INTERNAL;
   }
   *after_size = before_size + header_size;

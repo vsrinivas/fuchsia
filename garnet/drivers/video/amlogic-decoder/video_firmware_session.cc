@@ -42,8 +42,8 @@ zx_status_t VideoFirmwareSession::Init() {
 
   session_.emplace();
   TEEC_Result result;
-  result = TEEC_OpenSession(context_, &session_.value(), &kVideoFirmwareUuid,
-                            TEEC_LOGIN_PUBLIC, NULL, NULL, &return_origin);
+  result = TEEC_OpenSession(context_, &session_.value(), &kVideoFirmwareUuid, TEEC_LOGIN_PUBLIC,
+                            NULL, NULL, &return_origin);
   if (result != TEEC_SUCCESS) {
     session_.reset();
     LOG(ERROR,
@@ -66,14 +66,14 @@ zx_status_t VideoFirmwareSession::LoadVideoFirmware(uint8_t* data, uint32_t size
   }
 
   TEEC_Operation operation = {};
-  operation.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_MEMREF_TEMP_INPUT,
-                                          TEEC_NONE, TEEC_NONE);
+  operation.paramTypes =
+      TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE);
   operation.params[0].tmpref.buffer = data + kSignatureSize;
   operation.params[0].tmpref.size = size - kSignatureSize;
   operation.params[1].tmpref.buffer = data;
   operation.params[1].tmpref.size = kSignatureSize;
-  TEEC_Result res = TEEC_InvokeCommand(
-      &session_.value(), kVideoFirmwareCommandIdLoadVideoFirmware, &operation, nullptr);
+  TEEC_Result res = TEEC_InvokeCommand(&session_.value(), kVideoFirmwareCommandIdLoadVideoFirmware,
+                                       &operation, nullptr);
   if (res != TEEC_SUCCESS) {
     LOG(ERROR, "kVideoFirmwareCommandIdLoadVideoFirmware failed - res: 0x%x", res);
     return ZX_ERR_INTERNAL;

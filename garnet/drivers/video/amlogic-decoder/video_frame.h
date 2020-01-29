@@ -5,9 +5,9 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FRAME_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FRAME_H_
 
-#include <ddk/io-buffer.h>
-
 #include <cstdint>
+
+#include <ddk/io-buffer.h>
 
 class CodecBuffer;
 struct VideoFrame {
@@ -18,14 +18,14 @@ struct VideoFrame {
 
   // These can be odd when decoding VP9, and are preserved as reported from the
   // HW.  For h264 these are the same as coded_width and coded_height.
-  uint32_t hw_width = 0;  // HW-reported width
+  uint32_t hw_width = 0;   // HW-reported width
   uint32_t hw_height = 0;  // HW-reported height
 
   // NV12 wants coded_width and coded_height to be even, so we round up the
   // hw_width and hw_height to ensure that coded_width and coded_height of the
   // NV12 output is even.  The display_width and display_height can still be
   // odd.
-  uint32_t coded_width = 0;  // rounded-up coded_width for NV12
+  uint32_t coded_width = 0;   // rounded-up coded_width for NV12
   uint32_t coded_height = 0;  // rounded-up coded_height for NV12
 
   uint32_t uv_plane_offset = 0;

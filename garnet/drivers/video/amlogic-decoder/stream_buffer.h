@@ -12,9 +12,7 @@
 class StreamBuffer {
  public:
   // For now, this is how calling code populates buffer_.
-  std::optional<InternalBuffer>& optional_buffer() {
-    return buffer_;
-  }
+  std::optional<InternalBuffer>& optional_buffer() { return buffer_; }
 
   InternalBuffer& buffer() {
     ZX_DEBUG_ASSERT(buffer_);

@@ -10,8 +10,7 @@
 // allow it.
 void DumpVideoFrameToFile(VideoFrame* frame, const char* filename) {
   FILE* f = fopen(filename, "a");
-  io_buffer_cache_flush_invalidate(&frame->buffer, 0,
-                                   frame->stride * frame->coded_height);
+  io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
   io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
                                    frame->stride * frame->coded_height / 2);
 
@@ -20,8 +19,7 @@ void DumpVideoFrameToFile(VideoFrame* frame, const char* filename) {
     fwrite(buf_start + frame->stride * y, 1, frame->coded_width, f);
   }
   for (uint32_t y = 0; y < frame->coded_height / 2; y++) {
-    fwrite(buf_start + frame->uv_plane_offset + frame->stride * y, 1,
-           frame->coded_width, f);
+    fwrite(buf_start + frame->uv_plane_offset + frame->stride * y, 1, frame->coded_width, f);
   }
   fclose(f);
 }

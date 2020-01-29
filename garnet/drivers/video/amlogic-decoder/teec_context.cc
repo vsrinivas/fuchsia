@@ -4,7 +4,7 @@
 
 #include "teec_context.h"
 
-#include "zircon/types.h"
+#include <zircon/types.h>
 
 #include "tee-client-api/tee-client-types.h"
 
@@ -19,9 +19,7 @@ TeecContext::~TeecContext() {
   }
 }
 
-TEEC_Context& TeecContext::context() {
-  return context_;
-}
+TEEC_Context& TeecContext::context() { return context_; }
 
 void TeecContext::SetClientChannel(zx::channel client_channel) {
   context_.imp.tee_channel = client_channel.release();
