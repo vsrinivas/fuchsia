@@ -127,6 +127,7 @@ where
         schedule_node: ScheduleNode,
         protocol_state_node: ProtocolStateNode,
         last_results_node: LastResultsNode,
+        notified_cobalt: bool,
     ) {
         fs.dir("svc")
             .add_fidl_service(IncomingServices::Manager)
@@ -137,7 +138,13 @@ where
         let fs_fut = fs.for_each_concurrent(MAX_CONCURRENT, |stream| {
             Self::handle_client(server.clone(), stream).unwrap_or_else(|e| error!("{:?}", e))
         });
-        Self::setup_observer(server.clone(), schedule_node, protocol_state_node, last_results_node);
+        Self::setup_observer(
+            server.clone(),
+            schedule_node,
+            protocol_state_node,
+            last_results_node,
+            notified_cobalt,
+        );
         fs_fut.await;
     }
 
@@ -147,14 +154,18 @@ where
         schedule_node: ScheduleNode,
         protocol_state_node: ProtocolStateNode,
         last_results_node: LastResultsNode,
+        notified_cobalt: bool,
     ) {
         let state_machine_ref = server.borrow().state_machine_ref.clone();
         let mut state_machine = state_machine_ref.borrow_mut();
+        let app_set = server.borrow().app_set.clone();
         state_machine.set_observer(FuchsiaObserver::<PE, HR, IN, TM, MR, ST>::new(
             server,
             schedule_node,
             protocol_state_node,
             last_results_node,
+            app_set,
+            notified_cobalt,
         ));
     }
 
@@ -370,20 +381,20 @@ fn clone(state: &State) -> State {
 }
 
 #[cfg(test)]
-mod tests {
+pub use stub::FidlServerBuilder;
+
+#[cfg(test)]
+mod stub {
     use super::*;
-    use crate::{channel::ChannelConfig, configuration};
-    use fidl::endpoints::{create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_update::{ManagerMarker, MonitorEvent, MonitorMarker, Options};
-    use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
-    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use crate::configuration;
+    use fuchsia_inspect::Inspector;
     use omaha_client::{
         common::App, http_request::StubHttpRequest, installer::stub::StubInstaller,
         metrics::StubMetricsReporter, policy::StubPolicyEngine, protocol::Cohort,
         state_machine::StubTimer, storage::MemStorage,
     };
 
-    type StubFidlServer = FidlServer<
+    pub type StubFidlServer = FidlServer<
         StubPolicyEngine,
         StubHttpRequest,
         StubInstaller,
@@ -392,7 +403,7 @@ mod tests {
         MemStorage,
     >;
 
-    struct FidlServerBuilder {
+    pub struct FidlServerBuilder {
         apps: Vec<App>,
         channel_configs: Option<ChannelConfigs>,
         apps_node: Option<AppsNode>,
@@ -400,31 +411,31 @@ mod tests {
     }
 
     impl FidlServerBuilder {
-        fn new() -> Self {
+        pub fn new() -> Self {
             Self { apps: Vec::new(), channel_configs: None, apps_node: None, state_node: None }
         }
 
-        fn with_apps(mut self, mut apps: Vec<App>) -> Self {
+        pub fn with_apps(mut self, mut apps: Vec<App>) -> Self {
             self.apps.append(&mut apps);
             self
         }
 
-        fn with_apps_node(mut self, apps_node: AppsNode) -> Self {
+        pub fn with_apps_node(mut self, apps_node: AppsNode) -> Self {
             self.apps_node = Some(apps_node);
             self
         }
 
-        fn with_state_node(mut self, state_node: StateNode) -> Self {
+        pub fn with_state_node(mut self, state_node: StateNode) -> Self {
             self.state_node = Some(state_node);
             self
         }
 
-        fn with_channel_configs(mut self, channel_configs: ChannelConfigs) -> Self {
+        pub fn with_channel_configs(mut self, channel_configs: ChannelConfigs) -> Self {
             self.channel_configs = Some(channel_configs);
             self
         }
 
-        async fn build(self) -> StubFidlServer {
+        pub async fn build(self) -> StubFidlServer {
             let config = configuration::get_config("0.1.2");
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
             let app_set = if self.apps.is_empty() {
@@ -457,9 +468,20 @@ mod tests {
             )
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::channel::ChannelConfig;
+    use fidl::endpoints::{create_proxy, create_proxy_and_stream};
+    use fidl_fuchsia_update::{ManagerMarker, MonitorEvent, MonitorMarker, Options};
+    use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use omaha_client::{common::App, protocol::Cohort};
 
     fn spawn_fidl_server<M: fidl::endpoints::ServiceMarker>(
-        fidl: Rc<RefCell<StubFidlServer>>,
+        fidl: Rc<RefCell<stub::StubFidlServer>>,
         service: fn(M::RequestStream) -> IncomingServices,
     ) -> M::Proxy {
         let (proxy, stream) = create_proxy_and_stream::<M>().unwrap();
@@ -524,6 +546,7 @@ mod tests {
             schedule_node,
             protocol_state_node,
             last_results_node,
+            true,
         );
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
         let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();

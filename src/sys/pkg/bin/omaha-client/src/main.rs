@@ -12,6 +12,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 mod channel;
+mod cobalt;
 mod configuration;
 mod fidl;
 mod http_request;
@@ -24,6 +25,8 @@ mod policy;
 mod storage;
 mod temp_installer;
 mod timer;
+
+use configuration::ChannelSource;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init().expect("Can't init logger");
@@ -78,6 +81,12 @@ fn main() -> Result<(), Error> {
         let _channel_source_property =
             root.create_string("channel_source", format!("{:?}", channel_source));
 
+        let notify_cobalt =
+            channel_source == ChannelSource::VbMeta || channel_source == ChannelSource::SysConfig;
+        if notify_cobalt {
+            cobalt::notify_cobalt_current_channel(app_set.clone()).await;
+        }
+
         let fidl = fidl::FidlServer::new(
             state_machine_ref.clone(),
             stash_ref,
@@ -90,7 +99,8 @@ fn main() -> Result<(), Error> {
         // `.boxed_local()` was added to workaround stack overflow when we have too many levels of
         // nested async functions. Remove them when the generator optimization lands.
         future::join4(
-            fidl.start(fs, schedule_node, protocol_state_node, last_results_node).boxed_local(),
+            fidl.start(fs, schedule_node, protocol_state_node, last_results_node, notify_cobalt)
+                .boxed_local(),
             StateMachine::start(state_machine_ref).boxed_local(),
             cobalt_fut,
             check_and_set_system_health().boxed_local(),
