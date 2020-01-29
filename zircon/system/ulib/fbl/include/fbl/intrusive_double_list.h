@@ -320,21 +320,23 @@ class DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
 
   // erase
   //
-  // Erase the element at the provided iterator.  If there is no element in
-  // the list at this position (iter is end()), return a nullptr instance of
-  // PtrType.  It is an error to attempt to use an iterator from a different
-  // instance of this list type to attempt to erase a node.
+  // Remove the element at the provided iterator and return a pointer to the
+  // removed element.  If there is no element in the list at this position
+  // (iter is end()), return a nullptr instance of PtrType.  It is an error to
+  // attempt to use an iterator from a different instance of this list type to
+  // attempt to erase a node.
   PtrType erase(ValueType& obj) { return internal_erase(&obj); }
   PtrType erase(const iterator& iter) { return internal_erase(iter.node_); }
 
   // erase_next
   //
-  // Remove the element in the list which follows iter.  If there is no
-  // element in the list which follows iter, return a nullptr instance of
-  // PtrType.  It is an error to attempt to erase_next an invalid iterator
-  // (either an uninitialized iterator, or an iterator which is equal to
-  // end()) It is an error to attempt to use an iterator from a different
-  // instance of this list type to attempt to erase a node.
+  // Remove the element in the list which follows iter and return a pointer to
+  // the removed element.  If there is no element in the list which follows
+  // iter, return a nullptr instance of PtrType.  It is an error to attempt to
+  // erase_next an invalid iterator (either an uninitialized iterator, or an
+  // iterator which is equal to end()) It is an error to attempt to use an
+  // iterator from a different instance of this list type to attempt to erase
+  // a node.
   PtrType erase_next(const iterator& iter) {
     ZX_DEBUG_ASSERT(iter.IsValid());
     auto& ns = NodeTraits::node_state(*iter.node_);
@@ -424,7 +426,7 @@ class DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
   // erase_if
   //
   // Find the first member of the list which satisfies the predicate given by
-  // 'fn' and erase it from the list, returning a referenced pointer to the
+  // 'fn' and remove it from the list, returning a referenced pointer to the
   // removed element.  Return nullptr if no element satisfies the predicate.
   template <typename UnaryFn>
   PtrType erase_if(UnaryFn fn) {

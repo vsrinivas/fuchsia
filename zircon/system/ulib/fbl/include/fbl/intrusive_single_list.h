@@ -435,11 +435,11 @@ class SinglyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
 
   // erase_next
   //
-  // Remove the element in the list which follows iter.  If there is no
-  // element in the list which follows iter, return a nullptr instance of
-  // PtrType.  It is an error to attempt to erase_next an invalid iterator
-  // (either an uninitialized iterator, or an iterator which is equal to
-  // end())
+  // Remove the element in the list which follows iter and return a pointer to
+  // the removed element.  If there is no element in the list which follows
+  // iter, return a nullptr instance of PtrType.  It is an error to attempt to
+  // erase_next an invalid iterator (either an uninitialized iterator, or an
+  // iterator which is equal to end())
   PtrType erase_next(const iterator& iter) {
     ZX_DEBUG_ASSERT(iter.IsValid());
     auto& iter_ns = NodeTraits::node_state(*iter);
@@ -495,7 +495,7 @@ class SinglyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
   // erase_if
   //
   // Find the first member of the list which satisfies the predicate given by
-  // 'fn' and erase it from the list, returning a referenced pointer to the
+  // 'fn' and remove it from the list, returning a referenced pointer to the
   // removed element.  Return nullptr if no member satisfies the predicate.
   template <typename UnaryFn>
   PtrType erase_if(UnaryFn fn) {
