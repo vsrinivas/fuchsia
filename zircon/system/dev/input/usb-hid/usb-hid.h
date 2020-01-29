@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_H_
 #define ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_H_
 
+#include <lib/sync/completion.h>
 #include <zircon/hw/usb/hid.h>
 
 #include <memory>
@@ -51,8 +52,8 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
   void UsbHidRelease();
   void DdkRelease();
   void FindDescriptors(usb::Interface interface, usb_hid_descriptor_t** hid_desc,
-                       usb_endpoint_descriptor_t** endpt);
-
+                       const usb_endpoint_descriptor_t** endptin,
+                       const usb_endpoint_descriptor_t** endptout);
   zx_status_t Bind(ddk::UsbProtocolClient usbhid);
 
  private:
@@ -60,10 +61,17 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
 
   // These pointers are valid as long as usb_interface_list_ is valid.
   usb_hid_descriptor_t* hid_desc_ = nullptr;
-  usb_endpoint_descriptor_t* endpt_ = nullptr;
+
+  const usb_endpoint_descriptor_t* endptin_ = nullptr;
+
+  // This boolean is set to true for a usb device that has an interrupt out endpoint. The interrupt
+  // out endpoint is used to send reports to the device. (the SET report protocol).
+  bool has_endptout_ = false;
+  size_t endptout_max_size_ = 0;
 
   hid_info_t info_ = {};
   usb_request_t* req_ = nullptr;
+  usb_request_t* request_out_ = nullptr;
   bool req_queued_ = false;
 
   fbl::Mutex usb_lock_;
@@ -76,6 +84,7 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
   size_t parent_req_size_ = 0;
 
   std::thread unbind_thread_;
+  sync_completion_t set_report_complete_;
 };
 
 }  // namespace usb_hid

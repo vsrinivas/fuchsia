@@ -23,6 +23,8 @@
 #include <fbl/algorithm.h>
 #include <usb/usb-request.h>
 
+constexpr int BULK_MAX_PACKET = 512;
+
 namespace usb_hid_function {
 
 static const uint8_t boot_mouse_r_desc[50] = {
@@ -116,6 +118,30 @@ zx_status_t FakeUsbHidFunction::UsbFunctionInterfaceSetInterface(void* ctx, uint
   return ZX_OK;
 }
 
+int FakeUsbHidFunction::Thread() {
+  while (1) {
+    fbl::AutoLock lock(&mtx_);
+    if (!data_out_req_complete_) {
+      event_.Wait(&mtx_);
+    }
+
+    if (!active_) {
+      return 0;
+    }
+
+    data_out_req_complete_ = false;
+    usb_request_complete_t complete = {
+        .callback =
+            [](void* ctx, usb_request_t* req) {
+              return static_cast<FakeUsbHidFunction*>(ctx)->UsbEndpointOutCallback(req);
+            },
+        .ctx = this,
+    };
+    function_.RequestQueue(data_out_req_->request(), &complete);
+  }
+  return 0;
+}
+
 zx_status_t FakeUsbHidFunction::Bind() {
   report_desc_.resize(sizeof(boot_mouse_r_desc));
   memcpy(report_desc_.data(), &boot_mouse_r_desc, sizeof(boot_mouse_r_desc));
@@ -134,12 +160,20 @@ zx_status_t FakeUsbHidFunction::Bind() {
       .bInterfaceProtocol = USB_HID_PROTOCOL_MOUSE,
       .iInterface = 0,
   };
-  descriptor_->interrupt = {
+  descriptor_->interrupt_in = {
       .bLength = sizeof(usb_endpoint_descriptor_t),
       .bDescriptorType = USB_DT_ENDPOINT,
       .bEndpointAddress = USB_ENDPOINT_IN,  // set later
       .bmAttributes = USB_ENDPOINT_INTERRUPT,
-      .wMaxPacketSize = htole16(0x1000),
+      .wMaxPacketSize = htole16(BULK_MAX_PACKET),
+      .bInterval = 8,
+  };
+  descriptor_->interrupt_out = {
+      .bLength = sizeof(usb_endpoint_descriptor_t),
+      .bDescriptorType = USB_DT_ENDPOINT,
+      .bEndpointAddress = USB_ENDPOINT_OUT,  // set later
+      .bmAttributes = USB_ENDPOINT_INTERRUPT,
+      .wMaxPacketSize = htole16(BULK_MAX_PACKET),
       .bInterval = 8,
   };
   descriptor_->hid_descriptor = {
@@ -159,11 +193,28 @@ zx_status_t FakeUsbHidFunction::Bind() {
     zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_interface failed\n");
     return status;
   }
-  status = function_.AllocEp(USB_DIR_IN, &descriptor_->interrupt.bEndpointAddress);
+  status = function_.AllocEp(USB_DIR_IN, &descriptor_->interrupt_in.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep failed\n");
+    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint out failed\n");
     return status;
   }
+
+  status = function_.AllocEp(USB_DIR_OUT, &descriptor_->interrupt_out.bEndpointAddress);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint out failed\n");
+    return status;
+  }
+
+  status = usb::Request<>::Alloc(&data_out_req_, BULK_MAX_PACKET,
+                                 descriptor_->interrupt_out.bEndpointAddress,
+                                 function_.GetRequestSize());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  active_ = true;
+  thrd_create(
+      &thread_, [](void* ctx) { return static_cast<FakeUsbHidFunction*>(ctx)->Thread(); }, this);
 
   status = DdkAdd("usb-hid-function");
   if (status != ZX_OK) {
@@ -173,7 +224,18 @@ zx_status_t FakeUsbHidFunction::Bind() {
   return ZX_OK;
 }
 
-void FakeUsbHidFunction::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void FakeUsbHidFunction::DdkUnbindNew(ddk::UnbindTxn txn) {
+  {
+    fbl::AutoLock lock(&mtx_);
+    active_ = false;
+    event_.Signal();
+  }
+
+  int retval;
+  thrd_join(thread_, &retval);
+
+  txn.Reply();
+}
 
 void FakeUsbHidFunction::DdkRelease() { delete this; }
 
@@ -186,6 +248,21 @@ zx_status_t bind(void* ctx, zx_device_t* parent) {
   }
   return ZX_OK;
 }
+
+void FakeUsbHidFunction::UsbEndpointOutCallback(usb_request_t* request) {
+  fbl::AutoLock lock(&mtx_);
+  if (request->response.status == ZX_OK) {
+    report_.resize(request->response.actual);
+    usb_request_copy_from(request, report_.data(), request->response.actual, 0);
+    usb_request_copy_from(request, report_.data(), report_.size(), 0);
+  } else {
+    zxlogf(ERROR, "request status: %d\n", request->response.status);
+    active_ = false;
+  }
+  data_out_req_complete_ = true;
+  event_.Signal();
+}
+
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;

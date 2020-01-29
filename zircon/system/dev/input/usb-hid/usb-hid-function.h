@@ -5,15 +5,20 @@
 #ifndef ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_FUNCTION_H_
 #define ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_FUNCTION_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/hw/usb/hid.h>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <ddk/device.h>
 #include <ddk/protocol/hidbus.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/function.h>
+#include <fbl/condition_variable.h>
+#include <usb/request-cpp.h>
+#include <usb/usb.h>
 
 namespace usb_hid_function {
 
@@ -31,6 +36,8 @@ class FakeUsbHidFunction : public DeviceType {
   // |ddk::Device|
   void DdkRelease();
 
+  void UsbEndpointOutCallback(usb_request_t* request);
+
   static size_t UsbFunctionInterfaceGetDescriptorsSize(void* ctx);
 
   static void UsbFunctionInterfaceGetDescriptors(void* ctx, void* out_descriptors_buffer,
@@ -46,6 +53,8 @@ class FakeUsbHidFunction : public DeviceType {
                                                       uint8_t alt_setting);
 
  private:
+  int Thread();
+
   usb_function_interface_protocol_ops_t function_interface_ops_{
       .get_descriptors_size = UsbFunctionInterfaceGetDescriptorsSize,
       .get_descriptors = UsbFunctionInterfaceGetDescriptors,
@@ -60,7 +69,15 @@ class FakeUsbHidFunction : public DeviceType {
 
   struct fake_usb_hid_descriptor_t {
     usb_interface_descriptor_t interface;
-    usb_endpoint_descriptor_t interrupt;
+    usb_endpoint_descriptor_t interrupt_in;
+    usb_endpoint_descriptor_t interrupt_out;
+    usb_hid_descriptor_t hid_descriptor;
+  } __PACKED;
+
+  struct fake_usb_hid_descriptor_two_endpoints_t {
+    usb_interface_descriptor_t interface;
+    usb_endpoint_descriptor_t interrupt_in;
+    usb_endpoint_descriptor_t interrupt_out;
     usb_hid_descriptor_t hid_descriptor;
   } __PACKED;
 
@@ -71,6 +88,14 @@ class FakeUsbHidFunction : public DeviceType {
   size_t descriptor_size_;
 
   uint8_t hid_protocol_ = HID_PROTOCOL_REPORT;
+
+  std::optional<usb::Request<>> data_out_req_;
+  bool data_out_req_complete_ TA_GUARDED(mtx_) = true;
+  bool active_ = false;
+
+  fbl::ConditionVariable event_ TA_GUARDED(mtx_);
+  thrd_t thread_ = {};
+  fbl::Mutex mtx_;
 };
 
 }  // namespace usb_hid_function

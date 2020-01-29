@@ -4,6 +4,7 @@
 
 #include "usb-hid.h"
 
+#include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/hw/usb/hid.h>
@@ -180,6 +181,26 @@ zx_status_t UsbHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
 
 zx_status_t UsbHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                        size_t len) {
+  if (has_endptout_) {
+    fbl::AutoLock lock(&usb_lock_);
+    sync_completion_reset(&set_report_complete_);
+    usb_request_complete_t complete = {
+        .callback =
+            [](void* ctx, usb_request_t* request) {
+              sync_completion_signal(&static_cast<UsbHidbus*>(ctx)->set_report_complete_);
+            },
+        .ctx = this,
+    };
+
+    request_out_->header.length = len;
+    if (len > endptout_max_size_) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    usb_request_copy_to(request_out_, data, len, 0);
+    usb_.RequestQueue(request_out_, &complete);
+    auto status = sync_completion_wait(&set_report_complete_, ZX_TIME_INFINITE);
+    return status;
+  }
   return UsbHidControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_HID_SET_REPORT,
                           (static_cast<uint16_t>(rpt_type << 8 | rpt_id)), interface_, data, len,
                           NULL);
@@ -209,7 +230,7 @@ zx_status_t UsbHidbus::HidbusSetProtocol(uint8_t protocol) {
 void UsbHidbus::DdkUnbindNew(ddk::UnbindTxn txn) {
   unbind_thread_ = std::thread([this, txn = std::move(txn)]() mutable {
     fbl::AutoLock lock(&usb_lock_);
-    usb_.CancelAll(endpt_->bEndpointAddress);
+    usb_.CancelAll(endptin_->bEndpointAddress);
     txn.Reply();
   });
 }
@@ -224,20 +245,18 @@ void UsbHidbus::DdkRelease() {
 }
 
 void UsbHidbus::FindDescriptors(usb::Interface interface, usb_hid_descriptor_t** hid_desc,
-                                usb_endpoint_descriptor_t** endpt) {
+                                const usb_endpoint_descriptor_t** endptin,
+                                const usb_endpoint_descriptor_t** endptout) {
   for (auto& descriptor : interface.GetDescriptorList()) {
     if (descriptor.bDescriptorType == USB_DT_HID) {
       *hid_desc = (usb_hid_descriptor_t*)&descriptor;
-      if (*endpt) {
-        break;
-      }
     } else if (descriptor.bDescriptorType == USB_DT_ENDPOINT) {
       if (usb_ep_direction((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_IN &&
           usb_ep_type((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_INTERRUPT) {
-        *endpt = (usb_endpoint_descriptor_t*)&descriptor;
-        if (*hid_desc) {
-          break;
-        }
+        *endptin = (usb_endpoint_descriptor_t*)&descriptor;
+      } else if (usb_ep_direction((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_OUT &&
+                 usb_ep_type((usb_endpoint_descriptor_t*)&descriptor) == USB_ENDPOINT_INTERRUPT) {
+        *endptout = (usb_endpoint_descriptor_t*)&descriptor;
       }
     }
   }
@@ -254,22 +273,28 @@ zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
   }
 
   usb_hid_descriptor_t* hid_desc = NULL;
-  usb_endpoint_descriptor_t* endpt = NULL;
+  const usb_endpoint_descriptor_t* endptin = NULL;
+  const usb_endpoint_descriptor_t* endptout = NULL;
   auto interface = *usb_interface_list_->begin();
-  FindDescriptors(interface, &hid_desc, &endpt);
 
-  if (!endpt) {
-    status = ZX_ERR_NOT_SUPPORTED;
-    return status;
-  }
-
+  FindDescriptors(interface, &hid_desc, &endptin, &endptout);
   if (!hid_desc) {
     status = ZX_ERR_NOT_SUPPORTED;
     return status;
   }
-
-  endpt_ = endpt;
+  if (!endptin) {
+    status = ZX_ERR_NOT_SUPPORTED;
+    return status;
+  }
   hid_desc_ = hid_desc;
+  endptin_ = endptin;
+
+  if (endptout) {
+    has_endptout_ = true;
+    endptout_max_size_ = usb_ep_max_packet(endptout);
+    status = usb_request_alloc(&request_out_, endptout_max_size_, endptout->bEndpointAddress,
+                               parent_req_size_);
+  }
 
   interface_ = info_.dev_num = interface.descriptor()->bInterfaceNumber;
   info_.boot_device = interface.descriptor()->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
@@ -280,8 +305,8 @@ zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
     info_.device_class = HID_DEVICE_CLASS_POINTER;
   }
 
-  status =
-      usb_request_alloc(&req_, usb_ep_max_packet(endpt), endpt->bEndpointAddress, parent_req_size_);
+  status = usb_request_alloc(&req_, usb_ep_max_packet(endptin), endptin->bEndpointAddress,
+                             parent_req_size_);
   if (status != ZX_OK) {
     status = ZX_ERR_NO_MEMORY;
     return status;
