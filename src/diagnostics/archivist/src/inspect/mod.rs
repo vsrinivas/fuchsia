@@ -21,13 +21,14 @@ use {
         PartialNodeHierarchy,
     },
     fuchsia_inspect::trie,
-    fuchsia_inspect_node_hierarchy::{self, InspectHierarchyMatcher, NodeHierarchy},
+    fuchsia_inspect_node_hierarchy::{
+        serialization::{DeprecatedHierarchyFormatter, DeprecatedJsonFormatter, HierarchyData},
+        InspectHierarchyMatcher, NodeHierarchy,
+    },
     fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::future::{join_all, BoxFuture},
     futures::{FutureExt, TryFutureExt, TryStreamExt},
-    inspect_fidl_load as deprecated_inspect,
-    inspect_formatter::{self, DeprecatedHierarchyFormatter, HierarchyData},
-    io_util,
+    inspect_fidl_load as deprecated_inspect, io_util,
     parking_lot::{Mutex, RwLock},
     selectors,
     std::collections::HashMap,
@@ -678,7 +679,7 @@ impl ReaderServer {
             .map(|hierarchy_data| {
                 let formatted_string_result = match format {
                     fidl_fuchsia_diagnostics::Format::Json => {
-                        inspect_formatter::DeprecatedJsonFormatter::format(hierarchy_data)
+                        DeprecatedJsonFormatter::format(hierarchy_data)
                     }
                     fidl_fuchsia_diagnostics::Format::Text => {
                         Err(format_err!("Text formatting not supported for inspect."))

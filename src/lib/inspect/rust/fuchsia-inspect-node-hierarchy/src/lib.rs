@@ -18,6 +18,7 @@ use {
     },
 };
 
+pub mod serialization;
 pub mod trie;
 
 // TODO(fxb/43873): move LinkNodeDisposition and ArrayFormat to fuchsia-inspect-format

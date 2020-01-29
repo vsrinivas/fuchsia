@@ -20,7 +20,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//src/diagnostics/lib/inspect-fidl-load",
-    "//src/diagnostics/lib/inspect-formatter",
     "//src/diagnostics/lib/selectors",
     "//src/diagnostics/lib/validating-log-listener",
     "//src/diagnostics/streams:lib",

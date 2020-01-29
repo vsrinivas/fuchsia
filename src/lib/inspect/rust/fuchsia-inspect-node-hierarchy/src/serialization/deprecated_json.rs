@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{json::SerializableHierarchyFields, utils::format_parts, *},
+    crate::serialization::{json::SerializableHierarchyFields, utils::format_parts, *},
     anyhow::Error,
     serde::ser::{Serialize, SerializeMap, SerializeStruct, Serializer},
     serde_json::{
@@ -76,7 +76,7 @@ impl Serialize for SerializableHierarchyData {
 mod tests {
     use {
         super::*,
-        fuchsia_inspect_node_hierarchy::{ArrayFormat, ArrayValue, Property},
+        crate::{ArrayFormat, ArrayValue, Property},
     };
 
     #[test]

@@ -9,7 +9,9 @@ use {
         result::IqueryResult,
     },
     anyhow::{format_err, Error},
-    inspect_formatter::{self, DeprecatedHierarchyFormatter},
+    fuchsia_inspect_node_hierarchy::serialization::{
+        DeprecatedHierarchyFormatter, DeprecatedJsonFormatter, HierarchyData,
+    },
     serde::ser::Serialize,
     serde_json::{
         json,
@@ -42,7 +44,7 @@ impl Formatter for JsonFormatter {
                         result.location.to_string()
                     ));
                 }
-                Ok(inspect_formatter::HierarchyData {
+                Ok(HierarchyData {
                     hierarchy: result.hierarchy.unwrap(),
                     file_path: match self.path_format {
                         PathFormat::Absolute => result.location.absolute_path_to_string()?,
@@ -51,8 +53,8 @@ impl Formatter for JsonFormatter {
                     fields: result.location.parts,
                 })
             })
-            .collect::<Result<Vec<inspect_formatter::HierarchyData>, Error>>()?;
-        inspect_formatter::DeprecatedJsonFormatter::format_multiple(hierachies)
+            .collect::<Result<Vec<HierarchyData>, Error>>()?;
+        DeprecatedJsonFormatter::format_multiple(hierachies)
     }
 
     fn format_locations(&self, results: Vec<IqueryResult>) -> Result<String, Error> {

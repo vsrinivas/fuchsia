@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::{HierarchyDeserializer, HierarchySerializer},
-    anyhow::{bail, format_err, Error},
-    base64,
-    fuchsia_inspect_node_hierarchy::{
+    crate::{
+        serialization::{HierarchyDeserializer, HierarchySerializer},
         ArrayBucket, ArrayFormat, ArrayValue, NodeHierarchy, Property,
     },
+    anyhow::{bail, format_err, Error},
+    base64,
     lazy_static::lazy_static,
     paste,
     serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer},
@@ -670,10 +670,7 @@ fn parse_node_object(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fuchsia_inspect_node_hierarchy::{ArrayFormat, ArrayValue, Property},
-    };
+    use super::*;
 
     #[test]
     fn serialize_json() {

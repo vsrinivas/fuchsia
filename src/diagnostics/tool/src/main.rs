@@ -8,10 +8,13 @@ use {
         Difference::{Add, Rem, Same},
     },
     fidl_fuchsia_diagnostics::Selector,
-    fuchsia_inspect_node_hierarchy::{self, InspectHierarchyMatcher, NodeHierarchy},
-    inspect_formatter::{
-        json::{JsonNodeHierarchySerializer, RawJsonNodeHierarchySerializer},
-        HierarchyDeserializer, HierarchySerializer,
+    fuchsia_inspect_node_hierarchy::{
+        self,
+        serialization::{
+            json::{JsonNodeHierarchySerializer, RawJsonNodeHierarchySerializer},
+            HierarchyDeserializer, HierarchySerializer,
+        },
+        InspectHierarchyMatcher, NodeHierarchy,
     },
     regex::Regex,
     selectors,

@@ -31,9 +31,10 @@
 //! let hierarchy = JsonNodeHierarchySerializer::deserialize(string)?;
 //! ```
 
-use {anyhow::Error, fuchsia_inspect_node_hierarchy::NodeHierarchy};
+use {crate::NodeHierarchy, anyhow::Error};
 
-pub use crate::deprecated_json::*;
+pub use crate::serialization::deprecated_json::*;
+pub use crate::serialization::json::*;
 
 pub mod deprecated_json;
 pub mod json;

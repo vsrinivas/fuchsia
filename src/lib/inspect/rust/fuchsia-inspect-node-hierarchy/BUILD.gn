@@ -14,9 +14,14 @@ rustc_library("fuchsia-inspect-node-hierarchy") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/diagnostics/lib/selectors",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:paste",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
   ]
 }
 

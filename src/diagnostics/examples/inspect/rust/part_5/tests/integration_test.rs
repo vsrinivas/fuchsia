@@ -12,10 +12,12 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     fuchsia_inspect::{assert_inspect_tree, reader::NodeHierarchy},
+    fuchsia_inspect_node_hierarchy::serialization::{
+        json::RawJsonNodeHierarchySerializer, HierarchyDeserializer,
+    },
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     inspect_codelab_shared::CodelabEnvironment,
-    inspect_formatter::{json::RawJsonNodeHierarchySerializer, HierarchyDeserializer},
     lazy_static::lazy_static,
     serde_json,
     std::sync::atomic::{AtomicUsize, Ordering},
