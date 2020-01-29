@@ -6,14 +6,13 @@ use {
     fidl_fuchsia_wlan_common::{Cbw, WlanChan},
     fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanMarker, WlanProxy, WlanStatus},
-    fidl_fuchsia_wlan_sme::ApConfig,
     fidl_fuchsia_wlan_tap::{WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::prelude::*,
     wlan_common::{
         appendable::Appendable,
         bss::Protection,
-        channel, data_writer,
+        data_writer,
         ie::{
             self,
             rsn::{akm, cipher, rsne},
@@ -21,7 +20,7 @@ use {
         },
         mac, mgmt_writer,
         organization::Oui,
-        RadioConfig, TimeUnit,
+        TimeUnit,
     },
     wlan_rsn::rsna::SecAssocUpdate,
 };
@@ -36,9 +35,9 @@ mod eth_helper;
 mod event_handler_helper;
 mod wlanstack_helper;
 
-pub const CLIENT_MAC_ADDR: [u8; 6] = [0x66, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
+pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 pub const AP_MAC_ADDR: mac::Bssid = mac::Bssid([0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f]);
-pub const ETH_DST_MAC: [u8; 6] = [0x64, 0x74, 0x68, 0x64, 0x73, 0x74];
+pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: WlanChan = WlanChan { primary: 1, secondary80: 0, cbw: Cbw::Cbw20 };
 
 pub fn default_wlantap_config_client() -> WlantapPhyConfig {
@@ -55,15 +54,6 @@ pub fn default_wlantap_config_ap() -> WlantapPhyConfig {
 
 pub fn wlantap_config_ap(name: String, mac_addr: [u8; 6]) -> WlantapPhyConfig {
     config::create_wlantap_config(name, mac_addr, MacRole::Ap)
-}
-
-pub fn default_ap_config() -> ApConfig {
-    ApConfig {
-        ssid: String::from("fuchsia").into_bytes(),
-        password: vec![],
-        radio_cfg: RadioConfig::new(channel::Phy::Ht, channel::Cbw::Cbw20, CHANNEL.primary)
-            .to_fidl(),
-    }
 }
 
 pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
@@ -134,35 +124,7 @@ pub fn send_beacon(
     Ok(())
 }
 
-pub fn send_client_authentication(
-    frame_buf: &mut Vec<u8>,
-    channel: &WlanChan,
-    bss_id: &mac::Bssid,
-    proxy: &WlantapPhyProxy,
-) -> Result<(), anyhow::Error> {
-    frame_buf.clear();
-
-    let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FrameType::MGMT)
-        .with_mgmt_subtype(mac::MgmtSubtype::AUTH);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
-    mgmt_writer::write_mgmt_hdr(
-        frame_buf,
-        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, *bss_id, CLIENT_MAC_ADDR, seq_ctrl),
-        None,
-    )?;
-
-    frame_buf.append_value(&mac::AuthHdr {
-        auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
-        auth_txn_seq_num: 1,
-        status_code: mac::StatusCode::SUCCESS,
-    })?;
-
-    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
-    Ok(())
-}
-
-pub fn send_authentication(
+fn send_authentication(
     frame_buf: &mut Vec<u8>,
     channel: &WlanChan,
     bss_id: &mac::Bssid,
@@ -190,40 +152,7 @@ pub fn send_authentication(
     Ok(())
 }
 
-pub fn send_association_request(
-    frame_buf: &mut Vec<u8>,
-    channel: &WlanChan,
-    bss_id: &mac::Bssid,
-    proxy: &WlantapPhyProxy,
-) -> Result<(), anyhow::Error> {
-    frame_buf.clear();
-
-    let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FrameType::MGMT)
-        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_REQ);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
-    mgmt_writer::write_mgmt_hdr(
-        frame_buf,
-        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, *bss_id, CLIENT_MAC_ADDR, seq_ctrl),
-        None,
-    )?;
-
-    frame_buf.append_value(&mac::AssocReqHdr {
-        capabilities: mac::CapabilityInfo(0),
-        listen_interval: 0,
-    })?;
-
-    ie::write_ssid(frame_buf, b"fuchsia")?;
-    // tx_vec_idx:                            _     _     _   129   130     _   131   132
-    ie::write_supported_rates(frame_buf, &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?;
-    // tx_vec_idx:                            133 134 basic_135  136
-    ie::write_ext_supported_rates(frame_buf, &[48, 72, 128 + 96, 108])?;
-
-    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
-    Ok(())
-}
-
-pub fn send_association_response(
+fn send_association_response(
     frame_buf: &mut Vec<u8>,
     channel: &WlanChan,
     bss_id: &mac::Bssid,

@@ -7,7 +7,6 @@ import("//build/testing/environments.gni")
 
 test_package("wlan-hw-sim-test") {
   deps = [
-    "ap_power_save",
     "configure_legacy_privacy_off",
     "configure_legacy_privacy_on",
     "connect_to_open_network",
@@ -25,10 +24,6 @@ test_package("wlan-hw-sim-test") {
   ]
 
   tests = [
-    {
-      name = "ap_power_save"
-      environments = basic_envs
-    },
     {
       name = "configure_legacy_privacy_on"
       environments = basic_envs
