@@ -2,19 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":zx-panic-libc-test" ]
 }
 
-zx_test("zx-panic-libc-test") {
+test("zx-panic-libc-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "zx-panic-libc-test.cc" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zx-panic-libc",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zx-panic-libc",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+migrated_manifest("zx-panic-libc-test-manifest") {
+  deps = [ ":zx-panic-libc-test" ]
 }

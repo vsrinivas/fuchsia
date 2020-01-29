@@ -158,7 +158,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/utf_conversion/test",
       "$zx/system/ulib/zbi-bootfs:test",
       "$zx/system/ulib/zircon-crypto/test",
-      "$zx/system/ulib/zx-panic-libc/test",
       "$zx/system/ulib/zx/test",
       "$zx/system/ulib/zxio/test",
       "$zx/system/ulib/zxtest/test",
