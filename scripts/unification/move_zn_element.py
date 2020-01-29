@@ -156,6 +156,10 @@ def transform_build_file(build):
         if starting_type in Type.all():
             sys.stdout.write('  if (is_fuchsia) {\n')
             sys.stdout.write('    configs += [ "//build/unification/config:zircon-migrated" ]\n')
+            sys.stdout.write('    fdio_config = [ "//build/config/fuchsia:fdio_config" ]\n')
+            sys.stdout.write('    if (configs + fdio_config - fdio_config != configs) {\n')
+            sys.stdout.write('      configs -= fdio_config\n')
+            sys.stdout.write('    }\n')
             sys.stdout.write('  }\n')
 
     # Third pass: add manifest targets at the end of the file.
