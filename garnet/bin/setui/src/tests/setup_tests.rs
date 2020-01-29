@@ -15,8 +15,8 @@ use {
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    futures::lock::Mutex,
     futures::prelude::*,
-    parking_lot::RwLock,
     std::sync::Arc,
 };
 
@@ -76,8 +76,8 @@ async fn test_setup() {
     }
 
     let service_registry = ServiceRegistry::create();
-    let device_admin_service_handle = Arc::new(RwLock::new(DeviceAdminService::new()));
-    service_registry.write().register_service(device_admin_service_handle.clone());
+    let device_admin_service_handle = Arc::new(Mutex::new(DeviceAdminService::new()));
+    service_registry.lock().await.register_service(device_admin_service_handle.clone());
 
     // Handle reboot
     assert!(create_environment(
@@ -127,5 +127,8 @@ async fn test_setup() {
     }
 
     // Ensure reboot was requested by the controller
-    assert!(device_admin_service_handle.read().verify_action_sequence([Action::Reboot].to_vec()));
+    assert!(device_admin_service_handle
+        .lock()
+        .await
+        .verify_action_sequence([Action::Reboot].to_vec()));
 }

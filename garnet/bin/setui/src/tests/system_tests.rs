@@ -15,8 +15,8 @@ use {
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    futures::lock::Mutex,
     futures::prelude::*,
-    parking_lot::RwLock,
     std::sync::Arc,
 };
 
@@ -43,10 +43,10 @@ async fn test_system() {
     }
 
     let service_registry = ServiceRegistry::create();
-    let device_settings_service_handle = Arc::new(RwLock::new(DeviceSettingsService::new()));
-    service_registry.write().register_service(device_settings_service_handle.clone());
-    let device_admin_service_handle = Arc::new(RwLock::new(DeviceAdminService::new()));
-    service_registry.write().register_service(device_admin_service_handle.clone());
+    let device_settings_service_handle = Arc::new(Mutex::new(DeviceSettingsService::new()));
+    service_registry.lock().await.register_service(device_settings_service_handle.clone());
+    let device_admin_service_handle = Arc::new(Mutex::new(DeviceAdminService::new()));
+    service_registry.lock().await.register_service(device_admin_service_handle.clone());
 
     assert!(create_environment(
         fs.root_dir(),
@@ -84,7 +84,7 @@ async fn test_system() {
         assert_eq!(expected, store_lock.get().await);
     }
 
-    let device_settings_lock = device_settings_service_handle.read();
+    let device_settings_lock = device_settings_service_handle.lock().await;
 
     if let Some(account_reset_flag) =
         device_settings_lock.get_integer(FACTORY_RESET_FLAG.to_string())
@@ -95,5 +95,8 @@ async fn test_system() {
     }
 
     // Ensure reboot was requested by the controller
-    assert!(device_admin_service_handle.read().verify_action_sequence([Action::Reboot].to_vec()));
+    assert!(device_admin_service_handle
+        .lock()
+        .await
+        .verify_action_sequence([Action::Reboot].to_vec()));
 }
