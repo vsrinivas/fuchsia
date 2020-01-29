@@ -22,6 +22,11 @@
             ],
             from: "realm",
         },
+        {
+            directory: "/config/data",
+            from: "realm",
+            rights: [ "r*" ]
+        }
     ],
     // Holds all the sessions this session_manager will create. Capabilities offered to and exposed
     // by sessions should be routed here.
@@ -33,37 +38,15 @@
     ],
     offer: [
         {
-            // Sessions use Scenic to display images.
-            protocol: "/svc/fuchsia.ui.scenic.Scenic",
-            from: "realm",
-            to: [
-                "#session",
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.setui.SetUiService",
+                "/svc/fuchsia.sys.Launcher",        // Pass on the Launcher so that the session can launch cmx components.
+                "/svc/fuchsia.ui.input.ImeService",
+                "/svc/fuchsia.ui.input2.Keyboard",
+                "/svc/fuchsia.ui.scenic.Scenic",    // Sessions use Scenic to display images.
+                "/svc/fuchsia.ui.shortcut.Manager",
             ],
-        },
-        {
-            protocol: "/svc/fuchsia.ui.input2.Keyboard",
-            from: "realm",
-            to: [
-                "#session",
-            ],
-        },
-        {
-            // Pass on the Launcher so that the session can launch cmx components.
-            protocol: "/svc/fuchsia.sys.Launcher",
-            from: "realm",
-            to: [
-                "#session",
-            ],
-        },
-        {
-            protocol: "/svc/fuchsia.ui.input.ImeService",
-            from: "realm",
-            to: [
-                "#session",
-            ],
-        },
-        {
-            protocol: "/svc/fuchsia.ui.shortcut.Manager",
             from: "realm",
             to: [
                 "#session",
@@ -77,20 +60,6 @@
             ],
             rights: [
                 "r*",
-            ],
-        },
-        {
-            protocol: "/svc/fuchsia.logger.LogSink",
-            from: "realm",
-            to: [
-                "#session",
-            ],
-        },
-        {
-            protocol: "/svc/fuchsia.setui.SetUiService",
-            from: "realm",
-            to: [
-                "#session",
             ],
         },
     ],

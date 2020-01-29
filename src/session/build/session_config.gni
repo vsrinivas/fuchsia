@@ -1,0 +1,30 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# Packages a Session Framework configuration for the component_manager_sfw package.
+# The configuration will be located at component_manager_sfw's /config/data/startup.config.
+# Including this rule in a product definition will automatically launch
+# Session Framework with a root session, defined as the `session_url` in the json configuration.
+#
+# Parameters
+#   config
+#     The JSON configuration file for the Session Framework.
+template("session_config") {
+  config_data(target_name + "_session_manager.config") {
+    for_pkg = "sysmgr"
+    sources =
+        [ "//src/session/bin/session_manager/meta/session_manager.config" ]
+    outputs = [ "session_manager.config" ]
+  }
+
+  config_data(target_name) {
+    for_pkg = "component_manager_sfw"
+    sources = [ rebase_path(invoker.config) ]
+    outputs = [ "startup.config" ]
+
+    deps = [ ":" + target_name + "_session_manager.config" ]
+  }
+}

@@ -8,6 +8,9 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx, realm_management,
+    serde_derive::{Deserialize, Serialize},
+    serde_json,
+    std::fs,
     thiserror::{self, Error},
 };
 
@@ -17,6 +20,13 @@ pub struct SessionManagerArgs {
     #[argh(option, short = 's')]
     /// the URL for the session to start.
     pub session_url: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+/// The session manager component.
+pub struct SessionManagerConfigs {
+    /// the URL for the session to start.
+    pub session_url: String,
 }
 
 /// Errors returned by calls startup functions.
@@ -42,13 +52,30 @@ const SESSION_NAME: &str = "session";
 /// session_manager.cml.
 const SESSION_CHILD_COLLECTION: &str = "session";
 
-/// Gets the session url from `std::env::args()`. Fails with a comment about the missing
-/// --session_url option if the argument isn't provided.
+/// The path to the configuration file for the session.
+const CONFIG_PATH: &str = "/config/data/startup.config";
+
+/// Gets the session url from `/config/data/startup.config`.
+///
+/// If no configuration file exists, gets the session url from `std::env::args()`.
+/// Fails with a comment about the missing --session_url option if the argument isn't provided.
 ///
 /// # Returns
 /// `String` if the session url argument exists, else `None`.
 pub fn get_session_url() -> Option<String> {
-    let SessionManagerArgs { session_url } = argh::from_env();
+    let mut session_url: Option<String> = None;
+    if let Ok(config_str) = fs::read_to_string(CONFIG_PATH) {
+        if let Ok(session_manager_args) = serde_json::from_str::<SessionManagerConfigs>(&config_str)
+        {
+            session_url = Some(session_manager_args.session_url);
+        }
+    }
+
+    if session_url.is_none() {
+        let SessionManagerArgs { session_url } = argh::from_env();
+        return session_url;
+    }
+
     session_url
 }
 
