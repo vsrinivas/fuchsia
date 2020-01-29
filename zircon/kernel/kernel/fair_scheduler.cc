@@ -53,13 +53,13 @@ using ffl::Round;
   ktrace_probe(LocalTrace<LOCAL_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Cpu, \
                KTRACE_STRING_REF(string), ##args)
 
-#define LOCAL_KTRACE_FLOW_BEGIN(level, string, flow_id)                               \
+#define LOCAL_KTRACE_FLOW_BEGIN(level, string, flow_id, args...)                      \
   ktrace_flow_begin(LocalTrace<LOCAL_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Cpu, \
-                    KTRACE_GRP_SCHEDULER, KTRACE_STRING_REF(string), flow_id)
+                    KTRACE_GRP_SCHEDULER, KTRACE_STRING_REF(string), flow_id, ##args)
 
-#define LOCAL_KTRACE_FLOW_END(level, string, flow_id)                               \
+#define LOCAL_KTRACE_FLOW_END(level, string, flow_id, args...)                      \
   ktrace_flow_end(LocalTrace<LOCAL_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Cpu, \
-                  KTRACE_GRP_SCHEDULER, KTRACE_STRING_REF(string), flow_id)
+                  KTRACE_GRP_SCHEDULER, KTRACE_STRING_REF(string), flow_id, ##args)
 
 template <size_t level>
 using LocalTraceDuration = TraceDuration<TraceEnabled<LOCAL_KTRACE_LEVEL_ENABLED(level)>,
@@ -434,7 +434,8 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     next_thread->last_started_running = now.raw_value();
     timer_preempt_cancel();
   } else if (timeslice_expired || next_thread != current_thread) {
-    LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{"start_preemption: now,deadline"_stringref};
+    LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{
+        "start_preemption: now,deadline"_stringref};
 
     // Re-compute the time slice for the new thread based on the latest state.
     NextThreadTimeslice(next_thread);
@@ -465,7 +466,8 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     // Emit a flow end event to match the flow begin event emitted when the
     // thread was enqueued. Emitting in this scope ensures that thread just
     // came from the run queue (and is not the idle thread).
-    LOCAL_KTRACE_FLOW_END(KTRACE_FLOW, "sched_latency", FlowIdFromThreadGeneration(next_thread));
+    LOCAL_KTRACE_FLOW_END(KTRACE_FLOW, "sched_latency", FlowIdFromThreadGeneration(next_thread),
+                          next_thread->user_tid);
   }
 
   if (next_thread != current_thread) {
@@ -616,7 +618,8 @@ void Scheduler::QueueThread(thread_t* thread, Placement placement, SchedTime now
   LOCAL_KTRACE(KTRACE_DETAILED, "queue_thread");
 
   if (placement == Placement::Insertion) {
-    LOCAL_KTRACE_FLOW_BEGIN(KTRACE_FLOW, "sched_latency", FlowIdFromThreadGeneration(thread));
+    LOCAL_KTRACE_FLOW_BEGIN(KTRACE_FLOW, "sched_latency", FlowIdFromThreadGeneration(thread),
+                            thread->user_tid);
   }
 }
 
