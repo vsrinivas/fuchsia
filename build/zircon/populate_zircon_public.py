@@ -15,12 +15,22 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 ZIRCON_PUBLIC = os.path.join(FUCHSIA_ROOT, 'zircon', 'public')
 TEMPLATE_FILE = os.path.join(SCRIPT_DIR, 'template.gn')
 
-PUBLIC_DIRS = set([
-    'banjo',
-    'fidl',
-    'lib',
-    'tool',
-])
+DIRS = {
+    'lib': True,
+    'tool': False,
+}
+PUBLIC_DIRS = set(DIRS.keys())
+
+MARKER = 'ONLY EDIT IT BY THAT NAME!'
+
+
+def is_template(build_file):
+    with open(build_file, 'r') as file:
+        return MARKER in file.read()
+
+
+def has_sources(top_dir):
+    return DIRS[top_dir]
 
 
 def main():
@@ -35,6 +45,7 @@ def main():
         (set(dirs.keys()), PUBLIC_DIRS))
     template_stat = os.lstat(TEMPLATE_FILE)
     for top_dir, subdirs in dirs.iteritems():
+        top_dir_name = top_dir
         top_dir = os.path.join(ZIRCON_PUBLIC, top_dir)
         subdirs = set(subdirs)
         if not os.path.exists(top_dir):
@@ -43,24 +54,30 @@ def main():
             # Go over the existing contents of the directory.
             for existing in os.listdir(top_dir):
                 existing_dir = os.path.join(top_dir, existing)
+                if not os.path.isdir(existing_dir):
+                    # Disregard files (e.g. .gitignore).
+                    continue
                 build_file = os.path.join(existing_dir, 'BUILD.gn')
-                if os.path.isdir(existing_dir):
-                    if existing in subdirs:
-                        # An existing directory might already have the link.
-                        # If the link doesn't exist or doesn't match, make it.
-                        if not os.path.exists(build_file):
-                            os.link(TEMPLATE_FILE, build_file)
-                        elif not os.path.samestat(os.lstat(build_file),
-                                                  template_stat):
-                            os.remove(build_file)
-                            os.link(TEMPLATE_FILE, build_file)
-                        subdirs.remove(existing)
-                    else:
+                is_source = (has_sources(top_dir_name) and
+                             not is_template(build_file))
+                if existing in subdirs:
+                    if is_source:
+                        print('%s cannot be both a source and generated' %
+                              existing_dir)
+                        return 1
+                    # An existing directory might already have the link.
+                    # If the link doesn't exist or doesn't match, make it.
+                    if not os.path.exists(build_file):
+                        os.link(TEMPLATE_FILE, build_file)
+                    elif not os.path.samestat(os.lstat(build_file),
+                                              template_stat):
+                        os.remove(build_file)
+                        os.link(TEMPLATE_FILE, build_file)
+                    subdirs.remove(existing)
+                else:
+                    if not is_source:
                         # A stale directory that shouldn't exist any more.
                         shutil.rmtree(existing_dir)
-                else:
-                    # A stray file in one of the controlled directories.
-                    os.remove(existing_dir)
         # Make and populate any directories that don't exist yet.
         for subdir in subdirs:
             subdir = os.path.join(top_dir, subdir)
