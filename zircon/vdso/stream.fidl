@@ -38,7 +38,7 @@ protocol stream {
         -> (status status, vector_iovec vector, optional_usize actual);
 
     /// Modify the seek offset.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ or ZX_RIGHT_WRITE.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ or have ZX_RIGHT_WRITE.
     stream_seek(handle<stream> handle, stream_seek_origin whence, off offset)
         -> (status status, optional_off out_offset);
 };

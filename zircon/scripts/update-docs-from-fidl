@@ -113,6 +113,10 @@ def match_sentence_form(sentence, arg_names):
             '.'
         ],
         [
+            'ARG', 'must', 'be', 'of', 'type', 'TYPE', 'and', 'have', 'RIGHT',
+            'or', 'have', 'RIGHT', '.'
+        ],
+        [
             'ARG', 'must', 'be', 'of', 'type', 'TYPE1', 'or', 'TYPE2', 'and',
             'have', 'RIGHT', '.'
         ],
@@ -184,32 +188,33 @@ def match_sentence_form(sentence, arg_names):
     ])
 
     all_types = set([
-        'ZX_OBJ_TYPE_PROCESS',
-        'ZX_OBJ_TYPE_THREAD',
-        'ZX_OBJ_TYPE_VMO',
+        'ZX_OBJ_TYPE_BTI',
         'ZX_OBJ_TYPE_CHANNEL',
+        'ZX_OBJ_TYPE_CLOCK',
         'ZX_OBJ_TYPE_EVENT',
-        'ZX_OBJ_TYPE_PORT',
-        'ZX_OBJ_TYPE_INTERRUPT',
-        'ZX_OBJ_TYPE_PCI_DEVICE',
-        'ZX_OBJ_TYPE_LOG',
-        'ZX_OBJ_TYPE_SOCKET',
-        'ZX_OBJ_TYPE_RESOURCE',
         'ZX_OBJ_TYPE_EVENTPAIR',
-        'ZX_OBJ_TYPE_JOB',
-        'ZX_OBJ_TYPE_VMAR',
+        'ZX_OBJ_TYPE_EXCEPTION',
         'ZX_OBJ_TYPE_FIFO',
         'ZX_OBJ_TYPE_GUEST',
-        'ZX_OBJ_TYPE_VCPU',
-        'ZX_OBJ_TYPE_TIMER',
+        'ZX_OBJ_TYPE_INTERRUPT',
         'ZX_OBJ_TYPE_IOMMU',
-        'ZX_OBJ_TYPE_BTI',
-        'ZX_OBJ_TYPE_PROFILE',
-        'ZX_OBJ_TYPE_PMT',
-        'ZX_OBJ_TYPE_SUSPEND_TOKEN',
+        'ZX_OBJ_TYPE_JOB',
+        'ZX_OBJ_TYPE_LOG',
         'ZX_OBJ_TYPE_PAGER',
-        'ZX_OBJ_TYPE_EXCEPTION',
-        'ZX_OBJ_TYPE_CLOCK',
+        'ZX_OBJ_TYPE_PCI_DEVICE',
+        'ZX_OBJ_TYPE_PMT',
+        'ZX_OBJ_TYPE_PORT',
+        'ZX_OBJ_TYPE_PROCESS',
+        'ZX_OBJ_TYPE_PROFILE',
+        'ZX_OBJ_TYPE_RESOURCE',
+        'ZX_OBJ_TYPE_SOCKET',
+        'ZX_OBJ_TYPE_STREAM',
+        'ZX_OBJ_TYPE_SUSPEND_TOKEN',
+        'ZX_OBJ_TYPE_THREAD',
+        'ZX_OBJ_TYPE_TIMER',
+        'ZX_OBJ_TYPE_VCPU',
+        'ZX_OBJ_TYPE_VMAR',
+        'ZX_OBJ_TYPE_VMO',
     ])
 
     all_rsrcs = set([

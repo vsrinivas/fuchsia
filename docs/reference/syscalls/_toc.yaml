@@ -224,6 +224,18 @@ toc:
   path: /docs/reference/syscalls/socket_shutdown.md
 - title: "zx_socket_write"
   path: /docs/reference/syscalls/socket_write.md
+- title: "zx_stream_create"
+  path: /docs/reference/syscalls/stream_create.md
+- title: "zx_stream_readv"
+  path: /docs/reference/syscalls/stream_readv.md
+- title: "zx_stream_readv_at"
+  path: /docs/reference/syscalls/stream_readv_at.md
+- title: "zx_stream_seek"
+  path: /docs/reference/syscalls/stream_seek.md
+- title: "zx_stream_writev"
+  path: /docs/reference/syscalls/stream_writev.md
+- title: "zx_stream_writev_at"
+  path: /docs/reference/syscalls/stream_writev_at.md
 - title: "zx_syscall_test_0"
   path: /docs/reference/syscalls/syscall_test_0.md
 - title: "zx_syscall_test_1"

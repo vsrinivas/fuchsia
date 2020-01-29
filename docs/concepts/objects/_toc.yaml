@@ -42,6 +42,8 @@ toc:
   path: /docs/concepts/objects/resource.md
 - title: "Socket"
   path: /docs/concepts/objects/socket.md
+- title: "Stream"
+  path: /docs/concepts/objects/stream.md
 - title: "Task"
   path: /docs/concepts/objects/task.md
 - title: "Thread"
