@@ -14,9 +14,9 @@ use {
     fuchsia_syslog::{self, fx_log_info, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
-        channel::oneshot::{Receiver, Sender},
-        select, FutureExt, StreamExt,
+        channel::oneshot::Sender, future::FusedFuture, select, Future, FutureExt, StreamExt,
     },
+    std::fmt::Debug,
 };
 
 #[derive(Debug, Clone, ValidFidlTable, PartialEq)]
@@ -85,21 +85,20 @@ impl AvrcpRelay {
 
         let (sender, receiver) = futures::channel::oneshot::channel();
 
-        fasync::spawn(async move {
-            if let Err(e) = Self::relay(avrcp_svc, session_svc, domain, peer_id, receiver).await {
-                fx_log_info!("Relay ended with {:?}", e);
-            }
-        });
+        spawn_err(
+            "Session",
+            Self::session_relay(avrcp_svc.clone(), session_svc, domain, peer_id, receiver.fuse()),
+        );
 
         Ok(Self { _stop: Some(sender) })
     }
 
-    async fn relay(
+    async fn session_relay(
         mut avrcp: avrcp::PeerManagerProxy,
         publisher: sessions2::PublisherProxy,
         domain: Option<String>,
         peer_id: PeerId,
-        stop_signal: Receiver<()>,
+        mut stop_signal: impl FusedFuture + Unpin,
     ) -> Result<(), Error> {
         let controller =
             connect_avrcp(&mut avrcp, peer_id).await.context("getting controller from AVRCP")?;
@@ -143,7 +142,6 @@ impl AvrcpRelay {
         building.player_status = Some(last_player_status.clone().into());
 
         let mut avrcp_notify_stream = controller.take_event_stream();
-        let mut stop_signal = stop_signal.fuse();
 
         loop {
             let mut player_request_fut = player_request_stream.next();
@@ -159,7 +157,7 @@ impl AvrcpRelay {
                         fx_vlog!(1, "Player request stream is closed, quitting AVRCP.");
                         break;
                     }
-                    match request.unwrap()? {
+                    match request.unwrap().context("request from player")? {
                         sessions2::PlayerRequest::WatchInfoChange { responder } => {
                             if let Some(_) = hanging_watcher.take() {
                                 return Err(format_err!("Concurrent watches issued: not allowed"));
@@ -198,13 +196,13 @@ impl AvrcpRelay {
 
                     if notification.status.is_some() || notification.track_id.is_some() {
                         let mut building = staged_info.get_or_insert_with(sessions2::PlayerInfoDelta::new_empty);
-                        update_attributes(&controller, &mut building, &mut last_player_status).await?;
+                        update_attributes(&controller, &mut building, &mut last_player_status).await.context("updating attributes")?;
                         player_status_updated = true;
 
                     }
 
                     if notification.status.is_some() {
-                        update_status(&controller, &mut last_player_status).await?;
+                        update_status(&controller, &mut last_player_status).await.context("Updating status")?;
                         player_status_updated = true;
                     }
 
@@ -214,7 +212,7 @@ impl AvrcpRelay {
                     }
 
                     // Notify that the notification is handled so we can receive another one.
-                    let _ = controller.notify_notification_handled()?;
+                    let _ = controller.notify_notification_handled().context("acknowledging notification")?;
                 }
                 complete => unreachable!(),
             }
@@ -226,6 +224,18 @@ impl AvrcpRelay {
         }
         Ok(())
     }
+}
+
+fn spawn_err<F, E>(label: &'static str, future: F)
+where
+    F: Future<Output = Result<(), E>> + Send + 'static,
+    E: Debug,
+{
+    fasync::spawn(async move {
+        if let Some(e) = future.await.err() {
+            fx_log_info!("{} Completed with Error: {:?}", label, e);
+        }
+    });
 }
 
 async fn update_attributes(
@@ -329,7 +339,7 @@ mod tests {
 
     use fidl::endpoints::{self, RequestStream};
     use fuchsia_async::pin_mut;
-    use futures::{task::Poll, Future};
+    use futures::{channel::oneshot::Sender, task::Poll, Future};
     use std::{convert::TryInto, pin::Pin};
 
     fn setup_publisher_proxy(
@@ -340,6 +350,34 @@ mod tests {
     fn setup_avrcp_proxy(
     ) -> Result<(avrcp::PeerManagerProxy, avrcp::PeerManagerRequestStream), fidl::Error> {
         endpoints::create_proxy_and_stream::<avrcp::PeerManagerMarker>()
+    }
+
+    fn setup_media_relay(
+        domain: Option<String>,
+    ) -> Result<
+        (
+            sessions2::PublisherRequestStream,
+            avrcp::PeerManagerRequestStream,
+            Sender<()>,
+            impl Future,
+        ),
+        fidl::Error,
+    > {
+        let (publisher_proxy, publisher_requests) = setup_publisher_proxy()?;
+        let (avrcp_proxy, avrcp_requests) = setup_avrcp_proxy()?;
+
+        let (stop_sender, receiver) = futures::channel::oneshot::channel();
+
+        let peer_id = PeerId(0);
+
+        let relay_fut = AvrcpRelay::session_relay(
+            avrcp_proxy,
+            publisher_proxy,
+            domain,
+            peer_id,
+            receiver.fuse(),
+        );
+        Ok((publisher_requests, avrcp_requests, stop_sender, relay_fut))
     }
 
     fn expect_media_attributes_request(
@@ -388,16 +426,14 @@ mod tests {
     ) -> Result<(sessions2::PlayerProxy, avrcp::ControllerRequestStream), Error> {
         // Connects to AVRCP first.
         let complete = exec.run_until_stalled(&mut avrcp_request_stream.select_next_some());
-        let (mut controller_request_stream, responder) = match complete {
+        let mut controller_request_stream = match complete {
             Poll::Ready(Ok(avrcp::PeerManagerRequest::GetControllerForTarget {
                 client,
                 responder,
                 ..
-            })) => (client.into_stream()?, responder),
+            })) => responder.send(&mut Ok(())).and_then(|_| client.into_stream())?,
             x => panic!("Expected a GetController request, got {:?}", x),
         };
-
-        responder.send(&mut Ok(()))?;
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
@@ -430,8 +466,8 @@ mod tests {
         expect_play_status_request(&mut exec, &mut controller_request_stream)?;
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        // At this point, the relay is setup and should be waiting for requests from each of
-        // player_client and volume_clent, and sending commands / getting notifications from avrcp.
+        // At this point, the relay is set up and should be waiting for requests from
+        // player_client, and sending commands / getting notifications from avrcp.
         Ok((player_client, controller_request_stream))
     }
 
@@ -441,27 +477,15 @@ mod tests {
     fn test_relay_setup() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().expect("executor needed");
 
-        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
-        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
-
-        let (stop_sender, receiver) = futures::channel::oneshot::channel();
-
-        let peer_id = PeerId(0);
-
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
+        let (pubisher_requests, avrcp_requests, stop_sender, relay_fut) = setup_media_relay(None)?;
 
         pin_mut!(relay_fut);
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        let (player_client, mut controller_request_stream) = finish_relay_setup(
-            &mut relay_fut,
-            &mut exec,
-            publisher_request_stream,
-            avrcp_request_stream,
-            None,
-        )?;
+        let (player_client, mut controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, pubisher_requests, avrcp_requests, None)?;
 
         // Sending a stop should drop all the things and the future should complete.
         stop_sender.send(()).expect("should be able to send a stop");
@@ -469,7 +493,7 @@ mod tests {
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_ready());
 
-        match exec.run_until_stalled(&mut controller_request_stream.next()) {
+        match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(None) => {}
             x => panic!("Expected controller to be dropped, but got {:?}", x),
         };
@@ -487,30 +511,18 @@ mod tests {
     fn test_relay_avrcp_ends() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().expect("executor needed");
 
-        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
-        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
-
-        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
-
-        let peer_id = PeerId(0);
-
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
+        let (pubisher_requests, avrcp_requests, _stop_sender, relay_fut) = setup_media_relay(None)?;
 
         pin_mut!(relay_fut);
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        let (player_client, controller_request_stream) = finish_relay_setup(
-            &mut relay_fut,
-            &mut exec,
-            publisher_request_stream,
-            avrcp_request_stream,
-            None,
-        )?;
+        let (player_client, controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, pubisher_requests, avrcp_requests, None)?;
 
         // Closing the AVRCP controller should end the relay.
-        drop(controller_request_stream);
+        drop(controller_requests);
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_ready());
@@ -529,27 +541,15 @@ mod tests {
     fn test_relay_player_ends() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().expect("executor needed");
 
-        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
-        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
-
-        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
-
-        let peer_id = PeerId(0);
-
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
+        let (pubisher_requests, avrcp_requests, _stop_sender, relay_fut) = setup_media_relay(None)?;
 
         pin_mut!(relay_fut);
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        let (player_client, mut controller_request_stream) = finish_relay_setup(
-            &mut relay_fut,
-            &mut exec,
-            publisher_request_stream,
-            avrcp_request_stream,
-            None,
-        )?;
+        let (player_client, mut controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, pubisher_requests, avrcp_requests, None)?;
 
         // Closing of the MediaSession should end the relay.
         drop(player_client);
@@ -557,7 +557,7 @@ mod tests {
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_ready());
 
-        match exec.run_until_stalled(&mut controller_request_stream.next()) {
+        match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(None) => {}
             x => panic!("Expected controller to be dropped, but got {:?}", x),
         };
@@ -571,26 +571,14 @@ mod tests {
         let mut exec = fasync::Executor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
-        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
-        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
-
-        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
-
-        let peer_id = PeerId(0);
-
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
+        let (pubisher_requests, avrcp_requests, _stop_sender, relay_fut) = setup_media_relay(None)?;
 
         pin_mut!(relay_fut);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        let (player_client, _controller_request_stream) = finish_relay_setup(
-            &mut relay_fut,
-            &mut exec,
-            publisher_request_stream,
-            avrcp_request_stream,
-            None,
-        )?;
+        let (player_client, _controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, pubisher_requests, avrcp_requests, None)?;
 
         let mut watch_info_fut = player_client.watch_info_change();
 
@@ -629,26 +617,14 @@ mod tests {
         let mut exec = fasync::Executor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
-        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
-        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
-
-        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
-
-        let peer_id = PeerId(0);
-
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
+        let (pubisher_requests, avrcp_requests, _stop_sender, relay_fut) = setup_media_relay(None)?;
 
         pin_mut!(relay_fut);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        let (player_client, mut controller_request_stream) = finish_relay_setup(
-            &mut relay_fut,
-            &mut exec,
-            publisher_request_stream,
-            avrcp_request_stream,
-            None,
-        )?;
+        let (player_client, mut controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, pubisher_requests, avrcp_requests, None)?;
 
         let mut watch_info_fut = player_client.watch_info_change();
 
@@ -667,7 +643,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut watch_info_fut).is_pending());
 
         // When a play status change notification happens, we get new requests.
-        controller_request_stream.control_handle().send_on_notification(
+        controller_requests.control_handle().send_on_notification(
             7000,
             avrcp::Notification {
                 status: Some(avrcp::PlaybackStatus::Paused),
@@ -678,7 +654,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
         // Should ask for the current media info and the status to return the correct results.
-        match exec.run_until_stalled(&mut controller_request_stream.next()) {
+        match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetMediaAttributes { responder }))) => {
                 responder.send(&mut Ok(avrcp::MediaAttributes {
                     title: Some("Moneygrabber".to_string()),
@@ -694,7 +670,7 @@ mod tests {
         }
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        match exec.run_until_stalled(&mut controller_request_stream.next()) {
+        match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetPlayStatus { responder }))) => {
                 responder.send(&mut Ok(avrcp::PlayStatus {
                     song_length: Some(189000),
@@ -713,7 +689,7 @@ mod tests {
         };
 
         // After the notification is handled we should get an ack.
-        match exec.run_until_stalled(&mut controller_request_stream.next()) {
+        match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::NotifyNotificationHandled {
                 ..
             }))) => {}
@@ -747,26 +723,14 @@ mod tests {
         let mut exec = fasync::Executor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
-        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
-        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
-
-        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
-
-        let peer_id = PeerId(0);
-
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
+        let (pubisher_requests, avrcp_requests, _stop_sender, relay_fut) = setup_media_relay(None)?;
 
         pin_mut!(relay_fut);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        let (player_client, mut controller_request_stream) = finish_relay_setup(
-            &mut relay_fut,
-            &mut exec,
-            publisher_request_stream,
-            avrcp_request_stream,
-            None,
-        )?;
+        let (player_client, mut controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, pubisher_requests, avrcp_requests, None)?;
 
         let mut watch_info_fut = player_client.watch_info_change();
 
@@ -787,7 +751,7 @@ mod tests {
         exec.set_fake_time(fasync::Time::from_nanos(9000));
 
         // When a play status change notification happens, we get new requests.
-        controller_request_stream.control_handle().send_on_notification(
+        controller_requests.control_handle().send_on_notification(
             9000,
             avrcp::Notification { pos: Some(3051), ..avrcp::Notification::new_empty() },
         )?;
@@ -795,7 +759,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
         // After the notification is handled we should get an ack.
-        match exec.run_until_stalled(&mut controller_request_stream.next()) {
+        match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::NotifyNotificationHandled {
                 ..
             }))) => {}
@@ -848,26 +812,14 @@ mod tests {
     fn test_relay_sends_commands() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().expect("executor needed");
 
-        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
-        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
-
-        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
-
-        let peer_id = PeerId(0);
-
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
+        let (pubisher_requests, avrcp_requests, _stop_sender, relay_fut) = setup_media_relay(None)?;
 
         pin_mut!(relay_fut);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        let (player_client, mut controller_request_stream) = finish_relay_setup(
-            &mut relay_fut,
-            &mut exec,
-            publisher_request_stream,
-            avrcp_request_stream,
-            None,
-        )?;
+        let (player_client, mut controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, pubisher_requests, avrcp_requests, None)?;
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
@@ -877,27 +829,15 @@ mod tests {
         player_client.prev_item()?;
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_panel_command(
-            &mut exec,
-            &mut controller_request_stream,
-            avrcp::AvcPanelCommand::Pause,
-        )?;
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Pause)?;
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Play)?;
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Forward)?;
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
         expect_panel_command(
             &mut exec,
-            &mut controller_request_stream,
-            avrcp::AvcPanelCommand::Play,
-        )?;
-        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_panel_command(
-            &mut exec,
-            &mut controller_request_stream,
-            avrcp::AvcPanelCommand::Forward,
-        )?;
-        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_panel_command(
-            &mut exec,
-            &mut controller_request_stream,
+            &mut controller_requests,
             avrcp::AvcPanelCommand::Backward,
         )?;
 
@@ -911,15 +851,8 @@ mod tests {
 
         let domain = Some("domain://test".to_string());
 
-        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
-        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
-
-        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
-
-        let peer_id = PeerId(0);
-
-        let relay_fut =
-            AvrcpRelay::relay(avrcp_proxy, publisher_proxy, domain.clone(), peer_id, receiver);
+        let (pubisher_requests, avrcp_requests, _stop_sender, relay_fut) =
+            setup_media_relay(domain.clone())?;
 
         pin_mut!(relay_fut);
 
@@ -928,8 +861,8 @@ mod tests {
         let (_player, _controller_requests) = finish_relay_setup(
             &mut relay_fut,
             &mut exec,
-            publisher_request_stream,
-            avrcp_request_stream,
+            pubisher_requests,
+            avrcp_requests,
             domain,
         )?;
 
