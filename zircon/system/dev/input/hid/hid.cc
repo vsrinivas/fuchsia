@@ -31,7 +31,6 @@ namespace hid_driver {
 // ddk/protocol/input.h for the format). This macro sets FIDL return values for
 // boot mouse devices to reflect the boot protocol, rather than what the device
 // itself reports.
-#define BOOT_MOUSE_HACK 1
 #define BOOT_KBD_HACK 1
 
 static constexpr input_report_size_t BitsToBytes(input_report_size_t bits) {
@@ -405,15 +404,6 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
   if (info_.boot_device) {
 #if BOOT_KBD_HACK
     if (info_.device_class == HID_DEVICE_CLASS_KBD) {
-      status = hidbus_.SetProtocol(HID_PROTOCOL_BOOT);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "hid: could not put HID device into boot protocol: %d\n", status);
-        return status;
-      }
-    }
-#endif
-#if BOOT_MOUSE_HACK
-    if (info_.device_class == HID_DEVICE_CLASS_POINTER) {
       status = hidbus_.SetProtocol(HID_PROTOCOL_BOOT);
       if (status != ZX_OK) {
         zxlogf(ERROR, "hid: could not put HID device into boot protocol: %d\n", status);
