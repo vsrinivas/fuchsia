@@ -7,6 +7,7 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
@@ -27,7 +28,8 @@ class DeviceImpl {
 
   // Creates a DeviceImpl using the given |controller|.
   static fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
-      fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller);
+      fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller,
+      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator);
 
   // Returns a service handler for use with a service directory.
   fidl::InterfaceRequestHandler<fuchsia::camera3::Device> GetHandler();
@@ -52,6 +54,16 @@ class DeviceImpl {
 
   // Sets the current configuration to the provided index.
   void SetConfiguration(uint32_t index);
+
+  // Posts a task to connect to a stream.
+  void PostConnectToStream(uint32_t index,
+                           fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                           fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
+
+  // Connects to a stream.
+  void ConnectToStream(uint32_t index,
+                       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                       fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
 
   // Represents a single client connection to the DeviceImpl class.
   class Client : public fuchsia::camera3::Device {
@@ -89,6 +101,7 @@ class DeviceImpl {
   async::Loop loop_;
   zx::event bad_state_event_;
   fuchsia::camera2::hal::ControllerPtr controller_;
+  fuchsia::sysmem::AllocatorPtr allocator_;
   fuchsia::camera2::DeviceInfo device_info_;
   std::vector<fuchsia::camera2::hal::Config> configs_;
   std::vector<fuchsia::camera3::Configuration> configurations_;

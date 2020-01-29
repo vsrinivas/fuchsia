@@ -64,8 +64,7 @@ void DeviceImpl::Client::SetSoftwareMuteState(bool muted, SetSoftwareMuteStateCa
 void DeviceImpl::Client::ConnectToStream(
     uint32_t index, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
-  request.Close(ZX_ERR_NOT_SUPPORTED);
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  device_.PostConnectToStream(index, std::move(token), std::move(request));
 }
 
 void DeviceImpl::Client::Rebind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {

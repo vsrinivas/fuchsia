@@ -14,6 +14,7 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <vector>
 
 class FakeController : public fuchsia::camera2::hal::Controller {
  public:
@@ -35,6 +36,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
 
   async::Loop loop_;
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
+  std::vector<zx::channel> channels_;
 };
 
 #endif  // SRC_CAMERA_BIN_DEVICE_TEST_FAKE_CONTROLLER_H_

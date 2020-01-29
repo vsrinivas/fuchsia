@@ -19,12 +19,9 @@
 // camera3.Stream protocol.
 class StreamImpl {
  public:
-  StreamImpl(fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream);
+  StreamImpl(fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream,
+             fidl::InterfaceRequest<fuchsia::camera3::Stream> request, fit::closure on_no_clients);
   ~StreamImpl();
-
-  // Posts a task to bind a new client to this stream. Closes the request with ZX_ERR_ALREADY_BOUND
-  // if any clients already exist.
-  void PostBind(fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
 
  private:
   // Called if the underlying legacy stream disconnects.
@@ -66,6 +63,7 @@ class StreamImpl {
   fuchsia::camera2::StreamPtr legacy_stream_;
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
+  fit::closure on_no_clients_;
 
   friend class Client;
 };

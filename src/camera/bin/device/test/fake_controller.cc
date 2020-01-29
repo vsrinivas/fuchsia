@@ -29,7 +29,7 @@ static std::vector<fuchsia::camera2::hal::Config> DefaultConfigs() {
               },
           .color_spaces_count = 1,
           .color_space = {{{
-              .type = fuchsia::sysmem::ColorSpaceType::SRGB,
+              .type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC,
           }}},
           .min_coded_width = 128,
           .max_coded_width = 4096,
@@ -92,7 +92,10 @@ void FakeController::GetConfigs(fuchsia::camera2::hal::Controller::GetConfigsCal
 void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   uint32_t image_format_index,
                                   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
-                                  fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {}
+                                  fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
+  // Stash the channel so it's not closed immediately, but don't do anything with it.
+  channels_.push_back(stream.TakeChannel());
+}
 
 void FakeController::EnableStreaming() {}
 

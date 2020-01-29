@@ -35,8 +35,15 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator;
+  status = context->svc()->Connect(allocator.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "Failed to request allocator service.";
+    return EXIT_FAILURE;
+  }
+
   // Create the device and publish its service.
-  auto result = DeviceImpl::Create(std::move(controller));
+  auto result = DeviceImpl::Create(std::move(controller), std::move(allocator));
   if (result.is_error()) {
     FX_PLOGS(FATAL, result.error()) << "Failed to create device.";
     return EXIT_FAILURE;

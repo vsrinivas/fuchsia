@@ -24,10 +24,13 @@ DeviceImpl::~DeviceImpl() {
 }
 
 fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
-    fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller) {
+    fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller,
+    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator) {
   auto device = std::make_unique<DeviceImpl>();
 
   ZX_ASSERT(zx::event::create(0, &device->bad_state_event_) == ZX_OK);
+
+  ZX_ASSERT(device->allocator_.Bind(std::move(allocator), device->loop_.dispatcher()) == ZX_OK);
 
   constexpr auto kControllerDisconnected = ZX_USER_SIGNAL_0;
   constexpr auto kGetDeviceInfoReturned = ZX_USER_SIGNAL_1;
@@ -53,29 +56,30 @@ fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
       });
 
   zx_status_t get_configs_status = ZX_OK;
-  device->controller_->GetConfigs(
-      [&, device = device.get()](fidl::VectorPtr<fuchsia::camera2::hal::Config> configs,
-                                 zx_status_t status) {
-        get_configs_status = status;
-        if (status == ZX_OK) {
-          if (configs.has_value()) {
-            device->configs_ = std::move(configs.value());
-            for (const auto& config : device->configs_) {
-              auto result = Convert(config);
-              if (result.is_error()) {
-                get_configs_status = result.error();
-                FX_PLOGS(ERROR, get_configs_status);
-                break;
-              }
-              device->configurations_.push_back(result.take_value());
-            }
-          } else {
-            get_configs_status = ZX_ERR_INTERNAL;
-            FX_PLOGS(ERROR, get_configs_status) << "Controller returned null configs list.";
+  device->controller_->GetConfigs([&, device = device.get()](
+                                      fidl::VectorPtr<fuchsia::camera2::hal::Config> configs,
+                                      zx_status_t status) {
+    get_configs_status = status;
+    if (status == ZX_OK) {
+      if (configs.has_value() && !configs.value().empty()) {
+        device->configs_ = std::move(configs.value());
+        for (const auto& config : device->configs_) {
+          auto result = Convert(config);
+          if (result.is_error()) {
+            get_configs_status = result.error();
+            FX_PLOGS(ERROR, get_configs_status);
+            break;
           }
+          device->configurations_.push_back(result.take_value());
         }
-        ZX_ASSERT(event.signal(0, kGetConfigsReturned) == ZX_OK);
-      });
+      } else {
+        get_configs_status = ZX_ERR_INTERNAL;
+        FX_PLOGS(ERROR, get_configs_status) << "Controller returned null or empty configs list.";
+      }
+    }
+    device->SetConfiguration(0);
+    ZX_ASSERT(event.signal(0, kGetConfigsReturned) == ZX_OK);
+  });
 
   // Start the device thread and begin processing messages.
 
@@ -140,9 +144,71 @@ void DeviceImpl::PostSetConfiguration(uint32_t index) {
 
 void DeviceImpl::SetConfiguration(uint32_t index) {
   streams_.clear();
-  for (uint32_t stream_index = 0; stream_index < configurations_[index].streams.size();
-       ++stream_index) {
-    streams_.emplace_back(nullptr);
-  }
+  streams_.resize(configurations_[index].streams.size());
   current_configuration_index_ = index;
+}
+
+void DeviceImpl::PostConnectToStream(
+    uint32_t index, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
+  ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, index, token = std::move(token),
+                                                 request = std::move(request)]() mutable {
+              ConnectToStream(index, std::move(token), std::move(request));
+            }) == ZX_OK);
+}
+
+void DeviceImpl::ConnectToStream(
+    uint32_t index, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
+  if (index > streams_.size()) {
+    FX_PLOGS(INFO, ZX_ERR_INVALID_ARGS) << "Client requested invalid stream index " << index;
+    request.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  if (streams_[index]) {
+    FX_PLOGS(INFO, ZX_ERR_ALREADY_BOUND) << Messages::kStreamAlreadyBound;
+    request.Close(ZX_ERR_ALREADY_BOUND);
+    return;
+  }
+
+  // Negotiate buffers for this stream.
+  // TODO(44770): Watch for buffer collection events.
+  fuchsia::sysmem::BufferCollectionPtr collection;
+  allocator_->BindSharedCollection(std::move(token), collection.NewRequest(loop_.dispatcher()));
+  collection->SetConstraints(
+      true, configs_[current_configuration_index_].stream_configs[index].constraints);
+  collection->WaitForBuffersAllocated(
+      [this, index, request = std::move(request), collection = std::move(collection)](
+          zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) mutable {
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "Failed to allocate buffers for stream.";
+          request.Close(status);
+          return;
+        }
+
+        // Assign friendly names to each buffer for debugging and profiling.
+        for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
+          std::ostringstream oss;
+          oss << "Camera Config " << current_configuration_index_ << " Stream " << index
+              << " Buffer " << i;
+          auto str = oss.str();
+          ZX_ASSERT(buffers.buffers[i].vmo.set_property(ZX_PROP_NAME, str.c_str(), str.length()) ==
+                    ZX_OK);
+        }
+
+        // Get the legacy stream using the negotiated buffers.
+        fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream;
+        controller_->CreateStream(current_configuration_index_, index, 0, std::move(buffers),
+                                  legacy_stream.NewRequest());
+
+        // Create the stream. When the last client disconnects, post a task to the device thread to
+        // destroy the stream.
+        auto task = [this, index]() {
+          ZX_ASSERT(async::PostTask(loop_.dispatcher(),
+                                    [this, index]() { streams_[index] = nullptr; }) == ZX_OK);
+        };
+        streams_[index] = std::make_unique<StreamImpl>(std::move(legacy_stream), std::move(request),
+                                                       std::move(task));
+        collection->Close();
+      });
 }

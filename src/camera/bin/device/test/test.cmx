@@ -1,11 +1,19 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/device_test"
     },
     "sandbox": {
         "services": [
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

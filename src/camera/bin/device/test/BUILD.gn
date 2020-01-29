@@ -14,6 +14,7 @@ executable("test") {
   ]
 
   deps = [
+    "//garnet/packages/prod:sysmem_connector",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/lib/sys/cpp",
@@ -23,5 +24,6 @@ executable("test") {
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }

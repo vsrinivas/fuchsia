@@ -14,10 +14,14 @@
 #include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/util.h"
 
-StreamImpl::StreamImpl(fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream)
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+StreamImpl::StreamImpl(fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream,
+                       fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
+                       fit::closure on_no_clients)
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), on_no_clients_(std::move(on_no_clients)) {
   ZX_ASSERT(legacy_stream_.Bind(std::move(legacy_stream), loop_.dispatcher()) == ZX_OK);
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
+  auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
+  clients_.emplace(client_id_next_++, std::move(client));
   ZX_ASSERT(loop_.StartThread("Camera Stream Thread") == ZX_OK);
 }
 
@@ -27,29 +31,17 @@ StreamImpl::~StreamImpl() {
   loop_.JoinThreads();
 }
 
-void StreamImpl::PostBind(fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
-  auto task = [this, request = std::move(request)]() mutable {
-    if (!clients_.empty()) {
-      FX_PLOGS(INFO, ZX_ERR_ALREADY_BOUND) << Messages::kStreamAlreadyBound;
-      request.Close(ZX_ERR_ALREADY_BOUND);
-      return;
-    }
-    auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
-    clients_.emplace(client_id_next_++, std::move(client));
-  };
-  ZX_ASSERT(async::PostTask(loop_.dispatcher(), std::move(task)) == ZX_OK);
-}
-
 void StreamImpl::OnLegacyStreamDisconnected(zx_status_t status) {
   FX_PLOGS(ERROR, status) << "Legacy Stream disconnected unexpectedly.";
   clients_.clear();
+  on_no_clients_();
 }
 
 void StreamImpl::PostRemoveClient(uint64_t id) {
   async::PostTask(loop_.dispatcher(), [=]() {
-    auto it = clients_.find(id);
-    if (it != clients_.end()) {
-      clients_.erase(it);
+    clients_.erase(id);
+    if (clients_.empty()) {
+      on_no_clients_();
     }
   });
 }
