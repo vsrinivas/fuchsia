@@ -114,6 +114,7 @@ impl Peer {
         let (conn_stream_writer, conn_stream_reader) = p.conn.bind_id(0);
         spawn(log_errors(
             client_conn_stream(
+                node_id,
                 conn_stream_writer,
                 conn_stream_reader,
                 command_receiver,
@@ -251,6 +252,7 @@ impl Peer {
 }
 
 async fn client_conn_stream(
+    peer_node_id: NodeId,
     mut conn_stream_writer: AsyncQuicStreamWriter,
     mut conn_stream_reader: AsyncQuicStreamReader,
     mut commands: futures::channel::mpsc::Receiver<ClientPeerCommand>,
@@ -284,6 +286,7 @@ async fn client_conn_stream(
         let next_frame = conn_stream_reader.next().fuse();
         let mut next_services = services.next().fuse();
         pin_mut!(next_frame);
+        #[derive(Debug)]
         enum Action {
             Command(ClientPeerCommand),
             Frame(FrameType, Vec<u8>, bool),
@@ -301,6 +304,11 @@ async fn client_conn_stream(
                 Action::Services(services)
             }
         };
+        log::trace!(
+            "Peer connection ->{:?} gets connection stream command: {:?}",
+            peer_node_id,
+            action
+        );
         match action {
             Action::Command(command) => {
                 client_conn_handle_command(
@@ -426,7 +434,7 @@ async fn server_conn_stream(
         match frame_type {
             FrameType::Data => {
                 let msg: PeerMessage = decode_fidl(&mut bytes)?;
-                log::trace!("Got peer request: {:?}", msg);
+                log::trace!("Got peer request from {:?}: {:?}", node_id, msg);
                 match msg {
                     PeerMessage::ConnectToService(ConnectToService {
                         service_name,

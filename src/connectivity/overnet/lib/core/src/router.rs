@@ -177,6 +177,12 @@ impl Router {
         let routing_update_sender = self.routing_update_sender.clone();
         // Spawn a task to move link status to the
         spawn(link.new_description_observer().for_each(move |description| {
+            log::trace!(
+                "Send new description to peer node {:?} on link {:?}: desc = {:?}",
+                peer_node_id,
+                node_link_id,
+                description
+            );
             let mut routing_update_sender = routing_update_sender.clone();
             async move {
                 if let Err(e) = routing_update_sender

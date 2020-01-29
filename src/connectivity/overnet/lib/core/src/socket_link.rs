@@ -83,7 +83,13 @@ async fn run_socket_link(
     socket: fidl::Socket,
     duration_per_byte: Option<Duration>,
 ) -> Result<(), Error> {
-    log::info!("Begin handshake: connection_label:{:?} socket:{:?}", connection_label, socket);
+    let handshake_id = crate::router::generate_node_id().0;
+    log::info!(
+        "[HS:{}] Begin handshake: connection_label:{:?} socket:{:?}",
+        handshake_id,
+        connection_label,
+        socket
+    );
 
     const GREETING_STRING: &str = "OVERNET SOCKET LINK";
 
@@ -99,6 +105,7 @@ async fn run_socket_link(
         .context("queue greeting")?;
     let send = framer.take_sends();
     assert_eq!(send.len(), socket.write(&send).context("write greeting")?);
+    log::trace!("[HS:{}] Wrote greeting: {:?}", handshake_id, greeting);
 
     // Wait for first frame
     let (rx_bytes, mut tx_bytes) = futures::io::AsyncReadExt::split(
@@ -113,6 +120,7 @@ async fn run_socket_link(
         rx_frames.next().await.ok_or(anyhow::format_err!("No greeting received on socket"))?;
     let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())
         .context("decoding greeting")?;
+    log::trace!("[HS:{}] Got greeting: {:?}", handshake_id, greeting);
     let node_id = match greeting {
         StreamSocketGreeting { magic_string: None, .. } => {
             return Err(anyhow::format_err!(
@@ -133,16 +141,16 @@ async fn run_socket_link(
         StreamSocketGreeting { node_id: Some(n), .. } => n.id,
     };
 
-    log::trace!("Handshake complete, creating link");
+    log::trace!("[HS:{}] Handshake complete, creating link", handshake_id);
     let link_sender = node.new_link(node_id.into()).await.context("creating link")?;
     let link_receiver = link_sender.clone();
 
-    log::trace!("Running link");
+    log::trace!("[HS:{}] Running link", handshake_id);
     spawn(async move {
         while let Some(mut frame) = rx_frames.next().await {
             //log::trace!("RECV LINK FRAME: {:?}", &frame);
             if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
-                log::warn!("Error reading packet: {:?}", err);
+                log::warn!("[HS:{}] Error reading packet: {:?}", handshake_id, err);
             }
         }
     });

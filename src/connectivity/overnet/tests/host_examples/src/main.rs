@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
+use anyhow::{format_err, Context as _, Error};
 use argh::FromArgs;
 use parking_lot::{Condvar, Mutex};
 use rand::Rng;
-use std::cell::RefCell;
+use std::collections::HashMap;
 use std::env::current_exe;
 use std::io::{Read, Write};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
+use std::time::Duration;
 use tempfile::{NamedTempFile, TempPath};
 
 struct Semaphore {
@@ -124,53 +125,71 @@ impl Drop for Daemon {
 struct TestContextInner {
     daemons: Vec<Daemon>,
     run_things: Vec<ChildInfo>,
-    args: TestArgs,
 }
 
-struct TestContext(RefCell<TestContextInner>);
+struct TestContext {
+    state: Mutex<TestContextInner>,
+    args: TestArgs,
+}
 
 lazy_static::lazy_static! {
     static ref REPORT_MUTEX: Mutex<()> = Mutex::new(());
 }
 
 impl TestContext {
-    fn new(args: TestArgs) -> Self {
-        Self(RefCell::new(TestContextInner { daemons: vec![], run_things: vec![], args }))
+    fn new(args: TestArgs) -> Arc<Self> {
+        Arc::new(Self {
+            state: Mutex::new(TestContextInner { daemons: vec![], run_things: vec![] }),
+            args,
+        })
     }
 
     fn run_client(&self, mut cmd: Command) -> Result<(), Error> {
         let name = format!("{:?}", cmd);
-        if self.0.borrow().args.capture_output {
+        if self.args.capture_output {
             cmd.stdout(Stdio::piped());
             cmd.stderr(Stdio::piped());
         }
         let mut child = cmd.spawn().context("spawning client")?;
-        self.0.borrow_mut().run_things.push(ChildInfo::new(name, &mut child));
+        self.state.lock().run_things.push(ChildInfo::new(name, &mut child));
         assert!(child.wait().expect("client should succeed").success());
         Ok(())
     }
 
     fn new_daemon(&self, command: Command) -> Result<(), Error> {
-        let d = Daemon::new(command, &self.0.borrow().args)?;
-        self.0.borrow_mut().daemons.push(d);
+        let d = Daemon::new(command, &self.args)?;
+        self.state.lock().daemons.push(d);
         Ok(())
     }
 
     fn new_daemon_from_child(&self, name: String, child: Child) {
-        self.0.borrow_mut().daemons.push(Daemon::new_from_child(name, child));
+        self.state.lock().daemons.push(Daemon::new_from_child(name, child));
     }
 
-    fn show_reports_if_failed(&self, f: impl FnOnce() -> Result<(), Error>) -> Result<(), Error> {
-        let r = f();
+    fn show_reports_if_failed(
+        &self,
+        f: impl FnOnce() -> Result<(), Error> + Send + 'static,
+    ) -> Result<(), Error> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let j = std::thread::spawn(move || tx.send(f()));
+        let r = (|| -> Result<(), Error> {
+            rx.recv_timeout(Duration::from_secs(60))
+                .context("receiving completion notificiation")?
+                .context("running test code")?;
+            j.join()
+                .map_err(|_| format_err!("Failed to join thread"))?
+                .context("sending test completion notification")?;
+            Ok(())
+        })();
 
         if let Err(ref e) = &r {
             let _ = REPORT_MUTEX.lock();
-            let this = &*self.0.borrow();
+            let this = &*self.state.lock();
 
             println!(
                 "*******************************************************************************"
             );
-            println!("** ERROR: {}", e);
+            println!("** ERROR: {:?}", e);
 
             for thing in this.run_things.iter() {
                 thing.show();
@@ -179,24 +198,29 @@ impl TestContext {
             for thing in this.daemons.iter() {
                 thing.details.show();
             }
+
+            println!(
+                "*******************************************************************************"
+            );
+            eprintln!("WROTE LOG FOR ERROR: {:?}", e);
         }
 
         r
     }
 }
 
-struct Ascendd<'a> {
+struct Ascendd {
     socket: String,
-    ctx: &'a TestContext,
+    ctx: Arc<TestContext>,
 }
 
-impl<'a> Ascendd<'a> {
-    fn new(ctx: &'a TestContext) -> Result<Ascendd, Error> {
+impl Ascendd {
+    fn new(ctx: &Arc<TestContext>) -> Result<Ascendd, Error> {
         let socket = format!("/tmp/ascendd.{}.sock", rand::thread_rng().gen::<u128>());
         let mut cmd = cmd("ascendd");
         cmd.arg("--sockpath").arg(&socket);
         ctx.new_daemon(cmd)?;
-        Ok(Ascendd { ctx, socket })
+        Ok(Ascendd { ctx: ctx.clone(), socket })
     }
 
     fn cmd(&self, name: &str) -> Command {
@@ -296,7 +320,7 @@ mod tests {
     pub fn echo_test(args: TestArgs) -> Result<(), Error> {
         let ctx = TestContext::new(args);
         let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
-        ctx.show_reports_if_failed(|| {
+        ctx.clone().show_reports_if_failed(move || {
             ascendd.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd.echo_client()).context("running client")?;
             ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
@@ -313,7 +337,7 @@ mod tests {
         let ctx = TestContext::new(args);
         let mut ascendd1 = Ascendd::new(&ctx).context("creating ascendd 1")?;
         let mut ascendd2 = Ascendd::new(&ctx).context("creating ascendd 2")?;
-        ctx.show_reports_if_failed(|| {
+        ctx.clone().show_reports_if_failed(move || {
             bridge(&mut ascendd1, &mut ascendd2).context("bridging ascendds")?;
             ascendd1.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd1.echo_client()).context("running client")?;
@@ -330,7 +354,7 @@ mod tests {
     pub fn interface_passing_test(args: TestArgs) -> Result<(), Error> {
         let ctx = TestContext::new(args);
         let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
-        ctx.show_reports_if_failed(|| {
+        ctx.clone().show_reports_if_failed(move || {
             ascendd.add_interface_passing_server().context("starting server")?;
             ctx.run_client(ascendd.interface_passing_client()).context("running client")?;
             ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
@@ -375,22 +399,44 @@ impl Args {
     }
 }
 
+fn box_test<F: 'static + Send + Sync + Fn(TestArgs) -> Result<(), Error>>(
+    f: F,
+) -> Arc<dyn 'static + Send + Sync + Fn(TestArgs) -> Result<(), Error>> {
+    Arc::new(f)
+}
+
 fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
-    let test_fn = match args.test.as_str() {
-        "echo" => tests::echo_test,
-        "multiple_ascendd_echo" => tests::multiple_ascendd_echo_test,
-        "interface_passing" => tests::interface_passing_test,
-        x => return Err(anyhow::format_err!("Unknown test {}", x)),
-    };
+    let tests: HashMap<String, Arc<dyn 'static + Send + Sync + Fn(TestArgs) -> Result<(), Error>>> =
+        vec![
+            ("echo".to_string(), box_test(tests::echo_test)),
+            ("multiple_ascendd_echo".to_string(), box_test(tests::multiple_ascendd_echo_test)),
+            ("interface_passing".to_string(), box_test(tests::interface_passing_test)),
+        ]
+        .into_iter()
+        .collect();
+    let test_selector = args.test.as_str();
+    let test_fns: Vec<Arc<dyn 'static + Send + Sync + Fn(TestArgs) -> Result<(), Error>>> =
+        match test_selector {
+            "*" => tests.iter().map(|(_, test)| test.clone()).collect(),
+            _ => vec![tests
+                .get(test_selector)
+                .ok_or(anyhow::format_err!("Unknown test {}", test_selector))?
+                .clone()],
+        };
     let errors = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let concurrency = args.concurrency.unwrap_or(1);
     let sema = Semaphore::new(concurrency);
+    let mut test_it = test_fns.iter().cycle();
     for i in 0..args.jobs.unwrap_or(1) {
         let guard = Arc::new(sema.access());
-        eprintln!("START JOB: {}", i);
+        {
+            let _ = REPORT_MUTEX.lock();
+            eprintln!("START JOB: {}", i);
+        }
         let errors = errors.clone();
         let args = args.test_args();
+        let test_fn = test_it.next().unwrap().clone();
         std::thread::Builder::new()
             .spawn(move || {
                 if let Err(e) = test_fn(args) {

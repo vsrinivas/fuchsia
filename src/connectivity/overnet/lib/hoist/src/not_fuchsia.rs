@@ -21,11 +21,14 @@ pub use fidl_fuchsia_overnet::MeshControllerProxyInterface;
 pub use fidl_fuchsia_overnet::ServiceConsumerProxyInterface;
 pub use fidl_fuchsia_overnet::ServicePublisherProxyInterface;
 
-pub const ASCENDD_CLIENT_CONNECTION_STRING: &str = "Lift me";
-pub const ASCENDD_SERVER_CONNECTION_STRING: &str = "Yessir";
+pub const ASCENDD_CLIENT_CONNECTION_STRING: &str = "ASCENDD_CLIENT_CONNECTION_STRING";
+pub const ASCENDD_SERVER_CONNECTION_STRING: &str = "ASCENDD_SERVER_CONNECTION_STRING";
 pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
 
-pub use overnet_core::run;
+pub fn run<R>(f: impl Future<Output = R> + 'static) -> R {
+    crate::logger::init().expect("Failed to create logger");
+    overnet_core::run(f)
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Overnet <-> API bindings
