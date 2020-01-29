@@ -6,19 +6,15 @@ Fuchsia tracing library and utilities require access to the `trace_manager`'s
 services in the environment, which is typically set up by the
 [boot sequence](/docs/concepts/framework/boot_sequence.md).
 
-Note that capturing traces requires that the `devtools` package be included. If your build
-configuration does not include `devtools` by default, then you can add it manually by invoking
+Note that capturing traces requires that the `tools` bundle be included. If your build
+configuration does not include `tools` bundle by default, then you can add it manually by invoking
 `fx set` like:
 
 ```{shell}
-fx set PRODUCT.BOARD --with-base='//garnet/packages/products:devtools'
+fx set PRODUCT.BOARD --with-base '//bundles:tools'
 ```
 
-So as a full example:
-
-```{shell}
-fx set core.x64 --release --with-base=//garnet/packages/products:devtools,//peridot/packages/prod:sessionctl'
-```
+Note: `core` and most other products include tools ephemerally by default.
 
 ## Capturing Traces From a Development Host
 

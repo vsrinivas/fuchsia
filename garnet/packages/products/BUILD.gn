@@ -42,20 +42,3 @@ group("interactive_minimal") {
     "//src/ui/a11y",
   ]
 }
-
-group("devtools") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:cmdutils",
-    "//garnet/packages/prod:debug_agent",
-    "//garnet/packages/prod:far",
-    "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:pm",
-    "//garnet/packages/prod:run",
-    "//garnet/packages/prod:ssh",
-    "//garnet/packages/prod:tracing",
-    "//garnet/packages/testing:all",
-    "//garnet/packages/tools:all",
-    "//src/developer/memory/mem",
-  ]
-}

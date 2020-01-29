@@ -21,7 +21,7 @@ engine.
   * Ensure there's a path from  a top-level target, e.g. `//bundles:tests`, to your fuzzers package.
 1. Configure, build, and boot (with networking), e.g.:
   * _if a Fuchsia instance is not already running:_ `fx qemu -N`
-  * `fx set core.x64 --fuzz-with asan --with //bundles:tests --with //garnet/packages/products:devtools`
+  * `fx set core.x64 --fuzz-with asan --with //bundles:tests`
   * `fx build`
   * `fx serve`
 1. Use the fuzzer tool:
@@ -278,7 +278,7 @@ instrument them for fuzzing with an appropriate sanitizer.  The easiest way to a
 the `--fuzz-with <sanitizer>` flag with `fx set`, e.g:
 
 ```
-$ fx set core.x64 --fuzz-with asan --with //bundles:tests --with //garnet/packages/products:devtools
+$ fx set core.x64 --fuzz-with asan --with //bundles:tests
 $ fx build
 ```
 
@@ -315,7 +315,7 @@ Zircon fuzzers will be built with all supported sanitizers automatically. These 
 Fuchsia instance by including the `zircon_fuzzers` package, e.g.:
 
 ```
-$ fx set core.x64 --with //garnet/tests/zircon:zircon_fuzzers --with //garnet/packages/products:devtools
+$ fx set core.x64 --with //garnet/tests/zircon:zircon_fuzzers
 $ fx build
 ```
 
