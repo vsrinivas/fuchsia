@@ -379,6 +379,10 @@ zx_status_t device_rebind(zx_device_t* device) {
   return fake_ddk::Bind::Instance()->DeviceRebind(device);
 }
 
+// Please do not use get_root_resource() in new code. See ZX-1467.
+__EXPORT
+zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
+
 extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);

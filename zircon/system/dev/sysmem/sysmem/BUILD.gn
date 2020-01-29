@@ -53,7 +53,6 @@ zx_test("sysmem-unittest") {
   sources = [
     "test/contiguous_pooled_memory_allocator_test.cc",
     "test/device_test.cc",
-    "test/fake_root_resource.cc",
     "test/pixel_format_cost_test.cc",
   ]
   include_dirs = [ "." ]

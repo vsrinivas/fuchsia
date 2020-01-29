@@ -17,8 +17,6 @@
 
 namespace sysmem = llcpp::fuchsia::sysmem;
 
-zx_handle_t get_root_resource(void) { return ZX_HANDLE_INVALID; }
-
 static void empty_callback(void* ctx, uint32_t master_interrupt_control, uint64_t timestamp) {}
 
 namespace {

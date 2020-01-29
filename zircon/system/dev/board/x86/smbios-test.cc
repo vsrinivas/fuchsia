@@ -5,12 +5,6 @@
 #include <zxtest/zxtest.h>
 #include "smbios.h"
 
-// This is needed because smbios.cpp uses get_root_resource() for some of the
-// driver functionality (in that case, it comes from the devhost).  Since this
-// test binary is a standalone executable, we need something to define this
-// symbol.  On a build that GCs symbols, this will likely be omitted.
-extern "C" zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
-
 TEST(SmbiosTestCase, ProductNameAllSpaces) {
   char buf[32] = {};
   memset(buf, ' ', sizeof(buf) - 1);
