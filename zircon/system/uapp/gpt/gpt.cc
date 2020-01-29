@@ -51,7 +51,7 @@ int Usage(zx_status_t ret) {
   printf("the partitions themselves.\n\n");
   printf("> %s dump [<dev>]\n", bin_name);
   printf("  View the properties of the selected device\n");
-  printf("> %s Init [<dev>]\n", bin_name);
+  printf("> %s init [<dev>]\n", bin_name);
   printf("  Initialize the block device with a GPT\n");
   printf("> %s repartition <dev> [[<label> <type> <size>], ...]\n", bin_name);
   printf("  Destructively repartition the device with the given layout\n");
@@ -804,7 +804,7 @@ int main(int argc, char** argv) {
       return Usage(ZX_OK);
     }
     DumpPartitions(argv[2]);
-  } else if (!strcmp(cmd, "Init")) {
+  } else if (!strcmp(cmd, "init")) {
     if (argc <= 2) {
       return Usage(ZX_OK);
     }
