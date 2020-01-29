@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,16 +14,19 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
+	"go.fuchsia.dev/fuchsia/tools/serial"
 
 	"github.com/google/subcommands"
 )
@@ -126,6 +131,9 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	var bootMode bootserver.Mode
 	if r.netboot {
 		bootMode = bootserver.ModeNetboot
@@ -170,26 +178,41 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	errs := make(chan error)
 
-	serial := t0.Serial()
-	if serial != nil && r.serialLogFile != "" {
+	var socketPath string
+	if t0.Serial() != nil {
+		defer t0.Serial().Close()
+
 		// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
 		// arm64 devices should already be enabling kernel.serial at compile time.
 		r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
 
-		serialLog, err := os.Create(r.serialLogFile)
+		sOpts := serial.ServerOptions{
+			WriteBufferSize: botanist.SerialLogBufferSize,
+		}
+		if r.serialLogFile != "" {
+			serialLog, err := os.Create(r.serialLogFile)
+			if err != nil {
+				return err
+			}
+			defer serialLog.Close()
+			sOpts.AuxiliaryOutput = serialLog
+		}
+
+		s := serial.NewServer(t0.Serial(), sOpts)
+		socketPath = createSocketPath()
+		addr := &net.UnixAddr{Name: socketPath, Net: "unix"}
+		l, err := net.ListenUnix("unix", addr)
 		if err != nil {
 			return err
 		}
-		defer serialLog.Close()
+		defer l.Close()
 		go func() {
-			if _, err := io.Copy(serialLog, serial); err != nil {
-				errs <- fmt.Errorf("failed to write serial log: %v", err)
+			if err := s.Run(ctx, l); err != nil && ctx.Err() == nil {
+				errs <- err
+				return
 			}
 		}()
 	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	// Defer asynchronously restarts of each target.
 	defer func() {
@@ -225,7 +248,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 	go func() {
 		wg.Wait()
-		errs <- r.runAgainstTarget(ctx, t0, args)
+		errs <- r.runAgainstTarget(ctx, t0, args, socketPath)
 	}()
 
 	select {
@@ -236,9 +259,13 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	return nil
 }
 
-func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []string) error {
+func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []string, socketPath string) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	subprocessEnv := map[string]string{
-		"FUCHSIA_NODENAME": t.Nodename(),
+		"FUCHSIA_NODENAME":      t.Nodename(),
+		"FUCHSIA_SERIAL_SOCKET": socketPath,
 	}
 
 	// If |netboot| is true, then we assume that fuchsia is not provisioned
@@ -280,7 +307,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 				err := syslogger.Stream(ctx, s, false)
 				// TODO(fxbug.dev/43518): when 1.13 is available, spell this as
 				// `err != nil && errors.Is(err, context.Canceled) && errors.Is(err, context.DeadlineExceeded)`
-				if err != nil && ctx.Err() != nil {
+				if err != nil && ctx.Err() == nil {
 					logger.Errorf(ctx, "syslog streaming interrupted: %v", err)
 				}
 			}()
@@ -297,7 +324,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		Env: environ,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	ctx, cancel = context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	err := runner.Run(ctx, args, os.Stdout, os.Stderr)
@@ -317,6 +344,13 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
+}
+
+func createSocketPath() string {
+	// We randomly construct a socket path that is highly improbable to collide with anything.
+	randBytes := make([]byte, 16)
+	rand.Read(randBytes)
+	return filepath.Join(os.TempDir(), "serial"+hex.EncodeToString(randBytes)+".sock")
 }
 
 func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target, error) {
