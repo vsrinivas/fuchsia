@@ -415,8 +415,11 @@ TEST(SanitizerUtilsTest, MemorySnapshotFull) {
     if (count == kThreadCount) {
       break;
     }
-    ASSERT_OK(zx_futex_wait(reinterpret_cast<zx_futex_t*>(&ready), count, ZX_HANDLE_INVALID,
-                            ZX_TIME_INFINITE));
+    zx_status_t status = zx_futex_wait(reinterpret_cast<zx_futex_t*>(&ready), count,
+                                       ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+    if (status != ZX_ERR_BAD_STATE) {  // Normal race condition case: retry.
+      ASSERT_OK(status, "zx_futex_wait failed");
+    }
   }
 
   // Sanity-check the setup work.
