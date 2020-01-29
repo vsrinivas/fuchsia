@@ -642,6 +642,11 @@ static int fetch_next_line(const char** buffer, void* cookie) {
   }
   lineread->buffer[bufpos] = 0;
 
+#if CONSOLE_ENABLE_HISTORY
+  // add to history
+  add_history(lineread->buffer);
+#endif
+
   *buffer = lineread->buffer;
 
   return static_cast<int>(bufpos);
