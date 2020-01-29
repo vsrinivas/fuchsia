@@ -46,7 +46,7 @@ class OneFingerDragRecognizer : public GestureRecognizer {
   // drag. Once this delay elapses, the recognizer tries to aggressively accept the gesture in the
   // arena.
   OneFingerDragRecognizer(DragGestureCallback on_drag_update, DragGestureCallback on_drag_complete,
-                          zx::duration drag_gesture_delay);
+                          zx::duration drag_gesture_delay = kDefaultMinDragDuration);
   ~OneFingerDragRecognizer() override;
 
   void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;

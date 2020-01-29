@@ -89,7 +89,8 @@ std::vector<PointerParams> DragEvents(PointerId pointer_id, const glm::vec2& sta
                                       const glm::vec2& end, size_t moves = kDefaultMoves);
 
 fuchsia::ui::input::accessibility::PointerEvent ToPointerEvent(const PointerParams& params,
-                                                               uint64_t event_time);
+                                                               uint64_t event_time,
+                                                               zx_koid_t koid = 0);
 
 ::fuchsia::math::PointF ToLocalCoordinates(const glm::vec2& ndc);
 

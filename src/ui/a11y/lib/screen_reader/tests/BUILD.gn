@@ -27,6 +27,7 @@ executable("screen_reader_tests") {
     "//src/ui/a11y/lib/screen_reader/tests/mocks",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/tests/mocks",
+    "//src/ui/a11y/lib/testing:input",
     "//src/ui/a11y/lib/tts",
     "//src/ui/a11y/lib/util",
     "//src/ui/lib/glm_workaround",

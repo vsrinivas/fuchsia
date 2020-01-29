@@ -28,7 +28,7 @@ class GestureHandler {
   // The high-level gestures identified by this class.
   // TODO(lucasradaelli): Implement swipe-like gestures.
   // TODO(lucasradaelli): Implement multiple finger taps.
-  enum GestureType { kUnknown, kOneFingerSingleTap, kOneFingerDoubleTap };
+  enum GestureType { kUnknown, kOneFingerSingleTap, kOneFingerDoubleTap, kOneFingerDrag };
 
   // Some gestures need additional information about what was touched and where it was touched on
   // the screen. Callers of OnGesture() may provide this information.
@@ -52,6 +52,9 @@ class GestureHandler {
 
   // Binds the action defined in |callback| with the gesture |kOneFingerDoubleTap|.
   bool BindOneFingerDoubleTapAction(OnGestureCallback callback);
+
+  // Binds the action defined in |callback| with the gesture |kOneFingerDrag|.
+  bool BindOneFingerDragAction(OnGestureCallback callback);
 
   // Binds a recognizer that consumes everything.
   void ConsumeAll();

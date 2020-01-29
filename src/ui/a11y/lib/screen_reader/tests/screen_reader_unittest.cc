@@ -9,10 +9,12 @@
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
+#include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 
@@ -43,8 +45,17 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
     screen_reader_.BindGestures(gesture_manager_.gesture_handler());
   }
 
-  AccessibilityPointerEvent GetDefaultPointerEvent() const;
-  void CreateOnOneFingerTapAction();
+  void SendPointerEvents(const std::vector<PointerParams> &events) {
+    for (const auto &event : events) {
+      gesture_manager_.OnEvent(ToPointerEvent(event, 0 /*event time (unused)*/,
+                                              a11y::GetKoid(semantic_provider_.view_ref())));
+    }
+  }
+
+  void CreateOnOneFingerTapAction() {
+    SendPointerEvents(
+        TapEvents(1, {0, 0} /*global coordinates of tap ignored by mock semantic provider*/));
+  }
 
   sys::testing::ComponentContextProvider context_provider_;
   a11y::TtsManager tts_manager_;
@@ -53,42 +64,6 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   a11y::ScreenReader screen_reader_;
   accessibility_test::MockSemanticProvider semantic_provider_;
 };
-
-// Returns a default Accessibility Pointer Event.
-AccessibilityPointerEvent ScreenReaderTest::GetDefaultPointerEvent() const {
-  AccessibilityPointerEvent event;
-  event.set_event_time(10);
-  event.set_device_id(1);
-  event.set_pointer_id(1);
-  event.set_type(fuchsia::ui::input::PointerEventType::TOUCH);
-  event.set_phase(PointerEventPhase::ADD);
-  event.set_ndc_point({4, 4});
-  event.set_viewref_koid(a11y::GetKoid(semantic_provider_.view_ref()));
-  event.set_local_point({2, 2});
-  return event;
-}
-
-void ScreenReaderTest::CreateOnOneFingerTapAction() {
-  {
-    auto event = GetDefaultPointerEvent();
-    gesture_manager_.OnEvent(std::move(event));
-  }
-  {
-    auto event = GetDefaultPointerEvent();
-    event.set_phase(PointerEventPhase::DOWN);
-    gesture_manager_.OnEvent(std::move(event));
-  }
-  {
-    auto event = GetDefaultPointerEvent();
-    event.set_phase(PointerEventPhase::UP);
-    gesture_manager_.OnEvent(std::move(event));
-  }
-  {
-    auto event = GetDefaultPointerEvent();
-    event.set_phase(PointerEventPhase::REMOVE);
-    gesture_manager_.OnEvent(std::move(event));
-  }
-}
 
 // Create a test node with only a node id and a label.
 Node CreateTestNode(uint32_t node_id, std::string label) {
@@ -181,6 +156,57 @@ TEST_F(ScreenReaderTest, OnOneFingerDoubleTapAction) {
 
   EXPECT_EQ(fuchsia::accessibility::semantics::Action::DEFAULT,
             semantic_provider_.GetRequestedAction());
+}
+
+TEST_F(ScreenReaderTest, OnOneFingerDragAction) {
+  // Initialize Mock TTS Engine.
+  accessibility_test::MockTtsEngine mock_tts_engine;
+  fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
+      mock_tts_engine.GetHandle();
+  tts_manager_.RegisterEngine(
+      std::move(engine_handle),
+      [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
+        EXPECT_TRUE(result.is_response());
+      });
+  RunLoopUntilIdle();
+
+  // Creating test node to update.
+  std::vector<Node> update_nodes;
+  Node node = CreateTestNode(0, "Label A");
+  Node clone_node;
+  node.Clone(&clone_node);
+  update_nodes.push_back(std::move(clone_node));
+
+  // Update the node created above.
+  semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
+  RunLoopUntilIdle();
+
+  // Commit nodes.
+  semantic_provider_.CommitUpdates();
+  RunLoopUntilIdle();
+
+  semantic_provider_.SetHitTestResult(0);
+
+  // Create one finger drag action.
+  glm::vec2 first_update_ndc_position = {0, .7f};
+  auto first_update_local_coordinates = ToLocalCoordinates(first_update_ndc_position);
+
+  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, first_update_ndc_position));
+
+  // Wait for the drag delay to elapse, at which point the recognizer should claim the win and
+  // invoke the update callback.
+  RunLoopFor(a11y::OneFingerDragRecognizer::kDefaultMinDragDuration);
+
+  SendPointerEvents(MoveEvents(1, first_update_ndc_position, first_update_ndc_position, 1) +
+                    UpEvents(1, first_update_ndc_position));
+
+  RunLoopUntilIdle();
+
+  // Verify that TTS is called when OneFingerTapAction was performed.
+  EXPECT_TRUE(mock_tts_engine.ReceivedSpeak());
+  // Check if Utterance and Speak functions are called in Tts.
+  ASSERT_EQ(mock_tts_engine.ExamineUtterances().size(), 1u);
+  EXPECT_EQ(mock_tts_engine.ExamineUtterances()[0].message(), "Label A");
 }
 
 }  // namespace

@@ -48,7 +48,8 @@ std::vector<PointerParams> DragEvents(PointerId pointer_id, const glm::vec2& sta
 }
 
 fuchsia::ui::input::accessibility::PointerEvent ToPointerEvent(const PointerParams& params,
-                                                               uint64_t event_time) {
+                                                               uint64_t event_time,
+                                                               zx_koid_t koid) {
   fuchsia::ui::input::accessibility::PointerEvent event;
   event.set_event_time(event_time);
   event.set_device_id(1);
@@ -56,6 +57,7 @@ fuchsia::ui::input::accessibility::PointerEvent ToPointerEvent(const PointerPara
   event.set_type(fuchsia::ui::input::PointerEventType::TOUCH);
   event.set_phase(params.phase);
   event.set_ndc_point({params.coordinate.x, params.coordinate.y});
+  event.set_viewref_koid(koid);
   event.set_local_point(ToLocalCoordinates(params.coordinate));
 
   return event;
