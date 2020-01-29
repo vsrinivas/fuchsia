@@ -27,8 +27,11 @@ constexpr char kShutdownBasemgrCommandString[] = "shutdown";
 
 std::string FindBasemgrDebugService() {
   glob_t globbuf;
-  FXL_CHECK(glob(kBasemgrHubPath, 0, nullptr, &globbuf) == 0);
-  std::string service_path = globbuf.gl_pathv[0];
+  glob(kBasemgrHubPath, 0, nullptr, &globbuf);
+  std::string service_path = "";
+  if (globbuf.gl_pathc > 0) {
+    service_path = globbuf.gl_pathv[0];
+  }
   globfree(&globbuf);
   return service_path;
 }
