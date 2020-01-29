@@ -222,6 +222,12 @@ default_executable_configs = default_common_binary_configs + [
                                "//build/config:executable_config",
                                "//build/config:default_libs",
                              ]
+# The fdio config is added here so that it can later be removed from default
+# configs for targets which do not need it. This cannot be done when the config
+# is added transitively.
+if (current_os == "fuchsia") {
+  default_executable_configs += [ "//build/config/fuchsia:fdio_config" ]
+}
 default_executable_deps = [ "//build/config/scudo:default_for_executable" ]
 
 if (toolchain_variant.is_pic_default) {

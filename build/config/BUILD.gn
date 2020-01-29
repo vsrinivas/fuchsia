@@ -350,7 +350,6 @@ config("executable_config") {
   if (current_os == "fuchsia") {
     configs += [
       "//build/config/fuchsia:executable_config",
-      "//build/config/fuchsia:fdio_config",
     ]
   } else if (current_os == "mac") {
     configs += [
