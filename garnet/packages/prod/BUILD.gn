@@ -167,7 +167,6 @@ group("all") {
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:far",
-    "//garnet/packages/prod:fortune",
     "//garnet/packages/prod:guest_runner",
     "//garnet/packages/prod:insntrace",
     "//garnet/packages/prod:iquery",
@@ -691,11 +690,6 @@ group("wlan_drivers") {
     "//garnet/packages/prod:wlanif",
     "//garnet/packages/prod:wlanphy",
   ]
-}
-
-group("fortune") {
-  testonly = true
-  public_deps = [ "//examples/fortune" ]
 }
 
 group("bluetooth_all") {
