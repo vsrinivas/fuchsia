@@ -17,9 +17,7 @@ use {
 
 fn ethdir_path() -> std::path::PathBuf {
     let options: crate::Opt = argh::from_env();
-    let path = path::Path::new(&options.dev_path).join("class/ethernet");
-    info!("device path: {}", path.display());
-    path
+    path::Path::new(&options.dev_path).join("class/ethernet")
 }
 
 async fn device_found(
@@ -49,7 +47,6 @@ async fn device_found(
 
     if let Ok(device_info) = ethernet_device.get_info().await {
         let device_info: fidl_fuchsia_hardware_ethernet_ext::EthernetInfo = device_info.into();
-        info!("device {:#?}", ethernet_device);
         let device_channel = ethernet_device
             .into_channel()
             .map_err(|fidl_fuchsia_hardware_ethernet::DeviceProxy { .. }| {
@@ -57,9 +54,7 @@ async fn device_found(
             })?
             .into_zx_channel();
 
-        info!("device_channel {:#?}", device_channel);
-        info!("device info {:?}", device_info);
-        info!("topo_path {:?}", topological_path);
+        info!("Device found: topo_path {} info {:?}", topological_path, device_info);
         if device_info.features.is_physical() {
             event_chan.unbounded_send(Event::OIR(OIRInfo {
                 action: network_manager_core::oir::Action::ADD,
@@ -99,7 +94,7 @@ async fn run(event_chan: mpsc::UnboundedSender<Event>) -> Result<(), anyhow::Err
             path
         )
     })?;
-    info!("device path: {:?}", path);
+    debug!("device path: {}", path_as_str);
     let dir_proxy = open_directory_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dir_proxy)
         .await
