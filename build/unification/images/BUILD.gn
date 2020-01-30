@@ -549,7 +549,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.zbi-test",
     ":test.sys.zircon-crypto-test",
     ":test.sys.zxcrypt-test",
-    ":test.sys.zxio-test",
     ":test.sys.zxtest-integration-test",
     ":test.sys.zxtest-test",
   ]
@@ -929,7 +928,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.zbi-test",
     ":test.sys.zircon-crypto-test",
     ":test.sys.zxcrypt-test",
-    ":test.sys.zxio-test",
     ":test.sys.zxtest-integration-test",
     ":test.sys.zxtest-test",
   ]
@@ -1999,7 +1997,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-manifest",
     "//zircon/system/ulib/zx/test:zx-manifest",
     #":test.sys.zxcrypt-test",
-    #":test.sys.zxio-test",
+    "//zircon/system/ulib/zxio/test:zxio-manifest",
     #":test.sys.zxtest-integration-test",
     #":test.sys.zxtest-test",
   ]
@@ -2448,7 +2446,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-manifest",
     "//zircon/system/ulib/zx/test:zx-manifest",
     #":test.sys.zxcrypt-test",
-    #":test.sys.zxio-test",
+    "//zircon/system/ulib/zxio/test:zxio-manifest",
     #":test.sys.zxtest-integration-test",
     #":test.sys.zxtest-test",
   ]
