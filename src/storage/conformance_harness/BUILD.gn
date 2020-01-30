@@ -5,6 +5,7 @@
 group("conformance_harness") {
   testonly = true
   deps = [
+    "rust_pseudo_fs_mt:io_conformance_harness_rust_pseudo_fs_mt",
     "sdkcpp:io_conformance_harness_sdkcpp",
     "ulibfs:io_conformance_harness_ulibfs",
   ]

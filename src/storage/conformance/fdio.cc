@@ -171,6 +171,7 @@ int main(int argc, char** argv) {
   for (const auto& harness_name : {
     "io_conformance_harness_sdkcpp",
     "io_conformance_harness_ulibfs",
+    "io_conformance_harness_rust_pseudo_fs_mt",
   }) {
     FdioTest::harness_name = harness_name;
     std::cout << "----" << std::endl;

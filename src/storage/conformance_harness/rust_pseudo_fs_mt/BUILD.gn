@@ -1,0 +1,33 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  testonly = true
+  edition = "2018"
+  name = "io_conformance_harness_rust_pseudo_fs_mt"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/pseudo-fs-mt",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-io-test:fuchsia-io-test-rustc",
+  ]
+}
+
+package("io_conformance_harness_rust_pseudo_fs_mt") {
+  deps = [ ":bin" ]
+  meta = [
+    {
+      path = rebase_path("meta/io_conformance_harness_rust_pseudo_fs_mt.cmx")
+      dest = "io_conformance_harness_rust_pseudo_fs_mt.cmx"
+    },
+  ]
+  testonly = true
+  binary = "io_conformance_harness_rust_pseudo_fs_mt"
+}
