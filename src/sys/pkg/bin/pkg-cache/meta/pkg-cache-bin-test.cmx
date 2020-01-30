@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/pkg-cache-bin-test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
     }
 }

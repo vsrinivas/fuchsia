@@ -12,3 +12,9 @@ pub use crate::package::{Package, PackageBuilder, PackageDir, VerificationError}
 mod repo;
 pub use crate::repo::{BlobEncryptionKey, PackageEntry, Repository, RepositoryBuilder};
 pub mod serve;
+
+mod inspect;
+pub use crate::inspect::get_inspect_hierarchy;
+
+mod system_image;
+pub use crate::system_image::SystemImageBuilder;

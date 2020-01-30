@@ -136,6 +136,11 @@ impl MetaContents {
     pub fn contents(&self) -> &BTreeMap<String, Hash> {
         &self.contents
     }
+
+    /// Take the map from blob resource paths to Merkle Tree root hashes.
+    pub fn into_contents(self) -> BTreeMap<String, Hash> {
+        self.contents
+    }
 }
 
 #[cfg(test)]
@@ -152,6 +157,7 @@ mod tests {
         let empty = Vec::new();
         let meta_contents = MetaContents::deserialize(empty.as_slice()).unwrap();
         assert_eq!(meta_contents.contents(), &BTreeMap::new());
+        assert_eq!(meta_contents.into_contents(), BTreeMap::new());
     }
 
     #[test]
@@ -168,6 +174,7 @@ mod tests {
                 Hash::from_str("1111111111111111111111111111111111111111111111111111111111111111").unwrap(),
         };
         assert_eq!(meta_contents.contents(), &expected_contents);
+        assert_eq!(meta_contents.into_contents(), expected_contents);
     }
 
     proptest! {

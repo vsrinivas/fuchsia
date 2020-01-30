@@ -165,7 +165,14 @@ impl Package {
         ) -> Result<(), anyhow::Error> {
             let mut bytes = vec![];
             source.read_to_end(&mut bytes)?;
-            let mut file = dir.write_file(merkle.to_string(), 0777)?;
+            let mut file = match dir.write_file(merkle.to_string(), 0777) {
+                Ok(file) => file,
+                Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
+                    // blobfs already aware of this blob (e.g. blob is written or write is in-flight)
+                    return Ok(());
+                }
+                Err(e) => Err(e)?,
+            };
             file.set_len(bytes.len().try_into().unwrap())?;
             file.write_all(&bytes)?;
             Ok(())

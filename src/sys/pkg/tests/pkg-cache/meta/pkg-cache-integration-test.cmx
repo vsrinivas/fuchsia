@@ -3,13 +3,20 @@
         "binary": "test/pkg-cache-integration-test"
     },
     "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
         "features": [
+            "hub",
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

@@ -227,12 +227,20 @@ mod tests {
 
         assert_matches!(needs.next().await, None);
 
-        let pkg1_dir =
-            versions.open_package(pkg1.meta_far_merkle_root().to_owned(), None).await.unwrap();
+        let pkg1_dir = versions
+            .open_package(pkg1.meta_far_merkle_root(), None)
+            .await
+            .unwrap()
+            .into_proxy()
+            .unwrap();
         pkg1.verify_contents(&pkg1_dir).await.unwrap();
 
-        let pkg2_dir =
-            versions.open_package(pkg2.meta_far_merkle_root().to_owned(), None).await.unwrap();
+        let pkg2_dir = versions
+            .open_package(pkg2.meta_far_merkle_root(), None)
+            .await
+            .unwrap()
+            .into_proxy()
+            .unwrap();
         pkg2.verify_contents(&pkg2_dir).await.unwrap();
 
         pkgfs.stop().await.unwrap();
@@ -344,8 +352,12 @@ mod tests {
 
         // verify there are no more needs and the package is readable.
         assert_matches!(needs.next().await, None);
-        let pkg_dir =
-            versions.open_package(pkg.meta_far_merkle_root().to_owned(), None).await.unwrap();
+        let pkg_dir = versions
+            .open_package(pkg.meta_far_merkle_root(), None)
+            .await
+            .unwrap()
+            .into_proxy()
+            .unwrap();
         pkg.verify_contents(&pkg_dir).await.unwrap();
 
         pkgfs.stop().await.unwrap();

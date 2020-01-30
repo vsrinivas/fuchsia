@@ -14,17 +14,38 @@ rustc_test("driver") {
   deps = [
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/testing/pkgfs-ramdisk",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
+    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }
 
+# Include blobfs in the build, which comes from Zircon
+generate_manifest("blobfs.manifest") {
+  visibility = [ ":*" ]
+  args = []
+  foreach(pattern, [ "bin/blobfs" ]) {
+    args += [ "--binary=" + pattern ]
+  }
+}
+blobfs_manifest_outputs = get_target_outputs(":blobfs.manifest")
+blobfs_manifest_file = blobfs_manifest_outputs[0]
+
 test_package("pkg-cache-integration-tests") {
   deps = [
+    ":blobfs.manifest",
     ":driver",
+    "//garnet/go/src/grand_unified_binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
   ]
 
@@ -32,6 +53,10 @@ test_package("pkg-cache-integration-tests") {
     {
       name = "pkg_cache"
       dest = "pkg-cache"
+    },
+    {
+      name = "pkgsvr"
+      source = "grand_unified_binary"
     },
   ]
 
@@ -50,6 +75,8 @@ test_package("pkg-cache-integration-tests") {
       environments = basic_envs
     },
   ]
+
+  extra = [ blobfs_manifest_file ]
 }
 
 group("tests") {

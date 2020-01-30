@@ -23,6 +23,7 @@ rustc_library("pkgfs") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:openat",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -33,6 +34,7 @@ rustc_library("pkgfs") {
 
   test_deps = [
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",

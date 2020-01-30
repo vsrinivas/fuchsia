@@ -4,70 +4,76 @@
 
 #![cfg(test)]
 use {
-    fidl_fuchsia_space::{
-        ErrorCode as SpaceErrorCode, ManagerMarker as SpaceManagerMarker,
-        ManagerProxy as SpaceManagerProxy,
-    },
+    anyhow::Error,
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_pkg::{PackageCacheMarker, PackageCacheProxy},
+    fidl_fuchsia_pkg_ext::BlobId,
+    fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
+    fuchsia_inspect::reader::NodeHierarchy,
+    fuchsia_pkg_testing::get_inspect_hierarchy,
+    fuchsia_zircon as zx,
     futures::prelude::*,
-    matches::assert_matches,
-    std::fs::File,
-    std::path::PathBuf,
-    tempfile::TempDir,
+    pkgfs_ramdisk::PkgfsRamdisk,
 };
 
-struct Mounts {
-    pkgfs_ctl: TempDir,
-    pkgfs_versions: TempDir,
+mod inspect;
+mod space;
+
+trait PkgFs {
+    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 }
 
-impl Mounts {
-    fn new() -> Self {
-        Self {
-            pkgfs_ctl: tempfile::tempdir().expect("/tmp to exist"),
-            pkgfs_versions: tempfile::tempdir().expect("/tmp to exist"),
-        }
+impl PkgFs for PkgfsRamdisk {
+    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+        PkgfsRamdisk::root_dir_handle(self)
     }
 }
 
 struct Proxies {
     space_manager: SpaceManagerProxy,
+    package_cache: PackageCacheProxy,
 }
 
-struct TestEnv {
+struct TestEnv<P = PkgfsRamdisk> {
     _env: NestedEnvironment,
-    mounts: Mounts,
+    pkgfs: P,
     proxies: Proxies,
     pkg_cache: App,
+    nested_environment_label: String,
 }
 
-impl TestEnv {
-    fn new() -> Self {
-        let mounts = Mounts::new();
+impl TestEnv<PkgfsRamdisk> {
+    // workaround for fxb/38162
+    async fn stop(self) {
+        // Tear down the environment in reverse order, ending with the storage.
+        drop(self.proxies);
+        drop(self.pkg_cache);
+        drop(self._env);
+        self.pkgfs.stop().await.unwrap();
+    }
+}
 
+impl<P: PkgFs> TestEnv<P> {
+    fn new(pkgfs: P) -> Self {
         let mut fs = ServiceFs::new();
+        fs.add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
 
         let pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-without-pkgfs.cmx".to_string(),
         )
-        .add_dir_to_namespace(
-            "/pkgfs/ctl".to_string(),
-            File::open(mounts.pkgfs_ctl.path()).expect("/pkgfs/ctl tempdir to open"),
-        )
-        .expect("/pksfs/ctl to mount")
-        .add_dir_to_namespace(
-            "/pkgfs/versions".to_string(),
-            File::open(mounts.pkgfs_versions.path()).expect("/pkgfs/versions tempdir to open"),
-        )
-        .expect("/pkgfs/versions to mount");
+            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_dir_handle().unwrap().into());
 
+        let nested_environment_label = Self::make_nested_environment_label();
         let env = fs
-            .create_salted_nested_environment("pkg_cache_env")
+            .create_nested_environment(&nested_environment_label)
             .expect("nested environment to create successfully");
+
         fasync::spawn(fs.collect());
 
         let pkg_cache = pkg_cache.spawn(env.launcher()).expect("pkg_cache to launch");
@@ -76,77 +82,35 @@ impl TestEnv {
             space_manager: pkg_cache
                 .connect_to_service::<SpaceManagerMarker>()
                 .expect("connect to space manager"),
+            package_cache: pkg_cache.connect_to_service::<PackageCacheMarker>().unwrap(),
         };
 
-        Self { _env: env, mounts, proxies, pkg_cache: pkg_cache }
+        Self { _env: env, pkgfs, proxies, pkg_cache, nested_environment_label }
     }
 
-    fn pkgfs_garbage_path(&self) -> PathBuf {
-        self.mounts.pkgfs_ctl.path().join("garbage")
+    async fn inspect_hierarchy(&self) -> NodeHierarchy {
+        get_inspect_hierarchy(&self.nested_environment_label, "pkg-cache-without-pkgfs.cmx").await
     }
 
-    fn create_pkgfs_garbage(&self) {
-        File::create(self.pkgfs_garbage_path()).expect("create garbage file");
+    fn make_nested_environment_label() -> String {
+        let mut salt = [0; 4];
+        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        format!("pkg-cache-env_{}", hex::encode(&salt))
     }
 
-    fn pkgfs_garbage_exists(&self) -> bool {
-        self.pkgfs_garbage_path().exists()
+    async fn block_until_started(&self) {
+        let (_, server_end) = fidl::endpoints::create_endpoints().unwrap();
+        self.proxies
+            .package_cache
+            .open(
+                &mut "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse::<BlobId>()
+                    .unwrap()
+                    .into(),
+                &mut vec![].into_iter(),
+                server_end,
+            )
+            .await
+            .expect("fidl should succeed, but result of open doesn't matter");
     }
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_gc_garbage_file_deleted() {
-    let env = TestEnv::new();
-    env.create_pkgfs_garbage();
-
-    let res = env.proxies.space_manager.gc().await;
-
-    assert_matches!(res, Ok(Ok(())));
-    assert!(!env.pkgfs_garbage_exists());
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_gc_twice_same_client() {
-    let env = TestEnv::new();
-    env.create_pkgfs_garbage();
-
-    let res = env.proxies.space_manager.gc().await;
-
-    assert_matches!(res, Ok(Ok(())));
-    assert!(!env.pkgfs_garbage_exists());
-
-    env.create_pkgfs_garbage();
-
-    let res = env.proxies.space_manager.gc().await;
-
-    assert_matches!(res, Ok(Ok(())));
-    assert!(!env.pkgfs_garbage_exists());
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_gc_twice_different_clients() {
-    let env = TestEnv::new();
-    env.create_pkgfs_garbage();
-
-    let res = env.proxies.space_manager.gc().await;
-
-    assert_matches!(res, Ok(Ok(())));
-    assert!(!env.pkgfs_garbage_exists());
-
-    env.create_pkgfs_garbage();
-    let second_connection =
-        env.pkg_cache.connect_to_service::<SpaceManagerMarker>().expect("connect to space manager");
-    let res = second_connection.gc().await;
-
-    assert_matches!(res, Ok(Ok(())));
-    assert!(!env.pkgfs_garbage_exists());
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_gc_error_missing_garbage_file() {
-    let env = TestEnv::new();
-
-    let res = env.proxies.space_manager.gc().await;
-
-    assert_matches!(res, Ok(Err(SpaceErrorCode::Internal)));
 }

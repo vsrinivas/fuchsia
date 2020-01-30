@@ -40,7 +40,7 @@ impl PkgfsRamdiskBuilder {
         self
     }
 
-    /// Attempt to start the PkgfsRamdisk, consumign this builder.
+    /// Attempt to start the PkgfsRamdisk, consuming this builder.
     pub fn start(self) -> Result<PkgfsRamdisk, Error> {
         let blobfs = if let Some(blobfs) = self.blobfs { blobfs } else { BlobfsRamdisk::start()? };
 

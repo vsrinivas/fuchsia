@@ -6,7 +6,7 @@
 use {
     blobfs_ramdisk::BlobfsRamdisk,
     fuchsia_async as fasync,
-    fuchsia_pkg_testing::{Package, PackageBuilder, VerificationError},
+    fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder, VerificationError},
     matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::collections::HashSet,
@@ -156,33 +156,6 @@ async fn example_package() -> Package {
         .build()
         .await
         .expect("build package")
-}
-
-struct SystemImageBuilder<'a> {
-    static_packages: &'a [&'a Package],
-    cache_packages: Option<&'a [&'a Package]>,
-}
-
-impl<'a> SystemImageBuilder<'a> {
-    fn build(&self) -> impl Future<Output = Package> {
-        let mut static_packages_contents = String::new();
-        for pkg in self.static_packages {
-            static_packages_contents +=
-                &format!("{}/0={}\n", pkg.name(), pkg.meta_far_merkle_root())
-        }
-        let mut builder = PackageBuilder::new("system_image")
-            .add_resource_at("data/static_packages", static_packages_contents.as_bytes());
-        let mut cache_package_contents = String::new();
-        if let Some(cache_packages) = self.cache_packages {
-            for pkg in cache_packages {
-                cache_package_contents +=
-                    &format!("{}/0={}\n", pkg.name(), pkg.meta_far_merkle_root())
-            }
-            builder =
-                builder.add_resource_at("data/cache_packages", cache_package_contents.as_bytes());
-        }
-        async move { builder.build().await.unwrap() }
-    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -676,8 +649,7 @@ async fn test_pkgfs_restart_install_failed_meta_far() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_empty_static_index() {
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[], cache_packages: None }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -730,8 +702,7 @@ async fn test_pkgfs_with_system_image_meta_far_missing() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_system_image_base_package_missing() {
     let pkg = example_package().await;
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[&pkg], cache_packages: None }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -760,8 +731,7 @@ async fn test_pkgfs_with_system_image_base_package_missing() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
     let pkg = example_package().await;
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[&pkg], cache_packages: None }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -806,8 +776,7 @@ async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_install_update() {
     // GC doesn't work without a working system image
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[], cache_packages: None }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -931,8 +900,7 @@ async fn test_pkgfs_restart_deactivates_ephemeral_packages() {
 async fn test_pkgfs_with_cache_index() {
     let pkg = example_package().await;
 
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -964,8 +932,7 @@ async fn test_pkgfs_with_cache_index() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
     let pkg = example_package().await;
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -999,8 +966,7 @@ async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
     let pkg = example_package().await;
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
 
@@ -1037,8 +1003,7 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_shadowed_cache_package() {
     let pkg = example_package().await;
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
@@ -1123,8 +1088,7 @@ async fn test_pkgfs_shadowed_cache_package() {
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
     let pkg = example_package().await;
-    let system_image_package =
-        SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
+    let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
 
     let blobfs = BlobfsRamdisk::start().unwrap();
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());

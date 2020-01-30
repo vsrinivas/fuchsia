@@ -6,7 +6,7 @@
 
 use {
     crate::iou,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_merkle::Hash,
     fuchsia_zircon::Status,
@@ -20,7 +20,7 @@ pub enum PackageOpenError {
     #[error("the package does not exist")]
     NotFound,
 
-    #[error("while opening the package: {}", _0)]
+    #[error("while opening the package: {0}")]
     Io(iou::OpenError),
 }
 
@@ -49,12 +49,12 @@ impl Client {
     }
 
     /// Open the package given by `meta_far_merkle`, returning the directory and optionally cloning
-    /// the directory onto the given `dir_request`.
+    /// the directory onto the given `dir_request`. Verifies the OnOpen event before returning.
     pub async fn open_package(
         &self,
-        meta_far_merkle: Hash,
+        meta_far_merkle: &Hash,
         dir_request: Option<ServerEnd<DirectoryMarker>>,
-    ) -> Result<DirectoryProxy, PackageOpenError> {
+    ) -> Result<ClientEnd<DirectoryMarker>, PackageOpenError> {
         let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
         let dir = iou::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)
             .await
@@ -68,7 +68,11 @@ impl Client {
             let () = iou::clone_directory(&dir, dir_request).await.map_err(PackageOpenError::Io)?;
         }
 
-        Ok(dir)
+        Ok(dir
+            .into_channel()
+            .expect("no other users of the wrapped channel")
+            .into_zx_channel()
+            .into())
     }
 }
 
@@ -86,7 +90,7 @@ mod tests {
         let client = Client::open_from_pkgfs_root(&root).unwrap();
 
         let merkle = fuchsia_merkle::MerkleTree::from_reader(std::io::empty()).unwrap().root();
-        assert_matches!(client.open_package(merkle, None).await, Err(PackageOpenError::NotFound));
+        assert_matches!(client.open_package(&merkle, None).await, Err(PackageOpenError::NotFound));
 
         pkgfs.stop().await.unwrap();
     }
@@ -102,9 +106,12 @@ mod tests {
         let pkg_merkle = pkg.meta_far_merkle_root().to_owned();
         install.write_meta_far(&pkg).await;
 
-        assert_matches!(client.open_package(pkg_merkle, None).await, Ok(_));
+        assert_matches!(client.open_package(&pkg_merkle, None).await, Ok(_));
         assert_matches!(
-            pkg.verify_contents(&client.open_package(pkg_merkle, None).await.unwrap()).await,
+            pkg.verify_contents(
+                &client.open_package(&pkg_merkle, None).await.unwrap().into_proxy().unwrap()
+            )
+            .await,
             Ok(())
         );
 
@@ -130,7 +137,7 @@ mod tests {
 
         // Package is not complete yet, so opening fails.
         assert_matches!(
-            client.open_package(pkg_merkle, None).await,
+            client.open_package(&pkg_merkle, None).await,
             Err(PackageOpenError::NotFound)
         );
 
@@ -149,9 +156,12 @@ mod tests {
             )
             .await;
 
-        assert_matches!(client.open_package(pkg_merkle, None).await, Ok(_));
+        assert_matches!(client.open_package(&pkg_merkle, None).await, Ok(_));
         assert_matches!(
-            pkg.verify_contents(&client.open_package(pkg_merkle, None).await.unwrap()).await,
+            pkg.verify_contents(
+                &client.open_package(&pkg_merkle, None).await.unwrap().into_proxy().unwrap()
+            )
+            .await,
             Ok(())
         );
 
