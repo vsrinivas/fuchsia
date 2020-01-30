@@ -4,9 +4,9 @@ use fidl_fuchsia_data as fd;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, ExposeServiceDecl, ExposeProtocolDecl, FrameworkRef, OfferDecl,
-    OfferServiceDecl, OfferProtocolDecl, RealmRef, Ref, SelfRef, StartupMode, UseDecl,
-    UseServiceDecl, UseProtocolDecl,
+    ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef, OfferDecl,
+    OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl, SelfRef,
+    StartupMode, UseDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -26,6 +26,7 @@ fn main() {
             }],
         };
         let uses = vec![
+            UseDecl::Runner(UseRunnerDecl { source_name: Some("elf".to_string()) }),
             UseDecl::Service(UseServiceDecl {
                 source: Some(Ref::Realm(RealmRef {})),
                 source_path: Some("/fonts/CoolFonts".to_string()),
@@ -37,6 +38,11 @@ fn main() {
                 target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
             }),
         ];
+        let runners = vec![RunnerDecl {
+            name: Some("dart_runner".to_string()),
+            source: Some(Ref::Self_(SelfRef {})),
+            source_path: Some("/svc/fuchsia.sys2.Runner".to_string()),
+        }];
         let exposes = vec![
             ExposeDecl::Service(ExposeServiceDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
@@ -81,6 +87,18 @@ fn main() {
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
             }),
+            OfferDecl::Runner(OfferRunnerDecl {
+                source: Some(Ref::Realm(RealmRef {})),
+                source_name: Some("elf".to_string()),
+                target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                target_name: Some("elf".to_string()),
+            }),
+            OfferDecl::Runner(OfferRunnerDecl {
+                source: Some(Ref::Realm(RealmRef {})),
+                source_name: Some("elf".to_string()),
+                target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
+                target_name: Some("elf".to_string()),
+            }),
         ];
         let children = vec![ChildDecl {
             name: Some("logger".to_string()),
@@ -100,7 +118,6 @@ fn main() {
                 fd::Entry { key: "year".to_string(), value: Some(Box::new(fd::Value::Inum(2018))) },
             ],
         };
-        // TODO: test storage
         ComponentDecl {
             program: Some(program),
             uses: Some(uses),
@@ -109,9 +126,9 @@ fn main() {
             children: Some(children),
             collections: Some(collections),
             facets: Some(facets),
+            runners: Some(runners),
+            // TODO: test storage
             storage: None,
-            // TODO(fxb/4761): Test runners.
-            runners: None,
         }
     };
     assert_eq!(cm_decl, expected_decl);

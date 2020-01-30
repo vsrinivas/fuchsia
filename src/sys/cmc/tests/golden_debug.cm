@@ -4,6 +4,11 @@
     },
     "uses": [
         {
+            "runner": {
+                "source_name": "elf"
+            }
+        },
+        {
             "service": {
                 "source": {
                     "realm": {}
@@ -101,6 +106,34 @@
                 },
                 "target_path": "/svc/fuchsia.logger.LegacyLog"
             }
+        },
+        {
+            "runner": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "elf",
+                "target": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "target_name": "elf"
+            }
+        },
+        {
+            "runner": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "elf",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_name": "elf"
+            }
         }
     ],
     "children": [
@@ -119,5 +152,14 @@
     "facets": {
         "author": "Fuchsia",
         "year": 2018
-    }
+    },
+    "runners": [
+        {
+            "name": "dart_runner",
+            "source": {
+                "self": {}
+            },
+            "source_path": "/svc/fuchsia.sys2.Runner"
+        }
+    ]
 }

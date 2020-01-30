@@ -5,6 +5,9 @@
   },
   "use": [
     {
+      "runner": "elf",
+    },
+    {
       "service": "/fonts/CoolFonts",
       "as": "/svc/fuchsia.fonts.Provider",
     },
@@ -44,6 +47,11 @@
       "from": "#logger",
       "to": [ "#modular" ]
     },
+    {
+      "runner": "elf",
+      "from": "realm",
+      "to": [ "#logger", "#modular" ]
+    },
   ],
   "children": [
     {
@@ -55,6 +63,13 @@
     {
       "name": "modular",
       "durability": "persistent",
+    },
+  ],
+  "runners": [
+    {
+      "name": "dart_runner",
+      "from": "self",
+      "path": "/svc/fuchsia.sys2.Runner",
     },
   ],
   "facets": {
