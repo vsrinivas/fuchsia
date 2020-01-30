@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![warn(missing_docs)]
+//XXX: disabled due to build breakage and un-useful output: #![warn(missing_docs)]
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{create_proxy, ServerEnd};
