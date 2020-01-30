@@ -17,31 +17,35 @@ namespace scenic {
 constexpr size_t kCommandsPerMessage = 1u;
 
 SessionPtrAndListenerRequest CreateScenicSessionPtrAndListenerRequest(
-    fuchsia::ui::scenic::Scenic* scenic) {
+    fuchsia::ui::scenic::Scenic* scenic, async_dispatcher_t* dispatcher) {
   fuchsia::ui::scenic::SessionPtr session;
   fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
   auto listener_request = listener_handle.NewRequest();
 
-  scenic->CreateSession(session.NewRequest(), listener_handle.Bind());
+  scenic->CreateSession(session.NewRequest(dispatcher), std::move(listener_handle));
 
   return {std::move(session), std::move(listener_request)};
 }
 
 Session::Session(fuchsia::ui::scenic::SessionPtr session,
-                 fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> session_listener)
+                 fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> session_listener,
+                 async_dispatcher_t* dispatcher)
     : session_(std::move(session)), session_listener_binding_(this) {
   ZX_DEBUG_ASSERT(session_);
   if (session_listener.is_valid())
-    session_listener_binding_.Bind(std::move(session_listener));
+    session_listener_binding_.Bind(std::move(session_listener), dispatcher);
 }
 
-Session::Session(fuchsia::ui::scenic::Scenic* scenic) : session_listener_binding_(this) {
+Session::Session(fuchsia::ui::scenic::Scenic* scenic, async_dispatcher_t* dispatcher)
+    : session_listener_binding_(this) {
   ZX_DEBUG_ASSERT(scenic);
-  scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
+  scenic->CreateSession(session_.NewRequest(dispatcher),
+                        session_listener_binding_.NewBinding(dispatcher));
 }
 
-Session::Session(SessionPtrAndListenerRequest session_and_listener)
-    : Session(std::move(session_and_listener.first), std::move(session_and_listener.second)) {}
+Session::Session(SessionPtrAndListenerRequest session_and_listener, async_dispatcher_t* dispatcher)
+    : Session(std::move(session_and_listener.first), std::move(session_and_listener.second),
+              dispatcher) {}
 
 Session::~Session() {
   ZX_DEBUG_ASSERT_MSG(resource_count_ == 0, "Some resources outlived the session: %u",

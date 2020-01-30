@@ -20,11 +20,14 @@ namespace scenic {
 
 // Connect to Scenic and establish a new Session, as well as an InterfaceRequest
 // for a SessionListener that can be hooked up as desired.
+//
+// Callbacks will be run on the async dispatcher specified by |dispatcher|,
+// or the default dispatcher for the current thread if unspecified.
 using SessionPtrAndListenerRequest =
     std::pair<fuchsia::ui::scenic::SessionPtr,
               fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>>;
 SessionPtrAndListenerRequest CreateScenicSessionPtrAndListenerRequest(
-    fuchsia::ui::scenic::Scenic* scenic);
+    fuchsia::ui::scenic::Scenic* scenic, async_dispatcher_t* dispatcher = nullptr);
 
 // Wraps a Scenic session.
 // Maintains a queue of pending operations and assists with allocation of
@@ -49,15 +52,29 @@ class Session : private fuchsia::ui::scenic::SessionListener {
 
   // Wraps the provided session and session listener.
   // The listener is optional.
+  //
+  // Callbacks for |session_listener| will be run on the async dispatcher
+  // specified by |dispatcher|, or the default dispatcher for the current thread
+  // if unspecified. Callbacks for |session| will be run on the dispatcher to
+  // which it was bound before being passed in.
   explicit Session(
       fuchsia::ui::scenic::SessionPtr session,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> session_listener = nullptr);
+      fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> session_listener = nullptr,
+      async_dispatcher_t* dispatcher = nullptr);
 
   // Creates a new session using the provided Scenic and binds the listener to
   // this object. The Scenic itself is not retained after construction.
-  explicit Session(fuchsia::ui::scenic::Scenic* scenic);
+  //
+  // Callbacks will be run on the async dispatcher specified by |dispatcher|, or
+  // the default dispatcher for the current thread if unspecified.
+  explicit Session(fuchsia::ui::scenic::Scenic* scenic, async_dispatcher_t* dispatcher = nullptr);
 
-  explicit Session(SessionPtrAndListenerRequest session_and_listener);
+  // Callbacks for SessionListener will be run on the async dispatcher specified
+  // by |dispatcher|, or the default dispatcher for the current thread if
+  // unspecified. Callbacks for SesssionPtr will be run on the dispatcher to
+  // which it was bound before being passed in.
+  explicit Session(SessionPtrAndListenerRequest session_and_listener,
+                   async_dispatcher_t* dispatcher = nullptr);
 
   Session(const Session&) = delete;
   Session& operator=(const Session&) = delete;
