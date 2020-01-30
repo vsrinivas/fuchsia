@@ -17,7 +17,6 @@ group("tools") {
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:setui_client",
-    "//garnet/packages/prod:ssh",
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:tracing",
     "//garnet/packages/testing:all",
@@ -41,6 +40,7 @@ group("tools") {
     "//src/ui/tools/tiles_ctl",
     "//third_party/curl",
     "//third_party/iperf",
+    "//third_party/openssh-portable:openssh-tools",
     "//tools/fidl/gidl:host",
     "//tools/whereiscl:host($host_toolchain)",
 

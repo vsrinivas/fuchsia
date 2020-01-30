@@ -23,7 +23,7 @@ base_package_labels += [
   "//garnet/packages/prod:overnetstack",
   "//garnet/packages/prod:run",
   "//garnet/packages/prod:sbase",
-  "//garnet/packages/prod:ssh",
+  "//third_party/openssh-portable:openssh-tools",
   "//garnet/packages/prod:telephony",
   "//garnet/packages/prod:terminal",
   "//garnet/packages/prod:test_runner",

@@ -64,11 +64,6 @@ group("cpuperf") {
   ]
 }
 
-group("ssh") {
-  testonly = true
-  public_deps = [ "//third_party/openssh-portable:openssh-tools" ]
-}
-
 # WARNING: Known to topaz.
 group("drivers") {
   testonly = true
@@ -143,7 +138,6 @@ group("all") {
     "//garnet/packages/prod:scenic",
     "//garnet/packages/prod:setui_client",
     "//garnet/packages/prod:setui_service",
-    "//garnet/packages/prod:ssh",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:tee_manager",
     "//garnet/packages/prod:telephony",
