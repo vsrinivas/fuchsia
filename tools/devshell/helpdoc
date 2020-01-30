@@ -224,7 +224,6 @@ function create-main-toc {
     echo "  path: ${toc_prefix}/index.md"
     echo "- title: fx command"
     echo "  path: ${toc_prefix}/fx.md"
-    echo "- heading: \"fx subcommands\""
   } > "${base_out}/_toc.yaml"
 
   # sort categories
@@ -236,7 +235,8 @@ function create-main-toc {
     local norm_cat="$(normalize "${category}")"
     # Appends the category to the global _toc.yaml
     {
-      echo "- title: \"${category}\""
+      echo "- title: \"${category} commands\""
+      echo "  path: ${toc_prefix}/${norm_cat}"
       echo "  section:"
       echo "  - include: ${toc_prefix}/${norm_cat}_toc.yaml"
     } >> "${base_out}/_toc.yaml"
