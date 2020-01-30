@@ -58,7 +58,7 @@ class GNBuilder(Frontend):
             archive=archive,
             directory=directory)
         self.target_arches = []
-        self.fidl_targets = [] # List of all FIDL library targets generated
+        self.fidl_targets = []  # List of all FIDL library targets generated
 
     def prepare(self, arch, types):
         """Called before elements are processed.
@@ -96,16 +96,17 @@ class TestData(object):
     def __init__(self):
         self.fuchsia_root = FUCHSIA_ROOT
 
+
 def make_executable(path):
     st = os.stat(path)
     os.chmod(path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
 
 def create_test_workspace(output):
     # Remove any existing output.
     shutil.rmtree(output, True)
     # Copy the base tests.
-    shutil.copytree(
-        os.path.join(SCRIPT_DIR, 'test_project'), output)
+    shutil.copytree(os.path.join(SCRIPT_DIR, 'test_project'), output)
     # run.py file
     builder = Frontend(local_dir=SCRIPT_DIR)
     run_py_path = os.path.join(output, 'run.py')
@@ -138,6 +139,7 @@ def main():
         output=args.output,
         tests=args.tests)
 
+
 def run_generator(archive, directory, output, tests=''):
     """Run the generator. Returns 0 on success, non-zero otherwise.
 
@@ -151,7 +153,8 @@ def run_generator(archive, directory, output, tests=''):
     """
 
     # Remove any existing output.
-    shutil.rmtree(output)
+    if os.path.exists(output):
+        shutil.rmtree(output)
 
     builder = GNBuilder(
         archive=archive,
