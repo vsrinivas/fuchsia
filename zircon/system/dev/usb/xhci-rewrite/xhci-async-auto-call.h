@@ -37,7 +37,7 @@ class AsyncAutoCall : public fbl::RefCounted<AsyncAutoCall> {
   ~AsyncAutoCall() {
     if (completer_.has_value()) {
       completer_->complete_ok();
-      hci_->InvokePromise(
+      hci_->ScheduleTask(
           promise_
               .then([=](fit::result<void, void>& result) -> fit::result<TRB*, zx_status_t> {
                 return fit::ok<TRB*>(nullptr);

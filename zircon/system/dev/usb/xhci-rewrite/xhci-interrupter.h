@@ -41,11 +41,11 @@ class Interrupter {
   // owned by this interrupter
   zx::interrupt& GetIrq() { return irq_; }
 
-  TRBPromise Timeout(zx::duration nanoseconds);
+  TRBPromise Timeout(zx::time deadline);
 
  private:
   uint32_t interrupter_;
-  int IrqThread();
+  zx_status_t IrqThread();
   zx::interrupt irq_;
   std::thread thread_;
   EventRing event_ring_;

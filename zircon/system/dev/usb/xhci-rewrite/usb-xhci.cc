@@ -133,18 +133,15 @@ fit::promise<OwnedRequest, void> UsbXhci::UsbHciRequestQueue(OwnedRequest usb_re
 
 zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_id, uint8_t port_id,
                                               const std::optional<HubInfo>& hub_info,
-                                              std::optional<dma_buffer::Buffer>* out) {
+                                              std::optional<dma_buffer::PagedBuffer>* out) {
   // Section 4.3.3
   // 6.2.5 (Input Context initialization)
-  std::optional<dma_buffer::Buffer> buffer;
-  zx_status_t status = dma_buffer::Buffer::Create(
-      hci.bti(), hci.get_page_size(),
-      static_cast<uint32_t>(hci.get_page_size() == ZX_PAGE_SIZE ? 0 : hci.get_page_size() >> 12),
-      false, &buffer);
+  std::optional<dma_buffer::PagedBuffer> buffer;
+  zx_status_t status = dma_buffer::PagedBuffer::Create(hci.bti(), ZX_PAGE_SIZE, false, &buffer);
   if (status != ZX_OK) {
     return status;
   }
-  if (hci.get_is_32_bit_controller() && (buffer->phys() >= UINT32_MAX)) {
+  if (hci.get_is_32_bit_controller() && (buffer->phys()[0] >= UINT32_MAX)) {
     return ZX_ERR_NO_MEMORY;
   }
   // 6.2.5.1 -- Initialize input control context
@@ -173,7 +170,7 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
 zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t slot_id,
                                                    uint8_t port_id,
                                                    const std::optional<HubInfo>& hub_info,
-                                                   dma_buffer::Buffer* slot_context_buffer) {
+                                                   dma_buffer::PagedBuffer* slot_context_buffer) {
   CRCR trb_phys = tr_.phys(hci.CapLength());
   auto* control = static_cast<uint32_t*>(slot_context_buffer->virt());
   size_t slot_size = (hci.CSZ()) ? 64 : 32;
@@ -213,25 +210,21 @@ zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t s
   return ZX_OK;
 }
 
-zx_status_t DeviceState::InitializeOutputContextBuffer(const UsbXhci& hci, uint8_t slot_id,
-                                                       uint8_t port_id,
-                                                       const std::optional<HubInfo>& hub_info,
-                                                       uint64_t* dcbaa,
-                                                       std::optional<dma_buffer::Buffer>* out) {
+zx_status_t DeviceState::InitializeOutputContextBuffer(
+    const UsbXhci& hci, uint8_t slot_id, uint8_t port_id, const std::optional<HubInfo>& hub_info,
+    uint64_t* dcbaa, std::optional<dma_buffer::PagedBuffer>* out) {
   // Allocate an output device context data structure (6.2.1)
   // Update the DCBAA entry for this slot.
-  std::optional<dma_buffer::Buffer> output_context_buffer;
-  zx_status_t status = dma_buffer::Buffer::Create(
-      hci.bti(), hci.get_page_size(),
-      static_cast<uint32_t>(hci.get_page_size() == ZX_PAGE_SIZE ? 0 : hci.get_page_size() >> 12),
-      false, &output_context_buffer);
+  std::optional<dma_buffer::PagedBuffer> output_context_buffer;
+  zx_status_t status =
+      dma_buffer::PagedBuffer::Create(hci.bti(), ZX_PAGE_SIZE, false, &output_context_buffer);
   if (status != ZX_OK) {
     return status;
   }
-  if (hci.get_is_32_bit_controller() && (output_context_buffer->phys() >= UINT32_MAX)) {
+  if (hci.get_is_32_bit_controller() && (output_context_buffer->phys()[0] >= UINT32_MAX)) {
     return ZX_ERR_NO_MEMORY;
   }
-  dcbaa[slot_id] = output_context_buffer->phys();
+  dcbaa[slot_id] = output_context_buffer->phys()[0];
   if (!hub_info) {
     slot_id = static_cast<uint8_t>(slot_id);
   }
@@ -248,8 +241,8 @@ TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t
   if (!hub_info.has_value()) {
     hci->get_port_state()[port - 1].slot_id = slot;
   }
-  std::optional<dma_buffer::Buffer> slot_context_buffer;
-  std::optional<dma_buffer::Buffer> output_context_buffer;
+  std::optional<dma_buffer::PagedBuffer> slot_context_buffer;
+  std::optional<dma_buffer::PagedBuffer> output_context_buffer;
   zx_status_t status = InitializeSlotBuffer(*hci, slot, port, hub_info, &slot_context_buffer);
   if (status != ZX_OK) {
     return hci->ResultToTRBPromise(fit::error(status));
@@ -277,7 +270,7 @@ TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t
   // Issue an address device command for the device slot
   // See sections 3.3.4 and 6.4.3.4
   usb_xhci::AddressDeviceStruct command;
-  command.ptr = slot_context_buffer->phys();
+  command.ptr = slot_context_buffer->phys()[0];
   command.set_SlotID(slot);
   command.set_BSR(bsr);
   auto command_context = command_ring->AllocateContext();
@@ -364,7 +357,7 @@ TRBPromise UsbXhci::SetMaxPacketSizeCommand(uint8_t slot_id, uint8_t bMaxPacketS
     Control::Get().FromValue(0).set_Type(Control::EvaluateContextCommand).ToTrb(&cmd);
     cmd.set_SlotID(slot_id);
 
-    cmd.ptr = state.GetInputContext()->phys();
+    cmd.ptr = state.GetInputContext()->phys()[0];
   }
   auto context = command_ring_.AllocateContext();
   return SubmitCommand(cmd, std::move(context));
@@ -410,7 +403,7 @@ TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
                                         const ddk::UsbBusInterfaceProtocolClient& bus) mutable {
     for (size_t i = 0; i < kMaxEndpoints; i++) {
       fbl::AutoLock _(&device_state_[slot - 1].transaction_lock());
-      auto trbs = device_state_[slot - 1].GetTransferRing(i).ClearPendingTRBs();
+      auto trbs = device_state_[slot - 1].GetTransferRing(i).TakePendingTRBs();
       for (auto& trb : trbs) {
         trb.request->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
       }
@@ -418,7 +411,7 @@ TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
     fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> trbs;
     {
       fbl::AutoLock _(&device_state_[slot - 1].transaction_lock());
-      trbs = device_state_[slot - 1].GetTransferRing().ClearPendingTRBs();
+      trbs = device_state_[slot - 1].GetTransferRing().TakePendingTRBs();
     }
     for (auto& trb : trbs) {
       trb.request->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
@@ -507,7 +500,7 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
         .set_TTT((speed == USB_SPEED_HIGH) ? ((desc->wHubCharacteristics >> 5) & 3) : 0);
     Control::Get().FromValue(0).set_Type(Control::EvaluateContextCommand).ToTrb(&cmd);
     cmd.set_SlotID(slot).set_BSR(0);
-    cmd.ptr = state->GetInputContext()->phys();
+    cmd.ptr = state->GetInputContext()->phys()[0];
     hw_mb();
     context = command_ring_.AllocateContext();
   }
@@ -615,7 +608,7 @@ void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
     bool pending;
     do {
       pending = false;
-      auto trbs = command_ring_.ClearPendingTRBs();
+      auto trbs = command_ring_.TakePendingTRBs();
       for (auto& trb : trbs) {
         pending = true;
         CommandCompletionEvent evt;
@@ -628,12 +621,13 @@ void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
       }
       // Ensure that we've actually invoked the completions above
       // before moving to the next step.
-      FlushPromises();
+      // TODO (fxb/44375): Migrate to joins
+      RunUntilIdle();
       for (size_t i = 0; i < max_slots_; i++) {
         fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> trbs;
         {
           fbl::AutoLock _(&device_state_[i].transaction_lock());
-          trbs = device_state_[i].GetTransferRing().ClearPendingTRBs();
+          trbs = device_state_[i].GetTransferRing().TakePendingTRBs();
         }
         for (auto& trb : trbs) {
           pending = true;
@@ -643,7 +637,7 @@ void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
           fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> trbs;
           {
             fbl::AutoLock _(&device_state_[i].transaction_lock());
-            trbs = device_state_[i].GetTransferRing(c).ClearPendingTRBs();
+            trbs = device_state_[i].GetTransferRing(c).TakePendingTRBs();
           }
           for (auto& trb : trbs) {
             pending = true;
@@ -652,7 +646,8 @@ void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
         }
       }
       // Flush any outstanding async I/O
-      FlushPromises();
+      // TODO (fxb/44375): Migrate to joins
+      RunUntilIdle();
     } while (pending);
     interrupters_.reset();
     transaction.Reply();
@@ -907,7 +902,7 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
     state.transaction_lock().Release();
     WaitForIsochronousReady(&pending_transfer);
     if (pending_transfer.Complete()) {
-      state.transaction_lock_.Acquire();
+      state.transaction_lock().Acquire();
       return;
     }
     state.transaction_lock().Acquire();
@@ -1224,7 +1219,7 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
     if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
       endpoint_context->set_MAX_ESIT_PAYLOAD_LOW((ep_desc->wMaxPacketSize & 0x07FF) * max_burst);
     }
-    trb.ptr = state->GetInputContext()->phys();
+    trb.ptr = state->GetInputContext()->phys()[0];
     Control::Get()
         .FromValue((device_id + 1) << 24)
         .set_Type(Control::ConfigureEndpointCommand)
@@ -1268,7 +1263,7 @@ TRBPromise UsbXhci::UsbHciDisableEndpoint(uint32_t device_id,
     // Set root hub port number to port number and context entries to 1
     control[0] = (1 << (index + 1));
     control[1] = 1;
-    trb.ptr = state->GetInputContext()->phys();
+    trb.ptr = state->GetInputContext()->phys()[0];
     Control::Get()
         .FromValue((device_id + 1) << 24)
         .set_Type(Control::ConfigureEndpointCommand)
@@ -1323,17 +1318,17 @@ zx_status_t UsbXhci::UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
   }
   sync_completion_t completion;
   zx_status_t hub_status = ZX_OK;
-  InvokePromise(ConfigureHubAsync(device_id, speed, desc, multi_tt)
-                    .then([&](fit::result<TRB*, zx_status_t>& result) {
-                      if (result.is_ok()) {
-                        hub_status = ZX_OK;
-                      } else {
-                        hub_status = result.error();
-                      }
-                      sync_completion_signal(&completion);
-                      return result;
-                    })
-                    .box());
+  ScheduleTask(ConfigureHubAsync(device_id, speed, desc, multi_tt)
+                   .then([&](fit::result<TRB*, zx_status_t>& result) {
+                     if (result.is_ok()) {
+                       hub_status = ZX_OK;
+                     } else {
+                       hub_status = result.error();
+                     }
+                     sync_completion_signal(&completion);
+                     return result;
+                   })
+                   .box());
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   return hub_status;
 }
@@ -1343,17 +1338,17 @@ zx_status_t UsbXhci::UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb
   }
   sync_completion_t completion;
   zx_status_t out_status;
-  InvokePromise(UsbHciHubDeviceAddedAsync(device_id, port, speed)
-                    .then([&](fit::result<TRB*, zx_status_t>& result) {
-                      if (result.is_ok()) {
-                        out_status = ZX_OK;
-                      } else {
-                        out_status = result.error();
-                      }
-                      sync_completion_signal(&completion);
-                      return result;
-                    })
-                    .box());
+  ScheduleTask(UsbHciHubDeviceAddedAsync(device_id, port, speed)
+                   .then([&](fit::result<TRB*, zx_status_t>& result) {
+                     if (result.is_ok()) {
+                       out_status = ZX_OK;
+                     } else {
+                       out_status = result.error();
+                     }
+                     sync_completion_signal(&completion);
+                     return result;
+                   })
+                   .box());
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   return ZX_OK;
 }
@@ -1384,22 +1379,22 @@ zx_status_t UsbXhci::UsbHciHubDeviceRemoved(uint32_t hub_id, uint32_t port) {
     fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> trbs;
     {
       fbl::AutoLock _(&device_state_[slot - 1].transaction_lock());
-      trbs = device_state_[slot - 1].GetTransferRing(i).ClearPendingTRBs();
+      trbs = device_state_[slot - 1].GetTransferRing(i).TakePendingTRBs();
     }
     for (auto& trb : trbs) {
       trb.request->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
     }
   }
-  FlushPromises();
+  RunUntilIdle();
   fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> trbs;
   {
     fbl::AutoLock _(&device_state_[slot - 1].transaction_lock());
-    trbs = device_state_[slot - 1].GetTransferRing().ClearPendingTRBs();
+    trbs = device_state_[slot - 1].GetTransferRing().TakePendingTRBs();
   }
   for (auto& trb : trbs) {
     trb.request->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
   }
-  FlushPromises();
+  RunUntilIdle();
   // Bus should always be valid since we're getting a callback from a hub
   // that is a child of the bus.
   ZX_ASSERT(bus_.is_valid());
@@ -1407,18 +1402,18 @@ zx_status_t UsbXhci::UsbHciHubDeviceRemoved(uint32_t hub_id, uint32_t port) {
   if (status != ZX_OK) {
     return status;
   }
-  InvokePromise(DisableSlotCommand(slot)
-                    .then([&](fit::result<TRB*, zx_status_t>& result) {
-                      if (result.is_error()) {
-                        success = false;
-                        return result;
-                      }
-                      auto completion = static_cast<CommandCompletionEvent*>(result.value());
-                      success = completion->CompletionCode() == CommandCompletionEvent::Success;
-                      sync_completion_signal(&event);
-                      return result;
-                    })
-                    .box());
+  ScheduleTask(DisableSlotCommand(slot)
+                   .then([&](fit::result<TRB*, zx_status_t>& result) {
+                     if (result.is_error()) {
+                       success = false;
+                       return result;
+                     }
+                     auto completion = static_cast<CommandCompletionEvent*>(result.value());
+                     success = completion->CompletionCode() == CommandCompletionEvent::Success;
+                     sync_completion_signal(&event);
+                     return result;
+                   })
+                   .box());
   sync_completion_wait(&event, ZX_TIME_INFINITE);
   return success ? ZX_OK : ZX_ERR_IO;
 }
@@ -1444,7 +1439,7 @@ zx_status_t UsbXhci::UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address)
   }
   zx_status_t status;
   sync_completion_t completion;
-  InvokePromise(
+  ScheduleTask(
       SubmitCommand(reset_command, std::move(context))
           .then([&](fit::result<TRB*, zx_status_t>& result) -> fit::result<TRB*, zx_status_t> {
             if (result.is_error()) {
@@ -1525,7 +1520,7 @@ TRBPromise UsbXhci::UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address)
           TRB* new_ptr = nullptr;
           fbl::AutoLock _(&state->transaction_lock());
           index = static_cast<uint8_t>(XhciEndpointIndex(ep_address) - 1);
-          trbs = state->GetTransferRing(index).ClearPendingTRBs();
+          trbs = state->GetTransferRing(index).TakePendingTRBs();
           for (auto& trb : trbs) {
             new_ptr = trb.trb;
             auto control = Control::FromTRB(trb.trb);
@@ -1777,10 +1772,10 @@ zx_status_t UsbXhci::HciFinalize() {
     return 0;
   }
   uint32_t align_log2 = 0;
-  if (dma_buffer::Buffer::Create(bti_, page_size, align_log2, false, &dcbaa_buffer_) != ZX_OK) {
+  if (dma_buffer::PagedBuffer::Create(bti_, ZX_PAGE_SIZE, false, &dcbaa_buffer_) != ZX_OK) {
     return 0;
   }
-  if (is_32bit_ && (dcbaa_buffer_->phys() >= UINT32_MAX)) {
+  if (is_32bit_ && (dcbaa_buffer_->phys()[0] >= UINT32_MAX)) {
     return 0;
   }
   dcbaa_ = static_cast<uint64_t*>(dcbaa_buffer_->virt());
@@ -1789,19 +1784,24 @@ zx_status_t UsbXhci::HciFinalize() {
   RuntimeRegisterOffset offset = RuntimeRegisterOffset::Get().ReadFrom(&mmio_.value());
   runtime_offset_ = offset;
   uint32_t buffers =
-      hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() | (hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1;
-  scratchpad_buffers_ = std::make_unique<std::optional<dma_buffer::Buffer>[]>(buffers);
-  if (dma_buffer::Buffer::Create(bti_, ROUNDUP(buffers * sizeof(uint64_t), ZX_PAGE_SIZE),
-                                 align_log2, false, &scratchpad_buffer_array_) != ZX_OK) {
+      hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() | ((hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1);
+  scratchpad_buffers_ = std::make_unique<std::optional<dma_buffer::ContiguousBuffer>[]>(buffers);
+  if (ROUNDUP(buffers * sizeof(uint64_t), ZX_PAGE_SIZE) > ZX_PAGE_SIZE) {
+    // We can't create multi-page contiguously physical uncached buffers.
+    // This is presently not supported in the kernel.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (dma_buffer::PagedBuffer::Create(bti_, ZX_PAGE_SIZE, false, &scratchpad_buffer_array_) !=
+      ZX_OK) {
     return 0;
   }
-  if (is_32bit_ && (scratchpad_buffer_array_->phys() >= UINT32_MAX)) {
+  if (is_32bit_ && (scratchpad_buffer_array_->phys()[0] >= UINT32_MAX)) {
     return 0;
   }
   uint64_t* scratchpad_buffer_array = static_cast<uint64_t*>(scratchpad_buffer_array_->virt());
   for (size_t i = 0; i < buffers - 1; i++) {
-    if (dma_buffer::Buffer::Create(bti_, page_size, align_log2, false, &scratchpad_buffers_[i]) !=
-        ZX_OK) {
+    if (dma_buffer::ContiguousBuffer::Create(bti_, page_size, align_log2,
+                                             &scratchpad_buffers_[i]) != ZX_OK) {
       return 0;
     }
     if (is_32bit_ && (scratchpad_buffers_[i]->phys() >= UINT32_MAX)) {
@@ -1809,7 +1809,7 @@ zx_status_t UsbXhci::HciFinalize() {
     }
     scratchpad_buffer_array[i] = scratchpad_buffers_[i]->phys();
   }
-  static_cast<uint64_t*>(dcbaa_buffer_->virt())[0] = scratchpad_buffer_array_->phys();
+  static_cast<uint64_t*>(dcbaa_buffer_->virt())[0] = scratchpad_buffer_array_->phys()[0];
   max_slots_ = hcsparams1.MaxSlots();
   device_state_.reset(new (&ac) DeviceState[max_slots_]);
   if (!ac.check()) {
@@ -1820,7 +1820,7 @@ zx_status_t UsbXhci::HciFinalize() {
     return ZX_ERR_NO_MEMORY;
   }
   hw_mb();
-  DCBAAP::Get(cap_length_).FromValue(0).set_PTR(dcbaa_buffer_->phys()).WriteTo(&mmio_.value());
+  DCBAAP::Get(cap_length_).FromValue(0).set_PTR(dcbaa_buffer_->phys()[0]).WriteTo(&mmio_.value());
   // Initialize command ring
   doorbell_offset_ = DoorbellOffset::Get().ReadFrom(&mmio_.value());
   // Interrupt moderation interval == 30 microseconds (optimal value derived from scheduler trace)

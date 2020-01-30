@@ -57,6 +57,12 @@ __UNUSED static uint8_t XhciEndpointIndex(uint8_t ep_address) {
 
 __UNUSED static uint32_t Log2(uint32_t value) { return 31 - __builtin_clz(value); }
 
+static inline void InvalidatePageCache(void* addr, uint32_t options) {
+  uintptr_t page = reinterpret_cast<uintptr_t>(addr);
+  page = fbl::round_down(page, static_cast<uintptr_t>(PAGE_SIZE));
+  zx_cache_flush(reinterpret_cast<void*>(page), PAGE_SIZE, options);
+}
+
 // This is the main class for the USB XHCI host controller driver.
 // Refer to 3.1 for general architectural information on xHCI.
 class UsbXhci;
@@ -249,8 +255,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   }
 
   // Schedules a promise for execution on the executor
-  void InvokePromise(TRBPromise promise) {
-    interrupters_[0].ring().InvokePromise(std::move(promise));
+  void ScheduleTask(TRBPromise promise) {
+    interrupters_[0].ring().ScheduleTask(std::move(promise));
   }
 
   // Schedules the promise for execution and synchronously waits for it to complete
@@ -267,8 +273,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
       }
       return result;
     });
-    InvokePromise(continuation.box());
-    FlushPromises();
+    ScheduleTask(continuation.box());
+    RunUntilIdle();
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     return completion_code;
   }
@@ -283,12 +289,12 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   }
 
   // Creates a promise that resolves after a timeout
-  TRBPromise Timeout(zx::duration nanoseconds) { return interrupters_[0].Timeout(nanoseconds); }
+  TRBPromise Timeout(zx::time deadline) { return interrupters_[0].Timeout(deadline); }
 
   // Provides a barrier for promises.
   // After this method is invoked,
   // all pending promises will be flushed.
-  void FlushPromises() { interrupters_[0].ring().FlushPromises(); }
+  void RunUntilIdle() { interrupters_[0].ring().RunUntilIdle(); }
 
   // Initialization thread method. This is invoked from a separate detached thread
   // when xHCI binds
@@ -477,16 +483,16 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   uint64_t* dcbaa_;
 
   // IO buffer for the device context base address array
-  std::optional<dma_buffer::Buffer> dcbaa_buffer_;
+  std::optional<dma_buffer::PagedBuffer> dcbaa_buffer_;
 
   // BTI for retrieving physical memory addresses from IO buffers.
   zx::bti bti_;
 
   // xHCI scratchpad buffers (see xHCI section 4.20)
-  std::unique_ptr<std::optional<dma_buffer::Buffer>[]> scratchpad_buffers_;
+  std::unique_ptr<std::optional<dma_buffer::ContiguousBuffer>[]> scratchpad_buffers_;
 
   // IO buffer for the scratchpad buffer array
-  std::optional<dma_buffer::Buffer> scratchpad_buffer_array_;
+  std::optional<dma_buffer::PagedBuffer> scratchpad_buffer_array_;
 
   // Page size of the HCI
   size_t page_size_;

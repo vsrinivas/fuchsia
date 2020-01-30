@@ -105,8 +105,7 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
               // If we're in a retry context, it is the caller's responsibility to clean up.
               error_handler->GivebackPromise(error_handler->BorrowPromise()
                                                  .then([=](fit::result<void, void>& result) {
-                                                   hci->InvokePromise(
-                                                       hci->DisableSlotCommand(slot));
+                                                   hci->ScheduleTask(hci->DisableSlotCommand(slot));
                                                  })
                                                  .box());
             }
@@ -135,7 +134,7 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
               error_handler->Reinit();
               error_handler->GivebackPromise(error_handler->BorrowPromise()
                                                  .then([=](fit::result<void, void>& result) {
-                                                   hci->InvokePromise(
+                                                   hci->ScheduleTask(
                                                        hci->DisableSlotCommand(state->slot));
                                                  })
                                                  .box());

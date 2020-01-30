@@ -40,7 +40,7 @@ class EventRingSegmentTable {
                    ERSTSZ erst_size, ddk::MmioBuffer* mmio);
   zx_status_t AddSegment(zx_paddr_t paddr);
   ERSTEntry* entries() { return entries_; }
-  zx_paddr_t erst() { return erst_->phys(); }
+  zx_paddr_t erst() { return erst_->phys()[0]; }
   // Returns the number of segments in this ERST
   uint32_t SegmentCount() { return offset_; }
   uint64_t TrbCount() { return (SegmentCount() * page_size_) / sizeof(TRB); }
@@ -51,7 +51,7 @@ class EventRingSegmentTable {
  private:
   size_t erst_pressure_ = 0;
   ERSTSZ erst_size_;
-  std::optional<dma_buffer::Buffer> erst_;
+  std::optional<dma_buffer::PagedBuffer> erst_;
   // Entries in the event ring segment table.
   // This is valid after Init() is called which
   // allocates the event ring segment table.
@@ -95,12 +95,12 @@ class EventRing {
   TRB* erdp_virt() { return erdp_virt_; }
   zx_status_t HandleIRQ();
   zx_status_t Ring0Bringup();
-  void InvokePromise(fit::promise<TRB*, zx_status_t> promise);
-  void FlushPromises();
+  void ScheduleTask(fit::promise<TRB*, zx_status_t> promise);
+  void RunUntilIdle();
 
  private:
   synchronous_executor executor_;
-  zx_status_t HandlePortStatusChangeEvent(uint16_t port_id);
+  zx_status_t HandlePortStatusChangeEvent(uint8_t port_id);
   zx_status_t LinkUp(uint8_t port_id);
   Control AdvanceErdp() {
     fbl::AutoLock _(&segment_mutex_);
@@ -131,8 +131,8 @@ class EventRing {
   // USB 2.0 device attach
   void Usb2DeviceAttach(uint16_t port_id);
 
-  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::Buffer>> buffers_;
-  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::Buffer>>::iterator buffers_it_;
+  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>> buffers_;
+  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>>::iterator buffers_it_;
 
   // Virtual address of the event ring dequeue pointer
   TRB* erdp_virt_ = nullptr;

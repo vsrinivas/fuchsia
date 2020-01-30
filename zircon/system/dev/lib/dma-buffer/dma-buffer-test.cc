@@ -19,6 +19,7 @@ struct VmoMetadata {
   uint32_t cache_policy = 0;
   zx_paddr_t start_phys = 0;
   void* virt = nullptr;
+  bool contiguous = false;
 };
 
 struct SyscallState {
@@ -38,6 +39,17 @@ zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32
   VmoMetadata meta;
   meta.alignment_log2 = alignment_log2;
   meta.bti_handle = bti_handle;
+  meta.size = size;
+  syscall_state.vmos[*out] = meta;
+  return ZX_OK;
+}
+
+zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out) {
+  zx_status_t status = _zx_vmo_create(size, options, out);
+  if (status != ZX_OK) {
+    return status;
+  }
+  VmoMetadata meta;
   meta.size = size;
   syscall_state.vmos[*out] = meta;
   return ZX_OK;
@@ -82,9 +94,9 @@ zx_status_t zx_handle_close(zx_handle_t handle) {
 }
 }
 
-TEST(XhciBufferTests, InitWithCacheEnabled) {
-  std::optional<Buffer> buffer;
-  ASSERT_OK(Buffer::Create(kFakeBti, ZX_PAGE_SIZE * 4, 2, true, &buffer));
+TEST(DmaBufferTests, InitWithCacheEnabled) {
+  std::optional<ContiguousBuffer> buffer;
+  ASSERT_OK(ContiguousBuffer::Create(kFakeBti, ZX_PAGE_SIZE * 4, 2, &buffer));
   auto& state = syscall_state.vmos.begin()->second;
   ASSERT_EQ(state.alignment_log2, 2);
   ASSERT_EQ(state.bti_handle, kFakeBti.get());
@@ -95,14 +107,26 @@ TEST(XhciBufferTests, InitWithCacheEnabled) {
   ASSERT_EQ(buffer->phys(), state.start_phys);
 }
 
-TEST(XhciBufferTests, InitWithCacheDisabled) {
-  std::optional<Buffer> buffer;
-  ASSERT_OK(Buffer::Create(kFakeBti, ZX_PAGE_SIZE, 3, false, &buffer));
+TEST(DmaBufferTests, InitWithCacheDisabled) {
+  std::optional<PagedBuffer> buffer;
+  ASSERT_OK(PagedBuffer::Create(kFakeBti, ZX_PAGE_SIZE, false, &buffer));
   auto& state = syscall_state.vmos.begin()->second;
-  ASSERT_EQ(state.alignment_log2, 3);
-  ASSERT_EQ(state.bti_handle, kFakeBti.get());
+  ASSERT_EQ(state.alignment_log2, 0);
   ASSERT_EQ(state.cache_policy, ZX_CACHE_POLICY_UNCACHED);
   ASSERT_EQ(state.size, ZX_PAGE_SIZE);
+  ASSERT_EQ(buffer->virt(), state.virt);
+  ASSERT_EQ(buffer->size(), state.size);
+  ASSERT_EQ(buffer->phys()[0], state.start_phys);
+}
+
+TEST(DmaBufferTests, InitCachedMultiPageBuffer) {
+  std::optional<ContiguousBuffer> buffer;
+  ASSERT_OK(ContiguousBuffer::Create(kFakeBti, ZX_PAGE_SIZE * 4, 0, &buffer));
+  auto& state = syscall_state.vmos.begin()->second;
+  ASSERT_EQ(state.alignment_log2, 0);
+  ASSERT_EQ(state.cache_policy, 0);
+  ASSERT_EQ(state.bti_handle, kFakeBti.get());
+  ASSERT_EQ(state.size, ZX_PAGE_SIZE * 4);
   ASSERT_EQ(buffer->virt(), state.virt);
   ASSERT_EQ(buffer->size(), state.size);
   ASSERT_EQ(buffer->phys(), state.start_phys);

@@ -46,23 +46,23 @@ class TransferRing {
   // Commits a multi-TRB transaction
   void CommitTransaction(const State& start);
   void Restore(const State& state);
-  void RestoreLocked(const State& state);
+  void RestoreLocked(const State& state) __TA_REQUIRES(mutex_);
   zx_status_t Init(size_t page_size, const zx::bti& bti, EventRing* ring, bool is_32bit,
                    ddk::MmioBuffer* mmio, const UsbXhci& hci);
   // Assumption: This function must ONLY be called from the interrupt
   // thread. Otherwise thread-safety assumptions are violated.
-  zx_status_t DeinitIfActive();
+  zx_status_t DeinitIfActive() __TA_NO_THREAD_SAFETY_ANALYSIS;
   zx_status_t Deinit();
   // Only called during initialization when no other threads are running.
   // Would be pointless to hold the mutex here.
   CRCR phys(uint8_t cap_length);
   zx_paddr_t VirtToPhys(TRB* trb);
-  zx_paddr_t VirtToPhysLocked(TRB* trb);
+  zx_paddr_t VirtToPhysLocked(TRB* trb) __TA_REQUIRES(mutex_);
   TRB* PhysToVirt(zx_paddr_t paddr);
-  TRB* PhysToVirtLocked(zx_paddr_t paddr);
-  zx_status_t CompleteTRB(TRB* trb, std::optional<std::unique_ptr<TRBContext>>* context);
-  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> ClearPendingTRBs();
-  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> ClearPendingTRBsUntil(TRB* end);
+  TRB* PhysToVirtLocked(zx_paddr_t paddr) __TA_REQUIRES(mutex_);
+  zx_status_t CompleteTRB(TRB* trb, std::unique_ptr<TRBContext>* context);
+  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TakePendingTRBs();
+  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TakePendingTRBsUntil(TRB* end);
 
   std::unique_ptr<TRBContext> AllocateContext() {
     fbl::AutoLock _(&mutex_);
@@ -92,15 +92,16 @@ class TransferRing {
   // and increases the size of the ERST if necessary.
   // Each buffer can fit 1 page of TRBs
   // The dma_buffer::Buffer is owned by this TransferRing.
-  zx_status_t AllocBuffer(dma_buffer::Buffer** out) __TA_REQUIRES(mutex_);
+  zx_status_t AllocBuffer(dma_buffer::ContiguousBuffer** out) __TA_REQUIRES(mutex_);
   // Advances the enqueue pointer after a new element has been added to the transfer ring
   void AdvancePointer() __TA_REQUIRES(mutex_);
   fbl::Mutex mutex_;
   uint64_t token_ = 0;
   AllocatorType trb_context_allocator_ __TA_GUARDED(mutex_);
-  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::Buffer>> buffers_ __TA_GUARDED(mutex_);
-  std::map<zx_vaddr_t, dma_buffer::Buffer*> virt_to_buffer_ __TA_GUARDED(mutex_);
-  std::map<zx_paddr_t, dma_buffer::Buffer*> phys_to_buffer_ __TA_GUARDED(mutex_);
+  fbl::DoublyLinkedList<std::unique_ptr<dma_buffer::ContiguousBuffer>> buffers_
+      __TA_GUARDED(mutex_);
+  std::map<zx_vaddr_t, dma_buffer::ContiguousBuffer*> virt_to_buffer_ __TA_GUARDED(mutex_);
+  std::map<zx_paddr_t, dma_buffer::ContiguousBuffer*> phys_to_buffer_ __TA_GUARDED(mutex_);
   // Start of TRBs from perspective of enqueue pointer.
   // This pointer is incremented along with the enqueue pointer.
   TRB* trbs_ __TA_GUARDED(mutex_) = nullptr;

@@ -37,9 +37,7 @@ class synchronous_executor final : public fit::executor {
   // This method is thread-safe.
   void run();
 
-  synchronous_executor(const synchronous_executor&) = delete;
   synchronous_executor(synchronous_executor&&) = delete;
-  synchronous_executor& operator=(const synchronous_executor&) = delete;
   synchronous_executor& operator=(synchronous_executor&&) = delete;
 
  private:
@@ -56,7 +54,6 @@ class synchronous_executor final : public fit::executor {
    private:
     synchronous_executor* const executor_;
   };
-
   // The task context for tasks run by the executor.
   class context_impl final : public fit::context {
    public:
@@ -75,7 +72,6 @@ class synchronous_executor final : public fit::executor {
     std::optional<fit::suspended_task::ticket> ticket_;
     synchronous_executor* const executor_;
   };
-
   fit::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
   resolver_impl resolver_;
   std::mutex mutex_;

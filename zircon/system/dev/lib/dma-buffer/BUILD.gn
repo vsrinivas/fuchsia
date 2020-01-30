@@ -3,13 +3,12 @@
 # found in the LICENSE file.
 
 zx_library("dma-buffer") {
-  sdk = "shared"
+  sdk = "source"
   sdk_headers = [ "lib/dma-buffer/buffer.h" ]
-  shared = true
+  shared = false
   sources = [ "dma-buffer.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
