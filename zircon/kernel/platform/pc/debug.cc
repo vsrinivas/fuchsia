@@ -276,6 +276,7 @@ static void handle_serial_cmdline() {
   return;
 
 bail:
+  dprintf(INFO, "Failed to parse \"kernel.serial\" parameter.\n");
   bootloader.uart.type = ZBI_UART_NONE;
   return;
 }
