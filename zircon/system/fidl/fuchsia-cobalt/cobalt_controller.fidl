@@ -33,6 +33,7 @@ protocol Controller {
     GetNumSendAttempts() -> (uint32 num);
     GetFailedSendAttempts() -> (uint32 num);
     GetNumObservationsAdded() -> (uint64 num_obs);
+    GetNumEventAggregatorRuns() -> (uint64 num_runs);
 
     // Triggers Cobalt to generate Observations based on locally aggregated
     // event data and write them to the local ObservationStore. In a non-test

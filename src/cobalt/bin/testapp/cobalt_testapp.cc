@@ -47,10 +47,10 @@ constexpr uint32_t kInfiniteTime = 999999999;
     return false;      \
   }
 
-#define CONNECT_AND_TRY_TEST(test, backfill_days)  \
-  Connect(kInfiniteTime, 0, backfill_days, false); \
-  if (!(test)) {                                   \
-    return false;                                  \
+#define CONNECT_AND_TRY_TEST(test, backfill_days)     \
+  Connect(kInfiniteTime, 0, backfill_days, false, 0); \
+  if (!(test)) {                                      \
+    return false;                                     \
   }
 
 bool CobaltTestApp::RunTests() {
@@ -58,7 +58,7 @@ bool CobaltTestApp::RunTests() {
   // essentially configuring the ShippingManager to be in manual mode. It will
   // never send Observations because of the schedule and send them immediately
   // in response to RequestSendSoon().
-  Connect(kInfiniteTime, 0);
+  Connect(kInfiniteTime, 0, kEventAggregatorBackfillDays, true, 0);
 
   if (test_for_prober_) {
     TRY_TEST(CheckMetricIds());
@@ -110,6 +110,16 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
   CONNECT_AND_TRY_TEST(
       TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
       backfill_days);
+
+  // Run several times to make sure that it consistently passes.
+  for (int i = 0; i < 10; i++) {
+    Connect(kInfiniteTime, 0, backfill_days, true, 0);
+    if (!TestLogElapsedTimeWithAggregationWorkerRunning(&logger_, clock_.get(), &cobalt_controller_,
+                                                        backfill_days)) {
+      return false;
+    }
+  }
+
   return true;
 }
 

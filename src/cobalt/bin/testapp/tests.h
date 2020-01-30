@@ -77,6 +77,10 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger,
                                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                        const size_t backfill_days);
 
+bool TestLogElapsedTimeWithAggregationWorkerRunning(
+    CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
+    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, const size_t backfill_days);
+
 }  // namespace testapp
 }  // namespace cobalt
 

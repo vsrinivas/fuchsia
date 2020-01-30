@@ -475,5 +475,51 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
   return SendAndCheckSuccess("TestLogElapsedTimeWithAggregation", logger);
 }
 
+bool TestLogElapsedTimeWithAggregationWorkerRunning(
+    CobaltTestAppLogger* logger, SystemClockInterface* clock,
+    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller, const size_t backfill_days) {
+  FX_LOGS(INFO) << "========================";
+  FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregationWorkerRunning";
+  // Expect to generate |kNumAggregatedObservations| for each day in the
+  // backfill period, plus the current day. Expect to generate no observations
+  // when GenerateObservations is called for the second time on the same day.
+  std::map<uint32_t, uint64_t> expected_num_obs;
+  std::map<uint32_t, uint64_t> expect_no_obs;
+  for (const auto& pair : kNumAggregatedObservations) {
+    expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
+    expect_no_obs[pair.first] = 0;
+  }
+  for (uint32_t index : kStreamingTimeIndices) {
+    for (std::string component : kStreamingTimeComponentNames) {
+      // Log a duration depending on the index.
+      if (index != 0) {
+        int64_t duration = index * 100;
+        if (!logger->LogElapsedTime(cobalt_registry::kStreamingTimeMetricId, index, component,
+                                    duration)) {
+          FX_LOGS(INFO) << "Failed to log elapsed time for index " << index << " and component "
+                        << component << ".";
+          FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregationWorkerRunning : FAIL";
+          return false;
+        }
+        expected_num_obs[cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId] +=
+            kStreamingTimeNumWindowSizes;
+      }
+    }
+  }
+
+  sleep(1);
+
+  uint64_t num_runs = -1;
+  (*cobalt_controller)->GetNumEventAggregatorRuns(&num_runs);
+  if (num_runs != 1) {
+    FX_LOGS(INFO) << "After 1 second, the EventAggregatorManager should only have run 1 loop. ("
+                  << num_runs << " != " << 1 << ").";
+    FX_LOGS(INFO) << "TestLogElapsedTimeWithAggregationWorkerRunning : FAIL";
+    return false;
+  }
+
+  return SendAndCheckSuccess("TestLogElapsedTimeWithAggregationWorkerRunning", logger);
+}
+
 }  // namespace testapp
 }  // namespace cobalt
