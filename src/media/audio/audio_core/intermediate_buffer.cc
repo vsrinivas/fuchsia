@@ -6,8 +6,9 @@
 
 namespace media::audio {
 
-IntermediateBuffer::IntermediateBuffer(const Format& format, uint32_t size_in_frames,
-                                       TimelineFunction reference_clock_to_fractional_frames)
+IntermediateBuffer::IntermediateBuffer(
+    const Format& format, uint32_t size_in_frames,
+    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames)
     : Stream(format),
       frame_count_(size_in_frames),
       reference_clock_to_fractional_frames_(reference_clock_to_fractional_frames) {
@@ -21,9 +22,10 @@ std::optional<Stream::Buffer> IntermediateBuffer::LockBuffer(zx::time ref_time, 
 }
 
 Stream::TimelineFunctionSnapshot IntermediateBuffer::ReferenceClockToFractionalFrames() const {
+  auto [timeline_function, generation] = reference_clock_to_fractional_frames_->get();
   return {
-      .timeline_function = reference_clock_to_fractional_frames_,
-      .generation = kInvalidGenerationId + 1,
+      .timeline_function = timeline_function,
+      .generation = generation,
   };
 }
 

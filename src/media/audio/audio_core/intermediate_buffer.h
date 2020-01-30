@@ -8,13 +8,14 @@
 #include <memory>
 
 #include "src/media/audio/audio_core/stream.h"
+#include "src/media/audio/audio_core/versioned_timeline_function.h"
 
 namespace media::audio {
 
 class IntermediateBuffer : public Stream {
  public:
   IntermediateBuffer(const Format& output_format, uint32_t size_in_frames,
-                     TimelineFunction reference_clock_to_fractional_frames);
+                     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames);
 
   void* buffer() const { return buffer_.get(); }
   size_t frame_count() const { return frame_count_; }
@@ -28,7 +29,7 @@ class IntermediateBuffer : public Stream {
  private:
   std::unique_ptr<uint8_t[]> buffer_;
   uint32_t frame_count_;
-  TimelineFunction reference_clock_to_fractional_frames_;
+  fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames_;
 };
 
 }  // namespace media::audio

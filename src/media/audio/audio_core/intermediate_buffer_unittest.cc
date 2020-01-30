@@ -18,8 +18,8 @@ static const Format kFormat = Format({
 class IntermediateBufferTest : public ::testing::Test {};
 
 TEST_F(IntermediateBufferTest, LockBuffer) {
-  auto one_frame_per_ms =
-      TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000));
+  auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
+      TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
   auto intermediate_buffer = std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms);
   ASSERT_TRUE(intermediate_buffer);
 
@@ -44,8 +44,8 @@ TEST_F(IntermediateBufferTest, LockBuffer) {
 }
 
 TEST_F(IntermediateBufferTest, ClampLengthToBufferSize) {
-  auto one_frame_per_ms =
-      TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000));
+  auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
+      TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
   auto intermediate_buffer = std::make_shared<IntermediateBuffer>(kFormat, 256, one_frame_per_ms);
   ASSERT_TRUE(intermediate_buffer);
 

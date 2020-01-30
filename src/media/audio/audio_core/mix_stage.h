@@ -13,6 +13,7 @@
 #include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/stream.h"
+#include "src/media/audio/audio_core/versioned_timeline_function.h"
 
 namespace media::audio {
 
@@ -21,6 +22,8 @@ class MixStage : public Stream {
   MixStage(std::shared_ptr<Stream> output_stream);
   MixStage(const Format& output_format, uint32_t block_size,
            TimelineFunction reference_clock_to_fractional_frame);
+  MixStage(const Format& output_format, uint32_t block_size,
+           fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame);
 
   struct FrameSpan {
     int64_t start;

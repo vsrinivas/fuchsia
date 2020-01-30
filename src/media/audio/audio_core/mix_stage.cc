@@ -32,6 +32,12 @@ TimelineFunction ReferenceClockToIntegralFrames(
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    TimelineFunction reference_clock_to_fractional_frame)
+    : MixStage(
+          output_format, block_size,
+          fbl::MakeRefCounted<VersionedTimelineFunction>(reference_clock_to_fractional_frame)) {}
+
+MixStage::MixStage(const Format& output_format, uint32_t block_size,
+                   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame)
     : MixStage(std::make_shared<IntermediateBuffer>(output_format, block_size,
                                                     reference_clock_to_fractional_frame)) {}
 
