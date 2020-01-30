@@ -11,6 +11,5 @@ group("test") {
     "ddk-power",
     "ddk-schedule-work",
     "mock-device",
-    "sysdev",
   ]
 }
