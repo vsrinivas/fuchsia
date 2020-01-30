@@ -185,8 +185,8 @@ class AudioCapturerImpl : public AudioObject,
   void FinishBuffers(const PcbList& finished_buffers) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   // Mixer helper.
-  void UpdateFormat(fuchsia::media::AudioSampleFormat sample_format, uint32_t channels,
-                    uint32_t frames_per_second) FXL_LOCKS_EXCLUDED(mix_domain_->token());
+  void UpdateFormat(fuchsia::media::AudioStreamType stream_type)
+      FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   // Select a mixer for the link supplied.
   fit::result<std::shared_ptr<Mixer>, zx_status_t> ChooseMixer(const AudioObject& source,
@@ -222,8 +222,7 @@ class AudioCapturerImpl : public AudioObject,
   zx::duration min_fence_time_;
 
   // Capture format and gain state.
-  fuchsia::media::AudioStreamType format_;
-  uint32_t bytes_per_frame_;
+  Format format_;
   TimelineRate dest_frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;
   std::atomic<float> stream_gain_db_;

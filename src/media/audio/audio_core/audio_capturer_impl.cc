@@ -17,6 +17,7 @@
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
+namespace {
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
 
@@ -44,6 +45,13 @@ const zx::duration kFenceTimePadding = zx::msec(3);
 
 constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
+
+constexpr fuchsia::media::AudioStreamType kInitialFormat{
+    .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+    .channels = 1,
+    .frames_per_second = 8000};
+
+}  // namespace
 
 std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
@@ -76,6 +84,8 @@ AudioCapturerImpl::AudioCapturerImpl(
       state_(State::WaitingForVmo),
       loopback_(loopback),
       min_fence_time_(zx::nsec(0)),
+      // Ideally, initialize this to the native configuration of our initially-bound source.
+      format_(kInitialFormat),
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false),
       overflow_count_(0u),
@@ -91,9 +101,6 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
   source_links_.reserve(16u);
-
-  // Ideally, initialize this to the native configuration of our initially-bound source.
-  UpdateFormat(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 8000);
 }
 
 AudioCapturerImpl::~AudioCapturerImpl() {
@@ -211,7 +218,7 @@ void AudioCapturerImpl::GetStreamType(GetStreamTypeCallback cbk) {
   TRACE_DURATION("audio", "AudioCapturerImpl::GetStreamType");
   fuchsia::media::StreamType ret;
   ret.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
-  ret.medium_specific.set_audio(format_);
+  ret.medium_specific.set_audio(format_.stream_type());
   cbk(std::move(ret));
 }
 
@@ -260,7 +267,7 @@ void AudioCapturerImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
   REP(SettingCapturerStreamType(*this, stream_type));
 
   // Success, record our new format.
-  UpdateFormat(stream_type.sample_format, stream_type.channels, stream_type.frames_per_second);
+  UpdateFormat(stream_type);
 
   cleanup.cancel();
 }
@@ -300,21 +307,20 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     return;
   }
 
-  FX_CHECK(bytes_per_frame_ > 0);
   constexpr uint64_t max_uint32 = std::numeric_limits<uint32_t>::max();
-  if ((payload_buf_size < bytes_per_frame_) ||
-      (payload_buf_size > (max_uint32 * bytes_per_frame_))) {
+  if ((payload_buf_size < format_.bytes_per_frame()) ||
+      (payload_buf_size > (max_uint32 * format_.bytes_per_frame()))) {
     FX_LOGS(ERROR) << "Bad payload buffer VMO size (size = " << payload_buf_.size()
-                   << ", bytes per frame = " << bytes_per_frame_ << ")";
+                   << ", bytes per frame = " << format_.bytes_per_frame() << ")";
     return;
   }
 
   REP(AddingCapturerPayloadBuffer(*this, id, payload_buf_size));
 
-  payload_buf_frames_ = static_cast<uint32_t>(payload_buf_size / bytes_per_frame_);
+  payload_buf_frames_ = static_cast<uint32_t>(payload_buf_size / format_.bytes_per_frame());
   AUD_VLOG_OBJ(TRACE, this) << "payload buf -- size:" << payload_buf_size
                             << ", frames:" << payload_buf_frames_
-                            << ", bytes/frame:" << bytes_per_frame_;
+                            << ", bytes/frame:" << format_.bytes_per_frame();
 
   // Allocate our intermediate buffer for mixing.
   //
@@ -349,7 +355,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   });
 
   // Next, select our output producer.
-  output_producer_ = OutputProducer::Select(format_);
+  output_producer_ = OutputProducer::Select(format_.stream_type());
   if (output_producer_ == nullptr) {
     FX_LOGS(ERROR) << "Failed to select output producer";
     return;
@@ -705,7 +711,7 @@ zx_status_t AudioCapturerImpl::Process() {
         FX_DCHECK(payload_buf_.start() != nullptr);
 
         uint64_t offset_bytes =
-            bytes_per_frame_ * static_cast<uint64_t>(p.offset_frames + p.filled_frames);
+            format_.bytes_per_frame() * static_cast<uint64_t>(p.offset_frames + p.filled_frames);
 
         mix_target = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(payload_buf_.start()) +
                                              offset_bytes);
@@ -968,7 +974,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_links_.clear(); });
 
   // Silence our intermediate buffer.
-  size_t job_bytes = sizeof(mix_buf_[0]) * mix_frames * format_.channels;
+  size_t job_bytes = sizeof(mix_buf_[0]) * mix_frames * format_.channels();
   std::memset(mix_buf_.get(), 0u, job_bytes);
 
   // If our capturer is mute, we have nothing to do after filling with silence.
@@ -1245,7 +1251,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
         break;
       }
 
-      buf += dest_offset * format_.channels;
+      buf += dest_offset * format_.channels();
       frames_left -= dest_offset;
       if (!frames_left) {
         break;
@@ -1452,8 +1458,8 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
     pkt.pts = finished_buffer.capture_timestamp;
     pkt.flags = finished_buffer.flags;
     pkt.payload_buffer_id = 0u;
-    pkt.payload_offset = finished_buffer.offset_frames * bytes_per_frame_;
-    pkt.payload_size = finished_buffer.filled_frames * bytes_per_frame_;
+    pkt.payload_offset = finished_buffer.offset_frames * format_.bytes_per_frame();
+    pkt.payload_size = finished_buffer.filled_frames * format_.bytes_per_frame();
 
     REP(SendingCapturerPacket(*this, pkt));
 
@@ -1473,15 +1479,11 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
   }
 }
 
-void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_format,
-                                     uint32_t channels, uint32_t frames_per_second) {
+void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioStreamType stream_type) {
   TRACE_DURATION("audio", "AudioCapturerImpl::UpdateFormat");
   // Record our new format.
   FX_DCHECK(state_.load() == State::WaitingForVmo);
-  format_.sample_format = sample_format;
-  format_.channels = channels;
-  format_.frames_per_second = frames_per_second;
-  bytes_per_frame_ = channels * BytesPerSample(sample_format);
+  format_ = Format(stream_type);
 
   // Pre-compute the ratio between frames and clock mono ticks. Also figure out
   // the maximum number of frames we are allowed to mix and capture at a time.
@@ -1493,7 +1495,7 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_fo
   // to get around to capturing it. Limiting our maximum number of frames of to
   // capture to be less than this amount of time prevents this issue.
   int64_t tmp;
-  dest_frames_to_clock_mono_rate_ = TimelineRate(ZX_SEC(1), format_.frames_per_second);
+  dest_frames_to_clock_mono_rate_ = TimelineRate(ZX_SEC(1), format_.frames_per_second());
   tmp = dest_frames_to_clock_mono_rate_.Inverse().Scale(kMaxTimePerCapture);
   max_frames_per_capture_ = static_cast<uint32_t>(tmp);
 
@@ -1527,16 +1529,16 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
   }
 
   // Select a mixer.
-  auto mixer =
-      std::shared_ptr<Mixer>(Mixer::Select(source_format->stream_type(), format_).release());
+  auto mixer = std::shared_ptr<Mixer>(
+      Mixer::Select(source_format->stream_type(), format_.stream_type()).release());
   if (!mixer) {
     FX_LOGS(WARNING) << "Failed to find mixer for capturer.";
     FX_LOGS(WARNING) << "Source cfg: rate " << source_format->frames_per_second() << " ch "
                      << source_format->channels() << " sample fmt "
                      << fidl::ToUnderlying(source_format->sample_format());
-    FX_LOGS(WARNING) << "Dest cfg  : rate " << format_.frames_per_second << " ch "
-                     << format_.channels << " sample fmt "
-                     << fidl::ToUnderlying(format_.sample_format);
+    FX_LOGS(WARNING) << "Dest cfg  : rate " << format_.frames_per_second() << " ch "
+                     << format_.channels() << " sample fmt "
+                     << fidl::ToUnderlying(format_.sample_format());
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
 
