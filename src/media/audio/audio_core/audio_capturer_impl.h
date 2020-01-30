@@ -33,7 +33,6 @@ namespace media::audio {
 
 class AudioAdmin;
 class AudioCoreImpl;
-class AudioDeviceManager;
 
 class AudioCapturerImpl : public AudioObject,
                           public fuchsia::media::AudioCapturer,
@@ -50,20 +49,11 @@ class AudioCapturerImpl : public AudioObject,
 
   ~AudioCapturerImpl() override;
 
-  bool loopback() const { return loopback_; }
-  void SetInitialFormat(fuchsia::media::AudioStreamType format)
-      FXL_LOCKS_EXCLUDED(mix_domain_->token());
-
+ private:
   void OverflowOccurred(FractionalFrames<int64_t> source_start, FractionalFrames<int64_t> mix_point,
                         zx::duration overflow_duration);
   void PartialOverflowOccurred(FractionalFrames<int64_t> source_offset, int64_t mix_offset);
 
- protected:
-  fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<Stream> stream) override;
-  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
-
- private:
   // Notes about the AudioCapturerImpl state machine.
   // TODO(mpuryear): Update this comment block.
   //
@@ -155,14 +145,12 @@ class AudioCapturerImpl : public AudioObject,
 
   friend PcbAllocator;
 
-  fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
-
   AudioCapturerImpl(bool loopback,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
                     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
                     StreamVolumeManager* volume_manager, LinkMatrix* link_matrix);
 
-  // AudioCapturer FIDL implementation
+  // |fuchsia::media::AudioCapturer|
   void GetStreamType(GetStreamTypeCallback cbk) final;
   void SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) final;
@@ -190,11 +178,14 @@ class AudioCapturerImpl : public AudioObject,
   void ReportStart();
   void ReportStop();
 
-  // AudioObject overrides.
+  // |media::audio::AudioObject|
+  fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
+      const AudioObject& source, std::shared_ptr<Stream> stream) override;
+  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
   void OnLinkAdded() override;
   std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
 
-  // StreamVolume interface.
+  // |media::audio::StreamVolume|
   bool GetStreamMute() const final;
   fuchsia::media::Usage GetStreamUsage() const final;
   void RealizeVolume(VolumeCommand volume_command) final;
@@ -242,6 +233,7 @@ class AudioCapturerImpl : public AudioObject,
   void Shutdown(std::unique_ptr<AudioCapturerImpl> self)
       FXL_LOCKS_EXCLUDED(threading_model_.FidlDomain().token());
 
+  fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
   ThreadingModel& threading_model_;

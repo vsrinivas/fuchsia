@@ -145,11 +145,6 @@ void AudioCapturerImpl::RealizeVolume(VolumeCommand volume_command) {
   });
 }
 
-void AudioCapturerImpl::SetInitialFormat(fuchsia::media::AudioStreamType format) {
-  TRACE_DURATION("audio", "AudioCapturerImpl::SetInitialFormat");
-  UpdateFormat(format.sample_format, format.channels, format.frames_per_second);
-}
-
 fit::promise<> AudioCapturerImpl::Cleanup() {
   TRACE_DURATION("audio.debug", "AudioCapturerImpl::Cleanup");
   // We need to stop all the async operations happening on the mix dispatcher. These components
