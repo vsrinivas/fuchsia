@@ -58,6 +58,21 @@ static uint64_t read_sysregs(const char* regname) {
   return 0;
 }
 
+static const char * sysregs_list[] = {
+  "actlr_el1", "ccsidr_el1", "clidr_el1", "csselr_el1", "midr_el1", "mpidr_el1",
+  "sctlr_el1", "spsr_el1", "tcr_el1", "tpidrro_el0", "tpidr_el1", "ttbr0_el1",
+  "ttbr1_el1", "vbar_el1", "cntfrq_el0", "cntkctl_el1", "cntpct_el0", "cntps_ctl_el1",
+  "cntps_cval_el1", "cntps_tval_el1", "cntp_ctl_el0", "cntp_cval_el0", "cntp_tval_el0",
+  "cntvct_el0", "cntv_ctl_el0", "cntv_cval_el0", "cntv_tval_el0" };
+
+static void print_sysregs_list() {
+  int size = countof(sysregs_list);
+  printf(" system register name: \n");
+  for (int i = 0; i < size; i++) {
+    printf("      %s \n",sysregs_list[i]);
+  }
+}
+
 static int cmd_sysreg(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
@@ -67,9 +82,17 @@ STATIC_COMMAND_END(kernel)
 static int cmd_sysreg(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
     printf("not enough arguments\n");
+    printf("usage:\n");
+    printf("sysreg list \n");
+    printf("sysreg <register_name> \n");
     return -1;
   }
-  read_sysregs(argv[1].str);
+  if (!strcmp(argv[1].str, "list")) {
+    print_sysregs_list();
+  } else {
+    read_sysregs(argv[1].str);
+  }
+
   return 0;
 }
 
