@@ -34,10 +34,7 @@ zx_library("fzl") {
     # Many public headers here use various fbl headers.
     "$zx/system/ulib/fbl:headers",
 
-    # <lib/fzl/fdio.h> has #include <lib/fdio/unsafe.h>.
-    "$zx/system/ulib/fdio:headers",
-
-    # <lib/fzl/fdio.h> has #include <lib/zx/channel.h>.
+    # Many public headers here use various zx headers.
     "$zx/system/ulib/zx:headers",
   ]
 }

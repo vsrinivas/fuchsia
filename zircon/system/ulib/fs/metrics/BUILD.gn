@@ -30,6 +30,7 @@ zx_library("metrics-inspect") {
     "$zx/system/ulib/inspect",
     "$zx/system/ulib/zx",
   ]
+  configs += [ "$zx/public/gn/config:Wno-unused-function" ]
 }
 
 # Helper library that uses both cobalt and inspect to record metrics.
