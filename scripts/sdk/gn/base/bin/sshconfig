@@ -1,0 +1,7 @@
+StrictHostKeyChecking=no
+UserKnownHostsFile=/dev/null
+ConnectTimeout=1
+ServerAliveInterval=1
+ControlPersist=yes
+ControlMaster=auto
+ControlPath=/tmp/fuchsia--%r@%h:%p

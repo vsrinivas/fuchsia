@@ -10,7 +10,10 @@ import("//build/testing/test_spec.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [ ":host_gn_sdk_test($host_toolchain)" ]
+  public_deps = [
+    ":gn_sdk_script_tests($host_toolchain)",
+    ":host_gn_sdk_test($host_toolchain)",
+  ]
 }
 
 # Only build this for host targets
@@ -24,5 +27,12 @@ if (is_linux || is_mac) {
     gopackages = [ "gnsdktest" ]
     deps = [ ":host_gnsdk_test_lib" ]
     args = [ "-testscript=" + rebase_path("test_generate.py") ]
+  }
+
+  # Wrapper for all bash tests
+  go_test("gn_sdk_script_tests") {
+    gopackages = [ "gnsdktest" ]
+    deps = [ ":host_gnsdk_test_lib" ]
+    args = [ "-testscript=" + rebase_path("bash_tests/run_bash_tests.sh") ]
   }
 }
