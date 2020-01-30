@@ -63,24 +63,67 @@ Launched run fuchsia-pkg
 echo_client 28777:28779 zx_channel_create(options:uint32: 0)
   -> ZX_OK (out0:handle: 6d3e0273, out1:handle: 6c2e0347)
 
-echo_client 28777:28779 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)
-  sent request fuchsia.io/Directory.Open = {
-    flags: uint32 = 3
-    mode: uint32 = 493
-    path: string = "fuchsia.sys.Launcher"
-    object: handle = 6c0e0387
+echo_client 287283:287285 zx_channel_write(handle:handle: b84b2b47, options:uint32: 0)
+  sent request fuchsia.sys/Launcher.CreateComponent = {
+    launch_info: fuchsia.sys/LaunchInfo = {
+      flat_namespace: fuchsia.sys/FlatNamespace = null
+      additional_services: fuchsia.sys/ServiceList = null
+    }
+    controller: handle = b6bb28d3
   }
+
+josh 30539:30541 zx_channel_call(handle:handle: e1d252ab, options:uint32: 0)
+  sent request fuchsia.io/File.Write = { data: vector<uint8> = [
+
+
+  ] }
+  -> ZX_OK
+    received response fuchsia.io/File.Read = {
+      s: int32 = 0
+      data: vector<uint8> = [
+        // Copyright 2019 The Fuchsia Authors. All rights reserved.
+        // Use of this source code is governed by a BSD-style license that can be
+        // found in the LICENSE file.
+
+        /**
+         * @fileoverview Utilities for printing objects nicely.
+         */
+      ]
+    }
 )";
   std::string message1 = "echo_client 28777:28779 zx_channel_create(options:uint32: 0)\n";
   std::string message2 = "  -> ZX_OK (out0:handle: 6d3e0273, out1:handle: 6c2e0347)\n";
   std::string message3 =
-      R"(echo_client 28777:28779 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)
-  sent request fuchsia.io/Directory.Open = {
-    flags: uint32 = 3
-    mode: uint32 = 493
-    path: string = "fuchsia.sys.Launcher"
-    object: handle = 6c0e0387
+      R"(echo_client 287283:287285 zx_channel_write(handle:handle: b84b2b47, options:uint32: 0)
+  sent request fuchsia.sys/Launcher.CreateComponent = {
+    launch_info: fuchsia.sys/LaunchInfo = {
+      flat_namespace: fuchsia.sys/FlatNamespace = null
+      additional_services: fuchsia.sys/ServiceList = null
+    }
+    controller: handle = b6bb28d3
   }
+)";
+  std::string message4 =
+      R"(josh 30539:30541 zx_channel_call(handle:handle: e1d252ab, options:uint32: 0)
+  sent request fuchsia.io/File.Write = { data: vector<uint8> = [
+
+
+  ] }
+)";
+  std::string message5 =
+      R"(  -> ZX_OK
+    received response fuchsia.io/File.Read = {
+      s: int32 = 0
+      data: vector<uint8> = [
+        // Copyright 2019 The Fuchsia Authors. All rights reserved.
+        // Use of this source code is governed by a BSD-style license that can be
+        // found in the LICENSE file.
+
+        /**
+         * @fileoverview Utilities for printing objects nicely.
+         */
+      ]
+    }
 )";
   TestComparator comparator("");
   size_t number_char_processed = 0;
@@ -93,6 +136,13 @@ echo_client 28777:28779 zx_channel_write(handle:handle: 6d1e0003, options:uint32
   ASSERT_EQ(comparator.GetMessageAsStr(messages, &number_char_processed), message3);
   // + 1 for the ignored \n before message 3
   ASSERT_EQ(number_char_processed, message3.length() + 1);
+  messages = messages.substr(number_char_processed);
+  ASSERT_EQ(comparator.GetMessageAsStr(messages, &number_char_processed), message4);
+  // + 1 for the ignored \n before message 4
+  ASSERT_EQ(number_char_processed, message4.length() + 1);
+  messages = messages.substr(number_char_processed);
+  ASSERT_EQ(comparator.GetMessageAsStr(messages, &number_char_processed), message5);
+  ASSERT_EQ(number_char_processed, message5.length());
 }
 
 // Checks that the golden graph construction is correct, even for interleaved syscalls, or syscalls

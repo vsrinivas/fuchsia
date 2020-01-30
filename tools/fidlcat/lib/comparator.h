@@ -97,6 +97,13 @@ class Comparator {
  private:
   std::ostream& compare_results_;
 
+  // Returns true if line is the final line of a multiline request/response (ie begins with the
+  // proper number of spaces as indentation, then a sequence of " }" or " ]") We rely here on
+  // fidl_codec printing: it indents all the contents of a message by at least (indentation of
+  // beginning of message + 1), and the last line of the message will be a line containing exactly
+  // the same indentation as the beginning of the message and one or more closing brackets.
+  static bool ClosingSequence(std::string_view line, size_t indentation);
+
   // Returns true if line is not part of a message (ie a fidlcat startup indication or a newline).
   static bool IgnoredLine(std::string_view line);
 

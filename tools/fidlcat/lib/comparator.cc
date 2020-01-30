@@ -235,6 +235,32 @@ std::string_view Comparator::GetMessage(std::string_view messages, size_t* proce
     if (bpos < begin && messages.substr(begin, end - begin).find("  ->") == 0) {
       break;
     }
+    // If the current line is the beginning of a multiline "sent " or "received ", we skip lines
+    // until we get to the closing "  }". To find this closing "}", we rely on fidl_codec printing
+    // indentation: if the message is a request (begins with "  sent"), indentation is 2 spaces, if
+    // it is a response ("    received"), indentation is 4. Note: if fidl_codec fails to find the
+    // direction fo the message (request or response), this may fail to separate the messages
+    // properly, or if the first line of the message contains an opening { and some more {} couples,
+    // we mail fail to detect this as the beginning of a mutliline message. This should be removed
+    // when we can get access to a serialized version of the messages, and not only their text
+    // representation.
+    std::string_view cur_line = messages.substr(begin, end - begin);
+    bool is_received = cur_line.rfind("    received ", 0) != std::string::npos;
+    bool is_sent = cur_line.rfind("  sent ", 0) != std::string::npos;
+    if (is_sent || is_received) {
+      // This is the beginning of a request/response message
+      size_t pos_open = cur_line.find('{');
+      if (pos_open != std::string::npos &&
+          cur_line.substr(pos_open).find('}') == std::string::npos) {
+        // We have an open '{', we hence skip lines until we find the matching closing '}'
+        size_t indentation = is_sent ? 2 : 4;
+        while (end != std::string::npos &&
+               !ClosingSequence(messages.substr(begin, end - begin), indentation)) {
+          begin = end + 1;
+          end = messages.find('\n', begin);
+        }
+      }
+    }
     begin = end + 1;
     end = messages.find('\n', begin);
   }
@@ -242,6 +268,33 @@ std::string_view Comparator::GetMessage(std::string_view messages, size_t* proce
 
   // Note that as expected_output_ is a string_view, substr() returns a string_view as well.
   return messages.substr(bpos, begin - bpos);
+}
+
+bool Comparator::ClosingSequence(std::string_view line, size_t indentation) {
+  if (line.length() < indentation + 1) {
+    return false;
+  }
+  // exactly one tabulation before the first closing ] or }
+  for (size_t i = 0; i < indentation; i++) {
+    if (line[i] != ' ') {
+      return false;
+    }
+  }
+  if (line[indentation] != ']' && line[indentation] != '}') {
+    return false;
+  }
+  // then a sequence of " ]" or " }"
+  size_t pos = indentation + 1;
+  while (pos + 2 <= line.length()) {
+    if (line[pos] != ' ') {
+      return false;
+    }
+    if (line[pos + 1] != '}' && line[pos + 1] != ']') {
+      return false;
+    }
+    pos += 2;
+  }
+  return true;
 }
 
 bool Comparator::IgnoredLine(std::string_view line) {
