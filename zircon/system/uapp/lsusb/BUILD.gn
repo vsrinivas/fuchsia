@@ -2,12 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("lsusb") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("lsusb") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "lsusb.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-usb-device:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/system/fidl/fuchsia-hardware-usb-device:c",
   ]
+}
+
+migrated_manifest("lsusb-manifest") {
+  deps = [ ":lsusb" ]
 }
