@@ -17,6 +17,7 @@ use fidl_fuchsia_stash::{StoreAccessorProxy, StoreMarker, StoreProxy, Value};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::Vmo;
 use futures::lock::Mutex;
+use std::sync::Arc;
 
 /// Identifier in stash for the authentication mechanism id field.
 const AUTH_MECHANISM_ID: &str = "auth_mechanism_id";
@@ -41,10 +42,10 @@ pub enum State {
 #[async_trait]
 pub trait Manager: Send + Sync {
     /// Returns the current pre-auth state.
-    async fn get(&self) -> Result<State, AccountManagerError>;
+    async fn get(&self) -> Result<Arc<State>, AccountManagerError>;
 
     /// Sets the pre-auth state.
-    async fn put(&self, state: &State) -> Result<(), AccountManagerError>;
+    async fn put(&self, state: State) -> Result<(), AccountManagerError>;
 
     /// Removes the pre-auth state.
     async fn remove(&self) -> Result<(), AccountManagerError>;
@@ -52,9 +53,11 @@ pub trait Manager: Send + Sync {
 
 /// Stash-backed pre-auth manager. It uses two Stash fields, for auth mechanism
 /// id and enrollment data, respectively. There are two valid states: either no
-/// fields are set or both are set.
+/// fields are set or both are set. The stash manager keeps a cached version of
+/// the latest seen pre-auth state, so that reads can be cheap.
 pub struct StashManager {
     store_proxy: StoreProxy,
+    cached_state: Mutex<Option<Arc<State>>>,
 }
 
 impl StashManager {
@@ -63,7 +66,8 @@ impl StashManager {
         let store_proxy =
             connect_to_service::<StoreMarker>().account_manager_error(ApiError::Resource)?;
         store_proxy.identify(store_name)?;
-        Ok(Self { store_proxy })
+        let cached_state = Mutex::new(None);
+        Ok(Self { store_proxy, cached_state })
     }
 
     fn create_accessor(&self, read_only: bool) -> Result<StoreAccessorProxy, AccountManagerError> {
@@ -71,11 +75,9 @@ impl StashManager {
         self.store_proxy.create_accessor(read_only, server_end)?;
         Ok(accessor_proxy)
     }
-}
 
-#[async_trait]
-impl Manager for StashManager {
-    async fn get(&self) -> Result<State, AccountManagerError> {
+    // Fetches and returns the pre-auth state from the Stash service.
+    async fn fetch_state(&self) -> Result<State, AccountManagerError> {
         let accessor = self.create_accessor(true)?;
         let auth_mechanism_id_val = accessor.get_value(AUTH_MECHANISM_ID).await?.map(|x| *x);
         let enrollment_data_val = accessor.get_value(ENROLLMENT_DATA).await?.map(|x| *x);
@@ -95,15 +97,28 @@ impl Manager for StashManager {
         }
         .account_manager_error(ApiError::Unknown)
     }
+}
 
-    async fn put(&self, state: &State) -> Result<(), AccountManagerError> {
+#[async_trait]
+impl Manager for StashManager {
+    async fn get(&self) -> Result<Arc<State>, AccountManagerError> {
+        let mut cached_state = self.cached_state.lock().await;
+        let current_state = match &*cached_state {
+            None => Arc::new(self.fetch_state().await?),
+            Some(cached_state) => Arc::clone(&cached_state),
+        };
+        *cached_state = Some(Arc::clone(&current_state));
+        Ok(current_state)
+    }
+
+    async fn put(&self, state: State) -> Result<(), AccountManagerError> {
         let accessor = self.create_accessor(false)?;
         match &state {
-            State::NoEnrollments => {
+            &State::NoEnrollments => {
                 accessor.delete_value(AUTH_MECHANISM_ID)?;
                 accessor.delete_value(ENROLLMENT_DATA)?;
             }
-            State::SingleEnrollment { auth_mechanism_id, data } => {
+            &State::SingleEnrollment { ref auth_mechanism_id, ref data } => {
                 let mut auth_mechanism_id_val = Value::Stringval(auth_mechanism_id.clone());
                 let mut data_val = Value::Bytesval(write_mem_buffer(&data)?);
                 accessor.set_value(AUTH_MECHANISM_ID, &mut auth_mechanism_id_val)?;
@@ -113,11 +128,13 @@ impl Manager for StashManager {
         accessor.flush().await?.map_err(|err| {
             AccountManagerError::new(ApiError::Resource)
                 .with_cause(format_err!("Failed committing update to stash: {:?}", err))
-        })
+        })?;
+        *self.cached_state.lock().await = Some(Arc::new(state));
+        Ok(())
     }
 
     async fn remove(&self) -> Result<(), AccountManagerError> {
-        self.put(&State::NoEnrollments).await
+        self.put(State::NoEnrollments).await
     }
 }
 
@@ -135,32 +152,31 @@ fn write_mem_buffer(data: &[u8]) -> Result<Buffer, AccountManagerError> {
 
 /// Pre-auth manager with an in-memory state.
 pub struct InMemoryManager {
-    state: Mutex<State>,
+    state: Mutex<Arc<State>>,
 }
 
 impl InMemoryManager {
     /// Create an in-memory manager with a pre-set initial state.
     pub fn create(initial_state: State) -> Self {
-        Self { state: Mutex::new(initial_state) }
+        Self { state: Mutex::new(Arc::new(initial_state)) }
     }
 }
 
 #[async_trait]
 impl Manager for InMemoryManager {
-    async fn get(&self) -> Result<State, AccountManagerError> {
-        Ok((*self.state.lock().await).clone())
+    async fn get(&self) -> Result<Arc<State>, AccountManagerError> {
+        let state = &*self.state.lock().await;
+        Ok(Arc::clone(&state))
     }
 
-    async fn put(&self, state: &State) -> Result<(), AccountManagerError> {
+    async fn put(&self, state: State) -> Result<(), AccountManagerError> {
         let mut state_lock = self.state.lock().await;
-        *state_lock = state.clone();
+        *state_lock = Arc::new(state);
         Ok(())
     }
 
     async fn remove(&self) -> Result<(), AccountManagerError> {
-        let mut state_lock = self.state.lock().await;
-        *state_lock = State::NoEnrollments;
-        Ok(())
+        self.put(State::NoEnrollments).await
     }
 }
 
@@ -187,28 +203,28 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn in_memory_basic() -> Result<(), AccountManagerError> {
         let manager = InMemoryManager::create(State::NoEnrollments);
-        assert_eq!(manager.get().await?, State::NoEnrollments);
-        manager.put(&*TEST_STATE).await?;
-        assert_eq!(manager.get().await?, *TEST_STATE);
+        assert_eq!(manager.get().await?.as_ref(), &State::NoEnrollments);
+        manager.put(TEST_STATE.clone()).await?;
+        assert_eq!(manager.get().await?.as_ref(), &*TEST_STATE);
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn stash_no_enrollments() -> Result<(), AccountManagerError> {
         let manager = StashManager::create(&random_store_id())?;
-        assert_eq!(manager.get().await?, State::NoEnrollments);
-        manager.put(&State::NoEnrollments).await?;
-        assert_eq!(manager.get().await?, State::NoEnrollments);
+        assert_eq!(manager.get().await?.as_ref(), &State::NoEnrollments);
+        manager.put(State::NoEnrollments).await?;
+        assert_eq!(manager.get().await?.as_ref(), &State::NoEnrollments);
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn stash_single_enrollment() -> Result<(), AccountManagerError> {
         let manager = StashManager::create(&random_store_id())?;
-        manager.put(&TEST_STATE).await?;
-        assert_eq!(manager.get().await?, *TEST_STATE);
-        manager.put(&State::NoEnrollments).await?;
-        assert_eq!(manager.get().await?, State::NoEnrollments);
+        manager.put(TEST_STATE.clone()).await?;
+        assert_eq!(manager.get().await?.as_ref(), &*TEST_STATE);
+        manager.put(State::NoEnrollments).await?;
+        assert_eq!(manager.get().await?.as_ref(), &State::NoEnrollments);
         Ok(())
     }
 
@@ -217,10 +233,10 @@ mod tests {
         let store_name = random_store_id();
         {
             let manager = StashManager::create(&store_name)?;
-            manager.put(&TEST_STATE).await?;
+            manager.put(TEST_STATE.clone()).await?;
         }
         let manager = StashManager::create(&store_name)?;
-        assert_eq!(manager.get().await?, *TEST_STATE);
+        assert_eq!(manager.get().await?.as_ref(), &*TEST_STATE);
         Ok(())
     }
 

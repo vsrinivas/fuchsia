@@ -35,10 +35,10 @@ enum Lifecycle {
     Transferred,
 
     /// The account is locked.
-    Locked { pre_auth_state: Arc<pre_auth::State> },
+    Locked,
 
     /// The account is currently loaded and is available.
-    Initialized { account: Arc<Account>, pre_auth_state: Arc<pre_auth::State> },
+    Initialized { account: Arc<Account> },
 
     /// There is no account present, and initialization is not possible.
     Finished,
@@ -201,9 +201,9 @@ impl AccountHandler {
                         );
                         return Err(ApiError::InvalidRequest);
                     }
-                    (_, None) => Arc::new(pre_auth::State::NoEnrollments),
+                    (_, None) => pre_auth::State::NoEnrollments,
                 };
-                self.pre_auth_manager.put(&pre_auth_state).await.map_err(|err| {
+                self.pre_auth_manager.put(pre_auth_state).await.map_err(|err| {
                     warn!("Could not write pre-auth data: {:?}", err);
                     err.api_error
                 })?;
@@ -214,7 +214,7 @@ impl AccountHandler {
                 )
                 .await
                 .map_err(|err| err.api_error)?;
-                *state_lock = Lifecycle::Initialized { account: Arc::new(account), pre_auth_state };
+                *state_lock = Lifecycle::Initialized { account: Arc::new(account) };
                 self.inspect.lifecycle.set("initialized");
                 Ok(())
             }
@@ -235,9 +235,12 @@ impl AccountHandler {
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             Lifecycle::Uninitialized => {
-                let pre_auth_state =
-                    Arc::new(self.pre_auth_manager.get().await.map_err(|err| err.api_error)?);
-                *state_lock = Lifecycle::Locked { pre_auth_state };
+                // Fetch the pre-auth state for validation, but ignore it.
+                let _ = self.pre_auth_manager.get().await.map_err(|err| {
+                    warn!("Error fetching pre-auth state: {:?}", err);
+                    err.api_error
+                })?;
+                *state_lock = Lifecycle::Locked;
                 self.inspect.lifecycle.set("locked");
                 Ok(())
             }
@@ -259,7 +262,11 @@ impl AccountHandler {
                 info!("UnlockAccount was called in the Initialized state, quietly succeeding.");
                 return Ok(());
             }
-            Lifecycle::Locked { pre_auth_state } => {
+            Lifecycle::Locked => {
+                let pre_auth_state = self.pre_auth_manager.get().await.map_err(|err| {
+                    warn!("Error fetching pre-auth state: {:?}", err);
+                    err.api_error
+                })?;
                 let new_state = match pre_auth_state.as_ref() {
                     &pre_auth::State::NoEnrollments => {
                         let account = Account::load(
@@ -269,10 +276,7 @@ impl AccountHandler {
                         )
                         .await
                         .map_err(|err| err.api_error)?;
-                        Lifecycle::Initialized {
-                            account: Arc::new(account),
-                            pre_auth_state: Arc::clone(pre_auth_state),
-                        }
+                        Lifecycle::Initialized { account: Arc::new(account) }
                     }
                     &pre_auth::State::SingleEnrollment { .. } => {
                         // TODO(42885, 42886): Get authenticator channel and authenticate.
@@ -299,9 +303,9 @@ impl AccountHandler {
                 info!("LockAccount was called in the Locked state, quietly succeeding.");
                 return Ok(());
             }
-            Lifecycle::Initialized { pre_auth_state, account } => {
+            Lifecycle::Initialized { account } => {
                 let _ = account.task_group().cancel().await; // Ignore AlreadyCancelled error
-                let new_state = Lifecycle::Locked { pre_auth_state: Arc::clone(pre_auth_state) };
+                let new_state = Lifecycle::Locked;
                 *state_lock = new_state;
                 self.inspect.lifecycle.set("locked");
                 Ok(())
