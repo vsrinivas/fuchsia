@@ -17,7 +17,15 @@ const std::array<float, 3> kColorAdjustmentPreoffsets = {0, 0, 0};
 ColorTransformHandler::ColorTransformHandler(sys::ComponentContext& component_context,
                                              scenic::ResourceId compositor_id,
                                              scenic::Session* session)
-    : session_(session), compositor_id_(compositor_id), color_transform_handler_bindings_(this) {
+    : ColorTransformHandler(component_context, compositor_id, session, ColorTransformState()) {}
+
+ColorTransformHandler::ColorTransformHandler(sys::ComponentContext& component_context,
+                                             scenic::ResourceId compositor_id,
+                                             scenic::Session* session, ColorTransformState state)
+    : session_(session),
+      compositor_id_(compositor_id),
+      color_transform_handler_bindings_(this),
+      color_transform_state_(state) {
   component_context.svc()->Connect(color_transform_manager_.NewRequest());
   color_transform_manager_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Unable to connect to ColorTransformManager" << zx_status_get_string(status);
@@ -34,11 +42,29 @@ void ColorTransformHandler::SetColorTransformConfiguration(
     FXL_LOG(ERROR) << "ColorTransformConfiguration missing color adjustment matrix.";
     return;
   }
+  SetScenicColorConversion(configuration.color_adjustment_matrix());
+  color_transform_state_.Update(std::move(configuration));
+}
 
+void ColorTransformHandler::SetColorAdjustment(
+    fuchsia::ui::brightness::ColorAdjustmentTable color_adjustment_table) {
+  if (color_transform_state_.IsActive()) {
+    FXL_LOG(INFO) << "Ignoring SetColorAdjustment because color correction is currently active.";
+    return;
+  }
+
+  if (!color_adjustment_table.has_matrix()) {
+    FXL_LOG(INFO) << "Ignoring SetColorAdjustment because matrix is empty";
+    return;
+  }
+
+  SetScenicColorConversion(color_adjustment_table.matrix());
+}
+void ColorTransformHandler::SetScenicColorConversion(std::array<float, 9> color_transform_matrix) {
   // Create scenic color adjustment cmd.
   fuchsia::ui::gfx::Command color_adjustment_cmd;
   fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK display_color_conversion_cmd;
-  InitColorConversionCmd(&display_color_conversion_cmd, configuration.color_adjustment_matrix());
+  InitColorConversionCmd(&display_color_conversion_cmd, color_transform_matrix);
   // Call scenic to apply color adjustment.
   color_adjustment_cmd.set_set_display_color_conversion(std::move(display_color_conversion_cmd));
   session_->Enqueue(std::move(color_adjustment_cmd));

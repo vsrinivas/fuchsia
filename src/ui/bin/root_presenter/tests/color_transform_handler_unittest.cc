@@ -25,7 +25,14 @@ const std::array<float, 9> kCorrectDeuteranomaly = {
     0.288299f, 0.052709f, -0.257912f,
     0.711701f, 0.947291f, 0.257912f,
     0.000000f, -0.000000f, 1.000000f};
+
+const std::array<float, 9> kTint = {
+    0.2f, 0.0f, -0.0f,
+    0.2f, 0.0f, -0.0f,
+    0.000000f, -0.000000f, 1.000000f};
 // clang-format on
+
+const scenic::ResourceId id = 1;
 
 class ColorTransformHandlerTest : public gtest::TestLoopFixture {
  public:
@@ -37,7 +44,6 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
 
   void SetUp() final {
     // Create Scenic and Session.
-    scenic::ResourceId id = 1;
     fuchsia::ui::scenic::SessionPtr session_ptr;
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
     fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> listener_request =
@@ -46,11 +52,6 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
     fake_session_ = fake_scenic_.fakeSession();
     session_ =
         std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
-
-    // Create ColorTransformHandler.
-    color_transform_handler_ =
-        std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
-    RunLoopUntilIdle();
   }
 
   void TearDown() override {
@@ -67,7 +68,12 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
   std::unique_ptr<ColorTransformHandler> color_transform_handler_;
 };
 // Basic test to make sure the color transform handler can send updates to Scenic.
-TEST_F(ColorTransformHandlerTest, VerifyColorTransform) {
+TEST_F(ColorTransformHandlerTest, VerifyA11yColorTransform) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
   // Change settings.
   fuchsia::accessibility::ColorTransformConfiguration configuration;
   configuration.set_color_correction(
@@ -87,8 +93,13 @@ TEST_F(ColorTransformHandlerTest, VerifyColorTransform) {
   ASSERT_EQ(kCorrectDeuteranomaly, command.value().set_display_color_conversion().matrix);
 }
 
-// Verify that we don't call scenic when the matrix is missing.
-TEST_F(ColorTransformHandlerTest, TransformMissingMatrix) {
+// Verify that we don't call scenic when the accessibility matrix is missing.
+TEST_F(ColorTransformHandlerTest, A11yMissingMatrix) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
   // Change settings.
   fuchsia::accessibility::ColorTransformConfiguration configuration;
   configuration.set_color_correction(
@@ -97,6 +108,66 @@ TEST_F(ColorTransformHandlerTest, TransformMissingMatrix) {
   EXPECT_FALSE(configuration.has_color_adjustment_matrix());
 
   color_transform_handler_->SetColorTransformConfiguration(std::move(configuration), [] {});
+  RunLoopUntilIdle();
+
+  // Verify that fake scenic was not called.
+  ASSERT_FALSE(fake_session_->PresentWasCalled());
+}
+
+// Verify that a color adjustment from the brightness API is sent to scenic correctly.
+TEST_F(ColorTransformHandlerTest, VerifyColorAdjustment) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
+  // Change color adjustment via brightness.
+  fuchsia::ui::brightness::ColorAdjustmentTable table;
+  table.set_matrix(kTint);
+
+  ASSERT_TRUE(table.has_matrix());
+  color_transform_handler_->SetColorAdjustment(std::move(table));
+  RunLoopUntilIdle();
+
+  // Verify that fake scenic received the correct matrix.
+  ASSERT_TRUE(fake_session_->PresentWasCalled());
+  auto command = fake_session_->GetFirstCommand();
+  ASSERT_TRUE(command.has_value());
+  ASSERT_EQ(command.value().Which(), fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion);
+}
+
+// Verify that a color adjustment from the brightness API is not sent to scenic when accessibility
+// is active.
+TEST_F(ColorTransformHandlerTest, VerifyColorAdjustmentNoOpWithA11y) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      *context_provider_.context(), id, session_.get(),
+      ColorTransformState(/* color_inversion_enabled */ false,
+                          fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY));
+  RunLoopUntilIdle();
+
+  // Change color adjustment via brightness.
+  fuchsia::ui::brightness::ColorAdjustmentTable table;
+  table.set_matrix(kTint);
+
+  ASSERT_TRUE(table.has_matrix());
+  color_transform_handler_->SetColorAdjustment(std::move(table));
+  RunLoopUntilIdle();
+
+  // Verify that fake scenic was not called.
+  ASSERT_FALSE(fake_session_->PresentWasCalled());
+}
+// Verify that we don't call scenic when the brightness color adjustment matrix is not present.
+TEST_F(ColorTransformHandlerTest, BrightnessMissingMatrix) {
+  // Create ColorTransformHandler.
+  color_transform_handler_ =
+      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
+  RunLoopUntilIdle();
+
+  // Change color adjustment via brightness.
+  fuchsia::ui::brightness::ColorAdjustmentTable table;
+  ASSERT_FALSE(table.has_matrix());
+  color_transform_handler_->SetColorAdjustment(std::move(table));
   RunLoopUntilIdle();
 
   // Verify that fake scenic was not called.

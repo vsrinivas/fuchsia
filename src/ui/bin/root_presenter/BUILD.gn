@@ -69,6 +69,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.ui",
     "//sdk/fidl/fuchsia.ui.activity",
+    "//sdk/fidl/fuchsia.ui.brightness",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
@@ -203,6 +204,7 @@ source_set("color_transform") {
 
   deps = [
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.ui.brightness",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/ui/scenic/cpp",
