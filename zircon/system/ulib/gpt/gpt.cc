@@ -46,16 +46,18 @@ struct mbr_partition_t {
   uint32_t sectors;
 };
 
-void print_array(const gpt_partition_t* const a[kPartitionCount], int c) {
+void print_array(const gpt_partition_t* const partitions[kPartitionCount], int c) {
   char GUID[GPT_GUID_STRLEN];
   char name[GPT_NAME_LEN / 2 + 1];
 
   for (int i = 0; i < c; ++i) {
-    uint8_to_guid_string(GUID, a[i]->type);
+    uint8_to_guid_string(GUID, partitions[i]->type);
     memset(name, 0, GPT_NAME_LEN / 2 + 1);
-    utf16_to_cstring(name, reinterpret_cast<const uint16_t*>(a[i]->name), GPT_NAME_LEN / 2);
+    utf16_to_cstring(name, reinterpret_cast<const uint16_t*>(partitions[i]->name),
+                     GPT_NAME_LEN / 2);
 
-    printf("Name: %s \n  Start: %lu -- End: %lu \nType: %s\n", name, a[i]->first, a[i]->last, GUID);
+    printf("Name: %s \n  Start: %lu -- End: %lu \nType: %s\n", name, partitions[i]->first,
+           partitions[i]->last, GUID);
   }
 }
 
@@ -172,10 +174,12 @@ bool gpt_is_efi_guid(uint8_t* guid, ssize_t len) {
 }
 
 void uint8_to_guid_string(char* dst, const uint8_t* src) {
-  const guid_t* guid = reinterpret_cast<const guid_t*>(src);
-  sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2,
-          guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3],
-          guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
+  // memcpy'd rather than casting src in-place for alignment (for ubsan).
+  guid_t guid;
+  memcpy(&guid, src, sizeof(guid_t));
+  sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid.data1, guid.data2,
+          guid.data3, guid.data4[0], guid.data4[1], guid.data4[2], guid.data4[3], guid.data4[4],
+          guid.data4[5], guid.data4[6], guid.data4[7]);
 }
 
 const char* gpt_guid_to_type(const char* guid) { return gpt::KnownGuid::GuidStrToName(guid); }
