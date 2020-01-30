@@ -1,0 +1,11 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.url;
+
+/// Some major applications limit URL length to 2083.
+const uint32 MAX_URL_LENGTH = 2083;
+
+/// A URL is used to reference a resource from a specified network location.
+using Url = string:MAX_URL_LENGTH;
