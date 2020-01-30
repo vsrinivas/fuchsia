@@ -457,7 +457,7 @@ group("default") {
   deps = [
     "//build:tests",
     "//build/images:packages",
-    "//build/unification/tests:host-metadata",
+    "//build/unification",
     "//sdk",
   ]
   if (base_package_labels != [] || cache_package_labels != []) {

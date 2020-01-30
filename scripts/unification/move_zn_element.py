@@ -113,6 +113,8 @@ def transform_build_file(build):
         line = line.replace('$zx/system/dev/lib', '//zircon/public/lib')
         # Update references to Zircon in general.
         line = line.replace('$zx', '//zircon')
+        # Update import for fuzzers.
+        line = line.replace('//zircon/public/gn/fuzzer.gni', '//build/fuzzing/fuzzer.gni')
         # Print the line, if any content is left.
         if line:
             sys.stdout.write(line)

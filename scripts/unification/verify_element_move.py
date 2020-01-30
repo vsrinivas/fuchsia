@@ -9,6 +9,7 @@ import argparse
 import itertools
 import json
 import os
+import re
 import sys
 
 
@@ -30,17 +31,67 @@ MAX_SIZE_DECREASE = 10
 MAX_SIZE_INCREASE = 1
 
 
+class TypeBody(object):
+    def __init__(self, name, is_manifest):
+        self.name = name
+        self.is_manifest = is_manifest
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return 'T[%s]' % self.name
+
+    def load_data(self, build_dir, origin):
+        if self.is_manifest:
+            path = os.path.join(build_dir, 'obj', 'build', 'unification',
+                                'images',
+                                '%s-%s.unification.manifest' % (origin, self.name))
+            with open(path, 'r') as manifest_file:
+                contents = dict(map(lambda line: line.strip().split('=', 1),
+                                     manifest_file.readlines()))
+                contents = dict([(k, os.path.join(build_dir, v))
+                                 for k, v in contents.iteritems()])
+                return Manifest(origin, self, contents)
+        elif self.name == 'fuzzers':
+            path = os.path.join(build_dir, '%s_zircon_fuzzers.json' % origin)
+            with open(path, 'r') as manifest_file:
+                contents = json.load(manifest_file)
+            fuzzers = list(set([i.replace('-fuzzer.asan-ubsan', '')
+                                 .replace('-fuzzer.asan', '')
+                                 .replace('-fuzzer.ubsan', '')
+                                for i in contents]))
+            return Manifest(origin, self, fuzzers)
+        elif self.name == 'host_tests':
+            path = os.path.join(build_dir,
+                                '%s_zircon_host_tests.json' % origin)
+            with open(path, 'r') as manifest_file:
+                contents = json.load(manifest_file)
+                return Manifest(origin, self, contents)
+        raise Exception('Unhandled type: ' + self)
+
+    def to_json(self):
+        return self.name
+
+
 class Type(object):
-    AUX = 'aux'
-    IMAGE = 'image'
-    TESTS = 'tests'
+    AUX = TypeBody('aux', True)
+    FUZZERS = TypeBody('fuzzers', False)
+    HOST_TESTS = TypeBody('host_tests', False)
+    IMAGE = TypeBody('image', True)
+    TESTS = TypeBody('tests', True)
+
     @classmethod
-    def all(cls): return [cls.AUX, cls.IMAGE, cls.TESTS]
+    def all(cls): return [cls.AUX, cls.FUZZERS, cls.HOST_TESTS, cls.IMAGE, cls.TESTS]
 
-
-# Special-case for host tests which are not exposed in the same way as other
-# types.
-HOST_TESTS_TYPE = "host_tests"
+    @classmethod
+    def manifests(cls): return [t for t in cls.all() if t.is_manifest]
 
 
 class Origin(object):
@@ -63,10 +114,11 @@ class Manifest(object):
 
 
 class CustomJSONEncoder(json.JSONEncoder):
-    '''A JSON encoder that handles sets and sorts lists.'''
 
     def default(self, object):
-        if isinstance(object, FileDataSet) or isinstance(object, FileData):
+        if (isinstance(object, FileDataSet) or
+            isinstance(object, FileData) or
+            isinstance(object, TypeBody)):
             return object.to_json()
         return json.JSONEncoder.default(self, object)
 
@@ -150,18 +202,17 @@ class Summary(object):
     '''Data for a particular state of the build.'''
 
     def __init__(self):
-        # map { type --> FileDataSet }
+        # map { type --> FileDataSet | list }
         self.objects = {}
 
     def add_objects(self, type, objects):
-        dataset = self.objects.setdefault(type, FileDataSet())
-        for name, path in objects.iteritems():
-            dataset.add(name, FileData(path))
-
-    def add_host_tests(self, tests):
-        data = self.objects.setdefault(HOST_TESTS_TYPE, [])
-        data.extend(tests)
-        self.objects[HOST_TESTS_TYPE] = sorted(data)
+        if isinstance(objects, dict):
+            dataset = self.objects.setdefault(type, FileDataSet())
+            for name, path in objects.iteritems():
+                dataset.add(name, FileData(path))
+        elif isinstance(objects, list):
+            dataset = self.objects.setdefault(type, [])
+            self.objects[type] = sorted(set(dataset + objects))
 
     def get_objects(self, type):
         return self.objects[type]
@@ -171,37 +222,33 @@ class Summary(object):
         return 'S[' + ', '.join(items) + ']'
 
     def to_json(self, output):
-        json.dump(self.objects, output, cls=CustomJSONEncoder, indent=2,
+        data = dict([(str(k), v) for k, v in self.objects.iteritems()])
+        json.dump(data, output, cls=CustomJSONEncoder, indent=2,
                   sort_keys=True, separators=(',', ': '))
 
     @classmethod
     def from_json(cls, input):
         result = Summary()
         data = json.load(input)
-        for type in Type.all():
-            result.objects[type] = FileDataSet.from_json(data[type])
-        result.add_host_tests(data[HOST_TESTS_TYPE])
+        for type in Type.manifests():
+            result.objects[type] = FileDataSet.from_json(data[str(type)])
+        result.objects[Type.HOST_TESTS] = data[str(Type.HOST_TESTS)]
+        result.objects[Type.FUZZERS] = data[str(Type.FUZZERS)]
         return result
 
 
-def generate_summary(manifests, base_dir):
+def generate_summary(manifests):
     '''Generates a summary based on the manifests found in the build.'''
     result = Summary()
     for type in Type.all():
         for manifest in filter(lambda m: m.type == type, manifests):
-            contents = manifest.contents.copy()
-            contents = dict([(n, os.path.join(base_dir, p))
-                             for (n, p) in contents.iteritems()])
-            result.add_objects(type, contents)
-    for manifest in filter(lambda m: m.type == HOST_TESTS_TYPE, manifests):
-        contents = manifest.contents
-        result.add_host_tests(contents)
+            result.add_objects(type, manifest.contents)
     return result
 
 
 def report(manifest, is_error, message):
     type = 'Error' if is_error else 'Warning'
-    print('%s%s%s' % (type.ljust(10), manifest.ljust(12), message))
+    print('%s%s%s' % (type.ljust(10), str(manifest).ljust(12), message))
 
 
 def print_size(value):
@@ -216,7 +263,20 @@ def compare_summaries(reference, current):
     '''Compares summaries for two states of the build.'''
     has_errors = False
     has_warnings = False
-    for type in Type.all():
+    all_fuzzers_present = True  # Should be a list of changed fuzzers, really
+
+    # Fuzzers
+    reference_fuzzers = set(reference.get_objects(Type.FUZZERS))
+    current_fuzzers = set(current.get_objects(Type.FUZZERS))
+    if reference_fuzzers != current_fuzzers:
+        all_fuzzers_present = False
+        has_errors = True
+        for fuzzer in reference_fuzzers - current_fuzzers:
+            report(Type.FUZZERS, True, 'fuzzer removed: ' + fuzzer)
+        for fuzzer in current_fuzzers - reference_fuzzers:
+            report(Type.FUZZERS, True, 'fuzzer added: ' + fuzzer)
+
+    for type in Type.manifests():
         reference_objects = reference.get_objects(type)
         current_objects = current.get_objects(type)
         reference_names = reference_objects.filenames()
@@ -224,10 +284,17 @@ def compare_summaries(reference, current):
 
         # Missing and new files.
         if reference_names != current_names:
-            has_errors = True
             for element in reference_names - current_names:
-                report(type, True, 'element removed: ' + element)
+                if (re.match('^bin/.+-fuzzer\..{1,7}san$', element) or
+                    re.match('^meta/.+-fuzzer\..{1,7}san\.cmx$', element)):
+                    is_error = False
+                    has_warnings = True
+                else:
+                    is_error = True
+                    has_errors = True
+                report(type, is_error, 'element removed: ' + element)
             for element in current_names - reference_names:
+                has_errors = True
                 report(type, True, 'element added: ' + element)
 
         # Size changes.
@@ -274,14 +341,14 @@ def compare_summaries(reference, current):
                        ': ' + lib)
 
     # Host tests.
-    reference_host_tests = set(reference.get_objects(HOST_TESTS_TYPE))
-    current_host_tests = set(current.get_objects(HOST_TESTS_TYPE))
+    reference_host_tests = set(reference.get_objects(Type.HOST_TESTS))
+    current_host_tests = set(current.get_objects(Type.HOST_TESTS))
     if reference_host_tests != current_host_tests:
         has_errors = True
         for element in reference_host_tests - current_host_tests:
-            report(HOST_TESTS_TYPE, True, 'test removed: ' + element)
+            report(Type.HOST_TESTS, True, 'test removed: ' + element)
         for element in current_host_tests - reference_host_tests:
-            report(HOST_TESTS_TYPE, True, 'test added: ' + element)
+            report(Type.HOST_TESTS, True, 'test added: ' + element)
 
     if has_errors:
         print('Error: summaries do not match!')
@@ -313,21 +380,10 @@ def main():
     manifests = []
     for origin in Origin.all():
         for type in Type.all():
-            path = os.path.join(args.build_dir, 'obj', 'build', 'unification',
-                                'images',
-                                '%s-%s.unification.manifest' % (origin, type))
-            with open(path, 'r') as manifest_file:
-                contents = dict(map(lambda line: line.strip().split('=', 1),
-                                     manifest_file.readlines()))
-                manifests.append(Manifest(origin, type, contents))
-        host_tests_path = os.path.join(args.build_dir,
-                                       '%s_zircon_host_tests.json' % origin)
-        with open(host_tests_path, 'r') as host_tests_file:
-            data = json.load(host_tests_file)
-            manifests.append(Manifest(origin, 'host_tests', data))
+            manifests.append(type.load_data(args.build_dir, origin))
 
     # Generate a summary for the current build.
-    summary = generate_summary(manifests, args.build_dir)
+    summary = generate_summary(manifests)
 
     # If applicable, save the current build's summary.
     if args.summary:
