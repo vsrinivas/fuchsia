@@ -24,3 +24,9 @@ fidl("host") {
     "//sdk/fidl/fuchsia.bluetooth.sys",
   ]
 }
+
+fidl("component") {
+  name = "fuchsia.bluetooth.component"
+
+  sources = [ "component.fidl" ]
+}

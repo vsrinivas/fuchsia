@@ -5,6 +5,8 @@
 group("profiles") {
   testonly = true
   deps = [
+    "bt-a2dp-manager",
+    "bt-a2dp-manager:bt-a2dp-manager-tests",
     "bt-a2dp-sink",
     "bt-a2dp-sink:tests",
     "bt-a2dp-source",

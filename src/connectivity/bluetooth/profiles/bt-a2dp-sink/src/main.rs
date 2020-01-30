@@ -7,11 +7,13 @@
 use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
+    async_helpers::component_lifecycle::ComponentLifecycleServer,
     bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
+    fidl_fuchsia_bluetooth_component::LifecycleState,
     fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC},
     fuchsia_async as fasync,
     fuchsia_bluetooth::inspect::DebugExt,
@@ -419,6 +421,9 @@ async fn main() -> Result<(), Error> {
     let pool_clone = controller_pool.clone();
     fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
 
+    let mut lifecycle = ComponentLifecycleServer::spawn();
+    fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
+
     if let Err(e) = fs.take_and_serve_directory_handle() {
         fx_log_warn!("Unable to serve Inspect service directory: {}", e);
     }
@@ -469,6 +474,8 @@ async fn main() -> Result<(), Error> {
     if let Some(e) = status.error {
         return Err(format_err!("Couldn't add A2DP sink service: {:?}", e));
     }
+
+    lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
     let mut evt_stream = profile_svc.take_event_stream();
     while let Some(evt) = evt_stream.next().await {

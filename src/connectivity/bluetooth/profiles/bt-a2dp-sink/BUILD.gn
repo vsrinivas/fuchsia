@@ -32,6 +32,8 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback-rustc",
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
+    "//src/connectivity/bluetooth/fidl:component-rustc",
+    "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/bt-a2dp",
     "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/bt-avdtp",

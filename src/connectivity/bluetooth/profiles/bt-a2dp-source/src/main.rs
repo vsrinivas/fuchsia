@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
+    async_helpers::component_lifecycle::ComponentLifecycleServer,
     bt_a2dp::media_types::*,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
+    fidl_fuchsia_bluetooth_component::LifecycleState,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
@@ -284,11 +286,16 @@ async fn main() -> Result<(), Error> {
     let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
     let mut fs = ServiceFs::new();
+
+    let mut lifecycle = ComponentLifecycleServer::spawn();
+    fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
+
     let pool_clone = controller_pool.clone();
     fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
     if let Err(e) = fs.take_and_serve_directory_handle() {
         fx_log_warn!("Unable to serve Inspect service directory: {}", e);
     }
+
     fasync::spawn(fs.collect::<()>());
 
     let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
@@ -319,6 +326,8 @@ async fn main() -> Result<(), Error> {
     let mut evt_stream = profile_svc.take_event_stream();
 
     let mut peers = Peers::new(opts.source, profile_svc);
+
+    lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
     while let Some(evt) = evt_stream.next().await {
         let res = match evt? {

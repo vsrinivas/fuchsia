@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.component;
+
+/// States that a component can be in.
+enum LifecycleState {
+    INITIALIZING = 0;
+    READY = 1;
+};
+
+/// Protocol for querying the lifecycle of a component beyond that which
+/// is provided by zircon primitives.
+[Discoverable]
+protocol Lifecycle {
+    /// Hanging Get method for querying the `LifecycleState` of a component
+    GetState() -> (LifecycleState state);
+};

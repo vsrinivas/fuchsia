@@ -1,0 +1,31 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.a2dp;
+
+using zx;
+
+/// Enum corresponding to the A2DP SRC/SNK roles as defined in the
+/// A2DP v1.3.2 profile specification, section 2.2.
+enum Role {
+    /// Act as a source of digital audio streams, sending audio to peers.
+    SOURCE = 0;
+    /// Act as a sink of digital audio streams and play audio sent from peers.
+    SINK = 1;
+};
+
+/// A protocol for specifying which A2DP role this device should operate.
+[Discoverable]
+protocol AudioMode {
+    /// Switch the device to act as the specified A2DP Role. If the device is already
+    /// set to the requested role, calling this method is a no-op.
+    ///
+    /// When this method returns without error, a client can depend on the
+    /// following:
+    /// 1. If the role was switched, the previous profile has requested removal
+    ///    from the hosts' SDP databases, and all L2CAP channels associated with
+    ///    the previous profile have initiated or completed the process of closing.
+    /// 2. The device is in the requested A2DP role.
+    SetRole(Role role) -> () error zx.status;
+};

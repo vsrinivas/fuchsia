@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/bt-a2dp-manager-unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

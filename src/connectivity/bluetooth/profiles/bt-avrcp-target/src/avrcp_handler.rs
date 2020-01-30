@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    async_helpers::component_lifecycle::ComponentLifecycleServer,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_avrcp::{
         PeerManagerMarker, TargetAvcError, TargetHandlerMarker, TargetHandlerRequest,
         TargetHandlerRequestStream, TargetPassthroughError,
     },
+    fidl_fuchsia_bluetooth_component::LifecycleState,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     futures::TryStreamExt,
@@ -135,6 +137,7 @@ pub(crate) async fn handle_target_requests(
 /// Spin up task for handling incoming TargetHandler requests.
 pub(crate) async fn process_avrcp_requests(
     media_sessions: Arc<MediaSessions>,
+    mut lifecycle: ComponentLifecycleServer,
 ) -> Result<(), anyhow::Error> {
     // AVRCP Service Setup
     // Register this target handler with the AVRCP component.
@@ -147,6 +150,8 @@ pub(crate) async fn process_avrcp_requests(
         .await
         .expect("Unable to register target handler");
     // End AVRCP Service Setup
+
+    lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
     handle_target_requests(request_stream, media_sessions).await
 }

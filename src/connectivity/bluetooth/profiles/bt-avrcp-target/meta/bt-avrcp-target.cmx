@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.bluetooth.a2dp.ComponentLifecycle",
             "fuchsia.bluetooth.avrcp.PeerManager",
             "fuchsia.logger.LogSink",
             "fuchsia.media.sessions2.Discovery"
