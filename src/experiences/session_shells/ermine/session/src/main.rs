@@ -54,9 +54,7 @@ async fn main() -> Result<(), Error> {
     // This node can be used to move the associated view around.
     let _node = scene_manager.add_view_to_scene(view_provider, Some("Ermine".to_string())).await?;
 
-    scene_manager.present();
-
     workstation_input_pipeline::handle_input(scene_manager, &pointer_hack_server).await;
 
-    Ok(())
+    loop {}
 }
