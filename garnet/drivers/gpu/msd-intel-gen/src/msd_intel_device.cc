@@ -515,6 +515,9 @@ bool MsdIntelDevice::InitContextForRender(MsdIntelContext* context) {
   if (!context->Map(gtt(), engine->id()))
     return DRETF(false, "failed to map context");
 
+  if (!engine->InitContextWorkarounds(context))
+    return DRETF(false, "failed to init workarounds");
+
   if (!engine->InitContextCacheConfig(context))
     return DRETF(false, "failed to init cache config");
 

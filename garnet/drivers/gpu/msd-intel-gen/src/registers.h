@@ -538,6 +538,13 @@ class RenderEngineTlbControl : public magma::RegisterBase {
   static auto Get() { return magma::RegisterAddr<RenderEngineTlbControl>(0x4260); }
 };
 
+class CacheMode1 {
+ public:
+  static constexpr uint32_t kOffset = 0x7004;
+  static constexpr uint32_t k4x4StcOptimizationDisable = 1 << 6;
+  static constexpr uint32_t kPartialResolveInVcDisable = 1 << 1;
+};
+
 }  // namespace registers
 
 #endif  // REGISTERS_H

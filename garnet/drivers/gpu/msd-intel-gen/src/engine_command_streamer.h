@@ -39,6 +39,7 @@ class EngineCommandStreamer {
   // Initialize backing store for the given context on this engine command streamer.
   bool InitContext(MsdIntelContext* context) const;
 
+  bool InitContextWorkarounds(MsdIntelContext* context);
   bool InitContextCacheConfig(MsdIntelContext* context);
 
   // Initialize engine command streamer hardware.

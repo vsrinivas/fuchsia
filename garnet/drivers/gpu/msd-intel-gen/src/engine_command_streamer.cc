@@ -17,6 +17,7 @@
 #include "registers.h"
 #include "render_init_batch.h"
 #include "ringbuffer.h"
+#include "workarounds.h"
 
 EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
                                              uint32_t mmio_base)
@@ -45,6 +46,18 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const {
 
   // Transfer ownership of context_buffer
   context->SetEngineState(id(), std::move(context_buffer), std::move(ringbuffer));
+
+  return true;
+}
+
+bool EngineCommandStreamer::InitContextWorkarounds(MsdIntelContext* context) {
+  auto ringbuffer = context->get_ringbuffer(id());
+
+  if (!ringbuffer->HasSpace(Workarounds::InstructionBytesRequired()))
+    return DRETF(false, "insufficient ringbuffer space for workarounds");
+
+  if (!Workarounds::Init(ringbuffer, id()))
+    return DRETF(false, "failed to init workarounds");
 
   return true;
 }

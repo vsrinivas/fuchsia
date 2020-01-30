@@ -36,6 +36,7 @@ source_set("nonhardware_tests") {
     "test_scheduler.cc",
     "test_semaphore.cc",
     "test_sequencer.cc",
+    "test_workarounds.cc",
   ]
 
   deps = [ ":test_deps" ]

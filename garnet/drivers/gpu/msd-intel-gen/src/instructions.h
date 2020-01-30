@@ -62,6 +62,16 @@ class MiLoadDataImmediate {
       writer->Write32(dword[i]);
     }
   }
+
+  static void write(magma::InstructionWriter* writer, uint32_t count, uint32_t offset[],
+                    uint32_t value[]) {
+    writer->Write32(kCommandType | dword_count(count) - 2);
+    for (uint32_t i = 0; i < count; i++) {
+      DASSERT((offset[i] & 0x3) == 0);
+      writer->Write32(offset[i]);
+      writer->Write32(value[i]);
+    }
+  }
 };
 
 // intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf pp.1057

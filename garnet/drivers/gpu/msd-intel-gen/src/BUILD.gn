@@ -47,6 +47,8 @@ source_set("src") {
     "scheduler.cc",
     "scheduler.h",
     "types.h",
+    "workarounds.cc",
+    "workarounds.h",
   ]
 
   deps = [
