@@ -227,19 +227,14 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <memory>
+#include <utility>
+
 #include <fbl/intrusive_single_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
-
-#ifdef _KERNEL
-#include <ktl/unique_ptr.h>
-#else
-#include <memory>
-#endif
-
-#include <utility>
 
 // C++ API
 class RegionAllocator {
@@ -252,11 +247,7 @@ class RegionAllocator {
     struct RegionDeleter;
 
    public:
-#ifdef _KERNEL
-    using UPtr = ktl::unique_ptr<const Region, RegionDeleter>;
-#else
     using UPtr = std::unique_ptr<const Region, RegionDeleter>;
-#endif
 
    private:
     using WAVLTreeNodeState = fbl::WAVLTreeNodeState<Region*>;
