@@ -1,0 +1,2 @@
+# Disable Tricium checks for generated files and test inputs
+golden/** -tricium
