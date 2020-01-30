@@ -51,6 +51,69 @@ constexpr fuchsia::media::AudioStreamType kInitialFormat{
     .channels = 1,
     .frames_per_second = 8000};
 
+struct RbRegion {
+  uint32_t srb_pos;                     // start ring buffer pos
+  uint32_t len;                         // region length in frames
+  FractionalFrames<int64_t> sfrac_pts;  // start fractional frame pts
+};
+
+// Utility functions to debug clocking in MixToIntermediate.
+//
+// Display ring-buffer region info.
+[[maybe_unused]] void DumpRbRegions(const RbRegion* regions) {
+  for (auto i = 0; i < 2; ++i) {
+    if (regions[i].len) {
+      AUD_VLOG(SPEW) << "[" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
+                     << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts.raw_value()
+                     << " (" << std::dec << regions[i].sfrac_pts.Floor() << " frames)";
+    } else {
+      AUD_VLOG(SPEW) << "[" << i << "] len 0x0";
+    }
+  }
+}
+
+// Display a timeline function.
+[[maybe_unused]] void DumpTimelineFunction(const media::TimelineFunction& timeline_function) {
+  FX_VLOGS(SPEW) << "(TLFunction) sub/ref deltas " << timeline_function.subject_delta() << "/"
+                 << timeline_function.reference_delta() << ", sub/ref times "
+                 << timeline_function.subject_time() << "/" << timeline_function.reference_time();
+}
+
+// Display a ring-buffer snapshot.
+[[maybe_unused]] void DumpRbSnapshot(const AudioDriver::RingBufferSnapshot& rb_snap) {
+  AUD_VLOG_OBJ(SPEW, &rb_snap) << "(RBSnapshot) position_to_end_fence_frames "
+                               << rb_snap.position_to_end_fence_frames
+                               << ", end_fence_to_start_fence_frames "
+                               << rb_snap.end_fence_to_start_fence_frames << ", gen_id "
+                               << rb_snap.gen_id;
+
+  FX_VLOGS(SPEW) << "rb_snap.clock_mono_to_ring_pos_bytes:";
+  DumpTimelineFunction(rb_snap.clock_mono_to_ring_pos_bytes);
+
+  auto rb = rb_snap.ring_buffer;
+  AUD_VLOG_OBJ(SPEW, rb_snap.ring_buffer.get())
+      << "(DriverRBuf) size " << rb->size() << ", frames " << rb->frames() << ", frame_size "
+      << rb->frame_size() << ", start " << static_cast<void*>(rb->virt());
+}
+
+// Display a mixer bookkeeping struct.
+[[maybe_unused]] void DumpMixer(const Mixer& mixer) {
+  auto& mix_state = mixer.bookkeeping();
+  AUD_VLOG_OBJ(SPEW, &mix_state) << "(Bookkeep) mixer " << &mixer << " gain " << &mix_state.gain
+                                 << ", step_size x" << std::hex << mix_state.step_size
+                                 << ", rate_mod/den " << std::dec << mix_state.rate_modulo << "/"
+                                 << mix_state.denominator << " src_pos_mod "
+                                 << mix_state.src_pos_modulo << ", src_trans_gen "
+                                 << mix_state.source_trans_gen_id << ", dest_trans_gen "
+                                 << mix_state.dest_trans_gen_id;
+
+  FX_VLOGS(SPEW) << "mix_state.dest_frames_to_frac_source_frames:";
+  DumpTimelineFunction(mix_state.dest_frames_to_frac_source_frames);
+
+  FX_VLOGS(SPEW) << "mix_state.clock_mono_to_frac_source_frames:";
+  DumpTimelineFunction(mix_state.clock_mono_to_frac_source_frames);
+}
+
 }  // namespace
 
 std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
@@ -587,69 +650,6 @@ void AudioCapturerImpl::RecomputeMinFenceTime() {
     REP(SettingCapturerMinFenceTime(*this, cur_min_fence_time));
     min_fence_time_ = cur_min_fence_time;
   }
-}
-
-struct RbRegion {
-  uint32_t srb_pos;                     // start ring buffer pos
-  uint32_t len;                         // region length in frames
-  FractionalFrames<int64_t> sfrac_pts;  // start fractional frame pts
-};
-
-// Utility functions to debug clocking in MixToIntermediate.
-//
-// Display ring-buffer region info.
-void DumpRbRegions(const RbRegion* regions) {
-  for (auto i = 0; i < 2; ++i) {
-    if (regions[i].len) {
-      AUD_VLOG(SPEW) << "[" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
-                     << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts.raw_value()
-                     << " (" << std::dec << regions[i].sfrac_pts.Floor() << " frames)";
-    } else {
-      AUD_VLOG(SPEW) << "[" << i << "] len 0x0";
-    }
-  }
-}
-
-// Display a timeline function.
-void DumpTimelineFunction(const media::TimelineFunction& timeline_function) {
-  FX_VLOGS(SPEW) << "(TLFunction) sub/ref deltas " << timeline_function.subject_delta() << "/"
-                 << timeline_function.reference_delta() << ", sub/ref times "
-                 << timeline_function.subject_time() << "/" << timeline_function.reference_time();
-}
-
-// Display a ring-buffer snapshot.
-void DumpRbSnapshot(const AudioDriver::RingBufferSnapshot& rb_snap) {
-  AUD_VLOG_OBJ(SPEW, &rb_snap) << "(RBSnapshot) position_to_end_fence_frames "
-                               << rb_snap.position_to_end_fence_frames
-                               << ", end_fence_to_start_fence_frames "
-                               << rb_snap.end_fence_to_start_fence_frames << ", gen_id "
-                               << rb_snap.gen_id;
-
-  FX_VLOGS(SPEW) << "rb_snap.clock_mono_to_ring_pos_bytes:";
-  DumpTimelineFunction(rb_snap.clock_mono_to_ring_pos_bytes);
-
-  auto rb = rb_snap.ring_buffer;
-  AUD_VLOG_OBJ(SPEW, rb_snap.ring_buffer.get())
-      << "(DriverRBuf) size " << rb->size() << ", frames " << rb->frames() << ", frame_size "
-      << rb->frame_size() << ", start " << static_cast<void*>(rb->virt());
-}
-
-// Display a mixer bookkeeping struct.
-void DumpMixer(const Mixer& mixer) {
-  auto& mix_state = mixer.bookkeeping();
-  AUD_VLOG_OBJ(SPEW, &mix_state) << "(Bookkeep) mixer " << &mixer << " gain " << &mix_state.gain
-                                 << ", step_size x" << std::hex << mix_state.step_size
-                                 << ", rate_mod/den " << std::dec << mix_state.rate_modulo << "/"
-                                 << mix_state.denominator << " src_pos_mod "
-                                 << mix_state.src_pos_modulo << ", src_trans_gen "
-                                 << mix_state.source_trans_gen_id << ", dest_trans_gen "
-                                 << mix_state.dest_trans_gen_id;
-
-  FX_VLOGS(SPEW) << "mix_state.dest_frames_to_frac_source_frames:";
-  DumpTimelineFunction(mix_state.dest_frames_to_frac_source_frames);
-
-  FX_VLOGS(SPEW) << "mix_state.clock_mono_to_frac_source_frames:";
-  DumpTimelineFunction(mix_state.clock_mono_to_frac_source_frames);
 }
 
 zx_status_t AudioCapturerImpl::Process() {
