@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package filter
 
 import (
@@ -6,7 +10,6 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
@@ -14,7 +17,7 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *channel.Endpoint) {
+func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *syncEndpoint, *syncEndpoint) {
 	s := stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocol{
 			ipv4.NewProtocol(),
@@ -30,23 +33,23 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 		{
 			dstAddr:         testRouterNICAddr2,
 			dstPortRange:    PortRange{testRouterPort, testRouterPort},
-			newDstAddr:      testLanNICAddr,
-			newDstPortRange: PortRange{testLanPort, testLanPort},
+			newDstAddr:      testLANNICAddr,
+			newDstPortRange: PortRange{testLANPort, testLANPort},
 		},
 	}
 	f.rulesetRDR.Unlock()
 
-	linkEP1 := channel.New(1, 100, testRouterLinkAddress1)
+	var linkEP1 syncEndpoint
 	nic1 := tcpip.NICID(testRouterNICID1)
-	filtered1 := NewEndpoint(f, linkEP1)
+	filtered1 := NewEndpoint(f, &linkEP1)
 	if err := s.CreateNIC(nic1, filtered1); err != nil {
 		t.Fatalf("CreateNIC error: %s", err)
 	}
 	s.AddAddress(nic1, header.IPv4ProtocolNumber, testRouterNICAddr1)
 
-	linkEP2 := channel.New(1, 100, testRouterLinkAddress2)
+	var linkEP2 syncEndpoint
 	nic2 := tcpip.NICID(testRouterNICID2)
-	filtered2 := NewEndpoint(f, linkEP2)
+	filtered2 := NewEndpoint(f, &linkEP2)
 	if err := s.CreateNIC(nic2, filtered2); err != nil {
 		t.Fatalf("CreateNIC error: %s", err)
 	}
@@ -54,64 +57,64 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 
 	s.SetRouteTable([]tcpip.Route{
 		{
-			Destination: testLanNet,
+			Destination: testLANNet,
 			NIC:         nic1,
 		},
 		{
-			Destination: testWanNet,
+			Destination: testWANNet,
 			NIC:         nic2,
 		},
 	})
 	s.SetForwarding(true)
-	return s, linkEP1, linkEP2
+	return s, &linkEP1, &linkEP2
 }
 
-func TestRDROneWayWanToLanUDP(t *testing.T) {
-	sLan, sLanLinkEP := createTestStackLan(t)
-	sWan, sWanLinkEP := createTestStackWan(t)
+func TestRDROneWayWANToLANUDP(t *testing.T) {
+	sLAN, sLANLinkEP := createTestStackLAN(t)
+	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterRDR(t)
 
-	go link(sWanLinkEP, sRouterLinkEP2)
-	go link(sRouterLinkEP1, sLanLinkEP)
+	link(sWANLinkEP, sRouterLinkEP2)
+	link(sRouterLinkEP1, sLANLinkEP)
 
-	var wqLan waiter.Queue
-	epLanUDP, err := sLan.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLan)
+	var wqLAN waiter.Queue
+	epLANUDP, err := sLAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
 	if err != nil {
 		t.Fatalf("NewEndpoint error: %s", err)
 	}
-	var wqWan waiter.Queue
-	epWanUDP, err := sWan.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqWan)
+	var wqWAN waiter.Queue
+	epWANUDP, err := sWAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqWAN)
 	if err != nil {
 		t.Fatalf("NewEndpoint error: %s", err)
 	}
 
-	receiverLan := tcpip.FullAddress{Addr: testLanNICAddr, Port: testLanPort}
+	receiverLAN := tcpip.FullAddress{Addr: testLANNICAddr, Port: testLANPort}
 	receiverRouter := tcpip.FullAddress{Addr: testRouterNICAddr2, Port: testRouterPort}
 
-	if err := epLanUDP.Bind(receiverLan); err != nil {
+	if err := epLANUDP.Bind(receiverLAN); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 
-	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
-	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
+	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
+	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, _, err := epWanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
+	if _, _, err := epWANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("failed to write: %s", err)
 	}
 
 	select {
-	case <-chLan:
+	case <-chLAN:
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Read timeout")
 	}
-	wqLan.EventUnregister(&waitEntryLan)
+	wqLAN.EventUnregister(&waitEntryLAN)
 
 	var sender tcpip.FullAddress
-	recvd, _, err := epLanUDP.Read(&sender)
+	recvd, _, err := epLANUDP.Read(&sender)
 	if err != nil {
 		t.Fatalf("failed to read: %s", err)
 	}
-	if got, want := sender.Addr, testWanNICAddr; got != want {
+	if got, want := sender.Addr, testWANNICAddr; got != want {
 		t.Errorf("sender.Addr %s, want %s", got, want)
 	}
 	// sender.Port is random.
@@ -120,84 +123,84 @@ func TestRDROneWayWanToLanUDP(t *testing.T) {
 	}
 }
 
-func TestRDRRoundtripWanToLanUDP(t *testing.T) {
-	sLan, sLanLinkEP := createTestStackLan(t)
-	sWan, sWanLinkEP := createTestStackWan(t)
+func TestRDRRoundtripWANToLANUDP(t *testing.T) {
+	sLAN, sLANLinkEP := createTestStackLAN(t)
+	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterRDR(t)
 
-	go link(sWanLinkEP, sRouterLinkEP2)
-	go link(sRouterLinkEP1, sLanLinkEP)
+	link(sWANLinkEP, sRouterLinkEP2)
+	link(sRouterLinkEP1, sLANLinkEP)
 
-	go link(sLanLinkEP, sRouterLinkEP1)
-	go link(sRouterLinkEP2, sWanLinkEP)
+	link(sLANLinkEP, sRouterLinkEP1)
+	link(sRouterLinkEP2, sWANLinkEP)
 
-	var wqLan waiter.Queue
-	epLanUDP, err := sLan.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLan)
+	var wqLAN waiter.Queue
+	epLANUDP, err := sLAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqLAN)
 	if err != nil {
 		t.Fatalf("NewEndpoint error: %s", err)
 	}
-	var wqWan waiter.Queue
-	epWanUDP, err := sWan.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqWan)
+	var wqWAN waiter.Queue
+	epWANUDP, err := sWAN.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, &wqWAN)
 	if err != nil {
 		t.Fatalf("NewEndpoint error: %s", err)
 	}
 
-	receiverLan := tcpip.FullAddress{Addr: testLanNICAddr, Port: testLanPort}
+	receiverLAN := tcpip.FullAddress{Addr: testLANNICAddr, Port: testLANPort}
 	receiverRouter := tcpip.FullAddress{Addr: testRouterNICAddr2, Port: testRouterPort}
-	receiverWan := tcpip.FullAddress{Addr: testWanNICAddr, Port: testWanPort}
+	receiverWAN := tcpip.FullAddress{Addr: testWANNICAddr, Port: testWANPort}
 
-	if err := epLanUDP.Bind(receiverLan); err != nil {
+	if err := epLANUDP.Bind(receiverLAN); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
-	if err := epWanUDP.Bind(receiverWan); err != nil {
+	if err := epWANUDP.Bind(receiverWAN); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 
-	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
-	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
+	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
+	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, _, err := epWanUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
+	if _, _, err := epWANUDP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{To: &receiverRouter}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
 	select {
-	case <-chLan:
+	case <-chLAN:
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Read timeout")
 	}
-	wqLan.EventUnregister(&waitEntryLan)
+	wqLAN.EventUnregister(&waitEntryLAN)
 
 	var sender tcpip.FullAddress
-	recvd, _, err := epLanUDP.Read(&sender)
+	recvd, _, err := epLANUDP.Read(&sender)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
-	if got, want := sender.Addr, testWanNICAddr; got != want {
+	if got, want := sender.Addr, testWANNICAddr; got != want {
 		t.Errorf("sender.Addr %s, want %s", got, want)
 	}
-	if got, want := sender.Port, testWanPort; got != want {
+	if got, want := sender.Port, testWANPort; got != want {
 		t.Errorf("sender.Addr %d, want %d", got, want)
 	}
 	if got, want := string(recvd), "hello"; got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}
 
-	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
-	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
+	waitEntryWAN, chWAN := waiter.NewChannelEntry(nil)
+	wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-	if _, _, err := epLanUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
+	if _, _, err := epLANUDP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{To: &sender}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
 	select {
-	case <-chWan:
+	case <-chWAN:
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Read timeout")
 	}
-	wqWan.EventUnregister(&waitEntryWan)
+	wqWAN.EventUnregister(&waitEntryWAN)
 
 	var sender2 tcpip.FullAddress
-	recvd2, _, err := epWanUDP.Read(&sender2)
+	recvd2, _, err := epWANUDP.Read(&sender2)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -212,90 +215,90 @@ func TestRDRRoundtripWanToLanUDP(t *testing.T) {
 	}
 }
 
-func TestRDRWanToLanTCP(t *testing.T) {
-	sLan, sLanLinkEP := createTestStackLan(t)
-	sWan, sWanLinkEP := createTestStackWan(t)
+func TestRDRWANToLANTCP(t *testing.T) {
+	sLAN, sLANLinkEP := createTestStackLAN(t)
+	sWAN, sWANLinkEP := createTestStackWAN(t)
 	_, sRouterLinkEP1, sRouterLinkEP2 := createTestStackRouterRDR(t)
 
-	go link(sWanLinkEP, sRouterLinkEP2)
-	go link(sRouterLinkEP1, sLanLinkEP)
+	link(sWANLinkEP, sRouterLinkEP2)
+	link(sRouterLinkEP1, sLANLinkEP)
 
-	go link(sLanLinkEP, sRouterLinkEP1)
-	go link(sRouterLinkEP2, sWanLinkEP)
+	link(sLANLinkEP, sRouterLinkEP1)
+	link(sRouterLinkEP2, sWANLinkEP)
 
-	var wqLanMaster waiter.Queue
-	epLanTCPMaster, err := sLan.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wqLanMaster)
+	var wqLANMaster waiter.Queue
+	epLANTCPMaster, err := sLAN.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wqLANMaster)
 	if err != nil {
 		t.Fatalf("NewEndpoint error: %s", err)
 	}
-	var wqWan waiter.Queue
-	epWanTCP, err := sWan.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wqWan)
+	var wqWAN waiter.Queue
+	epWANTCP, err := sWAN.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wqWAN)
 	if err != nil {
 		t.Fatalf("NewEndpoint error: %s", err)
 	}
 
-	receiverLan := tcpip.FullAddress{Addr: testLanNICAddr, Port: testLanPort}
+	receiverLAN := tcpip.FullAddress{Addr: testLANNICAddr, Port: testLANPort}
 	receiverRouter := tcpip.FullAddress{Addr: testRouterNICAddr2, Port: testRouterPort}
 
-	if err := epLanTCPMaster.Bind(receiverLan); err != nil {
+	if err := epLANTCPMaster.Bind(receiverLAN); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
-	if err := epLanTCPMaster.Listen(10); err != nil {
+	if err := epLANTCPMaster.Listen(10); err != nil {
 		t.Fatalf("Bind error: %s", err)
 	}
 
-	waitEntryWan, chWan := waiter.NewChannelEntry(nil)
-	wqWan.EventRegister(&waitEntryWan, waiter.EventOut)
+	waitEntryWAN, chWAN := waiter.NewChannelEntry(nil)
+	wqWAN.EventRegister(&waitEntryWAN, waiter.EventOut)
 
-	waitEntryLanMaster, chLanMaster := waiter.NewChannelEntry(nil)
-	wqLanMaster.EventRegister(&waitEntryLanMaster, waiter.EventIn)
+	waitEntryLANMaster, chLANMaster := waiter.NewChannelEntry(nil)
+	wqLANMaster.EventRegister(&waitEntryLANMaster, waiter.EventIn)
 
-	if err := epWanTCP.Connect(receiverRouter); err != nil {
+	if err := epWANTCP.Connect(receiverRouter); err != nil {
 		if err != tcpip.ErrConnectStarted {
 			t.Fatalf("Connect error: %s", err)
 		}
 	}
 
 	select {
-	case <-chLanMaster:
+	case <-chLANMaster:
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Accept timeout")
 	}
 
-	epLanTCP, wqLan, err := epLanTCPMaster.Accept()
+	epLANTCP, wqLAN, err := epLANTCPMaster.Accept()
 	if err != nil {
 		t.Fatalf("Accept error: %s", err)
 	}
-	wqLanMaster.EventUnregister(&waitEntryLanMaster)
+	wqLANMaster.EventUnregister(&waitEntryLANMaster)
 
 	select {
-	case <-chWan:
+	case <-chWAN:
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Connect timeout")
 	}
-	wqWan.EventUnregister(&waitEntryWan)
+	wqWAN.EventUnregister(&waitEntryWAN)
 
-	sender, err := epLanTCP.GetRemoteAddress()
-	if got, want := sender.Addr, testWanNICAddr; got != want {
+	sender, err := epLANTCP.GetRemoteAddress()
+	if got, want := sender.Addr, testWANNICAddr; got != want {
 		t.Errorf("sender.Addr %s, want %s", got, want)
 	}
 	// sender.Port is random.
 
-	waitEntryLan, chLan := waiter.NewChannelEntry(nil)
-	wqLan.EventRegister(&waitEntryLan, waiter.EventIn)
+	waitEntryLAN, chLAN := waiter.NewChannelEntry(nil)
+	wqLAN.EventRegister(&waitEntryLAN, waiter.EventIn)
 
-	if _, _, err := epWanTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
+	if _, _, err := epWANTCP.Write(tcpip.SlicePayload("hello"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
 	select {
-	case <-chLan:
+	case <-chLAN:
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Read timeout")
 	}
-	wqLan.EventUnregister(&waitEntryLan)
+	wqLAN.EventUnregister(&waitEntryLAN)
 
-	recvd, _, err := epLanTCP.Read(nil)
+	recvd, _, err := epLANTCP.Read(nil)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}
@@ -303,20 +306,20 @@ func TestRDRWanToLanTCP(t *testing.T) {
 		t.Errorf("got %s, want %s", got, want)
 	}
 
-	wqWan.EventRegister(&waitEntryWan, waiter.EventIn)
+	wqWAN.EventRegister(&waitEntryWAN, waiter.EventIn)
 
-	if _, _, err := epLanTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
+	if _, _, err := epLANTCP.Write(tcpip.SlicePayload("hi"), tcpip.WriteOptions{}); err != nil {
 		t.Fatalf("Write error: %s", err)
 	}
 
 	select {
-	case <-chWan:
+	case <-chWAN:
 	case <-time.After(1 * time.Second):
 		t.Fatalf("Read timeout")
 	}
-	wqWan.EventUnregister(&waitEntryWan)
+	wqWAN.EventUnregister(&waitEntryWAN)
 
-	recvd2, _, err := epWanTCP.Read(nil)
+	recvd2, _, err := epWANTCP.Read(nil)
 	if err != nil {
 		t.Fatalf("Read error: %s", err)
 	}

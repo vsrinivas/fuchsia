@@ -13,7 +13,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
+	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -45,12 +45,12 @@ func (ep *endpointWithAttributes) MaxHeaderLength() uint16 {
 
 func TestEndpointAttributes(t *testing.T) {
 	ep1 := bridge.NewEndpoint(&endpointWithAttributes{
-		LinkEndpoint:    channel.New(1, 101, ""),
+		LinkEndpoint:    loopback.New(),
 		capabilities:    stack.CapabilityLoopback,
 		maxHeaderLength: 5,
 	})
 	ep2 := bridge.NewEndpoint(&endpointWithAttributes{
-		LinkEndpoint:    channel.New(1, 100, ""),
+		LinkEndpoint:    loopback.New(),
 		capabilities:    stack.CapabilityLoopback | stack.CapabilityResolutionRequired,
 		maxHeaderLength: 10,
 	})
@@ -83,7 +83,7 @@ func (we *waitingEndpoint) Wait() {
 }
 
 func TestEndpoint_Wait(t *testing.T) {
-	ep := channel.New(0, 0, "link address")
+	ep := loopback.New()
 	ep1 := waitingEndpoint{
 		LinkEndpoint: ep,
 		ch:           make(chan struct{}),

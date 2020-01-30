@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/net/dns/dnsmessage"
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
+	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -358,8 +358,7 @@ func TestResolver(t *testing.T) {
 		},
 		HandleLocal: true,
 	})
-	e := channel.New(0, 1280, "\x02\x03\x04\x05\x06\x07")
-	if err := s.CreateNIC(nicID, e); err != nil {
+	if err := s.CreateNIC(nicID, loopback.New()); err != nil {
 		t.Fatalf("s.CreateNIC(%d, _): %s", nicID, err)
 	}
 	if err := s.AddAddress(nicID, ipv4.ProtocolNumber, nicIPv4Addr); err != nil {

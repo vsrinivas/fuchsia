@@ -6,6 +6,8 @@ package dhcp
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -16,7 +18,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
+	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -32,11 +34,9 @@ const (
 	linkAddr2 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x53")
 
 	defaultAcquireTimeout = 1000 * time.Millisecond
-	defaulBackoffTime     = 100 * time.Millisecond
+	defaultBackoffTime    = 100 * time.Millisecond
 	defaultResendTime     = 400 * time.Millisecond
 )
-
-const defaultMTU = 65536
 
 func createTestStack() *stack.Stack {
 	return stack.New(stack.Options{
@@ -49,10 +49,61 @@ func createTestStack() *stack.Stack {
 	})
 }
 
-func addChannelToStack(t *testing.T, addresses []tcpip.Address, nicid tcpip.NICID, s *stack.Stack) *channel.Endpoint {
+var _ stack.LinkEndpoint = (*endpoint)(nil)
+
+type endpoint struct {
+	dispatcher    stack.NetworkDispatcher
+	remote        []*endpoint
+	onWritePacket func(tcpip.PacketBuffer) bool
+
+	stack.LinkEndpoint
+}
+
+func (*endpoint) MTU() uint32 {
+	// Determined experimentally; must be large enough to hold the longest packet
+	// we try to parse in these tests, since our hook point is before fragment
+	// reassembly (so it can't span multiple IP packets).
+	return headerBaseSize + 100
+}
+
+func (*endpoint) Capabilities() stack.LinkEndpointCapabilities {
+	return 0
+}
+
+func (*endpoint) MaxHeaderLength() uint16 {
+	return 0
+}
+
+func (*endpoint) LinkAddress() tcpip.LinkAddress {
+	return tcpip.LinkAddress([]byte(nil))
+}
+
+func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
+	e.dispatcher = dispatcher
+}
+
+func (e *endpoint) IsAttached() bool {
+	return e.dispatcher != nil
+}
+
+func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+	if fn := e.onWritePacket; fn != nil {
+		if !fn(pkt) {
+			return nil
+		}
+	}
+	for _, remote := range e.remote {
+		if !remote.IsAttached() {
+			panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
+		}
+		// the "remote" address for `other` is our local address and vice versa.
+		remote.dispatcher.DeliverNetworkPacket(remote, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
+	}
+	return nil
+}
+
+func addEndpointToStack(t *testing.T, addresses []tcpip.Address, nicid tcpip.NICID, s *stack.Stack, linkEP stack.LinkEndpoint) {
 	t.Helper()
-	ch := channel.New(256, defaultMTU, "")
-	var linkEP stack.LinkEndpoint = ch
 	if testing.Verbose() {
 		linkEP = sniffer.New(linkEP)
 	}
@@ -70,31 +121,30 @@ func addChannelToStack(t *testing.T, addresses []tcpip.Address, nicid tcpip.NICI
 		Destination: header.IPv4EmptySubnet,
 		NIC:         nicid,
 	}})
-
-	return ch
-}
-
-func createTestStackWithChannel(t *testing.T, addresses []tcpip.Address) (*stack.Stack, *channel.Endpoint) {
-	t.Helper()
-	s := createTestStack()
-	ch := addChannelToStack(t, addresses, testNICID, s)
-	return s, ch
 }
 
 // TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP tests that the IPv4
 // unspecified address is not a primary address when doing DHCP.
 func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
-	const incrementalTimeout = 100 * time.Millisecond
+	sent := make(chan struct{}, 1)
+	e := endpoint{
+		onWritePacket: func(tcpip.PacketBuffer) bool {
+			select {
+			case sent <- struct{}{}:
+			default:
+			}
+			return true
+		},
+	}
+	s := createTestStack()
+	addEndpointToStack(t, nil, testNICID, s, &e)
+	c := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	s, e := createTestStackWithChannel(t, nil)
-	c := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
-
-	// errs is for reporting the success or failure out of the goroutine.
-	errs := make(chan error, 1)
-
+	errs := make(chan error)
+	defer close(errs)
 	go func() {
 		info := c.Info()
 		_, err := c.acquire(ctx, &info)
@@ -103,10 +153,21 @@ func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 
 	select {
 	case err := <-errs:
+		if errors.Cause(err) == context.DeadlineExceeded {
+			t.Fatal("timed out waiting for a DHCP packet to be sent")
+		}
 		t.Fatalf("c.acquire(_, _): %s", err)
-	case <-time.After(defaultAcquireTimeout):
-		t.Fatal("timed out waiting for a DHCP packet to be sent")
-	case <-e.C:
+	case <-sent:
+		// Be careful not to do this if we read off the channel above to avoid
+		// deadlocking when the test fails in the clause above.
+		defer func() {
+			// Defers run inside-out, so this one will run before the context is
+			// cancelled; multiple cancellations are harmless.
+			cancel()
+			if err := <-errs; errors.Cause(err) != context.Canceled {
+				t.Error(err)
+			}
+		}()
 	}
 
 	nicInfo, ok := s.NICInfo()[testNICID]
@@ -123,64 +184,60 @@ func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 // TestSimultaneousDHCPClients makes two clients that are trying to get DHCP
 // addresses at the same time.
 func TestSimultaneousDHCPClients(t *testing.T) {
-	const clientCount = 2
-	serverStack, serverLinkEP := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
-	defer close(serverLinkEP.C)
-
 	// clientLinkEPs are the endpoints on which to inject packets to the client.
-	var clientLinkEPs []*channel.Endpoint
-	defer func() {
-		for _, ep := range clientLinkEPs {
-			close(ep.C)
-		}
-	}()
+	var clientLinkEPs [2]endpoint
 
-	// errs is for reporting the success or failure out of the goroutine.
+	// Synchronize the clients using a "barrier" on the server's replies to them.
+	var mu struct {
+		sync.Mutex
+		buffered int
+	}
+	cond := sync.Cond{L: &mu.Mutex}
+	serverLinkEP := endpoint{
+		onWritePacket: func(packetBuffer tcpip.PacketBuffer) bool {
+			mu.Lock()
+			mu.buffered++
+			for mu.buffered < len(clientLinkEPs) {
+				cond.Wait()
+			}
+			mu.Unlock()
+
+			return true
+		},
+	}
+	serverStack := createTestStack()
+	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
+
+	// Link the server and the clients.
+	for i := range clientLinkEPs {
+		serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEPs[i])
+		clientLinkEPs[i].remote = append(clientLinkEPs[i].remote, &serverLinkEP)
+	}
+
 	errs := make(chan error)
 	defer close(errs)
+	defer func() {
+		for range clientLinkEPs {
+			if err := <-errs; errors.Cause(err) != context.Canceled {
+				t.Error(err)
+			}
+		}
+	}()
 
 	// Start the clients.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	clientStack := createTestStack()
-	for i := 0; i < clientCount; i++ {
+	for i := range clientLinkEPs {
 		clientNICID := tcpip.NICID(i + 1)
-		clientLinkEP := addChannelToStack(t, nil, clientNICID, clientStack)
-		clientLinkEPs = append(clientLinkEPs, clientLinkEP)
-		c := NewClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+		addEndpointToStack(t, nil, clientNICID, clientStack, &clientLinkEPs[i])
+		c := NewClient(clientStack, clientNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 		info := c.Info()
-		go func() {
-			// Packets from the clients get sent to the server.
-			for pktInfo := range clientLinkEP.C {
-				serverLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
-			}
-		}()
 		go func() {
 			_, err := c.acquire(ctx, &info)
 			errs <- err
 		}()
 	}
-
-	go func() {
-		// Hold the packets until the first clientCount packets are received and
-		// then deliver those packets to all the clients.  Each client below will
-		// send one packet as part of DHCP acquire so this makes sure that all are
-		// running before continuing the acquisition.
-		buffered := make([]channel.PacketInfo, clientCount)
-		for i := 0; i < len(buffered); i++ {
-			buffered[i] = <-serverLinkEP.C
-		}
-		for _, pktInfo := range buffered {
-			for _, clientLinkEP := range clientLinkEPs {
-				clientLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
-			}
-		}
-		for pktInfo := range serverLinkEP.C {
-			for _, clientLinkEP := range clientLinkEPs {
-				clientLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
-			}
-		}
-	}()
 
 	// Start the server.
 	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
@@ -195,13 +252,6 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	}
 	if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
 		t.Fatal(err)
-	}
-
-	// Wait for all clients to finish and collect results.
-	for i := 0; i < clientCount; i++ {
-		if err := <-errs; err != nil {
-			t.Error(err)
-		}
 	}
 }
 
@@ -222,7 +272,9 @@ func (c *Client) verifyClientStats(t *testing.T, want uint64) {
 }
 
 func TestDHCP(t *testing.T) {
-	s, _ := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
+	s := createTestStack()
+	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, s, loopback.New())
+
 	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
 
 	serverCfg := Config{
@@ -240,7 +292,7 @@ func TestDHCP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c0 := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+	c0 := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 	info := c0.Info()
 	{
 		{
@@ -272,7 +324,7 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		c1 := NewClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+		c1 := NewClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 		info := c1.Info()
 		cfg, err := c1.acquire(ctx, &info)
 		if err != nil {
@@ -329,52 +381,46 @@ func TestDelayRetransmission(t *testing.T) {
 	}
 	for _, tc := range delayTests {
 		t.Run(tc.name, func(t *testing.T) {
-			serverStack, serverLinkEP := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
-			clientStack, clientLinkEP := createTestStackWithChannel(t, nil)
+			var serverLinkEP, clientLinkEP endpoint
+			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
+			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
-			go func() {
-				for pktInfo := range serverLinkEP.C {
-					clientLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
+			var discoverRcvd, requestRcvd int
+			clientLinkEP.onWritePacket = func(packetBuffer tcpip.PacketBuffer) bool {
+				h := hdr(packetBuffer.Data.First())
+				if !h.isValid() {
+					t.Fatalf("invalid header: %s", h)
 				}
-			}()
-
-			go func(discoverDelay, requestDelay time.Duration) {
-				if err := func() error {
-					discoverRcvd := 0
-					requestRcvd := 0
-					for pktInfo := range clientLinkEP.C {
-						dhcp := hdr(pktInfo.Pkt.Data.First())
-						opts, err := dhcp.options()
-						if err != nil {
-							return err
-						}
-						msgType, err := opts.dhcpMsgType()
-						if err != nil {
-							return err
-						}
-						// Avoid closing over a loop variable.
-						pktInfo := pktInfo
-						fn := func() { serverLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt)) }
-						switch msgType {
-						case dhcpDISCOVER:
-							if discoverRcvd == 0 {
-								discoverRcvd++
-								time.AfterFunc(discoverDelay, fn)
-							}
-						case dhcpREQUEST:
-							if requestRcvd == 0 {
-								requestRcvd++
-								time.AfterFunc(requestDelay, fn)
-							}
-						default:
-							fn()
-						}
+				opts, err := h.options()
+				if err != nil {
+					t.Fatalf("invalid header: %s, %s", err, h)
+				}
+				msgType, err := opts.dhcpMsgType()
+				if err != nil {
+					t.Fatalf("invalid header: %s, %s", err, h)
+				}
+				switch msgType {
+				case dhcpDISCOVER:
+					if discoverRcvd == 0 {
+						discoverRcvd++
+						time.Sleep(tc.discoverDelay)
 					}
-					return nil
-				}(); err != nil {
-					t.Error(err)
+				case dhcpREQUEST:
+					if requestRcvd == 0 {
+						requestRcvd++
+						time.Sleep(tc.requestDelay)
+					}
 				}
-			}(tc.requestDelay, tc.discoverDelay)
+
+				return true
+			}
+
+			serverStack := createTestStack()
+			addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
+
+			clientStack := createTestStack()
+			addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
+
 			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
 
 			serverCfg := Config{
@@ -393,7 +439,7 @@ func TestDelayRetransmission(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			c0 := NewClient(clientStack, testNICID, linkAddr1, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
+			c0 := NewClient(clientStack, testNICID, linkAddr1, tc.acquisition, defaultBackoffTime, tc.retransmission, nil)
 			info := c0.Info()
 			ctx, cancel = context.WithTimeout(ctx, tc.acquisition)
 			defer cancel()
@@ -409,10 +455,9 @@ func TestDelayRetransmission(t *testing.T) {
 					t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 				}
 			} else {
-				err := errors.Cause(err)
-				switch err {
+				switch err := errors.Cause(err); err {
 				case context.DeadlineExceeded:
-					// Success case: error is expected type.
+					// Success case.
 				default:
 					t.Errorf("got err=%v, want=%s", err, context.DeadlineExceeded)
 				}
@@ -457,32 +502,32 @@ func TestStateTransition(t *testing.T) {
 			t.Fatalf("unknown test type %d", typ)
 		}
 		t.Run(name, func(t *testing.T) {
-			serverStack, serverLinkEP := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
-			clientStack, clientLinkEP := createTestStackWithChannel(t, nil)
-
-			go func() {
-				for pktInfo := range serverLinkEP.C {
-					clientLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
-				}
-			}()
+			var serverLinkEP, clientLinkEP endpoint
+			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
+			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
 			var blockData uint32 = 0
-			go func() {
-				for pktInfo := range clientLinkEP.C {
-					if atomic.LoadUint32(&blockData) == 1 {
-						continue
-					}
-					if typ == testRebind {
-						// Only pass client broadcast packets back into the stack. This simulates
-						// packet loss during the client's unicast RENEWING state, forcing
-						// it into broadcast REBINDING state.
-						if header.IPv4(pktInfo.Pkt.Header.View()).DestinationAddress() != header.IPv4Broadcast {
-							continue
-						}
-					}
-					serverLinkEP.InjectInbound(pktInfo.Proto, packetbuffer.OutboundToInbound(pktInfo.Pkt))
+			clientLinkEP.onWritePacket = func(packetBuffer tcpip.PacketBuffer) bool {
+				if atomic.LoadUint32(&blockData) == 1 {
+					return false
 				}
-			}()
+				if typ == testRebind {
+					// Only pass client broadcast packets back into the stack. This simulates
+					// packet loss during the client's unicast RENEWING state, forcing
+					// it into broadcast REBINDING state.
+					if header.IPv4(packetBuffer.Header.View()).DestinationAddress() != header.IPv4Broadcast {
+						return false
+					}
+				}
+				return true
+			}
+
+			serverStack := createTestStack()
+			addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
+
+			clientStack := createTestStack()
+			addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
+
 			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02"}
 
 			serverCfg := Config{
@@ -539,7 +584,7 @@ func TestStateTransition(t *testing.T) {
 				addrCh <- curAddr
 			}
 
-			c := NewClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, acquiredFunc)
+			c := NewClient(clientStack, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, acquiredFunc)
 
 			c.Run(ctx)
 
@@ -660,7 +705,8 @@ func (c *chConn) Read() (buffer.View, tcpip.FullAddress, error) {
 func (c *chConn) Write(b []byte, addr *tcpip.FullAddress) error { return c.c.Write(b, addr) }
 
 func TestTwoServers(t *testing.T) {
-	s, _ := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
+	s := createTestStack()
+	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, s, loopback.New())
 
 	wq := new(waiter.Queue)
 	ep, err := s.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
@@ -697,7 +743,7 @@ func TestTwoServers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+	c := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
 	info := c.Info()
 	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatal(err)

@@ -270,8 +270,8 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 			transProto:      header.UDPProtocolNumber,
 			dstAddr:         testRouterNICAddr2,
 			dstPortRange:    PortRange{testRouterPort, testRouterPort},
-			newDstAddr:      testLanNICAddr,
-			newDstPortRange: PortRange{testLanPort, testLanPort},
+			newDstAddr:      testLANNICAddr,
+			newDstPortRange: PortRange{testLANPort, testLANPort},
 		},
 	})
 	if err != nil {
@@ -282,8 +282,8 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 			transProto:      header.TCPProtocolNumber,
 			dstAddr:         testRouterNICAddr2,
 			dstPortRange:    PortRange{testRouterPort, testRouterPort},
-			newDstAddr:      testLanNICAddr,
-			newDstPortRange: PortRange{testLanPort, testLanPort},
+			newDstAddr:      testLANNICAddr,
+			newDstPortRange: PortRange{testLANPort, testLANPort},
 		},
 	})
 	if err != nil {

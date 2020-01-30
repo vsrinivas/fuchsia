@@ -123,7 +123,7 @@ func (h hdr) isValid() bool {
 	if o := h.op(); o != opRequest && o != opReply {
 		return false
 	}
-	if h[1] != 0x01 || h[2] != 0x06 {
+	if !bytes.Equal(h[1:3], []byte{0x1, 0x6}) {
 		return false
 	}
 	return bytes.Equal(h[236:240], magicCookie)
@@ -153,18 +153,21 @@ func (h hdr) options() (opts options, err error) {
 		if h[i] == 255 {
 			break
 		}
-		if len(h) <= i+1 {
-			return nil, fmt.Errorf("option missing length")
+		code := optionCode(h[i])
+		i++
+		if len(h) < i+1 {
+			return nil, fmt.Errorf("option %s missing length i=%d", code, i)
 		}
-		optlen := int(h[i+1])
-		if len(h) < i+2+optlen {
-			return nil, fmt.Errorf("option %v too long i=%d, optlen=%d", optionCode(h[i]), i, optlen)
+		optlen := int(h[i])
+		i++
+		if len(h) < i+optlen {
+			return nil, fmt.Errorf("option %s too long i=%d, optlen=%d", code, i, optlen)
 		}
 		opts = append(opts, option{
-			code: optionCode(h[i]),
-			body: h[i+2 : i+2+optlen],
+			code: code,
+			body: h[i:][:optlen],
 		})
-		i += 2 + optlen
+		i += optlen
 	}
 	return opts, nil
 }

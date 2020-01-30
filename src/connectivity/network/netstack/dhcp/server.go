@@ -225,11 +225,11 @@ func (s *Server) handler(ctx context.Context, ch chan hdr) {
 				continue
 			}
 			// TODO: Handle DHCPRELEASE and DHCPDECLINE.
-			msgtype, err := opts.dhcpMsgType()
+			msgType, err := opts.dhcpMsgType()
 			if err != nil {
 				continue
 			}
-			switch msgtype {
+			switch msgType {
 			case dhcpDISCOVER:
 				s.handleDiscover(h, opts)
 			case dhcpREQUEST:

@@ -5,40 +5,52 @@
 package dhcp
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 func (h hdr) String() string {
+	var buf strings.Builder
+	if _, err := fmt.Fprintf(&buf, "len=%d", len(h)); err != nil {
+		panic(err)
+	}
+	if !h.isValid() {
+		return fmt.Sprintf("DHCP invalid; %s; %x", buf.String(), []byte(h))
+	}
 	opts, err := h.options()
-	var msgtype dhcpMsgType
-	if err == nil {
-		msgtype, err = opts.dhcpMsgType()
+	if err != nil {
+		return fmt.Sprintf("DHCP options=%s; %s; %x", err, buf.String(), []byte(h))
 	}
-	if !h.isValid() || err != nil {
-		return fmt.Sprintf("DHCP invalid, %v %v h[1:4]=%x cookie=%x len=%d (%v)", h.op(), h.xid(), []byte(h[1:4]), []byte(h[236:240]), len(h), err)
+	buf.WriteString(";options=")
+	for i, opt := range opts {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteString(opt.String())
 	}
-	buf := new(bytes.Buffer)
-	fmt.Fprintf(buf, "%v %v len=%d\n", msgtype, h.xid(), len(h))
-	fmt.Fprintf(buf, "\tciaddr:%v yiaddr:%v siaddr:%v giaddr:%v\n",
+	msgType, err := opts.dhcpMsgType()
+	if err != nil {
+		return fmt.Sprintf("DHCP type=%s; %s; %x", err, buf.String(), []byte(h))
+	}
+	if _, err := fmt.Fprintf(
+		&buf,
+		"type=%s;ciaddr=%s;yiaddr=%s;siaddr=%s;giaddr=%s;chaddr=%x",
+		msgType,
 		tcpip.Address(h.ciaddr()),
 		tcpip.Address(h.yiaddr()),
 		tcpip.Address(h.siaddr()),
-		tcpip.Address(h.giaddr()))
-	fmt.Fprintf(buf, "\tchaddr:%x", h.chaddr())
-	for _, opt := range opts {
-		fmt.Fprintf(buf, "\n\t%v", opt)
+		tcpip.Address(h.giaddr()),
+		h.chaddr(),
+	); err != nil {
+		panic(err)
 	}
 	return buf.String()
 }
 
 func (opt option) String() string {
-	buf := new(bytes.Buffer)
-	fmt.Fprintf(buf, "%v: ", opt.code)
-	fmt.Fprintf(buf, "%x", opt.body)
-	return buf.String()
+	return fmt.Sprintf("%s: %x", opt.code, opt.body)
 }
 
 func (code optionCode) String() string {
