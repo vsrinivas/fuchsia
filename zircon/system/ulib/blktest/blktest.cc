@@ -799,7 +799,10 @@ RUN_TEST(blkdev_test_fifo_basic)
 RUN_TEST(blkdev_test_fifo_multiple_vmo)
 RUN_TEST(blkdev_test_fifo_multiple_vmo_multithreaded)
 // TODO(smklein): Test ops across different vmos
+#if 0
+// Disabled due to issue 44600.
 RUN_TEST(blkdev_test_fifo_unclean_shutdown)
+#endif
 RUN_TEST(blkdev_test_fifo_bad_client_vmoid)
 RUN_TEST(blkdev_test_fifo_bad_client_unaligned_request)
 RUN_TEST(blkdev_test_fifo_bad_client_overflow)
