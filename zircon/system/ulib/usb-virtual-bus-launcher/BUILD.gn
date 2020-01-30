@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("usb-virtual-bus-launcher") {
-  sdk = "source"
+  sdk = "shared"
   sdk_headers = [
     "usb-virtual-bus-launcher/usb-virtual-bus-launcher.h",
     "usb-virtual-bus-launcher-helper/usb-virtual-bus-launcher-helper.h",
@@ -15,17 +15,20 @@ zx_library("usb-virtual-bus-launcher") {
     "usb-virtual-bus-launcher.cc",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp.headers",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp.headers",
+    "$zx/system/ulib/devmgr-integration-test:headers",
+    "$zx/system/ulib/driver-integration-test:headers",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
+    "$zx/system/ulib/zxtest:headers",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/driver-integration-test",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",

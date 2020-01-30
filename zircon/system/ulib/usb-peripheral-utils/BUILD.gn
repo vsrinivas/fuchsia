@@ -9,13 +9,14 @@ zx_library("usb-peripheral-utils") {
   sources = [ "event-watcher.cc" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp.headers",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp.headers",
   ]
   deps = [
+    "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/zx",
   ]
 }

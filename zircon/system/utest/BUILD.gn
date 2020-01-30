@@ -160,7 +160,6 @@ if (current_cpu != "") {
       "stdio",
       "timers",
       "trace",
-      "usb-virtual-bus:test",
       "utc-procargs",
       "util",
       "zxcrypt",

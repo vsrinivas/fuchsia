@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [
@@ -12,97 +25,127 @@ group("test") {
   ]
 }
 
-zx_test("usb-virtual-bus-ums") {
-  sources = [
-    "main.cc",
-    "ums-test.cc",
-  ]
+test("usb-virtual-bus-ums") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "ums-test.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-block:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral-block:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/usb-virtual-bus-launcher",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/usb-virtual-bus-launcher",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral-block:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
 }
 
-zx_test("usb-virtual-bus-hid") {
+test("usb-virtual-bus-hid") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-hid-test.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-input:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hid",
-    "$zx/system/ulib/usb-virtual-bus-launcher",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/usb-virtual-bus-launcher",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-input:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
 }
 
-zx_test("usb-virtual-bus-ftdi") {
+test("usb-virtual-bus-ftdi") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-test.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hid",
-    "$zx/system/ulib/usb-virtual-bus-launcher",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/usb-virtual-bus-launcher",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
 }
 
-zx_test("usb-virtual-bus-cdc-acm") {
+test("usb-virtual-bus-cdc-acm") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm-test.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hid",
-    "$zx/system/ulib/usb-virtual-bus-launcher",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/usb-virtual-bus-launcher",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
 }
 
-zx_test("usb-virtual-bus-cdc-ecm") {
+test("usb-virtual-bus-cdc-ecm") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-ecm-test.cc" ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-ethernet:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/hid",
-    "$zx/system/ulib/usb-virtual-bus-launcher",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/usb-virtual-bus-launcher",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
   ]
+}
+
+migrated_manifest("usb-virtual-bus-ums-manifest") {
+  deps = [ ":usb-virtual-bus-ums" ]
+}
+
+migrated_manifest("usb-virtual-bus-hid-manifest") {
+  deps = [ ":usb-virtual-bus-hid" ]
+}
+
+migrated_manifest("usb-virtual-bus-ftdi-manifest") {
+  deps = [ ":usb-virtual-bus-ftdi" ]
+}
+
+migrated_manifest("usb-virtual-bus-cdc-acm-manifest") {
+  deps = [ ":usb-virtual-bus-cdc-acm" ]
+}
+
+migrated_manifest("usb-virtual-bus-cdc-ecm-manifest") {
+  deps = [ ":usb-virtual-bus-cdc-ecm" ]
 }
