@@ -49,6 +49,7 @@ using digest::MerkleTreeCreator;
 // "blob-1abc8" or "compressedBlob-5c"
 constexpr char kBlobVmoNamePrefix[] = "blob";
 constexpr char kCompressedBlobVmoNamePrefix[] = "compressedBlob";
+constexpr char kMerkleNamePrefix[] = "merkle";
 
 void FormatVmoName(const char* prefix, fbl::StringBuffer<ZX_MAX_NAME_LEN>* vmo_name, size_t index) {
   vmo_name->Clear();
@@ -85,19 +86,54 @@ zx_status_t Blob::Verify() const {
 }
 
 zx_status_t Blob::InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* verifier) {
-  // Pre-populate the Merkle tree blocks. Verification takes place on the page fault path, so we
-  // can't block to fault in the Merkle tree then.
-  zx_status_t status = blobfs_->TransferPagesToVmo(
-      GetMapIndex(), 0, MerkleTreeBlocks(inode_) * kBlobfsBlockSize, mapping_.vmo(), nullptr);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to page in Merkle tree blocks: %s\n", zx_status_get_string(status));
-    return status;
+  fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
+  FormatVmoName(kMerkleNamePrefix, &vmo_name, Ino());
+
+  uint32_t merkle_blocks = MerkleTreeBlocks(inode_);
+  if (merkle_blocks > 0) {
+    zx_status_t status =
+        merkle_mapping_.CreateAndMap(merkle_blocks * kBlobfsBlockSize, vmo_name.c_str());
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("Failed to create Merkle VMO: %s\n", zx_status_get_string(status));
+      return status;
+    }
+
+    vmoid_t merkle_vmoid;
+    status = blobfs_->AttachVmo(merkle_mapping_.vmo(), &merkle_vmoid);
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("Failed to attach Merkle VMO to blkdev: %s\n", zx_status_get_string(status));
+      return status;
+    }
+    auto detach = fbl::MakeAutoCall([this, &merkle_vmoid]() { blobfs_->DetachVmo(merkle_vmoid); });
+
+    fs::Ticker ticker(blobfs_->Metrics().Collecting());
+    fs::ReadTxn txn(blobfs_);
+    AllocatedExtentIterator extent_iter(blobfs_->GetNodeFinder(), GetMapIndex());
+    BlockIterator block_iter(&extent_iter);
+    const uint64_t data_start = DataStartBlock(blobfs_->Info());
+    status = StreamBlocks(&block_iter, merkle_blocks,
+                          [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                            txn.Enqueue(merkle_vmoid, vmo_offset, dev_offset + data_start, length);
+                            return ZX_OK;
+                          });
+
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("Failed to enqueue read transactions: %s\n", zx_status_get_string(status));
+      return status;
+    }
+
+    status = txn.Transact();
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("Failed to flush read transactions: %s\n", zx_status_get_string(status));
+      return status;
+    }
+    blobfs_->Metrics().UpdateMerkleDiskRead(merkle_blocks * kBlobfsBlockSize, ticker.End());
   }
 
   const void* tree = inode_.blob_size ? GetMerkle() : nullptr;
   auto merkle_tree_verifier = std::make_unique<MerkleTreeVerifier>();
 
-  status = merkle_tree_verifier->SetDataLength(inode_.blob_size);
+  zx_status_t status = merkle_tree_verifier->SetDataLength(inode_.blob_size);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to set data length for Merkle tree verifier: %s\n",
                    zx_status_get_string(status));
@@ -135,6 +171,19 @@ zx_status_t Blob::InitVmos() {
   // Reverts blob back to uninitialized state on error.
   auto cleanup = fbl::MakeAutoCall([this]() { BlobCloseHandles(); });
 
+  // Use the pager only if the blob is uncompressed AND blobfs has a pager set up.
+  bool use_pager = (((inode_.header.flags & (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed |
+                                             kBlobFlagZSTDSeekableCompressed)) == 0) &&
+                    blobfs_->PagingEnabled());
+
+  if (use_pager) {
+    zx_status_t status = InitVmosPaged();
+    if (status == ZX_OK) {
+      cleanup.cancel();
+    }
+    return status;
+  }
+
   size_t vmo_size;
   if (mul_overflow(num_blocks, kBlobfsBlockSize, &vmo_size)) {
     FS_TRACE_ERROR("Multiplication overflow");
@@ -143,49 +192,20 @@ zx_status_t Blob::InitVmos() {
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
   FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
-
-  // Use the pager only if the blob is uncompressed AND blobfs has a pager set up.
-  bool use_pager = (((inode_.header.flags & (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed |
-                                             kBlobFlagZSTDSeekableCompressed)) == 0) &&
-                    blobfs_->PagingEnabled());
-
-  zx_status_t status;
-  if (use_pager) {
-    page_watcher_ = std::make_unique<PageWatcher>(blobfs_, GetMapIndex());
-    zx::vmo vmo;
-    status = page_watcher_->CreatePagedVmo(vmo_size, &vmo);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    vmo.set_property(ZX_PROP_NAME, vmo_name.c_str(), vmo_name.length());
-    status = mapping_.Map(std::move(vmo));
-  } else {
-    status = mapping_.CreateAndMap(vmo_size, vmo_name.c_str());
-  }
+  zx_status_t status = mapping_.CreateAndMap(vmo_size, vmo_name.c_str());
 
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialize vmo; error: %s\n", zx_status_get_string(status));
     return status;
   }
+
   if ((status = blobfs_->AttachVmo(mapping_.vmo(), &vmoid_)) != ZX_OK) {
     FS_TRACE_ERROR("Failed to attach VMO to block device; error: %s\n",
                    zx_status_get_string(status));
     return status;
   }
 
-  if (use_pager) {
-    std::unique_ptr<MerkleTreeVerifier> verifier = nullptr;
-    status = InitMerkleTreeVerifier(&verifier);
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto verifier_info = std::make_unique<VerifierInfo>();
-    verifier_info->verifier = std::move(verifier);
-    verifier_info->verifier_data_length = inode_.blob_size;
-    page_watcher_->SetPageVerifierInfo(std::move(verifier_info));
-
-  } else if ((inode_.header.flags & kBlobFlagLZ4Compressed) != 0) {
+  if ((inode_.header.flags & kBlobFlagLZ4Compressed) != 0) {
     status = InitCompressed(CompressionAlgorithm::LZ4);
   } else if ((inode_.header.flags & kBlobFlagZSTDCompressed) != 0) {
     status = InitCompressed(CompressionAlgorithm::ZSTD);
@@ -201,14 +221,48 @@ zx_status_t Blob::InitVmos() {
 
   // Verify the blob up front if the pager is not enabled. If the pager is enabled, the page request
   // handler verifies pages as they are read in from disk.
-  if (!use_pager) {
-    status = Verify();
-    if (status != ZX_OK) {
-      return status;
-    }
+  status = Verify();
+  if (status != ZX_OK) {
+    return status;
   }
 
   cleanup.cancel();
+  return ZX_OK;
+}
+
+zx_status_t Blob::InitVmosPaged() {
+  std::unique_ptr<MerkleTreeVerifier> verifier = nullptr;
+  // Pre-populate the Merkle tree blocks. Verification takes place on the page fault path, so we
+  // can't block to fault in the Merkle tree then.
+  zx_status_t status = InitMerkleTreeVerifier(&verifier);
+  if (status != ZX_OK) {
+    return status;
+  }
+  UserPagerInfo userpager_info;
+  userpager_info.identifier = GetMapIndex();
+  userpager_info.data_start_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
+  userpager_info.data_length_bytes = inode_.blob_size;
+  userpager_info.verifier = std::move(verifier);
+
+  page_watcher_ = std::make_unique<PageWatcher>(blobfs_, std::move(userpager_info));
+
+  zx::vmo vmo;
+  status = page_watcher_->CreatePagedVmo(BlobDataBlocks(inode_) * kBlobfsBlockSize, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
+  FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
+  vmo.set_property(ZX_PROP_NAME, vmo_name.c_str(), vmo_name.length());
+
+  status = mapping_.Map(std::move(vmo));
+
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to initialize vmo; error: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -372,6 +426,7 @@ Blob::Blob(Blobfs* bs, const Digest& digest)
 void Blob::BlobCloseHandles() {
   page_watcher_.reset();
   mapping_.Reset();
+  merkle_mapping_.Reset();
   readable_event_.reset();
 }
 
@@ -464,10 +519,25 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 }
 
 void* Blob::GetData() const {
+  if (merkle_mapping_.vmo().is_valid()) {
+    return mapping_.start();
+  }
   return fs::GetBlock(kBlobfsBlockSize, mapping_.start(), MerkleTreeBlocks(inode_));
 }
 
-void* Blob::GetMerkle() const { return mapping_.start(); }
+void* Blob::GetMerkle() const {
+  if (merkle_mapping_.vmo().is_valid()) {
+    return merkle_mapping_.start();
+  }
+  return mapping_.start();
+}
+
+uint64_t Blob::GetDataStartOffset() const {
+  if (merkle_mapping_.vmo().is_valid()) {
+    return 0;
+  }
+  return MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
+}
 
 fit::promise<void, zx_status_t> Blob::WriteMetadata() {
   TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
@@ -763,21 +833,10 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_siz
     return status;
   }
 
-  const size_t merkle_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
   zx::vmo clone;
+  status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, GetDataStartOffset(),
+                                       inode_.blob_size, &clone);
 
-  zx_info_vmo_t info;
-  status = mapping_.vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (info.flags & ZX_INFO_VMO_PAGER_BACKED) {
-    status = mapping_.vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, merkle_bytes,
-                                         inode_.blob_size, &clone);
-  } else {
-    status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes, inode_.blob_size,
-                                         &clone);
-  }
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create child VMO: %s\n", zx_status_get_string(status));
     return status;
@@ -850,8 +909,7 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
     len = inode_.blob_size - off;
   }
 
-  const size_t merkle_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
-  status = mapping_.vmo().read(data, merkle_bytes + off, len);
+  status = mapping_.vmo().read(data, GetDataStartOffset() + off, len);
   if (status == ZX_OK) {
     *actual = len;
   }
@@ -905,6 +963,7 @@ void Blob::ActivateLowMemory() {
     blobfs_->DetachVmo(vmoid_);
   }
   mapping_.Reset();
+  merkle_mapping_.Reset();
 }
 
 Blob::~Blob() { ActivateLowMemory(); }

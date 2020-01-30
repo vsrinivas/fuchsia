@@ -25,17 +25,14 @@ namespace blobfs {
 // detaching the VMO from the pager when done.
 class PageWatcher {
  public:
-  PageWatcher(UserPager* pager, uint32_t identifier)
-      : page_request_handler_(this), user_pager_(pager), identifier_(identifier) {}
+  PageWatcher(UserPager* pager, UserPagerInfo info)
+      : page_request_handler_(this), user_pager_(pager), userpager_info_(std::move(info)) {}
 
   ~PageWatcher() { DetachPagedVmoSync(); }
 
   // Creates a paged VMO |vmo_out| that will be backed by |user_pager_|.
   // |vmo_out| is owned by the caller.
   zx_status_t CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out);
-
-  // Sets |verifier_info_| that will be used to verify pages as they are populated.
-  void SetPageVerifierInfo(std::unique_ptr<VerifierInfo> verifier_info);
 
   // Detaches the paged VMO from the pager and waits for the page request handler to receive a
   // ZX_PAGER_VMO_COMPLETE packet. Should be called before the associated VMO or the |PageWatcher|
@@ -82,15 +79,12 @@ class PageWatcher {
   // Pointer to the user pager. Required to create the paged VMO and populate its pages.
   UserPager* const user_pager_;
 
-  // Unique identifier for the caller / object the |PageWatcher| is attached to. Is set at the
-  // time of creation and is used by |user_pager_| to issue block reads to the underlying block
-  // device.
-  uint32_t const identifier_;
-
   // Unowned VMO corresponding to the paged VMO. Used by |page_request_handler_| to populate pages.
   zx::unowned_vmo vmo_;
 
-  std::unique_ptr<VerifierInfo> verifier_info_ = nullptr;
+  // Various bits of information passed on to the user pager, not used directly by the page watcher.
+  // Set at time of creation.
+  UserPagerInfo userpager_info_;
 };
 
 }  // namespace blobfs

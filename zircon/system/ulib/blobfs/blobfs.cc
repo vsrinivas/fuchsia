@@ -801,13 +801,13 @@ zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
   return AttachVmo(transfer_vmo, &transfer_vmoid_);
 }
 
-zx_status_t Blobfs::PopulateTransferVmo(uint32_t map_index, uint64_t offset, uint64_t length) {
+zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) {
   fs::Ticker ticker(Metrics().Collecting());
   fs::ReadTxn txn(this);
-  AllocatedExtentIterator extent_iter(GetAllocator(), map_index);
+  AllocatedExtentIterator extent_iter(GetAllocator(), info->identifier);
   BlockIterator block_iter(&extent_iter);
 
-  auto start_block = static_cast<uint32_t>(offset / kBlobfsBlockSize);
+  auto start_block = static_cast<uint32_t>((offset + info->data_start_bytes) / kBlobfsBlockSize);
   auto block_count =
       static_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
 
@@ -842,12 +842,12 @@ zx_status_t Blobfs::PopulateTransferVmo(uint32_t map_index, uint64_t offset, uin
   return ZX_OK;
 }
 
-zx_status_t Blobfs::VerifyTransferVmo(VerifierInfo* verifier_info, const zx::vmo& transfer_vmo,
-                                      uint64_t offset, uint64_t length) {
-  if (!verifier_info) {
+zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, const zx::vmo& transfer_vmo,
+                                      UserPagerInfo* info) {
+  if (!info) {
     return ZX_ERR_INVALID_ARGS;
   }
-  ZX_DEBUG_ASSERT(verifier_info->verifier);
+  ZX_DEBUG_ASSERT(info->verifier);
 
   fs::Ticker ticker(Metrics().Collecting());
   fzl::VmoMapper mapping;
@@ -862,26 +862,22 @@ zx_status_t Blobfs::VerifyTransferVmo(VerifierInfo* verifier_info, const zx::vmo
     return status;
   }
 
-  uint64_t tree_length = verifier_info->verifier->GetTreeLength();
-  status = verifier_info->verifier->Verify(mapping.start(), length,
-                                           offset - fbl::round_up(tree_length, kBlobfsBlockSize));
+  status = info->verifier->Verify(mapping.start(), length, offset);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Verification failure: %s\n", zx_status_get_string(status));
   }
-  Metrics().UpdateMerkleVerify(length, tree_length, ticker.End());
+  Metrics().UpdateMerkleVerify(length, info->verifier->GetTreeLength(), ticker.End());
 
   return status;
 }
 
-zx_status_t Blobfs::AlignForVerification(VerifierInfo* verifier_info, uint64_t* offset,
-                                         uint64_t* length) {
-  ZX_DEBUG_ASSERT(verifier_info->verifier);
+zx_status_t Blobfs::AlignForVerification(uint64_t* offset, uint64_t* length, UserPagerInfo* info) {
+  ZX_DEBUG_ASSERT(info->verifier);
 
-  uint64_t merkle_size = fbl::round_up(verifier_info->verifier->GetTreeLength(), kBlobfsBlockSize);
-  uint64_t data_offset = *offset - merkle_size;
-  uint64_t data_length = fbl::min(*length, verifier_info->verifier_data_length - data_offset);
+  uint64_t data_offset = *offset;
+  uint64_t data_length = fbl::min(*length, info->data_length_bytes - data_offset);
 
-  zx_status_t status = verifier_info->verifier->Align(&data_offset, &data_length);
+  zx_status_t status = info->verifier->Align(&data_offset, &data_length);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Could not align offsets for verification: %s\n",
                    zx_status_get_string(status));
@@ -890,9 +886,9 @@ zx_status_t Blobfs::AlignForVerification(VerifierInfo* verifier_info, uint64_t* 
 
   ZX_DEBUG_ASSERT(data_offset % kBlobfsBlockSize == 0);
   ZX_DEBUG_ASSERT(data_length % kBlobfsBlockSize == 0 ||
-                  data_offset + data_length == verifier_info->verifier_data_length);
+                  data_offset + data_length == info->data_length_bytes);
 
-  *offset = data_offset + merkle_size;
+  *offset = data_offset;
   *length = data_length;
 
   return ZX_OK;

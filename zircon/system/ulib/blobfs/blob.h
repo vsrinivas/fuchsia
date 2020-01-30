@@ -218,6 +218,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // the contents of a VMO into memory when it is opened.
   zx_status_t InitVmos();
 
+  // Initializes the data and Merkle VMOs when the user pager is enabled.
+  zx_status_t InitVmosPaged();
+
   // Initializes a compressed blob by reading it from disk and decompressing it.
   // Does not verify the blob.
   zx_status_t InitCompressed(CompressionAlgorithm algorithm);
@@ -242,14 +245,26 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   void* GetData() const;
   void* GetMerkle() const;
 
+  // Offset into the |mapping_| VMO at which blob data starts
+  uint64_t GetDataStartOffset() const;
+
   Blobfs* const blobfs_;
   BlobFlags flags_ = {};
   std::atomic_bool syncing_;
 
-  // The mapping here consists of:
+  // If the user pager is disabled, the mapping here consists of:
   // 1) The Merkle Tree
   // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
+  //
+  // If the user pager is enabled, the mapping consists of blob data only.
   fzl::OwnedVmoMapper mapping_;
+
+  // If the user pager is enabled, this maps the Merkle tree which is read in directly,
+  // rather than being faulted in by the user pager.
+  fzl::OwnedVmoMapper merkle_mapping_;
+
+  // Maps |mapping_.vmo()| at the block device layer.
+  // When the user pager is enabled, this is only used on the write path.
   vmoid_t vmoid_ = {};
 
   // Watches any clones of "vmo_" provided to clients.

@@ -37,10 +37,6 @@ zx_status_t PageWatcher::CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out) {
   return ZX_OK;
 }
 
-void PageWatcher::SetPageVerifierInfo(std::unique_ptr<VerifierInfo> verifier_info) {
-  verifier_info_ = std::move(verifier_info);
-}
-
 void PageWatcher::DetachPagedVmoSync() {
   TRACE_DURATION("blobfs", "PageWatcher::DetachPagedVmoSync");
 
@@ -138,12 +134,8 @@ void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length
   uint64_t prefetch_offset, prefetch_length;
   GetPrefetchRangeInBytes(offset, length, &prefetch_offset, &prefetch_length);
 
-  if (!verifier_info_) {
-    FS_TRACE_ERROR("blobfs pager: Page verifier not set.\n");
-    return;
-  }
-  zx_status_t status = user_pager_->TransferPagesToVmo(
-      identifier_, prefetch_offset, prefetch_length, *vmo_, verifier_info_.get());
+  zx_status_t status =
+      user_pager_->TransferPagesToVmo(prefetch_offset, prefetch_length, *vmo_, &userpager_info_);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs pager: Failed to transfer pages to the blob, error: %s\n",
                    zx_status_get_string(status));

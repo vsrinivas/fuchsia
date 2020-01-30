@@ -52,10 +52,16 @@ zx_status_t UserPager::InitPager() {
   return ZX_OK;
 }
 
-zx_status_t UserPager::TransferPagesToVmo(uint32_t map_index, uint64_t offset, uint64_t length,
-                                          const zx::vmo& vmo, VerifierInfo* verifier_info) {
-  TRACE_DURATION("blobfs", "UserPager::TransferPagesToVmo", "map_index", map_index, "offset",
-                 offset, "length", length);
+zx_status_t UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                          UserPagerInfo* info) {
+  TRACE_DURATION("blobfs", "UserPager::TransferPagesToVmo", "offset", offset, "length", length);
+
+  ZX_DEBUG_ASSERT(info);
+  // Align the range to include pages needed for verification.
+  zx_status_t status = AlignForVerification(&offset, &length, info);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   auto decommit = fbl::MakeAutoCall([this, length]() {
     // Decommit pages in the transfer buffer that might have been populated. All blobs share the
@@ -64,27 +70,16 @@ zx_status_t UserPager::TransferPagesToVmo(uint32_t map_index, uint64_t offset, u
                               nullptr, 0);
   });
 
-  zx_status_t status;
-  if (verifier_info) {
-    // Align the range to include pages needed for verification.
-    status = AlignForVerification(verifier_info, &offset, &length);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
   // Read from storage into the transfer buffer.
-  status = PopulateTransferVmo(map_index, offset, length);
+  status = PopulateTransferVmo(offset, length, info);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Verify the pages read in if a verifier is provided.
-  if (verifier_info) {
-    status = VerifyTransferVmo(verifier_info, transfer_buffer_, offset, length);
-    if (status != ZX_OK) {
-      return status;
-    }
+  // Verify the pages read in.
+  status = VerifyTransferVmo(offset, length, transfer_buffer_, info);
+  if (status != ZX_OK) {
+    return status;
   }
 
   ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
