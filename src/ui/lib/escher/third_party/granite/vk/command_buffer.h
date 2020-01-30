@@ -90,6 +90,10 @@ class CommandBuffer : public Reffable {
   size_t NumWaitSemaphores() const { return impl_->NumWaitSemaphores(); }
   size_t NumSignalSemaphores() const { return impl_->NumSignalSemaphores(); }
 
+  // See class comment.  This function makes it illegal to trigger creation of a new pipeline;
+  // it is the app's responsibility to ensure that all required pipelines are generated in advance.
+  void DisableLazyPipelineCreation() { allow_renderpass_and_pipeline_creation_ = false; };
+
   // These resources will be retained until the command-buffer is finished
   // running on the GPU.
   void KeepAlive(Resource* resource) { impl_->KeepAlive(resource); }
@@ -540,6 +544,9 @@ class CommandBuffer : public Reffable {
   uint32_t dirty_descriptor_sets_ = 0;
 
   bool is_compute_ = false;
+
+  // See DisableLazyPipelineCreation().
+  bool allow_renderpass_and_pipeline_creation_ = true;
 
   CommandBufferPipelineState pipeline_state_;
   DynamicState dynamic_state_ = {};

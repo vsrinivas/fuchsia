@@ -288,6 +288,9 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
     render_pass_info.op_flags |=
         RenderPassInfo::kClearDepthStencilOp | RenderPassInfo::kOptimalDepthStencilLayoutOp;
   }
+
+  // TODO(44566): simplify this test to not need images/command-buffers.
+  RenderPassInfo::InitRenderPassAttachmentInfosFromImages(&render_pass_info);
   EXPECT_TRUE(render_pass_info.Validate());
 
   // TODO(ES-83): move into ShaderProgramTest.

@@ -5,8 +5,6 @@
 #ifndef SRC_UI_LIB_ESCHER_TEST_VK_VULKAN_TESTER_H_
 #define SRC_UI_LIB_ESCHER_TEST_VK_VULKAN_TESTER_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/vk/command_buffer.h"
 
 namespace escher {

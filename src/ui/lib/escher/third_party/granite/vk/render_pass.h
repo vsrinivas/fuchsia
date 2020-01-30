@@ -119,23 +119,23 @@ class RenderPass : public Resource {
 // Inline method definitions.
 
 inline vk::SampleCountFlagBits RenderPass::SubpassSamples(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size());
+  FXL_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
   return subpasses_[subpass].samples;
 }
 
 inline uint32_t RenderPass::GetColorAttachmentCountForSubpass(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size());
+  FXL_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
   return subpasses_[subpass].num_color_attachments;
 }
 
 inline uint32_t RenderPass::GetInputAttachmentCountForSubpass(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size());
+  FXL_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
   return subpasses_[subpass].num_input_attachments;
 }
 
 inline const vk::AttachmentReference& RenderPass::GetColorAttachmentForSubpass(
     uint32_t subpass, uint32_t index) const {
-  FXL_DCHECK(subpass < subpasses_.size());
+  FXL_DCHECK(subpass < subpasses_.size()) << subpass << " vs. " << subpasses_.size();
   FXL_DCHECK(index < subpasses_[subpass].num_color_attachments);
   return subpasses_[subpass].color_attachments[index];
 }
