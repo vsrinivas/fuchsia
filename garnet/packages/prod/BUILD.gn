@@ -82,11 +82,6 @@ group("cpuperf") {
   ]
 }
 
-group("auth") {
-  testonly = true
-  public_deps = [ "//src/identity/bin:core" ]
-}
-
 group("ssh") {
   testonly = true
   public_deps = [ "//third_party/openssh-portable:openssh-tools" ]
@@ -135,7 +130,6 @@ group("all") {
     "//garnet/packages/prod:amber",
     "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:atheros",
-    "//garnet/packages/prod:auth",
     "//garnet/packages/prod:battery_manager",
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_all",
