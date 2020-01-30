@@ -9,6 +9,7 @@ group("lib") {
   testonly = true
   deps = [
     "amlogic",
+    "as370",
     "broadcom",
     "dev-operation",
     "device-protocol-bt-gatt-svc",
