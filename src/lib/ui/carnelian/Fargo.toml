@@ -1,0 +1,23 @@
+library_search_paths = [
+    "obj/src/graphics/lib/compute/spinel",
+    "obj/src/graphics/lib/compute/common",
+    "obj/src/graphics/lib/compute/common/vk",
+    "obj/src/graphics/lib/compute/hotsort/platforms/vk",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3",
+    "obj/src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50",
+]
+
+additional_shared_libraries = [
+    "libvulkan.so",
+    "librust-trace-provider.so",
+]
+
+data_files = [
+    { src = "examples/shaders/copy.comp.spv", dst = "data/shaders/copy.comp.spv"},
+    { src = "examples/shaders/motioncopy.comp.spv", dst = "data/shaders/motioncopy.comp.spv"},
+]
