@@ -325,6 +325,8 @@ void SpinelFramer::Init(ddk::SpiProtocolClient spi, uint16_t spi_rx_align_allowa
   ClearStats();
 }
 
+void SpinelFramer::SetInboundAllowanceStatus(bool status) { has_inbound_allowance_ = status; }
+
 uint32_t SpinelFramer::GetTimeoutMs(void) {
   int timeout_ms = 1000 * 60 * 60 * 24;  // 24 hours
 
@@ -333,7 +335,7 @@ uint32_t SpinelFramer::GetTimeoutMs(void) {
     timeout_ms = 0;
   }
 
-  if (radio_data_rx_pending_) {
+  if (has_inbound_allowance_ && radio_data_rx_pending_) {
     // We have more data to read from the radio
     timeout_ms = 5;
   }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 library fuchsia.lowpan.spinel;
+using zx;
 
 const uint32 MAX_FRAME_SIZE = 4096;
 
@@ -69,6 +70,11 @@ enum Error : int32 {
     ///
     /// This error is only emitted via `->OnError()`.
     CLOSED = 6;
+};
+
+// No need to be a discoverable protocol since this is used for driver only.
+protocol DeviceSetup {
+    SetChannel(handle<channel> channel) -> () error zx.status;
 };
 
 [Discoverable]

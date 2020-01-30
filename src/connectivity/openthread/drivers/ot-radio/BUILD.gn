@@ -14,6 +14,7 @@ driver_module("ot-radio") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
     "//src/connectivity/openthread/third_party",
     "//src/devices:driver",
     "//zircon/public/lib/async-cpp",
@@ -23,6 +24,7 @@ driver_module("ot-radio") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/driver-unit-test",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",

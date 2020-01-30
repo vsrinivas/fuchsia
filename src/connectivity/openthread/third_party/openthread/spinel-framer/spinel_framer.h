@@ -21,6 +21,7 @@ class SpinelFramer {
   void ReceivePacketFromRadio(uint8_t* rxPacket, uint16_t* length);
   bool IsPacketPresent(void);
   void TrySpiTransaction(void);
+  void SetInboundAllowanceStatus(bool status);
 
  private:
   static constexpr uint16_t kMaxFrameSize = 2048;
@@ -63,6 +64,7 @@ class SpinelFramer {
   zx_status_t DoSpiXfer(uint16_t len);
   bool CheckAndClearInterrupt(void);
   void DebugSpiHeader(const char* hint);
+  bool has_inbound_allowance_ = false;
 };
 
 }  // namespace ot

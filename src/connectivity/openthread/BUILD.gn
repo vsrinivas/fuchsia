@@ -6,3 +6,8 @@ group("openthread") {
   testonly = true
   deps = [ "drivers" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}

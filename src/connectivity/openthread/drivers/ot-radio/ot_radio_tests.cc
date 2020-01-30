@@ -18,7 +18,7 @@ TEST(OtRadioTestCase, InitTest) {
   // Starts the thread
   ASSERT_OK(dev->Start());
   // Trigger a reset so the radio send us something
-  ASSERT_OK(dev->Reset());
+  ASSERT_OK(dev->DriverUnitTestGetResetEvent());
   // Wait for interrupt to fire and for SPI transaction to complete
   ASSERT_OK(sync_completion_wait_deadline(&dev->spi_rx_complete_, ZX_TIME_INFINITE));
   // Verify that a valid byte was sent by the radio
@@ -34,7 +34,7 @@ TEST(OtRadioTestCase, SpinelFramerTest) {
   // Starts the thread
   ASSERT_OK(dev->Start());
   // Send get version command
-  ASSERT_OK(dev->GetNCPVersion());
+  ASSERT_OK(dev->DriverUnitTestGetNCPVersion());
   // Wait for interrupt to fire and for SPI transaction to complete
   ASSERT_OK(sync_completion_wait_deadline(&dev->spi_rx_complete_, ZX_TIME_INFINITE));
   // Verify that a valid version response containing the string 'OPENTHREAD' is received
