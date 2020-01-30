@@ -69,11 +69,6 @@ group("ssh") {
   public_deps = [ "//third_party/openssh-portable:openssh-tools" ]
 }
 
-group("sysmgr") {
-  testonly = true
-  public_deps = [ "//garnet/bin/sysmgr" ]
-}
-
 # WARNING: Known to topaz.
 group("drivers") {
   testonly = true
@@ -108,7 +103,6 @@ group("all") {
   testonly = true
   public_deps = [
     ":drivers",
-    "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:battery_manager",
     "//garnet/packages/prod:bluetooth_a2dp",
@@ -152,7 +146,6 @@ group("all") {
     "//garnet/packages/prod:ssh",
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:sysmem_connector",
-    "//garnet/packages/prod:sysmgr",
     "//garnet/packages/prod:tee_manager",
     "//garnet/packages/prod:telephony",
     "//garnet/packages/prod:terminal",
@@ -247,8 +240,6 @@ group("guest_runner") {
   public_deps = [
     "//garnet/packages/config:network",
     "//src/sys/pkg/bin/amber",
-    "//garnet/packages/prod:appmgr",
-    "//garnet/packages/prod:sysmgr",
     "//src/virtualization/bin/guest:guest",
     "//src/virtualization/bin/guest_manager:guest_manager",
     "//src/virtualization/bin/guest_runner:guest_runner",
@@ -568,14 +559,6 @@ group("bluetooth_core") {
     "//src/connectivity/bluetooth/core/bt-host",
     "//src/connectivity/bluetooth/core/bt-init",
     "//src/connectivity/bluetooth/tools/bt-snoop",
-  ]
-}
-
-group("appmgr") {
-  testonly = true
-  public_deps = [
-    "//src/sys/appmgr",
-    "//src/sys/appmgr:appmgr_scheme_config",
   ]
 }
 

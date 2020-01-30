@@ -187,8 +187,8 @@ group("ui") {
 group("sysmgr") {
   testonly = true
   public_deps = [
+    "//garnet/bin/sysmgr",
     "//garnet/bin/sysmgr/integration_tests",
-    "//garnet/packages/prod:sysmgr",
   ]
 }
 
@@ -771,9 +771,10 @@ group("runtime") {
   testonly = true
   public_deps = [
     "//garnet/bin/glob",
+    "//garnet/bin/sysmgr",
     "//garnet/examples/fidl/echo_server_cpp",
-    "//garnet/packages/prod:appmgr",
-    "//garnet/packages/prod:sysmgr",
+    "//src/sys/appmgr",
+    "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr/integration_tests/sandbox/features/global-data:has_global_data",
     "//src/sys/appmgr/integration_tests/sandbox/features/global-data:no_global_data",
     "//src/sys/appmgr/integration_tests/sandbox/features/global-data:restricted_global_data",
