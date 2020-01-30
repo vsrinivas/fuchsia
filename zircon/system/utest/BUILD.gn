@@ -33,6 +33,8 @@ if (current_cpu != "") {
       "$zx/system/dev/audio/intel-hda:test",
       "$zx/system/dev/audio/lib/simple-audio-stream:sa-unittest",
       "$zx/system/dev/block/ftl/test",
+      "$zx/system/dev/bluetooth/bt-hci-broadcom:bt-hci-broadcom-test",
+      "$zx/system/dev/bluetooth/bt-hci-mediatek:bt-hci-mediatek-test",
       "$zx/system/dev/board/mt8167s_ref:mt8167s_ref-test",
       "$zx/system/dev/bus/pci:pci-driver",
       "$zx/system/dev/bus/pci:pci-unit",
