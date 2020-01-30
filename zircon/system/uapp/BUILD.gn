@@ -18,6 +18,5 @@ group("uapp") {
     "nand-loader",
     "nand-util",
     "syscall-check",
-    "xdc-test",
   ]
 }

@@ -2,30 +2,52 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("xdc-test") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("xdc-test") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [
     "xdc-device.cc",
     "xdc-test.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-usb-debug:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-usb-debug:c",
   ]
 }
 
-zx_host_tool("xdc-test-host") {
+executable("xdc-test-host") {
   sources = [
     "xdc-host.cc",
     "xdc-test.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/xdc-host-utils",
-    "$zx/system/ulib/xdc-server-utils",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/xdc-host-utils",
+    "//zircon/public/lib/xdc-server-utils",
   ]
+}
+
+migrated_manifest("xdc-test-manifest") {
+  deps = [ ":xdc-test" ]
 }
