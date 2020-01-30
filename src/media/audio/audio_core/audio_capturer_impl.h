@@ -168,7 +168,8 @@ class AudioCapturerImpl : public AudioObject,
 
   // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool MixToIntermediate(uint32_t mix_frames) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  bool MixToIntermediate(zx::time now, uint32_t mix_frames)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void UpdateTransformation(Mixer::Bookkeeping* bk, const AudioDriver::RingBufferSnapshot& rb_snap)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void DoStopAsyncCapture() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());

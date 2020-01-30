@@ -803,7 +803,7 @@ zx_status_t AudioCapturerImpl::Process() {
     }
 
     // Mix the requested number of frames from sources to intermediate buffer, then into output.
-    if (!MixToIntermediate(mix_frames)) {
+    if (!MixToIntermediate(now, mix_frames)) {
       ShutdownFromMixDomain();
       return ZX_ERR_INTERNAL;
     }
@@ -952,7 +952,7 @@ void AudioCapturerImpl::PartialOverflowOccurred(FractionalFrames<int64_t> frac_s
   }
 }
 
-bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
+bool AudioCapturerImpl::MixToIntermediate(zx::time now, uint32_t mix_frames) {
   TRACE_DURATION("audio", "AudioCapturerImpl::MixToIntermediate");
   FX_DCHECK(source_links_.size() == 0);
   link_matrix_.SourceLinks(*this, &source_links_);
@@ -1037,10 +1037,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // pump (AudioCapturer) and output mix pump (AudioOutput).
     //
     const auto& rb = rb_snap.ring_buffer;
-    auto now = zx::clock::get_monotonic().get();
 
     int64_t end_fence_frames =
-        FractionalFrames<int64_t>::FromRaw(info.clock_mono_to_frac_source_frames.Apply(now))
+        FractionalFrames<int64_t>::FromRaw(info.clock_mono_to_frac_source_frames.Apply(now.get()))
             .Floor();
     // If, because of significant FIFO depth or external delay, the calculated end_fence_frames
     // value is in the past, MOD it up into our ring buffer range.
