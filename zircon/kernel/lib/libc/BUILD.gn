@@ -10,7 +10,6 @@ source_set("libc") {
     "cxa_atexit.cc",
     "cxa_pure_virtual.cc",
     "cxx_allocator.cc",
-    "eabi.c",
     "errno.c",
     "printf.c",
     "qsort.c",
