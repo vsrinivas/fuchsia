@@ -223,13 +223,14 @@ spn_path_builder_cubic_smooth_to(spn_path_builder_t path_builder,  //
 //
 //
 
+
 spn_result_t
 spn_path_builder_rat_quad_to(spn_path_builder_t path_builder,  //
                              float              x1,
                              float              y1,
                              float              x2,
                              float              y2,
-                             float              w0)
+                             float              w1)
 {
   if (!SPN_ASSERT_STATE_TEST(SPN_PATH_BUILDER_STATE_BUILDING, path_builder))
     return SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN;
@@ -242,7 +243,7 @@ spn_path_builder_rat_quad_to(spn_path_builder_t path_builder,  //
   SPN_PB_CN_COORDS_APPEND(path_builder, rat_quad, 3, y1);
   SPN_PB_CN_COORDS_APPEND(path_builder, rat_quad, 4, x2);
   SPN_PB_CN_COORDS_APPEND(path_builder, rat_quad, 5, y2);
-  SPN_PB_CN_COORDS_APPEND(path_builder, rat_quad, 6, w0);
+  SPN_PB_CN_COORDS_APPEND(path_builder, rat_quad, 6, w1);
 
   spn_path_builder_move_to_1(path_builder, x2, y2);
 
@@ -257,8 +258,8 @@ spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
                               float              y2,
                               float              x3,
                               float              y3,
-                              float              w0,
-                              float              w1)
+                              float              w1,
+                              float              w2)
 {
   if (!SPN_ASSERT_STATE_TEST(SPN_PATH_BUILDER_STATE_BUILDING, path_builder))
     return SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN;
@@ -273,8 +274,8 @@ spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
   SPN_PB_CN_COORDS_APPEND(path_builder, rat_cubic, 5, y2);
   SPN_PB_CN_COORDS_APPEND(path_builder, rat_cubic, 6, x3);
   SPN_PB_CN_COORDS_APPEND(path_builder, rat_cubic, 7, y3);
-  SPN_PB_CN_COORDS_APPEND(path_builder, rat_cubic, 8, w0);
-  SPN_PB_CN_COORDS_APPEND(path_builder, rat_cubic, 9, w1);
+  SPN_PB_CN_COORDS_APPEND(path_builder, rat_cubic, 8, w1);
+  SPN_PB_CN_COORDS_APPEND(path_builder, rat_cubic, 9, w2);
 
   spn_path_builder_move_to_1(path_builder, x3, y3);
 

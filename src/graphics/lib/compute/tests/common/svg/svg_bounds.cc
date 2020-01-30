@@ -186,6 +186,7 @@ bounds_update_path(double * const                   bounds,
             break;
 
           case SVG_PATH_CMD_CUBIC_TO:
+          case SVG_PATH_CMD_RAT_CUBIC_TO:
             bounds_update_line(bounds,
                                cmd->cubic_to.x1,
                                cmd->cubic_to.y1,
@@ -196,6 +197,7 @@ bounds_update_path(double * const                   bounds,
             break;
 
           case SVG_PATH_CMD_CUBIC_TO_REL:
+          case SVG_PATH_CMD_RAT_CUBIC_TO_REL:
             bounds_update_line(bounds,
                                x + cmd->cubic_to.x1,
                                y + cmd->cubic_to.y1,
@@ -226,6 +228,7 @@ bounds_update_path(double * const                   bounds,
             break;
 
           case SVG_PATH_CMD_QUAD_TO:
+          case SVG_PATH_CMD_RAT_QUAD_TO:
             bounds_update_line(bounds,
                                cmd->quad_to.x1,
                                cmd->quad_to.y1,
@@ -235,6 +238,7 @@ bounds_update_path(double * const                   bounds,
             break;
 
           case SVG_PATH_CMD_QUAD_TO_REL:
+          case SVG_PATH_CMD_RAT_QUAD_TO_REL:
             bounds_update_point(bounds, x + cmd->quad_to.x1, y + cmd->quad_to.y1, ts);
             bounds_update_point(bounds, x += cmd->quad_to.x, y += cmd->quad_to.y, ts);
             break;
@@ -293,6 +297,7 @@ svg_estimate_bounds(struct svg const * const   sd,
           case SVG_RASTER_CMD_STROKE_WIDTH:  // TODO(digit):
             break;
 
+          case SVG_RASTER_CMD_TRANSFORM_PROJECT:
           case SVG_RASTER_CMD_TRANSFORM_MATRIX:
             affine_transform_stack_push(ts,
                                         (const affine_transform_t){

@@ -300,6 +300,52 @@ spn_svg_paths_decode(struct svg const * const svg, spn_path_builder_t pb)
             y += cmd->quad_smooth_to.y;
             break;
 
+          case SVG_PATH_CMD_RAT_CUBIC_TO:
+            spn(path_builder_rat_cubic_to(pb,
+                                          cmd->rat_cubic_to.x1,
+                                          cmd->rat_cubic_to.y1,
+                                          cmd->rat_cubic_to.x2,
+                                          cmd->rat_cubic_to.y2,
+                                          x = cmd->rat_cubic_to.x,
+                                          y = cmd->rat_cubic_to.y,
+                                          cmd->rat_cubic_to.w1,
+                                          cmd->rat_cubic_to.w2));
+            break;
+
+          case SVG_PATH_CMD_RAT_CUBIC_TO_REL:
+            spn(path_builder_rat_cubic_to(pb,
+                                          x + cmd->rat_cubic_to.x1,
+                                          y + cmd->rat_cubic_to.y1,
+                                          x + cmd->rat_cubic_to.x2,
+                                          y + cmd->rat_cubic_to.y2,
+                                          x + cmd->rat_cubic_to.x,
+                                          y + cmd->rat_cubic_to.y,
+                                          cmd->rat_cubic_to.w1,
+                                          cmd->rat_cubic_to.w2));
+            x += cmd->rat_cubic_to.x;
+            y += cmd->rat_cubic_to.y;
+            break;
+
+          case SVG_PATH_CMD_RAT_QUAD_TO:
+            spn(path_builder_rat_quad_to(pb,
+                                         cmd->rat_quad_to.x1,
+                                         cmd->rat_quad_to.y1,
+                                         x = cmd->rat_quad_to.x,
+                                         y = cmd->rat_quad_to.y,
+                                         cmd->rat_quad_to.w1));
+            break;
+
+          case SVG_PATH_CMD_RAT_QUAD_TO_REL:
+            spn(path_builder_rat_quad_to(pb,
+                                         x + cmd->rat_quad_to.x1,
+                                         y + cmd->rat_quad_to.y1,
+                                         x + cmd->rat_quad_to.x,
+                                         y + cmd->rat_quad_to.y,
+                                         cmd->rat_quad_to.w1));
+            x += cmd->rat_quad_to.x;
+            y += cmd->rat_quad_to.y;
+            break;
+
           case SVG_PATH_CMD_ARC_TO:
             spn_svg_arc_decode(false, &cmd->arc_to, &x, &y, pb);
             break;
@@ -367,6 +413,20 @@ spn_svg_rasters_decode(struct svg const * const       svg,
             break;
 
           case SVG_RASTER_CMD_STROKE_WIDTH:  // FIXME(allanmac): IGNORED
+            break;
+
+          case SVG_RASTER_CMD_TRANSFORM_PROJECT:
+            transform_stack_push_matrix(ts,
+                                        cmd->project.sx,
+                                        cmd->project.shx,
+                                        cmd->project.tx,
+                                        cmd->project.shy,
+                                        cmd->project.sy,
+                                        cmd->project.ty,
+                                        cmd->project.w0,
+                                        cmd->project.w1,
+                                        1);
+            transform_stack_concat(ts);
             break;
 
           case SVG_RASTER_CMD_TRANSFORM_MATRIX:

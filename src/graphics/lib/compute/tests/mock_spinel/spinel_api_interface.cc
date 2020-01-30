@@ -196,6 +196,27 @@ spn_path_builder_cubic_smooth_to(
 }
 
 spn_result_t
+spn_path_builder_rat_quad_to(
+  spn_path_builder_t path_builder, float x0, float y0, float x1, float y1, float w1)
+{
+  return fromSpinel(path_builder)->ratQuadTo(x0, y0, x1, y1, w1);
+}
+
+spn_result_t
+spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
+                              float              x0,
+                              float              y0,
+                              float              x1,
+                              float              y1,
+                              float              x2,
+                              float              y2,
+                              float              w1,
+                              float              w2)
+{
+  return fromSpinel(path_builder)->ratCubicTo(x0, y0, x1, y1, x2, y2, w1, w2);
+}
+
+spn_result_t
 spn_path_builder_ellipse(spn_path_builder_t path_builder,  //
                          float              cx,
                          float              cy,

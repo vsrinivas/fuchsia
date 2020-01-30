@@ -423,7 +423,7 @@ extern "C" {
         y1: f32,
         x2: f32,
         y2: f32,
-        w0: f32,
+        w1: f32,
     ) -> SpnResult;
     pub fn spn_path_builder_rat_cubic_to(
         path_builder: SpnPathBuilder,
@@ -433,8 +433,8 @@ extern "C" {
         y2: f32,
         x3: f32,
         y3: f32,
-        w0: f32,
         w1: f32,
+        w2: f32,
     ) -> SpnResult;
     pub fn spn_path_builder_ellipse(
         path_builder: SpnPathBuilder,

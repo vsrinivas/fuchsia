@@ -94,7 +94,7 @@ spn_path_builder_quad_smooth_to(spn_path_builder_t path_builder, float x2, float
 
 spn_result_t
 spn_path_builder_rat_quad_to(
-  spn_path_builder_t path_builder, float x1, float y1, float x2, float y2, float w0);
+  spn_path_builder_t path_builder, float x1, float y1, float x2, float y2, float w1);
 
 spn_result_t
 spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
@@ -104,8 +104,8 @@ spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
                               float              y2,
                               float              x3,
                               float              y3,
-                              float              w0,
-                              float              w1);
+                              float              w1,
+                              float              w2);
 
 //
 // TODO(allanmac) -- this is a synthetic built from primitives and doesn't

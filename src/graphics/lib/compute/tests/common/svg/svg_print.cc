@@ -317,6 +317,53 @@ svg_print(const struct svg * svg, svg_printf_func_t * print_func, void * print_o
                     << ")" << path_ls.comma;
             break;
 
+          case SVG_PATH_CMD_RAT_CUBIC_TO:
+            path_ls << "RatCubicTo"
+                    << "(x1:" << cmd->rat_cubic_to.x1
+                    << ",y1:" << cmd->rat_cubic_to.y1
+                    << ",x2:" << cmd->rat_cubic_to.x2
+                    << ",y2:" << cmd->rat_cubic_to.y2
+                    << ",x:" << cmd->rat_cubic_to.x
+                    << ",y:" << cmd->rat_cubic_to.y
+                    << ",w1:" << cmd->rat_cubic_to.w1
+                    << ",w2:" << cmd->rat_cubic_to.w2
+                    << ")" << path_ls.comma;
+            break;
+
+          case SVG_PATH_CMD_RAT_CUBIC_TO_REL:
+            path_ls << "RatCubicToRel"
+                    << "(dx1:" << cmd->rat_cubic_to.x1
+                    << ",dy1:" << cmd->rat_cubic_to.y1
+                    << ",w1:" << cmd->rat_cubic_to.w1
+                    << ",dx2:" << cmd->rat_cubic_to.x2
+                    << ",dy2:" << cmd->rat_cubic_to.y2
+                    << ",w2:" << cmd->rat_cubic_to.w2
+                    << ",dx:" << cmd->rat_cubic_to.x
+                    << ",dy:" << cmd->rat_cubic_to.y
+                    << ",w1:" << cmd->rat_cubic_to.w1
+                    << ",w2:" << cmd->rat_cubic_to.w2
+                    << ")" << path_ls.comma;
+            break;
+
+          case SVG_PATH_CMD_RAT_QUAD_TO:
+            path_ls << "RatQuadTo"
+                    << "(x1:" << cmd->rat_quad_to.x1
+                    << ",y1:" << cmd->rat_quad_to.y1
+                    << ",x:" << cmd->rat_quad_to.x
+                    << ",y:" << cmd->rat_quad_to.y
+                    << ",w1:" << cmd->rat_quad_to.w1
+                    << ")" << path_ls.comma;
+            break;
+          case SVG_PATH_CMD_RAT_QUAD_TO_REL:
+            path_ls << "RatQuadToRel"
+                    << "(dx1:" << cmd->rat_quad_to.x1
+                    << ",dy1:" << cmd->rat_quad_to.y1
+                    << ",dx:" << cmd->rat_quad_to.x
+                    << ",dy:" << cmd->rat_quad_to.y
+                    << ",w1:" << cmd->rat_quad_to.w1
+                    << ")" << path_ls.comma;
+            break;
+
           case SVG_PATH_CMD_ARC_TO:
             path_ls << "ArcTo"
                     << "(rx:" << cmd->arc_to.rx
@@ -391,6 +438,20 @@ svg_print(const struct svg * svg, svg_printf_func_t * print_func, void * print_o
             ls << "StrokeWidth"
               << "(w:" << cmd->stroke_width.stroke_width
               << ")" << ls.comma;
+            break;
+
+          case SVG_RASTER_CMD_TRANSFORM_PROJECT:
+            ls << "Transform(sx:" << cmd->project.sx;
+            if (cmd->project.shx)
+              ls << ",shx:" << cmd->project.shx;
+            ls << ",sy:" << cmd->project.sy;
+            if (cmd->project.shy)
+              ls << ",shy:" << cmd->project.shy;
+            if (cmd->project.tx || cmd->project.ty)
+              ls << ",tx:" << cmd->project.tx << ",ty:" << cmd->project.ty;
+            // always print these
+            ls << ",w0:" << cmd->project.w0 << ",w1:" << cmd->project.w1;
+            ls << ")" << ls.comma;
             break;
 
           case SVG_RASTER_CMD_TRANSFORM_MATRIX:

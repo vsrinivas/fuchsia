@@ -312,7 +312,7 @@ static_assert(checkElementSize<Path::RatCubicTo>(), "invalid element count");
   ::mock_spinel::Path::RatQuadTo::kTag, cx, cy, x, y, w
 
 #define MOCK_SPINEL_PATH_RAT_CUBIC_TO_LITERAL(c1x, c1y, c2x, c2y, x, y, w1, w2)                    \
-  ::mock_spinel::Path::RatCubicTo::kTag, c1x, c1y, c2x, c2y, x, y, w1, w2,
+  ::mock_spinel::Path::RatCubicTo::kTag, c1x, c1y, c2x, c2y, x, y, w1, w2
 
 //
 // Rasters

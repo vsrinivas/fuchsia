@@ -234,6 +234,12 @@ typedef enum svg_path_cmd_type
   SVG_PATH_CMD_QUAD_SMOOTH_TO,
   SVG_PATH_CMD_QUAD_SMOOTH_TO_REL,
 
+  SVG_PATH_CMD_RAT_CUBIC_TO,
+  SVG_PATH_CMD_RAT_CUBIC_TO_REL,
+
+  SVG_PATH_CMD_RAT_QUAD_TO,
+  SVG_PATH_CMD_RAT_QUAD_TO_REL,
+
   SVG_PATH_CMD_ARC_TO,
   SVG_PATH_CMD_ARC_TO_REL,
 } svg_path_cmd_type;
@@ -403,6 +409,29 @@ struct svg_path_cmd_quad_smooth_to
   float             y;
 };
 
+struct svg_path_cmd_rat_cubic_to
+{
+  svg_path_cmd_type type;
+  float             x1;
+  float             y1;
+  float             x2;
+  float             y2;
+  float             x;
+  float             y;
+  float             w1;
+  float             w2;
+};
+
+struct svg_path_cmd_rat_quad_to
+{
+  svg_path_cmd_type type;
+  float             x1;
+  float             y1;
+  float             x;
+  float             y;
+  float             w1;
+};
+
 struct svg_path_cmd_arc_to
 {
   svg_path_cmd_type type;
@@ -443,6 +472,8 @@ union svg_path_cmd
   struct svg_path_cmd_cubic_smooth_to cubic_smooth_to;
   struct svg_path_cmd_quad_to         quad_to;
   struct svg_path_cmd_quad_smooth_to  quad_smooth_to;
+  struct svg_path_cmd_rat_cubic_to    rat_cubic_to;
+  struct svg_path_cmd_rat_quad_to     rat_quad_to;
   struct svg_path_cmd_arc_to          arc_to;
 };
 
@@ -465,6 +496,7 @@ typedef enum svg_raster_cmd_type
   SVG_RASTER_CMD_STROKE_WIDTH,
 
   // TRANSFORM PATH BEFORE RASTERIZING
+  SVG_RASTER_CMD_TRANSFORM_PROJECT,    // 8 float
   SVG_RASTER_CMD_TRANSFORM_MATRIX,     // 6 float
   SVG_RASTER_CMD_TRANSFORM_TRANSLATE,  // 2 float
   SVG_RASTER_CMD_TRANSFORM_SCALE,      // 2 float
@@ -520,6 +552,19 @@ struct svg_raster_cmd_stroke_width
 {
   svg_raster_cmd_type type;
   float               stroke_width;
+};
+
+struct svg_raster_cmd_transform_project
+{
+  svg_raster_cmd_type type;
+  float               sx;
+  float               shy;
+  float               shx;
+  float               sy;
+  float               tx;
+  float               ty;
+  float               w0;
+  float               w1;
 };
 
 struct svg_raster_cmd_transform_matrix
@@ -587,6 +632,7 @@ union svg_raster_cmd
   struct svg_raster_cmd_stroke              stroke;
   struct svg_raster_cmd_marker              marker;
   struct svg_raster_cmd_stroke_width        stroke_width;  // stroke_* attributes
+  struct svg_raster_cmd_transform_project   project;
   struct svg_raster_cmd_transform_matrix    matrix;
   struct svg_raster_cmd_transform_translate translate;
   struct svg_raster_cmd_transform_scale     scale;

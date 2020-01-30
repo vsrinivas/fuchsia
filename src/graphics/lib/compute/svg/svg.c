@@ -214,6 +214,7 @@ svg_transform_lookup(char const * str, uint32_t len);
 // clang-format off
 #define SVG_TRANSFORMS_EXPAND(macro_)                 \
   macro_(matrix,    svg_parse_transform_matrix)       \
+  macro_(project,   svg_parse_transform_project)      \
   macro_(rotate,    svg_parse_transform_rotate)       \
   macro_(scale,     svg_parse_transform_scale)        \
   macro_(skewX,     svg_parse_transform_skewX)        \
@@ -298,6 +299,10 @@ static struct svg_lookup_cmd const path_lookup_cmds[] = {
   SVG_LOOKUP_CMD(SVG_PATH_CMD_QUAD_TO_REL, struct svg_path_cmd_quad_to),
   SVG_LOOKUP_CMD(SVG_PATH_CMD_QUAD_SMOOTH_TO, struct svg_path_cmd_quad_smooth_to),
   SVG_LOOKUP_CMD(SVG_PATH_CMD_QUAD_SMOOTH_TO_REL, struct svg_path_cmd_quad_smooth_to),
+  SVG_LOOKUP_CMD(SVG_PATH_CMD_RAT_CUBIC_TO, struct svg_path_cmd_rat_cubic_to),
+  SVG_LOOKUP_CMD(SVG_PATH_CMD_RAT_CUBIC_TO_REL, struct svg_path_cmd_rat_cubic_to),
+  SVG_LOOKUP_CMD(SVG_PATH_CMD_RAT_QUAD_TO, struct svg_path_cmd_rat_quad_to),
+  SVG_LOOKUP_CMD(SVG_PATH_CMD_RAT_QUAD_TO_REL, struct svg_path_cmd_rat_quad_to),
   SVG_LOOKUP_CMD(SVG_PATH_CMD_ARC_TO, struct svg_path_cmd_arc_to),
   SVG_LOOKUP_CMD(SVG_PATH_CMD_ARC_TO_REL, struct svg_path_cmd_arc_to)
 };
@@ -309,6 +314,7 @@ static struct svg_lookup_cmd const raster_lookup_cmds[] = {
   SVG_LOOKUP_CMD(SVG_RASTER_CMD_STROKE, struct svg_raster_cmd_stroke),
   SVG_LOOKUP_CMD(SVG_RASTER_CMD_MARKER, struct svg_raster_cmd_marker),
   SVG_LOOKUP_CMD(SVG_RASTER_CMD_STROKE_WIDTH, struct svg_raster_cmd_stroke_width),
+  SVG_LOOKUP_CMD(SVG_RASTER_CMD_TRANSFORM_PROJECT, struct svg_raster_cmd_transform_project),
   SVG_LOOKUP_CMD(SVG_RASTER_CMD_TRANSFORM_MATRIX, struct svg_raster_cmd_transform_matrix),
   SVG_LOOKUP_CMD(SVG_RASTER_CMD_TRANSFORM_TRANSLATE, struct svg_raster_cmd_transform_translate),
   SVG_LOOKUP_CMD(SVG_RASTER_CMD_TRANSFORM_SCALE, struct svg_raster_cmd_transform_scale),
@@ -2322,6 +2328,24 @@ svg_parse_path_quad_smooth_to(
 }
 
 static int
+svg_parse_path_rat_cubic_to(
+  struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len, svg_path_cmd_type const type)
+{
+  struct svg_path_cmd_rat_cubic_to cmd = { .type = type };
+
+  return svg_parse_path_coord_sequence(sp, ys, val, len, &cmd, sizeof(cmd), &cmd.x1, 8, false);
+}
+
+static int
+svg_parse_path_rat_quad_to(
+  struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len, svg_path_cmd_type const type)
+{
+  struct svg_path_cmd_rat_quad_to cmd = { .type = type };
+
+  return svg_parse_path_coord_sequence(sp, ys, val, len, &cmd, sizeof(cmd), &cmd.x1, 5, false);
+}
+
+static int
 svg_parse_path_arc_to(
   struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len, svg_path_cmd_type const type)
 {
@@ -2347,7 +2371,7 @@ svg_parse_attrib_d(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len
       int  n = len;
       char t[2];
 
-      int const err = sscanf(val, " %1[ACHLMQSTVZachlmqstvz]%n", t, &n);
+      int const err = sscanf(val, " %1[ACDHLMQRSTVZacdhlmqrstvz]%n", t, &n);
 
       if (err != 1)
         break;
@@ -2370,6 +2394,10 @@ svg_parse_attrib_d(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len
             n = svg_parse_path_cubic_to(sp, ys, val, len, SVG_PATH_CMD_CUBIC_TO);
             break;
 
+          case 'D':
+            n = svg_parse_path_rat_cubic_to(sp, ys, val, len, SVG_PATH_CMD_RAT_CUBIC_TO);
+            break;
+
           case 'H':
             n = svg_parse_path_hv_line_to(sp, ys, val, len, SVG_PATH_CMD_HLINE_TO);
             break;
@@ -2390,6 +2418,10 @@ svg_parse_attrib_d(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len
 
           case 'Q':
             n = svg_parse_path_quad_to(sp, ys, val, len, SVG_PATH_CMD_QUAD_TO);
+            break;
+
+          case 'R':
+            n = svg_parse_path_rat_quad_to(sp, ys, val, len, SVG_PATH_CMD_RAT_QUAD_TO);
             break;
 
           case 'S':
@@ -2419,6 +2451,10 @@ svg_parse_attrib_d(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len
             n = svg_parse_path_cubic_to(sp, ys, val, len, SVG_PATH_CMD_CUBIC_TO_REL);
             break;
 
+          case 'd':
+            n = svg_parse_path_rat_cubic_to(sp, ys, val, len, SVG_PATH_CMD_RAT_CUBIC_TO_REL);
+            break;
+
           case 'h':
             n = svg_parse_path_hv_line_to(sp, ys, val, len, SVG_PATH_CMD_HLINE_TO_REL);
             break;
@@ -2444,6 +2480,10 @@ svg_parse_attrib_d(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len
 
           case 'q':
             n = svg_parse_path_quad_to(sp, ys, val, len, SVG_PATH_CMD_QUAD_TO_REL);
+            break;
+
+          case 'r':
+            n = svg_parse_path_rat_quad_to(sp, ys, val, len, SVG_PATH_CMD_RAT_QUAD_TO_REL);
             break;
 
           case 's':
@@ -2483,6 +2523,21 @@ svg_parse_attrib_d(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len
 //
 // PARSE RENDER STATE ATTRIBS -- VARIABLE LENGTH
 //
+
+static void
+svg_parse_transform_project(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len)
+{
+  struct svg_raster_cmd_transform_project cmd = { .type = SVG_RASTER_CMD_TRANSFORM_PROJECT };
+
+  uint32_t parse_count;
+
+  svg_parse_numbers(sp, ys, val, len, &cmd.sx, 8, &parse_count);
+
+  if (parse_count != 8)
+    svg_invalid_attrib(sp, ys, val);
+
+  svg_stack_push(sp->curr->transforms, &cmd, sizeof(cmd));
+}
 
 static void
 svg_parse_transform_matrix(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len)

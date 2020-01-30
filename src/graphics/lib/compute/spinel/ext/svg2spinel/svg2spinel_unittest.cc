@@ -155,11 +155,11 @@ TEST_F(Svg2SpinelTest, skewX)
   // inspect transform
   ASSERT_TRUE(rasters);
   {
-    const auto & rasters = mock_context()->rasters();
-    ASSERT_EQ(rasters.size(), 1u);
+    const auto & mock_rasters = mock_context()->rasters();
+    ASSERT_EQ(mock_rasters.size(), 1u);
 
-    const auto & raster = rasters[0][0];
-    EXPECT_SPN_TRANSFORM_EQ(raster.transform,skewX);
+    const auto & raster = mock_rasters[0][0];
+    EXPECT_SPN_TRANSFORM_EQ(raster.transform, skewX);
   }
 
   transform_stack_release(ts);
@@ -180,7 +180,7 @@ TEST_F(Svg2SpinelTest, skewY)
                        "</svg>\n" };
 
   // expect skewY transform
-  spn_transform_t const skewX = { 1.0f, 0.0f, 0.0f,  //
+  spn_transform_t const skewY = { 1.0f, 0.0f, 0.0f,  //
                                   1.0f, 1.0f, 0.0f,  // shy = tan(45º) = 1
                                   0.0f, 0.0f };
 
@@ -202,11 +202,99 @@ TEST_F(Svg2SpinelTest, skewY)
   // inspect transform
   ASSERT_TRUE(rasters);
   {
-    const auto & rasters = mock_context()->rasters();
-    ASSERT_EQ(rasters.size(), 1u);
+    const auto & mock_rasters = mock_context()->rasters();
+    ASSERT_EQ(mock_rasters.size(), 1u);
 
-    const auto & raster = rasters[0][0];
-    EXPECT_SPN_TRANSFORM_EQ(raster.transform,skewX);
+    const auto & raster = mock_rasters[0][0];
+    EXPECT_SPN_TRANSFORM_EQ(raster.transform, skewY);
+  }
+
+  transform_stack_release(ts);
+
+  spn_svg_rasters_release(svg.get(), context_, rasters);
+
+  spn_svg_paths_release(svg.get(), context_, paths);
+}
+
+//
+//
+//
+
+TEST_F(Svg2SpinelTest, project)
+{
+  char const doc[] = { "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+                       "<g transform=\"project(1,2,3,4,5,6,7,8)\">\n"
+                       "  <path d= \"M1,2 R 3,4 5,6 7\"/>\n"
+                       "  <path d= \"M1,2 D 3,4 5,6 7,8, 9,10\"/>\n"
+                       "</g>\n"
+                       "</svg>\n" };
+
+  // SVG:    sx shy shx sy  tx ty w0 w1
+  // Spinel: sx shx tx  shy sy ty w0 w1
+  spn_transform_t const project = { 1.0f, 3.0f, 5.0f,  //
+                                    2.0f, 4.0f, 6.0f,  //
+                                    7.0f, 8.0f };
+
+  ScopedSvg svg = ScopedSvg::parseString(doc);
+  ASSERT_TRUE(svg.get());
+
+  // create paths
+  spn_path_t * paths = spn_svg_paths_decode(svg.get(), path_builder_);
+  ASSERT_TRUE(paths);
+
+  {
+    const auto & mock_paths = mock_context()->paths();
+    ASSERT_EQ(mock_paths.size(), 2u);
+
+    {
+      const auto & path = mock_paths[0];
+
+      static const float kExpectedPath[] = {
+
+        MOCK_SPINEL_PATH_MOVE_TO_LITERAL(1, 2),               //
+        MOCK_SPINEL_PATH_RAT_QUAD_TO_LITERAL(3, 4, 5, 6, 7),  //
+        MOCK_SPINEL_PATH_LINE_TO_LITERAL(1, 2)
+      };
+
+      ASSERT_THAT(path.data, ::testing::ElementsAreArray(kExpectedPath));
+    }
+
+    {
+      const auto & path = mock_paths[1];
+
+      static const float kExpectedPath[] = {
+
+        MOCK_SPINEL_PATH_MOVE_TO_LITERAL(1, 2),                          //
+        MOCK_SPINEL_PATH_RAT_CUBIC_TO_LITERAL(3, 4, 5, 6, 7, 8, 9, 10),  //
+        MOCK_SPINEL_PATH_LINE_TO_LITERAL(1, 2)
+      };
+
+      ASSERT_THAT(path.data, ::testing::ElementsAreArray(kExpectedPath));
+    }
+  }
+
+  // create transform stack
+  transform_stack * ts = transform_stack_create(32);
+  transform_stack_push_identity(ts);
+
+  // decode rasters
+  spn_raster_t * rasters = spn_svg_rasters_decode(svg.get(), raster_builder_, paths, ts);
+  ASSERT_TRUE(rasters);
+
+  // inspect transform of first
+  ASSERT_TRUE(rasters);
+  {
+    const auto & mock_rasters = mock_context()->rasters();
+    ASSERT_EQ(mock_rasters.size(), 2u);
+
+    {
+      const auto & raster = mock_rasters[0][0];
+      EXPECT_SPN_TRANSFORM_EQ(raster.transform, project);
+    }
+    {
+      const auto & raster = mock_rasters[1][0];
+      EXPECT_SPN_TRANSFORM_EQ(raster.transform, project);
+    }
   }
 
   transform_stack_release(ts);
