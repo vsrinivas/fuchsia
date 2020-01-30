@@ -368,7 +368,7 @@ From //kernel/params.gni:39
 Select an available scheduler.
 Valid values are: "legacy", "fair", "unified"
 
-**Current value (from the default):** `"fair"`
+**Current value (from the default):** `"unified"`
 
 From //kernel/params.gni:30
 
