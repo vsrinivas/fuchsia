@@ -157,7 +157,7 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
     usb_desc_iter_advance(iter);
   }
   if (cdc_header_desc == NULL || cdc_eth_desc == NULL) {
-    zxlogf(ERROR, "%s: CDC %s descriptor(s) not found", module_name,
+    zxlogf(ERROR, "%s: CDC %s descriptor(s) not found\n", module_name,
            cdc_header_desc ? "ethernet" : cdc_eth_desc ? "header" : "ethernet and header");
     goto fail;
   }

@@ -57,7 +57,9 @@ group("zircon_test_metadata") {
 }
 
 # When migrating Zircon fuzzers to the Fuchsia build, add them to this list.
-_migrated_fuzzers = []
+_migrated_fuzzers = [
+  "//zircon/system/dev/ethernet/usb-cdc-ecm:usb-cdc-ecm-descriptor-fuzzer",
+]
 
 # Emits a JSON manifest similar to the one used to incorporate Zircon fuzzers into the Fuchsia GN
 # build pre-unification. This is used to validate that the list of Zircon fuzzers is the unchanged
