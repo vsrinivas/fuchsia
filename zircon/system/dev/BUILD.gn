@@ -10,7 +10,6 @@ group("dev") {
     "$zx/third_party/dev/ethernet/e1000",
     "audio",
     "block",
-    "bluetooth",
     "board",
     "bus",
     "clk",

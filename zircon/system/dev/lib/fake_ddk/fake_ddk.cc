@@ -363,7 +363,7 @@ zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, 
   return ZX_OK;
 }
 
-__EXPORT
+__EXPORT __WEAK
 zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
   // This is currently a no-op.
   *fw = ZX_HANDLE_INVALID;
