@@ -12,10 +12,10 @@
 
 int main(int argc, char* argv[]) {
   syslog::InitLogger({"codec_factory"});
-  
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  codec_factory::CodecFactoryApp app(&loop);
+  codec_factory::CodecFactoryApp app(loop.dispatcher());
 
   loop.Run();
 
