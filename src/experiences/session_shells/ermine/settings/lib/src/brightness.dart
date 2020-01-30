@@ -90,8 +90,6 @@ class Brightness extends UiSpec {
 }
 
 class _BrightnessModel {
-  static const _checkBrightnessDuration = Duration(seconds: 1);
-
   final ControlProxy control;
   final VoidCallback onChange;
 
@@ -130,15 +128,13 @@ class _BrightnessModel {
     onChange?.call();
   }
 
-  void _listen() async {
+  void _listen() {
     _brightnessSubscription =
-        Stream.periodic(_checkBrightnessDuration).listen((_) async {
-      final brightness = await control.watchCurrentBrightness();
-      if (brightness != _brightness) {
-        _brightness = brightness;
-        onChange?.call();
-        _listen();
-      }
+        control.watchCurrentBrightness().asStream().listen((brightness) {
+      _brightnessSubscription.cancel();
+      _brightness = brightness;
+      onChange?.call();
+      _listen();
     });
   }
 }
