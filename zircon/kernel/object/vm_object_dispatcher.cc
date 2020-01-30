@@ -147,6 +147,21 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
 
 zx_info_vmo_t VmObjectDispatcher::GetVmoInfo(void) { return VmoToInfoEntry(vmo().get(), true, 0); }
 
+zx_status_t VmObjectDispatcher::SetContentSize(uint64_t content_size) {
+  canary_.Assert();
+
+  Guard<fbl::Mutex> guard{get_lock()};
+  content_size_ = content_size;
+  return ZX_OK;
+}
+
+uint64_t VmObjectDispatcher::GetContentSize() const {
+  canary_.Assert();
+
+  Guard<fbl::Mutex> guard{get_lock()};
+  return content_size_;
+}
+
 zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
                                         user_inout_ptr<char> buffer, size_t buffer_size,
                                         zx_rights_t rights) {

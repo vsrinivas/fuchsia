@@ -556,6 +556,11 @@ typedef struct zx_info_resource {
 // Exception close behavior.
 #define ZX_PROP_EXCEPTION_STATE             16u
 
+// The size of the content in a VMO, in bytes.
+//
+// The content size of a VMO can be larger or smaller than the actual size of
+// the VMO.
+//
 // Argument is a uint64_t.
 #define ZX_PROP_VMO_CONTENT_SIZE            17u
 

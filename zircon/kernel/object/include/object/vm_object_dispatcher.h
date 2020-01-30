@@ -59,6 +59,9 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   zx_info_vmo_t GetVmoInfo();
 
+  zx_status_t SetContentSize(uint64_t);
+  uint64_t GetContentSize() const;
+
   const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
   zx_koid_t pager_koid() const { return pager_koid_; }
 
@@ -68,6 +71,9 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   // ourselves to |vmo_| so we have to ensure we don't reset vmo_
   // except during destruction.
   fbl::RefPtr<VmObject> const vmo_;
+
+  // The size of the content stored in the VMO in bytes.
+  uint64_t content_size_ TA_GUARDED(get_lock()) = 0u;
 
   // The koid of the related pager object, or ZX_KOID_INVALID if
   // there is no related pager.

@@ -549,6 +549,38 @@ TEST(VmoTestCase, ResizeAlign) {
   EXPECT_OK(zx_handle_close(vmo), "handle_close");
 }
 
+TEST(VmoTestCase, ContentSize) {
+  zx_status_t status;
+  zx::vmo vmo;
+
+  size_t len = PAGE_SIZE * 4;
+  status = zx::vmo::create(len, 0, &vmo);
+  EXPECT_OK(status, "zx::vmo::create");
+
+  uint64_t content_size = 42;
+  status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+  EXPECT_OK(status, "get_property");
+  EXPECT_EQ(0u, content_size);
+
+  uint64_t target_size = len / 3;
+  status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &target_size, sizeof(target_size));
+  EXPECT_OK(status, "set_property");
+
+  content_size = 42;
+  status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+  EXPECT_OK(status, "get_property");
+  EXPECT_EQ(target_size, content_size);
+
+  target_size = len + 15643;
+  status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &target_size, sizeof(target_size));
+  EXPECT_OK(status, "set_property");
+
+  content_size = 42;
+  status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+  EXPECT_OK(status, "get_property");
+  EXPECT_EQ(target_size, content_size);
+}
+
 void RightsTestMapHelper(zx_handle_t vmo, size_t len, uint32_t flags, bool expect_success,
                          zx_status_t fail_err_code) {
   uintptr_t ptr;

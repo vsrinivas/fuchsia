@@ -723,6 +723,18 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
       return _value.reinterpret<uint32_t>().copy_to_user(
           resume_on_close ? ZX_EXCEPTION_STATE_HANDLED : ZX_EXCEPTION_STATE_TRY_NEXT);
     }
+    case ZX_PROP_VMO_CONTENT_SIZE: {
+      if (size < sizeof(uint64_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      auto vmo = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);
+      if (!vmo) {
+        return ZX_ERR_WRONG_TYPE;
+      }
+
+      uint64_t value = vmo->GetContentSize();
+      return _value.reinterpret<uint64_t>().copy_to_user(value);
+    }
     default:
       return ZX_ERR_INVALID_ARGS;
   }
@@ -883,6 +895,21 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
         return ZX_ERR_INVALID_ARGS;
       }
       return ZX_OK;
+    }
+    case ZX_PROP_VMO_CONTENT_SIZE: {
+      if (size < sizeof(uint64_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      auto vmo = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);
+      if (!vmo) {
+        return ZX_ERR_WRONG_TYPE;
+      }
+      uint64_t value = 0;
+      zx_status_t status = _value.reinterpret<const uint64_t>().copy_from_user(&value);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return vmo->SetContentSize(value);
     }
   }
 
