@@ -12,6 +12,7 @@ use fidl_fuchsia_update::{
     CheckStartedResult, Initiator, ManagerRequest, ManagerRequestStream, ManagerState,
     MonitorControlHandle, State,
 };
+use fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream};
 use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
@@ -86,6 +87,7 @@ where
 pub enum IncomingServices {
     Manager(ManagerRequestStream),
     ChannelControl(ChannelControlRequestStream),
+    ChannelProvider(ProviderRequestStream),
 }
 
 impl<PE, HR, IN, TM, MR, ST> FidlServer<PE, HR, IN, TM, MR, ST>
@@ -131,7 +133,8 @@ where
     ) {
         fs.dir("svc")
             .add_fidl_service(IncomingServices::Manager)
-            .add_fidl_service(IncomingServices::ChannelControl);
+            .add_fidl_service(IncomingServices::ChannelControl)
+            .add_fidl_service(IncomingServices::ChannelProvider);
         const MAX_CONCURRENT: usize = 1000;
         let server = Rc::new(RefCell::new(self));
         // Handle each client connection concurrently.
@@ -189,6 +192,13 @@ where
                     Self::handle_channel_control_request(server.clone(), request).await?;
                 }
             }
+            IncomingServices::ChannelProvider(mut stream) => {
+                while let Some(request) =
+                    stream.try_next().await.context("error receiving Provider request")?
+                {
+                    Self::handle_channel_provider_request(server.clone(), request).await?;
+                }
+            }
         }
         Ok(())
     }
@@ -198,7 +208,6 @@ where
         server: Rc<RefCell<Self>>,
         request: ManagerRequest,
     ) -> Result<(), Error> {
-        let mut server = server.borrow_mut();
         match request {
             ManagerRequest::CheckNow { options, monitor, responder } => {
                 info!("Received CheckNow request with {:?} and {:?}", options, monitor);
@@ -206,11 +215,12 @@ where
                 // Attach the monitor if passed for current update.
                 if let Some(monitor) = monitor {
                     let (_stream, handle) = monitor.into_stream_and_control_handle()?;
+                    let mut server = server.borrow_mut();
                     handle.send_on_state(clone(&server.state))?;
                     server.current_monitor_handles.push(handle);
                 }
 
-                match server.state.state {
+                match server.borrow().state.state {
                     Some(ManagerState::Idle) => {
                         let options = CheckOptions {
                             source: match options.initiator {
@@ -219,10 +229,7 @@ where
                                 None => return Err(format_err!("Options.Initiator is required")),
                             },
                         };
-                        let state_machine_ref = server.state_machine_ref.clone();
-                        // Drop the borrowed server before starting update check because the state
-                        // callback also need to borrow the server.
-                        drop(server);
+                        let state_machine_ref = server.borrow().state_machine_ref.clone();
                         // TODO: Detect and return CheckStartedResult::Throttled.
                         fasync::spawn_local(async move {
                             let mut state_machine = state_machine_ref.borrow_mut();
@@ -241,11 +248,12 @@ where
             }
             ManagerRequest::GetState { responder } => {
                 info!("Received GetState request");
-                responder.send(clone(&server.state)).context("error sending response")?;
+                responder.send(clone(&server.borrow().state)).context("error sending response")?;
             }
             ManagerRequest::AddMonitor { monitor, control_handle: _ } => {
                 info!("Received AddMonitor request with {:?}", monitor);
                 let (_stream, handle) = monitor.into_stream_and_control_handle()?;
+                let mut server = server.borrow_mut();
                 handle.send_on_state(clone(&server.state))?;
                 server.monitor_handles.push(handle);
             }
@@ -258,23 +266,24 @@ where
         server: Rc<RefCell<Self>>,
         request: ChannelControlRequest,
     ) -> Result<(), Error> {
-        let server = server.borrow();
         match request {
             ChannelControlRequest::SetTarget { channel, responder } => {
                 info!("Received SetTarget request with {}", channel);
                 // TODO: Verify that channel is valid.
+                let app_set = server.borrow().app_set.clone();
                 if channel.is_empty() {
                     // TODO: Remove this when fxb/36608 is fixed.
                     warn!(
                         "Empty channel passed to SetTarget, erasing all channel data in SysConfig."
                     );
                     write_partition(SysconfigPartition::Config, &[])?;
-                    let target_channel = match &server.channel_configs {
+                    let target_channel = match &server.borrow().channel_configs {
                         Some(channel_configs) => channel_configs.default_channel.clone(),
                         None => None,
                     };
-                    server.app_set.set_target_channel(target_channel).await;
+                    app_set.set_target_channel(target_channel).await;
                 } else {
+                    let server = server.borrow();
                     let tuf_repo = if let Some(channel_configs) = &server.channel_configs {
                         if let Some(channel_config) = channel_configs
                             .known_channels
@@ -297,25 +306,32 @@ where
                     let config = OtaUpdateChannelConfig::new(&channel, tuf_repo)?;
                     write_channel_config(&config)?;
 
-                    let mut storage = server.storage_ref.lock().await;
-                    server.app_set.set_target_channel(Some(channel)).await;
-                    server.app_set.persist(&mut *storage).await;
+                    let storage_ref = server.storage_ref.clone();
+                    // Don't borrow server across await.
+                    drop(server);
+                    let mut storage = storage_ref.lock().await;
+                    app_set.set_target_channel(Some(channel)).await;
+                    app_set.persist(&mut *storage).await;
                     if let Err(e) = storage.commit().await {
                         error!("Unable to commit target channel change: {}", e);
                     }
                 }
-                server.apps_node.set(&server.app_set.to_vec().await);
+                let app_vec = app_set.to_vec().await;
+                server.borrow().apps_node.set(&app_vec);
                 responder.send().context("error sending response")?;
             }
             ChannelControlRequest::GetTarget { responder } => {
-                let channel = server.app_set.get_target_channel().await;
+                let app_set = server.borrow().app_set.clone();
+                let channel = app_set.get_target_channel().await;
                 responder.send(&channel).context("error sending response")?;
             }
             ChannelControlRequest::GetCurrent { responder } => {
-                let channel = server.app_set.get_current_channel().await;
+                let app_set = server.borrow().app_set.clone();
+                let channel = app_set.get_current_channel().await;
                 responder.send(&channel).context("error sending response")?;
             }
             ChannelControlRequest::GetTargetList { responder } => {
+                let server = server.borrow();
                 let channel_names: Vec<&str> = match &server.channel_configs {
                     Some(channel_configs) => {
                         channel_configs.known_channels.iter().map(|cfg| cfg.name.as_ref()).collect()
@@ -325,6 +341,20 @@ where
                 responder
                     .send(&mut channel_names.iter().copied())
                     .context("error sending channel list response")?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn handle_channel_provider_request(
+        server: Rc<RefCell<Self>>,
+        request: ProviderRequest,
+    ) -> Result<(), Error> {
+        match request {
+            ProviderRequest::GetCurrent { responder } => {
+                let app_set = server.borrow().app_set.clone();
+                let channel = app_set.get_current_channel().await;
+                responder.send(&channel).context("error sending response")?;
             }
         }
         Ok(())
@@ -477,6 +507,7 @@ mod tests {
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_update::{ManagerMarker, MonitorEvent, MonitorMarker, Options};
     use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
+    use fidl_fuchsia_update_channel::ProviderMarker;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use omaha_client::{common::App, protocol::Cohort};
 
@@ -583,6 +614,20 @@ mod tests {
 
         let proxy =
             spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
+
+        assert_eq!("current-channel", proxy.get_current().await.unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_provider_get_channel() {
+        let apps = vec![App::new(
+            "id",
+            [1, 0],
+            Cohort { name: Some("current-channel".to_string()), ..Cohort::default() },
+        )];
+        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().with_apps(apps).build().await));
+
+        let proxy = spawn_fidl_server::<ProviderMarker>(fidl, IncomingServices::ChannelProvider);
 
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
     }
