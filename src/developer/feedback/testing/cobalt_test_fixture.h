@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_TESTING_COBALT_TEST_FIXTURE_H_
-#define SRC_DEVELOPER_FEEDBACK_TESTING_COBALT_TEST_FIXTURE H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_COBALT_TEST_FIXTURE_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>

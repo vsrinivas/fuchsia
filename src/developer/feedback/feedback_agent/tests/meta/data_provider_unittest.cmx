@@ -1,13 +1,13 @@
 {
-    "program": {
-        "binary": "test/data_provider_unittest"
-    },
     "facets": {
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.sysinfo.SysInfo"
             ]
         }
+    },
+    "program": {
+        "binary": "test/data_provider_unittest"
     },
     "sandbox": {
         "features": [

@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <zircon/errors.h>
