@@ -12,6 +12,7 @@ construction of a specific SDK for use in projects using GN.
 import argparse
 import os
 import shutil
+import stat
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -89,6 +90,32 @@ class GNBuilder(Frontend):
         self.write_file(self.dest('BUILD.gn'), 'top_level_build', self)
 
 
+class TestData(object):
+    """Class representing test data to be added to the run_py mako template"""
+
+    def __init__(self):
+        self.fuchsia_root = FUCHSIA_ROOT
+
+def make_executable(path):
+    st = os.stat(path)
+    os.chmod(path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+def create_test_workspace(output):
+    # Remove any existing output.
+    shutil.rmtree(output, True)
+    # Copy the base tests.
+    shutil.copytree(
+        os.path.join(SCRIPT_DIR, 'test_project'), output)
+    # run.py file
+    builder = Frontend(local_dir=SCRIPT_DIR)
+    run_py_path = os.path.join(output, 'run.py')
+    builder.write_file(
+        path=run_py_path, template_name='run_py', data=TestData())
+    make_executable(run_py_path)
+
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Creates a GN SDK for a given SDK tarball.')
@@ -101,10 +128,12 @@ def main():
         '--output',
         help='Path to the directory where to install the SDK',
         required=True)
+    parser.add_argument(
+        '--tests', help='Path to the directory where to generate tests')
     args = parser.parse_args()
 
     # Remove any existing output.
-    shutil.rmtree(args.output, ignore_errors=True)
+    shutil.rmtree(args.output)
 
     builder = GNBuilder(
         archive=args.archive,
@@ -113,6 +142,14 @@ def main():
         local_dir=SCRIPT_DIR)
     if not builder.run():
         return 1
+
+    if args.tests:
+        # Create the tests workspace
+        if not create_test_workspace(args.tests):
+            return 1
+        # Copy the GN SDK to the test workspace
+        wrkspc_sdk_dir = os.path.join(args.tests, 'third_party', 'fuchsia-sdk')
+        shutil.copytree(args.output, wrkspc_sdk_dir)
 
     return 0
 

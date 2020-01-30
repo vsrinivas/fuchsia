@@ -30,6 +30,8 @@ $ BUILD_ID="$(gsutil cat gs://fuchsia/development/LATEST_LINUX)" &&
 
 ### Testing
 
+#### Unit tests
+
 To test the generator, run the `test_generate.py` script.
 
 ```shell
@@ -49,3 +51,26 @@ $ scripts/sdk/gn/update_golden.py
 
 Commit your changes to the generator, `testdata` contents, and `golden` contents
 together.
+
+#### Integration tests
+
+1. Download the latest core SDK to a temporary directory:
+
+   ```sh
+   $ BUILD_ID="$(gsutil cat gs://fuchsia/development/LATEST_LINUX)"
+   gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz temp/core.tar.gz
+   ```
+1. Generate the test workspace into a temporary directory:
+
+   ```sh
+   $ scripts/sdk/gn/generate.py \
+    --archive temp/core.tar.gz \
+    --output temp/gn_sdk_dir/ \
+    --tests temp/test_workspace
+   ```
+
+1. Run the `run.py` file in the test workspace:
+
+   ```sh
+   $ temp/test_workspace/run.py
+   ```
