@@ -6,10 +6,5 @@ group("test") {
   testonly = true
   deps = [
     "crash-device",
-    "ddk-fidl-test",
-    "ddk-lifecycle",
-    "ddk-power",
-    "ddk-schedule-work",
-    "mock-device",
   ]
 }

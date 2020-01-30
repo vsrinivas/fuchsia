@@ -5,7 +5,6 @@
 group("dev") {
   testonly = true
   deps = [
-    "$zx/system/dev/test/bind-fail-test",
     "$zx/system/ulib/ddktl:ddktl-test",
     "$zx/third_party/dev/ethernet/e1000",
     "audio",
@@ -33,13 +32,6 @@ group("dev") {
     # test/ allows drivers to be used by IsolateDevmgr
     "$zx/system/utest/platform-bus:test",
     "test/crash-device",
-    "test/ddk-lifecycle:ddk-lifecycle-test",
-    "test/ddk-power:ddk-power-test",
-    "test/ddk-power:ddk-power-test-child",
-    "test/ddk-schedule-work:ddk-schedule-work-test",
-    "test/fidl-async-llcpp-driver",
-    "test/fidl-llcpp-driver",
-    "test/mock-device",
     "usb",
   ]
 }

@@ -2,34 +2,54 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-if (current_toolchain != default_toolchain) {
-  zx_test_driver("mock-device") {
-    sources = [
-      "device.cc",
-      "fidl.cc",
-    ]
-    deps = [
-      ":fuchsia.device.mock.llcpp",
-      "$zx/system/banjo/ddk.protocol.test",
-      "$zx/system/ulib/ddk",
-      "$zx/system/ulib/ddktl",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zircon-internal",
-      "$zx/system/ulib/zx",
-    ]
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
 
-    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-    deprecated_inhibit_driver_shlib_allowlist = true
-  }
+import("//build/config/fuchsia/rules.gni")
+import("//build/fidl/fidl.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("mock-device") {
+  test = true
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [
+    "device.cc",
+    "fidl.cc",
+  ]
+  deps = [
+    ":fuchsia.device.mock_llcpp",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.test",
+  ]
 }
 
-fidl_library("fuchsia.device.mock") {
-  visibility = [ ":*" ]
-  testonly = true
+fidl("fuchsia.device.mock") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
   sources = [ "mock-device.test.fidl" ]
+}
+
+migrated_manifest("mock-device-manifest") {
+  deps = [
+    ":mock-device",
+  ]
 }

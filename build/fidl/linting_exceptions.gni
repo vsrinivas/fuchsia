@@ -12,6 +12,7 @@ unlinted_libraries = [
   "fuchsia.device.devhost.test",
   "fuchsia.device.manager",
   "fuchsia.device.manager.test",
+  "fuchsia.device.power.test",
   "fuchsia.hardware.block.partition",
   "fuchsia.hardware.ethernet",
   "fuchsia.hardware.ramdisk",

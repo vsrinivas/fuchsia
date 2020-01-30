@@ -5,7 +5,6 @@
 group("uapp") {
   testonly = true
   deps = [
-    "$zx/system/dev/test/ddk-schedule-work:ddk-schedule-work-perf",
     "blobfs",
     "disk-pave",
     "fvm-check",
