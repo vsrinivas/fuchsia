@@ -57,6 +57,7 @@ class GNBuilder(Frontend):
             archive=archive,
             directory=directory)
         self.target_arches = []
+        self.fidl_targets = [] # List of all FIDL library targets generated
 
     def prepare(self, arch, types):
         """Called before elements are processed.
@@ -85,6 +86,7 @@ class GNBuilder(Frontend):
 
     def write_top_level_files(self):
         self.write_file(self.dest('.gitignore'), 'gitignore', self)
+        self.write_file(self.dest('BUILD.gn'), 'top_level_build', self)
 
 
 def main():
