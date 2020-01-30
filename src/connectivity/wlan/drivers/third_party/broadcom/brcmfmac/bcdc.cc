@@ -305,19 +305,6 @@ static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int if
   brcmf_netbuf_shrink_head(b_netbuf, drvr->hdrlen);
   memcpy(b_netbuf->data, netbuf->data(), netbuf->size());
 
-  /* Make sure there's enough writeable headroom */
-  if (brcmf_netbuf_head_space(b_netbuf) < drvr->hdrlen) {
-    const size_t head_delta = std::max<size_t>(drvr->hdrlen - brcmf_netbuf_head_space(b_netbuf), 0);
-    BRCMF_DBG(INFO, "%s: insufficient headroom (%zu)\n", brcmf_ifname(ifp), head_delta);
-    drvr->bus_if->stats.pktcowed.fetch_add(1);
-    ret = brcmf_netbuf_grow_realloc(b_netbuf, ALIGN(head_delta, NET_NETBUF_PAD), 0);
-    if (ret != ZX_OK) {
-      BRCMF_ERR("%s: failed to expand headroom\n", brcmf_ifname(ifp));
-      drvr->bus_if->stats.pktcow_failed.fetch_add(1);
-      goto done;
-    }
-  }
-
   if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
     ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);
   } else {

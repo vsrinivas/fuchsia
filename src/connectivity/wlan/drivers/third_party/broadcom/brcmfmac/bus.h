@@ -17,7 +17,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
 
-#include <atomic>
 #include <memory>
 
 #include <ddk/device.h>
@@ -89,17 +88,6 @@ struct brcmf_bus_ops {
   zx_status_t (*get_wifi_metadata)(brcmf_bus* bus, void* config, size_t exp_size, size_t* actual);
 };
 
-/**
- * struct brcmf_bus_stats - bus statistic counters.
- *
- * @pktcowed: packets cowed for extra headroom/unorphan.
- * @pktcow_failed: packets dropped due to failed cow-ing.
- */
-struct brcmf_bus_stats {
-  std::atomic<int> pktcowed;
-  std::atomic<int> pktcow_failed;
-};
-
 namespace wlan {
 namespace brcmfmac {
 
@@ -130,7 +118,6 @@ struct brcmf_bus {
     struct brcmf_simdev* sim;
   } bus_priv;
   enum brcmf_bus_state state;
-  struct brcmf_bus_stats stats;
   uint maxctl;
   uint32_t chip;
   uint32_t chiprev;

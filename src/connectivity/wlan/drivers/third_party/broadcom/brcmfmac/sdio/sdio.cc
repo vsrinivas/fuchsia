@@ -1879,7 +1879,6 @@ static void brcmf_sdio_wait_event_wakeup(struct brcmf_sdio* bus) {
 
 static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf_netbuf* pkt,
                                             uint16_t* head_pad_out) {
-  struct brcmf_bus_stats* stats;
   uint16_t head_pad;
   uint8_t* dat_buf;
 
@@ -1889,10 +1888,7 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf
   head_pad = ((unsigned long)dat_buf % bus->head_align);
   if (head_pad) {
     if (brcmf_netbuf_head_space(pkt) < head_pad) {
-      stats = &bus->sdiodev->bus_if->stats;
-      stats->pktcowed.fetch_add(1);
       if (brcmf_netbuf_grow_realloc(pkt, head_pad, 0)) {
-        stats->pktcow_failed.fetch_add(1);
         return ZX_ERR_NO_MEMORY;
       }
       head_pad = 0;
