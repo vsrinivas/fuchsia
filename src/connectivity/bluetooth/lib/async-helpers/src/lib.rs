@@ -4,6 +4,7 @@
 
 #![recursion_limit = "512"]
 
+pub mod event;
 pub mod hanging_get;
 pub mod responding_channel;
 pub mod stream_epitaph;
