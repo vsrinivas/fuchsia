@@ -8,7 +8,7 @@
 
 #include <memory>
 
-#include "fuchsia/settings/cpp/fidl.h"
+#include "src/lib/fxl/logging.h"
 
 namespace feedback {
 
@@ -19,31 +19,29 @@ void FakePrivacySettings::CloseConnection() {
 }
 
 void FakePrivacySettings::Watch(WatchCallback callback) {
-  if (!first_call_) {
-    watchers_.push_back(std::move(callback));
-    return;
+  FXL_CHECK(!watcher_);
+  watcher_ = std::make_unique<WatchCallback>(std::move(callback));
+  if (dirty_bit_) {
+    NotifyWatcher();
   }
-
-  fuchsia::settings::PrivacySettings settings;
-  settings_.Clone(&settings);
-  callback(fit::ok(std::move(settings)));
-  first_call_ = false;
 }
 
 void FakePrivacySettings::Set(fuchsia::settings::PrivacySettings settings, SetCallback callback) {
   settings_ = std::move(settings);
   callback(fit::ok());
+  dirty_bit_ = true;
 
-  NotifyWatchers();
+  if (watcher_) {
+    NotifyWatcher();
+  }
 }
 
-void FakePrivacySettings::NotifyWatchers() {
-  for (const auto& watcher : watchers_) {
-    fuchsia::settings::PrivacySettings settings;
-    settings_.Clone(&settings);
-    watcher(fit::ok(std::move(settings)));
-  }
-  watchers_.clear();
+void FakePrivacySettings::NotifyWatcher() {
+  fuchsia::settings::PrivacySettings settings;
+  settings_.Clone(&settings);
+  (*watcher_)(fit::ok(std::move(settings)));
+  watcher_.reset();
+  dirty_bit_ = false;
 }
 
 }  // namespace feedback

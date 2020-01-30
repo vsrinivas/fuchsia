@@ -18,8 +18,8 @@ namespace feedback {
 // Fake fuchsia.settings.Privacy service.
 //
 // The hanging get pattern behind Watch() requires us to maintain a separate handler per connection
-// to be able to track the "first call" on each connection. Here, we only make a single connection
-// in the unit tests anyway so the fake service can have at most one connection.
+// to be able to track each connection. Here, we only make a single connection in the unit tests
+// anyway so it's fine if the fake service can have at most one connection.
 class FakePrivacySettings : public fuchsia::settings::Privacy {
  public:
   // Returns a request handler for binding to this fake service.
@@ -38,15 +38,15 @@ class FakePrivacySettings : public fuchsia::settings::Privacy {
   void CloseConnection();
 
  private:
-  void NotifyWatchers();
+  void NotifyWatcher();
 
   // We use a Binding (single connection) and not a BindingSet (multiple connections in parallel) as
   // we don't want to have to maintain a separate handler per connection to implement the hanging
   // get pattern.
   std::unique_ptr<fidl::Binding<fuchsia::settings::Privacy>> binding_;
   fuchsia::settings::PrivacySettings settings_;
-  bool first_call_ = true;
-  std::vector<WatchCallback> watchers_;
+  bool dirty_bit_ = true;
+  std::unique_ptr<WatchCallback> watcher_;
 };
 
 class FakePrivacySettingsClosesConnection : public FakePrivacySettings {
