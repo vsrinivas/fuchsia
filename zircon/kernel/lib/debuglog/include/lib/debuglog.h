@@ -75,6 +75,12 @@ void dlog_bluescreen_init(void);
 // (for example, creating a qrcode)
 void dlog_bluescreen_halt(void);
 
+// Force the dlog into panic mode.  Can be used in special circumstances to
+// force log messages to the serial console in the event that interrupts are off
+// and will never be turned back on (for example, when about to force a watchdog
+// to fire).
+void dlog_force_panic(void);
+
 // Shutdown the debuglog subsystem.
 //
 // Note: This may block for an extended period of time.

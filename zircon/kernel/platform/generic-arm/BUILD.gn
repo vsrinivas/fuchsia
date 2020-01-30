@@ -27,6 +27,7 @@ source_set("generic-arm") {
     "$zx/kernel/dev/uart/mt8167",
     "$zx/kernel/dev/uart/nxp-imx",
     "$zx/kernel/dev/uart/pl011",
+    "$zx/kernel/dev/watchdog/generic32",
     "$zx/kernel/lib/cbuf",
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",

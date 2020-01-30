@@ -35,6 +35,7 @@ source_set("kernel") {
   deps = [
     ":tests",
     "$zx/kernel/dev/interrupt",
+    "$zx/kernel/dev/pdev/watchdog",
     "$zx/kernel/lib/abi_type_validator",
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",

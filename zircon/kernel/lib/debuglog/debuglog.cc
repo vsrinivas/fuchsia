@@ -363,7 +363,7 @@ static int debuglog_dumper(void* arg) {
 
     // If shutdown has been requested, this will be our last loop iteration.
     //
-    //We do not break early because we guarantee that any messages logged prior to the start of the
+    // We do not break early because we guarantee that any messages logged prior to the start of the
     // shutdown sequence will be emitted.
     done = dumper_shutdown_requested.load();
 
@@ -405,6 +405,8 @@ void dlog_bluescreen_init(void) {
   print_backtrace_version_info();
   crashlog.base_address = (uintptr_t)__code_start;
 }
+
+void dlog_force_panic(void) { dlog_bypass_ = true; }
 
 void dlog_shutdown(void) {
   DEBUG_ASSERT(!arch_ints_disabled());

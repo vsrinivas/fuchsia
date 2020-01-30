@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("watchdog") {
+  kernel = true
+  sources = [
+    "console.cc",
+    "watchdog.cc",
+  ]
+  deps = [
+    "$zx/kernel/dev/pdev",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/debuglog",
+  ]
+}
