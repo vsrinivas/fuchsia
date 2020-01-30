@@ -102,7 +102,7 @@ void Device::Unbind() {
 
   // Stop accepting new FIDL requests. Once the dispatcher is shut down,
   // remove the device.
-  dispatcher_.InitiateShutdown([this] { device_remove_deprecated(zxdev_); });
+  dispatcher_.InitiateShutdown([this] { device_async_remove(zxdev_); });
 }
 
 static void ConvertPhySupportedPhyInfo(::std::vector<wlan_device::SupportedPhy>* SupportedPhys,

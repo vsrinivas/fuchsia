@@ -175,7 +175,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
         std::lock_guard<std::mutex> guard(wlanmac_lock_);
         wlanmac_devices_.ReleaseAll();
       }
-      device_remove_deprecated(device_);
+      device_async_remove(device_);
     });
   }
 

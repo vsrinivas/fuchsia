@@ -290,7 +290,7 @@ void Device::ShutdownMainLoop() {
 void Device::EthUnbind() {
   debugfn();
   ShutdownMainLoop();
-  device_remove_deprecated(ethdev_);
+  device_async_remove(ethdev_);
 }
 
 void Device::EthRelease() {
