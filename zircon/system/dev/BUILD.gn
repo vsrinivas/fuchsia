@@ -41,7 +41,6 @@ group("dev") {
     "test/fidl-async-llcpp-driver",
     "test/fidl-llcpp-driver",
     "test/mock-device",
-    "thermal",
     "usb",
   ]
 }

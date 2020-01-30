@@ -2,55 +2,84 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("aml-thermal-s912") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("aml-thermal-s912") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-thermal.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.scpi",
-    "$zx/system/banjo/ddk.protocol.thermal",
-    "$zx/system/dev/lib/amlogic",
-    "$zx/system/dev/lib/device-protocol-pdev",
-    "$zx/system/fidl/fuchsia-hardware-thermal:c",
-    "$zx/system/ulib/async-loop:async-loop-cpp.static",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//src/devices:driver",
+    "//zircon/public/lib/amlogic",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.scpi",
+    "//zircon/system/banjo/ddk.protocol.thermal",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
-  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-zx_test("aml-thermal-s912-test") {
+test("aml-thermal-s912-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "aml-thermal-s912-test"
   sources = [
     "aml-thermal-test.cc",
     "aml-thermal.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.scpi",
-    "$zx/system/banjo/ddk.protocol.thermal",
-    "$zx/system/dev/lib/amlogic",
-    "$zx/system/dev/lib/device-protocol-pdev",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/fidl/fuchsia-hardware-thermal:c",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/mock-function",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/amlogic",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.scpi",
+    "//zircon/system/banjo/ddk.protocol.scpi:ddk.protocol.scpi_mock",
+    "//zircon/system/banjo/ddk.protocol.thermal",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
+}
+
+migrated_manifest("aml-thermal-s912-manifest") {
+  deps = [ ":aml-thermal-s912" ]
+}
+
+migrated_manifest("aml-thermal-s912-test-manifest") {
+  deps = [ ":aml-thermal-s912-test" ]
 }
