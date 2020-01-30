@@ -1,0 +1,114 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "default_url": "fuchsia-pkg://fuchsia.com/overnet_examples_tests#meta/overnet_socket_passing.cmx",
+            "environment": {
+                "children": [
+                    {
+                        "apps": [
+                            {
+                                "arguments": [
+                                    "server"
+                                ]
+                            }
+                        ],
+                        "inherit_services": false,
+                        "name": "server",
+                        "services": {
+                            "fuchsia.device.NameProvider": {
+                                "arguments": [
+                                    "--nodename",
+                                    "overnet-test-device-server"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                            },
+                            "fuchsia.devicesettings.DeviceSettingsManager": {
+                                "arguments": [
+                                    "-s",
+                                    "DeviceName=overnet-test-device-server"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx"
+                            },
+                            "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                            "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+                            "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                            "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                            "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                        },
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "server-ep",
+                                    "-i",
+                                    "192.168.0.1/24"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ]
+                    }
+                ],
+                "name": "client",
+                "services": {
+                    "fuchsia.device.NameProvider": {
+                        "arguments": [
+                            "--nodename",
+                            "overnet-test-device-client"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx"
+                    },
+                    "fuchsia.devicesettings.DeviceSettingsManager": {
+                        "arguments": [
+                            "-s",
+                            "DeviceName=overnet-test-device-client"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx"
+                    },
+                    "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+                    "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                    "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-e",
+                            "client-ep",
+                            "-i",
+                            "192.168.0.2/24"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    }
+                ],
+                "test": [
+                    {
+                        "arguments": [
+                            "client"
+                        ]
+                    }
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "server-ep"
+                        },
+                        {
+                            "name": "client-ep"
+                        }
+                    ],
+                    "name": "net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

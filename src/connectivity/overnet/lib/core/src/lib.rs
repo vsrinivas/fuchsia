@@ -7,7 +7,6 @@
 #![deny(missing_docs)]
 
 mod async_quic;
-mod channel_proxy;
 mod coding;
 mod diagnostics_service;
 mod framed_stream;
@@ -17,6 +16,9 @@ mod link;
 mod link_status_updater;
 mod peer;
 mod ping_tracker;
+mod proxy_channel;
+mod proxy_socket_datagram;
+mod proxy_socket_stream;
 mod route_planner;
 mod router;
 mod routing_label;

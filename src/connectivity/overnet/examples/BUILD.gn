@@ -11,12 +11,14 @@ group("examples") {
     ":overnet_examples_tests",
     "echo",
     "interface_passing",
+    "socket_passing",
   ]
 }
 
 group("netemul_empty_binaries") {
   write_file("$root_out_dir/overnet_echo_test", "")
   write_file("$root_out_dir/overnet_interface_passing_test", "")
+  write_file("$root_out_dir/overnet_socket_passing_test", "")
 }
 
 test_package("overnet_examples_tests") {
@@ -24,6 +26,7 @@ test_package("overnet_examples_tests") {
     ":netemul_empty_binaries",
     "echo:bin",
     "interface_passing:bin",
+    "socket_passing:bin",
   ]
 
   meta = [
@@ -35,6 +38,10 @@ test_package("overnet_examples_tests") {
       path = rebase_path("meta/overnet_interface_passing.cmx")
       dest = "overnet_interface_passing.cmx"
     },
+    {
+      path = rebase_path("meta/overnet_socket_passing.cmx")
+      dest = "overnet_socket_passing.cmx"
+    },
   ]
 
   binaries = [
@@ -44,6 +51,9 @@ test_package("overnet_examples_tests") {
     {
       name = "overnet_interface_passing"
     },
+    {
+      name = "overnet_socket_passing"
+    },
   ]
 
   tests = [
@@ -52,6 +62,9 @@ test_package("overnet_examples_tests") {
     },
     {
       name = "overnet_interface_passing_test"
+    },
+    {
+      name = "overnet_socket_passing_test"
     },
   ]
 }

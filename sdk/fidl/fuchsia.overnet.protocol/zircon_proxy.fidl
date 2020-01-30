@@ -30,11 +30,16 @@ struct ChannelHandle {
     StreamId stream_id;
 };
 
+enum SocketType {
+    DATAGRAM = 0;
+    STREAM = 1;
+};
+
 /// A proxied socket.
 struct SocketHandle {
     /// The Overnet proxy stream that was created to carry this socket.
     /// The protocol over said stream will be a `ZirconSocket`.
     StreamId stream_id;
     /// Socket options, per `zx_socket_create`.
-    uint32 options;
+    SocketType socket_type;
 };

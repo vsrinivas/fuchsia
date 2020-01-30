@@ -14,6 +14,9 @@ copy("copy_test_commands") {
             "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
             "root_out_dir") + "/overnet_interface_passing",
     get_label_info(
+            "//src/connectivity/overnet/examples/socket_passing:bin($host_toolchain)",
+            "root_out_dir") + "/overnet_socket_passing",
+    get_label_info(
             "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
             "root_out_dir") + "/ascendd",
     get_label_info("//src/connectivity/overnet/tools/onet:bin($host_toolchain)",
@@ -30,12 +33,14 @@ copy("copy_test_commands") {
       "$root_out_dir/overnet_host_examples_test_commands/onet",
       "$root_out_dir/overnet_host_examples_test_commands/overnet_echo",
       "$root_out_dir/overnet_host_examples_test_commands/overnet_interface_passing",
+      "$root_out_dir/overnet_host_examples_test_commands/overnet_socket_passing",
     ]
   }
 
   deps = [
     "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
     "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
+    "//src/connectivity/overnet/examples/socket_passing:bin($host_toolchain)",
     "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
     "//src/connectivity/overnet/tools/onet:bin($host_toolchain)",
   ]

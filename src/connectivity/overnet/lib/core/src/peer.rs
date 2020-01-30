@@ -4,12 +4,12 @@
 
 use crate::{
     async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter},
-    channel_proxy::spawn_channel_proxy,
     coding::{decode_fidl, encode_fidl},
     framed_stream::{FrameType, FramedStreamReader, FramedStreamWriter, MessageStats},
     future_help::{log_errors, Observer},
     labels::{Endpoint, NodeId},
     link::{Link, LinkStatus},
+    proxy_channel::spawn_channel_proxy,
     route_planner::{LinkDescription, RoutingUpdate},
     router::Router,
     runtime::{spawn, wait_until},

@@ -269,6 +269,23 @@ impl Ascendd {
         Ok(())
     }
 
+    fn socket_passing_cmd(&self, kind: &str) -> Command {
+        let mut c = self.labelled_cmd("overnet_socket_passing", kind);
+        c.arg(kind);
+        c
+    }
+
+    fn socket_passing_client(&self) -> Command {
+        let mut c = self.socket_passing_cmd("client");
+        c.arg("AUTOMATED_TEST");
+        c
+    }
+
+    fn add_socket_passing_server(&mut self) -> Result<(), Error> {
+        self.ctx.new_daemon(self.socket_passing_cmd("server"))?;
+        Ok(())
+    }
+
     fn add_onet_host_pipe(
         &mut self,
         label: &str,
@@ -361,6 +378,22 @@ mod tests {
             Ok(())
         })
     }
+
+    #[test]
+    fn socket_passing() -> Result<(), Error> {
+        socket_passing_test(Default::default())
+    }
+
+    pub fn socket_passing_test(args: TestArgs) -> Result<(), Error> {
+        let ctx = TestContext::new(args);
+        let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
+        ctx.clone().show_reports_if_failed(move || {
+            ascendd.add_socket_passing_server().context("starting server")?;
+            ctx.run_client(ascendd.socket_passing_client()).context("running client")?;
+            ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
+            Ok(())
+        })
+    }
 }
 
 pub struct TestArgs {
@@ -412,6 +445,7 @@ fn main() -> Result<(), Error> {
             ("echo".to_string(), box_test(tests::echo_test)),
             ("multiple_ascendd_echo".to_string(), box_test(tests::multiple_ascendd_echo_test)),
             ("interface_passing".to_string(), box_test(tests::interface_passing_test)),
+            ("socket_passing".to_string(), box_test(tests::socket_passing_test)),
         ]
         .into_iter()
         .collect();
