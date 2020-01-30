@@ -53,8 +53,8 @@ class GpioCfgReg : public hwreg::RegisterBase<GpioCfgReg, uint32_t> {
 
 class GpioBitFieldView : public ddk::MmioView {
  public:
-  explicit GpioBitFieldView(mmio_buffer_t& mmio, zx_off_t offset, size_t size)
-      : ddk::MmioView(mmio, offset, size) {}
+  explicit GpioBitFieldView(ddk::MmioBuffer& mmio, zx_off_t offset, size_t size)
+      : ddk::MmioView(mmio.View(offset, size)) {}
 
  protected:
   // Registers are separated by 0x1000 bytes.
@@ -63,7 +63,7 @@ class GpioBitFieldView : public ddk::MmioView {
 
 class GpioInOutReg : public GpioBitFieldView {
  public:
-  explicit GpioInOutReg(mmio_buffer_t& mmio) : GpioBitFieldView(mmio, 4, 0x1000 * kGpioMax) {}
+  explicit GpioInOutReg(ddk::MmioBuffer& mmio) : GpioBitFieldView(mmio, 4, 0x1000 * kGpioMax) {}
   bool GetVal(size_t idx) const {
     return static_cast<bool>(ddk::MmioView::GetBit<uint32_t>(0, Idx2Offset(idx)));
   }
@@ -76,7 +76,7 @@ enum class Mode { EdgeLow, EdgeHigh, EdgeDual, LevelLow, LevelHigh };
 
 class GpioIntCfgReg : public GpioBitFieldView {
  public:
-  explicit GpioIntCfgReg(mmio_buffer_t& mmio) : GpioBitFieldView(mmio, 8, 0x1000 * kGpioMax) {}
+  explicit GpioIntCfgReg(ddk::MmioBuffer& mmio) : GpioBitFieldView(mmio, 8, 0x1000 * kGpioMax) {}
 
   void EnableCombined(size_t idx, bool val) const {
     uint32_t target_proc = 0x7;  // NONE. Don't route to any processor subsystem.
@@ -133,7 +133,7 @@ class TlmmDirConnIntReg : public GpioBitFieldView {
   uint32_t Idx2Offset(size_t idx) const { return static_cast<uint32_t>(idx * 4); }
 
  public:
-  explicit TlmmDirConnIntReg(mmio_buffer_t& mmio)
+  explicit TlmmDirConnIntReg(ddk::MmioBuffer& mmio)
       : GpioBitFieldView(mmio, 0x102000, 4 * kGpioMax) {}
   void Enable(size_t gpio_n, size_t dir_int_n) const {
     ModifyBits<uint32_t>(static_cast<uint32_t>(gpio_n), 0, 8, Idx2Offset(dir_int_n));
@@ -142,7 +142,7 @@ class TlmmDirConnIntReg : public GpioBitFieldView {
 
 class TlmmGpioIntrStatusReg : public GpioBitFieldView {
  public:
-  explicit TlmmGpioIntrStatusReg(mmio_buffer_t& mmio)
+  explicit TlmmGpioIntrStatusReg(ddk::MmioBuffer& mmio)
       : GpioBitFieldView(mmio, 0xC, 0x1000 * kGpioMax) {}
   bool Status(size_t gpio_n) const {
     return static_cast<bool>(GetBit<uint32_t>(0, Idx2Offset(gpio_n)));

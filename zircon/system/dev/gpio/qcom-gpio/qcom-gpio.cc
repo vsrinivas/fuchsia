@@ -277,7 +277,8 @@ zx_status_t QcomGpioDevice::Create(zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  auto dev = fbl::make_unique_checked<gpio::QcomGpioDevice>(&ac, parent, gpio_mmio);
+  auto dev =
+      fbl::make_unique_checked<gpio::QcomGpioDevice>(&ac, parent, ddk::MmioBuffer(gpio_mmio));
   if (!ac.check()) {
     zxlogf(ERROR, "qcom_gpio_bind: ZX_ERR_NO_MEMORY\n");
     return ZX_ERR_NO_MEMORY;

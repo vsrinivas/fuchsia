@@ -35,13 +35,13 @@ class QcomGpioDevice : public DeviceType,
  public:
   static zx_status_t Create(zx_device_t* parent);
 
-  explicit QcomGpioDevice(zx_device_t* parent, mmio_buffer_t gpio_mmio)
+  explicit QcomGpioDevice(zx_device_t* parent, ddk::MmioBuffer gpio_mmio)
       : DeviceType(parent),
-        gpio_mmio_(gpio_mmio),
-        in_out_(gpio_mmio),
-        int_cfg_(gpio_mmio),
-        dir_conn_int_(gpio_mmio),
-        status_int_(gpio_mmio),
+        gpio_mmio_(std::move(gpio_mmio)),
+        in_out_(gpio_mmio_),
+        int_cfg_(gpio_mmio_),
+        dir_conn_int_(gpio_mmio_),
+        status_int_(gpio_mmio_),
         pdev_(parent) {}
 
   zx_status_t Bind();
