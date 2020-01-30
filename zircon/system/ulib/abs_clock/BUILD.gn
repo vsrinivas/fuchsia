@@ -9,8 +9,9 @@ zx_library("abs_clock") {
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/zx",
   ]
-  public_deps = [ "$zx/system/ulib/zx" ]
+  public_deps = [ "$zx/system/ulib/zx:headers" ]
 }
 
 group("test") {

@@ -10,7 +10,6 @@ group("uapp") {
     "disk-pave",
     "fvm-check",
     "hid",
-    "ihda",
     "kcounter",
     "kstress",
     "lz4",
