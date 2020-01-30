@@ -600,6 +600,12 @@ config("no_undefined_symbols") {
 config("visibility_hidden") {
   cflags = [ "-fvisibility=hidden" ]
   cflags_cc = [ "-fvisibility-inlines-hidden" ]
+
+  # Disable libc++ visibility annotations to make sure that the compiler option
+  # has effect on symbols defined in libc++ headers. Note that we don't want to
+  # disable these annotations altogether to ensure that our toolchain is usable
+  # outside of our build since not every user uses hidden visibility by default.
+  defines = [ "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS" ]
 }
 
 config("machine") {
