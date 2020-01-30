@@ -98,7 +98,6 @@ group("network") {
   public_deps = [
     "//garnet/bin/http:http_service_tests",
     "//garnet/bin/http/tests/manual/mwget",
-    "//garnet/packages/prod:network",
   ]
 }
 

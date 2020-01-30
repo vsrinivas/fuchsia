@@ -19,15 +19,6 @@ group("bluetooth_hid") {
   public_deps = [ "//src/connectivity/bluetooth/profiles/bt-hog" ]
 }
 
-group("netcfg") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/config:services",
-    "//src/connectivity/network/netcfg",
-    "//src/connectivity/network/netcfg:config",
-  ]
-}
-
 group("tracing") {
   testonly = true
   public_deps = [
@@ -62,15 +53,6 @@ group("scenic") {
     "//src/ui/bin/root_presenter",
     "//src/ui/policy:configs",
     "//src/ui/scenic",
-  ]
-}
-
-group("network") {
-  testonly = true
-  public_deps = [
-    ":netcfg",
-    "//garnet/bin/http",
-    "//garnet/packages/prod:netstack",
   ]
 }
 
@@ -126,7 +108,6 @@ group("all") {
   testonly = true
   public_deps = [
     ":drivers",
-    ":netcfg",
     "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:battery_manager",
@@ -156,8 +137,6 @@ group("all") {
     "//garnet/packages/prod:magma-img-rgx-mt8167",
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:memory_monitor",
-    "//garnet/packages/prod:netstack",
-    "//garnet/packages/prod:network",
     "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:odu",
     "//garnet/packages/prod:openthread",
@@ -238,14 +217,6 @@ group("memory_monitor") {
   public_deps = [
     "//garnet/packages/config:services",
     "//src/developer/memory/monitor",
-  ]
-}
-
-group("netstack") {
-  testonly = true
-  public_deps = [
-    ":netcfg",
-    "//src/connectivity/network/netstack",
   ]
 }
 

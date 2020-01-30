@@ -88,7 +88,6 @@ group("http") {
     "//garnet/examples/http/httpget_cpp",
     "//garnet/examples/http/httpget_rust",
     "//garnet/examples/http/postfile",
-    "//garnet/packages/prod:network",
   ]
 }
 
@@ -172,7 +171,6 @@ group("tcp") {
   testonly = true
   public_deps = [
     "//garnet/examples/tcp/tcp_file_sender",
-    "//garnet/packages/prod:network",
   ]
 }
 
