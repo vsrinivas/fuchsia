@@ -25,6 +25,7 @@ class ElfSymbol : public Symbol {
   const std::string& linkage_name() const { return record_.linkage_name; }
 
   uint64_t relative_address() const { return record_.relative_address; }
+  uint64_t size() const { return record_.size; }
 
   // Symbol public overrides:
   const ElfSymbol* AsElfSymbol() const override { return this; }

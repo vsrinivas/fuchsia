@@ -14,7 +14,7 @@ TEST(ElfSymbol, Names) {
   const char kMangled[] =
       "_ZZZN11debug_agent16SocketConnection6AcceptEPN9debug_ipc11MessageLoopEiEN3$_0clEvENKUlvE0_"
       "clEv";
-  ElfSymbolRecord record(ElfSymbolType::kNormal, kAddress, kMangled);
+  ElfSymbolRecord record(ElfSymbolType::kNormal, kAddress, 0, kMangled);
   auto elf_symbol = fxl::MakeRefCounted<ElfSymbol>(fxl::WeakPtr<ModuleSymbols>(), record);
 
   EXPECT_EQ(kAddress, elf_symbol->relative_address());

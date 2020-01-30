@@ -665,7 +665,7 @@ void ModuleSymbolsImpl::FillElfSymbols(const std::map<std::string, llvm::ELF::El
 
     auto inserted = mangled_elf_symbols_.emplace(
         std::piecewise_construct, std::forward_as_tuple(name),
-        std::forward_as_tuple(ElfSymbolType::kNormal, sym.st_value, name));
+        std::forward_as_tuple(ElfSymbolType::kNormal, sym.st_value, sym.st_size, name));
 
     // Append all addresses for now, this will be sorted at the bottom.
     elf_addresses_.push_back(&inserted->second);
@@ -673,9 +673,10 @@ void ModuleSymbolsImpl::FillElfSymbols(const std::map<std::string, llvm::ELF::El
 
   // Insert PLT symbols.
   for (const auto& [name, addr] : plt_syms) {
+    // TODO(sadmac): Set the symbol size to the size of a PLT entry on this architecture.
     auto inserted =
         mangled_elf_symbols_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
-                                     std::forward_as_tuple(ElfSymbolType::kPlt, addr, name));
+                                     std::forward_as_tuple(ElfSymbolType::kPlt, addr, 0, name));
 
     // Append all addresses for now, this will be sorted at the bottom.
     elf_addresses_.push_back(&inserted->second);

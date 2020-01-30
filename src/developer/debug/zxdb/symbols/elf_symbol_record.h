@@ -28,13 +28,16 @@ struct ElfSymbolRecord {
   ElfSymbolRecord() = default;
 
   // Automatically sets both the linkage name and unmangled name.
-  explicit ElfSymbolRecord(ElfSymbolType type, uint64_t relative_address,
+  explicit ElfSymbolRecord(ElfSymbolType type, uint64_t relative_address, uint64_t size,
                            const std::string& linkage_name);
 
   ElfSymbolType type = ElfSymbolType::kNormal;
 
   // Address relative to the beginning of the associated module of this symbol.
   uint64_t relative_address = 0;
+
+  // Size of this symbol.
+  uint64_t size = 0;
 
   // The name from the ELF file. For C++ programs this will be the mangled name.
   std::string linkage_name;

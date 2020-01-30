@@ -79,9 +79,9 @@ VirtualBaseTestSetup::VirtualBaseTestSetup(MockEvalContext* eval_context) {
   eval_context->data_provider()->AddMemory(kDerivedAddress, derived_data);
 
   base_vtable = fxl::MakeRefCounted<ElfSymbol>(
-      nullptr, ElfSymbolRecord(ElfSymbolType::kNormal, kVtableAddress, "_ZTV9BaseClass"));
+      nullptr, ElfSymbolRecord(ElfSymbolType::kNormal, kVtableAddress, 0, "_ZTV9BaseClass"));
   derived_vtable = fxl::MakeRefCounted<ElfSymbol>(
-      nullptr, ElfSymbolRecord(ElfSymbolType::kNormal, kVtableAddress, "_ZTV12DerivedClass"));
+      nullptr, ElfSymbolRecord(ElfSymbolType::kNormal, kVtableAddress, 0, "_ZTV12DerivedClass"));
 
   // Hook up the vtable pointer.
   eval_context->AddLocation(

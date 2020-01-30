@@ -94,7 +94,7 @@ TEST(FormatLocation, FormatLocation_ELF) {
   constexpr uint64_t kFunctionAddress = 0x1000;
   fxl::RefPtr<ElfSymbol> elf_symbol(fxl::MakeRefCounted<ElfSymbol>(
       fxl::WeakPtr<ModuleSymbols>(),
-      ElfSymbolRecord(ElfSymbolType::kPlt, kFunctionAddress, "memset")));
+      ElfSymbolRecord(ElfSymbolType::kPlt, kFunctionAddress, 0, "memset")));
   EXPECT_EQ(
       "memset",
       FormatLocation(Location(kFunctionAddress, FileLine(), 0, symbol_context, elf_symbol), options)
