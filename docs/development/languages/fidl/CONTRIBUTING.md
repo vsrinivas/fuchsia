@@ -564,7 +564,7 @@ fidl fmt --library my_library.fidl -i
 [fidlc-tests]: /zircon/system/utest/fidl/
 [jsonir]: /docs/development/languages/fidl/reference/json-ir.md
 [rtl-c]: /zircon/system/ulib/fidl/
-[rtl-cpp]: /garnet/public/lib/fidl/llcpp/
+[rtl-cpp]: /src/lib/fidl/llcpp/tests/
 [rtl-dart]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/
 [rtl-go]: https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/
 [rtl-rust]: /src/lib/fidl/rust/fidl/

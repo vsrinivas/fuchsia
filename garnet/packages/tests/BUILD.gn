@@ -356,17 +356,17 @@ group("all") {
 
 group("fidl_llcpp_conformance_test") {
   testonly = true
-  public_deps = [ "//garnet/public/lib/fidl/llcpp:fidl_llcpp_conformance_test" ]
+  public_deps = [ "//src/lib/fidl/llcpp/tests:fidl_llcpp_conformance_test" ]
 }
 
 group("fidl_llcpp_types_test") {
   testonly = true
-  public_deps = [ "//garnet/public/lib/fidl/llcpp:fidl_llcpp_types_test" ]
+  public_deps = [ "//src/lib/fidl/llcpp/tests:fidl_llcpp_types_test" ]
 }
 
 group("fidl_llcpp_builder_test") {
   testonly = true
-  public_deps = [ "//garnet/public/lib/fidl/llcpp:fidl_llcpp_builder_test" ]
+  public_deps = [ "//src/lib/fidl/llcpp/tests:fidl_llcpp_builder_test" ]
 }
 
 group("libc") {

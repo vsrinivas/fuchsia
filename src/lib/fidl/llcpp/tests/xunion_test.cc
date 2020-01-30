@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
-#include <garnet/public/lib/fidl/llcpp/test_utils.h>
+#include <src/lib/fidl/llcpp/tests/test_utils.h>
 
 #include "gtest/gtest.h"
 

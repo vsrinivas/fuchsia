@@ -21,7 +21,7 @@
 #include <example/llcpp/fidl.h>
 #include <transformerintegration/test/llcpp/fidl.h>
 
-#include "garnet/public/lib/fidl/llcpp/test_utils.h"
+#include "src/lib/fidl/llcpp/tests/test_utils.h"
 #include "gtest/gtest.h"
 
 namespace test = ::llcpp::transformerintegration::test;

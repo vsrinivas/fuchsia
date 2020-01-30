@@ -13,7 +13,7 @@
 #include <fidl/test/misc/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
-#include "garnet/public/lib/fidl/llcpp/test_utils.h"
+#include "src/lib/fidl/llcpp/tests/test_utils.h"
 
 namespace llcpp_misc = ::llcpp::fidl::test::misc;
 

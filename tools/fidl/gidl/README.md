@@ -36,7 +36,7 @@ for each language / binding.
     * Run (host): `fx run-host-tests fidl_cpp_host_conformance_test`
 
 * C++ (LLCPP):
-    * Build: `fx build garnet/public/lib/fidl/llcpp:fidl_llcpp_conformance_test`
+    * Build: `fx build src/lib/fidl/llcpp/tests:fidl_llcpp_conformance_test`
     * Run: `fx run-test fidl_llcpp_conformance_test`
 
 * Rust:
