@@ -152,6 +152,7 @@ class TestsManifestReader {
             testBundles.add(
               TestBundle(
                 testDefinition,
+                runnerFlags: testsConfig.runnerTokens,
                 extraFlags: testsConfig.passThroughTokens,
                 isDryRun: testsConfig.flags.dryRun,
                 raiseOnFailure: testsConfig.flags.shouldFailFast,

@@ -485,5 +485,11 @@ void main() {
       var testsConfig = TestsConfig.fromArgResults(results: results);
       expect(testsConfig.flags.shouldRebuild, true);
     });
+
+    test('with --realm', () {
+      ArgResults results = fxTestArgParser.parse(['--realm foo']);
+      var testsConfig = TestsConfig.fromArgResults(results: results);
+      expect(testsConfig.flags.realm, 'foo');
+    });
   });
 }

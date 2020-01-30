@@ -34,11 +34,11 @@ class ExecutionHandle {
   /// This does not account for any extra tokens the user many require - here
   /// we are only considered with vanilla test invocations driven straight from
   /// the definition in the manifest.
-  CommandTokens getInvocationTokens() {
+  CommandTokens getInvocationTokens(List<String> runnerFlags) {
     if (testType == TestType.command) {
       return _getCommandTokens();
     } else if (testType == TestType.component) {
-      return _getComponenTokens();
+      return _getComponenTokens(runnerFlags);
     } else if (testType == TestType.host) {
       return _getHostTokens();
     } else if (testType == TestType.suite) {
@@ -72,9 +72,10 @@ class ExecutionHandle {
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cmx".
-  CommandTokens _getComponenTokens() {
-    List<String> subCommand =
-        os == 'fuchsia' ? ['shell', 'run-test-component'] : ['run-host-test'];
+  CommandTokens _getComponenTokens(List<String> runnerFlags) {
+    List<String> subCommand = os == 'fuchsia'
+        ? ['shell', 'run-test-component'] + runnerFlags
+        : ['run-host-test'];
     return CommandTokens(['fx', ...subCommand, handle]);
   }
 

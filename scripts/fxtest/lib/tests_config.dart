@@ -12,6 +12,9 @@ class Flags {
 
   /// The maximum number of tests to run. If 0, all tests will be executed.
   final int limit;
+
+  /// The realm name to run the test inside of. If null, a random name is used.
+  final String realm;
   final bool allOutput;
   final bool shouldRebuild;
 
@@ -28,6 +31,7 @@ class Flags {
     this.dryRun = false,
     this.isVerbose = false,
     this.limit = 0,
+    this.realm = null,
     this.allOutput = false,
     this.simpleOutput = false,
     this.shouldOnlyRunDeviceTests = false,
@@ -46,6 +50,7 @@ class Flags {
       dryRun: argResults['dry'],
       isVerbose: argResults['verbose'] || argResults['output'],
       limit: int.parse(argResults['limit'] ?? '0'),
+      realm: argResults['realm'],
       simpleOutput: !argResults['simple'],
       shouldFailFast: argResults['fail'],
       shouldOnlyRunDeviceTests: argResults['device'],
@@ -67,6 +72,7 @@ class Flags {
     return Flags(
       dryRun: false,
       limit: 0,
+      realm: null,
       isVerbose: false,
       allOutput: false,
       simpleOutput: true,
@@ -85,6 +91,7 @@ class Flags {
   dryRun: $dryRun
   allOutput: $allOutput,
   limit: $limit
+  realm: $realm
   isVerbose: $isVerbose
   simpleOutput: $simpleOutput,
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
@@ -123,10 +130,12 @@ class Flags {
 /// parameters into a list of [PermutatedTestFlag] instances.
 class TestsConfig {
   final Flags flags;
+  final List<String> runnerTokens;
   final List<String> passThroughTokens;
   final List<String> testNames;
   TestsConfig({
     @required this.flags,
+    @required this.runnerTokens,
     @required this.passThroughTokens,
     @required this.testNames,
   });
@@ -136,8 +145,11 @@ class TestsConfig {
     List<String> passThroughTokens,
     List<String> testNames,
   }) {
+    Flags flags = Flags.fromArgResults(results);
     return TestsConfig(
-      flags: Flags.fromArgResults(results),
+      flags: flags,
+      runnerTokens:
+          flags.realm != null ? ['--realm-label=' + flags.realm] : const [],
       passThroughTokens: passThroughTokens,
       testNames: testNames,
     );
@@ -145,6 +157,7 @@ class TestsConfig {
 
   factory TestsConfig.all([List<String> tNames]) {
     return TestsConfig(
+      runnerTokens: const [],
       passThroughTokens: const [],
       testNames: tNames ?? [],
       flags: Flags.defaults(),
@@ -153,6 +166,7 @@ class TestsConfig {
 
   factory TestsConfig.host(List<String> tNames) {
     return TestsConfig(
+      runnerTokens: const [],
       passThroughTokens: const [],
       testNames: tNames,
       flags: Flags.defaults(
@@ -165,6 +179,7 @@ class TestsConfig {
   factory TestsConfig.device(List<String> tNames) {
     return TestsConfig(
       testNames: tNames,
+      runnerTokens: const [],
       passThroughTokens: const [],
       flags: Flags.defaults(
         shouldOnlyRunDeviceTests: true,

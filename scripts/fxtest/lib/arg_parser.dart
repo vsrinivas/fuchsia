@@ -57,6 +57,11 @@ final ArgParser fxTestArgParser = ArgParser()
       defaultsTo: null,
       help: 'If passed, prints a debug message for each test that takes '
           'longer than N seconds to execute')
+  ..addOption('realm',
+      abbr: 'R',
+      defaultsTo: null,
+      help: 'If passed, runs the tests in a named realm instead of a '
+          'randomized one. ')
   ..addFlag('skipped',
       abbr: 's',
       defaultsTo: false,

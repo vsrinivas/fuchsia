@@ -20,6 +20,9 @@ class TestBundle {
   /// The directory from which our test assumes it was invoked.
   final String workingDirectory;
 
+  /// Tokens to pass through to the test runners.
+  final List<String> runnerFlags;
+
   /// Tokens to pass through to individual tests.
   final List<String> extraFlags;
 
@@ -34,6 +37,7 @@ class TestBundle {
   TestBundle(
     this.testDefinition, {
     @required this.workingDirectory,
+    this.runnerFlags = const [],
     this.extraFlags = const [],
     this.raiseOnFailure = false,
     this.isDryRun = false,
@@ -45,7 +49,7 @@ class TestBundle {
   /// Returns a stream of test events that send feedback to the user.
   Stream<TestEvent> run() async* {
     CommandTokens commandTokens =
-        testDefinition.executionHandle.getInvocationTokens();
+        testDefinition.executionHandle.getInvocationTokens(runnerFlags);
 
     // Unparsed tests imply a major problem with `fx test`, so we
     // definitely want to throw an exception
