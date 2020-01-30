@@ -36,6 +36,7 @@ core_tests = [
   "pthread-tls",
   "socket",
   "stack",
+  "stream",
   "sync-completion",
   "sync-condition",
   "sync-mutex",

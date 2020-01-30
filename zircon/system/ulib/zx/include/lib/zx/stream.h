@@ -51,8 +51,8 @@ class stream final : public object<stream> {
     return zx_stream_readv_at(get(), options, offset, vector, vector_count, actual);
   }
 
-  zx_status_t seek(zx_stream_seek_origin_t whence, zx_off_t offset, zx_off_t* out_offset) const {
-    return zx_stream_seek(get(), whence, offset, out_offset);
+  zx_status_t seek(zx_stream_seek_origin_t whence, int64_t offset, zx_off_t* out_seek) const {
+    return zx_stream_seek(get(), whence, offset, out_seek);
   }
 };
 

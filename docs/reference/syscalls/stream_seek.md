@@ -15,7 +15,7 @@ Modify the seek offset.
 
 zx_status_t zx_stream_seek(zx_handle_t handle,
                            zx_stream_seek_origin_t whence,
-                           uint64_t offset,
+                           int64_t offset,
                            zx_off_t* out_offset);
 ```
 
@@ -24,8 +24,8 @@ zx_status_t zx_stream_seek(zx_handle_t handle,
 `zx_stream_seek()` sets the seek offset of the stream to *offset* relative to
 *whence*.
 
-If the resulting seek offset were to be negative, the resulting seek offset
-is zero instead.
+If the resulting seek offset were to be negative or exceed the maximum
+representable `zx_off_t`, `zx_stream_seek()` returns **ZX_ERR_INVALID_ARGS**.
 
 The resulting seek offset might extend beyond the end of the stream. Setting
 such a seek offset does not cause `zx_stream_seek()` to return an error, but
@@ -62,7 +62,9 @@ offset, relative to the start of the stream, into *out_offset* (if non-NULL).
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_READ** or
 **ZX_RIGHT_WRITE** right.
 
-**ZX_ERR_INVALID_ARGS**  *whence* is an invalid `zx_stream_seek_origin_t`.
+**ZX_ERR_INVALID_ARGS**  *whence* is an invalid `zx_stream_seek_origin_t` or
+the resulting seek would be negative or exceed the maximum representable
+`zx_off_t`.
 
 ## SEE ALSO
 

@@ -41,6 +41,7 @@ zx_library("object") {
     "resource.cc",
     "resource_dispatcher.cc",
     "socket_dispatcher.cc",
+    "stream_dispatcher.cc",
     "suspend_token_dispatcher.cc",
     "thread_dispatcher.cc",
     "timer_dispatcher.cc",

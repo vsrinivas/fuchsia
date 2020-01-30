@@ -311,16 +311,16 @@ typedef struct zx_iovec {
 #define ZX_SOCKET_PEEK                      ((uint32_t)1u << 3)
 
 // These can be passed to zx_stream_create().
-#define ZX_STREAM_MODE_READ                 ((uint32_t)0u)
-#define ZX_STREAM_MODE_WRITE                ((uint32_t)1u << 0)
-#define ZX_STREAM_MODE_APPEND               ((uint32_t)1u << 1)
+#define ZX_STREAM_MODE_READ                 ((uint32_t)1u << 0)
+#define ZX_STREAM_MODE_WRITE                ((uint32_t)1u << 1)
+#define ZX_STREAM_MODE_APPEND               ((uint32_t)1u << 2)
 #define ZX_STREAM_CREATE_MASK               (ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE | \
                                             ZX_STREAM_MODE_APPEND)
 
 typedef uint32_t zx_stream_seek_origin_t;
-#define ZX_STREAM_SEEK_ORIGIN_START      ((zx_seek_origin_t)0u)
-#define ZX_STREAM_SEEK_ORIGIN_CURRENT    ((zx_seek_origin_t)1u)
-#define ZX_STREAM_SEEK_ORIGIN_END        ((zx_seek_origin_t)2u)
+#define ZX_STREAM_SEEK_ORIGIN_START      ((zx_stream_seek_origin_t)0u)
+#define ZX_STREAM_SEEK_ORIGIN_CURRENT    ((zx_stream_seek_origin_t)1u)
+#define ZX_STREAM_SEEK_ORIGIN_END        ((zx_stream_seek_origin_t)2u)
 
 // Flags which can be used to to control cache policy for APIs which map memory.
 #define ZX_CACHE_POLICY_CACHED              ((uint32_t)0u)
