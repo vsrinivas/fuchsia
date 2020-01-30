@@ -15,6 +15,7 @@ source_set("entropy") {
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/crypto:headers",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/unittest",
     "$zx/third_party/lib/jitterentropy",
   ]

@@ -21,6 +21,7 @@ source_set("hypervisor") {
     "$zx/kernel/dev/psci",
     "$zx/kernel/dev/timer/arm_generic",
     "$zx/kernel/hypervisor:headers",
+    "$zx/kernel/lib/ktl",
     "$zx/system/ulib/affine",
   ]
 }

@@ -103,6 +103,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/lib/console",
       "$zx/kernel/lib/counters",
       "$zx/kernel/lib/crashlog",
+      "$zx/kernel/lib/ktl",
       "$zx/kernel/lib/perfmon",
       "$zx/kernel/object",
       "$zx/kernel/syscalls:syscall-abi",

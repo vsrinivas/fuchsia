@@ -11,6 +11,7 @@ zx_library("udisplay") {
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/gfx",
     "$zx/kernel/lib/gfxconsole",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/vm:headers",
   ]
 }

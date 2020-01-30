@@ -43,6 +43,7 @@ source_set("tests") {
     "$zx/kernel/lib/crypto",
     "$zx/kernel/lib/debuglog",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/unittest",
     "$zx/kernel/object",
     "$zx/system/ulib/affine",

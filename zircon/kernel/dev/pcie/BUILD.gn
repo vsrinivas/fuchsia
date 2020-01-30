@@ -23,11 +23,15 @@ zx_library("pcie") {
   deps = [
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/pci",
     "$zx/kernel/vm:headers",
     "$zx/system/ulib/region-alloc",
   ]
   public_deps = [
+    # <dev/address_provider/ecam_region.h> has #include <ktl/unique_ptr.h>.
+    "$zx/kernel/lib/ktl:headers",
+
     # <dev/pcie_platform.h> has #include <dev/interrupt.h>.
     "$zx/kernel/dev/interrupt:headers",
 

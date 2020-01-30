@@ -41,6 +41,7 @@ source_set("kernel") {
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/heap",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/libc",
     "$zx/kernel/lib/topology",
     "$zx/kernel/lib/version",

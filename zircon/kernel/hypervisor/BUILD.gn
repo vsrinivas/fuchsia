@@ -16,6 +16,7 @@ zx_library("hypervisor") {
   deps = [
     "$zx/kernel/arch/$zircon_cpu/hypervisor",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/bitmap",
   ]

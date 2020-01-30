@@ -9,6 +9,9 @@ zx_library("unittest") {
     "user_memory.cc",
   ]
   public_deps = [
+    # <lib/unittest/user_memory.h> has #include <ktl/move.h>.
+    "$zx/kernel/lib/ktl:headers",
+
     # <lib/unittest/user_memory.h> has #include <lib/crypto/prng.h>.
     "$zx/kernel/vm:headers",
   ]

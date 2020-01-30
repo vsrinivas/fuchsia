@@ -13,12 +13,16 @@ zx_library("crypto") {
   deps = [
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/explicit-memory",
     "$zx/third_party/ulib/uboringssl",
     "entropy",
   ]
   public_deps = [
+    # <lib/crypto/prng.h> has #include <ktl/atomic.h>.
+    "$zx/kernel/lib/ktl:headers",
+
     # lib/crypto/prng.h has #include <openssl/sha.h>.
     "$zx/third_party/ulib/uboringssl:headers",
 

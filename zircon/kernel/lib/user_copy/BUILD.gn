@@ -6,6 +6,10 @@ zx_library("user_copy") {
   kernel = true
   sources = []
   deps = [ ":tests" ]
+  public_deps = [
+    # <lib/user_copy/user_ptr.h> has #include <ktl/type_traits.h>.
+    "$zx/kernel/lib/ktl:headers",
+  ]
 }
 
 source_set("tests") {

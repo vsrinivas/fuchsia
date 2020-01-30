@@ -11,8 +11,13 @@ zx_library("instrumentation") {
     deps = [
       ":profile",
       ":sancov",
+      "$zx/kernel/lib/ktl",
       "$zx/kernel/object",
       "$zx/system/ulib/fbl",
+    ]
+    public_deps += [
+      # <lib/instrumentation/vmo.h> has #include <ktl/array.h>.
+      "$zx/kernel/lib/ktl:headers",
     ]
   }
 }

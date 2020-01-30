@@ -24,6 +24,7 @@ source_set("libc") {
     ":tests",
     "$zx/kernel/lib/heap",
     "$zx/kernel/lib/io",
+    "$zx/kernel/lib/ktl",
     "string",
   ]
 }

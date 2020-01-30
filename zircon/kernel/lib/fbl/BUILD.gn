@@ -7,9 +7,15 @@ zx_library("fbl") {
   sources = [ "arena.cc" ]
   deps = [
     ":tests",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/vm:headers",
   ]
-  public_deps = [ "$zx/system/ulib/fbl" ]
+  public_deps = [
+    "$zx/system/ulib/fbl",
+
+    # <include/fbl/arena.h> has #include <ktl/forward.h>.
+    "$zx/kernel/lib/ktl:headers",
+  ]
 }
 
 source_set("tests") {

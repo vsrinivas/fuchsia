@@ -6,6 +6,7 @@ source_set("lockdep") {
   sources = [ "lock_dep.cc" ]
   deps = [
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/version",
   ]
   public_deps = [

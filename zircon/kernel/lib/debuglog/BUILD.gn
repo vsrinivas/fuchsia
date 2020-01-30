@@ -9,6 +9,7 @@ zx_library("debuglog") {
     "$zx/kernel/dev/udisplay:headers",
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/crashlog",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/version",
   ]
 }

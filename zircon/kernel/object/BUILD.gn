@@ -62,6 +62,7 @@ zx_library("object") {
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/region-alloc",
   ]
@@ -69,6 +70,9 @@ zx_library("object") {
     deps += [ "$zx/kernel/dev/iommu/intel" ]
   }
   public_deps = [
+    # <object/buffer_chain.h> has #include <ktl/move.h>.
+    "$zx/kernel/lib/ktl:headers",
+
     # <object/pci_device_dispatcher.h> has #include <dev/pci_common.h>
     "$zx/kernel/dev/pcie:headers",
 
@@ -106,6 +110,7 @@ source_set("tests") {
   deps = [
     ":headers",
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/unittest",
   ]
 }

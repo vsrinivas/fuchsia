@@ -115,6 +115,7 @@ zx_library("x86") {
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/pci",
     "$zx/kernel/lib/perfmon",
     "$zx/kernel/lib/topology",

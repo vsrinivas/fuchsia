@@ -29,6 +29,9 @@ if (current_toolchain == default_toolchain) {
       configs = [
         ":headers",
 
+        # TODO(44971): Many include/ headers use <ktl/*.h> headers.
+        "$zx/kernel/lib/ktl:headers.config",
+
         # <stdio.h> has #include <lib/io.h>.
         "$zx/kernel/lib/io:headers.config",
 

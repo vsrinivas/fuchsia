@@ -156,6 +156,7 @@ if (is_kernel) {
       "$zx/kernel/lib/crypto",
       "$zx/kernel/lib/fbl",
       "$zx/kernel/lib/gfxconsole",
+      "$zx/kernel/lib/ktl",
       "$zx/kernel/lib/ktrace",
       "$zx/kernel/lib/mtrace",
       "$zx/kernel/lib/pci",

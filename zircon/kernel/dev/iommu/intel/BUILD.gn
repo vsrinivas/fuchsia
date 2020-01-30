@@ -18,6 +18,7 @@ zx_library("intel") {
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/pcie",
     "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/user_copy",
     "$zx/kernel/vm:headers",
     "$zx/system/ulib/bitmap",

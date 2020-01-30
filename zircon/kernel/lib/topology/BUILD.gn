@@ -8,7 +8,12 @@ zx_library("topology") {
   sources = [ "system-topology.cc" ]
   deps = [
     ":test",
+    "$zx/kernel/lib/ktl",
     "$zx/system/ulib/fbl",
+  ]
+  public_deps = [
+    # <lib/system-topology.h> has #include <ktl/move.h>.
+    "$zx/kernel/lib/ktl:headers",
   ]
 }
 
