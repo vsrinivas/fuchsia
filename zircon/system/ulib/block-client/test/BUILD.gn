@@ -2,12 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":block-client-unit" ]
 }
 
-zx_test("block-client-unit") {
+test("block-client-unit") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   test_group = "fs"
   sources = [
     "block-group-registry-tests.cc",
@@ -15,15 +42,21 @@ zx_test("block-client-unit") {
     "remote-block-device-test.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/block-client",
-    "$zx/system/ulib/block-client:fake-device",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/block-client",
+    "//zircon/public/lib/fake-device",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fvm",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/range",
+    "//zircon/public/lib/storage-metrics",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-io:c",
   ]
+}
+
+migrated_manifest("block-client-unit-manifest") {
+  deps = [ ":block-client-unit" ]
 }

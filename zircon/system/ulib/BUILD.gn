@@ -35,6 +35,7 @@ group("ulib") {
     "blktest",
     "blobfs",
     "block-client",
+    "block-client:fake-device",
     "boot-args",
     "bootfs",
     "c",

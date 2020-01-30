@@ -63,7 +63,12 @@ zx_library("fake-device") {
     "$zx/system/ulib/zx",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-device:c.headers",
+    "$zx/system/fidl/fuchsia-hardware-block:c.headers",
+    "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers",
     "$zx/system/ulib/fvm",
+    "$zx/system/ulib/range",
+    "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/zxtest",
   ]
 }
