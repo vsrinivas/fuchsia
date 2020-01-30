@@ -40,8 +40,8 @@ class Demo {
                          const escher::SemaphorePtr& framebuffer_acquired) = 0;
 
   const char* name() const { return name_; }
-  escher::Escher* escher() { return escher_.get(); }
-  escher::EscherWeakPtr GetEscherWeakPtr() { return escher_->GetWeakPtr(); }
+  escher::Escher* escher() const { return escher_.get(); }
+  escher::EscherWeakPtr GetEscherWeakPtr() const { return escher_->GetWeakPtr(); }
   const escher::VulkanContext& vulkan_context() const { return vulkan_context_; }
 
   // Helper function that draws the specified number of frames to an offscreen buffer.

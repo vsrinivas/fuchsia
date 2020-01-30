@@ -66,6 +66,16 @@ class PaperRenderFuncs : public RenderFuncs {
   static PaperRenderFuncs::MeshDrawData* NewMeshDrawData(const FramePtr& frame,
                                                          const mat4& transform, const vec4& color,
                                                          PaperDrawableFlags flags);
+
+  // Helper function used by |NewMeshData()| (see above), and also by
+  // |PaperRenderer::WarmPipelineAndRenderPassCaches()|.
+  //
+  // |total_attribute_count| must == |mesh_spec.total_attribute_count()|.  This is passed as an arg
+  // because:
+  //   - it involves non-negligible bit-shifting to compute
+  //   - |MeshData()|, the highest-frequency caller, already has this info
+  static RenderFuncs::VertexAttributeBinding* NewVertexAttributeBindings(
+      BlockAllocator* allocator, const MeshSpec& mesh_spec, uint32_t total_attribute_count);
 };
 
 }  // namespace escher

@@ -293,6 +293,8 @@ class CommandBufferPipelineState {
   uint32_t dirty_vertex_bindings_ = 0;
 };
 
+ESCHER_DEBUG_PRINTABLE(CommandBufferPipelineState::StaticState);
+
 // Inline function definitions - static state setters.
 
 // Macro to avoid typing boilerplate UnpackEnum() implementations.

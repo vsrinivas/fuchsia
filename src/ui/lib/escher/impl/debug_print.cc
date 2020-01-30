@@ -12,6 +12,7 @@
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/scene/camera.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
+#include "src/ui/lib/escher/third_party/granite/vk/command_buffer_pipeline_state.h"
 #include "src/ui/lib/escher/third_party/granite/vk/descriptor_set_layout.h"
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
@@ -262,7 +263,8 @@ std::ostream& operator<<(std::ostream& str, const PaperRendererShadowType& shado
 
 std::ostream& operator<<(std::ostream& str, const PaperRendererConfig& config) {
   return str << "PaperRendererConfig[shadow_type:"
-             << PaperRendererShadowTypeString(config.shadow_type) << "]";
+             << PaperRendererShadowTypeString(config.shadow_type)
+             << " sample_count:" << unsigned{config.msaa_sample_count} << "]";
 }
 
 std::ostream& operator<<(std::ostream& str, const VulkanDeviceQueues::Caps& caps) {
@@ -338,6 +340,39 @@ std::ostream& operator<<(std::ostream& str, const VulkanDeviceQueues::Caps& caps
 #undef PRINT_FEATURE
 
   return str << "\n]";
+}
+
+std::ostream& operator<<(std::ostream& str, const CommandBufferPipelineState::StaticState& state) {
+  return str
+         << "\n\tdepth_write: " << state.get_depth_write()
+         << "\n\tdepth_test: " << state.get_depth_test()
+         << "\n\tblend_enable: " << state.get_blend_enable()
+         << "\n\tcull_mode: " << vk::to_string(state.get_cull_mode())
+         << "\n\tfront_face: " << vk::to_string(state.get_front_face())
+         << "\n\tdepth_bias_enable: " << state.get_depth_bias_enable()
+         << "\n\tdepth_compare: " << vk::to_string(state.get_depth_compare())
+         << "\n\tstencil_test: " << state.get_stencil_test()
+         << "\n\tstencil_front_fail: " << vk::to_string(state.get_stencil_front_fail())
+         << "\n\tstencil_front_pass: " << vk::to_string(state.get_stencil_front_pass())
+         << "\n\tstencil_front_depth_fail: " << vk::to_string(state.get_stencil_front_depth_fail())
+         << "\n\tstencil_front_compare_op: " << vk::to_string(state.get_stencil_front_compare_op())
+         << "\n\tstencil_back_fail: " << vk::to_string(state.get_stencil_back_fail())
+         << "\n\tstencil_back_pass: " << vk::to_string(state.get_stencil_back_pass())
+         << "\n\tstencil_back_depth_fail: " << vk::to_string(state.get_stencil_back_depth_fail())
+         << "\n\tstencil_back_compare_op: " << vk::to_string(state.get_stencil_back_compare_op())
+         << "\n\talpha_to_coverage: " << state.get_alpha_to_coverage()
+         << "\n\talpha_to_one: " << state.get_alpha_to_one()
+         << "\n\tsample_shading: " << state.get_sample_shading()
+         << "\n\tsrc_color_blend: " << vk::to_string(state.get_src_color_blend())
+         << "\n\tdst_color_blend: " << vk::to_string(state.get_dst_color_blend())
+         << "\n\tcolor_blend_op: " << vk::to_string(state.get_color_blend_op())
+         << "\n\tsrc_alpha_blend: " << vk::to_string(state.get_src_alpha_blend())
+         << "\n\tdst_alpha_blend: " << vk::to_string(state.get_dst_alpha_blend())
+         << "\n\talpha_blend_op: " << vk::to_string(state.get_alpha_blend_op())
+         << "\n\tprimitive_restart: " << state.get_primitive_restart()
+         << "\n\tprimitive_topology: " << vk::to_string(state.get_primitive_topology())
+         << "\n\twireframe: " << state.get_wireframe()
+         << "\n\tcolor_write_mask: " << state.color_write_mask << "\n\tpadding: " << state.padding;
 }
 
 }  // namespace escher

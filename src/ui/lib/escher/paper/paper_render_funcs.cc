@@ -151,7 +151,8 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
   frame->cmds()->KeepAlive(mesh);
   frame->cmds()->KeepAlive(texture.get());
 
-  auto* obj = frame->Allocate<MeshData>();
+  BlockAllocator* allocator = frame->host_allocator();
+  auto* obj = allocator->Allocate<MeshData>();
 
   obj->index_binding.index_buffer = mesh->vk_index_buffer();
   obj->index_binding.index_type = MeshSpec::IndexTypeEnum;
@@ -161,14 +162,13 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
 
   // Set up vertex buffer bindings.
   obj->vertex_binding_count = mesh_spec.vertex_buffer_count();
-  obj->vertex_bindings = frame->AllocateMany<VertexBinding>(obj->vertex_binding_count);
+  obj->vertex_bindings = allocator->AllocateMany<VertexBinding>(obj->vertex_binding_count);
 
   {
     uint32_t binding_count = 0;
     for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
       if (auto& attribute_buffer = mesh->attribute_buffer(i)) {
-        // TODO(ES-103): avoid reaching in to impl::CommandBuffer for
-        // keep-alive.
+        // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
         frame->cmds()->KeepAlive(attribute_buffer.buffer);
 
         obj->vertex_bindings[binding_count++] =
@@ -182,20 +182,9 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
   }
 
   // Set up vertex attribute bindings.
-  obj->vertex_attribute_count = mesh_spec.total_attribute_count();
-  obj->vertex_attributes = frame->AllocateMany<VertexAttributeBinding>(obj->vertex_attribute_count);
-  {
-    VertexAttributeBinding* current = obj->vertex_attributes;
-    for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
-      if (mesh_spec.attribute_count(i) > 0) {
-        current = FillVertexAttributeBindings(current, i, mesh_spec.attributes[i]);
-      }
-    }
-
-    // Sanity check that we filled in the correct number of attributes.
-    FXL_DCHECK(current == (obj->vertex_attributes + obj->vertex_attribute_count));
-  }
-
+  const uint32_t total_attribute_count = mesh_spec.total_attribute_count();
+  obj->vertex_attribute_count = total_attribute_count;
+  obj->vertex_attributes = NewVertexAttributeBindings(allocator, mesh_spec, total_attribute_count);
   obj->uniform_binding_count = 0;
   obj->texture = texture.get();
 
@@ -217,6 +206,25 @@ PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(const FramePtr
   draw_data->flags = flags;
 
   return draw_data;
+}
+
+RenderFuncs::VertexAttributeBinding* PaperRenderFuncs::NewVertexAttributeBindings(
+    BlockAllocator* allocator, const MeshSpec& mesh_spec, uint32_t total_attribute_count) {
+  FXL_DCHECK(total_attribute_count == mesh_spec.total_attribute_count());
+
+  auto bindings = allocator->AllocateMany<VertexAttributeBinding>(total_attribute_count);
+  {
+    VertexAttributeBinding* current = bindings;
+    for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
+      if (mesh_spec.attribute_count(i) > 0) {
+        current = FillVertexAttributeBindings(current, i, mesh_spec.attributes[i]);
+      }
+    }
+
+    // Sanity check that we filled in the correct number of attributes.
+    FXL_DCHECK(current == (bindings + total_attribute_count));
+  }
+  return bindings;
 }
 
 }  // namespace escher

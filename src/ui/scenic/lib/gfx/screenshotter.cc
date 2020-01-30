@@ -103,7 +103,9 @@ std::vector<uint8_t> rotate_img_vec(const std::vector<uint8_t>& imgvec, uint32_t
   return result;
 }
 
-constexpr vk::Format kImageFormat = vk::Format::eB8G8R8A8Unorm;
+// If this changes, or if we must determine this dynamically, look for other places
+// that the same constant is used to see if they must also be changed.
+constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Unorm;
 
 constexpr uint32_t kBytesPerPixel = 4u;
 
@@ -160,7 +162,7 @@ void Screenshotter::TakeScreenshot(
 
   uint32_t rotation = compositor->layout_rotation();
   escher::ImageInfo image_info;
-  image_info.format = kImageFormat;
+  image_info.format = kScenicScreenshotFormat;
   image_info.width = width;
   image_info.height = height;
   image_info.usage =

@@ -21,10 +21,6 @@ FramebufferAllocator::FramebufferAllocator(ResourceRecycler* recycler,
 const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(const RenderPassInfo& info) {
   TRACE_DURATION("gfx", "escher::impl::FramebufferAllocator::ObtainFramebuffer");
 
-  // TODO(ES-75): consider making RenderPassInfo a subclass of Hashable
-  // so that we can directly look up the Framebuffer without first looking up
-  // the RenderPass (for the presumably-common case where the Framebuffer
-  // already exists).
   auto& render_pass = render_pass_cache_->ObtainRenderPass(info);
   FXL_DCHECK(render_pass);
 

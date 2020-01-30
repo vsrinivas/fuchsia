@@ -61,6 +61,7 @@ class Frame : public Resource {
   vk::CommandBuffer vk_command_buffer() const;
   uint64_t command_buffer_sequence_number() const { return command_buffer_sequence_number_; }
   GpuAllocator* gpu_allocator();
+  BlockAllocator* host_allocator() { return &block_allocator_; }
 
   // Allocate temporary CPU memory that is valid until EndFrame() is called.
   template <typename T>
