@@ -95,6 +95,11 @@ group("migrated-tests") {
 group("host") {
   testonly = true
 
+  metadata = {
+    # Prevent migrated host tests from being identified as "tools".
+    tool_barrier = []
+  }
+
   deps = [
     ":legacy-tests",
     ":migrated-tests",

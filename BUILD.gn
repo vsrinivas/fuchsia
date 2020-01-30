@@ -370,6 +370,7 @@ build_api_module("test_durations") {
 build_api_module("tool_paths") {
   testonly = true
   data_keys = [ "tool_paths" ]
+  walk_keys = [ "tool_barrier" ]
   deps = [
     ":tool_paths.metadata",
     ":tool_paths.zircon",
