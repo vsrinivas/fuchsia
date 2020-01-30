@@ -27,7 +27,9 @@ class MixStageTest : public testing::ThreadingModelFixture {
   zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
   std::shared_ptr<MixStage> mix_stage_ = std::make_shared<MixStage>(
       kDefaultFormat, 128,
-      TimelineFunction(TimelineRate(kDefaultFormat.frames_per_second(), zx::sec(1).to_nsecs())));
+      TimelineFunction(
+          TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                       zx::sec(1).to_nsecs())));
 
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.

@@ -24,7 +24,8 @@ const Format kDefaultFormat = Format(fuchsia::media::AudioStreamType{
     .channels = 2,
     .frames_per_second = 48000,
 });
-const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
+const TimelineFunction kOneFramePerMs =
+    TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000));
 
 class OutputPipelineTest : public testing::ThreadingModelFixture {
  protected:

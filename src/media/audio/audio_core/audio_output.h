@@ -44,7 +44,7 @@ class AudioOutput : public AudioDevice {
   }
 
   void SetupMixTask(const Format& format, size_t max_block_size_frames,
-                    TimelineFunction device_reference_clock_to_output_frame)
+                    TimelineFunction device_reference_clock_to_fractional_frame)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }

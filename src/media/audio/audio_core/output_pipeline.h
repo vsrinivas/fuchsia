@@ -29,12 +29,12 @@ class OutputPipeline : public Stream {
   // the pipeline will truncate this to only |max_block_size_frames| and the caller will have to
   // call |LockBuffer| again to mix the subsequent frames.
   //
-  // |ref_clock_to_output_frame| is a timeline function that will compute the output frame number
-  // (ex: as passed to |LockBuffer|) based on a reference timestamp. Specifically this should be the
-  // same function that computes the output ring buffer frame number based on a reference clock
-  // reading.
+  // |ref_clock_to_fractional_frame| is a timeline function that will compute the output frame
+  // number (in fixed point format with 13 bits of fractional precision) based on a reference
+  // timestamp.
   OutputPipeline(const PipelineConfig& config, const Format& output_format,
-                 uint32_t max_block_size_frames, TimelineFunction ref_clock_to_output_frame);
+                 uint32_t max_block_size_frames,
+                 TimelineFunction reference_clock_to_fractional_frame);
 
   // Adds |stream| as an input to be mixed. The given |usage| will indicate where in the pipeline
   // this stream will be routed (based on the |PipelineConfig| this pipeline was created with).

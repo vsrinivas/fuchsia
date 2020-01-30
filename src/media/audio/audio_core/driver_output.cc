@@ -464,7 +464,12 @@ void DriverOutput::OnDriverStartComplete() {
       .channels = format->channels(),
       .frames_per_second = format->frames_per_second(),
   });
-  SetupMixTask(mix_format, driver_ring_buffer()->frames(), clock_monotonic_to_output_frame_);
+
+  TimelineRate fractional_frames_per_frame =
+      TimelineRate(FractionalFrames<uint32_t>(1).raw_value());
+  auto reference_clock_to_fractional_frame = TimelineFunction::Compose(
+      TimelineFunction(fractional_frames_per_frame), clock_monotonic_to_output_frame_);
+  SetupMixTask(mix_format, driver_ring_buffer()->frames(), reference_clock_to_fractional_frame);
 
   const TimelineFunction& trans = clock_monotonic_to_output_frame_;
   uint32_t fd_frames = driver()->fifo_depth_frames();

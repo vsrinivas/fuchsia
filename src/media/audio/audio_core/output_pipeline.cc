@@ -26,11 +26,11 @@ std::vector<fuchsia::media::Usage> UsagesFromRenderUsages(
 
 OutputPipeline::OutputPipeline(const PipelineConfig& config, const Format& output_format,
                                uint32_t max_block_size_frames,
-                               TimelineFunction ref_clock_to_output_frame)
+                               TimelineFunction ref_clock_to_fractional_frame)
     : Stream(output_format) {
   uint32_t usage_mask = 0;
   stream_ = CreateMixStage(config.root(), output_format, max_block_size_frames,
-                           ref_clock_to_output_frame, &usage_mask);
+                           ref_clock_to_fractional_frame, &usage_mask);
   static constexpr uint32_t kAllUsages =
       1 << static_cast<uint32_t>(fuchsia::media::AudioRenderUsage::BACKGROUND) |
       1 << static_cast<uint32_t>(fuchsia::media::AudioRenderUsage::MEDIA) |
@@ -57,13 +57,12 @@ void OutputPipeline::RemoveInput(const Stream& stream) {
   streams_.erase(it);
 }
 
-std::shared_ptr<Stream> OutputPipeline::CreateMixStage(const PipelineConfig::MixGroup& spec,
-                                                       const Format& output_format,
-                                                       uint32_t max_block_size_frames,
-                                                       TimelineFunction ref_clock_to_output_frame,
-                                                       uint32_t* usage_mask) {
-  auto stage =
-      std::make_shared<MixStage>(output_format, max_block_size_frames, ref_clock_to_output_frame);
+std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
+    const PipelineConfig::MixGroup& spec, const Format& output_format,
+    uint32_t max_block_size_frames, TimelineFunction ref_clock_to_fractional_frame,
+    uint32_t* usage_mask) {
+  auto stage = std::make_shared<MixStage>(output_format, max_block_size_frames,
+                                          ref_clock_to_fractional_frame);
   for (const auto& usage : spec.input_streams) {
     auto mask = 1 << static_cast<uint32_t>(usage);
     FX_CHECK((*usage_mask & mask) == 0);
@@ -84,7 +83,7 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(const PipelineConfig::Mix
   mix_stages_.emplace_back(stage, UsagesFromRenderUsages(spec.input_streams));
   for (const auto& input : spec.inputs) {
     auto substage = CreateMixStage(input, output_format, max_block_size_frames,
-                                   ref_clock_to_output_frame, usage_mask);
+                                   ref_clock_to_fractional_frame, usage_mask);
     stage->AddInput(substage);
   }
   return root;

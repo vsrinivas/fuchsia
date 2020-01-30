@@ -18,8 +18,9 @@ namespace media::audio {
 
 class MixStage : public Stream {
  public:
+  MixStage(std::shared_ptr<Stream> output_stream);
   MixStage(const Format& output_format, uint32_t block_size,
-           TimelineFunction reference_clock_to_output_frame);
+           TimelineFunction reference_clock_to_fractional_frame);
 
   struct FrameSpan {
     int64_t start;
@@ -44,9 +45,9 @@ class MixStage : public Stream {
     float* buf;
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
-    uint32_t reference_clock_to_destination_frame_gen;
+    uint32_t reference_clock_to_fractional_destination_frame_gen;
     bool accumulate;
-    const TimelineFunction* reference_clock_to_destination_frame;
+    TimelineFunction reference_clock_to_fractional_destination_frame;
 
     // Per-stream job state, set up for each renderer during SetupMix.
     uint32_t frames_produced;
@@ -73,15 +74,10 @@ class MixStage : public Stream {
   std::mutex stream_lock_;
   std::vector<StreamHolder> streams_;
 
-  // State for the internal buffer which holds intermediate mix results.
-  std::unique_ptr<float[]> mix_buf_;
-  uint32_t mix_buf_frames_ = 0;
+  std::shared_ptr<Stream> output_stream_;
 
   // State used by the mix task.
   MixJob cur_mix_job_;
-
-  TimelineFunction reference_clock_to_output_frame_;
-  uint32_t reference_clock_to_output_frame_generation_;
 };
 
 }  // namespace media::audio

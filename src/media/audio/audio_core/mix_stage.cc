@@ -12,19 +12,31 @@
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/intermediate_buffer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
+namespace {
 
-MixStage::MixStage(const Format& output_format, uint32_t block_size_frames,
-                   TimelineFunction reference_clock_to_output_frame)
-    : Stream(output_format),
-      reference_clock_to_output_frame_(reference_clock_to_output_frame),
-      reference_clock_to_output_frame_generation_(1) {
-  SetupMixBuffer(block_size_frames);
+TimelineFunction ReferenceClockToIntegralFrames(
+    TimelineFunction reference_clock_to_fractional_frames) {
+  TimelineRate frames_per_fractional_frame =
+      TimelineRate(1, FractionalFrames<uint32_t>(1).raw_value());
+  return TimelineFunction::Compose(TimelineFunction(frames_per_fractional_frame),
+                                   reference_clock_to_fractional_frames);
 }
+
+}  // namespace
+
+MixStage::MixStage(const Format& output_format, uint32_t block_size,
+                   TimelineFunction reference_clock_to_fractional_frame)
+    : MixStage(std::make_shared<IntermediateBuffer>(output_format, block_size,
+                                                    reference_clock_to_fractional_frame)) {}
+
+MixStage::MixStage(std::shared_ptr<Stream> output_stream)
+    : Stream(output_stream->format()), output_stream_(std::move(output_stream)) {}
 
 std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<Stream> stream) {
   TRACE_DURATION("audio", "MixStage::AddInput");
@@ -57,24 +69,25 @@ std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
   TRACE_DURATION("audio", "MixStage::LockBuffer", "frame", frame, "length", frame_count);
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
-  cur_mix_job_.buf = mix_buf_.get();
-  cur_mix_job_.buf_frames = frame_count;
+  auto output_buffer = output_stream_->LockBuffer(now, frame, frame_count);
+  if (!output_buffer) {
+    return std::nullopt;
+  }
+  FX_DCHECK(output_buffer->start().Floor() == frame);
+
+  auto snapshot = output_stream_->ReferenceClockToFractionalFrames();
+
+  cur_mix_job_.buf = static_cast<float*>(output_buffer->payload());
+  cur_mix_job_.buf_frames = output_buffer->length().Floor();
   cur_mix_job_.start_pts_of = frame;
-  cur_mix_job_.reference_clock_to_destination_frame = &reference_clock_to_output_frame_;
-  cur_mix_job_.reference_clock_to_destination_frame_gen =
-      reference_clock_to_output_frame_generation_;
+  cur_mix_job_.reference_clock_to_fractional_destination_frame = snapshot.timeline_function;
+  cur_mix_job_.reference_clock_to_fractional_destination_frame_gen = snapshot.generation;
 
-  // If we have a mix job, then we must have an intermediate buffer allocated, and it must be
-  // large enough for the mix job we were given.
-  FX_DCHECK(mix_buf_);
-  FX_DCHECK(cur_mix_job_.buf_frames <= mix_buf_frames_);
-
-  // Fill the intermediate buffer with silence.
-  size_t bytes_to_zero =
-      sizeof(cur_mix_job_.buf[0]) * cur_mix_job_.buf_frames * format().channels();
+  // Fill the output buffer with silence.
+  size_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, now);
-  return {Stream::Buffer(frame, frame_count, cur_mix_job_.buf, true)};
+  return {Stream::Buffer(output_buffer->start(), output_buffer->length(), cur_mix_job_.buf, true)};
 }
 void MixStage::UnlockBuffer(bool release_buffer) {
   TRACE_DURATION("audio", "MixStage::UnlockBuffer");
@@ -82,30 +95,12 @@ void MixStage::UnlockBuffer(bool release_buffer) {
 
 Stream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames() const {
   TRACE_DURATION("audio", "MixStage::ReferenceClockToFractionalFrames");
-  TimelineRate fractional_frames_per_frame =
-      TimelineRate(FractionalFrames<uint32_t>(1).raw_value());
-  return {
-      .timeline_function = TimelineFunction::Compose(TimelineFunction(fractional_frames_per_frame),
-                                                     reference_clock_to_output_frame_),
-      .generation = reference_clock_to_output_frame_generation_,
-  };
+  return output_stream_->ReferenceClockToFractionalFrames();
 }
 
 void MixStage::Trim(zx::time time) {
   TRACE_DURATION("audio", "MixStage::Trim");
   ForEachSource(TaskType::Trim, time);
-}
-
-// Create our intermediate accumulation buffer.
-void MixStage::SetupMixBuffer(uint32_t max_mix_frames) {
-  TRACE_DURATION("audio", "MixStage::SetupMixBuffer");
-  FX_DCHECK(static_cast<uint64_t>(max_mix_frames) * format().channels() <=
-            std::numeric_limits<uint32_t>::max());
-
-  if (max_mix_frames > 0) {
-    mix_buf_frames_ = max_mix_frames;
-    mix_buf_ = std::make_unique<float[]>(mix_buf_frames_ * format().channels());
-  }
 }
 
 void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {
@@ -246,7 +241,7 @@ bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& so
   // At this point we know we need to consume some source data, but we don't yet know how much.
   // Here is how many destination frames we still need to produce, for this mix job.
   uint32_t dest_frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
-  float* buf = mix_buf_.get() + (cur_mix_job_.frames_produced * format().channels());
+  float* buf = cur_mix_job_.buf + (cur_mix_job_.frames_produced * format().channels());
 
   // Calculate this job's first and last sampling points, in source sub-frames. Use timestamps for
   // the first and last dest frames we need, translated into the source (frac_frame) timeline.
@@ -366,6 +361,8 @@ bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& so
     // jitter, we will defer this work.
     auto prev_dest_offset = dest_offset;
     auto prev_frac_source_offset = frac_source_offset;
+    auto reference_clock_to_integral_frame = ReferenceClockToIntegralFrames(
+        cur_mix_job_.reference_clock_to_fractional_destination_frame);
 
     // Check whether we are still ramping
     bool ramping = info.gain.IsRamping();
@@ -373,7 +370,7 @@ bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& so
       info.gain.GetScaleArray(
           info.scale_arr.get(),
           std::min(dest_frames_left - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
-          cur_mix_job_.reference_clock_to_destination_frame->rate());
+          reference_clock_to_integral_frame.rate());
     }
 
     {
@@ -391,8 +388,7 @@ bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& so
 
     // If src is ramping, advance by delta of dest_offset
     if (ramping) {
-      info.gain.Advance(dest_offset - prev_dest_offset,
-                        cur_mix_job_.reference_clock_to_destination_frame->rate());
+      info.gain.Advance(dest_offset - prev_dest_offset, reference_clock_to_integral_frame.rate());
     }
   } else {
     // This packet was initially within our mix window. After realigning our sampling point to the
@@ -432,11 +428,10 @@ void MixStage::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "MixStage::UpdateDestTrans");
   // We should only be here if we have a valid mix job. This means a job which supplies a valid
   // transformation from local time to output frames.
-  FX_DCHECK(job.reference_clock_to_destination_frame);
-  FX_DCHECK(job.reference_clock_to_destination_frame_gen != kInvalidGenerationId);
+  FX_DCHECK(job.reference_clock_to_fractional_destination_frame_gen != kInvalidGenerationId);
 
   // If generations match, don't re-compute -- just use what we have already.
-  if (bk->dest_trans_gen_id == job.reference_clock_to_destination_frame_gen) {
+  if (bk->dest_trans_gen_id == job.reference_clock_to_fractional_destination_frame_gen) {
     return;
   }
 
@@ -446,8 +441,10 @@ void MixStage::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {
   // Combine the job-supplied local-to-output transformation, with the renderer-supplied mapping of
   // local-to-input-subframe, to produce a transformation which maps from output frames to
   // fractional input frames.
+  TimelineFunction reference_clock_to_integral_frame =
+      ReferenceClockToIntegralFrames(job.reference_clock_to_fractional_destination_frame);
   TimelineFunction& dest = bk->dest_frames_to_frac_source_frames;
-  dest = bk->clock_mono_to_frac_source_frames * job.reference_clock_to_destination_frame->Inverse();
+  dest = bk->clock_mono_to_frac_source_frames * reference_clock_to_integral_frame.Inverse();
 
   // Finally, compute the step size in subframes. IOW, every time we move forward one output frame,
   // how many input subframes should we consume. Don't bother doing the multiplications if already
@@ -468,7 +465,7 @@ void MixStage::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {
   }
 
   // Done, update our dest_trans generation.
-  bk->dest_trans_gen_id = job.reference_clock_to_destination_frame_gen;
+  bk->dest_trans_gen_id = job.reference_clock_to_fractional_destination_frame_gen;
 }
 
 }  // namespace media::audio
