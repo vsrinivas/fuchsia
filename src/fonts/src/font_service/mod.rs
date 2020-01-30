@@ -470,11 +470,7 @@ impl FontService {
         while let Some(request) = stream.try_next().await.context("Error running provider")? {
             self.handle_font_provider_request(request)
                 .await
-                .context("Error while handling font provider request")
-                .map_err(|err| {
-                    fx_log_err!("{:?}", err);
-                    err
-                })?;
+                .context("Error while handling request")?;
         }
         Ok(())
     }
@@ -486,11 +482,7 @@ impl FontService {
         while let Some(request) = stream.try_next().await.context("Error running provider")? {
             self.handle_experimental_request(request)
                 .await
-                .context("Error while handling experimental font provider request")
-                .map_err(|err| {
-                    fx_log_err!("{:?}", err);
-                    err
-                })?;
+                .context("Error while handling request")?;
         }
         Ok(())
     }
