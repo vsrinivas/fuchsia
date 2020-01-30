@@ -2,23 +2,42 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("ram-nand") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("ram-nand") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "bind.cc",
     "ram-nand-ctl.cc",
   ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk.protocol.nand",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.nand",
+    "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
 }
 
@@ -26,16 +45,20 @@ source_set("common") {
   visibility = [ ":*" ]
   sources = [ "ram-nand.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.nand",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon-internal",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.nand",
+    "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
 }
 
-zx_test("ram-nand-test") {
+test("ram-nand-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "ram-nand-test"
   sources = [
     "test/ram-nand-ctl.cc",
@@ -44,23 +67,30 @@ zx_test("ram-nand-test") {
   include_dirs = [ "." ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk.protocol.nand",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/ramdevice-client",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/devmgr-launcher",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/ramdevice-client",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.nand",
+    "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
+}
+
+migrated_manifest("ram-nand-manifest") {
+  deps = [ ":ram-nand" ]
+}
+
+migrated_manifest("ram-nand-test-manifest") {
+  deps = [ ":ram-nand-test" ]
 }
