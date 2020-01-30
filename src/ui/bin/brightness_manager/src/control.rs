@@ -4,7 +4,7 @@ use crate::sensor::SensorControl;
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use fidl_fuchsia_ui_brightness::{
     BrightnessPoint, BrightnessTable, ControlRequest as BrightnessControlRequest,
     ControlWatchAutoBrightnessAdjustmentResponder, ControlWatchAutoBrightnessResponder,
@@ -164,6 +164,7 @@ impl Control {
                 }
             }
             BrightnessControlRequest::SetManualBrightness { value, control_handle: _ } => {
+                let value = num_traits::clamp(value, 0.0, 1.0);
                 self.set_manual_brightness(value).await;
             }
             BrightnessControlRequest::WatchCurrentBrightness { responder } => {
@@ -177,8 +178,14 @@ impl Control {
                 }
             }
             BrightnessControlRequest::SetBrightnessTable { table, control_handle: _ } => {
-                self.set_brightness_table(&table).await;
-                *BRIGHTNESS_TABLE.lock().await = table;
+                let result = self.check_brightness_table_and_set_new_curve(&table).await;
+                match result {
+                    Ok(_v) => fx_log_info!("Brightness table is valid and set"),
+                    Err(e) => {
+                        // TODO(lingxueluo): Close the connection if brightness table not valid.
+                        fx_log_err!("Brightness table is not valid because {}", e);
+                    }
+                }
             }
 
             BrightnessControlRequest::SetAutoBrightnessAdjustment {
@@ -251,6 +258,7 @@ impl Control {
 
     async fn set_manual_brightness(&mut self, value: f32) {
         // Stop the background brightness tasks, if any
+
         if let Some(handle) = self.set_brightness_abort_handle.take() {
             handle.abort();
         }
@@ -281,8 +289,8 @@ impl Control {
         Ok(())
     }
 
-    async fn set_brightness_table(&mut self, table: &BrightnessTable) {
-        fx_log_info!("Setting brightness table.");
+    async fn set_brightness_curve(&mut self, table: &BrightnessTable) {
+        fx_log_info!("Setting new brightness curve.");
         self.spline = generate_spline(table);
 
         if self.auto_brightness_abort_handle.is_some() {
@@ -294,6 +302,35 @@ impl Control {
                 self.current_sender_channel.clone(),
             );
         }
+    }
+
+    async fn check_brightness_table_and_set_new_curve(
+        &mut self,
+        table: &BrightnessTable,
+    ) -> Result<(), Error> {
+        let BrightnessTable { points } = table;
+        if points.is_empty() {
+            fx_log_info!("Brightness table can not be empty, use the default table instead.");
+            let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
+            let brightness_table = BrightnessTable { points: points.to_vec() };
+            self.set_brightness_curve(&brightness_table).await;
+            return Ok(());
+        }
+        let mut last_lux = -1.0;
+        for brightness_point in points {
+            if brightness_point.ambient_lux < 0.0 || brightness_point.display_nits < 0.0 {
+                fx_log_info!("Lux or nits in this table is negative.");
+                return Err(format_err!(format!("Lux or nits in this table is negative.")));
+            }
+            if brightness_point.ambient_lux > last_lux {
+                last_lux = brightness_point.ambient_lux;
+            } else {
+                fx_log_info!("Not increasing lux in this table.");
+                return Err(format_err!(format!("Not increasing lux in this table.")));
+            }
+        }
+        self.set_brightness_curve(&table).await;
+        Ok(())
     }
 
     async fn scale_new_adjustment(&mut self, mut adjustment: f32) -> f32 {
@@ -671,19 +708,8 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_brightness_curve_after_set_new_brightness_table() {
+    async fn test_brightness_table_valid() {
         let mut control = generate_control_struct().await;
-        let points = {
-            let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
-            let mut points_vec = Vec::new();
-            for point in points {
-                points_vec.push(BrightnessPoint {
-                    ambient_lux: point.ambient_lux,
-                    display_nits: point.display_nits,
-                });
-            }
-            points_vec
-        };
         let brightness_table = {
             let mut lux_to_nits = Vec::new();
             lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 50. });
@@ -697,7 +723,7 @@ mod tests {
 
             BrightnessTable { points: lux_to_nits }
         };
-        control.set_brightness_table(&brightness_table).await;
+        control.check_brightness_table_and_set_new_curve(&brightness_table).await.unwrap();
         assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(0, &control.spline).await), true);
         assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(1, &control.spline).await), true);
         assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(2, &control.spline).await), true);
@@ -708,7 +734,120 @@ mod tests {
         assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(200, &control.spline).await), true);
         assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(240, &control.spline).await), true);
         assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(300, &control.spline).await), true);
-        *BRIGHTNESS_TABLE.lock().await = BrightnessTable { points };
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_table_not_valid_negative_value() {
+        let mut control = generate_control_struct().await;
+        let brightness_table = {
+            let mut lux_to_nits = Vec::new();
+            lux_to_nits.push(BrightnessPoint { ambient_lux: -10., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 50. });
+            BrightnessTable { points: lux_to_nits }
+        };
+        control.check_brightness_table_and_set_new_curve(&brightness_table).await.unwrap_err();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_table_not_valid_lux_not_increasing() {
+        let mut control = generate_control_struct().await;
+        let brightness_table = {
+            let mut lux_to_nits = Vec::new();
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 3., display_nits: 50. });
+            lux_to_nits.push(BrightnessPoint { ambient_lux: 100., display_nits: 50. });
+            BrightnessTable { points: lux_to_nits }
+        };
+        control.check_brightness_table_and_set_new_curve(&brightness_table).await.unwrap_err();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_table_valid_but_empty() {
+        let mut control = generate_control_struct().await;
+        let brightness_table = {
+            let lux_to_nits = Vec::new();
+            BrightnessTable { points: lux_to_nits }
+        };
+        let old_curve = &control.spline.clone();
+        control.check_brightness_table_and_set_new_curve(&brightness_table).await.unwrap();
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(0, old_curve).await,
+                brightness_curve_lux_to_nits(0, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(1, old_curve).await,
+                brightness_curve_lux_to_nits(1, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(2, old_curve).await,
+                brightness_curve_lux_to_nits(2, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(15, old_curve).await,
+                brightness_curve_lux_to_nits(15, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(16, old_curve).await,
+                brightness_curve_lux_to_nits(16, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(100, old_curve).await,
+                brightness_curve_lux_to_nits(100, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(150, old_curve).await,
+                brightness_curve_lux_to_nits(150, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(200, old_curve).await,
+                brightness_curve_lux_to_nits(200, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(240, old_curve).await,
+                brightness_curve_lux_to_nits(240, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(300, old_curve).await,
+                brightness_curve_lux_to_nits(300, &control.spline).await
+            ),
+            true
+        );
+        assert_eq!(
+            cmp_float(
+                brightness_curve_lux_to_nits(340, old_curve).await,
+                brightness_curve_lux_to_nits(340, &control.spline).await
+            ),
+            true
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
