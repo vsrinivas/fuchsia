@@ -4,7 +4,6 @@
 
 source_set("libc") {
   sources = [
-    "atexit.c",
     "atoi.c",
     "atomic.cc",
     "bsearch.c",

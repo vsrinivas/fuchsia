@@ -22,6 +22,12 @@ SECTIONS
     PROVIDE_HIDDEN(__code_start = .);
 
     /*
+     * This symbol is used by code the compiler generates.
+     * It serves no particular purpose in the kernel.
+     */
+    PROVIDE_HIDDEN(__dso_handle = 0);
+
+    /*
      * This just leaves space in the memory image for the boot headers.
      * The actual boot header will be constructed in image.S, which see.
      */
