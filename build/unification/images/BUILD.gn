@@ -189,6 +189,7 @@ aggregate_manifest("legacy-image") {
       ":driver.nelson",
       ":driver.sherlock",
       ":driver.vim2",
+      ":driver.vim3",
     ]
   } else if (target_cpu == "x64") {
     deps += [

@@ -51,6 +51,8 @@ fbl::String GetTestFilter() {
     return "*Qemu*";
   } else if (!strcmp(board_name, "vim2")) {
     return "*Vim2*";
+  } else if (!strcmp(board_name, "vim3")) {
+    return "*Vim3*";
   } else if (!strcmp(board_name, "astro")) {
     return "*Astro*";
   } else if (!strcmp(board_name, "cleo")) {
@@ -137,6 +139,19 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
       "sys/platform/05:02:b/aml-mailbox",
       "class/thermal/000",
       "aml-video/amlogic_video",
+  };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, Vim3Test) {
+  static const char* kDevicePaths[] = {
+      "sys/platform/vim",
+      "sys/platform/00:00:1b/sysmem",
+      "sys/platform/05:06:1/aml-axg-gpio",
+      "sys/platform/05:00:14/clocks",
+      "sys/platform/05:00:2/aml-i2c",
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-81/rtc",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

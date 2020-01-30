@@ -89,7 +89,8 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
       break;
     case PDEV_PID_AMLOGIC_S905D2:
     case PDEV_PID_AMLOGIC_T931:
-      // S905D2 and T931 are identical.
+    case PDEV_PID_AMLOGIC_A311D:
+      // S905D2, T931, A311D are identical.
       gpio_blocks = s905d2_gpio_blocks;
       block_count = countof(s905d2_gpio_blocks);
       gpio_interrupt = &s905d2_interrupt_block;
@@ -487,7 +488,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace gpio
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_gpio, gpio::driver_ops, "zircon", "0.1", 6)
+ZIRCON_DRIVER_BEGIN(aml_gpio, gpio::driver_ops, "zircon", "0.1", 7)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
@@ -495,4 +496,5 @@ ZIRCON_DRIVER_BEGIN(aml_gpio, gpio::driver_ops, "zircon", "0.1", 6)
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A113),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A311D),
 ZIRCON_DRIVER_END(aml_gpio)

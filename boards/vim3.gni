@@ -1,0 +1,12 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//boards/arm64.gni")
+
+board_name = "vim3"
+
+# partitions for fx flash to flash
+zircon_a_partition = "boot"
+zircon_r_partition = "recovery"
+fastboot_product = "galilei"

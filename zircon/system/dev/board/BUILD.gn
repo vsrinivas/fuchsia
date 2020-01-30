@@ -22,6 +22,7 @@ group("board") {
       "nelson",
       "sherlock",
       "vim2",
+      "vim3",
     ]
   } else if (current_cpu == "x64") {
     deps += [ "x86" ]

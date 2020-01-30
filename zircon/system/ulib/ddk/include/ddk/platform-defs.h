@@ -90,6 +90,7 @@ __BEGIN_CDECLS
 #define PDEV_VID_KHADAS             4
 #define PDEV_PID_VIM2               2
 #define PDEV_PID_VIM2_MACHINA       1002
+#define PDEV_PID_VIM3               3
 
 #define PDEV_DID_VIM_DISPLAY        1
 
@@ -100,6 +101,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_AMLOGIC_S905D2     3
 #define PDEV_PID_AMLOGIC_T931       4
 #define PDEV_PID_AMLOGIC_S905D3     5
+#define PDEV_PID_AMLOGIC_A311D      6
 
 #define PDEV_DID_AMLOGIC_GPIO        1
 #define PDEV_DID_AMLOGIC_I2C         2
