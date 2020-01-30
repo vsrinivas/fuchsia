@@ -40,6 +40,7 @@ zx_test("syn-dhub-test") {
     "$zx/system/dev/lib/as370",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/dev/lib/qcom",
     "$zx/system/ulib/ddk",

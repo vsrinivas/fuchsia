@@ -8,6 +8,7 @@
 group("lib") {
   testonly = true
   deps = [
+    "$zx/system/dev/clk/hisi-lib:hisi-lib",
     "amlogic",
     "as370",
     "broadcom",
@@ -36,6 +37,7 @@ group("lib") {
     "ot-radio",
     "pci",
     "qcom",
+    "scsi",
     "scsi",
     "usb",
   ]

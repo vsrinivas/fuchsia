@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("hisi-lib") {
-  sdk = "static"
+  sdk = "source"
   sdk_headers = [
     "dev/clk/hisi-lib/hisi-gate.h",
     "dev/clk/hisi-lib/hisi-clk.h",
@@ -22,7 +22,6 @@ zx_library("hisi-lib") {
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
