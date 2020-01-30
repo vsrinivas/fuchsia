@@ -3,8 +3,5 @@
 # found in the LICENSE file.
 
 group("codec") {
-  deps = [
-    "alc5663",
-    "max98927",
-  ]
+  deps = [ "max98927" ]
 }
