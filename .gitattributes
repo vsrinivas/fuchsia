@@ -8,3 +8,8 @@
 *.h    text
 *.gn   text
 *.md   text
+
+# Skip Tricium by default on files in third_party and golden files.
+golden/** -tricium
+goldens/** -tricium
+third_party/** -tricium
