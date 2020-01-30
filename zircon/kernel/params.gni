@@ -27,7 +27,7 @@ declare_args() {
 
   # Select an available scheduler.
   # Valid values are: "legacy", "fair", "unified"
-  select_scheduler = "fair"
+  select_scheduler = "unified"
 
   # The level of detail for scheduler traces when enabled. Values greater than
   # zero add increasing details at the cost of increased trace buffer use.
