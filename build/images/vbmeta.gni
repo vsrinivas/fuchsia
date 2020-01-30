@@ -30,6 +30,10 @@ declare_args() {
 
   # Partition name from where image will be verified
   zvb_partition_name = "zircon"
+
+  # Board level extra vbmeta images to be combined into the top-level vbmeta
+  # struct.
+  board_extra_vbmeta_images = []
 }
 
 # Template for producing VBMETA image for AVB
@@ -81,9 +85,7 @@ template("vbmeta") {
                                "deps",
                              ])
 
-      outputs = [
-        output_vbmeta_props_zbi_file,
-      ]
+      outputs = [ output_vbmeta_props_zbi_file ]
       args = [
         "--output",
         rebase_path(outputs[0], root_build_dir),
@@ -115,12 +117,8 @@ template("vbmeta") {
                              "deps",
                            ])
 
-    inputs = [
-      zbi[0],
-    ]
-    outputs = [
-      output_vbmeta_desc_file,
-    ]
+    inputs = [ zbi[0] ]
+    outputs = [ output_vbmeta_desc_file ]
     args = [
       "add_hash_footer",
       "--image",
@@ -164,9 +162,7 @@ template("vbmeta") {
       avb_atx_metadata,
       output_vbmeta_desc_file,
     ]
-    outputs = [
-      output_file,
-    ]
+    outputs = [ output_file ]
     args = [
       "make_vbmeta_image",
       "--output",  # output of VBMETA image
@@ -180,6 +176,13 @@ template("vbmeta") {
       "--include_descriptors_from_image",
       rebase_path(output_vbmeta_desc_file, root_build_dir),
     ]
+    foreach(entry, board_extra_vbmeta_images) {
+      file = rebase_path(entry, root_build_dir)
+      args += [
+        "--include_descriptors_from_image",
+        file,
+      ]
+    }
     if (defined(invoker.prop_from_file)) {
       inputs += [ output_vbmeta_props_zbi_file ]
       args += [
