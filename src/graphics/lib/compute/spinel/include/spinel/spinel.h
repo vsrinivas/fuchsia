@@ -79,22 +79,40 @@ spn_result_t
 spn_path_builder_line_to(spn_path_builder_t path_builder, float x1, float y1);
 
 spn_result_t
-spn_path_builder_cubic_to(
-  spn_path_builder_t path_builder, float x1, float y1, float x2, float y2, float x3, float y3);
+spn_path_builder_cubic_to(spn_path_builder_t path_builder,  //
+                          float              x1,
+                          float              y1,
+                          float              x2,
+                          float              y2,
+                          float              x3,
+                          float              y3);
 
 spn_result_t
-spn_path_builder_cubic_smooth_to(
-  spn_path_builder_t path_builder, float x2, float y2, float x3, float y3);
+spn_path_builder_cubic_smooth_to(spn_path_builder_t path_builder,  //
+                                 float              x2,
+                                 float              y2,
+                                 float              x3,
+                                 float              y3);
 
 spn_result_t
-spn_path_builder_quad_to(spn_path_builder_t path_builder, float x1, float y1, float x2, float y2);
+spn_path_builder_quad_to(spn_path_builder_t path_builder,  //
+                         float              x1,
+                         float              y1,
+                         float              x2,
+                         float              y2);
 
 spn_result_t
-spn_path_builder_quad_smooth_to(spn_path_builder_t path_builder, float x2, float y2);
+spn_path_builder_quad_smooth_to(spn_path_builder_t path_builder,  //
+                                float              x2,
+                                float              y2);
 
 spn_result_t
-spn_path_builder_rat_quad_to(
-  spn_path_builder_t path_builder, float x1, float y1, float x2, float y2, float w1);
+spn_path_builder_rat_quad_to(spn_path_builder_t path_builder,  //
+                             float              x1,
+                             float              y1,
+                             float              x2,
+                             float              y2,
+                             float              w1);
 
 spn_result_t
 spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,

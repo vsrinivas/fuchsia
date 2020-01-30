@@ -1,5 +1,5 @@
 {
-    "spinel/spinel.h": "25f3347e73f3fb33c0203181a1d00c2a3696181b", 
+    "spinel/spinel.h": "f999539e17a4516fdd0596e9182f282bb67c198f", 
     "spinel/spinel_assert.h": "f561cfcf729cb4aaad4f2fbbb36eb90ed89d21e1", 
     "spinel/spinel_opcodes.h": "1b6b8612a10d39d4f9b8d2cd5d09b5df8324d629", 
     "spinel/spinel_result.h": "dfee08e10a53cb54ce3af2380dbd97f4224efb3d", 
