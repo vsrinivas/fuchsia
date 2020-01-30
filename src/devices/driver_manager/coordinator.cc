@@ -61,10 +61,33 @@
 
 namespace {
 
+constexpr char kDriverHostPath[] = "/boot/bin/driver_host";
 constexpr char kBootFirmwarePath[] = "/boot/lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kFshostAdminPath[] = "/svc/fuchsia.fshost.Admin";
+
+// The driver_host doesn't just define its own __asan_default_options()
+// function because that conflicts with the build-system feature of injecting
+// such a function based on the `asan_default_options` GN build argument.
+// Since driver_host is only ever launched here, it can always get its
+// necessary options through its environment variables.  The sanitizer
+// runtime combines the __asan_default_options() and environment settings.
+constexpr char kAsanEnvironment[] =
+    "ASAN_OPTIONS="
+
+    // All drivers have a pure C ABI.  But each individual driver might
+    // statically link in its own copy of some C++ library code.  Since no
+    // C++ language relationships leak through the driver ABI, each driver is
+    // its own whole program from the perspective of the C++ language rules.
+    // But the ASan runtime doesn't understand this and wants to diagnose ODR
+    // violations when the same global is defined in multiple drivers, which
+    // is likely with C++ library use.  There is no real way to teach the
+    // ASan instrumentation or runtime about symbol visibility and isolated
+    // worlds within the program, so the only thing to do is suppress the ODR
+    // violation detection.  This unfortunately means real ODR violations
+    // within a single C++ driver won't be caught either.
+    "detect_odr_violation=0";
 
 std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> ConnectToFshostAdminServer() {
   zx::channel local, remote;
@@ -319,16 +342,6 @@ void Coordinator::DumpDrivers(VmoWriter* vmo) const {
   }
 }
 
-static const char* get_devhost_bin(bool asan_drivers) {
-  // If there are any ASan drivers, use the ASan-supporting devhost for
-  // all drivers because even a devhost launched initially with just a
-  // non-ASan driver might later load an ASan driver.  One day we might
-  // be able to be more flexible about which drivers must get loaded into
-  // the same devhost and thus be able to use both ASan and non-ASan
-  // devhosts at the same time when only a subset of drivers use ASan.
-  return "/boot/bin/driver_host";
-}
-
 zx_handle_t get_service_root();
 
 zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out,
@@ -462,11 +475,27 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
   }
   dh->set_hrpc(dh_hrpc.release());
 
+  const char* program = kDriverHostPath;
   fbl::Vector<const char*> env;
+  if (config_.asan_drivers) {
+    // If there are any ASan drivers, use the ASan-supporting driver_host for
+    // all drivers because even a devhost launched initially with just a
+    // non-ASan driver might later load an ASan driver.  One day we might be
+    // able to be more flexible about which drivers must get loaded into the
+    // same devhost and thus be able to use both ASan and non-ASan devhosts
+    // at the same time when only a subset of drivers use ASan.
+    //
+    // TODO(44814): The build logic to install the asan-ready driver_host
+    // under the alternate name is currently broken.  So things only work
+    // if the build chose an asan-ready variant for the "main" driver_host.
+    // When this is restored in the build, this should select the right name.
+    //program = kDriverHostAsanPath;
+    env.push_back(kAsanEnvironment);
+  }
   boot_args().Collect("driver.", &env);
   env.push_back(nullptr);
   status = dc_launch_devhost(
-      dh.get(), loader_service_connector_, get_devhost_bin(config_.asan_drivers), name, env.data(),
+      dh.get(), loader_service_connector_, program, name, env.data(),
       hrpc.release(), root_resource(), zx::unowned_job(config_.devhost_job), config_.fs_provider);
   if (status != ZX_OK) {
     zx_handle_close(dh->hrpc());
