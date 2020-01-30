@@ -25,6 +25,24 @@ zx_library("tee-client-api") {
   ]
 }
 
+zx_library("tee-client-api-static") {
+  sdk = "static"
+  sdk_headers = [
+    "lib/tee-client-api/tee_client_api.h",
+    "lib/tee-client-api/tee-client-types.h",
+  ]
+  static = true
+  sources = [ "tee-client-api.cc" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-tee:llcpp",
+    "$zx/system/fidl/fuchsia-tee:llcpp",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
 zx_library("tee-client-api-headers") {
   sdk = "source"
   sdk_headers = [

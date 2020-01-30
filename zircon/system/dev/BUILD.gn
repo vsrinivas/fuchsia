@@ -23,7 +23,6 @@ group("dev") {
     "pci",
     "power",
     "pwm",
-    "securemem",
     "serial",
     "shareddma",
     "spi",

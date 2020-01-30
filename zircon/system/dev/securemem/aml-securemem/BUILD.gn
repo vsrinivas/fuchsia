@@ -2,26 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("aml-securemem") {
-  sources = []
-  deps = [ ":common" ]
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-  # TODO(32708): (ZX-2863) This driver presently violates the allowed shlib deps policy:
-  # + ../../prebuilt/third_party/gn/linux-x64/gn path . --root=../../zircon/ '//system/dev/securemem/aml-securemem:aml-securemem(//public/gn/toolchain:user-arm64-clang.shlib)' '//system/ulib/fdio:fdio.shared(//public/gn/toolchain:user-arm64-clang.shlib)'
-  # //system/dev/securemem/aml-securemem:aml-securemem --[public]-->
-  # //system/dev/securemem/aml-securemem:aml-securemem._build --[private]-->
-  # //system/dev/securemem/aml-securemem:common --[public]-->
-  # //system/ulib/tee-client-api:static --[public]-->
-  # //system/ulib/tee-client-api:tee-client-api.static --[private]-->
-  # //system/ulib/tee-client-api:tee-client-api._sources --[private]-->
-  # //system/ulib/fdio:fdio --[public]-->
-  # //system/ulib/fdio:fdio.shared
-  #
-  # TODO(36236): See bug for discussion of potential ways to resolve this.
-  deprecated_inhibit_driver_shlib_allowlist = true
-}
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
 
-source_set("common") {
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("aml-securemem") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [
     "device.cc",
     "device.h",
@@ -30,40 +32,73 @@ source_set("common") {
   ]
 
   deps = [
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-  ]
-
-  public_deps = [
-    "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/banjo/ddk.protocol.tee",
-    "$zx/system/dev/lib/device-protocol-platform-device",
-    "$zx/system/fidl/fuchsia-hardware-securemem:llcpp",
-    "$zx/system/fidl/fuchsia-sysmem:llcpp",
-    "$zx/system/ulib/async:async-cpp.static",
-    "$zx/system/ulib/async-loop:async-loop-cpp.static",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/closure-queue",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp.static",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/tee-client-api:static",
-    "$zx/third_party/ulib/safemath",
+    "//src/devices:driver",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/closure-queue",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-platform-device",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/safemath",
+    "//zircon/public/lib/tee-client-api-static",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/banjo/ddk.protocol.tee",
+    "//zircon/system/fidl/fuchsia-hardware-securemem:llcpp",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
 }
 
-zx_test("aml-securemem-test") {
+test("aml-securemem-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   output_name = "aml-securemem-test"
-  sources = [ "test/aml-securemem-test.cc" ]
+  sources = [
+    "device.cc",
+    "device.h",
+    "secmem-client-session.cc",
+    "sysmem-secure-mem-server.cc",
+    "test/aml-securemem-test.cc",
+  ]
   include_dirs = [ "." ]
   deps = [
-    ":common",
-    "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/closure-queue",
+    "//zircon/public/lib/device-protocol-platform-device",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/safemath",
+    "//zircon/public/lib/tee-client-api-static",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/banjo/ddk.protocol.tee",
+    "//zircon/system/fidl/fuchsia-hardware-securemem:llcpp",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
+}
+
+migrated_manifest("aml-securemem-manifest") {
+  deps = [ ":aml-securemem" ]
+}
+
+migrated_manifest("aml-securemem-test-manifest") {
+  deps = [ ":aml-securemem-test" ]
 }
