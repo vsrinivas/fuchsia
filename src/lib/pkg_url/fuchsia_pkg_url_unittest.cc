@@ -70,6 +70,7 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_EQ("1234", fp.hash());
   EXPECT_EQ("stuff", fp.resource_path());
   EXPECT_EQ("fuchsia-pkg://example.com/data-package/variant123?hash=1234", fp.package_path());
+  EXPECT_EQ("fuchsia-pkg://example.com/data-package#stuff", fp.WithoutVariantAndHash());
 }
 
 TEST(FuchsiaPkgUrl, pkgfs_dir_path) {

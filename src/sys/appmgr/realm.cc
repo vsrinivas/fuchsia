@@ -867,8 +867,8 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
 
     if (sandbox.HasService("fuchsia.pkg.PackageResolver") &&
-        !IsAllowedToUsePackageResolver(fp.ToString())) {
-      FXL_LOG(ERROR) << "Component " << fp.ToString() << " is not allowed to use "
+        !IsAllowedToUsePackageResolver(fp.WithoutVariantAndHash())) {
+      FXL_LOG(ERROR) << "Component " << fp.WithoutVariantAndHash() << " is not allowed to use "
                      << "fuchsia.pkg.PackageResolver. go/no-package-resolver";
       component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
       return;
@@ -1082,6 +1082,7 @@ bool Realm::IsAllowedToUsePackageResolver(std::string ns_id) {
   if (!package_resolver_allowlist.WasFilePresent()) {
     return true;
   }
+
   return package_resolver_allowlist.IsAllowed(ns_id);
 }
 

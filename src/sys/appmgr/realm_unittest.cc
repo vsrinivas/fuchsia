@@ -90,7 +90,7 @@ TEST_F(RealmTest, ReplaceAsExecPolicyAbsent) {
 
 TEST_F(RealmTest, PackageResolverPolicy) {
   static constexpr char kFile[] = R"F(
-  fuchsia-pkg://fuchsia.com/system_updater#meta/system_updater.cmx
+  fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx
   )F";
 
   // Stub out a dispatcher.  We won't actually run anything on it, but some
@@ -107,10 +107,19 @@ TEST_F(RealmTest, PackageResolverPolicy) {
   auto filename = NewFile(dir, "allowlist/package_resolver.txt", kFile);
   auto realm = CreateTestRealm(std::move(dirfd));
 
-  EXPECT_TRUE(realm->IsAllowedToUsePackageResolver(
-      "fuchsia-pkg://fuchsia.com/system_updater#meta/system_updater.cmx"));
-  EXPECT_FALSE(
-      realm->IsAllowedToUsePackageResolver("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"));
+  FuchsiaPkgUrl fp;
+
+  // "Vanilla" package url, without variant or hash
+  fp.Parse("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx");
+  EXPECT_TRUE(realm->IsAllowedToUsePackageResolver(fp.WithoutVariantAndHash()));
+
+  // Variants and hashes should be thrown away
+  fp.Parse("fuchsia-pkg://fuchsia.com/amber/0?hash=123#meta/system_updater.cmx");
+  EXPECT_TRUE(realm->IsAllowedToUsePackageResolver(fp.WithoutVariantAndHash()));
+
+  // Check exclusion
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  EXPECT_FALSE(realm->IsAllowedToUsePackageResolver(fp.WithoutVariantAndHash()));
 }
 
 }  // namespace

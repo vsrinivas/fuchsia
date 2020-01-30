@@ -72,6 +72,10 @@ std::string FuchsiaPkgUrl::package_path() const {
   return fxl::Substitute("fuchsia-pkg://$0/$1/$2$3", host_name_, package_name_, variant_, query);
 }
 
+std::string FuchsiaPkgUrl::WithoutVariantAndHash() const {
+  return fxl::Substitute("fuchsia-pkg://$0/$1#$2", host_name_, package_name_, resource_path_);
+}
+
 const std::string& FuchsiaPkgUrl::ToString() const { return url_; }
 
 }  // namespace component

@@ -27,6 +27,9 @@ class FuchsiaPkgUrl {
 
   bool Parse(const std::string& url);
 
+  // Serializes this url without a variant or hash included
+  std::string WithoutVariantAndHash() const;
+
   const std::string& host_name() const { return host_name_; }
   const std::string& package_name() const { return package_name_; }
   const std::string& variant() const { return variant_; }
