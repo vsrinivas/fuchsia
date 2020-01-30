@@ -23,7 +23,7 @@ class RingBufferTest : public testing::Test {
   void SetUp() override {
     const auto& format = kDefaultFormat;
     auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-        0, zx::time(0).get(), format.frames_per_second() * format.bytes_per_frame(),
+        0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
     ring_buffer_ =
         RingBuffer::Allocate(format, std::move(timeline_function), kRingBufferFrameCount, true);

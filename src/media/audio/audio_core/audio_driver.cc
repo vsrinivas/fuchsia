@@ -39,6 +39,14 @@ void LogMissedCommandDeadline(zx::duration delay) {
   FX_LOGS(WARNING) << "Driver command missed deadline by " << delay.to_nsecs() << "ns";
 }
 
+TimelineFunction TransposeFractionalFramesToBytes(const Format& format,
+                                                  TimelineFunction clock_mono_to_fractional_frame) {
+  TimelineRate frac_frames_to_bytes(format.bytes_per_frame(),
+                                    FractionalFrames<int32_t>(1).raw_value());
+  return TimelineFunction::Compose(TimelineFunction(frac_frames_to_bytes),
+                                   clock_mono_to_fractional_frame);
+}
+
 }  // namespace
 
 AudioDriver::AudioDriver(AudioDevice* owner) : AudioDriver(owner, LogMissedCommandDeadline) {}
@@ -46,7 +54,7 @@ AudioDriver::AudioDriver(AudioDevice* owner) : AudioDriver(owner, LogMissedComma
 AudioDriver::AudioDriver(AudioDevice* owner, DriverTimeoutHandler timeout_handler)
     : owner_(owner),
       timeout_handler_(std::move(timeout_handler)),
-      clock_mono_to_ring_pos_bytes_(fbl::MakeRefCounted<VersionedTimelineFunction>()) {
+      clock_mono_to_fractional_frame_(fbl::MakeRefCounted<VersionedTimelineFunction>()) {
   FX_DCHECK(owner_ != nullptr);
 }
 
@@ -104,7 +112,7 @@ void AudioDriver::Cleanup() {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
     ring_buffer = std::move(ring_buffer_);
   }
-  clock_mono_to_ring_pos_bytes_->Update(TimelineFunction());
+  clock_mono_to_fractional_frame_->Update(TimelineFunction());
   ring_buffer = nullptr;
 
   stream_channel_wait_.Cancel();
@@ -112,18 +120,36 @@ void AudioDriver::Cleanup() {
   cmd_timeout_.Cancel();
 }
 
+TimelineFunction AudioDriver::clock_mono_to_ring_pos_bytes() const {
+  auto format = GetFormat();
+  if (format) {
+    auto [clock_mono_to_fractional_frame, _] = clock_mono_to_fractional_frame_->get();
+    return TransposeFractionalFramesToBytes(*format, clock_mono_to_fractional_frame);
+  } else {
+    return TimelineFunction();
+  }
+}
+
 void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
   TRACE_DURATION("audio", "AudioDriver::SnapshotRingBuffer");
   FX_DCHECK(snapshot);
+  auto format = GetFormat();
+
   std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
 
-  auto [clock_mono_to_ring_pos_bytes, generation] = clock_mono_to_ring_pos_bytes_->get();
+  if (format) {
+    auto [clock_mono_to_fractional_frame, generation] = clock_mono_to_fractional_frame_->get();
+    snapshot->clock_mono_to_ring_pos_bytes =
+        TransposeFractionalFramesToBytes(*format, clock_mono_to_fractional_frame);
+    snapshot->gen_id = generation;
+  } else {
+    snapshot->clock_mono_to_ring_pos_bytes = TimelineFunction();
+    snapshot->gen_id = kInvalidGenerationId;
+  }
 
   snapshot->ring_buffer = ring_buffer_;
   snapshot->position_to_end_fence_frames = owner_->is_input() ? fifo_depth_frames() : 0;
   snapshot->end_fence_to_start_fence_frames = end_fence_to_start_fence_frames_;
-  snapshot->clock_mono_to_ring_pos_bytes = clock_mono_to_ring_pos_bytes;
-  snapshot->gen_id = generation;
 }
 
 std::optional<Format> AudioDriver::GetFormat() const {
@@ -355,7 +381,7 @@ zx_status_t AudioDriver::Stop() {
   }
 
   // Invalidate our timeline transformation here. To outside observers, we are now stopped.
-  clock_mono_to_ring_pos_bytes_->Update(TimelineFunction());
+  clock_mono_to_fractional_frame_->Update(TimelineFunction());
 
   // Send the command to stop the ring buffer.
   audio_rb_cmd_start_req_t req;
@@ -867,13 +893,13 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
 
-    ring_buffer_ = RingBuffer::Create(*format, clock_mono_to_ring_pos_bytes_, std::move(rb_vmo),
+    ring_buffer_ = RingBuffer::Create(*format, clock_mono_to_fractional_frame_, std::move(rb_vmo),
                                       resp.num_ring_buffer_frames, owner_->is_input());
     if (ring_buffer_ == nullptr) {
       ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);
       return ZX_ERR_NO_MEMORY;
     }
-    FX_DCHECK(!clock_mono_to_ring_pos_bytes_->get().first.invertible());
+    FX_DCHECK(!clock_mono_to_fractional_frame_->get().first.invertible());
   }
 
   // We are now Configured. Let our owner know about this important milestone.
@@ -900,9 +926,10 @@ zx_status_t AudioDriver::ProcessStartResponse(const audio_rb_cmd_start_resp_t& r
 
   // We are almost Started, so compute the translation from clock-monotonic to ring-buffer-position
   // (in bytes), then update the ring buffer state's transformation and bump the generation counter.
-  TimelineFunction func(0, resp.start_time, format->frames_per_second() * format->bytes_per_frame(),
+  TimelineFunction func(0, resp.start_time,
+                        FractionalFrames<int64_t>(format->frames_per_second()).raw_value(),
                         ZX_SEC(1));
-  clock_mono_to_ring_pos_bytes_->Update(func);
+  clock_mono_to_fractional_frame_->Update(func);
 
   // We are now Started. Let our owner know about this important milestone.
   state_ = State::Started;

@@ -209,9 +209,7 @@ class AudioDriver {
     return ring_buffer_;
   };
 
-  TimelineFunction clock_mono_to_ring_pos_bytes() const FXL_NO_THREAD_SAFETY_ANALYSIS {
-    return clock_mono_to_ring_pos_bytes_->get().first;
-  }
+  TimelineFunction clock_mono_to_ring_pos_bytes() const FXL_NO_THREAD_SAFETY_ANALYSIS;
   void StreamChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
@@ -260,7 +258,7 @@ class AudioDriver {
   mutable std::mutex ring_buffer_state_lock_;
   std::shared_ptr<RingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
   uint32_t end_fence_to_start_fence_frames_ FXL_GUARDED_BY(ring_buffer_state_lock_) = 0;
-  fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_ring_pos_bytes_;
+  fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_fractional_frame_;
 
   // Plug detection state.
   bool pd_enabled_ = false;

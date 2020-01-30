@@ -19,12 +19,12 @@ class RingBuffer : public Stream {
  public:
   static std::shared_ptr<RingBuffer> Create(
       const Format& format,
-      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_ring_pos_bytes, zx::vmo vmo,
+      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames, zx::vmo vmo,
       uint32_t frame_count, bool input);
 
   static std::shared_ptr<RingBuffer> Allocate(
       const Format& format,
-      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_ring_pos_bytes,
+      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
       uint32_t frame_count, bool input);
 
   RingBuffer(const Format& format,
@@ -43,11 +43,9 @@ class RingBuffer : public Stream {
   uint8_t* virt() const { return reinterpret_cast<uint8_t*>(vmo_mapper_.start()); }
 
  private:
-  TimelineFunction ReferenceClockToRingFrame() const;
-
   fzl::VmoMapper vmo_mapper_;
   uint32_t frames_ = 0;
-  fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_ring_pos_bytes_;
+  fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame_;
 };
 
 }  // namespace media::audio
