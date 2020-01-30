@@ -16,11 +16,6 @@
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
-// Allow (at most) 256 slabs of pending capture buffers. At 16KB per slab, this
-// means we will deny allocations after 4MB. If we ever need more than 4MB of
-// pending capture buffer bookkeeping, something has gone seriously wrong.
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(media::audio::AudioCapturerImpl::PcbAllocatorTraits, 0x100);
-
 namespace media::audio {
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -49,9 +44,6 @@ const zx::duration kFenceTimePadding = zx::msec(3);
 
 constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
-
-// static
-AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
 std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
@@ -412,7 +404,8 @@ void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_fr
   }
 
   // Allocate bookkeeping to track this pending capture operation.
-  auto pending_capture_buffer = PcbAllocator::New(offset_frames, num_frames, std::move(cbk));
+  auto pending_capture_buffer =
+      PendingCaptureBuffer::Allocator::New(offset_frames, num_frames, std::move(cbk));
   if (pending_capture_buffer == nullptr) {
     FX_LOGS(ERROR) << "Failed to allocate pending capture buffer!";
     return;
@@ -1361,8 +1354,8 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
   // Allocate bookkeeping to track this pending capture operation. If we cannot
   // allocate a new pending capture buffer, it is a fatal error and we need to
   // start the process of shutting down.
-  auto pending_capture_buffer =
-      PcbAllocator::New(async_next_frame_offset_, async_frames_per_packet_, nullptr);
+  auto pending_capture_buffer = PendingCaptureBuffer::Allocator::New(
+      async_next_frame_offset_, async_frames_per_packet_, nullptr);
   if (pending_capture_buffer == nullptr) {
     FX_LOGS(ERROR) << "Failed to allocate pending capture buffer during async capture mode!";
     ShutdownFromMixDomain();

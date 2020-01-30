@@ -112,6 +112,8 @@ source_set("audio_core_lib") {
     "packet.h",
     "packet_queue.cc",
     "packet_queue.h",
+    "pending_capture_buffer.cc",
+    "pending_capture_buffer.h",
     "pending_flush_token.cc",
     "pending_flush_token.h",
     "pipeline_config.h",

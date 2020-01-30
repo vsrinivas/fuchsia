@@ -23,6 +23,7 @@
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
+#include "src/media/audio/audio_core/pending_capture_buffer.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/threading_model.h"
@@ -118,37 +119,12 @@ class AudioCapturerImpl : public AudioObject,
            state != AudioCapturerImpl::State::Shutdown;
   }
 
-  struct PendingCaptureBuffer;
-
-  using PcbAllocatorTraits =
-      ::fbl::StaticSlabAllocatorTraits<std::unique_ptr<PendingCaptureBuffer>>;
-  using PcbAllocator = ::fbl::SlabAllocator<PcbAllocatorTraits>;
-  using PcbList = ::fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
-
-  struct PendingCaptureBuffer
-      : public fbl::SlabAllocated<PcbAllocatorTraits>,
-        public fbl::DoublyLinkedListable<std::unique_ptr<PendingCaptureBuffer>> {
-    PendingCaptureBuffer(uint32_t of, uint32_t nf, CaptureAtCallback c)
-        : offset_frames(of), num_frames(nf), cbk(std::move(c)) {}
-
-    static AtomicGenerationId sequence_generator;
-
-    const uint32_t offset_frames;
-    const uint32_t num_frames;
-    const CaptureAtCallback cbk;
-
-    int64_t capture_timestamp = fuchsia::media::NO_TIMESTAMP;
-    uint32_t flags = 0;
-    uint32_t filled_frames = 0;
-    const uint32_t sequence_number = sequence_generator.Next();
-  };
-
-  friend PcbAllocator;
-
   AudioCapturerImpl(bool loopback,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
                     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
                     StreamVolumeManager* volume_manager, LinkMatrix* link_matrix);
+
+  using PcbList = ::fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
 
   // |fuchsia::media::AudioCapturer|
   void GetStreamType(GetStreamTypeCallback cbk) final;
@@ -308,7 +284,5 @@ class AudioCapturerImpl : public AudioObject,
 };
 
 }  // namespace media::audio
-
-FWD_DECL_STATIC_SLAB_ALLOCATOR(media::audio::AudioCapturerImpl::PcbAllocatorTraits);
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
