@@ -249,14 +249,6 @@ class Performance {
     return processedResultFile;
   }
 
-  /// TODO(39301): Replace all uses of this with [processTrace].
-  Future<File> processTrace2(MetricsSpecSet metricsSpecSet, File trace,
-          {String converterPath,
-          Map<String, MetricsProcessor> registry =
-              defaultMetricsRegistry}) async =>
-      processTrace(metricsSpecSet, trace,
-          converterPath: converterPath, registry: registry);
-
   /// A helper function that converts the results to the catapult format.
   ///
   /// Returns the converted benchmark result [File].
