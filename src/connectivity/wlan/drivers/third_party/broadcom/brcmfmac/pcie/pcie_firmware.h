@@ -36,7 +36,10 @@ class PcieFirmware {
   // Accessors for various shared RAM states.
   uint8_t GetSharedRamVersion() const;
   uint16_t GetSharedRamFlags() const;
+  uint16_t GetMaxRxbufpost() const;
+  uint32_t GetRxDataOffset() const;
   uint32_t GetDeviceToHostMailboxDataAddress() const;
+  uint32_t GetRingInfoOffset() const;
 
   // Read the firmware console.  Only complete lines are returned, one at a time.
   std::string ReadConsole();

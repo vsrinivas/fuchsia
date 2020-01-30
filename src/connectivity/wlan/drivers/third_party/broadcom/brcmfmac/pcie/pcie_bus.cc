@@ -17,6 +17,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_handlers.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_master.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -54,6 +55,12 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
     return status;
   }
 
+  std::unique_ptr<PcieRingMaster> pcie_ring_master;
+  if ((status = PcieRingMaster::Create(pcie_buscore.get(), pcie_firmware.get(),
+                                       &pcie_ring_master)) != ZX_OK) {
+    return status;
+  }
+
   std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master;
   if ((status = PcieInterruptMaster::Create(device->parent(), pcie_buscore.get(),
                                             &pcie_interrupt_master)) != ZX_OK) {
@@ -80,6 +87,7 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
   pcie_bus->device_ = device;
   pcie_bus->pcie_buscore_ = std::move(pcie_buscore);
   pcie_bus->pcie_firmware_ = std::move(pcie_firmware);
+  pcie_bus->pcie_ring_master_ = std::move(pcie_ring_master);
   pcie_bus->pcie_interrupt_master_ = std::move(pcie_interrupt_master);
   pcie_bus->pcie_interrupt_handlers_ = std::move(pcie_interrupt_handlers);
   pcie_bus->brcmf_bus_ = std::move(bus);

@@ -21,10 +21,7 @@ BaseDmaRing::BaseDmaRing(std::unique_ptr<DmaBuffer> dma_buffer, size_t item_size
       item_size_(item_size),
       item_capacity_(item_capacity),
       read_index_(read_index),
-      write_index_(write_index) {
-  read_index->store(0, std::memory_order::memory_order_release);
-  write_index->store(0, std::memory_order::memory_order_release);
-}
+      write_index_(write_index) {}
 
 BaseDmaRing::~BaseDmaRing() = default;
 
@@ -91,7 +88,6 @@ zx_status_t ReadDmaRing::MapRead(uint16_t item_count, const void** out_buffer) {
     }
     cache_invalidate_index_ = end_index;
   }
-  std::atomic_thread_fence(std::memory_order::memory_order_acquire);
 
   *out_buffer = reinterpret_cast<const void*>(dma_buffer_->address() + read_index * item_size_);
   return ZX_OK;
@@ -194,7 +190,6 @@ zx_status_t WriteDmaRing::CommitWrite(uint16_t item_count) {
   uint16_t new_write_index = write_index + item_count;
 
   // Flush our new CPU-written entires from the cache, for DMA device access.
-  std::atomic_thread_fence(std::memory_order::memory_order_release);
   const uint16_t cache_clean_end = std::min(cache_clean_index_, new_write_index);
   cache_clean_index_ = std::max(cache_clean_index_, new_write_index);
   if (cache_clean_end > write_index) {

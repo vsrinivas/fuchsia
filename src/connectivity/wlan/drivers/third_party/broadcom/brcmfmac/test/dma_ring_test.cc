@@ -31,9 +31,9 @@ TEST(DmaRingTest, CreationParameters) {
   ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
 
-  volatile std::atomic<uint16_t> read_index = {};
-  volatile std::atomic<uint16_t> write_index = {};
-  volatile std::atomic<uint32_t> write_signal = {};
+  volatile std::atomic<uint16_t> read_index(0);
+  volatile std::atomic<uint16_t> write_index(0);
+  volatile std::atomic<uint32_t> write_signal(0);
   std::unique_ptr<ReadDmaRing> read_ring;
   std::unique_ptr<WriteDmaRing> write_ring;
 
@@ -44,8 +44,8 @@ TEST(DmaRingTest, CreationParameters) {
     write_index.store(42);
     EXPECT_EQ(ZX_OK, ReadDmaRing::Create(std::move(dma_buffer), kItemSize, i, &read_index,
                                          &write_index, &read_ring));
-    EXPECT_EQ(0u, read_index.load());
-    EXPECT_EQ(0u, write_index.load());
+    EXPECT_EQ(5u, read_index.load());
+    EXPECT_EQ(42u, write_index.load());
     EXPECT_NE(nullptr, read_ring);
     read_ring.reset();
 
@@ -55,8 +55,8 @@ TEST(DmaRingTest, CreationParameters) {
     write_signal.store(0);
     EXPECT_EQ(ZX_OK, WriteDmaRing::Create(std::move(dma_buffer), kItemSize, i, &read_index,
                                           &write_index, &write_signal, &write_ring));
-    EXPECT_EQ(0u, read_index.load());
-    EXPECT_EQ(0u, write_index.load());
+    EXPECT_EQ(5u, read_index.load());
+    EXPECT_EQ(42u, write_index.load());
     EXPECT_EQ(0u, write_signal.load());
     EXPECT_NE(nullptr, write_ring);
     write_ring.reset();
@@ -101,8 +101,8 @@ TEST(DmaRingTest, ReadTest) {
   EXPECT_NE(nullptr, dma_buffer_data);
   std::memcpy(dma_buffer_data, buffer_data, sizeof(buffer_data));
 
-  volatile std::atomic<uint16_t> read_index(5);
-  volatile std::atomic<uint16_t> write_index(42);
+  volatile std::atomic<uint16_t> read_index(0);
+  volatile std::atomic<uint16_t> write_index(0);
   std::unique_ptr<ReadDmaRing> read_ring;
   EXPECT_EQ(ZX_OK, ReadDmaRing::Create(std::move(dma_buffer), sizeof(uint32_t), kItemCount,
                                        &read_index, &write_index, &read_ring));
@@ -177,8 +177,8 @@ TEST(DmaRingTest, WriteTest) {
   }
   std::memcpy(dma_buffer_data, buffer_data, sizeof(buffer_data));
 
-  volatile std::atomic<uint16_t> read_index(5);
-  volatile std::atomic<uint16_t> write_index(42);
+  volatile std::atomic<uint16_t> read_index(0);
+  volatile std::atomic<uint16_t> write_index(0);
   volatile std::atomic<uint32_t> write_signal(0);
   std::unique_ptr<WriteDmaRing> write_ring;
   EXPECT_EQ(ZX_OK, WriteDmaRing::Create(std::move(dma_buffer), sizeof(uint32_t), kItemCount,

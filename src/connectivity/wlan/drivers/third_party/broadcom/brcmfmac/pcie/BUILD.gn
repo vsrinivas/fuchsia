@@ -21,6 +21,8 @@ source_set("pcie") {
     "pcie_interrupt_master.cc",
     "pcie_interrupt_master.h",
     "pcie_regs.h",
+    "pcie_ring_master.cc",
+    "pcie_ring_master.h",
   ]
   public = [ "pcie_device.h" ]
   deps = [

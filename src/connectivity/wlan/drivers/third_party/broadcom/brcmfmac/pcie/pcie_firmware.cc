@@ -34,6 +34,9 @@ constexpr zx::duration kFirmwareBootIteration = zx::msec(50);
 constexpr size_t kDmaD2hScratchBufferSize = 8;
 constexpr size_t kDmaD2hRingupdateBufferSize = 1024;
 
+// Default value for GetMaxRxbufpost(), if firmware provides no value.
+constexpr int kDefaultMaxRxbufpost = 255;
+
 // Adjust the buscore RAM size, according to the firmware binary.
 void AdjustBuscoreRamsize(std::string_view firmware, PcieBuscore* buscore) {
   if (firmware.size() < kFirmwareRamsizeOffset + 8) {
@@ -59,7 +62,11 @@ struct [[gnu::packed]] PcieFirmware::SharedRamInfo {
   uint16_t flags;
   uint32_t pad1[4];
   uint32_t console_addr;
-  uint32_t pad2[5];
+  uint32_t pad2[2];
+  uint16_t pad3[1];
+  uint16_t max_rxbufpost;
+  uint32_t rx_data_offset;
+  uint32_t pad4[1];
   uint32_t d2h_mb_data_addr;
   uint32_t ring_info_addr;
   uint32_t dma_scratch_len;
@@ -203,9 +210,20 @@ uint8_t PcieFirmware::GetSharedRamVersion() const { return shared_ram_info_->ver
 
 uint16_t PcieFirmware::GetSharedRamFlags() const { return shared_ram_info_->flags; }
 
+uint16_t PcieFirmware::GetMaxRxbufpost() const {
+  if (shared_ram_info_->max_rxbufpost == 0) {
+    return kDefaultMaxRxbufpost;
+  }
+  return shared_ram_info_->max_rxbufpost;
+}
+
+uint32_t PcieFirmware::GetRxDataOffset() const { return shared_ram_info_->rx_data_offset; }
+
 uint32_t PcieFirmware::GetDeviceToHostMailboxDataAddress() const {
   return shared_ram_info_->d2h_mb_data_addr;
 }
+
+uint32_t PcieFirmware::GetRingInfoOffset() const { return shared_ram_info_->ring_info_addr; }
 
 std::string PcieFirmware::ReadConsole() {
   // Optimization: estimated line length of a typical console log line.  Not required for

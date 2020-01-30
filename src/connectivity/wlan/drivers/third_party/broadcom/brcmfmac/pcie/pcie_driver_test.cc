@@ -26,6 +26,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_regs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_ring_master.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
 
 namespace wlan {
@@ -225,6 +226,13 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
   std::string console;
   while (!(console = pcie_firmware->ReadConsole()).empty()) {
     BRCMF_INFO("%s\n", console.c_str());
+  }
+
+  std::unique_ptr<PcieRingMaster> pcie_ring_master;
+  if ((status = PcieRingMaster::Create(pcie_buscore.get(), pcie_firmware.get(),
+                                       &pcie_ring_master)) != ZX_OK) {
+    BRCMF_ERR("PcieRingMaster creation failed: %s\n", zx_status_get_string(status));
+    return status;
   }
 
   std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master;
