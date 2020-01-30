@@ -70,6 +70,7 @@ executable("hub_tests") {
   deps = [
     "//garnet/bin/glob",
     "//garnet/bin/sysmgr:lib",
+    "//garnet/examples/fidl/services:echo",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
@@ -82,6 +83,25 @@ executable("hub_tests") {
   ]
 }
 
+executable("echo_server") {
+  testonly = true
+
+  output_name = "echo_server_for_test"
+
+  sources = [
+    "echo_server.cc",
+    "echo_server.h",
+  ]
+
+  deps = [
+    "//garnet/examples/fidl/services:echo",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
 config_data("sysmgr_config") {
   for_pkg = "appmgr_integration_tests"
   sources = [ rebase_path("//src/sys/sysmgr/config/services.config") ]
@@ -89,6 +109,7 @@ config_data("sysmgr_config") {
 
 test_package("appmgr_integration_tests") {
   deps = [
+    ":echo_server",
     ":hub_tests",
     ":realm_tests",
     ":sysmgr_config",
@@ -99,12 +120,19 @@ test_package("appmgr_integration_tests") {
     {
       name = "inspect_vmo_test_app"
     },
+    {
+      name = "echo_server_for_test"
+    },
   ]
 
   meta = [
     {
       path = rebase_path("inspect/meta/inspect_vmo_test_app.cmx")
       dest = "appmgr_integration_tests_inspect_test_app.cmx"
+    },
+    {
+      path = rebase_path("meta/echo_server.cmx")
+      dest = "echo_server.cmx"
     },
   ]
 

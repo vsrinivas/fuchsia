@@ -7,7 +7,10 @@
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/file_descriptor.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+
+#include <fidl/examples/echo/cpp/fidl.h>
 
 #include "garnet/bin/sysmgr/config.h"
 #include "gmock/gmock.h"
@@ -60,19 +63,40 @@ class HubTest : public sys::testing::TestWithEnvironment {
   }
 };
 
-TEST(ProbeHub, DISABLED_Component) {
-  constexpr char kGlob[] = "/hub/c/*/*/out/debug";
+using ProbeHub = HubTest;
+
+TEST_F(ProbeHub, Component) {
+  std::string echo_url = "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/echo_server.cmx";
+
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = echo_url;
+  auto echo_svc = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+
+  fuchsia::sys::ComponentControllerPtr controller;
+  launcher_ptr()->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+  bool directory_ready = false;
+  controller.events().OnDirectoryReady = [&] { directory_ready = true; };
+
+  RunLoopUntil([&]() { return directory_ready; });
+
+  constexpr char kGlob[] = "/hub/c/echo_server.cmx/*/out/debug";
   files::Glob glob(kGlob);
   EXPECT_GE(glob.size(), 1u) << kGlob << " expected to match at least once.";
+
+  std::string kGlob_svc =
+      std::string("/hub/c/echo_server.cmx/*/out/svc/") + fidl::examples::echo::Echo::Name_;
+  files::Glob glob_svc(kGlob_svc);
+  EXPECT_GE(glob_svc.size(), 1u) << kGlob_svc << " expected to match at least once.";
 }
 
-TEST(ProbeHub, Realm) {
+TEST_F(ProbeHub, Realm) {
   constexpr char kGlob[] = "/hub/c/";
   files::Glob glob(kGlob);
   EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match once.";
 }
 
-TEST(ProbeHub, RealmSvc) {
+TEST_F(ProbeHub, RealmSvc) {
   constexpr char kGlob[] = "/hub/svc/fuchsia.sys.Environment";
   files::Glob glob(kGlob);
   EXPECT_EQ(glob.size(), 1u);
