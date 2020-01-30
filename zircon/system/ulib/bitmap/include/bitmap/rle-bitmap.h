@@ -14,20 +14,11 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 
-#ifdef _KERNEL
-#include <ktl/unique_ptr.h>
-#else
-#endif
-
 namespace bitmap {
 
 struct RleBitmapElement;
 
-#ifdef _KERNEL
-using RleBitmapElementPtr = ktl::unique_ptr<RleBitmapElement>;
-#else
 using RleBitmapElementPtr = std::unique_ptr<RleBitmapElement>;
-#endif
 
 // A run-length encoded bitmap.
 class RleBitmap final : public Bitmap {
