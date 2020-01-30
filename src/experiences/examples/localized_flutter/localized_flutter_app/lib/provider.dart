@@ -455,10 +455,9 @@ class _InheritedProviders extends InheritedWidget {
   const _InheritedProviders({Widget child, this.providers, this.parent})
       : super(child: child);
 
-  /// Finds the closest _InheritedProviders widget abocve the current widget.
+  /// Finds the closest _InheritedProviders widget above the current widget.
   static _InheritedProviders of(BuildContext context) {
-    final widget = context.inheritFromWidgetOfExactType(_InheritedProviders);
-    return widget is _InheritedProviders ? widget : null;
+    return context.dependOnInheritedWidgetOfExactType<_InheritedProviders>();
   }
 
   @override
