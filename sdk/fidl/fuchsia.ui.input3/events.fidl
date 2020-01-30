@@ -35,4 +35,7 @@ table KeyEvent {
 
     /// Identifies the key ignoring modifiers, layout, prior key events, etc.
     3: Key key;
+
+    /// Modifiers in effect at the time of the event.
+    4: Modifiers modifiers;
 };

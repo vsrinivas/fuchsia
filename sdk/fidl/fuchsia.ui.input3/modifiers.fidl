@@ -1,0 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input3;
+
+/// Modifiers are special keys that modify the purpose or the function
+/// of other keys when used in combination with them.
+bits Modifiers : uint32 {
+    /// Applies when the `CAPS_LOCK` modifier is locked.
+    CAPS_LOCK = 0x00000001;
+    /// Applies when the `NUM_LOCK` modifier is locked.
+    NUM_LOCK = 0x00000002;
+    /// Applies when the `SCROLL_LOCK` modifier is locked.
+    SCROLL_LOCK = 0x00000004;
+
+    // TODO: Define additional modifiers as needed.
+    // SHIFT, CONTROL, ALT, META
+    // ALT_GRAPH, FUNCTION, FUNCTION_LOCK, SYMBOL, SYMBOL_LOCK
+};
