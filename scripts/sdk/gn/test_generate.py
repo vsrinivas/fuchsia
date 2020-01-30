@@ -36,7 +36,8 @@ class GNGenerateTest(unittest.TestCase):
         return_value=argparse.Namespace(
             output=TMP_DIR_NAME,
             archive='',
-            directory=os.path.join(SCRIPT_DIR, 'testdata')))
+            directory=os.path.join(SCRIPT_DIR, 'testdata'),
+            tests=''))
     def testEmptyArchive(self, mock_args):
         # Run the generator.
         generate.main()
@@ -56,7 +57,8 @@ class GNGenerateTest(unittest.TestCase):
             dcmp (filecmp.dircmp): A dircmp of the directories.
         """
         if dcmp.left_only or dcmp.right_only or dcmp.diff_files:
-            self.fail(f"Generated SDK does not match golden files.\n"
+            self.fail(f"Generated SDK does not match golden files. "
+                f"You can run ./update_golden.py to update them.\n"
                 f"Only in {dcmp.left}:\n{dcmp.left_only}\n\n"
                 f"Only in {dcmp.right}:\n{dcmp.right_only}\n\n"
                 f"Common different files:\n{dcmp.diff_files}")

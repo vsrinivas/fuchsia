@@ -132,24 +132,42 @@ def main():
         '--tests', help='Path to the directory where to generate tests')
     args = parser.parse_args()
 
-    # Remove any existing output.
-    shutil.rmtree(args.output)
-
-    builder = GNBuilder(
+    return run_generator(
         archive=args.archive,
         directory=args.directory,
         output=args.output,
+        tests=args.tests)
+
+def run_generator(archive, directory, output, tests=''):
+    """Run the generator. Returns 0 on success, non-zero otherwise.
+
+    Note that only one of archive or directory should be specified.
+
+    Args:
+        archive: Path to an SDK tarball archive.
+        directory: Path to an unpackaged SDK.
+        output: The output directory.
+        tests: The directory where to generate tests. Defaults to empty string.
+    """
+
+    # Remove any existing output.
+    shutil.rmtree(output)
+
+    builder = GNBuilder(
+        archive=archive,
+        directory=directory,
+        output=output,
         local_dir=SCRIPT_DIR)
     if not builder.run():
         return 1
 
-    if args.tests:
+    if tests:
         # Create the tests workspace
-        if not create_test_workspace(args.tests):
+        if not create_test_workspace(tests):
             return 1
         # Copy the GN SDK to the test workspace
-        wrkspc_sdk_dir = os.path.join(args.tests, 'third_party', 'fuchsia-sdk')
-        shutil.copytree(args.output, wrkspc_sdk_dir)
+        wrkspc_sdk_dir = os.path.join(tests, 'third_party', 'fuchsia-sdk')
+        shutil.copytree(output, wrkspc_sdk_dir)
 
     return 0
 
