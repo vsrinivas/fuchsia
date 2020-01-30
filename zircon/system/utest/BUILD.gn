@@ -164,7 +164,6 @@ if (current_cpu != "") {
       "stdio",
       "timers",
       "trace",
-      "usb",
       "usb-virtual-bus:test",
       "utc-procargs",
       "util",
