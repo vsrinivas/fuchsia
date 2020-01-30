@@ -65,10 +65,16 @@ table AdvertisingParameters {
     /// Defaults to [`fuchsia.bluetooth.le/AdvertisingModeHint.SLOW`] if not present.
     3: AdvertisingModeHint mode_hint;
 
+    /// [[DEPRECATED]]: Prefer to use the ConnectionOptions field for new code.
     /// If present and true then the controller will broadcast connectable advertisements which
     /// allows remote LE centrals to initiate a connection to the Peripheral. If false or otherwise
     /// not present then the advertisements will be non-connectable.
     4: bool connectable;
+
+    /// If present, the controller will broadcast connectable advertisements which allow remote LE
+    /// centrals to initiate connections to the Peripheral. The fields of ConnectionOptions will
+    /// configure any connections set up from advertising.
+    5: ConnectionOptions connection_options;
 };
 
 /// Capability that is valid for the duration of advertising. The caller can close the handle to

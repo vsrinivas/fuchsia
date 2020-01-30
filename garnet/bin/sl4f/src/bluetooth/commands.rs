@@ -5,7 +5,9 @@
 use crate::server::Facade;
 use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
-use fidl_fuchsia_bluetooth_le::{AdvertisingData, AdvertisingParameters, ScanFilter};
+use fidl_fuchsia_bluetooth_le::{
+    AdvertisingData, AdvertisingParameters, ConnectionOptions, ScanFilter,
+};
 use fuchsia_syslog::macros::*;
 use futures::future::{FutureExt, LocalBoxFuture};
 use parking_lot::RwLock;
@@ -43,7 +45,8 @@ fn ble_advertise_args_to_fidl(args_raw: Value) -> Result<AdvertisingParameters, 
     // Unpack the name for advertising data, as well as interval of advertising
     let name: Option<String> = adv_data_raw["name"].as_str().map(String::from);
     let connectable: bool = conn_raw.as_bool().unwrap_or(false);
-
+    let conn_opts =
+        if connectable { Some(ConnectionOptions { bondable_mode: Some(true) }) } else { None };
     // TODO(NET-1026): Is there a better way to unpack the args into an AdvData
     // struct? Unfortunately, can't derive deserialize for AdvData
     let parameters = AdvertisingParameters {
@@ -58,7 +61,8 @@ fn ble_advertise_args_to_fidl(args_raw: Value) -> Result<AdvertisingParameters, 
         }),
         scan_response: None,
         mode_hint: None,
-        connectable: Some(connectable),
+        connectable: None,
+        connection_options: conn_opts,
     };
 
     fx_log_info!(tag: "ble_advertise_args_to_fidl", "advertising parameters: {:?}", parameters);

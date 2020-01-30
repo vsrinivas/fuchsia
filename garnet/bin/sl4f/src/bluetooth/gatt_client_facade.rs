@@ -8,7 +8,9 @@ use fidl::endpoints;
 use fidl_fuchsia_bluetooth_gatt::{Characteristic, RemoteServiceProxy};
 use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
 use fidl_fuchsia_bluetooth_le::RemoteDevice;
-use fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy, ScanFilter};
+use fidl_fuchsia_bluetooth_le::{
+    CentralEvent, CentralMarker, CentralProxy, ConnectionOptions, ScanFilter,
+};
 use fuchsia_async as fasync;
 use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
@@ -516,7 +518,8 @@ impl GattClientFacade {
         let mut identifier = id.clone();
         match &self.inner.read().central {
             Some(c) => {
-                let status = c.connect_peripheral(&mut identifier, server_end).await?;
+                let conn_opts = ConnectionOptions { bondable_mode: Some(true) };
+                let status = c.connect_peripheral(&mut identifier, conn_opts, server_end).await?;
                 match status.error {
                     Some(e) => {
                         let err_msg =

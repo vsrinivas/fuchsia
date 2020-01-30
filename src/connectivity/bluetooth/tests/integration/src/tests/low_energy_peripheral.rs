@@ -75,7 +75,13 @@ async fn start_advertising(
 }
 
 fn default_parameters() -> AdvertisingParameters {
-    AdvertisingParameters { data: None, scan_response: None, mode_hint: None, connectable: None }
+    AdvertisingParameters {
+        data: None,
+        scan_response: None,
+        mode_hint: None,
+        connectable: None,
+        connection_options: None,
+    }
 }
 
 async fn test_enable_advertising(harness: PeripheralHarness) -> Result<(), Error> {

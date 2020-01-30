@@ -40,7 +40,9 @@ protocol Central {
     /// On success, `gatt_client` will be bound and can be used for GATT client
     /// role procedures. On failure, `gatt_client` will be closed and `status` will
     /// indicate an error.
-    ConnectPeripheral(string identifier, request<fuchsia.bluetooth.gatt.Client> gatt_client) -> (fuchsia.bluetooth.Status status);
+    ConnectPeripheral(string identifier, ConnectionOptions options,
+                      request<fuchsia.bluetooth.gatt.Client> gatt_client)
+        -> (fuchsia.bluetooth.Status status);
 
     /// Disconnects this Central's connection to the peripheral with the given identifier.
     DisconnectPeripheral(string identifier) -> (fuchsia.bluetooth.Status status);

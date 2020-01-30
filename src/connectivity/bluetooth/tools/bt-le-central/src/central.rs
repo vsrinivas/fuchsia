@@ -8,7 +8,7 @@
 use {
     anyhow::Error,
     fidl::endpoints,
-    fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy},
+    fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy, ConnectionOptions},
     fuchsia_bluetooth::{error::Error as BTError, types::le::RemoteDevice},
     futures::prelude::*,
     parking_lot::RwLock,
@@ -125,8 +125,8 @@ pub async fn listen_central_events(state: CentralStatePtr) {
 pub async fn connect_peripheral(state: &CentralStatePtr, mut id: String) -> Result<(), Error> {
     let (proxy, server) =
         endpoints::create_proxy().map_err(|_| BTError::new("Failed to create Client pair"))?;
-
-    let connect_peripheral_fut = state.read().svc.connect_peripheral(&mut id, server);
+    let conn_opts = ConnectionOptions { bondable_mode: Some(true) };
+    let connect_peripheral_fut = state.read().svc.connect_peripheral(&mut id, conn_opts, server);
 
     let status = connect_peripheral_fut
         .await

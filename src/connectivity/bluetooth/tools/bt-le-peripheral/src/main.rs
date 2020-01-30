@@ -9,8 +9,8 @@ use {
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_le::{
         AdvertisingData, AdvertisingHandleMarker, AdvertisingHandleProxy, AdvertisingModeHint,
-        AdvertisingParameters, ConnectionProxy, ManufacturerData, PeripheralEvent,
-        PeripheralMarker, PeripheralProxy, ServiceData,
+        AdvertisingParameters, ConnectionOptions, ConnectionProxy, ManufacturerData,
+        PeripheralEvent, PeripheralMarker, PeripheralProxy, ServiceData,
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
@@ -241,6 +241,8 @@ async fn main() -> Result<(), Error> {
     service_data.extend(binary_service_data);
     manufacturer_data.extend(binary_manufacturer_data);
 
+    let conn_opts =
+        if connectable { Some(ConnectionOptions { bondable_mode: Some(true) }) } else { None };
     // unchanging advertising data used for the lifetime of the program
     let params = AdvertisingParameters {
         data: Some(AdvertisingData {
@@ -254,7 +256,8 @@ async fn main() -> Result<(), Error> {
         }),
         scan_response: None,
         mode_hint,
-        connectable: Some(connectable),
+        connectable: None,
+        connection_options: conn_opts,
     };
 
     let peripheral = connect_to_service::<PeripheralMarker>()
@@ -434,7 +437,8 @@ mod tests {
             data: None,
             scan_response: None,
             mode_hint: Some(AdvertisingModeHint::Slow),
-            connectable: Some(true),
+            connectable: None,
+            connection_options: Some(ConnectionOptions { bondable_mode: Some(true) }),
         };
         let listen_task = listen(&proxy, input_parameters, &[]);
         let emulate_task = async {
@@ -449,7 +453,8 @@ mod tests {
         let mock_data = mock_data.expect("emulate task failed");
         let adv_params = mock_data.adv_params.expect("advertising was not enabled!");
         assert_eq!(AdvertisingModeHint::Slow, adv_params.mode_hint.unwrap());
-        assert!(adv_params.connectable.unwrap());
+        let received_connection_options = adv_params.connection_options.unwrap();
+        assert!(received_connection_options.bondable_mode.unwrap());
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -461,7 +466,8 @@ mod tests {
             data: None,
             scan_response: None,
             mode_hint: Some(AdvertisingModeHint::Slow),
-            connectable: Some(true),
+            connectable: None,
+            connection_options: Some(ConnectionOptions { bondable_mode: Some(true) }),
         };
 
         drop(server);

@@ -1,0 +1,15 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.le;
+
+/// Represents parameters that are set on a per-connection basis by FIDL protocols that create
+/// Low Energy connections.
+table ConnectionOptions {
+    /// When true, the connection operates in bondable mode. This means pairing will form a bond,
+    /// or persist across disconnections, if the peer is also in bondable mode. When not present,
+    /// the connection defaults to bondable mode. When false, the connection operates in non-
+    /// bondable mode, which means the local device only allows pairing that does not form a bond.
+    1: bool bondable_mode;
+};
