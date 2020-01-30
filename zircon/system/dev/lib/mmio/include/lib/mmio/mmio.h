@@ -124,6 +124,18 @@ class MmioPinnedBuffer {
   mmio_pinned_buffer_t pinned_;
 };
 
+struct MmioBufferOps {
+  uint8_t (*Read8)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs);
+  uint16_t (*Read16)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs);
+  uint32_t (*Read32)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs);
+  uint64_t (*Read64)(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs);
+
+  void (*Write8)(const void* ctx, const mmio_buffer_t& mmio, uint8_t val, zx_off_t offs);
+  void (*Write16)(const void* ctx, const mmio_buffer_t& mmio, uint16_t val, zx_off_t offs);
+  void (*Write32)(const void* ctx, const mmio_buffer_t& mmio, uint32_t val, zx_off_t offs);
+  void (*Write64)(const void* ctx, const mmio_buffer_t& mmio, uint64_t val, zx_off_t offs);
+};
+
 // Forward declaration.
 class MmioView;
 
@@ -132,8 +144,8 @@ class MmioBuffer {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(MmioBuffer);
 
-  explicit MmioBuffer(mmio_buffer_t mmio)
-      : mmio_(mmio), ptr_(reinterpret_cast<uintptr_t>(mmio.vaddr)) {
+  MmioBuffer(mmio_buffer_t mmio, const MmioBufferOps* ops = &kDefaultOps, const void* ctx = nullptr)
+      : mmio_(mmio), ops_(ops), ctx_(ctx) {
     ZX_ASSERT(mmio_.vaddr != nullptr);
   }
 
@@ -192,13 +204,9 @@ class MmioBuffer {
   MmioView View(zx_off_t off) const;
   MmioView View(zx_off_t off, size_t size) const;
 
-  uint32_t Read32(zx_off_t offs) const { return Read<uint32_t>(offs); }
-
   uint32_t ReadMasked32(uint32_t mask, zx_off_t offs) const {
     return ReadMasked<uint32_t>(mask, offs);
   }
-
-  void Write32(uint32_t val, zx_off_t offs) const { Write<uint32_t>(val, offs); }
 
   void ModifyBits32(uint32_t bits, uint32_t mask, zx_off_t offs) const {
     ModifyBits<uint32_t>(bits, mask, offs);
@@ -219,9 +227,17 @@ class MmioBuffer {
 
   template <typename T>
   T Read(zx_off_t offs) const {
-    ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio_.size);
-    ZX_DEBUG_ASSERT(ptr_);
-    return *reinterpret_cast<volatile T*>(ptr_ + offs);
+    if constexpr (sizeof(T) == sizeof(uint8_t)) {
+      return Read8(offs);
+    } else if constexpr (sizeof(T) == sizeof(uint16_t)) {
+      return Read16(offs);
+    } else if constexpr (sizeof(T) == sizeof(uint32_t)) {
+      return Read32(offs);
+    } else if constexpr (sizeof(T) == sizeof(uint64_t)) {
+      return Read64(offs);
+    } else {
+      static_assert(always_false<T>);
+    }
   }
 
   template <typename T>
@@ -242,10 +258,17 @@ class MmioBuffer {
 
   template <typename T>
   void Write(T val, zx_off_t offs) const {
-    ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio_.size);
-    ZX_DEBUG_ASSERT(ptr_);
-    *reinterpret_cast<volatile T*>(ptr_ + offs) = val;
-    hw_mb();
+    if constexpr (sizeof(T) == sizeof(uint8_t)) {
+      Write8(val, offs);
+    } else if constexpr (sizeof(T) == sizeof(uint16_t)) {
+      Write16(val, offs);
+    } else if constexpr (sizeof(T) == sizeof(uint32_t)) {
+      Write32(val, offs);
+    } else if constexpr (sizeof(T) == sizeof(uint64_t)) {
+      Write64(val, offs);
+    } else {
+      static_assert(always_false<T>);
+    }
   }
 
   template <typename T>
@@ -298,44 +321,124 @@ class MmioBuffer {
     ModifyBit<T>(false, shift, offs);
   }
 
+  uint8_t Read8(zx_off_t offs) const { return ops_->Read8(ctx_, mmio_, offs); }
+  uint16_t Read16(zx_off_t offs) const { return ops_->Read16(ctx_, mmio_, offs); }
+  uint32_t Read32(zx_off_t offs) const { return ops_->Read32(ctx_, mmio_, offs); }
+  uint64_t Read64(zx_off_t offs) const { return ops_->Read64(ctx_, mmio_, offs); }
+
+  void Write8(uint8_t val, zx_off_t offs) const { ops_->Write8(ctx_, mmio_, val, offs); }
+  void Write16(uint16_t val, zx_off_t offs) const { ops_->Write16(ctx_, mmio_, val, offs); }
+  void Write32(uint32_t val, zx_off_t offs) const { ops_->Write32(ctx_, mmio_, val, offs); }
+  void Write64(uint64_t val, zx_off_t offs) const { ops_->Write64(ctx_, mmio_, val, offs); }
+
  protected:
   mmio_buffer_t mmio_;
+  const MmioBufferOps* ops_;
+  const void* ctx_;
+
+  template <typename T>
+  static constexpr std::false_type always_false{};
+
+  template <typename T>
+  static T Read(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio.size);
+    const uintptr_t ptr = reinterpret_cast<uintptr_t>(mmio.vaddr);
+    ZX_DEBUG_ASSERT(ptr);
+    return *reinterpret_cast<volatile T*>(ptr + offs);
+  }
+
+  template <typename T>
+  static void Write(const void* ctx, const mmio_buffer_t& mmio, T val, zx_off_t offs) {
+    ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio.size);
+    const uintptr_t ptr = reinterpret_cast<uintptr_t>(mmio.vaddr);
+    ZX_DEBUG_ASSERT(ptr);
+    *reinterpret_cast<volatile T*>(ptr + offs) = val;
+    hw_mb();
+  }
+
+  static uint8_t Read8(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    return Read<uint8_t>(ctx, mmio, offs);
+  }
+
+  static uint16_t Read16(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    return Read<uint16_t>(ctx, mmio, offs);
+  }
+
+  static uint32_t Read32(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    return Read<uint32_t>(ctx, mmio, offs);
+  }
+
+  static uint64_t Read64(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    return Read<uint64_t>(ctx, mmio, offs);
+  }
+
+  static void Write8(const void* ctx, const mmio_buffer_t& mmio, uint8_t val, zx_off_t offs) {
+    Write<uint8_t>(ctx, mmio, val, offs);
+  }
+
+  static void Write16(const void* ctx, const mmio_buffer_t& mmio, uint16_t val, zx_off_t offs) {
+    Write<uint16_t>(ctx, mmio, val, offs);
+  }
+
+  static void Write32(const void* ctx, const mmio_buffer_t& mmio, uint32_t val, zx_off_t offs) {
+    Write<uint32_t>(ctx, mmio, val, offs);
+  }
+
+  static void Write64(const void* ctx, const mmio_buffer_t& mmio, uint64_t val, zx_off_t offs) {
+    Write<uint64_t>(ctx, mmio, val, offs);
+  }
+
+  static constexpr MmioBufferOps kDefaultOps = {
+      .Read8 = Read8,
+      .Read16 = Read16,
+      .Read32 = Read32,
+      .Read64 = Read64,
+      .Write8 = Write8,
+      .Write16 = Write16,
+      .Write32 = Write32,
+      .Write64 = Write64,
+  };
 
  private:
   void transfer(MmioBuffer&& other) {
     mmio_ = other.mmio_;
-    ptr_ = other.ptr_;
+    ops_ = other.ops_;
+    ctx_ = other.ctx_;
     other.reset();
   }
-
-  uintptr_t ptr_;
 };
 
 // A sliced view that of an mmio which does not unmap on close. Must not outlive
 // mmio buffer it is created from.
 class MmioView : public MmioBuffer {
  public:
-  MmioView(const mmio_buffer_t& mmio, zx_off_t offset)
-      : MmioBuffer(mmio_buffer_t{
-            .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
-            .offset = mmio.offset + offset,
-            .size = mmio.size - offset,
-            .vmo = mmio.vmo,
-        }) {
+  MmioView(const mmio_buffer_t& mmio, zx_off_t offset, const MmioBufferOps* ops = &kDefaultOps,
+           const void* ctx = nullptr)
+      : MmioBuffer(
+            mmio_buffer_t{
+                .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
+                .offset = mmio.offset + offset,
+                .size = mmio.size - offset,
+                .vmo = mmio.vmo,
+            },
+            ops, ctx) {
     ZX_ASSERT(offset < mmio.size);
   }
 
-  MmioView(const mmio_buffer_t& mmio, zx_off_t offset, size_t size)
-      : MmioBuffer(mmio_buffer_t{
-            .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
-            .offset = mmio.offset + offset,
-            .size = size,
-            .vmo = mmio.vmo,
-        }) {
+  MmioView(const mmio_buffer_t& mmio, zx_off_t offset, size_t size,
+           const MmioBufferOps* ops = &kDefaultOps, const void* ctx = nullptr)
+      : MmioBuffer(
+            mmio_buffer_t{
+                .vaddr = static_cast<uint8_t*>(mmio.vaddr) + offset,
+                .offset = mmio.offset + offset,
+                .size = size,
+                .vmo = mmio.vmo,
+            },
+            ops, ctx) {
     ZX_ASSERT(size + offset <= mmio.size);
   }
 
-  MmioView(const MmioView& mmio) : MmioBuffer(mmio.mmio_) {}
+  MmioView(const MmioView& mmio) : MmioBuffer(mmio.mmio_, mmio.ops_, mmio.ctx_) {}
 
   virtual ~MmioView() override {
     // Prevent unmap operation from occurring.
@@ -346,10 +449,10 @@ class MmioView : public MmioBuffer {
 // These can't be defined inside the class because they need MmioView
 // to be completely defined first.
 
-inline MmioView MmioBuffer::View(zx_off_t off) const { return MmioView(mmio_, off); }
+inline MmioView MmioBuffer::View(zx_off_t off) const { return MmioView(mmio_, off, ops_, ctx_); }
 
 inline MmioView MmioBuffer::View(zx_off_t off, size_t size) const {
-  return MmioView(mmio_, off, size);
+  return MmioView(mmio_, off, size, ops_, ctx_);
 }
 
 }  // namespace ddk

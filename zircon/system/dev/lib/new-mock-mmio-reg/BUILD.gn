@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("new-mock-mmio-reg") {
+  sdk = "source"
+  sdk_headers = [ "lib/new-mock-mmio-reg/new-mock-mmio-reg.h" ]
+  testonly = true
+  sources = []
+}
+
+zx_test("new-mock-mmio-reg-test") {
+  output_name = "new-mock-mmio-reg-test"
+  sources = [ "new-mock-mmio-reg-test.cc" ]
+  deps = [
+    ":new-mock-mmio-reg",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -34,6 +34,7 @@ group("lib") {
     "msm8x53",
     "mt8167",
     "mt8183",
+    "new-mock-mmio-reg",
     "ot-radio",
     "pci",
     "qcom",
