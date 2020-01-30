@@ -30,7 +30,6 @@
 #include <atomic>
 #include <mutex>
 
-#include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/wlanif.h>
 #include <ddk/protocol/wlanphyimpl.h>
 
@@ -230,7 +229,8 @@ struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name)
 void brcmf_free_net_device(struct net_device* dev);
 void brcmf_enable_tx(struct net_device* dev);
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
-void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* netbuf);
+void brcmf_netdev_start_xmit(struct net_device* ndev,
+                             std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf);
 
 /* Return pointer to interface name */
 const char* brcmf_ifname(struct brcmf_if* ifp);
@@ -242,8 +242,8 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
                          const char* name, uint8_t* mac_addr, struct brcmf_if** if_out);
 void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked);
 void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason reason, bool state);
-void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool success);
-void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf);
+void brcmf_txfinalize(struct brcmf_if* ifp, const struct ethhdr* eh, bool success);
+void brcmf_netif_rx(struct brcmf_if* ifp, const void* data, size_t size);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
 
 // Used in net_device.flags to indicate interface is up.

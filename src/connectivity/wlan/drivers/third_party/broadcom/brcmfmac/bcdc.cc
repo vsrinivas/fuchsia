@@ -288,15 +288,49 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
 }
 
 static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
-                                                  struct brcmf_netbuf* netbuf) {
+                                                  std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf) {
+  zx_status_t ret = ZX_OK;
   struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
   struct brcmf_bcdc* bcdc = static_cast<decltype(bcdc)>(drvr->proto->pd);
 
-  if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
-    return brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
+  // Copy the Netbuf's data in to a brcmf_netbuf, since that's what the rest of this stack
+  // understands.
+  struct brcmf_netbuf* b_netbuf = brcmf_netbuf_allocate(netbuf->size() + drvr->hdrlen);
+  if (b_netbuf == nullptr) {
+    ret = ZX_ERR_NO_MEMORY;
+    goto done;
   }
 
-  return brcmf_fws_process_netbuf(ifp, netbuf);
+  brcmf_netbuf_grow_tail(b_netbuf, netbuf->size() + drvr->hdrlen);
+  brcmf_netbuf_shrink_head(b_netbuf, drvr->hdrlen);
+  memcpy(b_netbuf->data, netbuf->data(), netbuf->size());
+
+  /* Make sure there's enough writeable headroom */
+  if (brcmf_netbuf_head_space(b_netbuf) < drvr->hdrlen) {
+    const size_t head_delta = std::max<size_t>(drvr->hdrlen - brcmf_netbuf_head_space(b_netbuf), 0);
+    BRCMF_DBG(INFO, "%s: insufficient headroom (%zu)\n", brcmf_ifname(ifp), head_delta);
+    drvr->bus_if->stats.pktcowed.fetch_add(1);
+    ret = brcmf_netbuf_grow_realloc(b_netbuf, ALIGN(head_delta, NET_NETBUF_PAD), 0);
+    if (ret != ZX_OK) {
+      BRCMF_ERR("%s: failed to expand headroom\n", brcmf_ifname(ifp));
+      drvr->bus_if->stats.pktcow_failed.fetch_add(1);
+      goto done;
+    }
+  }
+
+  if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
+    ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);
+  } else {
+    ret = brcmf_fws_process_netbuf(ifp, b_netbuf);
+  }
+
+done:
+  if (ret != ZX_OK) {
+    brcmu_pkt_buf_free_netbuf(b_netbuf);
+  }
+
+  netbuf->Return(ret);
+  return ret;
 }
 
 static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
@@ -320,11 +354,11 @@ void brcmf_proto_bcdc_txcomplete(brcmf_pub* drvr, struct brcmf_netbuf* txp, bool
       brcmf_fws_bustxfail(bcdc->fws, txp);
     }
   } else {
-    if (brcmf_proto_bcdc_hdrpull(drvr, false, txp, &ifp)) {
-      brcmu_pkt_buf_free_netbuf(txp);
-    } else {
-      brcmf_txfinalize(ifp, txp, success);
+    if (!brcmf_proto_bcdc_hdrpull(drvr, false, txp, &ifp)) {
+      struct ethhdr* eh = (struct ethhdr*)(txp->data);
+      brcmf_txfinalize(ifp, eh, success);
     }
+    brcmu_pkt_buf_free_netbuf(txp);
   }
 }
 

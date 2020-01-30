@@ -67,7 +67,10 @@ source_set("linuxisms") {
     ":debug",
     "//zircon/public/lib/sync",
   ]
-  public_deps = [ "//zircon/system/public" ]
+  public_deps = [
+    "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//zircon/system/public",
+  ]
 }
 
 # Sources for DMA buffer handling.

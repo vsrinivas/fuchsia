@@ -1,25 +1,80 @@
-/*
- * Copyright (c) 2018 The Fuchsia Authors
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 
-#include <stdio.h>
+#include <zircon/errors.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+
+namespace wlan {
+namespace brcmfmac {
+namespace {
+
+TEST(Netbuf, EthernetNetbuf) {
+  // Create an EthernetNetbuf, then allow it to automatically Return().
+  bool err_internal_returned = false;
+  {
+    auto eth_netbuf = std::make_unique<ethernet_netbuf_t>();
+    auto err_internal_callback = [&](zx_status_t status, ethernet_netbuf_t* netbuf) {
+      EXPECT_EQ(ZX_ERR_INTERNAL, status);
+      EXPECT_EQ(eth_netbuf.get(), netbuf);
+      err_internal_returned = true;
+    };
+    EthernetNetbuf netbuf(
+        eth_netbuf.get(),
+        [](void* cookie, zx_status_t status, ethernet_netbuf_t* netbuf) {
+          static_cast<decltype(err_internal_callback)*>(cookie)->operator()(status, netbuf);
+        },
+        &err_internal_callback);
+
+    // The destructor will Return() the buffer with ZX_ERR_INTERNAL.
+  }
+  EXPECT_TRUE(err_internal_returned);
+
+  // Create an EthernetNetbuf, then explicitly Return() it.
+  bool ok_returned = false;
+  {
+    auto eth_netbuf = std::make_unique<ethernet_netbuf_t>();
+    auto err_internal_callback = [&](zx_status_t status, ethernet_netbuf_t* netbuf) {
+      EXPECT_EQ(ZX_OK, status);
+      EXPECT_EQ(eth_netbuf.get(), netbuf);
+      ok_returned = true;
+    };
+    EthernetNetbuf netbuf(
+        eth_netbuf.get(),
+        [](void* cookie, zx_status_t status, ethernet_netbuf_t* netbuf) {
+          static_cast<decltype(err_internal_callback)*>(cookie)->operator()(status, netbuf);
+        },
+        &err_internal_callback);
+    netbuf.Return(ZX_OK);
+  }
+  EXPECT_TRUE(ok_returned);
+}
+
+TEST(Netbuf, AllocatedNetbuf) {
+  static constexpr size_t kAllocationSize = 4096;
+
+  // Create an AllocatedNetbuf, then allow it to automatically Return().
+  {
+    auto allocation = std::make_unique<char[]>(kAllocationSize);
+    AllocatedNetbuf netbuf(std::move(allocation), kAllocationSize);
+  }
+
+  // Create an AllocatedNetbuf, then explicitly Return() it.
+  {
+    auto allocation = std::make_unique<char[]>(kAllocationSize);
+    AllocatedNetbuf netbuf(std::move(allocation), kAllocationSize);
+    netbuf.Return(ZX_OK);
+  }
+}
+
+}  // namespace
+}  // namespace brcmfmac
+}  // namespace wlan
 
 namespace {
 
@@ -49,36 +104,36 @@ void TestPattern::Check(void* target, size_t len) { EXPECT_EQ(memcmp(target, pat
 
 static TestPattern testPattern;
 
-class Netbuf : public testing::Test {
+class BrcmfNetbuf : public testing::Test {
  public:
-  Netbuf();
-  ~Netbuf();
+  BrcmfNetbuf();
+  ~BrcmfNetbuf();
   struct brcmf_netbuf* buf = nullptr;
 };
 
-Netbuf::Netbuf() {
+BrcmfNetbuf::BrcmfNetbuf() {
   buf = brcmf_netbuf_allocate(BIG_SIZE);
   EXPECT_NE(buf, nullptr);
 }
 
-Netbuf::~Netbuf() { brcmf_netbuf_free(buf); }
+BrcmfNetbuf::~BrcmfNetbuf() { brcmf_netbuf_free(buf); }
 
-TEST_F(Netbuf, CanAllocate) { EXPECT_NE(buf, nullptr); }
+TEST_F(BrcmfNetbuf, CanAllocate) { EXPECT_NE(buf, nullptr); }
 
-TEST_F(Netbuf, AllocSizeAligned) {
+TEST_F(BrcmfNetbuf, AllocSizeAligned) {
   struct brcmf_netbuf* buf = brcmf_netbuf_allocate(SMALL_SIZE);
   EXPECT_NE(buf, nullptr);
   EXPECT_EQ(buf->allocated_size, (SMALL_SIZE + 3) & ~3);
   brcmf_netbuf_free(buf);
 }
 
-TEST_F(Netbuf, HasRightSize) {
+TEST_F(BrcmfNetbuf, HasRightSize) {
   EXPECT_EQ(brcmf_netbuf_tail_space(buf), BIG_SIZE);
   EXPECT_EQ(brcmf_netbuf_head_space(buf), 0u);
   EXPECT_EQ(buf->len, 0u);
 }
 
-TEST_F(Netbuf, GrowTail) {
+TEST_F(BrcmfNetbuf, GrowTail) {
   brcmf_netbuf_grow_tail(buf, SMALL_SIZE);
   EXPECT_EQ(buf->len, SMALL_SIZE);
   EXPECT_EQ(brcmf_netbuf_tail_space(buf), BIG_SIZE - SMALL_SIZE);
@@ -90,7 +145,7 @@ TEST_F(Netbuf, GrowTail) {
   testPattern.Check(buf->data, SMALL_SIZE);
 }
 
-TEST_F(Netbuf, ShrinkHead) {
+TEST_F(BrcmfNetbuf, ShrinkHead) {
   brcmf_netbuf_grow_tail(buf, 2 * SMALL_SIZE);
   EXPECT_EQ(buf->len, 2 * SMALL_SIZE);
   brcmf_netbuf_shrink_head(buf, SMALL_SIZE);
@@ -99,7 +154,7 @@ TEST_F(Netbuf, ShrinkHead) {
   EXPECT_EQ(brcmf_netbuf_head_space(buf), SMALL_SIZE);
 }
 
-TEST_F(Netbuf, ShrinkAndGrowHead) {
+TEST_F(BrcmfNetbuf, ShrinkAndGrowHead) {
   brcmf_netbuf_grow_tail(buf, 3 * SMALL_SIZE);
   EXPECT_EQ(buf->len, 3 * SMALL_SIZE);
   testPattern.Set(buf->data, 3 * SMALL_SIZE);
@@ -113,7 +168,7 @@ TEST_F(Netbuf, ShrinkAndGrowHead) {
   testPattern.Check(buf->data - SMALL_SIZE, 3 * SMALL_SIZE);
 }
 
-TEST_F(Netbuf, HeadMovePreservesData) {
+TEST_F(BrcmfNetbuf, HeadMovePreservesData) {
   brcmf_netbuf_grow_tail(buf, 3 * SMALL_SIZE);
   testPattern.Set(buf->data, 3 * SMALL_SIZE);
   brcmf_netbuf_shrink_head(buf, 2 * SMALL_SIZE);
@@ -121,7 +176,7 @@ TEST_F(Netbuf, HeadMovePreservesData) {
   testPattern.Check(buf->data, 3 * SMALL_SIZE);
 }
 
-TEST_F(Netbuf, ReallocHead) {
+TEST_F(BrcmfNetbuf, ReallocHead) {
   brcmf_netbuf_grow_tail(buf, 3 * SMALL_SIZE);
   EXPECT_EQ(buf->len, 3 * SMALL_SIZE);
   testPattern.Set(buf->data, 3 * SMALL_SIZE);
@@ -131,7 +186,7 @@ TEST_F(Netbuf, ReallocHead) {
   testPattern.Check(buf->data, 3 * SMALL_SIZE);
 }
 
-TEST_F(Netbuf, ReallocTail) {
+TEST_F(BrcmfNetbuf, ReallocTail) {
   brcmf_netbuf_grow_tail(buf, 3 * SMALL_SIZE);
   EXPECT_EQ(buf->len, 3 * SMALL_SIZE);
   testPattern.Set(buf->data, 3 * SMALL_SIZE);
@@ -142,7 +197,7 @@ TEST_F(Netbuf, ReallocTail) {
   testPattern.Check(buf->data, 3 * SMALL_SIZE);
 }
 
-TEST_F(Netbuf, ReallocBoth) {
+TEST_F(BrcmfNetbuf, ReallocBoth) {
   brcmf_netbuf_grow_tail(buf, 3 * SMALL_SIZE);
   EXPECT_EQ(buf->len, 3 * SMALL_SIZE);
   testPattern.Set(buf->data, 3 * SMALL_SIZE);
@@ -153,7 +208,7 @@ TEST_F(Netbuf, ReallocBoth) {
   testPattern.Check(buf->data, 3 * SMALL_SIZE);
 }
 
-TEST_F(Netbuf, SetLength) {
+TEST_F(BrcmfNetbuf, SetLength) {
   brcmf_netbuf_grow_tail(buf, 3 * SMALL_SIZE);
   brcmf_netbuf_set_length_to(buf, 2 * SMALL_SIZE);
   EXPECT_EQ(buf->len, 2 * SMALL_SIZE);
@@ -161,7 +216,7 @@ TEST_F(Netbuf, SetLength) {
   EXPECT_EQ(buf->len, 4 * SMALL_SIZE);
 }
 
-TEST_F(Netbuf, ReduceLength) {
+TEST_F(BrcmfNetbuf, ReduceLength) {
   brcmf_netbuf_grow_tail(buf, 3 * SMALL_SIZE);
   brcmf_netbuf_reduce_length_to(buf, 4 * SMALL_SIZE);
   EXPECT_EQ(buf->len, 3 * SMALL_SIZE);
@@ -169,25 +224,25 @@ TEST_F(Netbuf, ReduceLength) {
   EXPECT_EQ(buf->len, 2 * SMALL_SIZE);
 }
 
-class NetbufList : public testing::Test {
+class BrcmfNetbufList : public testing::Test {
  public:
-  NetbufList();
-  ~NetbufList();
+  BrcmfNetbufList();
+  ~BrcmfNetbufList();
   struct brcmf_netbuf* Buf(int32_t tag);
   int32_t Tag(struct brcmf_netbuf* buf) { return *(int32_t*)buf->data; }
   void ExpectOrder(int32_t tags[]);
   struct brcmf_netbuf_list list;
 };
 
-// Utility function that returns a tagged Netbuf
-struct brcmf_netbuf* NetbufList::Buf(int32_t tag) {
+// Utility function that returns a tagged brcmf_netbuf
+struct brcmf_netbuf* BrcmfNetbufList::Buf(int32_t tag) {
   struct brcmf_netbuf* buf = brcmf_netbuf_allocate(4);
   brcmf_netbuf_grow_tail(buf, 4);
   *(int32_t*)buf->data = tag;
   return buf;
 }
 
-void NetbufList::ExpectOrder(int32_t* tags) {
+void BrcmfNetbufList::ExpectOrder(int32_t* tags) {
   uint32_t i = 0;
   struct brcmf_netbuf* buf;
   brcmf_netbuf_list_for_every(&list, buf) {
@@ -201,9 +256,9 @@ void NetbufList::ExpectOrder(int32_t* tags) {
   EXPECT_EQ(list.qlen, list_length(&list.listnode));
 }
 
-NetbufList::NetbufList() { brcmf_netbuf_list_init(&list); }
+BrcmfNetbufList::BrcmfNetbufList() { brcmf_netbuf_list_init(&list); }
 
-NetbufList::~NetbufList() {
+BrcmfNetbufList::~BrcmfNetbufList() {
   struct brcmf_netbuf* buf;
   struct brcmf_netbuf* temp;
   EXPECT_EQ(list.qlen, list_length(&list.listnode));
@@ -211,7 +266,7 @@ NetbufList::~NetbufList() {
 }
 
 // It's hard to test length without adding, so I combined the tests.
-TEST_F(NetbufList, AddHeadAndLength) {
+TEST_F(BrcmfNetbufList, AddHeadAndLength) {
   EXPECT_EQ(brcmf_netbuf_list_length(&list), 0u);
   EXPECT_EQ(brcmf_netbuf_list_is_empty(&list), true);
   brcmf_netbuf_list_add_head(&list, Buf(1));
@@ -224,7 +279,7 @@ TEST_F(NetbufList, AddHeadAndLength) {
   ExpectOrder(tags);
 }
 
-TEST_F(NetbufList, AddTailAndPeek) {
+TEST_F(BrcmfNetbufList, AddTailAndPeek) {
   EXPECT_EQ(brcmf_netbuf_list_peek_head(&list), nullptr);
   EXPECT_EQ(brcmf_netbuf_list_peek_tail(&list), nullptr);
   brcmf_netbuf_list_add_tail(&list, Buf(1));
@@ -236,7 +291,7 @@ TEST_F(NetbufList, AddTailAndPeek) {
   EXPECT_EQ(Tag(brcmf_netbuf_list_peek_tail(&list)), 3);
 }
 
-TEST_F(NetbufList, ListPrev) {
+TEST_F(BrcmfNetbufList, ListPrev) {
   brcmf_netbuf* buf1 = Buf(1);
   brcmf_netbuf* buf2 = Buf(2);
   brcmf_netbuf_list_add_tail(&list, buf1);
@@ -245,7 +300,7 @@ TEST_F(NetbufList, ListPrev) {
   EXPECT_EQ(brcmf_netbuf_list_prev(&list, buf2), buf1);
 }
 
-TEST_F(NetbufList, PrevAndNext) {
+TEST_F(BrcmfNetbufList, PrevAndNext) {
   brcmf_netbuf* buf1 = Buf(1);
   brcmf_netbuf* buf2 = Buf(2);
   brcmf_netbuf* buf3 = Buf(3);
@@ -256,7 +311,7 @@ TEST_F(NetbufList, PrevAndNext) {
   EXPECT_EQ(brcmf_netbuf_list_next(&list, buf2), buf3);
 }
 
-TEST_F(NetbufList, RemoveTail) {
+TEST_F(BrcmfNetbufList, RemoveTail) {
   EXPECT_EQ(brcmf_netbuf_list_remove_tail(&list), nullptr);
   brcmf_netbuf* buf1 = Buf(1);
   brcmf_netbuf_list_add_tail(&list, buf1);
@@ -272,7 +327,7 @@ TEST_F(NetbufList, RemoveTail) {
   ExpectOrder(tags2);
 }
 
-TEST_F(NetbufList, RemoveHead) {
+TEST_F(BrcmfNetbufList, RemoveHead) {
   EXPECT_EQ(brcmf_netbuf_list_remove_head(&list), nullptr);
   brcmf_netbuf* buf1 = Buf(1);
   brcmf_netbuf_list_add_tail(&list, buf1);
@@ -288,7 +343,7 @@ TEST_F(NetbufList, RemoveHead) {
   ExpectOrder(tags2);
 }
 
-TEST_F(NetbufList, Remove) {
+TEST_F(BrcmfNetbufList, Remove) {
   brcmf_netbuf* buf1 = Buf(1);
   brcmf_netbuf* buf2 = Buf(2);
   brcmf_netbuf* buf3 = Buf(3);
@@ -313,7 +368,7 @@ TEST_F(NetbufList, Remove) {
   ExpectOrder(tags3);
 }
 
-TEST_F(NetbufList, AddAfter) {
+TEST_F(BrcmfNetbufList, AddAfter) {
   brcmf_netbuf* buf1 = Buf(1);
   brcmf_netbuf* buf2 = Buf(2);
   brcmf_netbuf* buf3 = Buf(3);

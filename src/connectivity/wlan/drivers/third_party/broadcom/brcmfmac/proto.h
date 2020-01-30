@@ -16,8 +16,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PROTO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PROTO_H_
 
-#include "core.h"
-#include "netbuf.h"
+#include <memory>
+
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 
 enum proto_addr_mode { ADDR_INDIRECT = 0, ADDR_DIRECT };
 
@@ -32,7 +34,8 @@ struct brcmf_proto {
                             int32_t* fwerr);
   zx_status_t (*set_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
                           int32_t* fwerr);
-  zx_status_t (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx, struct brcmf_netbuf* netbuf);
+  zx_status_t (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx,
+                               std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf);
   int (*txdata)(struct brcmf_pub* drvr, int ifidx, uint8_t offset, struct brcmf_netbuf* netbuf);
   void (*configure_addr_mode)(struct brcmf_pub* drvr, int ifidx, enum proto_addr_mode addr_mode);
   void (*delete_peer)(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]);
@@ -68,9 +71,9 @@ static inline zx_status_t brcmf_proto_set_dcmd(struct brcmf_pub* drvr, int ifidx
   return drvr->proto->set_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 
-static inline zx_status_t brcmf_proto_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
-                                                    struct brcmf_netbuf* netbuf) {
-  return drvr->proto->tx_queue_data(drvr, ifidx, netbuf);
+static inline zx_status_t brcmf_proto_tx_queue_data(
+    struct brcmf_pub* drvr, int ifidx, std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf) {
+  return drvr->proto->tx_queue_data(drvr, ifidx, std::move(netbuf));
 }
 
 static inline zx_status_t brcmf_proto_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,

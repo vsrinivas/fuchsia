@@ -1484,7 +1484,9 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
     ret = brcmf_fws_txstatus_suppressed(fws, fifo, netbuf, genbit, seq);
   }
   if (remove_from_hanger || ret != ZX_OK) {
-    brcmf_txfinalize(ifp, netbuf, true);
+    struct ethhdr* eh = (struct ethhdr*)(netbuf->data);
+    brcmf_txfinalize(ifp, eh, true);
+    brcmu_pkt_buf_free_netbuf(netbuf);
   }
 
   return ZX_OK;
@@ -1630,7 +1632,8 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
   /* validate flags and flow id */
   if (flags == 0xFF) {
     BRCMF_ERR("invalid flags...so ignore this packet\n");
-    brcmf_netif_rx(ifp, pkt);
+    brcmf_netif_rx(ifp, pkt->data, pkt->len);
+    brcmu_pkt_buf_free_netbuf(pkt);
     return;
   }
 
@@ -1640,7 +1643,8 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
 
     if (rfi == NULL) {
       BRCMF_DBG(INFO, "received flags to cleanup, but no flow (%d) yet\n", flow_id);
-      brcmf_netif_rx(ifp, pkt);
+      brcmf_netif_rx(ifp, pkt->data, pkt->len);
+      brcmu_pkt_buf_free_netbuf(pkt);
       return;
     }
 
@@ -1663,7 +1667,8 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
     rfi = static_cast<decltype(rfi)>(calloc(1, buf_size));
     if (rfi == NULL) {
       BRCMF_ERR("failed to alloc buffer\n");
-      brcmf_netif_rx(ifp, pkt);
+      brcmf_netif_rx(ifp, pkt->data, pkt->len);
+      brcmu_pkt_buf_free_netbuf(pkt);
       return;
     }
 
@@ -1772,7 +1777,8 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct brcmf_netbuf* pkt) {
 netif_rx:
   brcmf_netbuf_list_for_every_safe(&reorder_list, pkt, pnext) {
     brcmf_netbuf_list_remove(&reorder_list, pkt);
-    brcmf_netif_rx(ifp, pkt);
+    brcmf_netif_rx(ifp, pkt->data, pkt->len);
+    brcmu_pkt_buf_free_netbuf(pkt);
   }
 }
 
@@ -2083,7 +2089,8 @@ zx_status_t brcmf_fws_process_netbuf(struct brcmf_if* ifp, struct brcmf_netbuf* 
     brcmf_fws_schedule_deq(fws);
   } else {
     BRCMF_ERR("drop netbuf: no hanger slot\n");
-    brcmf_txfinalize(ifp, netbuf, false);
+    brcmf_txfinalize(ifp, eh, false);
+    brcmu_pkt_buf_free_netbuf(netbuf);
     rc = ZX_ERR_NO_MEMORY;
   }
   brcmf_fws_unlock(fws);
@@ -2158,7 +2165,9 @@ static void brcmf_fws_dequeue_worker(WorkItem* worker) {
         ret = brcmf_proto_txdata(drvr, ifidx, 0, netbuf);
         brcmf_fws_lock(fws);
         if (ret != ZX_OK) {
-          brcmf_txfinalize(brcmf_get_ifp(drvr, ifidx), netbuf, false);
+          struct ethhdr* eh = (struct ethhdr*)(netbuf->data);
+          brcmf_txfinalize(brcmf_get_ifp(drvr, ifidx), eh, false);
+          brcmu_pkt_buf_free_netbuf(netbuf);
         }
         if (fws->bus_flow_blocked) {
           break;

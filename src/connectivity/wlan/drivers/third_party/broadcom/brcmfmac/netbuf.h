@@ -1,31 +1,111 @@
-/*
- * Copyright (c) 2018 The Fuchsia Authors
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_NETBUF_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_NETBUF_H_
 
+// This file transitionally contains two "netbuf" implementations:
+// * Netbuf, which is a RAII class for ferrying external buffer instances around the brcmfmac
+//   driver.
+// * brcmf_netbuf, which is a transitional C struct used the last vestiges of the port from the
+//   Linux driver.  This is analogous to sk_buff.
+
+// Includes for Netbuf.
+
+#include <zircon/types.h>
+
+#include <memory>
+
+#include <ddk/protocol/ethernet.h>
+
+// Additional includes for brcmf_netbuf.
+
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#define _ALL_SOURCE
+#include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
-#include <zircon/types.h>
-#define _ALL_SOURCE
-#include <threads.h>
+
+namespace wlan {
+namespace brcmfmac {
+
+// The Netbuf class holds a sized memory buffer, which may have been allocated elsewhere, and
+// ensures that any buffer return callbacks are held and called appropriately when the buffer's
+// utility is complete.
+class Netbuf {
+ public:
+  // Construct an empty Netbuf instance.
+  Netbuf();
+
+  // Destroy a Netbuf instance.  If Return() has not already been called, it is called with
+  // ZX_ERR_INTERNAL.
+  virtual ~Netbuf();
+
+  // State accessors.
+  const void* data() const;
+  size_t size() const;
+
+  // Return ownership of the underlying buffer, calling a completion callback with the given status
+  // as a parameter.  After this call, the Netbuf is in the empty state; if Return() is called
+  // again, it causes a debug assertion and does nothing.
+  virtual void Return(zx_status_t status);
+
+ protected:
+  const void* data_ = nullptr;
+  size_t size_ = 0;
+};
+
+// This class implements Netbuf for use with an ethernet_netbuf_t instance obtained through the DDK
+// interface.
+class EthernetNetbuf : public Netbuf {
+ public:
+  EthernetNetbuf();
+  // Construct an EthernetNetbuf instance from an ethernet_netbuf_t instance, completion callback,
+  // and cookie.  The completion callback will be invoked when the instance is destroyed.
+  explicit EthernetNetbuf(ethernet_netbuf_t* netbuf, ethernet_impl_queue_tx_callback completion_cb,
+                          void* cookie);
+  EthernetNetbuf(const EthernetNetbuf& other) = delete;
+  EthernetNetbuf(EthernetNetbuf&& other);
+  EthernetNetbuf& operator=(EthernetNetbuf other);
+  friend void swap(EthernetNetbuf& lhs, EthernetNetbuf& rhs);
+  ~EthernetNetbuf() override;
+
+  void Return(zx_status_t status) override;
+
+ private:
+  ethernet_netbuf_t* netbuf_ = nullptr;
+  ethernet_impl_queue_tx_callback completion_cb_ = nullptr;
+  void* cookie_ = nullptr;
+};
+
+// This class implements Netbuf using an owned, allocated array.
+class AllocatedNetbuf : public Netbuf {
+ public:
+  AllocatedNetbuf();
+  // Construct an AllocatedNetbuf instance.  ITs storage will be deallocated when the instance is
+  // destroyed.
+  explicit AllocatedNetbuf(std::unique_ptr<char[]> allocation, size_t size);
+  AllocatedNetbuf(const AllocatedNetbuf& other) = delete;
+  AllocatedNetbuf(AllocatedNetbuf&& other);
+  AllocatedNetbuf& operator=(AllocatedNetbuf other);
+  friend void swap(AllocatedNetbuf& lhs, AllocatedNetbuf& rhs);
+  ~AllocatedNetbuf() override;
+
+  void Return(zx_status_t status) override;
+
+ private:
+  std::unique_ptr<char[]> allocation_;
+};
+
+}  // namespace brcmfmac
+}  // namespace wlan
+
+//
+// Transitional brcmf_netbuf definitions below.
+//
 
 // Purpose of this library:
 //

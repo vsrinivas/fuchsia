@@ -208,13 +208,13 @@ void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
   WorkQueue::ScheduleDefault(&ifp->multicast_work);
 }
 
-void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* ethernet_netbuf) {
+void brcmf_netdev_start_xmit(struct net_device* ndev,
+                             std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf) {
   zx_status_t ret;
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_pub* drvr = ifp->drvr;
-  struct brcmf_netbuf* netbuf = nullptr;
-  struct ethhdr* eh = nullptr;
-  int head_delta;
+  struct ethhdr eh;
+  const size_t netbuf_size = netbuf->size();
 
   BRCMF_DBG(DATA, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
 
@@ -226,47 +226,21 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* etherne
     goto done;
   }
 
-  netbuf = brcmf_netbuf_allocate(ethernet_netbuf->data_size + drvr->hdrlen);
-  brcmf_netbuf_grow_tail(netbuf, ethernet_netbuf->data_size + drvr->hdrlen);
-  brcmf_netbuf_shrink_head(netbuf, drvr->hdrlen);
-  memcpy(netbuf->data, ethernet_netbuf->data_buffer, ethernet_netbuf->data_size);
-
-  /* Make sure there's enough writeable headroom */
-  if (brcmf_netbuf_head_space(netbuf) < drvr->hdrlen) {
-    head_delta = std::max<int>(drvr->hdrlen - brcmf_netbuf_head_space(netbuf), 0);
-
-    BRCMF_DBG(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
-    drvr->bus_if->stats.pktcowed.fetch_add(1);
-    ret = brcmf_netbuf_grow_realloc(netbuf, ALIGN(head_delta, NET_NETBUF_PAD), 0);
-    if (ret != ZX_OK) {
-      BRCMF_ERR("%s: failed to expand headroom\n", brcmf_ifname(ifp));
-      drvr->bus_if->stats.pktcow_failed.fetch_add(1);
-      // TODO(cphoenix): Shouldn't I brcmf_netbuf_free here?
-      goto done;
-    }
-  }
-
   /* validate length for ether packet */
-  if (netbuf->len < sizeof(*eh)) {
+  if (netbuf->size() < sizeof(eh)) {
     ret = ZX_ERR_INVALID_ARGS;
-    brcmf_netbuf_free(netbuf);
+    netbuf->Return(ret);
     goto done;
   }
+  eh = *(struct ethhdr*)(netbuf->data());
 
-  eh = (struct ethhdr*)(netbuf->data);
-
-  if (eh->h_proto == htobe16(ETH_P_PAE)) {
+  if (eh.h_proto == htobe16(ETH_P_PAE)) {
     ifp->pend_8021x_cnt.fetch_add(1);
   }
 
-  /* determine the priority */
-  if ((netbuf->priority == 0) || (netbuf->priority > 7)) {
-    netbuf->priority = cfg80211_classify8021d(netbuf, NULL);
-  }
-
-  ret = brcmf_proto_tx_queue_data(drvr, ifp->ifidx, netbuf);
+  ret = brcmf_proto_tx_queue_data(drvr, ifp->ifidx, std::move(netbuf));
   if (ret != ZX_OK) {
-    brcmf_txfinalize(ifp, netbuf, false);
+    brcmf_txfinalize(ifp, &eh, false);
   }
 
 done:
@@ -274,7 +248,7 @@ done:
     ndev->stats.tx_dropped++;
   } else {
     ndev->stats.tx_packets++;
-    ndev->stats.tx_bytes += netbuf->len;
+    ndev->stats.tx_bytes += netbuf_size;
   }
   /* No status to return: we always eat the packet */
 }
@@ -305,22 +279,21 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
   ifp->drvr->irq_callback_lock.unlock();
 }
 
-void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
-  const ethhdr* const eh = reinterpret_cast<const ethhdr*>(netbuf->data);
+void brcmf_netif_rx(struct brcmf_if* ifp, const void* data, size_t size) {
+  const ethhdr* const eh = reinterpret_cast<const ethhdr*>(data);
   if (address_is_multicast(eh->h_dest) && !address_is_broadcast(eh->h_dest)) {
     ifp->ndev->stats.multicast++;
   }
 
   if (!(ifp->ndev->flags & IFF_UP)) {
-    brcmu_pkt_buf_free_netbuf(netbuf);
     return;
   }
 
-  ifp->ndev->stats.rx_bytes += netbuf->len;
+  ifp->ndev->stats.rx_bytes += size;
   ifp->ndev->stats.rx_packets++;
 
-  BRCMF_DBG(DATA, "rx proto=0x%X len %d\n", be16toh(eh->h_proto), netbuf->len);
-  brcmf_cfg80211_rx(ifp, netbuf);
+  BRCMF_DBG(DATA, "rx proto=0x%X len %d\n", be16toh(eh->h_proto), size);
+  brcmf_cfg80211_rx(ifp, data, size);
 }
 
 static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf,
@@ -360,7 +333,8 @@ void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
                                netbuf->len);
     }
 
-    brcmf_netif_rx(ifp, netbuf);
+    brcmf_netif_rx(ifp, netbuf->data, netbuf->len);
+    brcmu_pkt_buf_free_netbuf(netbuf);
   }
 }
 
@@ -377,13 +351,8 @@ void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
   brcmu_pkt_buf_free_netbuf(netbuf);
 }
 
-void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool success) {
-  struct ethhdr* eh;
-  uint16_t type;
-
-  eh = (struct ethhdr*)(txp->data);
-  type = be16toh(eh->h_proto);
-
+void brcmf_txfinalize(struct brcmf_if* ifp, const struct ethhdr* eh, bool success) {
+  const uint16_t type = be16toh(eh->h_proto);
   if (type == ETH_P_PAE) {
     if (ifp->pend_8021x_cnt.fetch_sub(1) == 1) {
       sync_completion_signal(&ifp->pend_8021x_wait);
@@ -393,8 +362,6 @@ void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool succe
   if (!success) {
     ifp->ndev->stats.tx_errors++;
   }
-
-  brcmu_pkt_buf_free_netbuf(txp);
 }
 
 static zx_status_t brcmf_netdev_stop(struct net_device* ndev) {

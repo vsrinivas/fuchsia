@@ -1753,28 +1753,28 @@ done:
 }
 
 #define EAPOL_ETHERNET_TYPE_UINT16 0x8e88
-void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
+void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   struct net_device* ndev = ifp->ndev;
-  THROTTLE(10, BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA), packet->data,
-                                  std::min(packet->len, 64u),
-                                  "Data received (%d bytes, max 64 shown):\n", packet->len););
+  THROTTLE(10, BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA), data,
+                                  std::min<size_t>(size, 64u),
+                                  "Data received (%d bytes, max 64 shown):\n", size););
   // IEEE Std. 802.3-2015, 3.1.1
-  uint16_t eth_type = ((uint16_t*)(packet->data))[6];
+  const uint16_t eth_type = ((uint16_t*)(data))[6];
+  const char* const data_bytes = reinterpret_cast<const char*>(data);
   if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {
     wlanif_eapol_indication_t eapol_ind;
     // IEEE Std. 802.1X-2010, 11.3, Figure 11-1
-    memcpy(&eapol_ind.dst_addr, packet->data, ETH_ALEN);
-    memcpy(&eapol_ind.src_addr, packet->data + 6, ETH_ALEN);
-    eapol_ind.data_count = packet->len - 14;
-    eapol_ind.data_list = packet->data + 14;
+    memcpy(&eapol_ind.dst_addr, data_bytes, ETH_ALEN);
+    memcpy(&eapol_ind.src_addr, data_bytes + 6, ETH_ALEN);
+    eapol_ind.data_count = size - 14;
+    eapol_ind.data_list = reinterpret_cast<const uint8_t*>(data_bytes + 14);
 
     BRCMF_DBG(WLANIF, "Sending EAPOL frame to SME. data_len: %zu\n", eapol_ind.data_count);
 
     wlanif_impl_ifc_eapol_ind(&ndev->if_proto, &eapol_ind);
   } else {
-    wlanif_impl_ifc_data_recv(&ndev->if_proto, packet->data, packet->len, 0);
+    wlanif_impl_ifc_data_recv(&ndev->if_proto, data, size, 0);
   }
-  brcmu_pkt_buf_free_netbuf(packet);
 }
 
 static void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss) {
@@ -3018,22 +3018,17 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
 
   // Ethernet header length + EAPOL PDU length
   packet_length = 2 * ETH_ALEN + sizeof(uint16_t) + req->data_count;
-  uint8_t* packet = static_cast<decltype(packet)>(malloc(packet_length));
-  if (packet == NULL) {
-    confirm.result_code = WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE;
-  } else {
-    // IEEE Std. 802.3-2015, 3.1.1
-    memcpy(packet, req->dst_addr, ETH_ALEN);
-    memcpy(packet + ETH_ALEN, req->src_addr, ETH_ALEN);
-    *(uint16_t*)(packet + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
-    memcpy(packet + 2 * ETH_ALEN + sizeof(uint16_t), req->data_list, req->data_count);
-    ethernet_netbuf_t netbuf;
-    netbuf.data_buffer = packet;
-    netbuf.data_size = packet_length;
-    brcmf_netdev_start_xmit(ndev, &netbuf);
-    free(packet);
-    confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
-  }
+  auto packet_data = std::make_unique<char[]>(packet_length);
+  // IEEE Std. 802.3-2015, 3.1.1
+  memcpy(packet_data.get(), req->dst_addr, ETH_ALEN);
+  memcpy(packet_data.get() + ETH_ALEN, req->src_addr, ETH_ALEN);
+  *(uint16_t*)(packet_data.get() + 2 * ETH_ALEN) = EAPOL_ETHERNET_TYPE_UINT16;
+  memcpy(packet_data.get() + 2 * ETH_ALEN + sizeof(uint16_t), req->data_list, req->data_count);
+
+  auto packet =
+      std::make_unique<wlan::brcmfmac::AllocatedNetbuf>(std::move(packet_data), packet_length);
+  brcmf_netdev_start_xmit(ndev, std::move(packet));
+  confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
   BRCMF_DBG(
@@ -3580,8 +3575,8 @@ void brcmf_if_stats_query_req(net_device* ndev) {
 
 void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_t* netbuf,
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
-  brcmf_netdev_start_xmit(ndev, netbuf);
-  completion_cb(cookie, ZX_OK, netbuf);
+  auto b = std::make_unique<wlan::brcmfmac::EthernetNetbuf>(netbuf, completion_cb, cookie);
+  brcmf_netdev_start_xmit(ndev, std::move(b));
 }
 
 zx_status_t brcmf_if_set_multicast_promisc(net_device* ndev, bool enable) {
