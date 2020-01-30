@@ -104,6 +104,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   void set_rebind_drv_name(const char* drv_name);
   std::optional<std::string> get_rebind_drv_name() { return rebind_drv_name_; }
 
+  void set_unbind_children_conn(fit::callback<void(zx_status_t)>);
+  fit::callback<void(zx_status_t)> take_unbind_children_conn();
+
   void PushTestCompatibilityConn(fit::callback<void(zx_status_t)>);
   fit::callback<void(zx_status_t)> PopTestCompatibilityConn();
 
@@ -278,6 +281,10 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   fit::callback<void(zx_status_t)> rebind_conn_ TA_GUARDED(rebind_conn_lock_);
 
+  fbl::Mutex unbind_children_conn_lock_;
+
+  fit::callback<void(zx_status_t)> unbind_children_conn_ TA_GUARDED(unbind_children_conn_lock_);
+
   std::optional<std::string> rebind_drv_name_ = std::nullopt;
 
   // The connection associated with fuchsia.device.Controller/RunCompatibilityTests
@@ -319,6 +326,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 // ZX_ERR_ALREADY_BOUND is returned
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname);
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev);
+zx_status_t device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev);
 zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self);
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                            int64_t hook_wait_time);

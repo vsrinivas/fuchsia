@@ -226,6 +226,39 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
       &child_fd));
 }
 
+TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
+  using driver_integration_test::IsolatedDevmgr;
+  driver_integration_test::IsolatedDevmgr::Args args;
+  driver_integration_test::IsolatedDevmgr devmgr;
+
+  board_test::DeviceEntry dev = {};
+  dev.vid = PDEV_VID_TEST;
+  dev.pid = PDEV_PID_DEVHOST_TEST;
+  dev.did = 0;
+  args.device_list.push_back(dev);
+
+  ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
+
+  fbl::unique_fd test_fd, parent_fd, child_fd;
+  zx::channel parent_channel;
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                          "sys/platform/11:0e:0", &test_fd));
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
+  ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
+
+  zx_status_t call_status = ZX_OK;
+  auto resp =
+      ::llcpp::fuchsia::device::Controller::Call::UnbindChildren(zx::unowned(parent_channel));
+  ASSERT_OK(resp.status());
+  if (resp->result.is_err()) {
+    call_status = resp->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
+      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
+}
+
 // Test binding again, but with different driver
 TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   IsolatedDevmgr devmgr;
@@ -408,4 +441,5 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   ASSERT_OK(call_status);
   fuchsia_device_test_DeviceDestroy(dev_channel.get());
 }
+
 }  // namespace

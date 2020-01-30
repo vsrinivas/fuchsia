@@ -241,6 +241,12 @@ void devhost_finalize() {
     }
 
     if (dev->parent) {
+      // When all the children are gone, complete the pending unbind request.
+      if ((!(dev->parent->flags & DEV_FLAG_DEAD)) && dev->parent->children.is_empty()) {
+        if (auto unbind_children = dev->parent->take_unbind_children_conn(); unbind_children) {
+          unbind_children(ZX_OK);
+        }
+      }
       // If the parent wants rebinding when its children are gone,
       // And the parent is not dead, And this was the last child...
       if ((dev->parent->flags & DEV_FLAG_WANTS_REBIND) && (!(dev->parent->flags & DEV_FLAG_DEAD)) &&
@@ -250,7 +256,7 @@ void devhost_finalize() {
         std::string drv = dev->parent->get_rebind_drv_name().value_or("");
         zx_status_t status = devhost_device_bind(dev->parent, drv.c_str());
         if (status != ZX_OK) {
-          if (auto rebind = dev->take_rebind_conn(); rebind) {
+          if (auto rebind = dev->parent->take_rebind_conn(); rebind) {
             rebind(status);
           }
         }

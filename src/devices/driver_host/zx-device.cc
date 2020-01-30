@@ -43,6 +43,18 @@ fit::callback<void(zx_status_t)> zx_device::take_rebind_conn() {
   return conn;
 }
 
+void zx_device::set_unbind_children_conn(fit::callback<void(zx_status_t)> conn) {
+  fbl::AutoLock<fbl::Mutex> lock(&unbind_children_conn_lock_);
+  unbind_children_conn_ = std::move(conn);
+}
+
+fit::callback<void(zx_status_t)> zx_device::take_unbind_children_conn() {
+  fbl::AutoLock<fbl::Mutex> lock(&unbind_children_conn_lock_);
+  auto conn = std::move(unbind_children_conn_);
+  unbind_children_conn_ = nullptr;
+  return conn;
+}
+
 void zx_device::PushTestCompatibilityConn(fit::callback<void(zx_status_t)> conn) {
   fbl::AutoLock<fbl::Mutex> lock(&test_compatibility_conn_lock_);
   test_compatibility_conn_.push_back(std::move(conn));

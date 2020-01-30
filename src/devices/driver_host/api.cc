@@ -297,6 +297,11 @@ zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unb
   return devhost_schedule_remove(dev, unbind_self);
 }
 
+zx_status_t device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
+  ApiAutoLock lock;
+  return devhost_schedule_unbind_children(dev);
+}
+
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                            int64_t hook_wait_time) {
   ApiAutoLock lock;

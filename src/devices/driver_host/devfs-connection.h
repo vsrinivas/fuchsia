@@ -76,6 +76,7 @@ class DevfsConnection : public fbl::RefCounted<DevfsConnection>,
 
   void Bind(::fidl::StringView driver, BindCompleter::Sync _completer) override;
   void Rebind(::fidl::StringView driver, RebindCompleter::Sync _completer) override;
+  void UnbindChildren(UnbindChildrenCompleter::Sync completer) override;
   void ScheduleUnbind(ScheduleUnbindCompleter::Sync _completer) override;
   void GetDriverName(GetDriverNameCompleter::Sync _completer) override;
   void GetDeviceName(GetDeviceNameCompleter::Sync _completer) override;

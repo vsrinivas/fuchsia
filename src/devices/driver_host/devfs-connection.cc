@@ -146,6 +146,23 @@ void DevfsConnection::Rebind(::fidl::StringView driver, RebindCompleter::Sync co
   }
 }
 
+void DevfsConnection::UnbindChildren(UnbindChildrenCompleter::Sync completer) {
+  zx_status_t status = device_schedule_unbind_children(this->dev);
+
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    // The unbind conn will be set until all the children of this device are unbound.
+    dev->set_unbind_children_conn([completer = completer.ToAsync()](zx_status_t status) mutable {
+      if (status != ZX_OK) {
+        completer.ReplyError(status);
+      } else {
+        completer.ReplySuccess();
+      }
+    });
+  }
+}
+
 void DevfsConnection::ScheduleUnbind(ScheduleUnbindCompleter::Sync completer) {
   zx_status_t status = device_schedule_remove(this->dev, true /* unbind_self */);
   if (status != ZX_OK) {

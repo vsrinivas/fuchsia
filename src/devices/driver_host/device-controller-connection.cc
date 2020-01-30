@@ -177,9 +177,18 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
 
 void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->unbind_cb == nullptr);
-  this->dev()->unbind_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
+  this->dev()->unbind_cb = [dev = this->dev(),
+                            completer = completer.ToAsync()](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
     llcpp::fuchsia::device::manager::DeviceController_Unbind_Response response;
+    if (status != ZX_OK && dev->parent) {
+      // If unbind returns an error, and if client is waiting for unbind to complete,
+      // inform the client.
+      if (auto unbind_children_conn = dev->parent->take_unbind_children_conn();
+          unbind_children_conn) {
+        unbind_children_conn(status);
+      }
+    }
     result.set_response(&response);
     completer.Reply(std::move(result));
   };

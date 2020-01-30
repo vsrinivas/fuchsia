@@ -138,6 +138,10 @@ protocol Controller {
     /// The Rebind will not return until the bind completes.
     Rebind(string:MAX_DRIVER_PATH_LEN driver) -> () error zx.status;
 
+    /// This api will unbind all the children of this device synchronously.
+    /// This will avoid watching for device removal by the clients.
+    UnbindChildren() -> () error zx.status;
+
     /// Disconnect this device and allow its parent to be bound again.
     /// This may not complete before it returns.
     ScheduleUnbind() -> () error zx.status;
