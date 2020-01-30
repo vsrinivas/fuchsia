@@ -2,26 +2,51 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":memfs-tests" ]
 }
 
-zx_test("memfs-tests") {
+test("memfs-tests") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [ "memfs-tests.cc" ]
   deps = [
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/memfs",
-    "$zx/system/ulib/memfs:memfs-cpp",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/memfs-cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+migrated_manifest("memfs-tests-manifest") {
+  deps = [ ":memfs-tests" ]
 }

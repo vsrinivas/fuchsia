@@ -126,7 +126,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/ldmsg/test",
       "$zx/system/ulib/libzbi/test",
       "$zx/system/ulib/lockdep:test",
-      "$zx/system/ulib/memfs/test",
       "$zx/system/ulib/minfs/test",
       "$zx/system/ulib/mipi-dsi:mipidsi",
       "$zx/system/ulib/paver:paver-test",
