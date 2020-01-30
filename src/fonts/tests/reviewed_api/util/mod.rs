@@ -27,17 +27,38 @@ macro_rules! assert_buf_eq {
     };
 }
 
+// TODO(kpozin): "Default" fonts will be empty when we begin building fonts per target product.
+pub fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
+    let launcher = launcher().context("Failed to open launcher service")?;
+    let app = launch(&launcher, FONTS_CMX.to_string(), None)
+        .context("Failed to launch fonts::Provider")?;
+
+    let font_provider = app
+        .connect_to_service::<fonts::ProviderMarker>()
+        .context("Failed to connect to fonts::Provider")?;
+
+    Ok((app, font_provider))
+}
+
 pub fn start_provider_with_manifest(
-    manifest_file_path: impl AsRef<str>,
+    manifest_file_name: impl AsRef<str>,
+    include_default_fonts: bool,
 ) -> Result<(App, fonts::ProviderProxy), Error> {
     let mut launch_options = LaunchOptions::new();
     launch_options.add_dir_to_namespace(
-        "/testdata".to_string(),
-        std::fs::File::open("/pkg/data/testdata")?,
+        "/test_fonts".to_string(),
+        std::fs::File::open("/pkg/data/testdata/test_fonts")?,
     )?;
 
     let launcher = launcher().context("Failed to open launcher service")?;
-    let args = vec!["--font-manifest".to_string(), manifest_file_path.as_ref().to_string()];
+    let mut args = vec![];
+    if !include_default_fonts {
+        args.push("--no-default-fonts".to_string());
+    }
+    args.append(&mut vec![
+        "--font-manifest".to_string(),
+        format!("/test_fonts/{}", manifest_file_name.as_ref()),
+    ]);
 
     let app = launch_with_options(&launcher, FONTS_CMX.to_string(), Some(args), launch_options)
         .context("Failed to launch fonts::Provider")?;
@@ -46,6 +67,10 @@ pub fn start_provider_with_manifest(
         .context("Failed to connect to fonts::Provider")?;
 
     Ok((app, font_provider))
+}
+
+pub fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
+    start_provider_with_manifest("test_manifest_v1.json", true)
 }
 
 #[derive(Debug, Eq, PartialEq)]
