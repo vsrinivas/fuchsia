@@ -80,6 +80,12 @@ class GNBuilder(Frontend):
         # Propagate the metadata for the Core SDK into the GN SDK.
         shutil.copytree(self.source('meta'), self.dest('meta'))
 
+    def finalize(self, arch, types):
+        self.write_top_level_files()
+
+    def write_top_level_files(self):
+        self.write_file(self.dest('.gitignore'), 'gitignore', self)
+
 
 def main():
     parser = argparse.ArgumentParser(
