@@ -403,8 +403,8 @@ __END_CDECLS
 #ifdef __cplusplus
 
 const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid);
-bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct iovec patch);
-void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct iovec patch);
+bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch);
+void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch);
 
 #endif  // __cplusplus
 

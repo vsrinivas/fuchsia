@@ -4,7 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <iovec.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/syscalls/system.h>

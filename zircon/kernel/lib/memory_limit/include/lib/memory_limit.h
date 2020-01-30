@@ -3,12 +3,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+
 #ifndef ZIRCON_KERNEL_LIB_MEMORY_LIMIT_INCLUDE_LIB_MEMORY_LIMIT_H_
 #define ZIRCON_KERNEL_LIB_MEMORY_LIMIT_INCLUDE_LIB_MEMORY_LIMIT_H_
-#include <iovec.h>
+
 #include <sys/types.h>
 #include <zircon/types.h>
-
 #include <vm/pmm.h>
 
 __BEGIN_CDECLS

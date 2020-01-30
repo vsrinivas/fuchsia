@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
-#include <iovec.h>
 
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>
@@ -40,12 +39,12 @@ static uint32_t microcode_checksum(uint32_t* patch, size_t dwords) {
   return sum;
 }
 
-bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct iovec patch) {
+bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch) {
   // See Intel SDM Volume 3 9.11 "Microcode Update Facilities"
   const uint32_t processor_signature = cpuid->ReadProcessorId().signature();
   const uint64_t platform_id = msr->read_msr(X86_MSR_IA32_PLATFORM_ID);
 
-  auto* const hdr = reinterpret_cast<const x86_intel_microcode_update_header*>(patch.iov_base);
+  auto* const hdr = reinterpret_cast<const x86_intel_microcode_update_header*>(patch.buffer);
   // All Intel microcode patches released so far have a header version of 0x1.
   if (hdr->header_version != 0x1) {
     return false;
@@ -60,8 +59,8 @@ bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struc
     return false;
   }
 
-  const auto dwords = patch.iov_len / 4;
-  const uint32_t checksum = microcode_checksum(reinterpret_cast<uint32_t*>(patch.iov_base), dwords);
+  const auto dwords = patch.capacity / 4;
+  const uint32_t checksum = microcode_checksum(reinterpret_cast<uint32_t*>(patch.buffer), dwords);
   if (checksum != 0) {
     return false;
   }
@@ -70,10 +69,10 @@ bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struc
 }
 
 // Attempt to load a compatible microcode patch. Invoked on every logical processor.
-void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct iovec patch) {
+void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch) {
   AutoSpinLock lock(&g_microcode_lock);
 
-  auto* const hdr = reinterpret_cast<const x86_intel_microcode_update_header*>(patch.iov_base);
+  auto* const hdr = reinterpret_cast<const x86_intel_microcode_update_header*>(patch.buffer);
   const uint32_t current_patch_level = x86_intel_get_patch_level();
   // Skip patch if we already have a newer version loaded. This is not required
   // but does save many cycles, especially on hyperthreaded CPUs.
@@ -82,7 +81,7 @@ void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct
   }
 
   const uintptr_t data =
-      reinterpret_cast<uintptr_t>(static_cast<char*>(patch.iov_base) + sizeof(*hdr));
+      reinterpret_cast<uintptr_t>(static_cast<char*>(patch.buffer) + sizeof(*hdr));
   // Write back & invalidate caches before loading microcode; this is not necessary
   // per the SDM, but Intel posts to LKML indicate it may be required.
   asm volatile("wbinvd" ::: "memory");
@@ -127,7 +126,7 @@ bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
 }
 
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  // IA32_ARCH_CAPABILITIES MSR enumerates fixes for L1TF, if available. 
+  // IA32_ARCH_CAPABILITIES MSR enumerates fixes for L1TF, if available.
   if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
     uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
     if (arch_capabilities & X86_ARCH_CAPABILITIES_RDCL_NO) {
