@@ -107,8 +107,8 @@ class GpioBitFieldView : public ddk::MmioView {
   uint32_t Idx2Offset(size_t idx) const { return static_cast<uint32_t>((idx / 16) * 0x10); }
 
  public:
-  explicit GpioBitFieldView(mmio_buffer_t& mmio, zx_off_t offset, size_t size)
-      : ddk::MmioView(mmio, offset, size) {}
+  explicit GpioBitFieldView(ddk::MmioBuffer& mmio, zx_off_t offset, size_t size)
+      : ddk::MmioView(mmio.View(offset, size)) {}
 
   void ModifyBit(size_t idx, bool val) const {
     ddk::MmioView::ModifyBit<uint16_t>(val, idx % 16, Idx2Offset(idx));
@@ -121,25 +121,25 @@ class GpioBitFieldView : public ddk::MmioView {
 
 class GpioDirReg : public GpioBitFieldView {
  public:
-  explicit GpioDirReg(mmio_buffer_t& mmio) : GpioBitFieldView(mmio, 0, 0x100) {}
+  explicit GpioDirReg(ddk::MmioBuffer& mmio) : GpioBitFieldView(mmio, 0, 0x100) {}
   void SetDir(size_t idx, bool is_out) const { ModifyBit(idx, is_out); }
 };
 
 class GpioOutReg : public GpioBitFieldView {
  public:
-  explicit GpioOutReg(mmio_buffer_t& mmio) : GpioBitFieldView(mmio, 0x100, 0x100) {}
+  explicit GpioOutReg(ddk::MmioBuffer& mmio) : GpioBitFieldView(mmio, 0x100, 0x100) {}
   void SetVal(size_t idx, bool val) const { ModifyBit(idx, val); }
 };
 
 class GpioInReg : public GpioBitFieldView {
  public:
-  explicit GpioInReg(mmio_buffer_t& mmio) : GpioBitFieldView(mmio, 0x200, 0x100) {}
+  explicit GpioInReg(ddk::MmioBuffer& mmio) : GpioBitFieldView(mmio, 0x200, 0x100) {}
   uint16_t GetVal(size_t idx) const { return GetBit(idx); }
 };
 
 class GpioPullEnReg : public GpioBitFieldView {
  public:
-  explicit GpioPullEnReg(mmio_buffer_t& mmio) : GpioBitFieldView(mmio, 0x500, 0x100) {}
+  explicit GpioPullEnReg(ddk::MmioBuffer& mmio) : GpioBitFieldView(mmio, 0x500, 0x100) {}
 
   bool PullEnable(size_t idx) const { return PullEnableInternal(idx, true); }
   bool PullDisable(size_t idx) const { return PullEnableInternal(idx, false); }
@@ -157,7 +157,7 @@ class GpioPullEnReg : public GpioBitFieldView {
 
 class GpioPullSelReg : public GpioBitFieldView {
  public:
-  explicit GpioPullSelReg(mmio_buffer_t& mmio) : GpioBitFieldView(mmio, 0x600, 0x100) {}
+  explicit GpioPullSelReg(ddk::MmioBuffer& mmio) : GpioBitFieldView(mmio, 0x600, 0x100) {}
   bool SetPullUp(size_t idx) const { return SetPullInternal(idx, true); }
   bool SetPullDown(size_t idx) const { return SetPullInternal(idx, false); }
 
@@ -174,7 +174,7 @@ class GpioPullSelReg : public GpioBitFieldView {
 
 class IoConfigReg : public ddk::MmioBuffer {
  public:
-  explicit IoConfigReg(mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  explicit IoConfigReg(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
   bool SetPullUp(size_t idx) const { return SetPullInternal(idx, true); }
   bool SetPullDown(size_t idx) const { return SetPullInternal(idx, false); }
   bool PullEnable(size_t idx, PullAmount amount) const { return PullEnableInternal(idx, amount); }
@@ -267,7 +267,7 @@ class IoConfigReg : public ddk::MmioBuffer {
 
 class ExtendedInterruptReg : public ddk::MmioBuffer {
  public:
-  explicit ExtendedInterruptReg(mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  explicit ExtendedInterruptReg(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
   void Enable(size_t idx) const { EnableInternal(idx, true); }
   void Disable(size_t idx) const { EnableInternal(idx, false); }
   bool IsEnabled(size_t idx) const {

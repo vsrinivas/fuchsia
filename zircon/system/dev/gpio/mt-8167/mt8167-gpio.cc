@@ -342,10 +342,12 @@ zx_status_t Mt8167GpioDevice::Create(zx_device_t* parent) {
   std::unique_ptr<gpio::Mt8167GpioDevice> dev;
 
   if (info.mmio_count == 3) {
-    dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent, gpio_mmio, iocfg_mmio,
-                                                              eint_mmio);
+    dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent, ddk::MmioBuffer(gpio_mmio),
+                                                           ddk::MmioBuffer(iocfg_mmio),
+                                                           ddk::MmioBuffer(eint_mmio));
   } else {
-    dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent, gpio_mmio, eint_mmio);
+    dev = fbl::make_unique_checked<gpio::Mt8167GpioDevice>(&ac, parent, ddk::MmioBuffer(gpio_mmio),
+                                                           ddk::MmioBuffer(eint_mmio));
   }
   if (!ac.check()) {
     zxlogf(ERROR, "mt8167_gpio_bind: ZX_ERR_NO_MEMORY\n");

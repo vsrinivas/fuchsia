@@ -29,27 +29,28 @@ class Mt8167GpioDevice : public DeviceType,
  public:
   static zx_status_t Create(zx_device_t* parent);
 
-  explicit Mt8167GpioDevice(zx_device_t* parent, mmio_buffer_t gpio_mmio, mmio_buffer_t iocfg_mmio,
-                            mmio_buffer_t eint_mmio)
+  explicit Mt8167GpioDevice(zx_device_t* parent, ddk::MmioBuffer gpio_mmio,
+                            ddk::MmioBuffer iocfg_mmio, ddk::MmioBuffer eint_mmio)
       : DeviceType(parent),
-        gpio_mmio_(gpio_mmio),
-        dir_(gpio_mmio),
-        out_(gpio_mmio),
-        in_(gpio_mmio),
-        pull_en_(gpio_mmio),
-        pull_sel_(gpio_mmio),
-        iocfg_(iocfg_mmio),
-        eint_(eint_mmio) {}
+        gpio_mmio_(std::move(gpio_mmio)),
+        dir_(gpio_mmio_),
+        out_(gpio_mmio_),
+        in_(gpio_mmio_),
+        pull_en_(gpio_mmio_),
+        pull_sel_(gpio_mmio_),
+        iocfg_(std::move(iocfg_mmio)),
+        eint_(std::move(eint_mmio)) {}
 
-  explicit Mt8167GpioDevice(zx_device_t* parent, mmio_buffer_t gpio_mmio, mmio_buffer_t eint_mmio)
+  explicit Mt8167GpioDevice(zx_device_t* parent, ddk::MmioBuffer gpio_mmio,
+                            ddk::MmioBuffer eint_mmio)
       : DeviceType(parent),
-        gpio_mmio_(gpio_mmio),
-        dir_(gpio_mmio),
-        out_(gpio_mmio),
-        in_(gpio_mmio),
-        pull_en_(gpio_mmio),
-        pull_sel_(gpio_mmio),
-        eint_(eint_mmio) {}
+        gpio_mmio_(std::move(gpio_mmio)),
+        dir_(gpio_mmio_),
+        out_(gpio_mmio_),
+        in_(gpio_mmio_),
+        pull_en_(gpio_mmio_),
+        pull_sel_(gpio_mmio_),
+        eint_(std::move(eint_mmio)) {}
 
   zx_status_t Bind();
   zx_status_t Init();

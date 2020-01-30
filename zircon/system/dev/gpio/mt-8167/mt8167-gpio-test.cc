@@ -7,7 +7,7 @@
 #include <fbl/auto_call.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 
 namespace {
 constexpr size_t kGpioRegCount = MT8167_GPIO_SIZE / sizeof(uint16_t);
