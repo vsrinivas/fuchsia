@@ -6,13 +6,13 @@
 #define ZIRCON_SYSTEM_DEV_LIB_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FIDL_HELPER_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
 #include <fbl/algorithm.h>
+#include "lib/async-loop/loop.h"
 
 namespace fake_ddk {
 
@@ -39,6 +39,9 @@ typedef zx_status_t(MessageOp)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 //
 class FidlMessenger {
  public:
+  explicit FidlMessenger() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  explicit FidlMessenger(const async_loop_config_t* config) : loop_(config) {}
+
   // Local channel to send FIDL client messages
   zx::channel& local() { return local_; }
 
@@ -57,7 +60,7 @@ class FidlMessenger {
       return status;
     }
 
-    if ((status = loop_.StartThread()) < 0) {
+    if ((status = loop_.StartThread("fake_ddk_fidl")) < 0) {
       return status;
     }
 
@@ -80,7 +83,7 @@ class FidlMessenger {
   // Channel to mimic RPC
   zx::channel local_;
   // Dispatcher for fidl messages
-  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop loop_;
 };
 
 }  // namespace fake_ddk

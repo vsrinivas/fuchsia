@@ -11,6 +11,7 @@
 
 #include "fake_gdc.h"
 #include "fake_isp.h"
+#include "lib/async-loop/default.h"
 #include "src/camera/drivers/controller/configs/sherlock/common_util.h"
 #include "src/camera/drivers/controller/configs/sherlock/monitoring_config.h"
 #include "src/camera/drivers/controller/configs/sherlock/video_conferencing_config.h"

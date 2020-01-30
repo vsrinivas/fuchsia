@@ -6,6 +6,7 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_BUTTONS_H_
 
 #include <fuchsia/buttons/cpp/fidl.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/cpp/binding.h>

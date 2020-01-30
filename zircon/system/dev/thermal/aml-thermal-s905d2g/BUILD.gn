@@ -65,6 +65,7 @@ zx_test("aml-thermal-s905d2g-test") {
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

@@ -15,6 +15,7 @@
 #include "fake_gdc.h"
 #include "fake_ge2d.h"
 #include "fake_isp.h"
+#include "lib/async-loop/default.h"
 #include "lib/fit/result.h"
 #include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
 #include "src/camera/drivers/controller/controller-protocol.h"

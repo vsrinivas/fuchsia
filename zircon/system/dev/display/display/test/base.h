@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
 
+#include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/bti.h>
@@ -55,7 +56,8 @@ class Binder : public fake_ddk::Bind {
     total_children_++;
     devices_[parent].children.push_back(*out);
     if (args && args->ops && args->ops->message) {
-      auto loop = std::make_unique<fake_ddk::FidlMessenger>();
+      auto loop =
+          std::make_unique<fake_ddk::FidlMessenger>(&kAsyncLoopConfigNoAttachToCurrentThread);
       loop->SetMessageOp(args->ctx, args->ops->message);
       fidl_loops_.insert({*out, std::move(loop)});
     }

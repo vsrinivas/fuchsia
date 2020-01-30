@@ -51,6 +51,7 @@ test("aml-light-test") {
   ]
   deps = [
     "//zircon/public/lib/amlogic",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",

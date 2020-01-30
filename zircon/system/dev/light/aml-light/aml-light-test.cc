@@ -4,6 +4,7 @@
 
 #include "aml-light.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>
 
