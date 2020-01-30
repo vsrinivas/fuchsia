@@ -34,6 +34,7 @@ pub mod fuchsia_handles {
     pub use zx::Process;
     pub use zx::Resource;
     pub use zx::Socket;
+    pub use zx::Stream;
     pub use zx::Thread;
     pub use zx::Timer;
     pub use zx::Vmar;
@@ -223,6 +224,7 @@ pub mod non_fuchsia_handles {
     declare_unsupported_fidl_handle!(DebugLog);
     declare_unsupported_fidl_handle!(Event);
     declare_unsupported_fidl_handle!(EventPair);
+    declare_unsupported_fidl_handle!(Stream);
     declare_unsupported_fidl_handle!(Vmo);
 
     macro_rules! declare_fidl_handle {

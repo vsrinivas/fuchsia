@@ -358,6 +358,7 @@ assoc_values!(ObjectType, [
     PCI_DEVICE      = sys::ZX_OBJ_TYPE_PCI_DEVICE;
     LOG             = sys::ZX_OBJ_TYPE_LOG;
     SOCKET          = sys::ZX_OBJ_TYPE_SOCKET;
+    STREAM          = sys::ZX_OBJ_TYPE_STREAM;
     RESOURCE        = sys::ZX_OBJ_TYPE_RESOURCE;
     EVENTPAIR       = sys::ZX_OBJ_TYPE_EVENTPAIR;
     JOB             = sys::ZX_OBJ_TYPE_JOB;

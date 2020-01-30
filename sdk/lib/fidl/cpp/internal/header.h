@@ -32,6 +32,7 @@
 #include <lib/zx/profile.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/socket.h>
+#include <lib/zx/stream.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/task.h>
 #include <lib/zx/thread.h>

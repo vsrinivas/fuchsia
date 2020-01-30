@@ -1459,6 +1459,7 @@ mod zx_encoding {
     type ZxProcess = zx::Process;
     type ZxResource = zx::Resource;
     type ZxSocket = zx::Socket;
+    type ZxStream = zx::Stream;
     type ZxThread = zx::Thread;
     type ZxTimer = zx::Timer;
     type ZxPort = zx::Port;
@@ -1476,6 +1477,7 @@ mod zx_encoding {
         ZxProcess,
         ZxResource,
         ZxSocket,
+        ZxStream,
         ZxThread,
         ZxTimer,
         ZxPort,
@@ -1496,9 +1498,10 @@ mod fidl_handle_encoding {
     type FidlEvent = crate::handle::Event;
     type FidlEventPair = crate::handle::EventPair;
     type FidlSocket = crate::handle::Socket;
+    type FidlStream = crate::handle::Stream;
     type FidlVmo = crate::handle::Vmo;
 
-    handle_based_codable![FidlChannel, FidlEvent, FidlEventPair, FidlSocket, FidlVmo,];
+    handle_based_codable![FidlChannel, FidlEvent, FidlEventPair, FidlSocket, FidlStream, FidlVmo,];
 
     // Stub host serialization of the FidlDebugLog.
     impl_layout!(FidlDebugLog, align: 1, size: 1);

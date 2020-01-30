@@ -304,6 +304,8 @@ multiconst!(zx_obj_type_t, [
     ZX_OBJ_TYPE_SUSPEND_TOKEN       = 27;
     ZX_OBJ_TYPE_PAGER               = 28;
     ZX_OBJ_TYPE_EXCEPTION           = 29;
+    ZX_OBJ_TYPE_CLOCK               = 30;
+    ZX_OBJ_TYPE_STREAM              = 31;
 ]);
 
 multiconst!(zx_obj_props_t, [

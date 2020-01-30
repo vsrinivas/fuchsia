@@ -198,6 +198,14 @@ table FileInfo {
     /// In append mode, the seek offset is moved to the end before every
     /// write, the two steps performed in an atomic manner.
     2: bool is_append;
+
+    /// An optional stream object, which can be used to read to and write from
+    /// the file.
+    ///
+    /// Reading and writing the file using the stream object can be up to 20x
+    /// faster than reading and writing the file using the Read and Write
+    /// operations in the [`fuchsia.io2/File`] protocol.
+    3: handle<stream> stream;
 };
 
 bits FileSignal : uint32 {
