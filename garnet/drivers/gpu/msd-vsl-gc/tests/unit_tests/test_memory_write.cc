@@ -105,7 +105,7 @@ class TestMsdVslDevice : public drm_test_info {
   std::shared_ptr<AddressSpace> address_space() { return address_space_; }
 
   bool AllocInterruptEvent(uint32_t* out_id) {
-    return device_.msd_vsl_device->AllocInterruptEvent(out_id);
+    return device_.msd_vsl_device->AllocInterruptEvent(false /* free_on_complete */, out_id);
   }
   bool FreeInterruptEvent(uint32_t id) { return device_.msd_vsl_device->FreeInterruptEvent(id); }
 

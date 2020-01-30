@@ -22,9 +22,27 @@ class TestEvents : public ::testing::Test {
     EXPECT_NE(address_space_, nullptr);
     device_->page_table_arrays()->AssignAddressSpace(kAddressSpaceIndex,
                                                      address_space_.get());
+    // This needs to be non-null, as the connection calls |ConnectionReleased| on destruction.
+    connection_owner_ = std::make_unique<ConnectionOwner>();
+    EXPECT_NE(connection_owner_, nullptr);
+    connection_ = std::make_unique<MsdVslConnection>(connection_owner_.get(), kAddressSpaceIndex,
+                                                     address_space_, 0 /* client_id */);
+    EXPECT_NE(connection_, nullptr);
+    context_ = std::make_shared<MsdVslContext>(connection_, connection_->address_space());
+    EXPECT_NE(context_, nullptr);
   }
 
  protected:
+  class ConnectionOwner : public MsdVslConnection::Owner {
+   public:
+    void ConnectionReleased(MsdVslConnection* connection) override {}
+
+    magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
+      return MAGMA_STATUS_UNIMPLEMENTED;
+    }
+    magma::PlatformBusMapper* GetBusMapper() override { return nullptr; }
+  };
+
   class AddressSpaceOwner : public AddressSpace::Owner {
    public:
     AddressSpaceOwner(magma::PlatformBusMapper* bus_mapper) : bus_mapper_(bus_mapper) {}
@@ -50,6 +68,10 @@ class TestEvents : public ::testing::Test {
     EXPECT_EQ(0x7FFFFFFFu, reg.reg_value());
   }
 
+  std::unique_ptr<ConnectionOwner> connection_owner_;
+  std::shared_ptr<MsdVslConnection> connection_;
+  std::shared_ptr<MsdVslContext> context_;
+
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   std::shared_ptr<AddressSpace> address_space_;
   std::unique_ptr<MsdVslDevice> device_;
@@ -59,11 +81,11 @@ TEST_F(TestEvents, AllocAndFree) {
   for (unsigned int i = 0; i < 2; i++) {
     uint32_t event_ids[MsdVslDevice::kNumEvents] = {};
     for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
-      ASSERT_TRUE(device_->AllocInterruptEvent(&event_ids[j]));
+      ASSERT_TRUE(device_->AllocInterruptEvent(false /* free_on_complete */, &event_ids[j]));
     }
     // We should have no events left.
     uint32_t id;
-    ASSERT_FALSE(device_->AllocInterruptEvent(&id));
+    ASSERT_FALSE(device_->AllocInterruptEvent(false /* free_on_complete */, &id));
 
     ASSERT_FALSE(device_->CompleteInterruptEvent(0));  // Not yet submitted.
 
@@ -90,7 +112,7 @@ TEST_F(TestEvents, Write) {
   uint32_t event_ids[MsdVslDevice::kNumEvents] = {};
   std::unique_ptr<magma::PlatformSemaphore> semaphores[MsdVslDevice::kNumEvents] = {};
   for (unsigned int i = 0; i < MsdVslDevice::kNumEvents; i++) {
-    ASSERT_TRUE(device_->AllocInterruptEvent(&event_ids[i]));
+    ASSERT_TRUE(device_->AllocInterruptEvent(false /* free_on_complete */, &event_ids[i]));
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_NE(semaphore, nullptr);
     semaphores[i] = std::move(semaphore);
@@ -131,22 +153,18 @@ TEST_F(TestEvents, Write) {
 }
 
 TEST_F(TestEvents, Submit) {
-  for (int i = 0; i < 10; i++) {
-    uint32_t event_id;
-    ASSERT_TRUE(device_->AllocInterruptEvent(&event_id));
+  for (int i = 0; i < 50; i++) {
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_NE(semaphore, nullptr);
 
-    auto mapped_batch = std::make_unique<MockMappedBatch>(semaphore->Clone());
-    uint16_t prefetch_out;
-    ASSERT_TRUE(device_->SubmitCommandBuffer(address_space_, kAddressSpaceIndex,
-                                             nullptr /* buf */, std::move(mapped_batch),
-                                             event_id, &prefetch_out));
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
+    signal_semaphores.emplace_back(semaphore->Clone());
+
+    auto batch = std::make_unique<EventBatch>(context_, signal_semaphores);
+    ASSERT_EQ(MAGMA_STATUS_OK, device_->SubmitBatch(std::move(batch)).get());
 
     constexpr uint64_t kTimeoutMs = 1000;
     ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
-
-    ASSERT_TRUE(device_->FreeInterruptEvent(event_id));
   }
 
   {

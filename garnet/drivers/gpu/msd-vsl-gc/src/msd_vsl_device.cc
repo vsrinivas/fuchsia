@@ -11,6 +11,7 @@
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
 #include "msd.h"
+#include "msd_vsl_context.h"
 #include "platform_barriers.h"
 #include "platform_logger.h"
 #include "platform_mmio.h"
@@ -18,6 +19,19 @@
 #include "registers.h"
 
 static constexpr uint32_t kInterruptIndex = 0;
+
+class MsdVslDevice::BatchRequest : public DeviceRequest {
+ public:
+  BatchRequest(std::unique_ptr<MappedBatch> batch) : batch_(std::move(batch)) {}
+
+ protected:
+  magma::Status Process(MsdVslDevice* device) override {
+    return device->ProcessBatch(std::move(batch_));
+  }
+
+ private:
+  std::unique_ptr<MappedBatch> batch_;
+};
 
 class MsdVslDevice::InterruptRequest : public DeviceRequest {
  public:
@@ -278,12 +292,13 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
   return MAGMA_STATUS_OK;
 }
 
-bool MsdVslDevice::AllocInterruptEvent(uint32_t* out_event_id) {
+bool MsdVslDevice::AllocInterruptEvent(bool free_on_complete, uint32_t* out_event_id) {
   std::lock_guard<std::mutex> lock(events_mutex_);
 
   for (uint32_t i = 0; i < kNumEvents; i++) {
     if (!events_[i].allocated) {
       events_[i].allocated = true;
+      events_[i].free_on_complete = free_on_complete;
       *out_event_id = i;
       return true;
     }
@@ -334,8 +349,9 @@ bool MsdVslDevice::CompleteInterruptEvent(uint32_t event_id) {
     return DRETF(false, "Cannot complete event %u, allocated %u submitted %u",
                  event_id, events_[event_id].allocated, events_[event_id].submitted);
   }
-  events_[event_id].submitted = false;
-  events_[event_id].mapped_batch = nullptr;
+  bool free_on_complete = events_[event_id].free_on_complete;
+  events_[event_id] = {};
+  events_[event_id].allocated = !free_on_complete;
   return true;
 }
 
@@ -629,7 +645,9 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   if (prefetch & 0xFFFF0000)
     return DRETF(false, "Can't submit length %u (prefetch 0x%x)", length, prefetch);
 
-  *prefetch_out = prefetch & 0xFFFF;
+  if (prefetch_out) {
+    *prefetch_out = prefetch & 0xFFFF;
+  }
 
   // Write the new commands to the end of the ringbuffer.
   // Add an EVENT to the end to the ringbuffer.
@@ -643,10 +661,52 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
 
   DLOG("Submitting buffer at gpu addr 0x%x", gpu_addr);
 
-  if (!LinkRingbuffer(prev_wait_link, gpu_addr, *prefetch_out)) {
+  if (!LinkRingbuffer(prev_wait_link, gpu_addr, prefetch)) {
     return DRETF(false, "Failed to link ringbuffer");
   }
   return true;
+}
+
+magma::Status MsdVslDevice::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
+  DLOG("SubmitBatch");
+  CHECK_THREAD_NOT_CURRENT(device_thread_id_);
+
+  EnqueueDeviceRequest(std::make_unique<BatchRequest>(std::move(batch)));
+  return MAGMA_STATUS_OK;
+}
+
+magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
+  CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+  auto context = batch->GetContext().lock();
+  if (!context) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "No context for batch %lu, IsCommandBuffer=%d",
+                 batch->GetBatchBufferId(), batch->IsCommandBuffer());
+  }
+  // TODO(fxb/44972): move page_table_array_slot into the address space and remove this.
+  auto connection = context->connection().lock();
+  if (!connection) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "No connection for batch %lu, IsCommandBuffer=%d",
+                 batch->GetBatchBufferId(), batch->IsCommandBuffer());
+  }
+  auto address_space = context->exec_address_space();
+
+  uint32_t event_id;
+  if (!AllocInterruptEvent(true /* free_on_complete */, &event_id)) {
+    // TODO(fxb/39354): queue the buffer to try again after an interrupt completes.
+    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "No events remaining");
+  }
+  magma::PlatformBuffer* buf = nullptr;
+  if (batch->IsCommandBuffer()) {
+    // TODO(fxb/39354): handle command buffers.
+    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "Command buffers not yet handled");
+  }
+  if (!SubmitCommandBuffer(address_space, connection->page_table_array_slot(), buf,
+                           std::move(batch), event_id, nullptr /* prefetch_out */)) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to submit command buffer");
+  }
+
+  return MAGMA_STATUS_OK;
 }
 
 std::unique_ptr<MsdVslConnection> MsdVslDevice::Open(msd_client_id_t client_id) {

@@ -61,6 +61,7 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   struct Event {
     bool allocated = false;
     bool submitted = false;
+    bool free_on_complete = false;
     std::unique_ptr<MappedBatch> mapped_batch;
   };
 
@@ -85,7 +86,9 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   magma::Status ProcessInterrupt();
 
   // Events for triggering interrupts.
-  bool AllocInterruptEvent(uint32_t* out_event_id);
+  // If |free_on_complete| is true, the event will be freed automatically after the corresponding
+  // interrupt is received.
+  bool AllocInterruptEvent(bool free_on_complete, uint32_t* out_event_id);
   bool FreeInterruptEvent(uint32_t event_id);
   // Writes a new interrupt event to the end of the ringbuffer. The event must have been allocated
   // using |AllocInterruptEvent|.
@@ -119,10 +122,13 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
                            std::unique_ptr<MappedBatch> mapped_batch,
                            uint32_t event_id, uint16_t* prefetch_out);
 
+  magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch);
+
   magma::RegisterIo* register_io() { return register_io_.get(); }
 
   // MsdVslConnection::Owner
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
 
   void ConnectionReleased(MsdVslConnection* connection) override {
     page_table_slot_allocator_->Free(connection->page_table_array_slot());
@@ -151,6 +157,7 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
   std::atomic_bool stop_device_thread_{false};
 
+  class BatchRequest;
   class InterruptRequest;
 
   // Thread-shared data members

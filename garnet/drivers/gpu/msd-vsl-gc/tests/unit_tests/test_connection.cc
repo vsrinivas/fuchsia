@@ -14,6 +14,10 @@ class TestMsdVslConnection : public MsdVslConnection::Owner {
     connection_released_ = connection;
   }
 
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
+    return MAGMA_STATUS_UNIMPLEMENTED;
+  }
+
   void Released() {
     auto connection =
         std::make_unique<MsdVslConnection>(this, 0, std::make_shared<AddressSpace>(this), 1000);

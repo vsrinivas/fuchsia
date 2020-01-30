@@ -10,13 +10,19 @@
 #include "address_space.h"
 #include "magma_util/macros.h"
 #include "msd.h"
+#include "msd_vsl_connection.h"
 
 class MsdVslContext {
  public:
-  MsdVslContext(std::shared_ptr<AddressSpace> address_space)
-      : address_space_(std::move(address_space)) {}
+  MsdVslContext(std::weak_ptr<MsdVslConnection> connection,
+                std::shared_ptr<AddressSpace> address_space)
+      : connection_(connection), address_space_(std::move(address_space)) {}
+
+  std::shared_ptr<AddressSpace> exec_address_space() { return address_space_; }
+  std::weak_ptr<MsdVslConnection> connection() { return connection_; }
 
  private:
+  std::weak_ptr<MsdVslConnection> connection_;
   std::shared_ptr<AddressSpace> address_space_;
 };
 

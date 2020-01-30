@@ -9,6 +9,7 @@
 
 #include "address_space.h"
 #include "magma_util/macros.h"
+#include "mapped_batch.h"
 #include "msd.h"
 
 class MsdVslConnection : AddressSpace::Owner {
@@ -16,7 +17,8 @@ class MsdVslConnection : AddressSpace::Owner {
   class Owner : public AddressSpace::Owner {
    public:
     virtual void ConnectionReleased(MsdVslConnection* connection) = 0;
-  };
+    virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
+ };
 
   MsdVslConnection(Owner* owner, uint32_t page_table_array_slot,
                    std::shared_ptr<AddressSpace> address_space, msd_client_id_t client_id)

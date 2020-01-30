@@ -12,8 +12,9 @@ void msd_connection_close(msd_connection_t* connection) {
 }
 
 msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection) {
-  return new MsdVslAbiContext(std::make_shared<MsdVslContext>(
-      MsdVslAbiConnection::cast(abi_connection)->ptr()->address_space()));
+  auto connection = MsdVslAbiConnection::cast(abi_connection)->ptr();
+  return new MsdVslAbiContext(
+      std::make_shared<MsdVslContext>(connection, connection->address_space()));
 }
 
 magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
