@@ -159,5 +159,37 @@ TEST_F(OutputRingBufferTest, TruncateBufferAtEndOfTheRing) {
   EXPECT_EQ(buffer->length().Floor(), 48u);
 }
 
+TEST(RingBufferTest, FrameOffset) {
+  const auto& format = kDefaultFormat;
+  const uint32_t frame_offset = 128;
+
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
+      zx::sec(1).to_nsecs()));
+  auto endpoints = RingBuffer::AllocateSoftwareBuffer(format, std::move(timeline_function),
+                                                      kRingBufferFrameCount, frame_offset);
+  auto ring_buffer = std::move(endpoints.writer);
+  ASSERT_TRUE(ring_buffer);
+
+  // The first buffer section should be |frame_offset| into the physical ring buffer and can be at
+  // most |kRingBufferFrameCount - frame_offset| frames long.
+  auto buffer = ring_buffer->LockBuffer(zx::time(0), 0, 2 * kRingBufferFrameCount);
+  ASSERT_TRUE(buffer);
+  ASSERT_EQ(0u, buffer->start().Floor());
+  ASSERT_EQ(kRingBufferFrameCount - frame_offset, buffer->length().Floor());
+  ASSERT_EQ(
+      reinterpret_cast<uintptr_t>(buffer->payload()),
+      reinterpret_cast<uintptr_t>(ring_buffer->virt()) + (frame_offset * format.bytes_per_frame()));
+
+  // The second buffer portion back at the start of the physical ring.
+  buffer = ring_buffer->LockBuffer(zx::time(0), kRingBufferFrameCount - frame_offset,
+                                   2 * kRingBufferFrameCount);
+  ASSERT_TRUE(buffer);
+  ASSERT_EQ(kRingBufferFrameCount - frame_offset, buffer->start().Floor());
+  ASSERT_EQ(frame_offset, buffer->length().Floor());
+  ASSERT_EQ(reinterpret_cast<uintptr_t>(buffer->payload()),
+            reinterpret_cast<uintptr_t>(ring_buffer->virt()));
+}
+
 }  // namespace
 }  // namespace media::audio

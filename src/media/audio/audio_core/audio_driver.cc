@@ -896,9 +896,9 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_
     bool input = owner_->is_input();
     auto mapping = input ? RingBuffer::VmoMapping::kReadOnly : RingBuffer::VmoMapping::kReadWrite;
     auto endpoint = input ? RingBuffer::Endpoint::kReadable : RingBuffer::Endpoint::kWritable;
-    ring_buffer_ = RingBuffer::CreateHardwareBuffer(*format, clock_mono_to_fractional_frame_,
-                                                    std::move(rb_vmo), resp.num_ring_buffer_frames,
-                                                    mapping, endpoint);
+    ring_buffer_ = RingBuffer::CreateHardwareBuffer(
+        *format, clock_mono_to_fractional_frame_, std::move(rb_vmo), resp.num_ring_buffer_frames,
+        mapping, endpoint, input ? fifo_depth_frames() : 0);
     if (ring_buffer_ == nullptr) {
       ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);
       return ZX_ERR_NO_MEMORY;

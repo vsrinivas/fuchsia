@@ -15,7 +15,7 @@ struct ReadableRingBufferTraits {
   static std::pair<int64_t, int64_t> ComputeValidFrameRange(int64_t position,
                                                             uint32_t ring_frames) {
     int64_t last_valid_frame = position;
-    int64_t first_valid_frame = std::max<int64_t>(last_valid_frame - ring_frames, 0);
+    int64_t first_valid_frame = last_valid_frame - ring_frames;
     return {first_valid_frame, last_valid_frame};
   }
 };
@@ -45,12 +45,13 @@ class RingBufferImpl : public RingBuffer {
   RingBufferImpl(const Format& format,
                  fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
                  fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
-                 Endpoint endpoint)
+                 Endpoint endpoint, uint32_t offset_frames)
       : RingBuffer(format, std::move(reference_clock_to_fractional_frames), std::move(vmo_mapper),
-                   frame_count, endpoint) {}
+                   frame_count, endpoint, offset_frames) {}
 
   std::optional<Stream::Buffer> LockBuffer(zx::time now, int64_t frame,
                                            uint32_t frame_count) override {
+    frame += offset_frames();
     auto [reference_clock_to_fractional_frame, _] = ReferenceClockToFractionalFrames();
     if (!reference_clock_to_fractional_frame.invertible()) {
       return std::nullopt;
@@ -58,7 +59,8 @@ class RingBufferImpl : public RingBuffer {
 
     int64_t ring_position_now =
         FractionalFrames<int64_t>::FromRaw(reference_clock_to_fractional_frame.Apply(now.get()))
-            .Floor();
+            .Floor() +
+        offset_frames();
     auto [first_valid_frame, last_valid_frame] =
         RingBufferTraits::ComputeValidFrameRange(ring_position_now, frames());
     if (frame >= last_valid_frame || (frame + frame_count) <= first_valid_frame) {
@@ -70,6 +72,7 @@ class RingBufferImpl : public RingBuffer {
     // 'absolute' here means the frame number not adjusted for the ring size. 'local' is the frame
     // number modulo ring size.
     int64_t first_absolute_frame = std::max(frame, first_valid_frame);
+
     int64_t first_frame_local = first_absolute_frame % frames();
     int64_t last_frame_local = std::min(last_requested_frame, last_valid_frame) % frames();
     if (last_frame_local <= first_frame_local) {
@@ -82,7 +85,7 @@ class RingBufferImpl : public RingBuffer {
 
     MemoryTraits::CleanBufferOnLock(payload, payload_bytes);
 
-    return {Stream::Buffer(first_absolute_frame, payload_frames, payload, true)};
+    return {Stream::Buffer(first_absolute_frame - offset_frames(), payload_frames, payload, true)};
   }
 };
 
@@ -134,8 +137,9 @@ fbl::RefPtr<RefCountedVmoMapper> MapVmo(const Format& format, zx::vmo vmo, uint3
 RingBuffer::Endpoints RingBuffer::AllocateSoftwareBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
-    uint32_t frame_count) {
+    uint32_t frame_count, uint32_t frame_offset) {
   TRACE_DURATION("audio", "RingBuffer::AllocateSoftwareBuffer");
+
   size_t vmo_size = frame_count * format.bytes_per_frame();
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
@@ -150,18 +154,18 @@ RingBuffer::Endpoints RingBuffer::AllocateSoftwareBuffer(
 
   return Endpoints{
       .reader = std::make_shared<RingBufferImpl<ReadableRingBufferTraits>>(
-          format, reference_clock_to_fractional_frame, vmo_mapper, frame_count,
-          Endpoint::kReadable),
+          format, reference_clock_to_fractional_frame, vmo_mapper, frame_count, Endpoint::kReadable,
+          frame_offset),
       .writer = std::make_shared<RingBufferImpl<WritableRingBufferTraits>>(
-          format, reference_clock_to_fractional_frame, vmo_mapper, frame_count,
-          Endpoint::kWritable),
+          format, reference_clock_to_fractional_frame, vmo_mapper, frame_count, Endpoint::kWritable,
+          frame_offset),
   };
 }
 
 std::shared_ptr<RingBuffer> RingBuffer::CreateHardwareBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame, zx::vmo vmo,
-    uint32_t frame_count, VmoMapping vmo_mapping, Endpoint endpoint) {
+    uint32_t frame_count, VmoMapping vmo_mapping, Endpoint endpoint, uint32_t offset_frames) {
   TRACE_DURATION("audio", "RingBuffer::CreateHardwareBuffer");
 
   auto vmo_mapper = MapVmo(format, std::move(vmo), frame_count, vmo_mapping);
@@ -170,23 +174,24 @@ std::shared_ptr<RingBuffer> RingBuffer::CreateHardwareBuffer(
   if (endpoint == Endpoint::kReadable) {
     return std::make_shared<RingBufferImpl<ReadableRingBufferTraits, CacheFlushMemoryTraits>>(
         format, std::move(reference_clock_to_fractional_frame), std::move(vmo_mapper), frame_count,
-        endpoint);
+        endpoint, offset_frames);
   } else {
     return std::make_shared<RingBufferImpl<WritableRingBufferTraits>>(
         format, std::move(reference_clock_to_fractional_frame), std::move(vmo_mapper), frame_count,
-        endpoint);
+        endpoint, offset_frames);
   }
 }
 
 RingBuffer::RingBuffer(const Format& format,
                        fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
                        fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
-                       Endpoint endpoint)
+                       Endpoint endpoint, uint32_t offset_frames)
     : Stream(format),
       endpoint_(endpoint),
       vmo_mapper_(std::move(vmo_mapper)),
       frames_(frame_count),
-      reference_clock_to_fractional_frame_(std::move(reference_clock_to_fractional_frame)) {
+      reference_clock_to_fractional_frame_(std::move(reference_clock_to_fractional_frame)),
+      offset_frames_(offset_frames) {
   FX_CHECK(vmo_mapper_->start() != nullptr);
   FX_CHECK(vmo_mapper_->size() >= (format.bytes_per_frame() * frame_count));
 }
