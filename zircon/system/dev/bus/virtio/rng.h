@@ -10,6 +10,7 @@
 #include <memory>
 
 #include <ddk/io-buffer.h>
+#include <ddktl/device.h>
 
 #include "device.h"
 #include "ring.h"
@@ -18,10 +19,11 @@ namespace virtio {
 
 class Ring;
 
-class RngDevice : public Device {
+class RngDevice : public Device, public ddk::Device<RngDevice> {
  public:
   RngDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend);
   virtual ~RngDevice();
+  void DdkRelease() { virtio::Device::Release(); }
 
   zx_status_t Init() override;
 

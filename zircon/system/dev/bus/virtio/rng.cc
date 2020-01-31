@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <limits.h>
+#include <zircon/status.h>
 
 #include <memory>
 #include <utility>
@@ -16,7 +17,8 @@
 namespace virtio {
 
 RngDevice::RngDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
-    : Device(bus_device, std::move(bti), std::move(backend)) {}
+    : virtio::Device(bus_device, std::move(bti), std::move(backend)),
+      ddk::Device<RngDevice>(bus_device) {}
 
 RngDevice::~RngDevice() {
   // TODO: clean up allocated physical memory
@@ -53,18 +55,12 @@ zx_status_t RngDevice::Init() {
   // set DRIVER_OK
   DriverStatusOk();
 
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "virtio-rng";
-  args.ctx = nullptr;
-  args.ops = &device_ops_;
-
-  auto status = device_add(bus_device_, &args, &device_);
+  zx_status_t status = DdkAdd("virtio-rng");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_add failed %d\n", tag(), status);
-    device_ = nullptr;
+    zxlogf(ERROR, "%s: failed to add device: %s\n", tag(), zx_status_get_string(status));
     return status;
   }
+  device_ = zxdev();
 
   // TODO(SEC-29): The kernel should trigger entropy requests, instead of relying on this
   // userspace thread to push entropy whenever it wants to. As a temporary hack, this thread
