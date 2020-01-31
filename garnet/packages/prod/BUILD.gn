@@ -92,11 +92,6 @@ group("auth") {
   public_deps = [ "//src/identity/bin:core" ]
 }
 
-group("bindc") {
-  testonly = true
-  public_deps = [ "//tools/bindc" ]
-}
-
 group("ssh") {
   testonly = true
   public_deps = [ "//third_party/openssh-portable:openssh-tools" ]
@@ -147,7 +142,6 @@ group("all") {
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:auth",
     "//garnet/packages/prod:battery_manager",
-    "//garnet/packages/prod:bindc",
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_all",
     "//garnet/packages/prod:bluetooth_atheros",
