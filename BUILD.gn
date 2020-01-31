@@ -241,31 +241,22 @@ build_api_module("binaries") {
 
 group("binaries.zircon") {
   visibility = [ ":binaries" ]
-  zircon_entries = read_file("$zircon_root_build_dir/binaries.json", "json")
   metadata = {
-    binaries = []
-    foreach(binary, zircon_entries) {
-      binaries += [
-        {
-          forward_variables_from(binary, "*")
-          label = string_replace(label, "//", "//zircon/")
-          if (defined(dist)) {
-            dist = rebase_path(dist, root_build_dir, zircon_root_build_dir)
-          }
-          if (defined(debug)) {
-            debug = rebase_path(debug, root_build_dir, zircon_root_build_dir)
-          }
-          if (defined(elf_build_id)) {
-            elf_build_id =
-                rebase_path(elf_build_id, root_build_dir, zircon_root_build_dir)
-          }
-          if (defined(breakpad)) {
-            breakpad =
-                rebase_path(breakpad, root_build_dir, zircon_root_build_dir)
-          }
-        },
-      ]
-    }
+    # This uses exec_script instead of read_file because the labels and paths
+    # need to be rebased to be valid in the Fuchsia build. Doing this in GN
+    # using a foreach loop takes 3 seconds, but the script takes 100ms. This
+    # should go away when the build is unified.
+    binaries =
+        exec_script("//build/zircon/read_zircon_binaries.py",
+                    [
+                      "--binaries-json",
+                      rebase_path("$zircon_root_build_dir/binaries.json"),
+                      "--root-build-dir",
+                      rebase_path(root_build_dir),
+                      "--zircon-root-build-dir",
+                      rebase_path(zircon_root_build_dir),
+                    ],
+                    "json")
   }
 }
 
