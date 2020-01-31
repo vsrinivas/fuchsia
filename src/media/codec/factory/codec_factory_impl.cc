@@ -180,8 +180,8 @@ CodecFactoryImpl::CodecFactoryImpl(
 // TODO(dustingreen): Seems simpler to avoid request_temp_ and OwnSelf() and
 // just have CreateSelfOwned() directly create the binding.
 void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
-  binding_ =
-      std::make_unique<BindingType>(std::move(self), std::move(request_temp_), app_->dispatcher());
+  binding_ = std::make_unique<BindingType>(std::move(self), std::move(request_temp_),
+                                           app_->loop()->dispatcher());
   binding_->set_error_handler([this](zx_status_t status) {
     // this will also ~this
     binding_ = nullptr;

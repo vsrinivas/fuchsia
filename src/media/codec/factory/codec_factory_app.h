@@ -22,7 +22,7 @@ namespace codec_factory {
 // CodecFactoryApp is singleton per-process.
 class CodecFactoryApp {
  public:
-  CodecFactoryApp(async_dispatcher_t* dispatcher);
+  CodecFactoryApp(async::Loop* loop);
 
   // The caller must only call this on the FIDL thread, and the returned * is
   // only valid for use until the caller returns from the caller's work on the
@@ -36,7 +36,7 @@ class CodecFactoryApp {
 
   std::vector<fuchsia::mediacodec::CodecDescription> MakeCodecList() const;
 
-  async_dispatcher_t* dispatcher() { return dispatcher_; }
+  async::Loop* loop() { return loop_; }
 
  private:
   struct CodecListEntry {
@@ -52,13 +52,12 @@ class CodecFactoryApp {
 
   void DiscoverMediaCodecDriversAndListenForMoreAsync();
 
-  void PublishService();
   void PostDiscoveryQueueProcessing();
   void ProcessDiscoveryQueue();
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
-  async_dispatcher_t* dispatcher_;
+  async::Loop* loop_;
 
   // We don't keep a fidl::BindingSet<> here, as we want each CodecFactory
   // instance to delete itself if an error occurs on its channel.
