@@ -113,6 +113,9 @@ void RunnerRunAllTestsSameTestCase();
 void RunnerSetUpAndTearDownEnvironmentsTests();
 void RunnerRunOnlyFilteredTests();
 void RunnerRepeatTests();
+void RunnerRunReturnsNonZeroOnTestFailure();
+void RunnerRunReturnsZeroOnAssertionsDisabled();
+void RunnerRunReturnsNonZeroOnAssertionsReEnabled();
 void RunnerListTests();
 
 // Verify that TestDriverImpl actually resets on the right spots,
@@ -197,6 +200,9 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(RunnerRunAllTests),
     RUN_TEST(RunnerRunAllTestsUntilFailure),
     RUN_TEST(RunnerRunAllTestsSameTestCase),
+    RUN_TEST(RunnerRunReturnsNonZeroOnTestFailure),
+    RUN_TEST(RunnerRunReturnsZeroOnAssertionsDisabled),
+    RUN_TEST(RunnerRunReturnsNonZeroOnAssertionsReEnabled),
     RUN_TEST(RunnerSetUpAndTearDownEnvironmentsTests),
     RUN_TEST(RunnerRunOnlyFilteredTests),
     RUN_TEST(RunnerListTests),

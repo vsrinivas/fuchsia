@@ -72,6 +72,49 @@ class FailingTest : public zxtest::Test {
   Runner* runner_;
 };
 
+// A test that generates assertions after disabling them.
+class NonFailingTest : public zxtest::Test {
+ public:
+  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
+    return [runner](TestDriver* driver) {
+      std::unique_ptr<NonFailingTest> test = zxtest::Test::Create<NonFailingTest>(driver);
+      test->runner_ = runner;
+      return test;
+    };
+  }
+
+ private:
+  void TestBody() {
+    runner_->DisableAsserts();
+    Assertion assertion("eq", "a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
+                        /* is_fatal = */ true);
+    runner_->NotifyAssertion(assertion);
+  }
+  Runner* runner_;
+};
+
+// A test that generates assertions after disabling and re-enabling.
+class FailingTest2 : public zxtest::Test {
+ public:
+  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
+    return [runner](TestDriver* driver) {
+      std::unique_ptr<FailingTest2> test = zxtest::Test::Create<FailingTest2>(driver);
+      test->runner_ = runner;
+      return test;
+    };
+  }
+
+ private:
+  void TestBody() {
+    runner_->DisableAsserts();
+    runner_->EnableAsserts();
+    Assertion assertion("eq", "a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
+                        /* is_fatal = */ true);
+    runner_->NotifyAssertion(assertion);
+  }
+  Runner* runner_;
+};
+
 }  // namespace
 
 void RunnerRegisterTest() {
@@ -440,6 +483,24 @@ void RunnerRunReturnsNonZeroOnTestFailure() {
 
   ZX_ASSERT_MSG(runner.Run(Runner::kDefaultOptions) != 0,
                 "Runner::Run must return non zero when at least one test fails.\n");
+}
+
+void RunnerRunReturnsZeroOnAssertionsDisabled() {
+  Runner runner(MakeSilentReporter());
+  runner.RegisterTest<Test, NonFailingTest>(kTestCaseName, kTestName, kFileName, kLineNumber,
+                                            NonFailingTest::MakeFactory(&runner));
+
+  ZX_ASSERT_MSG(runner.Run(Runner::kDefaultOptions) == 0,
+                "Runner::Run must return zero when assertions are disabled.\n");
+}
+
+void RunnerRunReturnsNonZeroOnAssertionsReEnabled() {
+  Runner runner(MakeSilentReporter());
+  runner.RegisterTest<Test, FailingTest2>(kTestCaseName, kTestName, kFileName, kLineNumber,
+                                            FailingTest2::MakeFactory(&runner));
+
+  ZX_ASSERT_MSG(runner.Run(Runner::kDefaultOptions) != 0,
+                "Runner::Run must return non zero when assertions are re-enabled.\n");
 }
 
 void RunnerListTests() {

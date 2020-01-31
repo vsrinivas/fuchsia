@@ -69,6 +69,10 @@ class TestDriverImpl final : public TestDriver, public LifecycleObserver {
   // This is not cleared on |TestDriverImpl::Reset|.
   bool HadAnyFailures() const { return had_any_failures_; }
 
+  // Control whether calls to OnAssertion do anything.
+  void EnableAsserts() { asserts_enabled_ = true; }
+  void DisableAsserts() { asserts_enabled_ = false; }
+
  private:
   TestStatus status_ = TestStatus::kFailed;
 
@@ -76,6 +80,8 @@ class TestDriverImpl final : public TestDriver, public LifecycleObserver {
   bool current_test_has_fatal_failures_ = false;
 
   bool had_any_failures_ = false;
+
+  bool asserts_enabled_ = true;
 };
 }  // namespace internal
 
@@ -220,6 +226,9 @@ class Runner {
 
   // Returns a pointer to the |LogSink| where the |reporter_| is running to.
   Reporter* mutable_reporter() { return &reporter_; }
+
+  void EnableAsserts() { return test_driver_.EnableAsserts(); }
+  void DisableAsserts() { return test_driver_.DisableAsserts(); }
 
  private:
   TestRef RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,

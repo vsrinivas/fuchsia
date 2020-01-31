@@ -38,10 +38,12 @@ void TestDriverImpl::OnTestFailure(const TestCase& test_case, const TestInfo& te
 }
 
 void TestDriverImpl::OnAssertion(const Assertion& assertion) {
-  status_ = TestStatus::kFailed;
-  current_test_has_any_failures_ = true;
-  current_test_has_fatal_failures_ = assertion.is_fatal();
-  had_any_failures_ = true;
+  if (asserts_enabled_) {
+    status_ = TestStatus::kFailed;
+    current_test_has_any_failures_ = true;
+    current_test_has_fatal_failures_ = assertion.is_fatal();
+    had_any_failures_ = true;
+  }
 }
 
 void TestDriverImpl::Reset() {
