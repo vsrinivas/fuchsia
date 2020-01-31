@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/errors.h>
+
+#include <limits>
 #include <memory>
 #include <utility>
 
 #include <fvm/format.h>
-#include <zircon/errors.h>
 #include <zxtest/zxtest.h>
 
 namespace fvm {
@@ -173,6 +175,42 @@ TEST(IntegrityValidationTest, ZeroedHeaderIsBadState) {
 
   ASSERT_EQ(fvm_validate_header(metadata_1.superblock.get(), metadata_2.superblock.get(),
                                 metadata_1.capacity, nullptr),
+            ZX_ERR_BAD_STATE);
+}
+
+TEST(IntegrityValidationTest, MetadataHasOverflowInCalculatedSizeIsBadState) {
+  Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
+  auto* header = reinterpret_cast<fvm::Header*>(metadata.superblock.get());
+
+  header->allocation_table_size = std::numeric_limits<uint64_t>::max() - fvm::kAllocTableOffset + 1;
+
+  ASSERT_EQ(fvm_validate_header(metadata.superblock.get(), metadata.superblock.get(),
+                                metadata.capacity, nullptr),
+            ZX_ERR_BAD_STATE);
+}
+
+TEST(IntegrityValidationTest, FvmPartitionNotBigForBothCopiesOfMetadataIsBadState) {
+  Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
+  auto* header = reinterpret_cast<fvm::Header*>(metadata.superblock.get());
+  fvm::FormatInfo info = fvm::FormatInfo::FromSuperBlock(*header);
+
+  header->fvm_partition_size = 2 * info.metadata_allocated_size() - 1;
+
+  ASSERT_EQ(fvm_validate_header(metadata.superblock.get(), metadata.superblock.get(),
+                                metadata.capacity, nullptr),
+            ZX_ERR_BAD_STATE);
+}
+
+TEST(IntegrityValidationTest, LastSliceOutOfFvmPartitionIsBadState) {
+  Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
+  auto* header = reinterpret_cast<fvm::Header*>(metadata.superblock.get());
+  fvm::FormatInfo info = fvm::FormatInfo::FromSuperBlock(*header);
+
+  // Now the last slice ends past the fvm partition and would trigger a Page Fault, probably.
+  header->fvm_partition_size = info.GetSliceStart(0) + info.slice_count() * info.slice_size() - 1;
+
+  ASSERT_EQ(fvm_validate_header(metadata.superblock.get(), metadata.superblock.get(),
+                                metadata.capacity, nullptr),
             ZX_ERR_BAD_STATE);
 }
 

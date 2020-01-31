@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -17,12 +18,12 @@
 #include <zircon/syscalls.h>
 #endif
 
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-
-#include "fvm/format.h"
+#include <fvm/format.h>
 
 #define ZXDEBUG 0
 
@@ -138,15 +139,62 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
   fvm::FormatInfo backup_info = fvm::FormatInfo::FromSuperBlock(*backup_header);
   size_t backup_metadata_size = backup_info.metadata_size();
 
+  auto check_value_consitency = [metadata_size](const fvm::Header* header,
+                                                const fvm::FormatInfo& info) {
+    // Check no overflow for each region of metadata.
+    uint64_t calculated_metadata_size = 0;
+    if (add_overflow(header->allocation_table_size, fvm::kAllocTableOffset,
+                     &calculated_metadata_size)) {
+      fprintf(stderr, "fvm: Calculated metadata size produces overflow(%" PRIu64 ", %zu).\n",
+              header->allocation_table_size, fvm::kAllocTableOffset);
+      return false;
+    }
+
+    // Check that the reported metadata size matches the calculated metadata size by format info.
+    if (info.metadata_size() > metadata_size) {
+      fprintf(stderr,
+              "fvm: Reported metadata size of %zu is smaller than header buffer size %zu.\n",
+              info.metadata_size(), metadata_size);
+      return false;
+    }
+
+    // Check metadata size is as least as big as the header.
+    if (info.metadata_size() < sizeof(fvm::Header)) {
+      fprintf(stderr,
+              "fvm: Reported metadata size of %zu is smaller than header buffer size %lu.\n",
+              info.metadata_size(), sizeof(fvm::Header));
+      return false;
+    }
+
+    // Check bounds of slice size and partition.
+    if (header->fvm_partition_size < 2 * info.metadata_allocated_size()) {
+      fprintf(stderr,
+              "fvm: Partition of size %" PRIu64 " can't fit both metadata copies of size %zu.\n",
+              header->fvm_partition_size, info.metadata_allocated_size());
+      return false;
+    }
+
+    // Check that addressable slices fit in the partition.
+    if (info.GetSliceStart(0) + info.slice_count() * info.slice_size() >
+        header->fvm_partition_size) {
+      fprintf(stderr,
+              "fvm: Slice count %zu Slice Size %zu out of range for partition %" PRIu64 ".\n",
+              info.slice_count(), info.slice_size(), header->fvm_partition_size);
+      return false;
+    }
+
+    return true;
+  };
+
   // Assume that the reported metadata size by each header is correct. This size must be smaller
   // than metadata buffer size(|metadata_size|. If this is the case, then check that the contents
   // from [start, reported_size] are valid.
   // The metadata size should always be at least the size of the header.
-  bool primary_valid = primary_metadata_size <= metadata_size &&
-                       primary_metadata_size >= sizeof(fvm::Header) &&
+  fprintf(stderr, "fvm: Inspecting primary metadata\n");
+  bool primary_valid = check_value_consitency(primary_header, primary_info) &&
                        fvm_check_hash(metadata, primary_metadata_size);
-  bool backup_valid = backup_metadata_size <= metadata_size &&
-                      backup_metadata_size >= sizeof(fvm::Header) &&
+  fprintf(stderr, "fvm: Inspecting secondary metadata\n");
+  bool backup_valid = check_value_consitency(backup_header, backup_info) &&
                       fvm_check_hash(backup, backup_metadata_size);
 
   // Decide if we should use the primary or the backup copy of metadata
