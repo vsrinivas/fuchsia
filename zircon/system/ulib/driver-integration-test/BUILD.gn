@@ -26,3 +26,28 @@ zx_library("driver-integration-test") {
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }
+
+zx_library("driver-integration-test-static") {
+  sdk = "static"
+  sdk_headers = [ "lib/driver-integration-test/fixture.h" ]
+
+  static = true
+  sources = [ "launcher.cc" ]
+  deps = [
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/inspector",
+    "$zx/system/ulib/libzbi",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  public_deps = [
+    "$zx/system/ulib/ddk:headers",
+    "$zx/system/ulib/devmgr-integration-test:headers",
+    "$zx/system/ulib/fbl:headers",
+  ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+}

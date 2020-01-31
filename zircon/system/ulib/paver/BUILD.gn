@@ -40,7 +40,7 @@ zx_library("paver") {
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
-    "$zx/system/ulib/ramdevice-client:static",
+    "$zx/system/ulib/ramdevice-client:ramdevice-client-static",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/sysconfig-client:sysconfig-sync-client",
     "$zx/system/ulib/zircon",

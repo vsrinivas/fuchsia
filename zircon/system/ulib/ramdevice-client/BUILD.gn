@@ -25,7 +25,41 @@ zx_library("ramdevice-client") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test:static",
     "$zx/system/ulib/devmgr-launcher:static",
-    "$zx/system/ulib/driver-integration-test:static",
+    "$zx/system/ulib/driver-integration-test:driver-integration-test-static",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+}
+
+zx_library("ramdevice-client-static") {
+  static = true
+  sdk = "static"
+  sdk_headers = [
+    "ramdevice-client/ramdisk.h",
+    "ramdevice-client/ramnand.h",
+  ]
+  sources = [
+    "ramdisk.cc",
+    "ramnand.cc",
+  ]
+  public_deps = [
+    # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
+    "$zx/system/ulib/driver-integration-test:headers",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/devmgr-integration-test:static",
+    "$zx/system/ulib/devmgr-launcher:static",
+    "$zx/system/ulib/driver-integration-test:driver-integration-test-static",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fdio-caller",

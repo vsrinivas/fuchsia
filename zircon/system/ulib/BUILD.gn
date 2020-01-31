@@ -122,6 +122,7 @@ group("ulib") {
     "pretty",
     "profile",
     "ramdevice-client",
+    "ramdevice-client:ramdevice-client-static",
     "range",
     "refcount",
     "region-alloc",
