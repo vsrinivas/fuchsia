@@ -481,13 +481,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/75ea787a80c77867e09e97ae60d3476604334f5d/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/39116ab7230c28854c711471e66360d5a4cefe56/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/75ea787a80c77867e09e97ae60d3476604334f5d/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/39116ab7230c28854c711471e66360d5a4cefe56/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -1988,7 +1988,7 @@ build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
 TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/b4a888da54a2b33760e6ed6506889b083cf37e54/infra/test_durations/default.json)" after the recipes start
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/d988ca68af8a980fd38d972e5f7e07bd6ab583eb/infra/test_durations/default.json)" after the recipes start
 setting this arg.
 
 **Current value (from the default):** `"//integration/infra/test_durations.json"`
