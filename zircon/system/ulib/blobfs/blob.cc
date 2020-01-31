@@ -899,8 +899,6 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
     return status;
   }
 
-  Digest d(GetKey());
-
   if (off >= inode_.blob_size) {
     *actual = 0;
     return ZX_OK;
