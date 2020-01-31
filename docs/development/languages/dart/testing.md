@@ -6,10 +6,10 @@ Multiple Dart test targets are available:
 
 - [dart_fuchsia_test] runs the test as a package on a fuchsia device. This must
   be used if there is anything fuchsia specific being used like fidl. It is run
-  with `fx run-test`.
+  with `fx test`.
 - [dart_test] runs unit tests that can be run on the host or on a fuchsia
   device. The dart:ui package is not made available to these tests. The test can
-  be run with `fx run-host-tests`.
+  be run with `fx tests --host`.
 - [flutter_test] is just like dart_test except the dart:ui package is made
   available to it, so it can test widget code.
 

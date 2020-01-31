@@ -257,7 +257,7 @@ If you want to leave Fuchsia running and recompile and re-run a test, run
 Fuchsia with networking enabled in one terminal, then in another terminal, run:
 
 ```sh
-fx run-test <test name> [<test args>]
+fx test <test name> [<test args>]
 ```
 
 You may wish to peruse the [testing FAQ](development/testing/faq.md).

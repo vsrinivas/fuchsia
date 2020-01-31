@@ -1424,7 +1424,7 @@ Reverser has a basic unit test. Run it:
    The unit tests is located in [reverser\_unittests.cc][cpp-part3-unittest].
 
    ```
-   fx run-test inspect_cpp_codelab_unittests
+   fx test inspect_cpp_codelab_unittests
    ```
 
 * {Rust}
@@ -1432,7 +1432,7 @@ Reverser has a basic unit test. Run it:
    The unit test is located in [reverser.rs > mod tests][rust-part3-unittest].
 
    ```
-   fx run-test inspect_rust_codelab_unittests
+   fx test inspect_rust_codelab_unittests
    ```
 
 * {Dart}
@@ -1440,7 +1440,7 @@ Reverser has a basic unit test. Run it:
    The unit test is located in [reverser\_test.dart][dart-part3-unittest].
 
    ```
-   fx run-test inspect_dart_codelab_part_3_unittests
+   fx test inspect_dart_codelab_part_3_unittests
    ```
 
 Note: This runs unit tests for all parts of this codelab.
@@ -1639,19 +1639,19 @@ You can run the integration tests for the codelab as follows:
 * {C++}
 
    ```
-   $ fx run-test inspect_cpp_codelab_integration_tests
+   $ fx test inspect_cpp_codelab_integration_tests
    ```
 
 * {Rust}
 
    ```
-   $ fx run-test inspect_rust_codelab_integration_tests
+   $ fx test inspect_rust_codelab_integration_tests
    ```
 
 * {Dart}
 
    ```
-   $ fx run-test inspect_dart_codelab_part_4_integration_tests
+   $ fx test inspect_dart_codelab_part_4_integration_tests
    ```
 
 Note: This runs integration tests for all parts of this codelab.

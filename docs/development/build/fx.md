@@ -57,7 +57,7 @@ with this:
 * `fx flash ; fx mkzedboot` [flash a target; or prepare a zedboot USB key](#flash-a-board-and-prepare-zedboot)
 * `fx serve` [serve a build](#serve-a-build)
 * `fx update` [update a target](#update-a-target-device)
-* `fx run-test` [execute tests](#execute-tests)
+* `fx test` [execute tests](#execute-tests)
 * `fx shell` [connect to a target shell](#connect-to-a-target-shell)
 * [and many other small tasks](#performing-other-common-tasks)
 
@@ -340,32 +340,25 @@ software stack.
 ## Execute tests {#execute-tests}
 
 The Fuchsia codebase contains many tests. Most of these tests are themselves
-Components, and can be launched on the target device in the same way as other
-components. On the target device, some programs also assist with test
-specific concerns for component launching, such as `runtests` and
+components and can be launched on the target device in the same way as other
+components. On the target device, some programs also assist with test-specific
+concerns for component launching, such as `runtests` and
 `/bin/run-test-component`. The process can also conveniently be controlled
-from the development host by way of `fx run-test`.
-
-The command `fx run-test <package-name>` requires the user to specify a
-particular package name to execute. A package may contain one or more tests.
-Arguments after `fx run-test package-name` are passed to the program
-`runtests`. One particularly common use case is to execute:
-`fx run-test <package-of-many-tests> -t <name-of-one-test>` to execute only a
-single test. To list the packages that are members of the current build
-configuration, run `fx list-packages`.
+from the development host by way of `fx test`. See
+[Running tests as components][executing-tests] for more details.
 
 Some users find that an effective high focus workflow is to have the system
 build, push and execute tests whenever they save their source code. This can
 be achieved with `fx` very easily, for example:
 
 ```shell
-$ fx -i run-test rolldice-tests
+$ fx -i test rolldice-tests
 ```
 
 The above command will execute the rolldice tests every time a change is made
 to the source code in the tree. The `-i` flag to `fx` causes `fx` to repeat
 the rest of its command every time the source code in the tree is changed.
-As the `fx run-test` command first performs a build, then executes a test on
+As the `fx test` command first performs a build, then executes a test on
 a target, this combination provides a convenient auto-test loop, great for
 high focus workflows like test driven development.
 
@@ -441,7 +434,7 @@ Then to run the emulator using TAP networking, execute `fx emu -N`. You can
 attach a package server by running: `fx serve` as you would with a physical
 target device.
 
-### Using multiple Fuchsia devices {#using-multiple-fuchsia-devices} 
+### Using multiple Fuchsia devices {#using-multiple-fuchsia-devices}
 
 Some users will have more than one Fuchsia device on a network, and will want
 to limit the effects of various commands to particular of those devices. The
@@ -536,3 +529,4 @@ Users should always start with `fx help <command>`.
 in `fx`, as well as documentation for `fx` global flags.
 
 [build-overview]: /docs/development/build/overview.md
+[executing-tests]: /docs/development/testing/running_tests_as_components.md

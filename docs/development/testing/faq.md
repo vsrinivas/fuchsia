@@ -61,7 +61,7 @@ There's the easy way if your QEMU has networking, and the hard way if it
 doesn't.
 
 A (with networking): In one terminal, start your QEMU instance with `fx qemu -N`.
-Next, on another terminal, type in `fx run-test scenic_tests`.
+Next, on another terminal, type in `fx test scenic_tests`.
 
 This invocation runs all the test executables in the `scenic_tests` package.
 
@@ -79,24 +79,31 @@ To exit QEMU, `dm shutdown`.
 
 ## Q: How do I run this unit test on my development device?
 
-A: Either manual invocation, like in QEMU, **or** `fx run-test` to a running
+A: Either manual invocation, like in QEMU, **or** `fx test` to a running
 device.
 
 Note that the booted device may not contain your binary at startup, but `fx
-run-test` will build the test binary, ship it over to the device, and run it,
+test` will build the test binary, ship it over to the device, and run it,
 while piping the output back to your workstation terminal. Slick!
 
 Make sure your device is running (hit Ctrl-D to boot an existing image) and
 connected to your workstation.
 
-From your workstation, `fx run-test scenic_tests` will serially run through all
+From your workstation, `fx test scenic_tests` will serially run through all
 test executables contained in the `scenic_tests` package.
 
-To run just one test executable, `fx run-test scenic_test -t scenic_unittests`,
-where the argument to `-t` is the executable name.
+To run just one test executable, use the following command:
+
+```bash
+fx test <executable-name>
+```
+
+Note: To run a unit test, the deprecated `fx run-test` command used the `-t`
+flag. To learn more about the new `fx test` command, see
+[Running tests as components][running_tests_as_components].
 
 You can automatically rebuild, install, and run your tests on every source file
-change with `fx -i`. For instance: `fx -i run-test scenic_tests`.
+change with `fx -i`. For instance: `fx -i test scenic_tests`.
 
 ## Q: Where are the test results captured?
 
@@ -153,7 +160,11 @@ out the code that defines that test.
 
 ## Q: How do I run a bunch of tests automatically? How do I ensure all dependencies are tested?
 
-A: Upload your patch to Gerrit and do a CQ dry run.
+A: Unlike the `fx run-test` command, the primary feature of `fx test` is batch
+execution. See [Running tests as components][running_tests_as_components]
+for examples on how to run multiple tests or test suites together.
+
+Additionally, you can always upload your patch to Gerrit and do a CQ dry run.
 
 ## Q: How do I run this unit test in a CQ dry run?
 
@@ -196,3 +207,5 @@ TODO: If you want an artifact that is generated as part of the build process,
 you should probably add the rule that generates the artifact to the `data_deps`
 array of the `test_package` rule.  But I have not tried it yet.  Update this
 section when you will try it :)
+
+[running_tests_as_components]: /docs/development/testing/running_tests_as_components.md#running_multiple_tests

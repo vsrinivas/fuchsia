@@ -214,8 +214,8 @@ You can run some sanity checks locally.
 ```shell
 [host] $ fx set core.x64 --with //src/connectivity:tests,//src/connectivity/network/netdump:netdump_unit_tests
 # (After running your target)
-[host] $ fx run-test netdump_unit_test          # unit test
-[host] $ fx run-test netdump_integration_tests  # integration test
+[host] $ fx test netdump_unit_test          # unit test
+[host] $ fx test netdump_integration_tests  # integration test
 ```
 
 

@@ -45,19 +45,17 @@ folder. So for above example there should be a `my_test.cmx` file in `meta/`.
 }
 ```
 
-## Run test
+## Running the tests
 
-```bash
-run-test-component fuchsia-pkg://fuchsia.com/my_test_pkg#meta/my_test.cmx
-```
+To run a Fuchsia test out of your build, execute:
 
-The URL passed to `run-test-component` represents a unique component url.
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test ${<var>TEST_NAME</var>}</code>
+</pre>
 
-A short form can be used if it is unambiguous:
+For more information on running Fuchsia tests, see
+[Running tests as components][executing-tests].
 
-```bash
-run-test-component my_test.cmx
-```
 
 ## Ambient Services
 
@@ -97,7 +95,7 @@ To inject additional services, you can add a `injected-services` clause to the m
 }
 ```
 
-`run-test-component` will start `component_url1` and `component_url2` and the
+`fx test` will start `component_url1` and `component_url2` and the
 test will have access to `service_name1` and `service_name2`. Note that this makes the injected services available in the test environment, but the test component still needs to "use" them by including the service in its `sandbox > services`.
 
 
@@ -148,3 +146,4 @@ However, services that are not listed here are not supported.
 
 This option would be replaced once we fix CP-144 (in component manager v2).
 
+[executing-tests]: /docs/development/testing/running_tests_as_components.md

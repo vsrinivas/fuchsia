@@ -88,7 +88,7 @@ total maximum length of a hostname is 253 characters including the dots.
 
 ## Package Identity
 
-### Package Name
+### Package Name {:package-name}
 
 A package name is a symbolic label which identifies a logical collection of
 software artifacts (files), independent of any particular variant or revision
@@ -159,7 +159,7 @@ of the following latin-1 characters: digits (`0` to `9`) and lower-case letters
 
 ## Resource Identity
 
-### Resource Paths
+### Resource Paths {:resource-paths}
 
 A resource path is a UTF-8 string which identifies a resource within a package.
 This is a file path, consisting of a sequence of single `/` delimited

@@ -135,17 +135,19 @@ information, please  see the [documentation on `test_package`][test_package].
 
 ## Running tests
 
-Warning: This is an experimental test command.
+Note: If you encounter any bugs or use cases not supported by `fx test`, file a
+bug with `fx`.
 
 To test the package, use the `fx test` command with the name of the package:
 
-```bash
-$ fx test ${TEST_PACKAGE_NAME}
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test ${<var>TEST_NAME</var>}</code>
+</pre>
 
 If the package you specified is a test component, the command makes your Fuchsia
 device load and run said component. However, if the package you specified is a
-host test, the command directly invokes that test binary.
+host test, the command directly invokes that test binary. Note that this can lead
+to the execution of multiple components.
 
 ### Customize `fx test` invocations
 
@@ -154,56 +156,67 @@ that you are editing. You can run `fx test` with arguments to run specific tests
 or test suites, and flags to filter down to just host or device tests. To
 customize `fx test`:
 
-```bash
-fx test [FLAGS] [TEST [TEST [...]]]
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test [<var>FLAGS</var>] [${<var>TEST_NAME</var>} [${<var>TEST_NAME</var>} [...]]]</code>
+</pre>
 
-### Three Ways to Specify a Test
+### Multiple ways to specify a test
 
 `fx test` supports multiple ways to reference a specific test.
 
-1. Full or partial paths:
+- Full or partial paths:
 
     Provide a partial path to match against all test binaries in children
     directories.
 
-    ```
-    $ fx test //host_x64/gen/sdk
-    ```
+    <pre class="prettyprint">
+    <code class="devsite-terminal">fx test //host_x64/gen/sdk</code>
+    </pre>
+
 
     Provide a full path to match against that exact binary.
 
-    ```
-    $ fx test //host_x64/pm_cmd_pm_genkey_test
-    ```
+    <pre class="prettyprint">
+    <code class="devsite-terminal">fx test //host_x64/pm_cmd_pm_genkey_test</code>
+    </pre>
 
     Note: `//` stands for the root of a Fuchsia tree checkout.
 
-2. Full or partial [Fuchsia Package URLs][fuchsia_package_url]:
+- Full or partial [Fuchsia Package URLs][fuchsia_package_url]:
 
     Provide a partial URL to match against all test components whose Package
     URLs start with the supplied value.
 
-    ```
-    $ fx test fuchsia-pkg://fuchsia.com/slider_mod_tests
-    ```
+    <pre class="prettyprint">
+    <code class="devsite-terminal">fx test <var>fuchsia-pkg://fuchsia.com/my_test_pkg</var></code>
+    </pre>
 
     Provide a full URL to match against that exact test component.
 
-    ```
-    $ fx test fuchsia-pkg://fuchsia.com/slider_mod_tests#meta/slider_mod_tests.cmx
-    ```
+    <pre class="prettyprint">
+    <code class="devsite-terminal">fx test <var>fuchsia-pkg://fuchsia.com/my_test_pkg#meta/my_test.cmx</var></code>
+    </pre>
 
-3. Test name:
 
-    Supplying the common name for either host tests (likely a binary) or device
-    test (a Fuchsia component) is supported. This name value is found in the
-    build directory’s `tests.json` manifest file, under the `"name"` key or as
-    the first URI segment in a Package URL.
+- Package name:
 
-    ```
-    $ fx test slider_mod_tests
-    ```
+    Provide a
+    [package name](/docs/concepts/storage/package_url.md#package-name) to
+    run all test components in that package:
+
+    <pre class="prettyprint">
+    <code class="devsite-terminal">fx test <var>my_test_pkg</var></code>
+    </pre>
+
+- Component name:
+
+    Provide a
+    [resource-path](/docs/concepts/storage/package_url.md#resource-paths) to
+    test a single component in a package:
+
+    <pre class="prettyprint">
+    <code class="devsite-terminal">fx test <var>my_test</var></code>
+    </pre>
 
 ### Running multiple tests
 
@@ -216,6 +229,14 @@ fx set core.x64 --with //bundles:tools,//bundles:tests,//garnet/packages/tests:a
 fx build
 fx test
 ```
+
+You can also provide multiple targets in a single invocation:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test <var>package_1 package_2 component_1 component_2</var></code>
+</pre>
+
+
 
 ### Converting from `run-test` or `run-host-tests`
 
@@ -247,12 +268,30 @@ For `run-host-tests`, you should always be able to change `fx run-host-tests` to
 <code class="devsite-terminal">fx run-host-tests ${<var>PATH_TO_HOST_TEST</var>}</code>
 </pre>
 
-
 Now becomes:
 
 <pre class="prettyprint">
 <code class="devsite-terminal">fx test ${<var>PATH_TO_HOST_TEST</var>}</code>
 </pre>
+
+
+#### the `-t` flag
+
+Unlike `fx run-test` (which operated on *packages*), `fx test` matches against tests
+in many different ways. This means that you can easily target tests either by their
+package name or directly by a component's name. One common workflow with `run-test`
+was to use the `-t` flag to specify a single component:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx run-test ${<var>PACKAGE_NAME</var>} -t ${<var>NESTED_COMPONENT_NAME</var>}</code>
+</pre>
+
+Now, with `fx test`, that simply becomes:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test ${<var>NESTED_COMPONENT_NAME</var>}</code>
+</pre>
+
 
 ## Running tests (Legacy)
 

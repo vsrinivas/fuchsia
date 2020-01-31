@@ -59,7 +59,7 @@ fx rustdoc path/from/fuchsia/root/to/target:label --open
 
 ## Tests
 
-You can run unit tests on connected devices using `fx`, with the `fx run-test
+You can run unit tests on connected devices using `fx`, with the `fx test
 {package name}` command.  See [Testing Rust code](testing.md) for information
 on adding and running tests.
 

@@ -53,7 +53,7 @@ Pending: No matches for location, it will be pending library loads.
 ```
 
 Then run the process the way you would in normal use (direcly on the command
-line, via `fx run-test`, via the shell's `run fuchsia-pkg://...`, or another
+line, via `fx test`, via the shell's `run fuchsia-pkg://...`, or another
 way. The debugger should then immediately break on `main` (it may take some
 time to load symbols so you may see a delay before showing the source code):
 
@@ -86,7 +86,7 @@ from least capable to most capable):
   * The system console or `fx shell` (adds some libraries).
   * The base component environment via the shell's `run` and the debugger's
     `run -c <package url>` (adds component capabilities).
-  * The test environment via `fx run-test`.
+  * The test environment via `fx test`.
   * The user environment when launched from a "story" (adds high-level
     services like scenic).
 
@@ -122,9 +122,9 @@ component's URL:
 
 Not all components can be launched this way since most higher-level services
 won't be accessible: if you can't do `run ...` from the system console, it
-won't work from the debugger either. Note also that `fx run-test` is a
+won't work from the debugger either. Note also that `fx test` is a
 different environment. According to your test's dependencies, it may or may not
-work from the debugger's `run` command. 
+work from the debugger's `run` command.
 
 ### Attaching to an existing process
 

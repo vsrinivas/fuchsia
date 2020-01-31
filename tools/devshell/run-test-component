@@ -31,5 +31,5 @@ function usage {
   fx-command-help run-test-component
 }
 
-echo $'This is deprecated. Please use fx run-test.\n'
+echo $'This is deprecated. Please use fx test.\n'
 fx-command-run run-test "$@"

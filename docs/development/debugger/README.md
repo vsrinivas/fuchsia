@@ -442,7 +442,7 @@ able to launch components with the second one, only attach to them.
 To run the debug agent tests:
 
 ```
-fx run-test debug_agent_tests
+fx test debug_agent_tests
 ```
 
 ## Bugs

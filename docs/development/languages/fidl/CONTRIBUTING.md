@@ -306,7 +306,7 @@ Tab 1> fx build && fx serve-updates
 
 Tab 2> fx qemu -kN
 
-Tab 3> fx run-test fidl_tests
+Tab 3> fx test fidl_tests
 ```
 
 There are separate tests for LLCPP that can be run in the same way as `fidl_tests`:
@@ -323,15 +323,14 @@ Tab 1> fx build && fx serve-updates
 
 Tab 2> fx qemu -kN
 
-Tab 3> fx run-test go_fidl_tests
-Tab 3> fx run-test fidl_go_conformance
+Tab 3> fx test go_fidl_tests fidl_go_conformance
 ```
 
 As with normal Go tests, you can pass [various flags][go-test-flags] to control
 execution, filter test cases, run benchmarks, etc. For instance:
 
 ```sh
-Tab 3> fx run-test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases/.*union.*'
+Tab 3> fx test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases/.*union.*'
 ```
 
 ### Rust runtime
@@ -343,7 +342,7 @@ Tab 1> fx build && fx serve-updates
 
 Tab 2> fx qemu -kN
 
-Tab 3> fx run-test rust_fidl_tests
+Tab 3> fx test rust_fidl_tests
 ```
 
 ### Dart runtime
@@ -357,7 +356,7 @@ Tab 1> fx build && fx serve-updates
 
 Tab 2> fx qemu -kN
 
-Tab 3> fx run-test fidl_bindings_test
+Tab 3> fx test fidl_bindings_test
 ```
 
 ### Compatibility Test
@@ -379,14 +378,14 @@ To run the compatibility tests with HLCPP, LLCPP, Rust, and Go:
 
 ```sh
 Tab 3> fx set core.x64 --with-base //garnet/packages/tests:zircon --with //garnet/packages/tests:all
-Tab 3> fx run-test fidl_compatibility_test
+Tab 3> fx test fidl_compatibility_test
 ```
 
 To run the compatiblity tests with Dart:
 
 ```sh
 Tab 3> fx set core.x64 --with //topaz/packages/tests:all
-Tab 3> fx run-test fidl_compatibility_test_topaz
+Tab 3> fx test fidl_compatibility_test_topaz
 ```
 
 ### GIDL
@@ -413,11 +412,11 @@ fx build host-tools/gidl
 | fidlgen type definitions | fx run-host-tests fidlgen_types_test                | garnet/go/src/fidl/compiler/backend/types                               |
 | fidl c runtime host test | fx run-host-tests fidl-test                         | zircon/system/ulib/fidl                                                 |
 | c++ host unittests       | fx run-host-tests fidl_cpp_host_unittests           | sdk/lib/fidl                                                            |
-| c++ bindings tests       | fx run-test fidl_tests                              | sdk/lib/fidl                                                            |
-| llcpp bindings tests     | fx run-test fidl_llcpp_types_test                   | garnet/go/src/fidl/compiler/llcpp_backend                               |
-| go bindings tests        | fx run-test go_fidl_tests                           | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
-| dart bindings tests      | fx run-test fidl_bindings_test                      | topaz/public/dart/fidl                                                  |
-| rust bindings            | fx run-test rust_fidl_tests                         | src/lib/fidl/rust/fidl                                        |
+| c++ bindings tests       | fx test fidl_tests                              | sdk/lib/fidl                                                            |
+| llcpp bindings tests     | fx test fidl_llcpp_types_test                   | garnet/go/src/fidl/compiler/llcpp_backend                               |
+| go bindings tests        | fx test go_fidl_tests                           | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
+| dart bindings tests      | fx test fidl_bindings_test                      | topaz/public/dart/fidl                                                  |
+| rust bindings            | fx test rust_fidl_tests                         | src/lib/fidl/rust/fidl                                        |
 
 
 The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:zircon

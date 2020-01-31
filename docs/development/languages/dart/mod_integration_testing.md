@@ -328,7 +328,7 @@ $ fx serve / ota / reboot
 The tests can then be run using
 
 ```bash
-$ fx run-test driver_example_mod_tests
+$ fx test driver_example_mod_tests
 ```
 
 > If the test hangs after the module shows up, make sure you're building in

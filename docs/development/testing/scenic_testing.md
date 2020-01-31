@@ -56,7 +56,7 @@ To add a new test package to CQ, you need to create a test component including s
 metadata and BUILD.gn file. See the
 [testing documentation](/docs/development/testing/test_component.md).
 You can include multiple test executables in one single test package, and all of them will be
-executed if you run `fx run-test <test_package>` on host.
+executed if you run `fx test <test_package>` on host.
 
 Examples of test packages:
 
@@ -104,9 +104,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From host workstation, ensure `fx serve` is running, then:
 
   ```
-  fx run-test scenic_tests
-  fx run-test escher_tests
-  fx run-test flutter_screencap_test
+  fx test scenic_tests escher_tests flutter_screencap_test
   ```
 
   From Fuchsia target device:
@@ -117,10 +115,12 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
 
 * Run a specific test binary:
 
-  From host workstation, ensure `fx serve` is running, then:
+  From host workstation, ensure `fx serve` is running, then use the following
+  command to run the `gfx_unittests` test component from the `scenic_tests`
+  package:
 
   ```
-  fx run-test scenic_tests -t gfx_unittests  # -t <test binary name>
+  fx test gfx_unittests
   ```
 
   From Fuchsia target device:
@@ -129,13 +129,17 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   runtests -t gfx_unittests
   ```
 
-* Run a single test:
+* Run a single test within a component:
 
   From host workstation, ensure `fx serve` is running, then:
 
   ```
-  fx run-test scenic_tests -t gfx_unittests -- --gunit_filter=HostImageTest.FindResource
+  fx test gfx_unittests -- --gunit_filter=HostImageTest.FindResource
   ```
+
+  Note: The previous way to target a single component involved the `-t` flag.
+  To learn more about this new command, see
+  [Running tests as components][running_tests_as_components].
 
   From Fuchsia target device:
 
@@ -150,7 +154,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From your host workstation:
 
   ```
-  fx shell run-test-component fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_unittests.cmx
+  fx test fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_unittests.cmx
   ```
 
   Note: `gfx_unittests.cmx` can be swapped for [any test component](/src/ui/scenic/BUILD.gn) . There is also fuzzy matching!
@@ -168,13 +172,13 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   Then run the pixel tests:
 
   ```
-  fx shell run fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_pixeltests.cmx
+  fx test fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_pixeltests.cmx
   ```
 
   Alternatively, run:
 
   ```
-  fx shell runtests -t gfx_pixeltests
+  fx test gfx_pixeltests
   ```
 
   Note: `gfx_pixeltests` currently requires `//bundles:tests` to be in your list of packages (e.g., `fx set [...] --with //bundles:tests`)
@@ -209,7 +213,7 @@ runtests -t gfx_apptests,gfx_unittests,escher_unittests,input_unittests,a11y_man
 
 ### Host tests
 
-  * `fx run-host-tests` runs all the host tests, but you probably only want to run Escher tests.
+  * `fx test --host` runs all host tests, but you probably only want to run Escher tests.
   *  Escher: To run `escher_unittests` locally on Linux: follow instructions in
      [Escher documentation](/docs/concepts/graphics/escher/building.md).
 
@@ -366,3 +370,4 @@ where there's no existing shell (e.g. in `terminal` or `core` products).
     fx shell tiles_ctl remove 1
     ```
 
+  [running_tests_as_components]: /docs/development/testing/running_tests_as_components.md

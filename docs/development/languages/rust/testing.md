@@ -156,10 +156,10 @@ then the library name will be `hello_world_rust_lib_test`.
 To run the tests run:
 
 ```sh
-fx run-test hello_world_rust_tests
+fx test hello_world_rust_tests
 ```
 
-Note: that in order to use `fx run-test`, you can't override
+Note: that in order to use `fx test`, you can't override
 `package_name="..."` in your `package`  or `test_package` declaration. This
 issue is tracked by BLD-338.
 
