@@ -35,6 +35,8 @@ executable("service") {
     "//src/lib/fxl",
     "//src/lib/vulkan",
     "//src/ui/examples/escher/common",
+
+    # Shadertoy service should always use glslang.
     "//src/ui/lib/escher:escher_with_glslang",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-loop-cpp",
