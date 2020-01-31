@@ -94,7 +94,23 @@ elif [[ -e "${state_file}.1" ]]; then
 fi
 
 echo "#!/bin/bash" >>"${state_file}"
-echo "BT_MOCK_ARGS=(\"${BASH_SOURCE}\" \"$@\")" >>"${state_file}"
+
+# Write the args into the status file.
+#
+# This is split into three steps, the middle of which writes the Bash array
+# literal. The array is written using printf and %q to quote or escape the
+# elements of the $@ array. This is important for a number of reasons:
+#
+# * Using escaped double quotes around $@ causes all of the arguments to be
+#   concatenated into a single space-separated string.
+# * Using escaped double quotes isn't safe if any item in the array contains a
+#   double quotation mark.
+# * Using printf allows all strings to be safely included in the array.
+# * Using printf prevents variable expansion when the status file is sourced as
+#   a script.
+printf "BT_MOCK_ARGS=( " >>"${state_file}"
+printf "%q " "${BASH_SOURCE}" "$@" >>"${state_file}"
+printf ")\n" >>"${state_file}"
 if ${had_side_effect}; then
   echo "declare -i BT_MOCK_SIDE_EFFECT_STATUS=${side_effect_status}" >>"${state_file}"
 fi

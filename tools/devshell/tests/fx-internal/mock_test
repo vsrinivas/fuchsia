@@ -1,0 +1,37 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test basic fx execution flows
+
+BT_MOCKED_TOOLS=(
+  "mockgoeshere"
+)
+
+# Verifies that
+TEST_mock-tokenizes-correctly() {
+  "${BT_TEMP_DIR}/mockgoeshere" -1 --2 3 four "five" " six " " \"seven\" " "  eight stilleight " "  nine  \" stillnine "
+
+  source "${BT_TEMP_DIR}/mockgoeshere.mock_state"
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[0]}" "${BT_TEMP_DIR}"/mockgoeshere
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[1]}" -1
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[2]}" --2
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[3]}" 3
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[4]}" four
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[5]}" five
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[6]}" ' six '
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[7]}" ' "seven" '
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[8]}" '  eight stilleight '
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[9]}" '  nine  " stillnine '
+}
+
+TEST_mock-handles-single-double-quotes() {
+  "${BT_TEMP_DIR}/mockgoeshere" 'before"after'
+
+  source "${BT_TEMP_DIR}/mockgoeshere.mock_state"
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[0]}" "${BT_TEMP_DIR}"/mockgoeshere
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[1]}" 'before"after'
+}
+
+BT_RUN_TESTS "$@"
