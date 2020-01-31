@@ -86,7 +86,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/fs-pty/test",
       "$zx/system/ulib/ftl:test",
       "$zx/system/ulib/fvm/test",
-      "$zx/system/ulib/gfx/test",
       "$zx/system/ulib/hermetic-compute/test",
       "$zx/system/ulib/hermetic-decompressor/test",
       "$zx/system/ulib/intel-hda:test",
