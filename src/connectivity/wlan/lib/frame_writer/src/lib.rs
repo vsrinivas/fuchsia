@@ -677,6 +677,17 @@ mod tests {
     }
 
     #[test]
+    fn write_body() {
+        let buffer_provider = BufferProvider;
+        let (buf, bytes_written) = write_frame!(buffer_provider, {
+            body: &[9u8; 9],
+        })
+        .expect("frame construction failed");
+        assert_eq!(bytes_written, 9);
+        assert_eq!(&[9, 9, 9, 9, 9, 9, 9, 9, 9][..], &buf[..]);
+    }
+
+    #[test]
     fn write_payload() {
         let buffer_provider = BufferProvider;
         let (buf, bytes_written) = write_frame!(buffer_provider, {
@@ -707,6 +718,7 @@ mod tests {
                 u8: &42u8,
                 MgmtHdr: &make_mgmt_hdr(),
             },
+            body: vec![41u8; 3],
             ies: {
                 ssid: &[2u8; 2][..],
                 supported_rates: &[1u8, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -719,7 +731,7 @@ mod tests {
             payload: vec![42u8; 5]
         })
         .expect("frame construction failed");
-        assert_eq!(bytes_written, 93);
+        assert_eq!(bytes_written, 96);
         #[rustfmt::skip]
         assert_eq!(
             &[
@@ -729,6 +741,67 @@ mod tests {
                 2, 2, 2, 2, 2, 2,
                 42,
                 0x21, 0x43, 42, 0, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 5, 5, 5, 5, 5, 5, 0x65, 0x87,
+                // Body:
+                41, 41, 41,
+                // Fields:
+                0, 2, 2, 2, // SSID
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // rates
+                191, 12, // VHT Element header
+                0, 0x34, 0, 0x12, // vht_cap_info
+                0, 0x78, 0, 0x56, 0, 0x34, 0, 0x12, // vht_mcs_nss
+                50, 1, 9, // extended rates
+                // Payload:
+                42, 42, 42, 42, 42,
+            ][..],
+            &buf[..]
+        );
+    }
+
+    #[test]
+    fn write_complex_verify_order() {
+        let buffer_provider = BufferProvider;
+        let (buf, bytes_written) = write_frame!(buffer_provider, {
+            payload: vec![42u8; 5],
+            ies: {
+                ssid: &[2u8; 2][..],
+                supported_rates: &[1u8, 2, 3, 4, 5, 6, 7, 8, 9],
+                vht_cap: &ie::VhtCapabilities {
+                    vht_cap_info: ie::VhtCapabilitiesInfo(0x1200_3400),
+                    vht_mcs_nss: ie::VhtMcsNssSet(0x1200_3400_5600_7800),
+                },
+                extended_supported_rates: {},
+            },
+            body: vec![41u8; 3],
+            headers: {
+                MgmtHdr: &MgmtHdr {
+                    frame_ctrl: FrameControl(0x1234),
+                    duration: 42,
+                    addr1: [7; 6],
+                    addr2: [6; 6],
+                    addr3: [5; 6],
+                    seq_ctrl: SequenceControl(0x5678),
+                },
+                DeauthHdr: {
+                    &DeauthHdr { reason_code: ReasonCode::MIC_FAILURE }
+                },
+                MacAddr: &[2u8; 6],
+                u8: &42u8,
+                MgmtHdr: &make_mgmt_hdr(),
+            },
+        })
+        .expect("frame construction failed");
+        assert_eq!(bytes_written, 96);
+        #[rustfmt::skip]
+        assert_eq!(
+            &[
+                // Headers:
+                0x34, 0x12, 42, 0, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 5, 5, 5, 5, 5, 5, 0x78, 0x56,
+                14, 0,
+                2, 2, 2, 2, 2, 2,
+                42,
+                0x21, 0x43, 42, 0, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 5, 5, 5, 5, 5, 5, 0x65, 0x87,
+                // Body:
+                41, 41, 41,
                 // Fields:
                 0, 2, 2, 2, // SSID
                 1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // rates

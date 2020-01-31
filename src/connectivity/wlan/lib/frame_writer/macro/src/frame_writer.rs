@@ -13,6 +13,7 @@ use {
         parse::{Parse, ParseStream},
         parse_macro_input,
         punctuated::Punctuated,
+        spanned::Spanned,
         Error, Expr, Ident, Result, Token,
     },
 };
@@ -27,12 +28,14 @@ macro_rules! unwrap_or_bail {
 }
 
 const GROUP_NAME_HEADERS: &str = "headers";
+const GROUP_NAME_BODY: &str = "body";
 const GROUP_NAME_IES: &str = "ies";
 const GROUP_NAME_PAYLOAD: &str = "payload";
 
 /// A set of `BufferWrite` types which can be written into a buffer.
 enum Writeable {
     Header(HeaderDefinition),
+    Body(Expr),
     Ie(IeDefinition),
     Payload(Expr),
 }
@@ -47,6 +50,7 @@ impl BufferWrite for Writeable {
     fn gen_frame_len_tokens(&self) -> Result<proc_macro2::TokenStream> {
         match self {
             Writeable::Header(x) => x.gen_frame_len_tokens(),
+            Writeable::Body(_) => Ok(quote!(frame_len += body.len();)),
             Writeable::Ie(x) => x.gen_frame_len_tokens(),
             Writeable::Payload(_) => Ok(quote!(frame_len += payload.len();)),
         }
@@ -54,6 +58,7 @@ impl BufferWrite for Writeable {
     fn gen_write_to_buf_tokens(&self) -> Result<proc_macro2::TokenStream> {
         match self {
             Writeable::Header(x) => x.gen_write_to_buf_tokens(),
+            Writeable::Body(_) => Ok(quote!(w.append_value(&body[..])?;)),
             Writeable::Ie(x) => x.gen_write_to_buf_tokens(),
             Writeable::Payload(_) => Ok(quote!(w.append_value(&payload[..])?;)),
         }
@@ -61,6 +66,7 @@ impl BufferWrite for Writeable {
     fn gen_var_declaration_tokens(&self) -> Result<proc_macro2::TokenStream> {
         match self {
             Writeable::Header(x) => x.gen_var_declaration_tokens(),
+            Writeable::Body(x) => Ok(quote!(let body = #x;)),
             Writeable::Ie(x) => x.gen_var_declaration_tokens(),
             Writeable::Payload(x) => Ok(quote!(let payload = #x;)),
         }
@@ -81,7 +87,12 @@ impl Parse for MacroArgs {
 }
 
 /// A parseable struct representing the macro's arguments.
-struct WriteDefinitions(Vec<Writeable>);
+struct WriteDefinitions {
+    hdrs: Vec<Writeable>,
+    body: Option<Writeable>,
+    fields: Vec<Writeable>,
+    payload: Option<Writeable>,
+}
 
 impl Parse for WriteDefinitions {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -89,22 +100,34 @@ impl Parse for WriteDefinitions {
         braced!(content in input);
         let groups = Punctuated::<GroupArgs, Token![,]>::parse_terminated(&content)?;
 
-        let mut writeable = vec![];
+        let mut hdrs = vec![];
+        let mut fields = vec![];
+        let mut body = None;
+        let mut payload = None;
         for group in groups {
             match group {
                 GroupArgs::Headers(data) => {
-                    writeable.extend(data.into_iter().map(|x| Writeable::Header(x)));
+                    hdrs.extend(data.into_iter().map(|x| Writeable::Header(x)));
                 }
                 GroupArgs::Fields(data) => {
-                    writeable.extend(data.into_iter().map(|x| Writeable::Ie(x)));
+                    fields.extend(data.into_iter().map(|x| Writeable::Ie(x)));
                 }
                 GroupArgs::Payload(data) => {
-                    writeable.push(Writeable::Payload(data));
+                    if payload.is_some() {
+                        return Err(Error::new(data.span(), "more than one payload defined"));
+                    }
+                    payload.replace(Writeable::Payload(data));
+                }
+                GroupArgs::Body(data) => {
+                    if body.is_some() {
+                        return Err(Error::new(data.span(), "more than one body defined"));
+                    }
+                    body.replace(Writeable::Body(data));
                 }
             }
         }
 
-        Ok(Self(writeable))
+        Ok(Self { hdrs, fields, body, payload })
     }
 }
 
@@ -112,6 +135,7 @@ impl Parse for WriteDefinitions {
 /// the buffer provider.
 enum GroupArgs {
     Headers(Vec<HeaderDefinition>),
+    Body(Expr),
     Fields(Vec<IeDefinition>),
     Payload(Expr),
 }
@@ -159,6 +183,7 @@ impl Parse for GroupArgs {
 
                 Ok(GroupArgs::Fields(ies))
             }
+            GROUP_NAME_BODY => Ok(GroupArgs::Body(input.parse::<Expr>()?)),
             GROUP_NAME_PAYLOAD => Ok(GroupArgs::Payload(input.parse::<Expr>()?)),
             unknown => Err(Error::new(name.span(), format!("unknown group: '{}'", unknown))),
         }
@@ -166,7 +191,7 @@ impl Parse for GroupArgs {
 }
 
 fn process_write_definitions(
-    write_defs: Vec<Writeable>,
+    write_defs: WriteDefinitions,
     make_buf_tokens: proc_macro2::TokenStream,
     return_buf_tokens: proc_macro2::TokenStream,
 ) -> TokenStream {
@@ -174,7 +199,18 @@ fn process_write_definitions(
     let mut write_to_buf_tokens = quote!();
     let mut frame_len_tokens = quote!(let mut frame_len = 0;);
 
-    for x in write_defs {
+    // Order writable pieces,=: Hdr + Body + Fields + Payload
+    let mut writables = vec![];
+    writables.extend(write_defs.hdrs);
+    if let Some(x) = write_defs.body {
+        writables.push(x);
+    }
+    writables.extend(write_defs.fields);
+    if let Some(x) = write_defs.payload {
+        writables.push(x);
+    }
+
+    for x in writables {
         let tokens = unwrap_or_bail!(x.gen_write_to_buf_tokens());
         write_to_buf_tokens = quote!(#write_to_buf_tokens #tokens);
 
@@ -227,7 +263,7 @@ pub fn process_with_buf_provider(input: TokenStream) -> TokenStream {
         let bytes_written = w.bytes_written();
         Ok((buf, bytes_written))
     );
-    process_write_definitions(macro_args.write_defs.0, buf_tokens, return_buf_tokens)
+    process_write_definitions(macro_args.write_defs, buf_tokens, return_buf_tokens)
 }
 
 pub fn process_with_dynamic_buf(input: TokenStream) -> TokenStream {
@@ -240,7 +276,7 @@ pub fn process_with_dynamic_buf(input: TokenStream) -> TokenStream {
         let bytes_written = w.bytes_written();
         Ok((w, bytes_written))
     );
-    process_write_definitions(macro_args.write_defs.0, buf_tokens, return_buf_tokens)
+    process_write_definitions(macro_args.write_defs, buf_tokens, return_buf_tokens)
 }
 
 pub fn process_with_fixed_buf(input: TokenStream) -> TokenStream {
@@ -254,5 +290,5 @@ pub fn process_with_fixed_buf(input: TokenStream) -> TokenStream {
         let bytes_written = w.bytes_written();
         Ok((buf, bytes_written))
     );
-    process_write_definitions(macro_args.write_defs.0, buf_tokens, return_buf_tokens)
+    process_write_definitions(macro_args.write_defs, buf_tokens, return_buf_tokens)
 }

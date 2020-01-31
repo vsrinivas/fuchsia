@@ -114,6 +114,10 @@ use proc_macro_hack::proc_macro_hack;
 /// });
 /// ```
 ///
+/// # Body
+/// An arbitrary body can be written to the end of the buffer's header section.
+/// The body's type must be a slice of a compatible type.
+///
 /// # Payload
 /// An arbitrary payload can be written to the end of the buffer. The payload's type must be a slice
 /// of a compatible type.
@@ -144,6 +148,7 @@ use proc_macro_hack::proc_macro_hack;
 ///                 .with_seq_num(self.ctx.seq_mgr.next_sns1(&mac::BCAST_ADDR) as u16),
 ///         },
 ///     },
+///     body: vec![412u8; 15],
 ///     ies: {
 ///         ssid: ssid,
 ///         supported_rates: &rates,
