@@ -350,6 +350,7 @@ TEST_F(LinkMatrixTest, UnlinkCallsCleanupHooksSourcePerspective) {
   under_test.Unlink(*source.get());
 
   EXPECT_EQ(dest->cleaned_source_link(), source.get());
+  EXPECT_EQ(source->cleaned_dest_link(), dest.get());
 }
 
 TEST_F(LinkMatrixTest, UnlinkCallsCleanupHooksDestPerspective) {
@@ -362,6 +363,7 @@ TEST_F(LinkMatrixTest, UnlinkCallsCleanupHooksDestPerspective) {
   under_test.Unlink(*dest.get());
 
   EXPECT_EQ(source->cleaned_dest_link(), dest.get());
+  EXPECT_EQ(dest->cleaned_source_link(), source.get());
 }
 
 TEST_F(LinkMatrixTest, AreLinked) {

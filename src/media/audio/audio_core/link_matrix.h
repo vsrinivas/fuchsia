@@ -31,7 +31,7 @@ class LinkMatrix {
   zx_status_t LinkObjects(std::shared_ptr<AudioObject> source, std::shared_ptr<AudioObject> dest,
                           std::shared_ptr<const LoudnessTransform> loudness_transform);
 
-  void Unlink(const AudioObject& object);
+  void Unlink(AudioObject& object);
 
   void ForEachDestLink(const AudioObject& object, fit::function<void(LinkHandle)> f);
   void ForEachSourceLink(const AudioObject& object, fit::function<void(LinkHandle)> f);

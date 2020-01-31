@@ -56,7 +56,7 @@ zx_status_t LinkMatrix::LinkObjects(std::shared_ptr<AudioObject> source,
   return ZX_OK;
 }
 
-void LinkMatrix::Unlink(const AudioObject& key) FXL_LOCKS_EXCLUDED(lock_) {
+void LinkMatrix::Unlink(AudioObject& key) FXL_LOCKS_EXCLUDED(lock_) {
   std::lock_guard<std::mutex> lock(lock_);
 
   auto dest_list = DestLinkSet(&key);
@@ -70,6 +70,7 @@ void LinkMatrix::Unlink(const AudioObject& key) FXL_LOCKS_EXCLUDED(lock_) {
     auto dest_object = dest.object.lock();
     if (dest_object) {
       dest_object->CleanupSourceLink(key, source->stream);
+      key.CleanupDestLink(*dest_object);
     }
 
     sources.erase(Link(&key));
@@ -86,6 +87,7 @@ void LinkMatrix::Unlink(const AudioObject& key) FXL_LOCKS_EXCLUDED(lock_) {
     auto source_object = source.object.lock();
     if (source_object) {
       source_object->CleanupDestLink(key);
+      key.CleanupSourceLink(*source_object, dest->stream);
     }
 
     dests.erase(Link(&key));
