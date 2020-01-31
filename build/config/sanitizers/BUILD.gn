@@ -81,6 +81,26 @@ if (asan_default_options != "") {
     # the __asan_default_options symbol exported.  On systems where the
     # ASan runtime is statically linked, it doesn't matter either way.
     configs -= [ "//build/config:symbol_visibility_hidden" ]
+
+    # This is the default on Fuchsia but not on all host platforms.
+    # It's necessary to link into Rust binaries, which are PIE even
+    # on platforms where C binaries are not PIE by default.
+    cflags = [ "-fPIE" ]
+
+    # TODO(45130): Remove this when GN is improved.  The link inputs from
+    # this source_set() are just silently ignored by an executable() target
+    # that uses rustc to link.  So shove the link input in through the back
+    # door because we can't have nice things.
+    public_configs = [ ":rust_asan_default_options" ]
+  }
+
+  # TODO(45130): I just can't even.
+  config("rust_asan_default_options") {
+    visibility = [ ":asan_default_options" ]
+    rustflags =
+        [ "-Clink-arg=" + rebase_path(
+              "$target_out_dir/asan_default_options.asan_default_options.c.o",
+              root_build_dir) ]
   }
 }
 
