@@ -380,8 +380,8 @@ cp -f ${FUCHSIA}/prebuilt/third_party/clang/linux-x64/lib/aarch64-fuchsia.manife
 cp -f ${FUCHSIA}/prebuilt/third_party/clang/linux-x64/lib/x86_64-fuchsia.manifest ${CLANG_DIR}/lib
 ```
 
-Finally, pass `--args clang_prefix="${CLANG_DIR}"` to `fx set` command and run
-`fx build`.
+Finally, pass `--args clang_prefix=\"${CLANG_DIR}/bin\" --no-goma`
+to `fx set` command and run `fx build`.
 
 ### Building Fuchsia with custom Clang on bots (Googlers only)
 
