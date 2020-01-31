@@ -7,8 +7,10 @@ use {
     fidl_fuchsia_media_sounds::PlayerProxy,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon::{self as zx},
+    futures::lock::Mutex,
     std::collections::HashSet,
     std::fs::File,
+    std::sync::Arc,
 };
 
 /// Creates a file-based sound from a resource file.
@@ -32,11 +34,10 @@ pub async fn play_sound<'a>(
     sound_player_proxy: &PlayerProxy,
     file_name: &'a str,
     id: u32,
-    added_files: &mut HashSet<&'a str>,
+    added_files: Arc<Mutex<HashSet<&'a str>>>,
 ) -> Result<(), Error> {
     // New sound, add it to the sound player set.
-    if !added_files.contains(file_name) {
-        added_files.insert(file_name);
+    if added_files.lock().await.insert(file_name) {
         let sound_file_channel = match resource_file_channel(file_name) {
             Ok(file) => Some(file),
             Err(e) => return Err(format_err!("[earcons] Failed to convert sound file: {}", e)),

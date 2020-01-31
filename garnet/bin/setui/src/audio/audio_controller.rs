@@ -130,7 +130,9 @@ pub fn spawn_audio_controller(
             let mut storage_lock = storage.lock().await;
             stored_value = storage_lock.get().await;
         }
-        let mut sound_player_added_files: HashSet<&str> = HashSet::new();
+
+        let sound_player_added_files: Arc<Mutex<HashSet<&str>>> =
+            Arc::new(Mutex::new(HashSet::new()));
 
         let stored_streams = stored_value.streams.iter().cloned().collect();
         update_volume_stream(&stored_streams, &mut stream_volume_controls).await;
@@ -176,13 +178,12 @@ pub fn spawn_audio_controller(
                             if last_media_user_volume != new_media_user_volume
                                 || volume_up_max_pressed
                             {
-                                play_media_volume_sound(
+                                fasync::spawn(play_media_volume_sound(
                                     sound_player_connection.clone(),
                                     priority_stream_playing.clone(),
                                     new_media_user_volume,
-                                    &mut sound_player_added_files,
-                                )
-                                .await;
+                                    sound_player_added_files.clone(),
+                                ));
                             }
 
                             stored_value.streams =
@@ -301,7 +302,7 @@ async fn play_media_volume_sound(
     sound_player_connection: Option<PlayerProxy>,
     priority_stream_playing: Arc<AtomicBool>,
     volume_level: Option<f32>,
-    mut sound_player_added_files: &mut HashSet<&str>,
+    sound_player_added_files: Arc<Mutex<HashSet<&str>>>,
 ) {
     if let (Some(sound_player_proxy), Some(volume_level)) =
         (sound_player_connection.clone(), volume_level)
@@ -312,15 +313,20 @@ async fn play_media_volume_sound(
         }
 
         if volume_level >= 1.0 {
-            play_sound(&sound_player_proxy, VOLUME_MAX_FILE_PATH, 0, &mut sound_player_added_files)
-                .await
-                .ok();
+            play_sound(
+                &sound_player_proxy,
+                VOLUME_MAX_FILE_PATH,
+                0,
+                sound_player_added_files.clone(),
+            )
+            .await
+            .ok();
         } else if volume_level > 0.0 {
             play_sound(
                 &sound_player_proxy,
                 VOLUME_CHANGED_FILE_PATH,
                 1,
-                &mut sound_player_added_files,
+                sound_player_added_files.clone(),
             )
             .await
             .ok();

@@ -306,6 +306,7 @@ async fn test_max_volume_sound_on_press() {
     // Set volume to max.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
 
+    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     assert!(fake_services.sound_player.lock().await.id_exists(0));
     assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
 
@@ -388,7 +389,10 @@ async fn test_earcons_with_active_stream() {
         .await;
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
 
     // With the background stream ducked, the sound should not have played.
     assert!(!fake_services.sound_player.lock().await.id_exists(0));
@@ -409,6 +413,8 @@ async fn test_earcons_with_active_stream() {
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+
+    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
 
     // With the background stream unadjusted, the sound should have played.
     assert!(fake_services.sound_player.lock().await.id_exists(0));
