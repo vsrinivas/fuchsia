@@ -65,6 +65,15 @@ const FifoEntrySize = C.sizeof_struct_eth_fifo_entry
 
 var _ link.Controller = (*Client)(nil)
 
+type ethProtocolState struct {
+	mu struct {
+		sync.Mutex
+		tmp      []C.struct_eth_fifo_entry
+		buf      []C.struct_eth_fifo_entry
+		inFlight uint32
+	}
+}
+
 // A Client is an ethernet client.
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
 // The protocol is described in system/fidl/fuchsia-hardware-ethernet/ethernet.fidl.
@@ -79,15 +88,8 @@ type Client struct {
 	state     link.State
 	stateFunc func(link.State)
 	arena     *Arena
-	tmpbuf    []C.struct_eth_fifo_entry // used to fill rx and drain tx
-	recvbuf   []C.struct_eth_fifo_entry // packets received
-	sendbuf   []C.struct_eth_fifo_entry // packets ready to send
 
-	// These are counters for buffer management purpose.
-	txTotal    uint32
-	rxTotal    uint32
-	txInFlight uint32 // number of buffers in tx fifo
-	rxInFlight uint32 // number of buffers in rx fifo
+	tx, rx ethProtocolState
 }
 
 func checkStatus(status int32, text string) error {
@@ -131,15 +133,16 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 	}
 
 	c := &Client{
-		Info:    info,
-		device:  device,
-		fifos:   *fifos,
-		path:    topo,
-		arena:   arena,
-		tmpbuf:  make([]C.struct_eth_fifo_entry, 0, maxDepth),
-		recvbuf: make([]C.struct_eth_fifo_entry, 0, fifos.RxDepth),
-		sendbuf: make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth),
+		Info:   info,
+		device: device,
+		fifos:  *fifos,
+		path:   topo,
+		arena:  arena,
 	}
+	c.tx.mu.buf = make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth)
+	c.tx.mu.tmp = make([]C.struct_eth_fifo_entry, 0, maxDepth)
+	c.rx.mu.buf = make([]C.struct_eth_fifo_entry, 0, fifos.RxDepth)
+	c.rx.mu.tmp = make([]C.struct_eth_fifo_entry, 0, maxDepth)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -153,7 +156,10 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		} else if err := checkStatus(status, "SetIoBuffer"); err != nil {
 			return err
 		}
-		if err := c.rxCompleteLocked(); err != nil {
+		c.rx.mu.Lock()
+		err = c.rxCompleteLocked()
+		c.rx.mu.Unlock()
+		if err != nil {
 			return fmt.Errorf("eth: failed to load rx fifo: %v", err)
 		}
 		return nil
@@ -244,9 +250,6 @@ func (c *Client) closeLocked() error {
 	if err := c.fifos.Rx.Close(); err != nil {
 		syslog.Warnf("eth: failed to close rx fifo: %s", err)
 	}
-	c.tmpbuf = c.tmpbuf[:0]
-	c.recvbuf = c.recvbuf[:0]
-	c.sendbuf = c.sendbuf[:0]
 	c.arena.freeAll(c)
 	c.changeStateLocked(link.StateClosed)
 
@@ -270,8 +273,8 @@ func (c *Client) SetPromiscuousMode(enabled bool) error {
 // AllocForSend will return nil. WaitSend can be called to block
 // until a transmission buffer is available.
 func (c *Client) AllocForSend() Buffer {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.tx.mu.Lock()
+	defer c.tx.mu.Unlock()
 	// TODO: Use more than txDepth here. More like 2x.
 	//       We cannot have more than txDepth outstanding for the fifo,
 	//       but we can have more between AllocForSend and Send. When
@@ -280,12 +283,12 @@ func (c *Client) AllocForSend() Buffer {
 	//       Send won't 'release' the buffer, we need an extra step
 	//       for that, because we will want to keep the buffer around
 	//       until the ACK comes back.
-	if c.txInFlight == c.fifos.TxDepth {
+	if c.tx.mu.inFlight == c.fifos.TxDepth {
 		return nil
 	}
 	buf := c.arena.alloc(c)
 	if buf != nil {
-		c.txInFlight++
+		c.tx.mu.inFlight++
 	}
 	return buf
 }
@@ -294,17 +297,17 @@ func (c *Client) AllocForSend() Buffer {
 // Send does not block.
 // If the client is closed, Send returns zx.ErrPeerClosed.
 func (c *Client) Send(b Buffer) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.tx.mu.Lock()
+	defer c.tx.mu.Unlock()
 	if err := c.txCompleteLocked(); err != nil {
 		return err
 	}
-	c.sendbuf = append(c.sendbuf, c.arena.entry(b))
+	c.tx.mu.buf = append(c.tx.mu.buf, c.arena.entry(b))
 
-	switch status, count := fifoWrite(c.fifos.Tx, c.sendbuf); status {
+	switch status, count := fifoWrite(c.fifos.Tx, c.tx.mu.buf); status {
 	case zx.ErrOk:
-		n := copy(c.sendbuf, c.sendbuf[count:])
-		c.sendbuf = c.sendbuf[:n]
+		n := copy(c.tx.mu.buf, c.tx.mu.buf[count:])
+		c.tx.mu.buf = c.tx.mu.buf[:n]
 	case zx.ErrShouldWait:
 	default:
 		return &zx.Error{Status: status, Text: "eth.Client.RX"}
@@ -338,13 +341,13 @@ func fifoRead(handle zx.Handle, b []C.struct_eth_fifo_entry) (zx.Status, uint32)
 	return status, uint32(actual)
 }
 
+// txCompleteLocked should be called with the tx lock held.
 func (c *Client) txCompleteLocked() error {
-	buf := c.tmpbuf[:c.fifos.TxDepth]
+	buf := c.tx.mu.tmp[:c.fifos.TxDepth]
 
 	switch status, count := fifoRead(c.fifos.Tx, buf); status {
 	case zx.ErrOk:
-		c.txInFlight -= count
-		c.txTotal += count
+		c.tx.mu.inFlight -= count
 		for _, entry := range buf[:count] {
 			c.arena.free(c, c.arena.bufferFromEntry(entry))
 		}
@@ -363,30 +366,30 @@ func (c *Client) txCompleteLocked() error {
 //
 // If the client is closed, Recv returns zx.ErrPeerClosed.
 func (c *Client) Recv() (Buffer, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if len(c.recvbuf) == 0 {
-		status, count := fifoRead(c.fifos.Rx, c.recvbuf[:cap(c.recvbuf)])
+	c.rx.mu.Lock()
+	defer c.rx.mu.Unlock()
+	if len(c.rx.mu.buf) == 0 {
+		status, count := fifoRead(c.fifos.Rx, c.rx.mu.buf[:cap(c.rx.mu.buf)])
 		if status != zx.ErrOk {
 			return nil, &zx.Error{Status: status, Text: "eth.Client.Recv"}
 		}
 
-		c.recvbuf = c.recvbuf[:count]
-		c.rxInFlight -= count
+		c.rx.mu.buf = c.rx.mu.buf[:count]
+		c.rx.mu.inFlight -= count
 		if err := c.rxCompleteLocked(); err != nil {
 			return nil, err
 		}
 	}
-	c.rxTotal++
-	b := c.recvbuf[0]
-	n := copy(c.recvbuf, c.recvbuf[1:])
-	c.recvbuf = c.recvbuf[:n]
+	b := c.rx.mu.buf[0]
+	n := copy(c.rx.mu.buf, c.rx.mu.buf[1:])
+	c.rx.mu.buf = c.rx.mu.buf[:n]
 	return c.arena.bufferFromEntry(b), nil
 }
 
+// rxCompleteLocked should be called with the rx lock held.
 func (c *Client) rxCompleteLocked() error {
-	buf := c.tmpbuf[:0]
-	for i := c.rxInFlight; i < c.fifos.RxDepth; i++ {
+	buf := c.rx.mu.tmp[:0]
+	for i := c.rx.mu.inFlight; i < c.fifos.RxDepth; i++ {
 		b := c.arena.alloc(c)
 		if b == nil {
 			break
@@ -401,7 +404,7 @@ func (c *Client) rxCompleteLocked() error {
 		return &zx.Error{Status: status, Text: "eth.Client.RX"}
 	}
 
-	c.rxInFlight += count
+	c.rx.mu.inFlight += count
 	for _, entry := range buf[count:] {
 		c.arena.free(c, c.arena.bufferFromEntry(entry))
 	}
@@ -412,10 +415,10 @@ func (c *Client) rxCompleteLocked() error {
 // or the client is closed.
 func (c *Client) WaitSend() error {
 	for {
-		c.mu.Lock()
+		c.tx.mu.Lock()
 		err := c.txCompleteLocked()
-		canSend := c.txInFlight < c.fifos.TxDepth
-		c.mu.Unlock()
+		canSend := c.tx.mu.inFlight < c.fifos.TxDepth
+		c.tx.mu.Unlock()
 		if err != nil {
 			return err
 		}
