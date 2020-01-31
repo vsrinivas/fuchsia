@@ -2,38 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("image_writer_test") {
+executable("test") {
+  output_name = "image_writer_test"
   testonly = true
-  sources = [ "raw12_writer_test.cc" ]
+  sources = [
+    "hsv_generator_test.cc",
+    "image_format_test.cc",
+    "raw12_writer_test.cc",
+  ]
   deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/fidl/cpp",
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/image_writer",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
-  ]
-}
-
-executable("hsv_generator_test") {
-  testonly = true
-  sources = [ "hsv_generator_test.cc" ]
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/lib/fidl/cpp",
-    "//src/camera/lib/image_writer:hsv_color_source",
-    "//src/camera/lib/image_writer:image_format_rgba",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/fzl",
-    "//zircon/public/lib/image-format",
-    "//zircon/public/lib/syslog",
-  ]
-}
-
-executable("image_format_test") {
-  testonly = true
-  sources = [ "image_format_test.cc" ]
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/lib/fidl/cpp",
     "//src/camera/lib/image_writer:hsv_color_source",
     "//src/camera/lib/image_writer:image_format_rgba",
     "//src/lib/fxl/test:gtest_main_with_syslog",

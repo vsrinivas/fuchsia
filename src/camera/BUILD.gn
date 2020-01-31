@@ -64,9 +64,7 @@ test_package("camera_tests") {
     "//src/camera/examples/camera_display/stream_provider/test",
     "//src/camera/lib/fake_legacy_stream/test",
     "//src/camera/lib/fake_stream/test",
-    "//src/camera/lib/image_writer/test:hsv_generator_test",
-    "//src/camera/lib/image_writer/test:image_format_test",
-    "//src/camera/lib/image_writer/test:image_writer_test",
+    "//src/camera/lib/image_writer/test",
     "//src/camera/lib/stream_utils/test:stream_utils_test",
   ]
 
@@ -144,16 +142,6 @@ test_package("camera_tests") {
     {
       name = "virtual_camera_test"
       manifest = "drivers/virtual_camera/test/meta/virtual_camera_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "hsv_generator_test"
-      manifest = "lib/image_writer/test/meta/hsv_generator_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "image_format_test"
-      manifest = "lib/image_writer/test/meta/image_format_test.cmx"
       environments = basic_envs
     },
     {
