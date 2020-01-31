@@ -26,8 +26,10 @@ class RingBufferTest : public testing::Test {
     auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
         0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
         zx::sec(1).to_nsecs()));
+    auto endpoints =
+        RingBuffer::Allocate(format, std::move(timeline_function), kRingBufferFrameCount);
     ring_buffer_ =
-        RingBuffer::Allocate(format, std::move(timeline_function), kRingBufferFrameCount, Endpoint);
+        Endpoint == RingBuffer::Endpoint::kReadable ? endpoints.reader : endpoints.writer;
     ASSERT_TRUE(ring_buffer());
 
     EXPECT_EQ(Endpoint, ring_buffer_->endpoint());

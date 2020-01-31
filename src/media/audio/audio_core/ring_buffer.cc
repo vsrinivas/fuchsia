@@ -34,7 +34,8 @@ class RingBufferImpl : public RingBuffer {
  public:
   RingBufferImpl(const Format& format,
                  fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
-                 fzl::VmoMapper vmo_mapper, uint32_t frame_count, Endpoint endpoint)
+                 fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
+                 Endpoint endpoint)
       : RingBuffer(format, std::move(reference_clock_to_fractional_frames), std::move(vmo_mapper),
                    frame_count, endpoint) {}
 
@@ -69,32 +70,8 @@ class RingBufferImpl : public RingBuffer {
   }
 };
 
-}  // namespace
-
-// static
-std::shared_ptr<RingBuffer> RingBuffer::Allocate(
-    const Format& format,
-    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
-    uint32_t frame_count, Endpoint endpoint) {
-  TRACE_DURATION("audio", "RingBuffer::Allocate");
-  size_t vmo_size = frame_count * format.bytes_per_frame();
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to allocate ring buffer VMO with size " << vmo_size;
-    return nullptr;
-  }
-  return RingBuffer::Create(
-      format, std::move(reference_clock_to_fractional_frame), std::move(vmo), frame_count,
-      endpoint == Endpoint::kReadable ? VmoMapping::kReadOnly : VmoMapping::kReadWrite, endpoint);
-}
-
-std::shared_ptr<RingBuffer> RingBuffer::Create(
-    const Format& format,
-    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame, zx::vmo vmo,
-    uint32_t frame_count, VmoMapping vmo_mapping, Endpoint endpoint) {
-  TRACE_DURATION("audio", "RingBuffer::Create");
-
+fbl::RefPtr<RefCountedVmoMapper> MapVmo(const Format& format, zx::vmo vmo, uint32_t frame_count,
+                                        RingBuffer::VmoMapping vmo_mapping) {
   if (!vmo.is_valid()) {
     FX_LOGS(ERROR) << "Invalid VMO!";
     return nullptr;
@@ -123,14 +100,56 @@ std::shared_ptr<RingBuffer> RingBuffer::Create(
   // Map the VMO into our address space.
   // TODO(35022): How do I specify the cache policy for this mapping?
   zx_vm_option_t flags =
-      ZX_VM_PERM_READ | (vmo_mapping == VmoMapping::kReadOnly ? 0 : ZX_VM_PERM_WRITE);
-  fzl::VmoMapper vmo_mapper;
-  status = vmo_mapper.Map(vmo, 0u, size, flags);
+      ZX_VM_PERM_READ | (vmo_mapping == RingBuffer::VmoMapping::kReadOnly ? 0 : ZX_VM_PERM_WRITE);
+  auto vmo_mapper = fbl::MakeRefCounted<RefCountedVmoMapper>();
+  status = vmo_mapper->Map(vmo, 0u, size, flags);
 
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to map ring buffer VMO";
     return nullptr;
   }
+
+  return vmo_mapper;
+}
+
+}  // namespace
+
+// static
+RingBuffer::Endpoints RingBuffer::Allocate(
+    const Format& format,
+    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
+    uint32_t frame_count) {
+  TRACE_DURATION("audio", "RingBuffer::Allocate");
+  size_t vmo_size = frame_count * format.bytes_per_frame();
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
+  FX_CHECK(status == ZX_OK);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to allocate ring buffer VMO with size " << vmo_size;
+    FX_CHECK(false);
+  }
+
+  auto vmo_mapper = MapVmo(format, std::move(vmo), frame_count, VmoMapping::kReadWrite);
+  FX_DCHECK(vmo_mapper);
+
+  return Endpoints{
+      .reader = std::make_shared<RingBufferImpl<ReadableRingBufferTraits>>(
+          format, reference_clock_to_fractional_frame, vmo_mapper, frame_count,
+          Endpoint::kReadable),
+      .writer = std::make_shared<RingBufferImpl<WritableRingBufferTraits>>(
+          format, reference_clock_to_fractional_frame, vmo_mapper, frame_count,
+          Endpoint::kWritable),
+  };
+}
+
+std::shared_ptr<RingBuffer> RingBuffer::Create(
+    const Format& format,
+    fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame, zx::vmo vmo,
+    uint32_t frame_count, VmoMapping vmo_mapping, Endpoint endpoint) {
+  TRACE_DURATION("audio", "RingBuffer::Create");
+
+  auto vmo_mapper = MapVmo(format, std::move(vmo), frame_count, vmo_mapping);
+  FX_DCHECK(vmo_mapper);
 
   if (endpoint == Endpoint::kReadable) {
     return std::make_shared<RingBufferImpl<ReadableRingBufferTraits>>(
@@ -145,14 +164,15 @@ std::shared_ptr<RingBuffer> RingBuffer::Create(
 
 RingBuffer::RingBuffer(const Format& format,
                        fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
-                       fzl::VmoMapper vmo_mapper, uint32_t frame_count, Endpoint endpoint)
+                       fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, uint32_t frame_count,
+                       Endpoint endpoint)
     : Stream(format),
       endpoint_(endpoint),
       vmo_mapper_(std::move(vmo_mapper)),
       frames_(frame_count),
       reference_clock_to_fractional_frame_(std::move(reference_clock_to_fractional_frame)) {
-  FX_CHECK(vmo_mapper_.start() != nullptr);
-  FX_CHECK(vmo_mapper_.size() >= (format.bytes_per_frame() * frame_count));
+  FX_CHECK(vmo_mapper_->start() != nullptr);
+  FX_CHECK(vmo_mapper_->size() >= (format.bytes_per_frame() * frame_count));
 }
 
 Stream::TimelineFunctionSnapshot RingBuffer::ReferenceClockToFractionalFrames() const {
