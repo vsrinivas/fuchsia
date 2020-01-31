@@ -183,18 +183,6 @@ zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_
   return zio->ops->vmo_get(io, flags, out_vmo, out_size);
 }
 
-zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
                       zxio_t** out_io) {
   zxio_internal_t* zio = to_internal(directory);

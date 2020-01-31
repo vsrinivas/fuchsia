@@ -35,6 +35,7 @@ test("zxio") {
     "null-test.cc",
     "posix-mode-test.cc",
     "remote_v2-test.cc",
+    "vmo-test.cc",
     "vmofile-test.cc",
     "zxio-test.cc",
   ]

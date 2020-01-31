@@ -83,10 +83,8 @@ typedef struct zxio_vmo {
   // The underlying VMO that stores the data.
   zx::vmo vmo;
 
-  // The size of the VMO in bytes.
-  //
-  // This value is never changed.
-  zx_off_t size;
+  // The size of the file in bytes.
+  const zx_off_t size;
 
   // The current seek offset within the file.
   zx_off_t offset __TA_GUARDED(lock);

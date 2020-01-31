@@ -332,7 +332,6 @@ static fdio_ops_t fdio_datagram_socket_ops = {
           *out_events = events;
         },
     .posix_ioctl = fdio_default_posix_ioctl,  // not supported
-    .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
     .set_attr = fdio_default_set_attr,
@@ -577,7 +576,6 @@ static fdio_ops_t fdio_stream_socket_ops = {
           auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
           return fdio_zx_socket_posix_ioctl(sio->pipe.socket, request, va);
         },
-    .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
     .set_attr = fdio_default_set_attr,

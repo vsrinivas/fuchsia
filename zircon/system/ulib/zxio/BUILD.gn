@@ -13,6 +13,7 @@ zx_library("zxio") {
   ]
   sources = [
     "debuglog.cc",
+    "get_vmo.cc",
     "null.cc",
     "pipe.cc",
     "remote.cc",

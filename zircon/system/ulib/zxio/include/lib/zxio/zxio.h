@@ -205,12 +205,18 @@ zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_
 // This function creates a clone of the underlying VMO when possible. If the
 // function cannot create a clone, the function will eagerly read the contents
 // of the file into a freshly-created VMO.
+//
+// If non-null, |out_size| will hold the size of the file. Note that the size of
+// the vmo as queried from the kernel would be rounded up to the page boundary.
 zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
 // Get a read-only VMO containing the whole contents of the file.
 //
 // This function creates a clone of the underlying VMO when possible. If the
 // function cannot create a clone, the function will return an error.
+//
+// If non-null, |out_size| will hold the size of the file. Note that the size of
+// the vmo as queried from the kernel would be rounded up to the page boundary.
 zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
 // Get a read-only handle to the exact VMO used by the file system server to
@@ -218,7 +224,19 @@ zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_siz
 //
 // This function fails if the server does not have an exact VMO representation
 // of the file.
+//
+// If non-null, |out_size| will hold the size of the file. Note that the size of
+// the vmo as queried from the kernel would be rounded up to the page boundary.
 zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+
+// Get a read + execute VMO as a clone of the underlying VMO in this file.
+// This function will fail rather than copying the contents if it cannot clone,
+// or if the particular |io| does not support / allow a read + execute VMO
+// representation.
+//
+// If non-null, |out_size| will hold the size of the file. Note that the size of
+// the vmo as queried from the kernel would be rounded up to the page boundary.
+zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
 // Directory
 

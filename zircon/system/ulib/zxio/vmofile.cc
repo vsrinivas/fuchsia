@@ -99,6 +99,85 @@ static zx_status_t zxio_vmofile_read_vector_at(zxio_t* io, zx_off_t offset,
                             });
 }
 
+static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+                                        size_t* out_size) {
+  if (out_vmo == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Can't support Vmofiles with a non-zero start/offset, because we return just
+  // a VMO with no other data - like a starting offset - to the user.
+  // (Technically we could support any page aligned offset, but that's currently
+  // unneeded.)
+  auto file = reinterpret_cast<zxio_vmofile_t*>(io);
+  if (file->start != 0) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  // Ensure that we return a VMO handle with only the rights requested by the
+  // client. For Vmofiles, the server side does not ever see the VMO_FLAG_*
+  // options from the client because the VMO is returned in NodeInfo/Vmofile
+  // rather than from a File.GetBuffer call.
+  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
+  rights |= flags & fio::VMO_FLAG_READ ? ZX_RIGHT_READ : 0;
+  rights |= flags & fio::VMO_FLAG_WRITE ? ZX_RIGHT_WRITE : 0;
+  rights |= flags & fio::VMO_FLAG_EXEC ? ZX_RIGHT_EXECUTE : 0;
+
+  if (flags & fio::VMO_FLAG_PRIVATE) {
+    // Allow SET_PROPERTY only if creating a private child VMO so that the user
+    // can set ZX_PROP_NAME (or similar).
+    rights |= ZX_RIGHT_SET_PROPERTY;
+
+    uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
+    if (flags & fio::VMO_FLAG_EXEC) {
+      // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the
+      // parent VMO has it, and we can't arbitrary add EXECUTE here on the
+      // client side. Adding CHILD_NO_WRITE still creates a snapshot and a new
+      // VMO object, which e.g. can have a unique ZX_PROP_NAME value, but the
+      // returned handle lacks WRITE and maintains EXECUTE.
+      if (flags & fio::VMO_FLAG_WRITE) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      options |= ZX_VMO_CHILD_NO_WRITE;
+    }
+
+    zx::vmo child_vmo;
+    zx_status_t status =
+        file->vmo.vmo.create_child(options, file->start, file->vmo.size, &child_vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // COPY_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't return
+    // a handle with that right unless requested using VMO_FLAG_WRITE.
+    // TODO(fxb/36877): Supporting VMO_FLAG_PRIVATE & VMO_FLAG_WRITE for
+    // Vmofiles is a bit weird and inconsistent. See bug for more info.
+    zx::vmo result;
+    status = child_vmo.replace(rights, &result);
+    if (status != ZX_OK) {
+      return status;
+    }
+    *out_vmo = result.release();
+    if (out_size) {
+      *out_size = file->vmo.size;
+    }
+    return ZX_OK;
+  }
+
+  // For !VMO_FLAG_PRIVATE (including VMO_FLAG_EXACT), we just duplicate another
+  // handle to the Vmofile's VMO with appropriately scoped rights.
+  zx::vmo result;
+  zx_status_t status = file->vmo.vmo.duplicate(rights, &result);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_vmo = result.release();
+  if (out_size) {
+    *out_size = file->vmo.size;
+  }
+  return ZX_OK;
+}
+
 static constexpr zxio_ops_t zxio_vmofile_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_vmofile_close;
@@ -108,6 +187,7 @@ static constexpr zxio_ops_t zxio_vmofile_ops = []() {
   ops.read_vector = zxio_vmofile_read_vector;
   ops.read_vector_at = zxio_vmofile_read_vector_at;
   ops.seek = zxio_vmo_seek;
+  ops.vmo_get = zxio_vmofile_vmo_get;
   return ops;
 }();
 

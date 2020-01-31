@@ -16,9 +16,10 @@
 
 namespace {
 
-class TestServer final : public llcpp::fuchsia::io::File::Interface {
+class TestServerBase : public llcpp::fuchsia::io::File::Interface {
  public:
-  TestServer() = default;
+  TestServerBase() = default;
+  virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
   void Close(CloseCompleter::Sync completer) override {
@@ -98,10 +99,23 @@ class File : public zxtest::Test {
     ASSERT_OK(zx::event::create(0, &event_on_server_));
     ASSERT_OK(event_on_server_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_to_client_));
     ASSERT_OK(zxio_file_init(&file_, control_client_end_.release(), event_to_client_.release()));
-    server_ = std::make_unique<TestServer>();
+  }
+
+  template <typename ServerImpl>
+  ServerImpl* StartServer() {
+    server_ = std::make_unique<ServerImpl>();
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_OK(loop_->StartThread("fake-filesystem"));
-    ASSERT_OK(fidl::Bind(loop_->dispatcher(), std::move(control_server_end_), server_.get()));
+    zx_status_t status;
+    EXPECT_OK(status = loop_->StartThread("fake-filesystem"));
+    if (status != ZX_OK) {
+      return nullptr;
+    }
+    EXPECT_OK(status =
+                  fidl::Bind(loop_->dispatcher(), std::move(control_server_end_), server_.get()));
+    if (status != ZX_OK) {
+      return nullptr;
+    }
+    return static_cast<ServerImpl*>(server_.get());
   }
 
   void TearDown() final {
@@ -116,11 +130,15 @@ class File : public zxtest::Test {
   zx::channel control_server_end_;
   zx::event event_on_server_;
   zx::event event_to_client_;
-  std::unique_ptr<TestServer> server_;
+  std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<async::Loop> loop_;
 };
 
 TEST_F(File, WaitTimeOut) {
+  class TestServer : public TestServerBase {};
+  TestServer* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_EQ(ZX_ERR_TIMED_OUT,
             zxio_wait_one(&file_.io, ZXIO_SIGNAL_ALL, ZX_TIME_INFINITE_PAST, &observed));
@@ -128,6 +146,10 @@ TEST_F(File, WaitTimeOut) {
 }
 
 TEST_F(File, WaitForReadable) {
+  class TestServer : public TestServerBase {};
+  TestServer* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(event_on_server_.signal(ZX_SIGNAL_NONE, llcpp::fuchsia::io::FILE_SIGNAL_READABLE));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
@@ -135,10 +157,40 @@ TEST_F(File, WaitForReadable) {
 }
 
 TEST_F(File, WaitForWritable) {
+  class TestServer : public TestServerBase {};
+  TestServer* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(event_on_server_.signal(ZX_SIGNAL_NONE, llcpp::fuchsia::io::FILE_SIGNAL_WRITABLE));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
+}
+
+TEST_F(File, GetVmoPropagatesError) {
+  // Positive error codes are protocol-specific errors, and will not
+  // occur in the system.
+  constexpr zx_status_t kGetAttrError = 1;
+  constexpr zx_status_t kGetBufferError = 2;
+
+  class TestServer : public TestServerBase {
+   public:
+    void GetAttr(GetAttrCompleter::Sync completer) override {
+      completer.Reply(kGetAttrError, ::llcpp::fuchsia::io::NodeAttributes{});
+    }
+    void GetBuffer(uint32_t flags, GetBufferCompleter::Sync completer) override {
+      completer.Reply(kGetBufferError, nullptr);
+    }
+  };
+  TestServer* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+
+  zx::vmo vmo;
+  ASSERT_STATUS(kGetBufferError,
+                zxio_vmo_get_clone(&file_.io, vmo.reset_and_get_address(), nullptr));
+  ASSERT_STATUS(kGetBufferError,
+                zxio_vmo_get_exact(&file_.io, vmo.reset_and_get_address(), nullptr));
+  ASSERT_STATUS(kGetAttrError, zxio_vmo_get_copy(&file_.io, vmo.reset_and_get_address(), nullptr));
 }
 
 }  // namespace

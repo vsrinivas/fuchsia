@@ -154,18 +154,6 @@ static zx_status_t fdio_zxio_link(fdio_t* io, const char* src, size_t srclen, zx
   return zxio_link(z, src, dst_token, dst);
 }
 
-static zx_status_t fdio_zxio_get_vmo(fdio_t* io, int flags, zx::vmo* out_vmo) {
-  zxio_t* z = fdio_get_zxio(io);
-  zx::vmo vmo;
-  size_t vmo_size;
-  zx_status_t status = zxio_vmo_get(z, flags, vmo.reset_and_get_address(), &vmo_size);
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out_vmo = std::move(vmo);
-  return ZX_OK;
-}
-
 static zx_status_t fdio_zxio_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
                                                   zxio_t* directory) {
   return zxio_dirent_iterator_init(iterator, directory);
@@ -191,7 +179,6 @@ static constexpr fdio_ops_t fdio_zxio_ops = {
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
@@ -316,7 +303,6 @@ static constexpr fdio_ops_t fdio_zxio_remote_ops = {
     .wait_begin = fdio_zxio_remote_wait_begin,
     .wait_end = fdio_zxio_remote_wait_end,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_zxio_get_vmo,
     .get_token = fdio_zxio_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
@@ -459,63 +445,6 @@ static inline zxio_vmofile_t* fdio_get_zxio_vmofile(fdio_t* io) {
   return (zxio_vmofile_t*)fdio_get_zxio(io);
 }
 
-static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags, zx::vmo* out_vmo) {
-  if (out_vmo == NULL) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // fdio can't support Vmofiles with a non-zero start/offset, because it returns just a VMO with no
-  // other data - like a starting offset - to the user. (Technically we could support any page
-  // aligned offset, but that's currently unneeded.)
-  zxio_vmofile_t* file = fdio_get_zxio_vmofile(io);
-  if (file->start != 0) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  // Ensure that we return a VMO handle with only the rights requested by the client. For Vmofiles,
-  // the server side does not ever see the VMO_FLAG_* options from the client because the VMO is
-  // returned in NodeInfo/Vmofile rather than from a File.GetBuffer call.
-  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-  rights |= (flags & fio::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & fio::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
-  rights |= (flags & fio::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
-
-  if (flags & fio::VMO_FLAG_PRIVATE) {
-    // Allow SET_PROPERTY only if creating a private child VMO so that the user can set ZX_PROP_NAME
-    // (or similar).
-    rights |= ZX_RIGHT_SET_PROPERTY;
-
-    uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
-    if (flags & fio::VMO_FLAG_EXEC) {
-      // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it, and
-      // we can't arbitrary add EXECUTE here on the client side. Adding CHILD_NO_WRITE still
-      // creates a snapshot and a new VMO object, which e.g. can have a unique ZX_PROP_NAME value,
-      // but the returned handle lacks WRITE and maintains EXECUTE.
-      if (flags & fio::VMO_FLAG_WRITE) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      options |= ZX_VMO_CHILD_NO_WRITE;
-    }
-
-    zx::vmo child_vmo;
-    zx_status_t status =
-        file->vmo.vmo.create_child(options, file->start, file->vmo.size, &child_vmo);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    // COPY_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't return a handle with that
-    // right unless requested using VMO_FLAG_WRITE.
-    // TODO(fxb/36877): Supporting VMO_FLAG_PRIVATE & VMO_FLAG_WRITE for Vmofiles is a bit weird and
-    // inconsistent. See bug for more info.
-    return child_vmo.replace(rights, out_vmo);
-  }
-
-  // For !VMO_FLAG_PRIVATE (including VMO_FLAG_EXACT), we just duplicate another handle to the
-  // Vmofile's VMO with appropriately scoped rights.
-  return file->vmo.vmo.duplicate(rights, out_vmo);
-}
-
 static constexpr fdio_ops_t fdio_zxio_vmofile_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
@@ -525,7 +454,6 @@ static constexpr fdio_ops_t fdio_zxio_vmofile_ops = {
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_zxio_vmofile_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
@@ -686,7 +614,6 @@ static constexpr fdio_ops_t fdio_zxio_pipe_ops = {
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
     .posix_ioctl = fdio_zxio_pipe_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,

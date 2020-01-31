@@ -881,7 +881,8 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
   int vflags = zx_options | (flags & MAP_PRIVATE ? fio::VMO_FLAG_PRIVATE : 0);
 
   zx::vmo vmo;
-  zx_status_t r = fdio_get_ops(io)->get_vmo(io, vflags, &vmo);
+  size_t size;
+  zx_status_t r = zxio_vmo_get(fdio_get_zxio(io), vflags, vmo.reset_and_get_address(), &size);
   fdio_release(io);
   // On POSIX, performing mmap on an fd which does not support it returns an access denied error.
   if (r == ZX_ERR_NOT_SUPPORTED) {

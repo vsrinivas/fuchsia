@@ -149,7 +149,6 @@ constexpr fdio_ops_t kLocalConnectionOps = []() {
   ops.unwrap = fdio_default_unwrap;
   ops.borrow_channel = fdio_default_borrow_channel;
   ops.posix_ioctl = fdio_default_posix_ioctl;
-  ops.get_vmo = fdio_default_get_vmo;
   ops.get_token = fdio_default_get_token;
   ops.set_attr = fdio_default_set_attr;
   ops.convert_to_posix_mode = local_dir_convert_to_posix_mode;

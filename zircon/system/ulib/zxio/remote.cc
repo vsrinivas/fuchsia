@@ -685,7 +685,9 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo
     return ZX_ERR_IO;
   }
   *out_vmo = buffer->vmo.release();
-  *out_size = buffer->size;
+  if (out_size) {
+    *out_size = buffer->size;
+  }
   return ZX_OK;
 }
 
