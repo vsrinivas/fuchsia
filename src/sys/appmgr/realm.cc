@@ -1075,14 +1075,8 @@ bool Realm::IsAllowedToConnectToComponentEventProvider(std::string ns_id) {
 bool Realm::IsAllowedToUsePackageResolver(std::string ns_id) {
   // There is a more permissive allowlist for non-user builds, but we enforce some kind
   // of allowlist in all build types.
-  // TODO(ampearce): toggle to kExpected once the allowlist and build files are checked in.
   Allowlist package_resolver_allowlist(appmgr_config_dir_, kPackageResolverAllowlist,
-                                       Allowlist::kOptional);
-  // TODO(ampearce): remove check after toggling optional bit.
-  if (!package_resolver_allowlist.WasFilePresent()) {
-    return true;
-  }
-
+                                       Allowlist::kExpected);
   return package_resolver_allowlist.IsAllowed(ns_id);
 }
 

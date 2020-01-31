@@ -15,13 +15,5 @@ config_data("appmgr_package_resolver_allowlist_userdebug") {
   for_pkg = "appmgr"
   sources = [ "package_resolver_allowlist_userdebug.txt" ]
   outputs = [ "allowlist/package_resolver.txt" ]
-
-  # Once we have the initial version checked in, we can remove it in user builds.
-  # Until we have both of these config_data blocks in tree, we can't assert anything about their existence.
-  # We'll soft transition by:
-  # - checking in this block which gives the userdebug allowlist to all builds,
-  # - checking in a build change which removes the userdebug allowlist from user builds
-  # - checking in a final CL which uncomments this non_production_tag assertion.
-
-  # deps = [ "//build/images:non_production_tag" ]  # Ensure exclusion from _user builds.
+  deps = [ "//build/images:non_production_tag" ]  # Ensure exclusion from _user builds.
 }
