@@ -81,6 +81,7 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
 #ifdef ZBI_COMPRESSION_MAGIC
           status = zx::vmo::create(bootdata.extra, 0, &bootfs_vmo);
           check(log, status, "cannot create BOOTFS VMO (%u bytes)", bootdata.extra);
+          bootfs_vmo.set_property(ZX_PROP_NAME, kBootfsVmoName, sizeof(kBootfsVmoName) - 1);
           status = Decompressor(job, engine_vmo, vdso_vmo)(*zx::unowned_vmo{bootdata_vmo},
                                                            off + sizeof(bootdata), bootdata.length,
                                                            bootfs_vmo, 0, bootdata.extra);
@@ -110,7 +111,6 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
             check(log, status, "cannot unmap BOOTFS VMO (%u bytes)", bootdata.length);
           }
         }
-        bootfs_vmo.set_property(ZX_PROP_NAME, kBootfsVmoName, sizeof(kBootfsVmoName) - 1);
 
         // Signal that we've already processed this one.
         bootdata.type = ZBI_TYPE_DISCARD;
