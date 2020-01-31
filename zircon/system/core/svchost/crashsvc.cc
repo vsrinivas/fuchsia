@@ -132,8 +132,8 @@ int crash_svc(void* arg) {
     }
 
     if (signals & ZX_CHANNEL_PEER_CLOSED) {
-      // We'll only get here in tests, if our job is actually the root job
-      // the system will halt before closing the channel.
+      // We should only get here in crashsvc's unit tests. In production, our job is actually the
+      // root job so the system will halt before closing its exception channel.
       return 0;
     }
 
