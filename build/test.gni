@@ -16,11 +16,19 @@ import("//build/testing/test_spec.gni")
 #
 template("test") {
   if (is_linux || is_mac) {
+    _output_name = target_name
+    if (defined(invoker.output_name)) {
+      _output_name = invoker.output_name
+    }
+    _output_dir = root_out_dir
+    if (defined(invoker.output_dir)) {
+      _output_dir = invoker.output_dir
+    }
     test_spec("${target_name}_spec") {
       testonly = true
       name = invoker.target_name
       target = invoker.target_name
-      path = "$root_out_dir/${invoker.target_name}"
+      path = "$_output_dir/$_output_name"
       deps = []
       if (defined(invoker.deps)) {
         deps += invoker.deps
