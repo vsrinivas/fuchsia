@@ -174,23 +174,6 @@ static zx_status_t print_report_desc(input_args_t* args, size_t report_desc_len)
   return ZX_OK;
 }
 
-static zx_status_t print_device_ids(input_args_t* args) {
-  auto result = args->sync_client->GetDeviceIds();
-  if (result.status() != ZX_OK) {
-    lprintf("hid: could not get device ids from %s (status=%d)\n", args->devpath, result.status());
-    return result.status();
-  }
-
-  mtx_lock(&print_lock);
-  printf("hid device ids:\n");
-  printf("  vendor_id:  0x%08x\n", result->ids.vendor_id);
-  printf("  product_id: 0x%08x\n", result->ids.product_id);
-  printf("  version:    0x%08x\n", result->ids.version);
-  mtx_unlock(&print_lock);
-
-  return ZX_OK;
-}
-
 static zx_status_t get_num_reports(input_args_t* args, size_t* num_reports) {
   auto result = args->sync_client->GetNumReports();
   if (result.status() != ZX_OK) {

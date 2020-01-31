@@ -2,19 +2,38 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("hid") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("hid") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  output_dir = "$root_out_dir/zircon-migrated"
+
   sources = [
     "main.cc",
     "report.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-input:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/hid-parser",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-input:llcpp",
   ]
+}
+
+migrated_manifest("hid-manifest") {
+  deps = [ ":hid" ]
 }
