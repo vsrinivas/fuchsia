@@ -2,16 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("test") {
-  testonly = true
-  deps = [
-    ":nand-broker",
-    ":nandpart-broker",
-  ]
-}
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
 
 source_set("common") {
-  testonly = true
   visibility = [ ":*" ]
 
   sources = [
@@ -19,28 +23,64 @@ source_set("common") {
     "parent.cc",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk.protocol.nand",
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/fidl/fuchsia-nand:c",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/ramdevice-client",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/devmgr-launcher",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/ramdevice-client",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.nand",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/fidl/fuchsia-nand:c",
   ]
 }
 
-zx_test("nand-broker") {
+test("nand-broker") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "main.cc" ]
   deps = [ ":common" ]
 }
 
-zx_test("nandpart-broker") {
+test("nandpart-broker") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "nandpart-main.cc" ]
   deps = [ ":common" ]
+}
+
+migrated_manifest("nand-broker-manifest") {
+  deps = [ ":nand-broker" ]
+}
+
+migrated_manifest("nandpart-broker-manifest") {
+  deps = [ ":nandpart-broker" ]
 }

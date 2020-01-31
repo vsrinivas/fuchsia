@@ -2,23 +2,54 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":aml-rawnand-unittest" ]
 }
 
-zx_test("aml-rawnand-unittest") {
+test("aml-rawnand-unittest") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   include_dirs = [ ".." ]
   sources = [
     "../aml-rawnand.cc",
     "aml-rawnand-test.cc",
   ]
   deps = [
-    "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/new-mock-mmio-reg",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
     "..:common",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/new-mock-mmio-reg",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+migrated_manifest("aml-rawnand-unittest-manifest") {
+  deps = [ ":aml-rawnand-unittest" ]
 }
