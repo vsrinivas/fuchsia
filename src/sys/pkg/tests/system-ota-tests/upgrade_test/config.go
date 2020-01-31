@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/device"
@@ -42,6 +43,8 @@ type Config struct {
 	LongevityTest            bool
 	archive                  *artifacts.Archive
 	sshPrivateKey            ssh.Signer
+	paveTimeout              time.Duration
+	cycleTimeout             time.Duration
 }
 
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
@@ -66,6 +69,8 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
 	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the upgrade amber-files repository")
 	fs.BoolVar(&c.LongevityTest, "longevity-test", false, "Continuously update to the latest repository")
+	fs.DurationVar(&c.paveTimeout, "pave-timeout", 1<<63-1, "Err if a pave it takes longer than this time (default is no timeout)")
+	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 1<<63-1, "Err if a test cycle it takes longer than this time (default is no timeout)")
 
 	return c, nil
 }

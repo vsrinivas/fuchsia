@@ -30,6 +30,18 @@ _environment_service_account =
 #   - Required: What environments this test should target.
 #   - Type: see //build/testing/test_spec.gni for more details. Note that
 #     any label and service_account in each environment is ignored.
+#
+#   timeout
+#   - Optional: Err if this test takes longer than this time.
+#   - Type: duration string
+#
+#   pave_timeout
+#   - Optional: Err if paving takes longer than this time.
+#   - Type: duration string
+#
+#   cycle_timeout
+#   - Optional: Err if the OTA test cycle takes longer than this time.
+#   - Type: duration string
 template("system_ota_test_suite") {
   assert(is_linux || is_mac, "system_ota_tests are for linux/mac only")
   assert(defined(invoker.release_builder),
@@ -52,19 +64,47 @@ template("system_ota_test_suite") {
     _spec_target_name = "${target_name}_${_test_name}_spec"
     _deps += [ ":${_spec_target_name}" ]
 
+    _command = []
+    _command = [
+      rebase_path(_test_binary, root_build_dir),
+      "-downgrade-builder-name",
+      invoker.release_builder,
+    ]
+
+    if (defined(invoker.timeout)) {
+      assert(invoker.timeout != "",
+             "'${_spec_target_name}' cannot have an empty timeout")
+      _command += [
+        "-test.timeout",
+        invoker.timeout,
+      ]
+    }
+
+    if (defined(invoker.pave_timeout)) {
+      assert(invoker.pave_timeout != "",
+             "'${_spec_target_name}' cannot have an empty pave timeout")
+      _command += [
+        "-pave-timeout",
+        invoker.pave_timeout,
+      ]
+    }
+
+    if (defined(invoker.cycle_timeout)) {
+      assert(invoker.cycle_timeout != "",
+             "'${_spec_target_name}' cannot have an empty cycle timeout")
+      _command += [
+        "-cycle-timeout",
+        invoker.cycle_timeout,
+      ]
+    }
+
     test_spec(_spec_target_name) {
       testonly = true
       name = test
       target = _main_target_name
       path = _test_binary
-      command = [
-        rebase_path(_test_binary, root_build_dir),
-        "-downgrade-builder-name",
-        invoker.release_builder,
-      ]
-      deps = [
-        test,
-      ]
+      command = _command
+      deps = [ test ]
 
       environments = []
       foreach(env, invoker.environments) {

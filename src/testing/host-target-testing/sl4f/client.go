@@ -37,14 +37,14 @@ type Client struct {
 	server    *ssh.Session
 }
 
-func NewClient(sshClient *sshclient.Client, addr string, repoName string) (*Client, error) {
+func NewClient(ctx context.Context, sshClient *sshclient.Client, addr string, repoName string) (*Client, error) {
 	c := &Client{
 		sshClient: sshClient,
 		repoName:  repoName,
 		url:       fmt.Sprintf("http://%s", strings.ReplaceAll(addr, "%", "%25")),
 	}
 
-	if err := c.connect(); err != nil {
+	if err := c.connect(ctx); err != nil {
 		return nil, err
 	}
 
@@ -55,10 +55,10 @@ func (c *Client) Close() {
 	c.disconnect()
 }
 
-func (c *Client) connect() error {
+func (c *Client) connect(ctx context.Context) error {
 	// If an ssh connection re-establishes without a reboot, sl4f may already be running.
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	if err := c.ping(ctx); err == nil {
+	pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	if err := c.ping(pingCtx); err == nil {
 		cancel()
 		return nil
 	}
@@ -91,19 +91,19 @@ func (c *Client) connect() error {
 	}
 
 	// Wait a few seconds for it to respond to requests.
-	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	pingCtx, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	for ctx.Err() == nil {
-		if err := c.ping(ctx); err == nil {
+	for pingCtx.Err() == nil {
+		if err := c.ping(pingCtx); err == nil {
 			c.server = server
 			return nil
 		}
 		time.Sleep(time.Second)
 	}
 
-	log.Printf("unable to ping sl4f: %s", ctx.Err())
+	log.Printf("unable to ping sl4f: %s", pingCtx.Err())
 	server.Close()
-	return ctx.Err()
+	return pingCtx.Err()
 }
 
 func (c *Client) disconnect() {
@@ -123,7 +123,7 @@ func (c *Client) ping(ctx context.Context) error {
 	}
 	var response string
 
-	if err := c.call(context.Background(), "file_facade.ReadFile", request, &response); err != nil {
+	if err := c.call(ctx, "file_facade.ReadFile", request, &response); err != nil {
 		return err
 	}
 

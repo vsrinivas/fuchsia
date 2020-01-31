@@ -125,7 +125,7 @@ func (c *Client) RebootToRecovery() error {
 
 // TriggerSystemOTA gets the device to perform a system update, ensuring it
 // reboots as expected. rpcClient, if provided, will be used and re-connected
-func (c *Client) TriggerSystemOTA(repo *packages.Repository, rpcClient **sl4f.Client) error {
+func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
 	log.Printf("triggering OTA")
 
 	rebootCheckPath := "/tmp/ota_test_should_reboot"
@@ -133,10 +133,10 @@ func (c *Client) TriggerSystemOTA(repo *packages.Repository, rpcClient **sl4f.Cl
 		// Write a file to /tmp that should be lost after a reboot, to
 		// ensure the device actually reboots instead of just
 		// disconnects from the network for a bit.
-		if err := (*rpcClient).FileWrite(rebootCheckPath, []byte("yes")); err != nil {
+		if err := (*rpcClient).FileWrite(ctx, rebootCheckPath, []byte("yes")); err != nil {
 			return fmt.Errorf("failed to write reboot check file: %s", err)
 		}
-		stat, err := (*rpcClient).PathStat(rebootCheckPath)
+		stat, err := (*rpcClient).PathStat(ctx, rebootCheckPath)
 		if err != nil {
 			return fmt.Errorf("failed to stat reboot check file: %s", err)
 		}
@@ -168,7 +168,7 @@ func (c *Client) TriggerSystemOTA(repo *packages.Repository, rpcClient **sl4f.Cl
 		*rpcClient = nil
 
 		var err error
-		*rpcClient, err = c.StartRpcSession(repo)
+		*rpcClient, err = c.StartRpcSession(ctx, repo)
 		if err != nil {
 			// FIXME(40913): every builder should at least build
 			// sl4f as a universe package.
@@ -182,7 +182,7 @@ func (c *Client) TriggerSystemOTA(repo *packages.Repository, rpcClient **sl4f.Cl
 		if *rpcClient == nil {
 			exists, err = c.RemoteFileExists(rebootCheckPath)
 		} else {
-			exists, err = (*rpcClient).PathExists(rebootCheckPath)
+			exists, err = (*rpcClient).PathExists(ctx, rebootCheckPath)
 		}
 
 		if err != nil {
@@ -272,7 +272,7 @@ func (c *Client) RegisterPackageRepository(repo *packages.Server) error {
 	return c.Run(cmd, os.Stdout, os.Stderr)
 }
 
-func (c *Client) StartRpcSession(repo *packages.Repository) (*sl4f.Client, error) {
+func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository) (*sl4f.Client, error) {
 	// Determine the address of this device from the point of view of the target.
 	localHostname, err := c.sshClient.GetSshConnection()
 	if err != nil {
@@ -294,7 +294,7 @@ func (c *Client) StartRpcSession(repo *packages.Repository) (*sl4f.Client, error
 	if err != nil {
 		return nil, err
 	}
-	defer repoServer.Shutdown(context.Background())
+	defer repoServer.Shutdown(ctx)
 
 	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing".
 	log.Printf("registering package repository: %s", repoServer.Dir)
@@ -303,7 +303,7 @@ func (c *Client) StartRpcSession(repo *packages.Repository) (*sl4f.Client, error
 		return nil, err
 	}
 
-	rpcClient, err := sl4f.NewClient(c.sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
+	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
 	if err != nil {
 		return nil, fmt.Errorf("error creating sl4f client: %s", err)
 	}

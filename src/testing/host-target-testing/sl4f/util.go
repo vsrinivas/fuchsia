@@ -5,6 +5,7 @@
 package sl4f
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -12,11 +13,11 @@ import (
 )
 
 // ValidateStaticPackages checks that all static packages have no missing blobs.
-func (c *Client) ValidateStaticPackages() error {
+func (c *Client) ValidateStaticPackages(ctx context.Context) error {
 	log.Printf("validating static packages")
 
 	path := "/pkgfs/ctl/validation/missing"
-	f, err := c.FileRead(path)
+	f, err := c.FileRead(ctx, path)
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", path, err)
 	}
@@ -31,9 +32,9 @@ func (c *Client) ValidateStaticPackages() error {
 }
 
 // GetSystemImageMerkle returns the merkle root of the system_image package
-func (c *Client) GetSystemImageMerkle() (string, error) {
+func (c *Client) GetSystemImageMerkle(ctx context.Context) (string, error) {
 	path := "/system/meta"
-	f, err := c.FileRead(path)
+	f, err := c.FileRead(ctx, path)
 	if err != nil {
 		return "", fmt.Errorf("error reading %q: %s", path, err)
 	}
@@ -42,8 +43,8 @@ func (c *Client) GetSystemImageMerkle() (string, error) {
 }
 
 // PathExists determines if the path exists on the target.
-func (c *Client) PathExists(path string) (bool, error) {
-	_, err := c.PathStat(path)
+func (c *Client) PathExists(ctx context.Context, path string) (bool, error) {
+	_, err := c.PathStat(ctx, path)
 	if err == nil {
 		return true, nil
 	} else if os.IsNotExist(err) {

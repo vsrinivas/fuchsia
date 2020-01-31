@@ -38,10 +38,10 @@ const (
 )
 
 // PaverQueryActiveConfiguration determines the active boot configuration of the target, if supported.
-func (c *Client) PaverQueryActiveConfiguration() (Configuration, error) {
+func (c *Client) PaverQueryActiveConfiguration(ctx context.Context) (Configuration, error) {
 	var raw_response json.RawMessage
 
-	if err := c.call(context.Background(), "paver.QueryActiveConfiguration", nil, &raw_response); err != nil {
+	if err := c.call(ctx, "paver.QueryActiveConfiguration", nil, &raw_response); err != nil {
 		return "", err
 	}
 
@@ -70,7 +70,7 @@ func (c *Client) PaverQueryActiveConfiguration() (Configuration, error) {
 }
 
 // PaverQueryConfigurationStatus determines the status of the given boot slot, if supported.
-func (c *Client) PaverQueryConfigurationStatus(configuration Configuration) (ConfigurationStatus, error) {
+func (c *Client) PaverQueryConfigurationStatus(ctx context.Context, configuration Configuration) (ConfigurationStatus, error) {
 	request := struct {
 		Configuration Configuration `json:"configuration"`
 	}{
@@ -78,7 +78,7 @@ func (c *Client) PaverQueryConfigurationStatus(configuration Configuration) (Con
 	}
 	var raw_response json.RawMessage
 
-	if err := c.call(context.Background(), "paver.QueryConfigurationStatus", &request, &raw_response); err != nil {
+	if err := c.call(ctx, "paver.QueryConfigurationStatus", &request, &raw_response); err != nil {
 		return "", err
 	}
 
@@ -107,7 +107,7 @@ func (c *Client) PaverQueryConfigurationStatus(configuration Configuration) (Con
 }
 
 // PaverReadAsset reads the requested asset from the device.
-func (c *Client) PaverReadAsset(configuration Configuration, asset Asset) ([]byte, error) {
+func (c *Client) PaverReadAsset(ctx context.Context, configuration Configuration, asset Asset) ([]byte, error) {
 	request := struct {
 		Configuration Configuration `json:"configuration"`
 		Asset         Asset         `json:"asset"`
@@ -117,7 +117,7 @@ func (c *Client) PaverReadAsset(configuration Configuration, asset Asset) ([]byt
 	}
 	var response string
 
-	if err := c.call(context.Background(), "paver.ReadAsset", &request, &response); err != nil {
+	if err := c.call(ctx, "paver.ReadAsset", &request, &response); err != nil {
 		return nil, err
 	}
 

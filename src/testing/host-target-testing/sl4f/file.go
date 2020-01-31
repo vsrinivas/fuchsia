@@ -13,7 +13,7 @@ import (
 )
 
 // FileRead reads path from the target.
-func (c *Client) FileRead(path string) ([]byte, error) {
+func (c *Client) FileRead(ctx context.Context, path string) ([]byte, error) {
 	request := struct {
 		Path string `json:"path"`
 	}{
@@ -21,7 +21,7 @@ func (c *Client) FileRead(path string) ([]byte, error) {
 	}
 	var response string
 
-	if err := c.call(context.Background(), "file_facade.ReadFile", request, &response); err != nil {
+	if err := c.call(ctx, "file_facade.ReadFile", request, &response); err != nil {
 		return nil, err
 	}
 
@@ -29,7 +29,7 @@ func (c *Client) FileRead(path string) ([]byte, error) {
 }
 
 // FileWrite writes buf to path on the target.
-func (c *Client) FileWrite(path string, buf []byte) error {
+func (c *Client) FileWrite(ctx context.Context, path string, buf []byte) error {
 	request := struct {
 		Path string `json:"dst"`
 		Data string `json:"data"`
@@ -39,7 +39,7 @@ func (c *Client) FileWrite(path string, buf []byte) error {
 	}
 	var response string
 
-	if err := c.call(context.Background(), "file_facade.WriteFile", request, &response); err != nil {
+	if err := c.call(ctx, "file_facade.WriteFile", request, &response); err != nil {
 		return err
 	}
 
@@ -51,7 +51,7 @@ func (c *Client) FileWrite(path string, buf []byte) error {
 }
 
 // FileDelete deletes the given path from the target, failing if it does not exist.
-func (c *Client) FileDelete(path string) error {
+func (c *Client) FileDelete(ctx context.Context, path string) error {
 	request := struct {
 		Path string `json:"path"`
 	}{
@@ -59,7 +59,7 @@ func (c *Client) FileDelete(path string) error {
 	}
 	var response string
 
-	if err := c.call(context.Background(), "file_facade.DeleteFile", request, &response); err != nil {
+	if err := c.call(ctx, "file_facade.DeleteFile", request, &response); err != nil {
 		return err
 	}
 
@@ -77,7 +77,7 @@ type PathMetadata struct {
 }
 
 // PathStat deletes the given path from the target, failing if it does not exist.
-func (c *Client) PathStat(path string) (PathMetadata, error) {
+func (c *Client) PathStat(ctx context.Context, path string) (PathMetadata, error) {
 	request := struct {
 		Path string `json:"path"`
 	}{
@@ -85,7 +85,7 @@ func (c *Client) PathStat(path string) (PathMetadata, error) {
 	}
 	var raw_response json.RawMessage
 
-	if err := c.call(context.Background(), "file_facade.Stat", request, &raw_response); err != nil {
+	if err := c.call(ctx, "file_facade.Stat", request, &raw_response); err != nil {
 		return PathMetadata{}, err
 	}
 
