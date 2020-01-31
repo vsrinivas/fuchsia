@@ -50,7 +50,7 @@ folder. So for above example there should be a `my_test.cmx` file in `meta/`.
 To run a Fuchsia test out of your build, execute:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx test ${<var>TEST_NAME</var>}</code>
+<code class="devsite-terminal">fx test <var>TEST_NAME</var></code>
 </pre>
 
 For more information on running Fuchsia tests, see

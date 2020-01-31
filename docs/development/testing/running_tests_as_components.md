@@ -141,7 +141,7 @@ bug with `fx`.
 To test the package, use the `fx test` command with the name of the package:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx test ${<var>TEST_NAME</var>}</code>
+<code class="devsite-terminal">fx test <var>TEST_NAME</var></code>
 </pre>
 
 If the package you specified is a test component, the command makes your Fuchsia
@@ -157,7 +157,7 @@ or test suites, and flags to filter down to just host or device tests. To
 customize `fx test`:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx test [<var>FLAGS</var>] [${<var>TEST_NAME</var>} [${<var>TEST_NAME</var>} [...]]]</code>
+<code class="devsite-terminal">fx test [<var>FLAGS</var>] [<var>TEST_NAME</var> [<var>TEST_NAME</var> [...]]]</code>
 </pre>
 
 ### Multiple ways to specify a test
@@ -249,13 +249,13 @@ For `run-test`, you should always be able to change `fx run-test` to `fx test`,
 for example:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx run-test ${<var>TEST_PACKAGE_NAME</var>}</code>
+<code class="devsite-terminal">fx run-test <var>TEST_PACKAGE_NAME</var></code>
 </pre>
 
 Now becomes:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx test ${<var>TEST_PACKAGE_NAME</var>}</code>
+<code class="devsite-terminal">fx test <var>TEST_PACKAGE_NAME</var></code>
 </pre>
 
 
@@ -265,13 +265,13 @@ For `run-host-tests`, you should always be able to change `fx run-host-tests` to
 `fx test`, for example:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx run-host-tests ${<var>PATH_TO_HOST_TEST</var>}</code>
+<code class="devsite-terminal">fx run-host-tests <var>PATH_TO_HOST_TEST</var></code>
 </pre>
 
 Now becomes:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx test ${<var>PATH_TO_HOST_TEST</var>}</code>
+<code class="devsite-terminal">fx test <var>PATH_TO_HOST_TEST</var></code>
 </pre>
 
 
@@ -283,13 +283,13 @@ package name or directly by a component's name. One common workflow with `run-te
 was to use the `-t` flag to specify a single component:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx run-test ${<var>PACKAGE_NAME</var>} -t ${<var>NESTED_COMPONENT_NAME</var>}</code>
+<code class="devsite-terminal">fx run-test <var>PACKAGE_NAME</var> -t <var>NESTED_COMPONENT_NAME</var></code>
 </pre>
 
 Now, with `fx test`, that simply becomes:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx test ${<var>NESTED_COMPONENT_NAME</var>}</code>
+<code class="devsite-terminal">fx test <var>NESTED_COMPONENT_NAME</var></code>
 </pre>
 
 
@@ -299,7 +299,7 @@ Tests can be exercised with the `fx run-test` command by providing the name of
 the package containing the tests.
 
 <pre class="prettyprint">
-<code class="devsite-terminal">fx run-test ${<var>TEST_PACKAGE_NAME</var>}</code>
+<code class="devsite-terminal">fx run-test <var>TEST_PACKAGE_NAME</var></code>
 </pre>
 
 This command will rebuild any modified files, push the named package to the
@@ -317,7 +317,7 @@ In light of the above facts, the recommended way to run tests from a Fuchsia
 shell is:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">run-test-component `locate ${<var>TEST_PACKAGE_NAME</var>}`</code>
+<code class="devsite-terminal">run-test-component `locate <var>TEST_PACKAGE_NAME</var>`</code>
 </pre>
 
 The `locate` tool will search for and return fuchsia-pkg URLs based on a given
