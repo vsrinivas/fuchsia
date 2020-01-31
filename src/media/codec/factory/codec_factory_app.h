@@ -31,7 +31,7 @@ class CodecFactoryApp {
   // on the FIDL thread could ~CodecFactoryPtr or similar.
   //
   // This method can return nullptr if a HW decoder isn't found...
-  const fuchsia::mediacodec::CodecFactoryPtr* FindHwCodec(
+  const fuchsia::mediacodec::CodecFactoryPtr* FindHwDecoder(
       fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match);
 
   std::vector<fuchsia::mediacodec::CodecDescription> MakeCodecList() const;

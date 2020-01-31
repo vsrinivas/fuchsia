@@ -84,7 +84,7 @@ std::vector<fuchsia::mediacodec::CodecDescription> CodecFactoryApp::MakeCodecLis
   return codecs;
 }
 
-const fuchsia::mediacodec::CodecFactoryPtr* CodecFactoryApp::FindHwCodec(
+const fuchsia::mediacodec::CodecFactoryPtr* CodecFactoryApp::FindHwDecoder(
     fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match) {
   auto iter = std::find_if(hw_codecs_.begin(), hw_codecs_.end(),
                            [&is_match](const std::unique_ptr<CodecListEntry>& entry) -> bool {
