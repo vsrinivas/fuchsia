@@ -17,7 +17,7 @@ use control::{
 use fidl_fuchsia_ui_brightness::ControlRequestStream;
 use fuchsia_async::{self as fasync};
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::{self, fx_log_info};
+use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::future::{AbortHandle, Abortable};
 use sender_channel::SenderChannel;
@@ -131,7 +131,11 @@ async fn get_initial_value(control: Arc<Mutex<dyn ControlTrait>>) -> Result<(f32
     let mut control = control.lock().await;
     let (backlight, auto_brightness_on) = control.get_backlight_and_auto_brightness_on();
     let backlight = backlight.lock().await;
-    Ok((backlight.get_brightness().await? as f32, auto_brightness_on))
+    let initial_brightness = backlight.get_brightness().await.unwrap_or_else(|e| {
+        fx_log_err!("Didn't get the initial brightness in watch due to err {}, assuming 1.0.", e);
+        1.0
+    });
+    Ok((initial_brightness as f32, auto_brightness_on))
 }
 
 async fn run_brightness_service(

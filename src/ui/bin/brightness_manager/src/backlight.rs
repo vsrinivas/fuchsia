@@ -61,6 +61,8 @@ impl Backlight {
         let result = self.proxy.get_state_normalized().await?;
         let backlight_info =
             result.map_err(|e| anyhow::format_err!("Failed to get state: {:?}", e))?;
+        assert!(backlight_info.brightness >= 0.0);
+        assert!(backlight_info.brightness <= 1.0);
         Ok(backlight_info.brightness)
     }
 

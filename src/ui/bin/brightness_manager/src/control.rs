@@ -53,8 +53,9 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref GET_BRIGHTNESS_FAILED_FIRST: Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
     static ref AUTO_BRIGHTNESS_ADJUSTMENT: Arc<Mutex<f32>> = Arc::new(Mutex::new(1.0));
+    static ref GET_BRIGHTNESS_FAILED_FIRST: Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
+    static ref LAST_SET_BRIGHTNESS: Arc<Mutex<f32>> = Arc::new(Mutex::new(1.0));
 }
 
 pub struct WatcherCurrentResponder {
@@ -159,8 +160,8 @@ impl Control {
                 let watch_auto_result =
                     self.watch_auto_brightness(watch_auto_handler, responder).await;
                 match watch_auto_result {
-                    Ok(_v) => fx_log_info!("Sent the auto value"),
-                    Err(e) => fx_log_info!("Didn't watch auto value successfully, got err {}", e),
+                    Ok(_v) => fx_log_info!("Watch auto brightness successfully."),
+                    Err(e) => fx_log_err!("Watch auto brightness failed due to err {}.", e),
                 }
             }
             BrightnessControlRequest::SetManualBrightness { value, control_handle: _ } => {
@@ -171,10 +172,8 @@ impl Control {
                 let watch_current_result =
                     self.watch_current_brightness(watch_current_handler, responder).await;
                 match watch_current_result {
-                    Ok(_v) => fx_log_info!("Sent the current value"),
-                    Err(e) => {
-                        fx_log_info!("Didn't watch current value successfully, got err {}", e)
-                    }
+                    Ok(_v) => fx_log_info!("Watch current brightness successfully."),
+                    Err(e) => fx_log_err!("Watch current brightness failed due to err {}.", e),
                 }
             }
             BrightnessControlRequest::SetBrightnessTable { table, control_handle: _ } => {
@@ -199,11 +198,8 @@ impl Control {
                     .watch_auto_brightness_adjustment(watch_adjustment_handler, responder)
                     .await;
                 match watch_adjustment_result {
-                    Ok(_v) => fx_log_info!("Sent the current value"),
-                    Err(e) => fx_log_info!(
-                        "Didn't watch auto brightness adjustment successfully, got err {}",
-                        e
-                    ),
+                    Ok(_v) => fx_log_info!("Watch adjustment successfully."),
+                    Err(e) => fx_log_err!("Watch adjustment failed due to err {}.", e),
                 }
             }
         }
@@ -250,7 +246,7 @@ impl Control {
         watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
         responder: ControlWatchAutoBrightnessResponder,
     ) -> Result<(), Error> {
-        fx_log_info!("Received get auto brightness enabled");
+        fx_log_info!("Watching auto brightness.");
         let mut hanging_get_lock = watch_auto_handler.lock().await;
         hanging_get_lock.watch(WatcherAutoResponder { watcher_auto_responder: responder })?;
         Ok(())
@@ -284,6 +280,7 @@ impl Control {
         watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
         responder: ControlWatchCurrentBrightnessResponder,
     ) -> Result<(), Error> {
+        fx_log_info!("Watching current brightness.");
         let mut hanging_get_lock = watch_current_handler.lock().await;
         hanging_get_lock.watch(WatcherCurrentResponder { watcher_current_responder: responder })?;
         Ok(())
@@ -517,36 +514,43 @@ async fn brightness_curve_lux_to_nits(lux: u16, spline: &Spline<f32, f32>) -> f3
 /// An abortable task is spawned to handle this as it can take a while to do.
 async fn set_brightness(value: f32, backlight: Arc<Mutex<dyn BacklightControl>>) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
+    let backlight = backlight.clone();
     fasync::spawn(
         Abortable::new(
             async move {
-                let mut backlight = backlight.lock().await;
-                let current_value = {
-                    let fut = backlight.get_brightness();
-                    // TODO(lingxueluo) Deal with this in backlight.rs later.
-                    match fut.await {
-                        Ok(brightness) => brightness as f32,
-                        Err(e) => {
-                            if *GET_BRIGHTNESS_FAILED_FIRST.lock().await {
-                                fx_log_err!("Failed to get backlight: {}. assuming 1.0", e);
-                                *GET_BRIGHTNESS_FAILED_FIRST.lock().await = false;
-                            }
-                            1.0
-                        }
-                    }
-                };
-                let set_brightness = |value| {
-                    backlight
-                        .set_brightness(value)
-                        .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
-                };
-                set_brightness_slowly(current_value, value, set_brightness, 10.millis()).await;
+                set_brightness_impl(value, backlight).await;
             },
             abort_registration,
         )
         .unwrap_or_else(|_task_aborted| ()),
     );
     abort_handle
+}
+
+async fn set_brightness_impl(value: f32, backlight: Arc<Mutex<dyn BacklightControl>>) {
+    let mut backlight = backlight.lock().await;
+    let current_value = {
+        let fut = backlight.get_brightness();
+        // TODO(lingxueluo) Deal with this in backlight.rs later.
+        match fut.await {
+            Ok(brightness) => brightness as f32,
+            Err(e) => {
+                if *GET_BRIGHTNESS_FAILED_FIRST.lock().await {
+                    fx_log_err!("Failed to get backlight: {}. assuming 1.0", e);
+                    *GET_BRIGHTNESS_FAILED_FIRST.lock().await = false;
+                }
+                let last_set_brightness = *LAST_SET_BRIGHTNESS.lock().await;
+                *LAST_SET_BRIGHTNESS.lock().await = value;
+                last_set_brightness
+            }
+        }
+    };
+    let set_brightness = |value| {
+        backlight
+            .set_brightness(value)
+            .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
+    };
+    set_brightness_slowly(current_value, value, set_brightness, 10.millis()).await;
 }
 
 /// Change the brightness of the screen slowly to `nits` nits. We don't want to change the screen
@@ -589,7 +593,7 @@ mod tests {
 
     use crate::sender_channel::SenderChannel;
     use crate::sensor::AmbientLightInputRpt;
-    use anyhow::Error;
+    use anyhow::{format_err, Error};
     use async_trait::async_trait;
 
     struct MockSensor {
@@ -612,6 +616,7 @@ mod tests {
     }
 
     struct MockBacklight {
+        valid_backlight: bool,
         value: f64,
         max_brightness: f64,
     }
@@ -619,7 +624,11 @@ mod tests {
     #[async_trait]
     impl BacklightControl for MockBacklight {
         async fn get_brightness(&self) -> Result<f64, Error> {
-            Ok(self.value)
+            if self.valid_backlight {
+                Ok(self.value)
+            } else {
+                Err(format_err!("Get brightness failed."))
+            }
         }
 
         fn set_brightness(&mut self, value: f64) -> Result<(), Error> {
@@ -638,7 +647,20 @@ mod tests {
     ) -> (Arc<Mutex<impl SensorControl>>, Arc<Mutex<impl BacklightControl>>) {
         let sensor = MockSensor { illuminence: sensor };
         let sensor = Arc::new(Mutex::new(sensor));
-        let backlight = MockBacklight { value: backlight, max_brightness: 250.0 };
+        let backlight =
+            MockBacklight { valid_backlight: true, value: backlight, max_brightness: 250.0 };
+        let backlight = Arc::new(Mutex::new(backlight));
+        (sensor, backlight)
+    }
+
+    fn set_mocks_not_valid(
+        sensor: u16,
+        backlight: f64,
+    ) -> (Arc<Mutex<impl SensorControl>>, Arc<Mutex<impl BacklightControl>>) {
+        let sensor = MockSensor { illuminence: sensor };
+        let sensor = Arc::new(Mutex::new(sensor));
+        let backlight =
+            MockBacklight { valid_backlight: false, value: backlight, max_brightness: 250.0 };
         let backlight = Arc::new(Mutex::new(backlight));
         (sensor, backlight)
     }
@@ -962,6 +984,28 @@ mod tests {
         // We know that set_brightness_slowly, at the bottom of the task, finishes at the correct
         // nits value from other tests if it has sufficient time.
         let backlight = backlight.lock().await;
-        assert_ne!(cmp_float(0.04, backlight.get_brightness().await.unwrap() as f32), true);
+        assert_eq!(cmp_float(0.04, backlight.get_brightness().await.unwrap() as f32), false);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_brightness_impl() {
+        let (_sensor, backlight) = set_mocks(0, 0.0);
+        let backlight_clone = backlight.clone();
+        set_brightness_impl(0.3, backlight_clone).await;
+        let backlight = backlight.lock().await;
+        assert_eq!(cmp_float(0.3, backlight.get_brightness().await.unwrap() as f32), true);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_manager_fail_gracefully() {
+        let (_sensor, backlight) = set_mocks_not_valid(0, 0.0);
+        {
+            let last_set_brightness = &*LAST_SET_BRIGHTNESS.lock().await;
+            assert_eq!(cmp_float(*last_set_brightness, 1.0), true);
+        }
+        let backlight_clone = backlight.clone();
+        set_brightness_impl(0.04, backlight_clone).await;
+        let last_set_brightness = &*LAST_SET_BRIGHTNESS.lock().await;
+        assert_eq!(cmp_float(*last_set_brightness, 0.04), true);
     }
 }
