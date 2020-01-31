@@ -17,21 +17,21 @@
 namespace fidl {
 namespace utils {
 
-static constexpr char kWhitespaceChars[] = " \t\n\v\f\r";
-static constexpr char kWhitespaceNoNewlineChars[] = " \t\v\f\r";
+constexpr char kWhitespaceChars[] = " \t\n\v\f\r";
+constexpr char kWhitespaceNoNewlineChars[] = " \t\v\f\r";
 
-static bool IsWhitespace(char ch) { return ch != '\0' && strchr(kWhitespaceChars, ch) != nullptr; }
+inline bool IsWhitespace(char ch) { return ch != '\0' && strchr(kWhitespaceChars, ch) != nullptr; }
 
-static bool IsWhitespaceNoNewline(char ch) {
+inline bool IsWhitespaceNoNewline(char ch) {
   return ch != '\0' && strchr(kWhitespaceNoNewlineChars, ch) != nullptr;
 }
 
 // Returns true if the view has anything other than whitespace
-static bool IsBlank(std::string_view view) {
+inline bool IsBlank(std::string_view view) {
   return view.find_first_not_of(kWhitespaceChars) == std::string::npos;
 }
 
-static bool LineFromOffsetIsBlank(const std::string& str, size_t offset) {
+inline bool LineFromOffsetIsBlank(const std::string& str, size_t offset) {
   for (size_t i = offset; i < str.size() && str[i] != '\n'; i++) {
     if (!IsWhitespaceNoNewline(str[i])) {
       return false;
@@ -40,9 +40,9 @@ static bool LineFromOffsetIsBlank(const std::string& str, size_t offset) {
   return true;
 }
 
-static bool FirstLineIsBlank(const std::string& str) { return LineFromOffsetIsBlank(str, 0); }
+inline bool FirstLineIsBlank(const std::string& str) { return LineFromOffsetIsBlank(str, 0); }
 
-static bool LineFromOffsetIsRegularComment(std::string_view view, size_t offset) {
+inline bool LineFromOffsetIsRegularComment(std::string_view view, size_t offset) {
   size_t i = offset;
   if ((i + 1 < view.size()) && view[i] == '/' && view[i + 1] == '/') {
     // Doc comments, which start with three slashes, should not
@@ -60,7 +60,7 @@ static bool LineFromOffsetIsRegularComment(std::string_view view, size_t offset)
   }
 }
 
-static bool FirstLineIsRegularComment(std::string_view view) {
+inline bool FirstLineIsRegularComment(std::string_view view) {
   return LineFromOffsetIsRegularComment(view, 0);
 }
 

@@ -28,10 +28,6 @@ static std::string_view to_string_view(const fidl::raw::SourceElement& element) 
   return element.span().data();
 }
 
-static std::string_view to_string_view(const fidl::raw::SourceElement* element) {
-  return to_string_view(*element);
-}
-
 template <typename SourceElementSubtype>
 std::string_view to_string_view(const std::unique_ptr<SourceElementSubtype>& element_ptr) {
   static_assert(std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
@@ -45,15 +41,11 @@ static std::string to_string(const fidl::raw::SourceElement& element) {
   return std::string(to_string_view(element));
 }
 
-static std::string to_string(const fidl::raw::SourceElement* element) {
-  return std::string(to_string_view(*element));
-}
-
 template <typename SourceElementSubtype>
 std::string to_string(const std::unique_ptr<SourceElementSubtype>& element_ptr) {
   static_assert(std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
                 "Template parameter type is not derived from SourceElement");
-  return to_string(element_ptr.get());
+  return to_string(*element_ptr.get());
 }
 
 }  // namespace

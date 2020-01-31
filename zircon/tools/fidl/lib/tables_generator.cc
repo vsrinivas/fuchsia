@@ -687,26 +687,4 @@ const coded::Type* TablesGenerator::AltType(const coded::Type* type) const {
   assert(it != alt_type_mapping_.end());
   return it->second;
 }
-
-namespace {
-
-std::map<uint32_t, uint32_t> MapFieldNumToAltFieldIndexInCodedStruct(
-    const std::vector<coded::StructField>& fields,
-    const std::vector<coded::StructField>& alt_fields) {
-  std::map<uint32_t, uint32_t> mapping;
-  for (auto field : fields) {
-    uint32_t alt_field_index_in_coded_struct = 0;
-    for (auto alt_field : alt_fields) {
-      if (field.field_num == alt_field.field_num) {
-        mapping.emplace(field.field_num, alt_field_index_in_coded_struct);
-        break;
-      }
-      alt_field_index_in_coded_struct++;
-    }
-  }
-  return mapping;
-}
-
-}  // namespace
-
 }  // namespace fidl

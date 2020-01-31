@@ -629,7 +629,8 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(on_union.Compile());
   ASSERT_EQ(on_union.errors().size(), 1);
-  ASSERT_STR_STR(on_union.errors()[0].c_str(), "idk");
+  ASSERT_STR_STR(on_union.errors()[0].c_str(),
+                 "Cannot attach attributes to reserved ordinals");
 
   TestLibrary on_xunion(R"FIDL(
 library fidl.test;
@@ -641,7 +642,8 @@ xunion Foo {
 )FIDL");
   ASSERT_FALSE(on_xunion.Compile());
   ASSERT_EQ(on_xunion.errors().size(), 1);
-  ASSERT_STR_STR(on_xunion.errors()[0].c_str(), "idk");
+  ASSERT_STR_STR(on_xunion.errors()[0].c_str(),
+                 "Cannot attach attributes to reserved ordinals");
 
   TestLibrary on_table(R"FIDL(
 library fidl.test;
@@ -653,7 +655,8 @@ table Foo {
 )FIDL");
   ASSERT_FALSE(on_table.Compile());
   ASSERT_EQ(on_table.errors().size(), 1);
-  ASSERT_STR_STR(on_table.errors()[0].c_str(), "idk");
+  ASSERT_STR_STR(on_table.errors()[0].c_str(),
+                 "Cannot attach attributes to reserved ordinals");
 
   END_TEST;
 }
@@ -699,5 +702,6 @@ RUN_TEST(constraint_only_three_members_on_protocol)
 RUN_TEST(max_bytes)
 RUN_TEST(max_handles)
 RUN_TEST(selector_incorrect_placement)
+RUN_TEST(no_attributes_on_reserved)
 RUN_TEST(parameter_attribute_incorrect_placement)
 END_TEST_CASE(attributes_tests)

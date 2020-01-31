@@ -38,8 +38,6 @@ bool IsPeerValid(const zx::unowned_eventpair& handle) {
   }
 }
 
-bool IsPeerValid(zx_handle_t handle) { return IsPeerValid(zx::unowned_eventpair(handle)); }
-
 bool EncodeErrorTest() {
   BEGIN_TEST;
 

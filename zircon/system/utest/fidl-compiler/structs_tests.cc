@@ -258,6 +258,7 @@ RUN_TEST(GoodEnumDefaultValueBitsMemberReference)
 RUN_TEST(GoodPrimitiveDefaultValueBitsMemberReference)
 RUN_TEST(BadDefaultValueBitsType)
 RUN_TEST(BadDefaultValuePrimitiveInBits)
+RUN_TEST(BadLegacyEnumMemberReference)
 RUN_TEST(BadDefaultValueNullableString)
 
 END_TEST_CASE(structs_tests)

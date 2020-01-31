@@ -370,8 +370,8 @@ struct B{depnoconflict.A a;}; // So the import is used.
   ASSERT_EQ(1, errors.size());
   ASSERT_STR_STR(
       errors[0].c_str(),
-      R"ERROR(lib.fidl:6:8: error: Declaration name 'x' conflicts with a library import; consider using the 'as' keyword to import the library under a different name.
-struct x{};
+      R"ERROR(lib.fidl:6:8: error: Declaration name 'dep' conflicts with a library import; consider using the 'as' keyword to import the library under a different name.
+struct dep{};
        ^)ERROR");
   END_TEST;
 }
@@ -390,4 +390,5 @@ RUN_TEST(invalid_unused_using)
 RUN_TEST(invalid_too_many_provided_libraries)
 RUN_TEST(library_declaration_name_collision)
 RUN_TEST(aliased_library_declaration_name_collision)
+RUN_TEST(aliased_library_nonaliased_declaration_name_collision)
 END_TEST_CASE(using_tests)

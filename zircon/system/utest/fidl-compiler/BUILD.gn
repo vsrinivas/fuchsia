@@ -153,7 +153,6 @@ if (current_toolchain == default_toolchain) {
       "$zx/third_party/ulib/uboringssl",
       "$zx/tools/fidl",
     ]
-    public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
   }
 
   source_set("examples") {
