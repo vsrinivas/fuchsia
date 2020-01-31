@@ -22,12 +22,16 @@ impl Facade for BaseManagerFacade {
 // FIDL methods.
 async fn base_manager_method_to_fidl(
     method_name: String,
-    _args: Value,
+    args: Value,
     facade: &BaseManagerFacade,
 ) -> Result<Value, Error> {
     match method_name.parse()? {
         BaseManagerMethod::RestartSession => {
             let result = facade.restart_session().await?;
+            Ok(to_value(result)?)
+        }
+        BaseManagerMethod::StartBasemgr => {
+            let result = facade.start_basemgr(args).await?;
             Ok(to_value(result)?)
         }
     }

@@ -6,6 +6,7 @@ use serde_derive::{Deserialize, Serialize};
 /// Enum for supported BaseManager commands.
 pub enum BaseManagerMethod {
     RestartSession,
+    StartBasemgr,
 }
 
 impl std::str::FromStr for BaseManagerMethod {
@@ -14,6 +15,7 @@ impl std::str::FromStr for BaseManagerMethod {
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "RestartSession" => Ok(BaseManagerMethod::RestartSession),
+            "StartBasemgr" => Ok(BaseManagerMethod::StartBasemgr),
             _ => return Err(format_err!("invalid BaseManager Facade method: {}", method)),
         }
     }
@@ -23,4 +25,10 @@ impl std::str::FromStr for BaseManagerMethod {
 pub enum RestartSessionResult {
     Success,
     NoSessionToRestart,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum StartBasemgrResult {
+    Success,
+    Fail,
 }

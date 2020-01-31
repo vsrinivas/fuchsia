@@ -62,6 +62,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
     "//src/lib/storage/fuchsia-vfs-watcher",
+    "//src/lib/storage/pseudo-fs",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/test_executor/rust:test_executor",
     "//src/lib/ui/fuchsia-scenic",

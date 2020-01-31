@@ -15,4 +15,17 @@ class Modular {
   /// This is equivalent to sessionctl restart_session.
   Future<String> restartSession() async =>
       await _sl4f.request('basemgr_facade.RestartSession');
+
+  /// Launches Basemgr.
+  ///
+  /// Take custom config (in json) if there's one,
+  /// or launch basemgr with defualt config.
+  Future<String> startBasemgr([String config]) async {
+    if (config != null && config.isNotEmpty) {
+      return await _sl4f
+          .request('basemgr_facade.StartBasemgr', {'config': config});
+    } else {
+      return await _sl4f.request('basemgr_facade.StartBasemgr', {});
+    }
+  }
 }
