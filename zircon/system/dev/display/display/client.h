@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CLIENT_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CLIENT_H_
 
-#include <fuchsia/hardware/display/c/fidl.h>
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
@@ -33,6 +33,7 @@
 #include "fence.h"
 #include "id-map.h"
 #include "image.h"
+#include "lib/fidl-async/cpp/bind.h"
 
 namespace display {
 
@@ -128,17 +129,18 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
 // The Client class manages all state associated with an open display client
 // connection. Other than initialization, all methods of this class execute on
 // on the controller's looper, so no synchronization is necessary.
-class Client : private FenceCallback {
+class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
+               private FenceCallback {
  public:
   // |controller| must outlive this and |proxy|.
   Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id);
 
   // This is used for testing
   Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id,
-         zx_handle_t server_handle);
+         zx::channel server_channel);
 
   ~Client();
-  zx_status_t Init(zx_handle_t server_handle);
+  zx_status_t Init(zx::channel server_channel);
 
   void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                          const uint64_t* displays_removed, size_t removed_count);
@@ -161,82 +163,68 @@ class Client : private FenceCallback {
   size_t TEST_imported_images_count() const { return images_.size(); }
 
  private:
-  void HandleImportVmoImage(const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
-                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleImportImage(const fuchsia_hardware_display_ControllerImportImageRequest* req,
-                         fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleReleaseImage(const fuchsia_hardware_display_ControllerReleaseImageRequest* req,
-                          fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  bool ImportEvent(zx::event event, uint64_t id) __TA_EXCLUDES(fence_mtx_);
-  void HandleImportEvent(const fuchsia_hardware_display_ControllerImportEventRequest* req,
-                         fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleReleaseEvent(const fuchsia_hardware_display_ControllerReleaseEventRequest* req,
-                          fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleCreateLayer(const fuchsia_hardware_display_ControllerCreateLayerRequest* req,
-                         fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleDestroyLayer(const fuchsia_hardware_display_ControllerDestroyLayerRequest* req,
-                          fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetDisplayMode(const fuchsia_hardware_display_ControllerSetDisplayModeRequest* req,
-                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetDisplayColorConversion(
-      const fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetDisplayLayers(const fuchsia_hardware_display_ControllerSetDisplayLayersRequest* req,
-                              fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetLayerPrimaryConfig(
-      const fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetLayerPrimaryPosition(
-      const fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetLayerPrimaryAlpha(
-      const fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetLayerCursorConfig(
-      const fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetLayerCursorPosition(
-      const fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetLayerColorConfig(
-      const fuchsia_hardware_display_ControllerSetLayerColorConfigRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetLayerImage(const fuchsia_hardware_display_ControllerSetLayerImageRequest* req,
-                           fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleCheckConfig(const fuchsia_hardware_display_ControllerCheckConfigRequest* req,
-                         fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleApplyConfig(const fuchsia_hardware_display_ControllerApplyConfigRequest* req,
-                         fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleEnableVsync(const fuchsia_hardware_display_ControllerEnableVsyncRequest* req,
-                         fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetVirtconMode(const fuchsia_hardware_display_ControllerSetVirtconModeRequest* req,
-                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleGetSingleBufferFramebuffer(
-      const fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest* req,
-      fidl::Builder* resp_builder, zx_handle_t* handle_out, bool* has_handle_out,
-      const fidl_type_t** resp_table);
-  void HandleImportBufferCollection(
-      const fuchsia_hardware_display_ControllerImportBufferCollectionRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleSetBufferCollectionConstraints(
-      const fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleReleaseBufferCollection(
-      const fuchsia_hardware_display_ControllerReleaseBufferCollectionRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+  bool _ImportEvent(zx::event event, uint64_t id) __TA_EXCLUDES(fence_mtx_);
 
-  void HandleIsCaptureSupported(
-      const fuchsia_hardware_display_ControllerIsCaptureSupportedRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-  void HandleImportImageForCapture(
-      const fuchsia_hardware_display_ControllerImportImageForCaptureRequest* req,
-      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+  void ImportVmoImage(llcpp::fuchsia::hardware::display::ImageConfig image_config, zx::vmo vmo,
+                      int32_t offset, ImportVmoImageCompleter::Sync _completer) override;
+  void ImportImage(llcpp::fuchsia::hardware::display::ImageConfig image_config,
+                   uint64_t collection_id, uint32_t index,
+                   ImportImageCompleter::Sync _completer) override;
+  void ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync _completer) override;
+  void ImportEvent(zx::event event, uint64_t id, ImportEventCompleter::Sync _completer) override;
+  void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync _completer) override;
+  void CreateLayer(CreateLayerCompleter::Sync _completer) override;
+  void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _completer) override;
+  void SetDisplayMode(uint64_t display_id, llcpp::fuchsia::hardware::display::Mode mode,
+                      SetDisplayModeCompleter::Sync _completer) override;
+  void SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets,
+                                 ::fidl::Array<float, 9> coefficients,
+                                 ::fidl::Array<float, 3> postoffsets,
+                                 SetDisplayColorConversionCompleter::Sync _completer) override;
+  void SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids,
+                        SetDisplayLayersCompleter::Sync _completer) override;
+  void SetLayerPrimaryConfig(uint64_t layer_id,
+                             llcpp::fuchsia::hardware::display::ImageConfig image_config,
+                             SetLayerPrimaryConfigCompleter::Sync _completer) override;
+  void SetLayerPrimaryPosition(uint64_t layer_id,
+                               llcpp::fuchsia::hardware::display::Transform transform,
+                               llcpp::fuchsia::hardware::display::Frame src_frame,
+                               llcpp::fuchsia::hardware::display::Frame dest_frame,
+                               SetLayerPrimaryPositionCompleter::Sync _completer) override;
+  void SetLayerPrimaryAlpha(uint64_t layer_id, llcpp::fuchsia::hardware::display::AlphaMode mode,
+                            float val, SetLayerPrimaryAlphaCompleter::Sync _completer) override;
+  void SetLayerCursorConfig(uint64_t layer_id,
+                            llcpp::fuchsia::hardware::display::ImageConfig image_config,
+                            SetLayerCursorConfigCompleter::Sync _completer) override;
+  void SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
+                              SetLayerCursorPositionCompleter::Sync _completer) override;
+  void SetLayerColorConfig(uint64_t layer_id, uint32_t pixel_format,
+                           ::fidl::VectorView<uint8_t> color_bytes,
+                           SetLayerColorConfigCompleter::Sync _completer) override;
+  void SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id,
+                     uint64_t signal_event_id, SetLayerImageCompleter::Sync _completer) override;
+  void CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) override;
+  void ApplyConfig(ApplyConfigCompleter::Sync _completer) override;
+  void EnableVsync(bool enable, EnableVsyncCompleter::Sync _completer) override;
+  void SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync _completer) override;
+  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) override;
+  void ImportBufferCollection(uint64_t collection_id, zx::channel collection_token,
+                              ImportBufferCollectionCompleter::Sync _completer) override;
+  void SetBufferCollectionConstraints(
+      uint64_t collection_id, llcpp::fuchsia::hardware::display::ImageConfig config,
+      SetBufferCollectionConstraintsCompleter::Sync _completer) override;
+  void ReleaseBufferCollection(uint64_t collection_id,
+                               ReleaseBufferCollectionCompleter::Sync _completer) override;
 
-  void HandleStartCapture(const fuchsia_hardware_display_ControllerStartCaptureRequest* req,
-                          fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+  void IsCaptureSupported(IsCaptureSupportedCompleter::Sync _completer) override;
+  void ImportImageForCapture(llcpp::fuchsia::hardware::display::ImageConfig image_config,
+                             uint64_t collection_id, uint32_t index,
+                             ImportImageForCaptureCompleter::Sync _completer) override;
 
-  void HandleReleaseCapture(const fuchsia_hardware_display_ControllerReleaseCaptureRequest* req,
-                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+  void StartCapture(uint64_t signal_event_id, uint64_t image_id,
+                    StartCaptureCompleter::Sync _completer) override;
+
+  void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _completer) override;
 
   // Cleans up layer state associated with an image. If image == nullptr, then
   // cleans up all image state. Return true if a current layer was modified.
@@ -249,7 +237,7 @@ class Client : private FenceCallback {
   uint64_t console_fb_display_id_ = -1;
   const uint32_t id_;
   uint32_t single_buffer_framebuffer_stride_ = 0;
-
+  zx::channel server_channel_;  // used for unit-testing
   zx_handle_t server_handle_;
   uint64_t next_image_id_ = 1;         // Only INVALID_ID == 0 is invalid
   uint64_t next_capture_image_id = 1;  // Only INVALID_ID == 0 is invalid
@@ -283,13 +271,10 @@ class Client : private FenceCallback {
   // TODO(stevensd): Delete this when client stop using SetDisplayImage
   uint64_t display_image_layer_ = INVALID_ID;
 
-  void HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase* self,
-                           zx_status_t status, const zx_packet_signal_t* signal);
-  async::WaitMethod<Client, &Client::HandleControllerApi> api_wait_{this};
-
-  void NotifyOnDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
-                               const int32_t* displays_removed, uint32_t removed_count);
-  bool CheckConfig(fidl::Builder* resp_builder);
+  void NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
+                             const int32_t* displays_removed, uint32_t removed_count);
+  bool CheckConfig(llcpp::fuchsia::hardware::display::ConfigResult* res,
+                   std::vector<llcpp::fuchsia::hardware::display::ClientCompositionOp>* ops);
 
   fbl::RefPtr<FenceReference> GetFence(uint64_t id) __TA_EXCLUDES(fence_mtx_);
 
@@ -353,7 +338,9 @@ class ClientProxy : public ClientParent {
 
   Controller* controller_;
   bool is_vc_;
-  zx::channel server_channel_;
+  // server_channel_ will be passed to handler_ which will in turn pass it to fidl::Bind who will
+  // own the channel.
+  zx::unowned_channel server_channel_;
   Client handler_;
   bool enable_vsync_ = false;
   bool enable_capture_ = false;

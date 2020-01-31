@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CONTROLLER_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CONTROLLER_H_
 
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -76,7 +77,8 @@ using ControllerParent =
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
-                   public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER> {
+                   public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER>,
+                   private llcpp::fuchsia::hardware::display::Provider::Interface {
  public:
   Controller(zx_device_t* parent);
 
@@ -148,14 +150,8 @@ class Controller : public ControllerParent,
   void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
   zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client);
 
-  zx_status_t OpenVirtconController(zx_handle_t device, zx_handle_t controller, fidl_txn_t* txn);
-  zx_status_t OpenController(zx_handle_t device, zx_handle_t controller, fidl_txn_t* txn);
-
-  static constexpr fuchsia_hardware_display_Provider_ops_t fidl_ops_ = {
-      .OpenVirtconController =
-          fidl::Binder<Controller>::BindMember<&Controller::OpenVirtconController>,
-      .OpenController = fidl::Binder<Controller>::BindMember<&Controller::OpenController>,
-  };
+  void OpenVirtconController(zx::channel device, zx::channel controller, OpenVirtconControllerCompleter::Sync _completer) override;
+  void OpenController(zx::channel device, zx::channel controller, OpenControllerCompleter::Sync _completer) override;
 
   // mtx_ is a global lock on state shared among clients.
   mutable mtx_t mtx_;
@@ -171,7 +167,7 @@ class Controller : public ControllerParent,
   bool vc_ready_ __TA_GUARDED(mtx());
   ClientProxy* primary_client_ __TA_GUARDED(mtx()) = nullptr;
   bool primary_ready_ __TA_GUARDED(mtx());
-  uint8_t vc_mode_ __TA_GUARDED(mtx()) = fuchsia_hardware_display_VirtconMode_INACTIVE;
+  llcpp::fuchsia::hardware::display::VirtconMode vc_mode_ __TA_GUARDED(mtx()) = llcpp::fuchsia::hardware::display::VirtconMode::INACTIVE;
   ClientProxy* active_client_ __TA_GUARDED(mtx()) = nullptr;
 
   async::Loop loop_;

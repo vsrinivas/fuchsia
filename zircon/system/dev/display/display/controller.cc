@@ -4,7 +4,7 @@
 
 #include "controller.h"
 
-#include <fuchsia/hardware/display/c/fidl.h>
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/threads.h>
 #include <zircon/time.h>
@@ -20,10 +20,13 @@
 #include <ddk/protocol/display/capture.h>
 #include <ddk/trace/event.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/display/capture.h>
 #include <fbl/auto_lock.h>
 
 #include "client.h"
+
+namespace fidl_display = llcpp::fuchsia::hardware::display;
 
 namespace {
 
@@ -566,7 +569,9 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 
   if (found_handles != handle_count) {
-    zxlogf(ERROR, "OnDisplayVsync with %lu unmatched images\n", handle_count - found_handles);
+    zxlogf(ERROR,
+           "OnDisplayVsync with %lu unmatched images (found_handles = %lu, handle_count = %lu)\n",
+           handle_count - found_handles, found_handles, handle_count);
     return;
   }
 
@@ -711,14 +716,14 @@ void Controller::ReleaseCaptureImage(Image* image) {
 
 void Controller::SetVcMode(uint8_t vc_mode) {
   fbl::AutoLock lock(mtx());
-  vc_mode_ = vc_mode;
+  vc_mode_ = static_cast<fidl_display::VirtconMode>(vc_mode);
   HandleClientOwnershipChanges();
 }
 
 void Controller::HandleClientOwnershipChanges() {
   ClientProxy* new_active;
-  if (vc_mode_ == fuchsia_hardware_display_VirtconMode_FORCED ||
-      (vc_mode_ == fuchsia_hardware_display_VirtconMode_FALLBACK && primary_client_ == nullptr)) {
+  if (vc_mode_ == fidl_display::VirtconMode::FORCED ||
+      (vc_mode_ == fidl_display::VirtconMode::FALLBACK && primary_client_ == nullptr)) {
     new_active = vc_client_;
   } else {
     new_active = primary_client_;
@@ -743,7 +748,7 @@ void Controller::OnClientDead(ClientProxy* client) {
   }
   if (client == vc_client_) {
     vc_client_ = nullptr;
-    vc_mode_ = fuchsia_hardware_display_VirtconMode_INACTIVE;
+    vc_mode_ = fidl_display::VirtconMode::INACTIVE;
   } else if (client == primary_client_) {
     primary_client_ = nullptr;
   } else {
@@ -903,26 +908,20 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   return task.release()->Post(loop_.dispatcher());
 }
 
-zx_status_t Controller::OpenVirtconController(zx_handle_t device, zx_handle_t controller,
-                                              fidl_txn_t* txn) {
-  zx::channel device_channel(device);
-  zx::channel controller_channel(controller);
-  zx_status_t status =
-      CreateClient(true /* is_vc */, std::move(device_channel), std::move(controller_channel));
-  return fuchsia_hardware_display_ProviderOpenVirtconController_reply(txn, status);
+void Controller::OpenVirtconController(zx::channel device, zx::channel controller,
+                                       OpenVirtconControllerCompleter::Sync _completer) {
+  _completer.Reply(CreateClient(true /* is_vc */, std::move(device), std::move(controller)));
 }
 
-zx_status_t Controller::OpenController(zx_handle_t device, zx_handle_t controller,
-                                       fidl_txn_t* txn) {
-  zx::channel device_channel(device);
-  zx::channel controller_channel(controller);
-  zx_status_t status =
-      CreateClient(false /* is_vc */, std::move(device_channel), std::move(controller_channel));
-  return fuchsia_hardware_display_ProviderOpenController_reply(txn, status);
+void Controller::OpenController(zx::channel device, zx::channel controller,
+                                OpenControllerCompleter::Sync _completer) {
+  _completer.Reply(CreateClient(false /* is_vc */, std::move(device), std::move(controller)));
 }
 
 zx_status_t Controller::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_display_Provider_dispatch(this, txn, msg, &fidl_ops_);
+  DdkTransaction transaction(txn);
+  fidl_display::Provider::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
 zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {

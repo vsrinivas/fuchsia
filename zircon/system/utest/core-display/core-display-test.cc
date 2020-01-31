@@ -7,10 +7,10 @@
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -55,18 +55,19 @@ class CoreDisplayTest : public zxtest::Test {
  public:
   void SetUp() override;
   void TearDown() override;
-  void SetCaptureSupported(bool enable) { capture_supported_ = enable; }
-  bool IsCaptureSupported() { return capture_supported_; }
+  bool IsCaptureSupported() const {
+    return (dc_client_->IsCaptureSupported().value().result.response().supported);
+  }
   void ImportEvent();
   void CreateToken();
   void DuplicateAndImportToken();
   void ImportBufferCollection();
   void SetBufferConstraints();
   void FinalizeClientConstraints();
-  uint64_t ImportCaptureImage();
-  zx_status_t StartCapture(uint64_t id, uint64_t e = kEventId);
+  uint64_t ImportCaptureImage() const;
+  zx_status_t StartCapture(uint64_t id, uint64_t e = kEventId) const;
   zx_status_t WaitForEvent();
-  zx_status_t ReleaseCapture(uint64_t id);
+  zx_status_t ReleaseCapture(uint64_t id) const;
   void CaptureSetup();
 
   std::unique_ptr<fhd::Controller::SyncClient> dc_client_;
@@ -133,34 +134,6 @@ void CoreDisplayTest::SetUp() {
   ASSERT_OK(status);
   sysmem_allocator_ =
       std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client_channel_));
-
-  // determine is capture is supported or not
-  zx::channel sysinfo_server_channel_;
-  status = zx::channel::create(0, &sysinfo_server_channel_, &sysinfo_client_channel_);
-  ASSERT_OK(status);
-
-  sysinfo_ = std::make_unique<sysinfo::SysInfo::SyncClient>(std::move(sysinfo_client_channel_));
-
-  constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
-  fbl::unique_fd sysinfo_fd(open(kSysInfoPath, O_RDWR));
-  if (!sysinfo_fd) {
-    SetCaptureSupported(false);
-    return;
-  }
-  fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
-  auto result = sysinfo::SysInfo::Call::GetBoardName(caller_sysinfo.channel());
-  if (!result.ok() || result.value().status != ZX_OK) {
-    SetCaptureSupported(false);
-    return;
-  }
-
-  auto board_name = std::string_view(result.value().name.data(), result.value().name.size());
-  printf("Found board %.*s\n", static_cast<int>(board_name.size()), board_name.data());
-  if (board_name != "qemu") {
-    SetCaptureSupported(true);
-  } else {
-    SetCaptureSupported(false);
-  }
 }
 
 void CoreDisplayTest::TearDown() {
@@ -271,24 +244,40 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   ASSERT_OK(wait_resp.status());
 }
 
-uint64_t CoreDisplayTest::ImportCaptureImage() {
+uint64_t CoreDisplayTest::ImportCaptureImage() const {
   // Make the buffer available for capture
   fhd::ImageConfig capture_cfg = {};  // will contain a handle
   auto importcap_resp = dc_client_->ImportImageForCapture(capture_cfg, kCollectionId, 0);
   if (importcap_resp.status() != ZX_OK) {
     return INVALID_ID;
   }
+  if (importcap_resp.value().result.is_err()) {
+    return importcap_resp.value().result.err();
+  }
+
   return importcap_resp.value().result.response().image_id;
 }
 
-zx_status_t CoreDisplayTest::StartCapture(uint64_t id, uint64_t e) {
+zx_status_t CoreDisplayTest::StartCapture(uint64_t id, uint64_t e) const {
   auto startcap_resp = dc_client_->StartCapture(e, id);
-  return (startcap_resp.value().result.err());
+  if (!startcap_resp.ok()) {
+    return startcap_resp.status();
+  }
+  if (startcap_resp.value().result.is_err()) {
+    return (startcap_resp.value().result.err());
+  }
+  return ZX_OK;
 }
 
-zx_status_t CoreDisplayTest::ReleaseCapture(uint64_t id) {
+zx_status_t CoreDisplayTest::ReleaseCapture(uint64_t id) const {
   auto releasecap_resp = dc_client_->ReleaseCapture(id);
-  return (releasecap_resp.value().result.err());
+  if (!releasecap_resp.ok()) {
+    return releasecap_resp.status();
+  }
+  if (releasecap_resp.value().result.is_err()) {
+    return (releasecap_resp.value().result.err());
+  }
+  return ZX_OK;
 }
 
 zx_status_t CoreDisplayTest::WaitForEvent() {

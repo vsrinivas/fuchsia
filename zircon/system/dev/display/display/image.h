@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_IMAGE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_IMAGE_H_
 
-#include <fuchsia/hardware/display/c/fidl.h>
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>

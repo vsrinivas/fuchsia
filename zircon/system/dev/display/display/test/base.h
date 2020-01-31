@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
 
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>

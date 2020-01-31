@@ -4,11 +4,12 @@
 
 #include "fence.h"
 
-#include <ddk/trace/event.h>
-
 #include <utility>
 
+#include <ddk/trace/event.h>
+
 #include "client.h"
+#include "zircon/assert.h"
 
 namespace display {
 
@@ -73,6 +74,7 @@ Fence::Fence(FenceCallback* cb, async_dispatcher_t* dispatcher, uint64_t fence_i
              zx::event&& event)
     : cb_(cb), dispatcher_(dispatcher), event_(std::move(event)) {
   id = fence_id;
+  ZX_DEBUG_ASSERT(event_.is_valid());
   zx_info_handle_basic_t info;
   zx_status_t status = event_.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   ZX_DEBUG_ASSERT(status == ZX_OK);
