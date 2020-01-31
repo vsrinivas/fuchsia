@@ -133,7 +133,8 @@ typedef struct {
     macro(ZBI_TYPE_DRV_BOARD_PRIVATE, "DRV_BOARD_PRIVATE", ".bin") \
     macro(ZBI_TYPE_DRV_BOARD_INFO, "DRV_BOARD_INFO", ".bin") \
     macro(ZBI_TYPE_IMAGE_ARGS, "IMAGE_ARGS", ".txt") \
-    macro(ZBI_TYPE_BOOT_VERSION, "BOOT_VERSION", ".bin")
+    macro(ZBI_TYPE_BOOT_VERSION, "BOOT_VERSION", ".bin") \
+    macro(ZBI_TYPE_HW_REBOOT_REASON, "HW_REBOOT_REASON", ".bin")
 
 // Each ZBI starts with a container header.
 //     length:          Total size of the image after this header.
@@ -621,5 +622,29 @@ typedef struct {
     zbi_partition_t partitions[];
 } zbi_partition_map_t;
 #endif
+
+
+#define ZBI_TYPE_HW_REBOOT_REASON       (0x42525748) // HWRB
+
+#define ZBI_HW_REBOOT_UNDEFINED         ((uint32_t)0)
+#define ZBI_HW_REBOOT_COLD              ((uint32_t)1)
+#define ZBI_HW_REBOOT_WARM              ((uint32_t)2)
+#define ZBI_HW_REBOOT_BROWNOUT          ((uint32_t)3)
+#define ZBI_HW_REBOOT_WATCHDOG          ((uint32_t)4)
+
+#ifndef __ASSEMBLER__
+#ifndef __cplusplus
+typedef uint32_t zbi_hw_reboot_reason_t;
+#else
+enum class ZbiHwRebootReason : uint32_t {
+    Undefined = ZBI_HW_REBOOT_UNDEFINED,
+    Cold = ZBI_HW_REBOOT_COLD,
+    Warm = ZBI_HW_REBOOT_WARM,
+    Brownout = ZBI_HW_REBOOT_BROWNOUT,
+    Watchdog = ZBI_HW_REBOOT_WATCHDOG,
+};
+using zbi_hw_reboot_reason_t = ZbiHwRebootReason;
+#endif  // __cplusplus
+#endif  // __ASSEMBLER__
 
 #endif  // SYSROOT_ZIRCON_BOOT_IMAGE_H_
