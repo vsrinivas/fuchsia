@@ -195,6 +195,9 @@ group("ulib-host") {
   deps = [
     "fbl",
     "fit",
+    "libzbi",
+    "pretty",
+    "unittest:unittest-static",
     "zxtest",
   ]
 }

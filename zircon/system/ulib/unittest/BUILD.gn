@@ -25,3 +25,23 @@ zx_library("unittest") {
     deps += [ "$zx/system/ulib/zx" ]
   }
 }
+
+# This static version is used for host binaries in the GN build.
+zx_library("unittest-static") {
+  sdk = "static"
+  sdk_headers = [ "unittest/unittest.h" ]
+  testonly = true
+  host = true
+  sources = [
+    "all-tests.cc",
+    "unittest-main.cc",
+    "unittest.cc",
+    "watchdog.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/pretty",
+  ]
+  if (current_os == "linux") {
+    libs = [ "pthread" ]
+  }
+}
