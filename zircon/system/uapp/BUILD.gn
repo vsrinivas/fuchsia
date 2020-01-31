@@ -7,7 +7,6 @@ group("uapp") {
   deps = [
     "blobfs",
     "disk-pave",
-    "fvm-check",
     "hid",
     "kcounter",
     "kstress",
