@@ -4,11 +4,12 @@
 
 #include "dwc2.h"
 
+#include <lib/zx/time.h>
+
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
-#include <lib/zx/time.h>
 
 namespace dwc2 {
 

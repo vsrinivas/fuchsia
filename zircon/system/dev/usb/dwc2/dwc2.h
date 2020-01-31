@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_USB_DWC2_DWC2_H_
+#define ZIRCON_SYSTEM_DEV_USB_DWC2_DWC2_H_
+
+#include <lib/device-protocol/pdev.h>
+#include <lib/mmio/mmio.h>
+#include <threads.h>
+#include <zircon/hw/usb.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
-#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/usb/dci.h>
 #include <ddktl/protocol/usb/phy.h>
 #include <fbl/mutex.h>
-#include <lib/mmio/mmio.h>
-#include <usb/request-cpp.h>
 #include <usb/dwc2/metadata.h>
-#include <zircon/hw/usb.h>
-
-#include <threads.h>
+#include <usb/request-cpp.h>
 
 #include "usb_dwc_regs.h"
 
@@ -148,3 +149,5 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
 };
 
 }  // namespace dwc2
+
+#endif  // ZIRCON_SYSTEM_DEV_USB_DWC2_DWC2_H_

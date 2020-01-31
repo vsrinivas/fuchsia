@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hwreg/bitfields.h>
+#ifndef ZIRCON_SYSTEM_DEV_USB_DWC2_USB_DWC_REGS_H_
+#define ZIRCON_SYSTEM_DEV_USB_DWC2_USB_DWC_REGS_H_
+
 #include <zircon/hw/usb.h>
+
+#include <hwreg/bitfields.h>
 
 constexpr uint32_t MAX_EPS_CHANNELS = 16;
 constexpr uint32_t DWC_MAX_EPS = 32;
@@ -528,3 +532,5 @@ class PCGCCTL : public hwreg::RegisterBase<PCGCCTL, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<PCGCCTL>(0xE00); }
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_USB_DWC2_USB_DWC_REGS_H_
