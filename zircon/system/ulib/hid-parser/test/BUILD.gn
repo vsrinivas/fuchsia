@@ -2,7 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -12,7 +24,11 @@ group("test") {
   ]
 }
 
-zx_test("hid-parser") {
+test("hid-parser") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "hid-descriptor-test.cc",
     "hid-helper-test.cc",
@@ -22,18 +38,22 @@ zx_test("hid-parser") {
     "hid-utest-data.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hid",
-    "$zx/system/ulib/hid-parser",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
 fuzzer("hid-parser-fuzzer") {
   sources = [ "hid-parser-fuzztest.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hid-parser",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hid-parser",
   ]
+}
+
+migrated_manifest("hid-parser-manifest") {
+  deps = [ ":hid-parser" ]
 }

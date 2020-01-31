@@ -16,7 +16,6 @@ fuzzer_names = [
   "ftl-read-write",
   "gfx",
   "hermetic-decompressor",
-  "hid-parser",
   "hmac",
   "journal",
   "journal-entry",

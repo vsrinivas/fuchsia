@@ -96,7 +96,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/gfx/test",
       "$zx/system/ulib/hermetic-compute/test",
       "$zx/system/ulib/hermetic-decompressor/test",
-      "$zx/system/ulib/hid-parser/test",
       "$zx/system/ulib/intel-hda:test",
       "$zx/system/ulib/io-scheduler:io-scheduler-test",
       "$zx/system/ulib/kernel-mexec:kernel-mexec-test",
