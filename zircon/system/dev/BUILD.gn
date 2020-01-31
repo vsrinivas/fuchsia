@@ -19,7 +19,6 @@ group("dev") {
     "mlg",
     "nand",
     "pci",
-    "power",
     "pwm",
     "shareddma",
     "spi",
