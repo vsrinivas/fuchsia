@@ -127,10 +127,10 @@ Members are appointed by each functional area of the project:
 
 | Area              | Appointee               |
 | ----------------- | ----------------------- |
-| Auth              | jsankey@google.com      |
 | Architecture      | silberst@google.com     |
+| Auth              | jsankey@google.com      |
 | Component         | jeffbrown@google.com    |
-| Connectivity      | tkilbourn@google.com    |
+| Connectivity      | jamuraa@google.com      |
 | DDK               | teisenbe@google.com     |
 | Developer         | dschulyer@google.com    |
 | Drivers           | ravoorir@google.com     |
