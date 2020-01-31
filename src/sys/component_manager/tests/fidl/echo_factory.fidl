@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test.echofactory;
+
+using fidl.examples.routing.echo;
+
+/// Test-only protocol used to demo attaching interposers to channels sent over
+/// a "factory" channel.
+[Discoverable]
+protocol EchoFactory {
+    RequestEchoProtocol(request<fidl.examples.routing.echo.Echo> server_end) -> ();
+};

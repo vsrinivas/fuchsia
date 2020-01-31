@@ -73,6 +73,56 @@ rustc_library("echo_capability") {
   ]
 }
 
+rustc_library("echo_factory_capability") {
+  name = "echo_factory_capability"
+  edition = "2018"
+  source_root = "echo_factory_capability.rs"
+  deps = [
+    ":breakpoint_system_client",
+    ":echo_capability",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:echofactory-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_library("echo_interposer") {
+  name = "echo_interposer"
+  edition = "2018"
+  source_root = "echo_interposer.rs"
+  deps = [
+    ":breakpoint_system_client",
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_library("echo_factory_interposer") {
+  name = "echo_factory_interposer"
+  edition = "2018"
+  source_root = "echo_factory_interposer.rs"
+  deps = [
+    ":breakpoint_system_client",
+    ":echo_interposer",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:echofactory-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
 rustc_library("test_utils") {
   name = "test_utils"
   edition = "2018"

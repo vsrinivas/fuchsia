@@ -16,6 +16,8 @@ rustc_test("breakpoints_system_integration_test_bin") {
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:echo_capability",
+    "//src/sys/component_manager/tests:echo_factory_interposer",
+    "//src/sys/component_manager/tests:echo_interposer",
     "//src/sys/component_manager/tests:test_utils",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
@@ -27,6 +29,8 @@ rustc_test("breakpoints_system_integration_test_bin") {
 test_package("breakpoints_system_integration_test") {
   deps = [
     ":breakpoints_system_integration_test_bin",
+    "components:chained_interpose_echo_client_bin",
+    "components:chained_interpose_echo_factory_bin",
     "components:echo_client_for_breakpoints_bin",
     "components:echo_reporter_bin",
     "components:interpose_echo_looper_bin",
@@ -68,11 +72,32 @@ test_package("breakpoints_system_integration_test") {
       path = rebase_path("components/scoped/meta/echo_reporter.cml")
       dest = "echo_reporter.cm"
     },
+    {
+      path = rebase_path("components/chained_interpose/meta/echo_realm.cml")
+      dest = "chained_interpose_echo_realm.cm"
+    },
+    {
+      path = rebase_path("components/chained_interpose/meta/echo_client.cml")
+      dest = "chained_interpose_echo_client.cm"
+    },
+    {
+      path = rebase_path("components/chained_interpose/meta/echo_factory.cml")
+      dest = "chained_interpose_echo_factory.cm"
+    },
   ]
 
   binaries = [
     {
       name = "interpose_echo_looper"
+    },
+    {
+      name = "chained_interpose_echo_client"
+    },
+    {
+      name = "chained_interpose_echo_client"
+    },
+    {
+      name = "chained_interpose_echo_factory"
     },
     {
       name = "echo_server"

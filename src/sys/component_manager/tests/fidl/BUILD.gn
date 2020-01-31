@@ -25,6 +25,14 @@ fidl("breakpoints") {
   sources = [ "breakpoints.fidl" ]
 }
 
+fidl("echofactory") {
+  name = "fuchsia.test.echofactory"
+
+  sources = [ "echo_factory.fidl" ]
+
+  public_deps = [ "//examples/components/routing/fidl:echo" ]
+}
+
 fidl("fuchsia.test.workscheduler") {
   sdk_category = "internal"
 

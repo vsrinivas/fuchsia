@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/chained_interpose_echo_factory",
+    },
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.test.echofactory.EchoFactory",
+            "from": "self",
+        }
+    ]
+}
