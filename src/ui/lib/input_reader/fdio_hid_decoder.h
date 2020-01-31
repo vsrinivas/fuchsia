@@ -11,8 +11,7 @@
 #include <string>
 #include <vector>
 
-#include <fbl/unique_fd.h>
-
+#include "src/lib/files/unique_fd.h"
 #include "src/ui/lib/input_reader/hid_decoder.h"
 #include "src/ui/lib/input_reader/mouse.h"
 #include "src/ui/lib/input_reader/touch.h"
@@ -33,7 +32,7 @@ namespace ui_input {
 // of the Hid device.
 class FdioHidDecoder : public HidDecoder {
  public:
-  FdioHidDecoder(const std::string& name, fbl::unique_fd fd);
+  FdioHidDecoder(const std::string& name, fxl::UniqueFD fd);
   ~FdioHidDecoder() override;
 
   // |HidDecoder|

@@ -803,7 +803,7 @@ group("device_settings") {
   testonly = true
   public_deps = [
     "//garnet/go/src/device_settings:device_settings_gotests",
-    "//garnet/packages/prod:device_settings",
+    "//src/sys/device_settings:device_settings_manager",
   ]
 }
 

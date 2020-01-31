@@ -20,6 +20,7 @@ source_set("display") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.display",
+    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",

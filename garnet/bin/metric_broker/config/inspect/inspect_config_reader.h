@@ -17,7 +17,7 @@ namespace broker_service::inspect {
 
 // This class parses a valid JSON document that conforms to |inspect.schema.json|
 // and returns a |SnapshotCofig|.
-class InspectConfigReader : public broker_service::JsonReader {
+class InspectConfigReader final : public broker_service::JsonReader {
  public:
   InspectConfigReader(rapidjson::Document document, rapidjson::SchemaDocument* schema);
   InspectConfigReader(const InspectConfigReader&) = delete;

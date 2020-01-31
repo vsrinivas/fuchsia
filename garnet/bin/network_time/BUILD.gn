@@ -70,3 +70,12 @@ executable("tests") {
     "//zircon/public/lib/zx",
   ]
 }
+
+group("network_time") {
+  testonly = true
+
+  public_deps = [
+    ":tests",
+    ":time_util_lib",
+  ]
+}

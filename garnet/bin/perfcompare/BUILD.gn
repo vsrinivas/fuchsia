@@ -19,3 +19,12 @@ go_test("host_perfcompare_test") {
   gopackages = [ "perfcompare" ]
   deps = [ ":host_perfcompare_test_lib" ]
 }
+
+group("perfcompare") {
+  testonly = true
+
+  public_deps = [
+    ":host_perfcompare_test_lib",
+    ":tests",
+  ]
+}

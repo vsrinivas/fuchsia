@@ -12,7 +12,7 @@ executable("bin") {
   deps = [
     "config/cobalt",
     "config/inspect",
-    "//zircon/system/fidl/fuchsia-metricbroker",
+    "//sdk/fidl/fuchsia.metricbroker",
   ]
 }
 

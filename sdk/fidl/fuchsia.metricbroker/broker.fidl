@@ -51,7 +51,7 @@ struct CobaltProjectConfig {
     fuchsia.mem.Buffer? cobalt_configuration;
 
     // Project Name as expected by Cobalt Service.
-    string? project_name;
+    string:100? project_name;
 };
 
 struct InspectSource {

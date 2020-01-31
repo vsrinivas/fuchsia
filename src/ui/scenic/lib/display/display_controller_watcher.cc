@@ -10,8 +10,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <zircon/status.h>
 
-#include <fbl/unique_fd.h>
-
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
@@ -40,7 +39,7 @@ void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callb
   std::string path = kDisplayDir + "/" + filename;
 
   FXL_LOG(INFO) << "Scenic: Acquired display controller " << path << ".";
-  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
+  fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
     callback(zx::channel(), zx::channel());

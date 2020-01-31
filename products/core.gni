@@ -18,7 +18,6 @@ meta_package_labels += [
 
 base_package_labels += [
   "//build/info:build-info",
-  "//garnet/bin/device_settings:device_settings_manager",
   "//garnet/bin/http",
   "//garnet/bin/log_listener:log_listener",
   "//garnet/bin/log_listener:log_listener_shell",
@@ -70,6 +69,7 @@ base_package_labels += [
   "//src/sys/appmgr:appmgr_deprecated_shell_allowlist",
   "//src/sys/appmgr:appmgr_global_data_allowlist",
   "//src/sys/appmgr:appmgr_scheme_config",
+  "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
   "//src/sys/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",

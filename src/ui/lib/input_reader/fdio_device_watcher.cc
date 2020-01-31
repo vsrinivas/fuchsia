@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/input_reader/fdio_hid_decoder.h"
 
@@ -24,7 +25,7 @@ void FdioDeviceWatcher::Watch(ExistsCallback callback) {
         if (fd < 0) {
           FXL_LOG(ERROR) << "Failed to open device " << filename;
         } else {
-          callback(std::make_unique<FdioHidDecoder>(filename, fbl::unique_fd(fd)));
+          callback(std::make_unique<FdioHidDecoder>(filename, fxl::UniqueFD(fd)));
         }
       });
 }

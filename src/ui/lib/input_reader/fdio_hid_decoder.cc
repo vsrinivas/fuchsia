@@ -17,6 +17,7 @@
 #include <hid/samsung.h>
 #include <trace/event.h>
 
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 
@@ -32,7 +33,7 @@ bool log_err(zx_status_t status, const std::string& what, const std::string& nam
 
 namespace ui_input {
 
-FdioHidDecoder::FdioHidDecoder(const std::string& name, fbl::unique_fd fd)
+FdioHidDecoder::FdioHidDecoder(const std::string& name, fxl::UniqueFD fd)
     : caller_(std::move(fd)), name_(name) {}
 
 FdioHidDecoder::~FdioHidDecoder() = default;

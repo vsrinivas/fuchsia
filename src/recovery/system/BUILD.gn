@@ -11,7 +11,7 @@ import("//build/testing/environments.gni")
 group("system") {
   testonly = true
   deps = [
-    ":config",
+    # Directory aggregates should not modify the product behavior: ":config",
     ":system_recovery",
     ":tests",
   ]

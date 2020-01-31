@@ -163,7 +163,6 @@ group("all") {
     "//garnet/packages/prod:cobalt_client",
     "//garnet/packages/prod:cpuperf",
     "//garnet/packages/prod:debug_agent",
-    "//garnet/packages/prod:device_settings",
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:far",
@@ -583,11 +582,6 @@ group("test_runner") {
     "//garnet/bin/test_runner:run_integration_tests",
     "//garnet/bin/test_runner:run_test",
   ]
-}
-
-group("device_settings") {
-  testonly = true
-  public_deps = [ "//garnet/bin/device_settings:device_settings_manager" ]
 }
 
 group("terminal") {
