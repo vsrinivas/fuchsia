@@ -101,6 +101,13 @@ void describe(const char* domain) {
 
   printf("Domain %s\n", domain);
 
+  auto resp = client->GetNumLogicalCores();
+  if (resp.status() != ZX_OK) {
+    fprintf(stderr, "Failed to get num logical cores domain '%s'\n", domain);
+  } else {
+    printf("  Num Logical Cores: %lu\n", resp.value().count);
+  }
+
   for (uint32_t i = 0; i < MAX_DEVICE_PERFORMANCE_STATES; i++) {
     auto resp = client->GetPerformanceStateInfo(i);
 
