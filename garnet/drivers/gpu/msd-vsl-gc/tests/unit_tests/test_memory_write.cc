@@ -42,7 +42,7 @@ class TestMsdVslDevice : public drm_test_info {
 
     address_space_owner_ =
         std::make_unique<AddressSpaceOwner>(device_.msd_vsl_device->GetBusMapper());
-    address_space_ = AddressSpace::Create(address_space_owner_.get());
+    address_space_ = AddressSpace::Create(address_space_owner_.get(), kAddressSpaceIndex);
     if (!address_space_)
       return DRETF(false, "failed to create address space");
 
@@ -132,6 +132,8 @@ class TestMsdVslDevice : public drm_test_info {
     virtual ~AddressSpaceOwner() = default;
 
     magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_; }
+
+    void AddressSpaceReleased(AddressSpace* address_space) override {}
 
    private:
     magma::PlatformBusMapper* bus_mapper_;

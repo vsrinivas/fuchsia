@@ -683,12 +683,6 @@ magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "No context for batch %lu, IsCommandBuffer=%d",
                  batch->GetBatchBufferId(), batch->IsCommandBuffer());
   }
-  // TODO(fxb/44972): move page_table_array_slot into the address space and remove this.
-  auto connection = context->connection().lock();
-  if (!connection) {
-    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "No connection for batch %lu, IsCommandBuffer=%d",
-                 batch->GetBatchBufferId(), batch->IsCommandBuffer());
-  }
   auto address_space = context->exec_address_space();
 
   uint32_t event_id;
@@ -701,7 +695,7 @@ magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
     // TODO(fxb/39354): handle command buffers.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "Command buffers not yet handled");
   }
-  if (!SubmitCommandBuffer(address_space, connection->page_table_array_slot(), buf,
+  if (!SubmitCommandBuffer(address_space, address_space->page_table_array_slot(), buf,
                            std::move(batch), event_id, nullptr /* prefetch_out */)) {
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to submit command buffer");
   }
@@ -714,14 +708,13 @@ std::unique_ptr<MsdVslConnection> MsdVslDevice::Open(msd_client_id_t client_id) 
   if (!page_table_slot_allocator_->Alloc(&page_table_array_slot))
     return DRETP(nullptr, "couldn't allocate page table slot");
 
-  auto address_space = AddressSpace::Create(this);
+  auto address_space = AddressSpace::Create(this, page_table_array_slot);
   if (!address_space)
     return DRETP(nullptr, "failed to create address space");
 
   page_table_arrays_->AssignAddressSpace(page_table_array_slot, address_space.get());
 
-  return std::make_unique<MsdVslConnection>(this, page_table_array_slot, std::move(address_space),
-                                            client_id);
+  return std::make_unique<MsdVslConnection>(this, std::move(address_space), client_id);
 }
 
 magma_status_t MsdVslDevice::ChipIdentity(magma_vsl_gc_chip_identity* out_identity) {

@@ -93,8 +93,8 @@ void AddressSpace::PageDirectory::PageTableUpdated(uint32_t page_directory_index
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::unique_ptr<AddressSpace> AddressSpace::Create(Owner* owner) {
-  auto address_space = std::make_unique<AddressSpace>(owner);
+std::unique_ptr<AddressSpace> AddressSpace::Create(Owner* owner, uint32_t page_table_array_slot) {
+  auto address_space = std::make_unique<AddressSpace>(owner, page_table_array_slot);
   if (!address_space->Init())
     return DRETP(nullptr, "Failed to init");
   return address_space;

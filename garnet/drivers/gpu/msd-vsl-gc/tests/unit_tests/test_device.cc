@@ -120,6 +120,8 @@ TEST_F(MsdVslDeviceTest, LoadAddressSpace) {
 
     magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_; }
 
+    void AddressSpaceReleased(AddressSpace* address_space) override {}
+
    private:
     magma::PlatformBusMapper* bus_mapper_;
   };
@@ -138,10 +140,10 @@ TEST_F(MsdVslDeviceTest, LoadAddressSpace) {
 
     AddressSpaceOwner owner(device->GetBusMapper());
 
-    std::unique_ptr<AddressSpace> address_space = AddressSpace::Create(&owner);
-    ASSERT_NE(device, nullptr);
-
     static constexpr uint32_t kAddressSpaceIndex = 1;
+
+    std::unique_ptr<AddressSpace> address_space = AddressSpace::Create(&owner, kAddressSpaceIndex);
+    ASSERT_NE(device, nullptr);
 
     device->page_table_arrays()->AssignAddressSpace(kAddressSpaceIndex, address_space.get());
 

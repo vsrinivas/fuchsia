@@ -23,17 +23,21 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
                                              uint64_t flags) {
   auto connection = MsdVslAbiConnection::cast(abi_connection)->ptr();
   auto buffer = MsdVslAbiBuffer::cast(abi_buffer)->ptr();
+  magma::Status status = connection->MapBufferGpu(buffer, gpu_va, page_offset, page_count);
+  return status.get();
+}
 
-  auto bus_mapping = connection->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(),
-                                                                 page_offset, page_count);
-  if (!bus_mapping)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to map page range to bus");
-
-  if (!connection->address_space()->AddMapping(std::make_unique<GpuMapping>(
-          connection->address_space(), buffer, 0, page_count * magma::page_size(), gpu_va,
-          std::move(bus_mapping))))
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to add mapping");
-
+magma::Status MsdVslConnection::MapBufferGpu(std::shared_ptr<MsdVslBuffer> buffer, uint64_t gpu_va,
+                                             uint64_t page_offset, uint64_t page_count) {
+  std::shared_ptr<GpuMapping> mapping;
+  magma::Status status = AddressSpace::MapBufferGpu(address_space(), buffer, gpu_va,
+                                                    page_offset, page_count, &mapping);
+  if (!status.ok()) {
+    return DRET_MSG(status.get(), "MapBufferGpu failed");
+  }
+  if (!address_space()->AddMapping(mapping)) {
+     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to add mapping");
+  }
   return MAGMA_STATUS_OK;
 }
 

@@ -9,12 +9,14 @@
 
 class RingbufferTest : public ::testing::Test {
  public:
-  class MockAddressSpaceOwner : public magma::AddressSpaceOwner {
+  class MockAddressSpaceOwner : public AddressSpace::Owner {
    public:
     // Put bus addresses close to the 40 bit limit
     MockAddressSpaceOwner() : bus_mapper_((1ul << (40 - 1))) {}
 
     magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    void AddressSpaceReleased(AddressSpace* address_space) override {}
 
    private:
     MockBusMapper bus_mapper_;
@@ -30,7 +32,7 @@ TEST_F(RingbufferTest, Map) {
   EXPECT_NE(ringbuffer, nullptr);
 
   MockAddressSpaceOwner owner;
-  std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner);
+  std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner, 0);
   ASSERT_NE(nullptr, address_space);
 
   EXPECT_TRUE(ringbuffer->Map(address_space));
@@ -95,7 +97,7 @@ TEST_F(RingbufferTest, ReserveContiguous) {
   EXPECT_NE(ringbuffer, nullptr);
 
   MockAddressSpaceOwner owner;
-  std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner);
+  std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner, 0);
   ASSERT_NE(nullptr, address_space);
   EXPECT_TRUE(ringbuffer->Map(address_space));
 

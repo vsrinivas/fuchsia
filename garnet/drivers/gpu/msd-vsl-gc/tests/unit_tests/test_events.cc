@@ -18,35 +18,22 @@ class TestEvents : public ::testing::Test {
 
     address_space_owner_ =
         std::make_unique<AddressSpaceOwner>(device_->GetBusMapper());
-    address_space_ = AddressSpace::Create(address_space_owner_.get());
+    address_space_ = AddressSpace::Create(address_space_owner_.get(), kAddressSpaceIndex);
     EXPECT_NE(address_space_, nullptr);
     device_->page_table_arrays()->AssignAddressSpace(kAddressSpaceIndex,
                                                      address_space_.get());
-    // This needs to be non-null, as the connection calls |ConnectionReleased| on destruction.
-    connection_owner_ = std::make_unique<ConnectionOwner>();
-    EXPECT_NE(connection_owner_, nullptr);
-    connection_ = std::make_unique<MsdVslConnection>(connection_owner_.get(), kAddressSpaceIndex,
-                                                     address_space_, 0 /* client_id */);
-    EXPECT_NE(connection_, nullptr);
-    context_ = std::make_shared<MsdVslContext>(connection_, connection_->address_space());
+    std::weak_ptr<MsdVslConnection> connection;
+    context_ = std::make_shared<MsdVslContext>(connection, address_space_);
     EXPECT_NE(context_, nullptr);
   }
 
  protected:
-  class ConnectionOwner : public MsdVslConnection::Owner {
-   public:
-    void ConnectionReleased(MsdVslConnection* connection) override {}
-
-    magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
-      return MAGMA_STATUS_UNIMPLEMENTED;
-    }
-    magma::PlatformBusMapper* GetBusMapper() override { return nullptr; }
-  };
-
   class AddressSpaceOwner : public AddressSpace::Owner {
    public:
     AddressSpaceOwner(magma::PlatformBusMapper* bus_mapper) : bus_mapper_(bus_mapper) {}
     virtual ~AddressSpaceOwner() = default;
+
+    void AddressSpaceReleased(AddressSpace* address_space) override {}
 
     magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_; }
 
@@ -68,10 +55,7 @@ class TestEvents : public ::testing::Test {
     EXPECT_EQ(0x7FFFFFFFu, reg.reg_value());
   }
 
-  std::unique_ptr<ConnectionOwner> connection_owner_;
-  std::shared_ptr<MsdVslConnection> connection_;
   std::shared_ptr<MsdVslContext> context_;
-
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   std::shared_ptr<AddressSpace> address_space_;
   std::unique_ptr<MsdVslDevice> device_;

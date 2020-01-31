@@ -22,11 +22,19 @@ static_assert(PAGE_SHIFT == 12, "Need 4k page");
 
 class AddressSpace : public magma::AddressSpace<GpuMapping> {
  public:
-  using Owner = magma::AddressSpaceOwner;
+  class Owner : public magma::AddressSpaceOwner {
+   public:
+    virtual void AddressSpaceReleased(AddressSpace* address_space) = 0;
+  };
 
-  static std::unique_ptr<AddressSpace> Create(Owner* owner);
+  static std::unique_ptr<AddressSpace> Create(Owner* owner, uint32_t page_table_array_slot);
 
-  AddressSpace(Owner* owner) : magma::AddressSpace<GpuMapping>(owner), owner_(owner) {}
+  AddressSpace(Owner* owner, uint32_t page_table_array_slot)
+      : magma::AddressSpace<GpuMapping>(owner),
+        owner_(owner),
+        page_table_array_slot_(page_table_array_slot) {}
+
+  virtual ~AddressSpace() { owner_->AddressSpaceReleased(this); }
 
   bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
   bool ClearLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
@@ -34,6 +42,8 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
   uint64_t Size() const override { return 1ull << 40; }
 
   uint64_t bus_addr() { return root_->bus_addr(); }
+
+  uint32_t page_table_array_slot() { return page_table_array_slot_; }
 
  private:
   // Maximum bus address is 40 bits.
@@ -158,6 +168,8 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
 
   Owner* owner_;
   std::unique_ptr<PageDirectory> root_;
+
+  uint32_t page_table_array_slot_;
 
   friend class TestAddressSpace;
 

@@ -12,35 +12,28 @@
 #include "mapped_batch.h"
 #include "msd.h"
 
-class MsdVslConnection : AddressSpace::Owner {
+class MsdVslConnection {
  public:
-  class Owner : public AddressSpace::Owner {
+  class Owner {
    public:
-    virtual void ConnectionReleased(MsdVslConnection* connection) = 0;
     virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
  };
 
-  MsdVslConnection(Owner* owner, uint32_t page_table_array_slot,
-                   std::shared_ptr<AddressSpace> address_space, msd_client_id_t client_id)
+  MsdVslConnection(Owner* owner, std::shared_ptr<AddressSpace> address_space,
+                   msd_client_id_t client_id)
       : owner_(owner),
-        page_table_array_slot_(page_table_array_slot),
         address_space_(std::move(address_space)),
         client_id_(client_id) {}
 
-  virtual ~MsdVslConnection() { owner_->ConnectionReleased(this); }
+  magma::Status MapBufferGpu(std::shared_ptr<MsdVslBuffer> buffer, uint64_t gpu_va,
+                             uint64_t page_offset, uint64_t page_count);
 
   msd_client_id_t client_id() { return client_id_; }
 
-  uint32_t page_table_array_slot() { return page_table_array_slot_; }
-
   std::shared_ptr<AddressSpace> address_space() { return address_space_; }
 
-  // AddressSpace::Owner
-  magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
-
  private:
-  Owner* owner_;
-  uint32_t page_table_array_slot_;
+  [[maybe_unused]] Owner* owner_;
   std::shared_ptr<AddressSpace> address_space_;
   msd_client_id_t client_id_;
 };

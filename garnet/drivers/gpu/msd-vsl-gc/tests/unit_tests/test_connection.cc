@@ -6,29 +6,50 @@
 #include "gtest/gtest.h"
 #include "mock/mock_bus_mapper.h"
 
-class TestMsdVslConnection : public MsdVslConnection::Owner {
+class TestMsdVslConnection : public ::testing::Test, public MsdVslConnection::Owner {
  public:
-  magma::PlatformBusMapper* GetBusMapper() override { return &mock_bus_mapper_; }
-
-  void ConnectionReleased(MsdVslConnection* connection) override {
-    connection_released_ = connection;
-  }
-
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
     return MAGMA_STATUS_UNIMPLEMENTED;
   }
 
-  void Released() {
-    auto connection =
-        std::make_unique<MsdVslConnection>(this, 0, std::make_shared<AddressSpace>(this), 1000);
-    MsdVslConnection* connection_ptr = connection.get();
-    connection.reset();
-    EXPECT_EQ(connection_released_, connection_ptr);
+  void SetUp() override {
+    static constexpr uint32_t kAddressSpaceIndex = 1;
+    address_space_ = AddressSpace::Create(&mock_address_space_owner_, kAddressSpaceIndex);
+    EXPECT_NE(address_space_, nullptr);
+
+    connection_ = std::make_shared<MsdVslConnection>(this, address_space_, 0 /* client_id */);
+    EXPECT_NE(connection_, nullptr);
   }
 
- private:
-  MockBusMapper mock_bus_mapper_;
-  MsdVslConnection* connection_released_ = nullptr;
+ protected:
+  class MockAddressSpaceOwner : public AddressSpace::Owner {
+   public:
+    MockAddressSpaceOwner() : bus_mapper_((1ul << (20 - 1))) {}
+
+    magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    void AddressSpaceReleased(AddressSpace* address_space) override {}
+
+   private:
+    MockBusMapper bus_mapper_;
+  };
+
+  std::shared_ptr<MsdVslConnection> connection_;
+
+  MockAddressSpaceOwner mock_address_space_owner_;
+  std::shared_ptr<AddressSpace> address_space_;
 };
 
-TEST(MsdVslConnection, Released) { TestMsdVslConnection().Released(); }
+TEST_F(TestMsdVslConnection, MapBufferGpu) {
+  constexpr uint64_t kBufferSizeInPages = 1;
+  constexpr uint64_t kGpuAddr = 0x10000;
+
+  std::shared_ptr<MsdVslBuffer> buffer =
+        MsdVslBuffer::Create(kBufferSizeInPages * magma::page_size(), "test");
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            connection_->MapBufferGpu(buffer, kGpuAddr, 0, kBufferSizeInPages).get());
+
+  std::shared_ptr<GpuMapping> mapping = address_space_->FindGpuMapping(kGpuAddr);
+  ASSERT_NE(mapping, nullptr);
+  EXPECT_EQ(mapping->BufferId(), buffer->platform_buffer()->id());
+}

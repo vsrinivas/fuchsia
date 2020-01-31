@@ -26,7 +26,9 @@
 #include "platform_semaphore.h"
 #include "ringbuffer.h"
 
-class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
+class MsdVslDevice : public msd_device_t,
+                     public AddressSpace::Owner,
+                     public MsdVslConnection::Owner {
  public:
   using DeviceRequest = DeviceRequest<MsdVslDevice>;
 
@@ -126,13 +128,16 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
 
   magma::RegisterIo* register_io() { return register_io_.get(); }
 
-  // MsdVslConnection::Owner
+  // AddressSpace::Owner
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
-  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
 
-  void ConnectionReleased(MsdVslConnection* connection) override {
-    page_table_slot_allocator_->Free(connection->page_table_array_slot());
+  void AddressSpaceReleased(AddressSpace* address_space) override {
+    // Free is thread safe.
+    page_table_slot_allocator_->Free(address_space->page_table_array_slot());
   }
+
+  // MsdVslConnection::Owner
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
 
   PageTableArrays* page_table_arrays() { return page_table_arrays_.get(); }
 

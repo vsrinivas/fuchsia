@@ -32,7 +32,6 @@ class PageTableSlotAllocator {
     return false;
   }
 
-  // Called on the connection thread.
   void Free(uint32_t index) {
     DASSERT(index < slot_busy_.size());
     DASSERT(slot_busy_[index]);
