@@ -89,37 +89,18 @@ struct RenderPassInfo {
     DepthStencil depth_stencil_mode = DepthStencil::kReadWrite;
   };
 
-  // This is a helper struct used for creating RenderPasses without needing ImageViews for the depth
-  // and color attachments.  Most client code won't need to use this, since Pipeline/RenderPass
-  // management is entirely encapsulated within CommandBuffer... almost.  The exception is when
-  // "warming the caches" to avoid lazy and Pipeline/RenderPass generation.  This struct helps to
-  // allow eager Pipeline/RenderPass creation without a dependency on CommandBuffer.
-  struct AttachmentInfo {
-    vk::Format format = vk::Format::eUndefined;
-    vk::ImageLayout swapchain_layout = vk::ImageLayout::eUndefined;
-    uint32_t sample_count = 1;
-    bool is_transient = false;
-
-    bool is_swapchain_image() const { return swapchain_layout != vk::ImageLayout::eUndefined; }
-
-    // Uses |image| to populate all fields: format/swapchain_layout/sample_count/is_transient.
-    void InitFromImage(const ImagePtr& image);
-  };
-
   // An optional depth-stencil attachment to be used by this render pass.
   //
   // NOTE: There may be use-cases where having multiple depth attachments is
   // desirable.  This is not currently supported, but support can be added if
   // necessary.
   ImageViewPtr depth_stencil_attachment;
-  AttachmentInfo depth_stencil_attachment_info;
 
   // Array of all of the color attachments that are used in this render pass.
   // Only the first |num_color_attachments| values are considered; the rest are
   // ignored.  In general, not all attachments will be used in each subpass;
   // the |Subpass| struct above describes which attachments are used.
   ImageViewPtr color_attachments[VulkanLimits::kNumColorAttachments];
-  std::array<AttachmentInfo, VulkanLimits::kNumColorAttachments> color_attachment_infos;
   uint32_t num_color_attachments = 0;
   RenderPassInfo::OpFlags op_flags = 0;
 
@@ -139,12 +120,6 @@ struct RenderPassInfo {
   // If empty, a default subpass will be provided.
   std::vector<Subpass> subpasses;
 
-  // Runs a series of validity checks on the RenderPassInfo, returning true only if all pass.
-  // For example:
-  // - there must be at least one attachment (either color or depth-stencil).
-  // - the same attachment cannot be both loaded and cleared.
-  bool Validate() const;
-
   // Return appropriate load/store ops for the specified color attachment,
   // depending on which of the corresponding bits are set in:
   // - clear_attachments
@@ -163,40 +138,22 @@ struct RenderPassInfo {
   std::pair<vk::AttachmentLoadOp, vk::AttachmentStoreOp> LoadStoreOpsForDepthStencilAttachment()
       const;
 
+  // Run a series of sanity checks on the RenderPassInfo, and return true if it
+  // passes.  For example:
+  // - there must be at least one attachment (either color or depth-stencil).
+  // - the same attachment cannot be both loaded and cleared.
+  bool Validate() const;
+
   // Handles the logic for setting up a vulkan render pass. If there are MSAA buffers a resolve
   // subpass is also added. Clear color is set to transparent-black and if the frame has a depth
   // texture that will also be used. This is general enough to meet most standard needs but if a
   // client wants something that is not handled here they will have to manually initialize their
   // own RenderPassInfo struct.
-  //
-  // This variant of InitRenderPassInfo() is used when the application wants to begin a render pass,
-  // which requires the attachment images to be provided.
   static void InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_area,
                                  const ImagePtr& output_image, const TexturePtr& depth_texture,
                                  const TexturePtr& msaa_texture = nullptr,
                                  ImageViewAllocator* allocator = nullptr);
-  // This variant of InitRenderPassInfo() cannot be used to call CommandBuffer::BeginRenderPass(),
-  // because there are no attachment images provided.  It can be used for warming up the render-pass
-  // cache to avoid jank caused by creating render-passes/pipelines at runtime.
-  //
-  // |msaa_format| will be ignored if |sample_count| == 1.
-  static void InitRenderPassInfo(RenderPassInfo* rp,
-                                 const RenderPassInfo::AttachmentInfo& color_info,
-                                 vk::Format depth_stencil_format, vk::Format msaa_format,
-                                 uint32_t sample_count, bool use_transient_depth_and_msaa);
-
-  // Used to reduce boilerplate when InitRenderPassInfo() is too generic.  This helper populates
-  // |depth_stencil_attachment_info| and |color_attachment_infos| with information from the images
-  // |depth_stencil_attachment| and |color_attachments|.  The caller is responsible for filling in
-  // all other fields.
-  //
-  // TODO(44566): this is mostly used for tests, some (all?) of which can be rewritten to use the
-  // "no images" variant of InitRenderPassInfo.  Aim for deletion of this function.
-  static void InitRenderPassAttachmentInfosFromImages(RenderPassInfo* rp);
 };
-
-ESCHER_DEBUG_PRINTABLE(RenderPassInfo);
-ESCHER_DEBUG_PRINTABLE(RenderPassInfo::AttachmentInfo);
 
 }  // namespace escher
 

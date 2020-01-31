@@ -5,15 +5,14 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_SHAPE_CACHE_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_SHAPE_CACHE_H_
 
-#include <lib/fit/function.h>
-
 #include <functional>
 #include <vector>
+
+#include <lib/fit/function.h>
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
-#include "src/ui/lib/escher/shape/mesh_spec.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 
 namespace escher {
@@ -40,17 +39,6 @@ struct PaperShapeCacheEntry {
 class PaperShapeCache {
  public:
   static constexpr size_t kNumFramesBeforeEviction = 3;
-
-  // The generated/cached meshes don't interleave attributes; they are stored in separate vertex
-  // buffers (or at least in disjoint regions of a vertex buffer).
-  static MeshSpec kStandardMeshSpec() { return {{MeshAttribute::kPosition2D, MeshAttribute::kUV}}; }
-  static MeshSpec kShadowVolumeMeshSpec() {
-    return {{MeshAttribute::kPosition2D, MeshAttribute::kUV, MeshAttribute::kBlendWeight1}};
-  }
-  // TODO(44898): use constexpr instead, when vulkan.hpp is new enough.
-  // static constexpr MeshSpec kStandardMeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}};
-  // static constexpr MeshSpec kShadowVolumeMeshSpec{
-  //     {MeshAttribute::kPosition2D, MeshAttribute::kUV, MeshAttribute::kBlendWeight1}};
 
   explicit PaperShapeCache(EscherWeakPtr escher, const PaperRendererConfig& config);
   ~PaperShapeCache();

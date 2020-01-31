@@ -45,10 +45,11 @@ inline MeshAttributes operator|(MeshAttribute bit0, MeshAttribute bit1) {
 // (e.g. kPosition2D == sizeof(vec2)).
 uint32_t GetMeshAttributeSize(MeshAttribute attr);
 
-// Return the byte-offset of the specified attribute |attr| within a vertex that contains all of the
-// attributes specified by |attributes|.  For example, if |attributes| is "kPosition3D | kUV" and
-// |attr| is "kUV" then the result will be 12, because the UV coordinates will immediately follow
-// the vec3 position, and sizeof(vec3) == 12.
+// Return the byte-offset of the specified attribute |attr| within a vertex that
+// that contains all of the attributes specified by |attributes|.  For example,
+// if |attributes| is "kPosition3D | kUV" and |attr| is "kUV" then the result
+// will be 12, because the UV coordinates will immediately follow the vec3
+// position, and sizeof(vec3) == 12.
 //
 // NOTE: this can also be used to find the stride of the vertex.  In the above
 // example, if we replace |attr| with "kStride", then the result will be 20,
@@ -56,16 +57,8 @@ uint32_t GetMeshAttributeSize(MeshAttribute attr);
 // and sizeof(vec3) + sizeof(vec2) == 20.
 uint32_t GetMeshAttributeOffset(const MeshAttributes& attributes, MeshAttribute attr);
 
-// Describes the format of a mesh with >= 1 attribute buffers (<= VulkanLimits::kNumVertexBuffers),
-// more specifically the layout of attributes within those buffers.  Some or all of the attributes
-// may be interleaved, or not. For example, here are three different specs with the same 3
-// attributes:
-//   - MeshSpec{{MeshAttribute::kPosition2D | MeshAttribute::kUV | MeshAttribute::kBlendWeight1}}
-//   - MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV | MeshAttribute::kBlendWeight1}}
-//   - MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV, MeshAttribute::kBlendWeight1}}
-// The first interleaves all three attributes.
-// The second interleaves the UV and blend weight attributes, but not the position attribute.
-// The third interleaves no attributes.
+// Describes the format of a mesh with either one or two attribute buffers,
+// and the layout of attributes within those buffers.
 struct MeshSpec {
   using IndexType = uint32_t;
   static constexpr vk::IndexType IndexTypeEnum = vk::IndexType::eUint32;

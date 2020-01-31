@@ -15,7 +15,6 @@
 #include "src/ui/lib/escher/third_party/granite/vk/command_buffer_pipeline_state.h"
 #include "src/ui/lib/escher/third_party/granite/vk/descriptor_set_layout.h"
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
-#include "src/ui/lib/escher/third_party/granite/vk/render_pass_info.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/shader_module.h"
@@ -374,30 +373,6 @@ std::ostream& operator<<(std::ostream& str, const CommandBufferPipelineState::St
          << "\n\tprimitive_topology: " << vk::to_string(state.get_primitive_topology())
          << "\n\twireframe: " << state.get_wireframe()
          << "\n\tcolor_write_mask: " << state.color_write_mask << "\n\tpadding: " << state.padding;
-}
-
-std::ostream& operator<<(std::ostream& str, const RenderPassInfo::AttachmentInfo& info) {
-  return str << vk::to_string(info.format) << ", " << vk::to_string(info.swapchain_layout) << ", "
-             << info.sample_count << ", " << (info.is_transient ? "true" : "false");
-}
-
-std::ostream& operator<<(std::ostream& str, const RenderPassInfo& rpi) {
-  if (rpi.Validate()) {
-    str << "RenderPassInfo[";
-  } else {
-    str << "RenderPassInfo[ (invalid: see errors above)";
-  }
-  str << "\n\tnum_subpasses: " << rpi.subpasses.size()
-      << "\n\tnum_color_attachments: " << rpi.num_color_attachments
-      << "\n\tclear/load/store attachments: 0x" << std::hex << rpi.clear_attachments << "/0x"
-      << rpi.load_attachments << "/0x" << rpi.store_attachments << std::dec;
-  for (size_t i = 0; i < rpi.num_color_attachments; ++i) {
-    str << "\n\t\t[" << i << "]: " << rpi.color_attachment_infos[i];
-  }
-  if (rpi.depth_stencil_attachment_info.format != vk::Format::eUndefined) {
-    str << "\n\tdepth_stencil_attachment: " << rpi.depth_stencil_attachment_info;
-  }
-  return str << "\n]";
 }
 
 }  // namespace escher

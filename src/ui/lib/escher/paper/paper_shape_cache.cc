@@ -12,6 +12,7 @@
 #include "src/ui/lib/escher/mesh/indexed_triangle_mesh_upload.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/shape/mesh_spec.h"
 #include "src/ui/lib/escher/shape/rounded_rect.h"
 #include "src/ui/lib/escher/util/alloca.h"
 #include "src/ui/lib/escher/util/hasher.h"
@@ -36,7 +37,7 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(IndexedTriangleMesh2d<vec2> mesh,
                                            PaperRendererShadowType shadow_type, Escher* escher,
                                            BatchGpuUploader* uploader) {
   TRACE_DURATION("gfx", "PaperShapeCache::ProcessTriangleMesh2d");
-  FXL_DCHECK(mesh_spec == PaperShapeCache::kStandardMeshSpec());
+  FXL_DCHECK((mesh_spec == MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
 
   // Convert 3d clip planes to 2d before clipping.
   std::vector<plane2> clip_planes_vec;
@@ -148,13 +149,17 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(IndexedTriangleMesh2d<vec2> mesh,
       }
 
       FXL_DCHECK(out_mesh.IsValid());
-      FXL_DCHECK(mesh_spec == PaperShapeCache::kStandardMeshSpec());
+      FXL_DCHECK((mesh_spec == MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
+      MeshSpec new_mesh_spec{{
+          MeshAttribute::kPosition2D,
+          MeshAttribute::kUV,
+          MeshAttribute::kBlendWeight1,
+      }};
 
       const uint32_t shadow_volume_index_count = out_mesh.index_count();
       return PaperShapeCacheEntry{
-          .mesh =
-              IndexedTriangleMeshUpload(escher, uploader, PaperShapeCache::kShadowVolumeMeshSpec(),
-                                        bounding_box, std::move(out_mesh)),
+          .mesh = IndexedTriangleMeshUpload(escher, uploader, new_mesh_spec, bounding_box,
+                                            std::move(out_mesh)),
           .num_indices = original_index_count,
           .num_shadow_volume_indices = shadow_volume_index_count,
       };

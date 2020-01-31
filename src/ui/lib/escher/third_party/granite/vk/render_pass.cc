@@ -60,36 +60,36 @@ const RenderPassInfo::Subpass* GetPointerToFirstSubpass(const RenderPassInfo& in
 // Helper function for constructor.  Return true if the attachment requires
 // an implicit layout transition (because it is a swapchain image or transient
 // attachment), and false otherwise.
-bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
+bool FillColorAttachmentDescription(const RenderPassInfo& info,
                                     vk::AttachmentDescription* attachment_descriptions,
                                     uint32_t index) {
 #ifndef NDEBUG
-  auto pair = image_utils::IsDepthStencilFormat(rpi.color_attachment_infos[index].format);
+  FXL_DCHECK(info.color_attachments[index]);
+  auto pair = image_utils::IsDepthStencilFormat(info.color_attachments[index]->image()->format());
   FXL_DCHECK(!pair.first && !pair.second) << "Color attachment cannot use depth/stencil format.";
 #endif
 
+  auto& image = info.color_attachments[index]->image();
   auto& desc = attachment_descriptions[index];
-  const auto& color_info = rpi.color_attachment_infos[index];
-  const bool is_swapchain_image = color_info.swapchain_layout != vk::ImageLayout::eUndefined;
 
   // TODO(ES-73): support for transient images.  What's missing?
-  FXL_DCHECK(!color_info.is_transient || !is_swapchain_image)
-      << "transient+swapchain images not yet handled.";
+  FXL_DCHECK(!image->is_transient() || !image->is_swapchain_image())
+      << "transient and swapchain images not yet handled.";
 
-  const auto load_store_ops_pair = rpi.LoadStoreOpsForColorAttachment(index);
+  const auto load_store_ops_pair = info.LoadStoreOpsForColorAttachment(index);
   const vk::AttachmentLoadOp load_op = load_store_ops_pair.first;
   const vk::AttachmentStoreOp store_op = load_store_ops_pair.second;
 
   desc.flags = vk::AttachmentDescriptionFlags();
-  desc.format = color_info.format;
-  desc.samples = SampleCountFlagBitsFromInt(color_info.sample_count);
+  desc.format = image->vk_format();
+  desc.samples = SampleCountFlagBitsFromInt(image->info().sample_count);
   desc.loadOp = load_op;
   desc.storeOp = store_op;
   // Stencil ops are inapplicable (this is a color attachment), hence eDontCare.
   desc.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
   desc.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
 
-  if (color_info.is_transient) {
+  if (image->info().is_transient()) {
     FXL_DCHECK(load_op == vk::AttachmentLoadOp::eDontCare);
     desc.initialLayout = vk::ImageLayout::eUndefined;
     // This will be filled in later with the layout of the last subpass that
@@ -97,11 +97,11 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
     // the end of the render pass.
     desc.finalLayout = vk::ImageLayout::eUndefined;
     return true;
-  } else if (is_swapchain_image) {
+  } else if (image->is_swapchain_image()) {
     desc.initialLayout = vk::ImageLayout::eUndefined;
-    desc.finalLayout = color_info.swapchain_layout;
+    desc.finalLayout = image->swapchain_layout();
     return true;
-  } else if (rpi.op_flags & RenderPassInfo::kOptimalColorLayoutOp) {
+  } else if (info.op_flags & RenderPassInfo::kOptimalColorLayoutOp) {
     desc.initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
     // This will be filled in later with the layout of the last subpass that
     // uses this attachment, in order to avoid an unnecessary transition at
@@ -118,15 +118,17 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
 // Helper function for constructor.  Return true if the attachment requires
 // an implicit layout transition (because it is a swapchain image or transient
 // attachment), and false otherwise.
-bool FillDepthStencilAttachmentDescription(const RenderPassInfo& rpi,
+bool FillDepthStencilAttachmentDescription(const RenderPassInfo& info,
                                            vk::AttachmentDescription* desc) {
+  auto& image = info.depth_stencil_attachment->image();
+
   desc->flags = vk::AttachmentDescriptionFlags();
-  desc->format = rpi.depth_stencil_attachment_info.format;
-  desc->samples = SampleCountFlagBitsFromInt(rpi.depth_stencil_attachment_info.sample_count);
+  desc->format = image->vk_format();
+  desc->samples = SampleCountFlagBitsFromInt(image->info().sample_count);
   desc->loadOp = vk::AttachmentLoadOp::eDontCare;
   desc->storeOp = vk::AttachmentStoreOp::eDontCare;
 
-  const auto load_store_ops_pair = rpi.LoadStoreOpsForDepthStencilAttachment();
+  const auto load_store_ops_pair = info.LoadStoreOpsForDepthStencilAttachment();
   const vk::AttachmentLoadOp load_op = load_store_ops_pair.first;
   const vk::AttachmentStoreOp store_op = load_store_ops_pair.second;
 
@@ -142,7 +144,7 @@ bool FillDepthStencilAttachmentDescription(const RenderPassInfo& rpi,
     desc->stencilStoreOp = store_op;
   }
 
-  if (rpi.depth_stencil_attachment_info.is_transient) {
+  if (image->info().is_transient()) {
     FXL_DCHECK(load_op != vk::AttachmentLoadOp::eLoad);
 
     desc->initialLayout = vk::ImageLayout::eUndefined;
@@ -156,9 +158,9 @@ bool FillDepthStencilAttachmentDescription(const RenderPassInfo& rpi,
   }
 
   vk::ImageLayout layout = vk::ImageLayout::eGeneral;
-  if (rpi.op_flags & RenderPassInfo::kOptimalDepthStencilLayoutOp) {
+  if (info.op_flags & RenderPassInfo::kOptimalDepthStencilLayoutOp) {
     layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-  } else if (rpi.op_flags & RenderPassInfo::kDepthStencilReadOnlyLayoutOp) {
+  } else if (info.op_flags & RenderPassInfo::kDepthStencilReadOnlyLayoutOp) {
     // NOTE: this flag and the one above are mutually exclusive.  This is
     // enforced by RenderPassInfo::Validate().
     layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
@@ -256,10 +258,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   FXL_DCHECK(num_info_subpasses <= 32);
 
   vk::AttachmentDescription attachments[VulkanLimits::kNumColorAttachments + 1];
-  const bool has_depth_stencil_attachment =
-      info.depth_stencil_attachment_info.format != vk::Format::eUndefined;
   const uint32_t num_attachments =
-      info.num_color_attachments + (has_depth_stencil_attachment ? 1 : 0);
+      info.num_color_attachments + (info.depth_stencil_attachment ? 1 : 0);
   uint32_t implicit_transitions = 0;
 
   // Initialize description of each color attachment (load/store ops, format,
@@ -274,7 +274,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   // Initialize description of depth-stencil attachment (load/store ops, format,
   // and layout).
   depth_stencil_format_ = vk::Format::eUndefined;
-  if (has_depth_stencil_attachment) {
+  if (info.depth_stencil_attachment) {
     auto attachment_description = attachments + info.num_color_attachments;
     if (FillDepthStencilAttachmentDescription(info, attachment_description)) {
       implicit_transitions |= 1u << info.num_color_attachments;
@@ -349,7 +349,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
     }
 
     depth_att_ref->attachment =
-        (has_depth_stencil_attachment &&
+        (info.depth_stencil_attachment &&
          info_subpasses[i].depth_stencil_mode != RenderPassInfo::DepthStencil::kNone)
             ? info.num_color_attachments
             : VK_ATTACHMENT_UNUSED;
@@ -711,7 +711,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
     FXL_DCHECK(attachments[attachment].finalLayout != vk::ImageLayout::eUndefined);
     color_final_layouts_[attachment] = attachments[attachment].finalLayout;
   }
-  if (has_depth_stencil_attachment) {
+  if (info.depth_stencil_attachment) {
     auto idx_depth_stencil_attachment = info.num_color_attachments;
     FXL_DCHECK(attachments[idx_depth_stencil_attachment].finalLayout !=
                vk::ImageLayout::eUndefined);

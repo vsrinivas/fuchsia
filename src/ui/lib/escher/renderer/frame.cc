@@ -85,10 +85,6 @@ void Frame::IssueCommandBuffer() {
   command_buffer_ =
       CommandBuffer::NewForType(escher(), command_buffer_type_, use_protected_memory_);
   command_buffer_sequence_number_ = command_buffer_->sequence_number();
-
-  if (disable_lazy_pipeline_creation_) {
-    command_buffer_->DisableLazyPipelineCreation();
-  }
 }
 
 void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
@@ -199,10 +195,5 @@ void Frame::PutCommandBuffer(CommandBufferPtr command_buffer) {
 }
 
 GpuAllocator* Frame::gpu_allocator() { return escher()->gpu_allocator(); }
-
-void Frame::DisableLazyPipelineCreation() {
-  disable_lazy_pipeline_creation_ = true;
-  command_buffer_->DisableLazyPipelineCreation();
-}
 
 }  // namespace escher

@@ -139,10 +139,7 @@ void CommandBuffer::BeginGraphicsOrComputeContext() {
 void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
   FXL_DCHECK(!IsInRenderPass());
 
-  framebuffer_ = escher_->framebuffer_allocator()->ObtainFramebuffer(
-      info, allow_renderpass_and_pipeline_creation_);
-  FXL_CHECK(framebuffer_) << "lazy render-pass creation allowed: "
-                          << allow_renderpass_and_pipeline_creation_;
+  framebuffer_ = escher_->framebuffer_allocator()->ObtainFramebuffer(info);
   auto& render_pass = framebuffer_->render_pass();
   pipeline_state_.set_render_pass(render_pass.get());
   impl_->KeepAlive(framebuffer_.get());

@@ -55,10 +55,6 @@ class Frame : public Resource {
   void AddTimestamp(const char* name,
                     vk::PipelineStageFlagBits stages = vk::PipelineStageFlagBits::eBottomOfPipe);
 
-  // See |CommandBuffer::DisableLazyPipelineCreation()|.  Disables lazy pipeline creation on the
-  // frame's current and subsequent CommandBuffers.
-  void DisableLazyPipelineCreation();
-
   uint64_t frame_number() const { return frame_number_; }
 
   CommandBuffer* cmds() const { return command_buffer_.get(); }
@@ -166,8 +162,6 @@ class Frame : public Resource {
   // resources in the Frame.  For now, this approach is easy and relatively
   // fool-proof.
   std::vector<ResourcePtr> keep_alive_;
-
-  bool disable_lazy_pipeline_creation_ = false;
 };
 
 }  // namespace escher

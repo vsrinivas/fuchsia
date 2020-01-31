@@ -18,24 +18,10 @@ FramebufferAllocator::FramebufferAllocator(ResourceRecycler* recycler,
                                            impl::RenderPassCache* render_pass_cache)
     : recycler_(recycler), render_pass_cache_(render_pass_cache) {}
 
-const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(
-    const RenderPassInfo& info, bool allow_render_pass_creation) {
+const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(const RenderPassInfo& info) {
   TRACE_DURATION("gfx", "escher::impl::FramebufferAllocator::ObtainFramebuffer");
 
-  // We need the render-pass to generate the hash used to look up a framebuffer.  If the
-  // render-pass doesn't exist, we assume that no framebuffer does either.  This is currently
-  // always true (since |RenderPassCache| never deletes cache entries), and is a safe assumption
-  // going forward (we should always evict items from this cache at least as frequently as from the
-  // render-pass cache).
-  auto& render_pass = render_pass_cache_->ObtainRenderPass(info, allow_render_pass_creation);
-  FXL_DCHECK(render_pass || !allow_render_pass_creation);
-  if (!render_pass) {
-    // We're returning "const Ptr&" not "Ptr", so we must return a reference to a value that won't
-    // immediately go out of scope.
-    FXL_LOG(WARNING) << "FramebufferAllocator::ObtainFramebuffer(): no render-pass was found";
-    const static impl::FramebufferPtr null_ptr;
-    return null_ptr;
-  }
+  auto& render_pass = render_pass_cache_->ObtainRenderPass(info);
   FXL_DCHECK(render_pass);
 
   Hasher h;
