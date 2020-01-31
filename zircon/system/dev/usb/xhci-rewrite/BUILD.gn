@@ -2,6 +2,50 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+zx_driver("xhci") {
+  sources = [
+    "synchronous_executor.cc",
+    "usb-xhci.cc",
+    "xhci-enumeration.cc",
+    "xhci-event-ring.cc",
+    "xhci-transfer-ring.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.bus",
+    "$zx/system/banjo/ddk.protocol.usb.hci",
+    "$zx/system/banjo/ddk.protocol.usb.hub",
+    "$zx/system/banjo/ddk.protocol.usb.phy",
+    "$zx/system/banjo/ddk.protocol.usb.request",
+    "$zx/system/dev/lib/device-protocol-pci",
+    "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/dma-buffer",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/fidl/fuchsia-usb-debug:c",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/trace:headers",
+    "$zx/system/ulib/xdc-server-utils",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+
+  # TODO (31742): Remove this in the future when we have official libasync support in drivers.
+  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+}
+
 zx_test("xhci-unittest") {
   output_name = "xhci-unittest"
   sources = [
