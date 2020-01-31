@@ -1,5 +1,8 @@
 {
     "program": {
+        "args": [
+            "--test-threads=1"
+        ],
         "binary": "test/integration_test_part_1"
     },
     "sandbox": {
