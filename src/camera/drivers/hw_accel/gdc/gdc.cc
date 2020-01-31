@@ -426,7 +426,11 @@ void GdcDevice::GdcRemoveTask(uint32_t task_index) {
 
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
-  ZX_ASSERT(task_entry != task_map_.end());
+  if (task_entry == task_map_.end()) {
+    // Release lock so death test doesn't hang.
+    al.release();
+    ZX_ASSERT(false);
+  }
 
   TaskInfo info;
   info.op = GDC_OP_REMOVE_TASK;
@@ -445,7 +449,11 @@ void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
 
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
-  ZX_ASSERT(task_entry != task_map_.end());
+  if (task_entry == task_map_.end()) {
+    // Release lock so death test doesn't hang.
+    al.release();
+    ZX_ASSERT(false);
+  }
 
   auto task = task_entry->second.get();
   ZX_ASSERT(ZX_OK == task->ReleaseOutputBuffer(buffer_index));
