@@ -108,7 +108,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/pretty:pretty-test",
       "$zx/system/ulib/refcount:test",
       "$zx/system/ulib/runtests-utils/test",
-      "$zx/system/ulib/simplehid/test",
       "$zx/system/ulib/smbios:smbios-test",
       "$zx/system/ulib/storage:test",
       "$zx/system/ulib/sysconfig-client:tests",
