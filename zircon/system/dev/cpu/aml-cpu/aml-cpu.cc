@@ -229,8 +229,8 @@ zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* o
 }
 
 void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer) {
-  // Placeholder.
-  completer.Reply(0);
+  unsigned int result = zx_system_get_num_cpus();
+  completer.Reply(result);
 }
 
 void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync completer) {
