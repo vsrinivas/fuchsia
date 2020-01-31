@@ -42,11 +42,6 @@ group("tracing") {
   ]
 }
 
-group("thermd") {
-  testonly = true
-  public_deps = [ "//garnet/bin/thermd" ]
-}
-
 group("bluetooth_intel") {
   testonly = true
   public_deps = [
@@ -192,7 +187,6 @@ group("all") {
     "//garnet/packages/prod:telephony",
     "//garnet/packages/prod:terminal",
     "//garnet/packages/prod:test_runner",
-    "//garnet/packages/prod:thermd",
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:timezone",
     "//garnet/packages/prod:tracing",
