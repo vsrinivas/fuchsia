@@ -24,6 +24,12 @@ declare_args() {
   ubsan_default_options = "print_stacktrace=1:halt_on_error=1"
 }
 
+# TODO(45047): Temporary until ready for lsan rollout.
+if (is_fuchsia) {
+  # Prepend so an explicit `detect_leaks=1` can override.
+  asan_default_options = "detect_leaks=0:$asan_default_options"
+}
+
 config("asan") {
   compiler_flags = [ "-fsanitize=address" ]
   asmflags = compiler_flags
