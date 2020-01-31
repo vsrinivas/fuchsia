@@ -643,7 +643,8 @@ void PmmNode::FreeFill(vm_page_t* page) {
 void PmmNode::CheckFreeFill(vm_page_t* page) {
   uint8_t* kvaddr = static_cast<uint8_t*>(paddr_to_physmap(page->paddr()));
   for (size_t j = 0; j < PAGE_SIZE; ++j) {
-    ASSERT(!enforce_fill_ || *(kvaddr + j) == PMM_FREE_FILL_BYTE);
+    ASSERT_MSG(!enforce_fill_ || *(kvaddr + j) == PMM_FREE_FILL_BYTE,
+        "PMM CheckFreeFill failed at address: %p", kvaddr);
   }
 }
 #endif  // PMM_ENABLE_FREE_FILL
