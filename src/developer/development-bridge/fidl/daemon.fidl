@@ -7,7 +7,7 @@ using fuchsia.developer.remotecontrol as rc;
 
 [Discoverable]
 protocol Daemon {
-    compose rc.FdbRemoteControl;
+    compose rc.RemoteControl;
     /// Returns the input.
     EchoString(string:256 value) -> (string:256 response);
 };

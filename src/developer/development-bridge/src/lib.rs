@@ -8,7 +8,7 @@ use {
     ascendd_lib::run_ascendd,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream},
-    fidl_fuchsia_developer_remotecontrol::{FdbRemoteControlMarker, FdbRemoteControlProxy},
+    fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
@@ -36,7 +36,7 @@ async fn start_ascendd() {
 
 // Daemon
 pub struct Daemon {
-    remote_control_proxy: FdbRemoteControlProxy,
+    remote_control_proxy: RemoteControlProxy,
 }
 
 impl Daemon {
@@ -46,7 +46,7 @@ impl Daemon {
         Ok(Daemon { remote_control_proxy })
     }
 
-    pub fn new_with_proxy(remote_control_proxy: FdbRemoteControlProxy) -> Daemon {
+    pub fn new_with_proxy(remote_control_proxy: RemoteControlProxy) -> Daemon {
         Daemon { remote_control_proxy }
     }
 
@@ -61,12 +61,12 @@ impl Daemon {
         Ok(())
     }
 
-    async fn create_remote_control_proxy(id: &mut NodeId) -> Result<FdbRemoteControlProxy, Error> {
+    async fn create_remote_control_proxy(id: &mut NodeId) -> Result<RemoteControlProxy, Error> {
         let svc = hoist::connect_as_service_consumer()?;
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-        svc.connect_to_service(id, FdbRemoteControlMarker::NAME, s)?;
+        svc.connect_to_service(id, RemoteControlMarker::NAME, s)?;
         let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
-        Ok(FdbRemoteControlProxy::new(proxy))
+        Ok(RemoteControlProxy::new(proxy))
     }
 
     async fn find_remote_control() -> Result<NodeId, Error> {
@@ -85,7 +85,7 @@ impl Daemon {
                     .services
                     .unwrap()
                     .iter()
-                    .find(|name| *name == FdbRemoteControlMarker::NAME)
+                    .find(|name| *name == RemoteControlMarker::NAME)
                     .is_none()
                 {
                     continue;
@@ -193,8 +193,7 @@ mod test {
     use super::*;
     use fidl_fidl_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol::{
-        FdbRemoteControlMarker, FdbRemoteControlProxy, FdbRemoteControlRequest,
-        RunComponentResponse,
+        RemoteControlMarker, RemoteControlProxy, RemoteControlRequest, RunComponentResponse,
     };
 
     fn spawn_daemon_server_with_fake_remote_control(stream: DaemonRequestStream) {
@@ -206,18 +205,14 @@ mod test {
         });
     }
 
-    fn setup_fake_remote_control_service() -> FdbRemoteControlProxy {
+    fn setup_fake_remote_control_service() -> RemoteControlProxy {
         let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<FdbRemoteControlMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
         hoist::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
-                    Some(FdbRemoteControlRequest::RunComponent {
-                        component_url,
-                        args,
-                        responder,
-                    }) => {
+                    Some(RemoteControlRequest::RunComponent { component_url, args, responder }) => {
                         let response = RunComponentResponse {
                             component_stdout: Some(component_url),
                             component_stderr: Some(args.join(",")),

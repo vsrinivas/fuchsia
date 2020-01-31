@@ -17,7 +17,7 @@ async fn exec_server() -> Result<(), Error> {
     let chan =
         fidl::AsyncChannel::from_channel(s).context("creating ServiceProvider async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
-    hoist::publish_service(rcs::FdbRemoteControlMarker::NAME, ClientEnd::new(p))?;
+    hoist::publish_service(rcs::RemoteControlMarker::NAME, ClientEnd::new(p))?;
 
     log::info!("published remote control service to overnet");
     let service = Arc::new(RemoteControlService::new().unwrap());
@@ -34,7 +34,7 @@ async fn exec_server() -> Result<(), Error> {
 
         hoist::spawn(async move {
             service_clone
-                .serve_stream(rcs::FdbRemoteControlRequestStream::from_channel(chan))
+                .serve_stream(rcs::RemoteControlRequestStream::from_channel(chan))
                 .await
                 .unwrap();
         });

@@ -28,15 +28,15 @@ impl RemoteControlService {
 
     pub async fn serve_stream<'a>(
         &'a self,
-        mut stream: rcs::FdbRemoteControlRequestStream,
+        mut stream: rcs::RemoteControlRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await.context("next RemoteControl request")? {
             match request {
-                rcs::FdbRemoteControlRequest::RunComponent { component_url, args, responder } => {
+                rcs::RemoteControlRequest::RunComponent { component_url, args, responder } => {
                     let response = self.spawn_component_and_wait(&component_url, args).await?;
                     responder.send(response).context("sending RunComponent response")?;
                 }
-                rcs::FdbRemoteControlRequest::StartComponent {
+                rcs::RemoteControlRequest::StartComponent {
                     component_url,
                     args,
                     controller,
@@ -45,7 +45,7 @@ impl RemoteControlService {
                     self.spawn_component_async(&component_url, args, controller)?;
                     responder.send(true).context("sending StartComponent response")?;
                 }
-                rcs::FdbRemoteControlRequest::RebootDevice { reboot_type, responder } => {
+                rcs::RemoteControlRequest::RebootDevice { reboot_type, responder } => {
                     self.reboot_device(reboot_type, responder).await?;
                 }
             }
@@ -101,7 +101,7 @@ impl RemoteControlService {
     pub async fn reboot_device<'a>(
         &'a self,
         reboot_type: rcs::RebootType,
-        responder: rcs::FdbRemoteControlRebootDeviceResponder,
+        responder: rcs::RemoteControlRebootDeviceResponder,
     ) -> Result<(), Error> {
         responder.send().context("failed to send successful reboot response.")?;
 
@@ -161,7 +161,7 @@ mod tests {
 
     async fn run_reboot_test(reboot_type: rcs::RebootType) {
         let (rcs_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<rcs::FdbRemoteControlMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
         fasync::spawn(async move {
             RemoteControlService::new_with_proxies(setup_fake_admin_service())
                 .serve_stream(stream)
@@ -186,11 +186,11 @@ mod tests {
         };
     }
 
-    fn setup_rcs() -> rcs::FdbRemoteControlProxy {
+    fn setup_rcs() -> rcs::RemoteControlProxy {
         let service = RemoteControlService::new().unwrap();
 
         let (rcs_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<rcs::FdbRemoteControlMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
         fasync::spawn(async move {
             service.serve_stream(stream).await.unwrap();
         });
@@ -200,7 +200,7 @@ mod tests {
 
     async fn run_component_test(component_url: &str, argv: Vec<&str>) -> rcs::RunComponentResponse {
         let (rcs_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<rcs::FdbRemoteControlMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
         fasync::spawn(async move {
             RemoteControlService::new().unwrap().serve_stream(stream).await.unwrap();
         });

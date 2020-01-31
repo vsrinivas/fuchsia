@@ -44,7 +44,7 @@ protocol ComponentController {
 };
 
 [Discoverable, FragileBase]
-protocol FdbRemoteControl {
+protocol RemoteControl {
     // Starts a component and waits for it finish.
     RunComponent(
         // Name of the component to start.
