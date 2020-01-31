@@ -282,7 +282,7 @@ impl ClientMlme {
                             &mut self.chan_sched,
                             &mut self.channel_state,
                         )
-                        .handle_timed_event(event_id, event);
+                        .handle_timed_event(event);
                 }
             }
         }
@@ -809,12 +809,11 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Called when a previously scheduled `TimedEvent` fired.
-    pub fn handle_timed_event(&mut self, event_id: EventId, event: TimedEvent) -> bool {
+    pub fn handle_timed_event(&mut self, event: TimedEvent) -> bool {
         match event {
             TimedEvent::LostBssCountdown => {
                 if let Some(lost_bss_counter) = self.sta.lost_bss_counter.as_mut() {
-                    let auto_deauth =
-                        lost_bss_counter.handle_timeout(&mut self.ctx.timer, event_id);
+                    let auto_deauth = lost_bss_counter.handle_timeout(&mut self.ctx.timer);
                     if auto_deauth {
                         self.send_deauthenticate_ind(fidl_mlme::ReasonCode::LeavingNetworkDeauth);
                         if let Err(e) =

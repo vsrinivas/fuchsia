@@ -13,6 +13,7 @@ use {
 
 /// Struct used to count remaining time BSS has not been detected. Used to determine
 /// when trigger auto deauth.
+#[derive(Debug)]
 pub struct LostBssCounter {
     /// Period it takes for BSS to send a single beacon
     beacon_period: zx::Duration,
@@ -74,10 +75,10 @@ impl LostBssCounter {
 
     /// Return true if BSS is considered lost.
     #[must_use]
-    pub fn handle_timeout(&mut self, timer: &mut Timer<TimedEvent>, timeout_id: EventId) -> bool {
-        match self.timeout_id {
-            Some(id) if id == timeout_id => (),
-            _ => return false,
+    pub fn handle_timeout(&mut self, timer: &mut Timer<TimedEvent>) -> bool {
+        // Do nothing if we are not counting lost beacons (e.g. paused when off-channel).
+        if self.timeout_id.is_none() {
+            return false;
         }
 
         let now = timer.now();
@@ -112,7 +113,7 @@ mod tests {
         assert_eq!(deadline, zx::Time::from_nanos(0) + (bcn_period() * TEST_TIMEOUT_BCN_COUNT));
         // Verify `handle_timeout` returns true, indicating auto-deauth
         fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT);
-        assert!(counter.handle_timeout(&mut timer, id));
+        assert!(counter.handle_timeout(&mut timer));
     }
 
     #[test]
@@ -132,7 +133,7 @@ mod tests {
         // Verify that calling `handle_timeout` at originally scheduled time would not
         // return false, indicating no auto-deauth yet
         fake_scheduler.increment_time(bcn_period());
-        assert!(!counter.handle_timeout(&mut timer, id));
+        assert!(!counter.handle_timeout(&mut timer));
 
         // LostBssCounter should schedule another timeout
         let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
@@ -144,7 +145,7 @@ mod tests {
 
         // Verify `handle_timeout` returns true, indicating auto-deauth
         fake_scheduler.increment_time(bcn_period() * (TEST_TIMEOUT_BCN_COUNT - 1));
-        assert!(counter.handle_timeout(&mut timer, id));
+        assert!(counter.handle_timeout(&mut timer));
     }
 
     #[test]
@@ -153,7 +154,7 @@ mod tests {
         let mut timer = Timer::new(fake_scheduler.as_scheduler());
         let mut counter = LostBssCounter::start(&mut timer, bcn_period(), TEST_TIMEOUT_BCN_COUNT);
 
-        let (id, _deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
+        let (_id, _deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
         assert_eq!(timer.scheduled_event_count(), 1);
         counter.pause(&mut timer);
         assert_eq!(timer.scheduled_event_count(), 0);
@@ -161,7 +162,7 @@ mod tests {
         // Timeout shouldn't be triggered while paused, but even if it does, it would
         // have no effect
         fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT * 2);
-        assert!(!counter.handle_timeout(&mut timer, id));
+        assert!(!counter.handle_timeout(&mut timer));
 
         // When unpaused, timeout should be rescheduled again
         counter.unpause(&mut timer);
@@ -171,7 +172,7 @@ mod tests {
 
         // Verify `handle_timeout` returns true, indicating auto-deauth
         fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT);
-        assert!(counter.handle_timeout(&mut timer, id));
+        assert!(counter.handle_timeout(&mut timer));
     }
 
     #[test]
@@ -193,7 +194,7 @@ mod tests {
 
         // Verify `handle_timeout` returns true, indicating auto-deauth
         fake_scheduler.increment_time(TimeUnit(1).into());
-        assert!(counter.handle_timeout(&mut timer, id));
+        assert!(counter.handle_timeout(&mut timer));
     }
 
     fn bcn_period() -> zx::Duration {
