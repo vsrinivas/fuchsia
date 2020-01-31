@@ -2,7 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("nand-util") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("nand-util") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [
     "aml.cc",
     "commands.cc",
@@ -11,14 +33,13 @@ zx_executable("nand-util") {
   ]
   deps = [
     ":common",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/cksum",
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
 }
 
@@ -28,30 +49,51 @@ source_set("common") {
     "ftl_internal.cc",
     "nand-broker.cc",
   ]
-  deps = [ "$zx/system/ulib/pretty" ]
+  deps = [ "//zircon/public/lib/pretty" ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/fidl/fuchsia-nand:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-device:c",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/fidl/fuchsia-nand:c",
   ]
 
   # TODO(41887): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs +=
-      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
-zx_test("nand-util-test") {
+test("nand-util-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   output_name = "nand-util-test"
   sources = [ "test/ftl_internal_test.cc" ]
   include_dirs = [ "." ]
   deps = [
     ":common",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+migrated_manifest("nand-util-manifest") {
+  deps = [ ":nand-util" ]
+}
+
+migrated_manifest("nand-util-test-manifest") {
+  deps = [ ":nand-util-test" ]
 }

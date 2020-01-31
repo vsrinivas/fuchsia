@@ -14,7 +14,6 @@ group("uapp") {
     "lz4",
     "minfs",
     "mutex_pi_exerciser",
-    "nand-util",
     "syscall-check",
   ]
 }
