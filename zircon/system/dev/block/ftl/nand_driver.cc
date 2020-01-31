@@ -110,6 +110,13 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
     options.flags = 0;
     error = CreateNdmVolume(ftl_volume, options);
   }
+
+  if (!error && !volume_data_saved()) {
+    // Initialization is complete; update the control data format, but ignore errors.
+    if (!WriteVolumeData()) {
+      zxlogf(ERROR, "FTL: Failed to upgrade NDM version\n");
+    }
+  }
   return error;
 }
 

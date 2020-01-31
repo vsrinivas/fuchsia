@@ -196,6 +196,10 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
 
   if (save_volume_data) {
     const NDMPartitionInfo* info = ndmGetPartitionInfo(ndm_);
+    if (info) {
+      volume_data_saved_ = true;
+    }
+
     if (ndmWritePartitionInfo(ndm_, &partition.ndm) != 0) {
       return "ndmWritePartitionInfo failed";
     }
@@ -205,6 +209,7 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
       if (ndmSavePartitionTable(ndm_) != 0) {
         return "ndmSavePartitionTable failed";
       }
+      volume_data_saved_ = true;
     }
   } else {
     // This call also allocates the partition data, but old style.
@@ -272,6 +277,14 @@ const VolumeOptions* NdmBaseDriver::GetSavedOptions() const {
   }
 
   return &info->exploded.data.options;
+}
+
+bool NdmBaseDriver::WriteVolumeData() {
+  if (ndmSavePartitionTable(ndm_) != 0) {
+    return false;
+  }
+  volume_data_saved_ = true;
+  return true;
 }
 
 void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, bool use_format_v2,

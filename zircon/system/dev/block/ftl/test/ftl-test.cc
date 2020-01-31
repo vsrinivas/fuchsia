@@ -615,9 +615,8 @@ TEST_F(FtlUpgradeTest, CreateNewVolumeWithVersion2ByDefault) {
   ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage1, 1, buffer.data(), nullptr));
 }
 
-// Verifies that a new control block with partition data is not automatically
-// added at this point.
-TEST_F(FtlUpgradeTest, DoesNotForceUpgrade) {
+// Verifies that a new control block with partition data is automatically added.
+TEST_F(FtlUpgradeTest, ForceUpgrade) {
   // Start with an old version.
   const TestOptions kNoEccErrors = {INT32_MAX, 50, false, false};
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
@@ -636,16 +635,20 @@ TEST_F(FtlUpgradeTest, DoesNotForceUpgrade) {
   ASSERT_TRUE(ftl_.ReAttach());
   ASSERT_OK(volume_->Unmount());
 
-  // No failure during read-only initialization means that the partition data
-  // was not saved, so there's nothing to retrieve. The current format is still
-  // the old version.
+  // Even with read-only initialization the partition data was saved.
   const uint32_t kControlPage0 = 299 * 64;  // First page of last block.
   const uint32_t kControlPage1 = 298 * 64;  // First page of previous block.
   std::array<char, kPageSize> buffer;
   ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0, 1, 1, buffer.data()));
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage1, 2, 0, buffer.data()));
+
+  // Verify that only one new control block is created.
+  ASSERT_TRUE(ftl_.ReAttach());
+  ASSERT_OK(volume_->Unmount());
   ASSERT_EQ(ftl::kNdmUncorrectableEcc,
             driver->NandRead(kControlPage0 + 1, 1, buffer.data(), nullptr));
-  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage1, 1, buffer.data(), nullptr));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc,
+            driver->NandRead(kControlPage1 + 1, 1, buffer.data(), nullptr));
 }
 
 TEST_F(FtlUpgradeTest, BadBlocksWriteVersion2) {

@@ -66,7 +66,16 @@ const char* NdmRamDriver::Init() {
 }
 
 const char* NdmRamDriver::Attach(const ftl::Volume* ftl_volume) {
-  return CreateNdmVolume(ftl_volume, options_, test_options_.save_config_data);
+  const char* error = CreateNdmVolume(ftl_volume, options_, test_options_.save_config_data);
+  if (!error) {
+    // Follow the logic of the real driver.
+    if (test_options_.save_config_data && !volume_data_saved()) {
+      if (!WriteVolumeData()) {
+        error = "Write volume failed";
+      }
+    }
+  }
+  return error;
 }
 
 bool NdmRamDriver::Detach() { return RemoveNdmVolume(); }

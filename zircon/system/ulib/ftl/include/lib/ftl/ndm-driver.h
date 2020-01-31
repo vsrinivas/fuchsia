@@ -130,6 +130,15 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   // with |save_volume_data| set to true.
   const VolumeOptions* GetSavedOptions() const;
 
+  // Returns true when volume data is saved on disk, either from a previous run
+  // or written by this run.
+  bool volume_data_saved() const { return volume_data_saved_; }
+
+  // Writes volume information to storage. Returns true on success.
+  // This should only be called after a successful call to CreateNdmVolume with
+  // save_volume_data set to true.
+  bool WriteVolumeData();
+
  protected:
   // This is exposed for unit tests only.
   ndm* GetNdmForTest() const { return ndm_; }
@@ -139,6 +148,7 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
 
  private:
   ndm* ndm_ = nullptr;
+  bool volume_data_saved_ = false;
 };
 
 // Performs global module initialization. This is exposed to support unit tests,
