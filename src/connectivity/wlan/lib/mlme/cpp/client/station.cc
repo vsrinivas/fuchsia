@@ -24,7 +24,6 @@
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/client/station.h>
-#include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/key.h>
 #include <wlan/mlme/mac_frame.h>
@@ -216,9 +215,8 @@ zx_status_t Station::Deauthenticate(wlan_mlme::ReasonCode reason_code) {
   }
 
   client_sta_send_deauth_frame(rust_client_.get(), rust_mlme_, static_cast<uint16_t>(reason_code));
-  infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
-        debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
-        join_ctx_->bssid().ToString().c_str(), reason_code);
+  infof("deauthenticating from %s, reason=%hu\n", join_ctx_->bssid().ToString().c_str(),
+        reason_code);
 
   if (state_ == WlanState::kAssociated) {
     device_->ClearAssoc(join_ctx_->bssid());
@@ -352,9 +350,8 @@ zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame)
   }
 
   auto deauth = frame.body();
-  infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
-        debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
-        join_ctx_->bssid().ToString().c_str(), deauth->reason_code);
+  infof("deauthenticating from %s, reason=%hu\n", join_ctx_->bssid().ToString().c_str(),
+        deauth->reason_code);
 
   if (state_ == WlanState::kAssociated) {
     device_->ClearAssoc(join_ctx_->bssid());
@@ -420,10 +417,9 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     device_->SetStatus(ETHERNET_STATUS_ONLINE);
   }
 
-  infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n", self_addr().ToString().c_str(),
-        debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(), assoc_ctx_.bssid.ToString().c_str(),
-        common::ChanStrLong(assoc_ctx_.chan).c_str(), common::BandStr(assoc_ctx_.chan).c_str(),
-        common::GetPhyStr(assoc_ctx_.phy).c_str());
+  infof("NIC %s associated with %s in channel %s, %s, %s\n", self_addr().ToString().c_str(),
+        assoc_ctx_.bssid.ToString().c_str(), common::ChanStrLong(assoc_ctx_.chan).c_str(),
+        common::BandStr(assoc_ctx_.chan).c_str(), common::GetPhyStr(assoc_ctx_.phy).c_str());
 
   // TODO(porce): Time when to establish BlockAck session
   // Handle MLME-level retry, if MAC-level retry ultimately fails
@@ -445,9 +441,8 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
   }
 
   auto disassoc = frame.body();
-  infof("disassociating from \"%s\"(%s), reason=%u\n",
-        debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
-        join_ctx_->bssid().ToString().c_str(), disassoc->reason_code);
+  infof("disassociating from %s, reason=%u\n", join_ctx_->bssid().ToString().c_str(),
+        disassoc->reason_code);
 
   UpdateState(WlanState::kAuthenticated);
   device_->ClearAssoc(join_ctx_->bssid());

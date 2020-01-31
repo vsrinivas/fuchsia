@@ -28,7 +28,6 @@
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/phy.h>
 #include <wlan/common/tx_vector.h>
-#include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
 
 #include "ralink.h"
@@ -3685,12 +3684,6 @@ zx_status_t Device::Query(wlan_info_t* info) {
             },
     };
   }
-
-  debugf("ralink: HT capabilities for band[0]: %s\n",
-         wlan::debug::Describe(info->bands[0].ht_caps).c_str());
-  debugf("ralink: HT capabilities for band[1]: %s\n",
-         wlan::debug::Describe(info->bands[1].ht_caps).c_str());
-
   return ZX_OK;
 }
 
@@ -4500,11 +4493,9 @@ zx_status_t FillTxStatusEntries(tx_vec_idx_t vec_idx_first, tx_vec_idx_t vec_idx
     // retries, when that happens, assume the retry chain is correct and the retry count
     // is incorrect. This seems to conform to the experimental results.
     debugmstl(
-        "error parsing retry chain. intended %s, final: %s, "
+        "error parsing retry chain. "
         "retry_actual: %u, retry_calculated: %d, success: %u, stat_fifo: %x, \n",
-        ::wlan::debug::Describe(vec_idx_first).c_str(),
-        ::wlan::debug::Describe(vec_idx_last).c_str(), num_retries, idx, stat_fifo.txq_ok(),
-        stat_fifo.val());
+        num_retries, idx, stat_fifo.txq_ok(), stat_fifo.val());
   }
 
   return ZX_OK;
@@ -4545,9 +4536,6 @@ zx_status_t Device::BuildTxStatusReport(const TxStatsFifoEntry& entry, const TxS
     // In this case only the first and last attempt can be used
     // setting num_retries to 1 to discard the rest
     num_retries = 1;
-    debugmstl("error: auto fallback involves major change: %s vs %s\n",
-              ::wlan::debug::Describe(vec_first).c_str(),
-              ::wlan::debug::Describe(vec_last).c_str());
   }
 
   return FillTxStatusEntries(idx_first, idx_last, stat_fifo, num_retries, report->tx_status_entry);
@@ -4682,7 +4670,7 @@ zx_status_t Device::EnableHwBcn(bool active) {
 }
 
 zx_status_t Device::WlanmacSetChannel(uint32_t options, const wlan_channel_t* chan) {
-    // Beware the multiple different return paths with different recovery requirements.
+  // Beware the multiple different return paths with different recovery requirements.
 
   ZX_DEBUG_ASSERT(chan != nullptr);
   debugf("channel change: from %s to %s attempting..\n", wlan::common::ChanStr(cfg_chan_).c_str(),

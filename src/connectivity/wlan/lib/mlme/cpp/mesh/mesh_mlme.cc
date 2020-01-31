@@ -9,7 +9,6 @@
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
-#include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_caps.h>
 #include <wlan/mlme/mesh/mesh_mlme.h>
 #include <wlan/mlme/mesh/parse_mp_action.h>

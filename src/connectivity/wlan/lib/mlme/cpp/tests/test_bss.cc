@@ -12,7 +12,6 @@
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/write_element.h>
-#include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/ps_cfg.h>

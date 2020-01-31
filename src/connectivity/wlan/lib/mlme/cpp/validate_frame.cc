@@ -7,7 +7,6 @@
 #include <fbl/span.h>
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/mac_frame.h>
-#include <wlan/mlme/debug.h>
 
 namespace wlan {
 
@@ -624,8 +623,7 @@ bool ValidateFrame(const char* context_msg, fbl::Span<const uint8_t> data) {
   ErrorAccumulator errors;
   DoValidateFrame(data, &errors);
   if (errors.HaveErrors()) {
-    errorf("%s:\n%sFrame contents: %s\n", context_msg, errors.GetMessage(),
-           debug::HexDump(data).c_str());
+    errorf("%s:\n%s\n", context_msg, errors.GetMessage());
   }
   return !errors.HaveErrors();
 }

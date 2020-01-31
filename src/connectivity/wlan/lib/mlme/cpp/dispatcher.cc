@@ -21,7 +21,6 @@
 #include <wlan/common/stats.h>
 #include <wlan/mlme/ap/ap_mlme.h>
 #include <wlan/mlme/client/client_mlme.h>
-#include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/dispatcher.h>
 #include <wlan/mlme/mac_frame.h>

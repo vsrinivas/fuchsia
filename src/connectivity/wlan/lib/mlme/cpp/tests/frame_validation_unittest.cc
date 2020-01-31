@@ -6,7 +6,6 @@
 #include <utility>
 
 #include <gtest/gtest.h>
-#include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
 
