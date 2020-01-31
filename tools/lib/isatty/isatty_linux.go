@@ -6,6 +6,14 @@
 
 package isatty
 
-import "syscall"
+import (
+	"os"
+	"syscall"
+	"unsafe"
+)
 
-const ioctlTermios = syscall.TCGETS
+func isTerminal() bool {
+	var termios syscall.Termios
+	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, os.Stdout.Fd(), syscall.TCGETS, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
+	return err == 0
+}
