@@ -127,7 +127,6 @@ group("all") {
   public_deps = [
     ":drivers",
     ":netcfg",
-    "//garnet/packages/prod:amber",
     "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:battery_manager",
@@ -195,7 +194,6 @@ group("all") {
     "//src/connectivity/wlan:tools",
     "//src/developer/memory/mem",
     "//src/fonts",
-    "//src/sys/pkg/bin/amber:pkgfs",
     "//src/ui/a11y:a11y",
   ]
 }
@@ -277,7 +275,7 @@ group("guest_runner") {
   testonly = true
   public_deps = [
     "//garnet/packages/config:network",
-    "//garnet/packages/prod:amber",
+    "//src/sys/pkg/bin/amber",
     "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:sysmgr",
     "//src/virtualization/bin/guest:guest",
@@ -433,11 +431,6 @@ group("bluetooth_avrcp") {
 group("bluetooth_a2dp") {
   testonly = true
   public_deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp-sink" ]
-}
-
-group("amber") {
-  testonly = true
-  public_deps = [ "//src/sys/pkg/bin/amber" ]
 }
 
 group("network-speed-test") {
