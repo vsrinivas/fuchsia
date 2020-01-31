@@ -4,10 +4,10 @@
 
 use crate::{
     common_utils::common::macros::{fx_err_and_bail, with_line},
-    hwinfo::types::{SerializableDeviceInfo, SerializableProductInfo},
+    hwinfo::types::{SerializableBoardInfo, SerializableDeviceInfo, SerializableProductInfo},
 };
 use anyhow::Error;
-use fidl_fuchsia_hwinfo::{DeviceMarker, ProductMarker};
+use fidl_fuchsia_hwinfo::{BoardMarker, DeviceMarker, ProductMarker};
 use fuchsia_component as app;
 use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
 
@@ -56,6 +56,24 @@ impl HwinfoFacade {
                 let product_info_string = format!("Product info found: {:?}", product_info);
                 fx_log_info!(tag: &with_line!(tag), "{}", product_info_string);
                 Ok(SerializableProductInfo::new(&product_info))
+            }
+            Err(err) => fx_err_and_bail!(
+                &with_line!(tag),
+                format_err!("Failed to create hwinfo proxy: {}", err)
+            ),
+        }
+    }
+
+    /// Returns the board info of the hwinfo proxy service.
+    pub async fn get_board_info(&self) -> Result<SerializableBoardInfo, Error> {
+        let tag = "HwinfoFacade::get_board_info";
+        let board_info_proxy = app::client::connect_to_service::<BoardMarker>();
+        match board_info_proxy {
+            Ok(p) => {
+                let board_info = p.get_info().await?;
+                let board_info_string = format!("Board info found: {:?}", board_info);
+                fx_log_info!(tag: &with_line!(tag), "{}", board_info_string);
+                Ok(SerializableBoardInfo::new(&board_info))
             }
             Err(err) => fx_err_and_bail!(
                 &with_line!(tag),

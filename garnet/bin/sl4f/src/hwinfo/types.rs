@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_hwinfo::{DeviceInfo, ProductInfo};
+use fidl_fuchsia_hwinfo::{BoardInfo, DeviceInfo, ProductInfo};
 use serde_derive::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
@@ -56,5 +56,18 @@ impl SerializableProductInfo {
             model: product.model.clone(),
             manufacturer: product.manufacturer.clone(),
         }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SerializableBoardInfo {
+    pub name: Option<String>,
+    pub revision: Option<String>,
+}
+
+/// Board object is not serializable so serialize the object.
+impl SerializableBoardInfo {
+    pub fn new(board: &BoardInfo) -> Self {
+        SerializableBoardInfo { name: board.name.clone(), revision: board.revision.clone() }
     }
 }

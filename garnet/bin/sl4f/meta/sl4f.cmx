@@ -19,6 +19,7 @@
             "fuchsia.factory.WidevineFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.hwinfo.Product",
+            "fuchsia.hwinfo.Board",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
