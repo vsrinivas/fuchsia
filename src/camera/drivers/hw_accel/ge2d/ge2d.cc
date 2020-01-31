@@ -72,8 +72,8 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
 
 zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
     const buffer_collection_info_2_t* input_buffer_collection,
-    const buffer_collection_info_2_t* output_buffer_collection, const water_mark_info_t* info,
-    zx::vmo watermark_vmo, const image_format_2_t* image_format_table_list,
+    const buffer_collection_info_2_t* output_buffer_collection, const water_mark_info_t* info_list,
+    size_t info_count, const image_format_2_t* image_format_table_list,
     size_t image_format_table_count, uint32_t image_format_index,
     const hw_accel_frame_callback_t* frame_callback,
     const hw_accel_res_change_callback_t* res_callback,
@@ -81,10 +81,12 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
+  if (info_count != image_format_table_count)
+    return ZX_ERR_INVALID_ARGS;
 
   auto task = std::make_unique<Ge2dTask>();
   zx_status_t status =
-      task->InitWatermark(input_buffer_collection, output_buffer_collection, info, watermark_vmo,
+      task->InitWatermark(input_buffer_collection, output_buffer_collection, info_list,
                           image_format_table_list, image_format_table_count, image_format_index,
                           frame_callback, res_callback, task_remove_callback, bti_, canvas_);
   if (status != ZX_OK) {
@@ -461,6 +463,8 @@ void Ge2dDevice::SetupInputOutputFormats(bool scaling_enabled, const image_forma
         .set_offset1(0x180)
         .set_offset2(0x180)
         .WriteTo(&ge2d_mmio_);
+    MatrixOffset::Get().FromValue(0).set_offset0(0).set_offset1(0).set_offset2(0).WriteTo(
+        &ge2d_mmio_);
   } else if (!is_src_nv12 && is_dst_nv12) {
     // RGB to BT.601 studio swing. Outputs of matrix multiplication seem
     // to be divided by 1024.

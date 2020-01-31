@@ -82,7 +82,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   // See ge2d-task.h for description of args.
   zx_status_t Ge2dInitTaskWaterMark(const buffer_collection_info_2_t* input_buffer_collection,
                                     const buffer_collection_info_2_t* output_buffer_collection,
-                                    const water_mark_info_t* info, zx::vmo watermark_vmo,
+                                    const water_mark_info_t* info_list, size_t info_count,
                                     const image_format_2_t* image_format_table_list,
                                     size_t image_format_table_count, uint32_t image_format_index,
                                     const hw_accel_frame_callback_t* frame_callback,

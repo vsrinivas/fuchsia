@@ -12,6 +12,7 @@
 #include <memory>
 
 #include <ddk/debug.h>
+#include <fbl/algorithm.h>
 
 constexpr uint32_t kEndianness = 7;
 constexpr auto kTag = "ge2d";
@@ -191,10 +192,10 @@ void Ge2dTask::FreeCanvasIds() {
     it->second.canvas_idx[kYComponent] = ScopedCanvasId();
     it->second.canvas_idx[kUVComponent] = ScopedCanvasId();
   }
-  if (task_type_ == GE2D_WATERMARK) {
-    wm_input_canvas_id_.canvas_idx[0] = ScopedCanvasId();
-    wm_blended_canvas_id_.canvas_idx[0] = ScopedCanvasId();
+  for (auto& watermark : wm_) {
+    watermark.input_canvas_id.canvas_idx[0] = ScopedCanvasId();
   }
+  wm_blended_canvas_id_.canvas_idx[0] = ScopedCanvasId();
 }
 
 void Ge2dTask::Ge2dChangeOutputRes(uint32_t new_output_buffer_index) {
@@ -207,6 +208,26 @@ void Ge2dTask::Ge2dChangeOutputRes(uint32_t new_output_buffer_index) {
         AllocCanvasId(&format, it.first, canvas_ids, CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
     ZX_ASSERT(status == ZX_OK);
     it.second = std::move(canvas_ids);
+  }
+  AllocateWatermarkCanvasIds();
+}
+
+void Ge2dTask::AllocateWatermarkCanvasIds() {
+  for (auto& wm : wm_) {
+    wm.input_canvas_id = image_canvas_id{};
+  }
+  if (output_format_index() < wm_.size()) {
+    auto& wm = wm_[output_format_index()];
+    image_canvas_id_t canvas_ids;
+    zx_status_t status = AllocCanvasId(&wm.image_format, wm.watermark_input_vmo.get(), canvas_ids,
+                                       CANVAS_FLAGS_READ);
+    ZX_ASSERT(status == ZX_OK);
+    wm.input_canvas_id = std::move(canvas_ids);
+
+    status = AllocCanvasId(&wm.image_format, watermark_blended_vmo_.get(), canvas_ids,
+                           CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
+    ZX_ASSERT(status == ZX_OK);
+    wm_blended_canvas_id_ = std::move(canvas_ids);
   }
 }
 
@@ -291,7 +312,7 @@ zx_status_t Ge2dTask::InitResize(const buffer_collection_info_2_t* input_buffer_
 
 zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
                                     const buffer_collection_info_2_t* output_buffer_collection,
-                                    const water_mark_info_t* wm_info, const zx::vmo& watermark_vmo,
+                                    const water_mark_info_t* wm_info,
                                     const image_format_2_t* image_format_table_list,
                                     size_t image_format_table_count, uint32_t image_format_index,
                                     const hw_accel_frame_callback_t* frame_callback,
@@ -308,65 +329,82 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
     FX_LOG(ERROR, kTag, "Init Failed");
     return status;
   }
-
-  if (wm_info->wm_image_format.pixel_format.type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
-    FX_LOG(ERROR, kTag, "Image format type not supported");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // Make copy of watermark info, pin watermark vmo.
-  wm_.loc_x = wm_info->loc_x;
-  wm_.loc_y = wm_info->loc_y;
-  wm_.wm_image_format = wm_info->wm_image_format;
-
   task_type_ = GE2D_WATERMARK;
 
-  uint64_t vmo_size;
-  vmo_size = wm_.wm_image_format.display_height * wm_.wm_image_format.bytes_per_row;
+  size_t max_size = 0;
+  for (uint32_t i = 0; i < image_format_table_count; i++) {
+    wm_.push_back({});
+    auto& wm = wm_.back();
+    if (wm_info[i].wm_image_format.pixel_format.type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
+      FX_LOG(ERROR, kTag, "Image format type not supported");
+      return ZX_ERR_NOT_SUPPORTED;
+    }
 
-  // The watermark vmo may not necessarily be contig. Allocate a contig vmo and
-  // copy the contents of the watermark image into it and use that.
-  status = zx::vmo::create_contiguous(bti, vmo_size, 0, &watermark_input_vmo_);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Unable to get create contiguous input watermark VMO");
-    return status;
+    // Make copy of watermark info, pin watermark vmo.
+    wm.loc_x = wm_info[i].loc_x;
+    wm.loc_y = wm_info[i].loc_y;
+    wm.image_format = wm_info[i].wm_image_format;
+    constexpr uint32_t kCanvasMinAlignment = 32;
+    wm.image_format.bytes_per_row =
+        fbl::round_up(wm.image_format.bytes_per_row, kCanvasMinAlignment);
+
+    uint64_t input_vmo_size =
+        wm.image_format.display_height * wm_info[i].wm_image_format.bytes_per_row;
+    uint64_t output_vmo_size = wm.image_format.display_height * wm.image_format.bytes_per_row;
+    uint64_t rounded_input_vmo_size = fbl::round_up(input_vmo_size, ZX_PAGE_SIZE);
+    max_size = std::max(output_vmo_size, max_size);
+
+    // Round the width up to be a multiple of 2, or otherwise the final RGBA to NV12
+    // blit hangs.
+    if ((wm.image_format.display_width % 2) != 0) {
+      wm.image_format.display_width++;
+      wm.image_format.coded_width++;
+      // bytes_per_row must be a multiple of 32, so this rounding up should
+      // work.
+      ZX_ASSERT(wm.image_format.coded_width * 4 <= wm.image_format.bytes_per_row);
+    }
+
+    // The watermark vmo may not necessarily be contig. Allocate a contig vmo and
+    // copy the contents of the watermark image into it and use that.
+    status = zx::vmo::create_contiguous(bti, output_vmo_size, 0, &wm.watermark_input_vmo);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, kTag, "Unable to get create contiguous input watermark VMO");
+      return status;
+    }
+    // Copy the watermark image over.
+    fzl::VmoMapper mapped_watermark_input_vmo;
+    status = mapped_watermark_input_vmo.Map(*zx::unowned_vmo(wm_info[i].watermark_vmo), 0,
+                                            rounded_input_vmo_size, ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, kTag, "Unable to get map for watermark input VMO");
+      return status;
+    }
+    fzl::VmoMapper mapped_contig_vmo;
+    status =
+        mapped_contig_vmo.Map(wm.watermark_input_vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, kTag, "Unable to get map contig watermark VMO");
+      return status;
+    }
+
+    // Expand out to ensure bytes_per_row is a multiple of 32, as that's what the canvas requires.
+    for (uint32_t y = 0; y < wm.image_format.display_height; ++y) {
+      memcpy(static_cast<uint8_t*>(mapped_contig_vmo.start()) + wm.image_format.bytes_per_row * y,
+             static_cast<uint8_t*>(mapped_watermark_input_vmo.start()) +
+                 wm_info[i].wm_image_format.bytes_per_row * y,
+             wm_info[i].wm_image_format.bytes_per_row);
+    }
+
+    zx_cache_flush(mapped_contig_vmo.start(), output_vmo_size, ZX_CACHE_FLUSH_DATA);
   }
-  // Copy the watermark image over.
-  fzl::VmoMapper mapped_watermark_input_vmo;
-  status = mapped_watermark_input_vmo.Map(watermark_vmo, 0, vmo_size, ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Unable to get map for watermark input VMO");
-    return status;
-  }
-  fzl::VmoMapper mapped_contig_vmo;
-  status =
-      mapped_contig_vmo.Map(watermark_input_vmo_, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Unable to get map contig watermark VMO");
-    return status;
-  }
-
-  memcpy(mapped_contig_vmo.start(), mapped_watermark_input_vmo.start(), vmo_size);
-  zx_cache_flush(mapped_contig_vmo.start(), vmo_size, ZX_CACHE_FLUSH_DATA);
-
-  status = AllocCanvasId(&wm_.wm_image_format, watermark_input_vmo_.get(), wm_input_canvas_id_,
-                         CANVAS_FLAGS_READ);
-  if (status != ZX_OK)
-    return status;
-
   // Allocate a vmo to hold the blended watermark id, then allocate a canvas id for the same.
-  status = zx::vmo::create_contiguous(bti, vmo_size, 0, &watermark_blended_vmo_);
+  status = zx::vmo::create_contiguous(bti, max_size, 0, &watermark_blended_vmo_);
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "Unable to get create contiguous blended watermark VMO");
     return status;
   }
-  watermark_blended_vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, vmo_size, nullptr, 0);
-  status = AllocCanvasId(&wm_.wm_image_format, watermark_blended_vmo_.get(), wm_blended_canvas_id_,
-                         CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Vmo creation for blended watermark image Failed");
-    return status;
-  }
+  watermark_blended_vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, max_size, nullptr, 0);
+  AllocateWatermarkCanvasIds();
   return status;
 }
 }  // namespace ge2d

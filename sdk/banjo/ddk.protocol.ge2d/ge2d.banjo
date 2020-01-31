@@ -35,6 +35,7 @@ struct WaterMarkInfo {
     uint32 loc_y;
     // Watermark Image Format
     zircon.device.sysmem.ImageFormat_2 wm_image_format;
+    handle<vmo> watermark_vmo;
 };
 
 [Layout = "ddk-protocol"]
@@ -71,11 +72,10 @@ protocol Ge2d {
     // together. Moreover this operation changes both the input and output
     // resolution, setting them to the same new resolution. Therefore we pass
     // a single ImageFormat table, with a single ImageFormat table index, which
-    // applies to both input and output frames.
+    // applies to both input and output frames. Watermark info is per-resolution.
     InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
                       zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
-                      WaterMarkInfo info,
-                      handle<vmo> watermark_vmo,
+                      vector<WaterMarkInfo> info,
                       vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
                       uint32 image_format_index,
                       ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,

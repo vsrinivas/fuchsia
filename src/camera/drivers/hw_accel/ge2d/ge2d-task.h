@@ -7,6 +7,7 @@
 
 #include <deque>
 #include <unordered_map>
+#include <vector>
 
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/ge2d.h>
@@ -80,13 +81,11 @@ class Ge2dTask : public generictask::GenericTask {
                          const hw_accel_remove_task_callback_t* remove_task_callback,
                          const zx::bti& bti, amlogic_canvas_protocol_t canvas);
 
-  image_format_2_t WatermarkFormat() { return wm_.wm_image_format; }
-
   // We use the same image format list (and image format index) for both input and output
   // for watermark tasks.
   zx_status_t InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
                             const buffer_collection_info_2_t* output_buffer_collection,
-                            const water_mark_info_t* info, const zx::vmo& watermark_vmo,
+                            const water_mark_info_t* info_list,
                             const image_format_2_t* image_format_table_list,
                             size_t image_format_table_count, uint32_t image_format_index,
                             const hw_accel_frame_callback_t* frame_callback,
@@ -116,10 +115,13 @@ class Ge2dTask : public generictask::GenericTask {
 
   void SetCropRect(const rect_t& rect) { res_info_.crop = rect; }
 
-  uint32_t watermark_loc_x() const { return wm_.loc_x; }
-  uint32_t watermark_loc_y() const { return wm_.loc_y; }
+  image_format_2_t WatermarkFormat() { return wm_[output_format_index()].image_format; }
+  uint32_t watermark_loc_x() const { return wm_[output_format_index()].loc_x; }
+  uint32_t watermark_loc_y() const { return wm_[output_format_index()].loc_y; }
 
-  const image_canvas_id& watermark_input_canvas() { return wm_input_canvas_id_; }
+  const image_canvas_id& watermark_input_canvas() {
+    return wm_[output_format_index()].input_canvas_id;
+  }
   const image_canvas_id& watermark_blended_canvas() { return wm_blended_canvas_id_; }
 
  private:
@@ -148,23 +150,23 @@ class Ge2dTask : public generictask::GenericTask {
   zx_status_t AllocOutputCanvasIds(const buffer_collection_info_2_t* output_buffer_collection,
                                    const image_format_2_t* output_image_format);
   void FreeCanvasIds();
+  void AllocateWatermarkCanvasIds();
 
   enum Ge2dTaskType task_type_;
   amlogic_canvas_protocol_t canvas_ = {};
   std::unique_ptr<image_format_2_t[]> output_image_format_list_;
   struct watermark_info {
-    fzl::PinnedVmo watermark_vmo_pinned_;
     uint32_t loc_x;
     uint32_t loc_y;
-    image_format_2_t wm_image_format;
+    image_format_2_t image_format;
+    image_canvas_id input_canvas_id;
+    // Allocate a contig vmo to hold the input watermark image.
+    zx::vmo watermark_input_vmo;
   };
-  watermark_info wm_;
+  std::vector<watermark_info> wm_;
   // Canvas id for the watermark image and the blended watermark image.
   // Both are RGBA images.
-  image_canvas_id wm_input_canvas_id_;
   image_canvas_id wm_blended_canvas_id_;
-  // Allocate a contig vmo to hold the input watermark image.
-  zx::vmo watermark_input_vmo_;
   // vmo to hold blended watermark image.
   zx::vmo watermark_blended_vmo_;
   resize_info_t res_info_;

@@ -88,8 +88,8 @@ class GenericTask {
   bool IsOutputFormatIndexValid(uint32_t output_format_index) const {
     return output_format_index < output_image_format_count_;
   }
-  uint32_t input_format_index() { return cur_input_image_format_index_; }
-  uint32_t output_format_index() { return cur_output_image_format_index_; }
+  uint32_t input_format_index() const { return cur_input_image_format_index_; }
+  uint32_t output_format_index() const { return cur_output_image_format_index_; }
   void set_input_format_index(uint32_t new_index) { cur_input_image_format_index_ = new_index; }
   void set_output_format_index(uint32_t new_index) { cur_output_image_format_index_ = new_index; }
   image_format_2_t input_format() {

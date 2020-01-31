@@ -67,6 +67,14 @@ ddk_mock::MockMmioReg& GetMockReg(ddk_mock::MockMmioRegRegion& registers) {
   return registers[T::Get().addr()];
 }
 
+void DuplicateWatermarkInfo(const water_mark_info_t& input, const zx::vmo& vmo, uint32_t count,
+                            std::vector<water_mark_info_t>* output) {
+  for (uint32_t i = 0; i < count; i++) {
+    output->push_back(input);
+    output->back().watermark_vmo = vmo.get();
+  }
+}
+
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
 class TaskTest : public zxtest::Test {
  public:
@@ -145,6 +153,9 @@ class TaskTest : public zxtest::Test {
                                                   watermark_vmo_.reset_and_get_address());
     ASSERT_OK(status);
 
+    DuplicateWatermarkInfo(watermark_info_, watermark_vmo_, kImageFormatTableSize,
+                           &duplicated_watermark_info_);
+
     status = camera::CreateContiguousBufferCollectionInfo(
         input_buffer_collection_, output_image_format_table_[0], bti_handle_.get(),
         buffer_collection_count);
@@ -199,8 +210,8 @@ class TaskTest : public zxtest::Test {
     zx::vmo watermark_vmo;
     EXPECT_OK(watermark_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &watermark_vmo));
     zx_status_t status = ge2d_device_->Ge2dInitTaskWaterMark(
-        &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
-        std::move(watermark_vmo), output_image_format_table_, kImageFormatTableSize, 0,
+        &input_buffer_collection_, &output_buffer_collection_, duplicated_watermark_info_.data(),
+        duplicated_watermark_info_.size(), output_image_format_table_, kImageFormatTableSize, 0,
         &frame_callback_, &res_callback_, &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     watermark_task = task_id;
@@ -244,6 +255,7 @@ class TaskTest : public zxtest::Test {
   image_format_2_t output_image_format_table_[kImageFormatTableSize];
   resize_info_t resize_info_;
   water_mark_info_t watermark_info_;
+  std::vector<water_mark_info_t> duplicated_watermark_info_;
   buffer_collection_info_2_t input_buffer_collection_;
   buffer_collection_info_2_t output_buffer_collection_;
   std::unique_ptr<Ge2dDevice> ge2d_device_;
@@ -268,7 +280,7 @@ TEST_F(TaskTest, BasicCreationTest) {
       &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
   status = watermark_task->InitWatermark(
-      &input_buffer_collection_, &output_buffer_collection_, &watermark_info_, watermark_vmo_,
+      &input_buffer_collection_, &output_buffer_collection_, duplicated_watermark_info_.data(),
       output_image_format_table_, kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
       &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
@@ -316,7 +328,7 @@ TEST_F(TaskTest, WatermarkResTest) {
   auto wm_task = std::make_unique<Ge2dTask>();
   zx_status_t status;
   status = wm_task->InitWatermark(&input_buffer_collection_, &output_buffer_collection_,
-                                  &watermark_info_, watermark_vmo_, output_image_format_table_,
+                                  duplicated_watermark_info_.data(), output_image_format_table_,
                                   kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
                                   &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
@@ -399,11 +411,9 @@ TEST_F(TaskTest, InitTaskTest) {
     auto entry = find(received_ids.begin(), received_ids.end(), task_id);
     EXPECT_EQ(received_ids.end(), entry);
     received_ids.push_back(task_id);
-    zx::vmo watermark_vmo;
-    ASSERT_OK(watermark_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &watermark_vmo));
     status = ge2d_device_->Ge2dInitTaskWaterMark(
-        &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
-        std::move(watermark_vmo), output_image_format_table_, kImageFormatTableSize, 0,
+        &input_buffer_collection_, &output_buffer_collection_, duplicated_watermark_info_.data(),
+        duplicated_watermark_info_.size(), output_image_format_table_, kImageFormatTableSize, 0,
         &frame_callback_, &res_callback_, &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     // Check to see if we are getting unique task ids.
@@ -749,10 +759,13 @@ TEST(TaskTest, NonContigVmoTest) {
   EXPECT_OK(camera::GetImageFormat(watermark_info.wm_image_format,
                                    fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
                                    kHeight / 4));
-  status = task->InitWatermark(&input_buffer_collection, &output_buffer_collection, &watermark_info,
-                               watermark_vmo, image_format_table, kImageFormatTableSize, 0,
-                               &frame_callback, &res_callback, &remove_task_callback, bti_handle,
-                               fake_canvas);
+  std::vector<water_mark_info_t> duplicated_watermark_info;
+  DuplicateWatermarkInfo(watermark_info, watermark_vmo, kImageFormatTableSize,
+                         &duplicated_watermark_info);
+  status = task->InitWatermark(&input_buffer_collection, &output_buffer_collection,
+                               duplicated_watermark_info.data(), image_format_table,
+                               kImageFormatTableSize, 0, &frame_callback, &res_callback,
+                               &remove_task_callback, bti_handle, fake_canvas);
   // Expecting Task setup to be returning an error when watermark vmo is not
   // contig.
   EXPECT_NE(ZX_OK, status);
@@ -785,9 +798,12 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   EXPECT_OK(camera::GetImageFormat(watermark_info.wm_image_format,
                                    fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
                                    kHeight / 4));
-  status = task->InitWatermark(nullptr, nullptr, &watermark_info, watermark_vmo, image_format_table,
-                               kImageFormatTableSize, 0, &frame_callback, &res_callback,
-                               &remove_task_callback, bti_handle, fake_canvas);
+  std::vector<water_mark_info_t> duplicated_watermark_info;
+  DuplicateWatermarkInfo(watermark_info, watermark_vmo, kImageFormatTableSize,
+                         &duplicated_watermark_info);
+  status = task->InitWatermark(nullptr, nullptr, duplicated_watermark_info.data(),
+                               image_format_table, kImageFormatTableSize, 0, &frame_callback,
+                               &res_callback, &remove_task_callback, bti_handle, fake_canvas);
   EXPECT_NE(ZX_OK, status);
 }
 
