@@ -7,6 +7,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"sort"
 	"strings"
 )
@@ -24,6 +25,23 @@ to generate metadata required by all of the backends, such as the size of
 types. Importantly, this removes the need for language-specific backends to
 implement field, name, or type resolution and analysis.
 */
+
+// ReadJSONIr reads a JSON IR file.
+func ReadJSONIr(filename string) (Root, error) {
+	var root Root
+
+	bytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return root, fmt.Errorf("Error reading from %s: %v", filename, err)
+	}
+
+	err = json.Unmarshal(bytes, &root)
+	if err != nil {
+		return root, fmt.Errorf("Error parsing JSON IR: %v", err)
+	}
+
+	return root, nil
+}
 
 type Identifier string
 

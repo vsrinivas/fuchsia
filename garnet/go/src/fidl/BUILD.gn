@@ -29,6 +29,14 @@ go_binary("fidlgen_llcpp") {
   deps = [ ":fidl_lib" ]
 }
 
+go_binary("fidlgen_rust") {
+  gopackage = "fidl/compiler/rust_backend"
+
+  sdk_category = "partner"
+
+  deps = [ ":fidl_lib" ]
+}
+
 install_host_tools("fidl") {
   deps = [
     ":fidlgen",
@@ -78,7 +86,7 @@ go_test("fidlgen_libfuzzer_test") {
 }
 
 go_test("fidlgen_rust_test") {
-  gopackages = [ "fidl/compiler/backend/rust" ]
+  gopackages = [ "fidl/compiler/rust_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
 }

@@ -5,10 +5,8 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -34,8 +32,8 @@ var flags = func() flagsDef {
 		source: flag.String("source", "",
 			"the output path for the generated C++ implementation."),
 		includeBase: flag.String("include-base", "",
-			"[optional] the directory relative to which includes will be computed. " +
-			"If omitted, assumes #include <fidl/library/name/llcpp/fidl.h>"),
+			"[optional] the directory relative to which includes will be computed. "+
+				"If omitted, assumes #include <fidl/library/name/llcpp/fidl.h>"),
 	}
 }()
 
@@ -51,24 +49,8 @@ type config struct {
 	primaryHeaderPath string
 }
 
-// decodeTypes decodes FIDL type information from the JSON file specified as an argument.
-func decodeTypes(jsonPath string) (types.Root, error) {
-	bytes, err := ioutil.ReadFile(jsonPath)
-	if err != nil {
-		return types.Root{}, fmt.Errorf("error reading from %s: %v", jsonPath, err)
-	}
-
-	var fidl types.Root
-	err = json.Unmarshal(bytes, &fidl)
-	if err != nil {
-		return types.Root{}, fmt.Errorf("error parsing JSON as FIDL data: %v", err)
-	}
-
-	return fidl, nil
-}
-
 func (f flagsDef) getConfig() (config, error) {
-	fidl, err := decodeTypes(*f.jsonPath)
+	fidl, err := types.ReadJSONIr(*f.jsonPath)
 
 	headerPath, err := filepath.Abs(*f.header)
 	if err != nil {

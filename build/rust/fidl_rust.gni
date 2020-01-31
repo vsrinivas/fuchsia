@@ -30,7 +30,7 @@ template("fidl_rust") {
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  file_stem = "$fidl_target_gen_dir/$underscore_name"
+  filename = "$fidl_target_gen_dir/$underscore_name.rs"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
@@ -38,30 +38,20 @@ template("fidl_rust") {
 
     visibility = [ ":*" ]
 
-    tool = "//garnet/go/src/fidl:fidlgen"
+    tool = "//garnet/go/src/fidl:fidlgen_rust"
 
-    inputs = [
-      json_representation,
-    ]
+    inputs = [ json_representation ]
 
-    outputs = [
-      "$file_stem.rs",
-    ]
+    outputs = [ filename ]
 
     args = [
       "--json",
       rebase_path(json_representation, root_build_dir),
-      "--output-base",
-      rebase_path(file_stem, root_build_dir),
-      "--include-base",
-      rebase_path(root_gen_dir, root_build_dir),
-      "--generators",
-      "rust",
+      "--output-filename",
+      rebase_path(filename, root_build_dir),
     ]
 
-    deps = [
-      ":$main_target_name($fidl_toolchain)",
-    ]
+    deps = [ ":$main_target_name($fidl_toolchain)" ]
   }
 
   group(main_target_name) {
@@ -72,9 +62,7 @@ template("fidl_rust") {
                              "visibility",
                            ])
 
-    deps = [
-      ":$generation_target_name",
-    ]
+    deps = [ ":$generation_target_name" ]
 
     if (defined(invoker.deps)) {
       deps += invoker.deps

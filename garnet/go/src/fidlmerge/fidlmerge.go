@@ -6,14 +6,15 @@ package main
 
 import (
 	"bytes"
-	"fidl/compiler/backend/common"
-	"fidl/compiler/backend/types"
 	"flag"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"text/template"
+
+	"fidl/compiler/backend/common"
+	"fidl/compiler/backend/types"
 )
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
@@ -30,6 +31,14 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 	types.Float64: "double",
 }
 
+func mustReadJSONIr(filename string) types.Root {
+	root, err := types.ReadJSONIr(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return root
+}
+
 func main() {
 	cmdlineflags := GetFlags()
 	options := make(Options)
@@ -43,7 +52,7 @@ func main() {
 	}
 
 	results := GenerateFidl(*cmdlineflags.templatePath,
-		cmdlineflags.FidlAmendments().Amend(cmdlineflags.FidlTypes()),
+		cmdlineflags.FidlAmendments().Amend(mustReadJSONIr(*cmdlineflags.jsonPath)),
 		cmdlineflags.outputBase,
 		options)
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package rust
+package codegen
 
 import (
 	"io"
@@ -10,16 +10,16 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"fidl/compiler/backend/rust/ir"
-	"fidl/compiler/backend/rust/templates"
 	"fidl/compiler/backend/types"
+	"fidl/compiler/rust_backend/ir"
+	"fidl/compiler/rust_backend/templates"
 )
 
-type FidlGenerator struct {
+type Generator struct {
 	tmpls *template.Template
 }
 
-func NewFidlGenerator() *FidlGenerator {
+func NewGenerator() *Generator {
 	tmpls := template.New("RustTemplates")
 	template.Must(tmpls.Parse(templates.SourceFile))
 	template.Must(tmpls.Parse(templates.Bits))
@@ -32,18 +32,17 @@ func NewFidlGenerator() *FidlGenerator {
 	template.Must(tmpls.Parse(templates.Table))
 	template.Must(tmpls.Parse(templates.Result))
 	template.Must(tmpls.Parse(templates.Bits))
-	return &FidlGenerator{
+	return &Generator{
 		tmpls: tmpls,
 	}
 }
 
-func (gen *FidlGenerator) GenerateImpl(wr io.Writer, tree ir.Root) error {
+func (gen *Generator) GenerateImpl(wr io.Writer, tree ir.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "GenerateSourceFile", tree)
 }
 
-func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
+func (gen *Generator) GenerateFidl(fidl types.Root, outputFilename string) error {
 	tree := ir.Compile(fidl)
-	outputFilename := config.OutputBase + ".rs"
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
 	}

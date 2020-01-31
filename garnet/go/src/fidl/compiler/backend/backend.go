@@ -15,7 +15,6 @@ import (
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/cpp_libfuzzer"
 	"fidl/compiler/backend/golang"
-	"fidl/compiler/backend/rust"
 	"fidl/compiler/backend/syzkaller"
 	"fidl/compiler/backend/types"
 )
@@ -28,7 +27,6 @@ var generators = map[string]GenerateFidl{
 	"cpp":       cpp.NewFidlGenerator(),
 	"go":        golang.NewFidlGenerator(),
 	"libfuzzer": cpp_libfuzzer.NewFidlGenerator(),
-	"rust":      rust.NewFidlGenerator(),
 	"syzkaller": syzkaller.NewFidlGenerator(),
 }
 
@@ -44,7 +42,8 @@ func main() {
 		fmt.Sprintf(`comma-separated list of names of generators to run
 valid generators: %s
 for Dart, use the fidlgen_dart executable
-for LLCPP, use the fidlgen_llcpp executable`,
+for LLCPP, use the fidlgen_llcpp executable
+for Rust, use the fidlgen_rust executable`,
 			strings.Join(validGenerators, ", ")))
 	flag.Parse()
 
@@ -53,7 +52,10 @@ for LLCPP, use the fidlgen_llcpp executable`,
 		os.Exit(1)
 	}
 
-	fidl := baseFlags.FidlTypes()
+	fidl, err := types.ReadJSONIr(*baseFlags.JsonPath)
+	if err != nil {
+		log.Fatal(err)
+	}
 	config := baseFlags.Config()
 
 	running := 0

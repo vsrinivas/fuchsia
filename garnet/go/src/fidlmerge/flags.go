@@ -6,7 +6,6 @@ package main
 
 import (
 	"encoding/json"
-	"fidl/compiler/backend/types"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -52,22 +51,6 @@ func GetFlags() Flags {
 // Valid returns true if the parsed flags are valid.
 func (f Flags) Valid() bool {
 	return *f.jsonPath != "" && *f.templatePath != "" && *f.outputBase != ""
-}
-
-// FidlTypes returns the root FIDL type information from the JSON file specified as an argument.
-func (f Flags) FidlTypes() types.Root {
-	bytes, err := ioutil.ReadFile(*f.jsonPath)
-	if err != nil {
-		log.Fatalf("Error reading from %s: %v", *f.jsonPath, err)
-	}
-
-	var fidl types.Root
-	err = json.Unmarshal(bytes, &fidl)
-	if err != nil {
-		log.Fatalf("Error parsing JSON as FIDL data: %v", err)
-	}
-
-	return fidl
 }
 
 // FidlAmendments returns the Amendments read from the JSON amend file specified as an argument.

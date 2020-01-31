@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-package rust
+package codegen
 
 import (
 	"bytes"
@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fidl/compiler/backend/rust/ir"
 	"fidl/compiler/backend/typestest"
+	"fidl/compiler/rust_backend/ir"
 )
 
 // basePath holds the base path to the directory containing goldens.
@@ -32,7 +32,7 @@ func TestCodegen(t *testing.T) {
 			implDotRs := typestest.GetGolden(basePath, fmt.Sprintf("%s.rs.golden", filename))
 
 			actualImplDotRs := new(bytes.Buffer)
-			if err := NewFidlGenerator().GenerateImpl(actualImplDotRs, tree); err != nil {
+			if err := NewGenerator().GenerateImpl(actualImplDotRs, tree); err != nil {
 				t.Fatalf("unexpected error while generating impl.go: %s", err)
 			}
 

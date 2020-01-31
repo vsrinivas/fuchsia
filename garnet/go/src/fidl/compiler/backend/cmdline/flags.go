@@ -14,7 +14,7 @@ import (
 
 // Flags common to all FIDL backends.
 type Flags struct {
-	jsonPath    *string
+	JsonPath    *string
 	outputBase  *string
 	includeBase *string
 }
@@ -33,14 +33,14 @@ func BaseFlags() Flags {
 
 // Valid returns true if the parsed flags are valid.
 func (f Flags) Valid() bool {
-	return *f.jsonPath != "" && *f.outputBase != "" && *f.includeBase != ""
+	return *f.JsonPath != "" && *f.outputBase != "" && *f.includeBase != ""
 }
 
-// FidlTypes returns the root FIDL type information from the JSON file specified as an argument.
+// TODO(pascallouis): Remove once fidlgen_dart uses shared ReadJSONIr function.
 func (f Flags) FidlTypes() types.Root {
-	bytes, err := ioutil.ReadFile(*f.jsonPath)
+	bytes, err := ioutil.ReadFile(*f.JsonPath)
 	if err != nil {
-		log.Fatalf("Error reading from %s: %v", *f.jsonPath, err)
+		log.Fatalf("Error reading from %s: %v", *f.JsonPath, err)
 	}
 
 	var fidl types.Root
