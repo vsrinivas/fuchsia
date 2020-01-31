@@ -16,10 +16,7 @@ zx_driver("mt8167s-display") {
     "mt8167s-display.cc",
     "ovl.cc",
   ]
-  deps = [
-    ":common",
-    "$zx/system/dev/lib/mmio",
-  ]
+  deps = [ ":common" ]
 }
 
 source_set("common") {
@@ -35,6 +32,7 @@ source_set("common") {
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -72,8 +70,8 @@ zx_test("dsi-host") {
   deps = [
     ":common",
     "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/dev/lib/mock-sysmem",
+    "$zx/system/dev/lib/new-mock-mmio-reg",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default",

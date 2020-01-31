@@ -16,7 +16,7 @@ zx_test("aml-rawnand-unittest") {
   deps = [
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/dev/lib/new-mock-mmio-reg",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
     "..:common",

@@ -4,10 +4,7 @@
 
 zx_driver("aml-pwm") {
   sources = [ "aml-pwm.cc" ]
-  deps = [
-    ":common",
-    "$zx/system/dev/lib/mmio",
-  ]
+  deps = [ ":common" ]
 }
 
 zx_test("aml-pwm-test") {
@@ -20,7 +17,7 @@ zx_test("aml-pwm-test") {
   deps = [
     ":common",
     "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/dev/lib/new-mock-mmio-reg",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
@@ -32,6 +29,7 @@ group("common") {
     "$zx/system/banjo/ddk.protocol.pwm",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

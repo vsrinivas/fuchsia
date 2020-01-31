@@ -3,14 +3,8 @@
 # found in the LICENSE file.
 
 zx_driver("aml-rawnand") {
-  # We need to compile aml-rawnand.cc with the real mmio library here but
-  # with the mock-mmio library in the test, so it can't be part of the
-  # common source_set.
   sources = [ "aml-rawnand.cc" ]
-  deps = [
-    ":common",
-    "$zx/system/dev/lib/mmio",
-  ]
+  deps = [ ":common" ]
 }
 
 source_set("common") {
@@ -21,6 +15,7 @@ source_set("common") {
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

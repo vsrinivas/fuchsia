@@ -30,7 +30,7 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 namespace dw_i2c {

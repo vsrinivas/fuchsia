@@ -8,7 +8,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 
 namespace {
 

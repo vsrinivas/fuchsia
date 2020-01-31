@@ -5,6 +5,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <mock/ddktl/protocol/shareddma.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <soc/as370/as370-dma.h>
 #include <soc/as370/syn-audio-in.h>
 #include <zxtest/zxtest.h>

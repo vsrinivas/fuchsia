@@ -11,7 +11,7 @@
 
 #include <ddk/metadata.h>
 #include <fbl/span.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 namespace ti {

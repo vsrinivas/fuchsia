@@ -4,7 +4,7 @@
 
 #include "syn-clk.h"
 
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <soc/as370/as370-clk.h>
 #include <soc/as370/as370-hw.h>
 

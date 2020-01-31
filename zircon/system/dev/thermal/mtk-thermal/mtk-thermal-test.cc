@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 namespace {

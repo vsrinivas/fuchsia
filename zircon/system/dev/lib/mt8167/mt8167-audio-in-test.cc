@@ -5,8 +5,8 @@
 #include <fbl/auto_call.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-audio-in.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 namespace {

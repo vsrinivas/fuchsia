@@ -4,7 +4,7 @@
 
 #include "msm8x53-clk.h"
 
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <soc/msm8x53/msm8x53-clock.h>
 
 #include "msm8x53-clk-regs.h"

@@ -14,7 +14,7 @@
 #include <queue>
 
 #include <ddk/io-buffer.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <soc/aml-common/aml-rawnand.h>
 #include <zxtest/zxtest.h>
 

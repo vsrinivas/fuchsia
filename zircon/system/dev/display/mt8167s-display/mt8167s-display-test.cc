@@ -15,7 +15,7 @@
 #include <memory>
 
 #include <ddktl/protocol/platform/device.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 #include "lcd.h"
