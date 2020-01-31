@@ -29,7 +29,17 @@ struct WritableRingBufferTraits {
   }
 };
 
-template <class RingBufferTraits>
+struct CacheFlushMemoryTraits {
+  static void CleanBufferOnLock(void* buffer, size_t length) {
+    zx_cache_flush(buffer, length, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+  }
+};
+
+struct DefaultMemoryTraits {
+  static void CleanBufferOnLock(void* buffer, size_t length) {}
+};
+
+template <class RingBufferTraits, class MemoryTraits = DefaultMemoryTraits>
 class RingBufferImpl : public RingBuffer {
  public:
   RingBufferImpl(const Format& format,
@@ -65,8 +75,14 @@ class RingBufferImpl : public RingBuffer {
     if (last_frame_local <= first_frame_local) {
       last_frame_local = frames();
     }
-    return {Stream::Buffer(first_absolute_frame, last_frame_local - first_frame_local,
-                           virt() + (first_frame_local * format().bytes_per_frame()), true)};
+
+    void* payload = virt() + (first_frame_local * format().bytes_per_frame());
+    uint32_t payload_frames = last_frame_local - first_frame_local;
+    size_t payload_bytes = payload_frames * format().bytes_per_frame();
+
+    MemoryTraits::CleanBufferOnLock(payload, payload_bytes);
+
+    return {Stream::Buffer(first_absolute_frame, payload_frames, payload, true)};
   }
 };
 
@@ -152,7 +168,7 @@ std::shared_ptr<RingBuffer> RingBuffer::Create(
   FX_DCHECK(vmo_mapper);
 
   if (endpoint == Endpoint::kReadable) {
-    return std::make_shared<RingBufferImpl<ReadableRingBufferTraits>>(
+    return std::make_shared<RingBufferImpl<ReadableRingBufferTraits, CacheFlushMemoryTraits>>(
         format, std::move(reference_clock_to_fractional_frame), std::move(vmo_mapper), frame_count,
         endpoint);
   } else {
