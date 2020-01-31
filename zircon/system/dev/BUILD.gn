@@ -15,7 +15,6 @@ group("dev") {
     "cpu",
     "display",
     "fw",
-    "gpu",
     "light-sensor",
     "mlg",
     "nand",
