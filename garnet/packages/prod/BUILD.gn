@@ -691,11 +691,6 @@ group("tee_manager") {
   ]
 }
 
-# TODO(dustingreen): Remove after sysmem-assistant dep removed elsewhere.
-group("sysmem-assistant") {
-  testonly = true
-}
-
 group("goldfish-vulkan") {
   testonly = true
   public_deps = [ "//garnet/lib/goldfish-vulkan/gnbuild:goldfish-vulkan" ]
