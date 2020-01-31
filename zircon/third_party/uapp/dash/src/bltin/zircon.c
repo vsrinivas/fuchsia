@@ -467,18 +467,18 @@ usage:
 
 //TODO(edcoyne): move "dm" command to its own file.
 static int print_dm_help() {
-    printf("dump              - dump device tree\n"
-           "poweroff          - power off the system\n"
-           "shutdown          - power off the system\n"
-           "suspend           - suspend the system to RAM\n"
-           "reboot            - reboot the system\n"
-           "reboot-bootloader - reboot the system into bootloader\n"
-           "reboot-recovery   - reboot the system into recovery\n"
-           "kerneldebug       - send a command to the kernel\n"
-           "ktraceoff         - stop kernel tracing\n"
-           "ktraceon          - start kernel tracing\n"
-           "devprops          - dump published devices and their binding properties\n"
-           "drivers           - list discovered drivers and their properties\n");
+    printf("dump                 - dump device tree\n"
+           "poweroff             - power off the system\n"
+           "shutdown             - power off the system\n"
+           "suspend              - suspend the system to RAM\n"
+           "reboot               - reboot the system\n"
+           "reboot-bootloader/rb - reboot the system into bootloader\n"
+           "reboot-recovery/rr   - reboot the system into recovery\n"
+           "kerneldebug          - send a command to the kernel\n"
+           "ktraceoff            - stop kernel tracing\n"
+           "ktraceon             - start kernel tracing\n"
+           "devprops             - dump published devices and their binding properties\n"
+           "drivers              - list discovered drivers and their properties\n");
     return 0;
 }
 
@@ -647,18 +647,29 @@ static int send_suspend(uint32_t flags) {
     return 0;
 }
 
-static bool command_cmp(const char* command, const char* input, int* command_length) {
-  *command_length = strlen(command);
+static bool command_cmp(const char* long_command, const char* short_command, const char* input,
+                        int* command_length) {
   const size_t input_length = strlen(input);
-  if (input_length < (size_t)(*command_length)) {
-    return false;
-  }
 
   // Ensure that the first command_length chars of input match and that it is
   // either the whole input or there is a space after the command, we don't want
   // partial command matching.
-  return strncmp(command, input, *command_length) == 0 &&
-      ((input_length == (size_t)*command_length) || input[*command_length] == ' ');
+  if (short_command) {
+    const size_t short_length = strlen(short_command);
+    if (input_length >= short_length && strncmp(short_command, input, short_length) == 0 &&
+        ((input_length == short_length) || input[short_length] == ' ')) {
+      *command_length = short_length;
+      return true;
+    }
+  }
+
+  const size_t long_length = strlen(long_command);
+  if (input_length >= long_length && strncmp(long_command, input, long_length) == 0 &&
+             ((input_length == long_length) || input[long_length] == ' ')) {
+    *command_length = long_length;
+    return true;
+  }
+  return false;
 }
 
 int zxc_dm(int argc, char** argv) {
@@ -669,41 +680,41 @@ int zxc_dm(int argc, char** argv) {
 
     // Handle service backed commands.
     int command_length = 0;
-    if (command_cmp("kerneldebug", argv[1], &command_length)) {
+    if (command_cmp("kerneldebug", NULL, argv[1], &command_length)) {
         return send_kernel_debug_command(argv[1] + command_length,
                                          strlen(argv[1]) - command_length);
-    } else if (command_cmp("ktraceon", argv[1], &command_length)) {
+    } else if (command_cmp("ktraceon", NULL, argv[1], &command_length)) {
         return send_kernel_tracing_enabled(true);
 
-    } else if (command_cmp("ktraceoff", argv[1], &command_length)) {
+    } else if (command_cmp("ktraceoff", NULL, argv[1], &command_length)) {
         return send_kernel_tracing_enabled(false);
 
-    } else if (command_cmp("help", argv[1], &command_length)) {
+    } else if (command_cmp("help", NULL, argv[1], &command_length)) {
         return print_dm_help();
 
-    } else if (command_cmp("dump", argv[1], &command_length)) {
+    } else if (command_cmp("dump", NULL, argv[1], &command_length)) {
         return send_dump(fuchsia_device_manager_DebugDumperDumpTree);
 
-    } else if (command_cmp("drivers", argv[1], &command_length)) {
+    } else if (command_cmp("drivers", NULL, argv[1], &command_length)) {
         return send_dump(fuchsia_device_manager_DebugDumperDumpDrivers);
 
-    } else if (command_cmp("devprops", argv[1], &command_length)) {
+    } else if (command_cmp("devprops", NULL, argv[1], &command_length)) {
         return send_dump(fuchsia_device_manager_DebugDumperDumpBindingProperties);
 
-    } else if (command_cmp("reboot", argv[1], &command_length)) {
+    } else if (command_cmp("reboot", NULL, argv[1], &command_length)) {
         return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT);
 
-    } else if (command_cmp("reboot-bootloader", argv[1], &command_length)) {
+    } else if (command_cmp("reboot-bootloader", "rb", argv[1], &command_length)) {
         return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER);
 
-    } else if (command_cmp("reboot-recovery", argv[1], &command_length)) {
+    } else if (command_cmp("reboot-recovery", "rr", argv[1], &command_length)) {
         return send_suspend(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY);
 
-    } else if (command_cmp("suspend", argv[1], &command_length)) {
+    } else if (command_cmp("suspend", NULL, argv[1], &command_length)) {
         return send_suspend(DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
 
-    } else if (command_cmp("poweroff", argv[1], &command_length) ||
-               command_cmp("shutdown", argv[1], &command_length)) {
+    } else if (command_cmp("poweroff", NULL, argv[1], &command_length) ||
+               command_cmp("shutdown", NULL, argv[1], &command_length)) {
         return send_suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
 
     } else {
