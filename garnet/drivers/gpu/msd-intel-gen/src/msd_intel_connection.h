@@ -15,7 +15,7 @@
 
 class ClientContext;
 
-class MsdIntelConnection : PerProcessGtt::Owner {
+class MsdIntelConnection {
  public:
   class Owner : public PerProcessGtt::Owner {
    public:
@@ -51,9 +51,6 @@ class MsdIntelConnection : PerProcessGtt::Owner {
   }
 
   void SendContextKilled() { notifications_.SendContextKilled(); }
-
-  // PerProcessGtt::Owner
-  magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
 
   // Maps |page_count| pages of the given |buffer| at |page_offset| to |gpu_addr| into the
   // GPU address space belonging to this connection.

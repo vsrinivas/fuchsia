@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <type_traits>
+
 #include "gtest/gtest.h"
 #include "mock/mock_bus_mapper.h"
 #include "msd_intel_connection.h"
 
-class TestMsdIntelConnection : public MsdIntelConnection::Owner {
+class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection::Owner {
  public:
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
     return MAGMA_STATUS_UNIMPLEMENTED;
@@ -135,14 +137,14 @@ class TestMsdIntelConnection : public MsdIntelConnection::Owner {
   uint32_t callback_count_ = 0;
 };
 
-TEST(MsdIntelConnection, Notification) { TestMsdIntelConnection().Notification(); }
+TEST_F(TestMsdIntelConnection, Notification) { Notification(); }
 
-TEST(MsdIntelConnection, ReleaseBuffer) { TestMsdIntelConnection().ReleaseBuffer(); }
+TEST_F(TestMsdIntelConnection, ReleaseBuffer) { ReleaseBuffer(); }
 
-TEST(MsdIntelConnection, ReleaseBufferWhileMapped) {
-  TestMsdIntelConnection().ReleaseBufferWhileMapped();
-}
+TEST_F(TestMsdIntelConnection, ReleaseBufferWhileMapped) { ReleaseBufferWhileMapped(); }
 
-TEST(MsdIntelConnection, ReuseGpuAddrWithoutRelease) {
-  TestMsdIntelConnection().ReuseGpuAddrWithoutRelease();
+TEST_F(TestMsdIntelConnection, ReuseGpuAddrWithoutRelease) { ReuseGpuAddrWithoutRelease(); }
+
+TEST_F(TestMsdIntelConnection, InheritanceCheck) {
+  EXPECT_FALSE(static_cast<bool>(std::is_base_of<PerProcessGtt::Owner, MsdIntelConnection>()));
 }
