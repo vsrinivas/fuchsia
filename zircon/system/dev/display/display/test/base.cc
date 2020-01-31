@@ -64,11 +64,13 @@ void TestBase::TearDown() {
   display_->DdkAsyncRemove();
   ddk_.DeviceAsyncRemove(const_cast<zx_device_t*>(sysmem_->device()));
   async::PostTask(loop_.dispatcher(),
-                  [sysmem = sysmem_.release(), sysmem_ctx = sysmem_ctx_.release()]() {
+                  [this, sysmem = sysmem_.release(), sysmem_ctx = sysmem_ctx_.release()]() {
                     delete sysmem;
                     delete sysmem_ctx;
+                    loop_.Quit();
                   });
-  loop_.Shutdown();
+  // Wait for loop_.Quit() to execute.
+  loop_.JoinThreads();
   EXPECT_TRUE(ddk_.Ok());
 }
 
