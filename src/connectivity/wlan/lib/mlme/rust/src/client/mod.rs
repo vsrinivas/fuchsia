@@ -841,8 +841,10 @@ impl<'a> BoundClient<'a> {
     }
 
     pub fn on_eth_frame<B: ByteSlice>(&mut self, frame: B) -> Result<(), Error> {
-        let (state, result) = self.sta.state.take().unwrap().on_eth_frame(self, frame);
-        self.sta.state = Some(state);
+        // Safe: |state| is never None and always replaced with Some(..).
+        let state = self.sta.state.take().unwrap();
+        let result = state.on_eth_frame(self, frame);
+        self.sta.state.replace(state);
         result
     }
 
@@ -969,6 +971,11 @@ impl<'a> BoundClient<'a> {
         if let Err(e) = result {
             error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
         }
+    }
+
+    fn is_on_channel(&self) -> bool {
+        let channel = self.ctx.device.channel();
+        self.channel_state.main_channel.map(|c| c == channel).unwrap_or(false)
     }
 
     fn send_mgmt_or_ctrl_frame(&mut self, out_buf: OutBuf) -> Result<(), zx::Status> {

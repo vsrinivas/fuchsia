@@ -761,22 +761,20 @@ impl States {
     }
 
     pub fn on_eth_frame<B: ByteSlice>(
-        self,
+        &self,
         sta: &mut BoundClient<'_>,
         frame: B,
-    ) -> (Self, Result<(), Error>) {
+    ) -> Result<(), Error> {
         match self {
-            States::Associated(state) => {
-                let result = state.on_eth_frame(sta, frame);
-                (state.into(), result)
-            }
-            _ => (
-                self,
-                Err(Error::Status(
-                    format!("Not associated, ethernet dropped"),
-                    zx::Status::BAD_STATE,
-                )),
-            ),
+            States::Associated(state) if sta.is_on_channel() => state.on_eth_frame(sta, frame),
+            States::Associated(_state) => Err(Error::Status(
+                format!("Associated but not on main channel. Ethernet dropped"),
+                zx::Status::BAD_STATE,
+            )),
+            _ => Err(Error::Status(
+                format!("Not associated. Ethernet dropped"),
+                zx::Status::BAD_STATE,
+            )),
         }
     }
 
@@ -961,6 +959,8 @@ mod tests {
 
         fn make_ctx(&mut self) -> Context {
             let device = self.fake_device.as_device();
+            device.set_channel(fake_wlan_channel()).expect("fake device is obedient");
+            self.channel_state.main_channel = Some(fake_wlan_channel());
             self.make_ctx_with_device(device)
         }
 
@@ -976,6 +976,14 @@ mod tests {
                 timer,
                 seq_mgr: SequenceManager::new(),
             }
+        }
+    }
+
+    fn fake_wlan_channel() -> banjo_wlan_info::WlanChannel {
+        banjo_wlan_info::WlanChannel {
+            primary: 0,
+            cbw: banjo_wlan_info::WlanChannelBandwidth(0),
+            secondary80: 0,
         }
     }
 
@@ -2183,9 +2191,7 @@ mod tests {
             29, // more payload
         ];
 
-        let (state, result) = state.on_eth_frame(&mut sta, &eth_frame[..]);
-        assert_variant!(state, States::Associated(_), "should stay in associated state");
-        assert_eq!(result.expect("all good"), ());
+        assert_eq!((), state.on_eth_frame(&mut sta, &eth_frame[..]).expect("all good"));
 
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         let (data_frame, _tx_flags) = m.fake_device.wlan_queue.remove(0);
@@ -2210,6 +2216,29 @@ mod tests {
     }
 
     #[test]
+    fn eth_frame_dropped_when_off_channel() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
+
+        sta.ctx
+            .device
+            .set_channel(banjo_wlan_info::WlanChannel { primary: 42, ..fake_wlan_channel() })
+            .expect("fake device is obedient");
+        let eth_frame = &[100; 14]; // An ethernet frame must be at least 14 bytes long.
+
+        let error = state
+            .on_eth_frame(&mut sta, &eth_frame[..])
+            .expect_err("Ethernet frame is dropped when client is off channel");
+        assert_variant!(error, Error::Status(_str, status) =>
+            assert_eq!(status, zx::Status::BAD_STATE),
+            "error should contain a status"
+        );
+    }
+
+    #[test]
     fn assoc_eth_frame_too_short_dropped() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
@@ -2219,11 +2248,12 @@ mod tests {
 
         let eth_frame = &[100; 13]; // Needs at least 14 bytes for header.
 
-        let (state, result) = state.on_eth_frame(&mut sta, &eth_frame[..]);
-        assert_variant!(state, States::Associated(_), "Should stay in joined");
-        let status = assert_variant !(result.unwrap_err(), Error::Status(_str, status) => status,
-                                      "should be error");
-        assert_eq!(status, zx::Status::IO_DATA_INTEGRITY);
+        let error =
+            state.on_eth_frame(&mut sta, &eth_frame[..]).expect_err("Ethernet frame is too short");
+        assert_variant!(error, Error::Status(_str, status) =>
+            assert_eq!(status, zx::Status::IO_DATA_INTEGRITY),
+            "error should contain a status"
+        );
     }
 
     #[test]
@@ -2236,11 +2266,13 @@ mod tests {
 
         let eth_frame = &[100; 14]; // long enough for ethernet header.
 
-        let (state, result) = state.on_eth_frame(&mut sta, &eth_frame[..]);
-        assert_variant!(state, States::Associated(_), "Should stay in joined");
-        let status = assert_variant !(result.unwrap_err(), Error::Status(_str, status) => status,
-                                      "should be error");
-        assert_eq!(status, zx::Status::BAD_STATE);
+        let error = state
+            .on_eth_frame(&mut sta, &eth_frame[..])
+            .expect_err("Ethernet frame canot be sent when controlled port is closed");
+        assert_variant!(error, Error::Status(_str, status) =>
+            assert_eq!(status, zx::Status::BAD_STATE),
+            "Error should contain status"
+        );
     }
 
     #[test]
@@ -2253,11 +2285,13 @@ mod tests {
 
         let eth_frame = &[100; 14]; // long enough for ethernet header.
 
-        let (state, result) = state.on_eth_frame(&mut sta, &eth_frame[..]);
-        assert_variant!(state, States::Joined(_), "Should stay in joined");
-        let status = assert_variant !(result.unwrap_err(), Error::Status(_str, status) => status,
-                                      "should be error");
-        assert_eq!(status, zx::Status::BAD_STATE);
+        let error = state
+            .on_eth_frame(&mut sta, &eth_frame[..])
+            .expect_err("Ethernet frame cannot be sent in Joined state");
+        assert_variant !(error, Error::Status(_str, status) =>
+            assert_eq!(status, zx::Status::BAD_STATE),
+            "Error should contain status"
+        );
     }
 
     #[test]
