@@ -21,7 +21,7 @@ zx_library("usb") {
 
     # <usb/request-cpp.h> has  #include <lib/operation/operation.h>.
     "$zx/system/dev/lib/dev-operation:headers",
-    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fit:headers",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

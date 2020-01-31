@@ -2,46 +2,69 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("ftdi-i2c-test") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("ftdi-i2c-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-i2c-test.cc" ]
   include_dirs = [ ".." ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk.protocol.i2cimpl",
-    "$zx/system/banjo/ddk.protocol.serialimpl",
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/fidl/fuchsia-hardware-ftdi:llcpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.i2cimpl",
+    "//zircon/system/banjo/ddk.protocol.serialimpl",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//zircon/system/fidl/fuchsia-hardware-ftdi:llcpp",
   ]
 }
 
 source_set("common") {
-  defines = [ "TEST" ]
+  defines = [
+    "_ALL_SOURCE",
+    "TEST",
+  ]
   include_dirs = [ ".." ]
   sources = [
     "../ftdi-i2c.cc",
     "../ftdi-mpsse.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/banjo/ddk.protocol.i2cimpl",
-    "$zx/system/banjo/ddk.protocol.serial",
-    "$zx/system/banjo/ddk.protocol.serialimpl",
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/fidl/fuchsia-hardware-ftdi:llcpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/banjo/ddk.protocol.i2cimpl",
+    "//zircon/system/banjo/ddk.protocol.serial",
+    "//zircon/system/banjo/ddk.protocol.serialimpl",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.composite",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/fidl/fuchsia-hardware-ftdi:llcpp",
   ]
+}
+
+migrated_manifest("ftdi-i2c-test-manifest") {
+  deps = [ ":ftdi-i2c-test" ]
 }

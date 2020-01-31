@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("intel-serialio") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("intel-serialio") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "dma/dma.c",
     "sdio/sdio.c",
@@ -12,10 +30,14 @@ zx_driver("intel-serialio") {
   ]
   include_dirs = [ "intel-serialio-include" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.pci",
-    "$zx/system/banjo/ddk.protocol.serial",
-    "$zx/system/dev/lib/device-protocol-pci",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/zircon",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-pci",
+    "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/banjo/ddk.protocol.serial",
   ]
+}
+
+migrated_manifest("intel-serialio-manifest") {
+  deps = [ ":intel-serialio" ]
 }

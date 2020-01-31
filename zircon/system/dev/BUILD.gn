@@ -21,7 +21,6 @@ group("dev") {
     "pci",
     "power",
     "pwm",
-    "serial",
     "shareddma",
     "spi",
     "sysmem",

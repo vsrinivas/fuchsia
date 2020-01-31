@@ -24,6 +24,7 @@ group("lib") {
     "fake-i2c",
     "fake-resource",
     "fake_ddk",
+    "fake-mmio-reg",
     "focaltech",
     "hi3660",
     "mmio",

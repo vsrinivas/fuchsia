@@ -2,17 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("test") {
-  testonly = true
-  deps = [ ":serial-unittest" ]
-}
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-zx_test("serial-unittest") {
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("serial-unittest") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "serial-test.cc" ]
   include_dirs = [ ".." ]
   deps = [
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/zxtest",
     "..:common",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/zxtest",
   ]
+}
+
+migrated_manifest("serial-unittest-manifest") {
+  deps = [ ":serial-unittest" ]
 }
