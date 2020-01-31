@@ -10,7 +10,6 @@ group("uapp") {
     "hid",
     "kcounter",
     "kstress",
-    "lz4",
     "minfs",
     "mutex_pi_exerciser",
     "syscall-check",

@@ -2,11 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("lz4") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("lz4") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "main.c" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/third_party/ulib/lz4",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/lz4",
   ]
+}
+
+migrated_manifest("lz4-manifest") {
+  deps = [ ":lz4" ]
 }
