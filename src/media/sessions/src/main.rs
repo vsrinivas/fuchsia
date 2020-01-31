@@ -4,6 +4,7 @@
 
 #![recursion_limit = "512"]
 
+mod id;
 mod proxies;
 mod services;
 #[cfg(test)]
@@ -12,6 +13,7 @@ mod test;
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_inspect::component;
 use futures::{channel::mpsc, prelude::*};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -33,27 +35,31 @@ async fn main() {
     fuchsia_syslog::init_with_tags(&["mediasession"]).expect("Initializing syslogger");
     fuchsia_syslog::fx_log_info!("Initializing Fuchsia Media Session Service");
 
+    let mut server = ServiceFs::new_local();
+    let inspector = component::inspector();
+    let root = inspector.root();
+
     let (player_sink, player_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
     let (request_sink, request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
     let discovery = self::services::discovery::Discovery::new(player_stream);
     spawn_log_error(discovery.serve(request_stream));
 
-    let mut server = ServiceFs::new_local();
     server
         .dir("svc")
-        .add_fidl_service(|request_stream| {
+        .add_fidl_service(move |request_stream| {
             spawn_log_error(
-                self::services::publisher::Publisher::new(player_sink.clone())
+                self::services::publisher::Publisher::new(player_sink.clone(), root)
                     .serve(request_stream),
             )
         })
         .add_fidl_service(
-            |request_stream: fidl_fuchsia_media_sessions2::DiscoveryRequestStream| {
+            move |request_stream: fidl_fuchsia_media_sessions2::DiscoveryRequestStream| {
                 let request_sink = request_sink.clone().sink_map_err(Into::into);
                 spawn_log_error(request_stream.map_err(Into::into).forward(request_sink));
             },
         );
-    server.take_and_serve_directory_handle().expect("To serve Media Session services");
+    inspector.serve(&mut server).expect("Serving inspect");
 
+    server.take_and_serve_directory_handle().expect("To serve Media Session services");
     server.collect::<()>().await;
 }

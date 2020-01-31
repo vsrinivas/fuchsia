@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    id::Id,
     services::discovery::{filter::*, player_event::PlayerEvent},
     Result,
 };
@@ -13,14 +14,15 @@ use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
 use fidl_table_validation::*;
 use fuchsia_async as fasync;
+use fuchsia_inspect as inspect;
 use fuchsia_syslog::{fx_log_info, fx_log_warn};
-use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
     future::{AbortHandle, Abortable},
     stream::FusedStream,
     task::{Context, Poll},
     Future, FutureExt, Stream, StreamExt, TryStreamExt,
 };
+use inspect::Property;
 use std::convert::*;
 use std::pin::Pin;
 use waitgroup::*;
@@ -137,8 +139,7 @@ impl ValidPlayerInfoDelta {
 /// A proxy for published `fuchsia.media.sessions2.Player` protocols.
 #[derive(Debug)]
 pub struct Player {
-    id: u64,
-    id_handle: zx::Event,
+    id: Id,
     inner: PlayerProxy,
     state: ValidPlayerInfoDelta,
     server_handles: Vec<AbortHandle>,
@@ -146,18 +147,20 @@ pub struct Player {
     registration: ValidPlayerRegistration,
     hanging_get: Option<QueryResponseFut<PlayerInfoDelta>>,
     terminated: bool,
+    // TODO(41131): Use structured data when a proc macro to derive
+    // Inspect support is available.
+    inspect_handle: inspect::StringProperty,
 }
 
 impl Player {
     pub fn new(
+        id: Id,
         client_end: ClientEnd<PlayerMarker>,
         registration: PlayerRegistration,
+        inspect_handle: inspect::StringProperty,
     ) -> Result<Self> {
-        let id_handle = zx::Event::create()?;
-        let id = id_handle.get_koid()?.raw_koid();
         Ok(Player {
             id,
-            id_handle,
             inner: client_end.into_proxy()?,
             state: ValidPlayerInfoDelta::default(),
             server_handles: vec![],
@@ -165,16 +168,18 @@ impl Player {
             registration: ValidPlayerRegistration::try_from(registration)?,
             hanging_get: None,
             terminated: false,
+            inspect_handle,
         })
     }
 
     pub fn id(&self) -> u64 {
-        self.id
+        self.id.get()
     }
 
     /// Updates state with the latest delta published by the player.
     pub fn update(&mut self, delta: ValidPlayerInfoDelta) {
         self.state = ValidPlayerInfoDelta::apply(self.state.clone(), delta);
+        self.inspect_handle.set(&format!("{:#?}", self.state));
     }
 
     /// Spawns a task to serve requests from `fuchsia.media.sessions2.SessionControl` with the
@@ -285,7 +290,7 @@ impl Player {
     fn options_satisfied(&self) -> WatchOptions {
         WatchOptions {
             only_active: Some(self.state.is_active().unwrap_or(false)),
-            allowed_sessions: Some(vec![self.id]),
+            allowed_sessions: Some(vec![self.id.get()]),
         }
     }
 }
@@ -333,7 +338,10 @@ impl Stream for Player {
                 if let PlayerEvent::Removed = event {
                     self.terminated = true;
                 }
-                Poll::Ready(Some(FilterApplicant::new(self.options_satisfied(), (self.id, event))))
+                Poll::Ready(Some(FilterApplicant::new(
+                    self.options_satisfied(),
+                    (self.id.get(), event),
+                )))
             }
         }
     }
@@ -357,25 +365,29 @@ mod test {
         stream::{self, StreamExt},
     };
     use futures_test::task::noop_waker;
+    use inspect::{assert_inspect_tree, Inspector};
     use test_util::assert_matches;
 
     static TEST_DOMAIN: &str = "test_domain";
 
-    fn test_player() -> (Player, ServerEnd<PlayerMarker>) {
+    fn test_player() -> (Inspector, Player, ServerEnd<PlayerMarker>) {
         let (player_client, player_server) =
             create_endpoints::<PlayerMarker>().expect("Creating endpoints for test");
+        let inspector = Inspector::new();
         let player = Player::new(
+            Id::new().expect("Creating id for test player"),
             player_client,
             PlayerRegistration { domain: Some(TEST_DOMAIN.to_string()) },
+            inspector.root().create_string("test_player", ""),
         )
         .expect("Creating player from valid prereqs");
-        (player, player_server)
+        (inspector, player, player_server)
     }
 
     #[fasync::run_singlethreaded]
     #[test]
     async fn clients_waits_for_new_status() -> Result<()> {
-        let (mut player, _player_server) = test_player();
+        let (_inspector, mut player, _player_server) = test_player();
 
         let (session_control_client, session_control_server) =
             create_endpoints::<SessionControlMarker>()?;
@@ -402,7 +414,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn client_gets_cached_player_status() -> Result<()> {
-        let (mut player, _player_server) = test_player();
+        let (_inspector, mut player, _player_server) = test_player();
 
         let (session_control_client, session_control_server) =
             create_endpoints::<SessionControlMarker>()?;
@@ -423,7 +435,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn client_channel_closes_when_backing_player_disconnects() -> Result<()> {
-        let (mut player, _player_server) = test_player();
+        let (_inspector, mut player, _player_server) = test_player();
 
         let (session_control_client, session_control_server) =
             create_endpoints::<SessionControlMarker>()?;
@@ -445,7 +457,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn update_stream_relays_player_state() -> Result<()> {
-        let (mut player, player_server) = test_player();
+        let (_inspector, mut player, player_server) = test_player();
         let mut requests = player_server.into_stream()?;
 
         let waker = noop_waker();
@@ -481,7 +493,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn update_stream_terminates_when_backing_player_disconnects() {
-        let (mut player, _) = test_player();
+        let (_inspector, mut player, _) = test_player();
         let mut player_stream = Pin::new(&mut player);
         let (_, event) = player_stream.next().await.expect("Polling player event").applicant;
         assert_matches!(event, PlayerEvent::Removed);
@@ -491,7 +503,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn update_stream_terminates_on_invalid_delta() -> Result<()> {
-        let (mut player, player_server) = test_player();
+        let (_inspector, mut player, player_server) = test_player();
         let mut requests = player_server.into_stream()?;
 
         let waker = noop_waker();
@@ -516,6 +528,60 @@ mod test {
         let (_, event) = player_stream.next().await.expect("Polling player event").applicant;
         assert_matches!(event, PlayerEvent::Removed);
         assert!(player_stream.is_terminated());
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    #[allow(unused)]
+    async fn inspect_node() -> Result<()> {
+        let (inspector, mut player, player_server) = test_player();
+        let mut requests = player_server.into_stream()?;
+
+        assert_inspect_tree!(inspector, root: {
+            test_player: "",
+        });
+
+        let waker = noop_waker();
+        let mut ctx = Context::from_waker(&waker);
+
+        let delta = PlayerInfoDelta {
+            player_capabilities: Some(PlayerCapabilities {
+                flags: Some(PlayerCapabilityFlags::Play | PlayerCapabilityFlags::Pause),
+            }),
+            ..Decodable::new_empty()
+        };
+
+        // Poll the stream so that it sends a watch request to the backing player.
+        let poll_result = Pin::new(&mut player).poll_next(&mut ctx);
+        assert_matches!(poll_result, Poll::Pending);
+
+        let info_change_responder = requests
+            .try_next()
+            .await?
+            .expect("Receiving a request")
+            .into_watch_info_change()
+            .expect("Receiving info change responder");
+        info_change_responder.send(delta)?;
+
+        let _ = player.next().await.expect("Polling player event");
+
+        const EXPECTED: &'static str = r"ValidPlayerInfoDelta {
+    local: None,
+    player_status: None,
+    metadata: None,
+    media_images: None,
+    player_capabilities: Some(
+        ValidPlayerCapabilities {
+            flags: Play | Pause,
+        },
+    ),
+}";
+
+        assert_inspect_tree!(inspector, root: {
+            test_player: EXPECTED,
+        });
 
         Ok(())
     }

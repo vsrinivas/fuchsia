@@ -2,20 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{proxies::player::Player, Result};
+use crate::{id::Id, proxies::player::Player, Result};
 use anyhow::Context as _;
 use fidl_fuchsia_media_sessions2::*;
+use fuchsia_inspect as inspect;
 use futures::{channel::mpsc, prelude::*};
 
 /// Implements `fuchsia.media.session2.Publisher`.
 #[derive(Clone)]
-pub struct Publisher {
+pub struct Publisher<'a> {
+    #[allow(unused)]
+    player_list: &'a inspect::Node,
     player_sink: mpsc::Sender<Player>,
 }
 
-impl Publisher {
-    pub fn new(player_sink: mpsc::Sender<Player>) -> Self {
-        Self { player_sink }
+impl<'a> Publisher<'a> {
+    pub fn new(player_sink: mpsc::Sender<Player>, player_list: &'a inspect::Node) -> Self {
+        Self { player_sink, player_list }
     }
 
     pub async fn serve(mut self, mut request_stream: PublisherRequestStream) -> Result<()> {
@@ -29,8 +32,14 @@ impl Publisher {
                 }
             };
 
+            let id = Id::new().context("Allocating new unique id")?;
+            let id_str = format!("{}", id.get());
+            let value: Option<String> = None;
+            let value_str = format!("{:?}", value);
+            let player_node = self.player_list.create_string(id_str, value_str);
+
             let player_result = (move || -> Result<Player> {
-                let player = Player::new(player, registration)?;
+                let player = Player::new(id, player, registration, player_node)?;
                 if let Some(responder) = responder {
                     responder.send(player.id())?;
                 }

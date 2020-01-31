@@ -226,9 +226,10 @@ impl Discovery {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::spawn_log_error;
+    use crate::{id::Id, spawn_log_error};
     use fidl::{encoding::Decodable, endpoints::create_endpoints};
     use fuchsia_async as fasync;
+    use fuchsia_inspect::Inspector;
     use test_util::assert_matches;
 
     #[fasync::run_singlethreaded]
@@ -254,10 +255,13 @@ mod test {
             .await?;
 
         // Add a player to the set, and vend an update from it.
+        let inspector = Inspector::new();
         let (player_client, player_server) = create_endpoints::<PlayerMarker>()?;
         let player = Player::new(
+            Id::new()?,
             player_client,
             PlayerRegistration { domain: Some(String::from("test_domain://")) },
+            inspector.root().create_string("test_player", ""),
         )?;
         player_sink.send(player).await?;
         let mut player_requests = player_server.into_stream()?;
