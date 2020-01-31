@@ -115,7 +115,7 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
       queue_(std::move(queue)),
       crash_server_(std::move(crash_server)),
       info_(std::move(info_context)),
-      privacy_settings_watcher_(services_, &settings_) {
+      privacy_settings_watcher_(dispatcher, services_, &settings_) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(services_);
   FXL_DCHECK(queue_);

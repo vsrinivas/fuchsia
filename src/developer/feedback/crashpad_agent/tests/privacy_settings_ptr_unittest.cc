@@ -43,7 +43,7 @@ PrivacySettings MakePrivacySettings(const std::optional<bool> user_data_sharing_
 class PrivacySettingsWatcherTest : public UnitTestFixture,
                                    public testing::WithParamInterface<Settings::UploadPolicy> {
  public:
-  PrivacySettingsWatcherTest() : watcher_(services(), &crash_reporter_settings_) {}
+  PrivacySettingsWatcherTest() : watcher_(dispatcher(), services(), &crash_reporter_settings_) {}
 
  protected:
   void SetUpPrivacySettingsProvider(
@@ -120,7 +120,7 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfServerNotAvail
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfServerClosesConnection) {
   SetInitialUploadPolicy(GetParam());
-  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettingsClosesConnection>());
+  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettingsClosesConnectionOnWatch>());
 
   watcher_.StartWatching();
   RunLoopUntilIdle();
@@ -138,6 +138,28 @@ TEST_P(PrivacySettingsWatcherTest, UploadPolicyDefaultToDisabledIfNoCallToSet) {
   EXPECT_TRUE(watcher_.IsConnected());
   EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
   EXPECT_FALSE(watcher_.privacy_settings().has_user_data_sharing_consent());
+}
+
+TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnRetry) {
+  SetInitialUploadPolicy(GetParam());
+  SetUpPrivacySettingsProvider(std::make_unique<FakePrivacySettingsClosesConnectionOnFirstWatch>());
+
+  SetPrivacySettings(kUserOptIn);
+
+  // The connection will be closed on the first call to Watch().
+  watcher_.StartWatching();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(watcher_.IsConnected());
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kLimbo);
+  EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
+
+  // We then retry to connect 5 minutes later and succeed.
+  // We run the loop longer than the delay to account for the nondeterminism of
+  // backoff::ExponentialBackoff.
+  RunLoopFor(zx::min(5));
+  EXPECT_TRUE(watcher_.IsConnected());
+  EXPECT_EQ(crash_reporter_settings_.upload_policy(), kEnabled);
+  EXPECT_TRUE(watcher_.privacy_settings().has_user_data_sharing_consent());
 }
 
 TEST_P(PrivacySettingsWatcherTest, UploadPolicySwitchesToSetValueOnFirstWatch_OptIn) {

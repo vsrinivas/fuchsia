@@ -4,8 +4,10 @@
 
 #include "src/developer/feedback/crashpad_agent/privacy_settings_ptr.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/settings/formatting.h>
+#include <lib/zx/time.h>
 #include <zircon/types.h>
 
 #include <optional>
@@ -16,9 +18,14 @@
 
 namespace feedback {
 
-PrivacySettingsWatcher::PrivacySettingsWatcher(std::shared_ptr<sys::ServiceDirectory> services,
+PrivacySettingsWatcher::PrivacySettingsWatcher(async_dispatcher_t* dispatcher,
+                                               std::shared_ptr<sys::ServiceDirectory> services,
                                                Settings* crash_reporter_settings)
-    : services_(services), crash_reporter_settings_(crash_reporter_settings) {}
+    : dispatcher_(dispatcher),
+      services_(services),
+      crash_reporter_settings_(crash_reporter_settings),
+      retry_backoff_(/*initial_delay=*/zx::min(1), /*retry_factor=*/2u, /*max_delay=*/zx::hour(1)) {
+}
 
 void PrivacySettingsWatcher::StartWatching() {
   Connect();
@@ -30,13 +37,19 @@ void PrivacySettingsWatcher::Connect() {
   privacy_settings_ptr_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.settings.Privacy";
     Reset();
-    // TODO(fxb/6360): re-connect with exponential backoff.
+
+    retry_task_.Reset([this]() mutable { StartWatching(); });
+    async::PostDelayedTask(
+        dispatcher_, [retry_task = retry_task_.callback()]() { retry_task(); },
+        retry_backoff_.GetNext());
   });
 }
 
 void PrivacySettingsWatcher::Watch() {
   privacy_settings_ptr_->Watch(
       [this](fit::result<fuchsia::settings::PrivacySettings, fuchsia::settings::Error> result) {
+        retry_backoff_.Reset();
+
         if (result.is_error()) {
           FX_LOGS(ERROR) << "Failed to obtain privacy settings: " << result.error();
           Reset();

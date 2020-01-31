@@ -6,11 +6,14 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_PRIVACY_SETTINGS_PTR_H_
 
 #include <fuchsia/settings/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
 
 #include "src/developer/feedback/crashpad_agent/settings.h"
+#include "src/lib/backoff/exponential_backoff.h"
+#include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -26,7 +29,8 @@ namespace feedback {
 class PrivacySettingsWatcher {
  public:
   // fuchsia.settings.Privacy is expected to be in |services|.
-  PrivacySettingsWatcher(std::shared_ptr<sys::ServiceDirectory> services,
+  PrivacySettingsWatcher(async_dispatcher_t* dispatcher,
+                         std::shared_ptr<sys::ServiceDirectory> services,
                          Settings* crash_reporter_settings);
 
   // Connects to fuchsia.settings.Privacy and watches for "user data sharing consent" changes.
@@ -46,11 +50,16 @@ class PrivacySettingsWatcher {
   void Reset();
   void Update();
 
+  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   Settings* crash_reporter_settings_;
 
   fuchsia::settings::PrivacySettings privacy_settings_;
   fuchsia::settings::PrivacyPtr privacy_settings_ptr_;
+
+  // We need to be able to cancel a posted retry task when |this| is destroyed.
+  fxl::CancelableClosure retry_task_;
+  backoff::ExponentialBackoff retry_backoff_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PrivacySettingsWatcher);
 };

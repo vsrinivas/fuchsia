@@ -44,4 +44,18 @@ void FakePrivacySettings::NotifyWatcher() {
   dirty_bit_ = false;
 }
 
+void FakePrivacySettingsClosesConnectionOnFirstWatch::Watch(WatchCallback callback) {
+  if (first_watch_) {
+    CloseConnection();
+    first_watch_ = false;
+    return;
+  }
+
+  FXL_CHECK(!watcher_);
+  watcher_ = std::make_unique<WatchCallback>(std::move(callback));
+  if (dirty_bit_) {
+    NotifyWatcher();
+  }
+}
+
 }  // namespace feedback

@@ -37,21 +37,31 @@ class FakePrivacySettings : public fuchsia::settings::Privacy {
  protected:
   void CloseConnection();
 
- private:
   void NotifyWatcher();
 
+ private:
   // We use a Binding (single connection) and not a BindingSet (multiple connections in parallel) as
   // we don't want to have to maintain a separate handler per connection to implement the hanging
   // get pattern.
   std::unique_ptr<fidl::Binding<fuchsia::settings::Privacy>> binding_;
   fuchsia::settings::PrivacySettings settings_;
+
+ protected:
   bool dirty_bit_ = true;
   std::unique_ptr<WatchCallback> watcher_;
 };
 
-class FakePrivacySettingsClosesConnection : public FakePrivacySettings {
+class FakePrivacySettingsClosesConnectionOnWatch : public FakePrivacySettings {
  public:
   void Watch(WatchCallback callback) { CloseConnection(); }
+};
+
+class FakePrivacySettingsClosesConnectionOnFirstWatch : public FakePrivacySettings {
+ public:
+  void Watch(WatchCallback callback);
+
+ private:
+  bool first_watch_ = true;
 };
 
 }  // namespace feedback
