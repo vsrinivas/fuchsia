@@ -10,6 +10,7 @@
 
 #include "third_party/cobalt/src/local_aggregation/event_aggregator_mgr.h"
 #include "third_party/cobalt/src/observation_store/observation_store.h"
+#include "third_party/cobalt/src/public/cobalt_service.h"
 #include "third_party/cobalt/src/uploader/shipping_manager.h"
 
 namespace cobalt {
@@ -17,12 +18,7 @@ namespace cobalt {
 class CobaltControllerImpl : public fuchsia::cobalt::Controller {
  public:
   // All of the pointers passed to the constructor must be non-null.
-  //
-  // |observation_store| should be the same ObservationStore which is used by
-  // by |event_aggregator| and by the Cobalt v1.0 ShippingManager.
-  CobaltControllerImpl(async_dispatcher_t* dispatcher, encoder::ShippingManager* shipping_manager,
-                       local_aggregation::EventAggregatorManager* event_aggregator_mgr,
-                       observation_store::ObservationStore* observation_store);
+  CobaltControllerImpl(async_dispatcher_t* dispatcher, CobaltService* cobalt_service);
 
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
@@ -39,9 +35,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
                                       GenerateAggregatedObservationsCallback callback) override;
 
   async_dispatcher_t* const dispatcher_;
-  encoder::ShippingManager* shipping_manager_;
-  local_aggregation::EventAggregatorManager* event_aggregator_mgr_;  // not owned
-  observation_store::ObservationStore* observation_store_;
+  CobaltService* cobalt_service_;  // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
 };

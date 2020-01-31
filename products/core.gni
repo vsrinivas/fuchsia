@@ -36,6 +36,7 @@ base_package_labels += [
   "//garnet/bin/thermd:config",
   "//garnet/bin/timezone",
   "//src/cobalt/bin/app:cobalt",
+  "//src/cobalt/bin/app:cobalt_registry",
   "//src/cobalt/bin/app:config",
   "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
   "//src/connectivity/bluetooth:core",
