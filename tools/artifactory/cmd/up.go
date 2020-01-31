@@ -77,7 +77,7 @@ flags:
 func (cmd *upCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.gcsBucket, "bucket", "", "GCS bucket to which artifacts will be uploaded")
 	f.StringVar(&cmd.uuid, "uuid", "", "UUID under which to index uploaded artifacts")
-	f.IntVar(&cmd.j, "j", 1000, "maximum number of concurrent uploading processes")
+	f.IntVar(&cmd.j, "j", 500, "maximum number of concurrent uploading processes")
 }
 
 func (cmd upCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
