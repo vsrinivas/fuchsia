@@ -51,6 +51,9 @@ test_package("feedback_agent_tests") {
       environments = basic_envs
     },
     {
+      name = "feedback_id_provider_unittest"
+    },
+    {
       name = "feedback_id_unittest"
     },
     {
@@ -134,6 +137,7 @@ test_package("feedback_agent_tests") {
     ":config_unittest",
     ":data_provider_unittest",
     ":feedback_agent_integration_test",
+    ":feedback_id_provider_unittest",
     ":feedback_id_unittest",
     ":inspect_exe",
     ":inspect_ptr_unittest",
@@ -247,6 +251,22 @@ executable("feedback_agent_integration_test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger",
+  ]
+}
+
+executable("feedback_id_provider_unittest") {
+  testonly = true
+
+  sources = [ "feedback_id_provider_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/feedback_agent/annotations:feedback_id_provider",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/lib/files:files",
+    "//src/lib/uuid:uuid",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 

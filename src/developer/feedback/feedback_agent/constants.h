@@ -14,6 +14,7 @@ constexpr char kAnnotationBuildProduct[] = "build.product";
 constexpr char kAnnotationBuildVersion[] = "build.version";
 constexpr char kAnnotationChannel[] = "channel";
 constexpr char kAnnotationDeviceBoardName[] = "device.board-name";
+constexpr char kAnnotationDeviceFeedbackId[] = "device.feedback-id";
 constexpr char kAnnotationDeviceUptime[] = "device.uptime";
 constexpr char kAnnotationDeviceUTCTime[] = "device.utc-time";
 constexpr char kAnnotationHardwareBoardName[] = "hardware.board.name";
@@ -33,6 +34,8 @@ constexpr char kAttachmentLogKernel[] = "log.kernel.txt";
 constexpr char kAttachmentLogSystem[] = "log.system.txt";
 
 constexpr char kAttachmentBundle[] = "fuchsia_feedback_data.zip";
+
+constexpr char kFeedbackIdPath[] = "/data/feedback_id.txt";
 
 }  // namespace feedback
 

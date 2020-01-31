@@ -92,6 +92,26 @@ source_set("board_info_provider") {
 }
 
 # Exposed separately for unit test purposes.
+source_set("feedback_id_provider") {
+  public = [ "feedback_id_provider.h" ]
+
+  sources = [
+    "feedback_id_provider.cc",
+    "feedback_id_provider.h",
+  ]
+
+  public_deps = [ ":single_sync_annotation_provider" ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//src/lib/uuid",
+  ]
+}
+
+# Exposed separately for unit test purposes.
 source_set("product_info_provider") {
   public = [ "product_info_provider.h" ]
 
@@ -137,5 +157,4 @@ source_set("single_sync_annotation_provider") {
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
   ]
-  visibility = [ "//src/developer/feedback/feedback_agent/tests/*" ]
 }
