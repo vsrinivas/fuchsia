@@ -56,25 +56,31 @@ class Comparator {
   // For testing, expected_output_ should then be set using ParseGolden.
   Comparator(std::ostream& os) : compare_results_(os) {}
 
-  // Given a message node for the current execution, see if it can be uniquely matched with a
-  // golden message node. Returns true if and only if there is exactly one golden node that could
-  // match, and false otherwise. In case no golden node could match this message, outputs an error
-  // to compare_results_.
-  bool UniqueMatchToGolden(std::shared_ptr<ActualMessageNode> actual_message_node);
+  // Given a message node for the current execution, see if it can be uniquely matched with a golden
+  // message node. If there is exactly one golden node that could match returns it, and returns
+  // nullptr otherwise. In case no golden node could match this message, outputs an error to
+  // compare_results_.
+  std::shared_ptr<GoldenMessageNode> UniqueMatchToGolden(
+      std::shared_ptr<ActualMessageNode> actual_message_node);
 
-  // Given an actual node with a matching golden node (ie assumes
-  // actual_node->matching_golden_node()) is not null) recursively propagates this matching
-  // along all dependency links. Returns false if an inconsistency in the matching was found while
-  // propagating. If reverse_propagate is set to true, also runs ReversePropagate for any new
-  // matching found.
-  bool PropagateMatch(std::shared_ptr<ActualNode> actual_node, bool reverse_propagate);
+  // Given an actual node and the golden node that should match it, checks that this match is
+  // possible (neither node is already matched, and they have the same number of dependencies), and
+  // recursively propagates this matching along all dependency links. Returns false if an
+  // inconsistency in the matching is found. If reverse_propagate is set to true, also runs
+  // ReversePropagate on actual_node.
+  bool PropagateMatch(std::shared_ptr<ActualNode> actual_node,
+                      std::shared_ptr<GoldenNode> golden_node, bool reverse_propagate);
 
-  // Given an actual node with a matching golden node (ie assumes
-  // actual_node->matching_golden_node()) is not null) recursively propagates this matching
-  // along reverse dependency links. Returns false if an inconsistency in the matching was found
-  // while propagating. Also runs Propagate for any new matching found. Assumes the
-  // actual_message_graph_ is complete, that is to say no more messages/nodes/links will be added to
-  // it.
+  // Given an actual node with a matching golden node, propagates this matching
+  // along the reverse dependency links of actual_node and alls PropagateMatch(with
+  // reverse_propagate set to true) for any new node matched. Returns false if an inconsistency in
+  // the matching was found while propagating.
+  // Assumes that PropagateMatch was called successfully on actual_node before, in particular that
+  // actual_node->matching_golden_node() is not null, and that the actual_message_graph_ is
+  // complete, that is to say no more messages/nodes/links will be added to it.
+  // Note: this function relies on PropagateMatching to take care of recursion termination, and
+  // never calls itself directly (the code here could be inserted at the end of PropagateMatch with
+  // the same behavior).
   bool ReversePropagateMatch(std::shared_ptr<ActualNode> actual_node);
 
   // Creates the golden_message_graph_ from the contents of the file.

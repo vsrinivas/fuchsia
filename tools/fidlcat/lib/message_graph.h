@@ -369,14 +369,22 @@ class MessageGraph {
   std::map<std::string, std::vector<std::shared_ptr<MessageNode<BaseNode>>>> message_nodes_;
 };
 
-// This class describes the nodes for the execution contained in the golden
-// file.
+// This class describes the nodes for the execution contained in the golden file. It simply contains
+// a boolean checking if it has already been matched to a node from the current execution. We rely
+// on ActualNodes to record the matching, we use the boolean to make sure no two nodes from the
+// current execution are matched to the same golden node, and that every golden node is matched.
 class GoldenBase {
  public:
   void PrintNode(std::ostream& output) const { output << " golden "; }
+
+  bool has_matching_actual_node() const { return has_matching_actual_node_; };
+  void set_has_matching_actual_node() { has_matching_actual_node_ = true; };
+
+ protected:
+  bool has_matching_actual_node_ = false;
 };
 
-// This class describes the nodes for the current execution. Teh only addition to GoldenBase is
+// This class describes the nodes for the current execution. The only addition to GoldenBase is
 // matching_golden_node_. This field is initially set to a null pointer when we create the actual
 // node. When we know for sure which golden node this node corresponds to, we set it accordingly.
 class ActualBase {
@@ -394,6 +402,7 @@ class ActualBase {
 
 using GoldenMessageGraph = MessageGraph<GoldenBase>;
 using GoldenMessageNode = MessageNode<GoldenBase>;
+using GoldenNode = Node<GoldenBase>;
 using ActualMessageGraph = MessageGraph<ActualBase>;
 using ActualNode = Node<ActualBase>;
 using ActualMessageNode = MessageNode<ActualBase>;

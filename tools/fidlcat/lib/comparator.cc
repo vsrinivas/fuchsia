@@ -21,8 +21,9 @@ void Comparator::CompareInput(std::string_view syscall_inputs, std::string_view 
                                                                  actual_tid, syscall_inputs);
   // Is there a unique match for this message in the golden messages? If so, we propagate this
   // match.
-  if (UniqueMatchToGolden(actual_message_node)) {
-    PropagateMatch(actual_message_node, false);
+  std::shared_ptr<GoldenNode> matching_golden_node = UniqueMatchToGolden(actual_message_node);
+  if (matching_golden_node) {
+    PropagateMatch(actual_message_node, matching_golden_node, false);
   }
   last_unmatched_input_from_tid_[actual_tid] = actual_message_node;
 }
@@ -44,8 +45,9 @@ void Comparator::CompareOutput(std::string_view syscall_outputs,
 
   // Is there a unique match for this message in the golden messages? If so, we propagate this
   // match.
-  if (UniqueMatchToGolden(actual_message_node)) {
-    PropagateMatch(actual_message_node, false);
+  std::shared_ptr<GoldenNode> matching_golden_node = UniqueMatchToGolden(actual_message_node);
+  if (matching_golden_node) {
+    PropagateMatch(actual_message_node, matching_golden_node, false);
   }
 }
 
@@ -53,67 +55,70 @@ void Comparator::DecodingError(std::string_view error) {
   compare_results_ << "Unexpected decoding error in the current execution:\n" << error;
 }
 
-bool Comparator::UniqueMatchToGolden(std::shared_ptr<ActualMessageNode> actual_message_node) {
+std::shared_ptr<GoldenMessageNode> Comparator::UniqueMatchToGolden(
+    std::shared_ptr<ActualMessageNode> actual_message_node) {
   auto poss_golden_messages =
       golden_message_graph_.message_nodes().find(actual_message_node->message());
   if (poss_golden_messages == golden_message_graph_.message_nodes().end()) {  // No message matched
     compare_results_ << "No golden message could match " << *actual_message_node;
-    return false;
+    return nullptr;
   }
   if (poss_golden_messages->second.size() == 1) {
     // exactly one message from golden matched this string
-    actual_message_node->set_matching_golden_node(poss_golden_messages->second[0]);
-    return true;
+    return poss_golden_messages->second[0];
   }
   // More than one golden message matched
-  return false;
+  return nullptr;
 }
 
-bool Comparator::PropagateMatch(std::shared_ptr<ActualNode> actual_node, bool reverse_propagate) {
-  auto golden_node = actual_node->matching_golden_node();
-  ZX_ASSERT(golden_node != nullptr);
+bool Comparator::PropagateMatch(std::shared_ptr<ActualNode> actual_node,
+                                std::shared_ptr<GoldenNode> golden_node, bool reverse_propagate) {
+  if (!actual_node || !golden_node) {
+    return false;
+  }
+  if (actual_node->matching_golden_node()) {
+    if (actual_node->matching_golden_node() == golden_node) {
+      return true;
+    }
+    compare_results_ << "Conflicting matches for " << *actual_node << "matched to " << *golden_node
+                     << " and " << *(actual_node->matching_golden_node()) << "\n";
+    return false;
+  }
+  if (golden_node->has_matching_actual_node()) {
+    compare_results_ << *golden_node << "was matched twice.\n";
+    return false;
+  }
+  if (golden_node->dependencies().size() != actual_node->dependencies().size()) {
+    compare_results_ << *actual_node << " with " << actual_node->dependencies().size()
+                     << " dependencies was matched with " << *golden_node << " which has "
+                     << golden_node->dependencies().size() << " dependencies \n";
+    return false;
+  }
+  actual_node->set_matching_golden_node(golden_node);
+  golden_node->set_has_matching_actual_node();
+
+  auto golden_i = golden_node->dependencies().begin();
 
   for (auto i = actual_node->dependencies().begin(); i != actual_node->dependencies().end(); i++) {
     auto actual_dependency_node = i->second;
     // The golden node that should match actual_dependency_node according to the dependency links
     // of golden_node
-    auto golden_dependency_node = golden_node->get_dependency_by_type(i->first);
+    auto golden_dependency_node = golden_i->second;
 
-    // golden_node does not have the dependency actual_node has, there is no possible matching
-    // between the current execution and the one stored in the golden file.
-    if (!golden_dependency_node) {
-      compare_results_ << *actual_node << " with dependency to " << *actual_dependency_node
-                       << " was matched to " << *golden_node
-                       << " which does not have this dependency \n";
+    if (!PropagateMatch(actual_dependency_node, golden_dependency_node, reverse_propagate)) {
       return false;
     }
-
-    if (!actual_dependency_node->matching_golden_node()) {
-      actual_dependency_node->set_matching_golden_node(golden_dependency_node);
-      if (!PropagateMatch(actual_dependency_node, reverse_propagate)) {
-        return false;
-      }
-      if (reverse_propagate && !ReversePropagateMatch(actual_dependency_node)) {
-        return false;
-      }
-    }
-    // actual_dependency_node was already matched, we check that this match makes sense for the
-    // current link
-    else if (actual_dependency_node->matching_golden_node() != golden_dependency_node) {
-      compare_results_
-          << "Conflicting matches for " << *actual_node << "matched to " << *golden_node
-          << "\n. Actual has dependency to " << *actual_dependency_node << " matched to "
-          << *actual_dependency_node->matching_golden_node()
-          << " whereas according to dependency from actual and its match it should have been "
-          << *golden_dependency_node << "\n";
-      return false;
-    }
+    golden_i++;
+  }
+  if (reverse_propagate) {
+    return ReversePropagateMatch(actual_node);
   }
   return true;
 }
 
 bool Comparator::ReversePropagateMatch(std::shared_ptr<ActualNode> actual_node) {
-  // golden_node matches actual_node
+  // Should only be called after Propagate has been called on actual_node, so actual_node should
+  // have a matching golden_node.
   auto golden_node = actual_node->matching_golden_node();
   ZX_ASSERT(golden_node != nullptr);
 
@@ -148,19 +153,7 @@ bool Comparator::ReversePropagateMatch(std::shared_ptr<ActualNode> actual_node) 
     }
     auto actual_dependency_node = actual_link_type_pair->second[0].lock();
     auto golden_dependency_node = golden_link_type_pair->second[0].lock();
-    if (!actual_dependency_node->matching_golden_node()) {
-      actual_dependency_node->set_matching_golden_node(golden_dependency_node);
-      if (!PropagateMatch(actual_dependency_node, true) ||
-          !ReversePropagateMatch(actual_dependency_node)) {
-        return false;
-      }
-    } else if (actual_dependency_node->matching_golden_node() != golden_dependency_node) {
-      compare_results_
-          << "Conflicting matches for " << *actual_node << "matched to " << *golden_node
-          << "\n. Actual has a reverse dependency to " << *actual_dependency_node << " matched to "
-          << *actual_dependency_node->matching_golden_node()
-          << " whereas according to dependency from actual and its match it should have been "
-          << *golden_dependency_node << "\n";
+    if (!PropagateMatch(actual_dependency_node, golden_dependency_node, true)) {
       return false;
     }
   }
@@ -372,7 +365,7 @@ bool Comparator::HasReturn(std::string_view message) {
 void Comparator::FinishComparison() {
   // All the messages have been intercepted, we now want to check our graph:
   // - First propagates matchings along reverse dependencies now that the graph is complete,
-  // - Then checks if there still are unmatched nodes.
+  // - Then checks if there still are unmatched nodes, either golden or actual.
 
   for (auto i = actual_message_graph_.message_nodes().begin();
        i != actual_message_graph_.message_nodes().end(); i++) {
@@ -411,11 +404,21 @@ void Comparator::FinishComparison() {
        i != actual_message_graph_.message_nodes().end(); i++) {
     for (size_t j = 0; j < i->second.size(); j++) {
       if (!i->second[j]->matching_golden_node()) {
-        compare_results_ << "Unmatched message " << i->second[j]->message();
+        compare_results_ << "Unmatched actual message " << i->second[j]->message();
         unmatched_message = true;
       }
     }
   }
+  for (auto i = golden_message_graph_.message_nodes().begin();
+       i != golden_message_graph_.message_nodes().end(); i++) {
+    for (size_t j = 0; j < i->second.size(); j++) {
+      if (!i->second[j]->has_matching_actual_node()) {
+        compare_results_ << "Unmatched golden message " << i->second[j]->message();
+        unmatched_message = true;
+      }
+    }
+  }
+
   // There is no need to check that handles, pids and tids are matched: as all of them have at least
   // one message that depends from them, if all messages are matched, so are they.
   if (!unmatched_message) {

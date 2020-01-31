@@ -26,12 +26,14 @@ class TestComparator : public Comparator {
     return golden_message_graph_.InsertMessage(process_name, pid, tid, cur_msg);
   }
 
-  bool UniqueMatchToGoldenTest(std::shared_ptr<ActualMessageNode> actual_message_node) {
+  std::shared_ptr<GoldenMessageNode> UniqueMatchToGoldenTest(
+      std::shared_ptr<ActualMessageNode> actual_message_node) {
     return UniqueMatchToGolden(actual_message_node);
   }
 
-  bool PropagateMatchTest(std::shared_ptr<ActualNode> actual_node) {
-    return PropagateMatch(actual_node, false);
+  bool PropagateMatchTest(std::shared_ptr<ActualNode> actual_node,
+                          std::shared_ptr<GoldenNode> golden_node) {
+    return PropagateMatch(actual_node, golden_node, false);
   }
 
   bool ReversePropagateMatchTest(std::shared_ptr<ActualNode> actual_node) {
@@ -270,9 +272,9 @@ TEST(Comparator, PropagateMatch) {
   std::string message1 = "zx_channel_create(options:uint32: 0)\n";
   ActualMessageGraph message_graph1;
   auto message_node1 = message_graph1.InsertMessage("echo_client", 2, 22, message1);
-  ASSERT_TRUE(comparator1.UniqueMatchToGoldenTest(
-      message_node1));  // set the matching node for message_node1
-  ASSERT_TRUE(comparator1.PropagateMatchTest(message_node1));
+  auto matching_golden1 = comparator1.UniqueMatchToGoldenTest(message_node1);
+  ASSERT_TRUE(matching_golden1);
+  ASSERT_TRUE(comparator1.PropagateMatchTest(message_node1, matching_golden1));
   auto golden_tid = comparator1.golden_message_graph().get_tid_node(11);
   auto actual_tid = message_graph1.get_tid_node(22);
   ASSERT_EQ(actual_tid->matching_golden_node(), golden_tid);
@@ -292,19 +294,22 @@ echo_client 1:21 zx_channel_write(handle:handle: 221a, options:uint32: 0)
   std::string message2a = "zx_channel_create(options:uint32: 0)\n";
   ActualMessageGraph message_graph2;
   auto message_node2a = message_graph2.InsertMessage("echo_client", 2, 22, message2a);
-  ASSERT_TRUE(comparator2.UniqueMatchToGoldenTest(message_node2a));
-  ASSERT_TRUE(comparator2.PropagateMatchTest(message_node2a));
+  auto matching_golden2a = comparator2.UniqueMatchToGoldenTest(message_node2a);
+  ASSERT_TRUE(matching_golden2a);
+  ASSERT_TRUE(comparator2.PropagateMatchTest(message_node2a, matching_golden2a));
 
   std::string message2b = "  -> ZX_OK (out0:handle: 111a, out1:handle: 111b)\n";
   auto message_node2b =
       message_graph2.InsertMessage("echo_client", 2, 22, message2b, message_node2a);
-  ASSERT_TRUE(comparator2.UniqueMatchToGoldenTest(message_node2b));
-  ASSERT_TRUE(comparator2.PropagateMatchTest(message_node2b));
+  auto matching_golden2b = comparator2.UniqueMatchToGoldenTest(message_node2b);
+  ASSERT_TRUE(matching_golden2b);
+  ASSERT_TRUE(comparator2.PropagateMatchTest(message_node2b, matching_golden2b));
 
   std::string message2c = "zx_channel_write(handle:handle: 221a, options:uint32: 0)\n";
   auto message_node2c = message_graph2.InsertMessage("echo_client", 2, 22, message2c);
-  ASSERT_TRUE(comparator2.UniqueMatchToGoldenTest(message_node2c));
-  ASSERT_FALSE(comparator2.PropagateMatchTest(message_node2c));
+  auto matching_golden2c = comparator2.UniqueMatchToGoldenTest(message_node2c);
+  ASSERT_TRUE(matching_golden2c);
+  ASSERT_FALSE(comparator2.PropagateMatchTest(message_node2c, matching_golden2c));
 }
 
 TEST(Comparator, ReversePropagateMatch) {
@@ -362,14 +367,75 @@ echo_client 1:12 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)
       "echo_client 2:21 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)\n";
   comparator.CompareInput(input_2, process_name, 2, 21);
   ASSERT_EQ(
-      "Conflicting matches for  actual message node: zx_channel_write(handle:handle: 0, "
-      "options:uint32: 0)\n "
-      "matched to  golden message node: zx_channel_write(handle:handle: 0, options:uint32: "
-      "0)\n \n. "
-      "Actual has dependency to  actual tid node: 21  matched to  golden tid node: 11  whereas "
-      "according to dependency from actual and its match it should have been  golden tid node: 12 "
-      "\n",
+      "Conflicting matches for  actual tid node: 21 matched to  golden tid node: 12  and  golden "
+      "tid node: 11 \n",
       comparator.output_string());
+}
+
+TEST(Comparator, CompareUnmatchedGoldenMessages) {
+  std::string messages = R"(
+echo_client 1:11 zx_channel_create(options:uint32: 0)
+  -> ZX_OK (out0:handle: 6d3e0273, out1:handle: 6c2e0347)
+
+echo_client 2:12 zx_channel_write(handle:handle: 6d1e0003, options:uint32: 0)
+)";
+  fidlcat::TestComparator comparator(messages);
+  std::string process_name = "echo_client";
+
+  std::string input_1 = "echo_client 2:21 zx_channel_create(options:uint32: 0)\n";
+  comparator.CompareInput(input_1, process_name, 2, 21);
+  ASSERT_EQ("", comparator.output_string());
+
+  std::string output_1 = "  -> ZX_OK (out0:handle: 6d3e0273, out1:handle: 6c2e0347)\n";
+  comparator.CompareOutput(output_1, process_name, 2, 21);
+  ASSERT_EQ("", comparator.output_string());
+
+  comparator.FinishComparison();
+  ASSERT_EQ("Unmatched golden message zx_channel_write(handle:handle: 0, options:uint32: 0)\n",
+            comparator.output_string());
+}
+
+TEST(Comparator, CompareUnmatchedActualMessages) {
+  std::string messages = R"(
+echo_client 1:11 zx_channel_create(options:uint32: 0)
+
+echo_client 1:11 zx_channel_create(options:uint32: 0)
+)";
+  fidlcat::TestComparator comparator(messages);
+  std::string process_name = "echo_client";
+
+  std::string input_1 = "echo_client 2:21 zx_channel_create(options:uint32: 0)\n";
+  comparator.CompareInput(input_1, process_name, 2, 21);
+  ASSERT_EQ("", comparator.output_string());
+
+  std::string input_2 = "echo_client 2:21 zx_channel_create(options:uint32: 0)\n";
+  comparator.CompareInput(input_1, process_name, 2, 21);
+  ASSERT_EQ("", comparator.output_string());
+
+  comparator.FinishComparison();
+  ASSERT_EQ(
+      "Unmatched actual message zx_channel_create(options:uint32: 0)\n"
+      "Unmatched actual message zx_channel_create(options:uint32: 0)\n"
+      "Unmatched golden message zx_channel_create(options:uint32: 0)\n"
+      "Unmatched golden message zx_channel_create(options:uint32: 0)\n",
+      comparator.output_string());
+}
+
+TEST(Comparator, MultipleActualMessagesForSameGolden) {
+  std::string messages = R"(
+echo_client 1:11 zx_channel_create(options:uint32: 0)
+)";
+  fidlcat::TestComparator comparator(messages);
+  std::string process_name = "echo_client";
+
+  std::string input_1 = "echo_client 2:21 zx_channel_create(options:uint32: 0)\n";
+  comparator.CompareInput(input_1, process_name, 2, 21);
+  ASSERT_EQ("", comparator.output_string());
+
+  std::string input_2 = "echo_client 2:21 zx_channel_create(options:uint32: 0)\n";
+  comparator.CompareInput(input_1, process_name, 2, 21);
+  ASSERT_EQ(" golden message node: zx_channel_create(options:uint32: 0)\n was matched twice.\n",
+            comparator.output_string());
 }
 
 }  // namespace fidlcat
