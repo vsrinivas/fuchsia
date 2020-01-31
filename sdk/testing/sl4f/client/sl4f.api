@@ -756,6 +756,10 @@
               "name": "playready",
               "type": "EnumConstantDeclarationImpl"
             },
+            "weave": {
+              "name": "weave",
+              "type": "EnumConstantDeclarationImpl"
+            }
             "widevine": {
               "name": "widevine",
               "type": "EnumConstantDeclarationImpl"

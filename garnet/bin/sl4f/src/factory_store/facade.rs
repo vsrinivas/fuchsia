@@ -10,7 +10,8 @@ use base64;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_factory::{
     CastCredentialsFactoryStoreProviderMarker, MiscFactoryStoreProviderMarker,
-    PlayReadyFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
+    PlayReadyFactoryStoreProviderMarker, WeaveFactoryStoreProviderMarker,
+    WidevineFactoryStoreProviderMarker,
 };
 use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE};
 use files_async::{readdir_recursive, DirentKind};
@@ -100,6 +101,10 @@ impl FactoryStoreFacade {
                 let playready_svc = connect_to_service::<PlayReadyFactoryStoreProviderMarker>()?;
                 playready_svc.get_factory_store(dir_server_end)?;
             }
+            FactoryStoreProvider::Weave => {
+                let weave_svc = connect_to_service::<WeaveFactoryStoreProviderMarker>()?;
+                weave_svc.get_factory_store(dir_server_end)?;
+            }
             FactoryStoreProvider::Widevine => {
                 let widevine_svc = connect_to_service::<WidevineFactoryStoreProviderMarker>()?;
                 widevine_svc.get_factory_store(dir_server_end)?;
@@ -132,6 +137,10 @@ mod tests {
             "playready" => hashmap! {
                 "pr/pr/prinfo.dat" => "playready info",
                 "dat.stuff" => "playready stuff"
+            },
+            "weave" => hashmap! {
+                "weave.file" => "weave info",
+                "weave/data" => "weave data"
             },
             "widevine" => hashmap! {
                 "stuff.log" => "widevine stuff",

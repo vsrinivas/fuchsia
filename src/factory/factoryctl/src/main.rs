@@ -8,7 +8,8 @@ use {
     fidl_fuchsia_boot::FactoryItemsMarker,
     fidl_fuchsia_factory::{
         CastCredentialsFactoryStoreProviderMarker, MiscFactoryStoreProviderMarker,
-        PlayReadyFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
+        PlayReadyFactoryStoreProviderMarker, WeaveFactoryStoreProviderMarker,
+        WidevineFactoryStoreProviderMarker,
     },
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     files_async::{self, DirentKind},
@@ -34,6 +35,8 @@ pub enum Opt {
     Misc(FactoryStoreCmd),
     #[structopt(name = "playready")]
     PlayReady(FactoryStoreCmd),
+    #[structopt(name = "weave")]
+    Weave(FactoryStoreCmd),
     #[structopt(name = "widevine")]
     Widevine(FactoryStoreCmd),
 }
@@ -141,6 +144,11 @@ async fn main() -> Result<(), Error> {
                 .expect("Failed to connect to PlayReadyFactoryStoreProvider service");
             process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
         }
+        Opt::Weave(cmd) => {
+            let proxy = connect_to_service::<WeaveFactoryStoreProviderMarker>()
+                .expect("Failed to connect to WeaveFactoryStoreProvider service");
+            process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
+        }
         Opt::Widevine(cmd) => {
             let proxy = connect_to_service::<WidevineFactoryStoreProviderMarker>()
                 .expect("Failed to connect to WidevineFactoryStoreProvider service");
@@ -158,7 +166,8 @@ mod tests {
             CastCredentialsFactoryStoreProviderRequest,
             CastCredentialsFactoryStoreProviderRequestStream, MiscFactoryStoreProviderRequest,
             MiscFactoryStoreProviderRequestStream, PlayReadyFactoryStoreProviderRequest,
-            PlayReadyFactoryStoreProviderRequestStream, WidevineFactoryStoreProviderRequest,
+            PlayReadyFactoryStoreProviderRequestStream, WeaveFactoryStoreProviderRequest,
+            WeaveFactoryStoreProviderRequestStream, WidevineFactoryStoreProviderRequest,
             WidevineFactoryStoreProviderRequestStream,
         },
         fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
@@ -182,22 +191,26 @@ mod tests {
     const CAST_TXT_FILE_NAME: &str = "txt/cast.txt";
     const MISC_TXT_FILE_NAME: &str = "misc/misc.txt";
     const PLAYREADY_TXT_FILE_NAME: &str = "txt/playready.txt";
+    const WEAVE_TXT_FILE_NAME: &str = "txt/weave.txt";
     const WIDEVINE_TXT_FILE_NAME: &str = "widevine.txt";
 
     const CAST_BIN_FILE_NAME: &str = "cast.bin";
     const MISC_BIN_FILE_NAME: &str = "bin/misc.bin";
     const PLAYREADY_BIN_FILE_NAME: &str = "playready/playready.bin";
+    const WEAVE_BIN_FILE_NAME: &str = "weave.bin";
     const WIDEVINE_BIN_FILE_NAME: &str = "widevine.bin";
 
     const CAST_TXT_FILE_CONTENTS: &str = "a cast file";
     const MISC_TXT_FILE_CONTENTS: &str = "a misc file";
     const PLAYREADY_TXT_FILE_CONTENTS: &str = "a playready file";
+    const WEAVE_TXT_FILE_CONTENTS: &str = "a weave file";
     const WIDEVINE_TXT_FILE_CONTENTS: &str = "a widevine file";
 
     const FACTORY_ITEM_CONTENTS: &[u8] = &[0xf0, 0xe8, 0x65, 0x94];
     const CAST_BIN_FILE_CONTENTS: &[u8] = &[0x0, 0x18, 0xF1, 0x6d];
     const MISC_BIN_FILE_CONTENTS: &[u8] = &[0x0, 0xf3, 0x17, 0xb6];
     const PLAYREADY_BIN_FILE_CONTENTS: &[u8] = &[0x0e, 0xb8, 0x1a, 0xc6];
+    const WEAVE_BIN_FILE_CONTENTS: &[u8] = &[0xab, 0xcd, 0xef, 0x1];
     const WIDEVINE_BIN_FILE_CONTENTS: &[u8] = &[0x0c, 0xee, 0x8a, 0x6f];
 
     enum IncomingServices {
@@ -205,6 +218,7 @@ mod tests {
         CastCredentialsFactoryStoreProvider(CastCredentialsFactoryStoreProviderRequestStream),
         MiscFactoryStoreProvider(MiscFactoryStoreProviderRequestStream),
         PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
+        WeaveFactoryStoreProvider(WeaveFactoryStoreProviderRequestStream),
         WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
     }
 
@@ -248,6 +262,7 @@ mod tests {
             .add_fidl_service(IncomingServices::CastCredentialsFactoryStoreProvider)
             .add_fidl_service(IncomingServices::MiscFactoryStoreProvider)
             .add_fidl_service(IncomingServices::PlayReadyFactoryStoreProvider)
+            .add_fidl_service(IncomingServices::WeaveFactoryStoreProvider)
             .add_fidl_service(IncomingServices::WidevineFactoryStoreProvider);
 
         let env = fs.create_salted_nested_environment("factoryctl_env");
@@ -340,6 +355,30 @@ mod tests {
                         .await
                         .unwrap();
                 }
+                IncomingServices::WeaveFactoryStoreProvider(stream) => {
+                    stream
+                        .err_into::<Error>()
+                        .try_for_each(
+                            |WeaveFactoryStoreProviderRequest::GetFactoryStore {
+                                 dir,
+                                 control_handle: _,
+                             }| {
+                                async move {
+                                    let weave_proxy = start_test_dir(
+                                        WEAVE_TXT_FILE_NAME,
+                                        WEAVE_TXT_FILE_CONTENTS,
+                                        WEAVE_BIN_FILE_NAME,
+                                        WEAVE_BIN_FILE_CONTENTS,
+                                    )?;
+                                    weave_proxy
+                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    Ok(())
+                                }
+                            },
+                        )
+                        .await
+                        .unwrap();
+                }
                 IncomingServices::WidevineFactoryStoreProvider(stream) => {
                     stream
                         .err_into::<Error>()
@@ -378,6 +417,7 @@ mod tests {
             ("cast", "list", CAST_BIN_FILE_NAME, CAST_TXT_FILE_NAME),
             ("misc", "list", MISC_BIN_FILE_NAME, MISC_TXT_FILE_NAME),
             ("playready", "list", PLAYREADY_BIN_FILE_NAME, PLAYREADY_TXT_FILE_NAME),
+            ("weave", "list", WEAVE_BIN_FILE_NAME, WEAVE_TXT_FILE_NAME),
             ("widevine", "list", WIDEVINE_BIN_FILE_NAME, WIDEVINE_TXT_FILE_NAME),
         ] {
             let output = AppBuilder::new(FACTORYCTL_PKG_URL)
@@ -402,6 +442,7 @@ mod tests {
             ("cast", "dump", CAST_TXT_FILE_NAME, CAST_TXT_FILE_CONTENTS),
             ("misc", "dump", MISC_TXT_FILE_NAME, MISC_TXT_FILE_CONTENTS),
             ("playready", "dump", PLAYREADY_TXT_FILE_NAME, PLAYREADY_TXT_FILE_CONTENTS),
+            ("weave", "dump", WEAVE_TXT_FILE_NAME, WEAVE_TXT_FILE_CONTENTS),
             ("widevine", "dump", WIDEVINE_TXT_FILE_NAME, WIDEVINE_TXT_FILE_CONTENTS),
         ] {
             let output = AppBuilder::new(FACTORYCTL_PKG_URL)
@@ -441,6 +482,12 @@ mod tests {
                 "dump",
                 PLAYREADY_BIN_FILE_NAME,
                 PLAYREADY_BIN_FILE_CONTENTS.to_hex(HEX_DISPLAY_CHUNK_SIZE),
+            ),
+            (
+                "weave",
+                "dump",
+                WEAVE_BIN_FILE_NAME,
+                WEAVE_BIN_FILE_CONTENTS.to_hex(HEX_DISPLAY_CHUNK_SIZE),
             ),
             (
                 "widevine",

@@ -52,8 +52,8 @@ enum IncomingServices {
     CastCredentialsFactoryStoreProvider(CastCredentialsFactoryStoreProviderRequestStream),
     MiscFactoryStoreProvider(MiscFactoryStoreProviderRequestStream),
     PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
-    WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
     WeaveFactoryStoreProvider(WeaveFactoryStoreProviderRequestStream),
+    WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
 }
 
 fn parse_bootfs<'a>(vmo: zx::Vmo) -> directory::simple::Simple<'static> {
@@ -279,8 +279,8 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(IncomingServices::CastCredentialsFactoryStoreProvider)
         .add_fidl_service(IncomingServices::MiscFactoryStoreProvider)
         .add_fidl_service(IncomingServices::PlayReadyFactoryStoreProvider)
-        .add_fidl_service(IncomingServices::WidevineFactoryStoreProvider)
-        .add_fidl_service(IncomingServices::WeaveFactoryStoreProvider);
+        .add_fidl_service(IncomingServices::WeaveFactoryStoreProvider)
+        .add_fidl_service(IncomingServices::WidevineFactoryStoreProvider);
     fs.take_and_serve_directory_handle().expect("Failed to serve factory providers");
 
     syslog::fx_log_info!("{}", "Setting up factory directories");
@@ -308,8 +308,8 @@ async fn main() -> Result<(), Error> {
         let cast_directory_clone = cast_directory.clone();
         let misc_directory_clone = misc_directory.clone();
         let playready_directory_clone = playready_directory.clone();
-        let widevine_directory_clone = widevine_directory.clone();
         let weave_directory_clone = weave_directory.clone();
+        let widevine_directory_clone = widevine_directory.clone();
 
         async move {
             match incoming_service {
@@ -346,23 +346,23 @@ async fn main() -> Result<(), Error> {
                     )
                     .await
                 }
-                IncomingServices::WidevineFactoryStoreProvider(stream) => {
-                    let widevine_directory_clone = widevine_directory_clone.clone();
-                    handle_request_stream(
-                        stream,
-                        widevine_directory_clone,
-                        |req: WidevineFactoryStoreProviderRequest| {
-                            req.into_get_factory_store().map(|item| item.0)
-                        },
-                    )
-                    .await
-                }
                 IncomingServices::WeaveFactoryStoreProvider(stream) => {
                     let weave_directory_clone = weave_directory_clone.clone();
                     handle_request_stream(
                         stream,
                         weave_directory_clone,
                         |req: WeaveFactoryStoreProviderRequest| {
+                            req.into_get_factory_store().map(|item| item.0)
+                        },
+                    )
+                    .await
+                }
+                IncomingServices::WidevineFactoryStoreProvider(stream) => {
+                    let widevine_directory_clone = widevine_directory_clone.clone();
+                    handle_request_stream(
+                        stream,
+                        widevine_directory_clone,
+                        |req: WidevineFactoryStoreProviderRequest| {
                             req.into_get_factory_store().map(|item| item.0)
                         },
                     )

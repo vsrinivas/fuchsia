@@ -30,6 +30,12 @@ void main(List<String> args) {
         'playready_file1',
         'some/dir/playready_file2'
       ];
+      const expectedWeaveFiles = [
+        'weave_file1',
+        'some/dir/weave_file2',
+        'weave_file3',
+        'another/dir/weave_file4'
+      ];
       const expectedWidevineFiles = [
         'widevine_file1',
         'some/dir/widevine_file2'
@@ -39,6 +45,7 @@ void main(List<String> args) {
         'cast': expectedCastFiles,
         'misc': expectedMiscFiles,
         'playready': expectedPlayreadyFiles,
+        'weave': expectedWeaveFiles,
         'widevine': expectedWidevineFiles
       };
 
@@ -61,12 +68,15 @@ void main(List<String> args) {
           await sl4fFactory.listFiles(FactoryStoreProvider.misc);
       final List<String> playreadyFiles =
           await sl4fFactory.listFiles(FactoryStoreProvider.playready);
+      final List<String> weaveFiles =
+          await sl4fFactory.listFiles(FactoryStoreProvider.weave);
       final List<String> widevineFiles =
           await sl4fFactory.listFiles(FactoryStoreProvider.widevine);
 
       expect(castFiles, containsAllInOrder(expectedCastFiles));
       expect(miscFiles, containsAllInOrder(expectedMiscFiles));
       expect(playreadyFiles, containsAllInOrder(expectedPlayreadyFiles));
+      expect(weaveFiles, containsAllInOrder(expectedWeaveFiles));
       expect(widevineFiles, containsAllInOrder(expectedWidevineFiles));
     });
 
@@ -78,6 +88,9 @@ void main(List<String> args) {
       const playreadyFilename = 'playready_file1';
       final expectedPlayreadyFileContents =
           base64Encode(utf8.encode('playready_file1'));
+      const weaveFilename = 'weave_file1';
+      final expectedWeaveFileContents =
+          base64Encode(utf8.encode('weave_file1'));
       const widevineFilename = 'widevine_file1';
       final expectedWidevineFileContents =
           base64Encode(utf8.encode('widevine_file1'));
@@ -86,6 +99,7 @@ void main(List<String> args) {
         'cast': {castFilename: expectedCastFileContents},
         'misc': {miscFilename: expectedMiscFileContents},
         'playready': {playreadyFilename: expectedPlayreadyFileContents},
+        'weave': {weaveFilename: expectedWeaveFileContents},
         'widevine': {widevineFilename: expectedWidevineFileContents}
       };
 
@@ -112,12 +126,15 @@ void main(List<String> args) {
           await sl4fFactory.readFile(FactoryStoreProvider.misc, miscFilename);
       final Uint8List playreadyFiles = await sl4fFactory.readFile(
           FactoryStoreProvider.playready, playreadyFilename);
+      final Uint8List weaveFiles =
+          await sl4fFactory.readFile(FactoryStoreProvider.weave, weaveFilename);
       final Uint8List widevineFiles = await sl4fFactory.readFile(
           FactoryStoreProvider.widevine, widevineFilename);
 
       expect(castFiles, base64Decode(expectedCastFileContents));
       expect(miscFiles, base64Decode(expectedMiscFileContents));
       expect(playreadyFiles, base64Decode(expectedPlayreadyFileContents));
+      expect(weaveFiles, base64Decode(expectedWeaveFileContents));
       expect(widevineFiles, base64Decode(expectedWidevineFileContents));
     });
   });

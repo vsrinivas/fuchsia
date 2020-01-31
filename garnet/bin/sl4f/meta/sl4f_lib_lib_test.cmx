@@ -14,6 +14,10 @@
                     "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/playready.cmx",
                     "--config=/config/data/playready_factory_store.config"
                 ],
+		"fuchsia.factory.WeaveFactoryStoreProvider": [
+                    "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/weave.cmx",
+                    "--config=/config/data/weave_factory_store.config"
+                ],
                 "fuchsia.factory.WidevineFactoryStoreProvider": [
                     "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/widevine.cmx",
                     "--config=/config/data/widevine_factory_store.config"
@@ -32,6 +36,7 @@
             "fuchsia.factory.CastCredentialsFactoryStoreProvider",
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
+            "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
             "fuchsia.logger.LogSink"
         ]

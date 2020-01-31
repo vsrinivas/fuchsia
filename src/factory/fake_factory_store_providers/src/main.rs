@@ -8,7 +8,8 @@ use {
         CastCredentialsFactoryStoreProviderRequest,
         CastCredentialsFactoryStoreProviderRequestStream, MiscFactoryStoreProviderRequest,
         MiscFactoryStoreProviderRequestStream, PlayReadyFactoryStoreProviderRequest,
-        PlayReadyFactoryStoreProviderRequestStream, WidevineFactoryStoreProviderRequest,
+        PlayReadyFactoryStoreProviderRequestStream, WeaveFactoryStoreProviderRequest,
+        WeaveFactoryStoreProviderRequestStream, WidevineFactoryStoreProviderRequest,
         WidevineFactoryStoreProviderRequestStream,
     },
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
@@ -30,6 +31,7 @@ enum IncomingServices {
     CastCredentialsFactoryStoreProvider(CastCredentialsFactoryStoreProviderRequestStream),
     MiscFactoryStoreProvider(MiscFactoryStoreProviderRequestStream),
     PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
+    WeaveFactoryStoreProvider(WeaveFactoryStoreProviderRequestStream),
     WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
 }
 
@@ -98,6 +100,13 @@ async fn run_server(req: IncomingServices, dir_mtx: LockedDirectoryProxy) -> Res
                 dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
             }
         }
+        IncomingServices::WeaveFactoryStoreProvider(mut stream) => {
+            while let Some(request) = stream.try_next().await? {
+                let WeaveFactoryStoreProviderRequest::GetFactoryStore { dir, control_handle: _ } =
+                    request;
+                dir_mtx.lock().await.clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+            }
+        }
         IncomingServices::WidevineFactoryStoreProvider(mut stream) => {
             while let Some(request) = stream.try_next().await? {
                 let WidevineFactoryStoreProviderRequest::GetFactoryStore { dir, control_handle: _ } =
@@ -114,6 +123,7 @@ enum Provider {
     Cast,
     Misc,
     Playready,
+    Weave,
     Widevine,
 }
 impl FromStr for Provider {
@@ -125,6 +135,7 @@ impl FromStr for Provider {
             "cast" => Ok(Provider::Cast),
             "misc" => Ok(Provider::Misc),
             "playready" => Ok(Provider::Playready),
+            "weave" => Ok(Provider::Weave),
             "widevine" => Ok(Provider::Widevine),
             _ => Err(format_err!("Could not find '{}' provider", formatted_str)),
         }
@@ -159,6 +170,7 @@ async fn main() -> Result<(), Error> {
         Provider::Playready => {
             fs_dir.add_fidl_service(IncomingServices::PlayReadyFactoryStoreProvider)
         }
+        Provider::Weave => fs_dir.add_fidl_service(IncomingServices::WeaveFactoryStoreProvider),
         Provider::Widevine => {
             fs_dir.add_fidl_service(IncomingServices::WidevineFactoryStoreProvider)
         }

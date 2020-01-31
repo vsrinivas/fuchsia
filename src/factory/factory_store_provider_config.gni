@@ -37,6 +37,7 @@ template("factory_store_provider_config_validate") {
 #       fuchsia.factory.CastCredentialsFactoryStoreProvider
 #       fuchsia.factory.MiscFactoryStoreProvider
 #       fuchsia.factory.PlayReadyFactoryStoreProvider
+#       fuchsia.factory.WeaveFactoryStoreProvider
 #       fuchsia.factory.WidevineFactoryStoreProvider
 template("factory_store_provider_config") {
   validate_target = target_name + "_${invoker.provider}_validate"

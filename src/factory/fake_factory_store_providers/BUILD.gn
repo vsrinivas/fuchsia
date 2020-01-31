@@ -58,6 +58,10 @@ package("fake_factory_store_providers") {
       dest = "playready.cmx"
     },
     {
+      path = rebase_path("meta/weave.cmx")
+      dest = "weave.cmx"
+    },
+    {
       path = rebase_path("meta/widevine.cmx")
       dest = "widevine.cmx"
     },
@@ -98,6 +102,7 @@ config_data("test_fake_factory_store_providers_config") {
     "testdata/test_cast.config",
     "testdata/test_misc.config",
     "testdata/test_playready.config",
+    "testdata/test_weave.config",
     "testdata/test_widevine.config",
   ]
 }

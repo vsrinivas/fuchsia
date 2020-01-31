@@ -1,0 +1,16 @@
+{
+    "program": {
+        "args": [
+            "--provider=weave"
+        ],
+        "binary": "bin/fake_factory_store_provider"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+  }

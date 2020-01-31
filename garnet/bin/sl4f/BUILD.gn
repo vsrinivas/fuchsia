@@ -151,6 +151,10 @@ test_package("sl4f-service-tests") {
       dest = "playready_factory_store.config"
     },
     {
+      path = rebase_path("testdata/weave_factory_store.config")
+      dest = "weave_factory_store.config"
+    },
+    {
       path = rebase_path("testdata/widevine_factory_store.config")
       dest = "widevine_factory_store.config"
     },
@@ -170,6 +174,7 @@ config_data("fake-factory-store-providers-config") {
     "testdata/cast_factory_store.config",
     "testdata/misc_factory_store.config",
     "testdata/playready_factory_store.config",
+    "testdata/weave_factory_store.config",
     "testdata/widevine_factory_store.config",
   ]
 }

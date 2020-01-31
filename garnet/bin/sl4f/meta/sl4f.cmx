@@ -15,6 +15,7 @@
             "fuchsia.factory.CastCredentialsFactoryStoreProvider",
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
+            "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.hwinfo.Product",

@@ -39,5 +39,6 @@ pub enum FactoryStoreProvider {
     Cast,
     Misc,
     Playready,
+    Weave,
     Widevine,
 }

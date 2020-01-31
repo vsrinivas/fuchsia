@@ -8,7 +8,8 @@ use {
     anyhow::Error,
     fidl_fuchsia_factory::{
         CastCredentialsFactoryStoreProviderMarker, MiscFactoryStoreProviderMarker,
-        PlayReadyFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
+        PlayReadyFactoryStoreProviderMarker, WeaveFactoryStoreProviderMarker,
+        WidevineFactoryStoreProviderMarker,
     },
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
@@ -87,6 +88,21 @@ async fn read_factory_files_from_playready_store() -> Result<(), Error> {
 async fn missing_factory_files_from_playready_store() -> Result<(), Error> {
     let dir_proxy = connect_to_factory_store_provider!(PlayReadyFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "abc").await.unwrap_err();
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn read_factory_files_from_weave_store() -> Result<(), Error> {
+    let dir_proxy = connect_to_factory_store_provider!(WeaveFactoryStoreProviderMarker);
+    assert_file(&dir_proxy, "weave.txt", "a weave file".as_bytes()).await?;
+    assert_file(&dir_proxy, "weave2.log", "and yet another weave".as_bytes()).await?;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn missing_factory_files_from_weave_store() -> Result<(), Error> {
+    let dir_proxy = connect_to_factory_store_provider!(WeaveFactoryStoreProviderMarker);
+    read_file_from_proxy(&dir_proxy, "defg").await.unwrap_err();
     Ok(())
 }
 

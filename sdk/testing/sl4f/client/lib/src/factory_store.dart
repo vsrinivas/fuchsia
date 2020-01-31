@@ -12,6 +12,7 @@ enum FactoryStoreProvider {
   cast,
   misc,
   playready,
+  weave,
   widevine,
 }
 
@@ -19,6 +20,7 @@ final _providerToJson = {
   FactoryStoreProvider.cast: 'cast',
   FactoryStoreProvider.misc: 'misc',
   FactoryStoreProvider.playready: 'playready',
+  FactoryStoreProvider.weave: 'weave',
   FactoryStoreProvider.widevine: 'widevine',
 };
 
