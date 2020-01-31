@@ -89,6 +89,9 @@ pub fn get_cpu_power(capacitance: Farads, voltage: Volts, op_completion_rate: He
 
 /// The CpuControlHandler node.
 pub struct CpuControlHandler {
+    /// The path to the driver that this node controls.
+    cpu_driver_path: String,
+
     /// The parameters of the CPU domain which are lazily queried from the CPU driver.
     cpu_control_params: RefCell<CpuControlParams>,
 
@@ -118,6 +121,7 @@ impl CpuControlHandler {
         cpu_dev_handler_node: Rc<dyn Node>,
     ) -> Result<Rc<Self>, Error> {
         Ok(Self::new_with_cpu_ctrl_proxy(
+            cpu_driver_path.clone(),
             Self::connect_cpu_proxy(cpu_driver_path)?,
             capacitance,
             cpu_stats_handler,
@@ -128,12 +132,14 @@ impl CpuControlHandler {
     /// Create the node with an existing CpuCtrl proxy (test configuration can use this
     /// to pass a proxy which connects to a fake driver)
     fn new_with_cpu_ctrl_proxy(
+        cpu_driver_path: String,
         cpu_ctrl_proxy: fcpuctrl::DeviceProxy,
         capacitance: Farads,
         cpu_stats_handler: Rc<dyn Node>,
         cpu_dev_handler_node: Rc<dyn Node>,
     ) -> Rc<Self> {
         Rc::new(Self {
+            cpu_driver_path,
             cpu_control_params: RefCell::new(CpuControlParams {
                 p_states: Vec::new(),
                 capacitance,
@@ -158,6 +164,11 @@ impl CpuControlHandler {
 
     /// Construct CpuControlParams by querying the required information from the CpuCtrl interface.
     async fn get_cpu_params(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "CpuControlHandler::get_cpu_params",
+            "driver" => self.cpu_driver_path.as_str()
+        );
         // Query P-state metadata from the CpuCtrl interface. Each supported performance state
         // has accompanying P-state metadata.
         let mut p_states = Vec::new();
@@ -176,11 +187,24 @@ impl CpuControlHandler {
         params.p_states = p_states;
         params.num_cores = self.cpu_ctrl_proxy.get_num_logical_cores().await? as u32;
         params.validate()?;
+        fuchsia_trace::instant!(
+            "power_manager",
+            "CpuControlHandler::received_cpu_params",
+            fuchsia_trace::Scope::Thread,
+            "valid" => 1,
+            "p_states" => format!("{:?}", params.p_states).as_str(),
+            "num_cores" => params.num_cores
+        );
         Ok(())
     }
 
     /// Returns the total CPU load (averaged since the previous call)
     async fn get_load(&self) -> Result<f32, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "CpuControlHandler::get_load",
+            "driver" => self.cpu_driver_path.as_str()
+        );
         match self.send_message(&self.cpu_stats_handler, &Message::GetTotalCpuLoad).await {
             Ok(MessageReturn::GetTotalCpuLoad(load)) => Ok(load),
             Ok(r) => Err(format_err!("GetTotalCpuLoad had unexpected return value: {:?}", r)),
@@ -190,6 +214,11 @@ impl CpuControlHandler {
 
     /// Returns the current CPU P-state index
     async fn get_current_p_state_index(&self) -> Result<usize, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "CpuControlHandler::get_current_p_state_index",
+            "driver" => self.cpu_driver_path.as_str()
+        );
         match self.send_message(&self.cpu_dev_handler_node, &Message::GetPerformanceState).await {
             Ok(MessageReturn::GetPerformanceState(state)) => Ok(state as usize),
             Ok(r) => Err(format_err!("GetPerformanceState had unexpected return value: {:?}", r)),
@@ -207,12 +236,12 @@ impl CpuControlHandler {
         &self,
         max_power: &Watts,
     ) -> Result<MessageReturn, Error> {
-        // The operation completion rate over the last sample interval is
-        //     num_operations / sample_interval,
-        // where
-        //     num_operations = last_load * last_frequency * sample_interval.
-        // Hence,
-        //     last_operation_rate = last_load * last_frequency.
+        fuchsia_trace::duration!(
+            "power_manager",
+            "CpuControlHandler::handle_set_max_power_consumption",
+            "driver" => self.cpu_driver_path.as_str(),
+            "max_power" => max_power.0
+        );
 
         // Lazily query the current P-state index on the first iteration
         let current_p_state_index = {
@@ -230,17 +259,33 @@ impl CpuControlHandler {
             self.cpu_control_params.borrow()
         };
 
+        // The operation completion rate over the last sample interval is
+        //     num_operations / sample_interval,
+        // where
+        //     num_operations = last_load * last_frequency * sample_interval.
+        // Hence,
+        //     last_operation_rate = last_load * last_frequency.
+        let last_load = self.get_load().await? as f64;
         let last_operation_rate = {
             // TODO(pshickel): Eventually we'll need a way to query the load only from the cores we
             // care about. As far as I can tell, there isn't currently a way to correlate the CPU
             // info coming from CpuStats with that from CpuCtrl.
-            let last_load = self.get_load().await? as f64;
             let last_frequency = cpu_params.p_states[current_p_state_index].frequency;
             last_frequency.mul_scalar(last_load)
         };
 
         // If no P-states meet the selection criterion, use the lowest-power state.
         let mut p_state_index = cpu_params.p_states.len() - 1;
+
+        fuchsia_trace::instant!(
+            "power_manager",
+            "CpuControlHandler::set_max_power_consumption_data",
+            fuchsia_trace::Scope::Thread,
+            "driver" => self.cpu_driver_path.as_str(),
+            "current_p_state_index" => current_p_state_index as u32,
+            "last_op_rate" => last_operation_rate.0,
+            "last_load" => last_load
+        );
 
         for (i, state) in cpu_params.p_states.iter().enumerate() {
             // We estimate that the operation rate over the next interval will be the min of
@@ -264,6 +309,14 @@ impl CpuControlHandler {
         }
 
         if p_state_index != self.current_p_state_index.get().unwrap() {
+            fuchsia_trace::instant!(
+                "power_manager",
+                "CpuControlHandler::updated_p_state_index",
+                fuchsia_trace::Scope::Thread,
+                "driver" => self.cpu_driver_path.as_str(),
+                "old_index" => self.current_p_state_index.get().unwrap() as u32,
+                "new_index" => p_state_index as u32
+            );
             // Tell the CPU DeviceControlHandler to update the performance state
             self.send_message(
                 &self.cpu_dev_handler_node,
@@ -338,6 +391,7 @@ pub mod tests {
     ) -> Rc<CpuControlHandler> {
         let capacitance = params.capacitance;
         CpuControlHandler::new_with_cpu_ctrl_proxy(
+            "Fake".to_string(),
             setup_fake_service(params),
             capacitance,
             cpu_stats_handler,

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::Nanoseconds;
@@ -41,7 +42,7 @@ pub struct CpuStatsHandler {
 }
 
 /// A record to store the total time spent idle for each CPU in the system at a moment in time
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct CpuIdleStats {
     /// Time the record was taken
     timestamp: Nanoseconds,
@@ -73,20 +74,32 @@ impl CpuStatsHandler {
 
     /// Calls out to the Kernel Stats service to retrieve the latest CPU stats
     async fn get_cpu_stats(&self) -> Result<fstats::CpuStats, Error> {
-        let stats = self
+        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::get_cpu_stats");
+        let result = self
             .stats_svc
             .get_cpu_stats()
             .await
-            .map_err(|e| format_err!("get_cpu_stats IPC failed: {}", e))?;
-        Ok(stats)
+            .map_err(|e| format_err!("get_cpu_stats IPC failed: {}", e));
+
+        log_if_err!(result, "Failed to get CPU stats");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "CpuStatsHandler::get_cpu_stats_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result).as_str()
+        );
+
+        Ok(result?)
     }
 
     async fn handle_get_num_cpus(&self) -> Result<MessageReturn, Error> {
+        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::handle_get_num_cpus");
         let stats = self.get_cpu_stats().await?;
         Ok(MessageReturn::GetNumCpus(stats.actual_num_cpus as u32))
     }
 
     async fn handle_get_total_cpu_load(&self) -> Result<MessageReturn, Error> {
+        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::handle_get_total_cpu_load");
         let new_stats = self.get_idle_stats().await?;
 
         // If the cached idle stats' idle_times vector has a length of 0, it means we have never
@@ -96,6 +109,12 @@ impl CpuStatsHandler {
         } else {
             Self::calculate_total_cpu_load(&self.cpu_idle_stats.borrow(), &new_stats)
         };
+        fuchsia_trace::instant!(
+            "power_manager",
+            "CpuStatsHandler::total_cpu_load",
+            fuchsia_trace::Scope::Thread,
+            "load" => load as f64
+        );
         self.cpu_idle_stats.replace(new_stats);
         Ok(MessageReturn::GetTotalCpuLoad(load))
     }
@@ -103,6 +122,7 @@ impl CpuStatsHandler {
     /// Gets the CPU idle stats, then populates them into the CpuIdleStats struct format that we
     /// can more easily use for calculations.
     async fn get_idle_stats(&self) -> Result<CpuIdleStats, Error> {
+        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::get_idle_stats");
         let mut idle_stats: CpuIdleStats = Default::default();
         let cpu_stats = self.get_cpu_stats().await?;
         let per_cpu_stats =
@@ -117,6 +137,13 @@ impl CpuStatsHandler {
             ));
         }
 
+        fuchsia_trace::instant!(
+            "power_manager",
+            "CpuStatsHandler::idle_stats_result",
+            fuchsia_trace::Scope::Thread,
+            "idle_stats" => format!("{:?}", idle_stats).as_str()
+        );
+
         Ok(idle_stats)
     }
 
@@ -125,7 +152,15 @@ impl CpuStatsHandler {
     ///     old_idle: the starting idle stats
     ///     new_idle: the ending idle stats
     fn calculate_total_cpu_load(old_idle: &CpuIdleStats, new_idle: &CpuIdleStats) -> f32 {
+        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::calculate_total_cpu_load");
         if old_idle.idle_times.len() != new_idle.idle_times.len() {
+            fuchsia_trace::instant!(
+                "power_manager",
+                "CpuStatsHandler::cpu_count_changed",
+                fuchsia_trace::Scope::Thread,
+                "old_stats" => format!("{:?}", old_idle).as_str(),
+                "new_stats" => format!("{:?}", new_idle).as_str()
+            );
             fx_log_err!(
                 "Number of CPUs changed (old={}; new={})",
                 old_idle.idle_times.len(),

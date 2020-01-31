@@ -5,7 +5,6 @@
 use crate::message::{Message, MessageReturn};
 use anyhow::Error;
 use async_trait::async_trait;
-use fuchsia_syslog::{fx_log_err, fx_vlog};
 use std::rc::Rc;
 
 /// A trait that all nodes in the PowerManager must implement
@@ -33,15 +32,29 @@ pub trait Node {
         node: &Rc<dyn Node>,
         msg: &Message,
     ) -> Result<MessageReturn, Error> {
+        // TODO(fxb/44484): Ideally we'd use a duration event here. But due to a limitation in the
+        // Rust tracing library, that would require creating any formatted strings (such as the
+        // "message" value) unconditionally, even when the tracing category is disabled. To
+        // avoid that unnecessary computation, just use an instant event.
+        fuchsia_trace::instant!(
+            "power_manager:messages",
+            "message_start",
+            fuchsia_trace::Scope::Thread,
+            "message" => format!("{:?}", msg).as_str(),
+            "source_node" => self.name(),
+            "dest_node" => node.name()
+        );
+
         let result = node.handle_message(msg).await;
-        match result.as_ref() {
-            Ok(r) => {
-                fx_vlog!(1, "{} -> {}: msg={:?}; res={:?}", self.name(), node.name(), msg, r);
-            }
-            Err(e) => {
-                fx_log_err!("{} -> {}: msg={:?}; res={:?}", self.name(), node.name(), msg, e);
-            }
-        }
+        fuchsia_trace::instant!(
+            "power_manager:messages",
+            "message_result",
+            fuchsia_trace::Scope::Thread,
+            "message" => format!("{:?}", msg).as_str(),
+            "source_node" => self.name(),
+            "dest_node" => node.name(),
+            "result" => format!("{:?}", result).as_str()
+        );
         result
     }
 }

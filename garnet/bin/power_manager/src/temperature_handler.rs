@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::Celsius;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_thermal as fthermal;
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use std::rc::Rc;
 
@@ -50,11 +52,37 @@ impl TemperatureHandler {
     }
 
     async fn handle_read_temperature(&self) -> Result<MessageReturn, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "TemperatureHandler::handle_read_temperature",
+            "driver" => self.driver_path.as_str()
+        );
         // TODO(pshickel): What if multiple other nodes want to know about the current
         // temperature from the same driver? If two requests come back to back, does it mean we
         // should blindly query the driver twice, or maybe we want to cache the last value with
         // some staleness tolerance parameter? There isn't a use-case for this yet, but it's
         // something to think about.
+        let result = self.read_temperature().await;
+        log_if_err!(
+            result,
+            format!("Failed to read temperature from {}", self.driver_path).as_str()
+        );
+        fuchsia_trace::instant!(
+            "power_manager",
+            "TemperatureHandler::read_temperature_result",
+            fuchsia_trace::Scope::Thread,
+            "driver" => self.driver_path.as_str(),
+            "result" => format!("{:?}", result).as_str()
+        );
+        Ok(MessageReturn::ReadTemperature(result?))
+    }
+
+    async fn read_temperature(&self) -> Result<Celsius, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "TemperatureHandler::read_temperature",
+            "driver" => self.driver_path.as_str()
+        );
         let (status, temperature) =
             self.driver_proxy.get_temperature_celsius().await.map_err(|e| {
                 format_err!(
@@ -72,7 +100,7 @@ impl TemperatureHandler {
                 e
             )
         })?;
-        Ok(MessageReturn::ReadTemperature(Celsius(temperature as f64)))
+        Ok(Celsius(temperature.into()))
     }
 }
 

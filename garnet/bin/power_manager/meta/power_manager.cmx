@@ -12,7 +12,8 @@
             "fuchsia.logger.LogSink",
             "fuchsia.kernel.Stats",
             "fuchsia.device.manager.Administrator",
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.sysinfo.SysInfo",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

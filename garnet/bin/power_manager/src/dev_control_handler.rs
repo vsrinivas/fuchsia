@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device as fdev;
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use std::rc::Rc;
 
@@ -52,21 +54,42 @@ impl DeviceControlHandler {
     }
 
     async fn handle_get_performance_state(&self) -> Result<MessageReturn, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "DeviceControlHandler::handle_get_performance_state",
+            "driver" => self.driver_path.as_str()
+        );
         // TODO(fxb/43744): The controller API doesn't exist yet (fxb/43743)
         Ok(MessageReturn::GetPerformanceState(0))
     }
 
     async fn handle_set_performance_state(&self, in_state: u32) -> Result<MessageReturn, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "DeviceControlHandler::handle_set_performance_state",
+            "driver" => self.driver_path.as_str(),
+            "state" => in_state
+        );
+
         // Make the FIDL call
-        let (status, out_state) =
-            self.driver_proxy.set_performance_state(in_state).await.map_err(|e| {
-                format_err!(
-                    "{} ({}): set_performance_state IPC failed: {}",
-                    self.name(),
-                    self.driver_path,
-                    e
-                )
-            })?;
+        let result = self.driver_proxy.set_performance_state(in_state).await.map_err(|e| {
+            format_err!(
+                "{} ({}): set_performance_state IPC failed: {}",
+                self.name(),
+                self.driver_path,
+                e
+            )
+        });
+
+        log_if_err!(result, "Failed to set performance state");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "DeviceControlHandler::set_performance_state_result",
+            fuchsia_trace::Scope::Thread,
+            "driver" => self.driver_path.as_str(),
+            "result" => format!("{:?}", result).as_str()
+        );
+        let (status, out_state) = result?;
 
         // Check the status code
         zx::Status::ok(status).map_err(|e| {

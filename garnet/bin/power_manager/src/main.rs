@@ -7,6 +7,7 @@ mod message;
 mod node;
 mod power_manager;
 mod types;
+mod utils;
 
 // nodes
 mod cpu_control_handler;
@@ -22,9 +23,11 @@ use anyhow::{format_err, Context, Error};
 use fdio;
 use fidl_fuchsia_sysinfo as fsysinfo;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::fx_log_info;
+use fuchsia_trace_provider;
 use fuchsia_zircon as zx;
-use futures::future;
+use futures::stream::StreamExt;
 
 async fn get_board_name() -> Result<String, Error> {
     let (client, server) = zx::Channel::create()?;
@@ -37,21 +40,28 @@ async fn get_board_name() -> Result<String, Error> {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    // Setup tracing
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
+
+    // Setup syslog
     fuchsia_syslog::init_with_tags(&["power_manager"])?;
     fuchsia_syslog::set_verbosity(1);
-
     fx_log_info!("started");
 
+    // Create a new ServiceFs to incoming handle service requests for the various services that the
+    // PowerManager hosts.
+    let mut fs = ServiceFs::new_local();
+
+    // Setup the PowerManager
     let board = get_board_name().await?;
     let mut pm = PowerManager::new(board).context("failed to create PowerManager")?;
-    pm.init().context("failed to init PowerManager")?;
+    pm.init(&mut fs).context("failed to init PowerManager")?;
 
-    // At this point, the core nodes and power manager logic should be up and running. We
-    // now block here forever to allow the nodes to execute their tasks. At any given moment,
-    // the PowerManager most likely does not have any runnable tasks. The PowerManager will run
-    // once any of its tasks are made runnable by an event such as a timer or stream event
-    // from an external source.
-    future::pending::<()>().await;
+    // Allow our services to be discovered.
+    fs.take_and_serve_directory_handle()?;
+
+    // Run the ServiceFs (handles incoming request streams). This future never completes.
+    fs.collect::<()>().await;
 
     Ok(())
 }

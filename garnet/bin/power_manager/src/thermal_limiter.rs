@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::ThermalLoad;
@@ -9,8 +10,9 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_thermal as fthermal;
 use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
+use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_syslog::fx_log_err;
+use fuchsia_zircon::AsHandleRef;
 use futures::prelude::*;
 use futures::TryStreamExt;
 use std::cell::{Cell, RefCell};
@@ -90,24 +92,25 @@ pub struct ThermalLimiter {
 }
 
 impl ThermalLimiter {
-    pub fn new() -> Result<Rc<Self>, Error> {
-        let node = Self::create_node();
-        node.clone().publish_fidl_service()?;
+    pub fn new(service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>) -> Result<Rc<Self>, Error> {
+        let node = Self::create_thermal_limiter_node();
+        node.clone().publish_fidl_service(service_fs)?;
         Ok(node)
     }
 
     /// Creates a new ThermalLimiter node (but doesn't setup the Controller service)
-    fn create_node() -> Rc<Self> {
+    fn create_thermal_limiter_node() -> Rc<Self> {
         Rc::new(Self { clients: RefCell::new(Vec::new()), thermal_load: Cell::new(ThermalLoad(0)) })
     }
 
     /// Start and publish the fuchsia.thermal.Controller service
-    fn publish_fidl_service(self: Rc<Self>) -> Result<(), Error> {
-        let mut fs = ServiceFs::new_local();
-        fs.dir("svc").add_fidl_service(move |stream: fthermal::ControllerRequestStream| {
+    fn publish_fidl_service(
+        self: Rc<Self>,
+        service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>,
+    ) -> Result<(), Error> {
+        service_fs.dir("svc").add_fidl_service(move |stream: fthermal::ControllerRequestStream| {
             self.clone().handle_new_service_connection(stream);
         });
-        fs.take_and_serve_directory_handle()?;
         Ok(())
     }
 
@@ -117,6 +120,11 @@ impl ThermalLimiter {
         self: Rc<Self>,
         mut stream: fthermal::ControllerRequestStream,
     ) {
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalLimiter::handle_new_service_connection",
+            fuchsia_trace::Scope::Thread
+        );
         fasync::spawn_local(
             async move {
                 while let Some(req) = stream.try_next().await? {
@@ -127,9 +135,24 @@ impl ThermalLimiter {
                             trip_points,
                             responder,
                         } => {
+                            fuchsia_trace::instant!(
+                                "power_manager",
+                                "ThermalLimiter::handle_subscribe",
+                                fuchsia_trace::Scope::Thread
+                            );
                             let mut result = self
                                 .handle_new_client(actor.into_proxy()?, actor_type, trip_points)
                                 .await;
+                            log_if_err!(
+                                result.map_err(|e| format!("{:?}", e)),
+                                "Failed to handle new client"
+                            );
+                            fuchsia_trace::instant!(
+                                "power_manager",
+                                "ThermalLimiter::handle_new_client_result",
+                                fuchsia_trace::Scope::Thread,
+                                "result" => format!("{:?}", result).as_str()
+                            );
                             let _ = responder.send(&mut result);
                         }
                     }
@@ -147,6 +170,18 @@ impl ThermalLimiter {
         actor_type: fthermal::ActorType,
         trip_points: Vec<u32>,
     ) -> Result<(), fthermal::Error> {
+        // TODO(fxb/44484): These strings must live for the duration of the function because the
+        // trace macro uses them when the function goes out of scope. Therefore, they must be bound
+        // here and not used anonymously at the macro callsite.
+        let actor_type_str = format!("{:?}", actor_type);
+        let trip_points_str = format!("{:?}", trip_points);
+        fuchsia_trace::duration!(
+            "power_manager",
+            "ThermalLimiter::handle_new_client",
+            "proxy" => proxy.as_handle_ref().raw_handle(),
+            "actor_type" => actor_type_str.as_str(),
+            "trip_points" => trip_points_str.as_str()
+        );
         // trip_points must:
         //  - have length in the range [1 - MAX_TRIP_POINT_COUNT]
         //  - have values in the range [1 - MAX_THERMAL_LOAD]
@@ -170,20 +205,16 @@ impl ThermalLimiter {
         // Update the client state based on our last cached thermal load
         client.update_state(self.thermal_load.get());
 
-        // Make a copy of the ClientEntry's proxy and state. We'll be using these in the spawned
-        // future below, which has a lifetime exceeding that of this function.
+        // Make a copy of the ClientEntry's proxy and state before ownership is moved into the
+        // `clients` vector.
         let proxy = client.proxy.clone();
         let state = client.current_state;
 
         // Add the new client entry to the client list
         self.clients.borrow_mut().push(client);
 
-        // In a new task, call out to the client to provide the initial thermal state update
-        fasync::spawn_local(async move {
-            if let Err(e) = proxy.set_thermal_state(state).await {
-                fx_log_err!("Failed to send thermal state to actor: {}", e);
-            }
-        });
+        // Send the initial thermal state update to the client
+        self.send_thermal_state(proxy, state);
 
         Ok(())
     }
@@ -194,6 +225,12 @@ impl ThermalLimiter {
         &self,
         thermal_load: ThermalLoad,
     ) -> Result<MessageReturn, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "ThermalLimiter::handle_update_thermal_load",
+            "old_thermal_load" => self.thermal_load.get().0,
+            "new_thermal_load" => thermal_load.0
+        );
         if thermal_load > MAX_THERMAL_LOAD {
             return Err(format_err!(
                 "Expected thermal_load in range [0-{}]; got {}",
@@ -218,20 +255,31 @@ impl ThermalLimiter {
         self.clients.borrow_mut().iter_mut().for_each(|client| {
             // If this client's state has changed...
             if let Some(state) = client.update_state(thermal_load) {
-                // Make a copy of the proxy because we'll need to use it in the Future (the
-                // lifetime of the original proxy object will not last long enough)
-                let proxy = client.proxy.clone();
-
-                // Spawn a future to update this client's thermal state
-                fasync::spawn_local(async move {
-                    if let Err(e) = proxy.set_thermal_state(state).await {
-                        fx_log_err!("Failed to send thermal state to actor: {}", e);
-                    }
-                });
+                self.send_thermal_state(client.proxy.clone(), state);
             }
         });
 
         Ok(MessageReturn::UpdateThermalLoad)
+    }
+
+    fn send_thermal_state(&self, proxy: fthermal::ActorProxy, state: u32) {
+        // Spawn a future to update this client's thermal state
+        fasync::spawn_local(async move {
+            fuchsia_trace::duration!(
+                "power_manager",
+                "ThermalLimiter::set_thermal_state",
+                "state" => state,
+                "proxy" => proxy.as_handle_ref().raw_handle()
+            );
+            let result = proxy.set_thermal_state(state).await;
+            log_if_err!(result, "Failed to send thermal state to actor");
+            fuchsia_trace::instant!(
+                "power_manager",
+                "ThermalLimiter::set_thermal_state_result",
+                fuchsia_trace::Scope::Thread,
+                "result" => format!("{:?}", result).as_str()
+            );
+        });
     }
 }
 
@@ -256,7 +304,7 @@ pub mod tests {
     use super::*;
 
     pub fn setup_test_node() -> Rc<ThermalLimiter> {
-        ThermalLimiter::create_node()
+        ThermalLimiter::create_thermal_limiter_node()
     }
 
     /// Creates an Actor proxy/stream and subscribes the proxy end to the given ThermalLimiter

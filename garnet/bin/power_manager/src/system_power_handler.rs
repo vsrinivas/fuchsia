@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device_manager as fdevmgr;
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_info;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use std::rc::Rc;
 
@@ -52,12 +53,29 @@ impl SystemPowerStateHandler {
     }
 
     async fn handle_system_shutdown(&self, reason: String) -> Result<MessageReturn, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "SystemPowerStateHandler::handle_system_shutdown",
+            "reason" => reason.as_str()
+        );
         fx_log_info!("System shutdown (reason: {})", reason);
-        self.dev_mgr_suspend(fdevmgr::SUSPEND_FLAG_POWEROFF).await?;
-        Ok(MessageReturn::SystemShutdown)
+        let result = self.dev_mgr_suspend(fdevmgr::SUSPEND_FLAG_POWEROFF).await;
+        log_if_err!(result, "System shutdown failed");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "SystemPowerStateHandler::dev_mgr_suspend_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result).as_str()
+        );
+        result.map(|_| MessageReturn::SystemShutdown)
     }
 
     async fn dev_mgr_suspend(&self, suspend_flag: u32) -> Result<(), Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "SystemPowerStateHandler::dev_mgr_suspend",
+            "suspend_flag" => suspend_flag
+        );
         let status = self.svc_proxy.suspend(suspend_flag).await.map_err(|e| {
             format_err!("DeviceManager Suspend failed: flag: {}; error: {}", suspend_flag, e)
         })?;

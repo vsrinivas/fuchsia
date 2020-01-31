@@ -5,7 +5,7 @@
 use crate::node::Node;
 use crate::types::{Celsius, Farads, Seconds, Watts};
 use anyhow::{format_err, Error};
-use fuchsia_syslog::fx_log_info;
+use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use std::rc::Rc;
 
 // nodes
@@ -25,22 +25,22 @@ impl PowerManager {
         Ok(pm)
     }
 
-    pub fn init(&mut self) -> Result<(), Error> {
-        fx_log_info!("Begin init: {}", self.board);
-
+    pub fn init(
+        &mut self,
+        service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>,
+    ) -> Result<(), Error> {
         match self.board.as_ref() {
-            "astro" => self.init_astro(),
+            "astro" => self.init_astro(service_fs),
             _ => Err(format_err!("Invalid target: {}", self.board)),
         }?;
-
-        self.nodes.iter().for_each(|n| fx_log_info!("Added node: {}", n.name()));
-
-        fx_log_info!("init complete");
 
         Ok(())
     }
 
-    fn init_astro(&mut self) -> Result<(), Error> {
+    fn init_astro(
+        &mut self,
+        service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>,
+    ) -> Result<(), Error> {
         let cpu_temperature =
             temperature_handler::TemperatureHandler::new("/dev/class/thermal/000".to_string())?;
         self.nodes.push(cpu_temperature.clone());
@@ -66,7 +66,7 @@ impl PowerManager {
         let sys_pwr_handler = system_power_handler::SystemPowerStateHandler::new()?;
         self.nodes.push(sys_pwr_handler.clone());
 
-        let thermal_limiter_node = thermal_limiter::ThermalLimiter::new()?;
+        let thermal_limiter_node = thermal_limiter::ThermalLimiter::new(service_fs)?;
         self.nodes.push(thermal_limiter_node.clone());
 
         let thermal_config = thermal_policy::ThermalConfig {

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::thermal_limiter;
@@ -9,7 +10,7 @@ use crate::types::{Celsius, Nanoseconds, Seconds, ThermalLoad, Watts};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_vlog};
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use std::cell::Cell;
@@ -144,9 +145,18 @@ impl ThermalPolicy {
 
         fasync::spawn_local(async move {
             while let Some(()) = periodic_timer.next().await {
-                log_if_error(
-                    self.iterate_thermal_control().await,
-                    "Error while running thermal control iteration",
+                fuchsia_trace::instant!(
+                    "power_manager",
+                    "ThermalPolicy::periodic_timer_fired",
+                    fuchsia_trace::Scope::Thread
+                );
+                let result = self.iterate_thermal_control().await;
+                log_if_err!(result, "Error while running thermal control iteration");
+                fuchsia_trace::instant!(
+                    "power_manager",
+                    "ThermalPolicy::iterate_thermal_control_result",
+                    fuchsia_trace::Scope::Thread,
+                    "result" => format!("{:?}", result).as_str()
                 );
             }
         });
@@ -163,6 +173,8 @@ impl ThermalPolicy {
     ///     4. The PID algorithm outputs the available power limit to impose in the system
     ///     5. Distribute the available power to the power actors (initially this is only the CPU)
     async fn iterate_thermal_control(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!("power_manager", "ThermalPolicy::iterate_thermal_control");
+
         let raw_temperature = self.get_temperature().await?;
 
         // Record the timestamp for this iteration now that we have all the data we need to proceed
@@ -187,30 +199,43 @@ impl ThermalPolicy {
         ));
         self.state.prev_temperature.set(filtered_temperature);
 
-        fx_vlog!(
-            1,
-            "iteration_period={}s; filtered_temperature={}C; raw_temperature={}C",
-            time_delta.0,
-            filtered_temperature.0,
-            raw_temperature.0
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::thermal_control_iteration_data",
+            fuchsia_trace::Scope::Thread,
+            "timestamp" => timestamp.0,
+            "raw_temperature" => raw_temperature.0,
+            "filtered_temperature" => filtered_temperature.0
         );
 
         // If the new temperature is above the critical threshold then shutdown the system
-        log_if_error(
-            self.check_critical_temperature(filtered_temperature).await,
-            "Error checking critical temperature",
+        let result = self.check_critical_temperature(filtered_temperature).await;
+        log_if_err!(result, "Error checking critical temperature");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::check_critical_temperature_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result).as_str()
         );
 
         // Update the ThermalLimiter node with the latest thermal load
-        log_if_error(
-            self.update_thermal_load(filtered_temperature).await,
-            "Error updating thermal load",
+        let result = self.update_thermal_load(filtered_temperature).await;
+        log_if_err!(result, "Error updating thermal load");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::update_thermal_load_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result).as_str()
         );
 
         // Run the thermal feedback controller
-        log_if_error(
-            self.iterate_controller(filtered_temperature, time_delta).await,
-            "Error running thermal feedback controller",
+        let result = self.iterate_controller(filtered_temperature, time_delta).await;
+        log_if_err!(result, "Error running thermal feedback controller");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::iterate_controller_result",
+            fuchsia_trace::Scope::Thread,
+            "result" => format!("{:?}", result).as_str()
         );
 
         Ok(())
@@ -218,6 +243,7 @@ impl ThermalPolicy {
 
     /// Query the current temperature from the temperature handler node
     async fn get_temperature(&self) -> Result<Celsius, Error> {
+        fuchsia_trace::duration!("power_manager", "ThermalPolicy::get_temperature");
         match self.send_message(&self.config.temperature_node, &Message::ReadTemperature).await {
             Ok(MessageReturn::ReadTemperature(t)) => Ok(t),
             Ok(r) => Err(format_err!("ReadTemperature had unexpected return value: {:?}", r)),
@@ -229,8 +255,21 @@ impl ThermalPolicy {
     /// we've reached or exceeded the shutdown temperature, message the system power handler node
     /// to initiate a system shutdown.
     async fn check_critical_temperature(&self, temperature: Celsius) -> Result<(), Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "ThermalPolicy::check_critical_temperature",
+            "temperature" => temperature.0
+        );
+
         // Temperature has exceeded the thermal shutdown temperature
         if temperature.0 >= self.config.policy_params.thermal_shutdown_temperature.0 {
+            fuchsia_trace::instant!(
+                "power_manager",
+                "ThermalPolicy::thermal_shutdown_reached",
+                fuchsia_trace::Scope::Thread,
+                "temperature" => temperature.0,
+                "shutdown_temperature" => self.config.policy_params.thermal_shutdown_temperature.0
+            );
             // TODO(pshickel): We shouldn't ever get an error here. But we should probably have
             // some type of fallback or secondary mechanism of halting the system if it somehow
             // does happen. This could have physical safety implications.
@@ -254,12 +293,30 @@ impl ThermalPolicy {
     /// Determines the current thermal load. If there is a change from the cached thermal_load,
     /// then the new value is sent out to the ThermalLimiter node.
     async fn update_thermal_load(&self, temperature: Celsius) -> Result<(), Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "ThermalPolicy::update_thermal_load",
+            "temperature" => temperature.0
+        );
         let thermal_load = Self::calculate_thermal_load(
             temperature,
             self.config.policy_params.thermal_limit_begin_temperature,
             self.config.policy_params.thermal_shutdown_temperature,
         );
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::calculated_thermal_load",
+            fuchsia_trace::Scope::Thread,
+            "load" => thermal_load.0
+        );
         if thermal_load != self.state.thermal_load.get() {
+            fuchsia_trace::instant!(
+                "power_manager",
+                "ThermalPolicy::thermal_load_changed",
+                fuchsia_trace::Scope::Thread,
+                "old_load" => self.state.thermal_load.get().0,
+                "new_load" => thermal_load.0
+            );
             self.state.thermal_load.set(thermal_load);
             self.send_message(
                 &self.config.thermal_limiter_node,
@@ -296,8 +353,19 @@ impl ThermalPolicy {
         filtered_temperature: Celsius,
         time_delta: Seconds,
     ) -> Result<(), Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "ThermalPolicy::iterate_controller",
+            "filtered_temperature" => filtered_temperature.0,
+            "time_delta" => time_delta.0
+        );
         let available_power = self.calculate_available_power(filtered_temperature, time_delta);
-        fx_vlog!(1, "available_power={}W", available_power.0);
+        fuchsia_trace::instant!(
+            "power_manager",
+            "ThermalPolicy::iterate_controller_power_available",
+            fuchsia_trace::Scope::Thread,
+            "available_power" => available_power.0
+        );
         self.distribute_power(available_power).await
     }
 
@@ -305,6 +373,12 @@ impl ThermalPolicy {
     /// available power as the control variable. Each call to the function will also
     /// update the state variable `error_integral` to be used on subsequent iterations.
     fn calculate_available_power(&self, temperature: Celsius, time_delta: Seconds) -> Watts {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "ThermalPolicy::calculate_available_power",
+            "temperature" => temperature.0,
+            "time_delta" => time_delta.0
+        );
         let controller_params = &self.config.policy_params.controller_params;
         let temperature_error = controller_params.target_temperature.0 - temperature.0;
         let error_integral = clamp(
@@ -328,6 +402,11 @@ impl ThermalPolicy {
     /// there may be more power actors with associated "weights" for distributing power amongst
     /// them.
     async fn distribute_power(&self, available_power: Watts) -> Result<(), Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "ThermalPolicy::distribute_power",
+            "available_power" => available_power.0
+        );
         let message = Message::SetMaxPowerConsumption(available_power);
         self.send_message(&self.config.cpu_control_node, &message).await?;
         Ok(())
@@ -345,12 +424,6 @@ fn clamp<T: std::cmp::PartialOrd>(val: T, min: T, max: T) -> T {
         max
     } else {
         val
-    }
-}
-
-fn log_if_error<T>(result: Result<T, Error>, prefix: &'static str) {
-    if let Err(e) = result {
-        fx_log_err!("{}: {}", prefix, e);
     }
 }
 
