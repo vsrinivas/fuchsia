@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/feedback_id_unittest"
+    },
+   "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
