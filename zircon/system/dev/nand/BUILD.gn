@@ -8,6 +8,5 @@ group("nand") {
     "aml-rawnand",
     "broker",
     "cadence-hpnfc",
-    "nand",
   ]
 }

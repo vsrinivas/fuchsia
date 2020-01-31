@@ -61,7 +61,6 @@ if (current_cpu != "") {
       "$zx/system/dev/nand/aml-rawnand/test",
       "$zx/system/dev/nand/broker/test",
       "$zx/system/dev/nand/cadence-hpnfc:cadence-hpnfc-test",
-      "$zx/system/dev/nand/nand/test",
       "$zx/system/dev/pwm/aml-pwm:aml-pwm-test",
       "$zx/system/dev/pwm/aml-pwm-init:aml-pwm-init-test",
       "$zx/system/dev/pwm/pwm:pwm-test",
