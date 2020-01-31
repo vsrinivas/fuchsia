@@ -110,52 +110,71 @@ async fn probe(
     let (own_id, peers) = list_peers().await?;
     let mut futures: futures::stream::FuturesUnordered<_> =
         peers.into_iter().map(|peer| probe_node(peer, probe_bits)).collect();
-    while let Some((node_id, result)) = futures.try_next().await? {
-        if let Some(node_description) = result.node_description {
-            if let Some(ref mut descriptions) = descriptions {
-                descriptions.insert(node_id, node_description);
-            }
-        }
-        if let Some(node_peer_connections) = result.peer_connections {
-            for peer_connection in node_peer_connections.iter() {
-                if let Some(source) = peer_connection.source {
-                    if node_id != source {
-                        return Err(anyhow::format_err!(
-                            "Invalid source node id {:?} from {:?}",
-                            source,
-                            node_id
-                        ));
+    while let Some(result) = futures.next().await {
+        match result {
+            // An error here implies that the result will not be complete, but at least we'll
+            // terminate and generate some report (albeit noisily).
+            Err(e) => eprintln!("Failed adding results from node: {:?}", e),
+            Ok((node_id, result)) => {
+                if let Some(node_description) = result.node_description {
+                    if let Some(ref mut descriptions) = descriptions {
+                        descriptions.insert(node_id, node_description);
                     }
-                } else {
-                    return Err(anyhow::format_err!("No source node id from {:?}", node_id));
                 }
-                if peer_connection.destination.is_none() {
-                    return Err(anyhow::format_err!("No destination node id from {:?}", node_id));
-                }
-            }
-            if let Some(ref mut peer_connections) = peer_connections {
-                peer_connections.extend(node_peer_connections.into_iter());
-            }
-        }
-        if let Some(node_links) = result.links {
-            for link in node_links.iter() {
-                if let Some(source) = link.source {
-                    if node_id != source {
-                        return Err(anyhow::format_err!(
-                            "Invalid source node id {:?} from {:?}",
-                            source,
-                            node_id
-                        ));
+                if let Some(node_peer_connections) = result.peer_connections {
+                    for peer_connection in node_peer_connections.iter() {
+                        if let Some(source) = peer_connection.source {
+                            if node_id != source {
+                                return Err(anyhow::format_err!(
+                                    "Invalid source node id {:?} from {:?}",
+                                    source,
+                                    node_id
+                                ));
+                            }
+                        } else {
+                            return Err(anyhow::format_err!(
+                                "No source node id from {:?}",
+                                node_id
+                            ));
+                        }
+                        if peer_connection.destination.is_none() {
+                            return Err(anyhow::format_err!(
+                                "No destination node id from {:?}",
+                                node_id
+                            ));
+                        }
                     }
-                } else {
-                    return Err(anyhow::format_err!("No source node id from {:?}", node_id));
+                    if let Some(ref mut peer_connections) = peer_connections {
+                        peer_connections.extend(node_peer_connections.into_iter());
+                    }
                 }
-                if link.destination.is_none() {
-                    return Err(anyhow::format_err!("No destination node id from {:?}", node_id));
+                if let Some(node_links) = result.links {
+                    for link in node_links.iter() {
+                        if let Some(source) = link.source {
+                            if node_id != source {
+                                return Err(anyhow::format_err!(
+                                    "Invalid source node id {:?} from {:?}",
+                                    source,
+                                    node_id
+                                ));
+                            }
+                        } else {
+                            return Err(anyhow::format_err!(
+                                "No source node id from {:?}",
+                                node_id
+                            ));
+                        }
+                        if link.destination.is_none() {
+                            return Err(anyhow::format_err!(
+                                "No destination node id from {:?}",
+                                node_id
+                            ));
+                        }
+                    }
+                    if let Some(ref mut links) = links {
+                        links.extend(node_links.into_iter());
+                    }
                 }
-            }
-            if let Some(ref mut links) = links {
-                links.extend(node_links.into_iter());
             }
         }
     }
