@@ -131,11 +131,11 @@ fbl::RefPtr<RefCountedVmoMapper> MapVmo(const Format& format, zx::vmo vmo, uint3
 }  // namespace
 
 // static
-RingBuffer::Endpoints RingBuffer::Allocate(
+RingBuffer::Endpoints RingBuffer::AllocateSoftwareBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame,
     uint32_t frame_count) {
-  TRACE_DURATION("audio", "RingBuffer::Allocate");
+  TRACE_DURATION("audio", "RingBuffer::AllocateSoftwareBuffer");
   size_t vmo_size = frame_count * format.bytes_per_frame();
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
@@ -158,11 +158,11 @@ RingBuffer::Endpoints RingBuffer::Allocate(
   };
 }
 
-std::shared_ptr<RingBuffer> RingBuffer::Create(
+std::shared_ptr<RingBuffer> RingBuffer::CreateHardwareBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame, zx::vmo vmo,
     uint32_t frame_count, VmoMapping vmo_mapping, Endpoint endpoint) {
-  TRACE_DURATION("audio", "RingBuffer::Create");
+  TRACE_DURATION("audio", "RingBuffer::CreateHardwareBuffer");
 
   auto vmo_mapper = MapVmo(format, std::move(vmo), frame_count, vmo_mapping);
   FX_DCHECK(vmo_mapper);

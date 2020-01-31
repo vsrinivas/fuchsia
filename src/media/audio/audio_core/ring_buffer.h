@@ -35,7 +35,7 @@ class RingBuffer : public Stream {
     kReadOnly,
     kReadWrite,
   };
-  static std::shared_ptr<RingBuffer> Create(
+  static std::shared_ptr<RingBuffer> CreateHardwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames, zx::vmo vmo,
       uint32_t frame_count, VmoMapping vmo_mapping, Endpoint endpoint);
@@ -45,7 +45,7 @@ class RingBuffer : public Stream {
     std::shared_ptr<RingBuffer> reader;
     std::shared_ptr<RingBuffer> writer;
   };
-  static Endpoints Allocate(
+  static Endpoints AllocateSoftwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames,
       uint32_t frame_count);
