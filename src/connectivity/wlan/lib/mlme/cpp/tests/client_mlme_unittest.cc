@@ -70,9 +70,9 @@ struct ClientTest : public ::testing::Test {
   }
 
   template <typename M>
-  zx_status_t HandleEncodedMlmeMsg(const MlmeMsg<M>& msg) {
+  zx_status_t EncodeAndHandleMlmeMsg(const MlmeMsg<M>&& msg) {
     fidl::Encoder enc(msg.ordinal());
-    auto body = *msg.body();
+    auto body = msg.cloned_body();
     ZX_ASSERT(SerializeServiceMsg(&enc, &body) == ZX_OK);
     return client.HandleEncodedMlmeMsg(
         fbl::Span{reinterpret_cast<const uint8_t*>(enc.GetMessage().bytes().data()),
@@ -138,7 +138,7 @@ struct ClientTest : public ::testing::Test {
   void GoOffChannel(uint16_t beacon_periods) {
     // For our test, scan duration doesn't matter for now since we explicit
     // force station to go back on channel by calling `HandleTimeout`
-    ASSERT_EQ(ZX_OK, HandleEncodedMlmeMsg(CreateScanRequest(beacon_periods * kBeaconPeriodTu)));
+    ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateScanRequest(beacon_periods * kBeaconPeriodTu)));
     ASSERT_FALSE(client.OnChannel());                    // sanity check
     device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue power-saving frame
   }
@@ -149,8 +149,8 @@ struct ClientTest : public ::testing::Test {
     TriggerTimeout();
     ASSERT_TRUE(client.OnChannel());  // sanity check
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-    device.NextMsgFromSmeChannel<wlan_mlme::ScanEnd>();  // clear out scan end msg
-    device.wlan_queue.erase(device.wlan_queue.begin());  // dequeue power-saving frame
+    device.AssertNextMsgFromSmeChannel<wlan_mlme::ScanEnd>();  // clear out scan end msg
+    device.wlan_queue.erase(device.wlan_queue.begin());        // dequeue power-saving frame
   }
 
   void AssertAuthConfirm(MlmeMsg<wlan_mlme::AuthenticateConfirm> msg,
@@ -438,9 +438,9 @@ TEST_F(ClientTest, ConstructAssociateContext) {
   ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAssocRequest(false)));
   // Respond with a Association Response frame and verify a ASSOCIATE.confirm
   // message was sent.
-  auto ap_assoc_ctx = wlan::test_utils::FakeAssocCtx();
-  ap_assoc_ctx.vht_cap = {};
-  ap_assoc_ctx.vht_op = {};
+  auto ap_assoc_ctx = wlan::test_utils::FakeDdkAssocCtx();
+  ap_assoc_ctx.has_vht_cap = false;
+  ap_assoc_ctx.has_vht_op = false;
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame(ap_assoc_ctx)));
   auto sta_assoc_ctx = device.GetStationAssocContext();
 
@@ -716,7 +716,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconReceived) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.NextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
@@ -736,7 +736,7 @@ TEST_F(ClientTest, AutoDeauth_NoBeaconsShortlyAfterConnecting) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.NextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 // Generally comment of auto-deauth tests below that combine with switching channel:
@@ -775,7 +775,7 @@ TEST_F(ClientTest, AutoDeauth_DoNotDeauthWhileSwitchingChannel) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.NextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
@@ -828,7 +828,7 @@ TEST_F(ClientTest, AutoDeauth_InterleavingBeaconsAndChannelSwitches) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.NextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 // This test explores what happens if the whole auto-deauth timeout duration is
@@ -864,7 +864,7 @@ TEST_F(ClientTest, AutoDeauth_SwitchingChannelBeforeDeauthTimeoutCouldTrigger) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.NextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
@@ -878,7 +878,7 @@ TEST_F(ClientTest, AutoDeauth_ForeignBeaconShouldNotPreventDeauth) {
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDeauthFrame(std::move(*device.wlan_queue.begin()),
                     wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
-  device.NextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
+  device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
 }
 
 TEST_F(ClientTest, DropFramesWhileOffChannel) {

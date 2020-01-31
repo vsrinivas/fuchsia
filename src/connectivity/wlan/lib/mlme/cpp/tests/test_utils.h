@@ -13,7 +13,7 @@
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
-#include <wlan/mlme/assoc_context.h>
+#include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 
 namespace wlan {
@@ -94,7 +94,7 @@ static inline std::unique_ptr<Packet> MakeEthPacket(const common::MacAddr& dest_
   return packet;
 }
 
-AssocContext FakeAssocCtx();
+wlan_assoc_ctx_t FakeDdkAssocCtx();
 wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band);
 
 }  // namespace test_utils

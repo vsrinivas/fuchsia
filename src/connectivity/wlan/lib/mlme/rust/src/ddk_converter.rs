@@ -13,7 +13,7 @@ use {
     },
 };
 
-fn ddk_channel_from_fidl(fc: fidl_common::WlanChan) -> banjo_wlan_info::WlanChannel {
+pub fn ddk_channel_from_fidl(fc: fidl_common::WlanChan) -> banjo_wlan_info::WlanChannel {
     let cbw = match fc.cbw {
         fidl_common::Cbw::Cbw20 => banjo_wlan_info::WlanChannelBandwidth::_20,
         fidl_common::Cbw::Cbw40 => banjo_wlan_info::WlanChannelBandwidth::_40,

@@ -13,9 +13,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <wlan/common/mac_frame.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/tx_vector.h>
-#include <wlan/mlme/client/station.h>
 #include <wlan/mlme/timer_manager.h>
 
 #include "probe_sequence.h"

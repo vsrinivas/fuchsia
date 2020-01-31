@@ -8,8 +8,6 @@
 #include <ddk/hw/wlan/ieee80211.h>
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/tx_vector.h>
-#include <wlan/mlme/client/join_context.h>
-#include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/protocol/mac.h>
@@ -65,13 +63,11 @@ std::string Describe(const wlan_info_channel_list& wl);
 std::string Describe(const wlan_info_band_info& bi);
 std::string Describe(const wlanmac_info& wi);
 std::string Describe(const CapabilityInfo& cap);
-std::string Describe(const AssocContext& assoc_ctx);
 std::string Describe(const std::vector<SupportedRate> rates);
 
 std::string ToAsciiOrHexStr(const uint8_t bytes[], size_t len);
 std::string ToAsciiOrHexStr(const std::vector<uint8_t>& vec);
 
-std::string Describe(const JoinContext& jc);
 }  // namespace debug
 }  // namespace wlan
 

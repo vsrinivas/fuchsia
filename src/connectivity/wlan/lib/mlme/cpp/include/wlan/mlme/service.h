@@ -125,6 +125,11 @@ class MlmeMsg : public BaseMlmeMsg {
   }
 
   const M* body() const { return &msg_; }
+  const M cloned_body() const {
+    M msg;
+    msg_.Clone(&msg);
+    return msg;
+  }
 
   static const void* type_id() { return &MlmeMsg<M>::kTypeId; }
   const void* get_type_id() const override { return type_id(); }

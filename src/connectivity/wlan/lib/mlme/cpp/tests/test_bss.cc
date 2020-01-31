@@ -208,6 +208,30 @@ MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
   return {std::move(*resp), fuchsia::wlan::mlme::internal::kMLME_AssociateResp_GenOrdinal};
 }
 
+MlmeMsg<wlan_mlme::NegotiatedCapabilities> CreateFinalizeAssociationRequest(
+    const wlan_assoc_ctx& ac, wlan_channel_t chan) {
+  auto cap = wlan_mlme::NegotiatedCapabilities::New();
+  cap->channel.primary = chan.primary;
+  cap->channel.cbw = static_cast<wlan_common::CBW>(chan.cbw);
+  cap->channel.secondary80 = chan.secondary80;
+
+  cap->cap_info = ac.cap_info;
+  cap->rates.assign(ac.rates, ac.rates + ac.rates_cnt);
+  if (ac.has_ht_cap) {
+    cap->ht_cap = wlan_mlme::HtCapabilities::New();
+    static_assert(sizeof(cap->ht_cap->bytes) == sizeof(ac.ht_cap));
+    memcpy(cap->ht_cap->bytes.data(), &ac.ht_cap, sizeof(ac.ht_cap));
+  }
+
+  if (ac.has_vht_cap) {
+    cap->vht_cap = wlan_mlme::VhtCapabilities::New();
+    static_assert(sizeof(cap->vht_cap->bytes) == sizeof(ac.vht_cap));
+    memcpy(cap->vht_cap->bytes.data(), &ac.vht_cap, sizeof(ac.vht_cap));
+  }
+
+  return {std::move(*cap), fuchsia::wlan::mlme::internal::kMLME_FinalizeAssociationReq_GenOrdinal};
+}
+
 MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
                                                     common::MacAddr dst_addr) {
   auto req = wlan_mlme::EapolRequest::New();
@@ -440,7 +464,7 @@ std::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
   return packet;
 }
 
-std::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
+std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ctx) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 
@@ -468,17 +492,17 @@ std::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx) {
   assoc->status_code = WLAN_STATUS_CODE_SUCCESS;
 
   BufferWriter elem_w(w.RemainingBuffer());
-  if (ap_assoc_ctx.ht_cap.has_value()) {
-    common::WriteHtCapabilities(&elem_w, ap_assoc_ctx.ht_cap.value());
+  if (ap_assoc_ctx.has_ht_cap) {
+    common::WriteHtCapabilities(&elem_w, HtCapabilities::FromDdk(ap_assoc_ctx.ht_cap));
   }
-  if (ap_assoc_ctx.ht_op.has_value()) {
-    common::WriteHtOperation(&elem_w, ap_assoc_ctx.ht_op.value());
+  if (ap_assoc_ctx.has_ht_op) {
+    common::WriteHtOperation(&elem_w, HtOperation::FromDdk(ap_assoc_ctx.ht_op));
   }
-  if (ap_assoc_ctx.vht_cap.has_value()) {
-    common::WriteVhtCapabilities(&elem_w, ap_assoc_ctx.vht_cap.value());
+  if (ap_assoc_ctx.has_vht_cap) {
+    common::WriteVhtCapabilities(&elem_w, VhtCapabilities::FromDdk(ap_assoc_ctx.vht_cap));
   }
-  if (ap_assoc_ctx.vht_op.has_value()) {
-    common::WriteVhtOperation(&elem_w, ap_assoc_ctx.vht_op.value());
+  if (ap_assoc_ctx.has_vht_op) {
+    common::WriteVhtOperation(&elem_w, VhtOperation::FromDdk(ap_assoc_ctx.vht_op));
   }
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());

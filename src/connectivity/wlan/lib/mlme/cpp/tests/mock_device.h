@@ -222,7 +222,25 @@ struct MockDevice : public DeviceInterface {
   }
 
   template <typename T>
-  MlmeMsg<T> NextMsgFromSmeChannel(uint64_t ordinal = MlmeMsg<T>::kNoOrdinal) {
+  std::optional<MlmeMsg<T>> GetNextMsgFromSmeChannel(uint64_t ordinal = MlmeMsg<T>::kNoOrdinal) {
+    zx_signals_t observed;
+    sme_.wait_one(ZX_CHANNEL_READABLE | ZX_SOCKET_PEER_CLOSED, zx::deadline_after(zx::msec(10)),
+                  &observed);
+    if (!(observed & ZX_CHANNEL_READABLE)) {
+      return {};
+    };
+
+    uint32_t read = 0;
+    uint8_t buf[ZX_CHANNEL_MAX_MSG_BYTES];
+
+    zx_status_t status = sme_.read(0, buf, nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0, &read, nullptr);
+    ZX_ASSERT(status == ZX_OK);
+
+    return MlmeMsg<T>::Decode(fbl::Span{buf, read}, ordinal);
+  }
+
+  template <typename T>
+  MlmeMsg<T> AssertNextMsgFromSmeChannel(uint64_t ordinal = MlmeMsg<T>::kNoOrdinal) {
     zx_signals_t observed;
     sme_.wait_one(ZX_CHANNEL_READABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(), &observed);
     ZX_ASSERT(observed & ZX_CHANNEL_READABLE);

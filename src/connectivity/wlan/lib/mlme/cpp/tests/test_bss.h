@@ -13,8 +13,6 @@
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/mlme/assoc_context.h>
-#include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -63,7 +61,7 @@ static constexpr uint8_t kRates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12,
                                      0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
 static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
-static const AssocContext kAssocCtx = {};
+static const wlan_assoc_ctx_t kDdkAssocCtx = {};
 
 template <typename FV>
 FV TypeCheckWlanFrame(Packet* pkt) {
@@ -90,6 +88,8 @@ MlmeMsg<::fuchsia::wlan::mlme::AssociateRequest> CreateAssocRequest(bool rsn);
 MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse> CreateAssocResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCodes result_code,
     uint16_t aid);
+MlmeMsg<::fuchsia::wlan::mlme::NegotiatedCapabilities> CreateFinalizeAssociationRequest(
+    const wlan_assoc_ctx& ac, wlan_channel_t chan);
 MlmeMsg<::fuchsia::wlan::mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
                                                                 common::MacAddr dst_addr);
 MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
@@ -104,7 +104,7 @@ std::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid);
 std::unique_ptr<Packet> CreateProbeRequest();
 std::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
                                             fbl::Span<const uint8_t> ssid, bool rsn);
-std::unique_ptr<Packet> CreateAssocRespFrame(const AssocContext& ap_assoc_ctx = kAssocCtx);
+std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ctx = kDdkAssocCtx);
 std::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr);
 std::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload);
 DataFrame<> CreateNullDataFrame();

@@ -6,51 +6,54 @@
 
 #include <ddk/protocol/wlan/info.h>
 #include <wlan/common/channel.h>
-#include <wlan/mlme/assoc_context.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {
 namespace test_utils {
 
-AssocContext FakeAssocCtx() {
-  return AssocContext{
+wlan_assoc_ctx_t FakeDdkAssocCtx() {
+  return wlan_assoc_ctx_t{
+      .has_ht_cap = true,
       .ht_cap =
-          HtCapabilities{
-              .ht_cap_info = HtCapabilityInfo(0x0162),
-              .ampdu_params = AmpduParams(0x17),
-              .mcs_set =
-                  SupportedMcsSet{
-                      .rx_mcs_head = SupportedMcsRxMcsHead(0x00000001000000ff),
-                      .rx_mcs_tail = SupportedMcsRxMcsTail(0x01000000),
-                      .tx_mcs = SupportedMcsTxMcs(0x00000000),
+          ieee80211_ht_capabilities{
+              .ht_capability_info = 0x0162,
+              .ampdu_params = 0x17,
+              .supported_mcs_set =
+                  ieee80211_ht_capabilities_supported_mcs_set_t{
+                      .fields =
+                          ieee80211_ht_capabilities_supported_mcs_set_fields{
+                              .rx_mcs_head = 0x00000001000000ff,
+                              .rx_mcs_tail = 0x01000000,
+                              .tx_mcs = 0x00000000,
+                          },
                   },
-              .ht_ext_cap = HtExtCapabilities(0x1234),
-              .txbf_cap = TxBfCapability(0x12345678),
-              .asel_cap = AselCapability(0xff),
+              .ht_ext_capabilities = 0x1234,
+              .tx_beamforming_capabilities = 0x12345678,
+              .asel_capabilities = 0xff,
           },
+      .has_ht_op = true,
       .ht_op =
-          HtOperation{
+          wlan_ht_op_t{
               .primary_chan = 123,
-              .head = HtOpInfoHead(0x01020304),
-              .tail = HtOpInfoTail(0x05),
-              .basic_mcs_set =
-                  SupportedMcsSet{
-                      .rx_mcs_head = SupportedMcsRxMcsHead(0x00000001000000ff),
-                      .rx_mcs_tail = SupportedMcsRxMcsTail(0x01000000),
-                      .tx_mcs = SupportedMcsTxMcs(0x00000000),
-                  },
+              .head = 0x01020304,
+              .tail = 0x05,
+              .rx_mcs_head = 0x00000001000000ff,
+              .rx_mcs_tail = 0x01000000,
+              .tx_mcs = 0x00000000,
           },
+      .has_vht_cap = true,
       .vht_cap =
-          VhtCapabilities{
-              .vht_cap_info = VhtCapabilitiesInfo(0x0f805032),
-              .vht_mcs_nss = VhtMcsNss(0x0000fffe0000fffe),
+          ieee80211_vht_capabilities_t{
+              .vht_capability_info = 0x0f805032,
+              .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
           },
+      .has_vht_op = true,
       .vht_op =
-          VhtOperation{
+          wlan_vht_op_t{
               .vht_cbw = 0x01,
               .center_freq_seg0 = 42,
               .center_freq_seg1 = 106,
-              .basic_mcs = BasicVhtMcsNss(0x1122),
+              .basic_mcs = 0x1122,
           },
   };
 }

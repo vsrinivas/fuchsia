@@ -100,21 +100,21 @@ struct Context {
 
   void StartAp(bool protected_ap = true) {
     HandleMlmeMsg(CreateStartRequest(protected_ap));
-    device->NextMsgFromSmeChannel<wlan_mlme::StartConfirm>();
+    device->AssertNextMsgFromSmeChannel<wlan_mlme::StartConfirm>();
     device->wlan_queue.clear();
   }
 
   void AuthenticateClient() {
     SendClientAuthReqFrame();
     HandleMlmeMsg(CreateAuthResponse(client_addr, wlan_mlme::AuthenticateResultCodes::SUCCESS));
-    device->NextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>();
+    device->AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>();
     device->wlan_queue.clear();
   }
 
   void AssociateClient(uint16_t aid) {
     SendClientAssocReqFrame();
     HandleMlmeMsg(CreateAssocResponse(client_addr, wlan_mlme::AssociateResultCodes::SUCCESS, aid));
-    device->NextMsgFromSmeChannel<wlan_mlme::AssociateIndication>();
+    device->AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>();
     device->wlan_queue.clear();
   }
 
@@ -227,7 +227,7 @@ struct ApInfraBssTest : public ::testing::Test {
 TEST_F(ApInfraBssTest, StartAp) {
   ctx.HandleMlmeMsg(CreateStartRequest(true));
 
-  ASSERT_EQ(device.NextMsgFromSmeChannel<wlan_mlme::StartConfirm>().body()->result_code,
+  ASSERT_EQ(device.AssertNextMsgFromSmeChannel<wlan_mlme::StartConfirm>().body()->result_code,
             wlan_mlme::StartResultCodes::SUCCESS);
 }
 
@@ -256,7 +256,7 @@ TEST_F(ApInfraBssTest, Authenticate_Success) {
 
   // Verify that an Authentication.indication msg is sent out (to SME)
   ASSERT_TRUE(device.wlan_queue.empty());
-  ctx.AssertAuthInd(device.NextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>());
+  ctx.AssertAuthInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>());
 
   // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
   ctx.HandleMlmeMsg(
@@ -308,7 +308,7 @@ TEST_F(ApInfraBssTest, Authenticate_Timeout) {
   ctx.HandleTimeout();
   ctx.SendClientAuthReqFrame();
   EXPECT_TRUE(device.wlan_queue.empty());
-  ctx.AssertAuthInd(device.NextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>());
+  ctx.AssertAuthInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>());
 }
 
 TEST_F(ApInfraBssTest, ReauthenticateWhileAuthenticated) {
@@ -337,7 +337,7 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAuthenticated) {
   // Send deauthentication frame
   ctx.SendClientDeauthFrame();
 
-  ctx.AssertDeauthInd(device.NextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>(),
+  ctx.AssertDeauthInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>(),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
 
   // Expect association context is still blank.
@@ -356,7 +356,7 @@ TEST_F(ApInfraBssTest, Associate_Success) {
 
   // Verify that an Association.indication msg is sent out (to SME)
   ASSERT_TRUE(device.wlan_queue.empty());
-  ctx.AssertAssocInd(device.NextMsgFromSmeChannel<wlan_mlme::AssociateIndication>());
+  ctx.AssertAssocInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>());
 
   // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
   ctx.HandleMlmeMsg(
@@ -466,7 +466,7 @@ TEST_F(ApInfraBssTest, Associate_Timeout) {
 
   // Send association request frame
   ctx.SendClientAssocReqFrame();
-  ctx.device->NextMsgFromSmeChannel<wlan_mlme::AssociateIndication>();
+  ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>();
 
   // No timeout yet, so nothing happens. Even if another assoc request comes,
   // it's a no-op
@@ -481,7 +481,7 @@ TEST_F(ApInfraBssTest, Associate_Timeout) {
   ctx.HandleTimeout();
   ctx.SendClientAssocReqFrame();
   EXPECT_TRUE(device.wlan_queue.empty());
-  ctx.AssertAssocInd(device.NextMsgFromSmeChannel<wlan_mlme::AssociateIndication>());
+  ctx.AssertAssocInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>());
 
   // Expect association context has been cleared.
   wlan_assoc_ctx_t expected_ctx = {};
@@ -497,7 +497,7 @@ TEST_F(ApInfraBssTest, Associate_EmptySsid) {
   // Send association request frame without an SSID
   auto ssid = fbl::Span<uint8_t>();
   ctx.SendClientAssocReqFrame(ssid, true);
-  ctx.device->NextMsgFromSmeChannel<wlan_mlme::AssociateIndication>();
+  ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>();
 
   // Verify that no Association.indication msg is sent out
   ASSERT_TRUE(device.wlan_queue.empty());
@@ -507,7 +507,7 @@ TEST_F(ApInfraBssTest, Associate_EmptySsid) {
 
   // Verify that an Association.indication msg is sent out (to SME)
   ASSERT_TRUE(device.wlan_queue.empty());
-  ctx.AssertAssocInd(device.NextMsgFromSmeChannel<wlan_mlme::AssociateIndication>());
+  ctx.AssertAssocInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>());
 }
 
 TEST_F(ApInfraBssTest, Associate_EmptyRsne) {
@@ -519,7 +519,7 @@ TEST_F(ApInfraBssTest, Associate_EmptyRsne) {
 
   // Verify that an Association.indication msg is sent out (to SME)
   ASSERT_TRUE(device.wlan_queue.empty());
-  ctx.AssertAssocInd(device.NextMsgFromSmeChannel<wlan_mlme::AssociateIndication>(), false);
+  ctx.AssertAssocInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>(), false);
 }
 
 TEST_F(ApInfraBssTest, ReauthenticateWhileAssociated) {
@@ -532,7 +532,7 @@ TEST_F(ApInfraBssTest, ReauthenticateWhileAssociated) {
 
   // Verify that an Authentication.indication msg is sent out (to SME)
   ASSERT_TRUE(device.wlan_queue.empty());
-  ctx.AssertAuthInd(device.NextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>());
+  ctx.AssertAuthInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateIndication>());
 
   // Simulate SME sending MLME-AUTHENTICATE.response msg with a success code
   ctx.HandleMlmeMsg(
@@ -556,7 +556,7 @@ TEST_F(ApInfraBssTest, ReassociationFlowWhileAssociated) {
 
   // Verify that an Association.indication msg is sent out (to SME)
   ASSERT_TRUE(device.wlan_queue.empty());
-  ctx.AssertAssocInd(device.NextMsgFromSmeChannel<wlan_mlme::AssociateIndication>());
+  ctx.AssertAssocInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>());
 
   // Simulate SME sending MLME-ASSOCIATE.response msg with a success code
   ctx.HandleMlmeMsg(
@@ -581,7 +581,7 @@ TEST_F(ApInfraBssTest, DeauthenticateWhileAssociated) {
 
   // Send deauthentication frame
   ctx.SendClientDeauthFrame();
-  ctx.AssertDeauthInd(device.NextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>(),
+  ctx.AssertDeauthInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>(),
                       wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH);
 
   // Expect association context has been cleared.
@@ -598,7 +598,7 @@ TEST_F(ApInfraBssTest, Disassociate) {
 
   // Send deauthentication frame
   ctx.SendClientDisassocFrame();
-  ctx.AssertDisassocInd(device.NextMsgFromSmeChannel<wlan_mlme::DisassociateIndication>());
+  ctx.AssertDisassocInd(device.AssertNextMsgFromSmeChannel<wlan_mlme::DisassociateIndication>());
 
   // Expect association context has been cleared.
   wlan_assoc_ctx_t expected_ctx = {};
@@ -652,7 +652,7 @@ TEST_F(ApInfraBssTest, UnprotectedApReceiveFramesAfterAssociation) {
   // Simulate unauthenticated client sending data frames, which should emit a deauth to MLME, deauth
   // to the client, and no eth frame
   ctx.SendDataFrame(kTestPayload);
-  ctx.device->NextMsgFromSmeChannel<wlan_mlme::DeauthenticateRequest>();
+  ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateRequest>();
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   device.wlan_queue.clear();
   ASSERT_TRUE(device.eth_queue.empty());
@@ -662,7 +662,7 @@ TEST_F(ApInfraBssTest, UnprotectedApReceiveFramesAfterAssociation) {
   // Simulate unassociated client sending data frames, which should emit a disassoc to MLME,
   // disassoc to the client, and no eth frame
   ctx.SendDataFrame(kTestPayload);
-  ctx.device->NextMsgFromSmeChannel<wlan_mlme::DisassociateRequest>();
+  ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::DisassociateRequest>();
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   device.wlan_queue.clear();
   ASSERT_TRUE(device.wlan_queue.empty());

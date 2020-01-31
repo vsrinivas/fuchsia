@@ -685,19 +685,6 @@ std::string Describe(const CapabilityInfo& cap) {
   return std::string(buf);
 }
 
-std::string Describe(const AssocContext& assoc_ctx) {
-  char buf[2048];
-  size_t offset = 0;
-  BUFFER("bssid:[%s]", assoc_ctx.bssid.ToString().c_str());
-  BUFFER("aid:%u", assoc_ctx.aid);
-  BUFFER("cap:[%s]", Describe(assoc_ctx.cap).c_str());
-  BUFFER("rates:[%s]", Describe(assoc_ctx.rates).c_str());
-
-  // TODO(NET-1278): Show HT / VHT capabilities
-
-  return std::string(buf);
-}
-
 std::string Describe(const std::vector<SupportedRate> rates) {
   char buf[1024];
   size_t offset = 0;
@@ -738,17 +725,6 @@ std::string ToAsciiOrHexStr(const uint8_t bytes[], size_t len) {
 
 std::string ToAsciiOrHexStr(const std::vector<uint8_t>& vec) {
   return ToAsciiOrHexStr(&vec[0], vec.size());
-}
-
-std::string Describe(const JoinContext& jc) {
-  std::ostringstream oss;
-  oss << "[BSS] BSSID" << jc.bssid().ToString();
-  oss << " Chan " << jc.bss_channel().primary;
-  oss << " CBW " << jc.bss_channel().cbw;
-  oss << " Sec80 " << jc.bss_channel().secondary80;
-  oss << " [Config] Phy " << static_cast<uint8_t>(jc.phy());
-  oss << " CBW " << jc.channel().cbw;
-  return oss.str();
 }
 
 }  // namespace debug

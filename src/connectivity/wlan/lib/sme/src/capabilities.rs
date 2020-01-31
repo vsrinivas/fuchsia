@@ -4,6 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_mlme as fidl_mlme,
+    log::error,
     static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
@@ -40,8 +41,13 @@ pub fn intersect_with_ap_as_client(
     client: &ClientCapabilities,
     ap: &ApCapabilities,
 ) -> StaCapabilities {
-    let rates = intersect_rates(ApRates(&ap.0.rates[..]), ClientRates(&client.0.rates[..]))
-        .unwrap_or(vec![]);
+    let rates = match intersect_rates(ApRates(&ap.0.rates[..]), ClientRates(&client.0.rates[..])) {
+        Ok(rates) => rates,
+        Err(e) => {
+            error!("error intersecting rates: {:?}", e);
+            vec![]
+        }
+    };
     let (cap_info, ht_cap, vht_cap) = intersect(&client.0, &ap.0);
     StaCapabilities { rates, cap_info, ht_cap, vht_cap }
 }

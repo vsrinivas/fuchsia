@@ -93,13 +93,11 @@ executable("mac_tests") {
   testonly = true
 
   sources = [
-    "assoc_ctx_unittest.cc",
     "channel_unittest.cc",
     "element_splitter_unittest.cc",
     "element_unittest.cc",
     "energy_unittest.cc",
     "frame_validation_unittest.cc",
-    "join_context_unittest.cc",
     "mac_frame_unittest.cc",
     "macaddr_unittest.cc",
     "mcs_unittest.cc",

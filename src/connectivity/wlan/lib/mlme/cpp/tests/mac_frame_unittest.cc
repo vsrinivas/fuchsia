@@ -3,14 +3,10 @@
 // found in the LICENSE file.
 
 #include <memory>
-#include <utility>
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <gtest/gtest.h>
-#include <wlan/common/buffer_writer.h>
 #include <wlan/common/write_element.h>
-#include <wlan/mlme/client/station.h>
-#include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/wlan.h>
 

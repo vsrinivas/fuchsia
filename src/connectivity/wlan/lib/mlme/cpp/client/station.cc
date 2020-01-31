@@ -779,13 +779,11 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
     return ZX_ERR_INVALID_ARGS;
   }
   auto ap = bss_assoc_ctx.value();
-  debugjoin("rxed AssocResp:[%s]\n", debug::Describe(ap).c_str());
 
   ap.cap = frame.body()->cap;
 
   auto ifc_info = device_->GetWlanInfo().ifc_info;
   auto client = MakeClientAssocCtx(ifc_info, join_ctx_->channel());
-  debugjoin("from WlanInfo: [%s]\n", debug::Describe(client).c_str());
 
   assoc_ctx_.cap = IntersectCapInfo(ap.cap, client.cap);
   assoc_ctx_.rates = IntersectRatesAp(ap.rates, client.rates);
@@ -837,8 +835,7 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
 
   // Validate if the AP accepted the requested PHY
   if (assoc_ctx_.phy != join_ctx_->phy()) {
-    warnf("PHY for join (%u) and for association (%u) differ. AssocResp:[%s]", join_ctx_->phy(),
-          assoc_ctx_.phy, debug::Describe(ap).c_str());
+    warnf("PHY for join (%u) and for association (%u) differ", join_ctx_->phy(), assoc_ctx_.phy);
   }
 
   assoc_ctx_.chan = join_ctx_->channel();
@@ -851,9 +848,6 @@ zx_status_t Station::SetAssocContext(const MgmtFrameView<AssociationResponse>& f
   // BSS.
   // TODO(porce): Ralink dependency on BlockAck, AMPDU handling
   assoc_ctx_.is_cbw40_tx = false;
-
-  debugjoin("final AssocCtx:[%s]\n", debug::Describe(assoc_ctx_).c_str());
-
   return ZX_OK;
 }
 
@@ -927,8 +921,7 @@ std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<Associati
     // differs from what the AP announced in its beacon.
     // Use the outcome of the association negotiation as the AssocContext's phy.
     // TODO(porce): How should this affect the radio's channel setting?
-    warnf("PHY for join (%u) and for association (%u) differ. AssocResp:[%s]", join_phy,
-          ctx.DerivePhy(), debug::Describe(bss.value()).c_str());
+    warnf("PHY for join (%u) and for association (%u) differ.", join_phy, ctx.DerivePhy());
   }
 
   return ctx;

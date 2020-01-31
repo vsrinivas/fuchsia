@@ -106,7 +106,8 @@ pub fn send_beacon(
         },
         ies: {
             ssid: ssid,
-            supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24],
+            supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0xe0, 0x6c],
+            extended_supported_rates: { /* continues from supported_rates */ },
             dsss_param_set: &ie::DsssParamSet { current_chan: channel.primary },
             rsne?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
