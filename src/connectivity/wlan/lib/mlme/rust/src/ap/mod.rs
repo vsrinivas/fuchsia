@@ -293,8 +293,8 @@ impl Ap {
                     qos_ctrl.map(|x| x.get()),
                     body,
                 ),
-            mac::MacFrame::Ctrl { ctrl_hdr, ta, body } => {
-                bss.handle_ctrl_frame(&mut self.ctx, *ctrl_hdr, ta.map(|a| a.get()), body)
+            mac::MacFrame::Ctrl { frame_ctrl, body } => {
+                bss.handle_ctrl_frame(&mut self.ctx, frame_ctrl, body)
             }
             mac::MacFrame::Unsupported { frame_ctrl } => {
                 error!("received unsupported MAC frame: frame_ctrl = {:?}", frame_ctrl);

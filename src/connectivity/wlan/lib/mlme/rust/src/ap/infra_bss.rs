@@ -439,24 +439,32 @@ impl InfraBss {
     pub fn handle_ctrl_frame<B: ByteSlice>(
         &mut self,
         ctx: &mut Context,
-        ctrl_hdr: mac::CtrlHdr,
-        ta: Option<MacAddr>,
+        frame_ctrl: mac::FrameControl,
         body: B,
     ) -> Result<(), Rejection> {
-        let ta = match ta {
-            Some(ta) => ta,
-            _ => {
-                return Err(Rejection::NoSrcAddr);
-            }
-        };
+        match mac::CtrlBody::parse(frame_ctrl.ctrl_subtype(), body)
+            .ok_or(Rejection::FrameMalformed)?
+        {
+            mac::CtrlBody::PsPoll { ps_poll } => {
+                let client = match self.clients.get_mut(&ps_poll.ta) {
+                    Some(client) => client,
+                    _ => {
+                        return Err(Rejection::Client(
+                            ps_poll.ta,
+                            ClientRejection::NotAuthenticated,
+                        ));
+                    }
+                };
 
-        let client = match self.clients.get_mut(&ta) {
-            Some(client) => client,
-            _ => {
-                return Err(Rejection::Client(ta, ClientRejection::NotAuthenticated));
+                // IEEE 802.11-2016 9.3.1.5 states the ID in the PS-Poll frame is the association ID
+                // with the 2 MSBs set to 1.
+                const PS_POLL_MASK: u16 = 0b11000000_00000000;
+                client
+                    .handle_ps_poll(ctx, ps_poll.masked_aid & !PS_POLL_MASK)
+                    .map_err(|e| Rejection::Client(client.addr, e))
             }
-        };
-        client.handle_ctrl_frame(ctx, ctrl_hdr, body).map_err(|e| Rejection::Client(client.addr, e))
+            _ => Err(Rejection::FrameMalformed),
+        }
     }
 
     pub fn handle_multicast_eth_frame(
@@ -1933,15 +1941,14 @@ mod tests {
 
         bss.handle_ctrl_frame(
             &mut ctx,
-            mac::CtrlHdr {
-                frame_ctrl: mac::FrameControl(0)
-                    .with_frame_type(mac::FrameType::CTRL)
-                    .with_ctrl_subtype(mac::CtrlSubtype::PS_POLL),
-                duration_or_id: 1 | 0b11000000_00000000,
-                ra: BSSID.0,
-            },
-            Some(CLIENT_ADDR),
-            &[][..],
+            mac::FrameControl(0)
+                .with_frame_type(mac::FrameType::CTRL)
+                .with_ctrl_subtype(mac::CtrlSubtype::PS_POLL),
+            &[
+                0b00000001, 0b11000000, // Masked AID
+                2, 2, 2, 2, 2, 2, // RA
+                4, 4, 4, 4, 4, 4, // TA
+            ][..],
         )
         .expect("expected OK");
         assert_eq!(fake_device.wlan_queue.len(), 1);

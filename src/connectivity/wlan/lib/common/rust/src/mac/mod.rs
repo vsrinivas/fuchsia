@@ -73,10 +73,8 @@ pub enum MacFrame<B> {
         body: B,
     },
     Ctrl {
-        // Control Header: fixed fields
-        ctrl_hdr: LayoutVerified<B, CtrlHdr>,
-        // Control Header: optional fields
-        ta: Option<UnalignedView<B, MacAddr>>,
+        // Control Header: frame control
+        frame_ctrl: FrameControl,
         // Body
         body: B,
     },
@@ -135,17 +133,9 @@ impl<B: ByteSlice> MacFrame<B> {
                 })
             }
             FrameType::CTRL => {
-                // Parse fixed header fields.
-                let ctrl_hdr = reader.read()?;
-
-                // Only CTS control frames do not hold an TA.
-                let ta = if fc.ctrl_subtype() != CtrlSubtype::CTS {
-                    Some(reader.read_unaligned()?)
-                } else {
-                    None
-                };
-
-                Some(MacFrame::Ctrl { ctrl_hdr, ta, body: reader.into_remaining() })
+                // Parse frame control.
+                let frame_ctrl = reader.read_value()?;
+                Some(MacFrame::Ctrl { frame_ctrl, body: reader.into_remaining() })
             }
             _type => Some(MacFrame::Unsupported { frame_ctrl: fc }),
         }
@@ -240,35 +230,18 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr1
                 4, 4, 4, 4, 4, 4, // addr2
             ][..], false),
-            Some(MacFrame::Ctrl { ctrl_hdr, ta, body }) => {
-                assert_eq!(0b00000000_10100100, { ctrl_hdr.frame_ctrl.0 });
-                assert_eq!(0b11000000_00000001, { ctrl_hdr.duration_or_id });
-                assert_eq!([2, 2, 2, 2, 2, 2], ctrl_hdr.ra);
-                assert_eq!(Some([4, 4, 4, 4, 4, 4]), ta.map(|a| a.get()));
-                assert_eq!(&body[..], &[]);
+            Some(MacFrame::Ctrl { frame_ctrl, body }) => {
+                assert_eq!(0b00000000_10100100, frame_ctrl.0);
+                assert_eq!(&body[..], &[
+                    0b00000001, 0b11000000, // Masked AID
+                    2, 2, 2, 2, 2, 2, // addr1
+                    4, 4, 4, 4, 4, 4, // addr2
+                ]);
             },
             "expected control frame"
         );
     }
 
-    #[test]
-    fn parse_ctrl_frame_no_ta() {
-        assert_variant!(
-            MacFrame::parse(&[
-                0b11000100, 0b00000000, // Frame Control
-                0b00000000, 0b00000000, // Duration
-                2, 2, 2, 2, 2, 2, // addr1
-            ][..], false),
-            Some(MacFrame::Ctrl { ctrl_hdr, ta, body }) => {
-                assert_eq!(0b00000000_11000100, { ctrl_hdr.frame_ctrl.0 });
-                assert_eq!(0b00000000_00000000, { ctrl_hdr.duration_or_id });
-                assert_eq!([2, 2, 2, 2, 2, 2], ctrl_hdr.ra);
-                assert_eq!(None, ta.map(|a| a.get()));
-                assert_eq!(&body[..], &[]);
-            },
-            "expected control frame"
-        );
-    }
     #[test]
     fn round_up_to_4() {
         assert_eq!(0, round_up(0u32, 4));

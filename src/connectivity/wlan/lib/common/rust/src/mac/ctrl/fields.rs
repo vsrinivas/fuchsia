@@ -3,16 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::mac::{FrameControl, MacAddr},
+    crate::mac::{Bssid, MacAddr},
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
 
-// IEEE Std 802.11-2016, 9.3.1
-// The following fields are always present for every control frame.
+// IEEE Std 802.11-2016, 9.3.1.5
 #[derive(FromBytes, AsBytes, Unaligned, PartialEq, Eq, Clone, Copy, Debug)]
 #[repr(C, packed)]
-pub struct CtrlHdr {
-    pub frame_ctrl: FrameControl,
-    pub duration_or_id: u16,
-    pub ra: MacAddr,
+pub struct PsPoll {
+    pub masked_aid: u16,
+    pub bssid: Bssid,
+    pub ta: MacAddr,
 }

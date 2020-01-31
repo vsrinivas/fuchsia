@@ -658,7 +658,10 @@ impl RemoteClient {
     }
 
     /// Handles PS-Poll (IEEE Std 802.11-2016, 9.3.1.5) from the PHY.
-    fn handle_ps_poll(&mut self, ctx: &mut Context, aid: Aid) -> Result<(), ClientRejection> {
+    pub fn handle_ps_poll(&mut self, ctx: &mut Context, aid: Aid) -> Result<(), ClientRejection> {
+        // All PS-Poll frames are Class 3.
+        self.reject_frame_class_if_not_permitted(ctx, mac::FrameClass::Class3)?;
+
         match self.state.as_mut() {
             State::Associated { aid: current_aid, ps_state, .. } => {
                 if aid != *current_aid {
@@ -1000,28 +1003,6 @@ impl RemoteClient {
             }
         }
         Ok(())
-    }
-
-    /// Handles control frames (IEEE Std 802.11-2016, 9.3.1) from the PHY.
-    pub fn handle_ctrl_frame<B: ByteSlice>(
-        &mut self,
-        ctx: &mut Context,
-        ctrl_hdr: mac::CtrlHdr,
-        body: B,
-    ) -> Result<(), ClientRejection> {
-        self.reject_frame_class_if_not_permitted(ctx, mac::frame_class(&{ ctrl_hdr.frame_ctrl }))?;
-
-        match mac::CtrlBody::parse({ ctrl_hdr.frame_ctrl }.ctrl_subtype(), body)
-            .ok_or(ClientRejection::ParseFailed)?
-        {
-            mac::CtrlBody::PsPoll => {
-                // IEEE 802.11-2016 9.3.1.5 states the ID in the PS-Poll frame is the association ID
-                // with the 2 MSBs set to 1.
-                const PS_POLL_MASK: u16 = 0b11000000_00000000;
-                self.handle_ps_poll(ctx, ctrl_hdr.duration_or_id & !PS_POLL_MASK)
-            }
-            _ => Err(ClientRejection::Unsupported),
-        }
     }
 
     /// Handles Ethernet II frames from the netstack.
