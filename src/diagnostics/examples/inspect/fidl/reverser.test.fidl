@@ -4,9 +4,11 @@
 
 library fuchsia.examples.inspect;
 
+// [START reverser_fidl]
 // Implementation of a string reverser.
 [Discoverable]
 protocol Reverser {
     // Returns the input string reversed character-by-character.
     Reverse(string:1024 input) -> (string:1024 response);
 };
+// [END reverser_fidl]

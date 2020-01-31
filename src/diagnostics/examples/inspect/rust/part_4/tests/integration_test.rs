@@ -57,6 +57,7 @@ impl IntegrationTest {
     }
 }
 
+// [START integration_test]
 #[fasync::run_singlethreaded(test)]
 async fn start_with_fizzbuzz() -> Result<(), Error> {
     let mut test = IntegrationTest::start()?;
@@ -66,6 +67,7 @@ async fn start_with_fizzbuzz() -> Result<(), Error> {
     // CODELAB: Check that the component was connected to FizzBuzz.
     Ok(())
 }
+// [END integration_test]
 
 #[fasync::run_singlethreaded(test)]
 async fn start_without_fizzbuzz() -> Result<(), Error> {

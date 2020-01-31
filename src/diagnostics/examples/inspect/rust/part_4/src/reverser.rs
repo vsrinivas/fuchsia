@@ -97,13 +97,17 @@ mod tests {
         super::*,
         anyhow::Error,
         fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy},
+        // [START include_testing]
         fuchsia_inspect::{self, assert_inspect_tree},
+        // [END include_testing]
         futures::channel::oneshot,
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_reverser() -> Result<(), Error> {
+        // [START test_inspector]
         let inspector = inspect::Inspector::new();
+        // [END test_inspector]
 
         let node = inspector.root().create_child("reverser_service");
         let factory = ReverserServerFactory::new(node);
@@ -123,6 +127,7 @@ mod tests {
         let result = reverser2.reverse("another").await?;
         assert_eq!(result, "rehtona");
 
+        // [START assert_tree]
         assert_inspect_tree!(inspector, root: {
             reverser_service: {
                 total_requests: 3u64,
@@ -137,6 +142,7 @@ mod tests {
                 },
             }
         });
+        // [END assert_tree]
 
         drop(reverser1);
         channel_closed_rcv.await?;

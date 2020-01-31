@@ -10,24 +10,36 @@ use {
     std::sync::Arc,
 };
 
+// [START part_1_add_connection_count]
 pub struct ReverserServerFactory {
     node: inspect::Node,
+    // [START_EXCLUDE]
     request_count: Arc<inspect::UintProperty>,
+    // [END_EXCLUDE]
     connection_count: inspect::UintProperty,
 }
 
 impl ReverserServerFactory {
     pub fn new(node: inspect::Node) -> Self {
+        // [START_EXCLUDE]
         let request_count = Arc::new(node.create_uint("total_requests", 0));
+        // [END_EXCLUDE]
         let connection_count = node.create_uint("connection_count", 0);
-        Self { node, request_count, connection_count }
+        Self {
+            node,
+            // [START_EXCLUDE]
+            request_count,
+            // [END_EXCLUDE]
+            connection_count,
+        }
     }
 
     pub fn spawn_new(&self, stream: ReverserRequestStream) {
+        self.connection_count.add(1);
+        // [END part_1_add_connection_count]
         let node = self.node.create_child(inspect::unique_name("connection"));
         let metrics = ReverserServerMetrics::new(node, self.request_count.clone());
         ReverserServer::new(metrics).spawn(stream);
-        self.connection_count.add(1);
     }
 }
 

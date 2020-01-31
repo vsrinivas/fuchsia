@@ -14,7 +14,11 @@ rustc_binary("bin") {
     "//src/diagnostics/examples/inspect/fidl:fuchsia.examples.inspect-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+
+    # [START part_1_solution_build_dep]
     "//src/lib/inspect/rust/fuchsia-inspect",
+
+    # [END part_1_solution_build_dep]
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

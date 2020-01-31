@@ -6,7 +6,9 @@
 #define SRC_DIAGNOSTICS_EXAMPLES_INSPECT_CPP_PART_2_REVERSER_H_
 
 #include <fuchsia/examples/inspect/cpp/fidl.h>
+// [START part_1_include]
 #include <lib/inspect/cpp/inspect.h>
+// [END part_1_include]
 
 // Reverser stats encapsulates all stat input to the Reverser.
 struct ReverserStats {

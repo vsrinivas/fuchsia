@@ -56,6 +56,7 @@ async fn main() -> Result<(), Error> {
     env.launch_fizzbuzz()?;
     let reverser = env.launch_reverser()?;
 
+    // [START reverse_loop]
     for string in args.strings {
         println!("Input: {}", string);
         match reverser.reverse(&string).await {
@@ -63,6 +64,7 @@ async fn main() -> Result<(), Error> {
             Err(e) => println!("Failed to reverse string. Error: {:?}", e),
         }
     }
+    // [END reverse_loop]
 
     println!("Done. Press Ctrl+C to exit");
     loop {

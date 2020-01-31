@@ -8,8 +8,10 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+// [START include_json]
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
+// [END include_json]
 #include <src/lib/fsl/vmo/strings.h>
 
 constexpr char reverser_url[] =
@@ -57,6 +59,7 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
 
   using ContentVector = std::vector<fuchsia::diagnostics::FormattedContent>;
 
+  // [START get_inspect]
   std::string GetInspectJson() {
     fuchsia::diagnostics::ArchivePtr archive;
     real_services()->Connect(archive.NewRequest());
@@ -98,6 +101,7 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
 
     return "";
   }
+  // [END get_inspect]
 
  private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
@@ -121,12 +125,17 @@ TEST_F(CodelabTest, StartWithFizzBuzz) {
   ASSERT_FALSE(error);
   EXPECT_EQ("olleh", result);
 
+  // [START parse_result]
   rapidjson::Document document;
   document.Parse(GetInspectJson());
+  // [END parse_result]
 
   EXPECT_EQ(rapidjson::Value("OK"),
+            // [START hint_get_value]
             rapidjson::GetValueByPointerWithDefault(
-                document, "/contents/root/fuchsia.inspect.Health/status", ""));
+                document, "/contents/root/fuchsia.inspect.Health/status", "")
+            // [END hint_get_value]
+  );
 }
 
 TEST_F(CodelabTest, StartWithoutFizzBuzz) {

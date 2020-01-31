@@ -19,8 +19,10 @@ class ReverserTest : public gtest::RealLoopFixture {
   fuchsia::examples::inspect::ReverserPtr OpenReverser() {
     fuchsia::examples::inspect::ReverserPtr ptr;
 
+    // [START open_reverser]
     binding_set_.AddBinding(std::make_unique<Reverser>(ReverserStats::CreateDefault()),
                             ptr.NewRequest());
+    // [END open_reverser]
 
     return ptr;
   }

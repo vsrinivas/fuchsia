@@ -115,6 +115,7 @@ int main(int argc, char** argv) {
   fuchsia::examples::inspect::ReverserSyncPtr reverser;
   services.Connect(reverser.NewRequest());
 
+  // [START reverse_loop]
   // Repeatedly send strings to be reversed to the other component.
   for (int i = 2; i < argc; i++) {
     printf("Input: %s\n", argv[i]);
@@ -129,6 +130,7 @@ int main(int argc, char** argv) {
     printf("Output: %s\n", output.c_str());
     fflush(stdout);
   }
+  // [END reverse_loop]
 
   printf("Done. Press Ctrl+C to exit\n");
   fflush(stdout);

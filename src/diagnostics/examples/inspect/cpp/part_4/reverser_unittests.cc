@@ -6,7 +6,9 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
+// [START include_testing]
 #include <lib/inspect/testing/cpp/inspect.h>
+// [END include_testing]
 
 #include "reverser.h"
 
@@ -92,11 +94,14 @@ TEST_F(ReverserTest, ReversePart4) {
   }
 
   {
+    // [START get_hierarchy]
     fit::result<inspect::Hierarchy> hierarchy;
     RunPromiseToCompletion(inspect::ReadFromInspector(inspector).then(
         [&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
     ASSERT_TRUE(hierarchy.is_ok());
+    // [END get_hierarchy]
 
+    // [START assertions]
     auto* global_count =
         hierarchy.value().node().get_property<inspect::UintPropertyValue>("request_count");
     ASSERT_TRUE(global_count);
@@ -108,6 +113,7 @@ TEST_F(ReverserTest, ReversePart4) {
         connection_0->node().get_property<inspect::UintPropertyValue>("request_count");
     ASSERT_TRUE(requests_0);
     EXPECT_EQ(2u, requests_0->value());
+    // [END assertions]
 
     auto* connection_1 = hierarchy.value().GetByPath({"connection_0x1"});
     ASSERT_TRUE(connection_1);

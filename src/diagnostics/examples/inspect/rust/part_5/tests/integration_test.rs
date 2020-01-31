@@ -3,25 +3,32 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context, Error},
+    anyhow::Error,
+    fidl_fuchsia_examples_inspect::ReverserProxy,
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    futures::StreamExt,
+    inspect_codelab_shared::CodelabEnvironment,
+    lazy_static::lazy_static,
+    std::sync::atomic::{AtomicUsize, Ordering},
+};
+
+// [START include_test_stuff]
+use {
+    anyhow::{format_err, Context},
     fidl_fuchsia_diagnostics::{
         ArchiveMarker, BatchIteratorMarker, Format, FormattedContent, ReaderMarker,
     },
-    fidl_fuchsia_examples_inspect::ReverserProxy,
     fidl_fuchsia_mem::Buffer,
-    fuchsia_async as fasync,
-    fuchsia_component::{client, server::ServiceFs},
+    fuchsia_component::client,
     fuchsia_inspect::{assert_inspect_tree, reader::NodeHierarchy},
     fuchsia_inspect_node_hierarchy::serialization::{
         json::RawJsonNodeHierarchySerializer, HierarchyDeserializer,
     },
     fuchsia_zircon::DurationNum,
-    futures::StreamExt,
-    inspect_codelab_shared::CodelabEnvironment,
-    lazy_static::lazy_static,
     serde_json,
-    std::sync::atomic::{AtomicUsize, Ordering},
 };
+// [END include_test_stuff]
 
 lazy_static! {
     static ref SUFFIX: AtomicUsize = AtomicUsize::new(0);
@@ -66,6 +73,7 @@ impl IntegrationTest {
         self.env.launch_reverser()
     }
 
+    // [START get_inspect]
     async fn get_inspect_hierarchy(&self) -> Result<NodeHierarchy, Error> {
         let archive =
             client::connect_to_service::<ArchiveMarker>().context("connect to Archive")?;
@@ -120,6 +128,7 @@ impl IntegrationTest {
         buffer_vmo.read(&mut bytes, 0)?;
         Ok(String::from_utf8_lossy(&bytes).to_string())
     }
+    // [END get_inspect]
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -129,7 +138,9 @@ async fn start_with_fizzbuzz() -> Result<(), Error> {
     let result = reverser.reverse("hello").await?;
     assert_eq!(result, "olleh");
 
+    // [START result_hierarchy]
     let hierarchy = test.get_inspect_hierarchy().await?;
+    // [END result_hierarchy]
     assert_inspect_tree!(hierarchy, root: contains {
         "fuchsia.inspect.Health": {
             status: "OK",

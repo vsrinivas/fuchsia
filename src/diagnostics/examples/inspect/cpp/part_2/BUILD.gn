@@ -4,6 +4,7 @@
 
 import("//build/test.gni")
 
+# [START part_1_solution_build_dep]
 source_set("lib") {
   sources = [
     "reverser.cc",
@@ -15,6 +16,8 @@ source_set("lib") {
     "//src/diagnostics/examples/inspect/fidl:fuchsia.examples.inspect",
   ]
 }
+
+# [END part_1_solution_build_dep]
 
 test("reverser_unittests_part_2") {
   sources = [ "reverser_unittests.cc" ]

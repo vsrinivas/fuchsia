@@ -56,6 +56,7 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
   fuchsia::sys::ComponentControllerPtr controller_;
 };
 
+// [START integration_test]
 TEST_F(CodelabTest, StartWithFizzBuzz) {
   auto ptr = StartComponentAndConnect({.include_fizzbuzz_service = true});
 
@@ -75,6 +76,7 @@ TEST_F(CodelabTest, StartWithFizzBuzz) {
 
   // CODELAB: Check that the component was connected to FizzBuzz.
 }
+// [END integration_test]
 
 TEST_F(CodelabTest, StartWithoutFizzBuzz) {
   auto ptr = StartComponentAndConnect({.include_fizzbuzz_service = false});

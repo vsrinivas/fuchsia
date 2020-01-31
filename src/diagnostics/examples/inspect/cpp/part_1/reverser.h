@@ -10,6 +10,7 @@
 // Implementation of the fuchsia.examples.inspect.Reverser protocol.
 //
 // Each instantiation of this class handles a single connection to Reverser.
+// [START reverser_h]
 class Reverser final : public fuchsia::examples::inspect::Reverser {
  public:
   // CODELAB: Create a new constructor for Reverser that takes an Inspect node.
@@ -21,5 +22,6 @@ class Reverser final : public fuchsia::examples::inspect::Reverser {
   // Reversers.
   static fidl::InterfaceRequestHandler<fuchsia::examples::inspect::Reverser> CreateDefaultHandler();
 };
+// [END reverser_h]
 
 #endif  // SRC_DIAGNOSTICS_EXAMPLES_INSPECT_CPP_PART_1_REVERSER_H_

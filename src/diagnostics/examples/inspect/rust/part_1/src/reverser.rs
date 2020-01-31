@@ -9,6 +9,7 @@ use {
     futures::TryStreamExt,
 };
 
+// [START reverser_def]
 pub struct ReverserServerFactory {}
 
 impl ReverserServerFactory {
@@ -43,6 +44,7 @@ impl ReverserServer {
         });
     }
 }
+// [END reverser_def]
 
 #[cfg(test)]
 mod tests {

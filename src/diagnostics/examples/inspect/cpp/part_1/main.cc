@@ -14,24 +14,32 @@
 using syslog::InitLogger;
 
 int main(int argc, char** argv) {
+  // [START init_logger]
   InitLogger({"inspect_cpp_codelab", "part1"});
+  // [END init_logger]
 
   FX_LOGS(INFO) << "Starting up...";
 
   // Standard component setup, create an event loop and obtain the
   // ComponentContext.
+  // [START async_executor]
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
+  // [END async_executor]
 
   // CODELAB: Initialize Inspect here.
 
   // Serve the reverser service.
+  // [START serve_outgoing]
   context->outgoing()->AddPublicService(Reverser::CreateDefaultHandler());
+  // [END serve_outgoing]
 
   // Send a request to the FizzBuzz service and print the response when it arrives.
+  // [START fizzbuzz_connect]
   fuchsia::examples::inspect::FizzBuzzPtr fizz_buzz;
   context->svc()->Connect(fizz_buzz.NewRequest());
   fizz_buzz->Execute(30, [](std::string result) { FX_LOGS(INFO) << "Got FizzBuzz: " << result; });
+  // [END fizzbuzz_connect]
 
   // Run the loop.
   loop.Run();
