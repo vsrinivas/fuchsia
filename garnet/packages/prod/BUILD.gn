@@ -163,8 +163,6 @@ group("all") {
     "//garnet/packages/prod:odu",
     "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:overnetstack",
-    "//garnet/packages/prod:pkg_cache",
-    "//garnet/packages/prod:pkg_resolver",
     "//garnet/packages/prod:pm",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
@@ -377,11 +375,6 @@ group("bluetooth_profiles") {
   ]
 }
 
-group("pkg_cache") {
-  testonly = true
-  public_deps = [ "//src/sys/pkg/bin/pkg-cache" ]
-}
-
 group("battery_manager") {
   testonly = true
   public_deps = [ "//garnet/bin/battery_manager:battery_manager" ]
@@ -425,11 +418,6 @@ group("vulkan") {
 group("run") {
   testonly = true
   public_deps = [ "//garnet/bin/run" ]
-}
-
-group("pkg_resolver") {
-  testonly = true
-  public_deps = [ "//src/sys/pkg/bin/pkg-resolver" ]
 }
 
 group("chrealm") {
