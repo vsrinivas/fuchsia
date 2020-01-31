@@ -188,7 +188,6 @@ group("all") {
     "//garnet/packages/prod:terminal",
     "//garnet/packages/prod:test_runner",
     "//garnet/packages/prod:tiles",
-    "//garnet/packages/prod:timezone",
     "//garnet/packages/prod:tracing",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
@@ -419,11 +418,6 @@ group("telephony") {
 group("tiles") {
   testonly = true
   public_deps = [ "//src/ui/tools/tiles" ]
-}
-
-group("timezone") {
-  testonly = true
-  public_deps = [ "//garnet/bin/timezone" ]
 }
 
 group("vulkan") {
