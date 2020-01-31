@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use crate::{
-    future_help::{Observable, Observer},
+    future_help::Observer,
     labels::{Endpoint, NodeId, NodeLinkId},
     peer::Peer,
     ping_tracker::PingTracker,
-    route_planner::LinkDescription,
     router::Router,
     routing_label::{RoutingLabel, MAX_ROUTING_LABEL_LENGTH},
 };
@@ -21,6 +20,7 @@ use std::{
     pin::Pin,
     rc::{Rc, Weak},
     task::{Context, Poll, Waker},
+    time::Duration,
 };
 
 struct LinkState {
@@ -36,6 +36,17 @@ struct LinkState {
     sent_packets: u64,
 }
 
+impl std::fmt::Debug for LinkState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let routes: Vec<NodeId> = self
+            .route_for_peers
+            .iter()
+            .filter_map(|p| Weak::upgrade(p).map(|p| p.node_id()))
+            .collect();
+        write!(f, "(route_for_peers={:?} to_forward.len={})", routes, self.to_forward.len(),)
+    }
+}
+
 /// A `Link` describes an established communications channel between two nodes.
 pub struct Link {
     own_node_id: NodeId,
@@ -43,8 +54,20 @@ pub struct Link {
     node_link_id: NodeLinkId,
     ping_tracker: PingTracker,
     router: Rc<Router>,
-    description: Observable<Option<LinkDescription>>,
     state: RefCell<LinkState>,
+}
+
+impl std::fmt::Debug for Link {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "LINK({:?}:{:?}->{:?}:state={:?})",
+            self.node_link_id,
+            self.own_node_id,
+            self.peer_node_id,
+            self.state.borrow()
+        )
+    }
 }
 
 impl Link {
@@ -71,7 +94,6 @@ impl Link {
                 sent_packets: 0,
             }),
             router: router.clone(),
-            description: Observable::new(None),
         });
         let weak_link = Rc::downgrade(&link);
         router
@@ -83,13 +105,11 @@ impl Link {
         if let Some(peer) = router.server_peer(peer_node_id, false, &Weak::new()).await? {
             peer.update_link_if_unset(&weak_link).await;
         }
-        router
-            .add_link(
-                &link,
-                link.ping_tracker.new_round_trip_time_observer().map(|_| ()).boxed_local(),
-            )
-            .await?;
         Ok(link)
+    }
+
+    pub(crate) fn new_round_trip_time_observer(&self) -> Observer<Option<Duration>> {
+        self.ping_tracker.new_round_trip_time_observer()
     }
 
     pub(crate) fn id(&self) -> NodeLinkId {
@@ -116,14 +136,16 @@ impl Link {
     }
 
     pub(crate) fn add_route_for_peer(&self, peer: &Rc<Peer>) {
+        log::trace!("{:?} ADD_ROUTE_FOR_PEER {:?}", self, peer.node_id());
         let mut state = self.state.borrow_mut();
         state.route_for_peers.push(Rc::downgrade(peer));
         state.wake_send();
     }
 
     pub(crate) fn remove_route_for_peer(&self, peer: &Rc<Peer>) {
+        log::trace!("{:?} REMOVE_ROUTE_FOR_PEER {:?}", self, peer.node_id());
         self.state.borrow_mut().route_for_peers.retain(|other| {
-            Weak::upgrade(other).map(|other| Rc::ptr_eq(peer, &other)).unwrap_or(false)
+            Weak::upgrade(other).map(|other| !Rc::ptr_eq(peer, &other)).unwrap_or(false)
         });
     }
 
@@ -239,26 +261,13 @@ impl Link {
     pub fn next_send<'a>(self: &'a Rc<Link>, frame: &'a mut [u8]) -> NextLinkSend<'a> {
         NextLinkSend { link: self, frame }
     }
-
-    /// Return an `Observer` against this links description
-    pub(crate) fn new_description_observer(&self) -> Observer<Option<LinkDescription>> {
-        self.description.new_observer()
-    }
-
-    pub(crate) fn make_status(&self) -> Option<LinkStatus> {
-        self.ping_tracker.round_trip_time().map(|round_trip_time| LinkStatus {
-            local_id: self.node_link_id,
-            to: self.peer_node_id,
-            round_trip_time: round_trip_time.as_micros().try_into().unwrap_or(std::u64::MAX),
-        })
-    }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LinkStatus {
-    local_id: NodeLinkId,
-    to: NodeId,
-    round_trip_time: u64,
+    pub(crate) local_id: NodeLinkId,
+    pub(crate) to: NodeId,
+    pub(crate) round_trip_time: Duration,
 }
 
 impl From<LinkStatus> for fidl_fuchsia_overnet_protocol::LinkStatus {
@@ -266,7 +275,11 @@ impl From<LinkStatus> for fidl_fuchsia_overnet_protocol::LinkStatus {
         fidl_fuchsia_overnet_protocol::LinkStatus {
             local_id: status.local_id.0,
             to: status.to.into(),
-            metrics: LinkMetrics { round_trip_time: Some(status.round_trip_time) },
+            metrics: LinkMetrics {
+                round_trip_time: Some(
+                    status.round_trip_time.as_micros().try_into().unwrap_or(std::u64::MAX),
+                ),
+            },
         }
     }
 }

@@ -183,7 +183,7 @@ impl TestContext {
         })();
 
         if let Err(ref e) = &r {
-            let _ = REPORT_MUTEX.lock();
+            let rm = REPORT_MUTEX.lock();
             let this = &*self.state.lock();
 
             println!(
@@ -203,6 +203,7 @@ impl TestContext {
                 "*******************************************************************************"
             );
             eprintln!("WROTE LOG FOR ERROR: {:?}", e);
+            drop(rm);
         }
 
         r
@@ -465,8 +466,9 @@ fn main() -> Result<(), Error> {
     for i in 0..args.jobs.unwrap_or(1) {
         let guard = Arc::new(sema.access());
         {
-            let _ = REPORT_MUTEX.lock();
+            let rm = REPORT_MUTEX.lock();
             eprintln!("START JOB: {}", i);
+            drop(rm);
         }
         let errors = errors.clone();
         let args = args.test_args();

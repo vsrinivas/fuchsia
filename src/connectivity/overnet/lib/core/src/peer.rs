@@ -10,7 +10,7 @@ use crate::{
     labels::{Endpoint, NodeId},
     link::{Link, LinkStatus},
     proxy_channel::spawn_channel_proxy,
-    route_planner::{LinkDescription, RoutingUpdate},
+    route_planner::RemoteRoutingUpdate,
     router::Router,
     runtime::{spawn, wait_until},
 };
@@ -69,6 +69,10 @@ pub(crate) struct Peer {
 }
 
 impl Peer {
+    pub(crate) fn node_id(&self) -> NodeId {
+        self.node_id
+    }
+
     // Common parts of new_client, new_server - create the peer object, get it routed
     fn new_instance(
         node_id: NodeId,
@@ -77,7 +81,12 @@ impl Peer {
         current_link: &Weak<Link>,
         commands: Option<futures::channel::mpsc::Sender<ClientPeerCommand>>,
     ) -> Result<Rc<Self>, Error> {
-        log::trace!("CREATE PEER FOR {:?}/{:?}", node_id, endpoint);
+        log::trace!(
+            "CREATE PEER FOR {:?}/{:?} CURRENT_LINK: {:?}",
+            node_id,
+            endpoint,
+            Weak::upgrade(&current_link)
+        );
         let conn = AsyncConnection::from_connection(conn, endpoint);
         let p = Rc::new(Self {
             endpoint,
@@ -124,7 +133,7 @@ impl Peer {
             "Client connection stream failed",
         ));
         spawn(log_errors(
-            send_links(command_sender, link_status_observer),
+            send_links(node_id, command_sender, link_status_observer),
             "Sending initial link data failed",
         ));
         Ok(p)
@@ -312,6 +321,7 @@ async fn client_conn_stream(
         match action {
             Action::Command(command) => {
                 client_conn_handle_command(
+                    peer_node_id,
                     command,
                     &mut conn_stream_writer,
                     &mut on_link_status_ack,
@@ -322,8 +332,12 @@ async fn client_conn_stream(
             Action::Frame(frame_type, mut bytes, fin) => {
                 match frame_type {
                     FrameType::Data => {
-                        client_conn_handle_incoming_frame(&mut bytes, &mut on_link_status_ack)
-                            .await?;
+                        client_conn_handle_incoming_frame(
+                            peer_node_id,
+                            &mut bytes,
+                            &mut on_link_status_ack,
+                        )
+                        .await?;
                     }
                 }
                 if fin {
@@ -347,12 +361,13 @@ async fn client_conn_stream(
 }
 
 async fn client_conn_handle_command(
+    peer_node_id: NodeId,
     command: ClientPeerCommand,
     conn_stream_writer: &mut FramedStreamWriter,
     on_link_status_ack: &mut Option<futures::channel::oneshot::Sender<()>>,
     conn_stats: Rc<PeerConnStats>,
 ) -> Result<(), Error> {
-    log::trace!("Handle client peer command: {:?}", command);
+    log::info!("Handle client peer command from {:?}: {:?}", peer_node_id, command);
     match command {
         ClientPeerCommand::UpdateLinkStatus(status, on_ack) => {
             assert!(on_link_status_ack.is_none());
@@ -381,10 +396,12 @@ async fn client_conn_handle_command(
 }
 
 async fn client_conn_handle_incoming_frame(
+    peer_node_id: NodeId,
     bytes: &mut [u8],
     on_link_status_ack: &mut Option<futures::channel::oneshot::Sender<()>>,
 ) -> Result<(), Error> {
     let msg: PeerReply = decode_fidl(bytes)?;
+    log::trace!("Got peer reply from {:?}: {:?}", peer_node_id, msg);
     match msg {
         PeerReply::UpdateLinkStatusAck(_) => {
             on_link_status_ack
@@ -492,18 +509,16 @@ async fn server_conn_stream(
                                 .ensure_client_peer(to, &*peer.current_link.lock().await)
                                 .await
                                 .context("Summoning due to received metrics")?;
-                            status.push((
+                            status.push(LinkStatus {
                                 to,
-                                local_id.into(),
-                                LinkDescription {
-                                    round_trip_time: std::time::Duration::from_micros(
-                                        metrics.round_trip_time.unwrap_or(std::u64::MAX),
-                                    ),
-                                },
-                            ));
+                                local_id: local_id.into(),
+                                round_trip_time: std::time::Duration::from_micros(
+                                    metrics.round_trip_time.unwrap_or(std::u64::MAX),
+                                ),
+                            });
                         }
                         router
-                            .send_routing_update(RoutingUpdate::UpdateRemoteLinkStatus {
+                            .send_routing_update(RemoteRoutingUpdate {
                                 from_node_id: node_id,
                                 status,
                             })
@@ -520,10 +535,13 @@ async fn server_conn_stream(
 }
 
 async fn send_links(
+    peer_node_id: NodeId,
     mut commands: futures::channel::mpsc::Sender<ClientPeerCommand>,
     mut observer: Observer<Vec<LinkStatus>>,
 ) -> Result<(), Error> {
+    log::trace!("SEND_LINKS:{:?} BEGINS", peer_node_id);
     while let Some(link_status) = observer.next().await {
+        log::trace!("SEND_LINKS:{:?} SCHEDULE SEND {:?}", peer_node_id, link_status);
         let (sender, receiver) = futures::channel::oneshot::channel();
         commands
             .send(ClientPeerCommand::UpdateLinkStatus(
@@ -533,8 +551,10 @@ async fn send_links(
                 sender,
             ))
             .await?;
+        log::trace!("SEND_LINKS:{:?} AWAIT ACK", peer_node_id);
         receiver.await?;
 
+        log::trace!("SEND_LINKS:{:?} SLEEPY TIME", peer_node_id);
         wait_until(std::time::Instant::now() + std::time::Duration::from_secs(1)).await;
     }
     Ok(())

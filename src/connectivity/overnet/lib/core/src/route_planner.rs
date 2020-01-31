@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 use crate::{
-    future_help::log_errors,
+    future_help::{log_errors, Observer},
     labels::{NodeId, NodeLinkId},
+    link::LinkStatus,
     router::Router,
     runtime::{maybe_wait_until, spawn},
 };
 use anyhow::{bail, format_err, Error};
 use futures::{prelude::*, select};
 use std::{
-    collections::{btree_map, BTreeMap, BinaryHeap},
+    collections::{BTreeMap, BinaryHeap},
     rc::{Rc, Weak},
     time::{Duration, Instant},
 };
@@ -80,15 +81,16 @@ impl NodeTable {
     }
 
     /// Update a single link on a node.
-    pub fn update_link(
+    fn update_link(
         &mut self,
         from: NodeId,
         to: NodeId,
         link_id: NodeLinkId,
         desc: LinkDescription,
     ) -> Result<(), Error> {
-        log::trace!(
-            "update_link: from:{:?} to:{:?} link_id:{:?} desc:{:?}",
+        log::info!(
+            "{:?} update_link: from:{:?} to:{:?} link_id:{:?} desc:{:?}",
+            self.root_node,
             from,
             to,
             link_id,
@@ -99,33 +101,19 @@ impl NodeTable {
         }
         self.get_or_create_node_mut(to);
         self.get_or_create_node_mut(from).links.insert(link_id, Link { to, desc });
-        log::trace!("{}", self.digraph_string());
         Ok(())
     }
 
-    pub fn update_links(
-        &mut self,
-        from: NodeId,
-        links: Vec<(NodeId, NodeLinkId, LinkDescription)>,
-    ) -> Result<(), Error> {
+    fn update_links(&mut self, from: NodeId, links: Vec<LinkStatus>) -> Result<(), Error> {
         self.get_or_create_node_mut(from).links.clear();
-        for (to, link_id, desc) in links.into_iter() {
-            self.update_link(from, to, link_id, desc)?;
+        for LinkStatus { to, local_id, round_trip_time } in links.into_iter() {
+            self.update_link(from, to, local_id, LinkDescription { round_trip_time })?;
         }
         Ok(())
-    }
-
-    pub fn remove_link(&mut self, from: NodeId, to: NodeId, link_id: NodeLinkId) {
-        match self.get_or_create_node_mut(from).links.entry(link_id) {
-            btree_map::Entry::Occupied(o) if o.get().to == to => {
-                o.remove();
-            }
-            _ => (),
-        }
     }
 
     /// Build a routing table for our node based on current link data
-    pub fn build_routes(&self) -> impl Iterator<Item = (NodeId, NodeLinkId)> {
+    fn build_routes(&self) -> impl Iterator<Item = (NodeId, NodeLinkId)> {
         let mut todo = BinaryHeap::new();
 
         let mut progress = BTreeMap::<NodeId, NodeProgress>::new();
@@ -184,83 +172,70 @@ impl NodeTable {
 }
 
 #[derive(Debug)]
-pub enum RoutingUpdate {
-    UpdateLocalLinkStatus {
-        to_node_id: NodeId,
-        link_id: NodeLinkId,
-        description: Option<LinkDescription>,
-    },
-    UpdateRemoteLinkStatus {
-        from_node_id: NodeId,
-        status: Vec<(NodeId, NodeLinkId, LinkDescription)>,
-    },
+pub(crate) struct RemoteRoutingUpdate {
+    pub(crate) from_node_id: NodeId,
+    pub(crate) status: Vec<LinkStatus>,
 }
 
-pub(crate) type RoutingUpdateSender = futures::channel::mpsc::Sender<RoutingUpdate>;
-pub(crate) type RoutingUpdateReceiver = futures::channel::mpsc::Receiver<RoutingUpdate>;
+pub(crate) type RemoteRoutingUpdateSender = futures::channel::mpsc::Sender<RemoteRoutingUpdate>;
+pub(crate) type RemoteRoutingUpdateReceiver = futures::channel::mpsc::Receiver<RemoteRoutingUpdate>;
 
-pub fn routing_update_channel() -> (RoutingUpdateSender, RoutingUpdateReceiver) {
+pub(crate) fn routing_update_channel() -> (RemoteRoutingUpdateSender, RemoteRoutingUpdateReceiver) {
     futures::channel::mpsc::channel(1)
 }
 
-#[derive(Debug)]
-enum Action {
-    Apply(RoutingUpdate),
-    UpdateRoutes,
-    Quit,
-}
-
-pub(crate) fn spawn_route_planner(router: Rc<Router>, mut updates: RoutingUpdateReceiver) {
+pub(crate) fn spawn_route_planner(
+    router: Rc<Router>,
+    mut remote_updates: RemoteRoutingUpdateReceiver,
+    mut local_updates: Observer<Vec<LinkStatus>>,
+) {
     let mut node_table = NodeTable::new(router.node_id());
     let router = Rc::downgrade(&router);
     spawn(log_errors(
         async move {
             let mut next_route_table_update = None;
             loop {
+                #[derive(Debug)]
+                enum Action {
+                    ApplyRemote(RemoteRoutingUpdate),
+                    ApplyLocal(Vec<LinkStatus>),
+                    UpdateRoutes,
+                }
                 let action = select! {
-                    x = updates.next().fuse() => match x {
-                        Some(x) => Action::Apply(x),
-                        None => Action::Quit,
+                    x = remote_updates.next().fuse() => match x {
+                        Some(x) => Action::ApplyRemote(x),
+                        None => return Ok(()),
+                    },
+                    x = local_updates.next().fuse() => match x {
+                        Some(x) => Action::ApplyLocal(x),
+                        None => return Ok(()),
                     },
                     _ = maybe_wait_until(next_route_table_update).fuse() => Action::UpdateRoutes
                 };
-                log::trace!("Routing update: {:?}", action);
+                log::info!("{:?} Routing update: {:?}", node_table.root_node, action);
                 match action {
-                    Action::Quit => return Ok(()),
-                    Action::Apply(update) => {
-                        match update {
-                            RoutingUpdate::UpdateLocalLinkStatus {
-                                to_node_id,
-                                link_id,
-                                description: Some(description),
-                            } => {
-                                if let Err(e) = node_table.update_link(
-                                    node_table.root_node,
-                                    to_node_id,
-                                    link_id,
-                                    description,
-                                ) {
-                                    log::warn!("Update link failed: {:?}", e);
-                                    continue;
-                                }
-                            }
-                            RoutingUpdate::UpdateLocalLinkStatus {
-                                to_node_id,
-                                link_id,
-                                description: None,
-                            } => {
-                                node_table.remove_link(node_table.root_node, to_node_id, link_id);
-                            }
-                            RoutingUpdate::UpdateRemoteLinkStatus { from_node_id, status } => {
-                                if from_node_id == node_table.root_node {
-                                    log::warn!("Attempt to update own node id links as remote");
-                                    continue;
-                                }
-                                if let Err(e) = node_table.update_links(from_node_id, status) {
-                                    log::warn!("Update links failed: {:?}", e);
-                                    continue;
-                                }
-                            }
+                    Action::ApplyRemote(RemoteRoutingUpdate { from_node_id, status }) => {
+                        if from_node_id == node_table.root_node {
+                            log::warn!("Attempt to update own node id links as remote");
+                            continue;
+                        }
+                        if let Err(e) = node_table.update_links(from_node_id, status) {
+                            log::warn!(
+                                "Update remote links from {:?} failed: {:?}",
+                                from_node_id,
+                                e
+                            );
+                            continue;
+                        }
+                        if next_route_table_update.is_none() {
+                            next_route_table_update =
+                                Some(Instant::now() + Duration::from_millis(100));
+                        }
+                    }
+                    Action::ApplyLocal(status) => {
+                        if let Err(e) = node_table.update_links(node_table.root_node, status) {
+                            log::warn!("Update local links failed: {:?}", e);
+                            continue;
                         }
                         if next_route_table_update.is_none() {
                             next_route_table_update =
@@ -268,6 +243,11 @@ pub(crate) fn spawn_route_planner(router: Rc<Router>, mut updates: RoutingUpdate
                         }
                     }
                     Action::UpdateRoutes => {
+                        log::info!(
+                            "{:?} Route table: {}",
+                            node_table.root_node,
+                            node_table.digraph_string()
+                        );
                         next_route_table_update = None;
                         Weak::upgrade(&router)
                             .ok_or_else(|| format_err!("Router shut down"))?

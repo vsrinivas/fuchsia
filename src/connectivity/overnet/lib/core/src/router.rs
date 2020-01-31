@@ -26,7 +26,7 @@ use crate::{
     link_status_updater::{spawn_link_status_updater, LinkStatePublisher},
     peer::Peer,
     route_planner::{
-        routing_update_channel, spawn_route_planner, RoutingUpdate, RoutingUpdateSender,
+        routing_update_channel, spawn_route_planner, RemoteRoutingUpdate, RemoteRoutingUpdateSender,
     },
     runtime::spawn,
     service_map::{ListablePeer, ServiceMap},
@@ -110,9 +110,9 @@ pub struct Router {
     peers: Mutex<BTreeMap<(NodeId, Endpoint), Rc<Peer>>>,
     links: Mutex<HashMap<NodeLinkId, Weak<Link>>>,
     link_state_publisher: LinkStatePublisher,
-    link_state_observable: Observable<Vec<LinkStatus>>,
+    link_state_observable: Rc<Observable<Vec<LinkStatus>>>,
     service_map: ServiceMap,
-    routing_update_sender: RoutingUpdateSender,
+    routing_update_sender: RemoteRoutingUpdateSender,
     list_peers_observer: Mutex<Option<Observer<Vec<ListablePeer>>>>,
 }
 
@@ -154,15 +154,19 @@ impl Router {
             server_key_file,
             routing_update_sender,
             link_state_publisher,
-            link_state_observable: Observable::new(Vec::new()),
+            link_state_observable: Rc::new(Observable::new(Vec::new())),
             service_map,
             links: Mutex::new(HashMap::new()),
             peers: Mutex::new(BTreeMap::new()),
             list_peers_observer,
         });
 
-        spawn_route_planner(router.clone(), routing_update_receiver);
-        spawn_link_status_updater(&router, link_state_receiver);
+        spawn_route_planner(
+            router.clone(),
+            routing_update_receiver,
+            router.link_state_observable.new_observer(),
+        );
+        spawn_link_status_updater(router.link_state_observable.clone(), link_state_receiver);
         // Spawn a future to service diagnostic requests
         if let Some(implementation) = options.diagnostics {
             spawn_diagostic_service_request_handler(router.clone(), implementation);
@@ -174,29 +178,15 @@ impl Router {
     pub async fn new_link(self: &Rc<Self>, peer_node_id: NodeId) -> Result<Rc<Link>, Error> {
         let node_link_id = self.next_node_link_id.fetch_add(1, Ordering::Relaxed).into();
         let link = Link::new(peer_node_id, node_link_id, &self).await?;
-        let routing_update_sender = self.routing_update_sender.clone();
-        // Spawn a task to move link status to the
-        spawn(link.new_description_observer().for_each(move |description| {
-            log::trace!(
-                "Send new description to peer node {:?} on link {:?}: desc = {:?}",
-                peer_node_id,
-                node_link_id,
-                description
-            );
-            let mut routing_update_sender = routing_update_sender.clone();
-            async move {
-                if let Err(e) = routing_update_sender
-                    .send(RoutingUpdate::UpdateLocalLinkStatus {
-                        to_node_id: peer_node_id,
-                        link_id: node_link_id,
-                        description,
-                    })
-                    .await
-                {
-                    log::warn!("Failed publishing local link state: {:?}", e);
-                }
-            }
-        }));
+        self.link_state_publisher
+            .clone()
+            .send(
+                link.new_round_trip_time_observer()
+                    .map(move |rtt| (node_link_id, peer_node_id, rtt))
+                    .boxed_local(),
+            )
+            .await?;
+        self.links.lock().await.insert(link.id(), Rc::downgrade(&link));
         Ok(link)
     }
 
@@ -311,36 +301,6 @@ impl Router {
             .collect()
     }
 
-    pub(crate) async fn add_link<'a>(
-        &self,
-        link: &Rc<Link>,
-        status_change: std::pin::Pin<Box<dyn 'a + Stream<Item = ()>>>,
-    ) -> Result<(), Error>
-    where
-        'a: 'static,
-    {
-        self.link_state_publisher.clone().send(status_change).await?;
-        self.links.lock().await.insert(link.id(), Rc::downgrade(link));
-        Ok(())
-    }
-
-    pub(crate) async fn publish_new_link_status(&self) {
-        let mut status = Vec::new();
-        let mut dead = Vec::new();
-        let mut links = self.links.lock().await;
-        for (id, link) in links.iter() {
-            if let Some(link) = Weak::upgrade(link) {
-                link.make_status().map(|s| status.push(s));
-            } else {
-                dead.push(*id);
-            }
-        }
-        for id in dead {
-            links.remove(&id);
-        }
-        self.link_state_observable.push(status);
-    }
-
     /// Diagnostic information for peer connections
     pub(crate) async fn peer_diagnostics(&self) -> Vec<PeerConnectionDiagnosticInfo> {
         self.peers.lock().await.iter().map(|(_, peer)| peer.diagnostics(self.node_id)).collect()
@@ -393,7 +353,7 @@ impl Router {
         Ok(config)
     }
 
-    pub(crate) async fn send_routing_update(&self, routing_update: RoutingUpdate) {
+    pub(crate) async fn send_routing_update(&self, routing_update: RemoteRoutingUpdate) {
         if let Err(e) = self.routing_update_sender.clone().send(routing_update).await {
             log::warn!("Routing update send failed: {:?}", e);
         }

@@ -40,6 +40,18 @@ impl From<NodeId> for fidl_fuchsia_overnet_protocol::NodeId {
     }
 }
 
+impl From<&NodeId> for fidl_fuchsia_overnet_protocol::NodeId {
+    fn from(id: &NodeId) -> Self {
+        Self { id: id.0 }
+    }
+}
+
+impl From<fidl_fuchsia_overnet_protocol::NodeId> for NodeId {
+    fn from(id: fidl_fuchsia_overnet_protocol::NodeId) -> Self {
+        id.id.into()
+    }
+}
+
 /// Labels a link with a node-unique identifier
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug, Hash)]
 pub struct NodeLinkId(pub u64);

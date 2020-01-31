@@ -106,11 +106,11 @@ fn spawn_echo_server(chan: fidl::AsyncChannel, quiet: bool) {
                 stream.try_next().await.context("error running echo server")?
             {
                 if !quiet {
-                    log::trace!("Received echo request for string {:?}", value);
+                    log::info!("Received echo request for string {:?}", value);
                 }
                 responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
                 if !quiet {
-                    log::trace!("echo response sent successfully");
+                    log::info!("echo response sent successfully");
                 }
             }
             Ok(())
