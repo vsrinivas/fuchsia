@@ -57,13 +57,16 @@ class GNGenerateTest(unittest.TestCase):
             dcmp (filecmp.dircmp): A dircmp of the directories.
         """
         if dcmp.left_only or dcmp.right_only or dcmp.diff_files:
-            self.fail(f"Generated SDK does not match golden files. "
-                f"You can run ./update_golden.py to update them.\n"
-                f"Only in {dcmp.left}:\n{dcmp.left_only}\n\n"
-                f"Only in {dcmp.right}:\n{dcmp.right_only}\n\n"
-                f"Common different files:\n{dcmp.diff_files}")
+            self.fail("Generated SDK does not match golden files. " \
+                "You can run ./update_golden.py to update them.\n" \
+                "Only in {}:\n{}\n\n" \
+                "Only in {}:\n{}\n\n" \
+                "Common different files:\n{}"
+                .format(dcmp.left, dcmp.left_only, dcmp.right, dcmp.right_only,
+                    dcmp.diff_files))
         for sub_dcmp in dcmp.subdirs.values():
             self.verify_contents_recursive(sub_dcmp)
+
 
 def TestMain():
     unittest.main()
