@@ -8,5 +8,4 @@ source_set("debugcommands") {
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
   ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

@@ -26,7 +26,6 @@
 static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_modify_mem(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_fill_mem(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_reset(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_memtest(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags);
