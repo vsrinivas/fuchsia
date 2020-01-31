@@ -512,14 +512,14 @@ explained in [Routing terminology](#routing-terminology).
       or runner capabilities.
     - `#<storage-name>` A [reference](#references) to a storage declaration.
       This source can only be used when offering storage capabilities.
-    - `to`: An array of capability targets, each of which is a
-      [reference](#references) to the child or collection to which the
-      capability is being offered, of the form `#<target-name>`.
-    - `as` _(optional)_: The explicit [target path](#capability-paths) for the
-      capability. If omitted, defaults to the source path.
-      `as` cannot be used:
-        - For storage capabilities.
-        - When `service_protocol` is an array of multiple items.
+- `to`: An array of capability targets, each of which is a
+  [reference](#references) to the child or collection to which the
+  capability is being offered, of the form `#<target-name>`.
+- `as` _(optional)_: The explicit [target path](#capability-paths) for the
+  capability. If omitted, defaults to the source path.
+  `as` cannot be used:
+    - For storage capabilities.
+    - When `service_protocol` is an array of multiple items.
 
 Example:
 
