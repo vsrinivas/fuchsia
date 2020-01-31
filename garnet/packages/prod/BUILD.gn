@@ -183,7 +183,6 @@ group("all") {
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:scenic",
-    "//garnet/packages/prod:scpi",
     "//garnet/packages/prod:setui_client",
     "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:ssh",
@@ -357,11 +356,6 @@ group("bluetooth_drivers") {
     "//src/connectivity/bluetooth/hci/passthrough",
     "//src/connectivity/bluetooth/profiles/bt-hog",
   ]
-}
-
-group("scpi") {
-  testonly = true
-  public_deps = [ "//garnet/bin/scpi" ]
 }
 
 group("vboot_reference") {
