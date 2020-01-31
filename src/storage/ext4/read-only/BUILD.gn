@@ -33,11 +33,11 @@ test_package("ext4-read-only-tests") {
 
   resources = [
     {
-      path = "1file.img"
+      path = "test_files/1file.img"
       dest = "1file.img"
     },
     {
-      path = "nest.img"
+      path = "test_files/nest.img"
       dest = "nest.img"
     },
   ]

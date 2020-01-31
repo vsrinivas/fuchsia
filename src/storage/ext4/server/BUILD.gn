@@ -101,11 +101,11 @@ test_package("ext4_server_integration_tests") {
 
   resources = [
     {
-      path = rebase_path("../read-only/1file.img")
+      path = rebase_path("../read-only/test_files/1file.img")
       dest = "1file.img"
     },
     {
-      path = rebase_path("../read-only/nest.img")
+      path = rebase_path("../read-only/test_files/nest.img")
       dest = "nest.img"
     },
   ]

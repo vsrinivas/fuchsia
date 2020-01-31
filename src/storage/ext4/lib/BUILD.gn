@@ -30,7 +30,7 @@ test_package("tests") {
 
   resources = [
     {
-      path = "nest.img"
+      path = rebase_path("../read-only/test_files/nest.img")
       dest = "nest.img"
     },
   ]
