@@ -210,6 +210,14 @@ class AudioCapturerImpl : public AudioObject,
   void Shutdown(std::unique_ptr<AudioCapturerImpl> self)
       FXL_LOCKS_EXCLUDED(threading_model_.FidlDomain().token());
 
+  TimelineRate dest_frames_to_clock_mono_rate() {
+    return TimelineRate(ZX_SEC(1), format_.frames_per_second());
+  }
+  TimelineRate fractional_dest_frames_to_clock_mono_rate() {
+    return TimelineRate(ZX_SEC(1),
+                        FractionalFrames<int64_t>(format_.frames_per_second()).raw_value());
+  }
+
   fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
@@ -224,7 +232,6 @@ class AudioCapturerImpl : public AudioObject,
 
   // Capture format and gain state.
   Format format_;
-  TimelineRate dest_frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;
   std::atomic<float> stream_gain_db_;
   bool mute_;
@@ -250,8 +257,9 @@ class AudioCapturerImpl : public AudioObject,
 
   // Capture bookkeeping
   bool async_mode_ = false;
-  TimelineFunction dest_frames_to_clock_mono_ FXL_GUARDED_BY(mix_domain_->token());
-  GenerationId dest_frames_to_clock_mono_gen_ FXL_GUARDED_BY(mix_domain_->token());
+
+  fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_fractional_dest_frames_ =
+      fbl::MakeRefCounted<VersionedTimelineFunction>();
   int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 
   uint32_t async_frames_per_packet_;

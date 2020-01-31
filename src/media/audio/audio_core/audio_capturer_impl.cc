@@ -703,7 +703,7 @@ zx_status_t AudioCapturerImpl::Process() {
 
         // If we don't know our timeline transformation, then the next buffer we produce is
         // guaranteed to be discontinuous relative to the previous one (if any).
-        if (!dest_frames_to_clock_mono_.invertible()) {
+        if (!clock_mono_to_fractional_dest_frames_->get().first.invertible()) {
           p.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
         }
 
@@ -734,8 +734,7 @@ zx_status_t AudioCapturerImpl::Process() {
     // asynchronous mode, reset our async ring buffer state, add a new pending capture buffer to the
     // queue, and restart the main Process loop.
     if (mix_target == nullptr) {
-      dest_frames_to_clock_mono_ = TimelineFunction();
-      dest_frames_to_clock_mono_gen_.Next();
+      clock_mono_to_fractional_dest_frames_->Update(TimelineFunction());
       frame_count_ = 0;
       mix_timer_.Cancel();
 
@@ -759,14 +758,13 @@ zx_status_t AudioCapturerImpl::Process() {
     // Ideally, if there were only one capture source and our frame rates match, we would align our
     // start time exactly with a source sample boundary.
     auto now = zx::clock::get_monotonic();
-    if (!dest_frames_to_clock_mono_.invertible()) {
+    if (!clock_mono_to_fractional_dest_frames_->get().first.invertible()) {
       // Ideally a timeline function could alter offsets without also recalculating the scale
       // factor. Then we could re-establish this function without re-reducing the fps-to-nsec rate.
       // Since we supply a rate that is already reduced, this should go pretty quickly.
-      dest_frames_to_clock_mono_ =
-          TimelineFunction(now.get(), frame_count_, dest_frames_to_clock_mono_rate_);
-      dest_frames_to_clock_mono_gen_.Next();
-      FX_DCHECK(dest_frames_to_clock_mono_.invertible());
+      clock_mono_to_fractional_dest_frames_->Update(
+          TimelineFunction(FractionalFrames<int64_t>(frame_count_).raw_value(), now.get(),
+                           fractional_dest_frames_to_clock_mono_rate().Inverse()));
     }
 
     // Limit our job size to our max job size.
@@ -776,7 +774,8 @@ zx_status_t AudioCapturerImpl::Process() {
 
     // Figure out when we can finish the job. If in the future, wait until then.
     zx::time last_frame_time =
-        zx::time(dest_frames_to_clock_mono_.Apply(frame_count_ + mix_frames));
+        zx::time(clock_mono_to_fractional_dest_frames_->get().first.Inverse().Apply(
+            FractionalFrames<int64_t>(frame_count_ + mix_frames).raw_value()));
     if (last_frame_time.get() == TimelineRate::kOverflow) {
       FX_LOGS(ERROR) << "Fatal timeline overflow in capture mixer, shutting down capture.";
       ShutdownFromMixDomain();
@@ -826,8 +825,11 @@ zx_status_t AudioCapturerImpl::Process() {
 
           // Assign a timestamp if one has not already been assigned.
           if (p.capture_timestamp == fuchsia::media::NO_TIMESTAMP) {
-            FX_DCHECK(dest_frames_to_clock_mono_.invertible());
-            p.capture_timestamp = dest_frames_to_clock_mono_.Apply(frame_count_);
+            auto [clock_mono_to_fractional_dest_frames, _] =
+                clock_mono_to_fractional_dest_frames_->get();
+            FX_DCHECK(clock_mono_to_fractional_dest_frames.invertible());
+            p.capture_timestamp = clock_mono_to_fractional_dest_frames.Inverse().Apply(
+                FractionalFrames<int64_t>(frame_count_).raw_value());
           }
 
           // If we filled the entire buffer, put it in the queue to be returned to the user.
@@ -839,9 +841,9 @@ zx_status_t AudioCapturerImpl::Process() {
         } else {
           // It looks like we were flushed while we were mixing. Invalidate our timeline function,
           // we will re-establish it and flag a discontinuity next time we have work to do.
-          dest_frames_to_clock_mono_ =
-              TimelineFunction(now.get(), frame_count_, dest_frames_to_clock_mono_rate_);
-          dest_frames_to_clock_mono_gen_.Next();
+          clock_mono_to_fractional_dest_frames_->Update(
+              TimelineFunction(FractionalFrames<int64_t>(frame_count_).raw_value(), now.get(),
+                               fractional_dest_frames_to_clock_mono_rate().Inverse()));
         }
       }
     }
@@ -1270,8 +1272,10 @@ void AudioCapturerImpl::UpdateTransformation(Mixer::Bookkeeping* info,
                                              const AudioDriver::RingBufferSnapshot& rb_snap) {
   TRACE_DURATION("audio", "AudioCapturerImpl::UpdateTransformation");
   FX_DCHECK(info != nullptr);
+  auto [clock_mono_to_fractional_dest_frames, clock_mono_to_fractional_dest_frames_gen] =
+      clock_mono_to_fractional_dest_frames_->get();
 
-  if ((info->dest_trans_gen_id == dest_frames_to_clock_mono_gen_.get()) &&
+  if ((info->dest_trans_gen_id == clock_mono_to_fractional_dest_frames_gen) &&
       (info->source_trans_gen_id == rb_snap.gen_id)) {
     return;
   }
@@ -1287,8 +1291,15 @@ void AudioCapturerImpl::UpdateTransformation(Mixer::Bookkeeping* info,
   auto clock_mono_to_ring_pos_frac_frames = TimelineFunction::Compose(
       TimelineFunction(src_bytes_to_frac_frames), rb_snap.clock_mono_to_ring_pos_bytes);
 
+  TimelineRate frames_per_fractional_frame =
+      TimelineRate(1, FractionalFrames<uint32_t>(1).raw_value());
+  auto dest_frames_to_clock_mono =
+      TimelineFunction::Compose(TimelineFunction(frames_per_fractional_frame),
+                                clock_mono_to_fractional_dest_frames)
+          .Inverse();
+
   info->dest_frames_to_frac_source_frames =
-      TimelineFunction::Compose(clock_mono_to_ring_pos_frac_frames, dest_frames_to_clock_mono_);
+      TimelineFunction::Compose(clock_mono_to_ring_pos_frac_frames, dest_frames_to_clock_mono);
 
   // Our frac source frame sampling point should lag the ring buffer DMA position by this offset.
   auto offset = FractionalFrames<int64_t>(rb_snap.position_to_end_fence_frames);
@@ -1305,7 +1316,7 @@ void AudioCapturerImpl::UpdateTransformation(Mixer::Bookkeeping* info,
                       (info->denominator * info->step_size);
 
   FX_DCHECK(info->denominator > 0);
-  info->dest_trans_gen_id = dest_frames_to_clock_mono_gen_.get();
+  info->dest_trans_gen_id = clock_mono_to_fractional_dest_frames_gen;
   info->source_trans_gen_id = rb_snap.gen_id;
 }
 
@@ -1336,8 +1347,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   }
 
   // Invalidate our clock transformation (our next packet will be discontinuous)
-  dest_frames_to_clock_mono_ = TimelineFunction();
-  dest_frames_to_clock_mono_gen_.Next();
+  clock_mono_to_fractional_dest_frames_->Update(TimelineFunction());
 
   // If we had a timer set, make sure that it is canceled. There is no point in
   // having it armed right now as we are in the process of stopping.
@@ -1494,8 +1504,7 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioStreamType stream_type
   // to get around to capturing it. Limiting our maximum number of frames of to
   // capture to be less than this amount of time prevents this issue.
   int64_t tmp;
-  dest_frames_to_clock_mono_rate_ = TimelineRate(ZX_SEC(1), format_.frames_per_second());
-  tmp = dest_frames_to_clock_mono_rate_.Inverse().Scale(kMaxTimePerCapture);
+  tmp = dest_frames_to_clock_mono_rate().Inverse().Scale(kMaxTimePerCapture);
   max_frames_per_capture_ = static_cast<uint32_t>(tmp);
 
   FX_DCHECK(tmp <= std::numeric_limits<uint32_t>::max());
