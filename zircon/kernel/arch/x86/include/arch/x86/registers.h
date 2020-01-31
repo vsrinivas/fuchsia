@@ -38,6 +38,8 @@
 #define X86_MSR_IA32_TSC_ADJUST 0x0000003b      /* TSC adjust */
 #define X86_MSR_IA32_SPEC_CTRL 0x00000048       /* Speculative Execution Controls */
 #define X86_SPEC_CTRL_IBRS (1ull << 0)
+// Partitions indirect branch predictors across hyperthreads
+#define X86_SPEC_CTRL_STIBP (1ull << 1)		/* Single Thread Indirect Branch Predictors */
 #define X86_SPEC_CTRL_SSBD (1ull << 2)
 #define X86_MSR_IA32_PRED_CMD 0x00000049        /* Indirect Branch Prediction Command */
 #define X86_MSR_IA32_BIOS_UPDT_TRIG 0x00000079u /* Microcode Patch Loader */

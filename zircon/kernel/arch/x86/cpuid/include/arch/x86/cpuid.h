@@ -246,6 +246,7 @@ class Features {
   static constexpr Feature CLZERO = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 0};
   static constexpr Feature AMD_IBPB = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 12};
   static constexpr Feature AMD_IBRS_ALWAYS_ON = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 16};
+  static constexpr Feature AMD_STIBP_ALWAYS_ON = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 17};
   static constexpr Feature AMD_PREFER_IBRS = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 18};
   static constexpr Feature AMD_SSBD = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 24};
   static constexpr Feature AMD_VIRT_SSBD = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 25};
