@@ -81,6 +81,11 @@ class Inspect {
   /// exit code.
   Future<String> _stdOutForSshCommand(String command) async {
     final process = await ssh.run(command);
+    if (process.stderr != null && process.stderr.trim().isNotEmpty) {
+      // There should not be anything on stderr in a successful run.
+      _log.warning('$command stderr: ${process.stderr}');
+      return null;
+    }
     return process.exitCode == 0 ? process.stdout : null;
   }
 }

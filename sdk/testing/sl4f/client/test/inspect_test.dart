@@ -78,6 +78,16 @@ void main(List<String> args) {
     }
   });
 
+  test('inspectComponentRoot fails if there is stderr data', () async {
+    final inspect = Inspect(FakeSsh(
+        findCommandStdOut: '',
+        findCommandStdErr: 'Error: blah!',
+        inspectCommandContentsRoot: null));
+
+    final result = await inspect.inspectComponentRoot('anything.cmx');
+    expect(result, isNull);
+  });
+
   group(FreezeDetector, () {
     test('no freeze', () async {
       FakeAsync().run((fakeAsync) {
@@ -164,6 +174,7 @@ class FakeSsh implements Ssh {
   int inspectCommandCount = 0;
 
   String findCommandStdOut;
+  String findCommandStdErr;
   String expectedInspectSuffix;
   dynamic inspectCommandContentsRoot;
   List<int> findCommandExitCode;
@@ -175,6 +186,7 @@ class FakeSsh implements Ssh {
     this.inspectCommandContentsRoot,
     this.findCommandExitCode = const <int>[0],
     this.inspectCommandExitCode = const <int>[0],
+    this.findCommandStdErr = '',
   });
 
   @override
@@ -185,10 +197,12 @@ class FakeSsh implements Ssh {
   Future<ProcessResult> run(String command, {String stdin}) async {
     int exitCode;
     String stdout;
+    String stderr;
 
     if (command.trim() == _iqueryFindCommand) {
       exitCode = findCommandExitCode[findCommandCount++];
       stdout = findCommandStdOut;
+      stderr = findCommandStdErr;
     } else if (command.trim() ==
         '$_iqueryRecursiveInspectCommandPrefix $expectedInspectSuffix') {
       exitCode = inspectCommandExitCode[inspectCommandCount++];
@@ -197,6 +211,6 @@ class FakeSsh implements Ssh {
       print('got unknown command $command');
       exitCode = -1;
     }
-    return ProcessResult(0, exitCode, stdout, '');
+    return ProcessResult(0, exitCode, stdout, stderr);
   }
 }
