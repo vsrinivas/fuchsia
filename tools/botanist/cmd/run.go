@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
@@ -33,6 +34,8 @@ import (
 
 const (
 	netstackTimeout time.Duration = 1 * time.Minute
+	repoID                        = "fuchsia-pkg://fuchsia.com"
+	gcsHost                       = "storage.cloud.google.com"
 )
 
 // Target represents a fuchsia instance.
@@ -123,11 +126,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 	f.StringVar(&r.repoURL, "repo", "", "URL at which to configure a package repository")
-	var defaultBlobURL string
-	if r.repoURL != "" {
-		defaultBlobURL = fmt.Sprintf("%s/blobs", r.repoURL)
-	}
-	f.StringVar(&r.blobURL, "blobs", defaultBlobURL, "URL at which to serve a package repository's blobs")
+	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs")
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -294,12 +293,18 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 			subprocessEnv["FUCHSIA_IPV4_ADDR"] = ip.String()
 		}
 
+		if r.repoURL != "" {
+			if err := repo.AddInsecurely(client, repoID, r.repoURL, r.blobURL); err != nil {
+				return err
+			}
+		}
 		if r.syslogFile != "" {
 			s, err := os.Create(r.syslogFile)
 			if err != nil {
 				return err
 			}
 			defer s.Close()
+			// Note: the sylogger takes ownership of the SSH client.
 			syslogger := syslog.NewSyslogger(client, config)
 			defer syslogger.Close()
 
