@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 
 using flatland::Flatland;
@@ -472,6 +473,86 @@ TEST_F(FlatlandTest, GraphLinkUnbindsOnParentDeath) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(graph_link.is_bound());
+}
+
+TEST_F(FlatlandTest, GraphUnlinkFailsWithoutLink) {
+  Flatland flatland = CreateFlatland();
+
+  flatland.UnlinkFromParent([](GraphLinkToken token) { EXPECT_TRUE(false); });
+
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  // Killing the peer token does not prevent the instance from returning a valid token.
+  parent_token.value.reset();
+  RunLoopUntilIdle();
+
+  GraphLinkToken graph_token;
+  flatland.UnlinkFromParent(
+      [&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(graph_token.value.is_valid());
+
+  // But trying to link with that token will immediately fail because it is already orphaned.
+  fidl::InterfacePtr<GraphLink> graph_link2;
+  flatland.LinkToParent(std::move(graph_token), graph_link2.NewRequest());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(graph_link2.is_bound());
+}
+
+TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const zx_koid_t expected_koid = fsl::GetKoid(child_token.value.get());
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  GraphLinkToken graph_token;
+  flatland.UnlinkFromParent(
+      [&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
+
+  // Until Present() is called, the previous GraphLink is not unbound.
+  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_FALSE(graph_token.value.is_valid());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_TRUE(graph_token.value.is_valid());
+  EXPECT_EQ(fsl::GetKoid(graph_token.value.get()), expected_koid);
 }
 
 TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
@@ -994,6 +1075,45 @@ TEST_F(FlatlandTest, ClearChildLink) {
 
   PRESENT(parent, true);
 
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+}
+
+TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  RunLoopUntilIdle();
+
+  const uint64_t kId1 = 1;
+  parent.CreateTransform(kId1);
+  parent.SetRootTransform(kId1);
+  parent.SetLinkOnTransform(kId1, kLinkId1);
+
+  PRESENT(parent, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  GraphLinkToken graph_token;
+  child.UnlinkFromParent([&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
+
+  PRESENT(child, true);
+
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  // The same token can be used to link a different instance.
+  Flatland child2 = CreateFlatland();
+  child2.LinkToParent(std::move(graph_token), graph_link.NewRequest());
+
+  PRESENT(child2, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent.GetLinkOrigin(), child2.GetLinkOrigin()));
+
+  // The old instance is not re-linked.
   EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
 }
 

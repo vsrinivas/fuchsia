@@ -133,6 +133,18 @@ protocol Flatland {
     /// information from their parent before calling Present(), if they wish.
     LinkToParent(GraphLinkToken token, request<GraphLink> graph_link);
 
+    /// Disconnects this Graph from its parent Graph and returns the GraphLinkToken used to
+    /// establish the link. This token can then be used to establish a new link with the Parent
+    /// graph.
+    ///
+    /// To clear the existing content from the screen without unlinking the current Graph, use
+    /// SetRootTransform(0) instead.
+    ///
+    /// Despite having a return type, this function is still feed-forward Like LinkToParent() and
+    /// requires a call to Present() to be executed. The GraphLinkToken will be returned after the
+    /// presented operations have been executed.
+    UnlinkFromParent() -> (GraphLinkToken token);
+
     /// This function will reset all state on this interface.
     ClearGraph();
 

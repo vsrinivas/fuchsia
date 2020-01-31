@@ -20,6 +20,7 @@ executable("unittests") {
   ]
   deps = [
     "//garnet/public/lib/gtest:gtest",
+    "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/flatland",
   ]

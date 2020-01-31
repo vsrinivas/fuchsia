@@ -51,6 +51,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
       fuchsia::ui::scenic::internal::GraphLinkToken token,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link) override;
   // |fuchsia::ui::scenic::internal::Flatland|
+  void UnlinkFromParent(
+      fuchsia::ui::scenic::internal::Flatland::UnlinkFromParentCallback callback) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
   void ClearGraph() override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void CreateTransform(TransformId transform_id) override;

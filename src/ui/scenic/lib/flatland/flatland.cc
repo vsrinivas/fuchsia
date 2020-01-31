@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
+#include <lib/zx/eventpair.h>
+
 #include "src/lib/fxl/logging.h"
 
 using fuchsia::ui::scenic::internal::ContentLink;
@@ -95,6 +97,38 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
         fuchsia::ui::scenic::internal::ContentLinkStatus::CONTENT_HAS_PRESENTED);
     // TODO(42583): create link-specific topologies atomically.
     topology_system_->SetLocalTopology({{parent_link_->link_handle, 0}, {link_origin_, 0}});
+    return true;
+  });
+}
+
+void Flatland::UnlinkFromParent(
+    fuchsia::ui::scenic::internal::Flatland::UnlinkFromParentCallback callback) {
+  pending_operations_.push_back([this, callback = std::move(callback)]() {
+    if (!parent_link_) {
+      FXL_LOG(ERROR) << "UnlinkFromParent failed, no existing parent link";
+      return false;
+    }
+
+    GraphLinkToken return_token;
+
+    // If the link is still valid, return the original token. If not, create an orphaned
+    // zx::eventpair and return it since the ObjectLinker does not retain the orphaned token.
+    auto link_token = parent_link_->exporter.ReleaseToken();
+    if (link_token.has_value()) {
+      return_token.value = zx::eventpair(std::move(link_token.value()));
+    } else {
+      // |peer_token| immediately falls out of scope, orphaning |return_token|.
+      zx::eventpair peer_token;
+      zx::eventpair::create(0, &return_token.value, &peer_token);
+    }
+
+    // TODO(42583): create link-specific topologies atomically.
+    topology_system_->ClearLocalTopology(parent_link_->link_handle);
+
+    parent_link_.reset();
+
+    callback(std::move(return_token));
+
     return true;
   });
 }
