@@ -54,7 +54,9 @@ const static struct {
     { "/boot",      "boot",      FS_BOOT,     FdioAction::CloneDir },
     { "/data",      "data",      FS_DATA,     FdioAction::CloneDir },
     { "/dev",       "dev",       FS_DEV,      FdioAction::AddNsEntry },
-    { "/hub",       "hub",       FS_HUB,      FdioAction::CloneDir },
+    // TODO(dgonyeo): add this path back in once the appmgr component doesn't
+    // exist on bringup builds
+    //{ "/hub",       "hub",       FS_HUB,      FdioAction::CloneDir },
     { "/install",   "install",   FS_INSTALL,  FdioAction::CloneDir },
     { "/pkgfs",     "pkgfs",     FS_PKGFS,    FdioAction::CloneDir },
     { "/svc",       "svc",       FS_SVC,      FdioAction::AddNsEntry },
