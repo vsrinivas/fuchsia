@@ -2,30 +2,47 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-group("test") {
-  testonly = true
-  deps = [
-    ":ftl",
-    ":ftl-integration",
-    ":ftl-read-write-fuzzer",
-  ]
-}
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+import("//build/fuzzing/fuzzer.gni")
 
 source_set("shared") {
-  testonly = true
   sources = [
     "ftl-shell.cc",
     "ndm-ram-driver.cc",
   ]
   public_deps = [
-    "$zx/system/dev/block/ftl:common",
-    "$zx/system/dev/lib/fake_ddk",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/system/dev/block/ftl:common",
   ]
 }
 
-zx_test("ftl") {
+test("ftl") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [
     "block_device_test.cc",
     "driver-test.cc",
@@ -34,39 +51,60 @@ zx_test("ftl") {
     "nand_operation_test.cc",
     "oob_doubler_test.cc",
   ]
-  include_dirs = [ "$zx/system/dev/block/ftl" ]
+  include_dirs = [ "//zircon/system/dev/block/ftl" ]
   deps = [
     ":shared",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
-zx_test("ftl-integration") {
+test("ftl-integration") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [
     "ftl_integration_test.cc",
     "ftl_test_observer.cc",
     "integration_main.cc",
     "launch.cc",
   ]
-  include_dirs = [ "$zx/system/dev/block/ftl" ]
+  include_dirs = [ "//zircon/system/dev/block/ftl" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/ramdevice-client",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/devmgr-launcher",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/ramdevice-client",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+    "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
 }
 
 fuzzer("ftl-read-write-fuzzer") {
   sources = [ "ftl-fuzzer.cc" ]
-  include_dirs = [ "$zx/system/dev/block/ftl" ]
+  include_dirs = [ "//zircon/system/dev/block/ftl" ]
   deps = [ ":shared" ]
+}
+
+migrated_manifest("ftl-manifest") {
+  deps = [ ":ftl" ]
+}
+
+migrated_manifest("ftl-integration-manifest") {
+  deps = [ ":ftl-integration" ]
 }

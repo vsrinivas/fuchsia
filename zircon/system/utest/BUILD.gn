@@ -28,7 +28,6 @@ if (current_cpu != "") {
       "$zx/system/core/ptysvc:ptysvc-test",
       "$zx/system/core/svchost:crashsvc-test",
       "$zx/system/dev/audio/lib/simple-audio-stream:sa-unittest",
-      "$zx/system/dev/block/ftl/test",
       "$zx/system/dev/board/mt8167s_ref:mt8167s_ref-test",
       "$zx/system/dev/bus/pci:pci-driver",
       "$zx/system/dev/bus/pci:pci-unit",

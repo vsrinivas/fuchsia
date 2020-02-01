@@ -13,7 +13,6 @@ fuzzer_names = [
   "affine",
   "bootfs-parser",
   "elfload",
-  "ftl-read-write",
   "hermetic-decompressor",
   "hmac",
   "journal",
