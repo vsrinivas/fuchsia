@@ -676,7 +676,8 @@ mod tests {
         }
     }
 
-    #[test]
+    // TODO(45125) re-enable after non flakey
+    #[allow(unused)]
     fn encode_sbc() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
@@ -792,7 +793,8 @@ mod tests {
         assert!(validated.is_ok(), "Failed hash: {:?}", validated);
     }
 
-    #[test]
+    // TODO(45125) re-enable after non flakey
+    #[allow(unused)]
     fn decode_sbc() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
