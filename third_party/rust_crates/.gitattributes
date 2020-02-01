@@ -1,2 +1,2 @@
 # Turn off LF normalization for vendored crates
-* text=false
+vendor/** text=false
