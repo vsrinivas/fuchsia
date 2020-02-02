@@ -32,6 +32,11 @@ For address spaces that use ASLR this controls the number of bits of entropy in
 the randomization. Higher entropy results in a sparser address space and uses
 more memory for page tables. Valid values range from 0-36, with default being 30.
 
+## blobfs.uncompressed=\<bool\>
+
+If this option is set, new blobs that blobfs writes at runtime are uncompressed.
+Blobfs compression is enabled by default.
+
 ## blobfs.userpager=\<bool\>
 
 Controls whether the blobfs user pager is enabled. Disabled by default.

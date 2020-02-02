@@ -35,6 +35,8 @@ class FshostBootArgs {
 
   bool blobfs_enable_userpager() { return boot_args_->GetBool("blobfs.userpager", false); }
 
+  bool blobfs_write_uncompressed() { return boot_args_->GetBool("blobfs.uncompressed", false); }
+
   const char* pkgfs_file_with_prefix_and_name(const char* prefix, const char* name) {
     char key[256];
     if (snprintf(key, sizeof(key), "zircon.system.pkgfs.file.%s%s", prefix, name) >=

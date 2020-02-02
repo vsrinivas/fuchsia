@@ -168,6 +168,8 @@ class Blobfs : public TransactionManager, public UserPager {
 
   bool PagingEnabled() const { return paging_enabled_; }
 
+  bool ShouldCompress() const { return !write_uncompressed_; }
+
  private:
   friend class BlobfsChecker;
 
@@ -265,6 +267,10 @@ class Blobfs : public TransactionManager, public UserPager {
 
   vmoid_t transfer_vmoid_ = {};
   bool paging_enabled_ = false;
+
+  // Compression is enabled by default. Use the kernel commandline "blobfs.uncompressed"
+  // to disable it.
+  bool write_uncompressed_ = false;
 };
 
 }  // namespace blobfs

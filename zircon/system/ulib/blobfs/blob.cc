@@ -487,7 +487,8 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   }
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
-  if (inode_.blob_size >= kCompressionMinBytesSaved) {
+
+  if (blobfs_->ShouldCompress() && inode_.blob_size >= kCompressionMinBytesSaved) {
     // TODO(markdittmer): Lookup stored choice of compression algorithm here.
     write_info->compressor = BlobCompressor::Create(CompressionAlgorithm::ZSTD, inode_.blob_size);
     if (!write_info->compressor) {

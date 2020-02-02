@@ -274,6 +274,11 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     fs->journal()->schedule_task(fs->journal()->WriteMetadata(operations.TakeOperations()));
   }
 
+  fs->write_uncompressed_ = options->write_uncompressed;
+  if (fs->write_uncompressed_) {
+    FS_TRACE_INFO("blobfs: Compression disabled\n");
+  }
+
   *out = std::move(fs);
   return ZX_OK;
 }

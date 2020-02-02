@@ -65,6 +65,9 @@ declare_args() {
   # on :non_production_tag, which is used to tag any non-production GN labels.
   # Build will fail if such dependency is found.
   check_production_eligibility = false
+
+  # Whether to compress the blobfs image.
+  compress_blobs = true
 }
 assert(
     meta_package_labels != [],
@@ -410,7 +413,11 @@ if (!bootfs_only) {
       "--depfile",
       "--sizes",
       rebase_path(blob_size_list, root_build_dir),
-      "--compress",
+    ]
+    if (compress_blobs) {
+      args += [ "--compress" ]
+    }
+    args += [
       rebase_path(blob_image_path, root_build_dir),
       "create",
       "--manifest",
