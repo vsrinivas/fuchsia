@@ -52,6 +52,7 @@ bool g_md_clear_on_user_return;
 bool g_has_ibpb;
 bool g_should_ibpb_on_ctxt_switch;
 bool g_ras_fill_on_ctxt_switch;
+bool g_cpu_vulnerable_to_rsb_underflow;
 bool g_has_enhanced_ibrs;
 bool g_enhanced_ibrs_enabled;
 bool g_amd_retpoline;
@@ -193,6 +194,9 @@ void x86_feature_init(void) {
     g_has_enhanced_ibrs = x86_amd_cpu_has_ibrs_always_on(&cpuid);
   }
   g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
+  g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
+                                      (x86_vendor == X86_VENDOR_INTEL) &&
+                                      x86_intel_cpu_has_rsb_fallback(&cpuid, &msr);
   // TODO(fxb/33667, fxb/12150): Consider whether a process can opt-out of an IBPB on switch,
   // either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
   // not to attack the next process).

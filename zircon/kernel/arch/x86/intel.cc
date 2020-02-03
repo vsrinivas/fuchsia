@@ -173,6 +173,20 @@ bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid) {
   return microarch_config->has_swapgs_bug;
 }
 
+bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
+    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
+    if (arch_capabilities & X86_ARCH_CAPABILITIES_RSBA) {
+      return true;
+    }
+  }
+
+  auto* const microarch_config = get_microarch_config(cpuid);
+  return (microarch_config->x86_microarch == X86_MICROARCH_INTEL_SKYLAKE) ||
+         (microarch_config->x86_microarch == X86_MICROARCH_INTEL_CANNONLAKE) ||
+         (microarch_config->x86_microarch == X86_MICROARCH_UNKNOWN);
+}
+
 bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
     uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);

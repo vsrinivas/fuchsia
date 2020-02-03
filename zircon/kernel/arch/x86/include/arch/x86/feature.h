@@ -351,6 +351,11 @@ static inline bool x86_cpu_should_ras_fill_on_ctxt_switch(void) {
   return g_ras_fill_on_ctxt_switch;
 }
 
+static inline bool x86_cpu_vulnerable_to_rsb_underflow(void) {
+  extern bool g_cpu_vulnerable_to_rsb_underflow;
+  return g_cpu_vulnerable_to_rsb_underflow;
+}
+
 static inline bool x86_cpu_should_ibpb_on_ctxt_switch(void) {
   extern bool g_should_ibpb_on_ctxt_switch;
   return g_should_ibpb_on_ctxt_switch;
@@ -384,6 +389,7 @@ bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_mds_taa(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid);
+bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_amd_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
