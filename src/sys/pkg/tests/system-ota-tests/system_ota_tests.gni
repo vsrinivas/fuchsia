@@ -42,6 +42,11 @@ _environment_service_account =
 #   cycle_timeout
 #   - Optional: Err if the OTA test cycle takes longer than this time.
 #   - Type: duration string
+#
+#   cycle_count
+#   - Optional: How many test cycles should the test execute. Defaults to 1
+#     cycle.
+#   - Type: integer string
 template("system_ota_test_suite") {
   assert(is_linux || is_mac, "system_ota_tests are for linux/mac only")
   assert(defined(invoker.release_builder),
@@ -95,6 +100,15 @@ template("system_ota_test_suite") {
       _command += [
         "-cycle-timeout",
         invoker.cycle_timeout,
+      ]
+    }
+
+    if (defined(invoker.cycle_count)) {
+      assert(invoker.cycle_count != "",
+             "'${_spec_target_name}' cannot have an empty cycle count")
+      _command += [
+        "-test.count",
+        invoker.cycle_count,
       ]
     }
 
