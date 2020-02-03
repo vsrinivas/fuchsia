@@ -22,6 +22,7 @@ group("lib") {
     "fake-bti",
     "fake-hidbus-ifc",
     "fake-i2c",
+    "fake-object",
     "fake-resource",
     "fake_ddk",
     "fake-mmio-reg",

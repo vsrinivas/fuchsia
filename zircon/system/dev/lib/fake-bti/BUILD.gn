@@ -8,6 +8,14 @@ zx_library("fake-bti") {
   testonly = true
   shared = true
   sources = [ "fake-bti.cc" ]
+  public_deps = [
+    # Note: technically this dependency isn't necessary in the ZN build,
+    # but if it is missing the fake-bti --> fake-object dependency is
+    # not properly captured in the metadata passed to the GN build.
+    # This will become moot when both libraries are migrated to that
+    # build.
+    "$zx/system/dev/lib/fake-object:headers",
+  ]
   deps = [
     "$zx/system/dev/lib/fake-object",
     "$zx/system/ulib/fbl",
