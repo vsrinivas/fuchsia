@@ -54,15 +54,15 @@
       "to": [ "#appmgr", "#driver_manager", "#console", "#sysinfo" ],
     },
     {
-      "protocol": [
-        "/svc/fuchsia.boot.Arguments",
-        "/svc/fuchsia.boot.Items",
-      ],
+      "protocol": "/svc/fuchsia.boot.Items",
       "from": "realm",
       "to": [ "#driver_manager", "#fshost" ],
     },
     {
-      "protocol": "/svc/fuchsia.process.Launcher",
+      "protocol": [
+        "/svc/fuchsia.process.Launcher",
+        "/svc/fuchsia.boot.Arguments",
+      ],
       "from": "realm",
       "to": [ "#driver_manager", "#fshost", "#appmgr" ],
     },

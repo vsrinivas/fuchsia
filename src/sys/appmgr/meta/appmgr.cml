@@ -15,6 +15,7 @@
     // the sys realm
 
     // From bootsvc
+    { "protocol": "/svc/fuchsia.boot.Arguments", "as": "/svc_for_sys/fuchsia.boot.Arguments" },
     { "protocol": "/svc/fuchsia.boot.FactoryItems", "as": "/svc_for_sys/fuchsia.boot.FactoryItems" },
     { "protocol": "/svc/fuchsia.boot.ReadOnlyLog", "as": "/svc_for_sys/fuchsia.boot.ReadOnlyLog" },
     { "protocol": "/svc/fuchsia.boot.RootJob", "as": "/svc_for_sys/fuchsia.boot.RootJob" },
