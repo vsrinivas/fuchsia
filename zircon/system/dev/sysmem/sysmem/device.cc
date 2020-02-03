@@ -19,6 +19,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <ddktl/protocol/platform/bus.h>
 
 #include "allocator.h"
 #include "buffer_collection_token.h"
@@ -185,57 +186,19 @@ fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
     .Connect = fidl::Binder<Device>::BindMember<&Device::Connect>,
 };
 
-zx_status_t sysmem_message(void* device_ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_sysmem_DriverConnector_dispatch(device_ctx, txn, msg, &driver_connector_ops);
-}
-
-// -Werror=missing-field-initializers seems more paranoid than I want here.
-zx_protocol_device_t sysmem_device_ops = [] {
-  zx_protocol_device_t tmp{};
-  tmp.version = DEVICE_OPS_VERSION;
-  tmp.message = sysmem_message;
-  return tmp;
-}();
-
-zx_status_t in_proc_sysmem_Connect(void* ctx, zx_handle_t allocator_request_param) {
-  Device* self = static_cast<Device*>(ctx);
-  return self->Connect(allocator_request_param);
-}
-
-zx_status_t in_proc_sysmem_RegisterHeap(void* ctx, uint64_t heap,
-                                        zx_handle_t heap_connection_param) {
-  Device* self = static_cast<Device*>(ctx);
-  return self->RegisterHeap(heap, heap_connection_param);
-}
-
-zx_status_t in_proc_sysmem_RegisterSecureMem(void* ctx, zx_handle_t secure_mem_connection) {
-  Device* self = static_cast<Device*>(ctx);
-  return self->RegisterSecureMem(secure_mem_connection);
-}
-
-zx_status_t in_proc_sysmem_UnregisterSecureMem(void* ctx) {
-  Device* self = static_cast<Device*>(ctx);
-  return self->UnregisterSecureMem();
-}
-
-// In-proc sysmem interface.  Essentially an in-proc version of
-// fuchsia.sysmem.DriverConnector.
-sysmem_protocol_ops_t in_proc_sysmem_protocol_ops = {
-    .connect = in_proc_sysmem_Connect,
-    .register_heap = in_proc_sysmem_RegisterHeap,
-    .register_secure_mem = in_proc_sysmem_RegisterSecureMem,
-    .unregister_secure_mem = in_proc_sysmem_UnregisterSecureMem,
-};
-
 }  // namespace
 
+zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_sysmem_DriverConnector_dispatch(this, txn, msg, &driver_connector_ops);
+}
+
 Device::Device(zx_device_t* parent_device, Driver* parent_driver)
-    : parent_device_(parent_device),
+    : DdkDeviceType(parent_device),
       parent_driver_(parent_driver),
-      in_proc_sysmem_protocol_{.ops = &in_proc_sysmem_protocol_ops, .ctx = this},
+      in_proc_sysmem_protocol_{.ops = &sysmem_protocol_ops_, .ctx = this},
       dispatcher_(parent_driver->dispatcher),
       closure_queue_(dispatcher_, parent_driver->dispatcher_thrd) {
-  ZX_DEBUG_ASSERT(parent_device_);
+  ZX_DEBUG_ASSERT(parent_);
   ZX_DEBUG_ASSERT(parent_driver_);
 }
 
@@ -259,7 +222,7 @@ void Device::OverrideSizeFromCommandLine(const char* name, uint64_t* memory_size
 }
 
 zx_status_t Device::Bind() {
-  zx_status_t status = device_get_protocol(parent_device_, ZX_PROTOCOL_PDEV, &pdev_);
+  zx_status_t status = ddk::PDevProtocolClient::CreateFromDevice(parent_, &pdev_);
   if (status != ZX_OK) {
     DRIVER_ERROR("Failed device_get_protocol() ZX_PROTOCOL_PDEV - status: %d", status);
     return status;
@@ -271,8 +234,7 @@ zx_status_t Device::Bind() {
   sysmem_metadata_t metadata;
 
   size_t metadata_actual;
-  status = device_get_metadata(parent_device_, SYSMEM_METADATA, &metadata, sizeof(metadata),
-                               &metadata_actual);
+  status = DdkGetMetadata(SYSMEM_METADATA, &metadata, sizeof(metadata), &metadata_actual);
   if (status == ZX_OK && metadata_actual == sizeof(metadata)) {
     pdev_device_info_vid_ = metadata.vid;
     pdev_device_info_pid_ = metadata.pid;
@@ -285,7 +247,7 @@ zx_status_t Device::Bind() {
 
   allocators_[fuchsia_sysmem_HeapType_SYSTEM_RAM] = std::make_unique<SystemRamMemoryAllocator>();
 
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+  status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
     DRIVER_ERROR("Failed pdev_get_bti() - status: %d", status);
     return status;
@@ -329,27 +291,14 @@ zx_status_t Device::Bind() {
     allocators_[fuchsia_sysmem_HeapType_AMLOGIC_SECURE] = std::move(amlogic_allocator);
   }
 
-  pbus_protocol_t pbus;
-  status = device_get_protocol(parent_device_, ZX_PROTOCOL_PBUS, &pbus);
+  ddk::PBusProtocolClient pbus;
+  status = ddk::PBusProtocolClient::CreateFromDevice(parent_, &pbus);
   if (status != ZX_OK) {
     DRIVER_ERROR("ZX_PROTOCOL_PBUS not available %d \n", status);
     return status;
   }
 
-  device_add_args_t device_add_args = {};
-  device_add_args.version = DEVICE_ADD_ARGS_VERSION;
-  device_add_args.name = "sysmem";
-  device_add_args.ctx = this;
-  device_add_args.ops = &sysmem_device_ops;
-  // ZX_PROTOCOL_SYSMEM causes /dev/class/sysmem to get created, and flags
-  // support for the fuchsia.sysmem.DriverConnector protocol.  The .message
-  // callback used is sysmem_device_ops.message, not
-  // sysmem_protocol_ops.message.
-  device_add_args.proto_id = ZX_PROTOCOL_SYSMEM;
-  device_add_args.proto_ops = &in_proc_sysmem_protocol_ops;
-  device_add_args.flags = DEVICE_ADD_ALLOW_MULTI_COMPOSITE;
-
-  status = device_add(parent_device_, &device_add_args, &device_);
+  status = DdkAdd("sysmem", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
     DRIVER_ERROR("Failed to bind device");
     return status;
@@ -364,10 +313,10 @@ zx_status_t Device::Bind() {
   // pbus_register_protocol() fails, we should remove the device without it
   // ever being visible.
   // TODO(ZX-3746) Remove this after all clients have switched to using composite protocol.
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
-                                  sizeof(in_proc_sysmem_protocol_));
+  status = pbus.RegisterProtocol(ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
+                                 sizeof(in_proc_sysmem_protocol_));
   if (status != ZX_OK) {
-    device_async_remove(device_);
+    DdkAsyncRemove();
     return status;
   }
 
@@ -381,9 +330,13 @@ zx_status_t Device::Connect(zx_handle_t allocator_request) {
   return ZX_OK;
 }
 
-zx_status_t Device::RegisterHeap(uint64_t heap, zx_handle_t heap_connection) {
-  zx::channel local_heap_connection(heap_connection);
+zx_status_t Device::SysmemConnect(zx::channel allocator_request) {
+  // The Allocator is channel-owned / self-owned.
+  Allocator::CreateChannelOwned(std::move(allocator_request), this);
+  return ZX_OK;
+}
 
+zx_status_t Device::SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
   // External heaps should not have bit 63 set but bit 60 must be set.
   if ((heap & 0x8000000000000000) || !(heap & 0x1000000000000000)) {
     DRIVER_ERROR("Invalid external heap");
@@ -392,7 +345,7 @@ zx_status_t Device::RegisterHeap(uint64_t heap, zx_handle_t heap_connection) {
 
   // Clean up heap allocator after peer closed channel.
   auto wait_for_close = std::make_unique<async::Wait>(
-      local_heap_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
+      heap_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
       async::Wait::Handler(
           [this, heap](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) { allocators_.erase(heap); }));
@@ -406,17 +359,16 @@ zx_status_t Device::RegisterHeap(uint64_t heap, zx_handle_t heap_connection) {
 
   // This replaces any previously registered allocator for heap (also cancels the old wait). This
   // behavior is preferred as it avoids a potential race-condition during heap restart.
-  allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(std::move(local_heap_connection),
+  allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(std::move(heap_connection),
                                                                 std::move(wait_for_close));
   return ZX_OK;
 }
 
-zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
+zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
   LOG(TRACE, "sysmem RegisterSecureMem begin");
-  zx::channel local_secure_mem_connection(secure_mem_connection);
 
   auto wait_for_close = std::make_unique<async::Wait>(
-      local_secure_mem_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
+      secure_mem_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
       async::Wait::Handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                   zx_status_t status, const zx_packet_signal_t* signal) {
         if (secure_mem_) {
@@ -439,7 +391,7 @@ zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
     return status;
   }
 
-  secure_mem_ = std::make_unique<SecureMemConnection>(std::move(local_secure_mem_connection),
+  secure_mem_ = std::make_unique<SecureMemConnection>(std::move(secure_mem_connection),
                                                       std::move(wait_for_close));
 
   // We can't immediately make a blocking fidl call via secure_mem_, because aml-securemem is
@@ -527,7 +479,7 @@ zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
 
 // This call allows us to tell the difference between expected vs. unexpected close of the tee_
 // channel.
-zx_status_t Device::UnregisterSecureMem() {
+zx_status_t Device::SysmemUnregisterSecureMem() {
   // By this point, the aml-securemem driver's suspend(mexec) has already prepared for mexec.
   //
   // In this path, the server end of the channel hasn't closed yet, but will be closed shortly after

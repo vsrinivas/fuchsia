@@ -21,6 +21,9 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/sysmem.h>
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 
@@ -28,10 +31,15 @@
 
 namespace sysmem_driver {
 
+class Device;
+using DdkDeviceType = ddk::Device<Device, ddk::Messageable>;
+
 class Driver;
 class BufferCollectionToken;
 
-class Device final : public MemoryAllocator::Owner {
+class Device final : public DdkDeviceType,
+                     public ddk::SysmemProtocol<Device, ddk::base_protocol>,
+                     public MemoryAllocator::Owner {
  public:
   Device(zx_device_t* parent_device, Driver* parent_driver);
 
@@ -43,13 +51,23 @@ class Device final : public MemoryAllocator::Owner {
   // The rest of the methods are only valid to call after Bind().
   //
 
-  zx_status_t Connect(zx_handle_t allocator_request);
-  zx_status_t RegisterHeap(uint64_t heap, zx_handle_t heap_connection);
-  zx_status_t RegisterSecureMem(zx_handle_t tee_connection);
-  zx_status_t UnregisterSecureMem();
+  // SysmemProtocol implementation.
+  zx_status_t SysmemConnect(zx::channel allocator_request);
+  zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
+  zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
+  zx_status_t SysmemUnregisterSecureMem();
+
+  // Ddk mixin implementations.
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  void DdkRelease() {
+    // Don't do anything. The sysmem driver assumes it's alive for the
+    // lifetime of the system.
+  }
 
   // MemoryAllocator::Owner implementation.
   const zx::bti& bti() override;
+
+  zx_status_t Connect(zx_handle_t allocator_request);
 
   zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override;
 
@@ -75,7 +93,7 @@ class Device final : public MemoryAllocator::Owner {
   MemoryAllocator* GetAllocator(const fuchsia_sysmem_BufferMemorySettings* settings);
 
   const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
-  const zx_device_t* device() const { return device_; }
+  const zx_device_t* device() const { return zxdev_; }
   async_dispatcher_t* dispatcher() { return dispatcher_; }
 
  private:
@@ -91,13 +109,10 @@ class Device final : public MemoryAllocator::Owner {
     std::unique_ptr<async::Wait> wait_for_close_;
   };
 
-  zx_device_t* parent_device_ = nullptr;
   Driver* parent_driver_ = nullptr;
 
-  pdev_protocol_t pdev_{};
+  ddk::PDevProtocolClient pdev_;
   zx::bti bti_;
-
-  zx_device_t* device_ = nullptr;
 
   // Initialize these to a value that won't be mistaken for a real vid or pid.
   uint32_t pdev_device_info_vid_ = std::numeric_limits<uint32_t>::max();
