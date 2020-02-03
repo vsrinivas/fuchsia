@@ -7,6 +7,10 @@ zx_library("refcount") {
   sdk_headers = [ "refcount/blocking_refcount.h" ]
   sources = [ "blocking_refcount.cc" ]
   public_deps = [
+    "$zx/system/ulib/sync:headers",
+    "$zx/system/ulib/zx:headers",
+  ]
+  deps = [
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zx",
   ]

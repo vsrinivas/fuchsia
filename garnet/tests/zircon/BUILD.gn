@@ -59,6 +59,7 @@ group("zircon_test_metadata") {
 # When migrating Zircon fuzzers to the Fuchsia build, add them to this list.
 _migrated_fuzzers = [
   "//zircon/system/dev/ethernet/usb-cdc-ecm:usb-cdc-ecm-descriptor-fuzzer",
+  "//zircon/system/dev/intel-hda/controller:nhlt-fuzzer",
   "//zircon/system/ulib/gfx/test:gfx-fuzzer",
   "//zircon/system/ulib/hid-parser/test:hid-parser-fuzzer",
 ]

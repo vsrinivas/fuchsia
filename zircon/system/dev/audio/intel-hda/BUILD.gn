@@ -7,14 +7,12 @@ group("intel-hda") {
     "codecs/hdmi",
     "codecs/qemu",
     "codecs/realtek",
-    "controller",
   ]
 }
 
 group("test") {
   testonly = true
   deps = [
-    "$zx/system/dev/audio/intel-hda/controller:test",
     "$zx/system/dev/audio/intel-hda/test",
   ]
 }

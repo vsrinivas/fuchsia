@@ -28,13 +28,14 @@ zx_library("intel-hda") {
   public_deps = [
     # <intel-hda/codec-utils/stream-base.h> has #include <ddk/protocol/intelhda/codec.h>.
     "$zx/system/banjo/ddk.protocol.intelhda.codec",
-    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-audio:llcpp.headers",
     "$zx/system/ulib/abs_clock:headers",
     "$zx/system/ulib/audio-driver-proto:headers",
     "$zx/system/ulib/dispatcher-pool:headers",
     "$zx/system/ulib/zx:headers",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
     "$zx/system/ulib/abs_clock",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",

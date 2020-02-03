@@ -23,7 +23,6 @@ fuzzer_names = [
   "ldmsg",
   "lz4",
   "lz4-decompress",
-  "nhlt",
   "noop",
   "raw-bitmap",
   "tftp",
