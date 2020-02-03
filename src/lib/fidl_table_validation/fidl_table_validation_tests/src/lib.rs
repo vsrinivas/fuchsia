@@ -7,11 +7,41 @@
 use fidl_table_validation::{ValidFidlTable, Validate};
 use std::convert::TryFrom;
 
+macro_rules! dummy_impl_decodable {
+    ($name:ty) => {
+        impl fidl::encoding::Layout for $name {
+            fn inline_align(_context: &fidl::encoding::Context) -> usize
+            where
+                Self: Sized,
+            {
+                0
+            }
+            fn inline_size(_context: &fidl::encoding::Context) -> usize
+            where
+                Self: Sized,
+            {
+                0
+            }
+        }
+
+        impl fidl::encoding::Decodable for $name {
+            fn new_empty() -> Self {
+                Self::default()
+            }
+            fn decode(&mut self, _decoder: &mut fidl::encoding::Decoder) -> fidl::Result<()> {
+                Ok(())
+            }
+        }
+    };
+}
+
 #[test]
 fn rejects_missing_fields() {
+    #[derive(Default)]
     struct FidlHello {
         required: Option<usize>,
     }
+    dummy_impl_decodable!(FidlHello);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(FidlHello)]
@@ -33,9 +63,11 @@ fn rejects_missing_fields() {
 
 #[test]
 fn sets_default_fields() {
+    #[derive(Default)]
     struct FidlHello {
         has_default: Option<usize>,
     }
+    dummy_impl_decodable!(FidlHello);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(FidlHello)]
@@ -52,9 +84,11 @@ fn sets_default_fields() {
 
 #[test]
 fn accepts_optional_fields() {
+    #[derive(Default)]
     struct FidlHello {
         optional: Option<usize>,
     }
+    dummy_impl_decodable!(FidlHello);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(FidlHello)]
@@ -76,9 +110,11 @@ fn accepts_optional_fields() {
 
 #[test]
 fn invalid_fails_custom_validator() {
+    #[derive(Default)]
     struct FidlHello {
         should_not_be_12: Option<usize>,
     }
+    dummy_impl_decodable!(FidlHello);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(FidlHello)]
@@ -108,9 +144,11 @@ fn invalid_fails_custom_validator() {
 
 #[test]
 fn valid_passes_custom_validator() {
+    #[derive(Default)]
     struct FidlHello {
         should_not_be_12: Option<usize>,
     }
+    dummy_impl_decodable!(FidlHello);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(FidlHello)]
@@ -140,9 +178,11 @@ fn valid_passes_custom_validator() {
 
 #[test]
 fn nested_valid_field_accepted() {
+    #[derive(Default)]
     struct NestedFidl {
         required: Option<usize>,
     }
+    dummy_impl_decodable!(NestedFidl);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(NestedFidl)]
@@ -150,9 +190,11 @@ fn nested_valid_field_accepted() {
         required: usize,
     }
 
+    #[derive(Default)]
     struct FidlHello {
         nested: Option<NestedFidl>,
     }
+    dummy_impl_decodable!(FidlHello);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(FidlHello)]
@@ -169,9 +211,11 @@ fn nested_valid_field_accepted() {
 
 #[test]
 fn nested_invalid_field_rejected() {
+    #[derive(Default)]
     struct NestedFidl {
         required: Option<usize>,
     }
+    dummy_impl_decodable!(NestedFidl);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(NestedFidl)]
@@ -179,9 +223,11 @@ fn nested_invalid_field_rejected() {
         required: usize,
     }
 
+    #[derive(Default)]
     struct FidlHello {
         nested: Option<NestedFidl>,
     }
+    dummy_impl_decodable!(FidlHello);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(FidlHello)]
@@ -197,10 +243,11 @@ fn nested_invalid_field_rejected() {
 
 #[test]
 fn back_into_original_nested() {
-    #[derive(Debug, PartialEq)]
+    #[derive(Default, Debug, PartialEq)]
     struct NestedFidl {
         required: Option<usize>,
     }
+    dummy_impl_decodable!(NestedFidl);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(NestedFidl)]
@@ -208,10 +255,11 @@ fn back_into_original_nested() {
         required: usize,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Default, Debug, PartialEq)]
     struct FidlHello {
         nested: Option<NestedFidl>,
     }
+    dummy_impl_decodable!(FidlHello);
 
     #[derive(ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(FidlHello)]
@@ -226,15 +274,17 @@ fn back_into_original_nested() {
 }
 
 mod nested {
-    #[derive(Debug, PartialEq)]
+    #[derive(Default, Debug, PartialEq)]
     pub(crate) struct FidlHello {
         pub required: Option<usize>,
     }
+
+    dummy_impl_decodable!(FidlHello);
 }
 
 #[test]
 fn works_with_nested_typenames() {
-    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[derive(Default, ValidFidlTable, Debug, PartialEq)]
     #[fidl_table_src(nested::FidlHello)]
     struct ValidHello {
         required: usize,

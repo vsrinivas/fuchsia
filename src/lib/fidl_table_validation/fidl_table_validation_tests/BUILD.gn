@@ -7,7 +7,10 @@ import("//build/test/test_package.gni")
 
 rustc_test("fidl_table_validation_tests_bin") {
   edition = "2018"
-  deps = [ "//src/lib/fidl_table_validation" ]
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fidl_table_validation",
+  ]
 }
 
 test_package("fidl_table_validation_tests") {

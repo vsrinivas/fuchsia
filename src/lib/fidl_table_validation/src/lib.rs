@@ -75,6 +75,8 @@
 //                "Option<" in field types.
 pub use fidl_table_validation_derive::ValidFidlTable;
 
+pub use fidl::encoding::Decodable;
+
 /// Validations on `T` that can be run during construction of a validated
 /// fidl table by adding the attribute `#[fidl_table_validator(YourImpl)]`
 /// to the valid struct.
