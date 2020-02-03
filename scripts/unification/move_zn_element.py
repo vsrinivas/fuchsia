@@ -115,6 +115,11 @@ def transform_build_file(build):
         line = line.replace('$zx', '//zircon')
         # Update import for fuzzers.
         line = line.replace('//zircon/public/gn/fuzzer.gni', '//build/fuzzing/fuzzer.gni')
+        # Update references to firmware.
+        line = line.replace('//zircon/public/gn/firmware.gni', '//build/unification/firmware.gni')
+        line = line.replace('$firmware_dir/', '')
+        # Update deps on libdriver.
+        line = line.replace('//zircon/public/lib/driver', '//src/devices:driver')
         # Print the line, if any content is left.
         if line:
             sys.stdout.write(line)
