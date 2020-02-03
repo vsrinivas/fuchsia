@@ -45,6 +45,7 @@ sdk://fidl/fuchsia.media.audio
 sdk://fidl/fuchsia.media.drm
 sdk://fidl/fuchsia.media.playback
 sdk://fidl/fuchsia.media.sessions2
+sdk://fidl/fuchsia.media.sounds
 sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.migration
