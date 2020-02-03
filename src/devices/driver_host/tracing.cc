@@ -12,8 +12,6 @@
 
 #include "log.h"
 
-namespace devmgr {
-
 zx_status_t devhost_start_trace_provider() {
   async_loop_t* loop;
   zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop);
@@ -48,5 +46,3 @@ zx_status_t devhost_start_trace_provider() {
   log(SPEW, "driver_host: trace provider registry begun\n");
   return ZX_OK;
 }
-
-}  // namespace devmgr

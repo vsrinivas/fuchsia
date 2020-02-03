@@ -8,8 +8,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-namespace devmgr {
-
 // clang-format off
 
 #define LOG_ERROR    0x001
@@ -28,12 +26,10 @@ namespace devmgr {
 
 extern uint32_t log_flags;
 
-#define log(flag, fmt...)                 \
-  do {                                    \
-    if (LOG_##flag & ::devmgr::log_flags) \
-      printf(fmt);                        \
+#define log(flag, fmt...)         \
+  do {                            \
+    if (LOG_##flag & ::log_flags) \
+      printf(fmt);                \
   } while (0)
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_LOG_H_

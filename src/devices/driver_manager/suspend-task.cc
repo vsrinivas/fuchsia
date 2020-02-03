@@ -6,8 +6,6 @@
 
 #include "coordinator.h"
 
-namespace devmgr {
-
 SuspendTask::SuspendTask(fbl::RefPtr<Device> device, uint32_t flags, Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion)),
       device_(std::move(device)),
@@ -105,5 +103,3 @@ void SuspendTask::Run() {
     Complete(status);
   }
 }
-
-}  // namespace devmgr

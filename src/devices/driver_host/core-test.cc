@@ -139,13 +139,13 @@ class CoreTest : public zxtest::Test {
 
   // This simulates receiving an unbind and remove request from the devcoordinator.
   void UnbindDevice(fbl::RefPtr<zx_device> dev) {
-    devmgr::ApiAutoLock lock;
-    devmgr::devhost_device_unbind(dev);
+    ApiAutoLock lock;
+    devhost_device_unbind(dev);
     // devhost_device_complete_removal() will drop the device reference added by device_add().
     // Since we never called device_add(), we should increment the reference count here.
     fbl::RefPtr<zx_device_t> dev_add_ref(dev.get());
     __UNUSED auto ptr = fbl::ExportToRawPtr(&dev_add_ref);
-    devmgr::devhost_device_complete_removal(dev);
+    devhost_device_complete_removal(dev);
   }
 
   async::Loop loop_;

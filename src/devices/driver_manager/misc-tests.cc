@@ -164,10 +164,10 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
   ASSERT_OK(status);
 }
 
-class TestDriverTestReporter : public devmgr::DriverTestReporter {
+class TestDriverTestReporter : public DriverTestReporter {
  public:
   explicit TestDriverTestReporter(const fbl::String& driver_name)
-      : devmgr::DriverTestReporter(driver_name) {}
+      : DriverTestReporter(driver_name) {}
 
   void LogMessage(const char* msg, size_t size) override {
     if (size != strlen(kLogMessage)) {
@@ -204,14 +204,14 @@ class TestDriverTestReporter : public devmgr::DriverTestReporter {
 };
 
 TEST(MiscTestCase, InitCoreDevices) {
-  devmgr::Coordinator coordinator(DefaultConfig(nullptr, nullptr));
+  Coordinator coordinator(DefaultConfig(nullptr, nullptr));
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 }
 
 TEST(MiscTestCase, DumpState) {
-  devmgr::Coordinator coordinator(DefaultConfig(nullptr, nullptr));
+  Coordinator coordinator(DefaultConfig(nullptr, nullptr));
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -221,7 +221,7 @@ TEST(MiscTestCase, DumpState) {
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kBufSize, 0, &vmo));
-  devmgr::VmoWriter writer(std::move(vmo));
+  VmoWriter writer(std::move(vmo));
 
   coordinator.DumpState(&writer);
 
@@ -235,28 +235,28 @@ TEST(MiscTestCase, DumpState) {
 
 TEST(MiscTestCase, LoadDriver) {
   bool found_driver = false;
-  auto callback = [&found_driver](devmgr::Driver* drv, const char* version) {
+  auto callback = [&found_driver](Driver* drv, const char* version) {
     delete drv;
     found_driver = true;
   };
-  devmgr::load_driver(kDriverPath, callback);
+  load_driver(kDriverPath, callback);
   ASSERT_TRUE(found_driver);
 }
 
 TEST(MiscTestCase, BindDrivers) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
   coordinator.set_running(true);
 
-  devmgr::Driver* driver;
-  auto callback = [&coordinator, &driver](devmgr::Driver* drv, const char* version) {
+  Driver* driver;
+  auto callback = [&coordinator, &driver](Driver* drv, const char* version) {
     driver = drv;
     return coordinator.DriverAdded(drv, version);
   };
-  devmgr::load_driver(kDriverPath, callback);
+  load_driver(kDriverPath, callback);
   loop.RunUntilIdle();
   ASSERT_EQ(1, coordinator.drivers().size_slow());
   ASSERT_EQ(driver, &coordinator.drivers().front());
@@ -265,7 +265,7 @@ TEST(MiscTestCase, BindDrivers) {
 // Test binding drivers against the root/test/misc devices
 TEST(MiscTestCase, BindDriversForBuiltins) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -289,7 +289,7 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
     }
 
     ~CallOnce() { EXPECT_EQ(1, call_count_, "Mismatch from line %zu\n", line_number_); }
-    zx_status_t operator()(const devmgr::Driver* drv, const fbl::RefPtr<devmgr::Device>& dev) {
+    zx_status_t operator()(const Driver* drv, const fbl::RefPtr<Device>& dev) {
       ++call_count_;
       return ZX_OK;
     }
@@ -299,11 +299,11 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
     size_t call_count_ = 0;
   };
 
-  auto make_fake_driver = [](auto&& instructions) -> std::unique_ptr<devmgr::Driver> {
+  auto make_fake_driver = [](auto&& instructions) -> std::unique_ptr<Driver> {
     size_t instruction_count = fbl::count_of(instructions);
     auto binding = std::make_unique<zx_bind_inst_t[]>(instruction_count);
     memcpy(binding.get(), instructions, instruction_count * sizeof(instructions[0]));
-    auto drv = std::make_unique<devmgr::Driver>();
+    auto drv = std::make_unique<Driver>();
     drv->binding.reset(binding.release());
     drv->binding_size = static_cast<uint32_t>(instruction_count * sizeof(instructions[0]));
     return drv;
@@ -363,7 +363,7 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
 
 TEST(MiscTestCase, BindDevices) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -376,7 +376,7 @@ TEST(MiscTestCase, BindDevices) {
   status = zx::channel::create(0, &controller_local, &controller_remote);
   ASSERT_OK(status);
 
-  fbl::RefPtr<devmgr::Device> device;
+  fbl::RefPtr<Device> device;
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
       nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
@@ -386,18 +386,17 @@ TEST(MiscTestCase, BindDevices) {
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
   // Add the driver.
-  devmgr::load_driver(kDriverPath,
-                      fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
+  load_driver(kDriverPath, fit::bind_member(&coordinator, &Coordinator::DriverAdded));
   loop.RunUntilIdle();
   ASSERT_FALSE(coordinator.drivers().is_empty());
 
   // The device has no devhost, so the init task should automatically complete.
   ASSERT_TRUE(device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device->state());
+  ASSERT_EQ(Device::State::kActive, device->state());
 
   // Bind the device to a fake devhost.
-  fbl::RefPtr<devmgr::Device> dev = fbl::RefPtr(&coordinator.devices().front());
-  devmgr::Devhost host;
+  fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
+  Devhost host;
   host.AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   dev->set_host(&host);
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
@@ -416,7 +415,7 @@ TEST(MiscTestCase, BindDevices) {
 
 TEST(MiscTestCase, TestOutput) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -429,7 +428,7 @@ TEST(MiscTestCase, TestOutput) {
   status = zx::channel::create(0, &controller_local, &controller_remote);
   ASSERT_OK(status);
 
-  fbl::RefPtr<devmgr::Device> device;
+  fbl::RefPtr<Device> device;
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
       nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
@@ -445,18 +444,17 @@ TEST(MiscTestCase, TestOutput) {
   device->test_reporter = std::move(test_reporter_);
 
   // Add the driver.
-  devmgr::load_driver(kDriverPath,
-                      fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
+  load_driver(kDriverPath, fit::bind_member(&coordinator, &Coordinator::DriverAdded));
   loop.RunUntilIdle();
   ASSERT_FALSE(coordinator.drivers().is_empty());
 
   // The device has no devhost, so the init task should automatically complete.
   ASSERT_TRUE(device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device->state());
+  ASSERT_EQ(Device::State::kActive, device->state());
 
   // Bind the device to a fake devhost.
-  fbl::RefPtr<devmgr::Device> dev = fbl::RefPtr(&coordinator.devices().front());
-  devmgr::Devhost host;
+  fbl::RefPtr<Device> dev = fbl::RefPtr(&coordinator.devices().front());
+  Devhost host;
   host.AddRef();  // refcount starts at zero, so bump it up to keep us from being cleaned up
   dev->set_host(&host);
   status = coordinator.BindDevice(dev, kDriverPath, true /* new device */);
@@ -498,7 +496,7 @@ TEST(MiscTestCase, TestOutput) {
 void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
                              size_t props_count) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -510,7 +508,7 @@ void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProper
   status = zx::channel::create(0, &controller_local, &controller_remote);
   ASSERT_OK(status);
 
-  fbl::RefPtr<devmgr::Device> device;
+  fbl::RefPtr<Device> device;
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
       props_data, props_count, "mock-device", ZX_PROTOCOL_TEST, nullptr /* driver_path */,
@@ -520,7 +518,7 @@ void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProper
 
   // Check that the device has been added to the coordinator, with the correct properties.
   ASSERT_EQ(1, coordinator.devices().size_slow());
-  const devmgr::Device& dev = coordinator.devices().front();
+  const Device& dev = coordinator.devices().front();
   ASSERT_EQ(dev.props().size(), props_count);
   for (size_t i = 0; i < props_count; i++) {
     ASSERT_EQ(dev.props()[i].id, props_data[i].id);

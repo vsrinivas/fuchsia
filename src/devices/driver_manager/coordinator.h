@@ -41,8 +41,6 @@
 
 using llcpp::fuchsia::device::manager::SystemPowerState;
 
-namespace devmgr {
-
 class DevhostLoaderService;
 class FsProvider;
 
@@ -111,7 +109,7 @@ class ResumeContext {
   bool pending_tasks_is_empty() { return pending_resume_tasks_.is_empty(); }
   bool completed_tasks_is_empty() { return completed_resume_tasks_.is_empty(); }
 
-  std::optional<fbl::RefPtr<ResumeTask>> take_pending_task(devmgr::Device& dev) {
+  std::optional<fbl::RefPtr<ResumeTask>> take_pending_task(Device& dev) {
     for (size_t i = 0; i < pending_resume_tasks_.size(); i++) {
       if (&pending_resume_tasks_[i]->device() == &dev) {
         auto task = pending_resume_tasks_.erase(i);
@@ -423,7 +421,5 @@ extern const char* kComponentDriverPath;
 
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_handle_t raw_watcher,
                                 fidl_txn_t* txn);
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_COORDINATOR_H_

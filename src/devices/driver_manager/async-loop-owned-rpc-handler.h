@@ -11,8 +11,6 @@
 #include <memory>
 #include <utility>
 
-namespace devmgr {
-
 // Mixin for representing a type that represents an RPC handler and is owned
 // by an async loop.  The loop will own both the wrapped type and the RPC
 // connection handle.
@@ -71,7 +69,5 @@ class AsyncLoopOwnedRpcHandler {
  private:
   WaitType wait_{this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED};
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_ASYNC_LOOP_OWNED_RPC_HANDLER_H_

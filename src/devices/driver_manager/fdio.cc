@@ -32,8 +32,6 @@
 #include <fbl/array.h>
 #include <fbl/vector.h>
 
-namespace devmgr {
-
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
 enum class FdioAction {
@@ -220,5 +218,3 @@ void ArgumentVector::Print(const char* prefix) const {
   }
   printf("...\n");
 }
-
-}  // namespace devmgr

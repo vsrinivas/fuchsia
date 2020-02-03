@@ -15,8 +15,6 @@
 #include "devhost.h"
 #include "scheduler_profile.h"
 
-using namespace devmgr;
-
 // These are the API entry-points from drivers
 // They must take the devhost_api_lock before calling devhost_* internals
 //
@@ -265,9 +263,7 @@ __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return dev->GetSizeOp(); }
 
 // LibDriver Misc Interfaces
 
-namespace devmgr {
 extern zx_handle_t root_resource_handle;
-}  // namespace devmgr
 
 // Please do not use get_root_resource() in new code. See ZX-1467.
 __EXPORT zx_handle_t get_root_resource() { return root_resource_handle; }

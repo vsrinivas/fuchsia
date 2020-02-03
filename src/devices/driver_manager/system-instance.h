@@ -18,16 +18,16 @@ constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
 zx_status_t wait_for_file(const char* path, zx::time deadline);
 
-class SystemInstance : public devmgr::FsProvider {
+class SystemInstance : public FsProvider {
  public:
   struct ServiceStarterArgs {
     SystemInstance* instance;
-    devmgr::Coordinator* coordinator;
+    Coordinator* coordinator;
   };
 
   SystemInstance();
 
-  // Implementation required to implement devmgr::FsProvider
+  // Implementation required to implement FsProvider
   zx::channel CloneFs(const char* path) override;
 
   // The heart of the public API, in the order that things get called during
@@ -36,22 +36,22 @@ class SystemInstance : public devmgr::FsProvider {
   zx_status_t PrepareChannels();
 
   zx_status_t StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
-                           bool require_system, devmgr::Coordinator* coordinator);
+                           bool require_system, Coordinator* coordinator);
   zx_status_t ReuseExistingSvchost();
 
   void devmgr_vfs_init();
 
   // Thread entry point
   static int pwrbtn_monitor_starter(void* arg);
-  int PwrbtnMonitorStarter(devmgr::Coordinator* coordinator);
+  int PwrbtnMonitorStarter(Coordinator* coordinator);
 
   void start_console_shell(const devmgr::BootArgs& boot_args);
   int ConsoleStarter(const devmgr::BootArgs* arg);
 
   // Thread entry point
   static int service_starter(void* arg);
-  int ServiceStarter(devmgr::Coordinator* coordinator);
-  int WaitForSystemAvailable(devmgr::Coordinator* coordinator);
+  int ServiceStarter(Coordinator* coordinator);
+  int WaitForSystemAvailable(Coordinator* coordinator);
 
   // TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
   zx_status_t clone_fshost_ldsvc(zx::channel* loader);
@@ -94,7 +94,7 @@ class SystemInstance : public devmgr::FsProvider {
   // cases.
   fdio_ns_t* default_ns_;
 
-  devmgr::DevmgrLauncher launcher_;
+  DevmgrLauncher launcher_;
 };
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_SYSTEM_INSTANCE_H_

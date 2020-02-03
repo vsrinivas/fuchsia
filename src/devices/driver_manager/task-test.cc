@@ -13,7 +13,7 @@
 namespace {
 
 // A task that counts how many times Run() and DependencyFailed() are called.
-class CountingTask : public devmgr::Task {
+class CountingTask : public Task {
  public:
   CountingTask() : Task(async_get_default_dispatcher()) {}
   ~CountingTask() override = default;
@@ -111,7 +111,7 @@ class DepOnParentTask : public CountingTask {
   zx_status_t mock_status_;
 };
 
-class SequenceTask : public devmgr::Task {
+class SequenceTask : public Task {
  public:
   SequenceTask() : Task(async_get_default_dispatcher()) {}
 

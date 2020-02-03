@@ -17,8 +17,6 @@
 
 struct zx_device;
 
-namespace devmgr {
-
 struct ProxyIostate : AsyncLoopOwnedRpcHandler<ProxyIostate> {
   explicit ProxyIostate(fbl::RefPtr<zx_device> device) : dev(std::move(device)) {}
   ~ProxyIostate();
@@ -43,7 +41,5 @@ struct ProxyIostate : AsyncLoopOwnedRpcHandler<ProxyIostate> {
   const fbl::RefPtr<zx_device> dev;
 };
 void proxy_ios_destroy(const fbl::RefPtr<zx_device>& dev);
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_PROXY_IOSTATE_H_

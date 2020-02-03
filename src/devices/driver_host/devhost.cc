@@ -62,8 +62,6 @@ zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
   return ZX_OK;
 }
 
-namespace devmgr {
-
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
@@ -233,7 +231,8 @@ zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx
         break;
       }
     }
-    log(INFO, "driver_host: driver '%s': log flags set to: 0x%x\n", new_driver->name(), dr->log_flags);
+    log(INFO, "driver_host: driver '%s': log flags set to: 0x%x\n", new_driver->name(),
+        dr->log_flags);
   }
 
   if (new_driver->has_init_op()) {
@@ -489,10 +488,8 @@ void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
 
 static zxio_t* devhost_zxio_logger = nullptr;
 
-}  // namespace devmgr
-
 __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
-  if (devmgr::devhost_zxio_logger == nullptr) {
+  if (devhost_zxio_logger == nullptr) {
     return;
   }
   char buffer[512];
@@ -502,10 +499,8 @@ __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
   va_end(ap);
 
   size_t actual;
-  zxio_write(devmgr::devhost_zxio_logger, buffer, std::min(r, sizeof(buffer)), 0, &actual);
+  zxio_write(devhost_zxio_logger, buffer, std::min(r, sizeof(buffer)), 0, &actual);
 }
-
-namespace devmgr {
 
 zx_handle_t root_resource_handle;
 
@@ -1124,8 +1119,4 @@ int device_host_main(int argc, char** argv) {
   return 0;
 }
 
-}  // namespace devmgr
-
-__EXPORT int devmgr_device_host_main(int argc, char** argv) {
-  return devmgr::device_host_main(argc, argv);
-}
+__EXPORT int devmgr_device_host_main(int argc, char** argv) { return device_host_main(argc, argv); }

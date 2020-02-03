@@ -50,9 +50,8 @@ class MockDevice : public fbl::RefCounted<MockDevice> {
   uint32_t protocol_id_ = 0;
 };
 
-using devmgr::ComponentPartDescriptor;
-using devmgr::internal::Match;
-using devmgr::internal::MatchParts;
+using internal::Match;
+using internal::MatchParts;
 
 template <size_t N>
 fbl::Array<const zx_bind_inst_t> MakeBindProgram(const zx_bind_inst_t (&insts)[N]) {

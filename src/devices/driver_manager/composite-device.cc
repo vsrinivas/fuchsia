@@ -13,8 +13,6 @@
 #include "fidl.h"
 #include "log.h"
 
-namespace devmgr {
-
 // CompositeDevice methods
 
 CompositeDevice::CompositeDevice(fbl::String name, fbl::Array<const zx_device_prop_t> properties,
@@ -266,9 +264,8 @@ bool CompositeDeviceComponent::TryMatch(const fbl::RefPtr<Device>& dev) {
   if (parts_.size() > UINT32_MAX) {
     return false;
   }
-  auto match =
-      ::devmgr::internal::MatchParts(dev, parts_.data(), static_cast<uint32_t>(parts_.size()));
-  if (match != ::devmgr::internal::Match::One) {
+  auto match = ::internal::MatchParts(dev, parts_.data(), static_cast<uint32_t>(parts_.size()));
+  if (match != ::internal::Match::One) {
     return false;
   }
   return true;
@@ -297,5 +294,3 @@ void CompositeDeviceComponent::Unbind() {
   bound_device_->disassociate_from_composite();
   bound_device_ = nullptr;
 }
-
-}  // namespace devmgr

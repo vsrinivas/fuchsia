@@ -9,8 +9,6 @@
 
 #include <utility>
 
-namespace devmgr {
-
 // Wraps a vmo to aid in writing text into it.
 class VmoWriter {
  public:
@@ -31,7 +29,5 @@ class VmoWriter {
   size_t written_ = 0;
   size_t available_ = 0;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_VMO_WRITER_H_

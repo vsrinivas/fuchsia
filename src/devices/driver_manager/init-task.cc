@@ -7,8 +7,6 @@
 #include "coordinator.h"
 #include "log.h"
 
-namespace devmgr {
-
 InitTask::InitTask(fbl::RefPtr<Device> device, Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion)), device_(std::move(device)) {}
 
@@ -75,5 +73,3 @@ void InitTask::Run() {
   // drop our init task reference. We need to drop it now.
   device_->DropInitTask();
 }
-
-}  // namespace devmgr

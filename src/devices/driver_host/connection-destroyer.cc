@@ -11,8 +11,6 @@
 #include "proxy-iostate.h"
 #include "zx-device.h"
 
-namespace devmgr {
-
 zx_status_t ConnectionDestroyer::QueueProxyConnection(async_dispatcher_t* dispatcher,
                                                       ProxyIostate* conn) {
   zx_packet_user_t pkt = {};
@@ -51,5 +49,3 @@ void ConnectionDestroyer::Handler(async_dispatcher_t* dispatcher, async::Receive
       ZX_ASSERT_MSG(false, "Unknown IosDestructionType %" PRIu64 "\n", data->u64[0]);
   }
 }
-
-}  // namespace devmgr

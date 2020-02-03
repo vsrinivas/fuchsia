@@ -34,13 +34,9 @@
 
 #include "devfs-connection.h"
 
-namespace devmgr {
-
 class CompositeDevice;
 class DeviceControllerConnection;
 struct ProxyIostate;
-
-}  // namespace devmgr
 
 // 'MDEV'
 #define DEV_MAGIC 0x4D444556
@@ -183,10 +179,10 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   // This is an atomic so that the connection's async loop can inspect this
   // value to determine if an expected shutdown is happening.  See comments in
   // devhost_remove().
-  std::atomic<devmgr::DeviceControllerConnection*> conn = nullptr;
+  std::atomic<DeviceControllerConnection*> conn = nullptr;
 
   fbl::Mutex proxy_ios_lock;
-  devmgr::ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;
+  ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;
 
   char name[ZX_DEVICE_NAME_MAX + 1] = {};
 
@@ -211,8 +207,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
                                        ::llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>;
 
   bool has_composite();
-  void set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite);
-  fbl::RefPtr<devmgr::CompositeDevice> take_composite();
+  void set_composite(fbl::RefPtr<CompositeDevice> composite);
+  fbl::RefPtr<CompositeDevice> take_composite();
 
   const DevicePowerStates& GetPowerStates() const;
   const PerformanceStates& GetPerformanceStates() const;
@@ -265,7 +261,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   // If this device is a component of a composite, this points to the
   // composite control structure.
-  fbl::RefPtr<devmgr::CompositeDevice> composite_;
+  fbl::RefPtr<CompositeDevice> composite_;
 
   fbl::WAVLTreeNodeState<fbl::RefPtr<zx_device>> local_id_node_;
 

@@ -27,7 +27,7 @@ TEST(ProxyIostateTestCase, Creation) {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
     ASSERT_NULL(dev->proxy_ios);
   }
-  ASSERT_OK(devmgr::ProxyIostate::Create(dev, std::move(proxy_remote), loop.dispatcher()));
+  ASSERT_OK(ProxyIostate::Create(dev, std::move(proxy_remote), loop.dispatcher()));
   {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
     ASSERT_NOT_NULL(dev->proxy_ios);
@@ -49,7 +49,7 @@ TEST(ProxyIostateTestCase, ChannelCloseThenCancel) {
   zx::channel proxy_local, proxy_remote;
   ASSERT_OK(zx::channel::create(0, &proxy_local, &proxy_remote));
 
-  ASSERT_OK(devmgr::ProxyIostate::Create(dev, std::move(proxy_remote), loop.dispatcher()));
+  ASSERT_OK(ProxyIostate::Create(dev, std::move(proxy_remote), loop.dispatcher()));
   ASSERT_OK(loop.RunUntilIdle());
 
   proxy_local.reset();

@@ -9,8 +9,6 @@
 
 #include <fbl/string.h>
 
-namespace devmgr {
-
 class DriverTestReporter {
  public:
   explicit DriverTestReporter(const fbl::String& driver_name) : driver_name_(driver_name) {}
@@ -31,7 +29,5 @@ class DriverTestReporter {
   uint64_t total_failed_ = 0;
   uint64_t total_skipped_ = 0;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_DRIVER_TEST_REPORTER_H_

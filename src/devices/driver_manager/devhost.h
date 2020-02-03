@@ -14,8 +14,6 @@
 
 #include "device.h"
 
-namespace devmgr {
-
 class Device;
 
 class Devhost {
@@ -88,7 +86,5 @@ class Devhost {
   // list of all child devhosts of this devhost
   fbl::DoublyLinkedList<Devhost*, Node> children_;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_DEVHOST_H_

@@ -16,8 +16,6 @@
 
 struct zx_device;
 
-namespace devmgr {
-
 class DeviceControllerConnection
     : public AsyncLoopOwnedRpcHandler<DeviceControllerConnection>,
       public llcpp::fuchsia::device::manager::DeviceController::Interface,
@@ -82,7 +80,5 @@ struct DevhostRpcReadContext {
   const char* path;
   DeviceControllerConnection* conn;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_DEVICE_CONTROLLER_CONNECTION_H_

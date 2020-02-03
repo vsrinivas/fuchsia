@@ -17,8 +17,6 @@
 #include "log.h"
 #include "zircon/system/ulib/fbl/include/fbl/ref_ptr.h"
 
-namespace devmgr {
-
 namespace {
 
 zx_status_t Reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
@@ -430,5 +428,3 @@ zx_status_t DevfsConnection::CloseMessage(FidlDispatchFunction dispatch) {
   dispatch(&msg, &connection);
   return ERR_DISPATCHER_DONE;
 }
-
-}  // namespace devmgr

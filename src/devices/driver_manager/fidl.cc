@@ -11,8 +11,6 @@
 #include "coordinator.h"
 #include "log.h"
 
-namespace devmgr {
-
 zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel coordinator_rpc,
                                   zx::channel device_controller_rpc, zx::vmo driver,
                                   const char* args, zx::handle rpc_proxy) {
@@ -194,5 +192,3 @@ zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite
   fidl::Message msg(builder.Finalize(), fidl::HandlePart(handles, num_handles, num_handles));
   return msg.Write(dh->hrpc(), 0);
 }
-
-}  // namespace devmgr

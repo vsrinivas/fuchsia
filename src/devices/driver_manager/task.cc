@@ -6,8 +6,6 @@
 
 #include "log.h"
 
-namespace devmgr {
-
 Task::Task(async_dispatcher_t* dispatcher, Completion completion, bool post_on_create)
     : completion_(std::move(completion)), dispatcher_(dispatcher) {
   if (post_on_create) {
@@ -83,5 +81,3 @@ void Task::Complete(zx_status_t status) {
   }
   self_.reset();
 }
-
-}  // namespace devmgr

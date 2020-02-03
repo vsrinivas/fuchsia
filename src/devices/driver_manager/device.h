@@ -28,8 +28,6 @@
 #include "driver-test-reporter.h"
 #include "metadata.h"
 
-namespace devmgr {
-
 class Coordinator;
 class Devhost;
 struct Devnode;
@@ -653,7 +651,5 @@ class Device : public fbl::RefCounted<Device>,
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_DEVICE_H_

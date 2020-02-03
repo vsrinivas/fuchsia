@@ -11,8 +11,6 @@
 
 #include <fbl/intrusive_double_list.h>
 
-namespace devmgr {
-
 struct Metadata {
   fbl::DoublyLinkedListNodeState<std::unique_ptr<Metadata>> node;
   struct Node {
@@ -54,7 +52,5 @@ struct Metadata {
   Metadata(Metadata&&) = delete;
   Metadata& operator=(Metadata&&) = delete;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_METADATA_H_

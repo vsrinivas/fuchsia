@@ -12,8 +12,6 @@
 
 #include "zx-device.h"
 
-namespace devmgr {
-
 typedef fbl::Array<fbl::RefPtr<zx_device>> CompositeComponents;
 
 // Modifies |device| to have the appropriate protocol_id, ctx, and ops tables
@@ -33,7 +31,5 @@ class CompositeDevice : public fbl::RefCounted<CompositeDevice> {
  private:
   fbl::RefPtr<zx_device> device_;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_COMPOSITE_DEVICE_H_

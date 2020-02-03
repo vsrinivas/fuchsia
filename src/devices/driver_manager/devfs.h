@@ -11,8 +11,6 @@
 
 #include <fbl/ref_ptr.h>
 
-namespace devmgr {
-
 class Device;
 struct Devnode;
 
@@ -39,7 +37,5 @@ zx_status_t devfs_connect(const Device* dev, zx::channel client_remote);
 // If ZX_OK is returned, then *device_out refers to the device at the given path
 // relative to the devnode.
 zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* device_out);
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_DEVFS_H_

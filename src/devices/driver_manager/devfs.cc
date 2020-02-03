@@ -31,8 +31,6 @@
 #include "lib/fidl/cpp/message_part.h"
 #include "log.h"
 
-namespace devmgr {
-
 namespace {
 
 // `OnOpen` event from fuchsia-io.  See zircon/system/fidl/fuchsia-io/io.fidl.
@@ -853,5 +851,3 @@ zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) 
   *dev = fbl::RefPtr(inout->device);
   return ZX_OK;
 }
-
-}  // namespace devmgr

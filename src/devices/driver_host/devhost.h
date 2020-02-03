@@ -34,8 +34,6 @@
 #include "lock.h"
 #include "zx-device.h"
 
-namespace devmgr {
-
 namespace fuchsia = ::llcpp::fuchsia;
 
 struct BindContext {
@@ -52,8 +50,6 @@ struct CreationContext {
 
 void devhost_set_bind_context(BindContext* ctx);
 void devhost_set_creation_context(CreationContext* ctx);
-
-}  // namespace devmgr
 
 // Nothing outside of devmgr/{devmgr,devhost,rpc-device}.c
 // should be calling devhost_*() APIs, as this could
@@ -96,20 +92,18 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
 
   zx_status_t InitOp() { return ops_->init(&ctx_); }
 
-  zx_status_t BindOp(devmgr::BindContext* bind_context,
-                     const fbl::RefPtr<zx_device_t>& device) const {
-    devmgr::devhost_set_bind_context(bind_context);
+  zx_status_t BindOp(BindContext* bind_context, const fbl::RefPtr<zx_device_t>& device) const {
+    devhost_set_bind_context(bind_context);
     auto status = ops_->bind(ctx_, device.get());
-    devmgr::devhost_set_bind_context(nullptr);
+    devhost_set_bind_context(nullptr);
     return status;
   }
 
-  zx_status_t CreateOp(devmgr::CreationContext* creation_context,
-                       const fbl::RefPtr<zx_device_t>& parent, const char* name, const char* args,
-                       zx_handle_t rpc_channel) const {
-    devmgr::devhost_set_creation_context(creation_context);
+  zx_status_t CreateOp(CreationContext* creation_context, const fbl::RefPtr<zx_device_t>& parent,
+                       const char* name, const char* args, zx_handle_t rpc_channel) const {
+    devhost_set_creation_context(creation_context);
     auto status = ops_->create(ctx_, parent.get(), name, args, rpc_channel);
-    devmgr::devhost_set_creation_context(nullptr);
+    devhost_set_creation_context(nullptr);
     return status;
   }
 
@@ -133,8 +127,6 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   fbl::String libname_;
   zx_status_t status_ = ZX_OK;
 };
-
-namespace devmgr {
 
 extern zx_protocol_device_t device_default_ops;
 
@@ -270,7 +262,5 @@ DevhostContext& DevhostCtx();
 
 // Retrieve the singleton async loop
 async::Loop* DevhostAsyncLoop();
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_DEVHOST_H_

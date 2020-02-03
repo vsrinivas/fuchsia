@@ -8,8 +8,6 @@
 #include "device.h"
 #include "task.h"
 
-namespace devmgr {
-
 // This is used for sending |Init| requests.
 class InitTask final : public Task {
  public:
@@ -25,7 +23,5 @@ class InitTask final : public Task {
 
   fbl::RefPtr<Device> device_;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_INIT_TASK_H_

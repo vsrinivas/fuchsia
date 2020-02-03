@@ -15,8 +15,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 
-namespace devmgr {
-
 // An outstanding operation.  This class is not thread-safe.
 class Task : public fbl::RefCounted<Task> {
  public:
@@ -97,7 +95,5 @@ class Task : public fbl::RefCounted<Task> {
   // Number of dependencies of this task that have finished
   size_t finished_dependencies_count_ = 0;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_TASK_H_

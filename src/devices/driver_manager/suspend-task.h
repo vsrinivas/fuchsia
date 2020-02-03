@@ -8,8 +8,6 @@
 #include "device.h"
 #include "task.h"
 
-namespace devmgr {
-
 class SuspendTask final : public Task {
  public:
   static fbl::RefPtr<SuspendTask> Create(fbl::RefPtr<Device> device, uint32_t flags,
@@ -32,7 +30,5 @@ class SuspendTask final : public Task {
   // The target suspend flags
   uint32_t flags_;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_SUSPEND_TASK_H_

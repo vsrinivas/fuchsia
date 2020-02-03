@@ -5,13 +5,9 @@
 #ifndef SRC_DEVICES_DRIVER_MANAGER_ENV_H_
 #define SRC_DEVICES_DRIVER_MANAGER_ENV_H_
 
-namespace devmgr {
-
 // getenv_bool looks in the environment for |key|. If not found, it
 // returns |default_value|. If found, it returns false if the found
 // value matches "0", "off", or "false", otherwise it returns true.
 bool getenv_bool(const char* key, bool default_value);
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_ENV_H_

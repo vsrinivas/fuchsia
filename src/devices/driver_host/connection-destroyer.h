@@ -8,8 +8,6 @@
 #include <lib/async/cpp/receiver.h>
 #include <zircon/syscalls.h>
 
-namespace devmgr {
-
 class DeviceControllerConnection;
 struct ProxyIostate;
 
@@ -46,7 +44,5 @@ class ConnectionDestroyer {
 
   async::Receiver receiver_{ConnectionDestroyer::Handler};
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_CONNECTION_DESTROYER_H_

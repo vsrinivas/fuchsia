@@ -13,8 +13,6 @@
 #include "coordinator.h"
 #include "device.h"
 
-namespace devmgr {
-
 namespace internal {
 
 uint32_t LookupBindProperty(BindProgramContext* ctx, uint32_t id) {
@@ -147,5 +145,3 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
   ctx.autobind = autobind ? 1 : 0;
   return internal::EvaluateBindProgram(&ctx);
 }
-
-}  // namespace devmgr

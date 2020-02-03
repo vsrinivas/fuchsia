@@ -8,8 +8,6 @@
 
 #include "coordinator.h"
 
-namespace devmgr {
-
 ResumeTask::ResumeTask(fbl::RefPtr<Device> device, uint32_t target_system_state,
                        Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion), true),
@@ -183,5 +181,3 @@ void ResumeTask::Run() {
     return Complete(status);
   }
 }
-
-}  // namespace devmgr

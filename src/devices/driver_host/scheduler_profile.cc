@@ -12,8 +12,6 @@
 #include <string.h>
 #include <zircon/types.h>
 
-namespace devmgr {
-
 zx_handle_t scheduler_profile_provider;
 
 zx_status_t devhost_connect_scheduler_profile_provider() {
@@ -61,5 +59,3 @@ zx_status_t devhost_get_scheduler_deadline_profile(uint64_t capacity, uint64_t d
   }
   return ZX_OK;
 }
-
-}  // namespace devmgr

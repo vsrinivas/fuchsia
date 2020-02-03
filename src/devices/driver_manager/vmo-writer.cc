@@ -9,8 +9,6 @@
 
 #include <cstdarg>
 
-namespace devmgr {
-
 void VmoWriter::Printf(const char* fmt, ...) {
   if (status_ != ZX_OK) {
     return;
@@ -44,5 +42,3 @@ void VmoWriter::Printf(const char* fmt, ...) {
 
   written_ = new_written;
 }
-
-}  // namespace devmgr

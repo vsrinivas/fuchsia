@@ -8,8 +8,6 @@
 #include "device.h"
 #include "task.h"
 
-namespace devmgr {
-
 class ResumeTask final : public Task {
  public:
   static fbl::RefPtr<ResumeTask> Create(fbl::RefPtr<Device> device, uint32_t target_system_state,
@@ -34,7 +32,5 @@ class ResumeTask final : public Task {
   // Target system resume state
   uint32_t target_system_state_;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_RESUME_TASK_H_

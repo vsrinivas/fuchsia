@@ -10,8 +10,6 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
-namespace devmgr {
-
 // Manages state of a FIDL transaction for the DevMgr so we can reply to the correct message.
 // DevmgrFidlTxn must not outlive the channel it is given
 class DevmgrFidlTxn : public fidl::Transaction {
@@ -110,7 +108,5 @@ class FidlTxn {
   // Transaction id of the message we're replying to
   const uint32_t txid_;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_FIDL_TXN_H_

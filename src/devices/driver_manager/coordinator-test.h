@@ -27,15 +27,14 @@
 
 constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";
 
-class DummyFsProvider : public devmgr::FsProvider {
+class DummyFsProvider : public FsProvider {
   ~DummyFsProvider() {}
   zx::channel CloneFs(const char* path) override { return zx::channel(); }
 };
 
 void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args);
-devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
-                                        devmgr::BootArgs* boot_args);
-void InitializeCoordinator(devmgr::Coordinator* coordinator);
+CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher, devmgr::BootArgs* boot_args);
+void InitializeCoordinator(Coordinator* coordinator);
 
 void CheckBindDriverReceived(const zx::channel& remote, const char* expected_driver);
 

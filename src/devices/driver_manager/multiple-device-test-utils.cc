@@ -171,7 +171,7 @@ void MultipleDeviceTestCase::TearDown() {
   coordinator_loop_.Shutdown();
 }
 
-void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
+void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, bool invisible,
                                        bool has_init, bool reply_to_init, bool always_init,
                                        size_t* index) {
@@ -201,7 +201,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent
   }
 }
 
-void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
+void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, size_t* index) {
   AddDevice(parent, name, protocol_id, driver, /* invisible */ false, /* has_init */ false,
             /* reply_to_init */ true, /* always_init */ true, index);
@@ -410,8 +410,7 @@ void MultipleDeviceTestCase::DoResume(
   }
 }
 
-void MultipleDeviceTestCase::DoResume(SystemPowerState target_state,
-                                      devmgr::ResumeCallback callback) {
+void MultipleDeviceTestCase::DoResume(SystemPowerState target_state, ResumeCallback callback) {
   DoResume(target_state, [this, callback = std::move(callback)](SystemPowerState target_state) {
     coordinator()->Resume(target_state, callback);
   });

@@ -7,8 +7,6 @@
 
 #include <zircon/types.h>
 
-namespace devmgr {
-
 zx_status_t devhost_connect_scheduler_profile_provider();
 zx_status_t devhost_get_scheduler_profile(uint32_t priority, const char* name,
                                           zx_handle_t* profile);
@@ -16,6 +14,5 @@ zx_status_t devhost_get_scheduler_profile(uint32_t priority, const char* name,
 zx_status_t devhost_get_scheduler_deadline_profile(uint64_t capacity, uint64_t deadline,
                                                    uint64_t period, const char* name,
                                                    zx_handle_t* profile);
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_SCHEDULER_PROFILE_H_

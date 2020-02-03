@@ -66,7 +66,7 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
 // Helper for BindComposite for issuing an AddComposite for a composite with the
 // given components.  It's assumed that these components are children of
 // the platform_bus and have the given protocol_id
-void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bus,
+void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
                                   const uint32_t* protocol_ids, size_t component_count,
                                   const zx_device_prop_t* props, size_t props_count,
                                   const char* name, zx_status_t expected_status = ZX_OK,
@@ -119,7 +119,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bu
       .metadata = ::fidl::VectorView(metadata_list),
   };
 
-  devmgr::Coordinator* coordinator = platform_bus->coordinator;
+  Coordinator* coordinator = platform_bus->coordinator;
   ASSERT_EQ(coordinator->AddCompositeDevice(platform_bus, name, comp_desc), expected_status);
 }
 
@@ -132,8 +132,8 @@ class CompositeTestCase : public MultipleDeviceTestCase {
                               zx::channel* composite_remote_out1,
                               zx::channel* composite_remote_out2);
 
-  fbl::RefPtr<devmgr::Device> GetCompositeDeviceFromComponent(const char* composite_name,
-                                                              size_t component_index);
+  fbl::RefPtr<Device> GetCompositeDeviceFromComponent(const char* composite_name,
+                                                      size_t component_index);
 
  protected:
   void SetUp() override {
@@ -142,9 +142,9 @@ class CompositeTestCase : public MultipleDeviceTestCase {
   }
 };
 
-fbl::RefPtr<devmgr::Device> CompositeTestCase::GetCompositeDeviceFromComponent(
-    const char* composite_name, size_t component_index) {
-  fbl::RefPtr<devmgr::Device> composite_device;
+fbl::RefPtr<Device> CompositeTestCase::GetCompositeDeviceFromComponent(const char* composite_name,
+                                                                       size_t component_index) {
+  fbl::RefPtr<Device> composite_device;
   auto component_device = device(component_index)->device;
   for (auto& comp : component_device->components()) {
     if (!strcmp(comp.composite()->device()->name().data(), composite_name)) {
@@ -436,8 +436,8 @@ TEST_F(CompositeTestCase, SharedComponentUnbinds) {
   coordinator_loop()->RunUntilIdle();
   {
     auto device1 = device(device_indexes[1])->device;
-    fbl::RefPtr<devmgr::Device> comp_device1;
-    fbl::RefPtr<devmgr::Device> comp_device2;
+    fbl::RefPtr<Device> comp_device1;
+    fbl::RefPtr<Device> comp_device2;
     for (auto& comp : device1->components()) {
       auto comp_device = comp.composite()->device();
       if (!strcmp(comp_device->name().data(), kCompositeDev1Name)) {
@@ -563,7 +563,7 @@ TEST_F(CompositeTestCase, ComponentUnbinds) {
   coordinator_loop()->RunUntilIdle();
 
   {
-    fbl::RefPtr<devmgr::Device> comp_device =
+    fbl::RefPtr<Device> comp_device =
         GetCompositeDeviceFromComponent(kCompositeDevName, device_indexes[1]);
     ASSERT_NOT_NULL(comp_device);
   }
@@ -720,21 +720,21 @@ TEST_F(CompositeTestCase, ResumeOrder) {
   ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
       kCompositeDevName, device_indexes, fbl::count_of(device_indexes), component_device_indexes,
       &composite_remote_coordinator, &composite_remote_controller));
-  fbl::RefPtr<devmgr::Device> comp_device =
+  fbl::RefPtr<Device> comp_device =
       GetCompositeDeviceFromComponent(kCompositeDevName, device_indexes[1]);
   ASSERT_NOT_NULL(comp_device);
 
   // Put all the devices in suspended state
-  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
-  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
-  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
+  platform_bus()->set_state(Device::State::kSuspended);
   for (auto idx : device_indexes) {
-    device(idx)->device->set_state(devmgr::Device::State::kSuspended);
+    device(idx)->device->set_state(Device::State::kSuspended);
   }
   for (auto idx : component_device_indexes) {
-    device(idx)->device->set_state(devmgr::Device::State::kSuspended);
+    device(idx)->device->set_state(Device::State::kSuspended);
   }
-  comp_device->set_state(devmgr::Device::State::kSuspended);
+  comp_device->set_state(Device::State::kSuspended);
 
   llcpp::fuchsia::device::manager::SystemPowerState state =
       llcpp::fuchsia::device::manager::SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON;
@@ -839,9 +839,9 @@ TEST_F(CompositeTestCase, Topology) {
       kCompositeDevName, device_indexes, fbl::count_of(device_indexes), component_device_indexes,
       &composite_remote_coordinator, &composite_remote_controller));
 
-  devmgr::Devnode* dn = coordinator()->root_device()->self;
-  fbl::RefPtr<devmgr::Device> composite_dev;
-  ASSERT_OK(devmgr::devfs_walk(dn, "composite-dev", &composite_dev));
+  Devnode* dn = coordinator()->root_device()->self;
+  fbl::RefPtr<Device> composite_dev;
+  ASSERT_OK(devfs_walk(dn, "composite-dev", &composite_dev));
 
   char path_buf[PATH_MAX];
   ASSERT_OK(coordinator()->GetTopologicalPath(composite_dev, path_buf, sizeof(path_buf)));
@@ -868,7 +868,7 @@ class CompositeMetadataTestCase : public CompositeTestCase {
     ASSERT_BYTES_EQ(data, kMetadataStr, len);
   }
 
-  fbl::RefPtr<devmgr::Device> composite_device;
+  fbl::RefPtr<Device> composite_device;
 
   // Hold reference to remote channels so that they do not close
   zx::channel composite_remote_coordinator;
@@ -946,7 +946,7 @@ TEST_F(CompositeMetadataTestCase, FailGetMetadata) {
 TEST_F(CompositeMetadataTestCase, FailGetMetadataFromParent) {
   size_t len = 0;
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
-  fbl::RefPtr<devmgr::Device> parent =
+  fbl::RefPtr<Device> parent =
       composite_device->composite()->bound_components().front().bound_device();
   ASSERT_EQ(platform_bus()->coordinator->GetMetadata(parent, kMetadataKey, nullptr, 0, &len),
             ZX_ERR_NOT_FOUND);
@@ -999,7 +999,7 @@ TEST_F(CompositeMetadataTestCase, GetMetadataFromChild) {
   ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
   ASSERT_NO_FATAL_FAILURES(
       AddDevice(composite_device, "child", ZX_PROTOCOL_AUDIO, "", &child_index));
-  fbl::RefPtr<devmgr::Device> child = device(child_index)->device;
+  fbl::RefPtr<Device> child = device(child_index)->device;
   ASSERT_OK(platform_bus()->coordinator->GetMetadata(child, kMetadataKey, buf, 32, &len));
   VerifyMetadata(buf, len);
 }
@@ -1142,7 +1142,7 @@ TEST_F(CompositeTestCase, ComponentDeviceInit) {
     auto index = device_indexes[i];
     ASSERT_FALSE(device(index)->device->is_visible());
     ASSERT_NO_FATAL_FAILURES(CheckInitReceived(device(index)->controller_remote, &txns[i]));
-    ASSERT_EQ(devmgr::Device::State::kInitializing, device(index)->device->state());
+    ASSERT_EQ(Device::State::kInitializing, device(index)->device->state());
     coordinator_loop()->RunUntilIdle();
   }
 
@@ -1155,7 +1155,7 @@ TEST_F(CompositeTestCase, ComponentDeviceInit) {
     coordinator_loop()->RunUntilIdle();
 
     ASSERT_TRUE(device(index)->device->is_visible());
-    ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+    ASSERT_EQ(Device::State::kActive, device(index)->device->state());
   }
 
   zx::channel composite_remote_coordinator;
@@ -1167,9 +1167,9 @@ TEST_F(CompositeTestCase, ComponentDeviceInit) {
   coordinator_loop()->RunUntilIdle();
 
   {
-    fbl::RefPtr<devmgr::Device> comp_device =
+    fbl::RefPtr<Device> comp_device =
         GetCompositeDeviceFromComponent(kCompositeDevName, device_indexes[1]);
     ASSERT_NOT_NULL(comp_device);
-    ASSERT_EQ(devmgr::Device::State::kActive, comp_device->state());
+    ASSERT_EQ(Device::State::kActive, comp_device->state());
   }
 }

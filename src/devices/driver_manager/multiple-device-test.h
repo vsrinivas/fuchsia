@@ -46,9 +46,9 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
   bool has_been_shutdown_;
 };
 
-class CoordinatorForTest : public devmgr::Coordinator {
+class CoordinatorForTest : public Coordinator {
  public:
-  CoordinatorForTest(devmgr::CoordinatorConfig config) : devmgr::Coordinator(std::move(config)) {}
+  CoordinatorForTest(CoordinatorConfig config) : Coordinator(std::move(config)) {}
 
   void SetFshostAdminClient(std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> client) {
     fshost_admin_client_ = std::move(client);
@@ -59,7 +59,7 @@ class CoordinatorForTest : public devmgr::Coordinator {
 
 struct DeviceState {
   // The representation in the coordinator of the device
-  fbl::RefPtr<devmgr::Device> device;
+  fbl::RefPtr<Device> device;
   // The remote end of the channel that the coordinator is talking to
   zx::channel coordinator_remote;
   // The remote end of the channel that the controller is talking to
@@ -75,10 +75,10 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void set_coordinator_loop_thread_running(bool value) { coordinator_loop_thread_running_ = value; }
   CoordinatorForTest* coordinator() { return &coordinator_; }
 
-  devmgr::Devhost* devhost() { return &devhost_; }
+  Devhost* devhost() { return &devhost_; }
   const zx::channel& devhost_remote() { return devhost_remote_; }
 
-  const fbl::RefPtr<devmgr::Device>& platform_bus() const { return platform_bus_.device; }
+  const fbl::RefPtr<Device>& platform_bus() const { return platform_bus_.device; }
   const zx::channel& platform_bus_coordinator_remote() const {
     return platform_bus_.coordinator_remote;
   }
@@ -87,10 +87,10 @@ class MultipleDeviceTestCase : public zxtest::Test {
   }
   DeviceState* device(size_t index) const { return &devices_[index]; }
 
-  void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name, uint32_t protocol_id,
+  void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, bool invisible, bool has_init, bool reply_to_init,
                  bool always_init, size_t* device_index);
-  void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name, uint32_t protocol_id,
+  void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, size_t* device_index);
   void RemoveDevice(size_t device_index);
 
@@ -101,7 +101,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void DoSuspend(uint32_t flags, fit::function<void(uint32_t)> suspend_cb);
 
   void DoResume(
-      SystemPowerState target_state, devmgr::ResumeCallback callback = [](zx_status_t) {});
+      SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
   void DoResume(SystemPowerState target_state, fit::function<void(SystemPowerState)> resume_cb);
 
   void CheckInitReceived(const zx::channel& remote, zx_txid_t* txid);
@@ -133,7 +133,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void TearDown() override;
 
   // The fake devhost that the platform bus is put into
-  devmgr::Devhost devhost_;
+  Devhost devhost_;
 
   // The remote end of the channel that the coordinator uses to talk to the
   // devhost

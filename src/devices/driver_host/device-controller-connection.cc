@@ -20,8 +20,6 @@
 #include "proxy-iostate.h"
 #include "zx-device.h"
 
-namespace devmgr {
-
 namespace {
 
 namespace fuchsia = ::llcpp::fuchsia;
@@ -242,7 +240,8 @@ zx_status_t DeviceControllerConnection::Create(fbl::RefPtr<zx_device> dev,
 void DeviceControllerConnection::Open(uint32_t flags, uint32_t mode, ::fidl::StringView path,
                                       ::zx::channel object, OpenCompleter::Sync completer) {
   if (path.size() != 1 && path.data()[0] != '.') {
-    log(ERROR, "driver_host: Tried to open path '%.*s'\n", static_cast<int>(path.size()), path.data());
+    log(ERROR, "driver_host: Tried to open path '%.*s'\n", static_cast<int>(path.size()),
+        path.data());
   }
   devhost_device_connect(this->dev(), flags, std::move(object));
 }
@@ -336,5 +335,3 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   fuchsia::device::manager::DeviceController::Dispatch(this, &fidl_msg, &txn);
   return txn.Status();
 }
-
-}  // namespace devmgr

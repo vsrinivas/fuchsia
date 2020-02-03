@@ -116,7 +116,7 @@ zx_status_t SystemInstance::PrepareChannels() {
 }
 
 zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
-                                         bool require_system, devmgr::Coordinator* coordinator) {
+                                         bool require_system, Coordinator* coordinator) {
   zx::channel dir_request, svchost_local;
   zx_status_t status = zx::channel::create(0, &dir_request, &svchost_local);
   if (status != ZX_OK) {
@@ -367,7 +367,7 @@ int SystemInstance::pwrbtn_monitor_starter(void* arg) {
   return args->instance->PwrbtnMonitorStarter(args->coordinator);
 }
 
-int SystemInstance::PwrbtnMonitorStarter(devmgr::Coordinator* coordinator) {
+int SystemInstance::PwrbtnMonitorStarter(Coordinator* coordinator) {
   const char* name = "pwrbtn-monitor";
   const char* argv[] = {"/boot/bin/pwrbtn-monitor", nullptr};
 
@@ -572,7 +572,7 @@ int wait_for_system_available(void* arg) {
   return args->instance->WaitForSystemAvailable(args->coordinator);
 }
 
-int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
+int SystemInstance::ServiceStarter(Coordinator* coordinator) {
   // Launch miscsvc binary with access to:
   // * /dev to talk to hardware
   // * /boot to dynamically load drivers (zxcrypt)
@@ -723,7 +723,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
   return 0;
 }
 
-int SystemInstance::WaitForSystemAvailable(devmgr::Coordinator* coordinator) {
+int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   // Block this thread until /system-delayed is available. Note that this is
   // only used for coordinating events between fshost and devcoordinator, the
   // /system path is used for loading drivers and appmgr below.
@@ -762,7 +762,7 @@ zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
 void SystemInstance::do_autorun(const char* name, const char* cmd,
                                 const zx::resource& root_resource) {
   if (cmd != nullptr) {
-    auto args = devmgr::ArgumentVector::FromCmdline(cmd);
+    auto args = ArgumentVector::FromCmdline(cmd);
     args.Print("autorun");
 
     zx::channel ldsvc;
@@ -784,7 +784,7 @@ void SystemInstance::do_autorun(const char* name, const char* cmd,
 
 zx::channel SystemInstance::CloneFs(const char* path) {
   if (!strcmp(path, "dev")) {
-    return devmgr::devfs_root_clone();
+    return devfs_root_clone();
   }
   zx::channel h0, h1;
   if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
@@ -795,7 +795,7 @@ zx::channel SystemInstance::CloneFs(const char* path) {
     zx::unowned_channel fs = zx::unowned_channel(svchost_outgoing_);
     status = fdio_service_clone_to(fs->get(), h1.release());
   } else if (!strncmp(path, "dev/", 4)) {
-    zx::unowned_channel fs = devmgr::devfs_root_borrow();
+    zx::unowned_channel fs = devfs_root_borrow();
     path += 4;
     status = fdio_open_at(fs->get(), path, FS_READ_WRITE_DIR_FLAGS, h1.release());
   }

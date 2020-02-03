@@ -10,8 +10,6 @@
 
 #include "log.h"
 
-namespace devmgr {
-
 void DevhostContext::PushWorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback callback) {
   auto work_item = std::make_unique<WorkItem>(dev, std::move(callback));
 
@@ -113,5 +111,3 @@ void DevhostContext::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> event
     abort();
   }
 }
-
-}  // namespace devmgr

@@ -28,8 +28,6 @@
 
 typedef struct zx_device zx_device_t;
 
-namespace devmgr {
-
 class Connection;
 
 // callback to process a FIDL message.
@@ -197,11 +195,9 @@ class Transaction : public fidl::Transaction {
   }
 
  private:
-  devmgr::Connection conn_;
+  Connection conn_;
   zx_status_t status_ = ZX_OK;
   bool status_called_ = false;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_DEVFS_CONNECTION_H_

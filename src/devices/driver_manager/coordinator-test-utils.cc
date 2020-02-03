@@ -6,9 +6,8 @@
 
 #include <zxtest/zxtest.h>
 
-devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
-                                        devmgr::BootArgs* boot_args) {
-  devmgr::CoordinatorConfig config{};
+CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher, devmgr::BootArgs* boot_args) {
+  CoordinatorConfig config{};
   const char config1[] = "key1=old-value\0key2=value2\0key1=new-value";
   if (boot_args != nullptr) {
     CreateBootArgs(config1, sizeof(config1), boot_args);
@@ -36,22 +35,20 @@ void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args
   ASSERT_OK(status);
 }
 
-void InitializeCoordinator(devmgr::Coordinator* coordinator) {
+void InitializeCoordinator(Coordinator* coordinator) {
   zx_status_t status = coordinator->InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 
   // Load the component driver
-  devmgr::load_driver(devmgr::kComponentDriverPath,
-                      fit::bind_member(coordinator, &devmgr::Coordinator::DriverAddedInit));
+  load_driver(kComponentDriverPath, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
 
   // Add the driver we're using as platform bus
-  devmgr::load_driver(kSystemDriverPath,
-                      fit::bind_member(coordinator, &devmgr::Coordinator::DriverAddedInit));
+  load_driver(kSystemDriverPath, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
 
   // Initialize devfs.
-  devmgr::devfs_init(coordinator->root_device(), coordinator->dispatcher());
-  status = devmgr::devfs_publish(coordinator->root_device(), coordinator->test_device());
-  status = devmgr::devfs_publish(coordinator->root_device(), coordinator->sys_device());
+  devfs_init(coordinator->root_device(), coordinator->dispatcher());
+  status = devfs_publish(coordinator->root_device(), coordinator->test_device());
+  status = devfs_publish(coordinator->root_device(), coordinator->sys_device());
   ASSERT_OK(status);
   coordinator->set_running(true);
 }

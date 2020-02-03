@@ -14,8 +14,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 
-namespace devmgr {
-
 struct Driver {
   Driver() = default;
 
@@ -44,7 +42,5 @@ using DriverLoadCallback = fit::function<void(Driver* driver, const char* versio
 
 void load_driver(const char* path, DriverLoadCallback func);
 void find_loadable_drivers(const char* path, DriverLoadCallback func);
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_DRIVER_H_

@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-namespace devmgr {
-
 bool getenv_bool(const char* key, bool default_value) {
   const char* value = getenv(key);
   if (value == nullptr) {
@@ -19,5 +17,3 @@ bool getenv_bool(const char* key, bool default_value) {
   }
   return true;
 }
-
-}  // namespace devmgr

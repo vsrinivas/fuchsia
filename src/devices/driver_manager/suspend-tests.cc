@@ -7,7 +7,7 @@
 class SuspendTestCase : public MultipleDeviceTestCase {
  public:
   void SuspendTest(uint32_t flags);
-  void StateTest(zx_status_t suspend_status, devmgr::Device::State want_device_state);
+  void StateTest(zx_status_t suspend_status, Device::State want_device_state);
 };
 TEST_F(SuspendTestCase, Poweroff) {
   ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_POWEROFF));
@@ -42,7 +42,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
       {0, "root_child1_2"},        {2, "root_child1_1_1"},      {1, "root_child2_1"},
   };
   for (auto& desc : devices) {
-    fbl::RefPtr<devmgr::Device> parent;
+    fbl::RefPtr<Device> parent;
     if (desc.parent_desc_index == UINT32_MAX) {
       parent = platform_bus();
     } else {
@@ -100,16 +100,15 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
 }
 
 TEST_F(SuspendTestCase, SuspendSuccess) {
-  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_OK, devmgr::Device::State::kSuspended));
+  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_OK, Device::State::kSuspended));
 }
 
 TEST_F(SuspendTestCase, SuspendFail) {
-  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_ERR_BAD_STATE, devmgr::Device::State::kActive));
+  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_ERR_BAD_STATE, Device::State::kActive));
 }
 
 // Verify the device transitions in and out of the suspending state.
-void SuspendTestCase::StateTest(zx_status_t suspend_status,
-                                devmgr::Device::State want_device_state) {
+void SuspendTestCase::StateTest(zx_status_t suspend_status, Device::State want_device_state) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "", &index));
 
@@ -120,7 +119,7 @@ void SuspendTestCase::StateTest(zx_status_t suspend_status,
   // Check for the suspend message without replying.
   ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(index)->controller_remote, flags, &txid));
 
-  ASSERT_EQ(device(index)->device->state(), devmgr::Device::State::kSuspending);
+  ASSERT_EQ(device(index)->device->state(), Device::State::kSuspending);
 
   ASSERT_NO_FATAL_FAILURES(
       SendSuspendReply(device(index)->controller_remote, suspend_status, txid));

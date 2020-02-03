@@ -79,7 +79,7 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
   return fuchsia_boot_RootResourceGet(local.get(), root_resource->reset_and_get_address());
 }
 
-void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
+void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
   enum {
     kDriverSearchPath,
     kLoadDriver,
@@ -113,7 +113,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
   };
 
   // Reset the args state
-  *out = devmgr::DevmgrArgs();
+  *out = DevmgrArgs();
 
   int opt;
   while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
@@ -181,10 +181,10 @@ int main(int argc, char** argv) {
   }
 
   if (boot_args.GetBool("devmgr.verbose", false)) {
-    devmgr::log_flags |= LOG_ALL;
+    log_flags |= LOG_ALL;
   }
 
-  devmgr::DevmgrArgs devmgr_args;
+  DevmgrArgs devmgr_args;
   ParseArgs(argc, argv, &devmgr_args);
   // Set up the default values for our arguments if they weren't given.
   if (devmgr_args.driver_search_paths.size() == 0) {
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
   bool require_system = boot_args.GetBool("devmgr.require-system", false);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  devmgr::CoordinatorConfig config{};
+  CoordinatorConfig config{};
   SystemInstance system_instance;
   config.dispatcher = loop.dispatcher();
   config.boot_args = &boot_args;
@@ -239,7 +239,7 @@ int main(int argc, char** argv) {
     config.oom_event = zx::event(oom_event);
   }
 
-  devmgr::Coordinator coordinator(std::move(config));
+  Coordinator coordinator(std::move(config));
 
   // Services offered to the rest of the system.
   svc::Outgoing outgoing{loop.dispatcher()};
@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  devmgr::devfs_init(coordinator.root_device(), loop.dispatcher());
+  devfs_init(coordinator.root_device(), loop.dispatcher());
   devfs_publish(coordinator.root_device(), coordinator.misc_device());
   devfs_publish(coordinator.root_device(), coordinator.sys_device());
   devfs_publish(coordinator.root_device(), coordinator.test_device());
@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
   // This is for use in tests to let the test environment see devfs.
   zx::channel devfs_client(zx_take_startup_handle(DEVMGR_LAUNCHER_DEVFS_ROOT_HND));
   if (devfs_client.is_valid()) {
-    fdio_service_clone_to(devmgr::devfs_root_borrow()->get(), devfs_client.release());
+    fdio_service_clone_to(devfs_root_borrow()->get(), devfs_client.release());
   }
 
   status = system_instance.CreateSvcJob(root_job);
@@ -346,10 +346,9 @@ int main(int argc, char** argv) {
   }
   thrd_detach(t);
 
-  std::unique_ptr<devmgr::DevhostLoaderService> loader_service;
+  std::unique_ptr<DevhostLoaderService> loader_service;
   if (boot_args.GetBool("devmgr.devhost.strict-linking", false)) {
-    status =
-        devmgr::DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
+    status = DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
     if (status != ZX_OK) {
       log(ERROR, "driver_manager: failed to create loader service\n");
       return 1;
@@ -375,12 +374,10 @@ int main(int argc, char** argv) {
   }
 
   for (const char* path : devmgr_args.driver_search_paths) {
-    devmgr::find_loadable_drivers(
-        path, fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAddedInit));
+    find_loadable_drivers(path, fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
   }
   for (const char* driver : devmgr_args.load_drivers) {
-    devmgr::load_driver(driver,
-                        fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAddedInit));
+    load_driver(driver, fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
   }
 
   if (coordinator.require_system() && !coordinator.system_loaded()) {

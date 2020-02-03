@@ -208,11 +208,11 @@ TEST_F(MultipleDeviceTestCase, UnbindThenResume) {
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", &child_index));
 
-  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
-  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
-  platform_bus()->set_state(devmgr::Device::State::kSuspended);
-  device(parent_index)->device->set_state(devmgr::Device::State::kSuspended);
-  device(child_index)->device->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
+  platform_bus()->set_state(Device::State::kSuspended);
+  device(parent_index)->device->set_state(Device::State::kSuspended);
+  device(child_index)->device->set_state(Device::State::kSuspended);
 
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(parent_index)->device));
   coordinator_loop()->RunUntilIdle();
@@ -256,11 +256,11 @@ TEST_F(MultipleDeviceTestCase, ResumeThenUnbind) {
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", &child_index));
 
-  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
-  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
-  platform_bus()->set_state(devmgr::Device::State::kSuspended);
-  device(parent_index)->device->set_state(devmgr::Device::State::kSuspended);
-  device(child_index)->device->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
+  platform_bus()->set_state(Device::State::kSuspended);
+  device(parent_index)->device->set_state(Device::State::kSuspended);
+  device(child_index)->device->set_state(Device::State::kSuspended);
 
   ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
 
@@ -334,8 +334,8 @@ TEST_F(MultipleDeviceTestCase, SuspendThenResume) {
       CheckSuspendReceivedAndReply(platform_bus_controller_remote(), flags, ZX_OK));
   ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->controller_remote));
   ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->controller_remote));
-  ASSERT_EQ(device(parent_index)->device->state(), devmgr::Device::State::kSuspended);
-  ASSERT_EQ(device(child_index)->device->state(), devmgr::Device::State::kSuspended);
+  ASSERT_EQ(device(parent_index)->device->state(), Device::State::kSuspended);
+  ASSERT_EQ(device(child_index)->device->state(), Device::State::kSuspended);
 }
 
 TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
@@ -347,11 +347,11 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", &child_index));
 
-  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
-  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
-  platform_bus()->set_state(devmgr::Device::State::kSuspended);
-  device(parent_index)->device->set_state(devmgr::Device::State::kSuspended);
-  device(child_index)->device->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
+  platform_bus()->set_state(Device::State::kSuspended);
+  device(parent_index)->device->set_state(Device::State::kSuspended);
+  device(child_index)->device->set_state(Device::State::kSuspended);
 
   ASSERT_NO_FATAL_FAILURES(DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON));
   coordinator_loop()->RunUntilIdle();
@@ -382,8 +382,8 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   coordinator_loop()->RunUntilIdle();
   ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->controller_remote));
   ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->controller_remote));
-  ASSERT_EQ(device(parent_index)->device->state(), devmgr::Device::State::kActive);
-  ASSERT_EQ(device(child_index)->device->state(), devmgr::Device::State::kActive);
+  ASSERT_EQ(device(parent_index)->device->state(), Device::State::kActive);
+  ASSERT_EQ(device(child_index)->device->state(), Device::State::kActive);
 }
 
 TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
@@ -393,16 +393,16 @@ TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
   async::Loop devhost_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   ASSERT_OK(devhost_loop.StartThread("DevHostLoop"));
 
-  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
-  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
-  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->set_state(Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(Device::State::kSuspended);
+  platform_bus()->set_state(Device::State::kSuspended);
 
   bool resume_callback_executed = false;
   zx::event resume_received_event;
   zx::event::create(0, &resume_received_event);
 
-  devmgr::ResumeCallback callback = [&resume_callback_executed,
-                                     &resume_received_event](zx_status_t status) {
+  ResumeCallback callback = [&resume_callback_executed,
+                             &resume_received_event](zx_status_t status) {
     ASSERT_EQ(status, ZX_ERR_TIMED_OUT);
     resume_callback_executed = true;
     resume_received_event.signal(0, ZX_USER_SIGNAL_0);

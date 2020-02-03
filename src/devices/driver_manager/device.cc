@@ -25,8 +25,6 @@
 #include "resume-task.h"
 #include "suspend-task.h"
 
-namespace devmgr {
-
 // TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
 static constexpr bool kEnableAlwaysInit = false;
 
@@ -1068,5 +1066,3 @@ void Device::AddCompositeDevice(
     completer.Reply(std::move(response));
   }
 }
-
-}  // namespace devmgr

@@ -18,7 +18,7 @@ TEST_F(InitTestCase, Init) {
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_TRUE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 }
 
 // Tests adding a device as invisible, which also has implemented an init hook.
@@ -34,7 +34,7 @@ TEST_F(InitTestCase, InvisibleAndInit) {
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_TRUE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 }
 
 // Tests adding a device as invisible, which has not also implemented an init hook.
@@ -47,7 +47,7 @@ TEST_F(InitTestCase, MakeVisibleThenDefaultInit) {
 
   // Not visible until we call MakeVisible.
   ASSERT_FALSE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 
   coordinator_.MakeVisible(device(index)->device);
   ASSERT_TRUE(device(index)->device->is_visible());
@@ -62,7 +62,7 @@ TEST_F(InitTestCase, DefaultInitThenMakeVisible) {
                                      false /* reply_to_init */, true /* always_init */, &index));
 
   ASSERT_FALSE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kInitializing, device(index)->device->state());
+  ASSERT_EQ(Device::State::kInitializing, device(index)->device->state());
 
   // Not visible until the init hook completes.
   coordinator_.MakeVisible(device(index)->device);
@@ -72,7 +72,7 @@ TEST_F(InitTestCase, DefaultInitThenMakeVisible) {
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_TRUE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 }
 
 // Tests that a device will not be unbound until init completes.
@@ -105,7 +105,7 @@ TEST_F(InitTestCase, InitThenUnbind) {
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(index)->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_EQ(devmgr::Device::State::kDead, device(index)->device->state());
+  ASSERT_EQ(Device::State::kDead, device(index)->device->state());
 }
 
 TEST_F(InitTestCase, InitThenSuspend) {
@@ -139,7 +139,7 @@ TEST_F(InitTestCase, InitThenSuspend) {
   ASSERT_NO_FATAL_FAILURES(
       CheckSuspendReceivedAndReply(platform_bus_controller_remote(), flags, ZX_OK));
 
-  ASSERT_EQ(devmgr::Device::State::kSuspended, device(index)->device->state());
+  ASSERT_EQ(Device::State::kSuspended, device(index)->device->state());
 }
 
 TEST_F(InitTestCase, ForcedRemovalDuringInit) {
@@ -160,7 +160,7 @@ TEST_F(InitTestCase, ForcedRemovalDuringInit) {
   coordinator_loop()->RunUntilIdle();
 
   // Check the device is dead and has no pending init task.
-  ASSERT_EQ(devmgr::Device::State::kDead, test_device->device->state());
+  ASSERT_EQ(Device::State::kDead, test_device->device->state());
   ASSERT_NULL(test_device->device->GetActiveInit());
 }
 
@@ -187,7 +187,7 @@ TEST_F(InitTestCase, FailedInit) {
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(index)->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_EQ(devmgr::Device::State::kDead, device(index)->device->state());
+  ASSERT_EQ(Device::State::kDead, device(index)->device->state());
 }
 
 // Tests that a child init task will not run until the parent's init task completes.
@@ -255,8 +255,8 @@ TEST_F(InitTestCase, InitParentFail) {
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(parent_index)->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_EQ(devmgr::Device::State::kDead, device(parent_index)->device->state());
-  ASSERT_EQ(devmgr::Device::State::kDead, device(child_index)->device->state());
+  ASSERT_EQ(Device::State::kDead, device(parent_index)->device->state());
+  ASSERT_EQ(Device::State::kDead, device(child_index)->device->state());
 }
 
 // TODO(fxb/43370): these tests can be removed once init tasks can be enabled for all devices.
@@ -266,7 +266,7 @@ TEST_F(InitTestCase, LegacyNoInit) {
                                      false /* invisible */, false /* has_init */,
                                      false /* reply_to_init */, false /* always_init */, &index));
   ASSERT_TRUE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 }
 
 TEST_F(InitTestCase, LegacyInit) {
@@ -281,7 +281,7 @@ TEST_F(InitTestCase, LegacyInit) {
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_TRUE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 }
 
 // Tests adding a device as invisible, which also has implemented an init hook.
@@ -297,7 +297,7 @@ TEST_F(InitTestCase, LegacyInvisibleAndInit) {
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_TRUE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 }
 
 // Tests adding a device as invisible, which has not also implemented an init hook.
@@ -309,7 +309,7 @@ TEST_F(InitTestCase, LegacyInvisibleNoInit) {
 
   // Not visible until we call MakeVisible.
   ASSERT_FALSE(device(index)->device->is_visible());
-  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  ASSERT_EQ(Device::State::kActive, device(index)->device->state());
 
   coordinator_.MakeVisible(device(index)->device);
   ASSERT_TRUE(device(index)->device->is_visible());

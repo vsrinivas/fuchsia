@@ -15,8 +15,6 @@
 
 class SystemInstance;
 
-namespace devmgr {
-
 // A loader service for devhosts that restricts access to dynamic libraries.
 class DevhostLoaderService {
  public:
@@ -36,7 +34,5 @@ class DevhostLoaderService {
   fbl::unique_fd root_;
   loader_service_t* svc_ = nullptr;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_DEVHOST_LOADER_SERVICE_H_

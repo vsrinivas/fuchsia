@@ -13,8 +13,6 @@
 #include "devhost.h"
 #include "zx-device.h"
 
-namespace devmgr {
-
 namespace {
 
 class CompositeDeviceInstance {
@@ -127,5 +125,3 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
 }
 
 CompositeDevice::~CompositeDevice() = default;
-
-}  // namespace devmgr

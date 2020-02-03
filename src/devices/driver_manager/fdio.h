@@ -10,8 +10,6 @@
 
 #include <memory>
 
-namespace devmgr {
-
 // clang-format off
 
 // Signals for synchronizing between devmgr and fshost during fshost launch
@@ -105,7 +103,5 @@ class ArgumentVector {
 #define LDSO_TRACE_CMDLINE "ldso.trace"
 // The env var to set to enable ld.so tracing.
 #define LDSO_TRACE_ENV "LD_TRACE=1"
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_FDIO_H_

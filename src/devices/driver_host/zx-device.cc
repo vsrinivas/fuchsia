@@ -164,13 +164,13 @@ zx_status_t zx_device::SetSystemPowerStateMapping(const SystemPowerStateMapping&
 // guarantee the lock holding invariant.  Instead, we acquire the lock if
 // it's not already being held by the current thread.
 void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
-  bool acq_lock = !devmgr::DM_LOCK_HELD();
+  bool acq_lock = !DM_LOCK_HELD();
   if (acq_lock) {
-    devmgr::DM_LOCK();
+    DM_LOCK();
   }
   auto unlock = fbl::MakeAutoCall([acq_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {
     if (acq_lock) {
-      devmgr::DM_UNLOCK();
+      DM_UNLOCK();
     }
   });
 
@@ -200,11 +200,11 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
   this->local_event.reset();
 
   // Put on the defered work list for finalization
-  devmgr::defer_device_list.push_back(this);
+  defer_device_list.push_back(this);
 
   // Immediately finalize if there's not an active enumerator
-  if (devmgr::devhost_enumerators == 0) {
-    devmgr::devhost_finalize();
+  if (devhost_enumerators == 0) {
+    devhost_finalize();
   }
 }
 
@@ -240,9 +240,9 @@ fbl::RefPtr<zx_device> zx_device::GetDeviceFromLocalId(uint64_t local_id) {
 
 bool zx_device::has_composite() { return !!composite_; }
 
-fbl::RefPtr<devmgr::CompositeDevice> zx_device::take_composite() { return std::move(composite_); }
+fbl::RefPtr<CompositeDevice> zx_device::take_composite() { return std::move(composite_); }
 
-void zx_device::set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite) {
+void zx_device::set_composite(fbl::RefPtr<CompositeDevice> composite) {
   composite_ = std::move(composite);
 }
 

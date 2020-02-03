@@ -16,8 +16,6 @@
 #include "async-loop-owned-event-handler.h"
 #include "zx-device.h"
 
-namespace devmgr {
-
 class DevhostContext {
  public:
   using Callback = fit::inline_callback<void(void), 2 * sizeof(void*)>;
@@ -85,7 +83,5 @@ class DevhostContext {
   EventWaiter* event_waiter_ TA_GUARDED(lock_) = nullptr;
   fbl::DoublyLinkedList<std::unique_ptr<WorkItem>> work_items_ TA_GUARDED(lock_);
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_HOST_DEVHOST_CONTEXT_H_

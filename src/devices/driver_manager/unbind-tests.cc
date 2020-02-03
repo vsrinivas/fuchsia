@@ -121,7 +121,7 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
   size_t num_to_unbind = 0;
   for (size_t i = 0; i < num_devices; i++) {
     auto& desc = devices[i];
-    fbl::RefPtr<devmgr::Device> parent;
+    fbl::RefPtr<Device> parent;
     if (desc.parent_desc_index == UINT32_MAX) {
       parent = platform_bus();
     } else {
@@ -313,7 +313,7 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceived(parent_device->controller_remote, &txid));
 
   // Adding a child device to an unbinding parent should fail.
-  fbl::RefPtr<devmgr::Device> child;
+  fbl::RefPtr<Device> child;
 
   zx::channel coordinator_local, coordinator_remote;
   zx_status_t status = zx::channel::create(0, &coordinator_local, &coordinator_remote);
@@ -323,7 +323,7 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   status = zx::channel::create(0, &controller_local, &controller_remote);
   ASSERT_OK(status);
 
-  fbl::RefPtr<devmgr::Device> device;
+  fbl::RefPtr<Device> device;
   status = coordinator_.AddDevice(
       parent_device->device, std::move(controller_local), std::move(coordinator_local),
       nullptr /* props_data */, 0 /* props_count */, "child", 0 /* protocol_id */,
@@ -409,11 +409,11 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringUnbind) {
   coordinator_loop()->RunUntilIdle();
 
   // Check that both devices are dead and have no pending unbind or remove tasks.
-  ASSERT_EQ(devmgr::Device::State::kDead, parent_device->device->state());
+  ASSERT_EQ(Device::State::kDead, parent_device->device->state());
   ASSERT_NULL(parent_device->device->GetActiveUnbind());
   ASSERT_NULL(parent_device->device->GetActiveRemove());
 
-  ASSERT_EQ(devmgr::Device::State::kDead, child_device->device->state());
+  ASSERT_EQ(Device::State::kDead, child_device->device->state());
   ASSERT_NULL(child_device->device->GetActiveUnbind());
   ASSERT_NULL(parent_device->device->GetActiveRemove());
 }
@@ -446,11 +446,11 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringRemove) {
   coordinator_loop()->RunUntilIdle();
 
   // Check that both devices are dead and have no pending unbind or remove tasks.
-  ASSERT_EQ(devmgr::Device::State::kDead, parent_device->device->state());
+  ASSERT_EQ(Device::State::kDead, parent_device->device->state());
   ASSERT_NULL(parent_device->device->GetActiveUnbind());
   ASSERT_NULL(parent_device->device->GetActiveRemove());
 
-  ASSERT_EQ(devmgr::Device::State::kDead, child_device->device->state());
+  ASSERT_EQ(Device::State::kDead, child_device->device->state());
   ASSERT_NULL(child_device->device->GetActiveUnbind());
   ASSERT_NULL(child_device->device->GetActiveRemove());
 }

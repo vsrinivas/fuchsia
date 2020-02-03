@@ -7,8 +7,6 @@
 #include "coordinator.h"
 #include "log.h"
 
-namespace devmgr {
-
 UnbindTask::UnbindTask(fbl::RefPtr<Device> device, UnbindTaskOpts opts, Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion), opts.post_on_create),
       device_(std::move(device)),
@@ -224,5 +222,3 @@ void RemoveTask::Run() {
     device_->DropRemoveTask();
   }
 }
-
-}  // namespace devmgr

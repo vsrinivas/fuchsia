@@ -6,8 +6,6 @@
 
 #include <stdio.h>
 
-namespace devmgr {
-
 void DriverTestReporter::LogMessage(const char* msg, size_t size) {
   fprintf(stdout, "[----------][%s] %.*s\n", driver_name_.data(), static_cast<int>(size), msg);
 }
@@ -51,5 +49,3 @@ void DriverTestReporter::TestFinished() {
     fprintf(stdout, "[  FAILED  ] %s: %lu tests failed.\n", driver_name_.data(), total_failed_);
   }
 }
-
-}  // namespace devmgr

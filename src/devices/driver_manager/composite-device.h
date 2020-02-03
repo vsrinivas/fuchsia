@@ -18,8 +18,6 @@
 
 #include "metadata.h"
 
-namespace devmgr {
-
 // Forward declaration
 class CompositeDevice;
 class Coordinator;
@@ -181,7 +179,5 @@ class CompositeDevice {
   // device.
   fbl::RefPtr<Device> device_;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_COMPOSITE_DEVICE_H_

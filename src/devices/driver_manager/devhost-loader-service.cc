@@ -43,7 +43,7 @@ zx_status_t LoadObject(void* ctx, const char* name, zx_handle_t* vmo) {
   if (!InWhitelist(name)) {
     return ZX_ERR_ACCESS_DENIED;
   }
-  auto self = static_cast<devmgr::DevhostLoaderService*>(ctx);
+  auto self = static_cast<DevhostLoaderService*>(ctx);
   fbl::String path = fbl::StringPrintf("/boot/lib/%s", name);
   int raw_fd;
   zx_status_t status =
@@ -85,8 +85,6 @@ constexpr loader_service_ops_t ops_{
 };
 
 }  // namespace
-
-namespace devmgr {
 
 zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
                                          SystemInstance* system_instance,
@@ -139,5 +137,3 @@ DevhostLoaderService::~DevhostLoaderService() {
 zx_status_t DevhostLoaderService::Connect(zx::channel* out) {
   return loader_service_connect(svc_, out->reset_and_get_address());
 }
-
-}  // namespace devmgr

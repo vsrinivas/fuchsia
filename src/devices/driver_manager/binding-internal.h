@@ -17,8 +17,6 @@
 #include "coordinator.h"
 #include "device.h"
 
-namespace devmgr {
-
 namespace internal {
 
 struct BindProgramContext {
@@ -269,7 +267,5 @@ Match MatchParts(const fbl::RefPtr<T>& device, const ComponentPartDescriptor* pa
 }
 
 }  // namespace internal
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_BINDING_INTERNAL_H_

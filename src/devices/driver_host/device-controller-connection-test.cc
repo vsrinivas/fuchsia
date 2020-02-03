@@ -31,14 +31,14 @@ TEST(DeviceControllerConnectionTestCase, Creation) {
   zx::channel device_local2, device_remote2;
   ASSERT_OK(zx::channel::create(0, &device_local2, &device_remote2));
 
-  std::unique_ptr<devmgr::DeviceControllerConnection> conn;
+  std::unique_ptr<DeviceControllerConnection> conn;
 
   ASSERT_NULL(dev->conn.load());
-  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote),
-                                                       std::move(device_remote2), &conn));
+  ASSERT_OK(DeviceControllerConnection::Create(dev, std::move(device_remote),
+                                               std::move(device_remote2), &conn));
   ASSERT_NOT_NULL(dev->conn.load());
 
-  ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
+  ASSERT_OK(DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
   ASSERT_OK(loop.RunUntilIdle());
 }
 
@@ -54,13 +54,12 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   zx::channel device_local2, device_remote2;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
 
-  class DeviceControllerConnectionTest : public devmgr::DeviceControllerConnection {
+  class DeviceControllerConnectionTest : public DeviceControllerConnection {
    public:
     DeviceControllerConnectionTest(fbl::RefPtr<zx_device> dev, zx::channel rpc,
                                    zx::channel coordinator_rpc, async_dispatcher_t* dispatcher,
                                    zx::channel local)
-        : devmgr::DeviceControllerConnection(std::move(dev), std::move(rpc),
-                                             std::move(coordinator_rpc)) {
+        : DeviceControllerConnection(std::move(dev), std::move(rpc), std::move(coordinator_rpc)) {
       dispatcher_ = dispatcher;
       local_ = std::move(local);
     }
@@ -71,7 +70,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
       // processing BindDriver.  Close the other half of the channel, so the reply below will fail
       // from ZX_ERR_PEER_CLOSED.
       auto conn = this->dev()->conn.exchange(nullptr);
-      devmgr::ConnectionDestroyer::Get()->QueueDeviceControllerConnection(dispatcher_, conn);
+      ConnectionDestroyer::Get()->QueueDeviceControllerConnection(dispatcher_, conn);
       local_.reset();
       completer.Reply(ZX_OK, zx::channel());
     }
@@ -140,17 +139,17 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
   zx::channel device_local2, device_remote2;
   ASSERT_OK(zx::channel::create(0, &device_local2, &device_remote2));
 
-  std::unique_ptr<devmgr::DeviceControllerConnection> conn;
-  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote),
-                                                       std::move(device_remote2), &conn));
+  std::unique_ptr<DeviceControllerConnection> conn;
+  ASSERT_OK(DeviceControllerConnection::Create(dev, std::move(device_remote),
+                                               std::move(device_remote2), &conn));
 
-  ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
+  ASSERT_OK(DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
   ASSERT_OK(loop.RunUntilIdle());
 
   // Perform the device shutdown protocol, since otherwise the devhost code
   // will assert, since it is unable to handle unexpected connection closures.
   auto dev_conn = dev->conn.exchange(nullptr);
-  devmgr::ConnectionDestroyer::Get()->QueueDeviceControllerConnection(loop.dispatcher(), dev_conn);
+  ConnectionDestroyer::Get()->QueueDeviceControllerConnection(loop.dispatcher(), dev_conn);
   device_local.reset();
 
   ASSERT_OK(loop.RunUntilIdle());
@@ -168,12 +167,11 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   zx::channel device_local2, device_remote2;
   ASSERT_OK(zx::channel::create(0, &device_local2, &device_remote2));
 
-  class DeviceControllerConnectionTest : public devmgr::DeviceControllerConnection {
+  class DeviceControllerConnectionTest : public DeviceControllerConnection {
    public:
     DeviceControllerConnectionTest(fbl::RefPtr<zx_device> dev, zx::channel rpc,
                                    zx::channel coordinator_rpc)
-        : devmgr::DeviceControllerConnection(std::move(dev), std::move(rpc),
-                                             std::move(coordinator_rpc)) {}
+        : DeviceControllerConnection(std::move(dev), std::move(rpc), std::move(coordinator_rpc)) {}
 
     void Unbind(UnbindCompleter::Sync completer) {
       fbl::RefPtr<zx_device> dev = this->dev();

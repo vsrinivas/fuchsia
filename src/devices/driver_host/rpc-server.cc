@@ -40,8 +40,6 @@
 #include "devhost.h"
 #include "zx-device.h"
 
-namespace devmgr {
-
 namespace {
 
 // A one-way message which may be emitted by the server without an
@@ -552,7 +550,7 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
     return status;
   }
   auto* conn = static_cast<DevfsConnection*>(cookie);
-  devmgr::Transaction transaction(txn);
+  Transaction transaction(txn);
   bool dispatched = llcpp::fuchsia::device::Controller::TryDispatch(conn, msg, &transaction);
   status = transaction.Status();
   if (dispatched) {
@@ -564,5 +562,3 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
   auto ddk_connection = Connection::FromTxn(txn)->ToDdkConnection();
   return conn->dev->MessageOp(msg, ddk_connection.Txn());
 }
-
-}  // namespace devmgr

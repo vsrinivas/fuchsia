@@ -12,8 +12,6 @@
 #include "log.h"
 #include "zx-device.h"
 
-namespace devmgr {
-
 ProxyIostate::~ProxyIostate() {
   fbl::AutoLock guard(&dev->proxy_ios_lock);
   ZX_ASSERT(dev->proxy_ios != this);
@@ -101,5 +99,3 @@ void ProxyIostate::CancelLocked(async_dispatcher_t* dispatcher) {
   // queue was full
   ConnectionDestroyer::Get()->QueueProxyConnection(dispatcher, this);
 }
-
-}  // namespace devmgr

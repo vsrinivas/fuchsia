@@ -8,8 +8,6 @@
 #include "device.h"
 #include "task.h"
 
-namespace devmgr {
-
 // This is not nested so we can forward declare it in device.h.
 struct UnbindTaskOpts {
   // Whether to call the unbind hook.
@@ -71,7 +69,5 @@ class RemoveTask final : public Task {
   // The device being removed.
   fbl::RefPtr<Device> device_;
 };
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_UNBIND_TASK_H_

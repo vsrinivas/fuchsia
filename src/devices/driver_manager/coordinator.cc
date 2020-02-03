@@ -121,8 +121,6 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 
 }  // namespace
 
-namespace devmgr {
-
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 const char* kComponentDriverPath = "/boot/driver/component.so";
@@ -489,14 +487,14 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     // under the alternate name is currently broken.  So things only work
     // if the build chose an asan-ready variant for the "main" driver_host.
     // When this is restored in the build, this should select the right name.
-    //program = kDriverHostAsanPath;
+    // program = kDriverHostAsanPath;
     env.push_back(kAsanEnvironment);
   }
   boot_args().Collect("driver.", &env);
   env.push_back(nullptr);
-  status = dc_launch_devhost(
-      dh.get(), loader_service_connector_, program, name, env.data(),
-      hrpc.release(), root_resource(), zx::unowned_job(config_.devhost_job), config_.fs_provider);
+  status = dc_launch_devhost(dh.get(), loader_service_connector_, program, name, env.data(),
+                             hrpc.release(), root_resource(), zx::unowned_job(config_.devhost_job),
+                             config_.fs_provider);
   if (status != ZX_OK) {
     zx_handle_close(dh->hrpc());
     return status;
@@ -1341,7 +1339,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
       // do not continue to suspend as this indicates a driver suspend
       // problem and should show as a bug
       log(ERROR, "driver_manager: failed to suspend: %s\n", zx_status_get_string(status));
-      ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
+      ctx.set_flags(SuspendContext::Flags::kRunning);
       if (callback_info->callback) {
         callback_info->callback(status);
         callback_info->callback = nullptr;
@@ -1354,7 +1352,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
       // suspend go to the kernel fallback
       ::suspend_fallback(root_resource(), ctx.sflags());
       // if we get here the system did not suspend successfully
-      ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
+      ctx.set_flags(SuspendContext::Flags::kRunning);
     }
 
     if (callback_info->callback) {
@@ -1406,7 +1404,7 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
       auto& ctx = resume_context();
       if (status != ZX_OK) {
         log(ERROR, "driver_manager: failed to resume: %s\n", zx_status_get_string(status));
-        ctx.set_flags(devmgr::ResumeContext::Flags::kSuspended);
+        ctx.set_flags(ResumeContext::Flags::kSuspended);
         auto task = ctx.take_pending_task(dev);
         callback(status);
         return;
@@ -1862,11 +1860,9 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   };
   return svc_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
                            fbl::MakeRefCounted<fs::Service>(debug));
-}  // namespace devmgr
+}
 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal) {
   this->ShutdownFilesystems();
 }
-
-}  // namespace devmgr

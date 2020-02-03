@@ -24,14 +24,14 @@ namespace {
 
 struct AddContext {
   const char* libname;
-  devmgr::DriverLoadCallback func;
+  DriverLoadCallback func;
 };
 
 bool is_driver_disabled(const char* name) {
   // driver.<driver_name>.disable
   char opt[16 + DRIVER_NAME_LEN_MAX];
   snprintf(opt, 16 + DRIVER_NAME_LEN_MAX, "driver.%s.disable", name);
-  return devmgr::getenv_bool(opt, false);
+  return getenv_bool(opt, false);
 }
 
 void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, void* cookie) {
@@ -46,7 +46,7 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, 
     return;
   }
 
-  auto drv = std::make_unique<devmgr::Driver>();
+  auto drv = std::make_unique<Driver>();
   if (drv == nullptr) {
     return;
   }
@@ -80,8 +80,6 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, 
 }
 
 }  // namespace
-
-namespace devmgr {
 
 void find_loadable_drivers(const char* path, DriverLoadCallback func) {
   DIR* dir = opendir(path);
@@ -143,5 +141,3 @@ void load_driver(const char* path, DriverLoadCallback func) {
     }
   }
 }
-
-}  // namespace devmgr

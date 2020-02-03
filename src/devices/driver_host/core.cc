@@ -32,8 +32,6 @@
 #include "devhost.h"
 #include "log.h"
 
-namespace devmgr {
-
 #define TRACE 0
 
 #if TRACE
@@ -531,7 +529,7 @@ void devhost_device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status
                                   uint8_t out_state) REQ_DM_LOCK {
   // There are 3 references when this function gets called in repsonse to
   // selective suspend on a device. 1. When we create a connection in ReadMessage
-  // 2. When we wrap the txn in devmgr::Transaction.
+  // 2. When we wrap the txn in Transaction.
   // 3. When we make the suspend txn asynchronous using ToAsync()
   if (dev->outstanding_transactions > 3) {
     ZX_PANIC("device: %p(%s): cannot reply to suspend, currently has %d outstanding transactions\n",
@@ -878,5 +876,3 @@ zx_status_t devhost_device_configure_auto_suspend(const fbl::RefPtr<zx_device>& 
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
-
-}  // namespace devmgr

@@ -8,8 +8,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
-namespace devmgr {
-
 class CompositeDevice;
 class Devhost;
 class Device;
@@ -34,7 +32,5 @@ zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite
                                             const uint64_t* component_local_ids,
                                             zx::channel coordinator_rpc,
                                             zx::channel device_controller_rpc);
-
-}  // namespace devmgr
 
 #endif  // SRC_DEVICES_DRIVER_MANAGER_FIDL_H_
