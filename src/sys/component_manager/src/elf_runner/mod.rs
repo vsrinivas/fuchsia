@@ -204,6 +204,13 @@ impl ElfRunner {
 
         let child_job = job_default().create_child_job()?;
 
+        // Set the minimum timer slack amount and default mode. The amount should be large enough to
+        // allow for some coalescing of timers, but small enough to ensure applications don't miss
+        // deadlines.
+        //
+        // Why Late and not Center or Early? Timers firing a little later than requested is not
+        // uncommon in non-realtime systems. Programs are generally tolerant of some
+        // delays. However, timers firing before their dealine can be unexpected and lead to bugs.
         child_job
             .set_policy(zx::JobPolicy::TimerSlack(
                 zx::Duration::from_micros(500),
