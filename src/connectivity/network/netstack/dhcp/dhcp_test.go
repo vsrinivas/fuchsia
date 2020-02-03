@@ -14,6 +14,7 @@ import (
 
 	"netstack/packetbuffer"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
@@ -358,8 +359,8 @@ func TestDHCP(t *testing.T) {
 			t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 		}
 
-		if got, want := cfg, serverCfg; !equalConfig(got, want) {
-			t.Errorf("client config:\n\t%#+v\nwant:\n\t%#+v", got, want)
+		if diff := cmp.Diff(cfg, serverCfg); diff != "" {
+			t.Errorf("(-want +got)\n%s", diff)
 		}
 		c0.verifyClientStats(t, 3)
 	}
@@ -464,21 +465,6 @@ func TestDelayRetransmission(t *testing.T) {
 			}
 		})
 	}
-}
-
-func equalConfig(c0, c1 Config) bool {
-	if c0.ServerAddress != c1.ServerAddress || c0.SubnetMask != c1.SubnetMask || c0.Gateway != c1.Gateway || c0.LeaseLength != c1.LeaseLength {
-		return false
-	}
-	if len(c0.DNS) != len(c1.DNS) {
-		return false
-	}
-	for i := 0; i < len(c0.DNS); i++ {
-		if c0.DNS[i] != c1.DNS[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func TestStateTransition(t *testing.T) {
