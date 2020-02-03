@@ -47,7 +47,7 @@ const zx::duration kMetricsPollFrequency = zx::min(5);
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                  const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher,
-                 bool send_metrics)
+                 bool send_metrics, bool watch_memory_pressure)
     : high_water_(
           "/cache", kHighWaterPollFrequency, kHighWaterThreshold, dispatcher,
           [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); }),
@@ -148,6 +148,8 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
         kMetricsPollFrequency, dispatcher, logger_.get(),
         [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
   }
+
+  pressure_ = std::make_unique<Pressure>(watch_memory_pressure);
 
   SampleAndPost();
 }

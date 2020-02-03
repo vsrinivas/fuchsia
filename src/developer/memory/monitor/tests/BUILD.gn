@@ -21,6 +21,7 @@ executable("memory_monitor_unittests") {
     "high_water_unittest.cc",
     "metrics_unittest.cc",
     "monitor_fidl_unittest.cc",
+    "pressure_unittest.cc",
   ]
 
   deps = [
@@ -31,6 +32,7 @@ executable("memory_monitor_unittests") {
     "//src/developer/memory/monitor:lib",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/memfs",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
   ]
 }
 

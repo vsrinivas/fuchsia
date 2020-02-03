@@ -19,6 +19,7 @@
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/metrics.h"
+#include "src/developer/memory/monitor/pressure.h"
 #include "src/lib/fxl/command_line.h"
 
 namespace monitor {
@@ -30,7 +31,7 @@ class MonitorUnitTest;
 class Monitor : public fuchsia::memory::Monitor {
  public:
   Monitor(std::unique_ptr<sys::ComponentContext> context, const fxl::CommandLine& command_line,
-          async_dispatcher_t* dispatcher, bool send_metrics);
+          async_dispatcher_t* dispatcher, bool send_metrics, bool watch_memory_pressure);
   ~Monitor();
   void Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) override;
   static const char kTraceName[];
@@ -65,6 +66,7 @@ class Monitor : public fuchsia::memory::Monitor {
   std::vector<fuchsia::memory::WatcherPtr> watchers_;
   trace::TraceObserver trace_observer_;
   std::unique_ptr<Metrics> metrics_;
+  std::unique_ptr<Pressure> pressure_;
 
   friend class test::MonitorUnitTest;
   FXL_DISALLOW_COPY_AND_ASSIGN(Monitor);

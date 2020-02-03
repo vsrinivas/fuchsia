@@ -20,7 +20,7 @@ class MonitorFidlUnitTest : public gtest::TestLoopFixture {
  protected:
   MonitorFidlUnitTest()
       : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(), fxl::CommandLine{},
-                                           dispatcher(), false)) {}
+                                           dispatcher(), false, false)) {}
 
   void TearDown() override {
     monitor_.reset();

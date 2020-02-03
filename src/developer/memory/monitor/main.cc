@@ -40,7 +40,7 @@ int main(int argc, const char** argv) {
   FXL_CHECK(set_status == ZX_OK);
 
   monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher(),
-                       true /* send_metrics */);
+                       true /* send_metrics */, true /* watch_memory_pressure */);
   loop.Run();
 
   FXL_VLOG(2) << argv[0] << ": exiting";

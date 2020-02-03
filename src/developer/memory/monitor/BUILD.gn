@@ -14,6 +14,8 @@ source_set("lib") {
     "metrics.h",
     "monitor.cc",
     "monitor.h",
+    "pressure.cc",
+    "pressure.h",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.memory",

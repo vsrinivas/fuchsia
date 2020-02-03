@@ -11,7 +11,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   monitor::Monitor app(sys::ComponentContext::Create(), fxl::CommandLine{}, loop.dispatcher(),
-                       false);
+                       false, false);
   loop.Run();
   return 0;
 }
