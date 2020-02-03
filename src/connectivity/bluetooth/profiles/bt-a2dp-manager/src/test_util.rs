@@ -63,6 +63,11 @@ impl ChildComponent {
         ChildComponent { termination: Event::new(), launch_info, controller: Some(controller) }
     }
 
+    /// Send signal that child component should be terminated.
+    pub fn terminate(&self) {
+        self.termination.signal();
+    }
+
     /// Returns a bool representing whether the component has been terminated.
     pub fn terminated(&self) -> bool {
         self.termination.signaled()

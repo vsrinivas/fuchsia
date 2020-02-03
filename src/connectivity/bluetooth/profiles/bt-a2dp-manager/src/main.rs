@@ -5,14 +5,21 @@
 #![recursion_limit = "256"]
 
 use {
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context, Error},
     fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleState},
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async::{self as fasync, Time, TimeoutExt},
     fuchsia_component::{client, fuchsia_single_component_package_url, server::ServiceFs},
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
-    futures::{channel::mpsc, select, sink::SinkExt, stream::StreamExt, FutureExt},
+    futures::{
+        channel::mpsc,
+        future::BoxFuture,
+        select,
+        sink::SinkExt,
+        stream::{FuturesUnordered, StreamExt, TryStreamExt},
+        FutureExt,
+    },
 };
 
 #[cfg(test)]
@@ -45,12 +52,18 @@ struct Handler {
     launcher: LauncherProxy,
     active_role: Option<Role>,
     children: Vec<client::App>,
+    child_events: FuturesUnordered<BoxFuture<'static, Result<client::ExitStatus, Error>>>,
 }
 
 impl Handler {
     /// Create a new `Handler`.
     pub fn new(launcher: LauncherProxy) -> Self {
-        Self { launcher, active_role: None, children: vec![] }
+        Self {
+            launcher,
+            active_role: None,
+            children: vec![],
+            child_events: FuturesUnordered::new(),
+        }
     }
 
     /// Handle a single request to set the a2dp role to `role`.
@@ -66,20 +79,27 @@ impl Handler {
         Ok(())
     }
 
-    /// Terminate all active profile component.
+    /// Terminate all active profile components.
     /// Returns an error if a profile is running but cannot be terminated.
     async fn terminate_active_profiles(&mut self) -> Result<(), Error> {
-        // send kill signal to all children
-        for mut child in self.children.drain(..) {
-            child.kill()?;
-            child
-                .wait()
-                .on_timeout(Time::after(COMPONENT_TERMINATION_TIMEOUT), || {
-                    Err(anyhow!("timeout waiting for component termination"))
-                })
-                .await?;
+        // Move collections of children and child_events to stack locals
+        // to ensure they are dropped in the event of an early return.
+        let mut children = std::mem::replace(&mut self.children, vec![]);
+        let events = std::mem::replace(&mut self.child_events, FuturesUnordered::new());
+
+        // Send kill signal to all children.
+        let results: Vec<_> = children.iter_mut().map(|c| c.kill()).collect();
+        for result in results {
+            result?;
         }
-        Ok(())
+
+        events
+            .map(|r: Result<client::ExitStatus, Error>| r.and_then(|e| e.ok().map_err(Into::into)))
+            .try_collect::<()>()
+            .on_timeout(Time::after(COMPONENT_TERMINATION_TIMEOUT), || {
+                Err(anyhow!("timeout waiting for component termination"))
+            })
+            .await
     }
 
     /// Launch the component associated with the specified `role` and return its `App`
@@ -98,8 +118,23 @@ impl Handler {
                 LifecycleState::Ready => break,
             }
         }
+        let event_stream = child.controller().take_event_stream();
+        self.child_events.push(client::ExitStatus::from_event_stream(event_stream).boxed());
         self.children.push(child);
         Ok(())
+    }
+
+    /// Watch child components that have been launched for the active profile. If early termination
+    /// or an error in the component's controller protocol are encountered, this function returns
+    /// that error.
+    async fn supervise(&mut self) -> Error {
+        loop {
+            let result = match self.child_events.select_next_some().await {
+                Ok(status) => anyhow!("Managed profile died unexpectedly: {}", status),
+                e @ Err(_) => e.context("Watching of managed profile failed").unwrap_err(),
+            };
+            return result;
+        }
     }
 }
 
@@ -108,13 +143,26 @@ impl Handler {
 /// previous request is complete.
 async fn handle_requests(mut requests: mpsc::Receiver<AudioModeRequest>, launcher: LauncherProxy) {
     let mut handler = Handler::new(launcher);
-    while let Some(AudioModeRequest::SetRole { role, responder }) = requests.next().await {
-        let mut response = handler.handle(role).await.map_err(|e| {
-            syslog::fx_log_err!("Failed to set role {:?}: {}", role, e);
-            zx::Status::INTERNAL.into_raw()
-        });
-        if let Err(e) = responder.send(&mut response) {
-            syslog::fx_vlog!(1, "Failed to respond to client: {}", e);
+
+    loop {
+        select! {
+            request = requests.next().fuse() => {
+                if let Some(AudioModeRequest::SetRole { role, responder }) = request {
+                    let mut response = handler.handle(role).await.map_err(|e| {
+                        syslog::fx_log_err!("Failed to set role {:?}: {}", role, e);
+                        zx::Status::INTERNAL.into_raw()
+                    });
+                    if let Err(e) = responder.send(&mut response) {
+                        syslog::fx_vlog!(1, "Failed to respond to client: {}", e);
+                    }
+                } else {
+                    break;
+                }
+            }
+            exit_status = handler.supervise().fuse() => {
+                syslog::fx_log_err!("Active role {:?} exited unexpectedly: {}", handler.active_role, exit_status);
+                break;
+            }
         }
     }
 }
@@ -319,5 +367,40 @@ mod tests {
             pin_mut!(next_n);
             assert!(ex.run_until_stalled(&mut next_n).is_pending());
         }
+    }
+
+    #[test]
+    fn handler_completes_on_unexpected_child_termination() {
+        let mut ex = fasync::Executor::new().unwrap();
+        let (mut sender, receiver) = mpsc::channel::<AudioModeRequest>(0);
+        let (mut launcher, launcher_proxy) = mock_launcher();
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
+        let handler = handle_requests(receiver, launcher_proxy);
+        pin_mut!(handler);
+
+        let role = Role::Source;
+        let expected_urls = into_urls(role);
+        // Construct a request that can be sent into the `handle_requests` function.
+        let mut response = proxy.set_role(role);
+        let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+        assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
+
+        let _ = ex.run_until_stalled(&mut handler);
+
+        let next_n = launcher.next_n(expected_urls.len());
+        pin_mut!(next_n);
+        let source_components = unwrap_ready!(ex.run_until_stalled(&mut next_n));
+        assert_expected_components!(expected_urls, &source_components);
+
+        // Drive the FIDL request/response to completion.
+        assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(Ok(()))));
+
+        // Handler is in a steady state.
+        assert!(ex.run_until_stalled(&mut handler).is_pending());
+
+        // Terminating a child component causes handler to complete
+        source_components[0].terminate();
+        assert!(ex.run_until_stalled(&mut handler).is_ready());
     }
 }
