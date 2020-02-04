@@ -18,12 +18,7 @@ class EffectsProcessorTest : public testing::EffectsLoaderTestBase {};
 //
 // Verify the creation, uniqueness, quantity and deletion of effect instances.
 TEST_F(EffectsProcessorTest, CreateDelete) {
-  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                               FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                               TEST_EFFECTS_ACTION_ASSIGN,
-                                               1.0}));
+  test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
 
   Effect effect3 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
   Effect effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
@@ -58,21 +53,15 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
     EXPECT_EQ(effects_handle2, processor.GetEffectAt(2).get());
     EXPECT_EQ(effects_handle4, processor.GetEffectAt(3).get());
 
-    EXPECT_EQ(4u, test_effects()->num_instances());
+    EXPECT_EQ(4u, test_effects().InstanceCount());
   }
 
   // All instances should be deleted when the processor is destructed.
-  EXPECT_EQ(0u, test_effects()->num_instances());
-  test_effects()->clear_effects();
+  EXPECT_EQ(0u, test_effects().InstanceCount());
 }
 
 TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
-  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                               FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                               TEST_EFFECTS_ACTION_ASSIGN,
-                                               1.0}));
+  test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
   Effect single_channel_effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
   Effect single_channel_effect2 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
   Effect two_channel_effect = effects_loader()->CreateEffect(0, 1, 2, 2, {});
@@ -98,34 +87,10 @@ TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
 
 // Verify (at a VERY Basic level) the methods that handle data flow.
 TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"increment_by_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                        TEST_EFFECTS_ACTION_ADD,
-                                        1.0}));
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"increment_by_2.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                        TEST_EFFECTS_ACTION_ADD,
-                                        2.0}));
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"assign_to_12.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                        TEST_EFFECTS_ACTION_ASSIGN,
-                                        12.0}));
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"increment_by_4.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                        TEST_EFFECTS_ACTION_ADD,
-                                        4.0}));
+  test_effects().AddEffect("increment_by_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  test_effects().AddEffect("increment_by_2.0").WithAction(TEST_EFFECTS_ACTION_ADD, 2.0);
+  test_effects().AddEffect("assign_to_12.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 12.0);
+  test_effects().AddEffect("increment_by_4.0").WithAction(TEST_EFFECTS_ACTION_ADD, 4.0);
 
   float buff[4] = {0, 1.0, 2.0, 3.0};
 
@@ -149,7 +114,7 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_OK);
   EXPECT_EQ(processor.AddEffect(std::move(effect3)), ZX_OK);
   EXPECT_EQ(processor.AddEffect(std::move(effect4)), ZX_OK);
-  EXPECT_EQ(4u, test_effects()->num_instances());
+  EXPECT_EQ(4u, test_effects().InstanceCount());
 
   // The first 2 processors will mutate data, but this will be clobbered by the 3rd processor which
   // just sets every sample to 12.0. The final processor will increment by 4.0 resulting in the
@@ -165,10 +130,10 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   test_effects_inspect_state inspect2 = {};
   test_effects_inspect_state inspect3 = {};
   test_effects_inspect_state inspect4 = {};
-  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(processor.GetEffectAt(0).get(), &inspect1));
-  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(processor.GetEffectAt(1).get(), &inspect2));
-  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(processor.GetEffectAt(2).get(), &inspect3));
-  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(processor.GetEffectAt(3).get(), &inspect4));
+  EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(0).get(), &inspect1));
+  EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(1).get(), &inspect2));
+  EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(2).get(), &inspect3));
+  EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(3).get(), &inspect4));
   EXPECT_EQ(0u, inspect1.flush_count);
   EXPECT_EQ(0u, inspect2.flush_count);
   EXPECT_EQ(0u, inspect3.flush_count);
@@ -176,10 +141,10 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
 
   // Flush, just sanity test the test_effects library has observed the flush call on each effect.
   EXPECT_EQ(processor.Flush(), ZX_OK);
-  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(processor.GetEffectAt(0).get(), &inspect1));
-  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(processor.GetEffectAt(1).get(), &inspect2));
-  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(processor.GetEffectAt(2).get(), &inspect3));
-  EXPECT_EQ(ZX_OK, test_effects()->inspect_instance(processor.GetEffectAt(3).get(), &inspect4));
+  EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(0).get(), &inspect1));
+  EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(1).get(), &inspect2));
+  EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(2).get(), &inspect3));
+  EXPECT_EQ(ZX_OK, test_effects().InspectInstance(processor.GetEffectAt(3).get(), &inspect4));
   EXPECT_EQ(1u, inspect1.flush_count);
   EXPECT_EQ(1u, inspect2.flush_count);
   EXPECT_EQ(1u, inspect3.flush_count);
@@ -202,31 +167,10 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
 }
 
 TEST_F(EffectsProcessorTest, ReportBlockSize) {
-  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_3", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                               3,
-                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                               TEST_EFFECTS_ACTION_ADD,
-                                               1.0}));
-  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_5", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                               5,
-                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                               TEST_EFFECTS_ACTION_ADD,
-                                               2.0}));
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"block_size_any", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                        TEST_EFFECTS_ACTION_ASSIGN,
-                                        12.0}));
-  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_1", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                               FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                               FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                               TEST_EFFECTS_ACTION_ADD,
-                                               4.0}));
+  test_effects().AddEffect("block_size_3").WithBlockSize(3);
+  test_effects().AddEffect("block_size_5").WithBlockSize(5);
+  test_effects().AddEffect("block_size_any").WithBlockSize(FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY);
+  test_effects().AddEffect("block_size_1").WithBlockSize(1);
 
   // Needed to use |CreateEffectByName| since the effect names are cached at loader creation time.
   RecreateLoader();
@@ -260,34 +204,10 @@ TEST_F(EffectsProcessorTest, ReportBlockSize) {
 }
 
 TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"max_buffer_1024", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        1024,
-                                        TEST_EFFECTS_ACTION_ADD,
-                                        1.0}));
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"max_buffer_512", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        512,
-                                        TEST_EFFECTS_ACTION_ADD,
-                                        1.0}));
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"max_buffer_256", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        256,
-                                        TEST_EFFECTS_ACTION_ADD,
-                                        1.0}));
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"max_buffer_128", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                        128,
-                                        TEST_EFFECTS_ACTION_ADD,
-                                        1.0}));
+  test_effects().AddEffect("max_buffer_1024").WithMaxFramesPerBuffer(1024);
+  test_effects().AddEffect("max_buffer_512").WithMaxFramesPerBuffer(512);
+  test_effects().AddEffect("max_buffer_256").WithMaxFramesPerBuffer(256);
+  test_effects().AddEffect("max_buffer_128").WithMaxFramesPerBuffer(128);
 
   // Needed to use |CreateEffectByName| since the effect names are cached at loader creation time.
   RecreateLoader();
@@ -333,27 +253,20 @@ TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
 }
 
 TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
-  ASSERT_EQ(ZX_OK, test_effects()->add_effect(
-                       {{"max_buffer_1024_any_align", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                        1024,
-                        TEST_EFFECTS_ACTION_ADD,
-                        1.0}));
-  ASSERT_EQ(ZX_OK,
-            test_effects()->add_effect({{"any_buffer_300_align", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                        300,
-                                        FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                        TEST_EFFECTS_ACTION_ADD,
-                                        1.0}));
-  ASSERT_EQ(ZX_OK, test_effects()->add_effect(
-                       {{"max_buffer_800_any_align", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                        800,
-                        TEST_EFFECTS_ACTION_ADD,
-                        1.0}));
+  test_effects()
+      .AddEffect("max_buffer_1024_any_align")
+      .WithMaxFramesPerBuffer(1024)
+      .WithBlockSize(FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY);
+
+  test_effects()
+      .AddEffect("any_buffer_300_align")
+      .WithMaxFramesPerBuffer(FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY)
+      .WithBlockSize(300);
+
+  test_effects()
+      .AddEffect("max_buffer_800_any_align")
+      .WithMaxFramesPerBuffer(800)
+      .WithBlockSize(FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY);
 
   // Needed to use |CreateEffectByName| since the effect names are cached at loader creation time.
   RecreateLoader();

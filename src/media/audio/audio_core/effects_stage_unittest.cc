@@ -27,13 +27,6 @@ const Format kDefaultFormat = Format(fuchsia::media::AudioStreamType{
 
 class EffectsStageTest : public testing::ThreadingModelFixture {
  protected:
-  void SetUp() override {
-    ThreadingModelFixture::SetUp();
-    test_effects_ = testing::OpenTestEffectsExt();
-    ASSERT_TRUE(test_effects_);
-    test_effects_->clear_effects();
-  }
-
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
   //
@@ -44,7 +37,7 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
-  std::shared_ptr<test_effects_module_ext> test_effects_;
+  testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
 };
 
 TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
@@ -55,12 +48,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
 
   // Create an effect we can load.
-  ASSERT_EQ(ZX_OK, test_effects_->add_effect({{"add_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                               FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                              FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                              FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                              TEST_EFFECTS_ACTION_ADD,
-                                              1.0}));
+  test_effects_.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Create the effects stage.
   std::vector<PipelineConfig::Effect> effects;
@@ -92,12 +80,9 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
 
   // Create an effect we can load.
   const uint32_t kBlockSize = 128;
-  ASSERT_EQ(ZX_OK, test_effects_->add_effect({{"add_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                               FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                              kBlockSize,
-                                              FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                              TEST_EFFECTS_ACTION_ADD,
-                                              1.0}));
+  test_effects_.AddEffect("add_1.0")
+      .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0)
+      .WithBlockSize(kBlockSize);
 
   // Create the effects stage.
   std::vector<PipelineConfig::Effect> effects;
@@ -138,12 +123,9 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
 
   const uint32_t kBlockSize = 128;
   const uint32_t kMaxBufferSize = 300;
-  ASSERT_EQ(ZX_OK, test_effects_->add_effect({{"test_effect", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                               FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                              kBlockSize,
-                                              kMaxBufferSize,
-                                              TEST_EFFECTS_ACTION_ADD,
-                                              1.0}));
+  test_effects_.AddEffect("test_effect")
+      .WithBlockSize(kBlockSize)
+      .WithMaxFramesPerBuffer(kMaxBufferSize);
 
   // Create the effects stage.
   std::vector<PipelineConfig::Effect> effects;

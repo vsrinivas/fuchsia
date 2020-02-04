@@ -23,14 +23,14 @@ class EffectsLoaderTestBase : public ::testing::Test {
   void SetUp() override;
   void TearDown() override;
 
-  test_effects_module_ext* test_effects() { return test_effects_.get(); }
+  const TestEffectsModule& test_effects() { return test_effects_; }
   EffectsLoader* effects_loader() { return effects_loader_.get(); }
 
   void RecreateLoader();
 
  private:
   std::unique_ptr<EffectsLoader> effects_loader_;
-  std::shared_ptr<test_effects_module_ext> test_effects_;
+  TestEffectsModule test_effects_ = TestEffectsModule::Open();
 };
 
 }  // namespace media::audio::testing
