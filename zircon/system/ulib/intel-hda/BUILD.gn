@@ -46,25 +46,3 @@ zx_library("intel-hda") {
     "$zx/system/ulib/zx",
   ]
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":intel-hda-utils-test" ]
-}
-
-zx_test("intel-hda-utils-test") {
-  testonly = true
-  sources = [
-    "utils/status_or_test.cc",
-    "utils/status_test.cc",
-    "utils/utils_test.cc",
-  ]
-  deps = [
-    ":intel-hda",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}
