@@ -68,7 +68,6 @@ enum Interrupt {
   kParserIrq,
   kDosMbox0Irq,
   kDosMbox1Irq,
-  kDosMbox2Irq,
 };
 
 enum {
