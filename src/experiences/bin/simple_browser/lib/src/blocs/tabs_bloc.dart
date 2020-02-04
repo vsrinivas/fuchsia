@@ -99,6 +99,26 @@ class TabsBloc {
         _tabs.value = UnmodifiableListView<WebPageBloc>(_tabsList);
         _currentTab.value = addTabAction.tab;
         break;
+      case TabsActionType.rearrangeTabs:
+        final RearrangeTabsAction rearrangeTabs = action;
+        final originalIndex = rearrangeTabs.originalIndex;
+        final newIndex = rearrangeTabs.newIndex;
+
+        final movingTab = _tabsList.elementAt(originalIndex);
+        // the tab moves to the left.
+        if (originalIndex > newIndex) {
+          _tabsList
+            ..removeAt(originalIndex)
+            ..insert(newIndex, movingTab);
+        }
+        // the tab moves to the right.
+        else {
+          _tabsList
+            ..insert(newIndex + 1, movingTab)
+            ..removeAt(originalIndex);
+        }
+        _tabs.value = UnmodifiableListView<WebPageBloc>(_tabsList);
+        break;
     }
   }
 }

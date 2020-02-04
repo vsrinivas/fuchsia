@@ -173,7 +173,14 @@ class _TabWidgetState extends State<_TabWidget> {
               widget.selected ? baseTheme.accentColor : baseTheme.primaryColor,
           child: DefaultTextStyle(
             style: TextStyle(
-                color: widget.selected ? baseTheme.primaryColor : null),
+              color: widget.selected
+                  ? baseTheme.primaryColor
+                  : baseTheme.accentColor,
+              // TODO(fxb/45267): Create a single theme file that can be shared
+              // by all the simple browser files. Include a text theme in it.
+              fontFamily: 'RobotoMono',
+              fontSize: 14.0,
+            ),
             child: Stack(
               children: <Widget>[
                 Center(

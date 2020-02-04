@@ -12,7 +12,7 @@ class TabsAction {
 }
 
 // Operations allowed for tab management
-enum TabsActionType { newTab, removeTab, focusTab, addTab }
+enum TabsActionType { newTab, removeTab, focusTab, addTab, rearrangeTabs }
 
 // Instructs to add a new tab to tab list.
 class NewTabAction extends TabsAction {
@@ -35,4 +35,13 @@ class FocusTabAction extends TabsAction {
 class AddTabAction extends TabsAction {
   final WebPageBloc tab;
   const AddTabAction({@required this.tab}) : super(TabsActionType.addTab);
+}
+
+class RearrangeTabsAction extends TabsAction {
+  final int originalIndex;
+  final int newIndex;
+  const RearrangeTabsAction({
+    @required this.originalIndex,
+    @required this.newIndex,
+  }) : super(TabsActionType.rearrangeTabs);
 }

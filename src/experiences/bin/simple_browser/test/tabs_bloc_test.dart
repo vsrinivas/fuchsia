@@ -312,6 +312,96 @@ void main() {
         ),
       );
     });
+
+    test('Add 5 tabs and move a tab to the left and right.', () async {
+      // Test Environment Set Up:
+      // Creates five tabs.
+      final tb = await _creatNTabs(5);
+
+      // Makes sure that the last tab is currently focused.
+      int actualFocusedTabIdx = tb.currentTabIdx;
+      int expectedFocusedTabIdx = 4;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason: _expectFocusedTabReason(
+          actualFocusedTabIdx.toString(),
+          expectedFocusedTabIdx.toString(),
+        ),
+      );
+
+      // Saves the current tabs.
+      WebPageBloc tab0BeforeMove = tb.tabs[0];
+      WebPageBloc tab1BeforeMove = tb.tabs[1];
+      WebPageBloc tab2BeforeMove = tb.tabs[2];
+      WebPageBloc tab3BeforeMove = tb.tabs[3];
+      WebPageBloc tab4BeforeMove = tb.tabs[4];
+
+      // Moves the currently focused tab (index 4) to the 3rd tab(index 2) position.
+      int indexToMove = 4;
+      int indexToBe = 2;
+      await _rearrangeTabs(tb, indexToMove, indexToBe);
+
+      // Sees if the index of the currently focused tab is now 2.
+      actualFocusedTabIdx = tb.currentTabIdx;
+      expectedFocusedTabIdx = indexToBe;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason:
+            '''Expected the currently focused tab index to be $expectedFocusedTabIdx,
+        but actually, is $actualFocusedTabIdx.''',
+      );
+
+      // Sees if all tabs have been rarranged correctly.
+      expect(tb.tabs[0], tab0BeforeMove,
+          reason: 'Expected that the 1st tab used to be the 1st.');
+      expect(tb.tabs[1], tab1BeforeMove,
+          reason: 'Expected that the 2nd tab used to be the 2nd.');
+      expect(tb.tabs[2], tab4BeforeMove,
+          reason: 'Expected that the 3rd tab used to be the 5th.');
+      expect(tb.tabs[3], tab2BeforeMove,
+          reason: 'Expected that the 4th tab used to be the 3rd.');
+
+      expect(tb.tabs[4], tab3BeforeMove,
+          reason: 'Expected that the 5th tab used to the 4th.');
+
+      // Saves the rearranged tabs.
+      tab0BeforeMove = tb.tabs[0];
+      tab1BeforeMove = tb.tabs[1];
+      tab2BeforeMove = tb.tabs[2];
+      tab3BeforeMove = tb.tabs[3];
+      tab4BeforeMove = tb.tabs[4];
+
+      // Moves the 2nd tab(index 1) to the 4th tab(index 3) position.
+      indexToMove = 1;
+      indexToBe = 3;
+      await _rearrangeTabs(tb, indexToMove, indexToBe);
+
+      // Sees if the currently focused tab has been shifted to the right and now has
+      // 3 as its index.
+      actualFocusedTabIdx = tb.currentTabIdx;
+      expectedFocusedTabIdx = 1;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason: '''Expected that the currently focused tab has been moved to
+        index $expectedFocusedTabIdx, but actually, its index is $actualFocusedTabIdx.''',
+      );
+
+      // Sees if all tabs have been rarranged correctly.
+      expect(tb.tabs[0], tab0BeforeMove,
+          reason: 'Expected that the 1st tab used to be the 1st.');
+      expect(tb.tabs[1], tab2BeforeMove,
+          reason: 'Expected that the 2nd tab used to be the 3rd.');
+      expect(tb.tabs[2], tab3BeforeMove,
+          reason: 'Expected that the 3rd tab used to be the 4th.');
+      expect(tb.tabs[3], tab1BeforeMove,
+          reason: 'Expected that the 4th tab used to be the 2nd.');
+
+      expect(tb.tabs[4], tab4BeforeMove,
+          reason: 'Expected that the 5th tab used to the 5th.');
+    });
   });
 
   group('isOnlyTab, previousTab, and nextTab getters', () {
@@ -428,6 +518,13 @@ Future _closeTab(TabsBloc tb, WebPageBloc tab) => _addActionAndAwait(
       tb,
       tb.tabsNotifier,
       RemoveTabAction(tab: tab),
+    );
+
+Future _rearrangeTabs(TabsBloc tb, int startIndex, int endIndex) =>
+    _addActionAndAwait(
+      tb,
+      tb.tabsNotifier,
+      RearrangeTabsAction(originalIndex: startIndex, newIndex: endIndex),
     );
 
 class MockWebPageBloc extends Mock implements WebPageBloc {}
