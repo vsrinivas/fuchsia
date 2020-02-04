@@ -5,6 +5,7 @@
 #include "src/virtualization/tests/guest_console.h"
 
 #include <lib/zx/time.h>
+#include <zircon/status.h>
 
 #include <iostream>
 #include <regex>
@@ -46,7 +47,8 @@ zx_status_t GuestConsole::Start() {
   // we send will be ignored until the guest is ready.
   status = WaitForAny(kTestTimeout);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed waiting for any output on the serial console";
+    FXL_LOG(ERROR) << "Failed waiting for any output on the serial console: "
+                   << zx_status_get_string(status);
     return status;
   }
 
@@ -57,7 +59,8 @@ zx_status_t GuestConsole::Start() {
   do {
     status = WaitForAny(kSerialStableDelay);
     if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
-      FXL_LOG(ERROR) << "Failed waiting for serial console to stabilize";
+      FXL_LOG(ERROR) << "Failed waiting for serial console to stabilize: "
+                     << zx_status_get_string(status);
       return status;
     }
   } while (status == ZX_OK);
@@ -83,35 +86,35 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
 
   zx_status_t status = SendBlocking(full_command + "\n");
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to send command: " << status;
+    FXL_LOG(ERROR) << "Failed to send command: " << zx_status_get_string(status);
     return status;
   }
 
   std::string intermediate_result;
   status = WaitForMarker(full_command, &intermediate_result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait for command echo: " << status;
+    FXL_LOG(ERROR) << "Failed to wait for command echo: " << zx_status_get_string(status);
     FXL_LOG(ERROR) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
   status = WaitForMarker(header + "\n", &intermediate_result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait for command header: " << status;
+    FXL_LOG(ERROR) << "Failed to wait for command header: " << zx_status_get_string(status);
     FXL_LOG(ERROR) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
   status = WaitForMarker(footer + "\n", result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait for command footer: " << status;
+    FXL_LOG(ERROR) << "Failed to wait for command footer: " << zx_status_get_string(status);
     FXL_LOG(ERROR) << "Received: \"" << result << "\"";
     return status;
   }
 
   status = WaitForMarker(prompt, &intermediate_result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait for command prompt: " << status;
+    FXL_LOG(ERROR) << "Failed to wait for command prompt: " << zx_status_get_string(status);
     FXL_LOG(ERROR) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
