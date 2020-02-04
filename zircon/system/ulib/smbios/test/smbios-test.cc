@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/smbios/smbios.h>
-#include <fbl/array.h>
+
 #include <memory>
+
+#include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -18,22 +20,20 @@ uint8_t ComputeChecksum(const uint8_t* data, size_t len) {
 }
 smbios::EntryPoint2_1 CreateFakeEntryPoint(const fbl::Array<uint8_t>& structs,
                                            uint16_t structures_count) {
-  smbios::EntryPoint2_1 ep = {
-    .anchor_string = {'_', 'S', 'M', '_'},
-    .checksum = 0,
-    .length = sizeof(smbios::EntryPoint2_1),
-    .major_ver = 2,
-    .minor_ver = 1,
-    .max_struct_size = 256,
-    .ep_rev = 0,
-    .formatted_area = {},
-    .intermediate_anchor_string = {'_', 'D', 'M', 'I', '_'},
-    .intermediate_checksum = 0,
-    .struct_table_length = static_cast<uint16_t>(structs.size()),
-    .struct_table_phys = 0x1000, // Fake physical address
-    .struct_count = structures_count,
-    .bcd_rev = 0x21
-  };
+  smbios::EntryPoint2_1 ep = {.anchor_string = {'_', 'S', 'M', '_'},
+                              .checksum = 0,
+                              .length = sizeof(smbios::EntryPoint2_1),
+                              .major_ver = 2,
+                              .minor_ver = 1,
+                              .max_struct_size = 256,
+                              .ep_rev = 0,
+                              .formatted_area = {},
+                              .intermediate_anchor_string = {'_', 'D', 'M', 'I', '_'},
+                              .intermediate_checksum = 0,
+                              .struct_table_length = static_cast<uint16_t>(structs.size()),
+                              .struct_table_phys = 0x1000,  // Fake physical address
+                              .struct_count = structures_count,
+                              .bcd_rev = 0x21};
 
   // The specification defines the offsets for this checksum
   ep.intermediate_checksum = static_cast<uint8_t>(

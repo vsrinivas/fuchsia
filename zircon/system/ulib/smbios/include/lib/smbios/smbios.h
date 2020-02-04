@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_SMBIOS_SMBIOS_H_
+#define LIB_SMBIOS_SMBIOS_H_
 
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/function.h>
 #include <stdint.h>
 #include <zircon/types.h>
+
+#include <fbl/function.h>
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
 
 #ifndef _KERNEL
 #include <optional>
@@ -293,3 +295,5 @@ static_assert(std::is_standard_layout_v<BaseboardInformationStruct>);
 #endif
 
 }  // namespace smbios
+
+#endif  // LIB_SMBIOS_SMBIOS_H_
