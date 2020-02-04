@@ -15,13 +15,18 @@ group("shell") {
   ]
 }
 
+declare_args() {
+  # Enable flutter_driver builds. This is effective only on debug builds.
+  flutter_driver_enabled = false
+}
+
 flutter_app("ermine_app") {
   main_dart = "lib/main.dart"
 
   fuchsia_package_name = "ermine"
   package_name = "ermine"
 
-  flutter_driver_extendable = true
+  flutter_driver_extendable = flutter_driver_enabled
 
   meta = [
     {
