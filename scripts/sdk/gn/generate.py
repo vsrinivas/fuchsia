@@ -136,6 +136,26 @@ class GNBuilder(Frontend):
         self.write_file(
             os.path.join(base, 'BUILD.gn'), 'cc_prebuilt_library', library)
 
+    def install_cc_source_library_atom(self, atom):
+        name = atom['name']
+        base = self.dest('pkg', name)
+        library = model.CppSourceLibrary(name)
+        library.relative_path_to_root = os.path.relpath(self.output, start=base)
+
+        self.copy_files(atom['headers'], atom['root'], base, library.hdrs)
+        self.copy_files(atom['sources'], atom['root'], base, library.srcs)
+
+        for dep in atom['deps']:
+            library.deps.append('../' + dep)
+
+        for dep in atom['fidl_deps']:
+            dep_name = dep
+            library.deps.append('../../fidl/' + dep_name)
+
+        library.includes = os.path.relpath(atom['include_dir'], atom['root'])
+
+        self.write_file(os.path.join(base, 'BUILD.gn'), 'cc_library', library)
+
 
 class TestData(object):
     """Class representing test data to be added to the run_py mako template"""

@@ -15,6 +15,10 @@
     {
       "meta": "pkg/sync/meta.json",
       "type": "cc_prebuilt_library"
+    },
+    {
+      "meta": "pkg/media_cpp/meta.json",
+      "type": "cc_source_library"
     }
   ],
   "schema_version": "1"
