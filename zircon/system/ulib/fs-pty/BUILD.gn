@@ -12,12 +12,6 @@ zx_library("fs-pty") {
   ]
   static = true
 
-  sources = []
-  deps = [ ":common" ]
-}
-
-source_set("common") {
-  visibility = [ ":*" ]
   sources = [
     "include/lib/fs-pty/service.h",
     "include/lib/fs-pty/tty-connection-internal.h",
@@ -36,6 +30,7 @@ source_set("common") {
   deps = [
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fs",
     "$zx/system/ulib/zircon",
   ]
 }
