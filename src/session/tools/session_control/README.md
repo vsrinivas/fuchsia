@@ -1,33 +1,38 @@
-# Session Control
+# session_control tool
+Reviewed on: 2020-02-04
 
-This directory contains a tool which allows developers to connect to the session
-manager and send it commands.
+`session_control` is a Fuchsia command line developer tool which allows developers to connect to the [`session_manager`](/src/session/bin/session_manager/README.md) and send it commands at runtime.
 
-In order to use the tool, you must include the following in your `fx set`:
+## Building
 
-```
---with //src/session/tools:all
-```
+This project can be added to builds by including `--with-base //src/session/tools:all` to the `fx set` invocation.
 
-or, for all of the session related code:
+It is also included in the larger `--with-base //src/session` target.
 
-```
---with-base=//src/session:all
-```
+Once you have rebuilt (with `fx build`) be sure to re-pave your device.
 
-## Example Usage
+## Running
 
-From the command line on your workstation:
+Run the `session_control` tool from the command line on your workstation:
 
 ```
-fx shell session_control -s <SESSION_URL>
+$ fx shell session_control --help
 ```
 
-## Note on Implementation
+## Testing
 
-This tool connects to the session services from its environment. In order to do
-so, the session manager exposes the service to the `component_manager` instance
-it is running under. The session framework has a custom v1 `component_manager`
-which exposes the service in its outgoing directory. The `session_manager.config`
-then informs `sysmgr` to route requests for `fuchsia.session.Launcher` to the
-component manager (and thus the session manager).
+Unit tests for `session_control` are included in the `session_control_tests` package.
+
+```
+$ fx run-test session_control_tests
+```
+
+## Source layout
+
+The entrypoint and implementation are located in `src/main.rs`. Unit tests are co-located with the code.
+
+## Note on implementation
+
+`session_control` connects to control services published by `session_manager` at runtime. One such service is `fuchsia.session.Launcher`.
+
+Due to the (current) inability to expose services directly from a v2 component such as `session_manager` via `/hub`, `session_manager` exposes these services to its parent special-purpose implementation of component manager (`component_manager_sfw`), with `sysmgr` providing service discovery as defined in [`session_manager.config`](/src/session/bin/session_manager/meta/session_manager.config).
