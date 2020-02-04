@@ -48,6 +48,44 @@ const uint8_t double_keys_keyboard[] = {
     0xC0,        // End Collection
 };
 
+// This keyboard declares keys up to 0xFF (256 keys).
+const uint8_t full_keys_keyboard[] = {
+    0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
+    0x09, 0x06,        // Usage (Keyboard)
+    0xA1, 0x01,        // Collection (Application)
+    0x05, 0x07,        //   Usage Page (Kbrd/Keypad)
+    0x19, 0xE0,        //   Usage Minimum (0xE0)
+    0x29, 0xE7,        //   Usage Maximum (0xE7)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x25, 0x01,        //   Logical Maximum (1)
+    0x75, 0x01,        //   Report Size (1)
+    0x95, 0x08,        //   Report Count (8)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x95, 0x01,        //   Report Count (1)
+    0x75, 0x08,        //   Report Size (8)
+    0x81, 0x01,        //   Input (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x95, 0x05,        //   Report Count (5)
+    0x75, 0x01,        //   Report Size (1)
+    0x05, 0x08,        //   Usage Page (LEDs)
+    0x19, 0x01,        //   Usage Minimum (Num Lock)
+    0x29, 0x05,        //   Usage Maximum (Kana)
+    0x91, 0x02,        //   Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
+    0x95, 0x01,        //   Report Count (1)
+    0x75, 0x03,        //   Report Size (3)
+    0x91, 0x01,        //   Output (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null
+                       //   Position,Non-volatile)
+    0x95, 0x06,        //   Report Count (6)
+    0x75, 0x08,        //   Report Size (8)
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x26, 0xFF, 0x00,  //   Logical Maximum (255)
+    0x05, 0x07,        //   Usage Page (Kbrd/Keypad)
+    0x19, 0x00,        //   Usage Minimum (0x00)
+    0x2A, 0xFF, 0x00,  //   Usage Maximum (0xFF)
+    0x81, 0x00,        //   Input (Data,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,              // End Collection
+};
+
 }  // namespace
 
 // Each test parses the report descriptor for the mouse and then sends one
@@ -189,4 +227,45 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   ASSERT_EQ(result, hid_input_report::kParseOk);
   ASSERT_EQ(1, out_report_size);
   ASSERT_EQ(0b101, report_data);
+}
+
+TEST(KeyboardTest, FullKeysKeyboard) {
+  hid::DeviceDescriptor* dev_desc = nullptr;
+  auto parse_res =
+      hid::ParseReportDescriptor(full_keys_keyboard, sizeof(full_keys_keyboard), &dev_desc);
+  ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+
+  hid_input_report::Keyboard keyboard;
+
+  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+            keyboard.ParseReportDescriptor(dev_desc->report[0]));
+  hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
+
+  hid_input_report::KeyboardDescriptor* keyboard_descriptor =
+      std::get_if<hid_input_report::KeyboardDescriptor>(&report_descriptor.descriptor);
+  ASSERT_NOT_NULL(keyboard_descriptor);
+
+  EXPECT_EQ(keyboard_descriptor->input->num_keys, 107);
+
+  // Test a report parses correctly.
+  hid_boot_kbd_report kbd_report = {};
+  kbd_report.modifier = HID_KBD_MODIFIER_LEFT_SHIFT | HID_KBD_MODIFIER_RIGHT_GUI;
+  kbd_report.usage[0] = HID_USAGE_KEY_A;
+  kbd_report.usage[1] = HID_USAGE_KEY_NON_US_BACKSLASH;
+  kbd_report.usage[2] = HID_USAGE_KEY_UP;
+
+  hid_input_report::InputReport report = {};
+  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+            keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
+                                      &report));
+
+  hid_input_report::KeyboardInputReport* keyboard_report =
+      std::get_if<hid_input_report::KeyboardInputReport>(&report.report);
+  ASSERT_NOT_NULL(keyboard_report);
+  ASSERT_EQ(keyboard_report->num_pressed_keys, 5U);
+  EXPECT_EQ(keyboard_report->pressed_keys[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
+  EXPECT_EQ(keyboard_report->pressed_keys[1], llcpp::fuchsia::ui::input2::Key::RIGHT_META);
+  EXPECT_EQ(keyboard_report->pressed_keys[2], llcpp::fuchsia::ui::input2::Key::A);
+  EXPECT_EQ(keyboard_report->pressed_keys[3], llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(keyboard_report->pressed_keys[4], llcpp::fuchsia::ui::input2::Key::UP);
 }

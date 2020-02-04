@@ -8,7 +8,7 @@ using fuchsia.ui.input2;
 
 /// Hardcoded max sizes for keyboard vectors. These sizes should be increased
 /// if we ever see keyboards with more objects than can be represented.
-const uint32 KEYBOARD_MAX_NUM_KEYS = 150;
+const uint32 KEYBOARD_MAX_NUM_KEYS = 256;
 const uint32 KEYBOARD_MAX_NUM_LEDS = 10;
 const uint32 KEYBOARD_MAX_PRESSED_KEYS = 15;
 
