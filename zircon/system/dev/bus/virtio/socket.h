@@ -19,6 +19,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -33,12 +35,19 @@ namespace virtio {
 
 using vsock_Addr = fuchsia_hardware_vsock_Addr;
 
-class SocketDevice : public Device {
+class SocketDevice : public Device,
+                     public ddk::Device<SocketDevice, ddk::UnbindableDeprecated, ddk::Messageable>,
+                     public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
  public:
   class ConnectionKey;
 
   explicit SocketDevice(zx_device_t* device, zx::bti, std::unique_ptr<Backend> backend);
   virtual ~SocketDevice() override;
+
+  // DDKTL hooks:
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  void DdkRelease();
+  void DdkUnbindDeprecated() { virtio::Device::Unbind(); }
 
   // Handlers for the incoming FIDL message endpoint. Public as the messages
   // get forwarded by C dispatch code.
@@ -51,7 +60,6 @@ class SocketDevice : public Device {
   uint32_t MessageGetCid();
 
   zx_status_t Init() override;
-  void Release() override;
 
   // VirtIO callbacks
   void IrqRingUpdate() override;
@@ -88,7 +96,7 @@ class SocketDevice : public Device {
   // fill the descriptors.
   class IoBufferRing {
    public:
-    IoBufferRing(Device* device, uint16_t count, uint32_t buf_size, bool host_write_only);
+    IoBufferRing(virtio::Device* device, uint16_t count, uint32_t buf_size, bool host_write_only);
     virtual ~IoBufferRing();
     // Initialize the Ring and allocate the io_buffer. index is the virtio ring index
     // in the device. This must be called prior to using any other members of
@@ -119,7 +127,7 @@ class SocketDevice : public Device {
 
   class RxIoBufferRing : public IoBufferRing {
    public:
-    RxIoBufferRing(Device* device, uint16_t count, uint32_t buf_size);
+    RxIoBufferRing(virtio::Device* device, uint16_t count, uint32_t buf_size);
 
     // Submit descriptors into the ring. Typically only needs to be called on
     // init, as ProcessDescriptors will automatically call this.
@@ -134,7 +142,7 @@ class SocketDevice : public Device {
 
   class TxIoBufferRing : public IoBufferRing {
    public:
-    TxIoBufferRing(Device* device, uint16_t count, uint32_t buf_size);
+    TxIoBufferRing(virtio::Device* device, uint16_t count, uint32_t buf_size);
     // Allocates a descriptor returning a pointer to the location to fill with
     // data.
     void* AllocInPlace(uint16_t* id);

@@ -38,17 +38,6 @@ static constexpr uint16_t kRxId = 0u;
 static constexpr uint16_t kTxId = 1u;
 static constexpr uint16_t kEventId = 2u;
 
-// Device bridge helpers
-static void virtio_net_unbind(void* ctx) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  sock->Unbind();
-}
-
-static void virtio_net_release(void* ctx) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  sock->Release();
-}
-
 // Wrappers for linking generated C fidl interfaces to the actual message handlers
 // in a SocketDevice
 static zx_status_t fidl_Start(void* ctx, zx_handle_t cb, fidl_txn_t* txn) {
@@ -99,19 +88,10 @@ static fuchsia_hardware_vsock_Device_ops_t fidl_ops = {
     .SendVmo = fidl_SendVmo,
 };
 
-static zx_status_t virtio_net_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  zx_status_t status = fuchsia_hardware_vsock_Device_dispatch(ctx, txn, msg, &fidl_ops);
+zx_status_t SocketDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t status = fuchsia_hardware_vsock_Device_dispatch(this, txn, msg, &fidl_ops);
   return status;
 }
-
-static zx_protocol_device_t kDeviceOps = []() {
-  zx_protocol_device_t ops = {};
-  ops.version = DEVICE_OPS_VERSION;
-  ops.unbind = virtio_net_unbind;
-  ops.release = virtio_net_release;
-  ops.message = virtio_net_message;
-  return ops;
-}();
 
 static virtio_vsock_hdr_t make_hdr(const SocketDevice::ConnectionKey& key, uint16_t op,
                                    uint32_t cid, const SocketDevice::CreditInfo& credit) {
@@ -130,7 +110,8 @@ static virtio_vsock_hdr_t make_hdr(const SocketDevice::ConnectionKey& key, uint1
 }
 
 SocketDevice::SocketDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
-    : Device(bus_device, std::move(bti), std::move(backend)),
+    : virtio::Device(bus_device, std::move(bti), std::move(backend)),
+      ddk::Device<SocketDevice, ddk::UnbindableDeprecated, ddk::Messageable>(bus_device),
       dispatch_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       rx_(this, kDataBacklog, kFrameSize),
       tx_(this, kDataBacklog, kFrameSize),
@@ -315,17 +296,12 @@ zx_status_t SocketDevice::Init() {
   timer_wait_handler_.set_trigger(ZX_TIMER_SIGNALED);
 
   // Initialize the zx_device and publish us.
-  device_add_args_t args;
-  memset(&args, 0, sizeof(args));
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "virtio-vsock";
-  args.ctx = this;
-  args.ops = &kDeviceOps;
-  args.proto_id = ZX_PROTOCOL_VSOCK;
-  if ((rc = device_add(bus_device_, &args, &device_)) != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to add device: %s\n", tag(), zx_status_get_string(rc));
-    return rc;
+  zx_status_t status = DdkAdd("virtio-vsock");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to add device: %s\n", tag(), zx_status_get_string(status));
+    return status;
   }
+  device_ = zxdev();
   event_.RefillRing();
 
   cleanup.cancel();
@@ -333,7 +309,7 @@ zx_status_t SocketDevice::Init() {
   return ZX_OK;
 }
 
-void SocketDevice::Release() {
+void SocketDevice::DdkRelease() {
   fbl::AutoLock lock(&lock_);
   ReleaseLocked();
 }
@@ -693,7 +669,7 @@ void SocketDevice::ReleaseLocked() {
   rx_.FreeBuffers();
   tx_.FreeBuffers();
   event_.FreeBuffers();
-  Device::Release();
+  virtio::Device::Release();
 }
 
 void SocketDevice::TransportResetLocked() {
@@ -711,7 +687,7 @@ void SocketDevice::TransportResetLocked() {
   }
 }
 
-SocketDevice::IoBufferRing::IoBufferRing(Device* device, uint16_t count, uint32_t buf_size,
+SocketDevice::IoBufferRing::IoBufferRing(virtio::Device* device, uint16_t count, uint32_t buf_size,
                                          bool host_write_only)
     : ring_(device), host_write_only_(host_write_only), count_(count), buf_size_(buf_size) {}
 
@@ -747,7 +723,8 @@ void SocketDevice::IoBufferRing::FreeBuffers() {
   }
 }
 
-SocketDevice::RxIoBufferRing::RxIoBufferRing(Device* device, uint16_t count, uint32_t buf_size)
+SocketDevice::RxIoBufferRing::RxIoBufferRing(virtio::Device* device, uint16_t count,
+                                             uint32_t buf_size)
     : IoBufferRing(device, count, buf_size, true) {}
 
 void SocketDevice::RxIoBufferRing::RefillRing() {
@@ -790,7 +767,8 @@ void SocketDevice::RxIoBufferRing::ProcessDescriptors(F func) {
   RefillRing();
 }
 
-SocketDevice::TxIoBufferRing::TxIoBufferRing(Device* device, uint16_t count, uint32_t buf_size)
+SocketDevice::TxIoBufferRing::TxIoBufferRing(virtio::Device* device, uint16_t count,
+                                             uint32_t buf_size)
     : IoBufferRing(device, count, buf_size, false) {}
 
 void* SocketDevice::TxIoBufferRing::AllocInPlace(uint16_t* id) {
