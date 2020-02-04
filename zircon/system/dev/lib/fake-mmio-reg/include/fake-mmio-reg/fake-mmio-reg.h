@@ -64,18 +64,72 @@ class FakeMmioRegRegion {
 
   // Accesses the FakeMmioReg at the given offset. Note that this is the _offset_, not the
   // _index_.
-  FakeMmioReg& operator[](size_t offset) {
+  FakeMmioReg& operator[](size_t offset) const {
     ZX_ASSERT(offset / reg_size_ < reg_count_);
     return fake_regs_[offset / reg_size_];
   }
 
   // Returns an mmio_buffer_t that can be used for constructing a ddk::MmioBuffer object.
-  mmio_buffer_t GetMmioBuffer() {
-    return mmio_buffer_t{
-        .vaddr = this, .offset = 0, .size = reg_size_ * reg_count_, .vmo = ZX_HANDLE_INVALID};
+  ddk::MmioBuffer GetMmioBuffer() {
+    return ddk::MmioBuffer(
+        mmio_buffer_t{
+            .vaddr = this,
+            .offset = 0,
+            .size = reg_size_ * reg_count_,
+            .vmo = ZX_HANDLE_INVALID,
+        },
+        &kFakeMmioOps, this);
   }
 
  private:
+  static uint8_t Read8(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const FakeMmioRegRegion*>(ctx);
+    return static_cast<uint8_t>(reg_region[offs + mmio.offset].Read());
+  }
+
+  static uint16_t Read16(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const FakeMmioRegRegion*>(ctx);
+    return static_cast<uint16_t>(reg_region[offs + mmio.offset].Read());
+  }
+
+  static uint32_t Read32(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const FakeMmioRegRegion*>(ctx);
+    return static_cast<uint32_t>(reg_region[offs + mmio.offset].Read());
+  }
+
+  static uint64_t Read64(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const FakeMmioRegRegion*>(ctx);
+    return reg_region[offs + mmio.offset].Read();
+  }
+
+  static void Write8(const void* ctx, const mmio_buffer_t& mmio, uint8_t val, zx_off_t offs) {
+    Write64(ctx, mmio, val, offs);
+  }
+
+  static void Write16(const void* ctx, const mmio_buffer_t& mmio, uint16_t val, zx_off_t offs) {
+    Write64(ctx, mmio, val, offs);
+  }
+
+  static void Write32(const void* ctx, const mmio_buffer_t& mmio, uint32_t val, zx_off_t offs) {
+    Write64(ctx, mmio, val, offs);
+  }
+
+  static void Write64(const void* ctx, const mmio_buffer_t& mmio, uint64_t val, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const FakeMmioRegRegion*>(ctx);
+    reg_region[offs + mmio.offset].Write(val);
+  }
+
+  static constexpr ddk::MmioBufferOps kFakeMmioOps = {
+      .Read8 = Read8,
+      .Read16 = Read16,
+      .Read32 = Read32,
+      .Read64 = Read64,
+      .Write8 = Write8,
+      .Write16 = Write16,
+      .Write32 = Write32,
+      .Write64 = Write64,
+  };
+
   FakeMmioReg* fake_regs_;
   const size_t reg_size_;
   const size_t reg_count_;

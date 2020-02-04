@@ -69,13 +69,13 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
 
   zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     auto buffer = region_->GetMmioBuffer();
-    out_mmio->offset = buffer.offset;
-    out_mmio->size = buffer.size;
-    out_mmio->vmo = buffer.vmo;
+    out_mmio->offset = buffer.get_offset();
+    out_mmio->size = buffer.get_size();
+    out_mmio->vmo = buffer.get_vmo()->get();
     return ZX_OK;
   }
 
-  mmio_buffer_t GetMmio() { return region_->GetMmioBuffer(); }
+  ddk::MmioBuffer GetMmio() { return region_->GetMmioBuffer(); }
 
   zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
     irq_signaller_ = zx::unowned_interrupt(irq_);

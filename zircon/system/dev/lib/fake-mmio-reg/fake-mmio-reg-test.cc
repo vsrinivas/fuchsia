@@ -4,16 +4,11 @@
 
 #include <lib/mmio/mmio.h>
 
+#include <fake-mmio-reg/fake-mmio-reg.h>
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
 namespace ddk_fake_test {
-
-TEST(MockMmioReg, Create) {
-  std::optional<ddk::MmioBuffer> buffer;
-  ASSERT_EQ(ddk::MmioBuffer::Create(0, 0, zx::vmo(ZX_HANDLE_INVALID), 0, &buffer),
-            ZX_ERR_NOT_SUPPORTED);
-}
 
 TEST(MockMmioReg, CopyFrom) {
   constexpr size_t kRegArrayLength = 0x100;
