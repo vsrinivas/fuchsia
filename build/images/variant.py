@@ -107,7 +107,21 @@ def find_variant(info, install_path, build_dir=os.path.curdir):
     variant_file = None
     abs_build_dir = os.path.abspath(build_dir)
     abs_filename = os.path.abspath(info.filename)
-    if abs_filename.startswith(os.path.join(abs_build_dir, '')):
+    variant_prefix = info.cpu.gn + '-'
+    if abs_filename.startswith(os.path.join(abs_build_dir, info.cpu.gn + '-')):
+        # It's in the build directory and points to a file outside of the main
+        # toolchain. The file is the actual variant file.
+        rel_filename = os.path.relpath(abs_filename, abs_build_dir)
+        toolchain_dir = os.path.normpath(rel_filename).split(os.sep)[0]
+        name = toolchain_dir[len(variant_prefix):]
+        if name != 'shared':
+            # loadable_module and driver_module targets are linked
+            # to the variant-shared toolchain.
+            if name[-7:] == '-shared':
+                name = name[:-7]
+            variant = make_variant(name, info)
+        variant_file = rel_filename
+    elif abs_filename.startswith(os.path.join(abs_build_dir, '')):
         # It's in the build directory.  If it's a variant, it's a hard link
         # into the variant toolchain root_out_dir.
         file_stat = os.stat(info.filename)
@@ -119,7 +133,6 @@ def find_variant(info, install_path, build_dir=os.path.curdir):
             # subdirectory is found.  Below, we'll change the name but not
             # call it a variant.
             rel_filename = os.path.relpath(abs_filename, abs_build_dir)
-            variant_prefix = info.cpu.gn + '-'
             subdirs = [
                 subdir for subdir in os.listdir(build_dir) if (
                     subdir.startswith(variant_prefix) and

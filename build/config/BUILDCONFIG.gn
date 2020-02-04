@@ -420,9 +420,13 @@ if (toolchain_variant.with_shared) {
         # Note: the manifest-related metadata is added to the builder target as
         # some targets (e.g. drivers) depend on it directly in the builder
         # toolchain.
+        variant_dir = ""
+        if (toolchain_variant.name != "") {
+          variant_dir = "${toolchain_variant.name}/"
+        }
         metadata = {
           migrated_manifest_lines =
-              [ "lib/$output_file_name=$rebased_output_file" ]
+              [ "lib/${variant_dir}$output_file_name=$rebased_output_file" ]
         }
       }
     }

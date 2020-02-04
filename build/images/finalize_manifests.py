@@ -251,7 +251,9 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
     for binary in unexamined_binaries.itervalues():
         add_binary(binary)
     for target in unexamined_binaries.iterkeys():
-        assert target in binaries
+        assert target in binaries, (
+            "Target %s missing from %s" %
+            (target, binaries.keys()))
 
     matched_binaries = set()
     for input_binary in input_binaries:
