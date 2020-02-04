@@ -8,6 +8,8 @@ toc:
   path: /docs/development/build/build_information.md
 - title: "The build system"
   path: /docs/development/build/overview.md
+- title: "Build system policies"
+  path: /docs/development/build/policies.md
 - title: "Build and pave quickstart"
   path: /docs/development/build/build_and_pave_quickstart.md
 - title: "fx workflows"
