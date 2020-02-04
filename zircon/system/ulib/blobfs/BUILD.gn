@@ -4,17 +4,40 @@
 
 zx_library("blobfs") {
   host = true
+  sdk = "source"
+  sdk_headers = [
+    "blobfs/common.h",
+    "blobfs/host.h",
+    "blobfs/format.h",
+    "blobfs/mount.h",
+    "blobfs/host",
+    "blobfs/host/fsck.h",
+    "blobfs/node-finder.h",
+    "blobfs/fsck.h",
+    "blobfs/cache-policy.h",
+    "blobfs/mkfs.h",
+  ]
   sources = [
     "allocator/extent-reserver.cc",
+    "allocator/extent-reserver.h",
     "allocator/node-reserver.cc",
+    "allocator/node-reserver.h",
     "blobfs-checker.cc",
     "common.cc",
+    "compression/compressor.h",
     "compression/lz4.cc",
+    "compression/lz4.h",
     "compression/zstd-plain.cc",
+    "compression/zstd-plain.h",
     "compression/zstd-rac.cc",
+    "compression/zstd-rac.h",
     "iterator/allocated-extent-iterator.cc",
+    "iterator/allocated-extent-iterator.h",
     "iterator/block-iterator.cc",
+    "iterator/block-iterator.h",
+    "iterator/extent-iterator.h",
     "iterator/vector-extent-iterator.cc",
+    "iterator/vector-extent-iterator.h",
   ]
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
@@ -25,7 +48,7 @@ zx_library("blobfs") {
     "$zx/system/ulib/storage/buffer:headers",
 
     # Seekable zstd include_dirs config required for all compilation units that incorporate it.
-    "$zx/third_party/ulib/zstd:zstdseek",
+    "$zx/third_party/ulib/zstd:zstdseek.headers",
 
     # <blobfs/format.h> has #include <digest/digest.h>.
     "$zx/system/ulib/digest:headers",
@@ -48,23 +71,29 @@ zx_library("blobfs") {
     "$zx/third_party/ulib/safemath",
     "$zx/third_party/ulib/uboringssl",
     "$zx/third_party/ulib/zstd",
+    "$zx/third_party/ulib/zstd:zstdseek",
   ]
   if (is_fuchsia) {
     sources += [
       "allocator/allocator.cc",
+      "allocator/allocator.h",
       "blob-cache.cc",
       "blob.cc",
       "blobfs.cc",
       "cache-node.cc",
       "compression/blob-compressor.cc",
+      "compression/blob-compressor.h",
       "directory.cc",
       "format.cc",
       "fsck.cc",
       "iterator/node-populator.cc",
+      "iterator/node-populator.h",
       "metrics.cc",
       "mount.cc",
       "pager/page-watcher.cc",
+      "pager/page-watcher.h",
       "pager/user-pager.cc",
+      "pager/user-pager.h",
       "query.cc",
       "runner.cc",
     ]

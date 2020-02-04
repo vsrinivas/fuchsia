@@ -5,7 +5,6 @@
 group("uapp") {
   testonly = true
   deps = [
-    "blobfs",
     "disk-pave",
     "kcounter",
     "kstress",

@@ -21,7 +21,7 @@ source_set("collector-test") {
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/cobalt-client:collector",
+    "$zx/system/ulib/cobalt-client:cobalt-collector",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fit",
@@ -39,9 +39,9 @@ source_set("metrics-test") {
   ]
   include_dirs = [ "../include/" ]
   deps = [
-    "$zx/system/ulib/cobalt-client:collector",
-    "$zx/system/ulib/cobalt-client:metrics",
-    "$zx/system/ulib/cobalt-client:types-internal",
+    "$zx/system/ulib/cobalt-client:cobalt-collector",
+    "$zx/system/ulib/cobalt-client:cobalt-metrics",
+    "$zx/system/ulib/cobalt-client:cobalt-types-internal",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zxtest",
@@ -59,7 +59,7 @@ source_set("in-memory-logger-test") {
   include_dirs = [ "../include/" ]
   deps = [
     "$zx/system/ulib/cobalt-client:in-memory-logger",
-    "$zx/system/ulib/cobalt-client:metrics",
+    "$zx/system/ulib/cobalt-client:cobalt-metrics",
     "$zx/system/ulib/zxtest",
   ]
 }

@@ -78,17 +78,6 @@ struct NodeDegree : NumericAttribute<NodeDegree, int64_t> {
   static constexpr int64_t EventOptions::*kAttributeValue = &EventOptions::node_degree;
 };
 
-// Create a histogram with the default number of buckets and properties matching cobalt
-// configuration so we can eventually replace cobalt-client.
-void CreateNanosecHistogramId(const char* name, inspect::Node* root,
-                              std::vector<inspect::ExponentialUintHistogram>* hist_list) {
-  constexpr uint64_t kBase = 2;
-  constexpr uint64_t kInitialStep = 10;
-  constexpr uint64_t kFloor = 0;
-  hist_list->push_back(
-      root->CreateExponentialUintHistogram(name, kFloor, kInitialStep, kBase, kHistogramBuckets));
-}
-
 void CreateMicrosecHistogramId(const char* name, inspect::Node* root,
                                std::vector<inspect::ExponentialUintHistogram>* hist_list) {
   constexpr uint64_t kBase = 2;

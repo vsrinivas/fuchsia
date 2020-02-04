@@ -2,63 +2,74 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("types-internal") {
-  public = [ "cpp/types-internal.h" ]
+# TODO(36548): turn the next 3 libraries back into source_set's visible only to
+# other targets in this file.
+
+zx_library("cobalt-types-internal") {
+  sdk = "source"
+  sdk_headers = [ "cpp/types-internal.h" ]
+  sources = []
   public_deps = [ "$zx/system/fidl/fuchsia-cobalt:llcpp" ]
-  visibility = [ "./*" ]
 }
 
-source_set("collector") {
+zx_library("cobalt-collector") {
+  sdk = "source"
+  sdk_headers = [
+    "cobalt-client/cpp/collector.h",
+    "cobalt-client/cpp/collector_internal.h",
+  ]
   sources = [
     "cobalt_logger.cc",
     "collector.cc",
   ]
   public_deps = [
+    "$zx/system/fidl/fuchsia-cobalt:llcpp.headers",
+    "$zx/system/ulib/fit:headers",
+    "$zx/system/ulib/zx:headers",
+  ]
+  deps = [
+    ":cobalt-types-internal",
+    "$zx/system/fidl/fuchsia-cobalt:llcpp",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/zx",
   ]
-  include_dirs = [ "./include/" ]
-  deps = [
-    ":types-internal",
-    "$zx/system/fidl/fuchsia-cobalt:llcpp",
-    "$zx/system/fidl/fuchsia-cobalt:llcpp",
-    "$zx/system/public",
-    "$zx/system/ulib/fdio",
-  ]
-  visibility = [ "./*" ]
 }
 
-source_set("metrics") {
-  sources = [
-    "counter.cc",
-    "histogram.cc",
-  ]
-  include_dirs = [ "./include/" ]
-  public_deps = [
-    ":collector",
-    ":types-internal",
-    "$zx/system/public",
-  ]
-  visibility = [ "./*" ]
-}
-
-zx_library("cobalt-client") {
+zx_library("cobalt-metrics") {
   sdk = "source"
   sdk_headers = [
     "cobalt-client/cpp/histogram_internal.h",
-    "cobalt-client/cpp/collector.h",
     "cobalt-client/cpp/counter.h",
-    "cobalt-client/cpp/in_memory_logger.h",
-    "cobalt-client/cpp/collector_internal.h",
-    "cobalt-client/cpp/types_internal.h",
     "cobalt-client/cpp/histogram.h",
     "cobalt-client/cpp/counter_internal.h",
     "cobalt-client/cpp/metric_options.h",
   ]
+  sources = [
+    "counter.cc",
+    "histogram.cc",
+  ]
+  public_deps = [
+    ":cobalt-collector.headers",
+    ":cobalt-types-internal.headers",
+  ]
+  deps = [
+    ":cobalt-collector",
+    ":cobalt-types-internal",
+  ]
+}
+
+zx_library("cobalt-client") {
+  sdk = "source"
+  sdk_headers = []
   sources = []
   public_deps = [
-    ":collector",
-    ":metrics",
+    ":cobalt-collector.headers",
+    ":cobalt-metrics.headers",
+  ]
+  deps = [
+    ":cobalt-collector",
+    ":cobalt-metrics",
   ]
 }
 
@@ -66,18 +77,10 @@ zx_library("cobalt-client") {
 zx_library("in-memory-logger") {
   sdk = "source"
   sdk_headers = [
-    "cobalt-client/cpp/histogram_internal.h",
-    "cobalt-client/cpp/collector.h",
-    "cobalt-client/cpp/counter.h",
     "cobalt-client/cpp/in_memory_logger.h",
-    "cobalt-client/cpp/collector_internal.h",
-    "cobalt-client/cpp/types_internal.h",
-    "cobalt-client/cpp/histogram.h",
-    "cobalt-client/cpp/counter_internal.h",
-    "cobalt-client/cpp/metric_options.h",
   ]
   testonly = true
   sources = [ "in_memory_logger.cc" ]
-  public_deps = [ ":metrics" ]
-  deps = [ ":types-internal" ]
+  public_deps = [ ":cobalt-metrics" ]
+  deps = [ ":cobalt-types-internal" ]
 }
