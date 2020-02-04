@@ -235,6 +235,21 @@ func (s_ *InterfaceStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.Mar
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
+func (s_ *InterfaceStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+}
+
+func (s_ *InterfaceStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case InterfaceMethodOrdinal:
+		fallthrough
+	case InterfaceMethodGenOrdinal:
+		err_ := s_.Impl.Method()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
 type InterfaceWithCtxStub struct {
 	Impl InterfaceWithCtx
 }
@@ -245,6 +260,17 @@ func (s_ *InterfaceWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ ui
 		fallthrough
 	case InterfaceMethodGenOrdinal:
 		err_ := s_.Impl.Method(ctx_)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *InterfaceWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case InterfaceMethodOrdinal:
+		fallthrough
+	case InterfaceMethodGenOrdinal:
+		err_ := s_.Impl.Method(args_.Ctx)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal

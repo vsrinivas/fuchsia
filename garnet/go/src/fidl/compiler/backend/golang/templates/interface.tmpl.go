@@ -293,6 +293,60 @@ func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.M
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
+func (s_ *{{ .StubName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+}
+
+func (s_ *{{ .StubName }}) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	{{- range .Methods }}
+	{{- if not .IsEvent }}
+	{{- range $index, $ordinal := .Ordinals.Reads }}
+		{{- if $index }}
+		fallthrough
+		{{- end }}
+	case {{ $ordinal.Name }}:
+	{{- end }}
+		{{- if .HasRequest }}
+		{{- if .Request }}
+		in_ := {{ .Request.Name }}{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		{{- end }}
+		{{- end }}
+		{{ if .Response }}
+		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
+		{{- end -}}
+		err_ := s_.Impl.{{ .Name }}(
+		{{- if .HasRequest }}
+		{{- if .Request -}}
+		{{- range $index, $m := .Request.Members -}}
+		{{- if $index -}}, {{- end -}}
+		in_.{{ $m.Name }}
+		{{- end -}}
+		{{- end -}}
+		{{- end -}}
+		)
+		{{- if .HasResponse }}
+		{{- if .Response }}
+		out_ := {{ .Response.Name }}{}
+		{{- range .Response.Members }}
+		out_.{{ .Name }} = {{ .PrivateName }}
+		{{- end }}
+		return &out_, true, err_
+		{{- else }}
+		return nil, true, err_
+		{{- end }}
+		{{- else }}
+		return nil, false, err_
+		{{- end }}
+	{{- end }}
+	{{- end }}
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
 type {{ .StubWithCtxName }} struct {
 	Impl {{ .WithCtxName }}
 }
@@ -319,6 +373,55 @@ func (s_ *{{ .StubWithCtxName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ 
 		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
 		{{- end -}}
 		err_ := s_.Impl.{{ .Name }}(ctx_
+		{{- if .HasRequest -}}
+		{{- if .Request -}}
+		{{- range $index, $m := .Request.Members -}}
+		, in_.{{ $m.Name }}
+		{{- end -}}
+		{{- end -}}
+		{{- end -}}
+		)
+		{{- if .HasResponse }}
+		{{- if .Response }}
+		out_ := {{ .Response.Name }}{}
+		{{- range .Response.Members }}
+		out_.{{ .Name }} = {{ .PrivateName }}
+		{{- end }}
+		return &out_, true, err_
+		{{- else }}
+		return nil, true, err_
+		{{- end }}
+		{{- else }}
+		return nil, false, err_
+		{{- end }}
+	{{- end }}
+	{{- end }}
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *{{ .StubWithCtxName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	{{- range .Methods }}
+	{{- if not .IsEvent }}
+	{{- range $index, $ordinal := .Ordinals.Reads }}
+		{{- if $index }}
+		fallthrough
+		{{- end }}
+	case {{ $ordinal.Name }}:
+	{{- end }}
+		{{- if .HasRequest }}
+		{{- if .Request }}
+		in_ := {{ .Request.Name }}{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		{{- end }}
+		{{- end }}
+		{{ if .Response }}
+		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
+		{{- end -}}
+		err_ := s_.Impl.{{ .Name }}(args_.Ctx
 		{{- if .HasRequest -}}
 		{{- if .Request -}}
 		{{- range $index, $m := .Request.Members -}}

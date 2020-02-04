@@ -70,6 +70,21 @@ func (s_ *FirstProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
+func (s_ *FirstProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+}
+
+func (s_ *FirstProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case FirstProtocolMethodOnFirstOrdinal:
+		fallthrough
+	case FirstProtocolMethodOnFirstGenOrdinal:
+		err_ := s_.Impl.MethodOnFirst()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
 type FirstProtocolWithCtxStub struct {
 	Impl FirstProtocolWithCtx
 }
@@ -80,6 +95,17 @@ func (s_ *FirstProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal
 		fallthrough
 	case FirstProtocolMethodOnFirstGenOrdinal:
 		err_ := s_.Impl.MethodOnFirst(ctx_)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *FirstProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case FirstProtocolMethodOnFirstOrdinal:
+		fallthrough
+	case FirstProtocolMethodOnFirstGenOrdinal:
+		err_ := s_.Impl.MethodOnFirst(args_.Ctx)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
@@ -164,6 +190,21 @@ func (s_ *SecondProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _binding
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
+func (s_ *SecondProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+}
+
+func (s_ *SecondProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case SecondProtocolMethodOnSecondOrdinal:
+		fallthrough
+	case SecondProtocolMethodOnSecondGenOrdinal:
+		err_ := s_.Impl.MethodOnSecond()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
 type SecondProtocolWithCtxStub struct {
 	Impl SecondProtocolWithCtx
 }
@@ -174,6 +215,17 @@ func (s_ *SecondProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordina
 		fallthrough
 	case SecondProtocolMethodOnSecondGenOrdinal:
 		err_ := s_.Impl.MethodOnSecond(ctx_)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *SecondProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case SecondProtocolMethodOnSecondOrdinal:
+		fallthrough
+	case SecondProtocolMethodOnSecondGenOrdinal:
+		err_ := s_.Impl.MethodOnSecond(args_.Ctx)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal

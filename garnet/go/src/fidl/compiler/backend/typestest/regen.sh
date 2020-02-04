@@ -119,13 +119,13 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     rm "${GOLDENS_DIR}/pkg_name"
     mv "${GOLDENS_DIR}/impl.go" "${GOLDENS_DIR}/${go_impl_name}.golden"
 
-    echo "  rust: ${json_name} > ${rust_name}"
-    ${FIDLGEN} \
-        -generators rust \
-        -json "${GOLDENS_DIR}/${json_name}" \
-        -output-base "${GOLDENS_DIR}/${json_name}" \
-        -include-base "${GOLDENS_DIR}"
-    mv "${GOLDENS_DIR}/${rust_name}" "${GOLDENS_DIR}/${rust_name}.golden"
+#    echo "  rust: ${json_name} > ${rust_name}"
+#    ${FIDLGEN} \
+#        -generators rust \
+#        -json "${GOLDENS_DIR}/${json_name}" \
+#        -output-base "${GOLDENS_DIR}/${json_name}" \
+#        -include-base "${GOLDENS_DIR}"
+#    mv "${GOLDENS_DIR}/${rust_name}" "${GOLDENS_DIR}/${rust_name}.golden"
 
     echo "  syzkaller: ${json_name} > ${syzkaller_name}"
     ${FIDLGEN} \

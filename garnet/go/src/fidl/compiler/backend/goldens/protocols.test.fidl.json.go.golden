@@ -535,6 +535,62 @@ func (s_ *WithAndWithoutRequestResponseStub) DispatchImplWithCtx(ordinal_ uint64
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
+func (s_ *WithAndWithoutRequestResponseStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+}
+
+func (s_ *WithAndWithoutRequestResponseStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal:
+		err_ := s_.Impl.NoRequestNoResponse()
+		return nil, false, err_
+	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal:
+		err_ := s_.Impl.NoRequestEmptyResponse()
+		return nil, true, err_
+	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal:
+		ret, err_ := s_.Impl.NoRequestWithResponse()
+		out_ := withAndWithoutRequestResponseNoRequestWithResponseResponse{}
+		out_.Ret = ret
+		return &out_, true, err_
+	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal:
+		in_ := withAndWithoutRequestResponseWithRequestNoResponseRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.WithRequestNoResponse(in_.Arg)
+		return nil, false, err_
+	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal:
+		in_ := withAndWithoutRequestResponseWithRequestEmptyResponseRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.WithRequestEmptyResponse(in_.Arg)
+		return nil, true, err_
+	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal:
+		in_ := withAndWithoutRequestResponseWithRequestWithResponseRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		ret, err_ := s_.Impl.WithRequestWithResponse(in_.Arg)
+		out_ := withAndWithoutRequestResponseWithRequestWithResponseResponse{}
+		out_.Ret = ret
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
 type WithAndWithoutRequestResponseWithCtxStub struct {
 	Impl WithAndWithoutRequestResponseWithCtx
 }
@@ -584,6 +640,58 @@ func (s_ *WithAndWithoutRequestResponseWithCtxStub) DispatchImpl(ctx_ _bindings.
 			return nil, false, err_
 		}
 		ret, err_ := s_.Impl.WithRequestWithResponse(ctx_, in_.Arg)
+		out_ := withAndWithoutRequestResponseWithRequestWithResponseResponse{}
+		out_.Ret = ret
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *WithAndWithoutRequestResponseWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal:
+		err_ := s_.Impl.NoRequestNoResponse(args_.Ctx)
+		return nil, false, err_
+	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal:
+		err_ := s_.Impl.NoRequestEmptyResponse(args_.Ctx)
+		return nil, true, err_
+	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal:
+		ret, err_ := s_.Impl.NoRequestWithResponse(args_.Ctx)
+		out_ := withAndWithoutRequestResponseNoRequestWithResponseResponse{}
+		out_.Ret = ret
+		return &out_, true, err_
+	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal:
+		in_ := withAndWithoutRequestResponseWithRequestNoResponseRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.WithRequestNoResponse(args_.Ctx, in_.Arg)
+		return nil, false, err_
+	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal:
+		in_ := withAndWithoutRequestResponseWithRequestEmptyResponseRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.WithRequestEmptyResponse(args_.Ctx, in_.Arg)
+		return nil, true, err_
+	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
+		fallthrough
+	case WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal:
+		in_ := withAndWithoutRequestResponseWithRequestWithResponseRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		ret, err_ := s_.Impl.WithRequestWithResponse(args_.Ctx, in_.Arg)
 		out_ := withAndWithoutRequestResponseWithRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, true, err_
@@ -719,6 +827,37 @@ func (s_ *WithErrorSyntaxStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindin
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
+func (s_ *WithErrorSyntaxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+}
+
+func (s_ *WithErrorSyntaxStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case WithErrorSyntaxResponseAsStructOrdinal:
+		fallthrough
+	case WithErrorSyntaxResponseAsStructGenOrdinal:
+		result, err_ := s_.Impl.ResponseAsStruct()
+		out_ := withErrorSyntaxResponseAsStructResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case WithErrorSyntaxErrorAsPrimitiveOrdinal:
+		fallthrough
+	case WithErrorSyntaxErrorAsPrimitiveGenOrdinal:
+		result, err_ := s_.Impl.ErrorAsPrimitive()
+		out_ := withErrorSyntaxErrorAsPrimitiveResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case WithErrorSyntaxErrorAsEnumOrdinal:
+		fallthrough
+	case WithErrorSyntaxErrorAsEnumGenOrdinal:
+		result, err_ := s_.Impl.ErrorAsEnum()
+		out_ := withErrorSyntaxErrorAsEnumResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
 type WithErrorSyntaxWithCtxStub struct {
 	Impl WithErrorSyntaxWithCtx
 }
@@ -743,6 +882,33 @@ func (s_ *WithErrorSyntaxWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordin
 		fallthrough
 	case WithErrorSyntaxErrorAsEnumGenOrdinal:
 		result, err_ := s_.Impl.ErrorAsEnum(ctx_)
+		out_ := withErrorSyntaxErrorAsEnumResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *WithErrorSyntaxWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case WithErrorSyntaxResponseAsStructOrdinal:
+		fallthrough
+	case WithErrorSyntaxResponseAsStructGenOrdinal:
+		result, err_ := s_.Impl.ResponseAsStruct(args_.Ctx)
+		out_ := withErrorSyntaxResponseAsStructResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case WithErrorSyntaxErrorAsPrimitiveOrdinal:
+		fallthrough
+	case WithErrorSyntaxErrorAsPrimitiveGenOrdinal:
+		result, err_ := s_.Impl.ErrorAsPrimitive(args_.Ctx)
+		out_ := withErrorSyntaxErrorAsPrimitiveResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case WithErrorSyntaxErrorAsEnumOrdinal:
+		fallthrough
+	case WithErrorSyntaxErrorAsEnumGenOrdinal:
+		result, err_ := s_.Impl.ErrorAsEnum(args_.Ctx)
 		out_ := withErrorSyntaxErrorAsEnumResponse{}
 		out_.Result = result
 		return &out_, true, err_
@@ -893,6 +1059,47 @@ func (s_ *ChannelProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindin
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
+func (s_ *ChannelProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+}
+
+func (s_ *ChannelProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case ChannelProtocolMethodAOrdinal:
+		fallthrough
+	case ChannelProtocolMethodAGenOrdinal:
+		in_ := channelProtocolMethodARequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.MethodA(in_.A,in_.B)
+		return nil, false, err_
+	case ChannelProtocolMethodBOrdinal:
+		fallthrough
+	case ChannelProtocolMethodBGenOrdinal:
+		in_ := channelProtocolMethodBRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		result, err_ := s_.Impl.MethodB(in_.A,in_.B)
+		out_ := channelProtocolMethodBResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case ChannelProtocolMutateSocketOrdinal:
+		fallthrough
+	case ChannelProtocolMutateSocketGenOrdinal:
+		in_ := channelProtocolMutateSocketRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(ctx_, data_, handleInfos_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		b, err_ := s_.Impl.MutateSocket(in_.A)
+		out_ := channelProtocolMutateSocketResponse{}
+		out_.B = b
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
 type ChannelProtocolWithCtxStub struct {
 	Impl ChannelProtocolWithCtx
 }
@@ -927,6 +1134,43 @@ func (s_ *ChannelProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordin
 			return nil, false, err_
 		}
 		b, err_ := s_.Impl.MutateSocket(ctx_, in_.A)
+		out_ := channelProtocolMutateSocketResponse{}
+		out_.B = b
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case ChannelProtocolMethodAOrdinal:
+		fallthrough
+	case ChannelProtocolMethodAGenOrdinal:
+		in_ := channelProtocolMethodARequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.MethodA(args_.Ctx, in_.A, in_.B)
+		return nil, false, err_
+	case ChannelProtocolMethodBOrdinal:
+		fallthrough
+	case ChannelProtocolMethodBGenOrdinal:
+		in_ := channelProtocolMethodBRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		result, err_ := s_.Impl.MethodB(args_.Ctx, in_.A, in_.B)
+		out_ := channelProtocolMethodBResponse{}
+		out_.Result = result
+		return &out_, true, err_
+	case ChannelProtocolMutateSocketOrdinal:
+		fallthrough
+	case ChannelProtocolMutateSocketGenOrdinal:
+		in_ := channelProtocolMutateSocketRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		b, err_ := s_.Impl.MutateSocket(args_.Ctx, in_.A)
 		out_ := channelProtocolMutateSocketResponse{}
 		out_.B = b
 		return &out_, true, err_

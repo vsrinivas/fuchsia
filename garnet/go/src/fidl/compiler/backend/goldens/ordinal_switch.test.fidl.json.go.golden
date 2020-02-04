@@ -101,6 +101,26 @@ func (s_ *SwitchingOrdinalsStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bind
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
+func (s_ *SwitchingOrdinalsStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+}
+
+func (s_ *SwitchingOrdinalsStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case SwitchingOrdinalsOrdinalFiveOrdinal:
+		fallthrough
+	case SwitchingOrdinalsOrdinalFiveGenOrdinal:
+		err_ := s_.Impl.OrdinalFive()
+		return nil, false, err_
+	case SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal:
+		fallthrough
+	case SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal:
+		err_ := s_.Impl.OnlyGeneratedOrdinal()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
 type SwitchingOrdinalsWithCtxStub struct {
 	Impl SwitchingOrdinalsWithCtx
 }
@@ -116,6 +136,22 @@ func (s_ *SwitchingOrdinalsWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ord
 		fallthrough
 	case SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal:
 		err_ := s_.Impl.OnlyGeneratedOrdinal(ctx_)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+func (s_ *SwitchingOrdinalsWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case SwitchingOrdinalsOrdinalFiveOrdinal:
+		fallthrough
+	case SwitchingOrdinalsOrdinalFiveGenOrdinal:
+		err_ := s_.Impl.OrdinalFive(args_.Ctx)
+		return nil, false, err_
+	case SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal:
+		fallthrough
+	case SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal:
+		err_ := s_.Impl.OnlyGeneratedOrdinal(args_.Ctx)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
