@@ -44,8 +44,7 @@ fit::function<fuchsia::sys::LaunchInfo()> AudioLaunchInfo(
 fit::function<fuchsia::sys::LaunchInfo()> AudioCoreLaunchInfo(
     std::shared_ptr<sys::ServiceDirectory> services) {
   return LaunchInfoWithIsolatedDevmgrForUrl(
-      "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core_nodevfs.cmx",
-      {"--disable-device-settings-writeback"}, services);
+      "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core_nodevfs.cmx", {}, services);
 }
 
 fit::function<fuchsia::sys::LaunchInfo()> VirtualAudioLaunchInfo(

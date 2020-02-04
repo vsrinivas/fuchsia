@@ -22,14 +22,9 @@
 namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
-                                       AudioDeviceSettingsPersistence* device_settings_persistence,
                                        LinkMatrix* link_matrix)
-    : threading_model_(*threading_model),
-      route_graph_(*route_graph),
-      device_settings_persistence_(*device_settings_persistence),
-      link_matrix_(*link_matrix) {
+    : threading_model_(*threading_model), route_graph_(*route_graph), link_matrix_(*link_matrix) {
   FX_DCHECK(route_graph);
-  FX_DCHECK(device_settings_persistence);
   FX_DCHECK(threading_model);
   FX_DCHECK(link_matrix);
 }
@@ -66,17 +61,7 @@ void AudioDeviceManager::Shutdown() {
   devices_pending_init_.clear();
 
   for (auto& [_, device] : devices_) {
-    device_promises.push_back(
-        fit::join_promises(device->Shutdown(), device_settings_persistence_.FinalizeSettings(
-                                                   *device->device_settings()))
-            .and_then([](std::tuple<fit::result<void>, fit::result<void, zx_status_t>>& results)
-                          -> fit::result<void> {
-              FX_DCHECK(std::get<0>(results).is_ok());
-              if (std::get<1>(results).is_error()) {
-                return fit::error();
-              }
-              return fit::ok();
-            }));
+    device_promises.push_back(device->Shutdown());
   }
   devices_.clear();
 
@@ -114,32 +99,6 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
     return;
   }
 
-  // Determine whether this device's persistent settings are actually unique,
-  // or if they collide with another device's unique ID.
-  //
-  // If these settings are currently unique in the system, attempt to load the
-  // persisted settings from disk, or create a new persisted settings file for
-  // this device if the file is either absent or corrupt.
-  //
-  // If these settings are not unique, then copy the settings of the device we
-  // conflict with, and use them without persistence. Currently, when device
-  // instances conflict, we persist only the first instance's settings.
-  fbl::RefPtr<AudioDeviceSettings> settings = device->device_settings();
-  FX_DCHECK(settings != nullptr);
-  threading_model_.FidlDomain().executor()->schedule_task(
-      device_settings_persistence_.LoadSettings(settings).then(
-          [this, device,
-           settings = std::move(settings)](fit::result<void, zx_status_t>& result) mutable {
-            if (result.is_error()) {
-              FX_PLOGS(FATAL, result.error()) << "Unable to load device settings; "
-                                              << "device will not use persisted settings";
-            }
-            ActivateDeviceWithSettings(std::move(device), std::move(settings));
-          }));
-}
-
-void AudioDeviceManager::ActivateDeviceWithSettings(std::shared_ptr<AudioDevice> device,
-                                                    fbl::RefPtr<AudioDeviceSettings> settings) {
   // If this device is still waiting for initialization, move it over to the set of active devices.
   // Otherwise (if not waiting for initialization), we've been removed.
   auto dev = devices_pending_init_.extract(device->token());
@@ -147,30 +106,10 @@ void AudioDeviceManager::ActivateDeviceWithSettings(std::shared_ptr<AudioDevice>
     return;
   }
 
-  // If this device should be completely ignored, remove it entirely from our awareness.
-  if (settings->Ignored()) {
-    REP(IgnoringDevice(*device));
-    RemoveDevice(device);
-    return;
-  }
-
   devices_.insert(std::move(dev));
 
   REP(ActivatingDevice(*device));
   device->SetActivated();
-
-  // We now have gain settings (restored from disk, cloned from others, or default). Reapply them
-  // via the device so it can apply its internal limits (which may not permit the values from disk).
-  //
-  // TODO(johngro): Clean up this awkward pattern. We want settings to be independent of devices;
-  // however, a device's capabilities may require certain limits on these settings.
-  constexpr uint32_t kAllSetFlags = fuchsia::media::SetAudioGainFlag_GainValid |
-                                    fuchsia::media::SetAudioGainFlag_MuteValid |
-                                    fuchsia::media::SetAudioGainFlag_AgcValid;
-  fuchsia::media::AudioGainInfo gain_info;
-  settings->GetGainInfo(&gain_info);
-  REP(SettingDeviceGainInfo(*device, gain_info, kAllSetFlags));
-  device->SetGainInfo(gain_info, kAllSetFlags);
 
   // Notify interested users of the new device. If it will become the new default, set 'is_default'
   // properly in the notification ("default" device is currently defined simply as last-plugged).
@@ -200,7 +139,6 @@ void AudioDeviceManager::RemoveDevice(const std::shared_ptr<AudioDevice>& device
   }
 
   device->Shutdown();
-  device_settings_persistence_.FinalizeSettings(*device->device_settings());
 
   auto& device_set = device->activated() ? devices_ : devices_pending_init_;
   device_set.erase(device->token());
@@ -306,7 +244,7 @@ std::shared_ptr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Ty
   // this operation becomes O(1). N is pretty low right now, so the benefits do
   // not currently outweigh the complexity of maintaining this index.
   for (auto& [_, device] : devices_) {
-    if ((device->type() != type) || device->device_settings()->AutoRoutingDisabled()) {
+    if (device->type() != type) {
       continue;
     }
 

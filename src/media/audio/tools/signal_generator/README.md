@@ -25,7 +25,6 @@ AudioCore, AudioRenderer, VolumeControl and GainControl FIDL protocols.
       [--ramp-dur=<RAMP_DURATION_MSEC>]
       [--usage-gain[=<GAIN_DB>]]
       [--usage-vol[=<VOLUME>]]
-      [--settings<=ENABLED>]
       [--help | --?]
 
 These optional parameters are interpreted as follows:
@@ -77,14 +76,9 @@ These optional parameters are interpreted as follows:
     --usage-vol[=<VOLUME>]   Set render usage volume ([0.0, 1.0]; 0.50 if only '--usage-vol' is
                              provided)
 
-      By default, changes to audio device settings are persisted
-    --settings[=<0|1>]       Enable/disable creation/update of device settings
-                             (0=Disable, 1=Enable; 0 is default if only '--settings' is provided)
-
     --help, --?              Show this message
 
 ### IMPORTANT NOTE
 
-Developers can use this tool to change systemwide render-usage volume and gain, and to
-enable/disable systemwide creation/update of settings files for audio input and output devices.
-These changes persist beyond this tool's invocation.
+Developers can use this tool to change systemwide render-usage volume and gain. These changes
+persist beyond this tool's invocation.

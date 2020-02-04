@@ -18,7 +18,6 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_device.h"
-#include "src/media/audio/audio_core/audio_device_settings_persistence.h"
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/audio_plug_detector_impl.h"
@@ -35,7 +34,6 @@ class SystemGainMuteProvider;
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
   AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
-                     AudioDeviceSettingsPersistence* device_settings_persistence,
                      LinkMatrix* link_matrix);
   ~AudioDeviceManager();
 
@@ -43,10 +41,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
 
   // Initialize the input/output manager.
   zx_status_t Init();
-
-  void EnableDeviceSettings(bool enabled) {
-    device_settings_persistence_.EnableDeviceSettings(enabled);
-  }
 
   // Blocking call. Called by the service, once, when it is time to shutdown the service
   // implementation. While this function is blocking, it must never block for long. Our process is
@@ -80,8 +74,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
                           bool is_input) final;
 
  private:
-  void ActivateDeviceWithSettings(std::shared_ptr<AudioDevice> device,
-                                  fbl::RefPtr<AudioDeviceSettings> settings);
   // Find the most-recently plugged device (per type: input or output) excluding throttle_output. If
   // allow_unplugged, return the most-recently UNplugged device if no plugged devices are found --
   // otherwise return nullptr.
@@ -129,8 +121,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
 
   // A helper class we will use to detect plug/unplug events for audio devices
   AudioPlugDetectorImpl plug_detector_;
-
-  AudioDeviceSettingsPersistence& device_settings_persistence_;
 
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;

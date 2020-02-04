@@ -91,11 +91,6 @@ class MediaApp {
     usage_volume_ = volume;
   }
 
-  void set_device_settings(bool settings_enabled) {
-    set_device_settings_ = true;
-    settings_enabled_ = settings_enabled;
-  }
-
   void Run(sys::ComponentContext* app_context);
 
  private:
@@ -185,9 +180,6 @@ class MediaApp {
   float usage_gain_db_ = kUnityGainDb;
   bool set_usage_volume_ = false;
   float usage_volume_;
-
-  bool set_device_settings_ = false;
-  bool settings_enabled_ = true;
 };
 
 }  // namespace media::tools

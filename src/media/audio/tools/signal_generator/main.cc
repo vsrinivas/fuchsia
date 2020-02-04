@@ -61,9 +61,6 @@ constexpr char kRenderUsageGainDefaultDb[] = "0.0";
 constexpr char kRenderUsageVolumeSwitch[] = "usage-vol";
 constexpr char kRenderUsageVolumeDefault[] = "0.50";
 
-constexpr char kDeviceSettingsSwitch[] = "settings";
-constexpr char kDeviceSettingsDefault[] = "0";
-
 constexpr char kHelpSwitch[] = "help";
 }  // namespace
 
@@ -149,12 +146,6 @@ void usage(const char* prog_name) {
       "provided)\n",
       kRenderUsageVolumeSwitch, fuchsia::media::audio::MIN_VOLUME,
       fuchsia::media::audio::MAX_VOLUME, kRenderUsageVolumeDefault, kRenderUsageVolumeSwitch);
-
-  printf("\n\t  By default, changes to audio device settings are persisted\n");
-  printf("\t--%s[=<0|1>]\t Enable/disable creation/update of device settings\n",
-         kDeviceSettingsSwitch);
-  printf("\t\t\t\t (0=Disable, 1=Enable; %s is default if only '--%s' is provided)\n",
-         kDeviceSettingsDefault, kDeviceSettingsSwitch);
 
   printf("\n\t--%s, --?\t\t Show this message\n\n", kHelpSwitch);
 }
@@ -338,16 +329,6 @@ int main(int argc, const char** argv) {
     media_app.set_usage_gain(std::stof(usage_gain_str));
   }
 
-  // Handle device settings
-  if (command_line.HasOption(kDeviceSettingsSwitch)) {
-    std::string device_settings_str;
-    command_line.GetOptionValue(kDeviceSettingsSwitch, &device_settings_str);
-    if (device_settings_str == "") {
-      device_settings_str = kDeviceSettingsDefault;
-    }
-
-    media_app.set_device_settings(fxl::StringToNumber<uint32_t>(device_settings_str) != 0);
-  }
   // Handle "generate to file"
   if (command_line.HasOption(kSaveToFileSwitch)) {
     std::string save_file_str;

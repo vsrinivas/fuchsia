@@ -9,7 +9,6 @@
 #endif
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
-#include "src/media/audio/audio_core/command_line_options.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/threading_model.h"
@@ -38,11 +37,6 @@ int main(int argc, const char** argv) {
   auto component_context = sys::ComponentContext::Create();
   REP(Init(component_context.get()));
 
-  auto options = CommandLineOptions::ParseFromArgcArgv(argc, argv);
-  if (!options.is_ok()) {
-    return -1;
-  }
-
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   if (!process_config) {
     FX_LOGS(INFO) << "No audio_core_config.json; using default configuration";
@@ -55,7 +49,7 @@ int main(int argc, const char** argv) {
   FX_CHECK(process_config);
   auto config_handle = ProcessConfig::set_instance(std::move(*process_config));
 
-  AudioCoreImpl impl(threading_model.get(), std::move(component_context), options.take_value());
+  AudioCoreImpl impl(threading_model.get(), std::move(component_context));
   threading_model->RunAndJoinAllThreads();
   return 0;
 }

@@ -43,9 +43,7 @@ lazy_static! {
                 UsageReporterMarker::SERVICE_NAME,
                 AudioDeviceEnumeratorMarker::SERVICE_NAME
             ],
-            arguments: Some(vec![
-                "--disable-device-settings-writeback".to_string()
-            ])
+            arguments: None
         },
         "fuchsia-pkg://fuchsia.com/virtual_audio_service#meta/virtual_audio_service_nodevfs.cmx" => ComponentLaunchInfo {
             services: vec![

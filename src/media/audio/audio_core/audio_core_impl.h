@@ -14,7 +14,6 @@
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
-#include "src/media/audio/audio_core/command_line_options.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
@@ -27,8 +26,7 @@ namespace media::audio {
 class AudioCoreImpl : public fuchsia::media::AudioCore, UsageGainAdjustment {
  public:
   AudioCoreImpl(ThreadingModel* threading_model,
-                std::unique_ptr<sys::ComponentContext> component_context,
-                CommandLineOptions options);
+                std::unique_ptr<sys::ComponentContext> component_context);
 
   // Disallow copy & move.
   AudioCoreImpl(AudioCoreImpl&& o) = delete;
@@ -53,7 +51,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, UsageGainAdjustment {
   void CreateAudioCapturer(
       bool loopback,
       fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) final;
-  void EnableDeviceSettings(bool enabled) final;
+  void EnableDeviceSettings(bool enabled) final {}
   void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
   void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;
   void BindUsageVolumeControl(
@@ -77,7 +75,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, UsageGainAdjustment {
 
   ThreadingModel& threading_model_;
 
-  AudioDeviceSettingsPersistence device_settings_persistence_;
   // State for dealing with devices.
   AudioDeviceManager device_manager_;
 

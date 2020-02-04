@@ -31,35 +31,17 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
     bool agc_enabled = false;
   };
 
-  static fbl::RefPtr<AudioDeviceSettings> Create(const AudioDriver& drv, bool is_input);
-
   AudioDeviceSettings(const audio_stream_unique_id_t& uid, const HwGainState& hw, bool is_input);
 
-  // Initialize this object with the contents of another instance with the same unique
-  // id. Do not make any attempt to persist these settings to disk from now on.
-  void InitFromClone(const AudioDeviceSettings& other);
-  fbl::RefPtr<AudioDeviceSettings> Clone();
+  // Disallow copy/move.
+  AudioDeviceSettings(const AudioDeviceSettings& o);
+  AudioDeviceSettings(AudioDeviceSettings&&) = delete;
+  AudioDeviceSettings& operator=(const AudioDeviceSettings&) = delete;
+  AudioDeviceSettings& operator=(AudioDeviceSettings&&) = delete;
 
   // Simple accessors for constant properties
   const audio_stream_unique_id_t& uid() const { return uid_; }
   bool is_input() const { return is_input_; }
-
-  // Simple accessors for persisted properties
-  bool Ignored() const { return ignored_; }
-  void SetIgnored(bool ignored);
-  bool AutoRoutingDisabled() const { return auto_routing_disabled_; }
-  void SetAutoRoutingDisabled(bool auto_routing_disabled);
-
-  void set_observer(fit::function<void(const AudioDeviceSettings*)> observer) {
-    FX_DCHECK(!observer_);
-    observer_ = std::move(observer);
-  }
-
-  // Disallow move construction/assignment and copy assign.
-  // We keep a private copy ctor to assist in implementing the |Clone| operation.
-  AudioDeviceSettings(AudioDeviceSettings&&) = delete;
-  AudioDeviceSettings& operator=(const AudioDeviceSettings&) = delete;
-  AudioDeviceSettings& operator=(AudioDeviceSettings&&) = delete;
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -100,17 +82,9 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
   //////////////////////////////////////////////////////////////////////////////
 
  private:
-  AudioDeviceSettings(const AudioDeviceSettings& o);
-
-  void NotifyObserver();
-
   const audio_stream_unique_id_t uid_;
   const bool is_input_;
   const bool can_agc_;
-
-  // These should only be accessed from the AudioDeviceManager's message loop thread.
-  bool ignored_ = false;
-  bool auto_routing_disabled_ = false;
 
   // The settings_lock_ protects any settings state which needs to be set by the AudioDeviceManager
   // and observed atomically by the mix domain threads. Any state which is used only by the
@@ -120,8 +94,6 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
   GainState gain_state_ FXL_GUARDED_BY(settings_lock_);
   audio_set_gain_flags_t gain_state_dirty_flags_ FXL_GUARDED_BY(settings_lock_) =
       static_cast<audio_set_gain_flags_t>(0);
-
-  fit::function<void(const AudioDeviceSettings*)> observer_;
 };
 
 }  // namespace media::audio

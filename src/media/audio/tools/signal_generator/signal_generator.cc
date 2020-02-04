@@ -172,10 +172,6 @@ void MediaApp::SetupPayloadCoefficients() {
 }
 
 void MediaApp::DisplayConfigurationSettings() {
-  if (set_device_settings_) {
-    printf("\nSetting device settings to %s.", (settings_enabled_ ? "ON" : "OFF"));
-  }
-
   auto it = std::find_if(kRenderUsageOptions.cbegin(), kRenderUsageOptions.cend(),
                          [usage = usage_](auto usage_string_and_usage) {
                            return usage == usage_string_and_usage.second;
@@ -231,16 +227,11 @@ void MediaApp::DisplayConfigurationSettings() {
   printf(".\n\n");
 }
 
-// AudioCore interface is used to enable/disable the creation/update of device settings files,
-// and to change the gain/volume of usages.
+// AudioCore interface is used to change the gain/volume of usages.
 void MediaApp::SetAudioCoreSettings(sys::ComponentContext* app_context) {
-  if (set_device_settings_ || set_usage_gain_ || set_usage_volume_) {
+  if (set_usage_gain_ || set_usage_volume_) {
     fuchsia::media::AudioCorePtr audio_core;
     app_context->svc()->Connect(audio_core.NewRequest());
-
-    if (set_device_settings_) {
-      audio_core->EnableDeviceSettings(settings_enabled_);
-    }
 
     if (set_usage_gain_) {
       audio_core->SetRenderUsageGain(usage_, usage_gain_db_);

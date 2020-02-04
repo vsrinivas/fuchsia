@@ -35,7 +35,6 @@ action_foreach("json_schema_headers") {
 
   sources = [
     "schema/audio_core_config_schema.jsx",
-    "schema/audio_device_settings_schema.jsx",
     "schema/audio_policy_schema.jsx",
   ]
 }
@@ -69,11 +68,6 @@ source_set("audio_core_lib") {
     "audio_device_manager.h",
     "audio_device_settings.cc",
     "audio_device_settings.h",
-    "audio_device_settings_persistence.cc",
-    "audio_device_settings_persistence.h",
-    "audio_device_settings_serialization.h",
-    "audio_device_settings_serialization_impl.cc",
-    "audio_device_settings_serialization_impl.h",
     "audio_driver.cc",
     "audio_driver.h",
     "audio_input.cc",
@@ -87,8 +81,6 @@ source_set("audio_core_lib") {
     "audio_policy.h",
     "audio_renderer_impl.cc",
     "audio_renderer_impl.h",
-    "command_line_options.cc",
-    "command_line_options.h",
     "device_registry.h",
     "driver_output.cc",
     "driver_output.h",
@@ -214,14 +206,11 @@ executable("unittest_bin") {
   sources = [
     "audio_admin_unittest.cc",
     "audio_capturer_impl_unittest.cc",
-    "audio_device_settings_persistence_unittest.cc",
-    "audio_device_settings_serialization_impl_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_driver_unittest.cc",
     "audio_output_unittest.cc",
     "audio_plug_detector_impl_unittest.cc",
     "audio_renderer_impl_unittest.cc",
-    "command_line_options_unittest.cc",
     "driver_output_unittest.cc",
     "effects_stage_unittest.cc",
     "format_unittest.cc",

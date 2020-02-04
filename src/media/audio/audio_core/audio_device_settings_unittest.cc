@@ -11,17 +11,6 @@
 namespace media::audio {
 namespace {
 
-class CallbackCounter {
- public:
-  fit::function<void(const AudioDeviceSettings*)> TakeObserver() { return std::move(observer_); }
-
-  size_t callback_count() const { return callback_count_; }
-
- private:
-  fit::function<void(const AudioDeviceSettings*)> observer_{[this](...) { ++callback_count_; }};
-  size_t callback_count_ = 0;
-};
-
 static constexpr audio_stream_unique_id_t kTestUniqueId = {
     {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}};
 
@@ -69,7 +58,6 @@ TEST_F(AudioDeviceSettingsTest, MuteTrueWhenNotSupported) {
 }
 
 TEST_F(AudioDeviceSettingsTest, SetGainInfoDoesNothingWithNoFlags) {
-  CallbackCounter counter;
   // Set AGC/Mute to 'true' but not supported.
   HwGainState hw_gain_state = kDefaultInitialHwGainState;
   hw_gain_state.cur_mute = true;
@@ -78,7 +66,6 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoDoesNothingWithNoFlags) {
   hw_gain_state.can_agc = true;
   hw_gain_state.cur_gain = 5.0;
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
-  settings.set_observer(counter.TakeObserver());
 
   // Verify initial state.
   fuchsia::media::AudioGainInfo gain_info;
@@ -100,13 +87,9 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoDoesNothingWithNoFlags) {
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
   EXPECT_EQ(5.0f, gain_info.gain_db);
-
-  // Nothing should have changed, so the observer should not have been notified.
-  EXPECT_EQ(0u, counter.callback_count());
 }
 
 TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyGainDb) {
-  CallbackCounter counter;
   // Set AGC/Mute to 'true' but not supported.
   HwGainState hw_gain_state = kDefaultInitialHwGainState;
   hw_gain_state.cur_mute = true;
@@ -115,7 +98,6 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyGainDb) {
   hw_gain_state.can_agc = true;
   hw_gain_state.cur_gain = 5.0;
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
-  settings.set_observer(counter.TakeObserver());
 
   // Verify initial state.
   fuchsia::media::AudioGainInfo gain_info;
@@ -137,11 +119,9 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyGainDb) {
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
   EXPECT_EQ(10.0f, gain_info.gain_db);
-  EXPECT_EQ(1u, counter.callback_count());
 }
 
 TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyMute) {
-  CallbackCounter counter;
   // Set AGC/Mute to 'true' but not supported.
   HwGainState hw_gain_state = kDefaultInitialHwGainState;
   hw_gain_state.cur_mute = true;
@@ -150,7 +130,6 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyMute) {
   hw_gain_state.can_agc = true;
   hw_gain_state.cur_gain = 5.0;
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
-  settings.set_observer(counter.TakeObserver());
 
   // Verify initial state.
   fuchsia::media::AudioGainInfo gain_info;
@@ -172,11 +151,9 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyMute) {
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
   EXPECT_EQ(5.0f, gain_info.gain_db);
-  EXPECT_EQ(1u, counter.callback_count());
 }
 
 TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyAgc) {
-  CallbackCounter counter;
   // Set AGC/Mute to 'true' but not supported.
   HwGainState hw_gain_state = kDefaultInitialHwGainState;
   hw_gain_state.cur_mute = true;
@@ -185,7 +162,6 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyAgc) {
   hw_gain_state.can_agc = true;
   hw_gain_state.cur_gain = 5.0;
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
-  settings.set_observer(counter.TakeObserver());
 
   // Verify initial state.
   fuchsia::media::AudioGainInfo gain_info;
@@ -208,31 +184,6 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyAgc) {
   // Note that we expect AgcSupported to remain unchanged.
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
   EXPECT_EQ(5.0f, gain_info.gain_db);
-  EXPECT_EQ(1u, counter.callback_count());
-}
-
-TEST_F(AudioDeviceSettingsTest, Clone) {
-  HwGainState hw_gain_state = kDefaultInitialHwGainState;
-  hw_gain_state.cur_mute = true;
-  hw_gain_state.cur_agc = true;
-  hw_gain_state.can_mute = true;
-  hw_gain_state.can_agc = true;
-  hw_gain_state.cur_gain = 5.0;
-  AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
-  settings.SetIgnored(settings.Ignored());
-
-  auto clone = settings.Clone();
-
-  fuchsia::media::AudioGainInfo gain_info, clone_gain_info;
-  settings.GetGainInfo(&gain_info);
-  clone->GetGainInfo(&clone_gain_info);
-
-  EXPECT_EQ(gain_info.flags, clone_gain_info.flags);
-  EXPECT_EQ(gain_info.gain_db, clone_gain_info.gain_db);
-  EXPECT_EQ(settings.Ignored(), clone->Ignored());
-  EXPECT_EQ(settings.AutoRoutingDisabled(), clone->AutoRoutingDisabled());
-  EXPECT_EQ(settings.is_input(), clone->is_input());
-  EXPECT_EQ(0, memcmp(settings.uid().data, clone->uid().data, sizeof(settings.uid().data)));
 }
 
 }  // namespace

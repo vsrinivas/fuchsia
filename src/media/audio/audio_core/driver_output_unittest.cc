@@ -10,7 +10,6 @@
 #include <fbl/span.h>
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/audio_device_settings_serialization_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/loudness_transform.h"

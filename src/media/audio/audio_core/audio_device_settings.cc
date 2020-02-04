@@ -12,13 +12,6 @@
 
 namespace media::audio {
 
-// static
-fbl::RefPtr<AudioDeviceSettings> AudioDeviceSettings::Create(const AudioDriver& drv,
-                                                             bool is_input) {
-  return fbl::MakeRefCounted<AudioDeviceSettings>(drv.persistent_unique_id(), drv.hw_gain_state(),
-                                                  is_input);
-}
-
 AudioDeviceSettings::AudioDeviceSettings(const audio_stream_unique_id_t& uid, const HwGainState& hw,
                                          bool is_input)
     : uid_(uid), is_input_(is_input), can_agc_(hw.can_agc) {
@@ -33,24 +26,6 @@ AudioDeviceSettings::AudioDeviceSettings(const AudioDeviceSettings& o)
   gain_state_.gain_db = o.gain_state_.gain_db;
   gain_state_.muted = o.gain_state_.muted;
   gain_state_.agc_enabled = o.gain_state_.agc_enabled;
-}
-
-void AudioDeviceSettings::InitFromClone(const AudioDeviceSettings& other) {
-  TRACE_DURATION("audio", "AudioDeviceSettings::InitFromClone");
-  FX_DCHECK(memcmp(&uid_, &other.uid_, sizeof(uid_)) == 0);
-
-  // Clone the gain settings.
-  fuchsia::media::AudioGainInfo gain_info;
-  other.GetGainInfo(&gain_info);
-  SetGainInfo(gain_info, UINT32_MAX);
-
-  // Clone misc. flags.
-  ignored_ = other.Ignored();
-  auto_routing_disabled_ = other.AutoRoutingDisabled();
-}
-
-fbl::RefPtr<AudioDeviceSettings> AudioDeviceSettings::Clone() {
-  return fbl::AdoptRef(new AudioDeviceSettings(*this));
 }
 
 bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
@@ -80,10 +55,6 @@ bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
 
   bool needs_wake = (!gain_state_dirty_flags_ && dirtied);
   gain_state_dirty_flags_ = dirtied;
-
-  if (needs_wake) {
-    NotifyObserver();
-  }
 
   return needs_wake;
 }
@@ -130,28 +101,6 @@ audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(GainState* out_sta
   }
 
   return ret;
-}
-
-void AudioDeviceSettings::SetIgnored(bool ignored) {
-  std::lock_guard<std::mutex> lock(settings_lock_);
-  if (ignored != ignored_) {
-    ignored_ = ignored;
-    NotifyObserver();
-  }
-}
-
-void AudioDeviceSettings::SetAutoRoutingDisabled(bool auto_routing_disabled) {
-  std::lock_guard<std::mutex> lock(settings_lock_);
-  if (auto_routing_disabled != auto_routing_disabled_) {
-    auto_routing_disabled_ = auto_routing_disabled;
-    NotifyObserver();
-  }
-}
-
-void AudioDeviceSettings::NotifyObserver() {
-  if (observer_) {
-    observer_(this);
-  }
 }
 
 }  // namespace media::audio

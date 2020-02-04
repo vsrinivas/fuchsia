@@ -25,11 +25,9 @@ constexpr zx_vm_option_t kAudioRendererVmarFlags =
 }  // namespace
 
 AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
-                             std::unique_ptr<sys::ComponentContext> component_context,
-                             CommandLineOptions options)
+                             std::unique_ptr<sys::ComponentContext> component_context)
     : threading_model_(*threading_model),
-      device_settings_persistence_(threading_model),
-      device_manager_(threading_model, &route_graph_, &device_settings_persistence_, &link_matrix_),
+      device_manager_(threading_model, &route_graph_, &link_matrix_),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
       audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
       route_graph_(ProcessConfig::instance().routing_config(), &link_matrix_),
@@ -50,7 +48,6 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
     }
   });
 
-  device_manager_.EnableDeviceSettings(options.enable_device_settings_writeback);
   zx_status_t res = device_manager_.Init();
   FX_DCHECK(res == ZX_OK);
 
@@ -132,12 +129,6 @@ void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUs
                                                   float db_gain) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGainAdjustment");
   volume_manager_.SetUsageGainAdjustment(UsageFrom(capture_usage), db_gain);
-}
-
-void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
-  TRACE_DURATION("audio", "AudioCoreImpl::EnableDeviceSettings");
-  AUD_VLOG(TRACE) << " (enabled: " << enabled << ")";
-  device_manager().EnableDeviceSettings(enabled);
 }
 
 void AudioCoreImpl::BindUsageVolumeControl(
