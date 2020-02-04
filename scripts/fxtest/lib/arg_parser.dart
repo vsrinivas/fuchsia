@@ -56,7 +56,7 @@ final ArgParser fxTestArgParser = ArgParser()
   ..addOption('warnslow',
       defaultsTo: null,
       help: 'If passed, prints a debug message for each test that takes '
-          'longer than N seconds to execute')
+          'longer\nthan N seconds to execute')
   ..addOption('realm',
       abbr: 'R',
       defaultsTo: null,

@@ -6,24 +6,57 @@
 #### CATEGORY=Run, inspect and debug
 ### [EXPERIMENTAL] Entry point for all Fuchsia tests (host and target)
 
-## usage:
-##  fx test {[testName ...] --host --device}
+## Usage: fx test [testName ...]
+
+## Options:
+## -t, --testNames
+## -h, --help
+##     --host                  If true, only runs host tests. The opposite of `--device`
+## -d, --device                If true, only runs device tests. The opposite of `--host`
+##     --printtests            If true, prints the contents of `//out/default/tests.json`
+##     --[no-]build            If true, invokes `fx build` before running the test suite
+##                             (defaults to on)
 ##
-## examples:
-##  - Execute all tests
-##  fx test
+## -r, --random                If true, randomizes test execution order
+##     --dry                   If true, does not invoke any tests
+## -f, --fail                  If true, halts test suite execution on the first failed test
+##     --limit                 If passed, ends test suite execution after N tests
+##     --warnslow              If passed, prints a debug message for each test that takes longer than N seconds to execute
+## -R, --realm                 If passed, runs the tests in a named realm instead of a randomized one.
+## -s, --skipped               If true, prints a debug statement about each skipped test
+##     --simple                If true, removes any color or decoration from output
+## -o, --output                If true, also displays the output from passing tests
+## -u, --silenceunsupported    If true, will reduce unsupported tests to a warning and continue executing.
+##                             This is dangerous outside of the local development cycle, as "unsupported"
+##                             tests are likely a problem with this command, not the tests.
 ##
-## - Execute the test component available at this URL
-##  fx test fuchsia-pkg://host.com/testName/etc
+## -v, --verbose
 ##
-##  - Execute the test whose package URL's `packageName` component matches the value
-##  fx test testName
+## Examples:
 ##
-##  - Execute all tests at and below this path
-##  fx test //subtree/path
+##   - Execute all tests
+##   fx test
 ##
-## Multiple test names can be supplied in the same invocation, e.g.:
-##  fx test //subtree/path //another/path fuchsia-pkg://...
+##   - Execute the test component available at this URL
+##   fx test fuchsia-pkg://fuchsia.com/myPackageName/##meta/componentName.cmx
+##
+##   - Execute the test whose package URL's `package-name` component matches
+##     the value. Runs all tests contained in this package.
+##   fx test myPackageName
+##
+##   - Execute the test whose package URL's `resource-path` component matches
+##     the value. Runs only that test out of its containing package.
+##   fx test componentName
+##
+##   - Execute all tests at and below this path (usually host tests)
+##   fx test //subtree/path
+##
+##   - Multiple test names can be supplied in the same invocation, e.g.:
+##   fx test //subtree/path //another/path fuchsia-pkg://...
+##
+## The value(s) supplied for `testName` can be fully-formed Fuchsia Package URLs,
+## Fuchsia package names, or Fuchsia-tree directories. Partial tree paths
+## will execute all descendent tests.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read

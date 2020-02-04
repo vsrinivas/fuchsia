@@ -10,22 +10,37 @@ import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
 
 void usage(ArgParser parser) {
-  stdout
-    ..writeln(wrapWith(
-      'Warning! This is an experimental new test command.',
-      [magenta],
-    ))
-    ..writeln()
-    ..writeln('Usage: fx test [testName ...]')
-    ..writeln()
-    ..writeln(
-      'The value(s) supplied for `testName` can be fully-formed Fuchsia '
-      'Package URLs, Fuchsia package names, or Fuchsia-tree directories. '
-      'Partial tree paths will execute all descendent tests.',
-    )
-    ..writeln()
-    ..writeln('Options:')
-    ..writeln(parser.usage);
+  stdout.writeln('''Usage: fx test [testName ...]
+
+Options:
+${parser.usage}
+
+Examples:
+
+  - Execute all tests
+  fx test
+
+  - Execute the test component available at this URL
+  fx test fuchsia-pkg://fuchsia.com/myPackageName/#meta/componentName.cmx
+
+  - Execute the test whose package URL's `package-name` component matches
+    the value. Runs all tests contained in this package.
+  fx test myPackageName
+
+  - Execute the test whose package URL's `resource-path` component matches
+    the value. Runs only that test out of its containing package.
+  fx test componentName
+
+  - Execute all tests at and below this path (usually host tests)
+  fx test //subtree/path
+
+  - Multiple test names can be supplied in the same invocation, e.g.:
+  fx test //subtree/path //another/path fuchsia-pkg://...
+
+The value(s) supplied for `testName` can be fully-formed Fuchsia Package URLs,
+Fuchsia package names, or Fuchsia-tree directories. Partial tree paths
+will execute all descendent tests.
+    ''');
 }
 
 /// CLI-flavored wrapper for [FuchsiaTestCommand]
