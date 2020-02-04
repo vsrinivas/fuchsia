@@ -2,7 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
 
 if (is_fuchsia) {
   group("test") {
@@ -10,29 +23,42 @@ if (is_fuchsia) {
     deps = [ ":service-llcpp-test" ]
   }
 
-  zx_test("service-llcpp-test") {
+  test("service-llcpp-test") {
+    # Dependent manifests unfortunately cannot be marked as `testonly`.
+    # TODO(44278): Remove when converting this file to proper GN build idioms.
+    testonly = false
+    configs += [ "//build/unification/config:zircon-migrated" ]
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
     sources = [
       "llcpp/client_test.cc",
       "llcpp/server_test.cc",
     ]
     deps = [
-      ":fidl.service.test.llcpp",
-      "$zx/system/ulib/async-loop:async-loop-cpp",
-      "$zx/system/ulib/async-loop:async-loop-default",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl-async",
-      "$zx/system/ulib/fidl-async:fidl-async-cpp",
-      "$zx/system/ulib/fs",
-      "$zx/system/ulib/service:service-llcpp",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zxtest",
+      ":fidl.service.test_llcpp",
+      "//zircon/public/lib/async-loop-cpp",
+      "//zircon/public/lib/async-loop-default",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/fidl-async",
+      "//zircon/public/lib/fidl-async-cpp",
+      "//zircon/public/lib/fs",
+      "//zircon/public/lib/service-llcpp",
+      "//zircon/public/lib/zxtest",
     ]
+  }
+
+  migrated_manifest("service-llcpp-manifest") {
+    deps = [ ":service-llcpp-test" ]
   }
 }
 
 # Generate C bindings that the LLCPP bindings depend on.
-fidl_library("fidl.service.test") {
-  testonly = true
+fidl("fidl.service.test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
   visibility = [ ":*" ]
   sources = [ "test.test.fidl" ]
 }
