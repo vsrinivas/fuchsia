@@ -2,11 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
-  deps = [ ":sysconfig-sync-client-test" ]
-}
-
 group("sysconfig-client") {
   deps = [
     ":sysconfig-sync-client",
@@ -48,17 +43,4 @@ zx_library("sysconfig-sync-client-c") {
     "$zx/system/ulib/zx",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
-}
-
-zx_test("sysconfig-sync-client-test") {
-  output_name = "sysconfig-sync-client-test"
-  sources = [ "sync-client-test.cc" ]
-  include_dirs = [ "." ]
-  deps = [
-    ":sysconfig-sync-client",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/ramdevice-client:static",
-    "$zx/system/ulib/zxtest",
-  ]
 }
