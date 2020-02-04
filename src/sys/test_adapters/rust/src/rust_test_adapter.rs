@@ -120,17 +120,13 @@ impl RustTestAdapter {
                         )
                         .context("Failed to send test cases to fuchsia.test.Suite")?;
                 }
-                ftest::SuiteRequest::Run { tests, run_listener, .. } => {
-                    let proxy = run_listener
-                        .into_proxy()
-                        .context("Can't convert listener channel to proxy")?;
+                ftest::SuiteRequest::Run { tests, listener, .. } => {
+                    let proxy =
+                        listener.into_proxy().context("Can't convert listener channel to proxy")?;
 
                     let test_names = tests
                         .into_iter()
-                        .map(|test| {
-                            let case = test.case.expect("Invocation must have a Case");
-                            case.name.expect("Case must have a name")
-                        })
+                        .map(|test| test.name.expect("Invocation must have a name"))
                         .collect();
 
                     self.run_tests(test_names, proxy).await.context("Failed to run tests")?;

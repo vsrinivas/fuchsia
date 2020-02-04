@@ -4,40 +4,65 @@
 
 library fuchsia.test;
 
-/// Name of a test case.
+/// Developer-defined human-readable name for a test case.
 using Name = string:512;
 
-/// Description of a single test case.
+/// Describes a single test case.
 table Case {
-    /// Used to show human readable results.
+    /// Uniquely identifies a test case within a test suite.
     1: Name name;
 };
 
-/// Defines the end state of a test case.
+/// Defines the outcome of running a test case.
 enum Status {
+    /// The test passed.
     PASSED = 1;
+
+    /// The test failed.
     FAILED = 2;
 
-    // TODO: Add more as required.
+    /// The test was skipped.
+    /// A skipped outcome typically indicates that no attempt was made to run
+    /// the test.
+    ///
+    /// Examples:
+    /// The test was disabled by the developer.
+    /// A precondition for running the test was not satisfied.
+    SKIPPED = 3;
+
+    /// The test was inconclusive.
+    /// An inconclusive outcome typically indicates a problem that is unrelated
+    /// to the subject under test.
+    ///
+    /// Examples:
+    /// The test could not accurately determine whether the intended
+    /// behavior was actually observed.
+    /// The test was marked as flaky by the developer.
+    /// The test was canceled prior to completion.
+    /// The test infrastructure needed to run the test was not available.
+    /// An unknown error occurred while attempting to run the test.
+    INCONCLUSIVE = 4;
 };
 
-/// Represents the results of invoking a single test case.
-/// Should be named 'Result', but this interacts awkwardly with Rust's generated
-/// code.
+/// Specification of a test to run.
+table Invocation {
+    /// Uniquely identifies a test case within a test suite.
+    1: Name name;
+};
+
+/// Optional additional instructions for running test cases.
+table RunOptions {
+};
+
+/// Results of invoking a single test case.
 table Outcome {
     1: Status status;
-
-    // TODO: Fill in additional test results, such as:
-    //  - machine parsable test results
-    //  - instrumentation data
-    //  - traces & detailed timing information
-    //  - auxiliary logs such as syslog
 };
 
-/// Listener listens to results from |`Suite.Run`| request.
+/// Listens to updates from test runs.
 protocol RunListener {
-    /// Indicates that an individual test case has started execution and provides
-    /// the primary log stream used by this test case.
+    /// Indicates that an individual test case has started execution.
+    /// Provides the primary log stream used by this test case.
     OnTestCaseStarted(Name name, handle<socket> primary_log);
 
     /// Indicates that an invididual test case has completed and outcome is
@@ -45,29 +70,13 @@ protocol RunListener {
     OnTestCaseFinished(Name name, Outcome outcome);
 };
 
-/// Specification of a test to run.
-table Invocation {
-    /// Test case to execute.
-    1: Case case;
-
-    // TODO:
-    // - providing parameters for parameterized tests
-    // - handle to store artifacts for a tests case.
-};
-
-// TODO:
-//  - filtering on suites & categories
-//  - specifying different execution orders (e.g. random order, repeat, etc)
-table RunOptions {
-};
-
 [Discoverable]
 protocol Suite {
     /// Enumerate the test cases available in this test suite.
-    GetTests() -> (vector<Case> cases);
+    GetTests() -> (vector<Case>:MAX cases);
 
     /// Run the specified test cases. Results are returned over the results
     /// channel. The Suite is expected to execute tests one at a time in the order
     /// specified. Closing |run_listener| marks end of this call.
-    Run(vector<Invocation> tests, RunOptions options, RunListener run_listener);
+    Run(vector<Invocation>:MAX tests, RunOptions options, RunListener listener);
 };

@@ -50,12 +50,11 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                     .send(&mut vec![ftest::Case { name: Some("EchoTest".to_string()) }].into_iter())
                     .expect("Should not error out");
             }
-            ftest::SuiteRequest::Run { tests, options: _, run_listener, .. } => {
+            ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
                 assert_eq!(tests.len(), 1);
-                assert_eq!(tests[0].case, Some(ftest::Case { name: Some("EchoTest".to_string()) }));
+                assert_eq!(tests[0].name, Some("EchoTest".to_string()));
 
-                let proxy =
-                    run_listener.into_proxy().expect("Can't convert listener channel to proxy");
+                let proxy = listener.into_proxy().expect("Can't convert listener channel to proxy");
                 let (log_end, _logger) =
                     fuchsia_zircon::Socket::create(fuchsia_zircon::SocketOpts::empty())
                         .expect("cannot create socket.");

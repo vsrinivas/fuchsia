@@ -34,6 +34,10 @@ pub enum Outcome {
     Passed,
     /// Test case failed.
     Failed,
+    /// Test case skipped.
+    Skipped,
+    /// Test outcome is inconclusive.
+    Inconclusive,
     /// Test case did not communicate the outcome.
     Error,
 }
@@ -165,7 +169,7 @@ pub async fn run_and_collect_results(
     fx_vlog!(1, "got test list: {:#?}", cases);
     let mut invocations = Vec::<Invocation>::new();
     for case in cases {
-        invocations.push(Invocation { case: Some(case) });
+        invocations.push(Invocation { name: Some(case.name.unwrap()) });
     }
     let (run_listener_client, mut run_listener) =
         fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
@@ -203,6 +207,8 @@ pub async fn run_and_collect_results(
                     Some(status) => match status {
                         fidl_fuchsia_test::Status::Passed => Outcome::Passed,
                         fidl_fuchsia_test::Status::Failed => Outcome::Failed,
+                        fidl_fuchsia_test::Status::Skipped => Outcome::Skipped,
+                        fidl_fuchsia_test::Status::Inconclusive => Outcome::Inconclusive,
                     },
                     // This will happen when test protocol is not properly implemented
                     // by the test and it forgets to set the outcome.

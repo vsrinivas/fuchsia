@@ -127,6 +127,8 @@ impl TestFacade {
                                     }
                                     "failed".to_string()
                                 }
+                                test_executor::Outcome::Skipped => "skipped".to_string(),
+                                test_executor::Outcome::Inconclusive => "inconclusive".to_string(),
                                 test_executor::Outcome::Error => {
                                     test_outcome = TestOutcome::Error;
                                     "error".to_string()

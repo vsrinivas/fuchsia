@@ -50,14 +50,14 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
   fuchsia::test::RunListenerPtr ptr;
   ptr.Bind(std::move(run_listener));
   for (auto& test_invocation : tests) {
-    auto& test_case = test_invocation.case_();
+    auto& test_name = test_invocation.name();
     zx::socket log_sock;
     zx::socket test_case_log;
     zx::socket::create(0, &log_sock, &test_case_log);
-    ptr->OnTestCaseStarted(test_case.name(), std::move(log_sock));
-    std::string msg1 = "log1 for " + test_case.name() + "\n";
-    std::string msg2 = "log2 for " + test_case.name() + "\n";
-    std::string msg3 = "log3 for " + test_case.name() + "\n";
+    ptr->OnTestCaseStarted(test_name, std::move(log_sock));
+    std::string msg1 = "log1 for " + test_name + "\n";
+    std::string msg2 = "log2 for " + test_name + "\n";
+    std::string msg3 = "log3 for " + test_name + "\n";
     zx_status_t status;
     FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg1.data(), msg1.length(), nullptr)))
         << status;
@@ -69,7 +69,7 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
 
     bool send_finished_event = true;
     for (auto& test_input : test_inputs_) {
-      if (test_input.name == test_case.name()) {
+      if (test_input.name == test_name) {
         if (test_input.set_outcome_status) {
           outcome.set_status(test_input.status);
         }
@@ -79,7 +79,7 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
     }
 
     if (send_finished_event) {
-      ptr->OnTestCaseFinished(test_case.name(), std::move(outcome));
+      ptr->OnTestCaseFinished(test_name, std::move(outcome));
     }
   }
 }
