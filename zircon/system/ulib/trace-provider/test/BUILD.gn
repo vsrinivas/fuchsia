@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":provider-test" ]
+}
+
+zx_test("provider-test") {
+  visibility = [ ":*" ]
+  output_name = "trace-provider-test"
+  sources = [
+    "fake_trace_manager.cc",
+    "fake_trace_manager.h",
+    "provider_test.cc",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-tracing-provider:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/trace-provider",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -181,29 +181,3 @@ zx_library("trace-provider-fdio-connect") {
   sources = trace_provider_fdio_connect_sources
   deps = trace_provider_fdio_connect_source_deps
 }
-
-group("tests") {
-  testonly = true
-  deps = [ ":provider-test" ]
-}
-
-zx_test("provider-test") {
-  visibility = [ ":*" ]
-  output_name = "trace-provider-test"
-  sources = [
-    "tests/fake_trace_manager.cc",
-    "tests/fake_trace_manager.h",
-    "tests/provider_test.cc",
-  ]
-  deps = [
-    "$zx/system/fidl/fuchsia-tracing-provider:c",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/trace-provider",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}
