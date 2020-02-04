@@ -41,7 +41,7 @@ def run_command(args, env, cwd):
     job = subprocess.Popen(
         args, env=env, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = job.communicate()
-    return (job.returncode, stdout, stderr)
+    return job.returncode, stdout, stderr
 
 
 def configure_triple(triple, args, clang_c_compiler, env):
@@ -188,21 +188,25 @@ def main():
         "--frozen",
     ]
 
-    # Save the cargo arguments so that tooling can properly pick them up. This is so that these
-    # arguments can be changed here without having to go change the tooling scripts as well.
-    # Remove the `cargo build` part of the args, and the message format argument, since tooling
-    # will want to control those itself.
+    # Save the cargo arguments so that tooling can properly pick them up. This
+    # is so that these arguments can be changed here without having to go change
+    # the tooling scripts as well.  Remove the `cargo build` part of the args,
+    # and the message format argument, since tooling will want to control those
+    # itself.
     cargo_args = call_args[2:]
 
-    call_args.append("--message-format=json")
-
-    retcode, stdout, stderr = run_command(call_args, env, args.crate_root)
+    retcode, stdout, stderr = run_command(
+        call_args + ["--message-format=json"], env, args.crate_root)
     if retcode != 0:
         # The output is not particularly useful as it is formatted in JSON.
         # Re-run the command with a user-friendly format instead.
-        del call_args[-1]
         _, stdout, stderr = run_command(call_args, env, args.crate_root)
-        print(stdout + stderr)
+        print("env:")
+        for kv in env.iteritems():
+            print(kv)
+        print(repr(call_args))
+        print(stdout)
+        print(stderr)
         return retcode
 
     cargo_toml_path = os.path.join(args.crate_root, "Cargo.toml")
