@@ -925,6 +925,11 @@ void Dwc2::DdkUnbindDeprecated() {
 
 void Dwc2::DdkRelease() { delete this; }
 
+void Dwc2::DdkSuspendNew(ddk::SuspendTxn txn) {
+  HandleSuspend();
+  txn.Reply(ZX_OK, 0);
+}
+
 void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
   uint8_t ep_num = DWC_ADDR_TO_INDEX(req->header.ep_address);
   if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= fbl::count_of(endpoints_)) {
