@@ -1,6 +1,6 @@
 #include "../isp-mem-array.h"
 
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 namespace camera {
@@ -36,7 +36,7 @@ TEST_F(IspMemArrayTest, IspMemArray32) {
   auto reg_array = std::make_unique<ddk_mock::MockMmioReg[]>(kArraySize);
   mock_registers_ =
       std::make_unique<ddk_mock::MockMmioRegRegion>(reg_array.get(), sizeof(uint32_t), kArraySize);
-  local_mmio_ = std::make_unique<ddk::MmioView>(mock_registers_->GetMmioBuffer(), 0);
+  local_mmio_ = std::make_unique<ddk::MmioView>(mock_registers_->GetMmioBuffer().View(0));
   std::shared_ptr<IspMemArray32> mem_array =
       std::make_shared<IspMemArray32>(*local_mmio_.get(), 0x00, kArraySize);
   for (uint32_t i = 0; i < kArraySize; ++i) {

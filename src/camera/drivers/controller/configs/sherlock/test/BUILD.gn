@@ -32,7 +32,6 @@ executable("configs_test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/image-format",
-    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",

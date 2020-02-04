@@ -21,7 +21,7 @@
 #include <ddk/debug.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
+#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 #include "../gdc-regs.h"
