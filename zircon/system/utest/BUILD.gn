@@ -104,7 +104,6 @@ if (current_cpu != "") {
       "blobfs-bench",
       "channel-fatal",
       "core",
-      "devcoordinator-namespace",
       "dlfcn",
       "fidl",
       "fidl-coding-tables",
