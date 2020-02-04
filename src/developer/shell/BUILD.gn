@@ -73,7 +73,11 @@ test_package("shell_tests") {
 group("tests") {
   testonly = true
 
-  deps = [ ":shell_tests" ]
+  deps = [
+    ":shell_tests",
+    "interpreter:shell_server",
+    "interpreter:tests",
+  ]
 }
 
 # "josh" is Javascript Object SHell.  We can change the name later.

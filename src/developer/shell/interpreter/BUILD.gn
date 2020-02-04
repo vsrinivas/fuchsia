@@ -1,0 +1,84 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("bin") {
+  output_name = "shell_server"
+
+  sources = [
+    "src/server.cc",
+    "src/server_main.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/svc",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/shell/fidl/fuchsia.shell:shell",
+    "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async-cpp",
+  ]
+}
+
+package("shell_server") {
+  deps = [ ":bin" ]
+  binaries = [
+    {
+      name = "shell_server"
+      dest = "shell_server"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("../meta/shell_server.cmx")
+      dest = "shell_server.cmx"
+    },
+  ]
+}
+
+executable("shell_server_test_bin") {
+  testonly = true
+  sources = [
+    "test/interpreter.cc",
+    "test/interpreter_test.cc",
+  ]
+
+  deps = [
+    ":shell_server",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/shell/fidl/fuchsia.shell:shell",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fidl-async-cpp",
+  ]
+}
+
+test_package("shell_server_tests") {
+  deps = [ ":shell_server_test_bin" ]
+  tests = [
+    {
+      name = "shell_server_test_bin"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":shell_server_tests" ]
+}
