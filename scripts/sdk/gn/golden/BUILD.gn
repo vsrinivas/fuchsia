@@ -40,5 +40,6 @@ group("runtime_library") {
 
 group("all_fidl_targets") {
   deps = [
+    "sdk/fidl/fuchsia.process",
   ]
 }

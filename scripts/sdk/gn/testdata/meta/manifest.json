@@ -19,6 +19,10 @@
     {
       "meta": "pkg/media_cpp/meta.json",
       "type": "cc_source_library"
+    },
+    {
+      "meta": "fidl/fuchsia.process/meta.json",
+      "type": "fidl_library"
     }
   ],
   "schema_version": "1"

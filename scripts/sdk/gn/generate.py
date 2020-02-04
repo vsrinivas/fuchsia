@@ -156,6 +156,21 @@ class GNBuilder(Frontend):
 
         self.write_file(os.path.join(base, 'BUILD.gn'), 'cc_library', library)
 
+    def install_fidl_library_atom(self, atom):
+        name = atom['name']
+        base = self.dest('fidl', name)
+        data = model.FidlLibrary(name, atom['name'])
+        data.relative_path_to_root = os.path.relpath(self.output, start=base)
+        data.short_name = name.split('.')[-1]
+        data.namespace = '.'.join(name.split('.')[0:-1])
+
+        self.copy_files(atom['sources'], atom['root'], base, data.srcs)
+        for dep in atom['deps']:
+            data.deps.append(dep)
+
+        self.write_file(os.path.join(base, 'BUILD.gn'), 'fidl', data)
+        self.fidl_targets.append(name)
+
 
 class TestData(object):
     """Class representing test data to be added to the run_py mako template"""
