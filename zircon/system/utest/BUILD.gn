@@ -88,7 +88,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/mipi-dsi/test",
       "$zx/system/ulib/paver:paver-test",
       "$zx/system/ulib/pretty/test",
-      "$zx/system/ulib/refcount:test",
+      "$zx/system/ulib/refcount/test",
       "$zx/system/ulib/runtests-utils/test",
       "$zx/system/ulib/smbios/test",
       "$zx/system/ulib/storage:test",

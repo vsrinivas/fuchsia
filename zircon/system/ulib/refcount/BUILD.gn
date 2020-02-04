@@ -15,20 +15,3 @@ zx_library("refcount") {
     "$zx/system/ulib/zx",
   ]
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":refcount-test" ]
-}
-
-zx_test("refcount-test") {
-  testonly = true
-  sources = [ "blocking_refcount_test.cc" ]
-  deps = [
-    ":refcount",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}
