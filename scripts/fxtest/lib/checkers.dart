@@ -63,7 +63,8 @@ class ComponentTestChecker extends Checker {
     return testName != null &&
         testName.startsWith('//') &&
         (testDefinition.name.startsWith(testName) ||
-            testDefinition.label.startsWith(testName));
+            (testDefinition.label != null &&
+                testDefinition.label.startsWith(testName)));
   }
 }
 
@@ -93,7 +94,10 @@ class UrlNameComponentChecker extends Checker {
   /// this [TestDefinition] instance's [PackageUrl] object
   @override
   bool _testPassesNameCheck(String testName, TestDefinition testDefinition) {
-    return testName != null && testName == testDefinition.parsedUrl.packageName;
+    return testName != null &&
+        (testName == testDefinition.parsedUrl.packageName ||
+            testName == testDefinition.parsedUrl.resourcePath ||
+            testName == testDefinition.parsedUrl.rawResource);
   }
 }
 

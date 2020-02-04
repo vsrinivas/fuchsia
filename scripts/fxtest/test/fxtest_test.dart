@@ -114,7 +114,7 @@ void main() {
       TestDefinition(
         buildDir: buildDir,
         os: 'fuchsia',
-        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#test.cmx',
+        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx',
         name: 'device test',
       ),
       TestDefinition(
@@ -124,43 +124,80 @@ void main() {
         name: '//host/test',
       ),
     ];
-    test('when the -h flag is passed', () {
-      TestsConfig testsConfig = TestsConfig.host(['//host/test']);
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: testDefinitions,
+
+    // Helper function to parse lots of data for tests
+    ParsedManifest parseFromArgs({
+      List<String> args,
+      bool device = false,
+      List<TestDefinition> testDefs,
+    }) {
+      TestsConfig testsConfig;
+      if (device) {
+        testsConfig = TestsConfig.device(args);
+      } else {
+        testsConfig = TestsConfig.all(args);
+      }
+      return tr.aggregateTests(
+        testDefinitions: testDefs ?? testDefinitions,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
       );
+    }
+
+    test('when the -h flag is passed', () {
+      ParsedManifest parsedManifest = parseFromArgs(args: ['//host/test']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, '//host/test');
     });
 
     test('when the -d flag is passed', () {
-      TestsConfig testsConfig =
-          TestsConfig.device(['fuchsia-pkg://fuchsia.com/fancy#test.cmx']);
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: testDefinitions,
-        buildDir: buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
+      ParsedManifest parsedManifest = parseFromArgs(
+        args: ['fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx'],
+        device: true,
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
     });
 
     test('when no flags are passed', () {
-      TestsConfig testsConfig = TestsConfig.all();
-      ParsedManifest parsedManifest = tr.aggregateTests(
-        testDefinitions: testDefinitions,
-        buildDir: buildDir,
-        eventEmitter: _ignoreEvents,
-        testsConfig: testsConfig,
-      );
+      ParsedManifest parsedManifest = parseFromArgs();
       expect(parsedManifest.testBundles, hasLength(2));
     });
 
-    test('when packageUrl `name` is matched', () {
+    test('when packageUrl.resourcePath is matched', () {
+      ParsedManifest parsedManifest = parseFromArgs(args: ['superBigTest.cmx']);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
+    });
+    test('when packageUrl.rawResource is matched', () {
+      ParsedManifest parsedManifest = parseFromArgs(args: ['superBigTest']);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
+    });
+
+    test('when packageUrl.resourcePath are not components', () {
+      var testDefs = <TestDefinition>[
+        TestDefinition(
+          buildDir: buildDir,
+          os: 'fuchsia',
+          packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#meta/not-component',
+          name: 'asdf-one',
+        ),
+        TestDefinition(
+          buildDir: buildDir,
+          os: 'fuchsia',
+          packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#bin/def-not-comp.so',
+          name: 'asdf-two',
+        ),
+      ];
+      expect(
+        () => parseFromArgs(testDefs: testDefs),
+        throwsA(TypeMatcher<MalformedFuchsiaUrlException>()),
+      );
+    });
+
+    test('when packageUrl.packageName is matched', () {
       TestsConfig testsConfig = TestsConfig.all(['fancy']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
@@ -172,8 +209,9 @@ void main() {
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
     });
 
-    test('when packageUrl `name` is matched but discriminating flag prevents',
-        () {
+    test(
+        'when packageUrl.packageName is matched but discriminating '
+        'flag prevents', () {
       TestsConfig testsConfig = TestsConfig.host(['fancy']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
@@ -242,6 +280,7 @@ void main() {
       expect(packageUrl.packageVariant, 'VARIANT');
       expect(packageUrl.hash, 'asdf');
       expect(packageUrl.resourcePath, 'OMG.cmx');
+      expect(packageUrl.rawResource, 'OMG');
     });
 
     test('when the variant is missing', () {
@@ -252,6 +291,7 @@ void main() {
       expect(packageUrl.packageVariant, null);
       expect(packageUrl.hash, 'asdf');
       expect(packageUrl.resourcePath, 'OMG.cmx');
+      expect(packageUrl.rawResource, 'OMG');
     });
 
     test('when the hash is missing', () {
@@ -262,6 +302,7 @@ void main() {
       expect(packageUrl.packageVariant, 'VARIANT');
       expect(packageUrl.hash, null);
       expect(packageUrl.resourcePath, 'OMG.cmx');
+      expect(packageUrl.rawResource, 'OMG');
     });
 
     test('when the resource path is missing', () {
@@ -272,6 +313,7 @@ void main() {
       expect(packageUrl.packageVariant, 'VARIANT');
       expect(packageUrl.hash, 'asdf');
       expect(packageUrl.resourcePath, '');
+      expect(packageUrl.rawResource, '');
     });
 
     test('when the variant and hash are missing', () {
@@ -282,6 +324,7 @@ void main() {
       expect(packageUrl.packageVariant, null);
       expect(packageUrl.hash, null);
       expect(packageUrl.resourcePath, 'OMG.cmx');
+      expect(packageUrl.rawResource, 'OMG');
     });
     test('when the variant and resource path are missing', () {
       PackageUrl packageUrl =
@@ -291,6 +334,7 @@ void main() {
       expect(packageUrl.packageVariant, null);
       expect(packageUrl.hash, 'asdf');
       expect(packageUrl.resourcePath, '');
+      expect(packageUrl.rawResource, '');
     });
 
     test('when the hash and resource path are missing', () {
@@ -301,6 +345,7 @@ void main() {
       expect(packageUrl.packageVariant, 'VARIANT');
       expect(packageUrl.hash, null);
       expect(packageUrl.resourcePath, '');
+      expect(packageUrl.rawResource, '');
     });
 
     test('when the variant, hash, and resource path are missing', () {
@@ -311,6 +356,7 @@ void main() {
       expect(packageUrl.packageVariant, null);
       expect(packageUrl.hash, null);
       expect(packageUrl.resourcePath, '');
+      expect(packageUrl.rawResource, '');
     });
   });
 
