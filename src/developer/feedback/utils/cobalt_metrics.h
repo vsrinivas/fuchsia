@@ -14,6 +14,12 @@ constexpr auto kProjectId = cobalt_registry::kProjectId;
 enum class RebootReason {
   kKernelPanic = cobalt_registry::RebootMetricDimensionReason::KernelPanic,
   kOOM = cobalt_registry::RebootMetricDimensionReason::Oom,
+  kCold = cobalt_registry::RebootMetricDimensionReason::Cold,
+  kClean = cobalt_registry::RebootMetricDimensionReason::Clean,
+  kUnknown = cobalt_registry::RebootMetricDimensionReason::Unknown,
+  kHardwareWatchdog = cobalt_registry::RebootMetricDimensionReason::HardwareWatchdog,
+  kSoftwareWatchdog = cobalt_registry::RebootMetricDimensionReason::SoftwareWatchdog,
+  kBrownout = cobalt_registry::RebootMetricDimensionReason::Brownout,
 };
 
 enum class CrashState {
