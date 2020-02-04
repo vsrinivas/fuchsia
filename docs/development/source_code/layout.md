@@ -160,8 +160,102 @@ additionally depend on the `testing` directory in that area and ancestors:
 Each area and subarea must define the following canonical targets in their
 top-level BUILD.gn file:
 
+* `<dir-name>`
+  * All directories should have a target with the same name as the directory.
+    The directory target is essentially an "all" target, intended and used to
+    produce "build-everything" builds.
+    * All buildable artifacts defined in the directory and subdirectories.
+    * All tests in the current directory and subdirectories.
+  * The directory target should only produce maximal builds - it should not
+    include configuration targets or changes that would modify the "product
+    behavior" of a particular product - for example, including the directory
+    target should not cause new software to be automatically started at boot
+    time, or override default service topologies or service maps.
+  * When a new sub-directory is added to an area, it should define this
+    directory-name target, as well as including the directory name target in
+    the parent directory target.
+
 * `tests`
   * All of the tests within this area
+  * When a new sub-directory is added with a new tests target, the tests target
+    should be added to the parent directories tests target.
+
+#### Example
+
+The following is an example for a directory called `fortune`.
+
+```gn
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+group("fortune") {
+  testonly = true
+  public_deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fortune-tests"
+  ]
+}
+
+executable("bin") {
+  output_name = "fortune"
+
+  sources = [
+    "fortune.cc"
+  ]
+}
+
+executable("test") {
+  testonly = true
+  output_name = "fortune-test"
+
+  sources = [
+    "test.cc"
+  ]
+}
+
+package("pkg") {
+  package_name = "fortune"
+
+  deps = [
+    ":bin"
+  ]
+
+  binaries = [
+    {
+      name = "fortune"
+    },
+  ]
+
+  meta = [
+    {
+      dest = "fortune.cmx"
+      path = rebase_path(dest)
+    },
+  ]
+}
+
+unittest_package("fortune-tests") {
+  testonly = true
+  deps = [
+    ":test",
+  ]
+
+  tests = [
+    {
+      name = "fortune-test"
+      environments = basic_env
+    },
+  ]
+}
+```
 
 ## Repository layout
 
