@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":storage_operation" ]
+}
+
+zx_test("storage_operation") {
+  test_group = "storage"
+  output_name = "storage-operation-test"
+  sources = [ "unbuffered_operations_builder_test.cc" ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/storage/operation",
+    "$zx/system/ulib/zxtest",
+  ]
+}

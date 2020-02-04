@@ -41,24 +41,3 @@ zx_library("buffer") {
     ]
   }
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":storage_buffer" ]
-}
-
-zx_test("storage_buffer") {
-  output_name = "storage-buffer-test"
-  test_group = "storage"
-  sources = [
-    "test/block_buffer_view_test.cc",
-    "test/blocking_ring_buffer_test.cc",
-    "test/ring_buffer_test.cc",
-    "test/vmo_buffer_test.cc",
-  ]
-  deps = [
-    ":buffer",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-  ]
-}

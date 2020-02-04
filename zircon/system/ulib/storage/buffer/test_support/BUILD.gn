@@ -18,19 +18,3 @@ zx_library("test_support") {
     "$zx/system/ulib/zx",
   ]
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":storage_buffer_test_support" ]
-}
-
-zx_test("storage_buffer_test_support") {
-  output_name = "storage-buffer-test-support-test"
-  test_group = "storage"
-  sources = [ "test/array_buffer_test.cc" ]
-  deps = [
-    ":test_support",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-  ]
-}

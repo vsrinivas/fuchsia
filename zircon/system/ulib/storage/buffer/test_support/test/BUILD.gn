@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":storage_buffer_test_support" ]
+}
+
+zx_test("storage_buffer_test_support") {
+  output_name = "storage-buffer-test-support-test"
+  test_group = "storage"
+  sources = [ "array_buffer_test.cc" ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/storage/buffer/test_support",
+    "$zx/system/ulib/zxtest",
+  ]
+}
