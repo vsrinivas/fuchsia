@@ -20,6 +20,5 @@ group("dev") {
     # test/ allows drivers to be used by IsolateDevmgr
     "$zx/system/utest/platform-bus:test",
     "test/crash-device",
-    "usb",
   ]
 }

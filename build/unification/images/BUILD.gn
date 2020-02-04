@@ -93,7 +93,6 @@ aggregate_manifest("legacy-image") {
     ":driver.test-pwm",
     ":driver.test-spi",
     ":driver.test.ddktl-test",
-    ":driver.usb-bus",
     ":driver.virtio_block",
     ":driver.virtio_console",
     ":driver.virtio_ethernet",
@@ -103,7 +102,6 @@ aggregate_manifest("legacy-image") {
     ":driver.virtio_scsi",
     ":driver.virtio_socket",
     ":driver.zxcrypt",
-    ":test.sys.usb-device-test",
   ]
 
   # CPU-specific targets.
@@ -983,7 +981,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/dev/backlight/ti-lp8556:ti-lp8556-manifest",
     "//zircon/system/dev/block/ums-function:ums-function-manifest",
     "//zircon/system/dev/audio/usb-audio:usb-audio-manifest",
-    #":driver.usb-bus",
+    "//zircon/system/dev/usb/usb-bus:usb-bus-manifest",
     "//zircon/system/dev/serial/usb-cdc-acm:usb-cdc-acm-manifest",
     "//zircon/system/dev/ethernet/usb-cdc-ecm:usb-cdc-ecm-manifest",
     "//zircon/system/dev/ethernet/usb-cdc-function:usb-cdc-function-manifest",
@@ -1006,7 +1004,7 @@ aggregate_manifest("migrated-image") {
     #":driver.virtio",
     "//zircon/system/dev/usb/xhci:xhci-manifest",
     #":driver.zxcrypt",
-    #":test.sys.usb-device-test",
+    "//zircon/system/dev/usb/usb-bus:usb-device-manifest",
   ]
   if (target_cpu == "x64") {
     deps += [
