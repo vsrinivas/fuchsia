@@ -49,7 +49,6 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/mt8167:mt8167-audio-lib-test",
       "$zx/system/dev/lib/new-mock-mmio-reg:new-mock-mmio-reg-test",
       "$zx/system/dev/lib/scsi:scsilib-disk-test",
-      "$zx/system/dev/light-sensor/lite-on:ltr-578als-test",
       "$zx/system/dev/pwm/aml-pwm:aml-pwm-test",
       "$zx/system/dev/pwm/aml-pwm-init:aml-pwm-init-test",
       "$zx/system/dev/pwm/pwm:pwm-test",

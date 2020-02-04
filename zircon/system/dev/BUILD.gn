@@ -12,7 +12,6 @@ group("dev") {
     "board",
     "bus",
     "fw",
-    "light-sensor",
     "mlg",
     "pci",
     "pwm",
