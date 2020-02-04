@@ -458,7 +458,7 @@ function.
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //public/gn/config/instrumentation/BUILD.gn:24
+From //public/gn/config/instrumentation/BUILD.gn:29
 
 ### use_ccache
 Set to true to enable compiling with ccache.

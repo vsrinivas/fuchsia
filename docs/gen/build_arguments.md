@@ -40,6 +40,14 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 From //build/images/BUILD.gn:1030
 
+### asan_default_options
+TODO(45047): Temporary until all lsan bugs are filed and marked with
+deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+**Current value (from the default):** `"detect_leaks=0"`
+
+From //build/config/sanitizers/BUILD.gn:25
+
 ### audio_core_trace_enabled
 Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
 tracing overhead.
@@ -180,7 +188,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:48
+From //src/graphics/lib/magma/gnbuild/magma.gni:49
 
 ### board_kernel_cmdline_args
 List of kernel command line this board to bake into the boot image that are
@@ -327,7 +335,7 @@ Targets that will be built as mali vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:36
+From //src/graphics/lib/magma/gnbuild/magma.gni:37
 
 ### build_libvulkan_goldfish
 This is a list of targets that will be built as goldfish vulkan ICDs.
@@ -341,21 +349,21 @@ Targets that will be built as IMG vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:45
+From //src/graphics/lib/magma/gnbuild/magma.gni:46
 
 ### build_libvulkan_qcom_adreno
 Targets that will be built as qualcomm vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:42
+From //src/graphics/lib/magma/gnbuild/magma.gni:43
 
 ### build_libvulkan_vsl_gc
 Targets that will be built as verisilicon vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:39
+From //src/graphics/lib/magma/gnbuild/magma.gni:40
 
 ### build_sdk_archives
 Whether to build SDK tarballs.
@@ -481,13 +489,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/39116ab7230c28854c711471e66360d5a4cefe56/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b97e77bcf521d358fa8dde13c4a5b673f4da6997/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/39116ab7230c28854c711471e66360d5a4cefe56/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b97e77bcf521d358fa8dde13c4a5b673f4da6997/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -834,7 +842,7 @@ From //third_party/dart/runtime/runtime_args.gni:88
 
 **Current value (from the default):** `"//third_party/expat"`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:13
+From //src/graphics/lib/magma/gnbuild/magma.gni:14
 
 ### experimental_wlan_client_mlme
 Selects the SoftMAC client implementation to use. Choices:
@@ -865,7 +873,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:595
+From //build/config/BUILDCONFIG.gn:599
 
 ### fastboot_product
 
@@ -992,7 +1000,7 @@ From //build/images/fvm.gni:32
 
 **Current value (from the default):** `"//third_party/glm"`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:16
+From //src/graphics/lib/magma/gnbuild/magma.gni:17
 
 ### go_vet_enabled
   go_vet_enabled
@@ -1291,7 +1299,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:508
+From //build/config/BUILDCONFIG.gn:512
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1367,7 +1375,7 @@ From //garnet/bin/log_listener/BUILD.gn:15
 
 **Current value (from the default):** `"//src/graphics/lib/magma"`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:12
+From //src/graphics/lib/magma/gnbuild/magma.gni:13
 
 ### magma_enable_developer_build
 Enable this to have the msd include a suite of tests and invoke them
@@ -1375,20 +1383,20 @@ automatically when the driver starts.
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:26
+From //src/graphics/lib/magma/gnbuild/magma.gni:27
 
 ### magma_enable_tracing
 Enable this to include fuchsia tracing capability
 
 **Current value (from the default):** `true`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:22
+From //src/graphics/lib/magma/gnbuild/magma.gni:23
 
 ### magma_python_path
 
 **Current value (from the default):** `"/b/s/w/ir/k/third_party/mako"`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:19
+From //src/graphics/lib/magma/gnbuild/magma.gni:20
 
 ### max_blob_contents_size
 Maximum allowable contents for the /blob in a release mode build.
@@ -1554,13 +1562,13 @@ From //garnet/drivers/gpu/msd-arm-mali/src/BUILD.gn:23
 
 **Current value (from the default):** `"//garnet/drivers/gpu"`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:14
+From //src/graphics/lib/magma/gnbuild/magma.gni:15
 
 ### msd_intel_gen_build_root
 
 **Current value (from the default):** `"//garnet/drivers/gpu/msd-intel-gen"`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:15
+From //src/graphics/lib/magma/gnbuild/magma.gni:16
 
 ### netcfg_autostart
 
@@ -1607,7 +1615,7 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:28
+From //src/graphics/lib/magma/gnbuild/magma.gni:29
 
 ### prebuilt_libvulkan_goldfish_path
 
@@ -1620,7 +1628,7 @@ The path to a prebuilt libvulkan.so for an IMG GPU.
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:31
+From //src/graphics/lib/magma/gnbuild/magma.gni:32
 
 ### prototype_account_transfer
 Whether or not prototype account transfer is enabled.
@@ -1805,7 +1813,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:800
+From //build/config/BUILDCONFIG.gn:804
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1814,7 +1822,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:805
+From //build/config/BUILDCONFIG.gn:809
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1838,7 +1846,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:641
+From //build/config/BUILDCONFIG.gn:645
 
 ### signed_image
 
@@ -1988,7 +1996,7 @@ build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
 TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/d988ca68af8a980fd38d972e5f7e07bd6ab583eb/infra/test_durations/default.json)" after the recipes start
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/ef82be1814334553cb85dc76d55b1fca586fa239/infra/test_durations/default.json)" after the recipes start
 setting this arg.
 
 **Current value (from the default):** `"//integration/infra/test_durations.json"`
@@ -2053,6 +2061,19 @@ The other fields are the variant's effects as defined in
 
 From //build/config/BUILDCONFIG.gn:98
 
+### ubsan_default_options
+Default [UndefinedBehaviorSanitizer](https://llvm.org/docs/UndefinedBehaviorSanitizer.html)
+options (before the `UBSAN_OPTIONS` environment variable is read at
+runtime).  This can be set as a build argument to affect most "ubsan"
+variants in `known_variants` (which see), or overridden in
+toolchain_args in one of those variants.  Note that setting this
+nonempty may conflict with programs that define their own
+`__ubsan_default_options` C function.
+
+**Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
+
+From //build/config/sanitizers/BUILD.gn:35
+
 ### universal_variants
 
 **Current value (from the default):**
@@ -2066,7 +2087,7 @@ From //build/config/BUILDCONFIG.gn:98
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:615
+From //build/config/BUILDCONFIG.gn:619
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2364,7 +2385,7 @@ From //build/images/BUILD.gn:43
 
 **Current value (from the default):** `"//zircon"`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:17
+From //src/graphics/lib/magma/gnbuild/magma.gni:18
 
 ### zircon_compdb_filter
 Compilation database filter. Gets passed to --export-compile-commands=<filter>.
