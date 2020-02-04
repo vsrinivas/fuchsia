@@ -6,6 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_lowpan_spinel::{DeviceEvent, DeviceEventStream, Error as SpinelError},
     fuchsia_async::futures::stream::TryStreamExt,
+    fuchsia_syslog::macros::*,
 };
 
 pub async fn expect_on_receive_event(stream: &mut DeviceEventStream) -> Result<Vec<u8>, Error> {
@@ -77,4 +78,39 @@ pub async fn expect_on_error_event(
         }
     }
     return Err(format_err!("No event"));
+}
+
+pub struct OtRadioDevice {
+    pub tx_allowance: u32,
+    pub rx_allowance: u32,
+}
+
+impl<'a> OtRadioDevice {
+    pub async fn expect_one_rx_frame_event(
+        &mut self,
+        stream: &mut DeviceEventStream,
+        num_of_event: u32,
+    ) -> Result<Vec<u8>, anyhow::Error> {
+        let mut res: Vec<u8> = vec![];
+        fx_log_info!("waiting for {} frame", num_of_event);
+        for _ in 0..num_of_event {
+            if let Some(event) =
+                stream.try_next().await.context("error waiting for spinel events")?
+            {
+                match event {
+                    DeviceEvent::OnReceiveFrame { data } => {
+                        res = data;
+                        self.rx_allowance -= 1;
+                    }
+                    DeviceEvent::OnReadyForSendFrames { number_of_frames } => {
+                        self.tx_allowance += number_of_frames;
+                    }
+                    DeviceEvent::OnError { error, .. } => {
+                        return Err(format_err!("received error code {:?}", error));
+                    }
+                }
+            }
+        }
+        return Ok(res);
+    }
 }

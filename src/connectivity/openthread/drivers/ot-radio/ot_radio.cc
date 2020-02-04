@@ -120,12 +120,13 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uin
     if (res != ZX_OK) {
       zxlogf(ERROR, "Error in handling send frame req: %s\n", zx_status_get_string(res));
     } else {
-      zxlogf(TRACE, "Successfully Txed pkt\n");
       ot_radio_obj_.outbound_allowance_--;
       ot_radio_obj_.outbound_cnt_++;
+      zxlogf(TRACE, "Successfully Txed pkt, total tx pkt %lu\n", ot_radio_obj_.outbound_cnt_);
       if ((ot_radio_obj_.outbound_cnt_ & 1) == 0) {
         lowpan_spinel_fidl::Device::SendOnReadyForSendFramesEvent(
             ot_radio_obj_.fidl_channel_->borrow(), kOutboundAllowanceInc);
+        ot_radio_obj_.outbound_allowance_ += kOutboundAllowanceInc;
       }
     }
   }
@@ -137,6 +138,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
   ot_radio_obj_.inbound_allowance_ += number_of_frames;
   if (ot_radio_obj_.inbound_allowance_ > 0 && ot_radio_obj_.spinel_framer_.get()) {
     ot_radio_obj_.spinel_framer_->SetInboundAllowanceStatus(true);
+    ot_radio_obj_.ReadRadioPacket();
   }
 }
 
