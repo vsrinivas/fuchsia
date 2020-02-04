@@ -177,7 +177,6 @@ if (current_cpu != "") {
     ]
     if (current_os == "linux") {
       deps += [
-        "$zx/system/dev/usb/usb-peripheral-test",
         "$zx/system/ulib/ftl-mtd/test",
         "ftl-mtd",
         "mtd",

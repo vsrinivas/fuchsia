@@ -53,7 +53,6 @@ if (current_os == "linux") {
     "mtd",
     "nand-redundant-storage",
     "nand-volume-driver",
-    "usb-peripheral-test",
   ]
 }
 
@@ -90,6 +89,10 @@ group("migrated-tests") {
     "//zircon/system/ulib/fbl/test:fbl",
     "//zircon/system/ulib/libzbi/test:zbi",
   ]
+
+  if (current_os == "linux") {
+    deps += [ "//zircon/system/dev/usb/usb-peripheral-test" ]
+  }
 }
 
 group("host") {
