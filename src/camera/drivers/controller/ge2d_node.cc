@@ -103,6 +103,8 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
         info.wm_image_format =
             ConvertHlcppImageFormat2toCType(internal_ge2d_node.ge2d_info.watermark[i].image_format);
         info.watermark_vmo = watermark_vmos[i].release();
+        constexpr float kGlobalAlpha = 200.f / 255;
+        info.global_alpha = kGlobalAlpha;
         watermarks_info.push_back(std::move(info));
       }
 

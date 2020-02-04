@@ -389,10 +389,19 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
 
     // Expand out to ensure bytes_per_row is a multiple of 32, as that's what the canvas requires.
     for (uint32_t y = 0; y < wm.image_format.display_height; ++y) {
-      memcpy(static_cast<uint8_t*>(mapped_contig_vmo.start()) + wm.image_format.bytes_per_row * y,
+      auto output_row =
+          static_cast<uint8_t*>(mapped_contig_vmo.start()) + wm.image_format.bytes_per_row * y;
+      memcpy(output_row,
              static_cast<uint8_t*>(mapped_watermark_input_vmo.start()) +
                  wm_info[i].wm_image_format.bytes_per_row * y,
              wm_info[i].wm_image_format.bytes_per_row);
+      // Implement global alpha on the CPU.
+      if (wm_info[i].global_alpha != 1.0f) {
+        for (uint32_t x = 0; x < wm.image_format.coded_width; ++x) {
+          uint8_t* alpha = &output_row[4 * x + 3];
+          *alpha = *alpha * wm_info[i].global_alpha;
+        }
+      }
     }
 
     zx_cache_flush(mapped_contig_vmo.start(), output_vmo_size, ZX_CACHE_FLUSH_DATA);

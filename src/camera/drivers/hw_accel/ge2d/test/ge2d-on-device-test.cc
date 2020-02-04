@@ -123,6 +123,7 @@ class Ge2dDeviceTest : public zxtest::Test {
     watermark_info_.wm_image_format = watermark_image_format;
     watermark_info_.loc_x = kWatermarkHorizontalOffset;
     watermark_info_.loc_y = kWatermarkVerticalOffset;
+    watermark_info_.global_alpha = 1.f;
   }
 
   zx::vmo CreateWatermarkVmo() {
@@ -321,6 +322,26 @@ uint8_t* GetPointerToPixel(void* base, const image_format_2_t& format, uint32_t 
     }
   } else {
     return static_cast<uint8_t*>(base) + format.bytes_per_row * y + 4 * x;
+  }
+}
+
+// Check that a region is a YUV solid color
+void CheckYUVRegion(void* data, const image_format_2_t& format, uint8_t y_component, uint8_t u,
+                    uint8_t v, uint32_t x_start, uint32_t width, uint32_t y_start,
+                    uint32_t height) {
+  for (uint32_t y = 0; y < height; y++) {
+    for (uint32_t x = 0; x < width; x++) {
+      uint32_t value = *GetPointerToPixel(data, format, x_start + x, y_start + y, 0);
+      EXPECT_EQ(y_component, value, "(%d, %d)", x, y);
+    }
+  }
+  for (uint32_t y = 0; y < height / 2; y++) {
+    for (uint32_t x = 0; x < width / 2; x++) {
+      uint32_t uv_value = *reinterpret_cast<volatile uint16_t*>(
+          GetPointerToPixel(data, format, x_start + x, y_start + y, 1));
+      EXPECT_EQ(u, uv_value & 0xff, "(%d, %d)", x, y);
+      EXPECT_EQ(v, uv_value >> 8, "(%d, %d)", x, y);
+    }
   }
 }
 
@@ -956,25 +977,8 @@ TEST_F(Ge2dDeviceTest, NewColorWatermark) {
                        format.bytes_per_row, format.bytes_per_row, format.coded_width, 2,
                        kWatermarkVerticalOffset / 2, 1.0f, 1.0f, 0, "UV");
 
-    for (uint32_t y = 0; y < kWatermarkHeight; y++) {
-      for (uint32_t x = 0; x < kWatermarkWidth; x++) {
-        uint32_t value =
-            *GetPointerToPixel(mapper_b.start(), format, kWatermarkHorizontalOffset + x,
-                               kWatermarkVerticalOffset + y, 0);
-        EXPECT_EQ(144, value);
-      }
-    }
-    for (uint32_t y = 0; y < kWatermarkHeight / 2; y++) {
-      for (uint32_t x = 0; x < kWatermarkWidth / 2; x++) {
-        uint32_t uv_value = *reinterpret_cast<volatile uint16_t*>(
-            GetPointerToPixel(mapper_b.start(), format, kWatermarkHorizontalOffset + x,
-                              kWatermarkVerticalOffset + y, 1));
-        // U
-        EXPECT_EQ(54, uv_value & 0xff);
-        // V
-        EXPECT_EQ(34, uv_value >> 8);
-      }
-    }
+    CheckYUVRegion(mapper_b.start(), format, 144, 54, 34, kWatermarkHorizontalOffset,
+                   kWatermarkWidth, kWatermarkVerticalOffset, kWatermarkHeight);
     sync_completion_signal(&completion_);
   });
 
@@ -1014,25 +1018,8 @@ TEST_F(Ge2dDeviceTest, YUVBlankWatermark) {
     fzl::VmoMapper mapper_b;
     ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
 
-    for (uint32_t y = 0; y < kWatermarkHeight; y++) {
-      for (uint32_t x = 0; x < kWatermarkWidth; x++) {
-        uint32_t value =
-            *GetPointerToPixel(mapper_b.start(), format, kWatermarkHorizontalOffset + x,
-                               kWatermarkVerticalOffset + y, 0);
-        EXPECT_EQ(82, value);
-      }
-    }
-    for (uint32_t y = 0; y < kWatermarkHeight / 2; y++) {
-      for (uint32_t x = 0; x < kWatermarkWidth / 2; x++) {
-        uint32_t uv_value = *reinterpret_cast<volatile uint16_t*>(
-            GetPointerToPixel(mapper_b.start(), format, kWatermarkHorizontalOffset + x,
-                              kWatermarkVerticalOffset + y, 1));
-        // U
-        EXPECT_EQ(90, uv_value & 0xff);
-        // V
-        EXPECT_EQ(240, uv_value >> 8);
-      }
-    }
+    CheckYUVRegion(mapper_b.start(), format, 82, 90, 240, kWatermarkHorizontalOffset,
+                   kWatermarkWidth, kWatermarkVerticalOffset, kWatermarkHeight);
 
     sync_completion_signal(&completion_);
   });
@@ -1091,23 +1078,8 @@ TEST_F(Ge2dDeviceTest, WatermarkOutputSize) {
                        format.bytes_per_row, format.bytes_per_row, format.coded_width, 2,
                        kSecondWatermarkOffset / 2, 1.0f, 1.0f, 0, "UV");
 
-    for (uint32_t y = 0; y < kWatermarkHeight; y++) {
-      for (uint32_t x = 0; x < kWatermarkWidth; x++) {
-        uint32_t value = *GetPointerToPixel(mapper_b.start(), format, kSecondWatermarkOffset + x,
-                                            kSecondWatermarkOffset + y, 0);
-        EXPECT_EQ(144, value);
-      }
-    }
-    for (uint32_t y = 0; y < kWatermarkHeight / 2; y++) {
-      for (uint32_t x = 0; x < kWatermarkWidth / 2; x++) {
-        uint32_t uv_value = *reinterpret_cast<volatile uint16_t*>(GetPointerToPixel(
-            mapper_b.start(), format, kSecondWatermarkOffset + x, kSecondWatermarkOffset + y, 1));
-        // U
-        EXPECT_EQ(54, uv_value & 0xff);
-        // V
-        EXPECT_EQ(34, uv_value >> 8);
-      }
-    }
+    CheckYUVRegion(mapper_b.start(), format, 144, 54, 34, kSecondWatermarkOffset, kWatermarkWidth,
+                   kSecondWatermarkOffset, kWatermarkHeight);
     sync_completion_signal(&completion_);
   });
 
@@ -1132,6 +1104,49 @@ TEST_F(Ge2dDeviceTest, WatermarkOutputSize) {
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
   EXPECT_EQ(1u, resolution_changed_count);
+}
+
+TEST_F(Ge2dDeviceTest, GlobalAlphaWatermark) {
+  SetupCallbacks();
+  SetupInput();
+  SetupWatermarkInfo();
+
+  watermark_info_.global_alpha = 0.5f;
+
+  // Pure red in YUV.
+  WriteConstantColorToVmo(input_buffer_collection_.buffers[0].vmo, 82, 90, 240,
+                          output_image_format_table_[0]);
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
+    image_format_2_t& format = output_image_format_table_[0];
+
+    CacheInvalidateVmo(vmo_b);
+
+    fzl::VmoMapper mapper_b;
+    ASSERT_OK(mapper_b.Map(*zx::unowned_vmo(vmo_b), 0, 0, ZX_VM_PERM_READ));
+
+    // Blend of 50% red and 50% green.
+    CheckYUVRegion(mapper_b.start(), format, 113, 72, 137, kWatermarkHorizontalOffset,
+                   kWatermarkWidth, kWatermarkVerticalOffset, kWatermarkHeight);
+    sync_completion_signal(&completion_);
+  });
+
+  zx::vmo watermark_vmo = CreateWatermarkVmo();
+  WriteConstantRgbaToVmo(watermark_vmo.get(), 0, 0xff, 0, 0xff, watermark_info_.wm_image_format);
+  std::vector<water_mark_info_t> duplicated;
+  DuplicateWatermarkInfo(watermark_info_, watermark_vmo, kImageFormatTableSize, &duplicated);
+  uint32_t watermark_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskWaterMark(
+      &input_buffer_collection_, &output_buffer_collection_, duplicated.data(), duplicated.size(),
+      output_image_format_table_, kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
+      &remove_task_callback_, &watermark_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(watermark_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
 }
 
 }  // namespace
