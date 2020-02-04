@@ -6,7 +6,9 @@ library fuchsia.ui.annotation;
 
 using fuchsia.ui.views;
 
-enum Error {
+enum CreationStatus {
+    OK = 0;
+
     // |ViewRef| is invalid.
     VIEWREF_INVALID = 1;
 
@@ -22,7 +24,7 @@ enum Error {
 /// of the existing client |View|.
 [Discoverable]
 protocol Registry {
-    /// Creates a new annotation |ViewHolder|, which can be linked to the
+    /// Creates a new annotation |ViewHolder|. The created ViewHolder holds an
     /// annotation |View| which renders within the existing client's View-space
     /// without that client's knowledge.
     ///
@@ -32,11 +34,23 @@ protocol Registry {
     /// |Session| using the corresponding |ViewToken|.
     ///
     /// The annotation |View| has the following properties:
-    ///  + It is a descendent of |client_view| in the scene graph. but it's
-    ///    not visible by the |client_view|'s |Session|.
+    ///  + It is a descendent of |client_view|'s ViewNode in the scene graph
+    ///    but it's not visible by the Session of |client_view|.
     ///  + It does not receive or intercept any hit event.
     ///  + It always has the same rendering state as |client_view| and always
     ///    match the size and metrics.
+    ///
+    /// When |client_view|'s Session receives the following Events, all its
+    /// annotation |View|s' Sessions will receive the corresponding Events of
+    /// the annotation |View|s:
+    ///   + ViewAttachedToSceneEvent
+    ///   + ViewDetachedFromSceneEvent
+    ///   + ViewPropertiesChangedEvent
+    ///   + ViewStateChangedEvent
+    ///
+    /// Since creating a ViewHolder modifies the SceneGraph, this function won't
+    /// take effect until we schedule a new frame by calling Present() on any
+    /// Session.
     ///
     /// There are a few erroneous conditions where the annotation |ViewHolder|
     /// will not be created, and callers should remove the annotation |View|
@@ -49,5 +63,5 @@ protocol Registry {
     ///
     CreateAnnotationViewHolder(fuchsia.ui.views.ViewRef client_view,
                                fuchsia.ui.views.ViewHolderToken view_holder_token)
-        -> () error Error;
+        -> (CreationStatus status);
 };
