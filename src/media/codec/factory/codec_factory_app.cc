@@ -30,39 +30,21 @@ const std::string kAllSwDecoderMimeTypes[] = {
 
 }  // namespace
 
-CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
-  // TODO(dustingreen): Determine if this is useful and if we're holding it
-  // right.
-  trace::TraceProviderWithFdio trace_provider(loop_->dispatcher());
+CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
+  trace::TraceProviderWithFdio trace_provider(dispatcher_);
 
-  // We pump |loop| in here, so it's important that
-  // sys::ComponentContext::Create() happen after
-  // DiscoverMediaCodecDrivers(), else the pumping of the loop will drop the
+  // Don't publish service or even create the component context until after initial discovery is
+  // done, else the pumping of the loop will drop the
   // incoming request for CodecFactory before AddPublicService() below has had
   // a chance to register for it.
   DiscoverMediaCodecDriversAndListenForMoreAsync();
+}
 
+void CodecFactoryApp::PublishService() {
+  // We delay doing this until we're completely ready to add services.
   // We _rely_ on the driver to either fail the channel or send OnCodecList().
-  // We don't set a timeout here because under different conditions this could
-  // take different duration.
-  zx_status_t run_result;
-  do {
-    run_result = loop_->Run(zx::time::infinite(), true);
-  } while (run_result == ZX_OK && !existing_devices_discovered_);
-  if (run_result != ZX_OK) {
-    // ignore/skip the driver that failed the channel already
-    // The ~codec_factory takes care of un-binding.
-    FX_LOGS(ERROR) << "loop failed: " << zx_status_get_string(run_result);
-    return;
-  }
+  ZX_DEBUG_ASSERT(existing_devices_discovered_);
 
-  // We delay doing this until we're completely ready to add services, because
-  // Create() binds to |loop| implicitly, so we don't want any
-  // pumping of |loop| up to this point to drop service connection requests.
-  //
-  // It's fine that AddPublicService() happens after Create()
-  // only because |loop| doesn't have a separate thread, and the current thread
-  // won't pump |loop| until after AddPublicService() is also done.
   startup_context_ = sys::ComponentContext::Create();
   startup_context_->outgoing()->AddPublicService<fuchsia::mediacodec::CodecFactory>(
       [this](fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
@@ -202,8 +184,7 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
               discovery_entry->codec_factory->events().OnCodecList = nullptr;
             };
 
-        discovery_entry->codec_factory->Bind(std::move(client_factory_channel),
-                                             loop_->dispatcher());
+        discovery_entry->codec_factory->Bind(std::move(client_factory_channel), dispatcher());
 
         device_discovery_queue_.emplace_back(std::move(discovery_entry));
       },
@@ -217,8 +198,7 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
 }
 
 void CodecFactoryApp::PostDiscoveryQueueProcessing() {
-  async::PostTask(loop_->dispatcher(),
-                  fit::bind_member(this, &CodecFactoryApp::ProcessDiscoveryQueue));
+  async::PostTask(dispatcher_, fit::bind_member(this, &CodecFactoryApp::ProcessDiscoveryQueue));
 }
 
 void CodecFactoryApp::ProcessDiscoveryQueue() {
@@ -270,7 +250,10 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
       // All pre-existing devices have been processed.
       //
       // Now the CodecFactory can begin serving (shortly).
-      existing_devices_discovered_ = true;
+      if (!existing_devices_discovered_) {
+        existing_devices_discovered_ = true;
+        PublishService();
+      }
       // The marker has done its job, so remove the marker.
       device_discovery_queue_.pop_front();
       return;
