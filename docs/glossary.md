@@ -31,9 +31,10 @@ suggestions to the user.
 
 #### **AppMgr** {#appmgr}
 
-The Application Manager (AppMgr) is responsible for launching components and
-managing the namespaces in which those components run. It is the first process
-started in the `fuchsia` job by the [DevMgr](#devmgr).
+The Application Manager (AppMgr) is responsible for launching
+[v1](#components-v1) [components](#component) and managing the namespaces in
+which those components run. It is run by [component manager](#component-manager)
+as a [v2](#components-v2) component.
 
 #### **Banjo** {#banjo}
 
@@ -68,7 +69,7 @@ process is complete, the bootfs is mounted at `/boot`.
 `bootsvc` is the second process started in Fuchsia. It provides a filesystem
 service for the [bootfs](#bootfs) and a loader service that loads programs from
 the same bootfs. After starting these services, it loads the third program,
-which defaults to `devmgr`.
+which defaults to `component_manager`.
 
 -   [Documentation](/docs/concepts/booting/bootsvc.md)
 
@@ -280,12 +281,10 @@ A Device Host (`DevHost`) is a process containing one or more device drivers.
 They are created by the Device Manager, as needed, to provide isolation between
 drivers for stability and security.
 
-#### **DevMgr** {#devmgr}
+#### **Device Manager** {#devmgr}
 
-The Device Manager (DevMgr) is responsible for enumerating, loading, and
-managing the life cycle of device drivers, as well as low level system tasks
-(providing filesystem servers for the boot filesystem, launching
-[AppMgr](#appmgr), and so on).
+The Device Manager (formerly devmgr or devcoordinator) is responsible for
+enumerating, loading, and managing the life cycle of device drivers.
 
 #### **DDK** {#ddk}
 
@@ -311,8 +310,8 @@ Directory capability is a [components v2](#components-v2) concept.
 
 #### **Driver** {#driver}
 
-A driver is a dynamic shared library which [DevMgr](#devmgr) can load into a
-[DevHost](#devhost) and that enables, and controls one or more devices.
+A driver is a dynamic shared library which [Device Manager](#devmgr) can load
+into a [DevHost](#devhost) and that enables, and controls one or more devices.
 
 -   [Reference](/docs/concepts/drivers/driver-development.md)
 -   [Driver Sources](/zircon/system/dev)
