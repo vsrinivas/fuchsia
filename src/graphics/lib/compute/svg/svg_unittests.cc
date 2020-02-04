@@ -116,4 +116,29 @@ TEST(svg, svg_parse_failure_color_name)
   EXPECT_TRUE(svg == NULL) << svg;
 }
 
+//
+// SUCCESS: parse an arc with concatenated flags
+//
+
+TEST(svg, svg_parse_success_arc_flags)
+{
+  char const doc[] = {
+    // all four cases of flags: 00, 01, 10, 11
+    "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+    "  <path d=\"M1,1A1,1 45 001,1\"/>"
+    "  <path d=\"M1,1A1,1 45 011,1\"/>"
+    "  <path d=\"M1,1A1,1 45 101,1\"/>"
+    "  <path d=\"M1,1A1,1 45 111,1\"/>"
+    "</svg>\n"
+  };
+
+  struct svg * svg = svg_parse(doc, false);
+
+  EXPECT_TRUE(svg != NULL) << svg;
+
+  EXPECT_TRUE(svg_path_count(svg) == 4) << svg_path_count(svg);
+
+  svg_dispose(svg);
+}
+
 }  // namespace

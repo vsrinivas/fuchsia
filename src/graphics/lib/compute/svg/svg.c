@@ -1918,6 +1918,81 @@ svg_parse_numbers(struct svg_parser * sp,
 }
 
 //
+// It's valid for arcs to concatenate 0/1 flags to the front of numbers.
+// But strtof() will ignore leading zeroes.
+//
+// To solve this as simply as possible, we reuse the existing
+// svg_parse_numbers() function and attempt to parse the 4th and 5th
+// parameters as flags:
+//
+// elliptical_arc_argument ::=
+//   number comma_wsp?
+//   number comma_wsp?
+//   number comma_wsp
+//   flag   comma_wsp?
+//   flag   comma_wsp?
+//   coordinate_pair
+//
+static uint32_t
+svg_parse_arc_numbers_and_flags(struct svg_parser * sp,
+                                yxml_t *            ys,
+                                char *              val,
+                                uint32_t            len,
+                                float *             array,
+                                uint32_t *          parse_count)
+{
+  *parse_count = 0;
+
+  char * next = val;
+
+  while (*next != 0)
+    {
+      char * stop = next;
+
+      if ((*parse_count == 3) || (*parse_count == 4))
+        {
+          if (next[0] == '0')
+            {
+              *array = 0.0f;
+              stop   = next + 1;
+            }
+          else if (next[0] == '1')
+            {
+              *array = 1.0f;
+              stop   = next + 1;
+            }
+        }
+      else
+        {
+          *array = strtof(next, &stop);
+        }
+
+      if (stop == next)
+        break;
+
+      next = stop;
+
+      *parse_count += 1;
+
+      // eat trailing whitespace... but let calling routine handle
+      // inter-sequence commas
+
+      while (isspace(*next))
+        next += 1;
+
+      if (*next == ',')  // eat up to one comma
+        next += 1;
+
+      if (*parse_count == 7)
+        break;
+
+      array += 1;
+    }
+
+  return (uint32_t)(next - val);
+}
+
+//
 // PARSE ATTRIBUTES
 //
 
@@ -2239,6 +2314,47 @@ svg_parse_path_coord_sequence(struct svg_parser * sp,
 //
 
 static int
+svg_parse_arc_parameter_sequence(struct svg_parser * sp,
+                                 yxml_t *            ys,
+                                 char *              val,
+                                 uint32_t            len,
+                                 void *              cmd,
+                                 uint32_t            cmd_size,
+                                 float *             cmd_coords)
+{
+  int  t     = 0;
+  bool first = true;
+
+  do
+    {
+      uint32_t parse_count;
+
+      uint32_t n = svg_parse_arc_numbers_and_flags(sp, ys, val, len, cmd_coords, &parse_count);
+
+      if ((parse_count == 0) && !first)
+        break;
+
+      if (parse_count != 7)
+        svg_invalid_attrib(sp, ys, val);
+
+      svg_stack_push(sp->paths, cmd, cmd_size);
+
+      first = false;
+      t += n;
+
+      val += n;
+      len -= n;
+    }
+  while (len > 0);
+
+  return t;
+}
+
+//
+//
+//
+
+static int
 svg_parse_path_move_to(struct svg_parser *     sp,
                        yxml_t *                ys,
                        char *                  val,
@@ -2351,7 +2467,7 @@ svg_parse_path_arc_to(
 {
   struct svg_path_cmd_arc_to cmd = { .type = type };
 
-  return svg_parse_path_coord_sequence(sp, ys, val, len, &cmd, sizeof(cmd), &cmd.rx, 7, false);
+  return svg_parse_arc_parameter_sequence(sp, ys, val, len, &cmd, sizeof(cmd), &cmd.rx);
 }
 
 //
@@ -2953,7 +3069,6 @@ svg_transform_cmp(void const * l, void const * r)
 
 static struct svg_transform const *
 svg_transform_lookup(char const * str, uint32_t len)
-
 {
   //
   // FIXME(allanmac): this used to use a perfect hash
