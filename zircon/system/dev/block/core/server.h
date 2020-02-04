@@ -35,7 +35,7 @@ class Server {
   // Creates a new Server.
   static zx_status_t Create(ddk::BlockProtocolClient* bp,
                             fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
-                            Server** out);
+                            std::unique_ptr<Server>* out);
 
   // Starts the Server using the current thread
   zx_status_t Serve() TA_EXCL(server_lock_);
@@ -55,7 +55,7 @@ class Server {
   // (If appropriate) tells the client that their operation is done.
   void TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group);
 
-  void ShutDown();
+  void Shutdown();
   ~Server();
 
  private:

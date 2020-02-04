@@ -74,7 +74,8 @@ class Manager {
 
   thrd_t thread_;
   std::atomic<ThreadState> state_ = ThreadState::None;
-  Server* server_ = nullptr;
+
+  std::unique_ptr<Server> server_;
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_BLOCK_CORE_MANAGER_H_

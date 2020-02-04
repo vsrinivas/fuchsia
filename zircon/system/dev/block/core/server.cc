@@ -12,7 +12,6 @@
 #include <zircon/syscalls.h>
 
 #include <limits>
-#include <memory>
 #include <new>
 #include <utility>
 
@@ -243,16 +242,15 @@ void Server::InQueueDrainer() {
 
 zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
                            fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
-                           Server** out) {
+                           std::unique_ptr<Server>* out) {
   fbl::AllocChecker ac;
-  Server* bs = new (&ac) Server(bp);
+  std::unique_ptr<Server> bs(new (&ac) Server(bp));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status;
   if ((status = fzl::create_fifo(BLOCK_FIFO_MAX_DEPTH, 0, fifo_out, &bs->fifo_)) != ZX_OK) {
-    delete bs;
     return status;
   }
 
@@ -265,7 +263,6 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
   zx_rights_t rights =
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_WAIT;
   if ((status = fifo_out->replace(rights, fifo_out)) != ZX_OK) {
-    delete bs;
     return status;
   }
 
@@ -273,7 +270,7 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
 
   // TODO(ZX-1583): Allocate BlockMsg arena based on block_op_size_.
 
-  *out = bs;
+  *out = std::move(bs);
   return ZX_OK;
 }
 
@@ -491,7 +488,7 @@ Server::~Server() {
   ZX_ASSERT(in_queue_.is_empty());
 }
 
-void Server::ShutDown() {
+void Server::Shutdown() {
   // Identify that the server should stop reading and return,
   // implicitly closing the fifo.
   fifo_.signal(0, kSignalFifoTerminate);

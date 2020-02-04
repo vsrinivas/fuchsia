@@ -34,13 +34,13 @@ zx_status_t Manager::StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* o
     return ZX_ERR_ALREADY_BOUND;
   }
   ZX_DEBUG_ASSERT(server_ == nullptr);
-  Server* server;
+  std::unique_ptr<Server> server;
   fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
   zx_status_t status = Server::Create(protocol, &fifo, &server);
   if (status != ZX_OK) {
     return status;
   }
-  server_ = server;
+  server_ = std::move(server);
   SetState(ThreadState::Running);
   if (thrd_create_with_name(&thread_, &RunServer, this, "block_server") != thrd_success) {
     FreeServer();
@@ -53,7 +53,7 @@ zx_status_t Manager::StartServer(ddk::BlockProtocolClient* protocol, zx::fifo* o
 zx_status_t Manager::CloseFifoServer() {
   switch (GetState()) {
     case ThreadState::Running:
-      server_->ShutDown();
+      server_->Shutdown();
       JoinServer();
       break;
     case ThreadState::Joinable:
@@ -80,8 +80,7 @@ void Manager::JoinServer() {
 
 void Manager::FreeServer() {
   SetState(ThreadState::None);
-  delete server_;
-  server_ = nullptr;
+  server_.reset();
 }
 
 int Manager::RunServer(void* arg) {
