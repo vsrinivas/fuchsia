@@ -30,7 +30,7 @@ group("network_settings_server") {
 group("sys") {
   testonly = true
   public_deps = [
-    "//src/devices/driver_manager",
+    "//src/devices/bin/driver_manager",
     "//src/sys/component_manager",
     "//src/sys/dash",
   ]
