@@ -131,6 +131,9 @@ int crash_svc(void* arg) {
       continue;
     }
 
+    // TODO(jmatt) remove this logging after 45059 is resolved
+    fprintf(stderr, "crashsvc: exception received, processing\n");
+
     if (signals & ZX_CHANNEL_PEER_CLOSED) {
       // We should only get here in crashsvc's unit tests. In production, our job is actually the
       // root job so the system will halt before closing its exception channel.
