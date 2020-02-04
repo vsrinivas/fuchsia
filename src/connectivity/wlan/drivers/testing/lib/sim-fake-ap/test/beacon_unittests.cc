@@ -15,10 +15,6 @@ namespace wlan::testing {
 
 class BeaconTest : public ::testing::Test, public simulation::StationIfc {
  public:
-  struct EventNotification {
-    void (BeaconTest::*callback)();
-  };
-
   // We will use the Beacon structure to keep track of all beacons we receive
   struct Beacon {
     Beacon(zx::time time, const wlan_channel_t& channel, const wlan_ssid_t& ssid,
@@ -27,6 +23,9 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
 
     zx::time time_;
     wlan_channel_t channel_;
+    // Using 0 as null value, so make sure not including 0 as the channel to switch to
+    uint8_t channel_to_switch_ = 0;
+    uint8_t channel_switch_count_ = 0;
     wlan_ssid_t ssid_;
     common::MacAddr bssid_;
   };
@@ -37,22 +36,30 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
   // Event handlers
   void StartBeaconCallback();
   void UpdateBeaconCallback();
+  void AssocCallback();
+  void ChannelSwitchCallback(wlan_channel_t& channel, zx::duration& interval);
   void StopBeaconCallback();
 
   // Test validation routines
   void ValidateStartStopBeacons();
   void ValidateUpdateBeacons();
+  void ValidateChannelSwitchBeacons();
+  void ValidateOverlapChannelSwitches();
+
+  void ScheduleCall(void (BeaconTest::*fn)(), zx::duration when);
+  void ScheduleChannelSwitchCall(void (BeaconTest::*fn)(wlan_channel_t& channel,
+                                                        zx::duration& interval),
+                                 zx::duration when, const wlan_channel_t& channel,
+                                 const zx::duration& interval);
 
   simulation::Environment env_;
   simulation::FakeAp ap_;
   std::list<Beacon> beacons_received_;
+  uint32_t CSA_beacon_count = 0;
 
  private:
   // StationIfc methods
   void ReceiveNotification(void* payload) override;
-
-  // No-op StationIfc methods
-
   void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
 };
 
@@ -61,17 +68,28 @@ void BeaconTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& cha
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
   auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP) {
+    return;
+  }
   ASSERT_EQ(mgmt_frame->MgmtFrameType(), simulation::SimManagementFrame::FRAME_TYPE_BEACON);
 
   auto beacon_frame = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
   beacons_received_.emplace_back(env_.GetTime(), channel, beacon_frame->ssid_,
                                  beacon_frame->bssid_);
+
+  auto ie = beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_CSA);
+  if (ie) {
+    CSA_beacon_count++;
+    auto ie_ptr = static_cast<simulation::CSAInformationElement*>(ie.get());
+    beacons_received_.back().channel_to_switch_ = ie_ptr->new_channel_number_;
+    beacons_received_.back().channel_switch_count_ = ie_ptr->channel_switch_count_;
+  }
 }
 
 void BeaconTest::ReceiveNotification(void* payload) {
-  auto notification = static_cast<EventNotification*>(payload);
-  auto handler = notification->callback;
-  (this->*handler)();
+  auto handler = static_cast<std::function<void()>*>(payload);
+  (*handler)();
+  delete handler;
 }
 
 // Some Useful defaults
@@ -82,6 +100,21 @@ constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 constexpr wlan_ssid_t kDefaultSsid = {.ssid = "Fuchsia Fake AP", .len = 15};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
+
+void BeaconTest::ScheduleCall(void (BeaconTest::*fn)(), zx::duration when) {
+  auto cb_fn = new std::function<void()>;
+  *cb_fn = std::bind(fn, this);
+  env_.ScheduleNotification(this, when, cb_fn);
+}
+
+void BeaconTest::ScheduleChannelSwitchCall(void (BeaconTest::*fn)(wlan_channel_t& channel,
+                                                                  zx::duration& interval),
+                                           zx::duration when, const wlan_channel_t& channel,
+                                           const zx::duration& interval) {
+  auto cb_fn = new std::function<void()>;
+  *cb_fn = std::bind(fn, this, channel, interval);
+  env_.ScheduleNotification(this, when, cb_fn);
+}
 
 /*** StartStop test ***/
 
@@ -117,12 +150,8 @@ void BeaconTest::ValidateStartStopBeacons() {
 }
 
 TEST_F(BeaconTest, StartStop) {
-  EventNotification start_notification = {.callback = &BeaconTest::StartBeaconCallback};
-  env_.ScheduleNotification(this, kStartTime, static_cast<void*>(&start_notification));
-
-  EventNotification stop_notification = {.callback = &BeaconTest::StopBeaconCallback};
-  env_.ScheduleNotification(this, kEndTime, static_cast<void*>(&stop_notification));
-
+  ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
+  ScheduleCall(&BeaconTest::StopBeaconCallback, kEndTime);
   env_.Run();
 
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kEndTime));
@@ -183,15 +212,9 @@ void BeaconTest::ValidateUpdateBeacons() {
 }
 
 TEST_F(BeaconTest, Update) {
-  EventNotification start_notification = {.callback = &BeaconTest::StartBeaconCallback};
-  env_.ScheduleNotification(this, kStartTime, static_cast<void*>(&start_notification));
-
-  EventNotification update_notification = {.callback = &BeaconTest::UpdateBeaconCallback};
-  env_.ScheduleNotification(this, kUpdateTime, static_cast<void*>(&update_notification));
-
-  EventNotification stop_notification = {.callback = &BeaconTest::StopBeaconCallback};
-  env_.ScheduleNotification(this, kEndTime, static_cast<void*>(&stop_notification));
-
+  ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
+  ScheduleCall(&BeaconTest::UpdateBeaconCallback, kUpdateTime);
+  ScheduleCall(&BeaconTest::StopBeaconCallback, kEndTime);
   env_.Run();
 
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kEndTime));
@@ -199,4 +222,192 @@ TEST_F(BeaconTest, Update) {
   ValidateUpdateBeacons();
 }
 
+/*** Channel Switch test ***/
+
+// Starts a beacon, switch the channel of AP in the middle, in this process, beacon contains CSA IE
+// should only be seen once, and the channel in which AP is sending these beacon will change after
+// channel switch.
+constexpr zx::duration kAssocTime = zx::msec(60);
+constexpr zx::duration kSwitchTime = zx::sec(1);
+constexpr zx::duration kCSABeaconInterval = zx::msec(120);
+constexpr zx::duration kLongCSABeaconInterval = zx::msec(350);
+constexpr wlan_channel_t kFirstChannelSwitched = {
+    .primary = 10, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+const common::MacAddr kClientMacAddr({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
+
+// Used in OverlapTest
+constexpr wlan_channel_t kSecondChannelSwitched = {
+    .primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+constexpr wlan_channel_t kThirdChannelSwitched = {
+    .primary = 12, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+constexpr zx::duration kShortEndTime = zx::msec(500);
+constexpr zx::duration kFirstSetChannel = zx::msec(80);
+constexpr zx::duration kSecondSetChannel = zx::msec(180);
+constexpr zx::duration kThirdSetChannel = zx::msec(280);
+
+// Used in StopBeaconWhenSwitching
+constexpr zx::duration kVeryShortEndTime = zx::msec(100);
+
+void BeaconTest::AssocCallback() {
+  simulation::SimAssocReqFrame assoc_req_frame(this, kClientMacAddr, kDefaultBssid);
+  env_.Tx(&assoc_req_frame, kDefaultChannel);
+}
+
+void BeaconTest::ChannelSwitchCallback(wlan_channel_t& channel, zx::duration& interval) {
+  ap_.SetCSABeaconInterval(interval);
+  ap_.SetChannel(channel);
+}
+
+void BeaconTest::ValidateChannelSwitchBeacons() {
+  // Check beacons received before channel switched
+  zx::time next_event_time = ABSOLUTE_TIME(kStartTime);
+  // This computation will ignore the case that kSwitchTime is equal to the time we enable beacon,
+  // because in that case, the number will depends on which one is scheduled to sim_env first.
+  uint64_t time_to_next_beacon =
+      kBeaconPeriod.get() - ((kSwitchTime.get() - kStartTime.get()) % kBeaconPeriod.get());
+  uint64_t cover = kLongCSABeaconInterval.get() - time_to_next_beacon;
+  uint8_t expect_CS_count = cover / kBeaconPeriod.get() + (cover % kBeaconPeriod.get() ? 1 : 0);
+
+  while (next_event_time < ABSOLUTE_TIME(kSwitchTime + kLongCSABeaconInterval)) {
+    ASSERT_EQ(beacons_received_.empty(), false);
+    Beacon received_beacon = beacons_received_.front();
+    EXPECT_EQ(received_beacon.time_, next_event_time);
+    EXPECT_EQ(received_beacon.channel_.primary, kDefaultChannel.primary);
+    EXPECT_EQ(received_beacon.ssid_.len, kDefaultSsid.len);
+    EXPECT_EQ(memcmp(received_beacon.ssid_.ssid, kDefaultSsid.ssid, kDefaultSsid.len), 0);
+    EXPECT_EQ(received_beacon.bssid_, kDefaultBssid);
+    EXPECT_EQ(received_beacon.channel_to_switch_,
+              (next_event_time > ABSOLUTE_TIME(kSwitchTime)) ? kFirstChannelSwitched.primary : 0);
+
+    if (next_event_time > ABSOLUTE_TIME(kSwitchTime)) {
+      EXPECT_EQ(received_beacon.channel_to_switch_, kFirstChannelSwitched.primary);
+      EXPECT_EQ(received_beacon.channel_switch_count_, expect_CS_count);
+      expect_CS_count--;
+    } else {
+      EXPECT_EQ(received_beacon.channel_to_switch_, 0);
+      EXPECT_EQ(received_beacon.channel_switch_count_, 0);
+    }
+    beacons_received_.pop_front();
+    next_event_time += kBeaconPeriod;
+  }
+
+  // Check beacons received after channel switched
+  while (next_event_time < ABSOLUTE_TIME(kEndTime)) {
+    ASSERT_EQ(beacons_received_.empty(), false);
+    Beacon received_beacon = beacons_received_.front();
+    EXPECT_EQ(received_beacon.time_, next_event_time);
+    EXPECT_EQ(received_beacon.channel_.primary, kFirstChannelSwitched.primary);
+    EXPECT_EQ(received_beacon.ssid_.len, kDefaultSsid.len);
+    EXPECT_EQ(memcmp(received_beacon.ssid_.ssid, kDefaultSsid.ssid, kDefaultSsid.len), 0);
+    EXPECT_EQ(received_beacon.bssid_, kDefaultBssid);
+    EXPECT_EQ(received_beacon.channel_to_switch_, 0);
+    EXPECT_EQ(received_beacon.channel_switch_count_, 0);
+    beacons_received_.pop_front();
+    next_event_time += kBeaconPeriod;
+  }
+
+  EXPECT_EQ(beacons_received_.empty(), true);
+  EXPECT_EQ(CSA_beacon_count, (uint32_t)3);
+  EXPECT_EQ(ap_.GetChannel().primary, kFirstChannelSwitched.primary);
+}
+
+TEST_F(BeaconTest, ChannelSwitch) {
+  // Associate to AP to trigger channel switch, kAssocTime is a little bit later than kStartTime to
+  // ensure AP being set uo first
+  ScheduleCall(&BeaconTest::AssocCallback, kAssocTime);
+  ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
+  ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kSwitchTime, kFirstChannelSwitched,
+                            kLongCSABeaconInterval);
+  ScheduleCall(&BeaconTest::StopBeaconCallback, kEndTime);
+  env_.Run();
+
+  EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kEndTime));
+  ValidateChannelSwitchBeacons();
+}
+
+// This is to verify following workflow: (first beacon)->(set channel)->(second beacon)->(set
+// channel again before first set channel executed)->(third beacon)->(set channel before second set
+// channel executed)->(fourth beacon->channel switch) The expected results will be:
+// 1. Target channel in CSA IE of each beacon will be updated after each set channel.
+// 2. The very first channel of AP will be maintained the same all the way until changing to the
+// last channel.
+void BeaconTest::ValidateOverlapChannelSwitches() {
+  ASSERT_EQ(beacons_received_.empty(), false);
+  Beacon received_beacon = beacons_received_.front();
+  EXPECT_EQ(received_beacon.channel_.primary, kDefaultChannel.primary);
+  EXPECT_EQ(received_beacon.channel_to_switch_, 0);
+  beacons_received_.pop_front();
+
+  ASSERT_EQ(beacons_received_.empty(), false);
+  received_beacon = beacons_received_.front();
+  EXPECT_EQ(received_beacon.channel_.primary, kDefaultChannel.primary);
+  EXPECT_EQ(received_beacon.channel_to_switch_, kFirstChannelSwitched.primary);
+  beacons_received_.pop_front();
+
+  ASSERT_EQ(beacons_received_.empty(), false);
+  received_beacon = beacons_received_.front();
+  EXPECT_EQ(received_beacon.channel_.primary, kDefaultChannel.primary);
+  EXPECT_EQ(received_beacon.channel_to_switch_, kSecondChannelSwitched.primary);
+  beacons_received_.pop_front();
+
+  ASSERT_EQ(beacons_received_.empty(), false);
+  received_beacon = beacons_received_.front();
+  EXPECT_EQ(received_beacon.channel_.primary, kDefaultChannel.primary);
+  EXPECT_EQ(received_beacon.channel_to_switch_, kThirdChannelSwitched.primary);
+  beacons_received_.pop_front();
+
+  ASSERT_EQ(beacons_received_.empty(), false);
+  received_beacon = beacons_received_.front();
+  EXPECT_EQ(received_beacon.channel_.primary, kThirdChannelSwitched.primary);
+  EXPECT_EQ(received_beacon.channel_to_switch_, 0);
+  beacons_received_.pop_front();
+
+  EXPECT_EQ(beacons_received_.empty(), true);
+  EXPECT_EQ(CSA_beacon_count, (uint32_t)3);
+  EXPECT_EQ(ap_.GetChannel().primary, kThirdChannelSwitched.primary);
+}
+
+TEST_F(BeaconTest, OverlapTest) {
+  ScheduleCall(&BeaconTest::AssocCallback, kAssocTime);
+  ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
+  ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kFirstSetChannel,
+                            kFirstChannelSwitched, kCSABeaconInterval);
+  ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kSecondSetChannel,
+                            kSecondChannelSwitched, kCSABeaconInterval);
+  ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kThirdSetChannel,
+                            kThirdChannelSwitched, kCSABeaconInterval);
+  ScheduleCall(&BeaconTest::StopBeaconCallback, kShortEndTime);
+  env_.Run();
+
+  EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kShortEndTime));
+
+  ValidateOverlapChannelSwitches();
+}
+
+// When AP does not enable beacon, it means CSA function is not supported as well in this case, so
+// AP will not leave a period of time to notify stations connected to it.
+TEST_F(BeaconTest, SwitchWithoutBeaconing) {
+  ScheduleCall(&BeaconTest::AssocCallback, kAssocTime);
+  ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kFirstSetChannel,
+                            kFirstChannelSwitched, kCSABeaconInterval);
+  env_.Run();
+  // Channel will be set immediately, no event should be scheduled
+  EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kFirstSetChannel));
+  EXPECT_EQ(ap_.GetChannel().primary, kFirstChannelSwitched.primary);
+}
+
+// When AP stop beaconing during the period of time to notify stations about channel switch, it mean
+// AP suddenly stop the support for CSA and will change the channel immediately.
+TEST_F(BeaconTest, StopBeaconWhenSwitching) {
+  ScheduleCall(&BeaconTest::AssocCallback, kAssocTime);
+  ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
+  ScheduleChannelSwitchCall(&BeaconTest::ChannelSwitchCallback, kFirstSetChannel,
+                            kFirstChannelSwitched, kCSABeaconInterval);
+  ScheduleCall(&BeaconTest::StopBeaconCallback, kVeryShortEndTime);
+  env_.Run();
+
+  // When beacon stops, everything stop immediately and channel will be updated.
+  EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kVeryShortEndTime));
+  EXPECT_EQ(ap_.GetChannel().primary, kFirstChannelSwitched.primary);
+}
 }  // namespace wlan::testing

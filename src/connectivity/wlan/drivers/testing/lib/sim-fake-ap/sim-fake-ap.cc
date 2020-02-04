@@ -10,6 +10,62 @@
 
 namespace wlan::simulation {
 
+void FakeAp::SetChannel(const wlan_channel_t& channel) {
+  // Time until next beacon.
+  zx::duration diff_to_next_beacon = beacon_state_.next_beacon_time - environment_->GetTime();
+
+  // If any station is associating with this AP, trigger channel switch.
+  if (!clients_.empty() && beacon_state_.is_beaconing &&
+      (CSA_beacon_interval_ >= diff_to_next_beacon)) {
+    // If a new CSA is triggered, then it will override the previous one, and schedule a new channel
+    // switch time.
+    uint8_t cs_count = 0;
+    // This is the time period start from next beacon to the end of CSA beacon interval.
+    zx::duration cover = CSA_beacon_interval_ - diff_to_next_beacon;
+    // This value is zero means next beacon is scheduled at the same time as CSA beacon interval
+    // end, and due to the mechanism of sim_env, this beacon will be sent out because it's scheduled
+    // earlier than we actually change channel.
+    if (cover.get() == 0) {
+      cs_count = 1;
+    } else {
+      cs_count =
+          cover / beacon_state_.beacon_interval + (cover % beacon_state_.beacon_interval ? 1 : 0);
+    }
+
+    if (beacon_state_.is_switching_channel) {
+      environment_->CancelNotification(this, beacon_state_.channel_switch_notification_id);
+    }
+
+    beacon_state_.beacon_frame_.AddCSAIE(channel, cs_count);
+    beacon_state_.channel_after_CSA = channel;
+
+    auto stop_CSAbeacon_handler = new std::function<void()>;
+    *stop_CSAbeacon_handler = std::bind(&FakeAp::HandleStopCSABeaconNotification, this);
+    environment_->ScheduleNotification(this, CSA_beacon_interval_,
+                                       static_cast<void*>(stop_CSAbeacon_handler),
+                                       &beacon_state_.channel_switch_notification_id);
+    beacon_state_.is_switching_channel = true;
+  } else {
+    chan_ = channel;
+  }
+}
+
+void FakeAp::SetBssid(const common::MacAddr& bssid) {
+  bssid_ = bssid;
+  beacon_state_.beacon_frame_.bssid_ = bssid;
+}
+
+void FakeAp::SetSsid(const wlan_ssid_t& ssid) {
+  ssid_ = ssid;
+  beacon_state_.beacon_frame_.ssid_ = ssid;
+}
+
+void FakeAp::SetCSABeaconInterval(zx::duration interval) {
+  // Meaningless to set CSA_beacon_interval to 0.
+  ZX_ASSERT(interval.get() != 0);
+  CSA_beacon_interval_ = interval;
+}
+
 bool FakeAp::CanReceiveChannel(const wlan_channel_t& channel) {
   // For now, require an exact match
   return ((channel.primary == chan_.primary) && (channel.cbw == chan_.cbw) &&
@@ -22,6 +78,7 @@ void FakeAp::ScheduleNextBeacon() {
   environment_->ScheduleNotification(this, beacon_state_.beacon_interval,
                                      static_cast<void*>(beacon_handler),
                                      &beacon_state_.beacon_notification_id);
+  beacon_state_.next_beacon_time = environment_->GetTime() + beacon_state_.beacon_interval;
 }
 
 void FakeAp::EnableBeacon(zx::duration beacon_period) {
@@ -32,8 +89,7 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
   }
 
   // First beacon is sent out immediately
-  SimBeaconFrame beacon_frame(this, ssid_, bssid_);
-  environment_->Tx(&beacon_frame, chan_);
+  environment_->Tx(&beacon_state_.beacon_frame_, chan_);
 
   beacon_state_.is_beaconing = true;
   beacon_state_.beacon_interval = beacon_period;
@@ -42,6 +98,15 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
 }
 
 void FakeAp::DisableBeacon() {
+  // If we stop beaconing when channel is switching, we cancel the channel switch event and directly
+  // set channel to new channel.
+  if (beacon_state_.is_switching_channel) {
+    chan_ = beacon_state_.channel_after_CSA;
+    beacon_state_.is_switching_channel = false;
+    ZX_ASSERT(environment_->CancelNotification(
+                  this, beacon_state_.channel_switch_notification_id) == ZX_OK);
+  }
+
   beacon_state_.is_beaconing = false;
   ZX_ASSERT(environment_->CancelNotification(this, beacon_state_.beacon_notification_id) == ZX_OK);
 }
@@ -155,9 +220,20 @@ zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason)
 
 void FakeAp::HandleBeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);
-  SimBeaconFrame beacon_frame(this, ssid_, bssid_);
-  environment_->Tx(&beacon_frame, chan_);
+  environment_->Tx(&beacon_state_.beacon_frame_, chan_);
+  // Channel switch count decrease by 1 each time after sending a CSA beacon.
+  if (beacon_state_.is_switching_channel) {
+    auto CSA_ie = beacon_state_.beacon_frame_.FindIE(InformationElement::IE_TYPE_CSA);
+    ZX_ASSERT(static_cast<CSAInformationElement*>(CSA_ie.get())->channel_switch_count_-- > 0);
+  }
   ScheduleNextBeacon();
+}
+
+void FakeAp::HandleStopCSABeaconNotification() {
+  ZX_ASSERT(beacon_state_.is_beaconing);
+  beacon_state_.beacon_frame_.RemoveIE(InformationElement::SimIEType::IE_TYPE_CSA);
+  chan_ = beacon_state_.channel_after_CSA;
+  beacon_state_.is_switching_channel = false;
 }
 
 void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {

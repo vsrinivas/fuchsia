@@ -38,19 +38,26 @@ class FakeAp : public StationIfc {
 
   FakeAp() = delete;
 
-  explicit FakeAp(Environment* environ) : environment_(environ) { environ->AddStation(this); }
+  explicit FakeAp(Environment* environ) : environment_(environ) {
+    environ->AddStation(this);
+    beacon_state_.beacon_frame_.sender_ = this;
+  }
 
   FakeAp(Environment* environ, const common::MacAddr& bssid, const wlan_ssid_t& ssid,
          const wlan_channel_t chan)
       : environment_(environ), chan_(chan), bssid_(bssid), ssid_(ssid) {
     environ->AddStation(this);
+    beacon_state_.beacon_frame_.sender_ = this;
+    beacon_state_.beacon_frame_.bssid_ = bssid;
+    beacon_state_.beacon_frame_.ssid_ = ssid;
   }
 
   ~FakeAp() = default;
 
-  void SetChannel(const wlan_channel_t& channel) { chan_ = channel; }
-  void SetBssid(const common::MacAddr& bssid) { bssid_ = bssid; }
-  void SetSsid(const wlan_ssid_t& ssid) { ssid_ = ssid; }
+  void SetChannel(const wlan_channel_t& channel);
+  void SetBssid(const common::MacAddr& bssid);
+  void SetSsid(const wlan_ssid_t& ssid);
+  void SetCSABeaconInterval(zx::duration interval);
 
   wlan_channel_t GetChannel() { return chan_; }
   common::MacAddr GetBssid() { return bssid_; }
@@ -81,15 +88,16 @@ class FakeAp : public StationIfc {
   void Rx(const SimFrame* frame, const wlan_channel_t& channel) override;
   void ReceiveNotification(void* payload) override;
 
+ private:
   void RxMgmtFrame(const SimManagementFrame* mgmt_frame);
 
- private:
   void ScheduleNextBeacon();
   void ScheduleAssocResp(uint16_t status, const common::MacAddr& dst);
   void ScheduleProbeResp(const common::MacAddr& dst);
 
   // Event handlers
   void HandleBeaconNotification();
+  void HandleStopCSABeaconNotification();
   void HandleAssocRespNotification(uint16_t status, common::MacAddr dst);
   void HandleProbeRespNotification(common::MacAddr dst);
 
@@ -104,15 +112,28 @@ class FakeAp : public StationIfc {
   struct BeaconState {
     // Are we currently emitting beacons?
     bool is_beaconing = false;
+    // Are we waiting for the execution of scheduled channel switch announcement?
+    bool is_switching_channel = false;
+    // This is the channel AP about to change to
+    wlan_channel_t channel_after_CSA;
 
     zx::duration beacon_interval;
 
     // Unique value that is associated with the next beacon event
     uint64_t beacon_notification_id;
+    // Unique value that is associated with the upcoming channel switch event
+    uint64_t channel_switch_notification_id;
+    // The time in sim_env for next beacon
+    zx::time next_beacon_time;
+
+    // There is only one static copy of beacon frame, and AP can modify it according to state.
+    simulation::SimBeaconFrame beacon_frame_;
   } beacon_state_;
 
   enum AssocHandling assoc_handling_mode_ = ASSOC_ALLOWED;
 
+  // Delay between start and stop sending CSA beacon to old channel
+  zx::duration CSA_beacon_interval_ = zx::msec(150);
   // Delay between an association request and an association response
   zx::duration assoc_resp_interval_ = zx::msec(1);
   // Delay between an Disassociation request and an Disassociation response

@@ -18,7 +18,6 @@ void Environment::Run() {
     // Make sure that time is always moving forward
     ZX_ASSERT(event->time >= time_);
     time_ = event->time;
-
     // Send event to client who requested it
     event->requester->ReceiveNotification(event->payload);
   }
