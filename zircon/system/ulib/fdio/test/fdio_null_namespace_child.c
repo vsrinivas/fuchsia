@@ -38,5 +38,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  fdio_ns_free_flat_ns(flat);
   return 0;
 }

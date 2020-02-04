@@ -232,4 +232,9 @@ TEST(HandleFDTest, BindToFDInvalid) {
   err = errno;
   EXPECT_LT(fd, 0, "");
   EXPECT_EQ(err, EMFILE, "");
+
+  // Do a successful one just to clean up the fdio and not leak it.
+  fd = fdio_bind_to_fd(fdio, -1, 0);
+  EXPECT_GE(fd, 0, "");
+  EXPECT_EQ(0, close(fd), "");
 }
