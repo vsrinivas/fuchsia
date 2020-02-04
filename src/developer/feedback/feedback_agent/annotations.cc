@@ -12,7 +12,7 @@ using fuchsia::feedback::Annotation;
 
 std::vector<fit::promise<std::vector<Annotation>>> GetAnnotations(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const std::set<std::string>& allowlist, zx::duration timeout, std::shared_ptr<Cobalt> cobalt) {
+    const std::set<std::string>& allowlist, zx::duration timeout, Cobalt* cobalt) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Annotation allowlist is empty, nothing to retrieve";
     return {};

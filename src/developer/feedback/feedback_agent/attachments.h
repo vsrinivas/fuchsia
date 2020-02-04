@@ -27,7 +27,7 @@ namespace feedback {
 // * |timeout| is per attachment.
 std::vector<fit::promise<fuchsia::feedback::Attachment>> GetAttachments(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const std::set<std::string>& allowlist, zx::duration timeout, std::shared_ptr<Cobalt> cobalt,
+    const std::set<std::string>& allowlist, zx::duration timeout, Cobalt* cobalt,
     async::Executor* inspect_executor);
 
 // Adds the |annotations| as an extra JSON attachment to |attachments|.

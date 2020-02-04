@@ -82,12 +82,12 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
   auto service_directory() { return environment_->service_directory(); }
 
   fit::result<fuchsia::mem::Buffer> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
-    auto cobalt = std::make_shared<Cobalt>(dispatcher(), service_directory());
+    Cobalt cobalt(dispatcher(), service_directory());
 
     fit::result<fuchsia::mem::Buffer> result;
     bool has_result = false;
     executor_.schedule_task(
-        feedback::CollectInspectData(dispatcher(), timeout, cobalt, &collection_executor_)
+        feedback::CollectInspectData(dispatcher(), timeout, &cobalt, &collection_executor_)
             .then([&result, &has_result](fit::result<fuchsia::mem::Buffer>& res) {
               result = std::move(res);
               has_result = true;
@@ -224,9 +224,9 @@ TEST_F(CollectInspectDataTest, Fail_InspectDiscoveryTimeout) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {
+  Cobalt cobalt(dispatcher(), real_services());
   const zx::duration unused_timeout = zx::sec(1);
-  Inspect inspect(dispatcher(), std::make_shared<Cobalt>(dispatcher(), real_services()),
-                  &collection_executor_);
+  Inspect inspect(dispatcher(), &cobalt, &collection_executor_);
   executor_.schedule_task(inspect.Collect(unused_timeout));
   ASSERT_DEATH(inspect.Collect(unused_timeout),
                testing::HasSubstr("Collect() is not intended to be called twice"));

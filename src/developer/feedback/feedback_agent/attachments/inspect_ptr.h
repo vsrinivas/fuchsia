@@ -27,21 +27,20 @@ namespace feedback {
 //
 // Requires "hub" in the features of the calling component's sandbox to access the hub.
 fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* timeout_dispatcher,
-                                                      zx::duration timeout,
-                                                      std::shared_ptr<Cobalt> cobalt,
+                                                      zx::duration timeout, Cobalt* cobalt,
                                                       async::Executor* collection_executor);
 
 // Wrapper around the Inspect data collection to track the lifetime of the objects more easily.
 class Inspect {
  public:
-  Inspect(async_dispatcher_t* timeout_dispatcher, std::shared_ptr<Cobalt> cobalt,
+  Inspect(async_dispatcher_t* timeout_dispatcher, Cobalt* cobalt,
           async::Executor* collection_executor);
 
   fit::promise<fuchsia::mem::Buffer> Collect(zx::duration timeout);
 
  private:
   async_dispatcher_t* timeout_dispatcher_;
-  std::shared_ptr<Cobalt> cobalt_;
+  Cobalt* cobalt_;
   async::Executor* collection_executor_;
   // Enforces the one-shot nature of Collect().
   bool has_called_collect_ = false;

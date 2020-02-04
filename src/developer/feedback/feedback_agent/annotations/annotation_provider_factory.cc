@@ -74,20 +74,20 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
                                                 async_dispatcher_t* dispatcher,
                                                 std::shared_ptr<sys::ServiceDirectory> services,
                                                 const zx::duration timeout,
-                                                std::shared_ptr<Cobalt> cobalt) {
+                                                Cobalt* cobalt) {
   switch (type) {
     case AnnotationType::BoardName:
       return std::make_unique<BoardNameProvider>();
     case AnnotationType::BuildInfo:
       return std::make_unique<BuildInfoProvider>(annotations);
     case AnnotationType::Channel:
-      return std::make_unique<ChannelProvider>(dispatcher, services, timeout, std::move(cobalt));
+      return std::make_unique<ChannelProvider>(dispatcher, services, timeout, cobalt);
     case AnnotationType::HardwareBoardInfo:
       return std::make_unique<BoardInfoProvider>(annotations, dispatcher, services, timeout,
-                                                 std::move(cobalt));
+                                                 cobalt);
     case AnnotationType::HardwareProductInfo:
       return std::make_unique<ProductInfoProvider>(annotations, dispatcher, services, timeout,
-                                                   std::move(cobalt));
+                                                   cobalt);
     case AnnotationType::Time:
       return std::make_unique<TimeProvider>(annotations,
                                             std::make_unique<timekeeper::SystemClock>());
@@ -97,12 +97,12 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
 std::set<std::string> AddIfAnnotationsIntersect(
     const AnnotationType type, const std::set<std::string>& allowlist,
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const zx::duration timeout, std::shared_ptr<Cobalt> cobalt,
+    const zx::duration timeout, Cobalt* cobalt,
     std::vector<std::unique_ptr<AnnotationProvider>>* providers) {
   auto annotations = AnnotationsToCollect(type, allowlist);
   if (!annotations.empty()) {
     providers->push_back(
-        GetProvider(type, annotations, dispatcher, services, timeout, std::move(cobalt)));
+        GetProvider(type, annotations, dispatcher, services, timeout, cobalt));
   }
 
   return annotations;
@@ -113,7 +113,7 @@ std::set<std::string> AddIfAnnotationsIntersect(
 std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
     const std::set<std::string>& allowlist, async_dispatcher_t* dispatcher,
     std::shared_ptr<sys::ServiceDirectory> services, const zx::duration timeout,
-    std::shared_ptr<Cobalt> cobalt) {
+    Cobalt* cobalt) {
   static auto annotation_types = GetAnnotationTypes();
 
   std::set<std::string> ignored_annotations = allowlist;

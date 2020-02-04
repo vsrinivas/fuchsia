@@ -46,7 +46,9 @@ class ProductInfoProviderTest
       public testing::WithParamInterface<std::map<std::string, std::string>> {
  public:
   ProductInfoProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+      : CobaltTestFixture(/*unit_test_fixture=*/this),
+        executor_(dispatcher()),
+        cobalt_(dispatcher(), services()) {}
 
  protected:
   void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
@@ -59,8 +61,7 @@ class ProductInfoProviderTest
   std::map<std::string, std::string> GetProductInfo(
       const std::set<std::string>& annotations_to_get = {},
       const zx::duration timeout = zx::sec(1)) {
-    ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout,
-                                 std::make_shared<Cobalt>(dispatcher(), services()));
+    ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt_);
 
     auto promise = provider.GetAnnotations();
 
@@ -89,6 +90,7 @@ class ProductInfoProviderTest
 
  private:
   std::unique_ptr<StubProduct> product_provider_;
+  Cobalt cobalt_;
 };
 
 ProductInfo CreateProductInfo(const std::map<std::string, std::string>& annotations) {
@@ -210,10 +212,10 @@ TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
 
 TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
   SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({})));
+  Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);
-  internal::ProductInfoPtr product_info_ptr(dispatcher(), services(),
-                                            std::make_shared<Cobalt>(dispatcher(), services()));
+  internal::ProductInfoPtr product_info_ptr(dispatcher(), services(), &cobalt);
   executor_.schedule_task(product_info_ptr.GetProductInfo(unused_timeout));
   ASSERT_DEATH(product_info_ptr.GetProductInfo(unused_timeout),
                testing::HasSubstr("GetProductInfo() is not intended to be called twice"));

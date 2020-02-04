@@ -64,9 +64,9 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher),
       services_(services),
       config_(config),
+      cobalt_(dispatcher_, services_),
       after_timeout_(dispatcher, after_timeout, timeout),
       executor_(dispatcher),
-      cobalt_(std::make_unique<Cobalt>(dispatcher_, services_)),
       inspect_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       inspect_executor_(inspect_loop_.dispatcher()) {
   if (const zx_status_t status = inspect_loop_.StartThread("inspect-thread"); status != ZX_OK) {
@@ -78,7 +78,7 @@ void DataProvider::GetData(GetDataCallback callback) {
   after_timeout_.Acquire();
   auto annotations =
       fit::join_promise_vector(GetAnnotations(dispatcher_, services_, config_.annotation_allowlist,
-                                              kDataTimeout, cobalt_))
+                                              kDataTimeout, &cobalt_))
           .and_then([](std::vector<fit::result<std::vector<Annotation>>>& annotation_promises)
                         -> fit::result<std::vector<Annotation>> {
             std::vector<Annotation> ok_annotations;
@@ -100,7 +100,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 
   auto attachments =
       fit::join_promise_vector(GetAttachments(dispatcher_, services_, config_.attachment_allowlist,
-                                              kDataTimeout, cobalt_, &inspect_executor_))
+                                              kDataTimeout, &cobalt_, &inspect_executor_))
           .and_then([](std::vector<fit::result<Attachment>>& attachments)
                         -> fit::result<std::vector<Attachment>> {
             std::vector<Attachment> ok_attachments;
@@ -168,7 +168,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   after_timeout_.Acquire();
-  auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, cobalt_)
+  auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, &cobalt_)
                      .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                                    -> fit::result<Screenshot> {
                        Screenshot screenshot;
