@@ -123,6 +123,30 @@ template("fidl_alias") {
     }
   }
 
+  group("c") {
+    public_deps = [
+      "//sdk/fidl/$library_name:${library_name}_c",
+    ]
+  }
+
+  group("c.headers") {
+    public_deps = [
+      "//sdk/fidl/$library_name:${library_name}_c",
+    ]
+  }
+
+  group("llcpp") {
+    public_deps = [
+      "//sdk/fidl/$library_name:${library_name}_llcpp",
+    ]
+  }
+
+  group("llcpp.headers") {
+    public_deps = [
+      "//sdk/fidl/$library_name:${library_name}_llcpp",
+    ]
+  }
+
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
     import("//build/sdk/sdk_atom_alias.gni")
     sdk_atom_alias("${target_name}_sdk") {
