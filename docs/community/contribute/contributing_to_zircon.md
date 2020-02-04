@@ -1,4 +1,4 @@
-# Guidelines for contributing to Zircon
+# Contributing to Zircon
 
 Zircon is under active development and at this time Zircon is
 not seeking major changes or new features from new contributors.

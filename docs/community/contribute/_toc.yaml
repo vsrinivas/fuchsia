@@ -1,0 +1,12 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Contributing to Zircon"
+  path: /docs/community/contribute/contributing_to_zircon.md
+- title: "Documentation"
+  section:
+  - include: /docs/community/contribute/docs/_toc.yaml
+- title: "Best practices"
+  section:
+  - include: /docs/community/contribute/best-practices/_toc.yaml

@@ -1,0 +1,8 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Respectful code"
+  path: /docs/community/contribute/best-practices/respectful_code.md
+- title: "Update channel usage policy"
+  path: /docs/community/contribute/best-practices/update_channel_usage_policy.md

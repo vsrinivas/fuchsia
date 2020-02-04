@@ -66,4 +66,4 @@ These are general style guidelines that can help create clearer documentation:
   prerequisites before reading your document.
 - **Use markdown.** You must create documentation in markdown (.md) and keep the markdown file
   wrapped to a 80 character column size.
-- **Be respectful** Follow the guidelines set forth in [Respectful Code](respectful_code.md).
+- **Be respectful** Follow the guidelines set forth in [Respectful Code](/docs/community/contribute/best-practices/respectful_code.md).

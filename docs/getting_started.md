@@ -271,7 +271,7 @@ You may wish to peruse the [testing FAQ](development/testing/faq.md).
 * [Fuchsia documentation](README.md) hub
 * Working with Zircon - [copying files, network booting, log viewing, and
 more](/docs/development/kernel/getting_started.md#Copying-files-to-and-from-Zircon)
-* [Documentation Standards](/docs/contribute/best-practices/documentation_standards.md) - best practices
+* [Documentation Standards](/docs/community/contribute/docs/documentation_standards.md) - best practices
   for documentation
 * [Information on the system bootstrap component](/src/sys/sysmgr/).
 * [Workflow tips and FAQ](development/source_code/workflow_tips_and_faq.md) that help increase
