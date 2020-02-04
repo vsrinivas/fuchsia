@@ -108,17 +108,6 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
 }
 
-TEST_F(CobaltTest, Check_CallbackExecutes) {
-  SetUpCobaltLoggerFactory(
-      std::make_unique<StubCobaltLoggerFactory>(std::make_unique<StubCobaltLoggerFailsLogEvent>()));
-
-  Status log_event_status = Status::OK;
-  cobalt_->LogOccurrence(kEventCode,
-                         [&log_event_status](Status status) { log_event_status = status; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(log_event_status, Status::INVALID_ARGUMENTS);
-}
-
 TEST_F(CobaltTest, Check_LoggerDoesNotRespond_ClosesConnection) {
   auto stub_logger = std::make_unique<StubCobaltLoggerIgnoresFirstEvents>(5u);
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>(std::move(stub_logger)));

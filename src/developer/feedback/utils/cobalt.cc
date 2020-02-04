@@ -96,15 +96,15 @@ void Cobalt::RetryConnectingToLogger() {
       logger_reconnection_backoff_.GetNext());
 }
 
-void Cobalt::LogEvent(CobaltEvent event, fit::callback<void(fuchsia::cobalt::Status)> callback) {
+void Cobalt::LogEvent(CobaltEvent event) {
   if (pending_events_.size() >= kMaxQueueSize) {
     FX_LOGS(INFO) << StringPrintf("Dropping Cobalt event %s - too many pending events (%lu)",
                                   event.ToString().c_str(), pending_events_.size());
     return;
   }
 
-  const auto event_id = next_event_id_++;
-  pending_events_.insert(std::make_pair(event_id, PendingEvent(event, std::move(callback))));
+  const uint64_t event_id = next_event_id_++;
+  pending_events_.insert(std::make_pair(event_id, std::move(event)));
   SendEvent(event_id);
 }
 
@@ -116,23 +116,19 @@ void Cobalt::SendEvent(uint64_t event_id) {
   if (pending_events_.find(event_id) == pending_events_.end()) {
     return;
   }
-  auto& pending_event = pending_events_.at(event_id);
+  CobaltEvent& event = pending_events_.at(event_id);
 
-  auto cb = [this, event_id, &pending_event](Status status) {
+  auto cb = [this, event_id, &event](Status status) {
     if (status != Status::OK) {
       FX_LOGS(INFO) << StringPrintf("Cobalt logging error: status %s, event %s",
-                                    ToString(status).c_str(),
-                                    pending_event.event.ToString().c_str());
+                                    ToString(status).c_str(), event.ToString().c_str());
     }
-
-    pending_event.callback(status);
 
     // We don't retry events that have been acknowledged by the server, regardless of the return
     // status.
     pending_events_.erase(event_id);
   };
 
-  const auto& event = pending_event.event;
   switch (event.type) {
     case CobaltEvent::Type::Occurrence:
       logger_->LogEvent(event.metric_id, event.event_code, std::move(cb));

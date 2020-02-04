@@ -30,32 +30,21 @@ class Cobalt {
   // Log an occurrence event with fuchsia.cobalt.Logger with the provided parameters. If the service
   // is not accessible, keep the parameters to try again later.
   template <typename EventCodeType>
-  void LogOccurrence(
-      EventCodeType event_code,
-      fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {}) {
-    LogEvent(CobaltEvent(event_code), std::move(callback));
+  void LogOccurrence(EventCodeType event_code) {
+    LogEvent(CobaltEvent(event_code));
   }
 
   // Log a count event with fuchsia.cobalt.Logger with the provided parameters. If the service is
   // not accessible, keep the parameters to try again later.
   template <typename EventCodeType>
-  void LogCount(
-      EventCodeType event_code, uint64_t count,
-      fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {}) {
-    LogEvent(CobaltEvent(event_code, count), std::move(callback));
+  void LogCount(EventCodeType event_code, uint64_t count) {
+    LogEvent(CobaltEvent(event_code, count));
   }
 
  private:
-  struct PendingEvent {
-    PendingEvent(CobaltEvent event, fit::callback<void(fuchsia::cobalt::Status)> callback)
-        : event(event), callback(std::move(callback)) {}
-    CobaltEvent event;
-    fit::callback<void(fuchsia::cobalt::Status)> callback;
-  };
-
   void ConnectToLogger(fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request);
   void RetryConnectingToLogger();
-  void LogEvent(CobaltEvent event, fit::callback<void(fuchsia::cobalt::Status)> callback);
+  void LogEvent(CobaltEvent event);
   void SendEvent(uint64_t event_id);
   void SendAllPendingEvents();
 
@@ -67,7 +56,7 @@ class Cobalt {
 
   // An event is pending if it has been written into a channel, but has not been acknowledged by
   // the recipient.
-  std::map<uint64_t, PendingEvent> pending_events_;
+  std::map<uint64_t, CobaltEvent> pending_events_;
   backoff::ExponentialBackoff logger_reconnection_backoff_;
 
   // We need to be able to cancel a posted reconnection task when |Cobalt| is destroyed.
