@@ -24,11 +24,11 @@ group("scenic") {
 group("all") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/fidl",
-    "//garnet/go/src/fidlmerge:host",
-    "//garnet/lib/magma:magma-tools",
     ":bluetooth",
     ":scenic",
+    "//garnet/go/src/fidl",
+    "//garnet/go/src/fidlmerge:host",
+    "//src/graphics/lib/magma:magma-tools",
   ]
 }
 

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//garnet/lib/magma/include/virtio/virtmagma_debug.gni")
+import("//src/graphics/lib/magma/include/virtio/virtmagma_debug.gni")
 
 source_set("device") {
   sources = [
@@ -185,8 +185,8 @@ source_set("virtio_magma_lib") {
   deps = [
     ":virtio",
     ":virtio_magma_generic",
-    "//garnet/lib/magma/include:magma_abi",
-    "//garnet/lib/magma/include/virtio",
+    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include/virtio",
   ]
 
   if (virtmagma_debug) {
@@ -199,7 +199,7 @@ executable("virtio_magma_bin") {
   output_name = "virtio_magma"
   deps = [
     ":virtio_magma_lib",
-    "//garnet/lib/magma/src/libmagma",
+    "//src/graphics/lib/magma/src/libmagma",
   ]
 }
 
@@ -209,7 +209,7 @@ executable("virtio_magma_bin_mock_system") {
   output_name = "virtio_magma_mock_system"
   deps = [
     ":virtio_magma_lib",
-    "//garnet/lib/magma/tests/mock:magma_system",
+    "//src/graphics/lib/magma/tests/mock:magma_system",
   ]
 }
 
@@ -343,11 +343,11 @@ executable("device_tests") {
 
   deps = [
     ":device",
-    "//garnet/lib/magma/include:magma_abi",
-    "//garnet/lib/magma/include/virtio:headers",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include/virtio:headers",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace-provider-with-fdio",
@@ -384,10 +384,10 @@ action("virtio_magma_generic") {
   out_file = "$target_gen_dir/virtio_magma_generic.h"
   script = "virtio_magma_generic.h.gen.py"
   args = [
-    rebase_path("//garnet/lib/magma/include/magma_abi/magma.json",
+    rebase_path("//src/graphics/lib/magma/include/magma_abi/magma.json",
                 root_build_dir),
     rebase_path(out_file, root_build_dir),
   ]
-  inputs = [ "//garnet/lib/magma/include/magma_abi/magma.json" ]
+  inputs = [ "//src/graphics/lib/magma/include/magma_abi/magma.json" ]
   outputs = [ "$out_file" ]
 }

@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+group("magma-vulkan") {
+  if (magma_enable_developer_build) {
+    testonly = true
+    deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
+  }
+  public_deps = [ ":magma-qcom-adreno" ]
+  if (build_libvulkan_qcom_adreno != []) {
+    public_deps += [ ":magma-qcom-adreno-config" ]
+  }
+}
+
+package("magma-qcom-adreno") {
+  deprecated_system_image = true
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
+
+  deps = []
+
+  if (build_libvulkan_qcom_adreno != []) {
+    deps += build_libvulkan_qcom_adreno
+    libraries = [
+      {
+        name = "libvulkan_adreno.so"
+      },
+    ]
+  }
+
+  if (magma_enable_developer_build) {
+    deps += [ "//garnet/drivers/gpu/msd-qcom-adreno:msd_qcom_test" ]
+    drivers = [
+      {
+        name = "libmsd_qcom_test.so"
+      },
+    ]
+  } else {
+    deps += [ "//garnet/drivers/gpu/msd-qcom-adreno:msd_qcom" ]
+    drivers = [
+      {
+        name = "libmsd_qcom.so"
+      },
+    ]
+  }
+}
+
+if (build_libvulkan_qcom_adreno != []) {
+  icd_config_data("magma-qcom-adreno-config") {
+    icds = [
+      {
+        lib = "libvulkan_adreno.so"
+        manifest = "$target_gen_dir/vulkan/icd.d/libvulkan_adreno.json"
+      },
+    ]
+  }
+}

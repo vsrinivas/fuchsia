@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+group("tools") {
+  public_deps = [ ":magma_info" ]
+}
+
+executable("magma_info") {
+  sources = [ "info.cc" ]
+
+  deps = [
+    "$magma_build_root/include:magma_abi",
+    "$zircon_build_root/public/lib/ddk",
+    "$zircon_build_root/public/lib/fdio",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//src/devices:driver",
+    "//src/lib/fxl",
+  ]
+
+  libs = [ "zircon" ]
+}

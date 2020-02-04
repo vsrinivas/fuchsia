@@ -100,7 +100,7 @@ exceptions = {
         '//src/graphics/lib/vulkan',
     ],
     '//src/virtualization': [
-        '//garnet/lib/magma',
+        '//src/graphics/lib/magma',
         '//garnet/packages/experimental:debian_guest',
         '//garnet/packages/experimental:zircon_guest',
         '//garnet/packages/prod:guest_runner',

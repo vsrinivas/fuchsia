@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 if (is_fuchsia) {
   import("//build/config/fuchsia/rules.gni")
@@ -25,8 +25,8 @@ magma_pdev_entry("msd_qcom_entry_test") {
 target(driver_module, "msd_qcom") {
   deps = [
     "src",
-    "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers",
-    "//garnet/lib/magma/src/sys_driver",
+    "//src/graphics/lib/magma/src/magma_util/platform:logger_for_system_drivers",
+    "//src/graphics/lib/magma/src/sys_driver",
   ]
 
   if (is_fuchsia) {
@@ -38,7 +38,7 @@ target(driver_module, "msd_qcom") {
   }
 
   if (is_linux) {
-    deps += [ "//garnet/lib/magma/src/magma_util/platform:entry" ]
+    deps += [ "//src/graphics/lib/magma/src/magma_util/platform:entry" ]
   }
 }
 
@@ -51,8 +51,8 @@ target(driver_module_test, "msd_qcom_test") {
 
   deps = [
     "src",
-    "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers",
-    "//garnet/lib/magma/src/sys_driver",
+    "//src/graphics/lib/magma/src/magma_util/platform:logger_for_system_drivers",
+    "//src/graphics/lib/magma/src/sys_driver",
   ]
 
   if (is_fuchsia) {
@@ -65,14 +65,14 @@ target(driver_module_test, "msd_qcom_test") {
 
   if (is_linux) {
     deps += [
-      "//garnet/lib/magma/src/magma_util/platform:entry",
-      "//garnet/lib/magma/tests_linux:drm_test_runner",
+      "//src/graphics/lib/magma/src/magma_util/platform:entry",
+      "//src/graphics/lib/magma/tests_linux:drm_test_runner",
     ]
   }
 
   deps += [
-    "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
-    "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+    "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
+    "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]
 }
 

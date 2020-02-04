@@ -7,7 +7,6 @@ group("tools") {
   public_deps = [
     "//garnet/go/src/fidl",
     "//garnet/go/src/fidlmerge:host",
-    "//garnet/lib/magma:magma-tools",
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:far",
@@ -32,6 +31,7 @@ group("tools") {
     "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
     "//src/devices/tools/banjo:banjo_bin",
     "//src/diagnostics/triage:install($host_toolchain)",
+    "//src/graphics/lib/magma:magma-tools",
     "//src/lib/icu:tools",
     "//src/media/bundles:tools",
     "//src/sys/component_manager_for_test",

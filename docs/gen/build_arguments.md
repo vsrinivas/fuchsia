@@ -180,7 +180,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //garnet/lib/magma/gnbuild/magma.gni:48
+From //src/graphics/lib/magma/gnbuild/magma.gni:48
 
 ### board_kernel_cmdline_args
 List of kernel command line this board to bake into the boot image that are
@@ -327,7 +327,7 @@ Targets that will be built as mali vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:36
+From //src/graphics/lib/magma/gnbuild/magma.gni:36
 
 ### build_libvulkan_goldfish
 This is a list of targets that will be built as goldfish vulkan ICDs.
@@ -341,21 +341,21 @@ Targets that will be built as IMG vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:45
+From //src/graphics/lib/magma/gnbuild/magma.gni:45
 
 ### build_libvulkan_qcom_adreno
 Targets that will be built as qualcomm vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:42
+From //src/graphics/lib/magma/gnbuild/magma.gni:42
 
 ### build_libvulkan_vsl_gc
 Targets that will be built as verisilicon vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:39
+From //src/graphics/lib/magma/gnbuild/magma.gni:39
 
 ### build_sdk_archives
 Whether to build SDK tarballs.
@@ -834,7 +834,7 @@ From //third_party/dart/runtime/runtime_args.gni:88
 
 **Current value (from the default):** `"//third_party/expat"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:13
+From //src/graphics/lib/magma/gnbuild/magma.gni:13
 
 ### experimental_wlan_client_mlme
 Selects the SoftMAC client implementation to use. Choices:
@@ -992,7 +992,7 @@ From //build/images/fvm.gni:32
 
 **Current value (from the default):** `"//third_party/glm"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:16
+From //src/graphics/lib/magma/gnbuild/magma.gni:16
 
 ### go_vet_enabled
   go_vet_enabled
@@ -1365,9 +1365,9 @@ From //garnet/bin/log_listener/BUILD.gn:15
 
 ### magma_build_root
 
-**Current value (from the default):** `"//garnet/lib/magma"`
+**Current value (from the default):** `"//src/graphics/lib/magma"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:12
+From //src/graphics/lib/magma/gnbuild/magma.gni:12
 
 ### magma_enable_developer_build
 Enable this to have the msd include a suite of tests and invoke them
@@ -1375,20 +1375,20 @@ automatically when the driver starts.
 
 **Current value (from the default):** `false`
 
-From //garnet/lib/magma/gnbuild/magma.gni:26
+From //src/graphics/lib/magma/gnbuild/magma.gni:26
 
 ### magma_enable_tracing
 Enable this to include fuchsia tracing capability
 
 **Current value (from the default):** `true`
 
-From //garnet/lib/magma/gnbuild/magma.gni:22
+From //src/graphics/lib/magma/gnbuild/magma.gni:22
 
 ### magma_python_path
 
 **Current value (from the default):** `"/b/s/w/ir/k/third_party/mako"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:19
+From //src/graphics/lib/magma/gnbuild/magma.gni:19
 
 ### max_blob_contents_size
 Maximum allowable contents for the /blob in a release mode build.
@@ -1554,13 +1554,13 @@ From //garnet/drivers/gpu/msd-arm-mali/src/BUILD.gn:23
 
 **Current value (from the default):** `"//garnet/drivers/gpu"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:14
+From //src/graphics/lib/magma/gnbuild/magma.gni:14
 
 ### msd_intel_gen_build_root
 
 **Current value (from the default):** `"//garnet/drivers/gpu/msd-intel-gen"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:15
+From //src/graphics/lib/magma/gnbuild/magma.gni:15
 
 ### netcfg_autostart
 
@@ -1607,7 +1607,7 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From //garnet/lib/magma/gnbuild/magma.gni:28
+From //src/graphics/lib/magma/gnbuild/magma.gni:28
 
 ### prebuilt_libvulkan_goldfish_path
 
@@ -1620,7 +1620,7 @@ The path to a prebuilt libvulkan.so for an IMG GPU.
 
 **Current value (from the default):** `""`
 
-From //garnet/lib/magma/gnbuild/magma.gni:31
+From //src/graphics/lib/magma/gnbuild/magma.gni:31
 
 ### prototype_account_transfer
 Whether or not prototype account transfer is enabled.
@@ -2247,7 +2247,7 @@ Enable verbose logging in virtmagma-related code
 
 **Current value (from the default):** `false`
 
-From //garnet/lib/magma/include/virtio/virtmagma_debug.gni:7
+From //src/graphics/lib/magma/include/virtio/virtmagma_debug.gni:7
 
 ### vulkan_sdk
 
@@ -2364,7 +2364,7 @@ From //build/images/BUILD.gn:43
 
 **Current value (from the default):** `"//zircon"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:17
+From //src/graphics/lib/magma/gnbuild/magma.gni:17
 
 ### zircon_compdb_filter
 Compilation database filter. Gets passed to --export-compile-commands=<filter>.

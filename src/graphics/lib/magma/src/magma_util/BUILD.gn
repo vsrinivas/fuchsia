@@ -1,0 +1,164 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+visibility_list = [
+  "//src/graphics/lib/magma/*",
+  "//garnet/drivers/gpu/*",
+  "//third_party/imgtec-pvr-rgx-km/*",
+]
+
+config("magma_util_config") {
+  if (is_debug) {
+    defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=1" ]
+  } else {
+    defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=0" ]
+  }
+}
+
+# Deprecated
+group("magma_util") {
+  public_deps = [ ":macros" ]
+}
+
+source_set("address_space") {
+  visibility = visibility_list
+
+  sources = [
+    "accessor.h",
+    "address_space.h",
+    "gpu_mapping.h",
+  ]
+  public_deps = [
+    ":macros",
+    "platform:buffer",
+    "platform:bus_mapper",
+  ]
+}
+
+source_set("macros") {
+  visibility = visibility_list
+
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+  public_deps = [ "platform:logger" ]
+
+  sources = [
+    "dlog.h",
+    "macros.h",
+  ]
+}
+
+source_set("status") {
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [ "status.h" ]
+
+  public_deps = [ "$magma_build_root/include:magma_abi_common" ]
+}
+
+source_set("mapped_batch") {
+  visibility = visibility_list
+
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "command_buffer.h",
+    "mapped_batch.h",
+  ]
+
+  public_deps = [
+    ":address_space",
+    "platform:semaphore",
+    "platform:trace",
+  ]
+}
+
+source_set("thread") {
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [ "thread.h" ]
+
+  deps = [ "platform:thread" ]
+}
+
+source_set("allocator") {
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
+    "address_space_allocator.h",
+    "retry_allocator.cc",
+    "retry_allocator.h",
+    "simple_allocator.cc",
+    "simple_allocator.h",
+  ]
+
+  public_deps = [
+    ":macros",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("semaphore_port") {
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [ "semaphore_port.h" ]
+
+  public_deps = [
+    ":macros",
+    "$magma_build_root/src/magma_util/platform:trace",
+    "platform:port",
+    "platform:semaphore",
+  ]
+}
+
+source_set("registers") {
+  visibility = visibility_list
+
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "register_bitfields.h",
+    "register_io.cc",
+    "register_io.h",
+  ]
+
+  public_deps = [
+    ":macros",
+    "platform:device",
+  ]
+}
+
+source_set("ringbuffer") {
+  visibility = visibility_list
+
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
+    "instruction_writer.h",
+    "ringbuffer.h",
+  ]
+
+  public_deps = [
+    ":address_space",
+    ":macros",
+  ]
+}

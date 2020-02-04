@@ -9,5 +9,5 @@ config("config") {
 source_set("include") {
   public_configs = [ ":config" ]
   sources = [ "magma_qcom_adreno.h" ]
-  public_deps = [ "//garnet/lib/magma/include:magma_abi_common" ]
+  public_deps = [ "//src/graphics/lib/magma/include:magma_abi_common" ]
 }

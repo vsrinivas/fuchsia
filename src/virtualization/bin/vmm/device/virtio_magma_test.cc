@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/magma/include/virtio/virtio_magma.h"
+#include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
@@ -11,7 +11,7 @@
 
 #include <fbl/algorithm.h>
 
-#include "garnet/lib/magma/include/magma_abi/magma.h"
+#include "src/graphics/lib/magma/include/magma_abi/magma.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"

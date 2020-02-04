@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 source_set("src") {
   public = []
@@ -31,23 +31,23 @@ source_set("src") {
   ]
   public_deps = [
     "../include",
-    "//garnet/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/include:msd_abi",
   ]
   deps = [
-    "//garnet/lib/magma/src/magma_util:address_space",
-    "//garnet/lib/magma/src/magma_util:macros",
-    "//garnet/lib/magma/src/magma_util:mapped_batch",
-    "//garnet/lib/magma/src/magma_util:registers",
-    "//garnet/lib/magma/src/magma_util:ringbuffer",
-    "//garnet/lib/magma/src/magma_util:thread",
-    "//garnet/lib/magma/src/magma_util/platform:barriers",
-    "//garnet/lib/magma/src/magma_util/platform:buffer",
-    "//garnet/lib/magma/src/magma_util/platform:bus_mapper",
-    "//garnet/lib/magma/src/magma_util/platform:device",
-    "//garnet/lib/magma/src/magma_util/platform:event",
-    "//garnet/lib/magma/src/magma_util/platform:logger",
-    "//garnet/lib/magma/src/magma_util/platform:semaphore",
-    "//garnet/lib/magma/src/magma_util/platform:thread",
+    "//src/graphics/lib/magma/src/magma_util:address_space",
+    "//src/graphics/lib/magma/src/magma_util:macros",
+    "//src/graphics/lib/magma/src/magma_util:mapped_batch",
+    "//src/graphics/lib/magma/src/magma_util:registers",
+    "//src/graphics/lib/magma/src/magma_util:ringbuffer",
+    "//src/graphics/lib/magma/src/magma_util:thread",
+    "//src/graphics/lib/magma/src/magma_util/platform:barriers",
+    "//src/graphics/lib/magma/src/magma_util/platform:buffer",
+    "//src/graphics/lib/magma/src/magma_util/platform:bus_mapper",
+    "//src/graphics/lib/magma/src/magma_util/platform:device",
+    "//src/graphics/lib/magma/src/magma_util/platform:event",
+    "//src/graphics/lib/magma/src/magma_util/platform:logger",
+    "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
+    "//src/graphics/lib/magma/src/magma_util/platform:thread",
   ]
   friend = [
     "../tests/mock:*",

@@ -6,7 +6,7 @@ For each component, a short term and long term process is described, where, in t
 
 ## Magma system driver
 
-The magma system driver must be open source but not GPL and hosted on *fuchsia.googlesource.com*.  A magma system driver must provide an implementation of the [msd interface](/garnet/lib/magma/include/msd_abi/msd.h).
+The magma system driver must be open source but not GPL and hosted on *fuchsia.googlesource.com*.  A magma system driver must provide an implementation of the [msd interface](/src/graphics/lib/magma/include/msd_abi/msd.h).
 
 ### Short term
 

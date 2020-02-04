@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 source_set("src") {
   sources = [
@@ -33,7 +33,7 @@ source_set("src") {
     sources += [ "linux/msd_qcom_platform_device_linux.cc" ]
   }
 
-  public_deps = [ "//garnet/lib/magma/include:msd_abi" ]
+  public_deps = [ "//src/graphics/lib/magma/include:msd_abi" ]
 
   deps = [
     "$magma_build_root/src/magma_util:address_space",

@@ -10,7 +10,7 @@ The source code for a magma graphics driver may be hosted entirely within the ga
 
 The core magma code is found under:
 
-* [lib/magma/src](/garnet/lib/magma/src)
+* [lib/magma/src](/src/graphics/lib/magma/src)
 
 Implementations of the magma service drivers are found under:
 
@@ -60,7 +60,7 @@ Includes all unit tests and integration tests.  There are 2 steps at this tps le
 1. Build with --args magma_enable_developer_build=true; this will run unit tests that require hardware,
 then present the device as usual for general applications.  Inspect the syslog for test results.
 
-2. Run the test script [lib/magma/scripts/test.sh](/garnet/lib/magma/scripts/test.sh) and inspect the test results.
+2. Run the test script [lib/magma/scripts/test.sh](/src/graphics/lib/magma/scripts/test.sh) and inspect the test results.
 
 #### L1
 
@@ -81,7 +81,7 @@ For details, refer to top level project documentation.
 
 #### S0
 
-For stress testing, run the test script [lib/magma/scripts/stress.sh](/garnet/lib/magma/scripts/stress.sh)
+For stress testing, run the test script [lib/magma/scripts/stress.sh](/src/graphics/lib/magma/scripts/stress.sh)
 and ensure that the driver does not leak resources over time.
 
 #### S1

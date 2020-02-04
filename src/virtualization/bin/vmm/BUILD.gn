@@ -111,9 +111,9 @@ source_set("lib") {
 
   deps = [
     ":guest_config",
-    "//garnet/lib/magma/include/virtio",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.virtualization.hardware",
+    "//src/graphics/lib/magma/include/virtio",
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
     "//src/virtualization/third_party/fdt",

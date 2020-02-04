@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 driver_module("msd_img_rgx_mt8167") {
   output_name = "libmsd_img_rgx_mt8167"
@@ -16,8 +16,7 @@ driver_module("msd_img_rgx_mt8167") {
   } else {
     deps = [ ":driver_sources" ]
   }
-  deps +=
-      [ "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers" ]
+  deps += [ "//src/graphics/lib/magma/src/magma_util/platform:logger_for_system_drivers" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -32,15 +31,15 @@ template("driver_source_template") {
 
     public_deps = [
       "../include",
-      "//garnet/lib/magma/src/magma_util:macros",
-      "//garnet/lib/magma/src/magma_util/platform:logger",
-      "//garnet/lib/magma/src/magma_util/platform:trace",
-      "//garnet/lib/magma/src/magma_util/platform:trace_provider",
-      "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
-      "//garnet/lib/magma/src/sys_driver",
-      "//garnet/lib/magma/tests/helper:platform_device_helper",
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
       "//src/devices:driver",
+      "//src/graphics/lib/magma/src/magma_util:macros",
+      "//src/graphics/lib/magma/src/magma_util/platform:logger",
+      "//src/graphics/lib/magma/src/magma_util/platform:trace",
+      "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
+      "//src/graphics/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
+      "//src/graphics/lib/magma/src/sys_driver",
+      "//src/graphics/lib/magma/tests/helper:platform_device_helper",
       "//third_party/imgtec-pvr-rgx-km:src",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",
@@ -56,8 +55,8 @@ template("driver_source_template") {
       testonly = true
       defines = [ "MAGMA_TEST_DRIVER=1" ]
       deps = [
-        "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
-        "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+        "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
+        "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
         "//third_party/googletest:gtest",
         "//third_party/imgtec-pvr-rgx-km:unit_tests",
       ]

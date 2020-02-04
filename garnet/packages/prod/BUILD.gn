@@ -600,8 +600,8 @@ group("bluetooth_all") {
 group("magma-arm-mali") {
   testonly = true
   public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-arm-mali:magma-vulkan",
     "//garnet/packages/prod:sysmem_connector",
+    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan",
   ]
 }
 
@@ -609,28 +609,29 @@ if (target_cpu == "x64") {
   group("magma-intel-gen") {
     testonly = true
     public_deps = [
-      "//garnet/lib/magma/gnbuild/magma-intel-gen:magma-vulkan",
       "//garnet/packages/prod:sysmem_connector",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan",
     ]
   }
 }
 
 group("magma-img-rgx-mt8167") {
   testonly = true
-  public_deps = [ "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-vulkan" ]
+  public_deps =
+      [ "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan" ]
 }
 
 group("magma-qcom-adreno") {
   testonly = true
   public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-qcom-adreno:magma-vulkan",
     "//garnet/packages/prod:sysmem_connector",
+    "//src/graphics/lib/magma/gnbuild/magma-qcom-adreno:magma-vulkan",
   ]
 }
 
 group("magma-vsl-gc") {
   testonly = true
-  public_deps = [ "//garnet/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan" ]
+  public_deps = [ "//src/graphics/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan" ]
 }
 
 group("setui_client") {

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 executable("msd_arm_mali_nonhardware_tests") {
   testonly = true
@@ -11,7 +11,7 @@ executable("msd_arm_mali_nonhardware_tests") {
 
   public_deps = [
     ":tests_not_requiring_hardware",
-    "//garnet/lib/magma/tests/helper:logger_init_helper",
+    "//src/graphics/lib/magma/tests/helper:logger_init_helper",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
@@ -33,7 +33,7 @@ source_set("tests_not_requiring_hardware") {
 
   deps = [
     ":test_deps",
-    "//garnet/lib/magma/tests/mock:bus_mapper",
+    "//src/graphics/lib/magma/tests/mock:bus_mapper",
   ]
 }
 
@@ -56,13 +56,13 @@ group("test_deps") {
   public_deps = [
     "../../include",
     "//garnet/drivers/gpu/msd-arm-mali/src",
-    "//garnet/lib/magma/include:msd_abi",
-    "//garnet/lib/magma/src/magma_util:macros",
-    "//garnet/lib/magma/src/magma_util/platform:port",
-    "//garnet/lib/magma/src/sys_driver:sys_driver",
-    "//garnet/lib/magma/tests/helper:command_buffer_helper",
-    "//garnet/lib/magma/tests/helper:platform_device_helper",
-    "//garnet/lib/magma/tests/mock:mmio",
+    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/src/magma_util:macros",
+    "//src/graphics/lib/magma/src/magma_util/platform:port",
+    "//src/graphics/lib/magma/src/sys_driver:sys_driver",
+    "//src/graphics/lib/magma/tests/helper:command_buffer_helper",
+    "//src/graphics/lib/magma/tests/helper:platform_device_helper",
+    "//src/graphics/lib/magma/tests/mock:mmio",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]

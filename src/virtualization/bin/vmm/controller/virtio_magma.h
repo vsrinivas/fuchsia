@@ -6,11 +6,12 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_MAGMA_H_
 
 #include <lib/zx/vmar.h>
-#include <virtio/virtio_ids.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/magma/include/virtio/virtio_magma.h"
+#include <virtio/virtio_ids.h>
+
+#include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"
 
 #define VIRTMAGMA_QUEUE_COUNT 1

@@ -2,9 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
 group("tests") {
   testonly = true
-  public_deps = [ "//garnet/packages/tests:magma" ]
+  deps = [
+    ":magma_abi_conformance_tests",
+    ":magma_info_test",
+    ":magma_nonhardware_tests",
+    "codegen",
+  ]
 }
 
 # Tests that require a working libvulkan to run.
@@ -21,11 +31,46 @@ group("vulkan-tests") {
 group("l1") {
   testonly = true
   deps = [
-    "//garnet/lib/magma:magma-tools",
     "//garnet/packages/examples:vkcube-on-fb",
     "//garnet/packages/examples:vkcube-on-scenic",
     "//garnet/packages/prod:scenic",
     "//garnet/packages/tests:image_pipe_swapchain",
     "//garnet/packages/tests:magma",
+    "//src/graphics/lib/magma/src/tools",
+  ]
+}
+
+test_package("magma_nonhardware_tests") {
+  deps = [ "unit_tests" ]
+
+  tests = [
+    {
+      name = "magma_unit_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+test_package("magma_abi_conformance_tests") {
+  deps = [ "integration" ]
+
+  tests = [
+    {
+      name = "magma_abi_conformance_tests"
+      environments = magma_hardware_envs
+    },
+  ]
+}
+
+# Run magma_info as a test to make sure it doesn't crash.
+test_package("magma_info_test") {
+  deps = [ "//src/graphics/lib/magma/src/tools:magma_info" ]
+
+  tests = [
+    {
+      name = "magma_info"
+      dest = "magma_info_test"
+      environments = magma_hardware_envs
+    },
   ]
 }

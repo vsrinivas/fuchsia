@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 # The gpu device
 driver_module("msd_intel") {
@@ -41,13 +41,13 @@ source_set("msd_intel_entry") {
 
   deps = [
     "src",
-    "//garnet/lib/magma/src/magma_util:macros",
-    "//garnet/lib/magma/src/magma_util/platform:trace",
-    "//garnet/lib/magma/src/magma_util/platform:trace_provider",
-    "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
-    "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
     "//src/devices:driver",
+    "//src/graphics/lib/magma/src/magma_util:macros",
+    "//src/graphics/lib/magma/src/magma_util/platform:trace",
+    "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
+    "//src/graphics/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
+    "//src/graphics/lib/magma/src/sys_driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zx",
   ]
@@ -63,22 +63,22 @@ source_set("msd_intel_test_entry") {
 
   deps = [
     "src",
-    "//garnet/lib/magma/src/magma_util:macros",
-    "//garnet/lib/magma/src/magma_util/platform:trace",
-    "//garnet/lib/magma/src/magma_util/platform:trace_provider",
-    "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
-    "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
     "//src/devices:driver",
+    "//src/graphics/lib/magma/src/magma_util:macros",
+    "//src/graphics/lib/magma/src/magma_util/platform:trace",
+    "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
+    "//src/graphics/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
+    "//src/graphics/lib/magma/src/sys_driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zx",
   ]
   libs = [ "zircon" ]
   deps += [
     "tests/unit_tests:hardware_tests",
-    "//garnet/lib/magma/src/magma_util/platform/zircon:pci_driver_gtest",
-    "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
-    "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+    "//src/graphics/lib/magma/src/magma_util/platform/zircon:pci_driver_gtest",
+    "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
+    "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]
 }
 

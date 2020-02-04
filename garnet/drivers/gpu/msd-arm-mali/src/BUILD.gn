@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 declare_args() {
   # Enable all 8 cores, which is faster but emits more heat.
@@ -74,18 +74,18 @@ source_set("src") {
   # libdriver.so.
   deps = [
     "../include",
-    "//garnet/lib/magma/include:msd_abi",
-    "//garnet/lib/magma/src/magma_util:macros",
-    "//garnet/lib/magma/src/magma_util:registers",
-    "//garnet/lib/magma/src/magma_util:thread",
-    "//garnet/lib/magma/src/magma_util/platform:barriers",
-    "//garnet/lib/magma/src/magma_util/platform:bus_mapper",
-    "//garnet/lib/magma/src/magma_util/platform:device",
-    "//garnet/lib/magma/src/magma_util/platform:event",
-    "//garnet/lib/magma/src/magma_util/platform:logger",
-    "//garnet/lib/magma/src/magma_util/platform:port",
-    "//garnet/lib/magma/src/magma_util/platform:semaphore",
-    "//garnet/lib/magma/src/magma_util/platform:trace",
+    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/src/magma_util:macros",
+    "//src/graphics/lib/magma/src/magma_util:registers",
+    "//src/graphics/lib/magma/src/magma_util:thread",
+    "//src/graphics/lib/magma/src/magma_util/platform:barriers",
+    "//src/graphics/lib/magma/src/magma_util/platform:bus_mapper",
+    "//src/graphics/lib/magma/src/magma_util/platform:device",
+    "//src/graphics/lib/magma/src/magma_util/platform:event",
+    "//src/graphics/lib/magma/src/magma_util/platform:logger",
+    "//src/graphics/lib/magma/src/magma_util/platform:port",
+    "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
+    "//src/graphics/lib/magma/src/magma_util/platform:trace",
     "//zircon/public/lib/fbl",
   ]
 }

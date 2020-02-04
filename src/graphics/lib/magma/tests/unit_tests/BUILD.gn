@@ -1,0 +1,193 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+package("testing_firmware_file") {
+  deprecated_system_image = true
+  testonly = true
+  libraries = [
+    {
+      dest = "firmware/test_firmware.txt"
+      source = rebase_path("test_firmware.txt")
+    },
+  ]
+}
+
+executable("unit_tests") {
+  testonly = true
+  output_name = "magma_unit_tests"
+
+  sources = []
+
+  deps = [
+    ":magma_platform_tests",
+    ":magma_system_tests",
+    ":magma_util_tests",
+    "$magma_build_root/tests/helper:logger_init_helper",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("magma_system_tests") {
+  testonly = true
+
+  sources = [
+    "test_magma_driver.cc",
+    "test_magma_system_buffer.cc",
+    "test_magma_system_connection.cc",
+    "test_magma_system_context.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util:macros",
+    "$magma_build_root/src/magma_util/platform:event",
+    "$magma_build_root/src/sys_driver",
+    "$magma_build_root/tests/helper:command_buffer_helper",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "$magma_build_root/tests/mock:msd",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("magma_util_tests") {
+  testonly = true
+
+  sources = [
+    "test_address_space.cc",
+    "test_address_space_allocator.cc",
+    "test_macros.cc",
+    "test_mapped_batch.cc",
+    "test_register_bitfields.cc",
+    "test_ringbuffer.cc",
+    "test_semaphore_port.cc",
+    "test_status.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util:address_space",
+    "$magma_build_root/src/magma_util:allocator",
+    "$magma_build_root/src/magma_util:mapped_batch",
+    "$magma_build_root/src/magma_util:registers",
+    "$magma_build_root/src/magma_util:ringbuffer",
+    "$magma_build_root/src/magma_util:semaphore_port",
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/tests/mock:address_space",
+    "$magma_build_root/tests/mock:bus_mapper",
+    "$zircon_build_root/public/lib/fdio",
+    "$zircon_build_root/public/lib/zx",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("magma_platform_tests") {
+  testonly = true
+  sources = [
+    "test_platform_connection.cc",
+    "test_platform_event.cc",
+    "test_platform_handle.cc",
+    "test_platform_logger.cc",
+    "test_platform_mmio.cc",
+    "test_platform_port.cc",
+    "test_platform_random.cc",
+    "test_platform_semaphore.cc",
+    "test_platform_sysmem_connection.cc",
+    "test_platform_thread.cc",
+    "test_platform_trace.cc",
+  ]
+  deps = [
+    "$magma_build_root/src/magma_util/platform:connection",
+    "$magma_build_root/src/magma_util/platform:connection_client",
+    "$magma_build_root/src/magma_util/platform:event",
+    "$magma_build_root/src/magma_util/platform:handle",
+    "$magma_build_root/src/magma_util/platform:logger",
+    "$magma_build_root/src/magma_util/platform:port",
+    "$magma_build_root/src/magma_util/platform:random",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:sysmem_connection",
+    "$magma_build_root/src/magma_util/platform:thread",
+    "$magma_build_root/src/magma_util/platform:trace",
+    "$magma_build_root/src/magma_util/platform:trace_provider",
+    "$magma_build_root/src/magma_util/platform:trace_provider_with_fdio",
+    "$magma_build_root/tests/mock:mmio",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+# Requires hardware
+source_set("magma_platform_device_test") {
+  testonly = true
+
+  if (current_cpu == "arm64") {
+    sources = [ "test_platform_device.cc" ]
+  } else if (current_cpu == "x64") {
+    sources = [ "test_platform_pci_device.cc" ]
+  }
+
+  deps = [
+    "$magma_build_root/src/magma_util/platform:thread",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# Requires hardware
+source_set("magma_platform_hardware_tests") {
+  testonly = true
+
+  sources = [
+    "test_platform_buffer.cc",
+    "test_platform_bus_mapper.cc",
+    "test_platform_interrupt.cc",
+  ]
+  if (is_linux) {
+    sources += [ "test_platform_iommu.cc" ]
+  }
+
+  deps = [
+    ":magma_platform_device_test",
+    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/src/magma_util:macros",
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:bus_mapper",
+    "$magma_build_root/src/magma_util/platform:device",
+    "$magma_build_root/src/magma_util/platform:iommu",
+    "$magma_build_root/src/magma_util/platform:thread",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "//third_party/googletest:gtest",
+  ]
+  if (is_fuchsia) {
+    deps += [ "//zircon/public/lib/zx" ]
+  }
+}
+
+# Requires hardware
+source_set("msd_abi_conformance_tests") {
+  testonly = true
+
+  sources = [
+    "test_magma_system_multithread.cc",
+    "test_msd_buffer.cc",
+    "test_msd_context.cc",
+    "test_msd_device.cc",
+    "test_msd_driver.cc",
+    "test_msd_semaphore.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/sys_driver",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "//garnet/drivers/gpu/msd-intel-gen/include",
+    "//third_party/googletest:gtest",
+  ]
+}

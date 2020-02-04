@@ -1,0 +1,102 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+# Mesa Intel Vulkan driver requires x64 build
+if (target_cpu == "x64") {
+  group("magma-vulkan") {
+    if (magma_enable_developer_build) {
+      testonly = true
+      deps =
+          [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
+    }
+    public_deps = [
+      ":magma-intel-gen",
+      ":magma-intel-gen-config",
+    ]
+  }
+
+  package("magma-intel-gen") {
+    deprecated_system_image = true
+    if (magma_enable_developer_build) {
+      testonly = true
+    }
+
+    deps = [ "//third_party/mesa:magma_vulkan" ]
+
+    libraries = [
+      {
+        name = "libvulkan_intel.so"
+      },
+    ]
+
+    if (magma_enable_developer_build) {
+      deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
+      drivers = [
+        {
+          name = "libmsd_intel_test.so"
+        },
+      ]
+    } else {
+      deps += [ "$msd_intel_gen_build_root:msd_intel" ]
+      drivers = [
+        {
+          name = "libmsd_intel.so"
+        },
+      ]
+    }
+  }
+
+  icd_config_data("magma-intel-gen-config") {
+    icds = [
+      {
+        lib = "libvulkan_intel.so"
+        manifest = "$target_gen_dir/vulkan/icd.d/libvulkan_intel.json"
+      },
+    ]
+  }
+
+  test_package("magma_intel_gen_nonhardware_tests") {
+    deps = [
+      "$msd_intel_gen_build_root:tests",
+      "//third_party/mesa:tests",
+    ]
+
+    tests = [
+      {
+        name = "msd_intel_gen_nonhardware_tests"
+      },
+      {
+        name = "mesa_unit_tests"
+      },
+      {
+        name = "state_pool"
+      },
+      {
+        name = "state_pool_free_list_only"
+      },
+      {
+        name = "state_pool_no_free"
+      },
+      {
+        name = "block_pool_no_free"
+      },
+    ]
+  }
+
+  test_package("magma_intel_gen_integration_tests") {
+    deps = [ "//garnet/drivers/gpu/msd-intel-gen/tests/integration" ]
+
+    tests = [
+      {
+        name = "msd_intel_gen_integration_tests"
+        environments = intel_gpu_envs
+      },
+    ]
+  }
+}

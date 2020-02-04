@@ -14,8 +14,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "garnet/lib/magma/include/magma_abi/magma.h"
-#include "garnet/lib/magma/include/virtio/virtio_magma.h"
+#include "src/graphics/lib/magma/include/magma_abi/magma.h"
+#include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 #include "src/lib/fxl/macros.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/virtio_magma_generic.h"

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 group("integration") {
   testonly = true
@@ -26,12 +26,12 @@ executable("msd_arm_mali_integration_tests") {
 
   public_deps = [
     "$zircon_build_root/public/lib/fdio",
-    "//garnet/lib/magma/include:magma_abi",
-    "//garnet/lib/magma/src/libmagma",
-    "//garnet/lib/magma/src/magma_util:macros",
-    "//garnet/lib/magma/tests/helper:logger_init_helper",
-    "//garnet/lib/magma/tests/helper:test_device_helper",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/src/libmagma",
+    "//src/graphics/lib/magma/src/magma_util:macros",
+    "//src/graphics/lib/magma/tests/helper:logger_init_helper",
+    "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",

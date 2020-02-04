@@ -1,0 +1,129 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+# Only including packages built inside this file.
+have_libvulkan_mali =
+    build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm
+
+group("magma-vulkan") {
+  if (magma_enable_developer_build) {
+    testonly = true
+    deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
+  }
+  public_deps = [ ":magma-arm-mali" ]
+  if (have_libvulkan_mali) {
+    public_deps += [ ":magma-arm-mali-config" ]
+  }
+}
+
+if (have_libvulkan_mali) {
+  icd_list = []
+  if (build_libvulkan_arm_mali != []) {
+    foreach(entry, build_libvulkan_arm_mali) {
+      icd_list += [
+        {
+          name = get_label_info(entry, "name")
+        },
+      ]
+    }
+  } else if (have_prebuilt_libvulkan_arm) {
+    icd_list += [
+      {
+        name = "libvulkan_arm"
+        library_path = rebase_path(prebuilt_libvulkan_arm_path)
+      },
+    ]
+  }
+}
+
+package("magma-arm-mali") {
+  deprecated_system_image = true
+  if (magma_enable_developer_build) {
+    testonly = true
+  }
+
+  if (magma_enable_developer_build) {
+    deps = [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test" ]
+    drivers = [
+      {
+        name = "libmsd_arm_test.so"
+      },
+    ]
+  } else {
+    deps = [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
+    drivers = [
+      {
+        name = "libmsd_arm.so"
+      },
+    ]
+  }
+
+  if (have_libvulkan_mali) {
+    resources = []
+    libraries = []
+    deps += build_libvulkan_arm_mali
+
+    foreach(entry, icd_list) {
+      icd_name = entry.name
+      if (defined(entry.library_path)) {
+        libraries += [
+          {
+            source = entry.library_path
+            name = "$icd_name.so"
+          },
+        ]
+      } else {
+        libraries += [
+          {
+            name = "$icd_name.so"
+          },
+        ]
+      }
+    }
+  }
+}
+
+if (have_libvulkan_mali) {
+  icd_config_data("magma-arm-mali-config") {
+    icds = []
+    foreach(entry, icd_list) {
+      icd_name = entry.name
+      icds += [
+        {
+          lib = "${icd_name}.so"
+          manifest = "$target_gen_dir/vulkan/icd.d/${icd_name}.json"
+        },
+      ]
+    }
+  }
+}
+
+test_package("msd_arm_mali_nonhardware_tests") {
+  deps = [ "//garnet/drivers/gpu/msd-arm-mali:tests" ]
+
+  tests = [
+    {
+      name = "msd_arm_mali_nonhardware_tests"
+    },
+  ]
+}
+
+# Run with autorun or "run_test_component msd_arm_mali_integration_tests"
+test_package("msd-arm-mali-integration-tests") {
+  tests = []
+
+  deps = [ "//garnet/drivers/gpu/msd-arm-mali/tests/integration" ]
+
+  tests = [
+    {
+      name = "msd_arm_mali_integration_tests"
+      environments = arm_gpu_envs
+    },
+  ]
+}

@@ -1,0 +1,185 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+source_set("buffer") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util:macros",
+    "..:buffer_header",
+  ]
+
+  sources = [
+    "linux_platform_buffer.cc",
+    "linux_platform_buffer.h",
+  ]
+}
+
+source_set("bus_mapper") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    ":buffer",
+    ":handle",
+    "..:bus_mapper_header",
+  ]
+
+  deps = [
+    ":device",
+    ":logger",
+  ]
+
+  sources = [
+    "linux_platform_bus_mapper.cc",
+    "linux_platform_bus_mapper.h",
+  ]
+}
+
+source_set("connection_client") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [ "..:connection_client_header" ]
+
+  sources = [
+    "linux_platform_connection_client.cc",
+    "linux_platform_connection_client.h",
+  ]
+
+  # Calls directly through to the delegate
+  deps = [ "..:connection_header" ]
+}
+
+source_set("connection") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [ "..:connection_header" ]
+
+  sources = [
+    "linux_platform_connection.cc",
+    "linux_platform_connection.h",
+  ]
+
+  deps = [ "..:connection_header" ]
+}
+
+source_set("device") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    ":handle",
+    "$magma_build_root/src/magma_util:macros",
+    "..:device_header",
+    "..:logger",
+  ]
+
+  sources = [
+    "linux_platform_device.cc",
+    "linux_platform_device.h",
+    "linux_platform_mmio.h",
+  ]
+}
+
+source_set("device_client") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [ "..:device_client_header" ]
+
+  sources = [ "linux_platform_device_client.cc" ]
+
+  deps = [
+    ":connection_client",
+    ":entry_header",
+    "..:connection_header",
+  ]
+}
+
+source_set("entry_header") {
+  sources = [ "linux_entry.h" ]
+}
+
+source_set("entry") {
+  sources = [ "linux_entry.cc" ]
+
+  deps = [
+    ":connection",
+    ":entry_header",
+    "..:logger",
+    "//src/graphics/lib/magma/src/magma_util:macros",
+    "//src/graphics/lib/magma/src/sys_driver",
+  ]
+}
+
+source_set("handle") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "linux_platform_handle.cc",
+    "linux_platform_handle.h",
+  ]
+
+  public_deps = [ "..:handle_header" ]
+
+  deps = [ "$magma_build_root/src/magma_util:macros" ]
+}
+
+source_set("iommu") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "linux_platform_iommu.cc",
+    "linux_platform_iommu.h",
+  ]
+
+  public_deps =
+      [ "//src/graphics/lib/magma/src/magma_util/platform:iommu_header" ]
+
+  deps = [
+    ":bus_mapper",
+    ":device",
+    "$magma_build_root/src/magma_util:macros",
+  ]
+}
+
+source_set("logger") {
+  public_deps = [ "..:logger_header" ]
+  sources = [ "linux_platform_logger.cc" ]
+}
+
+source_set("object") {
+  sources = [ "linux_platform_object.cc" ]
+
+  deps = [
+    "$magma_build_root/src/magma_util:macros",
+    "..:object_header",
+  ]
+}
+
+source_set("port") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [ "linux_platform_port.cc" ]
+
+  deps = [
+    "$magma_build_root/src/magma_util:macros",
+    "..:port_header",
+  ]
+}
+
+source_set("semaphore") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [ "linux_platform_semaphore.cc" ]
+
+  deps = [ "..:semaphore_header" ]
+}
+
+source_set("thread") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [ "linux_platform_thread.cc" ]
+
+  deps = [ "..:thread_header" ]
+}

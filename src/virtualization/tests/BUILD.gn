@@ -215,7 +215,7 @@ icd_manifest = "${target_gen_dir}/magma.json"
 
 action("icd_manifest") {
   visibility = [ ":*" ]
-  script = "//garnet/lib/magma/scripts/gen_icd_manifest.sh"
+  script = "//src/graphics/lib/magma/scripts/gen_icd_manifest.sh"
   args = [
     "${icd_filename}",
     rebase_path(icd_manifest, root_build_dir),
@@ -228,9 +228,9 @@ romfs_image("extras") {
 
   deps = [
     ":icd_manifest",
-    "//garnet/lib/magma/tests/integration:virtmagma_abi_conformance_tests(${linux_exe_toolchain})",
-    "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(${linux_exe_toolchain})",
-    "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
+    "//src/graphics/lib/magma/tests/integration:virtmagma_abi_conformance_tests(${linux_exe_toolchain})",
+    "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(${linux_exe_toolchain})",
+    "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
     "//src/lib/vulkan(${linux_lib_toolchain})",
   ]
 

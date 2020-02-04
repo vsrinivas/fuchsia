@@ -8,9 +8,9 @@ Magma Test Strategy
 Four major interfaces
 
 * [Vulkan](https://www.khronos.org/vulkan)
-* [magma](/garnet/lib/magma/include/magma_abi/magma.h)
-* [magma system](/garnet/lib/magma/src/magma_util/platform/platform_connection.h)
-* [msd](/garnet/lib/magma/include/msd_abi/msd.h)
+* [magma](/src/graphics/lib/magma/include/magma_abi/magma.h)
+* [magma system](/src/graphics/lib/magma/src/magma_util/platform/platform_connection.h)
+* [msd](/src/graphics/lib/magma/include/msd_abi/msd.h)
 
 Four major components
 

@@ -53,7 +53,7 @@ _presenting_ the system's UI; using the Scenic API, it creates the root of a
 Scenic scene graph, embeds the root process's UI, and reads input events
 using its _Input Reader_ library and continually forwards them to Scenic.
 
-Scenic is a client of the [_Vulkan graphics driver_](/garnet/lib/magma/)
+Scenic is a client of the [_Vulkan graphics driver_](/src/graphics/lib/magma/)
 and the system _Display Driver_.
 
 # Concepts {#concepts}
