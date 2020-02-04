@@ -190,12 +190,16 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
   // than metadata buffer size(|metadata_size|. If this is the case, then check that the contents
   // from [start, reported_size] are valid.
   // The metadata size should always be at least the size of the header.
-  fprintf(stderr, "fvm: Inspecting primary metadata\n");
   bool primary_valid = check_value_consitency(primary_header, primary_info) &&
                        fvm_check_hash(metadata, primary_metadata_size);
-  fprintf(stderr, "fvm: Inspecting secondary metadata\n");
+  if (!primary_valid) {
+    fprintf(stderr, "fvm: Primary metadata invalid\n");
+  }
   bool backup_valid = check_value_consitency(backup_header, backup_info) &&
                       fvm_check_hash(backup, backup_metadata_size);
+  if (!backup_valid) {
+    fprintf(stderr, "fvm: Secondary metadata invalid\n");
+  }
 
   // Decide if we should use the primary or the backup copy of metadata
   // for reading.
