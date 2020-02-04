@@ -85,6 +85,18 @@ bool internal::RingBufferState::IsSpaceAvailableLocked(size_t blocks) const {
 
 void internal::RingBufferState::CompleteFreeLocked(size_t start, size_t blocks) {
   ZX_DEBUG_ASSERT_MSG(start == reserved_start_, "Freeing out-of-order");
+
+  size_t decommit_blocks = std::min(blocks, capacity() - reserved_start_);
+  ZX_ASSERT(buffer_.vmo().op_range(ZX_VMO_OP_DECOMMIT, reserved_start_ * buffer_.BlockSize(),
+                                   decommit_blocks * buffer_.BlockSize(), nullptr, 0) == ZX_OK);
+
+  if (decommit_blocks < blocks) {
+    // Wrapping around the circular buffer.
+    decommit_blocks = blocks - decommit_blocks;
+    ZX_ASSERT(buffer_.vmo().op_range(ZX_VMO_OP_DECOMMIT, 0, decommit_blocks * buffer_.BlockSize(),
+                                     nullptr, 0) == ZX_OK);
+  }
+
   reserved_start_ = (reserved_start_ + blocks) % capacity();
   reserved_length_ -= blocks;
 }

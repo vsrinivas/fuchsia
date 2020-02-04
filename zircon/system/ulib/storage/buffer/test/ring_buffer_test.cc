@@ -21,15 +21,21 @@ class MockVmoidRegistry : public VmoidRegistry {
  public:
   vmoid_t default_vmoid() const { return 1; }
 
+  const zx::vmo& get_vmo() const { return vmo_; }
+
  private:
   zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) override {
     *out = default_vmoid();
+    EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_));
     return ZX_OK;
   }
   zx_status_t DetachVmo(vmoid_t vmoid) override {
     EXPECT_EQ(default_vmoid(), vmoid);
+    vmo_.reset();
     return ZX_OK;
   }
+
+  zx::vmo vmo_;
 };
 
 TEST(RingBufferTest, EmptyRingBuffer) {
@@ -661,6 +667,42 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
   ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.Data(0), 0, seed_a));
   ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_b, reservation.Data(1), 1, seed_b + 1));
   ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.Data(2), 2, seed_a + 2));
+}
+
+TEST(RingBufferTest, ReleaseReservationDecommitsMemory) {
+  zx::vmo vmo;
+  const size_t kVmoBlocks = 1;
+  int seed = 0xAB;
+  MakeTestVmo(kVmoBlocks, seed, &vmo);
+
+  const size_t kRingBufferBlocks = 128;
+  MockVmoidRegistry vmoid_registry;
+  VmoBuffer vmo_buffer;
+  ASSERT_OK(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"));
+  auto buffer = std::make_unique<RingBuffer>(std::move(vmo_buffer));
+
+  zx_info_vmo_t info;
+  auto write_blocks = [&](size_t count) {
+    RingBufferReservation reservation;
+    ASSERT_OK(buffer->Reserve(count, &reservation));
+    // Write header from the source VMO into the reservation.
+    for (size_t i = 0; i < count; i++) {
+      ASSERT_OK(vmo.read(reservation.Data(i), 0, kBlockSize));
+    }
+
+    ASSERT_OK(
+        vmoid_registry.get_vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_EQ(count * kBlockSize, info.committed_bytes);
+  };
+  // First issue a write that uses half of the buffer.
+  write_blocks(kRingBufferBlocks / 2);
+  // Now issue a write that uses all of the buffer, which should test wraparound.
+  write_blocks(kRingBufferBlocks);
+
+  // All committed bytes of the buffer should be released after the reservation
+  // goes out of scope.
+  ASSERT_OK(vmoid_registry.get_vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(0, info.committed_bytes);
 }
 
 }  // namespace
