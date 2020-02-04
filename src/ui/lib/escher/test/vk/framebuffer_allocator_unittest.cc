@@ -18,6 +18,9 @@
 namespace {
 using namespace escher;
 
+constexpr uint32_t kWidth = 1024;
+constexpr uint32_t kHeight = 1024;
+
 struct FramebufferTextures {
   TexturePtr color1;
   TexturePtr color2;
@@ -58,6 +61,11 @@ RenderPassInfo MakeRenderPassInfo(const FramebufferTextures& textures) {
     info.color_attachments[info.num_color_attachments++] = textures.color2;
   }
   info.depth_stencil_attachment = textures.depth;
+
+  RenderPassInfo::InitRenderPassAttachmentInfosFromImages(&info);
+
+  EXPECT_TRUE(info.Validate());
+
   return info;
 }
 
@@ -66,7 +74,7 @@ std::vector<impl::FramebufferPtr> ObtainFramebuffers(
   std::vector<impl::FramebufferPtr> result;
   result.reserve(textures.size());
   for (auto& texs : textures) {
-    result.push_back(allocator->ObtainFramebuffer(MakeRenderPassInfo(texs)));
+    result.push_back(allocator->ObtainFramebuffer(MakeRenderPassInfo(texs), true));
   }
   return result;
 }
@@ -80,9 +88,6 @@ VK_TEST_F(FramebufferAllocatorTest, Basic) {
   impl::FramebufferAllocator allocator(escher->resource_recycler(), &cache);
   allocator.BeginFrame();
 
-  uint32_t width = 1024;
-  uint32_t height = 1024;
-
   std::set<vk::Format> supported_depth_formats =
       escher->device()->caps().GetAllMatchingDepthStencilFormats(
           {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
@@ -93,18 +98,21 @@ VK_TEST_F(FramebufferAllocatorTest, Basic) {
 
   // Create a pair of each of three types of framebuffers.
   auto textures_2colors_D24 = MakeFramebufferTextures(
-      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eB8G8R8A8Unorm,
+      escher, 2, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eB8G8R8A8Unorm,
       d24_supported ? vk::Format::eD24UnormS8Uint : vk::Format::eUndefined);
   auto textures_2colors_D32 = MakeFramebufferTextures(
-      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eB8G8R8A8Unorm,
+      escher, 2, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eB8G8R8A8Unorm,
       d32_supported ? vk::Format::eD32SfloatS8Uint : vk::Format::eUndefined);
   auto textures_1color_D32 = MakeFramebufferTextures(
-      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined,
+      escher, 2, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined,
       d32_supported ? vk::Format::eD32SfloatS8Uint : vk::Format::eUndefined);
 
   auto framebuffers_2colors_D24 = ObtainFramebuffers(&allocator, textures_2colors_D24);
   auto framebuffers_2colors_D32 = ObtainFramebuffers(&allocator, textures_2colors_D32);
   auto framebuffers_1color_D32 = ObtainFramebuffers(&allocator, textures_1color_D32);
+  ASSERT_TRUE(framebuffers_2colors_D24[0] && framebuffers_2colors_D24[1]);
+  ASSERT_TRUE(framebuffers_2colors_D32[0] && framebuffers_2colors_D32[1]);
+  ASSERT_TRUE(framebuffers_1color_D32[0] && framebuffers_1color_D32[1]);
 
   // Each pair should have two different Framebuffers which share the same
   // RenderPass.
@@ -138,15 +146,80 @@ VK_TEST_F(FramebufferAllocatorTest, Basic) {
   SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
 }
 
-VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
+// Specificially test that we can create render-passes/framebuffers with no depth attachment.
+// This will overlap with the "Basic" test on targets which don't support depth attachments,
+// but we want to test this on all targets.
+VK_TEST_F(FramebufferAllocatorTest, BasicNoDepth) {
   auto escher = test::GetEscher();
 
   impl::RenderPassCache cache(escher->resource_recycler());
   impl::FramebufferAllocator allocator(escher->resource_recycler(), &cache);
   allocator.BeginFrame();
 
-  uint32_t width = 1024;
-  uint32_t height = 1024;
+  // Create a pair of each of two types of framebuffers.
+  auto textures_2colors =
+      MakeFramebufferTextures(escher, 2, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm,
+                              vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined);
+  auto textures_1color =
+      MakeFramebufferTextures(escher, 2, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm,
+                              vk::Format::eUndefined, vk::Format::eUndefined);
+
+  auto framebuffers_2colors = ObtainFramebuffers(&allocator, textures_2colors);
+  auto framebuffers_1color = ObtainFramebuffers(&allocator, textures_1color);
+  ASSERT_TRUE(framebuffers_2colors[0] && framebuffers_2colors[1]);
+  ASSERT_TRUE(framebuffers_1color[0] && framebuffers_1color[1]);
+
+  // Each pair should have two different Framebuffers which share the same
+  // RenderPass.
+  EXPECT_NE(framebuffers_2colors[0], framebuffers_2colors[1]);
+  EXPECT_EQ(framebuffers_2colors[0]->render_pass(), framebuffers_2colors[1]->render_pass());
+  EXPECT_NE(framebuffers_1color[0], framebuffers_1color[1]);
+  EXPECT_EQ(framebuffers_1color[0]->render_pass(), framebuffers_1color[1]->render_pass());
+  EXPECT_NE(framebuffers_2colors[0]->render_pass(), framebuffers_1color[0]->render_pass());
+
+  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
+  //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
+  SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
+}
+
+// Test that we can create render-passes/framebuffers with no color attachment, only a depth
+// attachment.  This is useful for e.g. rendering shadow maps.
+VK_TEST_F(FramebufferAllocatorTest, DepthOnly) {
+  auto escher = test::GetEscher();
+
+  impl::RenderPassCache cache(escher->resource_recycler());
+  impl::FramebufferAllocator allocator(escher->resource_recycler(), &cache);
+  allocator.BeginFrame();
+
+  std::set<vk::Format> supported_depth_formats =
+      escher->device()->caps().GetAllMatchingDepthStencilFormats(
+          {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+  if (supported_depth_formats.empty()) {
+    FXL_LOG(WARNING) << "No depth formats supported, skipping test.";
+    return;
+  }
+  vk::Format supported_depth_format = *(supported_depth_formats.begin());
+
+  // Create a pair of each of three types of framebuffers.
+  auto textures = MakeFramebufferTextures(escher, 2, kWidth, kHeight, 1, vk::Format::eUndefined,
+                                          vk::Format::eUndefined, supported_depth_format);
+
+  auto framebuffers = ObtainFramebuffers(&allocator, textures);
+
+  // Each pair should have two different Framebuffers which share the same
+  // RenderPass.
+  ASSERT_TRUE(framebuffers[0] && framebuffers[1]);
+  EXPECT_NE(framebuffers[0], framebuffers[1]);
+  EXPECT_EQ(framebuffers[0]->render_pass(), framebuffers[1]->render_pass());
+}
+
+VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
+  auto escher = test::GetEscher();
+
+  impl::RenderPassCache cache(escher->resource_recycler());
+  impl::FramebufferAllocator allocator(escher->resource_recycler(), &cache);
+  allocator.BeginFrame();
 
   // Make a single set of textures (depth and 2 color attachments) that will be
   // used to make a framebuffer.
@@ -157,7 +230,7 @@ VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
     depth_format = vk::Format::eUndefined;
   }
 
-  auto textures = MakeFramebufferTextures(escher, 1, width, height, 1, vk::Format::eB8G8R8A8Unorm,
+  auto textures = MakeFramebufferTextures(escher, 1, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm,
                                           vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined);
   auto framebuffer = ObtainFramebuffers(&allocator, textures);
 
@@ -184,6 +257,85 @@ VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
     allocator.BeginFrame();
   }
   EXPECT_NE(framebuffer, ObtainFramebuffers(&allocator, textures));
+
+  // TODO(36827) Now Vulkan validation layer has a performance warning:
+  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
+  //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
+  SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
+}
+
+VK_TEST_F(FramebufferAllocatorTest, LazyRenderPassCreation) {
+  auto escher = test::GetEscher();
+
+  impl::RenderPassCache rp_cache(escher->resource_recycler());
+  impl::FramebufferAllocator allocator(escher->resource_recycler(), &rp_cache);
+  allocator.BeginFrame();
+
+  // Make a single set of textures (depth and 2 color attachments) that will be
+  // used to make a framebuffer.
+  auto depth_format_result = escher->device()->caps().GetMatchingDepthFormat();
+  vk::Format depth_format = depth_format_result.value;
+  if (depth_format_result.result != vk::Result::eSuccess) {
+    FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
+    depth_format = vk::Format::eUndefined;
+  }
+
+  auto textures_bgra =
+      MakeFramebufferTextures(escher, 2, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm,
+                              vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined);
+
+  auto textures_rgba =
+      MakeFramebufferTextures(escher, 1, kWidth, kHeight, 1, vk::Format::eR8G8B8A8Unorm,
+                              vk::Format::eR8G8B8A8Unorm, vk::Format::eUndefined);
+
+  RenderPassInfo rpi_bgra0 = MakeRenderPassInfo(textures_bgra[0]);
+  RenderPassInfo rpi_bgra1 = MakeRenderPassInfo(textures_bgra[1]);
+  RenderPassInfo rpi_rgba0 = MakeRenderPassInfo(textures_rgba[0]);
+
+  // No framebuffer obtained, because there is no render-pass yet.
+  FXL_LOG(INFO) << "============= NOTE: Escher warnings expected";
+  auto fb_bgra0 = allocator.ObtainFramebuffer(rpi_bgra0, false);
+  EXPECT_FALSE(fb_bgra0);
+  EXPECT_EQ(0U, allocator.size());
+  EXPECT_EQ(0U, rp_cache.size());
+  FXL_LOG(INFO) << "============= NOTE: no additional Escher warnings are expected\n";
+
+  // This time, we allow lazy render-pass creation.
+  fb_bgra0 = allocator.ObtainFramebuffer(rpi_bgra0, true);
+  EXPECT_TRUE(fb_bgra0);
+
+  // We can find the same framebuffer again, regardless of whether lazy render-pass creation is
+  // allowed.
+  EXPECT_EQ(fb_bgra0, allocator.ObtainFramebuffer(rpi_bgra0, false));
+  EXPECT_EQ(fb_bgra0, allocator.ObtainFramebuffer(rpi_bgra0, true));
+  EXPECT_EQ(1U, allocator.size());
+  EXPECT_EQ(1U, rp_cache.size());
+
+  // We can also obtain a new framebuffer, even if we disallow lazy render-pass creation (since the
+  // existing render-pass will be found/used again).
+  auto fb_bgra1 = allocator.ObtainFramebuffer(rpi_bgra1, false);
+  EXPECT_TRUE(fb_bgra1);
+  EXPECT_NE(fb_bgra0, fb_bgra1);
+  EXPECT_EQ(2U, allocator.size());
+  EXPECT_EQ(1U, rp_cache.size());
+  EXPECT_EQ(fb_bgra0->render_pass(), fb_bgra1->render_pass());
+
+  // Using an incompatible RenderPassInfo, disabling lazy render-pass creation means that we can't
+  // obtain a framebuffer.
+  FXL_LOG(INFO) << "============= NOTE: Escher warnings expected";
+  auto fb_rgba0 = allocator.ObtainFramebuffer(rpi_rgba0, false);
+  EXPECT_FALSE(fb_rgba0);
+  EXPECT_EQ(2U, allocator.size());
+  EXPECT_EQ(1U, rp_cache.size());
+  FXL_LOG(INFO) << "============= NOTE: no additional Escher warnings are expected\n";
+
+  // And of course, enabling lazy render-pass creation will allow us to obtain a framebuffer.
+  fb_rgba0 = allocator.ObtainFramebuffer(rpi_rgba0, true);
+  EXPECT_TRUE(fb_rgba0);
+  EXPECT_EQ(3U, allocator.size());
+  EXPECT_EQ(2U, rp_cache.size());
+  EXPECT_NE(fb_rgba0->render_pass(), fb_bgra0->render_pass());
+  EXPECT_NE(fb_rgba0->render_pass(), fb_bgra1->render_pass());
 
   // TODO(36827) Now Vulkan validation layer has a performance warning:
   //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]

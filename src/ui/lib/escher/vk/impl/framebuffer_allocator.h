@@ -17,10 +17,26 @@ namespace impl {
 class FramebufferAllocator {
  public:
   FramebufferAllocator(ResourceRecycler* recycler, impl::RenderPassCache* render_pass_cache);
-  const impl::FramebufferPtr& ObtainFramebuffer(const RenderPassInfo& info);
+
+  // Obtain a cached Framebuffer, or lazily create a new one if necessary.  Creating a VkFramebuffer
+  // requires a VkRenderPass; if necessary the render pass will also be created lazily, but only if
+  // |allow_render_pass_creation| is true (otherwise a CHECK will fail).  This allows the
+  // application to require all render passes to be created at specific times (e.g. startup, or
+  // loading a particular game level) to avoid jank due to lazy creation of render passes (and
+  // pipelines).
+  //
+  // NOTE: pipelines cannot be created without a render pass, and render passes are useless without
+  // a pipeline.  Therefore, we could allow lazy render pass creation and rely on the inevitable
+  // failed CHECK during pipeline creation.  However, it is better to also disallow render pass
+  // creation because then the source of the problem is obvious, not lost among the many other
+  // reasons that might trigger lazy pipeline creation.
+  const impl::FramebufferPtr& ObtainFramebuffer(const RenderPassInfo& info,
+                                                bool allow_render_pass_creation);
 
   void BeginFrame() { framebuffer_cache_.BeginFrame(); }
   void Clear() { framebuffer_cache_.Clear(); }
+
+  size_t size() const { return framebuffer_cache_.size(); }
 
  private:
   struct CacheItem : public HashCacheItem<CacheItem> {
