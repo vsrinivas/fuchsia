@@ -29,9 +29,9 @@ namespace feedback {
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
                                                     zx::duration timeout,
-                                                    Cobalt* cobalt) {
+                                                    std::shared_ptr<Cobalt> cobalt) {
   std::unique_ptr<LogListener> log_listener =
-      std::make_unique<LogListener>(dispatcher, services, cobalt);
+      std::make_unique<LogListener>(dispatcher, services, std::move(cobalt));
 
   return log_listener->CollectLogs(timeout).then(
       [log_listener = std::move(log_listener)](
@@ -58,8 +58,8 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatch
 
 LogListener::LogListener(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services,
-                         Cobalt* cobalt)
-    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt), binding_(this) {}
+                         std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(std::move(cobalt)), binding_(this) {}
 
 fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_logs_) << "CollectLogs() is not intended to be called twice";

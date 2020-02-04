@@ -49,9 +49,9 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config config_;
-  Cobalt cobalt_;
   RefCountedDelayedTask after_timeout_;
   async::Executor executor_;
+  std::shared_ptr<Cobalt> cobalt_;
 
   // We run the Inspect data collection in a separate loop, thread and executor as the calling
   // component will itself be discovered and we don't want to deadlock it, cf. fxb/4632.

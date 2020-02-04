@@ -25,7 +25,8 @@ namespace feedback {
 // |services|.
 fit::promise<fuchsia::mem::Buffer> CollectKernelLog(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                                    zx::duration timeout, Cobalt* cobalt);
+                                                    zx::duration timeout,
+                                                    std::shared_ptr<Cobalt> cobalt);
 
 // Wraps around fuchsia::boot::ReadOnlyLogPtr to handle establishing the
 // connection, losing the connection, waiting for the callback, enforcing a
@@ -35,14 +36,14 @@ fit::promise<fuchsia::mem::Buffer> CollectKernelLog(async_dispatcher_t* dispatch
 class BootLog {
  public:
   BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-          Cobalt* cobalt);
+          std::shared_ptr<Cobalt> cobalt);
 
   fit::promise<fuchsia::mem::Buffer> GetLog(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
+  std::shared_ptr<Cobalt> cobalt_;
   // Enforces the one-shot nature of GetLog().
   bool has_called_get_log_ = false;
 

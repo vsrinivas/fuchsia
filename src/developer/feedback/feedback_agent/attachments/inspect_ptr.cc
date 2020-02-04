@@ -28,10 +28,10 @@ namespace feedback {
 
 fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* timeout_dispatcher,
                                                       zx::duration timeout,
-                                                      Cobalt* cobalt,
+                                                      std::shared_ptr<Cobalt> cobalt,
                                                       async::Executor* collection_executor) {
   std::unique_ptr<Inspect> inspect =
-      std::make_unique<Inspect>(timeout_dispatcher, cobalt, collection_executor);
+      std::make_unique<Inspect>(timeout_dispatcher, std::move(cobalt), collection_executor);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
@@ -40,10 +40,10 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* timeou
                                          /*args=*/std::move(inspect));
 }
 
-Inspect::Inspect(async_dispatcher_t* timeout_dispatcher, Cobalt* cobalt,
+Inspect::Inspect(async_dispatcher_t* timeout_dispatcher, std::shared_ptr<Cobalt> cobalt,
                  async::Executor* collection_executor)
     : timeout_dispatcher_(timeout_dispatcher),
-      cobalt_(cobalt),
+      cobalt_(std::move(cobalt)),
       collection_executor_(collection_executor) {}
 
 fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {

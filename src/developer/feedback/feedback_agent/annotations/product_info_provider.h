@@ -31,7 +31,7 @@ class ProductInfoProvider : public AnnotationProvider {
   ProductInfoProvider(const std::set<std::string>& annotations_to_get,
                       async_dispatcher_t* dispatcher,
                       std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout,
-                      Cobalt* cobalt);
+                      std::shared_ptr<Cobalt> cobalt);
 
   static std::set<std::string> GetSupportedAnnotations();
   fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
@@ -41,7 +41,7 @@ class ProductInfoProvider : public AnnotationProvider {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const zx::duration timeout_;
-  Cobalt* cobalt_;
+  std::shared_ptr<Cobalt> cobalt_;
 };
 
 namespace internal {
@@ -53,14 +53,14 @@ namespace internal {
 class ProductInfoPtr {
  public:
   ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                 Cobalt* cobalt);
+                 std::shared_ptr<Cobalt> cobalt);
 
   fit::promise<std::map<std::string, std::string>> GetProductInfo(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  Cobalt* cobalt_;
+  std::shared_ptr<Cobalt> cobalt_;
   // Enforces the one-shot nature of GetProductInfo().
   bool has_called_get_product_info_ = false;
 

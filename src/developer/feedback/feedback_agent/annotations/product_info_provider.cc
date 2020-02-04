@@ -40,12 +40,12 @@ bool IsRequired(const std::string& annotation) {
 ProductInfoProvider::ProductInfoProvider(const std::set<std::string>& annotations_to_get,
                                          async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services,
-                                         zx::duration timeout, Cobalt* cobalt)
+                                         zx::duration timeout, std::shared_ptr<Cobalt> cobalt)
     : annotations_to_get_(annotations_to_get),
       dispatcher_(dispatcher),
       services_(services),
       timeout_(timeout),
-      cobalt_(cobalt) {
+      cobalt_(std::move(cobalt)) {
   const auto supported_annotations = GetSupportedAnnotations();
   std::vector<std::string> not_supported;
   for (const auto& annotation : annotations_to_get_) {
@@ -136,8 +136,8 @@ namespace internal {
 
 ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
                                std::shared_ptr<sys::ServiceDirectory> services,
-                               Cobalt* cobalt)
-    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
+                               std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(std::move(cobalt)) {}
 
 fit::promise<std::map<std::string, std::string>> ProductInfoPtr::GetProductInfo(
     zx::duration timeout) {

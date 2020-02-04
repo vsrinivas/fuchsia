@@ -22,8 +22,9 @@ using fuchsia::ui::scenic::ScreenshotData;
 
 fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
                                             std::shared_ptr<sys::ServiceDirectory> services,
-                                            zx::duration timeout, Cobalt* cobalt) {
-  std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services, cobalt);
+                                            zx::duration timeout, std::shared_ptr<Cobalt> cobalt) {
+  std::unique_ptr<Scenic> scenic =
+      std::make_unique<Scenic>(dispatcher, services, std::move(cobalt));
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
@@ -33,8 +34,8 @@ fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
 }
 
 Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               Cobalt* cobalt)
-    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
+               std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(std::move(cobalt)) {}
 
 fit::promise<ScreenshotData> Scenic::TakeScreenshot(const zx::duration timeout) {
   FXL_CHECK(!has_called_take_screenshot_) << "TakeScreenshot() is not intended to be called twice";

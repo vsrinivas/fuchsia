@@ -23,8 +23,8 @@ using internal::ChannelProviderPtr;
 
 ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                 zx::duration timeout, Cobalt* cobalt)
-    : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(cobalt) {}
+                                 zx::duration timeout, std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(std::move(cobalt)) {}
 
 std::set<std::string> ChannelProvider::GetSupportedAnnotations() {
   return {
@@ -60,8 +60,8 @@ namespace internal {
 
 ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
                                        std::shared_ptr<sys::ServiceDirectory> services,
-                                       Cobalt* cobalt)
-    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
+                                       std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(std::move(cobalt)) {}
 
 fit::promise<std::string> ChannelProviderPtr::GetCurrent(zx::duration timeout) {
   FXL_CHECK(!has_called_get_current_) << "GetCurrent() is not intended to be called twice";

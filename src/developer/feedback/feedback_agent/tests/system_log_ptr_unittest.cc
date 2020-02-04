@@ -34,10 +34,7 @@ using testing::UnorderedElementsAreArray;
 
 class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  CollectSystemLogTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        executor_(dispatcher()),
-        cobalt_(dispatcher(), services()) {}
+  CollectSystemLogTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpLogger(std::unique_ptr<StubLogger> logger) {
@@ -50,7 +47,8 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
   fit::result<fuchsia::mem::Buffer> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
-        feedback::CollectSystemLog(dispatcher(), services(), timeout, &cobalt_)
+        feedback::CollectSystemLog(dispatcher(), services(), timeout,
+                                   std::make_shared<Cobalt>(dispatcher(), services()))
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -60,7 +58,6 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
   async::Executor executor_;
 
   std::unique_ptr<StubLogger> logger_;
-  Cobalt cobalt_;
 };
 
 TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
@@ -211,13 +208,12 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   });
   InjectServiceProvider(logger.get());
 
-  Cobalt cobalt(dispatcher(), services());
-
   // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
   // set it arbitrary long.
   const zx::duration timeout = zx::sec(1);
   fit::result<void> result;
-  LogListener log_listener(dispatcher(), services(), &cobalt);
+  LogListener log_listener(dispatcher(), services(),
+                           std::make_shared<Cobalt>(dispatcher(), services()));
   executor_.schedule_task(log_listener.CollectLogs(timeout).then(
       [&result](const fit::result<void>& res) { result = std::move(res); }));
   RunLoopFor(timeout);
@@ -237,10 +233,9 @@ TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
   });
   InjectServiceProvider(logger.get());
 
-  Cobalt cobalt(dispatcher(), services());
-
   const zx::duration unused_timeout = zx::sec(1);
-  LogListener log_listener(dispatcher(), services(), &cobalt);
+  LogListener log_listener(dispatcher(), services(),
+                           std::make_shared<Cobalt>(dispatcher(), services()));
   executor_.schedule_task(log_listener.CollectLogs(unused_timeout));
   ASSERT_DEATH(log_listener.CollectLogs(unused_timeout),
                testing::HasSubstr("CollectLogs() is not intended to be called twice"));

@@ -46,16 +46,16 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
                                               async_dispatcher_t* dispatcher,
                                               std::shared_ptr<sys::ServiceDirectory> services,
                                               const zx::duration timeout,
-                                              Cobalt* cobalt,
+                                              std::shared_ptr<Cobalt> cobalt,
                                               async::Executor* inspect_executor) {
   if (key == kAttachmentBuildSnapshot) {
     return VmoFromFilename("/config/build-info/snapshot");
   } else if (key == kAttachmentLogKernel) {
-    return CollectKernelLog(dispatcher, services, timeout, cobalt);
+    return CollectKernelLog(dispatcher, services, timeout, std::move(cobalt));
   } else if (key == kAttachmentLogSystem) {
-    return CollectSystemLog(dispatcher, services, timeout, cobalt);
+    return CollectSystemLog(dispatcher, services, timeout, std::move(cobalt));
   } else if (key == kAttachmentInspect) {
-    return CollectInspectData(dispatcher, timeout, cobalt, inspect_executor);
+    return CollectInspectData(dispatcher, timeout, std::move(cobalt), inspect_executor);
   } else {
     FX_LOGS(WARNING) << "Unknown attachment " << key;
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
@@ -64,9 +64,9 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
 
 fit::promise<Attachment> BuildAttachment(const std::string& key, async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services,
-                                         const zx::duration timeout, Cobalt* cobalt,
+                                         const zx::duration timeout, std::shared_ptr<Cobalt> cobalt,
                                          async::Executor* inspect_executor) {
-  return BuildValue(key, dispatcher, services, timeout, cobalt, inspect_executor)
+  return BuildValue(key, dispatcher, services, timeout, std::move(cobalt), inspect_executor)
       .and_then([key](fuchsia::mem::Buffer& vmo) -> fit::result<Attachment> {
         Attachment attachment;
         attachment.key = key;
@@ -84,7 +84,7 @@ fit::promise<Attachment> BuildAttachment(const std::string& key, async_dispatche
 std::vector<fit::promise<Attachment>> GetAttachments(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, const zx::duration timeout,
-    Cobalt* cobalt, async::Executor* inspect_executor) {
+    std::shared_ptr<Cobalt> cobalt, async::Executor* inspect_executor) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Attachment allowlist is empty, nothing to retrieve";
     return {};

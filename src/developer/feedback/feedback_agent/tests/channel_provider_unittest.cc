@@ -30,10 +30,7 @@ using testing::UnorderedElementsAreArray;
 
 class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  ChannelProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        executor_(dispatcher()),
-        cobalt_(dispatcher(), services()) {}
+  ChannelProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpChannelProviderPtr(std::unique_ptr<StubChannelProvider> channel_provider) {
@@ -45,7 +42,8 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
 
   std::optional<std::string> RetrieveCurrentChannel(const zx::duration timeout = zx::sec(1)) {
     std::optional<std::string> channel;
-    ChannelProvider provider(dispatcher(), services(), timeout, &cobalt_);
+    ChannelProvider provider(dispatcher(), services(), timeout,
+                             std::make_shared<Cobalt>(dispatcher(), services()));
     auto promises = provider.GetAnnotations();
     executor_.schedule_task(
         std::move(promises).then([&channel](fit::result<std::vector<Annotation>>& res) {
@@ -69,7 +67,6 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
 
  private:
   std::unique_ptr<StubChannelProvider> channel_provider_;
-  Cobalt cobalt_;
 };
 
 TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
@@ -122,9 +119,10 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNeverReturns) {
 
 TEST_F(ChannelProviderTest, Fail_CallGetCurrentTwice) {
   SetUpChannelProviderPtr(std::make_unique<StubChannelProvider>());
-  Cobalt cobalt(dispatcher(), services());
+
   const zx::duration unused_timeout = zx::sec(1);
-  internal::ChannelProviderPtr channel_provider(dispatcher(), services(), &cobalt);
+  internal::ChannelProviderPtr channel_provider(dispatcher(), services(),
+                                                std::make_shared<Cobalt>(dispatcher(), services()));
   executor_.schedule_task(channel_provider.GetCurrent(unused_timeout));
   ASSERT_DEATH(channel_provider.GetCurrent(unused_timeout),
                testing::HasSubstr("GetCurrent() is not intended to be called twice"));
