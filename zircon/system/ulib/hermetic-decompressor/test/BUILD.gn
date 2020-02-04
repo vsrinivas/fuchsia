@@ -15,6 +15,7 @@ group("test") {
 zx_test("hermetic-decompressor") {
   sources = [ "test.cc" ]
   deps = [
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/hermetic-decompressor",
     "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/lz4",
@@ -23,9 +24,7 @@ zx_test("hermetic-decompressor") {
 }
 
 fuzzer("hermetic-decompressor-fuzzer") {
-  sources = [
-    "fuzz.cc",
-  ]
+  sources = [ "fuzz.cc" ]
   deps = [
     "$zx/system/ulib/hermetic-decompressor",
     "$zx/system/ulib/zx",

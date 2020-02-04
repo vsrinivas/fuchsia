@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/hermetic-decompressor/hermetic-decompressor.h>
-
 #include <lib/zx/vmo.h>
+
+#include <fbl/auto_call.h>
 #include <lz4/lz4frame.h>
 #include <zstd/zstd.h>
 #include <zxtest/zxtest.h>
@@ -71,6 +72,7 @@ TEST(HermeticDecompressorTests, Lz4fTest) {
   LZ4F_compressionContext_t ctx{};
   LZ4F_errorCode_t ret = LZ4F_createCompressionContext(&ctx, LZ4F_VERSION);
   ASSERT_FALSE(LZ4F_isError(ret), "LZ4F_createCompressionContext: %s", LZ4F_getErrorName(ret));
+  auto cleanup = fbl::MakeAutoCall([&] { LZ4F_freeCompressionContext(ctx); });
 
   char* buffer = reinterpret_cast<char*>(compressed.data());
   size_t buffer_left = compressed.size();
