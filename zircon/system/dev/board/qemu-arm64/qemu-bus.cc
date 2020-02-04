@@ -29,7 +29,7 @@ static bool use_fake_display() {
 
 int QemuArm64::Thread() {
   zx_status_t status;
-  zxlogf(INFO, "qemu-bus thread running");
+  zxlogf(INFO, "qemu-bus thread running \n");
 
   if (use_fake_display()) {
     status = DisplayInit();
