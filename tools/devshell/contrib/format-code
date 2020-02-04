@@ -122,8 +122,7 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-# TODO(fxbug.dev/3240): remove the exclusion when llcpp bindings are no longer checked in.
-GIT_FILTER=("$@" :!zircon/system/*/gen/llcpp/*)
+GIT_FILTER=("$@" :!third_party/rust_crates/vendor*)
 
 get_git_files() {
   FILES=$(canonicalize $(git rev-parse --show-toplevel) \
