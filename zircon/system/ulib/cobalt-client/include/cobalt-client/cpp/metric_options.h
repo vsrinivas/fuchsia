@@ -47,13 +47,17 @@ struct MetricOptions {
   // metrics in the backend.
   uint32_t metric_id = {};
 
+  // Number of dimensions defined in the cobalt metric definition.
+  uint32_t metric_dimensions = 0;
+
   // This is the equivalent of the event enums defined in the cobalt configuration, because of
   // this order matters.
   //
   // E.g. Metric{id:1, event_codes:{0,0,0,0,1}}
   //      Metric{id:1, event_codes:{0,0,0,0,2}}
   // Can be seen independently in the cobalt backend, or aggregated together.
-  std::array<uint32_t, kMaxEventCodes> event_codes = {};
+  // The sent data will be limited by |max_event_codes|.
+  std::array<uint32_t, kMaxEventCodes> event_codes = {0, 0, 0, 0, 0};
 };
 
 // Describes an histogram, and provides data for mapping a value to a given bucket.

@@ -13,6 +13,7 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <cobalt-client/cpp/metric_options.h>
+#include <fs/metrics/events.h>
 #include <minfs/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
@@ -275,7 +276,9 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
   cobalt_client::MetricOptions metric_options;
   metric_options.metric_id = static_cast<std::underlying_type<fs_metrics::Event>::type>(
       fs_metrics::Event::kDataCorruption);
-  metric_options.event_codes = {};
+  metric_options.event_codes = {static_cast<uint32_t>(fs_metrics::CorruptionSource::kMinfs),
+                                static_cast<uint32_t>(fs_metrics::CorruptionType::kMetadata)};
+  metric_options.metric_dimensions = 2;
   metric_options.component = {};
   ASSERT_NE(logger_->counters().find(metric_options), logger_->counters().end());
   ASSERT_EQ(logger_->counters().at(metric_options), 1);

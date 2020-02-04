@@ -40,6 +40,10 @@ class MetricsTest : public zxtest::Test {
 cobalt_client::MetricOptions MakeMetricOptionsFromId(uint32_t metric_id) {
   cobalt_client::MetricOptions info = {};
   info.metric_id = metric_id;
+  info.metric_dimensions = 2;
+  info.event_codes = {0};
+  info.event_codes[0] = static_cast<uint32_t>(fs_metrics::CorruptionSource::kMinfs);
+  info.event_codes[1] = static_cast<uint32_t>(fs_metrics::CorruptionType::kMetadata);
   return info;
 }
 

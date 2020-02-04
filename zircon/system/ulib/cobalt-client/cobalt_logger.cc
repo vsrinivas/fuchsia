@@ -30,7 +30,7 @@ namespace {
   event.component = fidl::StringView(metric_info.component);
   // Safe to do so, since the request is read only.
   event.event_codes = fidl::VectorView<uint32_t>(
-      const_cast<uint32_t*>(metric_info.event_codes.data()), metric_info.event_codes.size());
+      const_cast<uint32_t*>(metric_info.event_codes.data()), metric_info.metric_dimensions);
   return event;
 }
 

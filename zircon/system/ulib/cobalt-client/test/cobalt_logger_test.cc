@@ -11,7 +11,6 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
-#include <lib/zx/vmo.h>
 #include <limits.h>
 #include <zircon/assert.h>
 
@@ -115,11 +114,20 @@ class FakeLoggerService : public ::llcpp::fuchsia::cobalt::Logger::Interface {
                       LogCobaltEventCompleter::Sync completer) final {
     // Use MetricOptions as a key.
     MetricOptions info;
+    info.metric_dimensions = static_cast<uint32_t>(event.event_codes.count());
+    if (event_code_count_tracker_ != nullptr) {
+      *event_code_count_tracker_ = info.metric_dimensions;
+    }
     info.metric_id = event.metric_id;
     info.component = event.component.data();
     for (uint64_t i = 0; i < MetricOptions::kMaxEventCodes; ++i) {
-      info.event_codes[i] = event.event_codes[i];
+      if (i < info.metric_dimensions) {
+        info.event_codes[i] = event.event_codes[i];
+      } else {
+        info.event_codes[i] = 0;
+      }
     }
+
     switch (event.payload.which()) {
       case EventData::Tag::kIntHistogram:
         storage_.Log(info, event.payload.int_histogram().data(),
@@ -142,11 +150,16 @@ class FakeLoggerService : public ::llcpp::fuchsia::cobalt::Logger::Interface {
 
   void set_log_return_status(Status status) { log_return_status_ = status; }
 
+  void set_log_event_code_count_tracker(uint32_t* event_count) {
+    event_code_count_tracker_ = event_count;
+  }
+
   // Returns the |InMemoryLogger| used for backing the storage of this |cobalt.Logger|.
   const InMemoryLogger& storage() const { return storage_; }
 
  private:
   Status log_return_status_ = Status::OK;
+  uint32_t* event_code_count_tracker_ = nullptr;
   InMemoryLogger storage_;
 };
 
@@ -234,6 +247,9 @@ class LoggerServiceFixture : public zxtest::Test {
   async::Loop* GetLoop() { return service_loop_.get(); }
 
   void SetLoggerLogReturnStatus(Status status) { logger_impl_.set_log_return_status(status); }
+  void SetLoggerLogEventCountTracker(uint32_t* event_code_count_tracker) {
+    logger_impl_.set_log_event_code_count_tracker(event_code_count_tracker);
+  }
 
  protected:
   CreateLoggerValidationArgs checker_;
@@ -256,9 +272,13 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
   std::vector<HistogramBucket> buckets;
 
   MetricOptions info;
+  uint32_t event_code_count_tracker = 0;
+
   info.metric_id = 1;
   info.component = "SomeComponent";
-  info.event_codes = {1, 2, 3, 4, 5};
+  info.event_codes = {1, 2, 3, 0, 0};
+  info.metric_dimensions = 3;
+  SetLoggerLogEventCountTracker(&event_code_count_tracker);
 
   for (uint32_t i = 0; i < kBucketCount; ++i) {
     buckets.push_back({.index = i, .count = 2 * i});
@@ -271,6 +291,8 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
   auto itr = GetStorage().histograms().find(info);
   ASSERT_NE(GetStorage().histograms().end(), itr);
   ASSERT_EQ(itr->second.size(), kBucketCount);
+
+  EXPECT_EQ(info.metric_dimensions, event_code_count_tracker);
 
   for (uint32_t i = 0; i < itr->second.size(); ++i) {
     EXPECT_EQ(buckets[i].count, (itr->second).at(i));
@@ -285,6 +307,8 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenFactoryServiceReturnsError)
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
+  info.metric_dimensions = MetricOptions::kMaxEventCodes;
+
   checker_.return_status = Status::INTERNAL_ERROR;
 
   for (uint32_t i = 0; i < kBucketCount; ++i) {
@@ -307,6 +331,8 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenLoggerServiceReturnsError) 
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
+  info.metric_dimensions = MetricOptions::kMaxEventCodes;
+
   SetLoggerLogReturnStatus(Status::INTERNAL_ERROR);
 
   for (uint32_t i = 0; i < kBucketCount; ++i) {
@@ -328,6 +354,7 @@ TEST_F(CobaltLoggerTest, LogHistogramWaitsUntilServiceBecomesAvailable) {
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
+  info.metric_dimensions = MetricOptions::kMaxEventCodes;
 
   for (uint32_t i = 0; i < kBucketCount; ++i) {
     buckets.push_back({.index = i, .count = 2 * i});
@@ -361,6 +388,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsTrueWhenServiceReturnsOk) {
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
+  info.metric_dimensions = MetricOptions::kMaxEventCodes;
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
@@ -378,6 +406,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenFactoryServiceReturnsError) {
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
+  info.metric_dimensions = MetricOptions::kMaxEventCodes;
   checker_.return_status = Status::INTERNAL_ERROR;
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
@@ -394,6 +423,8 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenLoggerServiceReturnsError) {
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
+  info.metric_dimensions = MetricOptions::kMaxEventCodes;
+
   SetLoggerLogReturnStatus(Status::INTERNAL_ERROR);
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
@@ -409,6 +440,7 @@ TEST_F(CobaltLoggerTest, LogCounterWaitsUntilServiceBecomesAvailable) {
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
+  info.metric_dimensions = MetricOptions::kMaxEventCodes;
 
   std::thread blocks_until_starts(
       [info, &log_result](internal::Logger* logger) {
