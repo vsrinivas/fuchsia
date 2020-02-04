@@ -37,7 +37,8 @@ class MixStage : public Stream {
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 
-  std::shared_ptr<Mixer> AddInput(std::shared_ptr<Stream> stream);
+  std::shared_ptr<Mixer> AddInput(std::shared_ptr<Stream> stream,
+                                  Mixer::Resampler sampler_hint = Mixer::Resampler::Default);
   void RemoveInput(const Stream& stream);
 
  private:

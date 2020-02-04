@@ -44,11 +44,13 @@ MixStage::MixStage(const Format& output_format, uint32_t block_size,
 MixStage::MixStage(std::shared_ptr<Stream> output_stream)
     : Stream(output_stream->format()), output_stream_(std::move(output_stream)) {}
 
-std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<Stream> stream) {
+std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<Stream> stream,
+                                          Mixer::Resampler resampler_hint) {
   TRACE_DURATION("audio", "MixStage::AddInput");
   FX_CHECK(stream);
   auto mixer = std::shared_ptr<Mixer>(
-      Mixer::Select(stream->format().stream_type(), format().stream_type()).release());
+      Mixer::Select(stream->format().stream_type(), format().stream_type(), resampler_hint)
+          .release());
   if (!mixer) {
     mixer = std::make_unique<audio::mixer::NoOp>();
   }
@@ -133,6 +135,7 @@ void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {
 }
 
 void MixStage::MixStream(Stream* stream, Mixer* mixer, zx::time ref_time) {
+  TRACE_DURATION("audio", "MixStage::MixStream");
   // Ensure the mapping from source-frame to local-time is up-to-date.
   UpdateSourceTrans(*stream, &mixer->bookkeeping());
   SetupMix(mixer);
@@ -159,17 +162,18 @@ void MixStage::MixStream(Stream* stream, Mixer* mixer, zx::time ref_time) {
     // for the first and last dest frames we need, translated into the source (frac_frame)
     // timeline.
     auto& info = mixer->bookkeeping();
-    FractionalFrames<int64_t> frac_source_for_first_mix_job_frame =
-        FractionalFrames<int64_t>::FromRaw(info.dest_frames_to_frac_source_frames(
-            cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced));
-    uint32_t source_frames =
+    auto frac_source_for_first_mix_job_frame =
+        stream_buffer ? stream_buffer->end()
+                      : FractionalFrames<int64_t>::FromRaw(info.dest_frames_to_frac_source_frames(
+                            cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced));
+    FractionalFrames<int64_t> source_frames =
         FractionalFrames<int64_t>::FromRaw(
-            info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left))
-            .Ceiling();
+            info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left)) +
+        mixer->pos_filter_width();
 
     // Try to grab the packet queue's front.
-    stream_buffer =
-        stream->LockBuffer(ref_time, frac_source_for_first_mix_job_frame.Floor(), source_frames);
+    stream_buffer = stream->LockBuffer(ref_time, frac_source_for_first_mix_job_frame.Floor(),
+                                       source_frames.Ceiling());
 
     // If the queue is empty, then we are done.
     if (!stream_buffer) {
@@ -196,12 +200,10 @@ void MixStage::MixStream(Stream* stream, Mixer* mixer, zx::time ref_time) {
       break;
     }
     // We did consume this entire source packet, and we should keep mixing.
-    stream_buffer = std::nullopt;
     stream->UnlockBuffer(release_buffer);
   }
 
   // Unlock queue (completing packet if needed) and proceed to the next source.
-  stream_buffer = std::nullopt;
   stream->UnlockBuffer(release_buffer);
 
   // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's

@@ -7,6 +7,7 @@
 #include <gmock/gmock.h>
 
 #include "src/media/audio/audio_core/packet_queue.h"
+#include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
@@ -25,11 +26,14 @@ const Format kDefaultFormat = Format(fuchsia::media::AudioStreamType{
 class MixStageTest : public testing::ThreadingModelFixture {
  protected:
   zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
-  std::shared_ptr<MixStage> mix_stage_ = std::make_shared<MixStage>(
-      kDefaultFormat, 128,
-      TimelineFunction(
+
+  fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
           TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
                        zx::sec(1).to_nsecs())));
+
+  std::shared_ptr<MixStage> mix_stage_ =
+      std::make_shared<MixStage>(kDefaultFormat, 128, timeline_function_);
 
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
@@ -162,6 +166,51 @@ TEST_F(MixStageTest, MixUniformFormats) {
     auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.6f)));
     mix_stage_->UnlockBuffer(true);
+  }
+}
+
+TEST_F(MixStageTest, MixFromRingBuffersSinc) {
+  // Create a new RingBuffer and add it to our mix stage.
+  constexpr uint32_t kRingSizeFrames = 72;
+
+  // We explictly request a SincSampler here to get a non-trivial filter width.
+  auto ring_buffer_endpoints =
+      RingBuffer::AllocateSoftwareBuffer(kDefaultFormat, timeline_function_, kRingSizeFrames);
+  mix_stage_->AddInput(ring_buffer_endpoints.reader, Mixer::Resampler::WindowedSinc);
+
+  // Fill up the ring buffer with some non-empty samples so that we can observe these values in
+  // the mix output.
+  constexpr float kRingBufferSampleValue1 = 0.5;
+  constexpr float kRingBufferSampleValue2 = 0.7;
+  float* ring_buffer_samples = reinterpret_cast<float*>(ring_buffer_endpoints.writer->virt());
+  for (size_t sample = 0; sample < kRingSizeFrames; ++sample) {
+    ring_buffer_samples[sample] = kRingBufferSampleValue1;
+    ring_buffer_samples[kRingSizeFrames + sample] = kRingBufferSampleValue2;
+  }
+
+  // Read the ring in two halves, each has been assigned a different source value in the ring
+  // above.
+  constexpr uint32_t kRequestedFrames = kRingSizeFrames / 2;
+  {
+    auto buf = mix_stage_->LockBuffer(time_until(zx::msec(1)), 0, kRequestedFrames);
+    ASSERT_TRUE(buf);
+    ASSERT_EQ(buf->start().Floor(), 0u);
+    ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
+    mix_stage_->UnlockBuffer(true);
+
+    auto& arr = as_array<float, kRequestedFrames>(buf->payload(), 0);
+    EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue1)));
+  }
+
+  {
+    auto buf = mix_stage_->LockBuffer(time_until(zx::msec(2)), kRequestedFrames, kRequestedFrames);
+    ASSERT_TRUE(buf);
+    ASSERT_EQ(buf->start().Floor(), kRequestedFrames);
+    ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
+    mix_stage_->UnlockBuffer(true);
+
+    auto& arr = as_array<float, 2 * kRequestedFrames>(buf->payload(), 0);
+    EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue2)));
   }
 }
 
