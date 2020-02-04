@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <type_traits>
 
 namespace fidl {
@@ -77,25 +78,25 @@ unowned_ptr<T> unowned(T* ptr) {
   template <typename T1, typename T2>                                  \
   bool func_name(const unowned_ptr<T1> p1, const unowned_ptr<T2> p2) { \
     return p1.get() op p2.get();                                       \
-  };
+  }
 #define UNIQUE_PTR_NULLPTR_COMPARISONS(func_name, op)                 \
   template <typename T1>                                              \
   bool func_name(const unowned_ptr<T1> p1, const std::nullptr_t p2) { \
     return p1.get() op nullptr;                                       \
-  };                                                                  \
+  }                                                                   \
   template <typename T2>                                              \
   bool func_name(const std::nullptr_t p1, const unowned_ptr<T2> p2) { \
     return nullptr op p2.get();                                       \
-  };
+  }
 
-UNIQUE_PTR_OPERATOR_COMPARISONS(operator==, ==);
-UNIQUE_PTR_NULLPTR_COMPARISONS(operator==, ==);
-UNIQUE_PTR_OPERATOR_COMPARISONS(operator!=, !=);
-UNIQUE_PTR_NULLPTR_COMPARISONS(operator!=, !=);
-UNIQUE_PTR_OPERATOR_COMPARISONS(operator<, <);
-UNIQUE_PTR_OPERATOR_COMPARISONS(operator<=, <=);
-UNIQUE_PTR_OPERATOR_COMPARISONS(operator>, >);
-UNIQUE_PTR_OPERATOR_COMPARISONS(operator>=, >=);
+UNIQUE_PTR_OPERATOR_COMPARISONS(operator==, ==)
+UNIQUE_PTR_NULLPTR_COMPARISONS(operator==, ==)
+UNIQUE_PTR_OPERATOR_COMPARISONS(operator!=, !=)
+UNIQUE_PTR_NULLPTR_COMPARISONS(operator!=, !=)
+UNIQUE_PTR_OPERATOR_COMPARISONS(operator<, <)
+UNIQUE_PTR_OPERATOR_COMPARISONS(operator<=, <=)
+UNIQUE_PTR_OPERATOR_COMPARISONS(operator>, >)
+UNIQUE_PTR_OPERATOR_COMPARISONS(operator>=, >=)
 
 }  // namespace fidl
 

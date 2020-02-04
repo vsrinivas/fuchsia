@@ -156,6 +156,11 @@ func (xum XUnionMember) UpperCamelCaseName() string {
 	return common.ToUpperCamelCase(xum.Name)
 }
 
+type TableFrameItem struct {
+	LLDecl string // "void" if reserved
+	Name   string
+}
+
 type Table struct {
 	types.Attributes
 	Namespace      string
@@ -168,6 +173,8 @@ type Table struct {
 	MaxOutOfLine   int
 	HasPointer     bool
 	Kind           tableKind
+	// Types of the members in ordinal order, "void" for reserved.
+	FrameItems []TableFrameItem
 }
 
 type TableMember struct {
@@ -1050,6 +1057,20 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 			r.BiggestOrdinal = m.Ordinal
 		}
 		r.Members = append(r.Members, m)
+	}
+
+	r.FrameItems = make([]TableFrameItem, r.BiggestOrdinal)
+	for i := 0; i < len(r.FrameItems); i++ {
+		r.FrameItems[i] = TableFrameItem{
+			LLDecl: "void",
+			Name:   fmt.Sprintf("reserved_%d", i),
+		}
+	}
+	for _, member := range r.Members {
+		r.FrameItems[member.Ordinal-1] = TableFrameItem{
+			LLDecl: member.Type.LLDecl,
+			Name:   member.Name,
+		}
 	}
 
 	return r

@@ -14,7 +14,7 @@ namespace name {
 
 auto ::llcpp::test::name::SimpleTable::Builder::set_x(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  frame_.x.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 1) {
     max_ordinal_ = 1;
   }
@@ -23,7 +23,7 @@ auto ::llcpp::test::name::SimpleTable::Builder::set_x(int64_t* elem) -> Builder&
 
 auto ::llcpp::test::name::SimpleTable::Builder::set_y(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[5 - 1].data = static_cast<void*>(elem);
+  frame_.y.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 5) {
     max_ordinal_ = 5;
   }
@@ -36,7 +36,7 @@ auto ::llcpp::test::name::SimpleTable::Builder::set_y(int64_t* elem) -> Builder&
 
 auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_z(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  frame_.z.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 1) {
     max_ordinal_ = 1;
   }
@@ -45,7 +45,7 @@ auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_z(int64_t* elem) -> 
 
 auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_y(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  frame_.y.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 2) {
     max_ordinal_ = 2;
   }
@@ -54,7 +54,7 @@ auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_y(int64_t* elem) -> 
 
 auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_x(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  frame_.x.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 3) {
     max_ordinal_ = 3;
   }
@@ -67,7 +67,7 @@ auto ::llcpp::test::name::ReverseOrdinalTable::Builder::set_x(int64_t* elem) -> 
 
 auto ::llcpp::test::name::OlderSimpleTable::Builder::set_x(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  frame_.x.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 1) {
     max_ordinal_ = 1;
   }
@@ -80,7 +80,7 @@ auto ::llcpp::test::name::OlderSimpleTable::Builder::set_x(int64_t* elem) -> Bui
 
 auto ::llcpp::test::name::NewerSimpleTable::Builder::set_x(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  frame_.x.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 1) {
     max_ordinal_ = 1;
   }
@@ -89,7 +89,7 @@ auto ::llcpp::test::name::NewerSimpleTable::Builder::set_x(int64_t* elem) -> Bui
 
 auto ::llcpp::test::name::NewerSimpleTable::Builder::set_y(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[5 - 1].data = static_cast<void*>(elem);
+  frame_.y.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 5) {
     max_ordinal_ = 5;
   }
@@ -98,7 +98,7 @@ auto ::llcpp::test::name::NewerSimpleTable::Builder::set_y(int64_t* elem) -> Bui
 
 auto ::llcpp::test::name::NewerSimpleTable::Builder::set_z(int64_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[6 - 1].data = static_cast<void*>(elem);
+  frame_.z.data = ::fidl::unowned_ptr<int64_t>(elem);
   if (max_ordinal_ < 6) {
     max_ordinal_ = 6;
   }

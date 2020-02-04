@@ -119,18 +119,20 @@ class tracking_ptr final {
   struct Deleter<U, typename std::enable_if_t<std::is_array<U>::value>> {
     static void delete_ptr(ArraylessT* p) { delete[] p; }
   };
-  template <>
-  struct Deleter<void> {
-    static void delete_ptr(void* p) {
-      assert(false &&
-             "Cannot delete void* in tracking_ptr<void>. "
-             "First std::move contained value to appropriate typed pointer.");
-    }
-  };
+  template <typename ArraylessU = ArraylessT,
+            typename Enabled = std::enable_if_t<!std::is_void<ArraylessU>::value>>
+  static void delete_ptr(ArraylessU* p) {
+    Deleter<T>::delete_ptr(p);
+  }
+  static void delete_ptr(void* p) {
+    assert(false &&
+           "Cannot delete void* in tracking_ptr<void>. "
+           "First std::move contained value to appropriate typed pointer.");
+  }
 
   void reset_marked(marked_ptr new_ptr) {
     if (is_owned()) {
-      Deleter<T>::delete_ptr(get());
+      delete_ptr(get());
     }
     set_marked(new_ptr);
   }
@@ -172,25 +174,25 @@ static_assert(sizeof(fidl::tracking_ptr<uint8_t[]>) == sizeof(uint8_t*),
   template <typename T, typename U>                                      \
   bool func_name(const tracking_ptr<T>& p1, const tracking_ptr<U>& p2) { \
     return p1.get() op p2.get();                                         \
-  };
+  }
 #define TRACKING_PTR_NULLPTR_COMPARISONS(func_name, op)                \
   template <typename T>                                                \
   bool func_name(const tracking_ptr<T>& p1, const std::nullptr_t p2) { \
     return p1.get() op nullptr;                                        \
-  };                                                                   \
+  }                                                                    \
   template <typename T>                                                \
   bool func_name(const std::nullptr_t p1, const tracking_ptr<T>& p2) { \
     return nullptr op p2.get();                                        \
-  };
+  }
 
-TRACKING_PTR_OPERATOR_COMPARISONS(operator==, ==);
-TRACKING_PTR_NULLPTR_COMPARISONS(operator==, ==);
-TRACKING_PTR_OPERATOR_COMPARISONS(operator!=, !=);
-TRACKING_PTR_NULLPTR_COMPARISONS(operator!=, !=);
-TRACKING_PTR_OPERATOR_COMPARISONS(operator<, <);
-TRACKING_PTR_OPERATOR_COMPARISONS(operator<=, <=);
-TRACKING_PTR_OPERATOR_COMPARISONS(operator>, >);
-TRACKING_PTR_OPERATOR_COMPARISONS(operator>=, >=);
+TRACKING_PTR_OPERATOR_COMPARISONS(operator==, ==)
+TRACKING_PTR_NULLPTR_COMPARISONS(operator==, ==)
+TRACKING_PTR_OPERATOR_COMPARISONS(operator!=, !=)
+TRACKING_PTR_NULLPTR_COMPARISONS(operator!=, !=)
+TRACKING_PTR_OPERATOR_COMPARISONS(operator<, <)
+TRACKING_PTR_OPERATOR_COMPARISONS(operator<=, <=)
+TRACKING_PTR_OPERATOR_COMPARISONS(operator>, >)
+TRACKING_PTR_OPERATOR_COMPARISONS(operator>=, >=)
 
 }  // namespace fidl
 

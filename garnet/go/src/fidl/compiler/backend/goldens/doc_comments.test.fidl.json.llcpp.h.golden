@@ -7,10 +7,12 @@
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
@@ -23,7 +25,7 @@ namespace test {
 namespace name {
 
 struct Union;
-struct Table;
+class Table;
 struct Struct;
 class Interface;
 class Service;
@@ -169,25 +171,24 @@ extern "C" const fidl_type_t v1_test_name_TableTable;
 // table comment #1
 //
 // table comment #3
-struct Table final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
+class Table final {
+  public:
   // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   // table field comment #1
   //
   // table field comment #3
   const int32_t& Field() const {
     ZX_ASSERT(has_Field());
-    return *reinterpret_cast<const int32_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->Field.data;
   }
   int32_t& Field() {
     ZX_ASSERT(has_Field());
-    return *reinterpret_cast<int32_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->Field.data;
   }
   bool has_Field() const {
-    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+    return max_ordinal_ >= 1 && frame_->Field.data != nullptr;
   }
 
   Table() = default;
@@ -205,13 +206,22 @@ struct Table final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
+  class Frame {
+    ::fidl::Envelope<int32_t> Field;
+
+    friend class Table;
+    friend class Table::Builder;
+  };
+
  private:
-  Table(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+  Table(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
+  uint64_t max_ordinal_;
+  ::fidl::tracking_ptr<Frame> frame_;
 };
 
 class Table::Builder {
  public:
-  Table view() { return Table(max_ordinal_, envelopes_.data_); }
+  Table view() { return Table(max_ordinal_, ::fidl::unowned_ptr<Table::Frame>(&frame_)); }
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -226,7 +236,7 @@ class Table::Builder {
   friend Builder Table::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
+  Table::Frame frame_ = {};
 };
 
 extern "C" const fidl_type_t v1_test_name_StructTable;

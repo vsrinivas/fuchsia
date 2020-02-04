@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
+
 #include "gtest/gtest.h"
 
 TEST(Table, BuildTablePrimitive) {
   namespace test = llcpp::fidl::llcpp::types::test;
-  uint8_t x = 3;
-  uint8_t y = 100;
-  auto builder = test::SampleTable::Build()
-      .set_x(&x)
-      .set_y(&y);
+  FIDL_ALIGNDECL uint8_t x = 3;
+  FIDL_ALIGNDECL uint8_t y = 100;
+  auto builder = test::SampleTable::Build().set_x(&x).set_y(&y);
   const auto& table = builder.view();
 
   ASSERT_TRUE(table.has_x());
@@ -28,8 +27,7 @@ TEST(Table, BuildTableVectorOfStruct) {
       {.x = 42},
   };
   fidl::VectorView<test::CopyableStruct> vector_view(structs);
-  auto builder = test::SampleTable::Build()
-      .set_vector_of_struct(&vector_view);
+  auto builder = test::SampleTable::Build().set_vector_of_struct(&vector_view);
   const auto& table = builder.view();
 
   ASSERT_FALSE(table.has_x());

@@ -7,10 +7,12 @@
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
@@ -23,7 +25,7 @@ namespace test {
 namespace name {
 
 struct UnionWithHandle;
-struct TableWithHandle;
+class TableWithHandle;
 struct HandlesInTypes;
 
 extern "C" const fidl_type_t v1_test_name_UnionWithHandleTable;
@@ -95,22 +97,21 @@ struct UnionWithHandle {
 
 extern "C" const fidl_type_t v1_test_name_TableWithHandleTable;
 
-struct TableWithHandle final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
+class TableWithHandle final {
+  public:
   // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   const ::zx::vmo& h() const {
     ZX_ASSERT(has_h());
-    return *reinterpret_cast<const ::zx::vmo*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->h.data;
   }
   ::zx::vmo& h() {
     ZX_ASSERT(has_h());
-    return *reinterpret_cast<::zx::vmo*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->h.data;
   }
   bool has_h() const {
-    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+    return max_ordinal_ >= 1 && frame_->h.data != nullptr;
   }
 
   TableWithHandle() = default;
@@ -128,13 +129,22 @@ struct TableWithHandle final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
+  class Frame {
+    ::fidl::Envelope<::zx::vmo> h;
+
+    friend class TableWithHandle;
+    friend class TableWithHandle::Builder;
+  };
+
  private:
-  TableWithHandle(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+  TableWithHandle(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
+  uint64_t max_ordinal_;
+  ::fidl::tracking_ptr<Frame> frame_;
 };
 
 class TableWithHandle::Builder {
  public:
-  TableWithHandle view() { return TableWithHandle(max_ordinal_, envelopes_.data_); }
+  TableWithHandle view() { return TableWithHandle(max_ordinal_, ::fidl::unowned_ptr<TableWithHandle::Frame>(&frame_)); }
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -146,7 +156,7 @@ class TableWithHandle::Builder {
   friend Builder TableWithHandle::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
+  TableWithHandle::Frame frame_ = {};
 };
 
 extern "C" const fidl_type_t v1_test_name_HandlesInTypesTable;

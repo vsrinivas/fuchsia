@@ -6,7 +6,7 @@ package fragments
 
 const Table = `
 {{- define "TableForwardDeclaration" }}
-struct {{ .Name }};
+class {{ .Name }};
 {{- end }}
 
 {{- define "TableDeclaration" }}
@@ -15,11 +15,10 @@ extern "C" const fidl_type_t {{ .TableType }};
 {{ range .DocComments }}
 //{{ . }}
 {{- end}}
-struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
+class {{ .Name }} final {
+  public:
   // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
+  bool IsEmpty() const { return max_ordinal_ == 0; }
   {{- range .Members }}
 {{ "" }}
     {{- range .DocComments }}
@@ -27,14 +26,14 @@ struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
     {{- end }}
   const {{ .Type.LLDecl }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<const {{ .Type.LLDecl }}*>(EnvelopesView::at({{ .Ordinal }} - 1).data);
+    return *frame_->{{ .Name }}.data;
   }
   {{ .Type.LLDecl }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<{{ .Type.LLDecl }}*>(EnvelopesView::at({{ .Ordinal }} - 1).data);
+    return *frame_->{{ .Name }}.data;
   }
   bool {{ .MethodHasName }}() const {
-    return EnvelopesView::count() >= {{ .Ordinal }} && EnvelopesView::at({{ .Ordinal }} - 1).data != nullptr;
+    return max_ordinal_ >= {{ .Ordinal }} && frame_->{{ .Name }}.data != nullptr;
   }
   {{- end }}
 
@@ -53,8 +52,19 @@ struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .HasPointer }};
 
+  class Frame {
+    {{- range .FrameItems }}
+    ::fidl::Envelope<{{ .LLDecl }}> {{ .Name }};
+    {{- end }}
+
+    friend class {{ .Name }};
+    friend class {{ .Name }}::Builder;
+  };
+
  private:
-  {{ .Name }}(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+  {{ .Name }}(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
+  uint64_t max_ordinal_;
+  ::fidl::tracking_ptr<Frame> frame_;
 };
 
 class {{ .Name }}::Builder {
@@ -63,7 +73,7 @@ class {{ .Name }}::Builder {
   {{- /* Zero-sized arrays are questionable in C++ */}}
   {{ .Name }} view() { return {{ .Name }}(0, nullptr); }
   {{- else }}
-  {{ .Name }} view() { return {{ .Name }}(max_ordinal_, envelopes_.data_); }
+  {{ .Name }} view() { return {{ .Name }}(max_ordinal_, ::fidl::unowned_ptr<{{.Name}}::Frame>(&frame_)); }
   {{- end }}
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
@@ -87,7 +97,7 @@ class {{ .Name }}::Builder {
   {{- else }}
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, {{ .BiggestOrdinal }}> envelopes_ = {};
+  {{ .Name }}::Frame frame_ = {};
   {{- end }}
 };
 {{- end }}
@@ -103,7 +113,7 @@ class {{ .Name }}::Builder {
 {{ "" }}
 auto {{ $table.Namespace }}::{{ $table.Name }}::Builder::set_{{ .Name }}({{ .Type.LLDecl }}* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[{{ .Ordinal }} - 1].data = static_cast<void*>(elem);
+  frame_.{{ .Name }}.data = ::fidl::unowned_ptr<{{ .Type.LLDecl }}>(elem);
   if (max_ordinal_ < {{ .Ordinal }}) {
     max_ordinal_ = {{ .Ordinal }};
   }

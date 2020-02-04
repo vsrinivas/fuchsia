@@ -7,10 +7,12 @@
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
@@ -21,42 +23,41 @@ namespace llcpp {
 namespace test {
 namespace name {
 
-struct SimpleTable;
-struct ReverseOrdinalTable;
-struct OlderSimpleTable;
-struct NewerSimpleTable;
-struct EmptyTable;
+class SimpleTable;
+class ReverseOrdinalTable;
+class OlderSimpleTable;
+class NewerSimpleTable;
+class EmptyTable;
 
 extern "C" const fidl_type_t v1_test_name_SimpleTableTable;
 
-struct SimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
+class SimpleTable final {
+  public:
   // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->x.data;
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->x.data;
   }
   bool has_x() const {
-    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+    return max_ordinal_ >= 1 && frame_->x.data != nullptr;
   }
 
   const int64_t& y() const {
     ZX_ASSERT(has_y());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(5 - 1).data);
+    return *frame_->y.data;
   }
   int64_t& y() {
     ZX_ASSERT(has_y());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(5 - 1).data);
+    return *frame_->y.data;
   }
   bool has_y() const {
-    return EnvelopesView::count() >= 5 && EnvelopesView::at(5 - 1).data != nullptr;
+    return max_ordinal_ >= 5 && frame_->y.data != nullptr;
   }
 
   SimpleTable() = default;
@@ -74,13 +75,26 @@ struct SimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 48;
   static constexpr bool HasPointer = true;
 
+  class Frame {
+    ::fidl::Envelope<int64_t> x;
+    ::fidl::Envelope<void> reserved_1;
+    ::fidl::Envelope<void> reserved_2;
+    ::fidl::Envelope<void> reserved_3;
+    ::fidl::Envelope<int64_t> y;
+
+    friend class SimpleTable;
+    friend class SimpleTable::Builder;
+  };
+
  private:
-  SimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+  SimpleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
+  uint64_t max_ordinal_;
+  ::fidl::tracking_ptr<Frame> frame_;
 };
 
 class SimpleTable::Builder {
  public:
-  SimpleTable view() { return SimpleTable(max_ordinal_, envelopes_.data_); }
+  SimpleTable view() { return SimpleTable(max_ordinal_, ::fidl::unowned_ptr<SimpleTable::Frame>(&frame_)); }
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -94,51 +108,50 @@ class SimpleTable::Builder {
   friend Builder SimpleTable::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 5> envelopes_ = {};
+  SimpleTable::Frame frame_ = {};
 };
 
 extern "C" const fidl_type_t v1_test_name_ReverseOrdinalTableTable;
 
-struct ReverseOrdinalTable final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
+class ReverseOrdinalTable final {
+  public:
   // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   const int64_t& z() const {
     ZX_ASSERT(has_z());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->z.data;
   }
   int64_t& z() {
     ZX_ASSERT(has_z());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->z.data;
   }
   bool has_z() const {
-    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+    return max_ordinal_ >= 1 && frame_->z.data != nullptr;
   }
 
   const int64_t& y() const {
     ZX_ASSERT(has_y());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(2 - 1).data);
+    return *frame_->y.data;
   }
   int64_t& y() {
     ZX_ASSERT(has_y());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(2 - 1).data);
+    return *frame_->y.data;
   }
   bool has_y() const {
-    return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
+    return max_ordinal_ >= 2 && frame_->y.data != nullptr;
   }
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(3 - 1).data);
+    return *frame_->x.data;
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(3 - 1).data);
+    return *frame_->x.data;
   }
   bool has_x() const {
-    return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+    return max_ordinal_ >= 3 && frame_->x.data != nullptr;
   }
 
   ReverseOrdinalTable() = default;
@@ -156,13 +169,24 @@ struct ReverseOrdinalTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 72;
   static constexpr bool HasPointer = true;
 
+  class Frame {
+    ::fidl::Envelope<int64_t> z;
+    ::fidl::Envelope<int64_t> y;
+    ::fidl::Envelope<int64_t> x;
+
+    friend class ReverseOrdinalTable;
+    friend class ReverseOrdinalTable::Builder;
+  };
+
  private:
-  ReverseOrdinalTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+  ReverseOrdinalTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
+  uint64_t max_ordinal_;
+  ::fidl::tracking_ptr<Frame> frame_;
 };
 
 class ReverseOrdinalTable::Builder {
  public:
-  ReverseOrdinalTable view() { return ReverseOrdinalTable(max_ordinal_, envelopes_.data_); }
+  ReverseOrdinalTable view() { return ReverseOrdinalTable(max_ordinal_, ::fidl::unowned_ptr<ReverseOrdinalTable::Frame>(&frame_)); }
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -178,27 +202,26 @@ class ReverseOrdinalTable::Builder {
   friend Builder ReverseOrdinalTable::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
+  ReverseOrdinalTable::Frame frame_ = {};
 };
 
 extern "C" const fidl_type_t v1_test_name_OlderSimpleTableTable;
 
-struct OlderSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
+class OlderSimpleTable final {
+  public:
   // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->x.data;
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->x.data;
   }
   bool has_x() const {
-    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+    return max_ordinal_ >= 1 && frame_->x.data != nullptr;
   }
 
   OlderSimpleTable() = default;
@@ -216,13 +239,22 @@ struct OlderSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
+  class Frame {
+    ::fidl::Envelope<int64_t> x;
+
+    friend class OlderSimpleTable;
+    friend class OlderSimpleTable::Builder;
+  };
+
  private:
-  OlderSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+  OlderSimpleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
+  uint64_t max_ordinal_;
+  ::fidl::tracking_ptr<Frame> frame_;
 };
 
 class OlderSimpleTable::Builder {
  public:
-  OlderSimpleTable view() { return OlderSimpleTable(max_ordinal_, envelopes_.data_); }
+  OlderSimpleTable view() { return OlderSimpleTable(max_ordinal_, ::fidl::unowned_ptr<OlderSimpleTable::Frame>(&frame_)); }
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -234,51 +266,50 @@ class OlderSimpleTable::Builder {
   friend Builder OlderSimpleTable::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
+  OlderSimpleTable::Frame frame_ = {};
 };
 
 extern "C" const fidl_type_t v1_test_name_NewerSimpleTableTable;
 
-struct NewerSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
+class NewerSimpleTable final {
+  public:
   // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->x.data;
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(1 - 1).data);
+    return *frame_->x.data;
   }
   bool has_x() const {
-    return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
+    return max_ordinal_ >= 1 && frame_->x.data != nullptr;
   }
 
   const int64_t& y() const {
     ZX_ASSERT(has_y());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(5 - 1).data);
+    return *frame_->y.data;
   }
   int64_t& y() {
     ZX_ASSERT(has_y());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(5 - 1).data);
+    return *frame_->y.data;
   }
   bool has_y() const {
-    return EnvelopesView::count() >= 5 && EnvelopesView::at(5 - 1).data != nullptr;
+    return max_ordinal_ >= 5 && frame_->y.data != nullptr;
   }
 
   const int64_t& z() const {
     ZX_ASSERT(has_z());
-    return *reinterpret_cast<const int64_t*>(EnvelopesView::at(6 - 1).data);
+    return *frame_->z.data;
   }
   int64_t& z() {
     ZX_ASSERT(has_z());
-    return *reinterpret_cast<int64_t*>(EnvelopesView::at(6 - 1).data);
+    return *frame_->z.data;
   }
   bool has_z() const {
-    return EnvelopesView::count() >= 6 && EnvelopesView::at(6 - 1).data != nullptr;
+    return max_ordinal_ >= 6 && frame_->z.data != nullptr;
   }
 
   NewerSimpleTable() = default;
@@ -296,13 +327,27 @@ struct NewerSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 72;
   static constexpr bool HasPointer = true;
 
+  class Frame {
+    ::fidl::Envelope<int64_t> x;
+    ::fidl::Envelope<void> reserved_1;
+    ::fidl::Envelope<void> reserved_2;
+    ::fidl::Envelope<void> reserved_3;
+    ::fidl::Envelope<int64_t> y;
+    ::fidl::Envelope<int64_t> z;
+
+    friend class NewerSimpleTable;
+    friend class NewerSimpleTable::Builder;
+  };
+
  private:
-  NewerSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+  NewerSimpleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
+  uint64_t max_ordinal_;
+  ::fidl::tracking_ptr<Frame> frame_;
 };
 
 class NewerSimpleTable::Builder {
  public:
-  NewerSimpleTable view() { return NewerSimpleTable(max_ordinal_, envelopes_.data_); }
+  NewerSimpleTable view() { return NewerSimpleTable(max_ordinal_, ::fidl::unowned_ptr<NewerSimpleTable::Frame>(&frame_)); }
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -318,16 +363,15 @@ class NewerSimpleTable::Builder {
   friend Builder NewerSimpleTable::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 6> envelopes_ = {};
+  NewerSimpleTable::Frame frame_ = {};
 };
 
 extern "C" const fidl_type_t v1_test_name_EmptyTableTable;
 
-struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
-  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
- public:
+class EmptyTable final {
+  public:
   // Returns whether no field is set.
-  bool IsEmpty() const { return EnvelopesView::empty(); }
+  bool IsEmpty() const { return max_ordinal_ == 0; }
 
   EmptyTable() = default;
   ~EmptyTable() = default;
@@ -344,8 +388,16 @@ struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
+  class Frame {
+
+    friend class EmptyTable;
+    friend class EmptyTable::Builder;
+  };
+
  private:
-  EmptyTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+  EmptyTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
+  uint64_t max_ordinal_;
+  ::fidl::tracking_ptr<Frame> frame_;
 };
 
 class EmptyTable::Builder {

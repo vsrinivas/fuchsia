@@ -251,7 +251,8 @@ func (b *llcppValueBuilder) newVar() string {
 
 func (b *llcppValueBuilder) OnBool(value bool) {
 	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("bool %s = %t;\n", newVar, value))
+	// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL bool %s = %t;\n", newVar, value))
 	b.lastVar = newVar
 }
 
@@ -282,16 +283,19 @@ func (b *llcppValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
 	if value == -9223372036854775808 {
 		// There are no negative integer literals in C++, so need to use arithmetic to create the minimum value.
-		b.Builder.WriteString(fmt.Sprintf("%s %s = -9223372036854775807ll - 1;\n", integerTypeName(typ), newVar))
+		// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
+		b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = -9223372036854775807ll - 1;\n", integerTypeName(typ), newVar))
 	} else {
-		b.Builder.WriteString(fmt.Sprintf("%s %s = %dll;\n", integerTypeName(typ), newVar, value))
+		// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
+		b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %dll;\n", integerTypeName(typ), newVar, value))
 	}
 	b.lastVar = newVar
 }
 
 func (b *llcppValueBuilder) OnUint64(value uint64, subtype fidlir.PrimitiveSubtype) {
 	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %dull;\n", integerTypeName(subtype), newVar, value))
+	// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %dull;\n", integerTypeName(subtype), newVar, value))
 	b.lastVar = newVar
 }
 
@@ -306,7 +310,8 @@ func (b *llcppValueBuilder) OnFloat64(value float64, subtype fidlir.PrimitiveSub
 		panic("unknown floating point type")
 	}
 	newVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("%s %s = %g;\n", typename, newVar, value))
+	// FIDL_ALIGNDECL is needed to avoid tracking_ptrs that don't have an LSB of 0.
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL %s %s = %g;\n", typename, newVar, value))
 	b.lastVar = newVar
 }
 
@@ -385,7 +390,7 @@ func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDe
 		elements = append(elements, fmt.Sprintf("std::move(%s)", b.lastVar))
 	}
 	sliceVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("auto %s = %s{%s};\n",
+	b.Builder.WriteString(fmt.Sprintf("FIDL_ALIGNDECL auto %s = %s{%s};\n",
 		sliceVar, typeName(decl), strings.Join(elements, ", ")))
 	b.lastVar = sliceVar
 }

@@ -82,12 +82,13 @@ class FidlLinearizer final
 
   Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
                       uint32_t inline_size, Position* out_position) {
-    // This will be mandatory in the future with LLCPP builders. Asserting now to ease the
-    // migration.
+    // We are undergoing a migration to tracking_ptr, which reserves the LSB of the
+    // pointer to indicate if the object is heap allocated. To assist with the
+    // migration, ensure that no pointer has the LSB set.
     // TODO(fxb/42059) Remove this assertion after switching objects to tracking_ptr.
-    assert(((reinterpret_cast<uintptr_t>(object_ptr_ptr) & 0x1) == 0) &&
-           "LLCPP pointers must have least significant bit of 0. "
-           "Please use at least 2-byte alignment.");
+    if ((reinterpret_cast<uintptr_t>(object_ptr_ptr) & 0x1) != 0) {
+      abort();
+    }
 
     uint32_t new_offset;
     if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {

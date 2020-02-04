@@ -20,7 +20,7 @@ void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
 
 auto ::llcpp::test::name::Table::Builder::set_Field(int32_t* elem) -> Builder&& {
   ZX_ASSERT(elem);
-  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  frame_.Field.data = ::fidl::unowned_ptr<int32_t>(elem);
   if (max_ordinal_ < 1) {
     max_ordinal_ = 1;
   }
