@@ -118,18 +118,18 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   const char* path = mkdevpath(dev, buffer, sizeof(buffer));
 
   // TODO: api lock integration
-  log(ERROR, "devhost[%s] bind driver '%.*s'\n", path, static_cast<int>(driver_path.size()),
+  log(ERROR, "driver_host[%s] bind driver '%.*s'\n", path, static_cast<int>(driver_path.size()),
       driver_path.data());
   fbl::RefPtr<zx_driver_t> drv;
   if (dev->flags & DEV_FLAG_DEAD) {
-    log(ERROR, "devhost[%s] bind to removed device disallowed\n", path);
+    log(ERROR, "driver_host[%s] bind to removed device disallowed\n", path);
     BindReply(dev, std::move(completer), ZX_ERR_IO_NOT_PRESENT);
     return;
   }
 
   zx_status_t r;
   if ((r = dh_find_driver(driver_path, std::move(driver), &drv)) < 0) {
-    log(ERROR, "devhost[%s] driver load failed: %d\n", path, r);
+    log(ERROR, "driver_host[%s] driver load failed: %d\n", path, r);
     BindReply(dev, std::move(completer), r);
     return;
   }
@@ -164,7 +164,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
              static_cast<int>(driver_path.size()), driver_path.data());
     }
     if (r != ZX_OK) {
-      log(ERROR, "devhost[%s] bind driver '%.*s' failed: %d\n", path,
+      log(ERROR, "driver_host[%s] bind driver '%.*s' failed: %d\n", path,
           static_cast<int>(driver_path.size()), driver_path.data(), r);
     }
     BindReply(dev, std::move(completer), r, std::move(test_output));
@@ -172,7 +172,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   }
 
   if (!drv->has_create_op()) {
-    log(ERROR, "devhost[%s] neither create nor bind are implemented: '%.*s'\n", path,
+    log(ERROR, "driver_host[%s] neither create nor bind are implemented: '%.*s'\n", path,
         static_cast<int>(driver_path.size()), driver_path.data());
   }
   BindReply(dev, std::move(completer), ZX_ERR_NOT_SUPPORTED, std::move(test_output));
@@ -329,7 +329,7 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   // same value.  See FIDL-524.
   uint64_t ordinal = hdr->ordinal;
   if (ordinal == fuchsia_io_DirectoryOpenOrdinal || ordinal == fuchsia_io_DirectoryOpenGenOrdinal) {
-    log(RPC_RIO, "devhost[%s] FIDL OPEN\n", path);
+    log(RPC_RIO, "driver_host[%s] FIDL OPEN\n", path);
     zx::unowned_channel conn = channel();
     DevmgrFidlTxn txn(std::move(conn), hdr->txid);
     fuchsia::io::Directory::Dispatch(this, &fidl_msg, &txn);
