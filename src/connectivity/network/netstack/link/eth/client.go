@@ -63,6 +63,7 @@ import (
 import "C"
 
 const zxsioEthSignalStatus = zx.SignalUser0
+const tag = "eth"
 
 const FifoEntrySize = C.sizeof_struct_eth_fifo_entry
 
@@ -115,7 +116,7 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		if err.(*zx.Error).Status != zx.ErrNotSupported {
 			return nil, err
 		}
-		syslog.Warnf("%s", err)
+		_ = syslog.WarnTf(tag, "%s", err)
 	}
 	info, err := device.GetInfo()
 	if err != nil {
@@ -150,7 +151,7 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 	if err := func() error {
 		h, err := c.arena.iovmo.Handle().Duplicate(zx.RightSameRights)
 		if err != nil {
-			return fmt.Errorf("eth: failed to duplicate vmo: %v", err)
+			return fmt.Errorf("%s: failed to duplicate vmo: %s", tag, err)
 		}
 		if status, err := device.SetIoBuffer(zx.VMO(h)); err != nil {
 			return err
@@ -161,11 +162,11 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		err = c.rxCompleteLocked()
 		c.rx.mu.Unlock()
 		if err != nil {
-			return fmt.Errorf("eth: failed to load rx fifo: %v", err)
+			return fmt.Errorf("%s: failed to load rx fifo: %s", tag, err)
 		}
 		return nil
 	}(); err != nil {
-		c.closeLocked()
+		_ = c.closeLocked()
 		return nil, err
 	}
 
@@ -194,7 +195,7 @@ func (c *Client) write(buffer tcpip.PacketBuffer) *tcpip.Error {
 			break
 		}
 		if err := c.WaitSend(); err != nil {
-			syslog.VLogTf(syslog.DebugVerbosity, "eth", "wait error: %s", err)
+			_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "wait error: %s", err)
 			return tcpip.ErrWouldBlock
 		}
 	}
@@ -204,11 +205,11 @@ func (c *Client) write(buffer tcpip.PacketBuffer) *tcpip.Error {
 		used += copy(buf[used:], v)
 	}
 	if err := c.Send(buf[:used]); err != nil {
-		syslog.VLogTf(syslog.DebugVerbosity, "eth", "send error: %s", err)
+		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "send error: %s", err)
 		return tcpip.ErrWouldBlock
 	}
 
-	syslog.VLogTf(syslog.TraceVerbosity, "eth", "write=%d", used)
+	_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "write=%d", used)
 
 	return nil
 }
@@ -260,7 +261,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				c.Free(b)
 			}
 		}(); err != nil {
-			syslog.WarnTf("eth", "dispatch error: %s", err)
+			_ = syslog.WarnTf(tag, "dispatch error: %s", err)
 		}
 	}()
 
@@ -354,14 +355,14 @@ func (c *Client) closeLocked() error {
 	}
 	err := c.device.Stop()
 	if err != nil {
-		err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %v", c.path, err)
+		err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.path, err)
 	}
 
 	if err := c.fifos.Tx.Close(); err != nil {
-		syslog.Warnf("eth: failed to close tx fifo: %s", err)
+		_ = syslog.WarnTf(tag, "failed to close tx fifo: %s", err)
 	}
 	if err := c.fifos.Rx.Close(); err != nil {
-		syslog.Warnf("eth: failed to close rx fifo: %s", err)
+		_ = syslog.WarnTf(tag, "failed to close rx fifo: %s", err)
 	}
 	c.arena.freeAll(c)
 	c.changeStateLocked(link.StateClosed)
@@ -554,9 +555,9 @@ func (c *Client) WaitRecv() {
 			// TODO(): The wired Ethernet should receive this signal upon being
 			// hooked up with a (an active) Ethernet cable.
 			if status, err := c.GetStatus(); err != nil {
-				syslog.WarnTf("eth", "status error: %s", err)
+				syslog.WarnTf(tag, "status error: %s", err)
 			} else {
-				syslog.VLogTf(syslog.TraceVerbosity, "eth", "status: %d", status)
+				syslog.VLogTf(syslog.TraceVerbosity, tag, "status: %d", status)
 
 				c.mu.Lock()
 				switch status {
