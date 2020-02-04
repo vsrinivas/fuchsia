@@ -145,10 +145,6 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "VideoInit() failed\n");
   }
 
-  if (VideoEncInit() != ZX_OK) {
-    zxlogf(ERROR, "VideoEncInit() failed\n");
-  }
-
   if (MaliInit() != ZX_OK) {
     zxlogf(ERROR, "MaliInit() failed\n");
   }

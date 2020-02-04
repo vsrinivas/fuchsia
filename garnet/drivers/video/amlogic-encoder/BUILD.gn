@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("amlogic_encoder") {
+  output_name = "amlogic_video_encoder"
+
+  sources = [
+    "binding.cc",
+    "device_ctx.cc",
+    "device_ctx.h",
+    "driver_ctx.cc",
+    "driver_ctx.h",
+  ]
+
+  deps = [
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fit",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+package("amlogic_video_encoder") {
+  deprecated_system_image = true
+
+  if (target_cpu == "arm64") {
+    deps = [ ":amlogic_encoder" ]
+    drivers = [
+      {
+        name = "amlogic_video_encoder.so"
+      },
+    ]
+  }
+}
