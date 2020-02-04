@@ -17,7 +17,6 @@ group("dev") {
     "mlg",
     "pci",
     "pwm",
-    "shareddma",
     "spi",
     "sysmem",
 

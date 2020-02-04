@@ -60,7 +60,6 @@ if (current_cpu != "") {
       "$zx/system/dev/pwm/aml-pwm:aml-pwm-test",
       "$zx/system/dev/pwm/aml-pwm-init:aml-pwm-init-test",
       "$zx/system/dev/pwm/pwm:pwm-test",
-      "$zx/system/dev/shareddma/syn-dma:syn-dhub-test",
       "$zx/system/dev/sysmem/sysmem:sysmem-unittest",
       "$zx/system/dev/test",
       "$zx/system/dev/usb/xhci-rewrite:xhci-unittest",
