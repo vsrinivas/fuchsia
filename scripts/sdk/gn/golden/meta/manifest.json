@@ -7,6 +7,15 @@
     ]
   },
   "id": "8890373976687374912",
-  "parts": [],
+  "parts": [
+    {
+      "meta": "pkg/svc/meta.json",
+      "type": "cc_prebuilt_library"
+    },
+    {
+      "meta": "pkg/sync/meta.json",
+      "type": "cc_prebuilt_library"
+    }
+  ],
   "schema_version": "1"
 }

@@ -44,7 +44,8 @@ class GNGenerateTest(unittest.TestCase):
         self.verify_contents(TMP_DIR_NAME)
 
     def verify_contents(self, outdir):
-        dcmp = filecmp.dircmp(outdir, os.path.join(SCRIPT_DIR, 'golden'))
+        dcmp = filecmp.dircmp(
+            outdir, os.path.join(SCRIPT_DIR, 'golden'), ignore=['bin', 'build'])
         self.verify_contents_recursive(dcmp)
 
     def verify_contents_recursive(self, dcmp):

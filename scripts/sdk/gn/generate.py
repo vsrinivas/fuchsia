@@ -23,6 +23,7 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from frontend import Frontend
+import template_model as model
 
 
 class GNBuilder(Frontend):
@@ -88,6 +89,52 @@ class GNBuilder(Frontend):
     def write_top_level_files(self):
         self.write_file(self.dest('.gitignore'), 'gitignore', self)
         self.write_file(self.dest('BUILD.gn'), 'top_level_build', self)
+
+    # Handlers for SDK atoms
+
+    def install_cc_prebuilt_library_atom(self, atom):
+        name = atom['name']
+        base = self.dest('pkg', name)
+        library = model.CppPrebuiltLibrary(name)
+        library.relative_path_to_root = os.path.relpath(self.output, start=base)
+        library.is_static = atom['format'] == 'static'
+
+        self.copy_files(atom['headers'], atom['root'], base, library.hdrs)
+
+        for arch in self.target_arches:
+
+            def _copy_prebuilt(path, category):
+                relative_dest = os.path.join(
+                    'arch',
+                    arch,  # pylint: disable=cell-var-from-loop
+                    category,
+                    os.path.basename(path))
+                dest = self.dest(relative_dest)
+                shutil.copy2(self.source(path), dest)
+                return relative_dest
+
+            binaries = atom['binaries'][arch]
+            prebuilt_set = model.CppPrebuiltSet(
+                _copy_prebuilt(binaries['link'], 'lib'))
+            if 'dist' in binaries:
+                dist = binaries['dist']
+                prebuilt_set.dist_lib = _copy_prebuilt(dist, 'dist')
+                prebuilt_set.dist_path = binaries['dist_path']
+
+            if 'debug' in binaries:
+                self.copy_file(binaries['debug'])
+
+            library.prebuilts[arch] = prebuilt_set
+
+        for dep in atom['deps']:
+            library.deps.append('../' + dep)
+
+        library.includes = os.path.relpath(atom['include_dir'], atom['root'])
+
+        if not os.path.exists(base):
+            os.makedirs(base)
+        self.write_file(
+            os.path.join(base, 'BUILD.gn'), 'cc_prebuilt_library', library)
 
 
 class TestData(object):
