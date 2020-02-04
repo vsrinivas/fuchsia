@@ -118,7 +118,8 @@ TransferDescriptor* TransferQueue::Dequeue() {
 bool TransferQueue::IsEmpty() const { return queue_.is_empty(); }
 
 ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
-    : Device(bus_device, std::move(bti), std::move(backend)) {}
+    : virtio::Device(bus_device, std::move(bti), std::move(backend)),
+      ddk::Device<ConsoleDevice, ddk::Messageable>(bus_device) {}
 
 ConsoleDevice::~ConsoleDevice() {}
 
@@ -197,18 +198,8 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
     port0_transmit_descriptors_.Add(desc);
   }
 
-  device_ops_.message = virtio_console_message;
-
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "virtio-console";
-  args.ctx = this;
-  args.ops = &device_ops_;
-
-  // We probably want to have an alias for console devices
-  args.proto_id = ZX_PROTOCOL_CONSOLE;
-
-  status = device_add(bus_device_, &args, &device_);
+  status = DdkAdd("virtio-console");
+  device_ = zxdev();
   if (status) {
     zxlogf(ERROR, "%s: Failed to register device (%d)\n", tag(), status);
     device_ = nullptr;
@@ -352,10 +343,9 @@ void ConsoleDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync comple
   });
 }
 
-zx_status_t ConsoleDevice::virtio_console_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t ConsoleDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ::llcpp::fuchsia::hardware::virtioconsole::Device::Dispatch(reinterpret_cast<ConsoleDevice*>(ctx),
-                                                              msg, &transaction);
+  ::llcpp::fuchsia::hardware::virtioconsole::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

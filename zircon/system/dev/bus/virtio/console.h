@@ -12,6 +12,8 @@
 #include <memory>
 
 #include <ddk/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fs/managed_vfs.h>
@@ -65,10 +67,14 @@ class TransferQueue {
 
 // Actual virtio console implementation
 class ConsoleDevice : public Device,
+                      public ddk::Device<ConsoleDevice, ddk::Messageable>,
+                      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE>,
                       public ::llcpp::fuchsia::hardware::virtioconsole::Device::Interface {
  public:
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   ~ConsoleDevice() override;
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  void DdkRelease() { virtio::Device::Release(); }
 
   zx_status_t Init() override;
   void Unbind() override;
@@ -90,7 +96,6 @@ class ConsoleDevice : public Device,
   constexpr static size_t kDescriptors = 32;
   constexpr static uint32_t kChunkSize = 512;
 
-  static zx_status_t virtio_console_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
   static zx_status_t virtio_console_read(void* ctx, void* buf, size_t len, zx_off_t off,
                                          size_t* actual);
   static zx_status_t virtio_console_write(void* ctx, const void* buf, size_t len, zx_off_t off,
