@@ -52,17 +52,20 @@ void DeviceControllerConnection::CompleteCompatibilityTests(
 
 void DeviceControllerConnection::Init(InitCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->init_cb == nullptr);
-  this->dev()->init_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
-    completer.Reply(status);
-  };
+
+  auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "init");
+  this->dev()->init_cb = [completer = completer.ToAsync(), trace = std::move(trace)](
+                             zx_status_t status) mutable { completer.Reply(status); };
   ApiAutoLock lock;
   devhost_device_init(this->dev());
 }
 
 void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->suspend_cb == nullptr);
-  this->dev()->suspend_cb = [completer = completer.ToAsync()](zx_status_t status,
-                                                              uint8_t out_state) mutable {
+
+  auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "suspend");
+  this->dev()->suspend_cb = [completer = completer.ToAsync(), trace = std::move(trace)](
+                                zx_status_t status, uint8_t out_state) mutable {
     if (status == ZX_ERR_NOT_SUPPORTED) {
       status = ZX_OK;
     }
@@ -75,9 +78,11 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync 
 void DeviceControllerConnection::Resume(uint32_t target_system_state,
                                         ResumeCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->resume_cb == nullptr);
-  this->dev()->resume_cb = [completer = completer.ToAsync()](zx_status_t status,
-                                                             uint8_t out_power_state,
-                                                             uint32_t out_perf_state) mutable {
+
+  auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "resume");
+  this->dev()->resume_cb = [completer = completer.ToAsync(), trace = std::move(trace)](
+                               zx_status_t status, uint8_t out_power_state,
+                               uint32_t out_perf_state) mutable {
     if (status == ZX_ERR_NOT_SUPPORTED) {
       status = ZX_OK;
     }
@@ -175,8 +180,11 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
 
 void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->unbind_cb == nullptr);
-  this->dev()->unbind_cb = [dev = this->dev(),
-                            completer = completer.ToAsync()](zx_status_t status) mutable {
+
+  auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "unbind");
+
+  this->dev()->unbind_cb = [dev = this->dev(), completer = completer.ToAsync(),
+                            trace = std::move(trace)](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
     llcpp::fuchsia::device::manager::DeviceController_Unbind_Response response;
     if (status != ZX_OK && dev->parent) {

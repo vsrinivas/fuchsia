@@ -93,6 +93,10 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   zx_status_t InitOp() { return ops_->init(&ctx_); }
 
   zx_status_t BindOp(BindContext* bind_context, const fbl::RefPtr<zx_device_t>& device) const {
+    fbl::StringBuffer<32> trace_label;
+    trace_label.AppendPrintf("%s:bind", name_);
+    TRACE_DURATION("driver_host:driver-hooks", trace_label.data());
+
     devhost_set_bind_context(bind_context);
     auto status = ops_->bind(ctx_, device.get());
     devhost_set_bind_context(nullptr);
