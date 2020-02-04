@@ -102,7 +102,6 @@ aggregate_manifest("legacy-image") {
     ":driver.virtio_rng",
     ":driver.virtio_scsi",
     ":driver.virtio_socket",
-    ":driver.xhci",
     ":driver.zxcrypt",
     ":test.sys.usb-device-test",
   ]
@@ -1013,7 +1012,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/dev/usb/usb-virtual-bus:usb-virtual-bus-manifest",
     "//zircon/system/dev/display/vim-display:vim-display-manifest",
     #":driver.virtio",
-    #":driver.xhci",
+    "//zircon/system/dev/usb/xhci:xhci-manifest",
     #":driver.zxcrypt",
     #":test.sys.usb-device-test",
   ]

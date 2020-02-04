@@ -142,13 +142,6 @@ static zx_status_t xhci_claim_ownership(xhci_t* xhci) {
   return ZX_OK;
 }
 
-static void xhci_vmo_release(zx_handle_t handle, zx_vaddr_t virt) {
-  uint64_t size;
-  zx_vmo_get_size(handle, &size);
-  zx_vmar_unmap(zx_vmar_root_self(), virt, size);
-  zx_handle_close(handle);
-}
-
 zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
   zx_status_t result = ZX_OK;
 

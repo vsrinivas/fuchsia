@@ -7,6 +7,5 @@ group("usb") {
   deps = [
     "usb-bus",
     "usb-bus:tests",
-    "xhci",
   ]
 }
