@@ -5,6 +5,8 @@
 #include "src/media/audio/audio_core/output_pipeline.h"
 
 #include "src/media/audio/audio_core/effects_stage.h"
+#include "src/media/audio/audio_core/ring_buffer.h"
+#include "src/media/audio/audio_core/tap_stage.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 
 namespace media::audio {
@@ -29,8 +31,9 @@ OutputPipeline::OutputPipeline(const PipelineConfig& config, const Format& outpu
                                TimelineFunction ref_clock_to_fractional_frame)
     : Stream(output_format) {
   uint32_t usage_mask = 0;
-  stream_ = CreateMixStage(config.root(), output_format, max_block_size_frames,
-                           ref_clock_to_fractional_frame, &usage_mask);
+  stream_ = CreateMixStage(
+      config.root(), output_format, max_block_size_frames,
+      fbl::MakeRefCounted<VersionedTimelineFunction>(ref_clock_to_fractional_frame), &usage_mask);
   static constexpr uint32_t kAllUsages =
       1 << static_cast<uint32_t>(fuchsia::media::AudioRenderUsage::BACKGROUND) |
       1 << static_cast<uint32_t>(fuchsia::media::AudioRenderUsage::MEDIA) |
@@ -59,8 +62,8 @@ void OutputPipeline::RemoveInput(const Stream& stream) {
 
 std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
     const PipelineConfig::MixGroup& spec, const Format& output_format,
-    uint32_t max_block_size_frames, TimelineFunction ref_clock_to_fractional_frame,
-    uint32_t* usage_mask) {
+    uint32_t max_block_size_frames,
+    fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, uint32_t* usage_mask) {
   auto stage = std::make_shared<MixStage>(output_format, max_block_size_frames,
                                           ref_clock_to_fractional_frame);
   for (const auto& usage : spec.input_streams) {
@@ -77,6 +80,17 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
     if (effects_stage) {
       root = std::move(effects_stage);
     }
+  }
+
+  // If this is the loopback stage, allocate the loopback ring buffer. Note we want this to be
+  // after any effects that may have been applied.
+  if (spec.loopback) {
+    FX_DCHECK(!loopback_) << "Only a single loopback point is allowed.";
+    const uint32_t ring_size = output_format.frames_per_second();
+    auto endpoints =
+        RingBuffer::AllocateSoftwareBuffer(output_format, ref_clock_to_fractional_frame, ring_size);
+    loopback_ = std::move(endpoints.reader);
+    root = std::make_shared<TapStage>(std::move(root), std::move(endpoints.writer));
   }
 
   std::vector<fuchsia::media::Usage> usages = UsagesFromRenderUsages(spec.input_streams);

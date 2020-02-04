@@ -36,6 +36,9 @@ class OutputPipeline : public Stream {
                  uint32_t max_block_size_frames,
                  TimelineFunction reference_clock_to_fractional_frame);
 
+  // Returns the loopback |Stream| for this pipeline.
+  std::shared_ptr<Stream> loopback() const { return loopback_; }
+
   // Adds |stream| as an input to be mixed. The given |usage| will indicate where in the pipeline
   // this stream will be routed (based on the |PipelineConfig| this pipeline was created with).
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<Stream> stream,
@@ -71,10 +74,9 @@ class OutputPipeline : public Stream {
   }
 
  private:
-  std::shared_ptr<Stream> CreateMixStage(const PipelineConfig::MixGroup& spec,
-                                         const Format& output_format, uint32_t block_size,
-                                         TimelineFunction ref_clock_to_output_frame,
-                                         uint32_t* usage_mask);
+  std::shared_ptr<Stream> CreateMixStage(
+      const PipelineConfig::MixGroup& spec, const Format& output_format, uint32_t block_size,
+      fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, uint32_t* usage_mask);
   MixStage& LookupStageForUsage(const fuchsia::media::Usage& usage);
 
   std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<fuchsia::media::Usage>>> mix_stages_;
@@ -83,6 +85,8 @@ class OutputPipeline : public Stream {
   // This is the root of the mix graph. The other mix stages must be reachable from this node
   // to actually get mixed.
   std::shared_ptr<Stream> stream_;
+
+  std::shared_ptr<Stream> loopback_;
 };
 
 }  // namespace media::audio
