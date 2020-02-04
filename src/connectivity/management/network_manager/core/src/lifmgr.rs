@@ -152,20 +152,22 @@ impl LIF {
     pub fn properties(&self) -> &LIFProperties {
         &self.properties
     }
+}
 
+impl From<&LIF> for fidl_fuchsia_router_config::Lif {
     /// Creates a fuchsia.router.config.Lif using the current state.
-    pub fn to_fidl_lif(&self) -> fidl_fuchsia_router_config::Lif {
-        let ps: Vec<_> = self.ports.iter().map(|p| p.to_u32()).collect();
+    fn from(lif: &LIF) -> fidl_fuchsia_router_config::Lif {
+        let ps: Vec<_> = lif.ports.iter().map(|p| p.to_u32()).collect();
         let lt;
         let p;
-        match self.l_type {
+        match lif.l_type {
             LIFType::WAN => {
                 lt = fidl_fuchsia_router_config::LifType::Wan;
-                p = Some(self.properties.to_fidl_wan());
+                p = Some(lif.properties.to_fidl_wan());
             }
             LIFType::LAN => {
                 lt = fidl_fuchsia_router_config::LifType::Lan;
-                p = Some(self.properties.to_fidl_lan());
+                p = Some(lif.properties.to_fidl_lan());
             }
             _ => {
                 lt = fidl_fuchsia_router_config::LifType::Invalid;
@@ -173,11 +175,11 @@ impl LIF {
             }
         };
         fidl_fuchsia_router_config::Lif {
-            element: Some(self.id.into()),
+            element: Some(lif.id.into()),
             type_: Some(lt),
-            name: Some(self.name.clone()),
+            name: Some(lif.name.clone()),
             port_ids: Some(ps),
-            vlan: Some(self.vlan),
+            vlan: Some(lif.vlan),
             properties: p,
         }
     }

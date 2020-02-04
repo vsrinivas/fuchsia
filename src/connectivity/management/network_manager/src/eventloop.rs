@@ -448,7 +448,7 @@ impl EventLoop {
                         )
                     }
                     Some(l) => {
-                        let ll = l.to_fidl_lif();
+                        let ll = l.into();
                         responder.send(ll, None)
                     }
                 }
@@ -471,20 +471,18 @@ impl EventLoop {
                         )
                     }
                     Some(l) => {
-                        let ll = l.to_fidl_lif();
+                        let ll = l.into();
                         responder.send(ll, None)
                     }
                 }
             }
             RouterStateRequest::GetWans { responder } => {
-                let lifs: Vec<Lif> =
-                    self.device.lifs(LIFType::WAN).map(|l| l.to_fidl_lif()).collect();
+                let lifs: Vec<Lif> = self.device.lifs(LIFType::WAN).map(|l| l.into()).collect();
                 info!("result: {:?} ", lifs);
                 responder.send(&mut lifs.into_iter())
             }
             RouterStateRequest::GetLans { responder } => {
-                let lifs: Vec<Lif> =
-                    self.device.lifs(LIFType::LAN).map(|l| l.to_fidl_lif()).collect();
+                let lifs: Vec<Lif> = self.device.lifs(LIFType::LAN).map(|l| l.into()).collect();
                 info!("result: {:?} ", lifs);
                 responder.send(&mut lifs.into_iter())
             }
