@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":pretty-test" ]
+}
+
+zx_test("pretty-test") {
+  sources = [ "test.c" ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/unittest",
+  ]
+}

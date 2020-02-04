@@ -16,12 +16,3 @@ zx_library("pretty") {
     sources += [ "hexdump.c" ]
   }
 }
-
-zx_test("pretty-test") {
-  sources = [ "test.c" ]
-  deps = [
-    ":pretty",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
-  ]
-}
