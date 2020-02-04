@@ -200,7 +200,7 @@ zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::
   std::unique_ptr<paver::DevicePartitioner> partitioner;
   zx_status_t status = paver::AstroPartitioner::Initialize(std::move(devfs_root), &partitioner);
   if (status != ZX_OK) {
-    return ZX_OK;
+    return status;
   }
 
   std::unique_ptr<paver::PartitionClient> partition;
