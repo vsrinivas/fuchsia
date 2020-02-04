@@ -24,19 +24,3 @@ zx_library("io-scheduler") {
     "$zx/system/ulib/zircon",
   ]
 }
-
-zx_test("io-scheduler-test") {
-  output_name = "iosched"
-  sources = [
-    "test/main.cc",
-    "test/stream.cc",
-    "test/unique-op.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/io-scheduler",
-    "$zx/system/ulib/zxtest",
-  ]
-}

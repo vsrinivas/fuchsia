@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":io-scheduler-test" ]
+}
+
+zx_test("io-scheduler-test") {
+  output_name = "iosched"
+  sources = [
+    "main.cc",
+    "stream.cc",
+    "unique-op.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/io-scheduler",
+    "$zx/system/ulib/zxtest",
+  ]
+}
