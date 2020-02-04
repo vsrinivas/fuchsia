@@ -30,7 +30,7 @@ driver_module("bt-hci-broadcom") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.bt.hci",
+    "//sdk/banjo/ddk.protocol.bt.hci",
     "//zircon/system/banjo/ddk.protocol.serialimpl.async",
     "//zircon/system/fidl/fuchsia-hardware-bluetooth:c",
   ]
@@ -62,7 +62,7 @@ test("bt-hci-broadcom-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.bt.hci",
+    "//sdk/banjo/ddk.protocol.bt.hci",
     "//zircon/system/banjo/ddk.protocol.serialimpl.async",
     "//zircon/system/fidl/fuchsia-hardware-bluetooth:c",
   ]
