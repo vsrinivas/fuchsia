@@ -79,7 +79,7 @@ def main():
     # Fixing references to the library will likely require a soft transition.
     with open(os.path.join(source_dir, 'BUILD.gn'), 'w') as build_file:
         build_file.writelines([
-            '# Copyright 2019 The Fuchsia Authors. All rights reserved.\n',
+            '# Copyright 2020 The Fuchsia Authors. All rights reserved.\n',
             '# Use of this source code is governed by a BSD-style license that can be\n',
             '# found in the LICENSE file.\n',
             '\n',
@@ -101,7 +101,7 @@ def main():
     run_command(['git', 'checkout', '-b', 'fidl-move-' + lib, 'JIRI_HEAD'])
     run_command(['git', 'add', sdk_dir])
     message = [
-        '[fidl] Move ' + lib + ' to //sdk/fidl',
+        '[unification] Move ' + lib + ' to //sdk/fidl',
         '',
         'Generated with: //scripts/unification/move_fidl_library.py ' + lib,
         '',

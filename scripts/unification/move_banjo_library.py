@@ -84,7 +84,7 @@ def main():
     run_command(['git', 'checkout', '-b', 'banjo-move-' + lib, 'JIRI_HEAD'])
     run_command(['git', 'add', sdk_dir])
     message = [
-        '[banjo] Move ' + lib + ' to //sdk/banjo',
+        '[unification] Move ' + lib + ' to //sdk/banjo',
         '',
         'Generated with: //scripts/unification/move_banjo_library.py ' + lib,
         '',
