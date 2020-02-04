@@ -369,16 +369,44 @@ func TestDHCP(t *testing.T) {
 func TestDelayRetransmission(t *testing.T) {
 	var delayTests = []struct {
 		name           string
-		discoverDelay  time.Duration
-		requestDelay   time.Duration
+		offerDelay     time.Duration
+		ackDelay       time.Duration
 		acquisition    time.Duration
 		retransmission time.Duration
 		success        bool
 	}{
-		{name: "DelayedDiscoverWithLongAcquisitionSucceeds", discoverDelay: 500 * time.Millisecond, requestDelay: 0, acquisition: 5 * time.Second, retransmission: 100 * time.Millisecond, success: true},
-		{name: "DelayedRequestWithLongAcquisitionSucceeds", discoverDelay: 0, requestDelay: 500 * time.Millisecond, acquisition: 5 * time.Second, retransmission: 100 * time.Millisecond, success: true},
-		{name: "DelayedDiscoverWithShortAcquisitionFails", discoverDelay: 1 * time.Second, requestDelay: 0, acquisition: 500 * time.Millisecond, retransmission: 100 * time.Millisecond, success: false},
-		{name: "DelayedRequestWithShortAcquisitionFails", discoverDelay: 0, requestDelay: 1 * time.Second, acquisition: 500 * time.Millisecond, retransmission: 100 * time.Millisecond, success: false},
+		{
+			name:           "DelayedOfferWithLongAcquisitionSucceeds",
+			offerDelay:     5 * time.Millisecond,
+			ackDelay:       0,
+			acquisition:    20 * time.Millisecond,
+			retransmission: 1 * time.Millisecond,
+			success:        true,
+		},
+		{
+			name:           "DelayedAckWithLongAcquisitionSucceeds",
+			offerDelay:     0,
+			ackDelay:       5 * time.Millisecond,
+			acquisition:    20 * time.Millisecond,
+			retransmission: 1 * time.Millisecond,
+			success:        true,
+		},
+		{
+			name:           "DelayedOfferWithShortAcquisitionFails",
+			offerDelay:     20 * time.Millisecond,
+			ackDelay:       0,
+			acquisition:    5 * time.Millisecond,
+			retransmission: 1 * time.Millisecond,
+			success:        false,
+		},
+		{
+			name:           "DelayedAckWithShortAcquisitionFails",
+			offerDelay:     0,
+			ackDelay:       20 * time.Millisecond,
+			acquisition:    5 * time.Millisecond,
+			retransmission: 1 * time.Millisecond,
+			success:        false,
+		},
 	}
 	for _, tc := range delayTests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -386,8 +414,8 @@ func TestDelayRetransmission(t *testing.T) {
 			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
-			var discoverRcvd, requestRcvd int
-			clientLinkEP.onWritePacket = func(packetBuffer tcpip.PacketBuffer) bool {
+			var offerRcvd, ackRcvd int
+			serverLinkEP.onWritePacket = func(packetBuffer tcpip.PacketBuffer) bool {
 				h := hdr(packetBuffer.Data.First())
 				if !h.isValid() {
 					t.Fatalf("invalid header: %s", h)
@@ -401,15 +429,15 @@ func TestDelayRetransmission(t *testing.T) {
 					t.Fatalf("invalid header: %s, %s", err, h)
 				}
 				switch msgType {
-				case dhcpDISCOVER:
-					if discoverRcvd == 0 {
-						discoverRcvd++
-						time.Sleep(tc.discoverDelay)
+				case dhcpOFFER:
+					if offerRcvd == 0 {
+						offerRcvd++
+						time.Sleep(tc.offerDelay)
 					}
-				case dhcpREQUEST:
-					if requestRcvd == 0 {
-						requestRcvd++
-						time.Sleep(tc.requestDelay)
+				case dhcpACK:
+					if ackRcvd == 0 {
+						ackRcvd++
+						time.Sleep(tc.ackDelay)
 					}
 				}
 
