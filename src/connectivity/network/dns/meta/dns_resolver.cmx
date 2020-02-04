@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/dns_resolver"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}
