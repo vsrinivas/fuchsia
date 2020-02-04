@@ -5,6 +5,7 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <poll.h>
@@ -29,6 +30,9 @@ constexpr char kPacketDurationOption[] = "packet-ms";
 constexpr char kVerboseOption[] = "v";
 constexpr char kShowUsageOption1[] = "help";
 constexpr char kShowUsageOption2[] = "?";
+constexpr char kRecordDurationOption[] = "duration";
+constexpr char kDurationDefaultSecs[] = "2.0";
+constexpr float kMaxDurationSecs= 86400.0f;
 
 WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
@@ -50,6 +54,19 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
 
   verbose_ = cmd_line_.HasOption(kVerboseOption);
   loopback_ = cmd_line_.HasOption(kLoopbackOption);
+
+  float duration = 0.0f;
+  std::string opt;
+  if (cmd_line_.GetOptionValue(kRecordDurationOption, &opt)) {
+    if (opt == "")
+      opt = kDurationDefaultSecs;
+
+    if (sscanf(opt.c_str(), "%f", &duration) != 1 || duration <= 0
+        || duration > kMaxDurationSecs) {
+      printf("Duration must be positive (max: %.1f)!\n", kMaxDurationSecs);
+      return;
+    }
+  }
 
   if (pos_args.size() < 1) {
     Usage();
@@ -76,9 +93,16 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   audio_capturer_->GetStreamType(
       [this](fuchsia::media::StreamType type) { OnDefaultFormatFetched(std::move(type)); });
 
-  // Quit if someone hits a key.
-  keystroke_waiter_.Wait([this](zx_status_t, uint32_t) { OnQuit(); }, STDIN_FILENO, POLLIN);
-
+  // TODO (b/148807692): produce a file with exactly the expected number of frames, or timeout.
+  if (duration > 0) {
+    zx::duration wait_time = zx::sec(duration);
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           [this]{OnQuit();},
+                           wait_time);
+  } else {
+    // Quit if someone hits a key.
+    keystroke_waiter_.Wait([this](zx_status_t, uint32_t) { OnQuit(); }, STDIN_FILENO, POLLIN);
+  }
   cleanup.cancel();
 }
 
@@ -117,6 +141,13 @@ void WavRecorder::Usage() {
   printf(" --%s=<MSECS>\tSpecify the duration (in milliseconds) of each capture packet\n",
          kPacketDurationOption);
   printf("\t\t\tMinimum packet duration is %.1f milliseconds\n", kMinPacketSizeMsec);
+
+  printf("\n   By default, capture waits for a keystroke\n");
+  printf(" --%s[=<SECS>]\tSpecify a fixed duration rather than waiting for keystroke\n",
+         kRecordDurationOption);
+  printf("\t\t\tDuration must be positive (max: %.1f)\n", kMaxDurationSecs);
+  printf("\t\t\tIf only --%s is specified, then a duration of %s is used.\n",
+         kRecordDurationOption, kDurationDefaultSecs);
 
   printf("\n --%s\t\t\tBe verbose; display per-packet info\n", kVerboseOption);
   printf(" --%s, --%s\t\tShow this message\n", kShowUsageOption1, kShowUsageOption2);
