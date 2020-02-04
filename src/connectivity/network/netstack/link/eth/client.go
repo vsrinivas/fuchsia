@@ -2,42 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package eth implements a client for zircon's ethernet interface.
-// It is comparable to zircon/system/ulib/inet6/eth-client.h.
-//
-// Sending a packet:
-//
-//	var buf eth.Buffer
-//	for {
-//		buf = c.AllocForSend()
-//		if buf != nil {
-//			break
-//		}
-//		if err := c.WaitSend(); err != nil {
-//			return err // sending is impossible
-//		}
-//	}
-//	// ... things network stacks do
-//	copy(buf, dataToSend)
-//	return c.Send(buf)
-//
-// Receiving a packet:
-//
-//	var buf eth.Buffer
-//	var err error
-//	for {
-//		buf, err = c.Recv()
-//		if err != zx.ErrShouldWait {
-//			break
-//		}
-//		c.WaitRecv()
-//	}
-//	if err != nil {
-//		return err
-//	}
-//	copy(dataRecvd, buf)
-//	c.Free(buf)
-//	return nil
 package eth
 
 import (
@@ -69,15 +33,6 @@ const FifoEntrySize = C.sizeof_struct_eth_fifo_entry
 
 var _ link.Controller = (*Client)(nil)
 
-type ethProtocolState struct {
-	mu struct {
-		sync.Mutex
-		tmp      []C.struct_eth_fifo_entry
-		buf      []C.struct_eth_fifo_entry
-		inFlight uint32
-	}
-}
-
 var _ stack.LinkEndpoint = (*Client)(nil)
 
 // A Client is an ethernet client.
@@ -98,7 +53,15 @@ type Client struct {
 	stateFunc func(link.State)
 	arena     *Arena
 
-	tx, rx ethProtocolState
+	rxQueue []C.struct_eth_fifo_entry
+	tx      struct {
+		mu struct {
+			sync.Mutex
+			tmp      []C.struct_eth_fifo_entry
+			buf      []C.struct_eth_fifo_entry
+			inFlight uint32
+		}
+	}
 }
 
 // NewClient creates a new ethernet Client.
@@ -129,22 +92,25 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		return nil, err
 	}
 
-	maxDepth := fifos.TxDepth
-	if fifos.RxDepth > maxDepth {
-		maxDepth = fifos.RxDepth
-	}
-
 	c := &Client{
 		Info:   info,
 		device: device,
 		fifos:  *fifos,
 		path:   topo,
 		arena:  arena,
+		// TODO: use 2x depth so that the driver always has rx buffers available. Be careful to
+		// preserve the invariant: len(rxQueue) >= cap(rxQueue) - RxDepth.
+		rxQueue: make([]C.struct_eth_fifo_entry, 0, fifos.RxDepth),
+	}
+	for i := 0; i < cap(c.rxQueue); i++ {
+		b := arena.alloc(c)
+		if b == nil {
+			return nil, fmt.Errorf("%s: failed to allocate initial RX buffer %d/%d", tag, i, cap(c.rxQueue))
+		}
+		c.rxQueue = append(c.rxQueue, arena.entry(b))
 	}
 	c.tx.mu.buf = make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth)
-	c.tx.mu.tmp = make([]C.struct_eth_fifo_entry, 0, maxDepth)
-	c.rx.mu.buf = make([]C.struct_eth_fifo_entry, 0, fifos.RxDepth)
-	c.rx.mu.tmp = make([]C.struct_eth_fifo_entry, 0, maxDepth)
+	c.tx.mu.tmp = make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -157,12 +123,6 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 			return err
 		} else if err := checkStatus(status, "SetIoBuffer"); err != nil {
 			return err
-		}
-		c.rx.mu.Lock()
-		err = c.rxCompleteLocked()
-		c.rx.mu.Unlock()
-		if err != nil {
-			return fmt.Errorf("%s: failed to load rx fifo: %s", tag, err)
 		}
 		return nil
 	}(); err != nil {
@@ -243,25 +203,65 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		defer c.wg.Done()
 		if err := func() error {
 			for {
-				b, err := c.Recv()
-				if err != nil {
-					if err, ok := err.(*zx.Error); ok {
-						switch err.Status {
-						case zx.ErrShouldWait:
-							c.WaitRecv()
-							continue
+				if len(c.rxQueue) != 0 {
+					status, sent := fifoWrite(c.fifos.Rx, c.rxQueue)
+					switch status {
+					case zx.ErrOk:
+					default:
+						return &zx.Error{Status: status, Text: "fifoWrite(RX)"}
+					}
+					c.rxQueue = append(c.rxQueue[:0], c.rxQueue[sent:]...)
+				}
+
+				for {
+					signals := zx.Signals(zx.SignalFIFOReadable | zx.SignalFIFOPeerClosed | zxsioEthSignalStatus)
+					if len(c.rxQueue) != 0 {
+						signals |= zx.SignalFIFOWritable
+					}
+					obs, err := zxwait.Wait(c.fifos.Rx, signals, zx.TimensecInfinite)
+					if err != nil {
+						return err
+					}
+					if obs&zxsioEthSignalStatus != 0 {
+						if status, err := c.GetStatus(); err != nil {
+							_ = syslog.WarnTf(tag, "status error: %s", err)
+						} else {
+							_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "status: %d", status)
+
+							c.mu.Lock()
+							switch status {
+							case LinkDown:
+								c.changeStateLocked(link.StateDown)
+							case LinkUp:
+								c.changeStateLocked(link.StateStarted)
+							}
+							c.mu.Unlock()
 						}
 					}
-					return err
+					if obs&(zx.SignalFIFOReadable) != 0 {
+						dst := c.rxQueue[len(c.rxQueue):cap(c.rxQueue)]
+						switch status, received := fifoRead(c.fifos.Rx, dst); status {
+						case zx.ErrOk:
+							c.rxQueue = c.rxQueue[:uint32(len(c.rxQueue))+received]
+							for i, entry := range dst[:received] {
+								var emptyLinkAddress tcpip.LinkAddress
+								dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, tcpip.PacketBuffer{
+									Data: append(buffer.View(nil), c.arena.bufferFromEntry(entry)...).ToVectorisedView(),
+								})
+								// This entry is going back to the driver; it can be reused.
+								dst[i].length = bufferSize
+							}
+						default:
+							return &zx.Error{Status: status, Text: "fifoRead(RX)"}
+						}
+					}
+					if obs&(zx.SignalFIFOWritable) != 0 {
+						break
+					}
 				}
-				var emptyLinkAddress tcpip.LinkAddress
-				dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, tcpip.PacketBuffer{
-					Data: append(buffer.View(nil), b...).ToVectorisedView(),
-				})
-				c.Free(b)
 			}
 		}(); err != nil {
-			_ = syslog.WarnTf(tag, "dispatch error: %s", err)
+			_ = syslog.WarnTf(tag, "RX loop: %s", err)
 		}
 	}()
 
@@ -473,58 +473,6 @@ func (c *Client) txCompleteLocked() error {
 	return nil
 }
 
-// Recv receives a Buffer from the ethernet driver.
-//
-// Recv does not block. If no data is available, this function
-// returns a nil Buffer and zx.ErrShouldWait.
-//
-// If the client is closed, Recv returns zx.ErrPeerClosed.
-func (c *Client) Recv() (Buffer, error) {
-	c.rx.mu.Lock()
-	defer c.rx.mu.Unlock()
-	if len(c.rx.mu.buf) == 0 {
-		status, count := fifoRead(c.fifos.Rx, c.rx.mu.buf[:cap(c.rx.mu.buf)])
-		if status != zx.ErrOk {
-			return nil, &zx.Error{Status: status, Text: "eth.Client.Recv"}
-		}
-
-		c.rx.mu.buf = c.rx.mu.buf[:count]
-		c.rx.mu.inFlight -= count
-		if err := c.rxCompleteLocked(); err != nil {
-			return nil, err
-		}
-	}
-	b := c.rx.mu.buf[0]
-	n := copy(c.rx.mu.buf, c.rx.mu.buf[1:])
-	c.rx.mu.buf = c.rx.mu.buf[:n]
-	return c.arena.bufferFromEntry(b), nil
-}
-
-// rxCompleteLocked should be called with the rx lock held.
-func (c *Client) rxCompleteLocked() error {
-	buf := c.rx.mu.tmp[:0]
-	for i := c.rx.mu.inFlight; i < c.fifos.RxDepth; i++ {
-		b := c.arena.alloc(c)
-		if b == nil {
-			break
-		}
-		buf = append(buf, c.arena.entry(b))
-	}
-	if len(buf) == 0 {
-		return nil // nothing to do
-	}
-	status, count := fifoWrite(c.fifos.Rx, buf)
-	if status != zx.ErrOk {
-		return &zx.Error{Status: status, Text: "eth.Client.RX"}
-	}
-
-	c.rx.mu.inFlight += count
-	for _, entry := range buf[count:] {
-		c.arena.free(c, c.arena.bufferFromEntry(entry))
-	}
-	return nil
-}
-
 // WaitSend blocks until it is possible to allocate a send buffer,
 // or the client is closed.
 func (c *Client) WaitSend() error {
@@ -541,38 +489,6 @@ func (c *Client) WaitSend() error {
 		}
 		// Errors from waiting handled in txComplete.
 		zxwait.Wait(c.fifos.Tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
-	}
-}
-
-// WaitRecv blocks until it is possible to receive a buffer,
-// or the client is closed.
-func (c *Client) WaitRecv() {
-	for {
-		obs, err := zxwait.Wait(c.fifos.Rx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed|zxsioEthSignalStatus, zx.TimensecInfinite)
-		if err != nil || obs&zx.SignalFIFOPeerClosed != 0 {
-			c.Close()
-		} else if obs&zxsioEthSignalStatus != 0 {
-			// TODO(): The wired Ethernet should receive this signal upon being
-			// hooked up with a (an active) Ethernet cable.
-			if status, err := c.GetStatus(); err != nil {
-				syslog.WarnTf(tag, "status error: %s", err)
-			} else {
-				syslog.VLogTf(syslog.TraceVerbosity, tag, "status: %d", status)
-
-				c.mu.Lock()
-				switch status {
-				case LinkDown:
-					c.changeStateLocked(link.StateDown)
-				case LinkUp:
-					c.changeStateLocked(link.StateStarted)
-				}
-				c.mu.Unlock()
-
-				continue
-			}
-		}
-
-		break
 	}
 }
 
