@@ -147,11 +147,12 @@ impl Repository {
         target_path: &TargetPath,
     ) -> Result<CustomTargetMetadata, MerkleForError> {
         let mut updating_client = self.updating_client.lock().await;
-        updating_client.update_if_stale().await.map_err(|e| match e {
-            TufError::NotFound => MerkleForError::NotFound,
+        updating_client.update_if_stale().await.or_else(|e| match e {
+            TufError::NotFound => Err(MerkleForError::NotFound),
             other => {
                 fx_log_err!("failed to update with TUF error {:?}", other);
-                MerkleForError::TufError(other)
+                // TODO(43646) Should this bubble up a MerkleForError::TufError(other)?
+                Ok(())
             }
         })?;
 

@@ -42,6 +42,7 @@ async fn test_initial_inspect_state() {
               }
             },
             experiments: {
+                "RustTuf": 1i64,
             },
             repository_manager: {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
@@ -86,6 +87,7 @@ async fn test_adding_repo_updates_inspect_state() {
               }
             },
             experiments: {
+                "RustTuf": 1i64,
             },
             repository_manager: {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),

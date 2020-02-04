@@ -117,8 +117,9 @@ fn main_inner() -> Result<(), Error> {
 
     let amber_connector = AmberConnector::new();
 
-    let experiment_state =
-        Arc::new(RwLock::new(experiment::State::new(inspector.root().create_child("experiments"))));
+    let mut experiment_state = experiment::State::new(inspector.root().create_child("experiments"));
+    experiment_state.set_state(experiment::Experiment::RustTuf, true);
+    let experiment_state = Arc::new(RwLock::new(experiment_state));
     let experiments = Arc::clone(&experiment_state).into();
 
     let font_package_manager = Arc::new(load_font_package_manager());

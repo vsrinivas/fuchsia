@@ -348,7 +348,7 @@ async fn error_codes() {
     // Nonexistant package
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/nonexistent").await,
-        Err(Status::INTERNAL)
+        Err(Status::NOT_FOUND)
     );
 
     env.stop().await;
