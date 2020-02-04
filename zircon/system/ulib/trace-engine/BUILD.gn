@@ -98,21 +98,3 @@ zx_library("trace-engine-headers-for-reader") {
   ]
   sources = []
 }
-
-group("tests") {
-  testonly = true
-  deps = [ ":hash-table-test" ]
-}
-
-zx_test("hash-table-test") {
-  visibility = [ ":*" ]
-  output_name = "trace-engine-hash-table-test"
-  sources = [
-    "hash_table.h",
-    "tests/hash_table_test.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-  ]
-}
