@@ -8,15 +8,3 @@ zx_library("mipi-dsi") {
   sources = [ "mipi-dsi.cc" ]
   deps = [ "$zx/system/banjo/ddk.protocol.dsiimpl" ]
 }
-
-zx_test("mipidsi") {
-  sources = [ "test/mipi-dsi-test.cc" ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.dsiimpl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/mipi-dsi",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}
