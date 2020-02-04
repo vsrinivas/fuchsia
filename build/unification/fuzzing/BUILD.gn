@@ -23,7 +23,6 @@ fuzzer_names = [
   "lz4",
   "lz4-decompress",
   "noop",
-  "raw-bitmap",
   "tftp",
   "utf_conversion",
   "vmo_file",
