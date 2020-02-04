@@ -19,6 +19,11 @@ declare_args() {
   # nonempty may conflict with programs that define their own
   # `__asan_default_options` C function.
   asan_default_options = ""
+  if (is_fuchsia) {
+    # TODO(45047): Temporary until all lsan bugs are filed and marked with
+    # deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+    asan_default_options = "detect_leaks=0"
+  }
 
   # Default [UndefinedBehaviorSanitizer](https://llvm.org/docs/UndefinedBehaviorSanitizer.html)
   # options (before the `UBSAN_OPTIONS` environment variable is read at
@@ -30,10 +35,23 @@ declare_args() {
   ubsan_default_options = "print_stacktrace=1:halt_on_error=1"
 }
 
-# TODO(45047): Temporary until ready for lsan rollout.
-if (is_fuchsia) {
-  # Prepend so an explicit `detect_leaks=1` can override.
-  asan_default_options = "detect_leaks=0:$asan_default_options"
+# TODO(45047): Temporary while leaks are plugged.
+# As leak bugs are found, file a bug #nnnnn for the leaky test/component,
+# and then add:
+# ```
+#   # TODO(nnnnn): Fix the leaks and remove this.
+#   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+# ```
+# to the target that builds the leaky code.  When all leaky tests have been
+# marked that way, the asan_default_options default above will be removed.
+source_set("suppress-lsan.DO-NOT-USE-THIS") {
+  # This would conflict with the generic one.
+  if (asan_default_options == "") {
+    sources = [ "asan_default_options.c" ]
+    defines = [ "ASAN_DEFAULT_OPTIONS=\"detect_leaks=0\"" ]
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+    cflags = [ "-fPIE" ]
+  }
 }
 
 variant("asan") {
