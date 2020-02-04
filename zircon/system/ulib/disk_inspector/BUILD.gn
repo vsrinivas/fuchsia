@@ -8,9 +8,17 @@ zx_library("disk_inspector") {
     "disk_inspector/inspector_transaction_handler.h",
     "disk_inspector/common_types.h",
     "disk_inspector/disk_inspector.h",
+    "disk_inspector/disk_obj.h",
+    "disk_inspector/disk_struct.h",
+    "disk_inspector/supported_types.h",
+    "disk_inspector/type_utils.h",
   ]
   static = true
-  sources = [ "disk_inspector.cc" ]
+  sources = [
+    "disk_inspector.cc",
+    "disk_struct.cc",
+  ]
+
   public_deps = [ "$zx/system/ulib/fbl:headers" ]
   deps = [ "$zx/system/ulib/fbl" ]
 

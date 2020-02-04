@@ -11,7 +11,10 @@ zx_test("disk_inspector_unit") {
   output_name = "disk-inspector-unit-test"
   sources = [
     "basic_types_test.cc",
+    "disk_primitive_test.cc",
+    "disk_struct_test.cc",
     "inspector_transaction_handler_test.cc",
+    "type_utils_test.cc",
   ]
   deps = [
     "$zx/system/ulib/block-client",
@@ -23,4 +26,5 @@ zx_test("disk_inspector_unit") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+  include_dirs = [ "$zx/system/ulib/disk_inspector" ]
 }
