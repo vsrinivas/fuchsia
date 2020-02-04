@@ -43,4 +43,8 @@ executable("configs_test") {
     "//zircon/system/fidl/fuchsia-hardware-camera",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
+
+  # Increase the default stack size from 256 KB because creating the configs can take up a very
+  # large amount of stack and would otherwise cause crashes on ASAN builds.
+  ldflags = [ "-Wl,-z,stack-size=0x100000" ]
 }

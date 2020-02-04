@@ -40,10 +40,12 @@ class FakeGe2d {
                                  const image_format_2_t* /*output_image_format_table_list*/,
                                  size_t /*output_image_format_table_count*/,
                                  uint32_t /*output_image_format_index*/,
-                                 const hw_accel_frame_callback_t* /*frame_callback*/,
+                                 const hw_accel_frame_callback_t* frame_callback,
                                  const hw_accel_res_change_callback_t* /*res_callback*/,
-                                 const hw_accel_remove_task_callback_t* /*task_remove_callback*/,
+                                 const hw_accel_remove_task_callback_t* remove_task_callback,
                                  uint32_t* /*out_task_index*/) {
+    remove_task_callback_ = remove_task_callback;
+    frame_callback_ = frame_callback;
     return ZX_OK;
   }
   zx_status_t Ge2dInitTaskWaterMark(const buffer_collection_info_2_t* /*input_buffer_collection*/,
@@ -52,13 +54,21 @@ class FakeGe2d {
                                     const image_format_2_t* /*image_format_table_list*/,
                                     size_t /*image_format_table_count*/,
                                     uint32_t /*image_format_index*/,
-                                    const hw_accel_frame_callback_t* /*frame_callback*/,
+                                    const hw_accel_frame_callback_t* frame_callback,
                                     const hw_accel_res_change_callback_t* /*res_callback*/,
-                                    const hw_accel_remove_task_callback_t* /*task_remove_callback*/,
+                                    const hw_accel_remove_task_callback_t* remove_task_callback,
                                     uint32_t* /*out_task_index*/) {
+    remove_task_callback_ = remove_task_callback;
+    frame_callback_ = frame_callback;
     return ZX_OK;
   }
-  zx_status_t Ge2dProcessFrame(uint32_t /*task_index*/, uint32_t /*input_buffer_index*/) {
+  zx_status_t Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
+    frame_available_info info = {
+        .buffer_id = input_buffer_index,
+        .metadata.input_buffer_index = input_buffer_index,
+        .frame_status = FRAME_STATUS_OK,
+    };
+    frame_callback_->frame_ready(frame_callback_->ctx, &info);
     return ZX_OK;
   }
   void Ge2dRemoveTask(uint32_t task_index) {}
@@ -134,6 +144,8 @@ class FakeGe2d {
 
   ge2d_protocol_t ge2d_protocol_ = {};
   ge2d_protocol_ops_t ge2d_protocol_ops_ = {};
+  const hw_accel_remove_task_callback_t* remove_task_callback_;
+  const hw_accel_frame_callback_t* frame_callback_;
 };
 
 #endif  // SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_GE2D_H_

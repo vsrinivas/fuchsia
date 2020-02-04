@@ -100,14 +100,25 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     return nullptr;
   }
 
+  fuchsia::sysmem::BufferCollectionInfo_2 FakeBufferCollection() {
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.buffer_count = kNumBuffers;
+    buffer_collection.settings.has_image_format_constraints = true;
+    auto& constraints = buffer_collection.settings.image_format_constraints;
+    constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+    constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+    constraints.max_coded_width = 4096;
+    constraints.max_coded_height = 4096;
+    constraints.max_bytes_per_row = 0xffffffff;
+    return buffer_collection;
+  }
+
   // This helper API does the basic validation of an Input Node.
   fit::result<std::unique_ptr<camera::InputNode>, zx_status_t> GetInputNode(
       const ControllerMemoryAllocator& allocator, StreamCreationData* info) {
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    buffer_collection.buffer_count = kNumBuffers;
     EXPECT_NE(nullptr, info);
 
-    info->output_buffers = std::move(buffer_collection);
+    info->output_buffers = FakeBufferCollection();
     info->image_format_index = 0;
 
     auto result = camera::InputNode::CreateInputNode(info, allocator, loop_.dispatcher(), isp_);
@@ -207,9 +218,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    buffer_collection.buffer_count = kNumBuffers;
-    info.output_buffers = std::move(buffer_collection);
+    info.output_buffers = FakeBufferCollection();
     auto stream_request = stream.NewRequest();
     auto status = pipeline_manager_->ConfigureStreamPipeline(&info, stream_request);
     if (status != ZX_OK) {

@@ -22,6 +22,10 @@ void ConvertToCTypeBufferCollectionInfo2(
     const fuchsia::sysmem::BufferCollectionInfo_2& hlcpp_buffer_collection,
     fuchsia_sysmem_BufferCollectionInfo_2* buffer_collection);
 
+fuchsia_sysmem_ImageFormat_2 GetImageFormatFromBufferCollection(
+    const fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection, uint32_t coded_width,
+    uint32_t coded_height);
+
 }  // namespace camera
 
 #endif  // SRC_CAMERA_LIB_FORMAT_CONVERSION_FORMAT_CONVERSION_H_

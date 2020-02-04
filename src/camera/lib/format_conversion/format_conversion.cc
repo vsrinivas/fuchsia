@@ -102,4 +102,22 @@ void ConvertToCTypeBufferCollectionInfo2(
   }
 }
 
+fuchsia_sysmem_ImageFormat_2 GetImageFormatFromBufferCollection(
+    const fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection, uint32_t coded_width,
+    uint32_t coded_height) {
+  ZX_ASSERT(buffer_collection.settings.has_image_format_constraints);
+  auto& constraints = buffer_collection.settings.image_format_constraints;
+  uint32_t bytes_per_row;
+  bool success = ImageFormatMinimumRowBytes(&constraints, coded_width, &bytes_per_row);
+  ZX_ASSERT(success);
+  return {.pixel_format = constraints.pixel_format,
+          .coded_width = coded_width,
+          .coded_height = coded_height,
+          .bytes_per_row = bytes_per_row,
+          .display_width = coded_width,
+          .display_height = coded_height,
+          .layers = 1,
+          .color_space = constraints.color_space[0]};
+}
+
 }  // namespace camera

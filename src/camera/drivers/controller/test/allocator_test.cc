@@ -81,9 +81,9 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
             buffer_collection_info.settings.image_format_constraints.pixel_format.type);
   EXPECT_EQ(kOutputStreamMlFRHeight,
-            buffer_collection_info.settings.image_format_constraints.max_coded_height);
+            buffer_collection_info.settings.image_format_constraints.required_max_coded_height);
   EXPECT_EQ(kOutputStreamMlFRWidth,
-            buffer_collection_info.settings.image_format_constraints.max_coded_width);
+            buffer_collection_info.settings.image_format_constraints.required_max_coded_width);
   EXPECT_EQ(kIspBytesPerRowDivisor,
             buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
   for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
@@ -111,8 +111,9 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigFRGDC1) {
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
             buffer_collection_info.settings.image_format_constraints.pixel_format.type);
   EXPECT_EQ(kIspFRHeight,
-            buffer_collection_info.settings.image_format_constraints.max_coded_height);
-  EXPECT_EQ(kIspFRWidth, buffer_collection_info.settings.image_format_constraints.max_coded_width);
+            buffer_collection_info.settings.image_format_constraints.required_max_coded_height);
+  EXPECT_EQ(kIspFRWidth,
+            buffer_collection_info.settings.image_format_constraints.required_max_coded_width);
   EXPECT_EQ(kIspBytesPerRowDivisor,
             buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
   for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
@@ -148,8 +149,9 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1GDC2) {
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
             buffer_collection_info.settings.image_format_constraints.pixel_format.type);
   EXPECT_EQ(kGdcFRHeight,
-            buffer_collection_info.settings.image_format_constraints.max_coded_height);
-  EXPECT_EQ(kGdcFRWidth, buffer_collection_info.settings.image_format_constraints.max_coded_width);
+            buffer_collection_info.settings.image_format_constraints.required_max_coded_height);
+  EXPECT_EQ(kGdcFRWidth,
+            buffer_collection_info.settings.image_format_constraints.required_max_coded_width);
   EXPECT_EQ(kGe2dBytesPerRowDivisor,
             buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
   for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
@@ -179,10 +181,8 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
   EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
             buffer_collection_info.settings.image_format_constraints.pixel_format.type);
-  EXPECT_EQ(kOutputStreamDSHeight,
-            buffer_collection_info.settings.image_format_constraints.min_coded_height);
-  EXPECT_EQ(kOutputStreamDSWidth,
-            buffer_collection_info.settings.image_format_constraints.min_coded_width);
+  EXPECT_EQ(0u, buffer_collection_info.settings.image_format_constraints.min_coded_height);
+  EXPECT_EQ(0u, buffer_collection_info.settings.image_format_constraints.min_coded_width);
   EXPECT_EQ(kIspBytesPerRowDivisor,
             buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
   for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {

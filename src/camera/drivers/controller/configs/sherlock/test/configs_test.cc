@@ -67,18 +67,23 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
   auto input_node = ds;
   auto gdc_ds_node = ds.child_nodes[0];
   ASSERT_EQ(gdc_ds_node.child_nodes.size(), 1u);
-  auto output_ds_node = gdc_ds_node.child_nodes[0];
+  auto ge2d_ds_node = gdc_ds_node.child_nodes[0];
+  ASSERT_EQ(ge2d_ds_node.child_nodes.size(), 1u);
+  auto output_ds_node = ge2d_ds_node.child_nodes[0];
 
   EXPECT_EQ(NodeType::kInputStream, input_node.type);
   EXPECT_EQ(NodeType::kGdc, gdc_ds_node.type);
+  EXPECT_EQ(NodeType::kGe2d, ge2d_ds_node.type);
   EXPECT_EQ(NodeType::kOutputStream, output_ds_node.type);
 
   ASSERT_EQ(input_node.supported_streams.size(), 1u);
   ASSERT_EQ(gdc_ds_node.supported_streams.size(), 1u);
+  ASSERT_EQ(ge2d_ds_node.supported_streams.size(), 1u);
   ASSERT_EQ(output_ds_node.supported_streams.size(), 1u);
 
   EXPECT_EQ(gdc_ds_node.supported_streams.at(0), kStreamTypeMonitoring);
   EXPECT_EQ(input_node.supported_streams.at(0), kStreamTypeMonitoring);
+  EXPECT_EQ(ge2d_ds_node.supported_streams.at(0), kStreamTypeMonitoring);
   EXPECT_EQ(output_ds_node.supported_streams.at(0), kStreamTypeMonitoring);
 
   ASSERT_EQ(gdc_ds_node.gdc_info.config_type.size(), 3u);
@@ -86,6 +91,8 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
   EXPECT_EQ(gdc_ds_node.gdc_info.config_type[0], GdcConfig::MONITORING_720p);
   EXPECT_EQ(gdc_ds_node.gdc_info.config_type[1], GdcConfig::MONITORING_480p);
   EXPECT_EQ(gdc_ds_node.gdc_info.config_type[2], GdcConfig::MONITORING_360p);
+
+  EXPECT_EQ(ge2d_ds_node.ge2d_info.config_type, Ge2DConfig::GE2D_WATERMARK);
 
   // FR graph validation.
   input_node = fr;

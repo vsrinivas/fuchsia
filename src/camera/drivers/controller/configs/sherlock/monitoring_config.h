@@ -53,6 +53,19 @@ constexpr uint32_t kOutputStreamMonitoringFrameRate = 30;
 constexpr fuchsia::sysmem::PixelFormatType kOutputStreamMonitoringPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 
+// Watermark information.
+constexpr uint32_t kWatermark720pWidth = 144;
+constexpr uint32_t kWatermark720pHeight = 84;
+
+constexpr uint32_t kWatermark480pWidth = 88;
+constexpr uint32_t kWatermark480pHeight = 48;
+
+constexpr uint32_t kWatermark360pWidth = 73;
+constexpr uint32_t kWatermark360pHeight = 42;
+
+constexpr fuchsia::sysmem::PixelFormatType kWatermarkPixelFormat =
+    fuchsia::sysmem::PixelFormatType::R8G8B8A8;
+
 }  // namespace
 
 // Returns the internal monitor configuration (DS).

@@ -33,9 +33,17 @@ enum Ge2DConfig {
 struct GdcInfo {
   std::vector<GdcConfig> config_type;
 };
+
+struct WatermarkInfo {
+  const char* filename;
+  fuchsia::sysmem::ImageFormat_2 image_format;
+  uint32_t loc_x;
+  uint32_t loc_y;
+};
+
 struct Ge2DInfo {
   Ge2DConfig config_type;
-  water_mark_info watermark;
+  std::vector<WatermarkInfo> watermark;
   resize_info resize;
 };
 

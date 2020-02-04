@@ -111,11 +111,10 @@ fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollec
   }
   // Just make one constraint that has the biggest width/height for each format type:
   // TODO(41321): Map these out. Right now we just use NV12 for everything.
-  uint32_t max_width = 0, max_height = 0, max_bytes_per_row = 0;
+  uint32_t max_width = 0, max_height = 0;
   for (auto& format : formats_) {
     max_width = std::max(max_width, format.coded_width);
     max_height = std::max(max_height, format.coded_height);
-    max_bytes_per_row = std::max(max_bytes_per_row, format.bytes_per_row);
   }
   constraints.image_format_constraints_count = 1;
   constraints.image_format_constraints[0] = {
@@ -125,14 +124,9 @@ fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollec
           {
               {{fuchsia::sysmem::ColorSpaceType::REC601_PAL}},
           },
-      .min_coded_width = max_width,
-      .max_coded_width = max_width,
-      .min_coded_height = max_height,
-      .max_coded_height = max_height,
-      .min_bytes_per_row = fbl::round_up(max_bytes_per_row, bytes_per_row_divisor_),
-      .max_bytes_per_row = 0xfffffff,
-      .layers = 1,
       .bytes_per_row_divisor = bytes_per_row_divisor_,
+      .required_max_coded_width = max_width,
+      .required_max_coded_height = max_height,
   };
   return constraints;
 }
@@ -142,6 +136,10 @@ fuchsia::camera2::hal::StreamConfig StreamConstraints::ConvertToStreamConfig() {
   ZX_ASSERT(!formats_.empty());
   fuchsia::camera2::StreamProperties stream_properties{};
   stream_properties.set_stream_type(stream_type_);
+
+  for (auto& format : formats_) {
+    format.bytes_per_row = fbl::round_up(format.coded_width, bytes_per_row_divisor_);
+  }
 
   return {
       .frame_rate = {.frames_per_sec_numerator = frames_per_second_,

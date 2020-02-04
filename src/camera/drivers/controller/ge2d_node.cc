@@ -47,36 +47,16 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 
   std::vector<fuchsia_sysmem_ImageFormat_2> output_image_formats_c;
   for (auto& format : internal_ge2d_node.image_formats) {
-    output_image_formats_c.push_back(ConvertHlcppImageFormat2toCType(format));
+    output_image_formats_c.push_back(GetImageFormatFromBufferCollection(
+        *output_buffer_collection_helper.GetC(), format.coded_width, format.coded_height));
   }
 
-  fuchsia_sysmem_ImageFormat_2 input_image_formats_c;
-  switch (internal_ge2d_node.ge2d_info.config_type) {
-    case Ge2DConfig::GE2D_RESIZE: {
-      // In this case the input format index is the same as previous nodes first
-      // image format.
-      input_image_formats_c =
-          ConvertHlcppImageFormat2toCType(parent_node->output_image_formats()[0]);
-
-      break;
-    }
-    case Ge2DConfig::GE2D_WATERMARK: {
-      // In this case the input format index is the one requested by client.
-      input_image_formats_c = ConvertHlcppImageFormat2toCType(
-          parent_node->output_image_formats()[info->image_format_index]);
-
-      // TODO(braval): Load Watermark VMO here.
-      break;
-    }
-      // clang-format off
-    default: {
-      FX_LOGST(ERROR, kTag) << "Unkwon config type";
-      return fit::error(ZX_ERR_INVALID_ARGS);
-    }
-      // clang-format on
+  std::vector<fuchsia_sysmem_ImageFormat_2> input_image_formats_c;
+  for (auto& format : parent_node->output_image_formats()) {
+    input_image_formats_c.push_back(GetImageFormatFromBufferCollection(
+        *input_buffer_collection_helper.GetC(), format.coded_width, format.coded_height));
   }
 
-  // Create GE2D Node.
   auto ge2d_node = std::make_unique<camera::Ge2dNode>(
       dispatcher, ge2d, parent_node, internal_ge2d_node.image_formats,
       std::move(output_buffers_hlcpp), info->stream_config->properties.stream_type(),
@@ -93,18 +73,55 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     case Ge2DConfig::GE2D_RESIZE: {
       auto status = ge2d.InitTaskResize(
           input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
-          ge2d_node->resize_info(), &input_image_formats_c, output_image_formats_c.data(),
+          ge2d_node->resize_info(), input_image_formats_c.data(), output_image_formats_c.data(),
           output_image_formats_c.size(), info->image_format_index, ge2d_node->frame_callback(),
           ge2d_node->res_callback(), ge2d_node->remove_task_callback(), &ge2d_task_index);
       if (status != ZX_OK) {
         FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GE2D resize task";
         return fit::error(status);
       }
-
       break;
     }
     case Ge2DConfig::GE2D_WATERMARK: {
-      // TODO(braval): Implement this.
+      std::vector<zx::vmo> watermark_vmos;
+      for (auto watermark : internal_ge2d_node.ge2d_info.watermark) {
+        size_t size;
+        zx::vmo vmo;
+        auto status = load_firmware(device, watermark.filename, vmo.reset_and_get_address(), &size);
+        if (status != ZX_OK || size == 0) {
+          FX_PLOGST(ERROR, kTag, status) << "Failed to load the watermark image";
+          return fit::error(status);
+        }
+        watermark_vmos.push_back(std::move(vmo));
+      }
+
+      std::vector<water_mark_info> watermarks_info;
+      for (uint32_t i = 0; i < internal_ge2d_node.ge2d_info.watermark.size(); i++) {
+        water_mark_info info;
+        info.loc_x = internal_ge2d_node.ge2d_info.watermark[i].loc_x;
+        info.loc_y = internal_ge2d_node.ge2d_info.watermark[i].loc_y;
+        info.wm_image_format =
+            ConvertHlcppImageFormat2toCType(internal_ge2d_node.ge2d_info.watermark[i].image_format);
+        info.watermark_vmo = watermark_vmos[i].release();
+        watermarks_info.push_back(std::move(info));
+      }
+
+      auto cleanup = fbl::MakeAutoCall([watermarks_info]() {
+        for (auto info : watermarks_info) {
+          ZX_ASSERT_MSG(ZX_OK == zx_handle_close(info.watermark_vmo),
+                        "Failed to free up watermark VMOs");
+        }
+      });
+
+      auto status = ge2d.InitTaskWaterMark(
+          input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
+          watermarks_info.data(), watermarks_info.size(), input_image_formats_c.data(),
+          input_image_formats_c.size(), info->image_format_index, ge2d_node->frame_callback(),
+          ge2d_node->res_callback(), ge2d_node->remove_task_callback(), &ge2d_task_index);
+      if (status != ZX_OK) {
+        FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GE2D watermark task";
+        return fit::error(status);
+      }
       break;
     }
     default: {
@@ -115,7 +132,6 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 
   ge2d_node->set_task_index(ge2d_task_index);
 
-  // Add child node.
   auto return_value = fit::ok(ge2d_node.get());
   parent_node->AddChildNodeInfo(std::move(ge2d_node));
   return return_value;
