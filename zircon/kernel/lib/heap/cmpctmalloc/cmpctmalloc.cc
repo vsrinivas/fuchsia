@@ -442,6 +442,7 @@ static void FixLeftPointer(header_t* right, header_t* new_left) TA_REQ(TheHeapLo
   right->left = (header_t*)(((uintptr_t)new_left & ~1) | tag);
 }
 
+[[maybe_unused]]
 static void check_free_fill(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
   // The first 16 bytes of the region won't have free fill due to overlap
   // with the allocator bookkeeping.
