@@ -153,7 +153,7 @@ class FakeStreamImpl : public FakeStream, public fuchsia::camera2::Stream {
   }
 
   fidl::Binding<fuchsia::camera2::Stream> binding_;
-  bool stopped_ = true;
+  bool stopped_ = false;
   std::unordered_set<uint32_t> outstanding_buffer_ids_;
   bool outstanding_error_frame_ = false;
   uint32_t client_error_count_ = 0;

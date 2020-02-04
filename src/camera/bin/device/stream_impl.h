@@ -8,11 +8,13 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
 #include <zircon/status.h>
 
 #include <memory>
+#include <queue>
 #include <vector>
 
 // Represents a specific stream in a camera device's configuration. Serves multiple clients of the
@@ -20,7 +22,8 @@
 class StreamImpl {
  public:
   StreamImpl(fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream,
-             fidl::InterfaceRequest<fuchsia::camera3::Stream> request, fit::closure on_no_clients);
+             fidl::InterfaceRequest<fuchsia::camera3::Stream> request, uint32_t max_camping_buffers,
+             fit::closure on_no_clients);
   ~StreamImpl();
 
  private:
@@ -30,12 +33,24 @@ class StreamImpl {
   // Posts a task to remove the client with the given id.
   void PostRemoveClient(uint64_t id);
 
+  // Posts a task to add the client with the given id to the queue of frame recipients.
+  void PostAddFrameSink(uint64_t id);
+
+  // Called when the legacy stream's OnFrameAvailable event fires.
+  void OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info);
+
+  // Sends pending frames to waiting recipients.
+  void SendFrames();
+
   // Represents a single client connection to the StreamImpl class.
   class Client : public fuchsia::camera3::Stream {
    public:
     Client(StreamImpl& stream, uint64_t id,
            fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
     ~Client();
+
+    // Posts a task to transfer ownership of the given frame to this client.
+    void PostSendFrame(fuchsia::camera3::FrameInfo frame);
 
    private:
     // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
@@ -57,6 +72,7 @@ class StreamImpl {
     uint64_t id_;
     async::Loop loop_;
     fidl::Binding<fuchsia::camera3::Stream> binding_;
+    GetNextFrameCallback frame_callback_;
   };
 
   async::Loop loop_;
@@ -64,7 +80,12 @@ class StreamImpl {
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
   fit::closure on_no_clients_;
-
+  uint32_t max_camping_buffers_;
+  uint64_t frame_counter_ = 0;
+  std::queue<uint64_t> frame_sinks_;
+  bool frame_sink_warning_sent_ = false;
+  std::queue<fuchsia::camera3::FrameInfo> frames_;
+  std::map<uint32_t, std::unique_ptr<async::Wait>> frame_waiters_;
   friend class Client;
 };
 

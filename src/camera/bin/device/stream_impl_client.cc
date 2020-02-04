@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include <sstream>
 
+#include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/stream_impl.h"
 
 StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
@@ -22,6 +24,13 @@ StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
 }
 
 StreamImpl::Client::~Client() { loop_.Shutdown(); }
+
+void StreamImpl::Client::PostSendFrame(fuchsia::camera3::FrameInfo frame) {
+  ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, frame = std::move(frame)]() mutable {
+              frame_callback_(std::move(frame));
+              frame_callback_ = nullptr;
+            }) == ZX_OK);
+}
 
 void StreamImpl::Client::OnClientDisconnected(zx_status_t status) {
   FX_PLOGS(DEBUG, status) << "Stream client " << id_ << " disconnected.";
@@ -48,7 +57,20 @@ void StreamImpl::Client::WatchResolution(WatchResolutionCallback callback) {
 }
 
 void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  if (stream_.max_camping_buffers_ == 0) {
+    FX_LOGS(INFO) << Messages::kNoCampingBuffers;
+  }
+
+  if (frame_callback_) {
+    FX_PLOGS(INFO, ZX_ERR_BAD_STATE)
+        << "Client called GetNextFrame while a previous call was still pending.";
+    CloseConnection(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  frame_callback_ = std::move(callback);
+
+  stream_.PostAddFrameSink(id_);
 }
 
 void StreamImpl::Client::Rebind(fidl::InterfaceRequest<Stream> request) {

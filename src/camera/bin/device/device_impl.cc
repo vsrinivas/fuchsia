@@ -196,6 +196,15 @@ void DeviceImpl::ConnectToStream(
                     ZX_OK);
         }
 
+        // Check the maximum number of buffers that Stream clients may hold collectively.
+        uint32_t driver_min_buffers = configs_[current_configuration_index_]
+                                          .stream_configs[index]
+                                          .constraints.min_buffer_count_for_camping;
+        ZX_ASSERT_MSG(buffers.buffer_count >= driver_min_buffers,
+                      "sysmem provided %d buffers but driver requires at least %d",
+                      buffers.buffer_count, driver_min_buffers);
+        uint32_t max_camping_buffers = buffers.buffer_count - driver_min_buffers;
+
         // Get the legacy stream using the negotiated buffers.
         fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream;
         controller_->CreateStream(current_configuration_index_, index, 0, std::move(buffers),
@@ -208,7 +217,7 @@ void DeviceImpl::ConnectToStream(
                                     [this, index]() { streams_[index] = nullptr; }) == ZX_OK);
         };
         streams_[index] = std::make_unique<StreamImpl>(std::move(legacy_stream), std::move(request),
-                                                       std::move(task));
+                                                       max_camping_buffers, std::move(task));
         collection->Close();
       });
 }

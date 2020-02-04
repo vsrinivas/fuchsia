@@ -59,13 +59,13 @@ class DeviceTest : public gtest::RealLoopFixture {
   fuchsia::sysmem::AllocatorPtr allocator_;
 };
 
-TEST_F(DeviceTest, CreateStreamNullConnection) { StreamImpl stream(nullptr, nullptr, nop); }
+TEST_F(DeviceTest, CreateStreamNullConnection) { StreamImpl stream(nullptr, nullptr, 0, nop); }
 
 TEST_F(DeviceTest, CreateStreamFakeLegacyStream) {
   fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
   auto result = FakeStream::Create(handle.NewRequest());
   ASSERT_TRUE(result.is_ok());
-  { StreamImpl stream(std::move(handle), nullptr, nop); }
+  { StreamImpl stream(std::move(handle), nullptr, 0, nop); }
 }
 
 TEST_F(DeviceTest, CreateStreamNoClientBuffers) {
@@ -110,6 +110,68 @@ TEST_F(DeviceTest, ConvertConfig) {
   ASSERT_FALSE(b.streams[0].supported_resolutions.empty());
   EXPECT_EQ(a.stream_configs[0].image_formats[0].bytes_per_row,
             b.streams[0].supported_resolutions[0].bytes_per_row);
+}
+
+TEST_F(DeviceTest, GetFrames) {
+  fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
+  auto result = FakeStream::Create(handle.NewRequest());
+  ASSERT_TRUE(result.is_ok());
+  auto legacy_stream_fake = result.take_value();
+  fuchsia::camera3::StreamPtr stream;
+  stream.set_error_handler(MakeErrorHandler("Stream"));
+  constexpr uint32_t kMaxCampingBuffers = 2;
+  constexpr uint32_t kBufferId1 = 42;
+  constexpr uint32_t kBufferId2 = 17;
+  auto stream_impl =
+      std::make_unique<StreamImpl>(std::move(handle), stream.NewRequest(), kMaxCampingBuffers, nop);
+  bool frame1_received = false;
+  bool frame2_received = false;
+  auto callback2 = [&](fuchsia::camera3::FrameInfo info) {
+    ASSERT_EQ(info.buffer_index, kBufferId2);
+    frame2_received = true;
+  };
+  auto callback1 = [&](fuchsia::camera3::FrameInfo info) {
+    ASSERT_EQ(info.buffer_index, kBufferId1);
+    frame1_received = true;
+    stream->GetNextFrame(std::move(callback2));
+  };
+  stream->GetNextFrame(std::move(callback1));
+  fuchsia::camera2::FrameAvailableInfo frame1_info;
+  frame1_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+  frame1_info.buffer_id = kBufferId1;
+  frame1_info.metadata.set_timestamp(0);
+  ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame1_info)), ZX_OK);
+  fuchsia::camera2::FrameAvailableInfo frame2_info;
+  frame2_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+  frame2_info.buffer_id = kBufferId2;
+  frame2_info.metadata.set_timestamp(0);
+  ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame2_info)), ZX_OK);
+  while (!HasFailure() && (!frame1_received || !frame2_received)) {
+    RunLoopUntilIdle();
+  }
+  auto client_result = legacy_stream_fake->StreamClientStatus();
+  EXPECT_TRUE(client_result.is_ok()) << client_result.error();
+  stream = nullptr;
+  stream_impl = nullptr;
+}
+
+TEST_F(DeviceTest, GetFramesInvalidCall) {
+  fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
+  auto result = FakeStream::Create(handle.NewRequest());
+  ASSERT_TRUE(result.is_ok());
+  auto legacy_stream_fake = result.take_value();
+  bool stream_errored = false;
+  fuchsia::camera3::StreamPtr stream;
+  stream.set_error_handler([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_BAD_STATE);
+    stream_errored = true;
+  });
+  auto stream_impl = std::make_unique<StreamImpl>(std::move(handle), stream.NewRequest(), 0, nop);
+  stream->GetNextFrame([](fuchsia::camera3::FrameInfo info) {});
+  stream->GetNextFrame([](fuchsia::camera3::FrameInfo info) {});
+  while (!HasFailure() && !stream_errored) {
+    RunLoopUntilIdle();
+  }
 }
 
 }  // namespace camera
