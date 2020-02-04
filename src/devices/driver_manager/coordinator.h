@@ -25,19 +25,19 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 
-#include "composite-device.h"
+#include "composite_device.h"
 #include "devhost.h"
 #include "device.h"
 #include "driver.h"
 #include "fbl/auto_lock.h"
 #include "fuchsia/device/manager/llcpp/fidl.h"
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
-#include "init-task.h"
+#include "init_task.h"
 #include "metadata.h"
-#include "resume-task.h"
-#include "suspend-task.h"
-#include "unbind-task.h"
-#include "vmo-writer.h"
+#include "resume_task.h"
+#include "suspend_task.h"
+#include "unbind_task.h"
+#include "vmo_writer.h"
 
 using llcpp::fuchsia::device::manager::SystemPowerState;
 

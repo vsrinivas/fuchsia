@@ -24,19 +24,19 @@ executable("driver_host") {
 source_set("common") {
   sources = [
     "api.cc",
-    "composite-device.cc",
-    "connection-destroyer.cc",
+    "composite_device.cc",
+    "connection_destroyer.cc",
     "core.cc",
-    "devfs-connection.cc",
-    "devhost-context.cc",
+    "devfs_connection.cc",
     "devhost.cc",
-    "device-controller-connection.cc",
+    "devhost_context.cc",
+    "device_controller_connection.cc",
     "env.cc",
-    "proxy-iostate.cc",
-    "rpc-server.cc",
+    "proxy_iostate.cc",
+    "rpc_server.cc",
     "scheduler_profile.cc",
     "tracing.cc",
-    "zx-device.cc",
+    "zx_device.cc",
   ]
 
   public_deps = [
@@ -75,11 +75,11 @@ shared_library("driver") {
 
 test("driver_host_test") {
   sources = [
-    "core-test.cc",
-    "device-api-test.cc",
-    "device-controller-connection-test.cc",
-    "device-controller-integration-test.cc",
-    "proxy-iostate-test.cc",
+    "core_test.cc",
+    "device_api_test.cc",
+    "device_controller_connection_test.cc",
+    "device_controller_integration_test.cc",
+    "proxy_iostate_test.cc",
   ]
 
   deps = [
@@ -96,9 +96,10 @@ devmgr_manifest("devmgr-manifest") {
 }
 
 test_package("driver_host_tests") {
-  deps = [  ":devmgr-manifest",
-            ":driver_host_test",
-         ]
+  deps = [
+    ":devmgr-manifest",
+    ":driver_host_test",
+  ]
 
   binaries = [
     {

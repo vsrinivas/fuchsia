@@ -39,10 +39,10 @@
 
 #include "coordinator.h"
 #include "devfs.h"
-#include "devhost-loader-service.h"
+#include "devhost_loader_service.h"
 #include "fdio.h"
 #include "log.h"
-#include "system-instance.h"
+#include "system_instance.h"
 
 namespace {
 

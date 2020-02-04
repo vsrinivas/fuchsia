@@ -9,7 +9,7 @@
 #include <ddk/driver.h>
 #include <fbl/array.h>
 
-#include "binding-internal.h"
+#include "binding_internal.h"
 #include "coordinator.h"
 #include "device.h"
 

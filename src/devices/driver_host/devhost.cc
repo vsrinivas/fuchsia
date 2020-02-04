@@ -45,15 +45,15 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 
-#include "async-loop-owned-rpc-handler.h"
-#include "composite-device.h"
-#include "connection-destroyer.h"
-#include "device-controller-connection.h"
+#include "async_loop_owned_rpc_handler.h"
+#include "composite_device.h"
+#include "connection_destroyer.h"
+#include "device_controller_connection.h"
 #include "env.h"
 #include "fidl_txn.h"
 #include "log.h"
 #include "main.h"
-#include "proxy-iostate.h"
+#include "proxy_iostate.h"
 #include "scheduler_profile.h"
 #include "tracing.h"
 

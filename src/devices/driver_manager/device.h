@@ -23,9 +23,9 @@
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
 
-#include "async-loop-ref-counted-rpc-handler.h"
-#include "composite-device.h"
-#include "driver-test-reporter.h"
+#include "async_loop_ref_counted_rpc_handler.h"
+#include "composite_device.h"
+#include "driver_test_reporter.h"
 #include "metadata.h"
 
 class Coordinator;

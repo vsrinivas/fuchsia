@@ -20,10 +20,10 @@
 #include "devfs.h"
 #include "fidl.h"
 #include "fidl_txn.h"
-#include "init-task.h"
+#include "init_task.h"
 #include "log.h"
-#include "resume-task.h"
-#include "suspend-task.h"
+#include "resume_task.h"
+#include "suspend_task.h"
 
 // TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
 static constexpr bool kEnableAlwaysInit = false;

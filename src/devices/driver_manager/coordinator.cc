@@ -47,9 +47,9 @@
 #include <inspector/inspector.h>
 #include <libzbi/zbi-cpp.h>
 
-#include "composite-device.h"
+#include "composite_device.h"
 #include "devfs.h"
-#include "devhost-loader-service.h"
+#include "devhost_loader_service.h"
 #include "env.h"
 #include "fdio.h"
 #include "fidl.h"
@@ -57,7 +57,7 @@
 #include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "lib/zx/time.h"
 #include "log.h"
-#include "vmo-writer.h"
+#include "vmo_writer.h"
 
 namespace {
 

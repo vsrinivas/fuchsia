@@ -24,11 +24,11 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddktl/resume-txn.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include "composite-device.h"
-#include "ddktl/resume-txn.h"
+#include "composite_device.h"
 #include "devhost.h"
 #include "log.h"
 

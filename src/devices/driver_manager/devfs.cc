@@ -26,7 +26,7 @@
 #include <fbl/string.h>
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
-#include "async-loop-owned-rpc-handler.h"
+#include "async_loop_owned_rpc_handler.h"
 #include "coordinator.h"
 #include "lib/fidl/cpp/message_part.h"
 #include "log.h"

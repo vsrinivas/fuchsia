@@ -28,11 +28,11 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
-#include "async-loop-owned-rpc-handler.h"
-#include "devfs-connection.h"
-#include "devhost-context.h"
+#include "async_loop_owned_rpc_handler.h"
+#include "devfs_connection.h"
+#include "devhost_context.h"
 #include "lock.h"
-#include "zx-device.h"
+#include "zx_device.h"
 
 namespace fuchsia = ::llcpp::fuchsia;
 
