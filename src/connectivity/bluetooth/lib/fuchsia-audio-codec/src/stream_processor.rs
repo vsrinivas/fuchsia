@@ -586,7 +586,7 @@ mod tests {
 
     use byteorder::{ByteOrder, NativeEndian};
     use fuchsia_async::{self as fasync};
-    use futures::{future, io::AsyncWriteExt};
+    use futures::io::AsyncWriteExt;
     use futures_test::task::new_count_waker;
     use hex;
     use mundane::hash::{Digest, Hasher, Sha256};
@@ -676,8 +676,7 @@ mod tests {
         }
     }
 
-    // TODO(45125) re-enable after non flakey
-    #[allow(unused)]
+    #[test]
     fn encode_sbc() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
@@ -747,16 +746,14 @@ mod tests {
         // After the encoder runs, the encoded future should have been woken once the output
         // started.
         let mut processed_events = 0;
-        // 2 encoder events that happen before Output is guaranteed: OnOutputConstraints, OnOutputPacket
-        while processed_events < 2 {
+        // 4 encoder events that happen before Output is guaranteed: OnInputConstraints,
+        // OnOutputConstraints, OnOutputFormat, OnOutputPacket
+        while processed_events < 4 {
             let mut process_fut = encoder.process_events();
             let process_result = exec.run_singlethreaded(&mut process_fut);
             assert!(process_result.is_ok());
             processed_events += process_result.unwrap();
         }
-
-        // wait until all pending data from other side has come through
-        let _ = exec.run_until_stalled(&mut future::pending::<()>());
 
         assert_eq!(encoder_fut_wake_count.get(), 1);
 
@@ -793,8 +790,7 @@ mod tests {
         assert!(validated.is_ok(), "Failed hash: {:?}", validated);
     }
 
-    // TODO(45125) re-enable after non flakey
-    #[allow(unused)]
+    #[test]
     fn decode_sbc() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
@@ -850,16 +846,14 @@ mod tests {
         // After the decoder runs, the decoded future should have been woken once the output
         // started.
         let mut processed_events = 0;
-        // 2 decoder events that happen before Output is guaranteed: OnOutputConstraints, OnOutputPacket
-        while processed_events < 2 {
+        // 4 decoder events that happen before Output is guaranteed: OnInputConstraints,
+        // OnOutputConstraints, OnOutputFormat, OutputPacket
+        while processed_events < 4 {
             let mut process_fut = decoder.process_events();
             let process_result = exec.run_singlethreaded(&mut process_fut);
             assert!(process_result.is_ok());
             processed_events += process_result.unwrap();
         }
-
-        // wait until all pending data from other side has come through
-        let _ = exec.run_until_stalled(&mut future::pending::<()>());
 
         assert_eq!(decoder_fut_wake_count.get(), 1);
 
