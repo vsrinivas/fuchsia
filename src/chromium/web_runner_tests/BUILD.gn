@@ -74,6 +74,8 @@ executable("web_runner_integration_tests") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
   ]
+
+  data_deps = [ "//src/fonts:downstream_test_deps" ]
 }
 
 executable("web_runner_pixel_tests") {
@@ -101,6 +103,8 @@ executable("web_runner_pixel_tests") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
   ]
+
+  data_deps = [ "//src/fonts:downstream_test_deps" ]
 }
 
 test_package("web_runner_tests") {

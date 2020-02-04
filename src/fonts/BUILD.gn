@@ -22,6 +22,19 @@ group("tests") {
   ]
 }
 
+# Group of all the dependencies needed for downstream tests that rely on fonts,
+# such as Chromium tests.
+# Tests that use this dependency should also put
+# { "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts_for_downstream_tests.cmx" }
+# in their component manifests' "facets" > "fuchsia.test" > "injected-services".
+group("downstream_test_deps") {
+  testonly = true
+  public_deps = [
+    # TODO(kpozin): Add ":downstream-test-fonts-collection"
+    ":fonts",
+  ]
+}
+
 rustc_binary("font_server") {
   name = "font_server"
   with_unit_tests = true
