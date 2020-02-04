@@ -16,12 +16,16 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/lib/async/cpp/operation.h"
+
+namespace component {
+class ServiceProviderImpl;
+}
 
 namespace modular {
 
@@ -39,17 +43,28 @@ class EntityProviderRunner;
 // for some test environments that construct AgentRunner outside of a Sessionmgr.
 class AgentRunner {
  public:
-  AgentRunner(fuchsia::sys::Launcher* launcher,
-              fuchsia::auth::TokenManager* token_manager,
+  AgentRunner(fuchsia::sys::Launcher* launcher, fuchsia::auth::TokenManager* token_manager,
               AgentServicesFactory* agent_services_factory,
               EntityProviderRunner* entity_provider_runner, inspect::Node* session_inspect_node,
-              std::unique_ptr<AgentServiceIndex> agent_service_index = nullptr,
+              std::map<std::string, std::string> agent_service_index = {},
               sys::ComponentContext* const sessionmgr_context = nullptr);
   ~AgentRunner();
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
   // no new tasks are scheduled to run.
   void Teardown(fit::function<void()> callback);
+
+  // Returns a list of service names present in the cached agent service index.
+  std::vector<std::string> GetAgentServices() const;
+
+  // Returns true if the `agent_url` is present in the agent service index.
+  bool AgentInServiceIndex(const std::string& agent_url) const;
+
+  // Publishes all services in |agent_service_index_| to |service_provider|, allowing clients
+  // of |service_provider|, provided |service_provider| is bound to a component's environment,
+  // to connect to agent services directly through that environment.
+  void PublishAgentServices(const std::string& requestor_url,
+                            component::ServiceProviderImpl* service_provider);
 
   // Connects to an agent (and starts it up if it doesn't exist) through
   // |fuchsia::modular::Agent.Connect|. Called using
@@ -152,8 +167,9 @@ class AgentRunner {
   // Not owned. This is the parent node to the agent nodes.
   inspect::Node* session_inspect_node_;
 
-  // May be nullptr or empty.
-  std::unique_ptr<AgentServiceIndex> agent_service_index_;
+  // Services mapped to agents that provide those services. Used when a service is requested
+  // without specifying the handling agent. May be empty.
+  std::map<std::string, std::string> agent_service_index_;
 
   // The sys::ComponentContext in which SessionmgrImpl was launched (also needed by agents).
   // AgentContext will use this to re-expose services from the "sys" Realm, like

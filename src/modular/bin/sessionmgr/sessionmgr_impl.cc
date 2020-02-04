@@ -17,7 +17,6 @@
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
-#include "src/modular/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/bin/sessionmgr/focus.h"
 #include "src/modular/bin/sessionmgr/presentation_provider.h"
@@ -193,6 +192,7 @@ void SessionmgrImpl::Initialize(
 
   InitializeSessionEnvironment(session_id);
   InitializeUser(std::move(account), std::move(agent_token_manager));
+  InitializeAgentRunner();
   InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
 }
 
@@ -335,9 +335,7 @@ void SessionmgrImpl::InitializeIntlPropertyProvider() {
       });
 }
 
-void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
-                                       fuchsia::modular::AppConfig story_shell_config,
-                                       bool use_session_shell_for_story_shell_factory) {
+void SessionmgrImpl::InitializeAgentRunner() {
   startup_agent_launcher_.reset(new StartupAgentLauncher(
       [this](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
         if (terminating_) {
@@ -364,13 +362,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       std::make_unique<EntityProviderRunner>(static_cast<EntityProviderLauncher*>(this));
   AtEnd(Reset(&entity_provider_runner_));
 
-  std::map<std::string, std::string> service_to_agent_map;
-  for (auto& entry : config_.agent_service_index()) {
-    service_to_agent_map.emplace(entry.service_name(), entry.agent_url());
-  }
-  auto agent_service_index =
-      std::make_unique<MapAgentServiceIndex>(std::move(service_to_agent_map));
-
   // Initialize the AgentRunner.
   //
   // The AgentRunner must use its own |ArgvInjectingLauncher|, different from the
@@ -381,6 +372,11 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   // will soon deprecated and replace this Modular solution.
   //
   // Create a new launcher that uses sessionmgr's realm launcher.
+  std::map<std::string, std::string> agent_service_index;
+  for (auto& entry : config_.agent_service_index()) {
+    agent_service_index.emplace(entry.service_name(), entry.agent_url());
+  }
+
   ArgvInjectingLauncher::ArgvMap argv_map;
   for (auto& component : config_.component_args()) {
     argv_map.insert(std::make_pair(component.url(), component.args()));
@@ -392,7 +388,11 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
                                       &inspect_root_node_, std::move(agent_service_index),
                                       sessionmgr_context_));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
+}
 
+void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
+                                       fuchsia::modular::AppConfig story_shell_config,
+                                       bool use_session_shell_for_story_shell_factory) {
   ComponentContextInfo component_context_info{agent_runner_.get(), entity_provider_runner_.get()};
 
   startup_agent_launcher_->StartAgents(agent_runner_.get(), config_.session_agents(),
@@ -504,6 +504,11 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
   // |service_list| enumerates which services are made available to the session
   // shell.
   auto service_list = fuchsia::sys::ServiceList::New();
+
+  for (auto service_name : agent_runner_->GetAgentServices()) {
+    service_list->names.push_back(service_name);
+  }
+  agent_runner_->PublishAgentServices(session_shell_config.url, &session_shell_services_);
 
   service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
   session_shell_services_.AddService<fuchsia::modular::SessionShellContext>([this](auto request) {

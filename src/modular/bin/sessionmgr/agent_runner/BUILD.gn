@@ -10,8 +10,6 @@ source_set("agent_runner") {
     "agent_context_impl.cc",
     "agent_context_impl.h",
     "agent_runner.cc",
-    "agent_service_index.h",
-    "map_agent_service_index.h",
   ]
 
   public_deps = [
@@ -80,10 +78,7 @@ hermetic_tests_package("agent_runner_unittests") {
 
 # Broken out for component to depend on w/o creating circles.
 source_set("public") {
-  sources = [
-    "agent_runner.h",
-    "agent_service_index.h",
-  ]
+  sources = [ "agent_runner.h" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular",

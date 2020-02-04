@@ -23,7 +23,6 @@
 #include "gtest/gtest.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/testing/mock_base.h"
@@ -152,8 +151,7 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
     if (agent_runner_ == nullptr) {
       agent_runner_ = std::make_unique<modular::AgentRunner>(
           &launcher_, token_manager_.get(), /*agent_services_factory=*/nullptr,
-          entity_provider_runner_.get(), &node_,
-          std::make_unique<modular::MapAgentServiceIndex>(std::move(agent_service_index_)));
+          entity_provider_runner_.get(), &node_, std::move(agent_service_index_));
     }
     return agent_runner_.get();
   }

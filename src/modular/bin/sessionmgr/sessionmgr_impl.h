@@ -21,7 +21,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/module_resolver/local_module_resolver.h"
-#include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
@@ -81,6 +80,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeUser(fuchsia::modular::auth::AccountPtr account,
                       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
   void InitializeLedger();
+  void InitializeAgentRunner();
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
   void InitializeModular(const fidl::StringPtr& session_shell_url,

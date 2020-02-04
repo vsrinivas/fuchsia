@@ -67,6 +67,9 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   void Continue(fuchsia::sys::ServiceListPtr service_list, FlowToken flow) {
     service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::AgentContext::Name_);
+    for (const auto& service_name : agent_context_impl_->agent_runner_->GetAgentServices()) {
+      service_list->names.push_back(service_name);
+    }
     agent_context_impl_->service_provider_impl_.AddBinding(service_list->provider.NewRequest());
     agent_context_impl_->app_client_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
         launcher_, std::move(agent_config_),
@@ -163,6 +166,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       entity_provider_runner_(info.component_context_info.entity_provider_runner),
       agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)) {
+  agent_runner_->PublishAgentServices(url_, &service_provider_impl_);
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
         component_context_impl_.Connect(std::move(request));
@@ -275,6 +279,13 @@ void AgentContextImpl::ListProfileIds(fuchsia::auth::AppConfig app_config,
 }
 
 void AgentContextImpl::StopAgentIfIdle() {
+  // See if this agent is in the agent service index. If so, and to facilitate components
+  // with connections to the agent made through the environment and without associated
+  // AgentControllers, short-circuit the usual idle cleanup and leave us running.
+  if (agent_runner_->AgentInServiceIndex(url_)) {
+    return;
+  }
+
   operation_queue_.Add(std::make_unique<StopCall>(false /* is agent runner terminating? */, this,
                                                   [this](bool stopped) {
                                                     if (stopped) {

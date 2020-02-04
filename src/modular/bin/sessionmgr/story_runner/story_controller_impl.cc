@@ -283,6 +283,10 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     fuchsia::sys::ServiceProviderPtr module_context_provider;
     auto module_context_provider_request = module_context_provider.NewRequest();
     auto service_list = fuchsia::sys::ServiceList::New();
+    for (auto service_name : story_controller_impl_->story_provider_impl_->component_context_info()
+                                 .agent_runner->GetAgentServices()) {
+      service_list->names.push_back(service_name);
+    }
     service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
     service_list->names.push_back(fuchsia::intl::PropertyProvider::Name_);

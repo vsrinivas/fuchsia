@@ -433,8 +433,20 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
     return;
   }
 
+  auto service_list = fuchsia::sys::ServiceList::New();
+  for (auto service_name : component_context_info_.agent_runner->GetAgentServices()) {
+    service_list->names.push_back(service_name);
+  }
+  component_context_info_.agent_runner->PublishAgentServices(story_shell_config_.url,
+                                                             &story_shell_services_);
+
+  fuchsia::sys::ServiceProviderPtr service_provider;
+  story_shell_services_.AddBinding(service_provider.NewRequest());
+  service_list->provider = std::move(service_provider);
+
   preloaded_story_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      session_environment_->GetLauncher(), CloneStruct(story_shell_config_));
+      session_environment_->GetLauncher(), CloneStruct(story_shell_config_), /*data_origin=*/"",
+      std::move(service_list));
 }
 
 fuchsia::modular::StoryInfo2Ptr StoryProviderImpl::GetCachedStoryInfo(std::string story_id) {

@@ -19,9 +19,7 @@ std::unique_ptr<FakeStoryShell> FakeStoryShell::CreateWithDefaultOptions() {
 }
 
 // static
-std::vector<std::string> FakeStoryShell::GetDefaultSandboxServices() {
-  return {};
-}
+std::vector<std::string> FakeStoryShell::GetDefaultSandboxServices() { return {}; }
 
 void FakeStoryShell::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->outgoing()->AddPublicService(bindings_.GetHandler(this));

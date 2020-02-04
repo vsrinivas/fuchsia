@@ -23,13 +23,13 @@ namespace modular {
 
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
-AgentRunner::AgentRunner(
-    fuchsia::sys::Launcher* const launcher,
-    fuchsia::auth::TokenManager* const token_manager,
-    AgentServicesFactory* const agent_services_factory,
-    EntityProviderRunner* const entity_provider_runner, inspect::Node* session_inspect_node,
-    std::unique_ptr<AgentServiceIndex> agent_service_index,
-    sys::ComponentContext* const sessionmgr_context)
+AgentRunner::AgentRunner(fuchsia::sys::Launcher* const launcher,
+                         fuchsia::auth::TokenManager* const token_manager,
+                         AgentServicesFactory* const agent_services_factory,
+                         EntityProviderRunner* const entity_provider_runner,
+                         inspect::Node* session_inspect_node,
+                         std::map<std::string, std::string> agent_service_index,
+                         sys::ComponentContext* const sessionmgr_context)
     : launcher_(launcher),
       token_manager_(token_manager),
       agent_services_factory_(agent_services_factory),
@@ -92,6 +92,31 @@ void AgentRunner::Teardown(fit::function<void()> callback) {
         termination_callback(/* from_timeout= */ true);
       },
       kTeardownTimeout);
+}
+
+std::vector<std::string> AgentRunner::GetAgentServices() const {
+  std::vector<std::string> service_names;
+  for (const auto& index_entry : agent_service_index_) {
+    service_names.push_back(index_entry.first);
+  }
+  return service_names;
+}
+
+void AgentRunner::PublishAgentServices(const std::string& requestor_url,
+                                       component::ServiceProviderImpl* service_provider) {
+  for (const auto& index_entry : agent_service_index_) {
+    const auto& service_name = index_entry.first;
+    service_provider->AddServiceForName(
+        [this, requestor_url, service_name](zx::channel channel) mutable {
+          fuchsia::modular::AgentControllerPtr agent_controller;
+          fuchsia::modular::AgentServiceRequest agent_service_request;
+          agent_service_request.set_service_name(service_name);
+          agent_service_request.set_channel(std::move(channel));
+          agent_service_request.set_agent_controller(agent_controller.NewRequest());
+          ConnectToAgentService(requestor_url, std::move(agent_service_request));
+        },
+        service_name);
+  }
 }
 
 void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::function<void()> done) {
@@ -196,8 +221,9 @@ void AgentRunner::ConnectToAgentService(const std::string& requestor_url,
   if (request.has_handler()) {
     agent_url = request.handler();
   } else {
-    if (auto optional = agent_service_index_->FindAgentForService(request.service_name())) {
-      agent_url = optional.value();
+    auto it = agent_service_index_.find(request.service_name());
+    if (it != agent_service_index_.end()) {
+      agent_url = it->second;
     } else {
       HandleAgentServiceNotFound(std::move(*request.mutable_channel()), request.service_name());
       return;
@@ -230,9 +256,14 @@ void AgentRunner::ConnectToEntityProvider(
   });
 }
 
+bool AgentRunner::AgentInServiceIndex(const std::string& agent_url) const {
+  auto it = std::find_if(agent_service_index_.begin(), agent_service_index_.end(),
+                         [agent_url](const auto& entry) { return entry.second == agent_url; });
+  return it != agent_service_index_.end();
+}
+
 void AgentRunner::RemoveAgent(const std::string agent_url) {
   running_agents_.erase(agent_url);
-
   if (*terminating_) {
     return;
   }

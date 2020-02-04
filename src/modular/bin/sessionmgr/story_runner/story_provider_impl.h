@@ -30,6 +30,7 @@
 #include "src/modular/bin/sessionmgr/story/model/story_model_owner.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_entity_provider.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/proxy.h"
@@ -210,6 +211,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // Component URL and arguments used to launch story shells.
   fuchsia::modular::AppConfig story_shell_config_;
+
+  // Services that story shells can connect to from their environment.
+  component::ServiceProviderImpl story_shell_services_;
 
   // Used to preload story shell before it is requested.
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> preloaded_story_shell_app_;
