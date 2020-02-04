@@ -294,10 +294,10 @@ fn schema_error(error: schema::SchemaError) -> String {
         schema::SchemaError::WrongId => String::from("Wrong Id"),
         schema::SchemaError::IdConflicts => String::from("Id conflicts"),
         schema::SchemaError::NotAnObject => String::from("Not an object"),
-        schema::SchemaError::UrlParseError(p) => String::from(format!("Url parse error: {}", p)),
-        schema::SchemaError::UnknownKey(key) => String::from(format!("Unknown key: {}", key)),
+        schema::SchemaError::UrlParseError(p) => format!("Url parse error: {}", p),
+        schema::SchemaError::UnknownKey(key) => format!("Unknown key: {}", key),
         schema::SchemaError::Malformed { path, detail } => {
-            String::from(format!("Malformed: {}, {}", path, detail))
+            format!("Malformed: {}, {}", path, detail)
         }
     }
 }
@@ -373,7 +373,7 @@ impl Config {
                     })
                 })?);
                 self.startup_path = Some(loaded_path);
-                return self.final_validation().await;
+                self.final_validation().await
             }
             Err(e) => Err(e),
         }
@@ -477,16 +477,6 @@ impl Config {
             && intf.routed_vlan.is_none()
         {
             return Ok(());
-        } else if intf.switched_vlan.is_some()
-            && intf.subinterfaces.is_none()
-            && intf.routed_vlan.is_none()
-        {
-            return Ok(());
-        } else if intf.routed_vlan.is_some()
-            && intf.subinterfaces.is_none()
-            && intf.switched_vlan.is_none()
-        {
-            return Ok(());
         }
         Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
             path: String::from(self.startup_path().to_string_lossy()),
@@ -555,8 +545,8 @@ impl Config {
     }
 
     /// Validates each [`config::Subinterface`].
-    fn validate_subinterfaces(&self, subinterfaces: &Vec<Subinterface>) -> error::Result<()> {
-        for subif in subinterfaces.into_iter() {
+    fn validate_subinterfaces(&self, subinterfaces: &[Subinterface]) -> error::Result<()> {
+        for subif in subinterfaces.iter() {
             if let Some(v4addr) = &subif.ipv4 {
                 for a in v4addr.addresses.iter() {
                     self.validate_ip_address(&a)?;
@@ -585,7 +575,7 @@ impl Config {
             Some(intfs) => intfs,
             None => {
                 return Err(error::NetworkManager::CONFIG(error::Config::NotFound {
-                    msg: format!("Config contains no interfaces"),
+                    msg: "Config contains no interfaces".to_string(),
                 }));
             }
         };
@@ -611,7 +601,7 @@ impl Config {
     pub fn device(&self) -> error::Result<&Device> {
         self.device_config.as_ref().map(|c| &c.device).ok_or_else(|| {
             error::NetworkManager::CONFIG(error::Config::NotFound {
-                msg: format!("Device was not found yet. Is the config loaded?"),
+                msg: "Device was not found yet. Is the config loaded?".to_string(),
             })
         })
     }
@@ -642,8 +632,8 @@ impl Config {
     pub fn device_id_is_an_uplink(&self, topo_path: &str) -> bool {
         self.get_interface_by_device_id(topo_path)
             .map(|intf| match intf.config.interface_type {
-                InterfaceType::IfUplink => return intf.subinterfaces.is_some(),
-                _ => return false,
+                InterfaceType::IfUplink => intf.subinterfaces.is_some(),
+                _ => false,
             })
             .unwrap_or(false)
     }
@@ -655,8 +645,8 @@ impl Config {
     pub fn device_id_is_a_downlink(&self, topo_path: &str) -> bool {
         self.get_interface_by_device_id(topo_path)
             .map(|intf| match intf.config.interface_type {
-                InterfaceType::IfEthernet => return intf.subinterfaces.is_some(),
-                _ => return false,
+                InterfaceType::IfEthernet => intf.subinterfaces.is_some(),
+                _ => false,
             })
             .unwrap_or(false)
     }
@@ -682,7 +672,7 @@ impl Config {
         if let Some(subifs) = &intf.subinterfaces {
             if subifs.is_empty() {
                 return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
-                    msg: format!("Interface must have at least one 'subinterface' definition"),
+                    msg: "Interface must have at least one \'subinterface\' definition".to_string(),
                 }));
             }
             // TODO(cgibson): LIFProperties doesn't support vectors of IP addresses yet. fxb/42315.
@@ -725,11 +715,8 @@ impl Config {
                 properties.dhcp = dhcp_client;
             }
             // TODO(42315): LIFProperties doesn't support IPv6 addresses yet.
-            match (c.ip, c.prefix_length) {
-                (Some(address), Some(prefix)) => {
-                    properties.address = Some(LifIpAddr { address, prefix });
-                }
-                _ => {}
+            if let (Some(address), Some(prefix)) = (c.ip, c.prefix_length) {
+                properties.address = Some(LifIpAddr { address, prefix });
             }
         }
 
@@ -779,7 +766,7 @@ impl Config {
             Some(subif) => subif,
             None => {
                 return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
-                    msg: format!("An uplink must have a 'subinterface' configuration"),
+                    msg: "An uplink must have a \'subinterface\' configuration".to_string(),
                 }));
             }
         };
@@ -787,7 +774,7 @@ impl Config {
         // TODO(42315): LIFProperties does not support multiple addresses yet.
         if subifs.len() != 1 {
             return Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
-                msg: format!("Multiple subinterfaces on a single interface are not supported"),
+                msg: "Multiple subinterfaces on a single interface are not supported".to_string(),
             }));
         }
 
@@ -880,7 +867,7 @@ impl Config {
             // TODO(cgibson): Implement trunk VLANs when netstack supports it.
             InterfaceMode::Trunk => {
                 return Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
-                    msg: format!("Trunk VLANs are not supported yet."),
+                    msg: "Trunk VLANs are not supported yet.".to_string(),
                 }));
             }
         }
@@ -911,7 +898,7 @@ impl Config {
         if ports.peek().is_none() {
             warn!("Provided list of ports was empty?");
             return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
-                msg: format!("Provided list of ports was empty?"),
+                msg: "Provided list of ports was empty?".to_string(),
             }));
         }
         let mut routed_vlan = None;
@@ -924,9 +911,8 @@ impl Config {
                         Some(r)
                     } else {
                         return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
-                            msg: format!(
-                                "switched_vlan ports do not resolve to the same RoutedVlan"
-                            ),
+                            msg: "switched_vlan ports do not resolve to the same RoutedVlan"
+                                .to_string(),
                         }));
                     }
                 }
@@ -934,7 +920,7 @@ impl Config {
         }
         routed_vlan.ok_or_else(|| {
             error::NetworkManager::CONFIG(error::Config::Malformed {
-                msg: format!("switched_vlan ports do not resolve to the same RoutedVlan"),
+                msg: "switched_vlan ports do not resolve to the same RoutedVlan".to_string(),
             })
         })
     }
@@ -1036,9 +1022,11 @@ impl Config {
     /// If there is no "services" definition in the configuration, returns a
     /// [`error::Config::NotFound`] error.
     fn get_services(&self) -> error::Result<&Services> {
-        self.device()?.services.as_ref().ok_or(error::NetworkManager::CONFIG(
-            error::Config::NotFound { msg: format!("'services' definition was not found") },
-        ))
+        self.device()?.services.as_ref().ok_or_else(|| {
+            error::NetworkManager::CONFIG(error::Config::NotFound {
+                msg: "\'services\' definition was not found".to_string(),
+            })
+        })
     }
 
     /// Returns the IP forwarding configuration.

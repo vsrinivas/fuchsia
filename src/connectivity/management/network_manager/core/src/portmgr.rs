@@ -80,10 +80,10 @@ impl PortManager {
     }
 
     /// Returns topo path from a port id.
-    pub fn topo_path(&self, pid: &PortId) -> Option<&str> {
+    pub fn topo_path(&self, pid: PortId) -> Option<&str> {
         self.path_to_pid
             .iter()
-            .filter_map(|(k, v)| if pid == v { Some(k.as_str()) } else { None })
+            .filter_map(|(k, v)| if pid == *v { Some(k.as_str()) } else { None })
             .next()
     }
 
@@ -291,11 +291,11 @@ mod tests {
         let mut pm = PortManager::new();
         pm.add_port(Port::new(PortId::from(1), &generate_path(1), 1));
         pm.add_port(Port::new(PortId::from(5), &generate_path(5), 1));
-        let got = pm.topo_path(&PortId::from(1));
+        let got = pm.topo_path(PortId::from(1));
         assert_eq!(got, Some(generate_path(1).as_str()));
-        let got = pm.topo_path(&PortId::from(5));
+        let got = pm.topo_path(PortId::from(5));
         assert_eq!(got, Some(generate_path(5).as_str()));
-        let got = pm.topo_path(&PortId::from(6));
+        let got = pm.topo_path(PortId::from(6));
         assert_eq!(got, None);
     }
 

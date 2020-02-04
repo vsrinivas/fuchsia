@@ -388,7 +388,7 @@ impl NetCfg {
         .await;
 
         r.squash_result()
-            .with_context(|| format!("failed setting interface state"))
+            .with_context(|| "failed setting interface state".to_string())
             .map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
@@ -518,7 +518,7 @@ impl NetCfg {
     ) -> error::Result<()> {
         self.resolver_admin
             .set_name_servers(&mut servers.iter_mut())
-            .with_context(|| format!("failed setting interface state"))
+            .with_context(|| "failed setting interface state".to_string())
             .map_err(|e| {
                 error!("set_dns_resolver error {:?}", e);
                 error::NetworkManager::HAL(error::Hal::OperationFailed)

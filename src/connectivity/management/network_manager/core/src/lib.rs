@@ -210,7 +210,7 @@ impl DeviceState {
     async fn configure_lan_bridge(&mut self, pids: &[PortId]) -> error::Result<()> {
         let switched_vlans = pids.iter().map(|pid| {
             self.port_manager
-                .topo_path(&pid)
+                .topo_path(*pid)
                 .ok_or_else(|| {
                     error::NetworkManager::CONFIG(error::Config::NotFound {
                         msg: format!("topo_path not found in port manager map: {:?}", pid),
