@@ -677,6 +677,35 @@ TEST(LibabrTest, MarkSlotSuccessfulNoExtraneousWrites) {
   EXPECT_EQ(0, ops.write_metadata_count_);
 }
 
+void MarkSlotSuccessfulWithOtherSuccessful(AbrSlotIndex slot_index) {
+  AbrSlotIndex other_slot_index = OtherSlot(slot_index);
+  FakeOps ops = FakeOpsWithInitializedMetadata();
+  // First set up the other slot as successful.
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, other_slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotSuccessful(ops, other_slot_index));
+  EXPECT_GT(ops.metadata_.slot_data[other_slot_index].priority, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].tries_remaining, 0);
+  EXPECT_NE(ops.metadata_.slot_data[other_slot_index].successful_boot, 0);
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, slot_index));
+  EXPECT_EQ(kAbrResultOk, AbrMarkSlotSuccessful(ops, slot_index));
+  EXPECT_GT(ops.metadata_.slot_data[slot_index].priority, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[slot_index].tries_remaining, 0);
+  EXPECT_NE(ops.metadata_.slot_data[slot_index].successful_boot, 0);
+  // Expect that the other slot has been marked not successful.
+  EXPECT_NE(ops.metadata_.slot_data[other_slot_index].priority, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].tries_remaining, kAbrMaxTriesRemaining);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].successful_boot, 0);
+  ValidateMetadata(ops.metadata_);
+}
+
+TEST(LibabrTest, MarkSlotSuccessfulWithOtherSuccessfulA) {
+  MarkSlotSuccessfulWithOtherSuccessful(kAbrSlotIndexA);
+}
+
+TEST(LibabrTest, MarkSlotSuccessfulWithOtherSuccessfulB) {
+  MarkSlotSuccessfulWithOtherSuccessful(kAbrSlotIndexB);
+}
+
 void GetSlotInfo(AbrSlotIndex slot_index) {
   AbrSlotIndex other_slot_index = OtherSlot(slot_index);
   FakeOps ops = FakeOpsWithInitializedMetadata();

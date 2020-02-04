@@ -318,6 +318,7 @@ AbrResult AbrMarkSlotUnbootable(const AbrOps* abr_ops, AbrSlotIndex slot_index) 
 
 AbrResult AbrMarkSlotSuccessful(const AbrOps* abr_ops, AbrSlotIndex slot_index) {
   AbrData abr_data, abr_data_orig;
+  AbrSlotIndex other_slot_index;
   AbrResult result;
 
   if (!check_slot_index(slot_index)) {
@@ -342,6 +343,12 @@ AbrResult AbrMarkSlotSuccessful(const AbrOps* abr_ops, AbrSlotIndex slot_index) 
   abr_data.slot_data[slot_index].tries_remaining = 0;
   abr_data.slot_data[slot_index].successful_boot = 1;
 
+  /* Remove any success mark on the other slot. */
+  other_slot_index = 1 - slot_index;
+  if (is_slot_bootable(&abr_data.slot_data[other_slot_index])) {
+    abr_data.slot_data[other_slot_index].tries_remaining = kAbrMaxTriesRemaining;
+    abr_data.slot_data[other_slot_index].successful_boot = 0;
+  }
   return save_metadata_if_changed(abr_ops, &abr_data, &abr_data_orig);
 }
 

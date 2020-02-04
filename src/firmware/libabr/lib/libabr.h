@@ -126,6 +126,10 @@ AbrResult AbrMarkSlotUnbootable(const AbrOps* abr_ops, AbrSlotIndex slot_index);
  * This function is typically used by the OS update system after having confirmed that the slot
  * works as intended. It is not normally used by a bootloader except in response to an explicit
  * operator command.
+ *
+ * Compatibility between the newly successful slot and the other slot is unknown. Even if the other
+ * slot was successful at one point, it may no longer be. This function adds a success mark to the
+ * given slot but also removes any success mark on the other slot.
  */
 AbrResult AbrMarkSlotSuccessful(const AbrOps* abr_ops, AbrSlotIndex slot_index);
 
