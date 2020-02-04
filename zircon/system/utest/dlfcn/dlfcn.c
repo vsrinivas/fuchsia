@@ -188,6 +188,9 @@ bool loader_service_test(void) {
   EXPECT_EQ(old2, my_service, "unexpected previous service handle");
   zx_handle_close(old2);
 
+  // Clean up.
+  EXPECT_EQ(loader_service_release(svc), ZX_OK, "loader_service_release");
+
   END_TEST;
 }
 
