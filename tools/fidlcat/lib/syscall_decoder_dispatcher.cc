@@ -284,7 +284,8 @@ void Syscall::ComputeTypes() {
 void SyscallDecoderDispatcher::DisplayHandle(const zx_handle_info_t& handle_info,
                                              const fidl_codec::Colors& colors, std::ostream& os) {
   fidl_codec::DisplayHandle(colors, handle_info, os);
-  const HandleDescription* known_handle = inference_.GetHandleDescription(handle_info.handle);
+  const fidl_codec::semantic::HandleDescription* known_handle =
+      inference_.GetHandleDescription(handle_info.handle);
   if (known_handle != nullptr) {
     os << '(';
     known_handle->Display(colors, os);
