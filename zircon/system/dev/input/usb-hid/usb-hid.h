@@ -62,8 +62,8 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
   // These pointers are valid as long as usb_interface_list_ is valid.
   usb_hid_descriptor_t* hid_desc_ = nullptr;
 
-  const usb_endpoint_descriptor_t* endptin_ = nullptr;
-
+  uint8_t endptin_address_ = 0;
+  uint8_t endptout_address_ = 0;
   // This boolean is set to true for a usb device that has an interrupt out endpoint. The interrupt
   // out endpoint is used to send reports to the device. (the SET report protocol).
   bool has_endptout_ = false;

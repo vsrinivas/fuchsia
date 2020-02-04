@@ -65,16 +65,9 @@ class FakeUsbHidFunction : public DeviceType {
   ddk::UsbFunctionProtocolClient function_;
 
   std::vector<uint8_t> report_desc_;
-  std::vector<uint8_t> report_;
+  std::vector<uint8_t> report_ TA_GUARDED(mtx_);
 
   struct fake_usb_hid_descriptor_t {
-    usb_interface_descriptor_t interface;
-    usb_endpoint_descriptor_t interrupt_in;
-    usb_endpoint_descriptor_t interrupt_out;
-    usb_hid_descriptor_t hid_descriptor;
-  } __PACKED;
-
-  struct fake_usb_hid_descriptor_two_endpoints_t {
     usb_interface_descriptor_t interface;
     usb_endpoint_descriptor_t interrupt_in;
     usb_endpoint_descriptor_t interrupt_out;

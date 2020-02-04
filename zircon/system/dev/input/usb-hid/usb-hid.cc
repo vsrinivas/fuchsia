@@ -230,7 +230,8 @@ zx_status_t UsbHidbus::HidbusSetProtocol(uint8_t protocol) {
 void UsbHidbus::DdkUnbindNew(ddk::UnbindTxn txn) {
   unbind_thread_ = std::thread([this, txn = std::move(txn)]() mutable {
     fbl::AutoLock lock(&usb_lock_);
-    usb_.CancelAll(endptin_->bEndpointAddress);
+    usb_.CancelAll(endptin_address_);
+    usb_.CancelAll(endptout_address_);
     txn.Reply();
   });
 }
@@ -287,9 +288,10 @@ zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
     return status;
   }
   hid_desc_ = hid_desc;
-  endptin_ = endptin;
+  endptin_address_ = endptin->bEndpointAddress;
 
   if (endptout) {
+    endptout_address_ = endptout->bEndpointAddress;
     has_endptout_ = true;
     endptout_max_size_ = usb_ep_max_packet(endptout);
     status = usb_request_alloc(&request_out_, endptout_max_size_, endptout->bEndpointAddress,

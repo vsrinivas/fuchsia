@@ -77,6 +77,8 @@ zx_status_t FakeUsbHidFunction::UsbFunctionInterfaceControl(void* ctx, const usb
                                                             size_t* out_read_actual) {
   FakeUsbHidFunction* func = static_cast<FakeUsbHidFunction*>(ctx);
 
+  fbl::AutoLock lock(&func->mtx_);
+
   if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE)) {
     if (setup->bRequest == USB_REQ_GET_DESCRIPTOR) {
       memcpy(out_read_buffer, func->report_desc_.data(), func->report_desc_.size());
@@ -130,6 +132,9 @@ int FakeUsbHidFunction::Thread() {
     }
 
     data_out_req_complete_ = false;
+    // Release the lock before queueing, as the callback acquires the lock and is sometimes run in
+    // the same thread.
+    lock.release();
     usb_request_complete_t complete = {
         .callback =
             [](void* ctx, usb_request_t* req) {
@@ -143,6 +148,7 @@ int FakeUsbHidFunction::Thread() {
 }
 
 zx_status_t FakeUsbHidFunction::Bind() {
+  fbl::AutoLock lock(&mtx_);
   report_desc_.resize(sizeof(boot_mouse_r_desc));
   memcpy(report_desc_.data(), &boot_mouse_r_desc, sizeof(boot_mouse_r_desc));
   report_.resize(3);
@@ -215,7 +221,6 @@ zx_status_t FakeUsbHidFunction::Bind() {
   active_ = true;
   thrd_create(
       &thread_, [](void* ctx) { return static_cast<FakeUsbHidFunction*>(ctx)->Thread(); }, this);
-
   status = DdkAdd("usb-hid-function");
   if (status != ZX_OK) {
     return status;
@@ -233,7 +238,6 @@ void FakeUsbHidFunction::DdkUnbindNew(ddk::UnbindTxn txn) {
 
   int retval;
   thrd_join(thread_, &retval);
-
   txn.Reply();
 }
 
@@ -253,7 +257,6 @@ void FakeUsbHidFunction::UsbEndpointOutCallback(usb_request_t* request) {
   fbl::AutoLock lock(&mtx_);
   if (request->response.status == ZX_OK) {
     report_.resize(request->response.actual);
-    usb_request_copy_from(request, report_.data(), request->response.actual, 0);
     usb_request_copy_from(request, report_.data(), report_.size(), 0);
   } else {
     zxlogf(ERROR, "request status: %d\n", request->response.status);
