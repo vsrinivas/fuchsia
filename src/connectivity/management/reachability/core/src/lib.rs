@@ -6,15 +6,13 @@ pub mod ping;
 
 #[macro_use]
 extern crate log;
-use anyhow::Error;
-use fidl_fuchsia_net_stack as stack;
-use fidl_fuchsia_netstack as netstack;
-use fuchsia_zircon as zx;
-use network_manager_core::error;
-use network_manager_core::hal;
-use network_manager_core::lifmgr::LifIpAddr;
 pub use ping::{IcmpPinger, Pinger};
-use std::collections::HashMap;
+use {
+    anyhow::Error,
+    fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack, fuchsia_zircon as zx,
+    network_manager_core::{address::LifIpAddr, error, hal},
+    std::collections::HashMap,
+};
 
 const INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "8.8.8.8";
 const PROBE_PERIOD_IN_SEC: i64 = 60;

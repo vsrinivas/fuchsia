@@ -15,6 +15,7 @@
 #[macro_use]
 extern crate log;
 
+pub mod address;
 pub mod config;
 pub mod error;
 pub mod hal;
@@ -25,12 +26,14 @@ pub mod packet_filter;
 pub mod portmgr;
 mod servicemgr;
 
-use crate::lifmgr::{LIFProperties, LIFType, LifIpAddr};
-use crate::portmgr::PortId;
-use fidl_fuchsia_net_stack as stack;
-use fidl_fuchsia_netstack as netstack;
-use fidl_fuchsia_router_config::{Id, LifProperties};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use {
+    crate::address::LifIpAddr,
+    crate::lifmgr::{LIFProperties, LIFType},
+    crate::portmgr::PortId,
+    fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack,
+    fidl_fuchsia_router_config::{Id, LifProperties},
+    std::sync::atomic::{AtomicUsize, Ordering},
+};
 
 // TODO(cgibson): Remove this when we have the ability to add one port at a time the bridge.
 const NUMBER_OF_PORTS_IN_LAN: usize = 3;
@@ -934,7 +937,7 @@ fn generate_uuid() -> UUID {
     ID.fetch_add(1, Ordering::Relaxed) as UUID
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone, Default)]
 pub struct ElementId {
     uuid: UUID,
     version: Version,

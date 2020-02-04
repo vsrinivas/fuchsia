@@ -4,13 +4,15 @@
 
 //! Handles packet filtering requests for Network Manager.
 
-use crate::error;
-use crate::servicemgr::NatConfig;
-use anyhow::{format_err, Error};
-use fidl_fuchsia_net_filter::{self as netfilter, Direction, FilterMarker, FilterProxy, Status};
-use fidl_fuchsia_router_config as router_config;
-use fuchsia_component::client::connect_to_service;
-use std::net::IpAddr;
+use {
+    crate::error,
+    crate::servicemgr::NatConfig,
+    anyhow::{format_err, Error},
+    fidl_fuchsia_net_filter::{self as netfilter, Direction, FilterMarker, FilterProxy, Status},
+    fidl_fuchsia_router_config as router_config,
+    fuchsia_component::client::connect_to_service,
+    std::net::IpAddr,
+};
 
 /// Storage for this PacketFilter's attributes.
 pub struct PacketFilter {
@@ -191,7 +193,7 @@ fn from_nat_config(
     nat_config: &NatConfig,
 ) -> Result<(fidl_fuchsia_net::Subnet, fidl_fuchsia_net::IpAddress, u32), Error> {
     let src_subnet = match &nat_config.local_subnet {
-        Some(subnet) => subnet.clone().to_fidl_subnet(),
+        Some(subnet) => fidl_fuchsia_net::Subnet::from(subnet),
         None => return Err(format_err!("NatConfig must have a local_subnet set")),
     };
     let wan_ip = match nat_config.global_ip {
@@ -434,8 +436,8 @@ impl PacketFilter {
 mod tests {
     use super::*;
 
+    use crate::address::LifIpAddr;
     use crate::hal;
-    use crate::lifmgr::LifIpAddr;
     use fidl_fuchsia_net::IpAddress::Ipv4;
     use fidl_fuchsia_net::Ipv4Address;
     use fidl_fuchsia_router_config::{

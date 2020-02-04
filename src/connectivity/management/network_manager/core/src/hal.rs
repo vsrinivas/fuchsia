@@ -4,22 +4,26 @@
 
 //! A simple port manager.
 
-use crate::error;
-use crate::lifmgr::{self, subnet_mask_to_prefix_length, to_ip_addr, LIFProperties, LifIpAddr};
-use crate::oir;
-use crate::DnsPolicy;
-use anyhow::{Context as _, Error};
-use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_stack::{
-    self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker, StackProxy,
+use {
+    crate::address::{subnet_mask_to_prefix_length, to_ip_addr, LifIpAddr},
+    crate::error,
+    crate::lifmgr::{self, LIFProperties},
+    crate::oir,
+    crate::DnsPolicy,
+    anyhow::{Context as _, Error},
+    fidl_fuchsia_net as net,
+    fidl_fuchsia_net_stack::{
+        self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker,
+        StackProxy,
+    },
+    fidl_fuchsia_net_stack_ext::FidlReturn,
+    fidl_fuchsia_netstack::{
+        self as netstack, NetstackMarker, NetstackProxy, ResolverAdminMarker, ResolverAdminProxy,
+    },
+    fuchsia_component::client::connect_to_service,
+    std::convert::TryFrom,
+    std::net::IpAddr,
 };
-use fidl_fuchsia_net_stack_ext::FidlReturn;
-use fidl_fuchsia_netstack::{
-    self as netstack, NetstackMarker, NetstackProxy, ResolverAdminMarker, ResolverAdminProxy,
-};
-use fuchsia_component::client::connect_to_service;
-use std::convert::TryFrom;
-use std::net::IpAddr;
 
 /// The port ID's used by the netstack.
 ///
@@ -345,10 +349,7 @@ impl NetCfg {
     ) -> error::Result<()> {
         let r = self
             .stack
-            .add_interface_address(
-                StackPortId::from(pid).to_u64(),
-                &mut addr.to_fidl_interface_address(),
-            )
+            .add_interface_address(StackPortId::from(pid).to_u64(), &mut addr.into())
             .await;
         r.squash_result().map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
@@ -359,7 +360,7 @@ impl NetCfg {
         pid: PortId,
         addr: &'a LifIpAddr,
     ) -> error::Result<()> {
-        let a = addr.to_fidl_address_and_prefix();
+        let a: fidl_fuchsia_router_config::CidrAddress = addr.into();
         // TODO(dpradilla): this needs to be changed to use the stack fidl once
         // this functionality is moved there. the u32 conversion won't be needed.
         let r = self
@@ -746,7 +747,7 @@ mod tests {
                 ),
             }),
             Route {
-                target: lifmgr::LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
+                target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
                 gateway: Some("1.2.3.4".parse().unwrap()),
                 metric: None,
                 port_id: None,
@@ -765,7 +766,7 @@ mod tests {
                 destination: stack::ForwardingDestination::DeviceId(3)
             }),
             Route {
-                target: lifmgr::LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
+                target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
                 gateway: None,
                 metric: None,
                 port_id: Some(PortId(3))
@@ -791,10 +792,7 @@ mod tests {
                 ),
             }),
             Route {
-                target: lifmgr::LifIpAddr {
-                    address: "2620:0:1000:5000::".parse().unwrap(),
-                    prefix: 64
-                },
+                target: LifIpAddr { address: "2620:0:1000:5000::".parse().unwrap(), prefix: 64 },
                 gateway: Some("fe80::200:5eff:fe00:265".parse().unwrap()),
                 metric: None,
                 port_id: None,
@@ -813,10 +811,7 @@ mod tests {
                 destination: stack::ForwardingDestination::DeviceId(3)
             }),
             Route {
-                target: lifmgr::LifIpAddr {
-                    address: "2620:0:1000:5000::".parse().unwrap(),
-                    prefix: 58
-                },
+                target: LifIpAddr { address: "2620:0:1000:5000::".parse().unwrap(), prefix: 58 },
                 gateway: None,
                 metric: None,
                 port_id: Some(PortId(3))

@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::error;
-use crate::lifmgr;
-use serde_derive::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::HashSet;
-use std::fs::File;
-use std::io::Read;
-use std::path::{Path, PathBuf};
-use valico::json_schema::{self, schema};
+use {
+    crate::{address::LifIpAddr, error, lifmgr},
+    serde_derive::{Deserialize, Serialize},
+    serde_json::Value,
+    std::collections::HashSet,
+    std::fs::File,
+    std::io::Read,
+    std::path::{Path, PathBuf},
+    valico::json_schema::{self, schema},
+};
 
 /// Interface types defined by the OpenConfig interfaces model.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
@@ -726,7 +727,7 @@ impl Config {
             // TODO(42315): LIFProperties doesn't support IPv6 addresses yet.
             match (c.ip, c.prefix_length) {
                 (Some(address), Some(prefix)) => {
-                    properties.address = Some(lifmgr::LifIpAddr { address, prefix });
+                    properties.address = Some(LifIpAddr { address, prefix });
                 }
                 _ => {}
             }
@@ -1055,6 +1056,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::address::LifIpAddr;
     use crate::error::NetworkManager::CONFIG;
     use fuchsia_async as fasync;
     use std::fs;
@@ -1885,7 +1887,7 @@ mod tests {
         assert_eq!(properties.dhcp, false);
         assert_eq!(
             properties.address,
-            Some(lifmgr::LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
+            Some(LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
         );
 
         // Make sure DHCP client can be enabled when no static IP configuration is present.
@@ -1911,7 +1913,7 @@ mod tests {
         assert_eq!(properties.dhcp, false);
         assert_eq!(
             properties.address,
-            Some(lifmgr::LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
+            Some(LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
         );
     }
 
@@ -1940,19 +1942,19 @@ mod tests {
                 "test_wan_no_admin_state_id",
                 false,
                 false,
-                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+                Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             (
                 "test_wan_down_id",
                 false,
                 false,
-                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+                Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             (
                 "test_wan_up_id",
                 true,
                 false,
-                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+                Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             ("test_wan_dhcp_id", true, true, None),
         ] {
@@ -1984,19 +1986,19 @@ mod tests {
                 "test_lan_no_admin_state_id",
                 false,
                 false,
-                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+                Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             (
                 "test_lan_down_id",
                 false,
                 false,
-                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+                Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             (
                 "test_lan_up_id",
                 true,
                 false,
-                Some(lifmgr::LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
+                Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
         ] {
             match test_config.create_lan_properties(path) {
@@ -2210,7 +2212,7 @@ mod tests {
                 assert_eq!(p.dhcp, false);
                 assert_eq!(
                     p.address,
-                    Some(lifmgr::LifIpAddr { address: "192.168.0.1".parse().unwrap(), prefix: 32 })
+                    Some(LifIpAddr { address: "192.168.0.1".parse().unwrap(), prefix: 32 })
                 );
             }
             Err(e) => panic!("Got unexpected result: {:?}", e),

@@ -7,13 +7,13 @@
 // TODO(dpradilla): remove when done.
 #![allow(dead_code)]
 
-use crate::portmgr::PortId;
-use crate::{error, ElementId, Version, UUID};
-use fidl_fuchsia_net as fnet;
-use fidl_fuchsia_net_stack::{self as stack};
-use fidl_fuchsia_router_config;
-use std::collections::{HashMap, HashSet};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use {
+    crate::address::LifIpAddr,
+    crate::portmgr::PortId,
+    crate::{error, ElementId, Version, UUID},
+    fidl_fuchsia_router_config,
+    std::collections::{HashMap, HashSet},
+};
 
 /// `LIFType` denotes the supported types of Logical Interfaces.
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -183,158 +183,46 @@ impl LIF {
     }
 }
 
-// TODO(dpradilla): Move struct declarations to the top.
-
-/// LifIpAddr is an IP address and its prefix.
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-pub struct LifIpAddr {
-    pub address: IpAddr,
-    pub prefix: u8,
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) struct DnsSearch {
+    /// List of DNS servers to consult.
+    servers: Vec<LifIpAddr>,
+    /// Domain to add to non fully qualified domain names.
+    domain_name: Option<String>,
 }
-
-/// Creates an `std::net::IpAddr` from fuchsia.net.IpAddress.
-pub fn to_ip_addr(addr: fnet::IpAddress) -> IpAddr {
-    match addr {
-        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => IpAddr::from(addr),
-        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => IpAddr::from(addr),
-    }
-}
-
-impl From<&stack::InterfaceAddress> for LifIpAddr {
-    fn from(addr: &stack::InterfaceAddress) -> Self {
-        LifIpAddr { address: to_ip_addr(addr.ip_address), prefix: addr.prefix_len }
-    }
-}
-
-impl From<&fnet::Subnet> for LifIpAddr {
-    fn from(s: &fnet::Subnet) -> Self {
-        match *s {
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }),
-                prefix_len: prefix,
-            } => LifIpAddr { address: addr.into(), prefix },
-            fnet::Subnet {
-                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }),
-                prefix_len: prefix,
-            } => LifIpAddr { address: addr.into(), prefix },
+impl From<fidl_fuchsia_router_config::DnsSearch> for DnsSearch {
+    fn from(d: fidl_fuchsia_router_config::DnsSearch) -> Self {
+        DnsSearch {
+            servers: d.servers.into_iter().map(|ip| LifIpAddr::from(&ip)).collect(),
+            domain_name: d.domain_name,
         }
     }
 }
 
-/// Converts a subnet mask given as a set of octets to a scalar prefix length.
-pub fn subnet_mask_to_prefix_length(addr: fnet::IpAddress) -> u8 {
-    match addr {
-        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
-            (!u32::from_be_bytes(addr)).leading_zeros() as u8
-        }
-        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-            (!u128::from_be_bytes(addr)).leading_zeros() as u8
-        }
+#[derive(Debug, Eq, PartialEq, Clone, Default)]
+pub struct DhcpServerOptions {
+    pub(crate) id: ElementId,
+    pub(crate) lease_time_sec: u32,
+    pub(crate) default_gateway: Option<fidl_fuchsia_net::Ipv4Address>,
+    pub(crate) dns_server: Option<DnsSearch>,
+    pub(crate) enable: bool,
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub enum Dhcp {
+    Server,
+    Client,
+    None,
+}
+
+impl Default for Dhcp {
+    fn default() -> Self {
+        Dhcp::None
     }
 }
 
-impl From<&fidl_fuchsia_router_config::CidrAddress> for LifIpAddr {
-    fn from(a: &fidl_fuchsia_router_config::CidrAddress) -> Self {
-        match a.address {
-            Some(addr) => {
-                LifIpAddr { address: to_ip_addr(addr), prefix: a.prefix_length.unwrap_or(0) }
-            }
-            None => LifIpAddr { address: IpAddr::from([0, 0, 0, 0]), prefix: 0 },
-        }
-    }
-}
-
-/// Strips the host part from a given `address` and `prefix`.
-fn strip_host(address: &IpAddr, prefix: u8) -> IpAddr {
-    match address {
-        IpAddr::V4(a) => {
-            if prefix == 0 {
-                IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))
-            } else if prefix > 32 {
-                *address
-            } else {
-                IpAddr::V4(Ipv4Addr::from(
-                    (u32::from_be_bytes(a.octets()) >> (32 - prefix) << (32 - prefix))
-                        .to_be_bytes(),
-                ))
-            }
-        }
-        IpAddr::V6(a) => {
-            if prefix == 0 {
-                IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0))
-            } else if prefix > 128 {
-                *address
-            } else {
-                IpAddr::V6(Ipv6Addr::from(
-                    (u128::from_be_bytes(a.octets()) >> (128 - prefix) << (128 - prefix))
-                        .to_be_bytes(),
-                ))
-            }
-        }
-    }
-}
-
-impl LifIpAddr {
-    /// Convert to fuchsia.router.config.CidrAddress.
-    pub fn to_fidl_address_and_prefix(&self) -> fidl_fuchsia_router_config::CidrAddress {
-        match self.address {
-            IpAddr::V4(a) => fidl_fuchsia_router_config::CidrAddress {
-                address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: a.octets() })),
-                prefix_length: Some(self.prefix),
-            },
-            IpAddr::V6(a) => fidl_fuchsia_router_config::CidrAddress {
-                address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: a.octets() })),
-                prefix_length: Some(self.prefix),
-            },
-        }
-    }
-
-    /// Convert to fuchsia.net.Subnet, which contains a subnet mask and prefix length.
-    pub fn to_fidl_subnet(&self) -> fnet::Subnet {
-        match self.address {
-            IpAddr::V4(a) => fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
-                    addr: (u32::from_be_bytes(a.octets()) >> (32 - self.prefix)
-                        << (32 - self.prefix))
-                        .to_be_bytes(),
-                }),
-                prefix_len: self.prefix,
-            },
-            IpAddr::V6(a) => fnet::Subnet {
-                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
-                    addr: (u128::from_be_bytes(a.octets()) >> (128 - self.prefix)
-                        << (128 - self.prefix))
-                        .to_be_bytes(),
-                }),
-                prefix_len: self.prefix,
-            },
-        }
-    }
-
-    /// Convert to fuchsia.net.stack::InterfaceAddress.
-    pub fn to_fidl_interface_address(&self) -> stack::InterfaceAddress {
-        match self.address {
-            IpAddr::V4(a) => stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: a.octets() }),
-                prefix_len: self.prefix,
-            },
-            IpAddr::V6(a) => stack::InterfaceAddress {
-                ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: a.octets() }),
-                prefix_len: self.prefix,
-            },
-        }
-    }
-
-    /// Returns true if `address` is in the same subnet as `LifIpAddr`.
-    pub fn is_in_same_subnet(&self, address: &IpAddr) -> bool {
-        let local_subnet = strip_host(&self.address, self.prefix);
-        let address_subnet = strip_host(address, self.prefix);
-        local_subnet == address_subnet
-    }
-}
-
-#[derive(Eq, PartialEq, Debug, Clone, Copy, Default)]
-/// Dynamic properties associated with the LIF.
+#[derive(Eq, PartialEq, Debug, Clone, Default)]
+/// Properties associated with the LIF.
 pub struct LIFProperties {
     /// Whether this interface's current address was acquired via DHCP. Corresponds to
     /// fuchsia.netstack.NetInterfaceFlagUp.
@@ -354,7 +242,7 @@ impl LIFProperties {
             } else {
                 fidl_fuchsia_router_config::WanAddressMethod::Manual
             }),
-            address_v4: self.address.as_ref().map(|x| x.to_fidl_address_and_prefix()),
+            address_v4: self.address.as_ref().map(|x| x.into()),
             gateway_v4: None,
             address_v6: None,
             gateway_v6: None,
@@ -374,7 +262,7 @@ impl LIFProperties {
     /// Convert to fuchsia.router.config.LifProperties, LAN variant.
     pub fn to_fidl_lan(&self) -> fidl_fuchsia_router_config::LifProperties {
         fidl_fuchsia_router_config::LifProperties::Lan(fidl_fuchsia_router_config::LanProperties {
-            address_v4: self.address.as_ref().map(|x| x.to_fidl_address_and_prefix()),
+            address_v4: self.address.as_ref().map(|x| x.into()),
             address_v6: None,
             enable: Some(self.enabled),
             dhcp_config: None,
@@ -459,6 +347,7 @@ impl LIFManager {
 mod tests {
     use super::*;
     use crate::portmgr::{Port, PortManager};
+    use fidl_fuchsia_net as fnet;
     use fnet::Ipv4Address;
 
     fn create_ports() -> PortManager {
@@ -799,34 +688,6 @@ mod tests {
         assert_eq!(got, None);
     }
 
-    fn v4(addr: [u8; 4]) -> fnet::IpAddress {
-        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr })
-    }
-
-    fn v6(addr: [u8; 16]) -> fnet::IpAddress {
-        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr })
-    }
-
-    #[test]
-    fn test_to_prefix() {
-        assert_eq!(subnet_mask_to_prefix_length(v4([255, 255, 255, 255])), 32);
-        assert_eq!(subnet_mask_to_prefix_length(v4([255, 255, 255, 0])), 24);
-        assert_eq!(subnet_mask_to_prefix_length(v4([255, 128, 0, 0])), 9);
-        assert_eq!(subnet_mask_to_prefix_length(v4([0, 0, 0, 0])), 0);
-        assert_eq!(
-            subnet_mask_to_prefix_length(v6([
-                255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
-            ])),
-            128
-        );
-        assert_eq!(
-            subnet_mask_to_prefix_length(v6([
-                255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0,
-            ])),
-            64
-        );
-    }
-
     #[test]
     fn test_from_subnet_tolifipaddr() {
         assert_eq!(
@@ -870,7 +731,7 @@ mod tests {
     ) -> (LifIpAddr, fnet::Subnet) {
         let lifip = LifIpAddr { address: lifip_addr.parse().unwrap(), prefix: prefix_len };
 
-        let ip: IpAddr = expected_addr.parse().unwrap();
+        let ip = expected_addr.parse().unwrap();
         let expected_subnet = fnet::Subnet {
             addr: fnet::IpAddress::Ipv4(Ipv4Address {
                 addr: match ip {
@@ -886,64 +747,21 @@ mod tests {
     #[test]
     fn test_fidl_subnet_math() {
         let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.10.10", 32);
-        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
 
         let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.10.0", 24);
-        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
 
         let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.254.0.0", 16);
-        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
 
         let (lifip, expected_subnet) = build_lif_subnet("169.254.10.10", "169.0.0.0", 8);
-        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
 
         let (lifip, expected_subnet) = build_lif_subnet("169.254.127.254", "169.254.124.0", 22);
-        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
+        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
 
         let (lifip, expected_subnet) = build_lif_subnet("16.25.12.25", "16.16.0.0", 12);
-        assert_eq!(lifip.to_fidl_subnet(), expected_subnet);
-    }
-
-    #[test]
-    fn test_strip_host() {
-        let got = strip_host(&"85.170.255.170".parse().unwrap(), 23);
-        let want: IpAddr = "85.170.254.0".parse().unwrap();
-        assert_eq!(want, got, "valid ipv4 prefix");
-
-        let got = strip_host(&"1200:5555:aaaa:aaaa:aaaa:aaaa:5555:aaaa".parse().unwrap(), 57);
-        let want: IpAddr = "1200:5555:aaaa:aa80:0:0:0:0".parse().unwrap();
-        assert_eq!(want, got, "valid ipv6 prefix");
-
-        let got = strip_host(&"85.170.170.85".parse().unwrap(), 58);
-        let want: IpAddr = "85.170.170.85".parse().unwrap();
-        assert_eq!(want, got, "invalid ipv4 prefix");
-
-        let got = strip_host(&"1200:0:0:0:aaaa:5555:aaaa:5555".parse().unwrap(), 129);
-        let want: IpAddr = "1200:0:0:0:aaaa:5555:aaaa:5555".parse().unwrap();
-        assert_eq!(want, got, "invalid ipv6 prefix");
-
-        let got = strip_host(&"85.170.170.85".parse().unwrap(), 0);
-        let want: IpAddr = "0.0.0.0".parse().unwrap();
-        assert_eq!(want, got, "ipv4 prefix 0");
-
-        let got = strip_host(&"1200:0:0:0:aaaa:5555:aaaa:5555".parse().unwrap(), 0);
-        let want: IpAddr = "::".parse().unwrap();
-        assert_eq!(want, got, "ipv6 prefix 0");
-    }
-
-    #[test]
-    fn test_is_in_same_subnet() {
-        let address = LifIpAddr { address: "1.2.3.26".parse().unwrap(), prefix: 27 };
-        assert!(address.is_in_same_subnet(&"1.2.3.26".parse().unwrap()));
-        assert!(address.is_in_same_subnet(&"1.2.3.30".parse().unwrap()));
-        assert!(!address.is_in_same_subnet(&"1.2.3.32".parse().unwrap()));
-        let address = LifIpAddr {
-            address: "2401:fa00:480:16:1295:6946:837:373a".parse().unwrap(),
-            prefix: 58,
-        };
-        assert!(address.is_in_same_subnet(&"2401:fa00:480:16:1295:6946:837:373a".parse().unwrap()));
-        assert!(address.is_in_same_subnet(&"2401:fa00:480:16:2345:6946:837:373a".parse().unwrap()));
-        assert!(address.is_in_same_subnet(&"2401:fa00:480:26:1295:6946:837:373a".parse().unwrap()));
-        assert!(!address.is_in_same_subnet(&"2401:fa00:480:46:2345:6946:837:373a".parse().unwrap()));
+        assert_eq!(fidl_fuchsia_net::Subnet::from(&lifip), expected_subnet);
     }
 }

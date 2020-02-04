@@ -13,10 +13,10 @@
 // TODO(dpradilla): remove allow
 #![allow(dead_code)]
 
-use crate::hal::PortId;
-use crate::lifmgr::{LifIpAddr, LIF};
-use crate::{error, UUID};
-use std::collections::HashSet;
+use {
+    crate::{address::LifIpAddr, error, hal::PortId, lifmgr::LIF, UUID},
+    std::collections::HashSet,
+};
 
 pub struct NatConfig {
     pub enable: bool,
@@ -127,7 +127,8 @@ impl Manager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lifmgr::{LIFType, LifIpAddr, LIF};
+    use crate::address::LifIpAddr;
+    use crate::lifmgr::{LIFType, LIF};
     use crate::portmgr::PortId;
     use crate::portmgr::{Port, PortManager};
 
