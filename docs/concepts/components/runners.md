@@ -111,7 +111,7 @@ declare a runner capability in its component manifest, as follows:
         "from": "self",
 
         // Path to the service in our outgoing directory.
-        "path": "/svc/fuchsia.io.ComponentRunner",
+        "path": "/svc/fuchsia.sys2.ComponentRunner",
     }],
 }
 ```
