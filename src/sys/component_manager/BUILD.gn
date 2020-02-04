@@ -25,6 +25,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/cm_fidl_validator",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -146,6 +147,7 @@ test_package("component_manager_tests") {
   deps = [
     ":lib_test",
     "//examples/components/basic:hello_world_bin",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",
   ]

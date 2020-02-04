@@ -4,7 +4,7 @@
 
 library fuchsia.session;
 
-using fuchsia.sys2;
+using fuchsia.url;
 
 /// A protocol used to launch sessions.
 [Discoverable]
@@ -28,5 +28,5 @@ enum LaunchSessionError {
 /// Describes a session to launch.
 table SessionConfiguration {
     /// The component URL of the session.
-    1: string:fuchsia.sys2.MAX_URL_LENGTH session_url;
+    1: string:fuchsia.url.MAX_URL_LENGTH session_url;
 };

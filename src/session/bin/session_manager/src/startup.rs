@@ -5,7 +5,7 @@
 use {
     crate::cobalt,
     argh::FromArgs,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx, realm_management,
     serde_derive::{Deserialize, Serialize},
@@ -36,13 +36,13 @@ pub enum StartupError {
     RealmConnection,
 
     #[error("Existing session not destroyed at \"{}/{}\": {:?}", collection, name, err)]
-    NotDestroyed { name: String, collection: String, err: fsys::Error },
+    NotDestroyed { name: String, collection: String, err: fcomponent::Error },
 
     #[error("Session {} not created at \"{}/{}\": {:?}", url, collection, name, err)]
-    NotCreated { name: String, collection: String, url: String, err: fsys::Error },
+    NotCreated { name: String, collection: String, url: String, err: fcomponent::Error },
 
     #[error("Session {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
-    NotBound { name: String, collection: String, url: String, err: fsys::Error },
+    NotBound { name: String, collection: String, url: String, err: fcomponent::Error },
 }
 
 /// The name of the session child component.
@@ -123,12 +123,12 @@ pub async fn launch_session(session_url: &str) -> Result<(), StartupError> {
 async fn set_session(session_url: &str, realm: fsys::RealmProxy) -> Result<(), StartupError> {
     realm_management::destroy_child_component(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
         .await
-        .or_else(|err: fsys::Error| match err {
+        .or_else(|err: fcomponent::Error| match err {
             // Since the intent is simply to clear out the existing session child if it exists,
             // related errors are disregarded.
-            fsys::Error::InvalidArguments
-            | fsys::Error::InstanceNotFound
-            | fsys::Error::CollectionNotFound => Ok(()),
+            fcomponent::Error::InvalidArguments
+            | fcomponent::Error::InstanceNotFound
+            | fcomponent::Error::CollectionNotFound => Ok(()),
             _ => Err(err),
         })
         .map_err(|err| StartupError::NotDestroyed {

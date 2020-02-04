@@ -4,11 +4,13 @@
 
 library fuchsia.sys2;
 
+using fuchsia.component;
+
 /// Statically declares a component instance collection.
 table CollectionDecl {
     /// The name of the collection. Instances created in the collection are
     /// scoped to this name.
-    1: collection_name name;
+    1: fuchsia.component.collection_name name;
 
     /// The durability of instances in the collection.
     2: Durability durability;
@@ -16,9 +18,9 @@ table CollectionDecl {
 
 /// The durability of component instances created in a collection.
 enum Durability {
-  /// An instance exists until either it or its parent is destroyed.
-  PERSISTENT = 1;
-  /// An instance exists until either its parent instance is stopped
-  /// or it is explicitly destroyed.
-  TRANSIENT = 2;
+    /// An instance exists until either it or its parent is destroyed.
+    PERSISTENT = 1;
+    /// An instance exists until either its parent instance is stopped
+    /// or it is explicitly destroyed.
+    TRANSIENT = 2;
 };

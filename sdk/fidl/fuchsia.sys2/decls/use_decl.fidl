@@ -5,6 +5,7 @@
 library fuchsia.sys2;
 
 using fuchsia.io2;
+using fuchsia.component;
 
 /// Declares a capability used by a component, which was offered to the
 /// component's environment.
@@ -30,13 +31,13 @@ table UseServiceDecl {
     /// component.
     ///
     /// Must be an absolute path starting with /.
-    2: string:MAX_PATH_LENGTH source_path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    3: string:MAX_PATH_LENGTH target_path;
+    3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a legacy service used by a component, which was offered to the
@@ -51,13 +52,13 @@ table UseProtocolDecl {
 
     /// Path identifying the legacy service, by which it was presented to this
     /// component.
-    2: string:MAX_PATH_LENGTH source_path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    3: string:MAX_PATH_LENGTH target_path;
+    3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a directory used by a component, which was offered to the
@@ -69,19 +70,19 @@ table UseDirectoryDecl {
 
     /// Path identifying the directory, by which it was presented to this
     /// component.
-    2: string:MAX_PATH_LENGTH source_path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    3: string:MAX_PATH_LENGTH target_path;
+    3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 
     /// The rights required by the component to use this directory.
     4: fuchsia.io2.Rights rights;
 
     /// The subdirectory of this directory to use instead of the root. Optional.
-    5: string:MAX_PATH_LENGTH subdir;
+    5: string:fuchsia.component.MAX_PATH_LENGTH subdir;
 };
 
 /// Declares storage used by a component, which was offered to the component's
@@ -94,7 +95,7 @@ table UseStorageDecl {
     /// namespace. Must not be set if `type` is `META`.
     ///
     /// Must be an absolute path starting with /.
-    2: string:MAX_PATH_LENGTH target_path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a runner used by a component, which was offered to the component's
@@ -102,5 +103,5 @@ table UseStorageDecl {
 table UseRunnerDecl {
     /// The name of the runner, as it was presented to this component by the
     /// realm.
-    1: runner_name source_name;
+    1: fuchsia.component.runner_name source_name;
 };

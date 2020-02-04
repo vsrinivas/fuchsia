@@ -4,18 +4,21 @@
 
 library fuchsia.sys2;
 
+using fuchsia.component;
+using fuchsia.url;
+
 /// Statically declares a child component instance.
 table ChildDecl {
     /// The name assigned to the child by its parent.
     ///
     /// Must be non-empty, unique among all siblings, and contain only the
     /// following characters: [a-z0-9-_.].
-    1: child_name name;
+    1: fuchsia.component.child_name name;
 
     /// The child component's URL.
     ///
     /// Must be non-empty and a well-formed URL.
-    2: string:MAX_URL_LENGTH url;
+    2: fuchsia.url.Url url;
 
     /// The startup mode for the component instance.
     3: StartupMode startup;

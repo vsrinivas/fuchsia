@@ -4,6 +4,8 @@
 
 library fuchsia.sys2;
 
+using fuchsia.component;
+
 /// A reference to a capability source or destination relative to this
 /// component.
 xunion Ref {
@@ -28,21 +30,21 @@ struct ChildRef {
     /// The name assigned to the child by its parent. If `collection` is set,
     /// `name` is scoped to `collection` and the child is a dynamic instance.
     /// Required.
-    child_name name;
+    fuchsia.component.child_name name;
     /// The collection `name` belongs to. If omitted, `name` references a static
     /// instance. This field must be omitted if the `ChildRef` is being used in
     /// a component declaration. Optional.
-    collection_name? collection;
+    fuchsia.component.collection_name? collection;
 };
 
 /// A reference to one of the component's collections.
 struct CollectionRef {
-    collection_name name;
+    fuchsia.component.collection_name name;
 };
 
 /// A reference to one of the component's storage sections.
 struct StorageRef {
-    string:MAX_STORAGE_NAME_LENGTH name;
+    string:fuchsia.component.MAX_STORAGE_NAME_LENGTH name;
 };
 
 /// A reference to the component framework itself.

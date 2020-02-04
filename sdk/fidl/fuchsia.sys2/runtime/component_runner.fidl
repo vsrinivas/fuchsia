@@ -6,6 +6,7 @@ library fuchsia.sys2;
 
 using fuchsia.data;
 using fuchsia.io;
+using fuchsia.component;
 
 /// An interface for running components.
 ///
@@ -43,7 +44,7 @@ protocol ComponentRunner {
     ///    resources.
     /// - `INTERNAL`: An unexpected internal runner error was encountered.
     Start(ComponentStartInfo start_info,
-          request<ComponentController> controller) -> () error Error;
+          request<ComponentController> controller) -> () error fuchsia.component.Error;
 };
 
 /// Parameters for starting a new component instance.

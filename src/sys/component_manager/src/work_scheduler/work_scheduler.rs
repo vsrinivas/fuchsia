@@ -22,7 +22,7 @@ use {
         work_scheduler::{delegate::WorkSchedulerDelegate, dispatcher::RealDispatcher},
     },
     cm_rust::{CapabilityPath, ComponentDecl},
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
     lazy_static::lazy_static,
     std::{
@@ -72,7 +72,7 @@ impl WorkScheduler {
         target_moniker: &AbsoluteMoniker,
         work_id: &'a str,
         work_request: &'a fsys::WorkRequest,
-    ) -> Result<(), fsys::Error> {
+    ) -> Result<(), fcomponent::Error> {
         let mut delegate = self.delegate.lock().await;
         delegate.schedule_work(
             RealDispatcher::new(target_moniker.clone(), self.binder.clone()),
@@ -103,20 +103,20 @@ impl WorkScheduler {
         &self,
         target_moniker: &AbsoluteMoniker,
         work_id: &str,
-    ) -> Result<(), fsys::Error> {
+    ) -> Result<(), fcomponent::Error> {
         let mut delegate = self.delegate.lock().await;
         delegate
             .cancel_work(RealDispatcher::new(target_moniker.clone(), self.binder.clone()), work_id)
     }
 
     /// `get_batch_period()` interface method is forwarded to delegate.
-    pub async fn get_batch_period(&self) -> Result<i64, fsys::Error> {
+    pub async fn get_batch_period(&self) -> Result<i64, fcomponent::Error> {
         let delegate = self.delegate.lock().await;
         delegate.get_batch_period()
     }
 
     /// `set_batch_period()` interface method is forwarded to delegate.
-    pub async fn set_batch_period(&self, batch_period: i64) -> Result<(), fsys::Error> {
+    pub async fn set_batch_period(&self, batch_period: i64) -> Result<(), fcomponent::Error> {
         let mut delegate = self.delegate.lock().await;
         delegate.set_batch_period(batch_period)
     }
@@ -180,7 +180,7 @@ mod time_tests {
                 work_item::WorkItem,
             },
         },
-        fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
         fuchsia_async::{Executor, Time, WaitState},
         futures::{executor::block_on, future::BoxFuture, lock::Mutex, Future},
         std::sync::Arc,
@@ -236,7 +236,7 @@ mod time_tests {
             abs_moniker: &AbsoluteMoniker,
             work_id: &'a str,
             work_request: &'a fsys::WorkRequest,
-        ) -> Result<(), fsys::Error> {
+        ) -> Result<(), fcomponent::Error> {
             let mut delegate = self.delegate.lock().await;
             delegate.schedule_work(Arc::new(abs_moniker.clone()), work_id, work_request)
         }
@@ -246,7 +246,7 @@ mod time_tests {
             dispatcher: Arc<CountingDispatcher>,
             work_id: &'a str,
             work_request: &'a fsys::WorkRequest,
-        ) -> Result<(), fsys::Error> {
+        ) -> Result<(), fcomponent::Error> {
             let mut delegate = self.delegate.lock().await;
             delegate.schedule_work(dispatcher, work_id, work_request)
         }

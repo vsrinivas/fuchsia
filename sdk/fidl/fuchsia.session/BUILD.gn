@@ -10,5 +10,8 @@ fidl("fuchsia.session") {
     "launcher.fidl",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.sys2" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.data",
+    "//sdk/fidl/fuchsia.url",
+  ]
 }

@@ -5,6 +5,7 @@
 library fuchsia.sys2;
 
 using fuchsia.io;
+using fuchsia.component;
 
 /// A protocol used by a component instance to manage its own realm, such as for
 /// binding to its children.
@@ -38,7 +39,7 @@ protocol Realm {
     ///   starting it.
     /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
     BindChild(ChildRef child,
-              request<fuchsia.io.Directory> exposed_dir) -> () error Error;
+              request<fuchsia.io.Directory> exposed_dir) -> () error fuchsia.component.Error;
 
     /// Creates a child component instance dynamically. When this function
     /// returns successfully, the instance exists, but it may not be running.
@@ -49,7 +50,7 @@ protocol Realm {
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
     /// - `INSTANCE_ALREADY_EXISTS`: `decl.name` already exists in `collection`.
     /// - `NO_SPACE`: Could not allocate storage for the new instance.
-    CreateChild(CollectionRef collection, ChildDecl decl) -> () error Error;
+    CreateChild(CollectionRef collection, ChildDecl decl) -> () error fuchsia.component.Error;
 
     /// Destroys a dynamically-created component instance. When this function
     /// returns, the client should assume the instance no longer exists.
@@ -62,7 +63,7 @@ protocol Realm {
     ///   to a dynamic instance.
     /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
-    DestroyChild(ChildRef child) -> () error Error;
+    DestroyChild(ChildRef child) -> () error fuchsia.component.Error;
 
     /// Returns an iterator that lists all instances in a collection.
     ///
@@ -74,7 +75,7 @@ protocol Realm {
     /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference.
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
     ListChildren(CollectionRef collection, request<ChildIterator> iter) -> ()
-        error Error;
+        error fuchsia.component.Error;
 };
 
 /// A protocol to iterate over the list of children in a realm.

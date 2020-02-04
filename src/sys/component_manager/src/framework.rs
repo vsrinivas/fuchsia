@@ -19,6 +19,7 @@ use {
     cm_fidl_validator,
     cm_rust::{CapabilityPath, FidlIntoNative},
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
@@ -153,18 +154,20 @@ impl RealmCapabilityHostInner {
         realm: Arc<Realm>,
         collection: fsys::CollectionRef,
         child_decl: fsys::ChildDecl,
-    ) -> Result<(), fsys::Error> {
+    ) -> Result<(), fcomponent::Error> {
         cm_fidl_validator::validate_child(&child_decl)
-            .map_err(|_| fsys::Error::InvalidArguments)?;
+            .map_err(|_| fcomponent::Error::InvalidArguments)?;
         let child_decl = child_decl.fidl_into_native();
         Realm::add_dynamic_child(&realm, collection.name, &child_decl).await.map_err(
             |e| match e {
-                ModelError::InstanceAlreadyExists { .. } => fsys::Error::InstanceAlreadyExists,
-                ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
-                ModelError::Unsupported { .. } => fsys::Error::Unsupported,
+                ModelError::InstanceAlreadyExists { .. } => {
+                    fcomponent::Error::InstanceAlreadyExists
+                }
+                ModelError::CollectionNotFound { .. } => fcomponent::Error::CollectionNotFound,
+                ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
                 e => {
                     error!("add_dynamic_child() failed: {:?}", e);
-                    fsys::Error::Internal
+                    fcomponent::Error::Internal
                 }
             },
         )?;
@@ -176,16 +179,16 @@ impl RealmCapabilityHostInner {
         realm: Arc<Realm>,
         child: fsys::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
-    ) -> Result<(), fsys::Error> {
+    ) -> Result<(), fcomponent::Error> {
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
         Realm::resolve_decl(&realm).await.map_err(|e| match e {
             ModelError::ResolverError { err } => {
                 debug!("failed to resolve: {:?}", err);
-                fsys::Error::InstanceCannotResolve
+                fcomponent::Error::InstanceCannotResolve
             }
             e => {
                 error!("resolve_decl() failed: {}", e);
-                fsys::Error::Internal
+                fcomponent::Error::Internal
             }
         })?;
         let child_realm = {
@@ -200,25 +203,25 @@ impl RealmCapabilityHostInner {
                 .map_err(|e| match e {
                     ModelError::ResolverError { err } => {
                         debug!("failed to resolve child: {:?}", err);
-                        fsys::Error::InstanceCannotResolve
+                        fcomponent::Error::InstanceCannotResolve
                     }
                     ModelError::RunnerError { err } => {
                         debug!("failed to start child: {:?}", err);
-                        fsys::Error::InstanceCannotStart
+                        fcomponent::Error::InstanceCannotStart
                     }
                     e => {
                         error!("bind() failed: {:?}", e);
-                        fsys::Error::Internal
+                        fcomponent::Error::Internal
                     }
                 })?
                 .open_exposed(exposed_dir.into_channel())
                 .await
                 .map_err(|e| {
                     error!("open_exposed() failed: {:?}", e);
-                    fsys::Error::Internal
+                    fcomponent::Error::Internal
                 })?;
         } else {
-            return Err(fsys::Error::InstanceNotFound);
+            return Err(fcomponent::Error::InstanceNotFound);
         }
         Ok(())
     }
@@ -227,17 +230,19 @@ impl RealmCapabilityHostInner {
         model: Arc<Model>,
         realm: Arc<Realm>,
         child: fsys::ChildRef,
-    ) -> Result<(), fsys::Error> {
-        child.collection.as_ref().ok_or(fsys::Error::InvalidArguments)?;
+    ) -> Result<(), fcomponent::Error> {
+        child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
         let _ =
             Realm::remove_dynamic_child(model, realm, &partial_moniker).await.map_err(
                 |e| match e {
-                    ModelError::InstanceNotFoundInRealm { .. } => fsys::Error::InstanceNotFound,
-                    ModelError::Unsupported { .. } => fsys::Error::Unsupported,
+                    ModelError::InstanceNotFoundInRealm { .. } => {
+                        fcomponent::Error::InstanceNotFound
+                    }
+                    ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
                     e => {
                         error!("remove_dynamic_child() failed: {:?}", e);
-                        fsys::Error::Internal
+                        fcomponent::Error::Internal
                     }
                 },
             )?;
@@ -249,17 +254,17 @@ impl RealmCapabilityHostInner {
         realm: Arc<Realm>,
         collection: fsys::CollectionRef,
         iter: ServerEnd<fsys::ChildIteratorMarker>,
-    ) -> Result<(), fsys::Error> {
+    ) -> Result<(), fcomponent::Error> {
         Realm::resolve_decl(&realm).await.map_err(|e| {
             error!("resolve_decl() failed: {:?}", e);
-            fsys::Error::Internal
+            fcomponent::Error::Internal
         })?;
         let state = realm.lock_state().await;
         let state = state.as_ref().expect("list_children: not resolved");
         let decl = state.decl();
         let _ = decl
             .find_collection(&collection.name)
-            .ok_or_else(|| fsys::Error::CollectionNotFound)?;
+            .ok_or_else(|| fcomponent::Error::CollectionNotFound)?;
         let mut children: Vec<_> = state
             .live_child_realms()
             .filter_map(|(m, _)| match m.collection() {
@@ -538,7 +543,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InvalidArguments);
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
         }
 
         // Instance already exists.
@@ -553,7 +558,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InstanceAlreadyExists);
+            assert_eq!(err, fcomponent::Error::InstanceAlreadyExists);
         }
 
         // Collection not found.
@@ -565,7 +570,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::CollectionNotFound);
+            assert_eq!(err, fcomponent::Error::CollectionNotFound);
         }
 
         // Unsupported.
@@ -577,7 +582,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::Unsupported);
+            assert_eq!(err, fcomponent::Error::Unsupported);
         }
         {
             let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -592,7 +597,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::Unsupported);
+            assert_eq!(err, fcomponent::Error::Unsupported);
         }
     }
 
@@ -765,7 +770,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InvalidArguments);
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
         }
 
         // Instance not found.
@@ -778,7 +783,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InstanceNotFound);
+            assert_eq!(err, fcomponent::Error::InstanceNotFound);
         }
     }
 
@@ -942,7 +947,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InstanceNotFound);
+            assert_eq!(err, fcomponent::Error::InstanceNotFound);
         }
 
         // Instance cannot start.
@@ -955,7 +960,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InstanceCannotStart);
+            assert_eq!(err, fcomponent::Error::InstanceCannotStart);
         }
 
         // Instance cannot resolve.
@@ -969,7 +974,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::InstanceCannotResolve);
+            assert_eq!(err, fcomponent::Error::InstanceCannotResolve);
         }
     }
 
@@ -1072,7 +1077,7 @@ mod tests {
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
-            assert_eq!(err, fsys::Error::CollectionNotFound);
+            assert_eq!(err, fcomponent::Error::CollectionNotFound);
         }
     }
 }

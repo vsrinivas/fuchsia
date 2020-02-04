@@ -5,6 +5,7 @@
 library fuchsia.sys2;
 
 using zx;
+using fuchsia.component;
 
 const uint32 MAX_WORK_ID_LENGTH = 100;
 using WorkId = string:MAX_WORK_ID_LENGTH;
@@ -41,10 +42,10 @@ protocol WorkScheduler {
     /// Schedule a new work item identified by `work_id`. The work item is to be scheduled roughly
     /// at the time corresponding to `work_request.start`. When `work_request.period` is specified,
     /// reschedule work roughly every `work_request.period` until the the work item is canceled.
-    ScheduleWork(WorkId work_id, WorkRequest work_request) -> () error Error;
+    ScheduleWork(WorkId work_id, WorkRequest work_request) -> () error fuchsia.component.Error;
 
     /// Cancel the scheduled work item specified by `work_id`.
-    CancelWork(WorkId work_id) -> () error Error;
+    CancelWork(WorkId work_id) -> () error fuchsia.component.Error;
 };
 
 /// Component-exposed service: Work scheduler connects to this service to invoke scheduled work item
@@ -55,7 +56,7 @@ protocol WorkScheduler {
 /// provider (i.e., the framework) and no one else.
 [Discoverable]
 protocol Worker {
-    DoWork(WorkId work_id) -> () error Error;
+    DoWork(WorkId work_id) -> () error fuchsia.component.Error;
 };
 
 /// Framework service: Administrative API for controlling parameters of the `WorkScheduler`
@@ -70,9 +71,9 @@ protocol WorkSchedulerControl {
     /// Get the current period between `WorkScheduler` attempts to dispatch a batch of work.
     /// `batch_period` is a non-negative 64-bit integer in the range [0, 2^63-1], representing a
     /// number of nanoseconds between dispatching batches of work.
-    GetBatchPeriod() -> (zx.duration batch_period) error Error;
+    GetBatchPeriod() -> (zx.duration batch_period) error fuchsia.component.Error;
     /// Set the current period between `WorkScheduler` attempts to batch and dispatch a batch of
     /// work. `batch_period` is a non-negative 64-bit integer in the range [0, 2^63-1], representing
     /// a number of nanoseconds between dispatching batches of work.
-    SetBatchPeriod(zx.duration batch_period) -> () error Error;
+    SetBatchPeriod(zx.duration batch_period) -> () error fuchsia.component.Error;
 };

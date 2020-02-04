@@ -4,6 +4,8 @@
 
 library fuchsia.sys2;
 
+using fuchsia.component;
+
 /// The type of storage offered by this component.
 enum StorageType {
     /// General data storage.
@@ -21,7 +23,7 @@ enum StorageType {
 /// or meta storage can be offered.
 table StorageDecl {
     /// The name of this storage
-    1: string:MAX_STORAGE_NAME_LENGTH name;
+    1: string:fuchsia.component.MAX_STORAGE_NAME_LENGTH name;
 
     /// The provider of the underlying directory capability relative to the
     /// component itself. Must be `realm`, `self`, or `child`.
@@ -30,5 +32,5 @@ table StorageDecl {
     /// The incoming path to the directory capability. If "source == SELF", this
     /// is a path in the component's outgoing directory. Otherwise, it is the
     /// path by which the capability was presented to the component.
-    3: string:MAX_PATH_LENGTH source_path;
+    3: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 };

@@ -128,6 +128,7 @@ mod tests {
             self, CapabilityName, ChildDecl, ComponentDecl, OfferDecl, OfferRunnerDecl,
             OfferRunnerSource, OfferTarget, UseDecl, UseRunnerDecl,
         },
+        fidl_fuchsia_component as fcomponent,
         futures::lock::Mutex,
         matches::assert_matches,
     };
@@ -209,7 +210,7 @@ mod tests {
                 fidl::endpoints::create_endpoints::<fsys::ComponentControllerMarker>()?;
             assert_matches!(
                 client.start(sample_start_info("xxx://failing"), server_controller).await.unwrap(),
-                Err(fsys::Error::InstanceCannotStart)
+                Err(fcomponent::Error::InstanceCannotStart)
             );
         }
 

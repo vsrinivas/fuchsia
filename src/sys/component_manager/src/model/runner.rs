@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     clonable_error::ClonableError,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::{future::BoxFuture, stream::TryStreamExt},
     thiserror::Error,
 };
@@ -81,15 +81,15 @@ impl RunnerError {
         RunnerError::RunnerConnectionError { err: err.into().into() }
     }
 
-    /// Convert this error into its approximate fsys::Error equivalent.
-    pub fn as_fidl_error(&self) -> fsys::Error {
+    /// Convert this error into its approximate fcomponent::Error equivalent.
+    pub fn as_fidl_error(&self) -> fcomponent::Error {
         match self {
-            RunnerError::InvalidArgs { .. } => fsys::Error::InvalidArguments,
-            RunnerError::ComponentLoadError { .. } => fsys::Error::InstanceCannotStart,
-            RunnerError::ComponentLaunchError { .. } => fsys::Error::InstanceCannotStart,
-            RunnerError::ComponentRuntimeDirectoryError { .. } => fsys::Error::Internal,
-            RunnerError::RunnerConnectionError { .. } => fsys::Error::Internal,
-            RunnerError::Unsupported { .. } => fsys::Error::Unsupported,
+            RunnerError::InvalidArgs { .. } => fcomponent::Error::InvalidArguments,
+            RunnerError::ComponentLoadError { .. } => fcomponent::Error::InstanceCannotStart,
+            RunnerError::ComponentLaunchError { .. } => fcomponent::Error::InstanceCannotStart,
+            RunnerError::ComponentRuntimeDirectoryError { .. } => fcomponent::Error::Internal,
+            RunnerError::RunnerConnectionError { .. } => fcomponent::Error::Internal,
+            RunnerError::Unsupported { .. } => fcomponent::Error::Unsupported,
         }
     }
 }
@@ -138,9 +138,9 @@ fn spawn_null_controller_server(mut request_stream: fsys::ComponentControllerReq
     });
 }
 
-/// Wrapper for converting fsys::Error into the anyhow::Error type.
+/// Wrapper for converting fcomponent::Error into the anyhow::Error type.
 #[derive(Debug, Clone, Error)]
-pub struct RemoteRunnerError(pub fsys::Error);
+pub struct RemoteRunnerError(pub fcomponent::Error);
 
 impl std::fmt::Display for RemoteRunnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -150,8 +150,8 @@ impl std::fmt::Display for RemoteRunnerError {
     }
 }
 
-impl std::convert::From<fsys::Error> for RemoteRunnerError {
-    fn from(error: fsys::Error) -> RemoteRunnerError {
+impl std::convert::From<fcomponent::Error> for RemoteRunnerError {
+    fn from(error: fcomponent::Error) -> RemoteRunnerError {
         RemoteRunnerError(error)
     }
 }

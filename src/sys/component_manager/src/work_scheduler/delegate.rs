@@ -13,7 +13,7 @@ use {
         },
     },
     cm_rust::ComponentDecl,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     fuchsia_async::{self as fasync, Time},
     futures::lock::Mutex,
     std::{
@@ -88,12 +88,12 @@ impl WorkSchedulerDelegate {
         dispatcher: Arc<dyn Dispatcher>,
         work_id: &str,
         work_request: &fsys::WorkRequest,
-    ) -> Result<(), fsys::Error> {
+    ) -> Result<(), fcomponent::Error> {
         let work_items = &mut self.work_items;
         let work_item = WorkItem::try_new(dispatcher, work_id, work_request)?;
 
         if work_items.contains(&work_item) {
-            return Err(fsys::Error::InstanceAlreadyExists);
+            return Err(fcomponent::Error::InstanceAlreadyExists);
         }
 
         work_items.push(work_item);
@@ -109,7 +109,7 @@ impl WorkSchedulerDelegate {
         &mut self,
         dispatcher: Arc<dyn Dispatcher>,
         work_id: &str,
-    ) -> Result<(), fsys::Error> {
+    ) -> Result<(), fcomponent::Error> {
         let work_items = &mut self.work_items;
         let work_item = WorkItem::new_by_identity(dispatcher, work_id);
 
@@ -122,7 +122,7 @@ impl WorkSchedulerDelegate {
         });
 
         if !found {
-            return Err(fsys::Error::InstanceNotFound);
+            return Err(fcomponent::Error::InstanceNotFound);
         }
 
         self.update_timeout();
@@ -131,7 +131,7 @@ impl WorkSchedulerDelegate {
     }
 
     /// `fuchsia.sys2.WorkSchedulerControl.GetBatchPeriod` FIDL protocol method implementation.
-    pub(super) fn get_batch_period(&self) -> Result<i64, fsys::Error> {
+    pub(super) fn get_batch_period(&self) -> Result<i64, fcomponent::Error> {
         match self.batch_period {
             Some(batch_period) => Ok(batch_period),
             // TODO(markdittmer): GetBatchPeriod Ok case should probably return Option<i64> to
@@ -141,9 +141,9 @@ impl WorkSchedulerDelegate {
     }
 
     /// `fuchsia.sys2.WorkSchedulerControl.SetBatchPeriod` FIDL protocol method implementation.
-    pub(super) fn set_batch_period(&mut self, batch_period: i64) -> Result<(), fsys::Error> {
+    pub(super) fn set_batch_period(&mut self, batch_period: i64) -> Result<(), fcomponent::Error> {
         if batch_period <= 0 {
-            return Err(fsys::Error::InvalidArguments);
+            return Err(fcomponent::Error::InvalidArguments);
         }
 
         if batch_period != std::i64::MAX {
@@ -340,7 +340,7 @@ mod tests {
                 work_item::WorkItem,
             },
         },
-        fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
         futures::future::BoxFuture,
         std::sync::Arc,
     };
@@ -371,7 +371,7 @@ mod tests {
             component_id: &str,
             work_id: &str,
             work_request: &fsys::WorkRequest,
-        ) -> Result<(), fsys::Error> {
+        ) -> Result<(), fcomponent::Error> {
             self.schedule_work(dispatcher(component_id), work_id, work_request)
         }
 
@@ -379,7 +379,7 @@ mod tests {
             &mut self,
             component_id: &str,
             work_id: &str,
-        ) -> Result<(), fsys::Error> {
+        ) -> Result<(), fcomponent::Error> {
             self.cancel_work(Arc::new(AbsoluteMoniker::from(vec![component_id])), work_id)
         }
 
@@ -387,13 +387,13 @@ mod tests {
             &self,
             component_id: &str,
             work_id: &str,
-        ) -> Result<(i64, Option<i64>), fsys::Error> {
+        ) -> Result<(i64, Option<i64>), fcomponent::Error> {
             let abs_moniker: AbsoluteMoniker = vec![component_id].into();
             match self.work_items.iter().find(|work_item| {
                 work_item.dispatcher.abs_moniker() == &abs_moniker && work_item.id == work_id
             }) {
                 Some(work_item) => Ok((work_item.next_deadline_monotonic, work_item.period)),
-                None => Err(fsys::Error::InstanceNotFound),
+                None => Err(fcomponent::Error::InstanceNotFound),
             }
         }
     }
@@ -435,12 +435,12 @@ mod tests {
             work_scheduler.get_work_status(a, "EACH_SECOND")
         );
         assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
+            Err(fcomponent::Error::InstanceNotFound),
             work_scheduler.get_work_status(a, "IN_AN_HOUR")
         );
 
         assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
+            Err(fcomponent::Error::InstanceNotFound),
             work_scheduler.get_work_status(b, "NOW_ONCE")
         );
         assert_eq!(
@@ -454,7 +454,7 @@ mod tests {
 
         assert_eq!(Ok((FAKE_MONOTONIC_TIME, None)), work_scheduler.get_work_status(c, "NOW_ONCE"));
         assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
+            Err(fcomponent::Error::InstanceNotFound),
             work_scheduler.get_work_status(c, "EACH_SECOND")
         );
         assert_eq!(
@@ -467,7 +467,7 @@ mod tests {
         assert_eq!(Ok(()), work_scheduler.cancel_work_item(a, "NOW_ONCE"));
 
         assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
+            Err(fcomponent::Error::InstanceNotFound),
             work_scheduler.get_work_status(a, "NOW_ONCE")
         );
         assert_eq!(
@@ -475,12 +475,12 @@ mod tests {
             work_scheduler.get_work_status(a, "EACH_SECOND")
         );
         assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
+            Err(fcomponent::Error::InstanceNotFound),
             work_scheduler.get_work_status(a, "IN_AN_HOUR")
         );
 
         assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
+            Err(fcomponent::Error::InstanceNotFound),
             work_scheduler.get_work_status(b, "NOW_ONCE")
         );
         assert_eq!(
@@ -494,7 +494,7 @@ mod tests {
 
         assert_eq!(Ok((FAKE_MONOTONIC_TIME, None)), work_scheduler.get_work_status(c, "NOW_ONCE"));
         assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
+            Err(fcomponent::Error::InstanceNotFound),
             work_scheduler.get_work_status(c, "EACH_SECOND")
         );
         assert_eq!(
@@ -559,7 +559,7 @@ mod tests {
     #[test]
     fn work_scheduler_batch_period_error() {
         let mut work_scheduler = WorkSchedulerDelegate::new_raw();
-        assert_eq!(Err(fsys::Error::InvalidArguments), work_scheduler.set_batch_period(0));
-        assert_eq!(Err(fsys::Error::InvalidArguments), work_scheduler.set_batch_period(-1))
+        assert_eq!(Err(fcomponent::Error::InvalidArguments), work_scheduler.set_batch_period(0));
+        assert_eq!(Err(fcomponent::Error::InvalidArguments), work_scheduler.set_batch_period(-1))
     }
 }

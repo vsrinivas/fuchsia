@@ -4,7 +4,7 @@
 
 library fuchsia.test.manager;
 
-using fuchsia.sys2;
+using fuchsia.url;
 
 /// Runs test that implements the `fuchsia.test.Suite` protocol
 /// (either directly or via a runner adapter). The test must be a
@@ -13,7 +13,7 @@ using fuchsia.sys2;
 /// Designed to be used by run_test_suite to execute v2 tests.
 [Discoverable]
 protocol Harness {
-    RunSuite(string:fuchsia.sys2.MAX_URL_LENGTH suite_url, handle<socket> logger) -> (Outcome outcome);
+    RunSuite(fuchsia.url.Url suite_url, handle<socket> logger) -> (Outcome outcome);
 };
 
 /// Outcome of running the suite.

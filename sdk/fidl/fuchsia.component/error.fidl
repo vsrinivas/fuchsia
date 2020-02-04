@@ -1,0 +1,30 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.component;
+
+/// Standard error codes for component framework protocols.
+enum Error {
+    /// Component manager encountered an otherwise unspecified error while
+    /// performing the operation.
+    INTERNAL = 1;
+    /// At least one argument had an invalid format.
+    INVALID_ARGUMENTS = 2;
+    /// The feature is not yet supported.
+    UNSUPPORTED = 3;
+    /// The component instance was not found.
+    INSTANCE_NOT_FOUND = 4;
+    /// The component instance already exists.
+    INSTANCE_ALREADY_EXISTS = 5;
+    /// The component instance could not be started.
+    INSTANCE_CANNOT_START = 6;
+    /// Failed to resolve the component's declaration.
+    INSTANCE_CANNOT_RESOLVE = 7;
+    /// The component collection was not found.
+    COLLECTION_NOT_FOUND = 8;
+    /// There was insufficient resources to perform the operation.
+    RESOURCE_UNAVAILABLE = 9;
+    /// The component instance died unexpectedly.
+    INSTANCE_DIED = 10;
+};

@@ -4,15 +4,17 @@
 
 library fuchsia.sys2;
 
+using fuchsia.component;
+
 /// Declares a runner capability backed by a service.
 table RunnerDecl {
     /// The name of this runner.
-    1: runner_name name;
+    1: fuchsia.component.runner_name name;
 
     /// The provider of the underlying service relative to the component itself.
     /// Must be `realm`, `self`, or `child`.
     2: Ref source;
 
     /// The path of the capability within the specified source.
-    3: string:MAX_PATH_LENGTH source_path;
+    3: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 };

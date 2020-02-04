@@ -5,6 +5,7 @@
 library fuchsia.sys2;
 
 using fuchsia.io2;
+using fuchsia.component;
 
 /// Declares a capability offered by a component to one of its children, which
 /// may have been offered by the component's containing realm, the component
@@ -31,7 +32,7 @@ table OfferServiceDecl {
     /// Path identifying the service being offered.
     ///
     /// Must be an absolute path starting with /.
-    2: string:MAX_PATH_LENGTH source_path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 
     /// Reference to the target. Must be `child` or `collection`.
     3: Ref target;
@@ -39,7 +40,7 @@ table OfferServiceDecl {
     /// The path under which the capability is being offered.
     ///
     /// Must be an absolute path starting with /.
-    4: string:MAX_PATH_LENGTH target_path;
+    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a legacy service offered by a component to one of its children,
@@ -54,7 +55,7 @@ table OfferProtocolDecl {
     1: Ref source;
 
     /// Path identifying the legacy service being offered.
-    2: string:MAX_PATH_LENGTH source_path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 
     /// Reference to the target. Must be `child` or `collection`.
     3: Ref target;
@@ -62,7 +63,7 @@ table OfferProtocolDecl {
     /// The path under which the capability is being offered.
     ///
     /// Must be an absolute path starting with /.
-    4: string:MAX_PATH_LENGTH target_path;
+    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a directory offered by a component to one of its children, which
@@ -74,7 +75,7 @@ table OfferDirectoryDecl {
     1: Ref source;
 
     /// Path identifying the directory being offered.
-    2: string:MAX_PATH_LENGTH source_path;
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
 
     /// Reference to the target of the capability. Must be `child` or
     /// `collection`.
@@ -83,13 +84,13 @@ table OfferDirectoryDecl {
     /// The path under which the capability is being offered.
     ///
     /// Must be an absolute path starting with /.
-    4: string:MAX_PATH_LENGTH target_path;
+    4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 
     /// The rights this directory should be offered with, required iff `source == self`.
     5: fuchsia.io2.Rights rights;
 
     /// The subdirectory of this directory to offer instead of the root. Optional.
-    6: string:MAX_PATH_LENGTH subdir;
+    6: string:fuchsia.component.MAX_PATH_LENGTH subdir;
 };
 
 /// Declares a storage capability offered by a component to one of its children,
@@ -116,12 +117,12 @@ table OfferRunnerDecl {
     1: Ref source;
 
     /// Name of the runner being offered.
-    2: runner_name source_name;
+    2: fuchsia.component.runner_name source_name;
 
     /// Reference to the target of the capability. Must be `child` or
     /// `collection`.
     3: Ref target;
 
     /// Name under which the capability is being offered.
-    4: runner_name target_name;
+    4: fuchsia.component.runner_name target_name;
 };

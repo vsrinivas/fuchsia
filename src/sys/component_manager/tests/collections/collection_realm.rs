@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints,
-    fidl_fidl_test_components as ftest,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client,
@@ -76,7 +76,7 @@ async fn main() {
         let res =
             realm.bind_child(&mut child_ref, server_end).await.expect("second bind_child a failed");
         let err = res.expect_err("expected bind_child a to fail");
-        assert_eq!(err, fsys::Error::InstanceNotFound);
+        assert_eq!(err, fcomponent::Error::InstanceNotFound);
     }
 
     println!("{}", list_children(&realm).await.expect("failed to list children"));

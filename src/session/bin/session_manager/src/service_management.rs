@@ -5,8 +5,8 @@
 use {
     crate::startup,
     anyhow::{Context as _, Error},
+    fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_session::{LaunchSessionError, LauncherRequest, LauncherRequestStream},
-    fidl_fuchsia_sys2 as fsys,
     fuchsia_component::server::ServiceFs,
     futures::{StreamExt, TryStreamExt},
 };
@@ -67,7 +67,9 @@ async fn handle_session_manager_request_stream(
                         url: _,
                         err: sys_err,
                     } => match sys_err {
-                        fsys::Error::InstanceCannotResolve => Err(LaunchSessionError::NotFound),
+                        fcomponent::Error::InstanceCannotResolve => {
+                            Err(LaunchSessionError::NotFound)
+                        }
                         _ => Err(LaunchSessionError::Failed),
                     },
                     _ => Err(LaunchSessionError::Failed),

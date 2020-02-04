@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_io::DirectoryMarker, fidl_fuchsia_sys2 as fsys};
+use {
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_sys2 as fsys,
+};
 
 /// Creates a child in the specified `Realm`.
 ///
@@ -19,7 +22,7 @@ pub async fn create_child_component(
     child_url: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
-) -> Result<(), fsys::Error> {
+) -> Result<(), fcomponent::Error> {
     let mut collection_ref = fsys::CollectionRef { name: collection_name.to_string() };
     let child_decl = fsys::ChildDecl {
         name: Some(child_name.to_string()),
@@ -30,7 +33,7 @@ pub async fn create_child_component(
     realm
         .create_child(&mut collection_ref, child_decl)
         .await
-        .map_err(|_| fsys::Error::Internal)??;
+        .map_err(|_| fcomponent::Error::Internal)??;
 
     Ok(())
 }
@@ -49,15 +52,18 @@ pub async fn bind_child_component(
     child_name: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
-) -> Result<(), fsys::Error> {
+) -> Result<(), fcomponent::Error> {
     let mut child_ref = fsys::ChildRef {
         name: child_name.to_string(),
         collection: Some(collection_name.to_string()),
     };
 
-    let (_, server_end) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(|_| fsys::Error::Internal)?;
-    realm.bind_child(&mut child_ref, server_end).await.map_err(|_| fsys::Error::Internal)??;
+    let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
+        .map_err(|_| fcomponent::Error::Internal)?;
+    realm
+        .bind_child(&mut child_ref, server_end)
+        .await
+        .map_err(|_| fcomponent::Error::Internal)??;
 
     Ok(())
 }
@@ -76,13 +82,13 @@ pub async fn destroy_child_component(
     child_name: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
-) -> Result<(), fsys::Error> {
+) -> Result<(), fcomponent::Error> {
     let mut child_ref = fsys::ChildRef {
         name: child_name.to_string(),
         collection: Some(collection_name.to_string()),
     };
 
-    realm.destroy_child(&mut child_ref).await.map_err(|_| fsys::Error::Internal)??;
+    realm.destroy_child(&mut child_ref).await.map_err(|_| fcomponent::Error::Internal)??;
 
     Ok(())
 }
@@ -92,7 +98,7 @@ mod tests {
     use {
         super::{bind_child_component, create_child_component, destroy_child_component},
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
         futures::prelude::*,
     };
 
@@ -167,7 +173,7 @@ mod tests {
     async fn create_child_error() {
         let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
             fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
-                let _ = responder.send(&mut Err(fsys::Error::Internal));
+                let _ = responder.send(&mut Err(fcomponent::Error::Internal));
             }
             _ => {
                 assert!(false);
@@ -220,7 +226,7 @@ mod tests {
     async fn bind_child_error() {
         let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
             fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                let _ = responder.send(&mut Err(fsys::Error::Internal));
+                let _ = responder.send(&mut Err(fcomponent::Error::Internal));
             }
             _ => {
                 assert!(false);

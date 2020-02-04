@@ -4,7 +4,7 @@
 
 use {
     crate::work_scheduler::dispatcher::Dispatcher,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     std::{cmp::Ordering, fmt, sync::Arc},
 };
 
@@ -64,12 +64,12 @@ impl WorkItem {
         dispatcher: Arc<dyn Dispatcher>,
         id: &str,
         work_request: &fsys::WorkRequest,
-    ) -> Result<Self, fsys::Error> {
+    ) -> Result<Self, fcomponent::Error> {
         let next_deadline_monotonic = match &work_request.start {
-            None => Err(fsys::Error::InvalidArguments),
+            None => Err(fcomponent::Error::InvalidArguments),
             Some(start) => match start {
                 fsys::Start::MonotonicTime(monotonic_time) => Ok(monotonic_time),
-                _ => Err(fsys::Error::InvalidArguments),
+                _ => Err(fcomponent::Error::InvalidArguments),
             },
         }?;
         Ok(WorkItem::new(dispatcher, id, *next_deadline_monotonic, work_request.period))

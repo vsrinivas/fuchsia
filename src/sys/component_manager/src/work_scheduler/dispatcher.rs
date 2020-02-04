@@ -7,6 +7,7 @@ use {
         model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_PATH},
     },
+    fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::Channel,
@@ -23,7 +24,7 @@ use {
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("fuchsia.sys2 fidl protocol error: {:?}", 0)]
-    API(fsys::Error),
+    API(fcomponent::Error),
     /// Used in tests to indicate dispatchers that cannot connect to real component instances.
     #[cfg(test)]
     #[error("component is not running")]

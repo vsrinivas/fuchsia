@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.component;
+
+const uint32 MAX_FACET_NAME_LENGTH = 100;
+const uint32 MAX_CHILD_NAME_LENGTH = 100;
+const uint32 MAX_COLLECTION_NAME_LENGTH = 100;
+const uint32 MAX_RUNNER_NAME_LENGTH = 100;
+const uint32 MAX_STORAGE_NAME_LENGTH = 100;
+const uint32 MAX_PATH_LENGTH = 1024;

@@ -9,8 +9,9 @@
 //! calling component.
 
 use {
-    async_trait::async_trait, fidl_fuchsia_session::ElementSpec, fidl_fuchsia_sys::LauncherProxy,
-    fidl_fuchsia_sys2 as fsys, fuchsia_component, realm_management, thiserror::Error,
+    async_trait::async_trait, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_session::ElementSpec, fidl_fuchsia_sys::LauncherProxy, fidl_fuchsia_sys2 as fsys,
+    fuchsia_component, realm_management, thiserror::Error,
 };
 
 /// Errors returned by calls to [`ElementManager`].
@@ -24,12 +25,12 @@ pub enum ElementManagerError {
     /// Returned when the element manager fails to created the component instance associated with
     /// a given element.
     #[error("Element {} not created at \"{}/{}\": {:?}", url, collection, name, err)]
-    NotCreated { name: String, collection: String, url: String, err: fsys::Error },
+    NotCreated { name: String, collection: String, url: String, err: fcomponent::Error },
 
     /// Returned when the element manager fails to bind to the component instance associated with
     /// a given element.
     #[error("Element {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
-    NotBound { name: String, collection: String, url: String, err: fsys::Error },
+    NotBound { name: String, collection: String, url: String, err: fcomponent::Error },
 }
 
 impl ElementManagerError {
@@ -44,7 +45,7 @@ impl ElementManagerError {
         name: impl Into<String>,
         collection: impl Into<String>,
         url: impl Into<String>,
-        err: impl Into<fsys::Error>,
+        err: impl Into<fcomponent::Error>,
     ) -> ElementManagerError {
         ElementManagerError::NotCreated {
             name: name.into(),
@@ -58,7 +59,7 @@ impl ElementManagerError {
         name: impl Into<String>,
         collection: impl Into<String>,
         url: impl Into<String>,
-        err: impl Into<fsys::Error>,
+        err: impl Into<fcomponent::Error>,
     ) -> ElementManagerError {
         ElementManagerError::NotBound {
             name: name.into(),
@@ -155,12 +156,12 @@ pub async fn add_cml_element(
 ) -> Result<(), ElementManagerError> {
     realm_management::create_child_component(&child_name, &child_url, child_collection, &realm)
         .await
-        .map_err(|err: fsys::Error| {
+        .map_err(|err: fcomponent::Error| {
             ElementManagerError::not_created(child_name, child_collection, child_url, err)
         })?;
 
     realm_management::bind_child_component(child_name, child_collection, &realm).await.map_err(
-        |err: fsys::Error| {
+        |err: fcomponent::Error| {
             ElementManagerError::not_bound(child_name, child_collection, child_url, err)
         },
     )?;
@@ -187,7 +188,7 @@ impl ElementManager for SimpleElementManager {
                         child_name,
                         child_collection,
                         child_url.clone(),
-                        fsys::Error::Internal,
+                        fcomponent::Error::Internal,
                     )
                 })?,
             )
@@ -205,6 +206,7 @@ mod tests {
     use {
         super::{ElementManager, ElementManagerError, SimpleElementManager},
         fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_component as fcomponent,
         fidl_fuchsia_session::ElementSpec,
         fidl_fuchsia_sys::{LaunchInfo, LauncherMarker, LauncherProxy, LauncherRequest},
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -457,7 +459,7 @@ mod tests {
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
             fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
-                let _ = responder.send(&mut Err(fsys::Error::Internal));
+                let _ = responder.send(&mut Err(fcomponent::Error::Internal));
             }
             _ => {
                 assert!(false);
@@ -476,7 +478,12 @@ mod tests {
                     "",
                 )
                 .await,
-            Err(ElementManagerError::not_created("", "", component_url, fsys::Error::Internal))
+            Err(ElementManagerError::not_created(
+                "",
+                "",
+                component_url,
+                fcomponent::Error::Internal
+            ))
         );
     }
 
@@ -490,7 +497,7 @@ mod tests {
         // successfully the bind should not be called.
         let realm = spawn_realm_server(move |realm_request| match realm_request {
             fsys::RealmRequest::CreateChild { collection: _, decl: _, responder } => {
-                let _ = responder.send(&mut Err(fsys::Error::NoSpace));
+                let _ = responder.send(&mut Err(fcomponent::Error::ResourceUnavailable));
             }
             _ => {
                 assert!(false);
@@ -509,7 +516,12 @@ mod tests {
                     "",
                 )
                 .await,
-            Err(ElementManagerError::not_created("", "", component_url, fsys::Error::NoSpace))
+            Err(ElementManagerError::not_created(
+                "",
+                "",
+                component_url,
+                fcomponent::Error::ResourceUnavailable
+            ))
         );
     }
 
@@ -526,7 +538,7 @@ mod tests {
                 let _ = responder.send(&mut Ok(()));
             }
             fsys::RealmRequest::BindChild { child: _, exposed_dir: _, responder } => {
-                let _ = responder.send(&mut Err(fsys::Error::InstanceCannotStart));
+                let _ = responder.send(&mut Err(fcomponent::Error::InstanceCannotStart));
             }
             _ => {
                 assert!(false);
@@ -549,7 +561,7 @@ mod tests {
                 "",
                 "",
                 component_url,
-                fsys::Error::InstanceCannotStart
+                fcomponent::Error::InstanceCannotStart
             ))
         );
     }
