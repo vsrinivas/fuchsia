@@ -787,7 +787,7 @@ pub mod capability_util {
         assert_eq!(s, zx::sys::ZX_OK);
         assert_eq!(
             *info.expect("failed to receive node info"),
-            NodeInfo::File(FileObject { event: None })
+            NodeInfo::File(FileObject { event: None, stream: None })
         );
     }
 

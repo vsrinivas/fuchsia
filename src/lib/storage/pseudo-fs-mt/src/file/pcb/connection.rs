@@ -210,7 +210,7 @@ impl FileConnection {
             };
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::File(FileObject { event: None });
+            let mut info = NodeInfo::File(FileObject { event: None, stream: None });
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
@@ -294,7 +294,7 @@ impl FileConnection {
                 return Ok(ConnectionState::Closed);
             }
             FileRequest::Describe { responder } => {
-                let mut info = NodeInfo::File(FileObject { event: None });
+                let mut info = NodeInfo::File(FileObject { event: None, stream: None });
                 responder.send(&mut info)?;
             }
             FileRequest::Sync { responder } => {

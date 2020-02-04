@@ -112,7 +112,7 @@ fn read_only_read_with_describe() {
 
             assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                 assert_eq!(s, ZX_OK);
-                assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None }))));
+                assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))));
             });
         }
     });
@@ -258,7 +258,7 @@ fn read_error() {
 
                 assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                     assert_eq!(s, ZX_OK);
-                    assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None }))));
+                    assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))));
                 });
 
                 assert_read!(proxy, "Have value");

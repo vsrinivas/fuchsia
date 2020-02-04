@@ -85,7 +85,7 @@ async fn open_blob(
     Status::ok(status)?;
 
     let event = match *info.expect("FileEvent to have NodeInfo") {
-        NodeInfo::File(FileObject { event: Some(event) }) => event,
+        NodeInfo::File(FileObject { event: Some(event), stream: None }) => event,
         other => panic!("NodeInfo from FileEventStream to be File variant with event: {:?}", other),
     };
     Ok((file, event))

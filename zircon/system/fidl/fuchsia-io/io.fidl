@@ -43,6 +43,11 @@ struct FileObject {
     ///
     /// The "`FILE_SIGNAL_`" values may be observed on this event.
     handle<event>? event;
+
+    /// A placeholder for future stream support.
+    ///
+    /// Currently, servers are required not to send a handle in this field.
+    handle<stream>? stream;
 };
 
 /// The object may be cast to interface 'Directory'.

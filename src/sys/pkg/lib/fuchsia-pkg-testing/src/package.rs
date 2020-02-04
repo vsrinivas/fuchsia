@@ -240,7 +240,7 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
         }?;
 
         let event = match *info.expect("FileEvent to have NodeInfo") {
-            NodeInfo::File(FileObject { event }) => event,
+            NodeInfo::File(FileObject { event, stream: None }) => event,
             other => {
                 panic!("NodeInfo from FileEventStream to be File variant with event: {:?}", other)
             }

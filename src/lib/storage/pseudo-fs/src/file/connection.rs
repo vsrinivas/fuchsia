@@ -216,7 +216,7 @@ impl FileConnection {
             };
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::File(FileObject { event: None });
+            let mut info = NodeInfo::File(FileObject { event: None, stream: None });
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return None,
@@ -253,7 +253,7 @@ impl FileConnection {
                 panic!("Bug: Close can't be handled by the connection object");
             }
             FileRequest::Describe { responder } => {
-                let mut info = NodeInfo::File(FileObject { event: None });
+                let mut info = NodeInfo::File(FileObject { event: None, stream: None });
                 responder.send(&mut info)?;
             }
             FileRequest::Sync { responder } => {

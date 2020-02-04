@@ -78,7 +78,7 @@ impl NodeKind {
 
     fn expect_file(info: NodeInfo) -> Result<Option<fuchsia_zircon::Event>, NodeKind> {
         match info {
-            NodeInfo::File(fio::FileObject { event }) => Ok(event),
+            NodeInfo::File(fio::FileObject { event, stream: None }) => Ok(event),
             other => Err(NodeKind::kind_of(&other)),
         }
     }
