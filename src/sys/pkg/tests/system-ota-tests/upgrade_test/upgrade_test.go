@@ -7,7 +7,6 @@ package upgrade
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -91,15 +90,11 @@ func testOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClien
 }
 
 func doTestOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client) {
-	outputDir := c.OutputDir
-	if outputDir == "" {
-		var err error
-		outputDir, err = ioutil.TempDir("", "system_ota_tests")
-		if err != nil {
-			t.Fatalf("failed to create a temporary directory: %s", err)
-		}
-		defer os.RemoveAll(outputDir)
+	outputDir, cleanup, err := c.OutputDir()
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer cleanup()
 
 	repo, err := c.GetUpgradeRepository(outputDir)
 	if err != nil {
@@ -187,16 +182,11 @@ func testLongevityOTAAttempt(t *testing.T, ctx context.Context, device *device.C
 }
 
 func doTestLongevityOTAAttempt(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, buildID string, checkABR bool) {
-	// Use the output dir if specified, otherwise download into a temporary directory.
-	outputDir := c.OutputDir
-	if outputDir == "" {
-		var err error
-		outputDir, err = ioutil.TempDir("", "system_ota_tests")
-		if err != nil {
-			t.Fatalf("failed to create a temporary directory: %s", err)
-		}
-		defer os.RemoveAll(outputDir)
+	outputDir, cleanup, err := c.OutputDir()
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer cleanup()
 
 	build, err := c.BuildArchive().GetBuildByID(buildID, outputDir)
 	if err != nil {
@@ -244,16 +234,12 @@ func paveDevice(t *testing.T, ctx context.Context, device *device.Client) *sl4f.
 }
 
 func doPaveDevice(t *testing.T, ctx context.Context, device *device.Client) *sl4f.Client {
-	// Use the output dir if specified, otherwise download into a temporary directory.
-	outputDir := c.OutputDir
-	if outputDir == "" {
-		var err error
-		outputDir, err = ioutil.TempDir("", "system_ota_tests")
-		if err != nil {
-			t.Fatalf("failed to create a temporary directory: %s", err)
-		}
-		defer os.RemoveAll(outputDir)
+	outputDir, cleanup, err := c.OutputDir()
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer cleanup()
+
 	downgradePaver, err := c.GetDowngradePaver(outputDir)
 	if err != nil {
 		t.Fatal(err)
@@ -312,7 +298,14 @@ func systemOTA(t *testing.T, ctx context.Context, device *device.Client, rpcClie
 		t.Fatalf("error determining target config: %s", err)
 	}
 
-	server := setupOTAServer(t, ctx, device, *rpcClient, repo, expectedSystemImageMerkle)
+	if isDeviceUpToDate(t, ctx, device, *rpcClient, expectedSystemImageMerkle) {
+		t.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
+	}
+
+	server, err := device.ServePackageRepository(ctx, repo, "upgrade_test")
+	if err != nil {
+		t.Fatalf("error setting up server: %s", err)
+	}
 	defer server.Shutdown(ctx)
 
 	if err := device.TriggerSystemOTA(ctx, repo, rpcClient); err != nil {
@@ -334,7 +327,14 @@ func systemPrimeOTA(t *testing.T, ctx context.Context, device *device.Client, rp
 		t.Fatalf("error determining target config: %s", err)
 	}
 
-	server := setupOTAServer(t, ctx, device, *rpcClient, repo, expectedSystemImageMerkle)
+	if isDeviceUpToDate(t, ctx, device, *rpcClient, expectedSystemImageMerkle) {
+		t.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
+	}
+
+	server, err := device.ServePackageRepository(ctx, repo, "upgrade_test")
+	if err != nil {
+		t.Fatalf("error setting up server: %s", err)
+	}
 	defer server.Shutdown(ctx)
 
 	// Since we're invoking system_updater.cmx directly, we need to do the GC ourselves
@@ -385,36 +385,6 @@ func systemPrimeOTA(t *testing.T, ctx context.Context, device *device.Client, rp
 		t.Fatalf("unable to connect to sl4f after OTA: %s", err)
 	}
 	validateDevice(t, ctx, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR)
-}
-
-func setupOTAServer(t *testing.T, ctx context.Context, device *device.Client, rpcClient *sl4f.Client, repo *packages.Repository, expectedSystemImageMerkle string) *packages.Server {
-	if isDeviceUpToDate(t, ctx, device, rpcClient, expectedSystemImageMerkle) {
-		t.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
-	}
-
-	// Make sure the device doesn't have any broken static packages.
-	if err := device.ValidateStaticPackages(); err != nil {
-		t.Fatal(err)
-	}
-
-	// Tell the device to connect to our repository.
-	localHostname, err := device.GetSshConnection()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Serve the repository before the test begins.
-	server, err := repo.Serve(localHostname, "host_target_testing")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := device.RegisterPackageRepository(server); err != nil {
-		server.Shutdown(ctx)
-		t.Fatal(err)
-	}
-
-	return server
 }
 
 func isDeviceUpToDate(t *testing.T, ctx context.Context, device *device.Client, rpcClient *sl4f.Client, expectedSystemImageMerkle string) bool {

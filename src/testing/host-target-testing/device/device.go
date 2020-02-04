@@ -272,6 +272,32 @@ func (c *Client) RegisterPackageRepository(repo *packages.Server) error {
 	return c.Run(cmd, os.Stdout, os.Stderr)
 }
 
+func (c *Client) ServePackageRepository(ctx context.Context, repo *packages.Repository, name string) (*packages.Server, error) {
+	// Make sure the device doesn't have any broken static packages.
+	if err := c.ValidateStaticPackages(); err != nil {
+		return nil, err
+	}
+
+	// Tell the device to connect to our repository.
+	localHostname, err := c.GetSshConnection()
+	if err != nil {
+		return nil, err
+	}
+
+	// Serve the repository before the test begins.
+	server, err := repo.Serve(localHostname, "host_target_testing")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.RegisterPackageRepository(server); err != nil {
+		server.Shutdown(ctx)
+		return nil, err
+	}
+
+	return server, nil
+}
+
 func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository) (*sl4f.Client, error) {
 	// Determine the address of this device from the point of view of the target.
 	localHostname, err := c.sshClient.GetSshConnection()

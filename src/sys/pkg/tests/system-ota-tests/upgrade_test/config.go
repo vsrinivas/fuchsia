@@ -23,7 +23,7 @@ import (
 )
 
 type Config struct {
-	OutputDir                string
+	outputDir                string
 	FuchsiaDir               string
 	sshKeyFile               string
 	netaddrPath              string
@@ -52,7 +52,7 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 
 	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system_ota_tests")
 
-	fs.StringVar(&c.OutputDir, "output-dir", "", "save temporary files to this directory, defaults to a tempdir")
+	fs.StringVar(&c.outputDir, "output-dir", "", "save temporary files to this directory, defaults to a tempdir")
 	fs.StringVar(&c.FuchsiaDir, "fuchsia-dir", os.Getenv("FUCHSIA_DIR"), "fuchsia dir")
 	fs.StringVar(&c.sshKeyFile, "ssh-private-key", os.Getenv("FUCHSIA_SSH_KEY"), "SSH private key file that can access the device")
 	fs.StringVar(&c.netaddrPath, "netaddr-path", filepath.Join(testDataPath, "netaddr"), "zircon netaddr tool path")
@@ -111,6 +111,23 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+func (c *Config) OutputDir() (string, func(), error) {
+	// If we specified an -output-dir, return it, and a cleanup function
+	// that does nothoing.
+	if c.outputDir != "" {
+		return c.outputDir, func() {}, nil
+	}
+
+	// Otherwise create a tempdir, and return a cleanup function that
+	// deletes the tempdir when called.
+	outputDir, err := ioutil.TempDir("", "system_ota_tests")
+	if err != nil {
+		return "", func() {}, err
+	}
+
+	return outputDir, func() { os.RemoveAll(outputDir) }, nil
 }
 
 func (c *Config) SshPrivateKey() (ssh.Signer, error) {
