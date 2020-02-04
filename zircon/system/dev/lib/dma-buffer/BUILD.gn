@@ -15,18 +15,3 @@ zx_library("dma-buffer") {
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }
-
-zx_test("dma-buffer-test") {
-  output_name = "dma-buffer-test"
-  sources = [
-    "dma-buffer-test.cc",
-    "dma-buffer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}

@@ -1,0 +1,21 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":dma-buffer-test" ]
+}
+
+zx_test("dma-buffer-test") {
+  output_name = "dma-buffer-test"
+  sources = [ "dma-buffer-test.cc" ]
+  deps = [
+    "$zx/system/dev/lib/dma-buffer",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

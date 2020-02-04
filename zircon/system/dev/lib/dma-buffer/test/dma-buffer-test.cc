@@ -6,7 +6,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "include/lib/dma-buffer/buffer.h"
+#include "lib/dma-buffer/buffer.h"
 
 namespace dma_buffer {
 
