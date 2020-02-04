@@ -153,8 +153,6 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       PushDirectoryFromPath("/tmp");
     } else if (feature == "shell-commands") {
       PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
-    } else if (feature == "system-temp") {
-      PushDirectoryFromPath("/tmp");
     } else if (feature == "vulkan") {
       PushDirectoryFromPath("/dev/class/goldfish-address-space");
       PushDirectoryFromPath("/dev/class/goldfish-control");

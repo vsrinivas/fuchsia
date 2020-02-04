@@ -7,20 +7,7 @@ import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("system-temp") {
   testonly = true
-  deps = [
-    ":has_system_temp",
-    ":no_system_temp",
-  ]
-}
-
-sandbox_test_package("has_system_temp") {
-  sources = [ "has_system_temp.cc" ]
-
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
-  ]
-  environments = basic_envs
+  deps = [ ":no_system_temp" ]
 }
 
 sandbox_test_package("no_system_temp") {

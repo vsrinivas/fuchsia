@@ -214,10 +214,6 @@ The set of currently known features are as follows:
   component's namespace at `/tmp`. This is isolated from the system temp and
   the temp directories of other component instances.
 
-- `system-temp`, which requests access to the system temp directory, located at
-  `/tmp` in the package's namespace. This feature is deprecated and will be
-  removed soon. Use `isolated-temp` if global state isn't absolutely mandatory.
-
 - `root-ssl-certificates`, which requests access to the root SSL certificates
   for the device. These certificates are provided in the `/config/ssl` directory
   in the package's namespace.

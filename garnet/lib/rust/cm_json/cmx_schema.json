@@ -90,7 +90,6 @@
               "isolated-persistent-storage",
               "shell-commands",
               "root-ssl-certificates",
-              "system-temp",
               "isolated-temp",
               "vulkan",
               "deprecated-ambient-replace-as-executable"
