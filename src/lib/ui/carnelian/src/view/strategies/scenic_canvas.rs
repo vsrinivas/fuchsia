@@ -15,7 +15,10 @@ use crate::{
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_images::{ImagePipe2Marker, ImagePipe2Proxy};
+use fidl_fuchsia_images::{
+    AlphaFormat, ColorSpace, ImageInfo, ImagePipe2Marker, ImagePipe2Proxy, MemoryType, PixelFormat,
+    Tiling, Transform,
+};
 use fidl_fuchsia_sysmem::ImageFormat2;
 use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, OnSignals};
@@ -23,21 +26,35 @@ use fuchsia_framebuffer::{
     sysmem::{minimum_row_bytes, BufferCollectionAllocator},
     FrameSet,
 };
-use fuchsia_scenic::{ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time};
+use fuchsia_scenic::{Image, ImagePipe2, Material, Memory, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time, Vmo};
 use futures::channel::mpsc::UnboundedSender;
 use mapped_vmo::Mapping;
-use std::{cell::RefCell, collections::BTreeSet, iter, sync::Arc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    iter,
+    sync::Arc,
+};
+
+pub(crate) type Vmos = BTreeMap<u64, Vmo>;
+
+// TODO: Remove this workaround once ImagePipe2 works in Femu.
+// https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=6469
+
+enum PlumberTools {
+    SysMem {},
+    Vmo { vmos: Vmos },
+}
 
 struct Plumber {
     pub size: UintSize,
-    pub pixel_format: fidl_fuchsia_sysmem::PixelFormatType,
     pub buffer_count: usize,
     pub collection_id: u32,
     pub first_image_id: u64,
-    pub buffer_allocator: BufferCollectionAllocator,
     pub frame_set: FrameSet,
     pub canvases: Canvases,
+    pub tools: PlumberTools,
 }
 
 impl Plumber {
@@ -53,73 +70,113 @@ impl Plumber {
             BufferCollectionAllocator::new(size.width, size.height, pixel_format, buffer_count)?;
         let image_pipe_token = buffer_allocator.duplicate_token().await?;
         image_pipe_client.add_buffer_collection(collection_id, image_pipe_token)?;
-        let buffers = buffer_allocator.allocate_buffers().await?;
-        let linear_stride_bytes =
-            minimum_row_bytes(buffers.settings.image_format_constraints, size.width)?;
-        let buffer_size = linear_stride_bytes * size.height;
+        let buffers_result = buffer_allocator.allocate_buffers().await;
         let mut canvases: Canvases = Canvases::new();
-        let mut index = 0;
         let mut image_ids = BTreeSet::new();
-        for buffer in &buffers.buffers[0..buffers.buffer_count as usize] {
-            let image_id = index + first_image_id;
-            image_ids.insert(image_id);
-            let vmo = buffer.vmo.as_ref().expect("vmo");
+        let tools = if let Ok(buffers) = buffers_result {
+            let linear_stride_bytes =
+                minimum_row_bytes(buffers.settings.image_format_constraints, size.width)?;
+            let buffer_size = linear_stride_bytes * size.height;
+            let mut index = 0;
+            for buffer in &buffers.buffers[0..buffers.buffer_count as usize] {
+                let image_id = index + first_image_id;
+                image_ids.insert(image_id);
+                let vmo = buffer.vmo.as_ref().expect("vmo");
 
-            let mapping = Mapping::create_from_vmo(
-                vmo,
-                buffer_size as usize,
-                zx::VmarFlags::PERM_READ
-                    | zx::VmarFlags::PERM_WRITE
-                    | zx::VmarFlags::MAP_RANGE
-                    | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
-            )
-            .context("Frame::new() Mapping::create_from_vmo failed")
-            .expect("mapping");
-            let canvas = RefCell::new(Canvas::new(
-                IntSize::new(size.width as i32, size.height as i32),
-                MappingPixelSink::new(&Arc::new(mapping)),
-                linear_stride_bytes,
-                4,
-                image_id,
-                index as u32,
-            ));
-            canvases.insert(image_id, canvas);
-            let uindex = index as u32;
-            image_pipe_client
-                .add_image(
-                    image_id as u32,
-                    collection_id,
-                    uindex,
-                    &mut make_image_format(size.width, size.height, pixel_format),
+                let mapping = Mapping::create_from_vmo(
+                    vmo,
+                    buffer_size as usize,
+                    zx::VmarFlags::PERM_READ
+                        | zx::VmarFlags::PERM_WRITE
+                        | zx::VmarFlags::MAP_RANGE
+                        | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
                 )
-                .expect("add_image");
-            index += 1;
-        }
+                .context("Frame::new() Mapping::create_from_vmo failed")
+                .expect("mapping");
+                let canvas = RefCell::new(Canvas::new(
+                    IntSize::new(size.width as i32, size.height as i32),
+                    MappingPixelSink::new(&Arc::new(mapping)),
+                    linear_stride_bytes,
+                    4,
+                    image_id,
+                    index as u32,
+                ));
+                canvases.insert(image_id, canvas);
+                let uindex = index as u32;
+                image_pipe_client
+                    .add_image(
+                        image_id as u32,
+                        collection_id,
+                        uindex,
+                        &mut make_image_format(size.width, size.height, pixel_format),
+                    )
+                    .expect("add_image");
+                index += 1;
+            }
+            PlumberTools::SysMem {}
+        } else {
+            let linear_stride_bytes = size.width * 4;
+            let buffer_size = linear_stride_bytes * size.height;
+            let mut vmos = Vmos::new();
+            for index in 0..buffer_count as u64 {
+                let image_id = index + first_image_id;
+                image_ids.insert(image_id);
+                let vmo = Vmo::create(buffer_size.into())?;
+                let mapping = Mapping::create_from_vmo(
+                    &vmo,
+                    buffer_size as usize,
+                    zx::VmarFlags::PERM_READ
+                        | zx::VmarFlags::PERM_WRITE
+                        | zx::VmarFlags::MAP_RANGE
+                        | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+                )
+                .context("Frame::new() Mapping::create_from_vmo failed")
+                .expect("mapping");
+                let canvas = RefCell::new(Canvas::new(
+                    IntSize::new(size.width as i32, size.height as i32),
+                    MappingPixelSink::new(&Arc::new(mapping)),
+                    linear_stride_bytes,
+                    4,
+                    image_id,
+                    index as u32,
+                ));
+                canvases.insert(image_id, canvas);
+                vmos.insert(image_id, vmo);
+            }
+            PlumberTools::Vmo { vmos }
+        };
         let frame_set = FrameSet::new(image_ids);
         Ok(Plumber {
             size,
             buffer_count,
-            pixel_format,
             collection_id,
             first_image_id,
-            buffer_allocator,
             frame_set,
             canvases,
+            tools,
         })
     }
 
     pub fn enter_retirement(&mut self, image_pipe_client: &mut ImagePipe2Proxy) {
-        for image_id in self.first_image_id..self.first_image_id + self.buffer_count as u64 {
-            image_pipe_client.remove_image(image_id as u32).unwrap_or_else(|err| {
-                eprintln!("image_pipe_client.remove_image {} failed with {}", image_id, err)
-            });
+        match &self.tools {
+            PlumberTools::Vmo { .. } => (),
+            PlumberTools::SysMem { .. } => {
+                for image_id in self.first_image_id..self.first_image_id + self.buffer_count as u64
+                {
+                    image_pipe_client.remove_image(image_id as u32).unwrap_or_else(|err| {
+                        eprintln!("image_pipe_client.remove_image {} failed with {}", image_id, err)
+                    });
+                }
+                image_pipe_client.remove_buffer_collection(self.collection_id).unwrap_or_else(
+                    |err| {
+                        eprintln!(
+                            "image_pipe_client.remove_buffer_collection {} failed with {}",
+                            self.collection_id, err
+                        )
+                    },
+                );
+            }
         }
-        image_pipe_client.remove_buffer_collection(self.collection_id).unwrap_or_else(|err| {
-            eprintln!(
-                "image_pipe_client.remove_buffer_collection {} failed with {}",
-                self.collection_id, err
-            )
-        });
     }
 }
 
@@ -130,11 +187,11 @@ pub(crate) struct ScenicCanvasViewStrategy {
     scenic_resources: ScenicResources,
     content_node: ShapeNode,
     content_material: Material,
+    next_buffer_collection: u32,
     image_pipe: ImagePipe2,
     image_pipe_client: ImagePipe2Proxy,
     plumber: Option<Plumber>,
     retiring_plumbers: Vec<Plumber>,
-    next_buffer_collection: u32,
     next_image_id: u64,
 }
 
@@ -148,7 +205,6 @@ impl ScenicCanvasViewStrategy {
         let (image_pipe_client, server_end) = create_endpoints::<ImagePipe2Marker>()?;
         let image_pipe = ImagePipe2::new(session.clone(), server_end);
         let content_material = Material::new(session.clone());
-        content_material.set_texture_resource(Some(&image_pipe));
         let content_node = ShapeNode::new(session.clone());
         content_node.set_material(&content_material);
         scenic_resources.root_node.add_child(&content_node);
@@ -201,7 +257,7 @@ impl ScenicCanvasViewStrategy {
                 &mut self.image_pipe_client,
             )
             .await
-            .expect("Plumber::new"),
+            .expect("VmoPlumber::new"),
         );
         Ok(())
     }
@@ -246,6 +302,7 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         let size = view_details.physical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
+            let session = self.scenic_resources.session.clone();
             if self.plumber.is_none() {
                 self.create_plumber(size).await.expect("create_plumber");
             } else {
@@ -260,7 +317,6 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
             let center_x = view_details.physical_size.width * 0.5;
             let center_y = view_details.physical_size.height * 0.5;
             self.content_node.set_translation(center_x, center_y, -0.1);
-            self.content_material.set_texture_resource(Some(&self.image_pipe));
             let rectangle = Rectangle::new(
                 self.scenic_resources.session.clone(),
                 size.width as f32,
@@ -290,15 +346,48 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
                         .unbounded_send(MessageInternal::ImageFreed(key, available, collection_id))
                         .expect("unbounded_send");
                 });
-                self.image_pipe_client
-                    .present_image(
-                        canvas.borrow().id as u32,
-                        0,
-                        &mut iter::empty(),
-                        &mut iter::once(wait_event),
-                    )
-                    .await
-                    .expect("present_image");
+                match &plumber.tools {
+                    PlumberTools::Vmo { vmos } => {
+                        session.lock().add_release_fence(wait_event);
+                        let vmo = vmos.get(&available).expect("vmo");
+                        let vmo = vmo
+                            .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                            .expect("duplicating buffer vmo");
+
+                        let linear_stride_bytes = size.width * 4;
+                        let buffer_size = linear_stride_bytes * size.height;
+                        let memory = Memory::new(
+                            session.clone(),
+                            vmo,
+                            buffer_size.into(),
+                            MemoryType::HostMemory,
+                        );
+                        let info = ImageInfo {
+                            width: size.width,
+                            height: size.height,
+                            stride: linear_stride_bytes,
+                            transform: Transform::Normal,
+                            alpha_format: AlphaFormat::Opaque,
+                            pixel_format: PixelFormat::Bgra8,
+                            color_space: ColorSpace::Srgb,
+                            tiling: Tiling::Linear,
+                        };
+                        let image = Image::new(&memory, 0, info);
+                        self.content_material.set_texture(Some(&image));
+                    }
+                    PlumberTools::SysMem { .. } => {
+                        self.content_material.set_texture_resource(Some(&self.image_pipe));
+                        self.image_pipe_client
+                            .present_image(
+                                canvas.borrow().id as u32,
+                                0,
+                                &mut iter::empty(),
+                                &mut iter::once(wait_event),
+                            )
+                            .await
+                            .expect("present_image");
+                    }
+                }
                 plumber.frame_set.mark_presented(available);
             }
         }
