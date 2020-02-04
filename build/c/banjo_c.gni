@@ -61,6 +61,9 @@ template("banjo_c_target") {
     # The generated headers #include ddktl headers.
     public_configs += [ "//zircon/public/lib/ddktl:ddktl.config" ]
 
+    if (!defined(deps)) {
+      deps = []
+    }
     deps += [
       ":${main_target_name}_c_compile($banjo_toolchain)",
       ":${main_target_name}_cpp_compile($banjo_toolchain)",
@@ -91,6 +94,9 @@ template("banjo_c_target") {
       ddktl_mock_header,
     ]
 
+    if (!defined(deps)) {
+      deps = []
+    }
     deps += [
       ":${main_target_name}",
       ":${main_target_name}_cpp_mock($banjo_toolchain)",
