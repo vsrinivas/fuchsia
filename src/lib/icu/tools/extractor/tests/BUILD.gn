@@ -1,0 +1,54 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("icu_data_extractor_tests") {
+  edition = "2018"
+  source_root = "tests.rs"
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:regex",
+  ]
+
+  # Must depend directly on these in order to have access to them in CQ
+  non_rust_deps = [ ":test_files" ]
+}
+
+copy("copy_icudtl_dat") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs =
+      [ "$root_out_dir/test_data/icu_data_extractor/{{source_file_part}}" ]
+}
+
+copy("copy_tzres") {
+  sources = [
+    "//third_party/icu/tzres/metaZones.res",
+    "//third_party/icu/tzres/timezoneTypes.res",
+    "//third_party/icu/tzres/zoneinfo64.res",
+  ]
+  outputs = [
+    "$root_out_dir/test_data/icu_data_extractor/tzres/{{source_file_part}}",
+  ]
+}
+
+group("test_files") {
+  data_deps = [
+    ":copy_icudtl_dat",
+    ":copy_tzres",
+    "//src/lib/icu/tools/extractor:icu_data_extractor($host_toolchain)",
+  ]
+  metadata = {
+    test_runtime_deps = get_target_outputs(":copy_icudtl_dat") +
+                        get_target_outputs(":copy_tzres") +
+                        [ "$root_out_dir/icu_data_extractor" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":icu_data_extractor_tests($host_toolchain)" ]
+}

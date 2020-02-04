@@ -21,6 +21,7 @@ if (is_host) {
       "//src/lib/files",
       "//src/lib/fxl",
       "//third_party/icu",
+      "//zircon/public/lib/fbl",
     ]
   }
 }
@@ -29,4 +30,9 @@ install_host_tools("host") {
   testonly = true
   deps = [ ":icu_data_extractor" ]
   outputs = [ "icu_data_extractor" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
 }

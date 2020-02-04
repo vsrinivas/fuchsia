@@ -51,7 +51,7 @@ int TzIds::Execute(const fxl::CommandLine& command_line,
 
   UErrorCode status = UErrorCode::U_ZERO_ERROR;
 
-  auto ids = icu::TimeZone::createEnumeration();
+  auto ids = std::unique_ptr<icu::StringEnumeration>(icu::TimeZone::createEnumeration());
   auto count = ids->count(status);
 
   if (U_FAILURE(status)) {
@@ -64,6 +64,7 @@ int TzIds::Execute(const fxl::CommandLine& command_line,
 
   reordered_ids.insert(reordered_ids.end(), fixed_order_ids.begin(), fixed_order_ids.end());
 
+  // `id` is owned by the enumeration, `ids`
   for (const char* id = nullptr; (id = ids->next(nullptr, status)) != nullptr;) {
     const std::string id_str(id);
     if (fixed_set.erase(id_str) == 0) {

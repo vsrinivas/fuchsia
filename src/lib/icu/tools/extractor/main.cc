@@ -5,12 +5,15 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <optional>
 #include <string>
+
+#include <fbl/auto_call.h>
 
 #include "common.h"
 #include "src/lib/fxl/command_line.h"
@@ -27,22 +30,50 @@ using icu_data_extractor::kArgTzResPath;
 using icu_data_extractor::TzIds;
 using icu_data_extractor::TzVersion;
 
-// Maps a file into memory as read-only and returns a pointer to the memory.
+// Wrapper around read-only mmap-ed files for easy resource cleanup.
 //
-// Returns `nullptr` if reading or mmapping fails.
-void* MmapFile(const std::string& path) {
-  int fd = open(path.c_str(), O_RDONLY);
-  if (fd == -1) {
-    return nullptr;
+// Instantiate using `MappedFile::Open()`.
+// Get the file's contents using `MappedFile::data()`.
+class MappedFile {
+ public:
+  // Maps a file into memory as read-only and returns a container.
+  //
+  // Returns `nullptr` if reading or mmapping fails.
+  static std::unique_ptr<MappedFile> Open(const std::string& path) {
+    int fd = open(path.c_str(), O_RDONLY);
+    if (fd == -1) {
+      return nullptr;
+    }
+
+    // Automatically close the file when this variable goes out of scope.
+    auto close_fd = fbl::MakeAutoCall([&fd, &path]() {
+      if (close(fd) != 0) {
+        std::cerr << "Failed to explicitly close file " << path
+                  << " after opening it. Error: " << strerror(errno) << std::endl;
+      }
+    });
+
+    struct stat st;
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+      return nullptr;
+    }
+
+    void* data = mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (data == nullptr) {
+      return nullptr;
+    }
+
+    return std::unique_ptr<MappedFile>(new MappedFile(st.st_size, data));
   }
 
-  struct stat st;
-  if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
-    return nullptr;
-  }
+  ~MappedFile() { munmap(data_, size_); }
+  const void* data() const { return data_; }
 
-  return mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-}
+ private:
+  MappedFile(size_t size, void* data) : size_(size), data_(data) {}
+  const size_t size_;
+  void* data_;
+};
 
 int PrintUsage(const fxl::CommandLine& command_line,
                const std::vector<std::unique_ptr<Command>>& commands) {
@@ -87,14 +118,14 @@ int main(int argc, const char** argv) {
   }
 
   // This will be unmapped automatically when the program exits.
-  const void* icu_data = MmapFile(icu_data_path);
+  const std::unique_ptr<MappedFile> icu_data = MappedFile::Open(icu_data_path);
   if (icu_data == nullptr) {
     std::cerr << "Couldn't read file at " << icu_data_path << std::endl;
     return -1;
   }
 
   UErrorCode err = U_ZERO_ERROR;
-  udata_setCommonData(icu_data, &err);
+  udata_setCommonData(icu_data->data(), &err);
   if (err != U_ZERO_ERROR) {
     std::cerr << "Error while loading from \"" << icu_data_path << "\": " << u_errorName(err)
               << std::endl;
