@@ -64,19 +64,20 @@ static bool BuildTraceProgramArgs(const std::string& relative_tspec_path,
   AppendLoggingArgs(args, "");
   args->push_back("record");
   args->push_back(fxl::StringPrintf(
-                      "--spec-file=%s",
-                      (std::string(kSpawnedTestPackagePath) + "/" + relative_tspec_path).c_str()));
+      "--spec-file=%s",
+      (std::string(kSpawnedTestPackagePath) + "/" + relative_tspec_path).c_str()));
   args->push_back(fxl::StringPrintf(
-                      "--output-file=%s",
-                      (std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path).c_str()));
+      "--output-file=%s",
+      (std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path).c_str()));
 
   AppendLoggingArgs(args, "--append-args=");
 
   // Note that |relative_tspec_path| cannot have a comma.
-  args->push_back(fxl::StringPrintf(
-      "--append-args=run,%s",
-      (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) + "/" + relative_tspec_path)
-          .c_str()));
+  args->push_back(
+      fxl::StringPrintf("--append-args=run,%s",
+                        (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) +
+                         "/" + relative_tspec_path)
+                            .c_str()));
 
   return true;
 }
@@ -129,8 +130,7 @@ bool RunTrace(const zx::job& job, const std::vector<std::string>& args, zx::proc
     return false;
   }
   // Add a path to our /tmp so trace can write, e.g., trace files there.
-  status = AddAuxDirToSpawnAction(kTestTmpPath, kSpawnedTestTmpPath,
-                                  &spawn_actions[num_actions++]);
+  status = AddAuxDirToSpawnAction(kTestTmpPath, kSpawnedTestTmpPath, &spawn_actions[num_actions++]);
   if (status != ZX_OK) {
     return false;
   }
@@ -179,8 +179,7 @@ static bool AddAuxDirToLaunchInfo(const char* local_path, const char* remote_pat
   return true;
 }
 
-static bool RunTraceComponentAndWait(const std::string& app,
-                                     const std::vector<std::string>& args) {
+static bool RunTraceComponentAndWait(const std::string& app, const std::vector<std::string>& args) {
   auto flat_namespace = fuchsia::sys::FlatNamespace::New();
   // Add a path to our /pkg so trace can read tspec files.
   if (!AddAuxDirToLaunchInfo(kTestPackagePath, kSpawnedTestPackagePath, flat_namespace.get())) {
@@ -221,8 +220,9 @@ bool VerifyTspec(const std::string& relative_tspec_path,
 
   std::vector<std::string> args;
   BuildVerificationProgramArgs(
-      (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) + "/" + relative_tspec_path),
-      std::string(kTestTmpPath) + "/" + relative_output_file_path, &args);
+      (std::string(spec.spawn ? kSpawnedTestPackagePath : kTestPackagePath) + "/" +
+       relative_tspec_path),
+      std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path, &args);
 
   FXL_LOG(INFO) << "Verifying tspec " << relative_tspec_path << ", output file "
                 << relative_output_file_path;
