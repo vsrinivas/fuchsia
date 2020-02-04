@@ -13,7 +13,11 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # build
         SCRIPT_DIR))                 # zircon
 ZIRCON_PUBLIC = os.path.join(FUCHSIA_ROOT, 'zircon', 'public')
-TEMPLATE_FILE = os.path.join(SCRIPT_DIR, 'template.gn')
+EXPORT_TEMPLATE_FILE = os.path.join(SCRIPT_DIR, 'template.gn')
+UNIFICATION_DIR = os.path.join(FUCHSIA_ROOT, 'build', 'unification')
+MAPPINGS_FILE = os.path.join(UNIFICATION_DIR, 'zircon_library_mappings.json')
+FORWARD_TEMPLATE_FILE = os.path.join(UNIFICATION_DIR,
+                                     'zircon_library_forward.gn')
 
 DIRS = {
     'lib': True,
@@ -36,15 +40,42 @@ def has_sources(top_dir):
 def main():
     with open(sys.argv[1]) as f:
         legacy_dirs = json.load(f)
-    dirs = {}
+    with open(MAPPINGS_FILE, 'r') as f:
+        content = json.load(f)
+        mapped_lib_dirs = dict([('lib/' + i['name'], i['label'])
+                                for i in content])
+
+    # Verify that we're not trying to create a forwarding target and an exported
+    # library under the same alias.
+    common_dirs = set(mapped_lib_dirs) & set(legacy_dirs)
+    if common_dirs:
+        print('The following paths cannot be both exports from Zircon and '
+              'forwarding targets:')
+        for dir in common_dirs:
+            print('//zircon/public/' + dir)
+        return 1
+
+    # Create a data structure holding all generated paths.
+    all_dirs = {}
     for dir in legacy_dirs:
+        all_dirs[dir] = EXPORT_TEMPLATE_FILE
+    for dir in mapped_lib_dirs:
+        all_dirs[dir] = FORWARD_TEMPLATE_FILE
+
+    dirs = {}
+    for dir, template in all_dirs.iteritems():
         top_dir = os.path.dirname(dir)
-        dirs[top_dir] = dirs.get(top_dir, []) + [os.path.basename(dir)]
+        name = os.path.basename(dir)
+        subdirs, templates = dirs.setdefault(top_dir, ([], {}))
+        templates[name] = template
+        dirs[top_dir] = (subdirs + [name], templates)
     assert set(dirs.keys()).issubset(PUBLIC_DIRS), (
         "%r from JSON should be a subset of %r" %
         (set(dirs.keys()), PUBLIC_DIRS))
-    template_stat = os.lstat(TEMPLATE_FILE)
-    for top_dir, subdirs in dirs.iteritems():
+    stats = dict([(f, os.lstat(f))
+                  for f in [EXPORT_TEMPLATE_FILE, FORWARD_TEMPLATE_FILE]])
+    for top_dir in dirs:
+        subdirs, templates = dirs[top_dir]
         top_dir_name = top_dir
         top_dir = os.path.join(ZIRCON_PUBLIC, top_dir)
         subdirs = set(subdirs)
@@ -59,6 +90,7 @@ def main():
                     continue
                 build_file = os.path.join(existing_dir, 'BUILD.gn')
                 is_source = (has_sources(top_dir_name) and
+                             os.path.exists(build_file) and
                              not is_template(build_file))
                 if existing in subdirs:
                     if is_source:
@@ -67,12 +99,13 @@ def main():
                         return 1
                     # An existing directory might already have the link.
                     # If the link doesn't exist or doesn't match, make it.
+                    template = templates[existing]
                     if not os.path.exists(build_file):
-                        os.link(TEMPLATE_FILE, build_file)
+                        os.link(template, build_file)
                     elif not os.path.samestat(os.lstat(build_file),
-                                              template_stat):
+                                              stats[template]):
                         os.remove(build_file)
-                        os.link(TEMPLATE_FILE, build_file)
+                        os.link(template, build_file)
                     subdirs.remove(existing)
                 else:
                     if not is_source:
@@ -80,9 +113,10 @@ def main():
                         shutil.rmtree(existing_dir)
         # Make and populate any directories that don't exist yet.
         for subdir in subdirs:
+            template = templates[subdir]
             subdir = os.path.join(top_dir, subdir)
             os.mkdir(subdir)
-            os.link(TEMPLATE_FILE, os.path.join(subdir, 'BUILD.gn'))
+            os.link(template, os.path.join(subdir, 'BUILD.gn'))
     return 0
 
 

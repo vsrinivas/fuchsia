@@ -35,6 +35,8 @@ if (dir_target == false) {
   }
 }
 
+assert(dir_target != false, "Could not find $dir in Zircon legacy metadata")
+
 import(dir_target.import)
 
 target(dir_target.target_type, dir) {

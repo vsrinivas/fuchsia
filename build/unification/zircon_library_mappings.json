@@ -1,0 +1,7 @@
+[
+  {
+    "name": "this_is_only_a_test",
+    "label": "//zircon/public/lib/fdio",
+    "sdk": true
+  }
+]

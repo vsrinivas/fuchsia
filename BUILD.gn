@@ -145,7 +145,12 @@ if (current_toolchain == default_toolchain) {
   exec_script("//build/zircon/populate_zircon_public.py",
               [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],
               "",
-              [ "$zircon_root_build_dir/legacy_dirs.json" ])
+              [
+                "$zircon_root_build_dir/legacy_dirs.json",
+                "//build/unification/zircon_library_forward.gn",
+                "//build/unification/zircon_library_mappings.json",
+                "//build/zircon/template.gn",
+              ])
 }
 
 ###
