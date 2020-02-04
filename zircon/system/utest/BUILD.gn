@@ -85,7 +85,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/ldmsg/test",
       "$zx/system/ulib/lockdep:test",
       "$zx/system/ulib/minfs/test",
-      "$zx/system/ulib/mipi-dsi/test",
       "$zx/system/ulib/paver:paver-test",
       "$zx/system/ulib/pretty/test",
       "$zx/system/ulib/refcount/test",
