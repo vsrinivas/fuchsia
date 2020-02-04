@@ -53,7 +53,6 @@ driver_module("optee") {
     "//zircon/system/fidl/fuchsia-tee:llcpp",
     "//zircon/system/fidl/fuchsia-tee-manager:llcpp",
   ]
-  cflags_cc = [ "-Wno-unused-function" ]
 }
 
 group("test") {
@@ -99,7 +98,6 @@ test("optee-message-test") {
     "//zircon/system/fidl/fuchsia-hardware-tee:llcpp",
     "//zircon/system/fidl/fuchsia-tee:llcpp",
   ]
-  cflags_cc = [ "-Wno-unused-function" ]
 }
 
 migrated_manifest("optee-manifest") {

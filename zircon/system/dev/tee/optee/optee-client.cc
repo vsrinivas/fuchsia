@@ -70,18 +70,6 @@ static constexpr
   *dst = (static_cast<DST_T>(src_hi) << 32) | static_cast<DST_T>(static_cast<uint32_t>(src_lo));
 }
 
-// Builds a UUID string from a TEEC_UUID, formatting as per the RFC 4122 specification.
-static fbl::StringBuffer<kUuidNameLength> BuildUuidString(const TEEC_UUID& ta_uuid) {
-  fbl::StringBuffer<kUuidNameLength> buf;
-
-  buf.AppendPrintf(kUuidNameFormat, ta_uuid.timeLow, ta_uuid.timeMid, ta_uuid.timeHiAndVersion,
-                   ta_uuid.clockSeqAndNode[0], ta_uuid.clockSeqAndNode[1],
-                   ta_uuid.clockSeqAndNode[2], ta_uuid.clockSeqAndNode[3],
-                   ta_uuid.clockSeqAndNode[4], ta_uuid.clockSeqAndNode[5],
-                   ta_uuid.clockSeqAndNode[6], ta_uuid.clockSeqAndNode[7]);
-  return buf;
-}
-
 // Builds the expected path to a trusted application, formatting the file name per the RFC 4122
 // specification.
 static fbl::StringBuffer<kTaPathLength> BuildTaPath(const TEEC_UUID& ta_uuid) {
