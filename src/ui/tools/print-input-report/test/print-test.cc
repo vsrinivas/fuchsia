@@ -83,7 +83,7 @@ class FakeDevice final : public fuchsia_input_report::InputDevice::Interface {
       return;
     }
 
-    fuchsia_input_report::InputReport report = fidl.builder.view();
+    fuchsia_input_report::InputReport report = fidl.builder.build();
     reports_event_.signal(DEV_STATE_READABLE, 0);
     completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(&report, 1));
   }
@@ -107,7 +107,7 @@ class FakeDevice final : public fuchsia_input_report::InputDevice::Interface {
     hid_input_report::FidlDescriptor fidl;
     ASSERT_EQ(hid_input_report::SetFidlDescriptor(descriptor_, &fidl), ZX_OK);
 
-    fuchsia_input_report::DeviceDescriptor descriptor = fidl.builder.view();
+    fuchsia_input_report::DeviceDescriptor descriptor = fidl.builder.build();
     completer.Reply(std::move(descriptor));
   }
 

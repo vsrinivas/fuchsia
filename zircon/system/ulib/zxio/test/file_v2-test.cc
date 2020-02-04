@@ -37,12 +37,12 @@ class TestServerBase : public fio2::File::Interface {
 
   void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync completer) override {
     if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
-      auto file_info_builder = fio2::FileInfo::Build();
-      fio2::FileInfo file_info = file_info_builder.view();
+      auto file_info_builder = fio2::FileInfo::UnownedBuilder();
+      fio2::FileInfo file_info = file_info_builder.build();
       auto representation = fio2::Representation::WithFile(&file_info);
-      auto info_builder = fio2::ConnectionInfo::Build();
-      info_builder.set_representation(&representation);
-      completer.Reply(info_builder.view());
+      auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
+      info_builder.set_representation(fidl::unowned(&representation));
+      completer.Reply(info_builder.build());
       return;
     }
     completer.Close(ZX_ERR_NOT_SUPPORTED);
@@ -169,19 +169,19 @@ class TestServerEvent final : public TestServerBase {
 
   void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync completer) override {
     if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
-      auto file_info_builder = fio2::FileInfo::Build();
+      auto file_info_builder = fio2::FileInfo::UnownedBuilder();
       zx::event client_observer;
       zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
       if (status != ZX_OK) {
         completer.Close(ZX_ERR_INTERNAL);
         return;
       }
-      file_info_builder.set_observer(&client_observer);
-      fio2::FileInfo file_info = file_info_builder.view();
+      file_info_builder.set_observer(fidl::unowned(&client_observer));
+      fio2::FileInfo file_info = file_info_builder.build();
       auto representation = fio2::Representation::WithFile(&file_info);
-      auto info_builder = fio2::ConnectionInfo::Build();
-      info_builder.set_representation(&representation);
-      completer.Reply(info_builder.view());
+      auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
+      info_builder.set_representation(fidl::unowned(&representation));
+      completer.Reply(info_builder.build());
       return;
     }
     completer.Close(ZX_ERR_NOT_SUPPORTED);
@@ -375,19 +375,19 @@ class TestServerStream final : public TestServerBase {
 
   void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync completer) override {
     if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
-      auto file_info_builder = fio2::FileInfo::Build();
+      auto file_info_builder = fio2::FileInfo::UnownedBuilder();
       zx::stream client_stream;
       zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);
       if (status != ZX_OK) {
         completer.Close(ZX_ERR_INTERNAL);
         return;
       }
-      file_info_builder.set_stream(&client_stream);
-      fio2::FileInfo file_info = file_info_builder.view();
+      file_info_builder.set_stream(fidl::unowned(&client_stream));
+      fio2::FileInfo file_info = file_info_builder.build();
       auto representation = fio2::Representation::WithFile(&file_info);
-      auto info_builder = fio2::ConnectionInfo::Build();
-      info_builder.set_representation(&representation);
-      completer.Reply(info_builder.view());
+      auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
+      info_builder.set_representation(fidl::unowned(&representation));
+      completer.Reply(info_builder.build());
       return;
     }
     completer.Close(ZX_ERR_NOT_SUPPORTED);

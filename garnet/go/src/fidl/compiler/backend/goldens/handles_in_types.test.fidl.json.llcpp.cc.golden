@@ -23,19 +23,6 @@ void ::llcpp::test::name::UnionWithHandle::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(UnionWithHandle, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
-::llcpp::test::name::TableWithHandle::Builder TableWithHandle::Build() {
-  return TableWithHandle::Builder();
-}
-
-auto ::llcpp::test::name::TableWithHandle::Builder::set_h(::zx::vmo* elem) -> Builder&& {
-  ZX_ASSERT(elem);
-  frame_.h.data = ::fidl::unowned_ptr<::zx::vmo>(elem);
-  if (max_ordinal_ < 1) {
-    max_ordinal_ = 1;
-  }
-  return std::move(*this);
-}
-
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp

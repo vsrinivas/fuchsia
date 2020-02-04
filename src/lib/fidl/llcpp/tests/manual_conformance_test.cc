@@ -231,8 +231,8 @@ TEST(ComplexTable, SuccessEmpty) {
   // clang-format on
   // encode
   {
-    auto builder = llcpp_misc::ComplexTable::Build();
-    auto input = builder.view();
+    llcpp_misc::ComplexTable::UnownedBuilder builder;
+    auto input = builder.build();
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
     auto linearize_result = fidl::Linearize(&input, std::move(bytes));
@@ -325,8 +325,10 @@ TEST(ComplexTable, Success) {
   int32_t xunion_i = 0xdeadbeef;
   // encode
   {
-    auto simple_builder = llcpp_misc::SimpleTable::Build().set_x(&table_x).set_y(&table_y);
-    auto simple_table = simple_builder.view();
+    auto simple_builder = llcpp_misc::SimpleTable::UnownedBuilder()
+                              .set_x(fidl::unowned(&table_x))
+                              .set_y(fidl::unowned(&table_y));
+    auto simple_table = simple_builder.build();
     llcpp_misc::SampleXUnion xu;
     xu.set_i(&xunion_i);
     std::vector<fidl::StringView> strings_vector{
@@ -334,11 +336,11 @@ TEST(ComplexTable, Success) {
         fidl::StringView(after),
     };
     fidl::VectorView<fidl::StringView> strings(strings_vector);
-    auto builder = llcpp_misc::ComplexTable::Build()
-                       .set_simple(&simple_table)
-                       .set_u(&xu)
-                       .set_strings(&strings);
-    auto input = builder.view();
+    auto builder = llcpp_misc::ComplexTable::UnownedBuilder()
+                       .set_simple(fidl::unowned(&simple_table))
+                       .set_u(fidl::unowned(&xu))
+                       .set_strings(fidl::unowned(&strings));
+    auto input = builder.build();
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
     auto linearize_result = fidl::Linearize(&input, std::move(bytes));

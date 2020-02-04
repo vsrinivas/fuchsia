@@ -14,19 +14,6 @@ void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(Union, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
-::llcpp::test::name::Table::Builder Table::Build() {
-  return Table::Builder();
-}
-
-auto ::llcpp::test::name::Table::Builder::set_Field(int32_t* elem) -> Builder&& {
-  ZX_ASSERT(elem);
-  frame_.Field.data = ::fidl::unowned_ptr<int32_t>(elem);
-  if (max_ordinal_ < 1) {
-    max_ordinal_ = 1;
-  }
-  return std::move(*this);
-}
-
 namespace {
 
 [[maybe_unused]]

@@ -42,7 +42,7 @@ TEST(FidlTest, MouseInputDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_mouse());
   ASSERT_TRUE(fidl.mouse().has_input());
   auto& fidl_mouse = fidl.mouse().input();
@@ -78,7 +78,7 @@ TEST(FidlTest, MouseInputReport) {
   hid_input_report::FidlInputReport fidl_report = {};
   ASSERT_OK(SetFidlInputReport(report, &fidl_report));
 
-  fuchsia_input_report::InputReport fidl = fidl_report.builder.view();
+  fuchsia_input_report::InputReport fidl = fidl_report.builder.build();
   ASSERT_TRUE(fidl.has_mouse());
   auto& fidl_mouse = fidl.mouse();
 
@@ -119,7 +119,7 @@ TEST(FidlTest, SensorInputDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_sensor());
   ASSERT_TRUE(fidl.sensor().has_input());
   auto& fidl_sensor = fidl.sensor().input();
@@ -147,7 +147,7 @@ TEST(FidlTest, SensorInputReport) {
   hid_input_report::FidlInputReport fidl_report = {};
   ASSERT_OK(SetFidlInputReport(report, &fidl_report));
 
-  fuchsia_input_report::InputReport fidl = fidl_report.builder.view();
+  fuchsia_input_report::InputReport fidl = fidl_report.builder.build();
   ASSERT_TRUE(fidl.has_sensor());
   auto& fidl_sensor = fidl.sensor();
 
@@ -187,7 +187,7 @@ TEST(FidlTest, TouchInputDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_touch());
   ASSERT_TRUE(fidl.touch().has_input());
   fuchsia_input_report::TouchInputDescriptor& fidl_touch = fidl.touch().input();
@@ -221,7 +221,7 @@ TEST(FidlTest, TouchInputReport) {
   hid_input_report::FidlInputReport fidl_report = {};
   ASSERT_OK(SetFidlInputReport(report, &fidl_report));
 
-  fuchsia_input_report::InputReport fidl = fidl_report.builder.view();
+  fuchsia_input_report::InputReport fidl = fidl_report.builder.build();
   ASSERT_TRUE(fidl.has_touch());
   auto& fidl_touch = fidl.touch();
 
@@ -248,7 +248,7 @@ TEST(FidlTest, KeyboardInputDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(descriptor, &fidl_desc));
 
-  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_keyboard());
   ASSERT_TRUE(fidl.keyboard().has_input());
   auto& fidl_keyboard = fidl.keyboard().input();
@@ -273,7 +273,7 @@ TEST(FidlTest, KeyboardOutputDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(descriptor, &fidl_desc));
 
-  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_keyboard());
   ASSERT_TRUE(fidl.keyboard().has_output());
   auto& fidl_keyboard = fidl.keyboard().output();
@@ -297,7 +297,7 @@ TEST(FidlTest, KeyboardInputReport) {
   hid_input_report::FidlInputReport fidl_report = {};
   ASSERT_OK(SetFidlInputReport(report, &fidl_report));
 
-  fuchsia_input_report::InputReport fidl = fidl_report.builder.view();
+  fuchsia_input_report::InputReport fidl = fidl_report.builder.build();
   ASSERT_TRUE(fidl.has_keyboard());
   auto& fidl_keyboard = fidl.keyboard();
 

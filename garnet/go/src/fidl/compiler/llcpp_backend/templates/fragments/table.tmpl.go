@@ -16,7 +16,7 @@ extern "C" const fidl_type_t {{ .TableType }};
 //{{ . }}
 {{- end}}
 class {{ .Name }} final {
-  public:
+public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
   {{- range .Members }}
@@ -26,14 +26,14 @@ class {{ .Name }} final {
     {{- end }}
   const {{ .Type.LLDecl }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *frame_->{{ .Name }}.data;
+    return *frame_ptr_->{{ .Name }}_.data;
   }
   {{ .Type.LLDecl }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *frame_->{{ .Name }}.data;
+    return *frame_ptr_->{{ .Name }}_.data;
   }
   bool {{ .MethodHasName }}() const {
-    return max_ordinal_ >= {{ .Ordinal }} && frame_->{{ .Name }}.data != nullptr;
+    return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
   {{- end }}
 
@@ -42,9 +42,6 @@ class {{ .Name }} final {
   {{ .Name }}({{ .Name }}&& other) noexcept = default;
   {{ .Name }}& operator=({{ .Name }}&& other) noexcept = default;
 
-  class Builder;
-  friend class Builder;
-  static Builder Build();
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .InlineSize }};
@@ -52,32 +49,54 @@ class {{ .Name }} final {
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .HasPointer }};
 
-  class Frame {
+  class Builder;
+  class UnownedBuilder;
+
+  class Frame final {
+  public:
+    Frame() = default;
+    // In its intended usage, Frame will be referenced by a tracking_ptr. If the tracking_ptr is
+    // assigned before a move or copy, then it will reference the old invalid object. Because this
+    // is unsafe, copies are disallowed and moves are only allowed by friend classes that operate
+    // safely.
+    Frame(const Frame&) = delete;
+    Frame& operator=(const Frame&) = delete;
+
+  private:
+    Frame(Frame&&) noexcept = default;
+    Frame& operator=(Frame&&) noexcept = default;
+
     {{- range .FrameItems }}
-    ::fidl::Envelope<{{ .LLDecl }}> {{ .Name }};
+    ::fidl::Envelope<{{ .LLDecl }}> {{ .Name }}_;
     {{- end }}
 
     friend class {{ .Name }};
     friend class {{ .Name }}::Builder;
+    friend class {{ .Name }}::UnownedBuilder;
   };
 
  private:
-  {{ .Name }}(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame> && frame) : max_ordinal_(max_ordinal), frame_(std::move(frame)) {}
-  uint64_t max_ordinal_;
-  ::fidl::tracking_ptr<Frame> frame_;
+  {{ .Name }}(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
+  uint64_t max_ordinal_ = 0;
+  ::fidl::tracking_ptr<Frame> frame_ptr_;
 };
 
-class {{ .Name }}::Builder {
+// {{ .Name }}::Builder builds {{ .Name }}.
+// Usage:
+// {{ .Name }} val = {{ .Name }}::Builder(std::make_unique<{{ .Name }}::Frame>())
+{{ if ne (len .Members) 0 }}// .set_{{(index .Members 0).Name}}(ptr){{end}}
+// .build();
+class {{ .Name }}::Builder final {
  public:
-  {{- if eq .BiggestOrdinal 0 }}
-  {{- /* Zero-sized arrays are questionable in C++ */}}
-  {{ .Name }} view() { return {{ .Name }}(0, nullptr); }
-  {{- else }}
-  {{ .Name }} view() { return {{ .Name }}(max_ordinal_, ::fidl::unowned_ptr<{{.Name}}::Frame>(&frame_)); }
-  {{- end }}
   ~Builder() = default;
+  Builder() = delete;
+  Builder(::fidl::tracking_ptr<{{ .Name }}::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
+
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
+
+  Builder(const Builder& other) = delete;
+  Builder& operator=(const Builder& other) = delete;
 
   {{- range .Members }}
 {{ "" }}
@@ -85,41 +104,63 @@ class {{ .Name }}::Builder {
   //{{ . }}
     {{- end }}
     {{- /* TODO(FIDL-677): The elem pointer should be const if it has no handles. */}}
-  Builder&& set_{{ .Name }}({{ .Type.LLDecl }}* elem);
+  Builder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}> elem) {
+    frame_ptr_->{{ .Name }}_.data = std::move(elem);
+    if (max_ordinal_ < {{ .Ordinal }}) {
+      // Note: the table size is not currently reduced if nullptr is set.
+      // This is possible to reconsider in the future.
+      max_ordinal_ = {{ .Ordinal }};
+    }
+    return std::move(*this);
+  }
   {{- end }}
 
- private:
-  Builder() = default;
-  friend Builder {{ .Name }}::Build();
+  {{ .Name }} build() {
+    return {{ .Name }}(max_ordinal_, std::move(frame_ptr_));
+  }
 
-  {{- if eq .BiggestOrdinal 0 }}
-  {{- /* Zero-sized arrays are questionable in C++ */}}
-  {{- else }}
-
+  private:
   uint64_t max_ordinal_ = 0;
-  {{ .Name }}::Frame frame_ = {};
-  {{- end }}
+  ::fidl::tracking_ptr<{{ .Name }}::Frame> frame_ptr_;
 };
+
+// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
+// data.
+class {{ .Name }}::UnownedBuilder final {
+public:
+  ~UnownedBuilder() = default;
+  UnownedBuilder() noexcept = default;
+  UnownedBuilder(UnownedBuilder&& other) noexcept = default;
+  UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
+
+  {{- range .Members }}
+{{ "" }}
+    {{- range .DocComments }}
+  //{{ . }}
+    {{- end }}
+    {{- /* TODO(FIDL-677): The elem pointer should be const if it has no handles. */}}
+  UnownedBuilder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}> elem) {
+    ZX_ASSERT(elem);
+    frame_.{{ .Name }}_.data = std::move(elem);
+    if (max_ordinal_ < {{ .Ordinal }}) {
+      max_ordinal_ = {{ .Ordinal }};
+    }
+    return std::move(*this);
+  }
+  {{- end }}
+
+  {{ .Name }} build() {
+    return {{ .Name }}(max_ordinal_, ::fidl::unowned_ptr<{{ .Name }}::Frame>(&frame_));
+  }
+
+private:
+  uint64_t max_ordinal_ = 0;
+  {{ .Name }}::Frame frame_;
+};
+
 {{- end }}
 
 {{- define "TableDefinition" }}
-{{- $table := . }}
-
-{{ .Namespace }}::{{ .Name }}::Builder {{ .Name }}::Build() {
-  return {{ .Name }}::Builder();
-}
-
-{{- range .Members }}
-{{ "" }}
-auto {{ $table.Namespace }}::{{ $table.Name }}::Builder::set_{{ .Name }}({{ .Type.LLDecl }}* elem) -> Builder&& {
-  ZX_ASSERT(elem);
-  frame_.{{ .Name }}.data = ::fidl::unowned_ptr<{{ .Type.LLDecl }}>(elem);
-  if (max_ordinal_ < {{ .Ordinal }}) {
-    max_ordinal_ = {{ .Ordinal }};
-  }
-  return std::move(*this);
-}
-{{- end }}
 {{- end }}
 
 {{- define "TableTraits" }}

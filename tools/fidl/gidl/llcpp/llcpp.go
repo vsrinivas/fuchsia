@@ -341,10 +341,15 @@ func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.Struct
 }
 
 func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
+	frameVar := b.newVar()
+
+	b.Builder.WriteString(fmt.Sprintf(
+		"auto %s = llcpp::conformance::%s::Frame();\n", frameVar, value.Name))
+
 	builderVar := b.newVar()
 
 	b.Builder.WriteString(fmt.Sprintf(
-		"auto %s = llcpp::conformance::%s::Build();\n", builderVar, value.Name))
+		"auto %s = llcpp::conformance::%s::Builder(fidl::unowned(&%s));\n", builderVar, value.Name, frameVar))
 
 	for _, field := range value.Fields {
 		if field.Key.Name == "" {
@@ -354,11 +359,11 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(&%s);\n", builderVar, field.Key.Name, fieldVar))
+			"%s.set_%s(fidl::unowned(&%s));\n", builderVar, field.Key.Name, fieldVar))
 	}
 	tableVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
-		"auto %s = %s.view();\n", tableVar, builderVar))
+		"auto %s = %s.build();\n", tableVar, builderVar))
 
 	b.lastVar = tableVar
 }

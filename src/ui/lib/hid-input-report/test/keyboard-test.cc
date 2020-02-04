@@ -213,13 +213,13 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   led_array[1] = hid_input_report::fuchsia_input_report::LedType::SCROLL_LOCK;
   // Build the FIDL table.
   auto led_view = fidl::VectorView<hid_input_report::fuchsia_input_report::LedType>(led_array);
-  auto keyboard_builder = hid_input_report::fuchsia_input_report::KeyboardOutputReport::Build();
-  keyboard_builder.set_enabled_leds(&led_view);
+  hid_input_report::fuchsia_input_report::KeyboardOutputReport::UnownedBuilder keyboard_builder;
+  keyboard_builder.set_enabled_leds(fidl::unowned(&led_view));
   hid_input_report::fuchsia_input_report::KeyboardOutputReport fidl_keyboard =
-      keyboard_builder.view();
-  auto builder = hid_input_report::fuchsia_input_report::OutputReport::Build();
-  builder.set_keyboard(&fidl_keyboard);
-  hid_input_report::fuchsia_input_report::OutputReport fidl_report = builder.view();
+      keyboard_builder.build();
+  hid_input_report::fuchsia_input_report::OutputReport::UnownedBuilder builder;
+  builder.set_keyboard(fidl::unowned(&fidl_keyboard));
+  hid_input_report::fuchsia_input_report::OutputReport fidl_report = builder.build();
   uint8_t report_data;
   size_t out_report_size;
   auto result =

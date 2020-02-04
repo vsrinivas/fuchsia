@@ -466,15 +466,16 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   led_array[0] = hid_input_report::fuchsia_input_report::LedType::NUM_LOCK;
   led_array[1] = hid_input_report::fuchsia_input_report::LedType::SCROLL_LOCK;
   auto led_view = fidl::VectorView<hid_input_report::fuchsia_input_report::LedType>(led_array);
-  auto keyboard_builder = hid_input_report::fuchsia_input_report::KeyboardOutputReport::Build();
-  keyboard_builder.set_enabled_leds(&led_view);
+  auto keyboard_builder =
+      hid_input_report::fuchsia_input_report::KeyboardOutputReport::UnownedBuilder();
+  keyboard_builder.set_enabled_leds(fidl::unowned(&led_view));
   hid_input_report::fuchsia_input_report::KeyboardOutputReport fidl_keyboard =
-      keyboard_builder.view();
-  auto builder = hid_input_report::fuchsia_input_report::OutputReport::Build();
-  builder.set_keyboard(&fidl_keyboard);
+      keyboard_builder.build();
+  auto builder = hid_input_report::fuchsia_input_report::OutputReport::UnownedBuilder();
+  builder.set_keyboard(fidl::unowned(&fidl_keyboard));
   // Send the report.
   fuchsia_input_report::InputDevice::ResultOf::SendOutputReport response =
-      sync_client.SendOutputReport(builder.view());
+      sync_client.SendOutputReport(builder.build());
   ASSERT_OK(response.status());
   ASSERT_FALSE(response->result.is_err());
   // Get and check the hid output report.

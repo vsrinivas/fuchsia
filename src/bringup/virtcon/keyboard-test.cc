@@ -69,7 +69,7 @@ class KeyboardInputHelper {
 
     hid_input_report::FidlInputReport fidl;
     hid_input_report::SetFidlInputReport(report, &fidl);
-    keyboard_.ProcessInput(fidl.builder.view());
+    keyboard_.ProcessInput(fidl.builder.build());
   }
 
   // Byte 0 contains one bit per modifier key.

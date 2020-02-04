@@ -139,7 +139,7 @@ TEST_F(DirV2, Enumerate) {
 
         // Sends a different entry every time.
         void GetNext(GetNextCompleter::Sync completer) override {
-          auto builder = fio2::DirectoryEntry::Build();
+          auto builder = fio2::DirectoryEntry::UnownedBuilder();
           fidl::StringView name;
           fio2::NodeProtocolSet protocols;
           fio2::Operations abilities;
@@ -147,29 +147,29 @@ TEST_F(DirV2, Enumerate) {
           switch (count_) {
             case 0:
               name = fidl::StringView("zero");
-              builder.set_name(&name);
+              builder.set_name(fidl::unowned(&name));
               protocols = fio2::NodeProtocolSet::DIRECTORY;
-              builder.set_protocols(&protocols);
+              builder.set_protocols(fidl::unowned(&protocols));
               abilities = fio2::Operations::ENUMERATE;
-              builder.set_abilities(&abilities);
+              builder.set_abilities(fidl::unowned(&abilities));
               id = 0;
-              builder.set_id(&id);
+              builder.set_id(fidl::unowned(&id));
               break;
             case 1:
               name = fidl::StringView("one");
-              builder.set_name(&name);
+              builder.set_name(fidl::unowned(&name));
               protocols = fio2::NodeProtocolSet::FILE;
-              builder.set_protocols(&protocols);
+              builder.set_protocols(fidl::unowned(&protocols));
               abilities = fio2::Operations::READ_BYTES;
-              builder.set_abilities(&abilities);
+              builder.set_abilities(fidl::unowned(&abilities));
               id = 1;
-              builder.set_id(&id);
+              builder.set_id(fidl::unowned(&id));
               break;
             default:
               return completer.ReplySuccess(fidl::VectorView<fio2::DirectoryEntry>());
           }
           count_++;
-          fio2::DirectoryEntry entry[1] = {builder.view()};
+          fio2::DirectoryEntry entry[1] = {builder.build()};
           completer.ReplySuccess(fidl::VectorView(entry));
         }
 

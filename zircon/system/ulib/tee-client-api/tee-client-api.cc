@@ -36,19 +36,19 @@ class Value {
  public:
   fuchsia_tee::Value to_llcpp() {
     if (direction_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_direction(&direction_.value());
+      llcpp_builder_.set_direction(fidl::unowned(&direction_.value()));
     }
     if (a_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_a(&a_.value());
+      llcpp_builder_.set_a(fidl::unowned(&a_.value()));
     }
     if (b_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_b(&b_.value());
+      llcpp_builder_.set_b(fidl::unowned(&b_.value()));
     }
     if (c_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_c(&c_.value());
+      llcpp_builder_.set_c(fidl::unowned(&c_.value()));
     }
 
-    return llcpp_builder_.view();
+    return llcpp_builder_.build();
   }
 
   void set_direction(fuchsia_tee::Direction direction) { direction_ = direction; }
@@ -60,7 +60,7 @@ class Value {
   void set_c(uint64_t c) { c_ = c; }
 
  private:
-  fuchsia_tee::Value::Builder llcpp_builder_ = fuchsia_tee::Value::Build();
+  fuchsia_tee::Value::UnownedBuilder llcpp_builder_;
 
   std::optional<fuchsia_tee::Direction> direction_{};
   std::optional<uint64_t> a_{};
@@ -72,19 +72,19 @@ class Buffer {
  public:
   fuchsia_tee::Buffer to_llcpp() {
     if (direction_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_direction(&direction_.value());
+      llcpp_builder_.set_direction(fidl::unowned(&direction_.value()));
     }
     if (vmo_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_vmo(&vmo_.value());
+      llcpp_builder_.set_vmo(fidl::unowned(&vmo_.value()));
     }
     if (offset_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_offset(&offset_.value());
+      llcpp_builder_.set_offset(fidl::unowned(&offset_.value()));
     }
     if (size_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_size(&size_.value());
+      llcpp_builder_.set_size(fidl::unowned(&size_.value()));
     }
 
-    return llcpp_builder_.view();
+    return llcpp_builder_.build();
   }
 
   void set_direction(fuchsia_tee::Direction direction) { direction_ = direction; }
@@ -96,7 +96,7 @@ class Buffer {
   void set_size(uint64_t size) { size_ = size; }
 
  private:
-  fuchsia_tee::Buffer::Builder llcpp_builder_ = fuchsia_tee::Buffer::Build();
+  fuchsia_tee::Buffer::UnownedBuilder llcpp_builder_;
 
   std::optional<fuchsia_tee::Direction> direction_{};
   std::optional<zx::vmo> vmo_{};

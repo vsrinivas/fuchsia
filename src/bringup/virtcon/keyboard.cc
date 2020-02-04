@@ -7,13 +7,13 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <poll.h>
 #include <stdio.h>
@@ -118,8 +118,9 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
   }
 
   // Generate the OutputReport.
-  auto report_builder = llcpp::fuchsia::input::report::OutputReport::Build();
-  auto keyboard_report_builder = llcpp::fuchsia::input::report::KeyboardOutputReport::Build();
+  auto report_builder = llcpp::fuchsia::input::report::OutputReport::UnownedBuilder();
+  auto keyboard_report_builder =
+      llcpp::fuchsia::input::report::KeyboardOutputReport::UnownedBuilder();
   fidl::VectorView<llcpp::fuchsia::input::report::LedType> led_view;
   llcpp::fuchsia::input::report::LedType caps_led =
       llcpp::fuchsia::input::report::LedType::CAPS_LOCK;
@@ -130,13 +131,13 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
     led_view = fidl::VectorView<llcpp::fuchsia::input::report::LedType>(nullptr, 0);
   }
 
-  keyboard_report_builder.set_enabled_leds(&led_view);
+  keyboard_report_builder.set_enabled_leds(fidl::unowned(&led_view));
   llcpp::fuchsia::input::report::KeyboardOutputReport keyboard_report =
-      keyboard_report_builder.view();
-  report_builder.set_keyboard(&keyboard_report);
+      keyboard_report_builder.build();
+  report_builder.set_keyboard(fidl::unowned(&keyboard_report));
 
   llcpp::fuchsia::input::report::InputDevice::ResultOf::SendOutputReport result =
-      keyboard_client_->SendOutputReport(report_builder.view());
+      keyboard_client_->SendOutputReport(report_builder.build());
 }
 
 // returns true if key was pressed and none were released

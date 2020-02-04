@@ -132,9 +132,9 @@ class RewriteTransaction : public fidl::Transaction {
           constexpr uint32_t kUnknownBytes = 5000;
           constexpr uint32_t kUnknownHandles = 0;
           real_response->envelope = fidl_envelope_t{
-            .num_bytes = kUnknownBytes,
-            .num_handles = kUnknownHandles,
-            .presence = FIDL_ALLOC_PRESENT,
+              .num_bytes = kUnknownBytes,
+              .num_handles = kUnknownHandles,
+              .presence = FIDL_ALLOC_PRESENT,
           };
           real_msg.num_bytes =
               sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + kUnknownBytes;
@@ -151,9 +151,9 @@ class RewriteTransaction : public fidl::Transaction {
             ZX_ASSERT(zx_event_create(0, &real_msg_handles[i]) == ZX_OK);
           }
           real_response->envelope = fidl_envelope_t{
-            .num_bytes = kUnknownBytes,
-            .num_handles = kUnknownHandles,
-            .presence = FIDL_ALLOC_PRESENT,
+              .num_bytes = kUnknownBytes,
+              .num_handles = kUnknownHandles,
+              .presence = FIDL_ALLOC_PRESENT,
           };
           real_msg.num_bytes =
               sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + kUnknownBytes;
@@ -166,8 +166,8 @@ class RewriteTransaction : public fidl::Transaction {
           ZX_ASSERT_MSG(false, "Cannot reach here");
       }
     }
-    zx_status_t status = channel_->write(0, real_msg.bytes, real_msg.num_bytes,
-                                         real_msg.handles, real_msg.num_handles);
+    zx_status_t status = channel_->write(0, real_msg.bytes, real_msg.num_bytes, real_msg.handles,
+                                         real_msg.num_handles);
     ZX_ASSERT(status == ZX_OK);
   }
 
@@ -197,26 +197,29 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
 
   void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync completer) override {
     fidl::Array<uint8_t, 30> array = {};
-    auto table_builder = test::FlexibleTable::Build()
-        .set_want_more_than_30_bytes_at_ordinal_3(&array);
-    completer.Reply(table_builder.view());
+    auto table_builder =
+        test::FlexibleTable::UnownedBuilder().set_want_more_than_30_bytes_at_ordinal_3(
+            fidl::unowned(&array));
+    completer.Reply(table_builder.build());
   }
 
   void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync completer) override {
     fidl::Array<zx::handle, 4> array = {};
-    auto table_builder = test::FlexibleTable::Build()
-        .set_want_more_than_4_handles_at_ordinal_4(&array);
-    completer.Reply(table_builder.view());
+    auto table_builder =
+        test::FlexibleTable::UnownedBuilder().set_want_more_than_4_handles_at_ordinal_4(
+            fidl::unowned(&array));
+    completer.Reply(table_builder.build());
   }
 
   Server(async_dispatcher_t* dispatcher, zx::channel channel)
       : async_wait_t({
-          .state = ASYNC_STATE_INIT,
-          .handler = &MessageHandler,
-          .object = channel.release(),
-          .trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-          .options = 0,
-      }), dispatcher_(dispatcher) {
+            .state = ASYNC_STATE_INIT,
+            .handler = &MessageHandler,
+            .object = channel.release(),
+            .trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+            .options = 0,
+        }),
+        dispatcher_(dispatcher) {
     async_begin_wait(dispatcher_, this);
   }
 

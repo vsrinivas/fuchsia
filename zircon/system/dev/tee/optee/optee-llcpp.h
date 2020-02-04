@@ -22,13 +22,13 @@ class OsRevision {
  public:
   fuchsia_tee::OsRevision to_llcpp() {
     if (major_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_major(&major_.value());
+      llcpp_builder_.set_major(fidl::unowned(&major_.value()));
     }
     if (minor_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_minor(&minor_.value());
+      llcpp_builder_.set_minor(fidl::unowned(&minor_.value()));
     }
 
-    return llcpp_builder_.view();
+    return llcpp_builder_.build();
   }
 
   void set_major(uint32_t major) { major_ = major; }
@@ -36,7 +36,7 @@ class OsRevision {
   void set_minor(uint32_t minor) { minor_ = minor; }
 
  private:
-  fuchsia_tee::OsRevision::Builder llcpp_builder_ = fuchsia_tee::OsRevision::Build();
+  fuchsia_tee::OsRevision::UnownedBuilder llcpp_builder_;
 
   std::optional<uint32_t> major_{};
   std::optional<uint32_t> minor_{};
@@ -46,18 +46,18 @@ class OsInfo {
  public:
   fuchsia_tee::OsInfo to_llcpp() {
     if (uuid_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_uuid(&uuid_.value());
+      llcpp_builder_.set_uuid(fidl::unowned(&uuid_.value()));
     }
     if (revision_.has_value()) {
       llcpp_revision_ = revision_->to_llcpp();
-      llcpp_builder_ = llcpp_builder_.set_revision(&llcpp_revision_);
+      llcpp_builder_.set_revision(fidl::unowned(&llcpp_revision_));
     }
     if (is_global_platform_compliant_.has_value()) {
-      llcpp_builder_ =
-          llcpp_builder_.set_is_global_platform_compliant(&is_global_platform_compliant_.value());
+      llcpp_builder_.set_is_global_platform_compliant(
+          fidl::unowned(&is_global_platform_compliant_.value()));
     }
 
-    return llcpp_builder_.view();
+    return llcpp_builder_.build();
   }
 
   void set_uuid(fuchsia_tee::Uuid uuid) { uuid_ = uuid; }
@@ -69,7 +69,7 @@ class OsInfo {
   }
 
  private:
-  fuchsia_tee::OsInfo::Builder llcpp_builder_ = fuchsia_tee::OsInfo::Build();
+  fuchsia_tee::OsInfo::UnownedBuilder llcpp_builder_;
   fuchsia_tee::OsRevision llcpp_revision_{};
 
   std::optional<fuchsia_tee::Uuid> uuid_{};
@@ -81,19 +81,19 @@ class Value {
  public:
   fuchsia_tee::Value to_llcpp() {
     if (direction_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_direction(&direction_.value());
+      llcpp_builder_.set_direction(fidl::unowned(&direction_.value()));
     }
     if (a_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_a(&a_.value());
+      llcpp_builder_.set_a(fidl::unowned(&a_.value()));
     }
     if (b_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_b(&b_.value());
+      llcpp_builder_.set_b(fidl::unowned(&b_.value()));
     }
     if (c_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_c(&c_.value());
+      llcpp_builder_.set_c(fidl::unowned(&c_.value()));
     }
 
-    return llcpp_builder_.view();
+    return llcpp_builder_.build();
   }
 
   void set_direction(fuchsia_tee::Direction direction) { direction_ = direction; }
@@ -105,7 +105,7 @@ class Value {
   void set_c(uint64_t c) { c_ = c; }
 
  private:
-  fuchsia_tee::Value::Builder llcpp_builder_ = fuchsia_tee::Value::Build();
+  fuchsia_tee::Value::UnownedBuilder llcpp_builder_;
 
   std::optional<fuchsia_tee::Direction> direction_{};
   std::optional<uint64_t> a_{};
@@ -117,19 +117,19 @@ class Buffer {
  public:
   fuchsia_tee::Buffer to_llcpp() {
     if (direction_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_direction(&direction_.value());
+      llcpp_builder_.set_direction(fidl::unowned(&direction_.value()));
     }
     if (vmo_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_vmo(&vmo_.value());
+      llcpp_builder_.set_vmo(fidl::unowned(&vmo_.value()));
     }
     if (offset_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_offset(&offset_.value());
+      llcpp_builder_.set_offset(fidl::unowned(&offset_.value()));
     }
     if (size_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_size(&size_.value());
+      llcpp_builder_.set_size(fidl::unowned(&size_.value()));
     }
 
-    return llcpp_builder_.view();
+    return llcpp_builder_.build();
   }
 
   void set_direction(fuchsia_tee::Direction direction) { direction_ = direction; }
@@ -141,7 +141,7 @@ class Buffer {
   void set_size(uint64_t size) { size_ = size; }
 
  private:
-  fuchsia_tee::Buffer::Builder llcpp_builder_ = fuchsia_tee::Buffer::Build();
+  fuchsia_tee::Buffer::UnownedBuilder llcpp_builder_;
 
   std::optional<fuchsia_tee::Direction> direction_{};
   std::optional<zx::vmo> vmo_{};
@@ -207,19 +207,19 @@ class OpResult {
  public:
   fuchsia_tee::OpResult to_llcpp() {
     if (return_code_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_return_code(&return_code_.value());
+      llcpp_builder_.set_return_code(fidl::unowned(&return_code_.value()));
     }
 
     if (return_origin_.has_value()) {
-      llcpp_builder_ = llcpp_builder_.set_return_origin(&return_origin_.value());
+      llcpp_builder_.set_return_origin(fidl::unowned(&return_origin_.value()));
     }
 
     if (parameter_set_.has_value()) {
       llcpp_parameter_set_ = parameter_set_->to_llcpp();
-      llcpp_builder_ = llcpp_builder_.set_parameter_set(&llcpp_parameter_set_);
+      llcpp_builder_.set_parameter_set(fidl::unowned(&llcpp_parameter_set_));
     }
 
-    return llcpp_builder_.view();
+    return llcpp_builder_.build();
   }
 
   void set_return_code(uint64_t return_code) { return_code_ = return_code; }
@@ -231,7 +231,7 @@ class OpResult {
   void set_parameter_set(ParameterSet parameter_set) { parameter_set_ = std::move(parameter_set); }
 
  private:
-  fuchsia_tee::OpResult::Builder llcpp_builder_ = fuchsia_tee::OpResult::Build();
+  fuchsia_tee::OpResult::UnownedBuilder llcpp_builder_;
   fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_;
 
   std::optional<uint64_t> return_code_{};

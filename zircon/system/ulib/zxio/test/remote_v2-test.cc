@@ -113,11 +113,11 @@ TEST_F(RemoteV2, GetAttributes) {
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
       fio2::NodeProtocolSet protocols = fio2::NodeProtocolSet::FILE;
-      auto builder = fio2::NodeAttributes::Build()
-                         .set_content_size(&content_size)
-                         .set_protocols(&protocols)
-                         .set_id(&id);
-      completer.ReplySuccess(builder.view());
+      auto builder = fio2::NodeAttributes::UnownedBuilder()
+                         .set_content_size(fidl::unowned(&content_size))
+                         .set_protocols(fidl::unowned(&protocols))
+                         .set_id(fidl::unowned(&id));
+      completer.ReplySuccess(builder.build());
     }
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());
