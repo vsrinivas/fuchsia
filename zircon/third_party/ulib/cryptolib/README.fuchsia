@@ -1,8 +1,0 @@
-Source: https://github.com/jlnt/greygoo/tree/master/ucryptolib
-Git Commit: b74ba4db80c6de95892b3a3429529eed89b8773a
-License: Apache License version 2.0
-
-Modifications:
- - Changed header guard to "#pragma once"
- - Added __BEGIN_CDECLS / __END_CDECLS
- - Changed code to avoid VLAs.

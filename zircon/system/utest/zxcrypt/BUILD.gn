@@ -35,7 +35,6 @@ zx_test("zxcrypt") {
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
-    "$zx/third_party/ulib/cryptolib",
     "$zx/third_party/ulib/uboringssl",
   ]
 }

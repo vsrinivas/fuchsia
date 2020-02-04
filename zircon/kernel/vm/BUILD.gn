@@ -39,7 +39,6 @@ zx_library("vm") {
     "$zx/kernel/lib/user_copy",
     "$zx/kernel/lib/userabi",
     "$zx/system/ulib/pretty",
-    "$zx/third_party/ulib/cryptolib",
   ]
   public_deps = [
     # <vm/vm_page_list.h> has #include <ktl/unique_ptr.h>.
