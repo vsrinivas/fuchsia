@@ -2,7 +2,6 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """
 Runs the GN SDK tests
 usage: run.py [-h] [--proj_dir PROJ_DIR] [--out_dir OUT_DIR]
@@ -17,9 +16,11 @@ OUT_DIR defaults to ./out/default relative to the run.py
 """
 
 import argparse
+import imp
 import os
 from subprocess import check_output, Popen
 import sys
+import unittest
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,6 +28,12 @@ ARCHES = [
     'arm64',
     'x64',
 ]
+
+FUCHSIA_ROOT = '${data.fuchsia_root}'
+GEN_FIDL_RESP_FILE_TEST_PATH = os.path.join(
+    FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'gen_fidl_response_file_unittest.py')
+gen_fidl_response_file_unittest = imp.load_source(
+    'gen_fidl_response_file_unittest', GEN_FIDL_RESP_FILE_TEST_PATH)
 
 DEFAULT_OUT_DIR = os.path.join(SCRIPT_DIR, 'out')
 
@@ -45,7 +52,17 @@ class GnTester(object):
         self.arch = arch
         self.out_dir = out_dir
 
+    def _gen_fild_resp_file_unittest(self):
+        loader = unittest.TestLoader()
+        tests = loader.loadTestsFromModule(gen_fidl_response_file_unittest)
+        suite = unittest.TestSuite()
+        suite.addTests(tests)
+        runner = unittest.TextTestRunner()
+        runner.run(suite)
+
     def run(self):
+        if self._gen_fild_resp_file_unittest():
+            return 1
         return 0
 
 

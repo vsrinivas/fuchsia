@@ -28,7 +28,7 @@ def write_libraries(libraries_path, libraries):
             f.write("\n")
 
 
-def main():
+def main(args_list=None):
     parser = argparse.ArgumentParser(
         description="Generate response file for FIDL frontend")
     parser.add_argument(
@@ -52,7 +52,10 @@ def main():
         "--sources", help="List of FIDL source files", nargs="*")
     parser.add_argument(
         "--dep-libraries", help="List of dependent libraries", nargs="*")
-    args = parser.parse_args()
+    if args_list:
+        args = parser.parse_args(args_list)
+    else:
+        args = parser.parse_args()
 
     target_libraries = []
 
@@ -62,7 +65,6 @@ def main():
             if library in target_libraries:
                 continue
             target_libraries.append(library)
-
     target_libraries.append(" ".join(sorted(args.sources)))
     write_libraries(args.out_libraries, target_libraries)
 
