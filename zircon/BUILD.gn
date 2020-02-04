@@ -629,36 +629,3 @@ foreach(cpu, standard_fuchsia_cpus) {
 build_api_module("zbi_test_success_string") {
   contents = zbi_test_success_string
 }
-
-# This describes pre-generated FIDL bindings that are required by the build.
-#
-# TODO(BLD-441): This will go away when fidlgen is built in this build.
-# See $zx/public/gn/fidl/llcpp.gni, where the metadata is generated.
-#
-# Type: list(scope)
-#
-#   name
-#     Required: The FIDL library name as it appears in FIDL source (with dots).
-#     Type: string
-#
-#   label
-#     Required: The label of the fidl_library() target.
-#     Type: label_no_toolchain
-#
-#   json
-#     Required: Path to the fidlc --json output.
-#     Type: path relative to $root_build_dir
-#
-#   target_gen_dir
-#     Required: The place in the source tree where generated files go.
-#     Type: path relative to $root_build_dir
-#
-#   args
-#     Required: Argument list for `fidlgen` if run in $root_build_dir.
-#     Type: list(string)
-#
-build_api_module("fidl_gen") {
-  testonly = true
-  data_keys = [ "fidl_gen" ]
-  deps = default_deps
-}
