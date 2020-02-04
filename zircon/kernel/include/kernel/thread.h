@@ -384,13 +384,13 @@ static inline void dump_thread_user_tid_during_panic(uint64_t tid,
 // global thread list
 thread_t* thread_id_to_thread_slow(uint64_t tid);
 
-static inline bool thread_is_realtime(thread_t* t) {
+static inline bool thread_is_realtime(const thread_t* t) {
   return (t->flags & THREAD_FLAG_REAL_TIME) && t->base_priority > DEFAULT_PRIORITY;
 }
 
-static inline bool thread_is_idle(thread_t* t) { return !!(t->flags & THREAD_FLAG_IDLE); }
+static inline bool thread_is_idle(const thread_t* t) { return !!(t->flags & THREAD_FLAG_IDLE); }
 
-static inline bool thread_is_real_time_or_idle(thread_t* t) {
+static inline bool thread_is_real_time_or_idle(const thread_t* t) {
   return !!(t->flags & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE));
 }
 
@@ -408,7 +408,7 @@ static inline bool thread_is_real_time_or_idle(thread_t* t) {
 // calculation of effective priority makes writing tests like this more
 // difficult which is why we have an internal flag which can be used for
 // disabling this behavior.
-static inline bool thread_cannot_boost(thread_t* t) {
+static inline bool thread_cannot_boost(const thread_t* t) {
   return !!(t->flags & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE | THREAD_FLAG_NO_BOOST));
 }
 
