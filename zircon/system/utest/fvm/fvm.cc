@@ -13,10 +13,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/memfs/memfs.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -2564,25 +2564,28 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // Try to bind an fvm to the disk.
   ASSERT_OK(fdio_get_service_handle(ramdisk_fd.get(), fvm_channel.reset_and_get_address()));
 
+  // Bind should return ZX_ERR_IO when the load of a driver fails.
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
       zx::unowned_channel(fvm_channel.get()),
       ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
   ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
-
-  // Ugly way of validating that the driver failed to Load.
-  char fvm_path[PATH_MAX];
-  snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path());
-  ASSERT_EQ(wait_for_device(fvm_path, zx::sec(1).get()), ZX_ERR_TIMED_OUT);
+  ASSERT_FALSE(resp->result.is_response());
+  ASSERT_EQ(resp->result.err(), ZX_ERR_IO);
 
   // Grow the ramdisk to the appropiate size and bind should succeed.
   ASSERT_OK(ramdisk_grow(ramdisk(), kFvmPartitionSize));
-
-  resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
+  // Use Controller::Call::Rebind because the driver might still be
+  // when init fails. Driver removes the device and will eventually be
+  // unloaded but Controller::Bind above does not wait until
+  // the device is removed. Controller::Rebind ensures nothing is
+  // bound to the device, before it tries to bind the driver again.
+  auto resp2 = ::llcpp::fuchsia::device::Controller::Call::Rebind(
       zx::unowned_channel(fvm_channel.get()),
       ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
-  ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp->result.is_response());
+  ASSERT_OK(resp2.status());
+  ASSERT_TRUE(resp2->result.is_response());
+  char fvm_path[PATH_MAX];
+  snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path());
   ASSERT_OK(wait_for_device(fvm_path, zx::duration::infinite().get()));
 }
 

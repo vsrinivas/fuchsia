@@ -484,11 +484,29 @@ void devhost_device_init_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t 
       dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
     }
   }
-  if (dev->init_cb) {
-    dev->init_cb(status);
-  } else {
-    ZX_PANIC("device: %p(%s): cannot reply to init, no callback set, flags are 0x%x\n", dev.get(),
-             dev->name, dev->flags);
+
+  ZX_ASSERT_MSG(dev->init_cb,
+                "device: %p(%s): cannot reply to init, no callback set, flags are 0x%x\n",
+                dev.get(), dev->name, dev->flags);
+
+  dev->init_cb(status);
+  // Device is no longer invisible.
+  dev->flags &= ~(DEV_FLAG_INVISIBLE);
+  // If all children completed intializing,
+  // complete pending bind and rebind connections.
+  bool complete_bind_rebind = true;
+  for (auto& child : dev->parent->children) {
+    if (child.flags & DEV_FLAG_INVISIBLE) {
+      complete_bind_rebind = false;
+    }
+  }
+  if (complete_bind_rebind) {
+    if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
+      bind_conn(status);
+    }
+    if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
+      rebind_conn(status);
+    }
   }
 }
 
@@ -516,6 +534,16 @@ zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
     printf("device: %p(%s): cannot be removed (%s)\n", dev.get(), dev->name,
            removal_problem(dev->flags));
     return ZX_ERR_INVALID_ARGS;
+  }
+  if (dev->flags & DEV_FLAG_INVISIBLE) {
+    // We failed during init and the device is being removed. Complete the pending
+    // bind/rebind conn of parent if any.
+    if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
+      bind_conn(ZX_ERR_IO);
+    }
+    if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
+      rebind_conn(ZX_ERR_IO);
+    }
   }
 #if TRACE_ADD_REMOVE
   printf("device: %p(%s): is being scheduled for removal\n", dev.get(), dev->name);

@@ -591,6 +591,8 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
     if (status == ZX_OK) {
       if (response.Unwrap()->result.is_response()) {
         device_id = response.Unwrap()->result.response().local_device_id;
+        // Mark child as invisible until the init function is replied.
+        child->flags |= DEV_FLAG_INVISIBLE;
       } else {
         call_status = response.Unwrap()->result.err();
       }
@@ -673,6 +675,26 @@ void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev,
     }
   }
   log_rpc_result("make-visible", status, call_status);
+  dev->flags &= ~(DEV_FLAG_INVISIBLE);
+
+  // Reply to any pending bind/rebind requests, if all
+  // the children are initialized.
+  bool reply_bind_rebind = true;
+  for (auto& child : dev->parent->children) {
+    if (child.flags & DEV_FLAG_INVISIBLE) {
+      reply_bind_rebind = false;
+    }
+  }
+  if (!reply_bind_rebind) {
+    return;
+  }
+  status = (status == ZX_OK) ? call_status : status;
+  if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
+    bind_conn(status);
+  }
+  if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
+    rebind_conn(status);
+  }
 }
 
 // Send message to devcoordinator informing it that this device

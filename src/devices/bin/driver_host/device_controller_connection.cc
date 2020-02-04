@@ -31,6 +31,16 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
                zx::channel test_output = zx::channel()) {
   completer.Reply(status, std::move(test_output));
 
+  bool complete_bind = true;
+  for (auto &child : dev->children) {
+    if ((child.flags & DEV_FLAG_INVISIBLE) || child.ops->init) {
+      // Driver has initializatin to do.
+      complete_bind = false;
+    }
+  }
+  if (!complete_bind) {
+    return;
+  }
   if (auto bind_conn = dev->take_bind_conn(); bind_conn) {
     bind_conn(status);
   }
