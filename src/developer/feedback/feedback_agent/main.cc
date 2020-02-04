@@ -10,7 +10,9 @@
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
+#include "src/developer/feedback/feedback_agent/feedback_id.h"
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});
@@ -21,6 +23,10 @@ int main(int argc, const char** argv) {
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
   feedback::FeedbackAgent agent(&root_node);
+
+  if (!feedback::InitializeFeedbackId(feedback::kFeedbackIdPath)) {
+    FX_LOGS(ERROR) << "Error initializing feedback id";
+  }
 
   // We spawn a new process capable of handling fuchsia.feedback.DataProvider requests on every
   // incoming request. This has the advantage of tying each request to a different process that can

@@ -10,6 +10,7 @@
 #include "src/developer/feedback/feedback_agent/annotations/board_name_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/build_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/channel_provider.h"
+#include "src/developer/feedback/feedback_agent/annotations/feedback_id_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/product_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/time_provider.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
@@ -34,6 +35,7 @@ enum class AnnotationType {
   BoardName = 0,
   BuildInfo,
   Channel,
+  FeedbackId,
   HardwareBoardInfo,
   HardwareProductInfo,
   Time,
@@ -50,6 +52,8 @@ std::set<std::string> GetSupportedAnnotations(const AnnotationType type) {
       return BuildInfoProvider::GetSupportedAnnotations();
     case AnnotationType::Channel:
       return ChannelProvider::GetSupportedAnnotations();
+    case AnnotationType::FeedbackId:
+      return FeedbackIdProvider::GetSupportedAnnotations();
     case AnnotationType::HardwareBoardInfo:
       return BoardInfoProvider::GetSupportedAnnotations();
     case AnnotationType::HardwareProductInfo:
@@ -82,6 +86,8 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
       return std::make_unique<BuildInfoProvider>(annotations);
     case AnnotationType::Channel:
       return std::make_unique<ChannelProvider>(dispatcher, services, timeout, std::move(cobalt));
+    case AnnotationType::FeedbackId:
+      return std::make_unique<FeedbackIdProvider>();
     case AnnotationType::HardwareBoardInfo:
       return std::make_unique<BoardInfoProvider>(annotations, dispatcher, services, timeout,
                                                  std::move(cobalt));

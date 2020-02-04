@@ -41,7 +41,9 @@ executable("main") {
   sources = [ "main.cc" ]
 
   deps = [
+    ":constants",
     ":feedback_agent_src",
+    ":feedback_id",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -98,8 +100,6 @@ source_set("data_provider_src") {
     "config.h",
     "data_provider.cc",
     "data_provider.h",
-    "feedback_id.cc",
-    "feedback_id.h",
     "image_conversion.cc",
     "image_conversion.h",
     "ref_counted_delayed_task.cc",
@@ -130,10 +130,25 @@ source_set("data_provider_src") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
-    "//src/lib/uuid",
     "//third_party/libpng",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+source_set("feedback_id") {
+  public = [ "feedback_id.h" ]
+
+  sources = [
+    "feedback_id.cc",
+    "feedback_id.h",
+  ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//src/lib/uuid",
   ]
 }
 

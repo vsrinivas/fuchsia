@@ -206,6 +206,7 @@ executable("data_provider_unittest") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/developer/feedback/feedback_agent:feedback_id",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
@@ -276,7 +277,7 @@ executable("feedback_id_unittest") {
   sources = [ "feedback_id_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/developer/feedback/feedback_agent:feedback_id",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/files:files",
     "//src/lib/uuid:uuid",

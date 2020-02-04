@@ -366,6 +366,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                       MatchesKey(kAnnotationBuildVersion),
                                       MatchesKey(kAnnotationChannel),
                                       MatchesKey(kAnnotationDeviceBoardName),
+                                      MatchesKey(kAnnotationDeviceFeedbackId),
                                       MatchesKey(kAnnotationDeviceUptime),
                                       MatchesKey(kAnnotationDeviceUTCTime),
                                       MatchesKey(kAnnotationHardwareBoardName),

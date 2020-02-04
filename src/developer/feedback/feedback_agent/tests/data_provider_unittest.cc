@@ -24,6 +24,7 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/feedback_agent/feedback_id.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_board.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
@@ -33,6 +34,8 @@
 #include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/archive.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -69,6 +72,7 @@ const std::set<std::string> kDefaultAnnotations = {
     kAnnotationBuildVersion,
     kAnnotationChannel,
     kAnnotationDeviceBoardName,
+    kAnnotationDeviceFeedbackId,
     kAnnotationDeviceUptime,
     kAnnotationDeviceUTCTime,
     kAnnotationHardwareBoardName,
@@ -216,7 +220,12 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 // connecting through FIDL.
 class DataProviderTest : public UnitTestFixture {
  public:
-  void SetUp() override { SetUpDataProvider(kDefaultConfig); }
+  void SetUp() override {
+    SetUpDataProvider(kDefaultConfig);
+    ASSERT_TRUE(InitializeFeedbackId(kFeedbackIdPath));
+  }
+
+  void TearDown() override { ASSERT_TRUE(files::DeletePath(kFeedbackIdPath, /*recursive=*/false)); }
 
  protected:
   void SetUpDataProvider(const Config& config) {
@@ -543,18 +552,21 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     },
     "%s": {
       "type": "string"
+    },
+    "%s": {
+      "type": "string"
     }
   },
   "additionalProperties": false
 })",
                 kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
                 kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationChannel,
-                kAnnotationDeviceBoardName, kAnnotationDeviceUptime, kAnnotationDeviceUTCTime,
-                kAnnotationHardwareBoardName, kAnnotationHardwareBoardRevision,
-                kAnnotationHardwareProductLanguage, kAnnotationHardwareProductLocaleList,
-                kAnnotationHardwareProductManufacturer, kAnnotationHardwareProductModel,
-                kAnnotationHardwareProductName, kAnnotationHardwareProductRegulatoryDomain,
-                kAnnotationHardwareProductSKU))
+                kAnnotationDeviceBoardName, kAnnotationDeviceFeedbackId, kAnnotationDeviceUptime,
+                kAnnotationDeviceUTCTime, kAnnotationHardwareBoardName,
+                kAnnotationHardwareBoardRevision, kAnnotationHardwareProductLanguage,
+                kAnnotationHardwareProductLocaleList, kAnnotationHardwareProductManufacturer,
+                kAnnotationHardwareProductModel, kAnnotationHardwareProductName,
+                kAnnotationHardwareProductRegulatoryDomain, kAnnotationHardwareProductSKU))
             .HasParseError());
     rapidjson::SchemaDocument schema(schema_json);
     rapidjson::SchemaValidator validator(schema);
@@ -666,6 +678,19 @@ TEST_F(DataProviderTest, GetData_Time) {
                                       MatchesKey(kAnnotationDeviceUptime),
                                       MatchesKey(kAnnotationDeviceUTCTime),
                                   }));
+}
+
+TEST_F(DataProviderTest, GetData_FeedbackId) {
+  std::string feedback_id;
+  ASSERT_TRUE(files::ReadFileToString(kFeedbackIdPath, &feedback_id));
+  fit::result<Data, zx_status_t> result = GetData();
+
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  ASSERT_TRUE(data.has_annotations());
+  EXPECT_THAT(data.annotations(),
+              testing::Contains(MatchesAnnotation(kAnnotationDeviceFeedbackId, feedback_id)));
 }
 
 TEST_F(DataProviderTest, GetData_EmptyAnnotationAllowlist) {
