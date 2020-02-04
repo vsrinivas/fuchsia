@@ -49,17 +49,20 @@ import (
 	"unsafe"
 
 	"netstack/link"
-
 	"syslog"
 
 	"fidl/fuchsia/hardware/ethernet"
+
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 // #cgo CFLAGS: -I${SRCDIR}/../../../zircon/public
 // #include <zircon/device/ethernet.h>
 import "C"
 
-const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
+const zxsioEthSignalStatus = zx.SignalUser0
 
 const FifoEntrySize = C.sizeof_struct_eth_fifo_entry
 
@@ -74,10 +77,15 @@ type ethProtocolState struct {
 	}
 }
 
+var _ stack.LinkEndpoint = (*Client)(nil)
+
 // A Client is an ethernet client.
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
 // The protocol is described in system/fidl/fuchsia-hardware-ethernet/ethernet.fidl.
 type Client struct {
+	dispatcher stack.NetworkDispatcher
+	wg         sync.WaitGroup
+
 	Info ethernet.Info
 
 	device ethernet.Device
@@ -90,13 +98,6 @@ type Client struct {
 	arena     *Arena
 
 	tx, rx ethProtocolState
-}
-
-func checkStatus(status int32, text string) error {
-	if status := zx.Status(status); status != zx.ErrOk {
-		return &zx.Error{Status: status, Text: text}
-	}
-	return nil
 }
 
 // NewClient creates a new ethernet Client.
@@ -169,6 +170,118 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 	}
 
 	return c, nil
+}
+
+func (c *Client) MTU() uint32 { return c.Info.Mtu }
+
+func (c *Client) Capabilities() stack.LinkEndpointCapabilities {
+	// TODO(tamird/brunodalbo): expose hardware offloading capabilities.
+	return 0
+}
+
+func (c *Client) MaxHeaderLength() uint16 {
+	return 0
+}
+
+func (c *Client) LinkAddress() tcpip.LinkAddress {
+	return tcpip.LinkAddress(c.Info.Mac.Octets[:])
+}
+
+func (c *Client) write(buffer tcpip.PacketBuffer) *tcpip.Error {
+	var buf Buffer
+	for {
+		if buf = c.AllocForSend(); buf != nil {
+			break
+		}
+		if err := c.WaitSend(); err != nil {
+			syslog.VLogTf(syslog.DebugVerbosity, "eth", "wait error: %s", err)
+			return tcpip.ErrWouldBlock
+		}
+	}
+	used := 0
+	used += copy(buf[used:], buffer.Header.View())
+	for _, v := range buffer.Data.Views() {
+		used += copy(buf[used:], v)
+	}
+	if err := c.Send(buf[:used]); err != nil {
+		syslog.VLogTf(syslog.DebugVerbosity, "eth", "send error: %s", err)
+		return tcpip.ErrWouldBlock
+	}
+
+	syslog.VLogTf(syslog.TraceVerbosity, "eth", "write=%d", used)
+
+	return nil
+}
+
+func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+	return c.write(pkt)
+}
+
+func (c *Client) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	// TODO(tamird/stijlist): do better batching here. We can allocate a buffer for each packet
+	// before attempting to send them all to the drive all at once.
+	var n int
+	for _, pkt := range pkts {
+		if err := c.WritePacket(r, gso, protocol, pkt); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
+}
+
+func (c *Client) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
+	return c.write(tcpip.PacketBuffer{
+		Data: vv,
+	})
+}
+
+func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		if err := func() error {
+			for {
+				b, err := c.Recv()
+				if err != nil {
+					if err, ok := err.(*zx.Error); ok {
+						switch err.Status {
+						case zx.ErrShouldWait:
+							c.WaitRecv()
+							continue
+						}
+					}
+					return err
+				}
+				var emptyLinkAddress tcpip.LinkAddress
+				dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, tcpip.PacketBuffer{
+					Data: append(buffer.View(nil), b...).ToVectorisedView(),
+				})
+				c.Free(b)
+			}
+		}(); err != nil {
+			syslog.WarnTf("eth", "dispatch error: %s", err)
+		}
+	}()
+
+	c.dispatcher = dispatcher
+}
+
+func (c *Client) IsAttached() bool {
+	return c.dispatcher != nil
+}
+
+// Wait implements stack.LinkEndpoint. It blocks until an error in the dispatch
+// goroutine(s) spawned in Attach occurs.
+func (c *Client) Wait() {
+	c.wg.Wait()
+}
+
+func checkStatus(status int32, text string) error {
+	if status := zx.Status(status); status != zx.ErrOk {
+		return &zx.Error{Status: status, Text: text}
+	}
+	return nil
 }
 
 func (c *Client) SetOnStateChange(f func(link.State)) {
@@ -434,10 +547,10 @@ func (c *Client) WaitSend() error {
 // or the client is closed.
 func (c *Client) WaitRecv() {
 	for {
-		obs, err := zxwait.Wait(c.fifos.Rx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed|ZXSIO_ETH_SIGNAL_STATUS, zx.TimensecInfinite)
+		obs, err := zxwait.Wait(c.fifos.Rx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed|zxsioEthSignalStatus, zx.TimensecInfinite)
 		if err != nil || obs&zx.SignalFIFOPeerClosed != 0 {
 			c.Close()
-		} else if obs&ZXSIO_ETH_SIGNAL_STATUS != 0 {
+		} else if obs&zxsioEthSignalStatus != 0 {
 			// TODO(): The wired Ethernet should receive this signal upon being
 			// hooked up with a (an active) Ethernet cable.
 			if status, err := c.GetStatus(); err != nil {

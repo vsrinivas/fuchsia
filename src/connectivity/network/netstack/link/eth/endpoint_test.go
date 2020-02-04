@@ -107,9 +107,9 @@ func TestEndpoint_WritePacket(t *testing.T) {
 	const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
 	const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")
 	// Test that we don't accidentally put unused bytes on the wire.
-	const header = "foo"
-	hdr := buffer.NewPrependable(len(header) + 5)
-	if want, got := len(header), copy(hdr.Prepend(len(header)), header); got != want {
+	const packetHeader = "foo"
+	hdr := buffer.NewPrependable(int(outEndpoint.MaxHeaderLength()) + len(packetHeader) + 5)
+	if want, got := len(packetHeader), copy(hdr.Prepend(len(packetHeader)), packetHeader); got != want {
 		t.Fatalf("got copy() = %d, want = %d", got, want)
 	}
 	const body = "bar"
@@ -137,7 +137,7 @@ func TestEndpoint_WritePacket(t *testing.T) {
 			DstLinkAddr: remoteLinkAddress,
 			Protocol:    protocol,
 			Pkt: tcpip.PacketBuffer{
-				Data: buffer.View(header + body).ToVectorisedView(),
+				Data: buffer.View(packetHeader + body).ToVectorisedView(),
 			},
 		}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {
 			t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
