@@ -10,12 +10,3 @@ zx_library("smbios") {
   sources = [ "smbios.cc" ]
   deps = [ "$zx/system/ulib/fbl" ]
 }
-
-zx_test("smbios-test") {
-  sources = [ "smbios-test.cc" ]
-  deps = [
-    ":smbios",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-  ]
-}
