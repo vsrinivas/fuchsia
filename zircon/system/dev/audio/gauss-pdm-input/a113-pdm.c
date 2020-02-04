@@ -79,13 +79,6 @@ void a113_pdm_arb_config(a113_audio_device_t* aml_tdm_dev) {
   a113_ee_audio_write(aml_tdm_dev, EE_AUDIO_ARB_CTRL, 1 << 31 | 0xff << 0);
 }
 
-static void a113_pdm_filters_config(a113_audio_device_t* audio_device, int lpf1_len, int lpf2_len,
-                                    int lpf3_len) {}
-
-static void a113_pdm_LPF_coeff(a113_audio_device_t* audio_device, int lpf1_len,
-                               const int* lpf1_coeff, int lpf2_len, const int* lpf2_coeff,
-                               int lpf3_len, const int* lpf3_coeff) {}
-
 void a113_pdm_filter_ctrl(a113_audio_device_t* audio_device) {
   a113_pdm_write(audio_device, PDM_HCIC_CTRL1,
                  (0x80000000 | 0x7 | (0x8 << 4) | (0x80 << 16) | (0x11 << 24)));

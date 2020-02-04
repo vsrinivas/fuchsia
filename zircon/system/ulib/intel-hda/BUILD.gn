@@ -39,6 +39,7 @@ zx_library("intel-hda") {
     "$zx/system/ulib/abs_clock",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/fbl",

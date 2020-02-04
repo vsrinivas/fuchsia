@@ -30,12 +30,6 @@ namespace audio::intel_hda {
 
 namespace {
 
-// Return true if the given file exists.
-bool FileExists(const std::string& path) {
-  struct stat stat_result;
-  return stat(path.c_str(), &stat_result) == 0;
-}
-
 // Return the files in the given directory.
 //
 // The given path should end with "/".
