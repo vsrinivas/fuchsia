@@ -808,14 +808,6 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
   *m_out = static_cast<uint32_t>(static_cast<uint64_t>(x) * *n_out / y);
 }
 
-static registers::Trans select_trans(registers::Ddi ddi, registers::Pipe pipe) {
-  if (ddi == registers::DDI_A) {
-    return registers::TRANS_EDP;
-  } else {
-    return static_cast<registers::Trans>(pipe);
-  }
-}
-
 }  // namespace
 
 namespace i915 {

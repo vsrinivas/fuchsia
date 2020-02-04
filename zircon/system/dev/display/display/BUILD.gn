@@ -2,16 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("display") {
-  deps = [ ":shared" ]
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  deprecated_inhibit_driver_shlib_allowlist = true
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("display") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  deps = [
+    ":shared",
+    "//src/devices:driver",
+  ]
 }
 
 # Also used by test/.
 source_set("shared") {
   visibility = [ "./*" ]
+  defines = [ "_ALL_SOURCE" ]
   sources = [
     "client.cc",
     "controller.cc",
@@ -19,38 +38,30 @@ source_set("shared") {
     "image.cc",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk.protocol.display.capture",
-    "$zx/system/banjo/ddk.protocol.display.controller",
-    "$zx/system/banjo/ddk.protocol.i2cimpl",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/fidl/fuchsia-hardware-display:llcpp",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/audio-proto-utils",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/edid",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/image-format",
-    "$zx/system/ulib/trace:trace-driver",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-
-    # TODO(BLD-353): This is actually a transitive dependency of the ddk
-    # library, but the library doesn't express it properly because of
-    # legacy complications.
-    "$zx/system/ulib/trace:headers",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/audio-proto-utils",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/edid",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/trace-driver",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.display.capture",
+    "//zircon/system/banjo/ddk.protocol.display.controller",
+    "//zircon/system/banjo/ddk.protocol.i2cimpl",
+    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+}
 
-  # TODO(42488): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs +=
-      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+migrated_manifest("display-manifest") {
+  deps = [ ":display" ]
 }

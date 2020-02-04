@@ -46,13 +46,6 @@ static constexpr uint64_t kMaxLayers = 65536;
 
 static constexpr uint32_t kInvalidLayerType = UINT32_MAX;
 
-uint32_t calculate_refresh_rate_e2(const edid::timing_params_t params) {
-  double total_pxls = (params.horizontal_addressable + params.horizontal_blanking) *
-                      (params.vertical_addressable + params.vertical_blanking);
-  double pixel_clock_hz = params.pixel_freq_10khz * 1000 * 10;
-  return static_cast<uint32_t>(round(100 * pixel_clock_hz / total_pxls));
-}
-
 // Removes and invokes EarlyRetire on all entries before end.
 static void do_early_retire(list_node_t* list, display::image_node_t* end = nullptr) {
   display::image_node_t* node;

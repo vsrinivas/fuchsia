@@ -37,13 +37,6 @@ if (current_cpu != "") {
       "$zx/system/dev/bus/pci:pci-driver",
       "$zx/system/dev/bus/pci:pci-unit",
       "$zx/system/dev/bus/virtio:virtio-test",
-      "$zx/system/dev/display/aml-canvas:aml-canvas-test",
-      "$zx/system/dev/display/astro-display:astro-display-test",
-      "$zx/system/dev/display/display/test",
-      "$zx/system/dev/display/goldfish-display:tests",
-      "$zx/system/dev/display/hikey-display:hikey-display-test",
-      "$zx/system/dev/display/mt8167s-display:tests",
-      "$zx/system/dev/display/vim-display:vim-display-test",
       "$zx/system/dev/lib/as370:audio-dsp-test",
       "$zx/system/dev/lib/as370:syn-audio-in-test",
       "$zx/system/dev/lib/device-protocol-pci:device-protocol-pci-test",
@@ -156,7 +149,6 @@ if (current_cpu != "") {
         "$zx/system/dev/board/x86:x86-lid-test",
         "$zx/system/dev/board/x86:x86-pwrsrc-test",
         "$zx/system/dev/board/x86:x86-thermal-test",
-        "$zx/system/dev/display/intel-i915:intel-i915-test",
         "x86-umip",
       ]
     }

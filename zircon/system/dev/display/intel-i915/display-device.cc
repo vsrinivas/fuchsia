@@ -34,54 +34,6 @@ void backlight_release(void* ctx) { delete static_cast<i915::display_ref_t*>(ctx
 
 static zx_protocol_device_t backlight_ops = {};
 
-uint32_t float_to_i915_csc_offset(float f) {
-  ZX_DEBUG_ASSERT(0 <= f && f < 1.0f);  // Controller::CheckConfiguration validates this
-
-  // f is in [0, 1). Multiply by 2^12 to convert to a 12-bit fixed-point fraction.
-  return static_cast<uint32_t>(f * pow(FLT_RADIX, 12));
-}
-
-uint32_t float_to_i915_csc_coefficient(float f) {
-  registers::CscCoeffFormat res;
-  if (f < 0) {
-    f *= -1;
-    res.set_sign(1);
-  }
-
-  if (f < .125) {
-    res.set_exponent(res.kExponent0125);
-    f /= .125f;
-  } else if (f < .25) {
-    res.set_exponent(res.kExponent025);
-    f /= .25f;
-  } else if (f < .5) {
-    res.set_exponent(res.kExponent05);
-    f /= .5f;
-  } else if (f < 1) {
-    res.set_exponent(res.kExponent1);
-  } else if (f < 2) {
-    res.set_exponent(res.kExponent2);
-    f /= 2.0f;
-  } else {
-    res.set_exponent(res.kExponent4);
-    f /= 4.0f;
-  }
-  f = (f * 512) + .5f;
-
-  if (f >= 512) {
-    res.set_mantissa(0x1ff);
-  } else {
-    res.set_mantissa(static_cast<uint16_t>(f));
-  }
-
-  return res.reg_value();
-}
-
-uint32_t encode_pipe_color_component(uint8_t component) {
-  // Convert to unsigned .10 fixed point format
-  return component << 2;
-}
-
 }  // namespace
 
 namespace i915 {

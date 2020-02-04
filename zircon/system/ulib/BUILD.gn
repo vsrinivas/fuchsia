@@ -116,6 +116,7 @@ group("ulib") {
     "memfs:memfs-cpp",
     "minfs",
     "mini-process",
+    "mipi-dsi",
     "mock-function",
     "pci",
     "perftest",

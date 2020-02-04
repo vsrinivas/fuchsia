@@ -2,16 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 source_set("shared") {
   visibility = [ ":*" ]
   sources = [ "simple-display.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.display.controller",
-    "$zx/system/banjo/ddk.protocol.pci",
-    "$zx/system/dev/lib/device-protocol-pci",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-pci",
+    "//zircon/public/lib/mmio",
+    "//zircon/system/banjo/ddk.protocol.display.controller",
+    "//zircon/system/banjo/ddk.protocol.pci",
   ]
 }
 
@@ -22,22 +36,23 @@ simple_drivers = [
   "intel",
 ]
 
-group("simple") {
-  deps = []
-  foreach(driver, simple_drivers) {
-    deps += [ ":simple.$driver" ]
-  }
-}
-
 foreach(driver, simple_drivers) {
-  zx_driver("simple.$driver") {
+  driver_module("simple.$driver") {
+    defines = [ "_ALL_SOURCE" ]
+    configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+    configs += [ "//build/unification/config:zircon-migrated" ]
     sources = [ "simple-$driver.c" ]
     deps = [
       ":shared",
-      "$zx/system/banjo/ddk.protocol.display.controller",
-      "$zx/system/banjo/ddk.protocol.pci",
-      "$zx/system/dev/lib/device-protocol-pci",
-      "$zx/system/ulib/ddk",
+      "//zircon/public/lib/ddk",
+      "//zircon/public/lib/device-protocol-pci",
+      "//zircon/system/banjo/ddk.protocol.display.controller",
+      "//zircon/system/banjo/ddk.protocol.pci",
     ]
+  }
+  migrated_manifest("simple-$driver-manifest") {
+    deps = [ ":simple.$driver" ]
   }
 }

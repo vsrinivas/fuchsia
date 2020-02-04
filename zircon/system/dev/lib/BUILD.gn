@@ -8,7 +8,9 @@
 group("lib") {
   testonly = true
   deps = [
+    #"$zx/system/dev/audio/lib/simple-audio-stream",
     "$zx/system/dev/clk/hisi-lib:hisi-lib",
+    "$zx/system/dev/sysmem/sysmem:sysmem_common_srcs",
     "amlogic",
     "as370",
     "broadcom",
@@ -33,6 +35,7 @@ group("lib") {
     "mock-i2c",
     "mock-mmio-reg",
     "mock-sdio",
+    "mock-sysmem",
     "msm8x53",
     "mt8167",
     "mt8183",

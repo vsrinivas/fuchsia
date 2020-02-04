@@ -22,6 +22,7 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/display/capture.h>
+#include <fbl/array.h>
 #include <fbl/auto_lock.h>
 
 #include "client.h"
@@ -613,7 +614,7 @@ zx_status_t Controller::DisplayControllerInterfaceGetAudioFormat(
 
 void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc,
                              uint32_t client_stamp, uint32_t client_id) {
-  const display_config_t* display_configs[count];
+  fbl::Array<const display_config_t*> display_configs(new const display_config_t*[count], count);
   uint32_t display_count = 0;
   {
     fbl::AutoLock lock(mtx());
@@ -703,7 +704,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
     applied_client_id_ = client_id;
   }
 
-  dc_.ApplyConfiguration(display_configs, display_count);
+  dc_.ApplyConfiguration(display_configs.get(), display_count);
 }
 
 void Controller::ReleaseImage(Image* image) { dc_.ReleaseImage(&image->info()); }

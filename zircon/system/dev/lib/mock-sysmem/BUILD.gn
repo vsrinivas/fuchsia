@@ -5,6 +5,5 @@
 zx_library("mock-sysmem") {
   sdk = "source"
   sdk_headers = [ "lib/mock-sysmem/mock-buffer-collection.h" ]
-  testonly = true
   sources = []
 }

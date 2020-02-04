@@ -2,18 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("ssd1306") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("ssd1306") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ssd1306.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.dotmatrixdisplay",
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/dev/lib/device-protocol-i2c",
-    "$zx/system/dev/lib/device-protocol-i2c-channel",
-    "$zx/system/fidl/fuchsia-hardware-dotmatrixdisplay:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-i2c",
+    "//zircon/public/lib/device-protocol-i2c-channel",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.dotmatrixdisplay",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/fidl/fuchsia-hardware-dotmatrixdisplay:c",
   ]
+}
+
+migrated_manifest("ssd1306-manifest") {
+  deps = [ ":ssd1306" ]
 }
