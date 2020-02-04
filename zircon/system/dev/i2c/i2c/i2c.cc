@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
+#include "i2c.h"
+
+#include <lib/sync/completion.h>
 #include <threads.h>
+#include <zircon/types.h>
+
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -12,10 +17,7 @@
 #include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/mutex.h>
-#include <lib/sync/completion.h>
-#include <zircon/types.h>
 
-#include "i2c.h"
 #include "i2c-child.h"
 
 namespace i2c {
@@ -121,7 +123,7 @@ void I2cDevice::AddChildren() {
     }
 
     fbl::AllocChecker ac;
-    std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(zxdev(), i2c_, i2c_buses_[bus_id], &channel));
+    std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(zxdev(), i2c_buses_[bus_id], channel.address));
     if (!ac.check()) {
       zxlogf(ERROR, "%s: out of memory\n", __func__);
       return;
