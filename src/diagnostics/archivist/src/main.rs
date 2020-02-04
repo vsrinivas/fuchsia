@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
     diagnostics::init();
 
     let opt: Args = argh::from_env();
-    let log_manager = logs::LogManager::new();
+    let log_manager = logs::LogManager::new(diagnostics::root().create_child("log_stats"));
     if !opt.disable_klog {
         log_manager.spawn_klogger()?;
     }

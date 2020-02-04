@@ -7,6 +7,7 @@
 use anyhow::{Context as _, Error};
 use fidl::endpoints::ClientEnd;
 use fuchsia_async as fasync;
+use fuchsia_inspect::{self as inspect, NumericProperty};
 use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashSet;
@@ -137,11 +138,95 @@ impl<T> MemoryBoundedBuffer<T> {
     pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         IterMut { inner: self.inner.iter_mut() }
     }
+
+    fn len(&self) -> usize {
+        self.total_size
+    }
+}
+
+/// Structure that holds stats for the log manager.
+struct LogManagerStats {
+    node: inspect::Node,
+    total_logs: inspect::UintProperty,
+    kernel_logs: inspect::UintProperty,
+    logsink_logs: inspect::UintProperty,
+    verbose_logs: inspect::UintProperty,
+    info_logs: inspect::UintProperty,
+    warning_logs: inspect::UintProperty,
+    error_logs: inspect::UintProperty,
+    fatal_logs: inspect::UintProperty,
+}
+
+impl LogManagerStats {
+    /// Create a stat holder, publishing counters under the given node.
+    fn new(node: inspect::Node) -> Self {
+        let total_logs = node.create_uint("total_logs", 0);
+        let kernel_logs = node.create_uint("kernel_logs", 0);
+        let logsink_logs = node.create_uint("logsink_logs", 0);
+        let verbose_logs = node.create_uint("verbose_logs", 0);
+        let info_logs = node.create_uint("info_logs", 0);
+        let warning_logs = node.create_uint("warning_logs", 0);
+        let error_logs = node.create_uint("error_logs", 0);
+        let fatal_logs = node.create_uint("fatal_logs", 0);
+
+        Self {
+            node,
+            kernel_logs,
+            logsink_logs,
+            total_logs,
+            verbose_logs,
+            info_logs,
+            warning_logs,
+            error_logs,
+            fatal_logs,
+        }
+    }
+
+    /// Record an incoming log from a given source.
+    ///
+    /// This method updates the counters based on the contents of the log message.
+    fn record_log(&self, msg: &LogMessage, source: LogSource) {
+        self.total_logs.add(1);
+        match source {
+            LogSource::Kernel => {
+                self.kernel_logs.add(1);
+            }
+            LogSource::LogSink => {
+                self.logsink_logs.add(1);
+            }
+        }
+        match LogLevelFilter::from_primitive(msg.severity as i8) {
+            Some(LogLevelFilter::Info) => {
+                self.info_logs.add(1);
+            }
+            Some(LogLevelFilter::Warn) => {
+                self.warning_logs.add(1);
+            }
+            Some(LogLevelFilter::Error) => {
+                self.error_logs.add(1);
+            }
+            Some(LogLevelFilter::Fatal) => {
+                self.fatal_logs.add(1);
+            }
+            _ => {
+                self.verbose_logs.add(1);
+            }
+        }
+    }
+}
+
+/// Denotes the source of a particular log message.
+enum LogSource {
+    /// Log came from the kernel log (klog)
+    Kernel,
+    /// Log came from unattributed log sink
+    LogSink,
 }
 
 struct LogManagerShared {
     listeners: Vec<ListenerWrapper>,
     log_msg_buffer: MemoryBoundedBuffer<LogMessage>,
+    stats: LogManagerStats,
 }
 
 #[derive(Clone)]
@@ -149,12 +234,18 @@ pub struct LogManager {
     shared_members: Arc<Mutex<LogManagerShared>>,
 }
 
+enum LogType {
+    Kernel,
+    Syslog,
+}
+
 impl LogManager {
-    pub fn new() -> Self {
+    pub fn new(node: inspect::Node) -> Self {
         Self {
             shared_members: Arc::new(Mutex::new(LogManagerShared {
                 listeners: Vec::new(),
                 log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
+                stats: LogManagerStats::new(node),
             })),
         }
     }
@@ -166,7 +257,9 @@ impl LogManager {
         let mut itr = kernel_logger.log_stream();
         while let Some(res) = itr.next() {
             match res {
-                Ok((log_msg, size)) => self.process_log(log_msg, size),
+                Ok((log_msg, size)) => {
+                    self.process_log(log_msg, size, LogSource::Kernel);
+                }
                 Err(e) => {
                     println!("encountered an error from the kernel log iterator: {}", e);
                     break;
@@ -179,7 +272,7 @@ impl LogManager {
         fasync::spawn(
             klog_stream
                 .map_ok(move |(log_msg, size)| {
-                    manager.process_log(log_msg, size);
+                    manager.process_log(log_msg, size, LogSource::Kernel);
                 })
                 .try_collect::<()>()
                 .unwrap_or_else(|e| eprintln!("failed to read kernel logs: {:?}", e)),
@@ -206,9 +299,10 @@ impl LogManager {
         )
     }
 
-    fn process_log(&self, mut log_msg: LogMessage, size: usize) {
+    fn process_log(&self, mut log_msg: LogMessage, size: usize, source: LogSource) {
         let mut shared_members = self.shared_members.lock();
         run_listeners(&mut shared_members.listeners, &mut log_msg);
+        shared_members.stats.record_log(&log_msg, source);
         shared_members.log_msg_buffer.push(log_msg, size);
     }
 
@@ -230,7 +324,7 @@ impl LogManager {
 
                     let f = ls
                         .map_ok(move |(log_msg, size)| {
-                            state.process_log(log_msg, size);
+                            state.process_log(log_msg, size, LogSource::LogSink);
                         })
                         .try_collect::<()>();
 
@@ -332,6 +426,7 @@ mod tests {
         super::*,
         crate::logs::logger::fx_log_packet_t,
         fidl_fuchsia_logger::{LogFilterOptions, LogMarker, LogProxy, LogSinkMarker, LogSinkProxy},
+        fuchsia_inspect::assert_inspect_tree,
         fuchsia_zircon as zx,
         std::collections::HashSet,
         validating_log_listener::{validate_log_dump, validate_log_stream},
@@ -405,9 +500,21 @@ mod tests {
             tags: vec![],
         };
 
-        TestHarness::new()
-            .filter_test(vec![lm].into_iter().collect(), vec![p, p2], Some(options))
-            .await;
+        assert_inspect_tree!(TestHarness::new()
+        .filter_test(vec![lm].into_iter().collect(), vec![p, p2], Some(options))
+        .await,
+        root: {
+            log_stats: {
+                total_logs: 2u64,
+                kernel_logs: 0u64,
+                logsink_logs: 2u64,
+                verbose_logs: 0u64,
+                info_logs: 0u64,
+                warning_logs: 2u64,
+                error_logs: 0u64,
+                fatal_logs: 0u64,
+            }
+        });
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -447,6 +554,12 @@ mod tests {
         p2.metadata.pid = 0;
         p2.metadata.tid = 0;
         p2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
+        let mut p3 = p.clone();
+        p3.metadata.severity = LogLevelFilter::Info.into_primitive().into();
+        let mut p4 = p.clone();
+        p4.metadata.severity = -22;
+        let mut p5 = p.clone();
+        p5.metadata.severity = LogLevelFilter::Fatal.into_primitive().into();
         let lm = LogMessage {
             pid: p2.metadata.pid,
             tid: p2.metadata.tid,
@@ -466,9 +579,21 @@ mod tests {
             tags: vec![],
         };
 
-        TestHarness::new()
-            .filter_test(vec![lm].into_iter().collect(), vec![p, p2], Some(options))
-            .await;
+        assert_inspect_tree!(TestHarness::new()
+            .filter_test(vec![lm].into_iter().collect(), vec![p, p2, p3, p4, p5], Some(options))
+            .await,
+        root: {
+            log_stats: contains {
+                total_logs: 5u64,
+                kernel_logs: 0u64,
+                logsink_logs: 5u64,
+                verbose_logs: 1u64,
+                info_logs: 1u64,
+                warning_logs: 1u64,
+                error_logs: 1u64,
+                fatal_logs: 1u64,
+            }
+        });
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -555,14 +680,17 @@ mod tests {
         log_proxy: LogProxy,
         log_sink_proxy: LogSinkProxy,
         sin: zx::Socket,
+        inspector: inspect::Inspector,
     }
 
     impl TestHarness {
         fn new() -> Self {
+            let inspector = inspect::Inspector::new();
             let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
             let shared_members = Arc::new(Mutex::new(LogManagerShared {
                 listeners: Vec::new(),
                 log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
+                stats: LogManagerStats::new(inspector.root().create_child("log_stats")),
             }));
 
             let lm = LogManager { shared_members: shared_members };
@@ -577,20 +705,22 @@ mod tests {
 
             log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
 
-            Self { log_proxy, log_sink_proxy, sin }
+            Self { log_proxy, log_sink_proxy, sin, inspector }
         }
 
+        /// Run a filter test, returning the Inspector to check Inspect output.
         async fn filter_test(
             self,
             expected: HashSet<LogMessage>,
             packets: Vec<fx_log_packet_t>,
             filter_options: Option<LogFilterOptions>,
-        ) {
+        ) -> inspect::Inspector {
             for mut p in packets {
                 self.sin.write(to_u8_slice(&mut p)).unwrap();
             }
 
             validate_log_stream(expected, self.log_proxy, filter_options).await;
+            self.inspector
         }
 
         async fn manager_test(self, test_dump_logs: bool) {
