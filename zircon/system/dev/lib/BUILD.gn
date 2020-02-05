@@ -21,6 +21,7 @@ group("lib") {
     "device-protocol-pci",
     "device-protocol-pdev",
     "device-protocol-platform-device",
+    "dma-buffer",
     "fake-bti",
     "fake-hidbus-ifc",
     "fake-i2c",
