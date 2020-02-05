@@ -916,10 +916,10 @@ zx_status_t ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmod
        (ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_DEAUTH) ||
        (ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_DISASSOC)) &&
       (hdr->frame_ctrl & IEEE80211_FRAME_PROTECTED_MASK)) {
-    msdu->used += IEEE80211_CCMP_MIC_LEN;
+    msdu->used += IEEE80211_CCMP_128_MIC_LEN;
   } else if ((msdu->tx.flags & ATH10K_TX_BUF_PROTECTED) && txmode == ATH10K_HW_TXRX_RAW &&
              (hdr->frame_ctrl & IEEE80211_FRAME_PROTECTED_MASK)) {
-    msdu->used += IEEE80211_CCMP_MIC_LEN;
+    msdu->used += IEEE80211_CCMP_128_MIC_LEN;
   }
 
 #if 0   // NEEDS PORTING

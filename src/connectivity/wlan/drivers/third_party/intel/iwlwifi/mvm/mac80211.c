@@ -34,6 +34,8 @@
  *
  *****************************************************************************/
 
+#include <ddk/hw/wlan/ieee80211.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
@@ -1914,7 +1916,7 @@ static void iwl_mvm_cfg_he_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u
 
     /* Mark MU EDCA as enabled, unless none detected on some AC */
     flags |= STA_CTXT_HE_MU_EDCA_CW;
-    for (i = 0; i < IEEE80211_NUM_ACS; i++) {
+    for (i = 0; i < IEEE80211_AC_MAX; i++) {
         struct ieee80211_he_mu_edca_param_ac_rec* mu_edca =
             &mvmvif->queue_params[i].mu_edca_param_rec;
         uint8_t ac = mac80211_ac_to_ucode_ac[i];
@@ -2535,7 +2537,7 @@ void iwl_mvm_sta_pm_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
         case IWL_MVM_PM_EVENT_ASLEEP:
             break;
         case IWL_MVM_PM_EVENT_UAPSD:
-            ieee80211_sta_uapsd_trigger(sta, IEEE80211_NUM_TIDS);
+            ieee80211_sta_uapsd_trigger(sta, IEEE80211_TIDS_MAX);
             break;
         case IWL_MVM_PM_EVENT_PS_POLL:
             ieee80211_sta_pspoll(sta);

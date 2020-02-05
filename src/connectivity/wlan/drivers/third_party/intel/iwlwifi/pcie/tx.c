@@ -37,6 +37,8 @@
 #include <lib/async/time.h>
 #include <zircon/status.h>
 
+#include <ddk/hw/wlan/ieee80211.h>
+
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
@@ -233,7 +235,7 @@ static void iwl_pcie_txq_update_byte_cnt_tbl(struct iwl_trans* trans, struct iwl
 
     switch (sec_ctl & TX_CMD_SEC_MSK) {
     case TX_CMD_SEC_CCM:
-        len += IEEE80211_CCMP_MIC_LEN;
+        len += IEEE80211_CCMP_128_MIC_LEN;
         break;
     case TX_CMD_SEC_TKIP:
         len += IEEE80211_TKIP_ICV_LEN;

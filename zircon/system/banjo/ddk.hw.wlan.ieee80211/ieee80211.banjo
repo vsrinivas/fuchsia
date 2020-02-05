@@ -14,6 +14,15 @@ library ddk.hw.wlan.ieee80211;
 /// IEEE Std 802.11-2016, 9.4.2.2
 const uint32 IEEE80211_SSID_LEN_MAX = 32;
 
+/// IEEE Std 802.11-2016, 9.2.4.5
+const uint32 IEEE80211_TIDS_MAX = 16;
+
+/// IEEE Std 802.11-2016 12.5.3.2
+const uint32 IEEE80211_CCMP_HDR_LEN = 8;
+const uint32 IEEE80211_CCMP_PN_LEN = 6;
+const uint32 IEEE80211_CCMP_128_MIC_LEN = 8;
+const uint32 IEEE80211_CCMP_256_MIC_LEN = 16;
+
 /// Bitfields in the HT Capabilities element "Supported MCS Set" field. These
 /// are approximately as defined in 9.4.2.56.4.
 [Packed]

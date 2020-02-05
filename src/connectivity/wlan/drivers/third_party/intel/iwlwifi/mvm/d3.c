@@ -34,13 +34,15 @@
  *
  *****************************************************************************/
 
-#include <linux/etherdevice.h>
-#include <linux/fs.h>
-#include <linux/ip.h>
 #include <net/addrconf.h>
 #include <net/cfg80211.h>
 #include <net/ipv6.h>
 #include <net/tcp.h>
+
+#include <ddk/hw/wlan/ieee80211.h>
+#include <linux/etherdevice.h>
+#include <linux/fs.h>
+#include <linux/ip.h>
 
 #include "fw-api.h"
 #include "iwl-modparams.h"
@@ -1214,7 +1216,7 @@ static void iwl_mvm_set_aes_rx_seq(struct iwl_mvm* mvm, struct aes_sc* scs,
                                    struct ieee80211_sta* sta, struct ieee80211_key_conf* key) {
   int tid;
 
-  BUILD_BUG_ON(IWL_NUM_RSC != IEEE80211_NUM_TIDS);
+  BUILD_BUG_ON(IWL_NUM_RSC != IEEE80211_TIDS_MAX);
 
   if (sta && iwl_mvm_has_new_rx_api(mvm)) {
     struct iwl_mvm_sta* mvmsta;
@@ -1250,7 +1252,7 @@ static void iwl_mvm_set_aes_rx_seq(struct iwl_mvm* mvm, struct aes_sc* scs,
 static void iwl_mvm_set_tkip_rx_seq(struct tkip_sc* scs, struct ieee80211_key_conf* key) {
   int tid;
 
-  BUILD_BUG_ON(IWL_NUM_RSC != IEEE80211_NUM_TIDS);
+  BUILD_BUG_ON(IWL_NUM_RSC != IEEE80211_TIDS_MAX);
 
   for (tid = 0; tid < IWL_NUM_RSC; tid++) {
     struct ieee80211_key_seq seq = {};

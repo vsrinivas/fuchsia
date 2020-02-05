@@ -37,6 +37,8 @@
 #include <stdbool.h>
 #include <threads.h>
 
+#include <ddk/hw/wlan/ieee80211.h>
+
 #if 0  // NEEDS_PORTING
 #include "fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
@@ -1323,7 +1325,7 @@ static void iwl_mvm_queue_state_change(struct iwl_op_mode* op_mode, int hw_queue
     int tid = i;
 
     if (tid == IWL_MAX_TID_COUNT) {
-      tid = IEEE80211_NUM_TIDS;
+      tid = IEEE80211_TIDS_MAX;
     }
 
     txq = sta->txq[tid];

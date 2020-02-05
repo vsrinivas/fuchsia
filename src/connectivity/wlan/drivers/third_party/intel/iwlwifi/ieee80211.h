@@ -23,24 +23,22 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <ddk/hw/wlan/ieee80211.h>
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/protocol/wlan/info.h>
 
-#define IEEE80211_CCMP_PN_LEN 6
-
+// The below constants are not defined in the 802.11-2016 Std.
 #define IEEE80211_MAX_CHAINS 4
-
-#define IEEE80211_NUM_ACS 4
-
-#define IEEE80211_NUM_TIDS 16
-
 #define IEEE80211_MAX_RTS_THRESHOLD 2353
 
+// The order of access categories is not clearly specified in 802.11-2016 Std.
+// Therefore it cannot be moved into ieee80211 banjo file.
 enum ieee80211_ac_numbers {
   IEEE80211_AC_VO = 0,
   IEEE80211_AC_VI = 1,
   IEEE80211_AC_BE = 2,
   IEEE80211_AC_BK = 3,
+  IEEE80211_AC_MAX = 4,
 };
 
 enum ieee80211_frame_release_type {
@@ -146,7 +144,7 @@ struct ieee80211_tx_rate {
 struct ieee80211_txq;
 struct ieee80211_sta {
   void* drv_priv;
-  struct ieee80211_txq* txq[IEEE80211_NUM_TIDS + 1];
+  struct ieee80211_txq* txq[IEEE80211_TIDS_MAX + 1];
 };
 
 struct ieee80211_tx_info {

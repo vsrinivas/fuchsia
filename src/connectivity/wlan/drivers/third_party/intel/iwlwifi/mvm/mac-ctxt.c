@@ -310,7 +310,7 @@ zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm_vif* mvmvif) {
 #if 0   // NEEDS_PORTING
   /* No need to allocate data queues to P2P Device MAC and NAN.*/
   if (vif->type == NL80211_IFTYPE_P2P_DEVICE || vif->type == NL80211_IFTYPE_NAN) {
-    for (ac = 0; ac < IEEE80211_NUM_ACS; ac++) {
+    for (ac = 0; ac < IEEE80211_AC_MAX; ac++) {
       vif->hw_queue[ac] = IEEE80211_INVAL_HW_QUEUE;
     }
 
@@ -329,7 +329,7 @@ zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm_vif* mvmvif) {
    * mac80211 ieee80211_check_queues() function won't fail
    */
   uint32_t ac;
-  for (ac = 0; ac < IEEE80211_NUM_ACS; ac++) {
+  for (ac = 0; ac < IEEE80211_AC_MAX; ac++) {
     uint8_t queue = find_first_zero_bit(&used_hw_queues, queue_limit);
 
     if (queue >= queue_limit) {
@@ -555,7 +555,7 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm_vif* mvmvif, wlan_info_ba
 
   cmd->filter_flags = cpu_to_le32(MAC_FILTER_ACCEPT_GRP);
 
-  for (int i = 0; i < IEEE80211_NUM_ACS; i++) {
+  for (uint32_t i = 0; i < IEEE80211_AC_MAX; i++) {
     uint8_t txf = iwl_mvm_mac_ac_to_tx_fifo(mvm, i);
 
     cmd->ac[txf].cw_min = cpu_to_le16(mvmvif->queue_params[i].cw_min);

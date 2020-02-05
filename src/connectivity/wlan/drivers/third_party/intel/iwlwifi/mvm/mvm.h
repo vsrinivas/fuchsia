@@ -41,6 +41,7 @@
 #include <zircon/listnode.h>
 
 #include <ddk/driver.h>
+#include <ddk/hw/wlan/ieee80211.h>
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/protocol/wlan/info.h>
 
@@ -403,7 +404,7 @@ struct iwl_mvm_vif {
    * as mac80211 has a separate callback but we need
    * to have the data for the MAC context
    */
-  struct ieee80211_tx_queue_params queue_params[IEEE80211_NUM_ACS];
+  struct ieee80211_tx_queue_params queue_params[IEEE80211_AC_MAX];
   struct iwl_mvm_time_event_data time_event_data;
   struct iwl_mvm_time_event_data hs_time_event_data;
 
@@ -638,11 +639,11 @@ enum iwl_mvm_traffic_load {
 
 struct iwl_mvm_tcm_mac {
   struct {
-    uint32_t pkts[IEEE80211_NUM_ACS];
+    uint32_t pkts[IEEE80211_AC_MAX];
     uint32_t airtime;
   } tx;
   struct {
-    uint32_t pkts[IEEE80211_NUM_ACS];
+    uint32_t pkts[IEEE80211_AC_MAX];
     uint32_t airtime;
     uint32_t last_ampdu_ref;
   } rx;
@@ -831,7 +832,7 @@ static inline struct iwl_mvm_txq* iwl_mvm_txq_from_mac80211(struct ieee80211_txq
 
 static inline struct iwl_mvm_txq* iwl_mvm_txq_from_tid(struct ieee80211_sta* sta, uint8_t tid) {
   if (tid == IWL_MAX_TID_COUNT) {
-    tid = IEEE80211_NUM_TIDS;
+    tid = IEEE80211_TIDS_MAX;
   }
 
   return (struct iwl_mvm_txq*)(sta->txq[tid]->drv_priv);

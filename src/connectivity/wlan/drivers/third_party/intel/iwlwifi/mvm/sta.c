@@ -37,6 +37,8 @@
 
 #include <net/mac80211.h>
 
+#include <ddk/hw/wlan/ieee80211.h>
+
 #include "mvm.h"
 #include "rs.h"
 
@@ -535,7 +537,7 @@ static int iwl_mvm_free_inactive_queue(struct iwl_mvm* mvm, int queue,
 
 static int iwl_mvm_get_shared_queue(struct iwl_mvm* mvm, unsigned long tfd_queue_mask, uint8_t ac) {
   int queue = 0;
-  uint8_t ac_to_queue[IEEE80211_NUM_ACS];
+  uint8_t ac_to_queue[IEEE80211_AC_MAX];
   int i;
 
   /*
@@ -1327,7 +1329,7 @@ void iwl_mvm_add_new_dqa_stream_wk(struct work_struct* wk) {
 
     txq = container_of((void*)mvmtxq, struct ieee80211_txq, drv_priv);
     tid = txq->tid;
-    if (tid == IEEE80211_NUM_TIDS) {
+    if (tid == IEEE80211_TIDS_MAX) {
       tid = IWL_MAX_TID_COUNT;
     }
 
