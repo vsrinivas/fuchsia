@@ -20,6 +20,7 @@
 
 #include <fs-management/mount.h>
 
+namespace {
 struct {
   const char* name;
   disk_format_t df;
@@ -70,6 +71,7 @@ int parse_args(int argc, char** argv, fsck_options_t* options, disk_format_t* df
   }
   return 0;
 }
+}  // namespace
 
 int main(int argc, char** argv) {
   char* devicepath;
