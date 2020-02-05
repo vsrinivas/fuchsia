@@ -1951,6 +1951,10 @@ svg_parse_arc_numbers_and_flags(struct svg_parser * sp,
 
       if ((*parse_count == 3) || (*parse_count == 4))
         {
+          // eat leading whitespace
+          while (isspace(*next))
+            next += 1;
+
           if (next[0] == '0')
             {
               *array = 0.0f;
@@ -1976,7 +1980,6 @@ svg_parse_arc_numbers_and_flags(struct svg_parser * sp,
 
       // eat trailing whitespace... but let calling routine handle
       // inter-sequence commas
-
       while (isspace(*next))
         next += 1;
 
