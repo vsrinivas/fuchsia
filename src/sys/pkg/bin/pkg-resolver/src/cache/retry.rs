@@ -97,20 +97,24 @@ mod tests {
     #[test]
     fn http_errors_retries_network_error_once() {
         let mut backoff = HttpErrors::default();
-        let err = FetchError::BadHttpStatus(StatusCode::INTERNAL_SERVER_ERROR);
+        let err = FetchError::BadHttpStatus {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            uri: "fake-uri".into(),
+        };
         assert_eq!(backoff.next_backoff(&err), Some(Duration::from_secs(0)));
         assert_eq!(backoff.next_backoff(&err), None);
     }
 
-    const FETCH_ERROR_RATE_LIMIT: FetchError =
-        FetchError::BadHttpStatus(StatusCode::TOO_MANY_REQUESTS);
+    fn make_rate_limit_error() -> FetchError {
+        FetchError::BadHttpStatus { code: StatusCode::TOO_MANY_REQUESTS, uri: "fake-uri".into() }
+    }
 
     #[test]
     fn http_errors_429_always_retries_with_delay() {
         let mut backoff = HttpErrors::default();
         for _ in 0..10 {
             assert_matches!(
-                backoff.next_backoff(&FETCH_ERROR_RATE_LIMIT),
+                backoff.next_backoff(&make_rate_limit_error()),
                 Some(delay) if delay > Duration::from_secs(0)
             );
         }
@@ -120,7 +124,7 @@ mod tests {
     fn http_errors_429_caps_max_delay() {
         let mut backoff = HttpErrors::default();
         for _ in 0..10 {
-            let delay = backoff.next_backoff(&FETCH_ERROR_RATE_LIMIT).unwrap();
+            let delay = backoff.next_backoff(&make_rate_limit_error()).unwrap();
             assert!(
                 delay <= MAX_RATE_LIMIT_RETRY_DELAY,
                 "{:?} <= {:?}",
@@ -133,20 +137,20 @@ mod tests {
     #[test]
     fn http_errors_429_retries_with_increasingish_timeout() {
         let mut backoff = HttpErrors::default();
-        let mut last_delay = backoff.next_backoff(&FETCH_ERROR_RATE_LIMIT).unwrap();
+        let mut last_delay = backoff.next_backoff(&make_rate_limit_error()).unwrap();
 
         // If the first backoff chooses a jitter value of exactly 1s, it is possible for the
         // second backoff to choose a jitter value of exactly 0s, resulting in 2 delays with
         // the same value. Handle that specific initial case manually by allowing the
         // comparison to be >= instead of >.
         if last_delay == Duration::from_secs(2) {
-            let next_delay = backoff.next_backoff(&FETCH_ERROR_RATE_LIMIT).unwrap();
+            let next_delay = backoff.next_backoff(&make_rate_limit_error()).unwrap();
             assert!(next_delay >= last_delay, "{:?} >= {:?}", next_delay, last_delay);
             last_delay = next_delay;
         }
 
         while last_delay < MAX_RATE_LIMIT_RETRY_DELAY {
-            let next_delay = backoff.next_backoff(&FETCH_ERROR_RATE_LIMIT).unwrap();
+            let next_delay = backoff.next_backoff(&make_rate_limit_error()).unwrap();
             assert!(next_delay > last_delay, "{:?} > {:?}", next_delay, last_delay);
             last_delay = next_delay;
         }

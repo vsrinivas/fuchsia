@@ -340,15 +340,19 @@ impl ToResolveStatus for FetchError {
     fn to_resolve_status(&self) -> Status {
         match self {
             FetchError::CreateBlob(_) => Status::IO,
-            FetchError::BadHttpStatus(hyper::StatusCode::UNAUTHORIZED) => Status::ACCESS_DENIED,
-            FetchError::BadHttpStatus(hyper::StatusCode::FORBIDDEN) => Status::ACCESS_DENIED,
-            FetchError::BadHttpStatus(_) => Status::UNAVAILABLE,
+            FetchError::BadHttpStatus { code: hyper::StatusCode::UNAUTHORIZED, .. } => {
+                Status::ACCESS_DENIED
+            }
+            FetchError::BadHttpStatus { code: hyper::StatusCode::FORBIDDEN, .. } => {
+                Status::ACCESS_DENIED
+            }
+            FetchError::BadHttpStatus { .. } => Status::UNAVAILABLE,
             FetchError::ContentLengthMismatch { .. } => Status::UNAVAILABLE,
-            FetchError::UnknownLength => Status::UNAVAILABLE,
-            FetchError::BlobTooSmall => Status::UNAVAILABLE,
-            FetchError::BlobTooLarge => Status::UNAVAILABLE,
-            FetchError::Hyper(_) => Status::UNAVAILABLE,
-            FetchError::Http(_) => Status::UNAVAILABLE,
+            FetchError::UnknownLength { .. } => Status::UNAVAILABLE,
+            FetchError::BlobTooSmall { .. } => Status::UNAVAILABLE,
+            FetchError::BlobTooLarge { .. } => Status::UNAVAILABLE,
+            FetchError::Hyper { .. } => Status::UNAVAILABLE,
+            FetchError::Http { .. } => Status::UNAVAILABLE,
             FetchError::Truncate(e) => e.to_resolve_status(),
             FetchError::Write(e) => e.to_resolve_status(),
             FetchError::NoMirrors => Status::INTERNAL,
@@ -551,39 +555,28 @@ async fn fetch_blob(
 
 #[derive(Debug, Error)]
 pub enum BlobUrlError {
-    #[error("mirror URI doesn't have a path")]
-    UriWithoutPath,
+    #[error("Blob mirror url doesn't have a path: {mirror_url}")]
+    UriWithoutPath { mirror_url: String },
 
-    #[error("HTTP error: {}", _0)]
-    Http(http::Error),
+    #[error("While making blob url from {mirror_url}, invalid URI: {e}")]
+    InvalidUri {
+        #[source]
+        e: http::uri::InvalidUri,
+        mirror_url: String,
+    },
 
-    #[error("invalid URI: {}", _0)]
-    InvalidUri(http::uri::InvalidUri),
-
-    #[error("invalid URI parts: {}", _0)]
-    InvalidUriParts(http::uri::InvalidUriParts),
-}
-
-impl From<http::Error> for BlobUrlError {
-    fn from(x: http::Error) -> Self {
-        BlobUrlError::Http(x)
-    }
-}
-
-impl From<http::uri::InvalidUri> for BlobUrlError {
-    fn from(x: http::uri::InvalidUri) -> Self {
-        BlobUrlError::InvalidUri(x)
-    }
-}
-
-impl From<http::uri::InvalidUriParts> for BlobUrlError {
-    fn from(x: http::uri::InvalidUriParts) -> Self {
-        BlobUrlError::InvalidUriParts(x)
-    }
+    #[error("while making blob url from {mirror_url}, invalid URI parts: {e}")]
+    InvalidUriParts {
+        #[source]
+        e: http::uri::InvalidUriParts,
+        mirror_url: String,
+    },
 }
 
 fn make_blob_url(blob_mirror_url: &str, merkle: &BlobId) -> Result<hyper::Uri, BlobUrlError> {
-    let uri = blob_mirror_url.parse::<Uri>()?;
+    let uri = blob_mirror_url
+        .parse::<Uri>()
+        .map_err(|e| BlobUrlError::InvalidUri { e, mirror_url: blob_mirror_url.into() })?;
 
     let mut uri_parts = uri.into_parts();
     let (path, query) = match &uri_parts.path_and_query {
@@ -595,18 +588,23 @@ fn make_blob_url(blob_mirror_url: &str, merkle: &BlobId) -> Result<hyper::Uri, B
             }
             (modified_path, path_and_query.query())
         }
-        None => return Err(BlobUrlError::UriWithoutPath),
+        None => return Err(BlobUrlError::UriWithoutPath { mirror_url: blob_mirror_url.into() }),
     };
     // Add the merkle string to the end of the path.
     // There isn't a way to reconstruct a PathAndQuery by its struct members,
     // so we have to use format and then parse from a string...
-    uri_parts.path_and_query = if let Some(query) = query {
-        Some(format!("{}/{}?{}", path, &merkle, query).parse()?)
-    } else {
-        Some(format!("{}/{}", path, &merkle).parse()?)
-    };
+    uri_parts.path_and_query = Some(
+        if let Some(query) = query {
+            format!("{}/{}?{}", path, &merkle, query)
+        } else {
+            format!("{}/{}", path, &merkle)
+        }
+        .parse()
+        .map_err(|e| BlobUrlError::InvalidUri { e, mirror_url: blob_mirror_url.into() })?,
+    );
 
-    Ok(Uri::from_parts(uri_parts)?)
+    Ok(Uri::from_parts(uri_parts)
+        .map_err(|e| BlobUrlError::InvalidUriParts { e, mirror_url: blob_mirror_url.into() })?)
 }
 
 async fn download_blob(
@@ -615,11 +613,17 @@ async fn download_blob(
     expected_len: Option<u64>,
     dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
 ) -> Result<(), FetchError> {
-    let request = Request::get(uri).body(Body::empty())?;
-    let response = client.request(request).compat().await?;
+    let request = Request::get(uri)
+        .body(Body::empty())
+        .map_err(|e| FetchError::Http { e, uri: uri.to_string() })?;
+    let response = client
+        .request(request)
+        .compat()
+        .await
+        .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })?;
 
     if response.status() != StatusCode::OK {
-        return Err(FetchError::BadHttpStatus(response.status()));
+        return Err(FetchError::BadHttpStatus { code: response.status(), uri: uri.to_string() });
     }
 
     let body = response.into_body();
@@ -627,22 +631,28 @@ async fn download_blob(
     let expected_len = match (expected_len, body.content_length()) {
         (Some(expected), Some(actual)) => {
             if expected != actual {
-                return Err(FetchError::ContentLengthMismatch { expected, actual });
+                return Err(FetchError::ContentLengthMismatch {
+                    expected,
+                    actual,
+                    uri: uri.to_string(),
+                });
             } else {
                 expected
             }
         }
         (Some(length), None) | (None, Some(length)) => length,
-        (None, None) => return Err(FetchError::UnknownLength),
+        (None, None) => return Err(FetchError::UnknownLength { uri: uri.to_string() }),
     };
 
     let mut dest = dest.truncate(expected_len).await.map_err(FetchError::Truncate)?;
 
     let mut chunks = body.compat();
     let mut written = 0u64;
-    while let Some(chunk) = chunks.try_next().await? {
+    while let Some(chunk) =
+        chunks.try_next().await.map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })?
+    {
         if written + chunk.len() as u64 > expected_len {
-            return Err(FetchError::BlobTooLarge);
+            return Err(FetchError::BlobTooLarge { uri: uri.to_string() });
         }
 
         dest = match dest.write(&chunk).await.map_err(FetchError::Write)? {
@@ -658,7 +668,7 @@ async fn download_blob(
     }
 
     if expected_len != written {
-        return Err(FetchError::BlobTooSmall);
+        return Err(FetchError::BlobTooSmall { uri: uri.to_string() });
     }
 
     Ok(())
@@ -666,53 +676,49 @@ async fn download_blob(
 
 #[derive(Debug, Error)]
 pub enum FetchError {
-    #[error("could not create blob: {}", _0)]
+    #[error("could not create blob: {0}")]
     CreateBlob(pkgfs::install::BlobCreateError),
 
-    #[error("http request expected 200, got {}", _0)]
-    BadHttpStatus(hyper::StatusCode),
+    #[error("Blob fetch of {uri}: http request expected 200, got {code}")]
+    BadHttpStatus { code: hyper::StatusCode, uri: String },
 
     #[error("repository has no configured mirrors")]
     NoMirrors,
 
-    #[error("expected blob length of {}, got {}", expected, actual)]
-    ContentLengthMismatch { expected: u64, actual: u64 },
+    #[error("Blob fetch of {uri}: expected blob length of {expected}, got {actual}")]
+    ContentLengthMismatch { expected: u64, actual: u64, uri: String },
 
-    #[error("blob length not known or provided by server")]
-    UnknownLength,
+    #[error("Blob fetch of {uri}: blob length not known or provided by server")]
+    UnknownLength { uri: String },
 
-    #[error("downloaded blob was too small")]
-    BlobTooSmall,
+    #[error("Blob fetch of {uri}: downloaded blob was too small")]
+    BlobTooSmall { uri: String },
 
-    #[error("downloaded blob was too large")]
-    BlobTooLarge,
+    #[error("Blob fetch of {uri}: downloaded blob was too large")]
+    BlobTooLarge { uri: String },
 
-    #[error("failed to truncate blob: {}", _0)]
+    #[error("failed to truncate blob: {0}")]
     Truncate(pkgfs::install::BlobTruncateError),
 
-    #[error("failed to write blob data: {}", _0)]
+    #[error("failed to write blob data: {0}")]
     Write(pkgfs::install::BlobWriteError),
 
-    #[error("hyper error: {}", _0)]
-    Hyper(hyper::Error),
+    #[error("hyper error while fetching {uri}: {e}")]
+    Hyper {
+        #[source]
+        e: hyper::Error,
+        uri: String,
+    },
 
-    #[error("http error: {}", _0)]
-    Http(hyper::http::Error),
+    #[error("http error while fetching {uri}: {e}")]
+    Http {
+        #[source]
+        e: hyper::http::Error,
+        uri: String,
+    },
 
-    #[error("blob url error: {}", _0)]
-    BlobUrl(BlobUrlError),
-}
-
-impl From<hyper::Error> for FetchError {
-    fn from(x: hyper::Error) -> Self {
-        FetchError::Hyper(x)
-    }
-}
-
-impl From<hyper::http::Error> for FetchError {
-    fn from(x: hyper::http::Error) -> Self {
-        FetchError::Http(x)
-    }
+    #[error("blob url error: {0}")]
+    BlobUrl(#[source] BlobUrlError),
 }
 
 impl From<BlobUrlError> for FetchError {
@@ -724,12 +730,12 @@ impl From<BlobUrlError> for FetchError {
 impl FetchError {
     fn kind(&self) -> FetchErrorKind {
         match self {
-            FetchError::BadHttpStatus(StatusCode::TOO_MANY_REQUESTS) => {
+            FetchError::BadHttpStatus { code: StatusCode::TOO_MANY_REQUESTS, uri: _ } => {
                 FetchErrorKind::NetworkRateLimit
             }
-            FetchError::Hyper(_) | FetchError::Http(_) | FetchError::BadHttpStatus(_) => {
-                FetchErrorKind::Network
-            }
+            FetchError::Hyper { .. }
+            | FetchError::Http { .. }
+            | FetchError::BadHttpStatus { .. } => FetchErrorKind::Network,
             _ => FetchErrorKind::Other,
         }
     }
@@ -775,12 +781,12 @@ mod tests {
 
         assert_matches!(
             make_blob_url("HelloWorld", &merkle).unwrap_err(),
-            BlobUrlError::UriWithoutPath
+            BlobUrlError::UriWithoutPath { mirror_url } if mirror_url == "HelloWorld".to_string()
         );
 
         assert_matches!(
             make_blob_url("server:80", &merkle).unwrap_err(),
-            BlobUrlError::UriWithoutPath
+            BlobUrlError::UriWithoutPath { mirror_url } if mirror_url == "server:80".to_string()
         );
 
         // IPv6 zone id
