@@ -64,4 +64,12 @@ test_package("soundplayer_tests") {
       environments = basic_envs
     },
   ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/sfx_s16le.wav")
+      dest = "sfx.wav"
+    },
+  ]
 }

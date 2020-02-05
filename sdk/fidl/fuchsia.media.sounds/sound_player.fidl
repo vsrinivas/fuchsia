@@ -4,6 +4,7 @@
 
 library fuchsia.media.sounds;
 
+using fuchsia.io;
 using fuchsia.media;
 using fuchsia.mem;
 using zx;
@@ -13,10 +14,11 @@ using zx;
 protocol Player {
     /// Adds a sound to the collection maintained for the client, reading the sound from a file.
     /// If `id` identifies an existing sound in the collection, the service will close the
-    /// connection.
+    /// connection. Returns the duration of the sound or an error status returned from an I/O
+    /// operation.
     ///
     /// Currently, only PCM WAV files are supported.
-    AddSoundFromFile(uint32 id, handle<channel> file_channel) -> () error zx.status;
+    AddSoundFromFile(uint32 id, fuchsia.io.File file) -> (zx.duration duration) error zx.status;
 
     /// Adds a sound, in the form of a buffer containing raw PCM samples, to the collection
     /// maintained for the client. The service will retain a handle to the buffer's VMO until the

@@ -13,6 +13,8 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+const DURATION: i64 = 1000000000;
+
 /// An implementation of the SoundPlayer for tests.
 pub struct SoundPlayerService {
     // Represents the number of times the sound has been played in total.
@@ -70,13 +72,9 @@ impl Service for SoundPlayerService {
         fasync::spawn(async move {
             while let Some(req) = player_stream.try_next().await.unwrap() {
                 match req {
-                    PlayerRequest::AddSoundFromFile {
-                        id,
-                        file_channel: _file_channel,
-                        responder,
-                    } => {
+                    PlayerRequest::AddSoundFromFile { id, file: _file, responder } => {
                         play_counts_clone.write().insert(id, 0);
-                        responder.send(&mut Ok(())).unwrap();
+                        responder.send(&mut Ok(DURATION)).unwrap();
                     }
                     PlayerRequest::PlaySound { id, usage, responder } => {
                         sound_mappings_clone.write().insert(id, usage);

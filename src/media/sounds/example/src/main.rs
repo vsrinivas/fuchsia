@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
         .context("Connecting to fuchsia.media.sounds.Player")?;
 
     player_proxy
-        .add_sound_from_file(0, resource_file_channel("sfx.wav")?)
+        .add_sound_from_file(0, resource_file("sfx.wav")?)
         .await?
         .map_err(|status| anyhow::format_err!("AddSoundFromFile failed {}", status))?;
 
@@ -68,14 +68,18 @@ async fn main() -> Result<()> {
 }
 
 /// Creates a file channel from a resource file.
-fn resource_file_channel(name: &str) -> Result<zx::Channel> {
+fn resource_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>> {
     // We try two paths here, because normal components see their package data resources in
     // /pkg/data and shell tools see them in /pkgfs/packages/<pkg>>/0/data.
-    Ok(zx::Channel::from(fdio::transfer_fd(
-        File::open(format!("/pkg/data/{}", name))
-            .or_else(|_| File::open(format!("/pkgfs/packages/soundplayer_example/0/data/{}", name)))
-            .context("Opening package data file")?,
-    )?))
+    Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
+        fdio::transfer_fd(
+            File::open(format!("/pkg/data/{}", name))
+                .or_else(|_| {
+                    File::open(format!("/pkgfs/packages/soundplayer_example/0/data/{}", name))
+                })
+                .context("Opening package data file")?,
+        )?,
+    )))
 }
 
 /// Creates a VMO-based sound containing a decaying sine wave using the slope iteration method.

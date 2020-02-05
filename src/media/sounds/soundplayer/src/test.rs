@@ -12,6 +12,7 @@ use fuchsia_component::client::{launch, App};
 use fuchsia_component::server::*;
 use fuchsia_zircon::{self as zx, prelude::AsHandleRef};
 use futures::{channel::oneshot, StreamExt};
+use std::fs::File;
 
 const SOUNDPLAYER_URL: &str = "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cmx";
 const PAYLOAD_SIZE: usize = 1024;
@@ -19,14 +20,14 @@ const USAGE: AudioRenderUsage = AudioRenderUsage::Media;
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn integration() -> Result<()> {
+async fn integration_buffer() -> Result<()> {
     let (sender, receiver) = oneshot::channel::<()>();
     let (mut buffer, koid, mut stream_type) = test_sound(PAYLOAD_SIZE);
 
     let service = TestService::new(
         sender,
         RendererExpectations {
-            vmo_koid: koid,
+            vmo_koid: Some(koid),
             packet: StreamPacket {
                 pts: 0,
                 payload_buffer_id: 0,
@@ -44,7 +45,7 @@ async fn integration() -> Result<()> {
     service
         .sound_player
         .add_sound_buffer(0, &mut buffer, &mut stream_type)
-        .expect("Calling add_sound");
+        .expect("Calling add_sound_buffer");
     service
         .sound_player
         .play_sound(0, USAGE)
@@ -54,6 +55,68 @@ async fn integration() -> Result<()> {
     service.sound_player.remove_sound(0).expect("Calling remove_sound");
 
     receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
+}
+
+const DURATION: i64 = 288412698;
+const FILE_PAYLOAD_SIZE: u64 = 25438;
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn integration_file() -> Result<()> {
+    let (sender, receiver) = oneshot::channel::<()>();
+
+    let service = TestService::new(
+        sender,
+        RendererExpectations {
+            vmo_koid: None,
+            packet: StreamPacket {
+                pts: 0,
+                payload_buffer_id: 0,
+                payload_offset: 0,
+                payload_size: FILE_PAYLOAD_SIZE,
+                flags: 0,
+                buffer_config: 0,
+                stream_segment_id: 0,
+            },
+            stream_type: AudioStreamType {
+                sample_format: AudioSampleFormat::Signed16,
+                channels: 1,
+                frames_per_second: 44100,
+            },
+            usage: USAGE,
+        },
+    );
+
+    let duration = service
+        .sound_player
+        .add_sound_from_file(0, resource_file("sfx.wav").expect("Reading sound file"))
+        .await
+        .context("Calling add_sound_from_file")?;
+    assert!(duration == Ok(DURATION));
+    service
+        .sound_player
+        .play_sound(0, USAGE)
+        .await
+        .context("Calling play_sound")?
+        .map_err(|err| anyhow::format_err!("Error playing sound: {:?}", err))?;
+    service.sound_player.remove_sound(0).expect("Calling remove_sound");
+
+    receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
+}
+
+/// Creates a file channel from a resource file.
+fn resource_file(name: &str) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>> {
+    // We try two paths here, because normal components see their package data resources in
+    // /pkg/data and shell tools see them in /pkgfs/packages/<pkg>>/0/data.
+    Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
+        fdio::transfer_fd(
+            File::open(format!("/pkg/data/{}", name))
+                .or_else(|_| {
+                    File::open(format!("/pkgfs/packages/soundplayer_example/0/data/{}", name))
+                })
+                .context("Opening package data file")?,
+        )?,
+    )))
 }
 
 struct TestService {
@@ -82,7 +145,7 @@ impl TestService {
             .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, ()>();
 
         let environment = service_fs
-            .create_nested_environment("soundplayer-integration-test")
+            .create_salted_nested_environment("soundplayer-integration-test")
             .expect("Creating nested environment");
         let app = launch(environment.launcher(), String::from(SOUNDPLAYER_URL), None)
             .expect("Launching soundplayer");
@@ -108,7 +171,7 @@ fn test_sound(size: usize) -> (fidl_fuchsia_mem::Buffer, zx::Koid, AudioStreamTy
 
 #[derive(Copy, Clone)]
 struct RendererExpectations {
-    vmo_koid: zx::Koid,
+    vmo_koid: Option<zx::Koid>,
     packet: StreamPacket,
     stream_type: AudioStreamType,
     usage: AudioRenderUsage,
@@ -179,10 +242,9 @@ impl FakeAudioRenderer {
 
                     assert!(!payload_id.is_some());
                     payload_id.replace(id);
-                    assert!(
-                        payload_buffer.get_koid().expect("Getting vmo koid")
-                            == self.renderer_expectations.vmo_koid
-                    );
+                    if let Some(vmo_koid) = self.renderer_expectations.vmo_koid {
+                        assert!(payload_buffer.get_koid().expect("Getting vmo koid") == vmo_koid);
+                    }
                 }
                 AudioRendererRequest::RemovePayloadBuffer { id, .. } => {
                     assert!(pause_no_reply_called);

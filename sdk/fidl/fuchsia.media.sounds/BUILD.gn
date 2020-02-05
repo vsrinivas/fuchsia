@@ -11,6 +11,7 @@ fidl("fuchsia.media.sounds") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
+    "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 }

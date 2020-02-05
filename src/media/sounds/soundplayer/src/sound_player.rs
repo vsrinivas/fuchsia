@@ -32,14 +32,15 @@ impl SoundPlayer {
             futures::select! {
                 request = request_stream.select_next_some() => {
                     match request? {
-                        PlayerRequest::AddSoundFromFile { id, file_channel, responder} => {
-                            match Sound::from_file_channel(id, file_channel) {
+                        PlayerRequest::AddSoundFromFile { id, file, responder} => {
+                            match Sound::from_file_channel(id, file) {
                                 Ok(sound) => {
+                                    let duration = sound.duration();
                                     if self.sounds_by_id.insert(id, sound).is_some() {
                                         fuchsia_syslog::fx_log_err!("AddSound called with id already in use {}", id);
                                         return Err(anyhow::format_err!("Client error, disconnecting"));
                                     } else {
-                                        responder.send(&mut Ok(())).unwrap_or(());
+                                        responder.send(&mut Ok(duration.into_nanos())).unwrap_or(());
                                     }
                                 },
                                 Err(status) => {
@@ -109,7 +110,7 @@ impl Sound {
 
     fn from_file_channel(
         id: u32,
-        file_channel: zx::Channel,
+        file_channel: fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>,
     ) -> std::result::Result<Self, zx::Status> {
         let wav = wav_reader::WavReader::read(BufReader::new(fdio::create_fd(
             file_channel.into_handle(),
@@ -117,6 +118,21 @@ impl Sound {
         .map_err(|_| zx::Status::INVALID_ARGS)?;
 
         Ok(Self { id, vmo: wav.vmo, size: wav.size, stream_type: wav.stream_type })
+    }
+
+    fn duration(&self) -> zx::Duration {
+        let bytes_per_sample = match self.stream_type.sample_format {
+            AudioSampleFormat::Unsigned8 => 1,
+            AudioSampleFormat::Signed16 => 2,
+            AudioSampleFormat::Signed24In32 => 4,
+            AudioSampleFormat::Float => 4,
+        };
+        zx::Duration::from_nanos(
+            ((self.size * 1000000000)
+                / bytes_per_sample
+                / self.stream_type.channels as u64
+                / self.stream_type.frames_per_second as u64) as i64,
+        )
     }
 }
 

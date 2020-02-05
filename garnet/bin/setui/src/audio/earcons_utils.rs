@@ -14,16 +14,20 @@ use {
 };
 
 /// Creates a file-based sound from a resource file.
-fn resource_file_channel(name: &str) -> Result<zx::Channel, Error> {
+fn resource_file(
+    name: &str,
+) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>, Error> {
     // We try two paths here, because normal components see their config package data resources in
     // /pkg/data and shell tools see them in /pkgfs/packages/config-data/0/data/<pkg>.
-    Ok(zx::Channel::from(fdio::transfer_fd(
-        File::open(format!("/config/data/{}", name))
-            .or_else(|_| {
-                File::open(format!("/pkgfs/packages/config-data/0/data/setui_service/{}", name))
-            })
-            .context("Opening package data file")?,
-    )?))
+    Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
+        fdio::transfer_fd(
+            File::open(format!("/config/data/{}", name))
+                .or_else(|_| {
+                    File::open(format!("/pkgfs/packages/config-data/0/data/setui_service/{}", name))
+                })
+                .context("Opening package data file")?,
+        )?,
+    )))
 }
 
 /// Plays a sound with the given [id] and [file_name] via the [sound_player_proxy].
@@ -38,7 +42,7 @@ pub async fn play_sound<'a>(
 ) -> Result<(), Error> {
     // New sound, add it to the sound player set.
     if added_files.lock().await.insert(file_name) {
-        let sound_file_channel = match resource_file_channel(file_name) {
+        let sound_file_channel = match resource_file(file_name) {
             Ok(file) => Some(file),
             Err(e) => return Err(format_err!("[earcons] Failed to convert sound file: {}", e)),
         };
