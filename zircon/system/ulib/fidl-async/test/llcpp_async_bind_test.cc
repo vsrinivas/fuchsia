@@ -727,78 +727,68 @@ TEST(AsyncBindTestCase, ConcurrentIdempotentClose) {
     thread.join();
 }
 
-TEST(AsyncBindTestCase, UnbindBeforeClose) {
-  struct CloseServer : ::llcpp::fidl::test::simple::Simple::Interface {
-    void Close(CloseCompleter::Sync completer) override {
-      binding_ref->Unbind();
-      completer.Close(ZX_OK);
-    }
-    void Echo(int32_t, EchoCompleter::Sync) override { ADD_FAILURE("Must not call echo"); }
-    std::unique_ptr<fidl::BindingRef> binding_ref;
-  };
+TEST(AsyncBindTestCase, BindingRefUnbind) {
+  // Create the server.
+  sync_completion_t destroyed;
+  auto* server = new Server(&destroyed);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
 
+  // Create and bind the channel.
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   auto remote_handle = remote.get();
-
-  // Launch server.
-  auto server = std::make_unique<CloseServer>();
-  async::Loop server_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(server_loop.StartThread());
-
-  // Bind the channel.
-  fidl::OnUnboundFn<CloseServer> on_unbound =
-      [remote_handle](CloseServer*, fidl::UnboundReason reason, zx::channel channel) {
-        ASSERT_EQ(fidl::UnboundReason::kUnbind, reason);
-        // Unbind() precedes Close(), so the channel should be valid.
-        ASSERT_EQ(remote_handle, channel.get());
-        channel.reset();
-      };
+  fidl::OnUnboundFn<Server> on_unbound =
+      [remote_handle, &remote](Server* server, fidl::UnboundReason reason, zx::channel channel) {
+    ASSERT_EQ(reason, fidl::UnboundReason::kUnbind);
+    ASSERT_EQ(channel.get(), remote_handle);
+    remote = std::move(channel);
+    delete server;
+  };
   auto binding_ref = fidl::BindingRef::CreateAsyncBinding(
-      server_loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
+      loop.dispatcher(), std::move(remote), server, std::move(on_unbound));
   ASSERT_TRUE(binding_ref.is_ok());
 
-  // Give the BindingRef to the server so it can call Unbind().
-  server->binding_ref = std::make_unique<fidl::BindingRef>(std::move(binding_ref.value()));
+  // Unbind(). The binding should be destroyed without waiting for the BindingRef to be destroyed.
+  binding_ref.value().Unbind();
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 
-  auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
-  ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
+  // Unbind()/Close() may still be called from the BindingRef.
+  binding_ref.value().Unbind();
+  binding_ref.value().Close(ZX_OK);
+
+  // The channel should still be valid.
+  ASSERT_EQ(remote.get(), remote_handle);
 }
 
-TEST(AsyncBindTestCase, CloseBeforeUnbind) {
-  struct UnbindServer : ::llcpp::fidl::test::simple::Simple::Interface {
-    void Close(CloseCompleter::Sync completer) override {
-      completer.Close(ZX_OK);
-      binding_ref->Unbind();
-    }
-    void Echo(int32_t, EchoCompleter::Sync) override { ADD_FAILURE("Must not call echo"); }
-    std::unique_ptr<fidl::BindingRef> binding_ref;
-  };
+TEST(AsyncBindTestCase, BindingRefClose) {
+  // Create the server.
+  sync_completion_t destroyed;
+  auto* server = new Server(&destroyed);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
 
+  // Create and bind the channel.
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  // Launch server.
-  auto server = std::make_unique<UnbindServer>();
-  async::Loop server_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(server_loop.StartThread());
-
-  // Bind the channel.
-  fidl::OnUnboundFn<UnbindServer> on_unbound = [](UnbindServer*, fidl::UnboundReason reason,
-                                                  zx::channel channel) {
-    ASSERT_EQ(fidl::UnboundReason::kUnbind, reason);
-    // Close() precedes Unbind(), so the channel will have been closed.
+  fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnboundReason reason,
+                                            zx::channel channel) {
+    ASSERT_EQ(reason, fidl::UnboundReason::kUnbind);
     ASSERT_FALSE(channel);
+    delete server;
   };
   auto binding_ref = fidl::BindingRef::CreateAsyncBinding(
-      server_loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
+      loop.dispatcher(), std::move(remote), server, std::move(on_unbound));
   ASSERT_TRUE(binding_ref.is_ok());
 
-  // Give the BindingRef to the server so it can call Unbind().
-  server->binding_ref = std::make_unique<fidl::BindingRef>(std::move(binding_ref.value()));
+  // Unbind(). The binding should be destroyed without waiting for the BindingRef to be destroyed.
+  binding_ref.value().Close(ZX_OK);
+  ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 
-  auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
-  ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
+  // Unbind()/Close() may still be called from the BindingRef.
+  binding_ref.value().Unbind();
+  binding_ref.value().Close(ZX_OK);
 }
 
 }  // namespace

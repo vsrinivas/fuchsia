@@ -243,13 +243,13 @@ fit::result<BindingRef, zx_status_t> AsyncTypeErasedBind(async_dispatcher_t* dis
 }  // namespace internal
 
 void BindingRef::Unbind() {
-  if (binding_)
-    binding_->Unbind(std::move(binding_));
+  if (auto binding = binding_.lock())
+    binding->Unbind(std::move(binding));
 }
 
 void BindingRef::Close(zx_status_t epitaph) {
-  if (binding_)
-    binding_->Close(std::move(binding_), epitaph);
+  if (auto binding = binding_.lock())
+    binding->Close(std::move(binding), epitaph);
 }
 
 }  // namespace fidl

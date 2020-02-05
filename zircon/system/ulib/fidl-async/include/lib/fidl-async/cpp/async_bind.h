@@ -107,10 +107,10 @@ class BindingRef {
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
       internal::TypeErasedDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound);
 
-  explicit BindingRef(std::shared_ptr<internal::AsyncBinding> internal_binding)
+  explicit BindingRef(std::weak_ptr<internal::AsyncBinding> internal_binding)
       : binding_(std::move(internal_binding)) {}
 
-  std::shared_ptr<internal::AsyncBinding> binding_;
+  std::weak_ptr<internal::AsyncBinding> binding_;
 };
 
 // Binds an implementation of a low-level C++ server interface to |channel| using a potentially
