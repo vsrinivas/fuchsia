@@ -23,7 +23,7 @@ driver_module("usb-hid") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-hid.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -45,7 +45,7 @@ driver_module("usb-hid-fake-usb") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-hid-function.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",

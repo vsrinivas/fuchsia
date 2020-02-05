@@ -24,7 +24,7 @@ driver_module("unit-test-fail") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "unit-test-fail.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
   ]
 }
@@ -38,7 +38,7 @@ driver_module("unit-test-pass") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "unit-test-pass.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
   ]
 }

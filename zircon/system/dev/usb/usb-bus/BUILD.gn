@@ -27,7 +27,7 @@ driver_module("usb-bus") {
   sources = [ "usb-bus.cc" ]
   deps = [
     ":common",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
   ]
 }
 

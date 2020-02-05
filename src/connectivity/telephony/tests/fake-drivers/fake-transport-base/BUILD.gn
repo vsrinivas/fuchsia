@@ -11,7 +11,7 @@ static_library("fake-transport-base") {
   ]
 
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/ddk",

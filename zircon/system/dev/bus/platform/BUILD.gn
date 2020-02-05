@@ -37,7 +37,7 @@ driver_module("platform-bus") {
     "platform-device.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
@@ -70,7 +70,7 @@ driver_module("platform-bus.proxy") {
   }
   sources = [ "platform-proxy.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",

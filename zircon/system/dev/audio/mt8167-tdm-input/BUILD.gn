@@ -27,7 +27,7 @@ driver_module("mt8167-tdm-input") {
   ]
 
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",

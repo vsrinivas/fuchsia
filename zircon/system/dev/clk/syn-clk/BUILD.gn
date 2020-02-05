@@ -24,7 +24,7 @@ driver_module("syn-clk") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "syn-clk.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

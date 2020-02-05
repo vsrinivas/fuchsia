@@ -26,7 +26,7 @@ driver_module("usb-tester") {  # TODO: test_driver?
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-tester.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",

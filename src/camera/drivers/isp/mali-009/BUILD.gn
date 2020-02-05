@@ -50,7 +50,7 @@ driver_module("mali-009-driver") {
     "//src/camera/drivers/isp/modules:isp-registers",
     "//src/camera/drivers/test_utils",
     "//src/camera/test/isp_tester:fuchsia.camera.test_c",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",

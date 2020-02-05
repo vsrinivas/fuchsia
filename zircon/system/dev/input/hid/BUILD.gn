@@ -29,7 +29,7 @@ driver_module("hid") {
     "hid.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hid",

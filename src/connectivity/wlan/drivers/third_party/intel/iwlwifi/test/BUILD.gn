@@ -27,7 +27,7 @@ source_set("iwlwifi_sim_trans_ss") {
   deps = [
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake_ddk",
     "//zircon/system/banjo/ddk.protocol.pci",

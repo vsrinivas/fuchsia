@@ -24,7 +24,7 @@ all_deps = [
   "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_client",
   "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_server",
   "//src/connectivity/wlan/lib/common/cpp:common",
-  "//src/devices:driver",
+  "//src/devices/lib/driver",
   "//zircon/public/lib/async-cpp",
   "//zircon/public/lib/async-loop-cpp",
   "//zircon/public/lib/async-loop-default",

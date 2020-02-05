@@ -24,7 +24,7 @@ driver_module("gpt") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gpt.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/gpt",

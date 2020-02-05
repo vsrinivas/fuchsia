@@ -30,7 +30,7 @@ driver_module("syn-dma") {
   }
   sources = [ "syn-dhub.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

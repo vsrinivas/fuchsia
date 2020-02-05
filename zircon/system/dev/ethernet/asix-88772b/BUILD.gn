@@ -27,7 +27,7 @@ driver_module("asix-88772b") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "asix-88772b.c" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",

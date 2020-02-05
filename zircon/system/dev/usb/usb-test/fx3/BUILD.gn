@@ -27,7 +27,7 @@ driver_module("fx3") {  # TODO: test_driver?
   testonly = false
   sources = [ "fx3.c" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.usb",

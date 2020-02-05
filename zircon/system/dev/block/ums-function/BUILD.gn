@@ -23,7 +23,7 @@ driver_module("ums-function") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ums-function.c" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",

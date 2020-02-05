@@ -27,7 +27,7 @@ driver_module("astro-tdm-output") {
   ]
 
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",

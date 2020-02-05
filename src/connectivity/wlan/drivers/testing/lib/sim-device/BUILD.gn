@@ -9,7 +9,7 @@ static_library("sim-device") {
   ]
 
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
   ]
 }

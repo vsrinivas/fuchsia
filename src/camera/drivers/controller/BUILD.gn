@@ -58,7 +58,7 @@ source_set("controller-source") {
     "//sdk/fidl/fuchsia.camera2.hal",
     "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
     "//src/camera/lib/format_conversion:format_conversion",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",

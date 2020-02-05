@@ -23,7 +23,7 @@ driver_module("usb-cdc-function") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cdc-eth-function.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/inet6",

@@ -25,7 +25,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//src/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

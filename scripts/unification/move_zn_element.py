@@ -119,7 +119,7 @@ def transform_build_file(build):
         line = line.replace('//zircon/public/gn/firmware.gni', '//build/unification/firmware.gni')
         line = line.replace('$firmware_dir/', '')
         # Update deps on libdriver.
-        line = line.replace('//zircon/public/lib/driver', '//src/devices:driver')
+        line = line.replace('//zircon/public/lib/driver', '//src/devices/lib/driver')
         # Print the line, if any content is left.
         if line:
             sys.stdout.write(line)

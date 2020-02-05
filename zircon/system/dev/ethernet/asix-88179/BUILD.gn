@@ -23,7 +23,7 @@ driver_module("asix-88179") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "asix-88179.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",

@@ -12,7 +12,7 @@ driver_module("address_space_driver") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pci",

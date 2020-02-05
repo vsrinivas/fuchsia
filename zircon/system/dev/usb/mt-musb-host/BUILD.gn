@@ -24,7 +24,7 @@ driver_module("mt-musb-host") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":common",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
   ]
 }
 

@@ -23,7 +23,7 @@ driver_module("ktrace") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ktrace.c" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",

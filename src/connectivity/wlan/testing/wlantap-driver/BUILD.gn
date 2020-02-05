@@ -24,7 +24,7 @@ driver_module("wlantap_driver") {
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

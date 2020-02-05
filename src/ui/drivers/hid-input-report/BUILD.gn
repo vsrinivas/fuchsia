@@ -14,7 +14,7 @@ driver_module("hid-input-report") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//src/ui/lib/hid-input-report",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -37,7 +37,7 @@ test("hid-input-report-test-bin") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//src/ui/lib/hid-input-report",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

@@ -27,7 +27,7 @@ driver_module("mt-8167") {
     "mt8167-gpio.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-platform-device",
@@ -54,7 +54,7 @@ test("mtk-gpio") {
     "mt8167-gpio.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-platform-device",

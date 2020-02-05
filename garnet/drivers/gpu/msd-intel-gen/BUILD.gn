@@ -42,7 +42,7 @@ source_set("msd_intel_entry") {
   deps = [
     "src",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util/platform:trace",
     "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
@@ -64,7 +64,7 @@ source_set("msd_intel_test_entry") {
   deps = [
     "src",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util/platform:trace",
     "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",

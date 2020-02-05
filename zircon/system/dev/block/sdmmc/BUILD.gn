@@ -32,7 +32,7 @@ driver_module("sdmmc") {
     "sdmmc-root-device.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",

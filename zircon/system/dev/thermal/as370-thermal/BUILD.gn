@@ -24,7 +24,7 @@ driver_module("as370-thermal") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "as370-thermal.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

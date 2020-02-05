@@ -30,7 +30,7 @@ driver_module("gauss-pdm-input") {
     "vmo_helper.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",

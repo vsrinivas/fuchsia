@@ -36,7 +36,7 @@ driver_module("ddk-lifecycle-test") {
   ]
   deps = [
     ":fuchsia.device.lifecycle.test_llcpp",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",

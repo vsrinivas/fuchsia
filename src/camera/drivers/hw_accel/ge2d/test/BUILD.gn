@@ -16,7 +16,7 @@ executable("ge2d-task") {
     "//sdk/banjo/ddk.protocol.ge2d",
     "//src/camera/drivers/hw_accel/task:camera-task",
     "//src/camera/drivers/test_utils",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",

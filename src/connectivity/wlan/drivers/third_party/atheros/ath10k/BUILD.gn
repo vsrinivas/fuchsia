@@ -72,7 +72,7 @@ driver_module("ath10k_driver") {
   deps = [
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/sync",

@@ -24,7 +24,7 @@ driver_module("aml-axg-gpio") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-axg-gpio.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -53,7 +53,7 @@ test("aml-axg-gpio-test") {
     "aml-axg-gpio.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

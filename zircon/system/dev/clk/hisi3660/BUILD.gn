@@ -23,7 +23,7 @@ driver_module("hisi3660") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hisi3660-clk.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",

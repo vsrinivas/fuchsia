@@ -12,7 +12,7 @@ driver_module("imx227_driver") {
     "imx227_test.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",

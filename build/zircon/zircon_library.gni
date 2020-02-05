@@ -105,12 +105,12 @@ template("zircon_library") {
   if (library_deps + [ "//zircon/public/lib/driver" ] -
       [ "//zircon/public/lib/driver" ] != library_deps) {
     library_deps -= [ "//zircon/public/lib/driver" ]
-    library_deps += [ "//src/devices:driver" ]
+    library_deps += [ "//src/devices/lib/driver" ]
   }
   if (library_public_deps + [ "//zircon/public/lib/driver" ] -
       [ "//zircon/public/lib/driver" ] != library_public_deps) {
     library_public_deps -= [ "//zircon/public/lib/driver" ]
-    library_public_deps += [ "//src/devices:driver" ]
+    library_public_deps += [ "//src/devices/lib/driver" ]
   }
 
   # Update reference to uboringssl, which really only forwards to boringssl.

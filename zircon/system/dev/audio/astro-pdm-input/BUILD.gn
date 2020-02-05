@@ -24,7 +24,7 @@ driver_module("astro-pdm-input") {
   sources = [ "audio-stream-in.cc" ]
 
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",

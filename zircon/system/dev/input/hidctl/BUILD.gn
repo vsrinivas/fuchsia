@@ -23,7 +23,7 @@ driver_module("hidctl") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hidctl.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",

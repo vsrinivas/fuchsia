@@ -41,7 +41,7 @@ driver_module("alc5663") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":shared",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
   ]
 }

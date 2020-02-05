@@ -27,7 +27,7 @@ driver_module("hdmi-audio-codec") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hdmi-codec.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",

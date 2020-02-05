@@ -23,7 +23,7 @@ driver_module("nelson-usb-phy") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "nelson-usb-phy.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

@@ -24,7 +24,7 @@ driver_module("ddk-runcompatibilityhook-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-driver.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
@@ -39,7 +39,7 @@ driver_module("ddk-runcompatibilityhook-test-child") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-driver-child.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",

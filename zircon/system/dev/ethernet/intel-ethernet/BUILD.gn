@@ -28,7 +28,7 @@ driver_module("intel-ethernet") {
     "ie.c",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-pci",
     "//zircon/system/banjo/ddk.protocol.ethernet",

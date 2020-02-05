@@ -29,7 +29,7 @@ driver_module("intel-i2c") {
     "intel-i2c-subordinate.c",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/sync",

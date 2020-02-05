@@ -30,7 +30,7 @@ driver_module("rtl88xx_driver") {
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/usb",

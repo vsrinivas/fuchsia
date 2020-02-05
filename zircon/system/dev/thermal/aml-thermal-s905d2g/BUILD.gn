@@ -30,7 +30,7 @@ driver_module("aml-thermal-s905d2g") {
     "aml-voltage.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

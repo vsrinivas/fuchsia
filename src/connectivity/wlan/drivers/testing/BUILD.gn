@@ -26,7 +26,7 @@ driver_module("wlanphy-testdev") {
     "//sdk/fidl/fuchsia.wlan.device",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

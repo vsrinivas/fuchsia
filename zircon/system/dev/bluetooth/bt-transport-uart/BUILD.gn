@@ -23,7 +23,7 @@ driver_module("bt-transport-uart") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bt-transport-uart.c" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//sdk/banjo/ddk.protocol.bt.hci",

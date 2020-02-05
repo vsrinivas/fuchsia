@@ -23,7 +23,7 @@ driver_module("aml-ethernet-s912") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-ethernet.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

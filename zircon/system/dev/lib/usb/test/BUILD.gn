@@ -62,7 +62,7 @@ test("usb-wrapper-test") {
   output_name = "usb-wrapper-test"
   sources = [ "usb-wrapper-test.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake-bti",

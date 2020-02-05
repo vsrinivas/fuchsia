@@ -32,7 +32,7 @@ source_set("virtual_camera_source") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
     "//src/camera/lib/image_writer:hsv_color_source",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",

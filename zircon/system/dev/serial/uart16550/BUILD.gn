@@ -24,7 +24,7 @@ driver_module("uart16550") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "uart16550.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
