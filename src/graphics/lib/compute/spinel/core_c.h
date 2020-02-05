@@ -21,7 +21,7 @@ struct spn_vec4   { float    x; float    y; float    z; float    w; };
 struct spn_uvec2  { uint32_t x; uint32_t y; };
 struct spn_uvec4  { uint32_t x; uint32_t y; uint32_t z; uint32_t w; };
 struct spn_ivec4  { int32_t  x; int32_t  y; int32_t  z; int32_t  w; };
-struct spn_mat2x2 { float    a; float    b; float    c; float    d; };
+struct spn_mat2x2 { float    a; float    b; float    c; float    d; }; // GLSL defaults to column major
 
 #define SPN_TYPE_UINT    uint32_t
 #define SPN_TYPE_INT     int32_t
