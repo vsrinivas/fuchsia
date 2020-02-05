@@ -133,6 +133,12 @@ template("go_build") {
     }
 
     action(main_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
       deps = []
       if (defined(invoker.non_go_deps)) {
         deps += invoker.non_go_deps
