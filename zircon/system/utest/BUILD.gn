@@ -53,7 +53,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/ddk:ddk-unittest",
       "$zx/system/ulib/elf-search/test",
       "$zx/system/ulib/elfload/test",
-      "$zx/system/ulib/fdio-caller/test",
       "$zx/system/ulib/fdio/test",
       "$zx/system/ulib/ffl/test",
       "$zx/system/ulib/fs:test",
