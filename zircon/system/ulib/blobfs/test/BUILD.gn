@@ -11,6 +11,8 @@ group("test") {
     ":blobfs-large-integration",
     ":blobfs-unit",
     ":zstd-fuzzer",
+    ":zstd-seekable-fuzzer",
+    ":zstd-seekable-symmetric-fuzzer",
   ]
 }
 
@@ -138,18 +140,34 @@ fuzzer("zstd-fuzzer") {
   sources = [ "zstd-fuzzer.cc" ]
   deps = [
     "$zx/system/ulib/blobfs",
-    "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/zstd",
   ]
   include_dirs = [ ".." ]
 }
 
 fuzzer("lz4-fuzzer") {
-  sources = [ "zstd-fuzzer.cc" ]
+  sources = [ "lz4-fuzzer.cc" ]
   deps = [
     "$zx/system/ulib/blobfs",
     "$zx/third_party/ulib/lz4",
-    "$zx/third_party/ulib/zstd",
+  ]
+  include_dirs = [ ".." ]
+}
+
+fuzzer("zstd-seekable-symmetric-fuzzer") {
+  sources = [ "zstd-seekable-symmetric-fuzzer.cc" ]
+  deps = [
+    "$zx/system/ulib/blobfs",
+    "$zx/third_party/ulib/zstd:zstdseek",
+  ]
+  include_dirs = [ ".." ]
+}
+
+fuzzer("zstd-seekable-fuzzer") {
+  sources = [ "zstd-seekable-fuzzer.cc" ]
+  deps = [
+    "$zx/system/ulib/blobfs",
+    "$zx/third_party/ulib/zstd:zstdseek",
   ]
   include_dirs = [ ".." ]
 }

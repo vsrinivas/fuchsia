@@ -31,7 +31,7 @@
 #include "blobfs.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
-#include "compression/zstd-rac.h"
+#include "compression/zstd-seekable.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/block-iterator.h"
 #include "iterator/extent-iterator.h"
@@ -347,7 +347,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
       break;
     case CompressionAlgorithm::ZSTD_SEEKABLE:
       // TODO(markdittmer): This does not have the same signature as other decompression routines.
-      status = ZSTDSeekableDecompress(GetData(), &target_size, compressed_buffer);
+      status = ZSTDSeekableDecompress(GetData(), &target_size, compressed_buffer, compressed_size);
       break;
     default:
       FS_TRACE_ERROR("Unsupported decompression algorithm");

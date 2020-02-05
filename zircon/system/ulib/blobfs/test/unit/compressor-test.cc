@@ -16,7 +16,7 @@
 #include "compression/blob-compressor.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
-#include "compression/zstd-rac.h"
+#include "compression/zstd-seekable.h"
 #include "zircon/errors.h"
 
 namespace blobfs {
@@ -82,7 +82,7 @@ void DecompressionHelper(CompressionAlgorithm algorithm, const void* compressed,
       ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
       break;
     case CompressionAlgorithm::ZSTD_SEEKABLE:
-      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed));
+      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed, src_size));
       break;
     default:
       FAIL("Bad algorithm");
@@ -252,7 +252,7 @@ void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compre
       ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
       break;
     case CompressionAlgorithm::ZSTD_SEEKABLE:
-      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed));
+      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed, src_size));
       break;
     default:
       FAIL("Bad algorithm");

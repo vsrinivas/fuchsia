@@ -15,7 +15,7 @@
 
 #include "lz4.h"
 #include "zstd-plain.h"
-#include "zstd-rac.h"
+#include "zstd-seekable.h"
 
 namespace blobfs {
 

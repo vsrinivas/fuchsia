@@ -27,6 +27,8 @@ fuzzer_names = [
   "vmo_file",
   "zbi-bootfs",
   "zstd",
+  "zstd-seekable",
+  "zstd-seekable-symmetric",
 ]
 known_fuzzers = []
 foreach(fuzzer, fuzzer_names) {
