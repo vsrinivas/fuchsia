@@ -699,7 +699,6 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/gpt:gpt-manifest",
     "//zircon/system/uapp/hid:hid-manifest",
     "//zircon/system/uapp/i2c:i2c-manifest",
-    "//zircon/system/uapp/i2cutil:i2cutil-manifest",
     "//zircon/system/uapp/ihda:ihda-manifest",
     "//zircon/system/uapp/disk-pave:install-disk-image-manifest",
     "//zircon/system/uapp/iochk:iochk-manifest",
