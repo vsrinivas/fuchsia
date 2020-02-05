@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_NEW_MOCK_MMIO_REG_INCLUDE_NEW_MOCK_MMIO_REG_NEW_MOCK_MMIO_REG_H_
+#define ZIRCON_SYSTEM_DEV_LIB_NEW_MOCK_MMIO_REG_INCLUDE_NEW_MOCK_MMIO_REG_NEW_MOCK_MMIO_REG_H_
 
-#include <lib/mmio/mmio.h>
+#include <memory>
+
 #include <fbl/vector.h>
+#include <lib/mmio/mmio.h>
 #include <zxtest/zxtest.h>
 
 namespace ddk_mock {
@@ -151,13 +154,13 @@ class MockMmioRegRegion {
   // is not transferred.
   MockMmioRegRegion(MockMmioReg* mock_regs, size_t reg_size, size_t reg_count)
       : mock_regs_(mock_regs), reg_size_(reg_size), reg_count_(reg_count) {
-    ZX_ASSERT(reg_size_ > 0);
+    ASSERT_GT(reg_size_, 0);
   }
 
   // Accesses the MockMmioReg at the given offset. Note that this is the _offset_, not the
   // _index_.
-  MockMmioReg& operator[](size_t offset) {
-    ZX_ASSERT(offset / reg_size_ < reg_count_);
+  MockMmioReg& operator[](size_t offset) const {
+    CheckOffset(offset);
     return mock_regs_[offset / reg_size_];
   }
 
@@ -168,16 +171,73 @@ class MockMmioRegRegion {
     }
   }
 
-  // Returns an mmio_buffer_t that can be used for constructing a ddk::MmioBuffer object.
-  mmio_buffer_t GetMmioBuffer() {
-    return mmio_buffer_t{
-        .vaddr = this, .offset = 0, .size = reg_size_ * reg_count_, .vmo = ZX_HANDLE_INVALID};
+  ddk::MmioBuffer GetMmioBuffer() {
+    return ddk::MmioBuffer(
+        mmio_buffer_t{
+            .vaddr = this,
+            .offset = 0,
+            .size = reg_size_ * reg_count_,
+            .vmo = ZX_HANDLE_INVALID,
+        },
+        &kMockMmioOps, this);
   }
 
  private:
-  MockMmioReg* mock_regs_;
+  static uint8_t Read8(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const MockMmioRegRegion*>(ctx);
+    return static_cast<uint8_t>(reg_region[offs + mmio.offset].Read());
+  }
+
+  static uint16_t Read16(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const MockMmioRegRegion*>(ctx);
+    return static_cast<uint16_t>(reg_region[offs + mmio.offset].Read());
+  }
+
+  static uint32_t Read32(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const MockMmioRegRegion*>(ctx);
+    return static_cast<uint32_t>(reg_region[offs + mmio.offset].Read());
+  }
+
+  static uint64_t Read64(const void* ctx, const mmio_buffer_t& mmio, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const MockMmioRegRegion*>(ctx);
+    return reg_region[offs + mmio.offset].Read();
+  }
+
+  static void Write8(const void* ctx, const mmio_buffer_t& mmio, uint8_t val, zx_off_t offs) {
+    Write64(ctx, mmio, val, offs);
+  }
+
+  static void Write16(const void* ctx, const mmio_buffer_t& mmio, uint16_t val, zx_off_t offs) {
+    Write64(ctx, mmio, val, offs);
+  }
+
+  static void Write32(const void* ctx, const mmio_buffer_t& mmio, uint32_t val, zx_off_t offs) {
+    Write64(ctx, mmio, val, offs);
+  }
+
+  static void Write64(const void* ctx, const mmio_buffer_t& mmio, uint64_t val, zx_off_t offs) {
+    const auto& reg_region = *reinterpret_cast<const MockMmioRegRegion*>(ctx);
+    reg_region[offs + mmio.offset].Write(val);
+  }
+
+  static constexpr ddk::MmioBufferOps kMockMmioOps = {
+      .Read8 = Read8,
+      .Read16 = Read16,
+      .Read32 = Read32,
+      .Read64 = Read64,
+      .Write8 = Write8,
+      .Write16 = Write16,
+      .Write32 = Write32,
+      .Write64 = Write64,
+  };
+
+  void CheckOffset(zx_off_t offs) const { ASSERT_LT(offs / reg_size_, reg_count_); }
+
+  MockMmioReg* const mock_regs_;
   const size_t reg_size_;
   const size_t reg_count_;
 };
 
 }  // namespace ddk_mock
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_NEW_MOCK_MMIO_REG_INCLUDE_NEW_MOCK_MMIO_REG_NEW_MOCK_MMIO_REG_H_

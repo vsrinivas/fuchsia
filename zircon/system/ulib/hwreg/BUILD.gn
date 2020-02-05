@@ -14,19 +14,6 @@ zx_library("hwreg") {
   static = true
   sources = [ "printers.cc" ]
 
-  # **Note!** It's important that this library not depend on the
-  # <lib/mmio/mmio.h> header at all, so it doesn't need to have
-  # "$zx/system/dev/lib/mmio:headers" here.  The hwreg library can be used
-  # with either the real mmio library ($zx/system/dev/lib/mmio) or with the
-  # mock for testing ($zx/system/dev/lib/mock-mmio-reg).  The mock library
-  # provides an alternate <lib/mmio/mmio.h> implementation.  If anything
-  # that wants to use the mock library also winds up with the real library
-  # in its deps (indirectly via public_deps in libraries like this) then
-  # it's hard to make sure the library paths put the mock library first.
-  # So it's better to simply avoid having the real library in the deps at
-  # all.  But this means that this library's headers must be maintained so
-  # that they can be used along with either <lib/mmio/mmio.h>
-  # implementation without actually including *either* header at all.
   public_deps = [
     # <hwreg/internal.h> has #include <fbl/algorithm.h>.
     "$zx/system/ulib/fbl:headers",
