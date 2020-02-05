@@ -203,6 +203,7 @@ group("ulib") {
 group("ulib-host") {
   testonly = true
   deps = [
+    "cmdline",
     "fbl",
     "fit",
     "libzbi",

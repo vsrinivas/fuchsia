@@ -145,7 +145,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/trace-reader:tests",
       "$zx/system/ulib/zxtest/test",
       "$zx/tools/kazoo:tests",
-      "cmdline",
       "fidl",
       "fidl-compiler",
       "fit",
