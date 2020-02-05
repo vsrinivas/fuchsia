@@ -16,7 +16,7 @@ The tests use the HCI driver emulator, so no hardware is required, and they can 
 ## Build the tests
 To ensure the tests build correctly, build the integration test package:
 ```
-   fx build src/connectivity/bluetooth/tests/integration
+   $ fx build src/connectivity/bluetooth/tests/integration
 ```
 
 In order to run the tests:
@@ -34,6 +34,9 @@ In order to run the tests:
 ```
 
 ## Run the Tests
+
+*Note: you must re-pave your device if it does not already contain the hci emulator. The tests use the hci emulator driver, which must be in the base-image and cannot be served from the package server.*
+
 Run from your development host via the `fx` tool:
 ```
   $  fx run-test bluetooth-tests -t bt-integration-tests
@@ -42,6 +45,44 @@ Run from your development host via the `fx` tool:
 Run directly in a shell on the fuchsia target:
 ```
   $ runtests -t bt-integration-tests
+```
+
+### Run on QEMU
+
+The easiest way to run the tests is in QEMU. This lets you run the tests with no additional hardware, and set up a system quickly with the correct image. On an x64 workstation, you can run QEMU using the kvm back-end (via the `-k` switch), which will run at almost native speed of the host machine.
+
+First, build the tests - using the x64 platform will allow you to use KVM for improved performance.
+
+```
+   $ fx set core.x64 \
+     --with-base=src/connectivity/bluetooth/hci/emulator
+     --with=src/connectivity/bluetooth
+     --with=src/connectivity/bluetooth/tests
+
+   $ fx build
+```
+
+In one terminal, run Fuchsia on QEMU
+```
+   // Start QEMU (-N to enable networking, -k to use KVM to emulate at near-native spead, though only works for x64 targets)
+   $ fx qemu -kN
+```
+
+In another terminal, set your fx configuration to use the newly appeared QEMU device:
+
+```
+   $ fx set-device
+```
+*(If you have other fuchsia targets connected, you'll need to specify which one)*
+
+Then run the package server:
+```
+   $ fx serve
+```
+
+Then finally in a third terminal, run the tests:
+```
+   $ fx run-test bluetooth-tests -t bt-integration-tests
 ```
 
 ## Writing Tests
