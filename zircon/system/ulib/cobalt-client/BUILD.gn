@@ -82,5 +82,10 @@ zx_library("in-memory-logger") {
   testonly = true
   sources = [ "in_memory_logger.cc" ]
   public_deps = [ ":cobalt-metrics" ]
-  deps = [ ":cobalt-types-internal" ]
+  deps = [
+    ":cobalt-types-internal",
+    "$zx/system/ulib/fit:headers",
+    "$zx/system/ulib/zx:headers",
+    "$zx/system/fidl/fuchsia-cobalt:llcpp",
+  ]
 }
