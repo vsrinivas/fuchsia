@@ -89,17 +89,16 @@ async fn run() -> Result<(), Error> {
         let stream = watch_hosts();
         pin_mut!(stream);
         while let Some(msg) = stream.try_next().await? {
-            let hd = watch_hd.clone();
             match msg {
                 AdapterAdded(device_path) => {
-                    let result = hd.add_adapter(&device_path).await;
+                    let result = watch_hd.add_adapter(&device_path).await;
                     if let Err(e) = &result {
                         fx_log_warn!("Error adding bt-host device '{:?}': {:?}", device_path, e);
                     }
                     result?
                 }
                 AdapterRemoved(device_path) => {
-                    hd.rm_adapter(&device_path);
+                    watch_hd.rm_adapter(&device_path);
                 }
             }
         }

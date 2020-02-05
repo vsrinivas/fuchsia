@@ -241,7 +241,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_change_name() {
-        let (delegate_client, mut host_dispatcher) = setup_generic_access_service();
+        let (delegate_client, host_dispatcher) = setup_generic_access_service();
         let (expected_device_name, _err) =
             delegate_client.on_read_value(GENERIC_ACCESS_DEVICE_NAME_ID, 0).await.unwrap();
         assert_eq!(expected_device_name.unwrap(), TEST_DEVICE_NAME.as_bytes());

@@ -43,7 +43,7 @@ pub async fn start_control_service(
 }
 
 async fn handler(
-    mut hd: HostDispatcher,
+    hd: HostDispatcher,
     session: &mut ControlSession,
     event: ControlRequest,
 ) -> fidl::Result<()> {
