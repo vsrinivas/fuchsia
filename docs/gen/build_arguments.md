@@ -110,7 +110,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:19
+From //BUILD.gn:20
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_component_event_provider_allowlist", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
@@ -118,7 +118,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:19
+From //BUILD.gn:20
 
 ### blob_blobfs_maximum_bytes
 For build/images:fvm.blob.sparse.blk, use this argument.
@@ -276,7 +276,7 @@ From //products/core.gni:7
 
 **Overridden from the default:** `false`
 
-From //build/images/boot.gni:15
+From //build/images/boot_args.gni:11
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -284,7 +284,7 @@ From //products/core.gni:7
 
 **Overridden from the default:** `false`
 
-From //build/images/boot.gni:15
+From //build/images/boot_args.gni:11
 
 ### bootloader_hw_revision
 HW revision of the bootloader to be included into OTA package and paving
@@ -386,7 +386,7 @@ From //products/core.gni:78
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:27
+From //BUILD.gn:28
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -394,7 +394,7 @@ From //products/core.gni:78
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:27
+From //BUILD.gn:28
 
 ### camera_debug
 
@@ -712,6 +712,16 @@ Package the rootfs as a QCOW image (as opposed to a flat file).
 
 From //src/virtualization/packages/debian_guest/BUILD.gn:9
 
+### debug_zircon_libraries_more
+Use this flag to optimize source libraries imported from Zircon the same was
+as other libraries in this build.
+By default, they are optimized the same as in the ZN build, which leaves
+less debugging information available.
+
+**Current value (from the default):** `false`
+
+From //build/unification/config/BUILD.gn:10
+
 ### default_git_folder
 Absolute path to the .git folder.
 
@@ -895,6 +905,13 @@ From //build/fidl/wireformat.gni:9
 **Current value (from the default):** `"flutter_jit_app"`
 
 From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/a73f69cdb12b1e55bb2be0f65ac9f4506c7de9b9/runtime/dart/dart_component.gni#12)
+
+### flutter_driver_enabled
+Enable flutter_driver builds. This is effective only on debug builds.
+
+**Current value (from the default):** `false`
+
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:21
 
 ### flutter_profile
 
@@ -1677,7 +1694,7 @@ From //build/rust/config.gni:42
 Sets the panic type for Rust on fuchsia.
 Valid values are "unwind" and "abort".
 
-**Current value (from the default):** `"abort"`
+**Current value (from the default):** `"unwind"`
 
 From //build/rust/config.gni:29
 
@@ -1996,12 +2013,12 @@ build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
 TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/ef82be1814334553cb85dc76d55b1fca586fa239/infra/test_durations/default.json)" after the recipes start
+"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/cc8003fe4386b789d8bf82f6d3642baa79d178ec/infra/test_durations/default.json)" after the recipes start
 setting this arg.
 
 **Current value (from the default):** `"//integration/infra/test_durations.json"`
 
-From //BUILD.gn:36
+From //BUILD.gn:37
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2103,7 +2120,7 @@ From //products/core.gni:80
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:44
+From //BUILD.gn:45
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
@@ -2111,7 +2128,7 @@ From //products/core.gni:80
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:44
+From //BUILD.gn:45
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2228,7 +2245,7 @@ Use vboot images
 
 **Current value (from the default):** `false`
 
-From //build/images/boot.gni:11
+From //build/images/boot_args.gni:7
 
 ### using_fuchsia_sdk
 Only set in buildroots where targets configure themselves for use with the
@@ -2367,7 +2384,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:93
+From //BUILD.gn:94
 
 ### zircon_asserts
 
@@ -2392,7 +2409,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:72
+From //BUILD.gn:73
 
 ### zircon_enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -2404,7 +2421,7 @@ From //products/core.gni:12
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:65
+From //BUILD.gn:66
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -2412,7 +2429,7 @@ From //products/core.gni:12
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:65
+From //BUILD.gn:66
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2429,14 +2446,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:57
+From //BUILD.gn:58
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:61
+From //BUILD.gn:62
 
 ### zircon_r_partition
 
@@ -2450,7 +2467,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:69
+From //BUILD.gn:70
 
 ### zvb_partition_name
 Partition name from where image will be verified
