@@ -21,6 +21,10 @@ zx_library("block-client") {
   public_deps = [
     # <block-client/cpp/client.h> has #include <lib/zx/fifo.h>.
     "$zx/system/ulib/zx:headers",
+    # <block-client/cpp/fake-device.h> has #include <range/range.h>.
+    "$zx/system/ulib/range:headers",
+    # <block-client/cpp/fake-device.h> has #include <storage-metrics/block-metrics.h>.
+    "$zx/system/ulib/storage-metrics:headers",
 
     # <block-client/cpp/block-device.h> has #include <.../fidl.h>
     "$zx/system/fidl/fuchsia-device:c.headers",

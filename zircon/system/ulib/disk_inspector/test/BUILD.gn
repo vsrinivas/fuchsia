@@ -2,12 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":disk_inspector_unit" ]
 }
 
-zx_test("disk_inspector_unit") {
+test("disk_inspector_unit") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   output_name = "disk-inspector-unit-test"
   sources = [
     "basic_types_test.cc",
@@ -17,14 +44,17 @@ zx_test("disk_inspector_unit") {
     "type_utils_test.cc",
   ]
   deps = [
-    "$zx/system/ulib/block-client",
-    "$zx/system/ulib/block-client:fake-device",
-    "$zx/system/ulib/disk_inspector",
-    "$zx/system/ulib/storage/buffer",
-    "$zx/system/ulib/storage/operation",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/block-client",
+    "//zircon/public/lib/fake-device",
+    "//zircon/public/lib/disk_inspector",
+    "//zircon/public/lib/buffer",
+    "//zircon/public/lib/operation",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
-  include_dirs = [ "$zx/system/ulib/disk_inspector" ]
+  include_dirs = [ "//zircon/public/lib/disk_inspector" ]
+}
+
+migrated_manifest("disk_inspector_unit-manifest") {
+  deps = [ ":disk_inspector_unit" ]
 }
