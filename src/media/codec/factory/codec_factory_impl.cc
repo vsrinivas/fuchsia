@@ -210,7 +210,7 @@ void CodecFactoryImpl::CreateDecoder(
   // Instead, we find where to delegate the request to.
 
   // First, try to find a hw-accelerated codec to satisfy the request.
-  const fuchsia::mediacodec::CodecFactoryPtr* factory = app_->FindHwDecoder(
+  const fuchsia::mediacodec::CodecFactoryPtr* factory = app_->FindHwCodec(
       [&params](const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
         // TODO(dustingreen): pay attention to the bool constraints of the
         // params vs. the hw_codec_description bools.  For the moment we just
@@ -274,8 +274,27 @@ void CodecFactoryImpl::CreateEncoder(
     return;
   }
 
+  // We don't have any need to bind the codec_request locally to this process.
+  // Instead, we find where to delegate the request to.
+
+  // First, try to find a hw-accelerated codec to satisfy the request.
+  const fuchsia::mediacodec::CodecFactoryPtr* factory = app_->FindHwCodec(
+      [&encoder_params](const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
+        ;
+        return (fuchsia::mediacodec::CodecType::ENCODER == hw_codec_description.codec_type) &&
+               (encoder_params.input_details().mime_type() == hw_codec_description.mime_type);
+      });
+
+  if (factory) {
+    // prefer HW-accelerated
+    (*factory)->CreateEncoder(std::move(encoder_params), std::move(encoder_request));
+    return;
+  }
+
   if (encoder_params.has_require_hw() && encoder_params.require_hw()) {
-    FX_LOGS(WARNING) << "There are no hardware encoders yet.";
+    FX_LOGS(WARNING) << "require_hw, but no matching HW encoder factory found ("
+                     << encoder_params.input_details().mime_type() << "); closing";
+    // ~encoder
     return;
   }
 

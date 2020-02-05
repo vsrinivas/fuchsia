@@ -2,18 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("factory") {
-  output_name = "codec_factory"
+import("//build/test/test_package.gni")
 
+source_set("factory_source") {
   sources = [
     "codec_factory_app.cc",
     "codec_factory_app.h",
     "codec_factory_impl.cc",
     "codec_factory_impl.h",
-    "main.cc",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
@@ -23,7 +22,42 @@ executable("factory") {
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/system/fidl/fuchsia-hardware-mediacodec",
   ]
+}
 
-  # codec_factory spawns codec_runner_sw_ffmpeg(s) which is a peer package for now,
-  # so no dep is needed here for codec_runner_sw_ffmpeg.
+executable("factory") {
+  output_name = "codec_factory"
+
+  sources = [ "main.cc" ]
+
+  deps = [ ":factory_source" ]
+}
+
+executable("codec_factory_hw_detect_test_bin") {
+  output_name = "codec_factory_hw_detect_test"
+
+  testonly = true
+
+  sources = [ "test/codec_factory_hw_detect_test.cc" ]
+
+  deps = [
+    ":factory_source",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+test_package("codec_factory_hw_detect_test") {
+  deps = [ ":codec_factory_hw_detect_test_bin" ]
+
+  tests = [
+    {
+      name = "codec_factory_hw_detect_test"
+
+      # test depends on hw decoder device being present
+      environments = [
+        astro_env,
+        sherlock_env,
+      ]
+    },
+  ]
 }

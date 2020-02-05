@@ -25,6 +25,7 @@ group("tests") {
     "//src/media/codec/examples:use_media_decoder",
     "//src/media/codec/examples:use_vp9_decoder_secure_output_test",
     "//src/media/codec/examples:use_vp9_decoder_test",
+    "//src/media/codec/factory:codec_factory_hw_detect_test",
   ]
 }
 
