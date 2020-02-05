@@ -32,6 +32,15 @@ struct AcpiNumaDomain {
   uint8_t memory_count = 0;
 };
 
+// Describes a dedicated system debug port suitable for low-level
+// debugging and diagnostics.
+//
+// Currently, we only support a 16550-compatible UART using MMIO.
+struct AcpiDebugPortDescriptor {
+  // Physical address of the 16550 MMIO registers.
+  paddr_t address;
+};
+
 // Wraps ACPICA functions (except init) to allow testing.
 class AcpiTableProvider {
  public:
@@ -86,6 +95,10 @@ class AcpiTables {
   // Lookup high precision event timer information. Returns ZX_OK and
   // populates hpet if successful, otherwise returns error.
   zx_status_t hpet(acpi_hpet_descriptor* hpet) const;
+
+  // Lookup low-level debug port information. Returns ZX_OK and
+  // populates info if successful, otherwise returns error.
+  zx_status_t debug_port(AcpiDebugPortDescriptor* desc) const;
 
   // Vists all pairs of cpu apic id and NumaRegion.
   // Visitor is expected to have the signature:

@@ -7,6 +7,7 @@
 #include <lib/acpi_tables.h>
 #include <trace.h>
 
+#include <fbl/span.h>
 #include <lk/init.h>
 
 #define LOCAL_TRACE 0
@@ -15,6 +16,94 @@ namespace {
 
 constexpr uint32_t kAcpiMaxInitTables = 32;
 ACPI_TABLE_DESC acpi_tables[kAcpiMaxInitTables];
+
+// Read a POD struct of type "T" from memory at "data" with a given
+// offset.
+//
+// Return the struct, and a span of the data which may be larger than
+// sizeof(T).
+//
+// Return an error if the span is not large enough to contain the data.
+template <typename T>
+inline zx_status_t ReadStruct(fbl::Span<const uint8_t> data, T* out, size_t offset = 0) {
+  // Ensure there is enough data for the header.
+  if (data.size_bytes() < offset + sizeof(T)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Copy the data to the out pointer.
+  //
+  // We copy the memory instead of just returning a raw pointer to the
+  // input data to avoid unaligned memory accesses, which are undefined
+  // behaviour in C (albeit, on x86 don't tend to matter in practice).
+  memcpy(reinterpret_cast<uint8_t*>(out), data.data() + offset, sizeof(T));
+
+  return ZX_OK;
+}
+
+// Read a POD struct of type "T" from memory at "data", which has a length field "F".
+//
+// Return the struct, and a span of the data which may be larger than
+// sizeof(T).
+//
+// Return an error if the span is not large enough to contain the data.
+template <typename T, typename F>
+inline zx_status_t ReadVariableLengthStruct(fbl::Span<const uint8_t> data, F T::*length_field,
+                                            T* out, fbl::Span<const uint8_t>* payload,
+                                            size_t offset = 0) {
+  // Read the struct data.
+  zx_status_t status = ReadStruct(data, out, offset);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Ensure the input data is large enough to fit the data in
+  // "length_field".
+  auto length = static_cast<size_t>(out->*length_field);
+  if (length + offset > data.size_bytes()) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Create a span of the data.
+  *payload = fbl::Span<const uint8_t>(data.begin() + offset, out->*length_field);
+
+  return ZX_OK;
+}
+
+// Read an ACPI table entry of type "T" from the memory starting a "header".
+//
+// On success, we return the struct and a span refering to the range of
+// data, which may be larger than sizeof(T).
+//
+// We assume that the memory being pointed contains at least sizeof(T)
+// bytes. Return an error if the header isn't valid.
+template <typename T>
+inline zx_status_t ReadAcpiEntry(const ACPI_TABLE_HEADER* header, T* out,
+                                 fbl::Span<const uint8_t>* payload) {
+  // Read the length. Use "memcpy" to avoid unaligned reads.
+  uint32_t length;
+  memcpy(&length, &header->Length, sizeof(uint32_t));
+  if (length < sizeof(T)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Ensure the table doesn't wrap the address space.
+  auto start = reinterpret_cast<uintptr_t>(header);
+  auto end = start + header->Length;
+  if (end < start) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Ensure that the header length looks reasonable.
+  if (header->Length > 16 * 1024) {
+    TRACEF("Table entry suspiciously long: %u\n", header->Length);
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Read the result.
+  *payload = fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(header), length);
+  return ReadStruct(*payload, out);
+}
 
 }  // namespace
 
@@ -275,6 +364,77 @@ zx_status_t AcpiTables::hpet(acpi_hpet_descriptor* hpet) const {
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
+
+  return ZX_OK;
+}
+
+zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
+  // Find the DBG2 table entry.
+  ACPI_TABLE_HEADER* table;
+  ACPI_STATUS acpi_status = tables_->GetTable((char*)ACPI_SIG_DBG2, 1, &table);
+  if (acpi_status != AE_OK) {
+    TRACEF("acpi: could not find debug port (v2) ACPI entry\n");
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  // Read the DBG2 header.
+  ACPI_TABLE_DBG2 debug_table;
+  fbl::Span<const uint8_t> payload;
+  zx_status_t status = ReadAcpiEntry(table, &debug_table, &payload);
+  if (status != ZX_OK) {
+    TRACEF("acpi: Failed to read DBG2 ACPI header.\n");
+    return status;
+  }
+
+  // Ensure at least one debug port.
+  if (debug_table.InfoCount < 1) {
+    TRACEF("acpi: DBG2 table contains no debug ports.\n");
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  // Read the first device payload.
+  ACPI_DBG2_DEVICE device;
+  fbl::Span<const uint8_t> device_payload;
+  status = ReadVariableLengthStruct<ACPI_DBG2_DEVICE>(payload,
+                                                      /*length_field=*/&ACPI_DBG2_DEVICE::Length,
+                                                      /*out=*/&device,
+                                                      /*payload=*/&device_payload,
+                                                      /*offset=*/debug_table.InfoOffset);
+  if (status != ZX_OK) {
+    TRACEF("acpi: Could not parse DBG2 device.\n");
+    return status;
+  }
+
+  // Ensure we are a supported type.
+  if (device.PortType != ACPI_DBG2_SERIAL_PORT ||
+      device.PortSubtype != ACPI_DBG2_16550_COMPATIBLE) {
+    TRACEF("acpi: DBG2 debug port unsuported. (type=%x, subtype=%x)\n", device.PortType,
+           device.PortSubtype);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // We need at least one register.
+  if (device.RegisterCount < 1) {
+    TRACEF("acpi: DBG2 debug port doesn't have any registers defined.\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Get base address and length.
+  ACPI_GENERIC_ADDRESS address;
+  status = ReadStruct(device_payload, &address, /*offset=*/device.BaseAddressOffset);
+  if (status != ZX_OK) {
+    TRACEF("acpi: Failed to read DBG2 address registers.\n");
+    return status;
+  }
+  uint32_t address_length;
+  status = ReadStruct(device_payload, &address_length, /*offset=*/device.AddressSizeOffset);
+  if (status != ZX_OK) {
+    TRACEF("acpi: Failed to read DBG2 address length.\n");
+    return status;
+  }
+
+  // Return information.
+  desc->address = static_cast<paddr_t>(address.Address);
 
   return ZX_OK;
 }
