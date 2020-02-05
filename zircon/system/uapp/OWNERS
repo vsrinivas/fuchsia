@@ -1,2 +1,5 @@
 teisenbe@google.com
-*
+
+# To limit new additions to the ZN build.
+per-file BUILD.gn=pylaligand@google.com
+per-file BUILD.gn=shayba@google.com
