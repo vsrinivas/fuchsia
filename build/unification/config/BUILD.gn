@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Use this flag to optimize source libraries imported from Zircon the same was
+  # as other libraries in this build.
+  # By default, they are optimized the same as in the ZN build, which leaves
+  # less debugging information available.
+  debug_zircon_libraries_more = false
+}
+
 # The following config is applied to code migrated from the ZN build and is a
 # stepping stone to full conversion to the GN build.
 # It should not be used on any target native to the GN build.
@@ -47,4 +55,24 @@ config("zircon-migrated") {
     "ZX_ASSERT_LEVEL=2",
     "WITH_FRAME_POINTERS=1",
   ]
+}
+
+# The following config is applied to source C/C++ libraries imported from ZN so
+# that they are as optimized as in the ZN build.
+
+config("zircon-library") {
+  compiler_flags = []
+
+  if (!debug_zircon_libraries_more) {
+    compiler_flags += [
+      "-O2",
+      "-no-canonical-prefixes",
+    ]
+  }
+
+  cflags = compiler_flags
+
+  ldflags = compiler_flags
+
+  asmflags = compiler_flags
 }

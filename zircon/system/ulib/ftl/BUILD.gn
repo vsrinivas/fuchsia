@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("ftl") {
-  sdk = "static"
+  sdk = "source"
   sdk_headers = [
     "lib/ftl/ndm-driver.h",
     "lib/ftl/volume.h",
@@ -11,23 +11,39 @@ zx_library("ftl") {
   host = true
 
   sources = [
+    "ftl.h",
+    "ftl_private.h",
     "ftln/ftln_init.c",
     "ftln/ftln_intrnl.c",
     "ftln/ftln_rd.c",
     "ftln/ftln_util.c",
+    "ftln/ftlnp.h",
     "ftln/ndm-driver.cc",
     "ftln/volume.cc",
+    "inc/kprivate/fsdriver.h",
+    "inc/kprivate/fsprivate.h",
+    "inc/kprivate/ndm.h",
+    "inc/config.h",
+    "inc/posix.h",
+    "inc/sys.h",
+    "inc/targetos.h",
     "ndm/ndm_init.c",
     "ndm/ndm_intrnl.c",
     "ndm/ndm_vols.c",
+    "ndm/ndmp.h",
     "utils/aalloc.c",
+    "utils/bsp.h",
     "utils/crc32_tbl.c",
     "utils/fsmem.c",
     "utils/fsys.c",
     "utils/fsysinit.c",
     "utils/ftl_mc.c",
+    "utils/ftl_mc.h",
+    "utils/kernel.h",
     "utils/sys.c",
   ]
+
+  include_dirs = [ "." ]
 
   deps = [
     "$zx/system/ulib/backtrace-request",

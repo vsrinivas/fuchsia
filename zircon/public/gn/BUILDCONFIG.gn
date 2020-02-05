@@ -486,6 +486,12 @@ template("library") {
       }
     }
 
+    ubsan_config =
+        "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use"
+    ubsan_disabled =
+        defined(invoker.configs) &&
+        invoker.configs + [ ubsan_config ] - [ ubsan_config ] != invoker.configs
+
     legacy_metadata = {
       legacy_barrier = []
       legacy_dirs = [ "lib/$_library_name$name_suffix" ]
@@ -500,6 +506,7 @@ template("library") {
           dir = "//zircon/" + rebase_path(".", "//")
           include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
           compilation_include_dirs = local_include_dirs
+          disable_ubsan = ubsan_disabled
           headers = sdk_headers
           publishable = sdk_publishable
           if (sdk == "source") {

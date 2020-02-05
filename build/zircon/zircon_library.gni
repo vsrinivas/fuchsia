@@ -204,8 +204,10 @@ template("zircon_library") {
                  ])
     }
     if (defined(invoker.libs) && invoker.libs != []) {
-      is_host_library = string_replace(library, "-host", "") + "-host" == library
-      assert(is_fuchsia != is_host_library, "Prebuilt $library used in wrong toolchain")
+      is_host_library =
+          string_replace(library, "-host", "") + "-host" == library
+      assert(is_fuchsia != is_host_library,
+             "Prebuilt $library used in wrong toolchain")
       libs += rebase_path(invoker.libs, ".", zircon_root_build_dir)
     }
   }
@@ -229,6 +231,7 @@ template("zircon_library") {
                              "debug",
                              "deps",
                              "dir",
+                             "disable_ubsan",
                              "headers",
                              "include_dirs",
                              "install",
@@ -240,6 +243,12 @@ template("zircon_library") {
                              "source_dir",
                            ])
     public_configs = [ ":$library.config" ]
+    if (!is_prebuilt) {
+      configs += [ "//build/unification/config:zircon-library" ]
+      if (defined(invoker.disable_ubsan) && invoker.disable_ubsan) {
+        configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+      }
+    }
     deps = library_deps
     public_deps = library_public_deps
     if (!is_fuchsia) {
