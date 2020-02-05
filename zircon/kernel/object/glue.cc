@@ -12,84 +12,20 @@
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/crashlog.h>
-#include <lib/debuglog.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 #include <lk/init.h>
 #include <object/diagnostics.h>
 #include <object/event_dispatcher.h>
+#include <object/executor.h>
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <platform/halt_helper.h>
 
-// All jobs and processes are rooted at the |root_job|.
-static fbl::RefPtr<JobDispatcher> root_job;
+static Executor gExecutor;
 
-fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() { return root_job; }
-
-class RootJobObserver final : public StateObserver {
- private:
-  Flags OnInitialize(zx_signals_t initial_state, const CountInfo* cinfo) final {
-    if (HasChild(initial_state)) {
-      panic("root-job: invalid initial state\n");
-    }
-    return 0;
-  }
-
-  Flags OnStateChange(zx_signals_t new_state) final { return MaybeHalt(new_state); }
-
-  Flags OnCancel(const Handle* handle) final { return 0; }
-
-  bool HasChild(zx_signals_t state) const {
-    bool no_child = (state & ZX_JOB_NO_JOBS) && (state & ZX_JOB_NO_PROCESSES);
-    return !no_child;
-  }
-
-  Flags MaybeHalt(zx_signals_t state) {
-    // If the root job has been terminated, it will have no children. We do not
-    // check for `ZX_JOB_TERMINATED`, as that may occur before all the children
-    // have been terminated.
-    if (HasChild(state)) {
-      return 0;
-    }
-    // We may be in an interrupt context, e.g. thread_process_pending_signals(),
-    // so we schedule a DPC.
-    dpc_queue(&dpc_, true);
-    return kNeedRemoval;
-  }
-
-  static void Halt(dpc_t* dpc) {
-    const char* notice = gCmdline.GetString("kernel.root-job.notice");
-    if (notice != nullptr) {
-      printf("root-job: notice: %s\n", notice);
-    }
-
-    const char* behavior = gCmdline.GetString("kernel.root-job.behavior");
-    if (behavior == nullptr) {
-      behavior = "reboot";
-    }
-
-    printf("root-job: taking %s action\n", behavior);
-    dlog_shutdown();
-
-    if (!strcmp(behavior, "halt")) {
-      platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
-    } else if (!strcmp(behavior, "bootloader")) {
-      platform_halt(HALT_ACTION_REBOOT_BOOTLOADER, HALT_REASON_SW_RESET);
-    } else if (!strcmp(behavior, "recovery")) {
-      platform_halt(HALT_ACTION_REBOOT_RECOVERY, HALT_REASON_SW_RESET);
-    } else if (!strcmp(behavior, "shutdown")) {
-      platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
-    } else {
-      platform_halt(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
-    }
-  }
-
-  dpc_t dpc_{LIST_INITIAL_CLEARED_VALUE, &Halt, nullptr};
-};
-
-static ktl::unique_ptr<RootJobObserver> root_job_observer;
+fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() { return gExecutor.GetRootJobDispatcher(); }
 
 enum PressureLevel : uint8_t {
   kOutOfMemory = 0,
@@ -150,7 +86,7 @@ static void on_oom() {
   switch (oom_behavior) {
     case OomBehavior::kJobKill:
 
-      if (!root_job->KillJobWithKillOnOOM()) {
+      if (!gExecutor.KillJobWithKillOnOOM()) {
         printf("OOM: no alive job has a kill bit\n");
       }
 
@@ -207,18 +143,7 @@ static int oom_thread(void* unused) {
   }
 }
 
-static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
-  Handle::Init();
-  PortDispatcher::Init();
-
-  root_job = JobDispatcher::CreateRootJob();
-  fbl::AllocChecker ac;
-  root_job_observer = ktl::make_unique<RootJobObserver>(&ac);
-  if (!ac.check()) {
-    panic("root-job: failed to allocate observer\n");
-  }
-  root_job->AddObserver(root_job_observer.get());
-
+static void memory_pressure_init() {
   for (uint8_t i = 0; i < PressureLevel::kNumLevels; i++) {
     KernelHandle<EventDispatcher> event;
     zx_rights_t rights;
@@ -253,6 +178,15 @@ static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     thread_detach(thread);
     thread_resume(thread);
   }
+}
+
+static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
+  Handle::Init();
+  PortDispatcher::Init();
+
+  gExecutor.Init();
+
+  memory_pressure_init();
 }
 
 LK_INIT_HOOK(libobject, object_glue_init, LK_INIT_LEVEL_THREADING)
