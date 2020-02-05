@@ -57,10 +57,9 @@ type Client struct {
 	tx      struct {
 		mu struct {
 			sync.Mutex
-			tmp      []C.struct_eth_fifo_entry
-			buf      []C.struct_eth_fifo_entry
-			inFlight uint32
+			queue []C.struct_eth_fifo_entry
 		}
+		cond sync.Cond
 	}
 }
 
@@ -109,8 +108,15 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		}
 		c.rxQueue = append(c.rxQueue, arena.entry(b))
 	}
-	c.tx.mu.buf = make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth)
-	c.tx.mu.tmp = make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth)
+	c.tx.mu.queue = make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth)
+	for i := 0; i < cap(c.tx.mu.queue); i++ {
+		b := arena.alloc(c)
+		if b == nil {
+			return nil, fmt.Errorf("%s: failed to allocate initial TX buffer %d/%d", tag, i, cap(c.tx.mu.queue))
+		}
+		c.tx.mu.queue = append(c.tx.mu.queue, arena.entry(b))
+	}
+	c.tx.cond.L = &c.tx.mu.Mutex
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -148,56 +154,85 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 	return tcpip.LinkAddress(c.Info.Mac.Octets[:])
 }
 
-func (c *Client) write(buffer tcpip.PacketBuffer) *tcpip.Error {
-	var buf Buffer
-	for {
-		if buf = c.AllocForSend(); buf != nil {
-			break
-		}
-		if err := c.WaitSend(); err != nil {
-			_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "wait error: %s", err)
-			return tcpip.ErrWouldBlock
-		}
-	}
-	used := 0
-	used += copy(buf[used:], buffer.Header.View())
-	for _, v := range buffer.Data.Views() {
-		used += copy(buf[used:], v)
-	}
-	if err := c.Send(buf[:used]); err != nil {
-		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "send error: %s", err)
-		return tcpip.ErrWouldBlock
+func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
+	batchSize := len(pkts)
+	if txDepth := int(c.fifos.TxDepth); batchSize > txDepth {
+		batchSize = txDepth
 	}
 
-	_ = syslog.VLogTf(syslog.TraceVerbosity, tag, "write=%d", used)
+	c.tx.mu.Lock()
+	defer c.tx.mu.Unlock()
+	for len(c.tx.mu.queue) < batchSize {
+		c.tx.cond.Wait()
+	}
 
-	return nil
+	// Acquire packets from the end to minimize how many packets may need to be shifted back.
+	queue := c.tx.mu.queue[len(c.tx.mu.queue)-batchSize:]
+	c.tx.mu.queue = c.tx.mu.queue[:len(c.tx.mu.queue)-batchSize]
+	for i, pkt := range pkts[:batchSize] {
+		// This is being reused, reset its length to get an appropriately sized buffer.
+		queue[i].length = bufferSize
+		b := c.arena.bufferFromEntry(queue[i])
+		used := copy(b, pkt.Header.View())
+		for _, v := range pkt.Data.Views() {
+			used += copy(b[used:], v)
+		}
+		queue[i] = c.arena.entry(b[:used])
+	}
+	switch status, count := fifoWrite(c.fifos.Tx, queue); status {
+	case zx.ErrOk:
+		c.tx.mu.queue = append(c.tx.mu.queue, queue[count:]...)
+		return int(count), nil
+	case zx.ErrShouldWait:
+		return 0, tcpip.ErrWouldBlock
+	default:
+		_ = syslog.WarnTf(tag, "fifoWrite(TX): %s", status)
+		return 0, tcpip.ErrClosedForSend
+	}
 }
 
 func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
-	return c.write(pkt)
+	_, err := c.write([]tcpip.PacketBuffer{pkt})
+	return err
 }
 
-func (c *Client) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
-	// TODO(tamird/stijlist): do better batching here. We can allocate a buffer for each packet
-	// before attempting to send them all to the drive all at once.
-	var n int
-	for _, pkt := range pkts {
-		if err := c.WritePacket(r, gso, protocol, pkt); err != nil {
-			return n, err
-		}
-		n++
-	}
-	return n, nil
+func (c *Client) WritePackets(_ *stack.Route, _ *stack.GSO, pkts []tcpip.PacketBuffer, _ tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
+	return c.write(pkts)
 }
 
 func (c *Client) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
-	return c.write(tcpip.PacketBuffer{
+	_, err := c.write([]tcpip.PacketBuffer{{
 		Data: vv,
-	})
+	}})
+	return err
 }
 
 func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		if err := func() error {
+			scratch := make([]C.struct_eth_fifo_entry, c.fifos.TxDepth)
+			for {
+				if _, err := zxwait.Wait(c.fifos.Tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite); err != nil {
+					return err
+				}
+
+				switch status, count := fifoRead(c.fifos.Tx, scratch); status {
+				case zx.ErrOk:
+					c.tx.mu.Lock()
+					c.tx.mu.queue = append(c.tx.mu.queue, scratch[:count]...)
+					c.tx.mu.Unlock()
+					c.tx.cond.Broadcast()
+				default:
+					return &zx.Error{Status: status, Text: "fifoRead(TX)"}
+				}
+			}
+		}(); err != nil {
+			_ = syslog.WarnTf(tag, "TX loop: %s", err)
+		}
+	}()
+
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
@@ -382,65 +417,6 @@ func (c *Client) SetPromiscuousMode(enabled bool) error {
 	return nil
 }
 
-// AllocForSend returns a Buffer to be passed to Send.
-// If there are too many outstanding transmission buffers, then
-// AllocForSend will return nil. WaitSend can be called to block
-// until a transmission buffer is available.
-func (c *Client) AllocForSend() Buffer {
-	c.tx.mu.Lock()
-	defer c.tx.mu.Unlock()
-	// TODO: Use more than txDepth here. More like 2x.
-	//       We cannot have more than txDepth outstanding for the fifo,
-	//       but we can have more between AllocForSend and Send. When
-	//       this is the entire netstack, we want a lot of buffer.
-	//       But there is missing tooling here. In particular, calling
-	//       Send won't 'release' the buffer, we need an extra step
-	//       for that, because we will want to keep the buffer around
-	//       until the ACK comes back.
-	if c.tx.mu.inFlight == c.fifos.TxDepth {
-		return nil
-	}
-	buf := c.arena.alloc(c)
-	if buf != nil {
-		c.tx.mu.inFlight++
-	}
-	return buf
-}
-
-// Send sends a Buffer to the ethernet driver.
-// Send does not block.
-// If the client is closed, Send returns zx.ErrPeerClosed.
-func (c *Client) Send(b Buffer) error {
-	c.tx.mu.Lock()
-	defer c.tx.mu.Unlock()
-	if err := c.txCompleteLocked(); err != nil {
-		return err
-	}
-	c.tx.mu.buf = append(c.tx.mu.buf, c.arena.entry(b))
-
-	switch status, count := fifoWrite(c.fifos.Tx, c.tx.mu.buf); status {
-	case zx.ErrOk:
-		n := copy(c.tx.mu.buf, c.tx.mu.buf[count:])
-		c.tx.mu.buf = c.tx.mu.buf[:n]
-	case zx.ErrShouldWait:
-	default:
-		return &zx.Error{Status: status, Text: "eth.Client.RX"}
-	}
-
-	return nil
-}
-
-// Free frees a Buffer obtained from Recv.
-//
-// TODO: c.Free(c.AllocForSend()) will leak txInFlight and eventually jam
-//       up the client. This is not an expected use of this library, but
-//       tracking to handle it could be useful for debugging.
-func (c *Client) Free(b Buffer) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.arena.free(c, b)
-}
-
 func fifoWrite(handle zx.Handle, b []C.struct_eth_fifo_entry) (zx.Status, uint32) {
 	var actual uint
 	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
@@ -453,43 +429,6 @@ func fifoRead(handle zx.Handle, b []C.struct_eth_fifo_entry) (zx.Status, uint32)
 	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
 	status := zx.Sys_fifo_read(handle, C.sizeof_struct_eth_fifo_entry, data, uint(len(b)), &actual)
 	return status, uint32(actual)
-}
-
-// txCompleteLocked should be called with the tx lock held.
-func (c *Client) txCompleteLocked() error {
-	buf := c.tx.mu.tmp[:c.fifos.TxDepth]
-
-	switch status, count := fifoRead(c.fifos.Tx, buf); status {
-	case zx.ErrOk:
-		c.tx.mu.inFlight -= count
-		for _, entry := range buf[:count] {
-			c.arena.free(c, c.arena.bufferFromEntry(entry))
-		}
-	case zx.ErrShouldWait:
-	default:
-		return &zx.Error{Status: status, Text: "eth.Client.TX"}
-	}
-
-	return nil
-}
-
-// WaitSend blocks until it is possible to allocate a send buffer,
-// or the client is closed.
-func (c *Client) WaitSend() error {
-	for {
-		c.tx.mu.Lock()
-		err := c.txCompleteLocked()
-		canSend := c.tx.mu.inFlight < c.fifos.TxDepth
-		c.tx.mu.Unlock()
-		if err != nil {
-			return err
-		}
-		if canSend {
-			return nil
-		}
-		// Errors from waiting handled in txComplete.
-		zxwait.Wait(c.fifos.Tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
-	}
 }
 
 // ListenTX tells the ethernet driver to reflect all transmitted

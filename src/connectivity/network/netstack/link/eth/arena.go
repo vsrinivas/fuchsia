@@ -40,8 +40,6 @@ type Arena struct {
 	iovmo zx.VMO
 	iobuf []byte
 
-	TestOnlyDisableOwnerCheck bool
-
 	mu struct {
 		sync.Mutex
 		freebufs []int
@@ -125,7 +123,7 @@ func (a *Arena) free(c *Client, b Buffer) {
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if !a.TestOnlyDisableOwnerCheck && a.mu.owner[i] != c {
+	if a.mu.owner[i] != c {
 		panic(fmt.Sprintf("eth.Arena: freeing a buffer owned by another client: %d (owner: %p, caller: %p)", i, a.mu.owner[i], c))
 	}
 	a.mu.owner[i] = nil
