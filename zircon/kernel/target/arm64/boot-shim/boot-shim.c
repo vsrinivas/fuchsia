@@ -226,6 +226,7 @@ static void append_from_device_tree(zbi_header_t* zbi, device_tree_context_t* ct
 
 #endif  // HAS_DEVICE_TREE
 
+__attribute__((unused))
 static void dump_words(const char* what, const void* data) {
   uart_puts(what);
   const uint64_t* words = data;
