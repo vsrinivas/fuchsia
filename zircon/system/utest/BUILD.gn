@@ -70,7 +70,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/lockdep:test",
       "$zx/system/ulib/minfs/test",
       "$zx/system/ulib/paver:paver-test",
-      "$zx/system/ulib/pretty/test",
       "$zx/system/ulib/refcount/test",
       "$zx/system/ulib/runtests-utils/test",
       "$zx/system/ulib/storage:test",
