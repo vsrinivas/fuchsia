@@ -1,0 +1,32 @@
+{
+    program: {
+        binary: "bin/a11y_manager"
+    },
+    expose: [
+        {
+            protocol: [
+                "/svc/fuchsia.accessibility.Magnifier",
+                "/svc/fuchsia.accessibility.ColorTransform",
+                "/svc/fuchsia.accessibility.Manager",
+                "/svc/fuchsia.accessibility.SettingsManager",
+                "/svc/fuchsia.accessibility.semantics.SemanticTree",
+                "/svc/fuchsia.accessibility.semantics.SemanticsManager",
+                "/svc/fuchsia.accessibility.tts.TtsManager",
+                "/svc/fuchsia.accessibility.tts.EngineRegistry",
+            ],
+            from: "self",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.settings.Accessibility",
+                "/svc/fuchsia.tracing.provider.Registry",
+                "/svc/fuchsia.ui.input.accessibility.PointerEventRegistry",
+            ],
+            from: "realm",
+        },
+    ],
+}
+

@@ -18,6 +18,10 @@ package("a11y_manager") {
       path = rebase_path("meta/a11y_manager.cmx")
       dest = "a11y_manager.cmx"
     },
+    {
+      path = rebase_path("meta/a11y_manager.cml")
+      dest = "a11y_manager.cm"
+    },
   ]
 }
 
