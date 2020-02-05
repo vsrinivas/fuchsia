@@ -4,7 +4,7 @@
 
 use anyhow::{Context as _, Error};
 use fuchsia_component::server::ServiceFs;
-use futures::{lock::Mutex, prelude::*};
+use futures::{lock::Mutex, prelude::*, stream::FuturesUnordered};
 use http_request::FuchsiaHyperHttpRequest;
 use log::{error, info};
 use omaha_client::state_machine::StateMachine;
@@ -44,7 +44,10 @@ fn main() -> Result<(), Error> {
         let config = configuration::get_config(&version);
         info!("Update config: {:?}", config);
 
+        let futures = FuturesUnordered::new();
+
         let (metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();
+        futures.push(cobalt_fut.boxed_local());
 
         let http = FuchsiaHyperHttpRequest::new();
         let installer = temp_installer::FuchsiaInstaller::new()?;
@@ -62,6 +65,7 @@ fn main() -> Result<(), Error> {
         )
         .await;
         let state_machine_ref = Rc::new(RefCell::new(state_machine));
+        futures.push(StateMachine::start(state_machine_ref.clone()).boxed_local());
 
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
@@ -84,28 +88,25 @@ fn main() -> Result<(), Error> {
         let notify_cobalt =
             channel_source == ChannelSource::VbMeta || channel_source == ChannelSource::SysConfig;
         if notify_cobalt {
-            cobalt::notify_cobalt_current_channel(app_set.clone()).await;
+            futures.push(cobalt::notify_cobalt_current_channel(app_set.clone()).boxed_local());
         }
 
         let fidl = fidl::FidlServer::new(
-            state_machine_ref.clone(),
+            state_machine_ref,
             stash_ref,
             app_set,
             apps_node,
             state_node,
             channel_configs,
         );
-
-        // `.boxed_local()` was added to workaround stack overflow when we have too many levels of
-        // nested async functions. Remove them when the generator optimization lands.
-        future::join4(
+        futures.push(
             fidl.start(fs, schedule_node, protocol_state_node, last_results_node, notify_cobalt)
                 .boxed_local(),
-            StateMachine::start(state_machine_ref).boxed_local(),
-            cobalt_fut,
-            check_and_set_system_health().boxed_local(),
-        )
-        .await;
+        );
+
+        futures.push(check_and_set_system_health().boxed_local());
+
+        futures.collect::<()>().await;
         Ok(())
     })
 }
