@@ -64,7 +64,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/hermetic-compute/test",
       "$zx/system/ulib/hermetic-decompressor/test",
-      "$zx/system/ulib/intel-hda/test",
       "$zx/system/ulib/kernel-mexec:kernel-mexec-test",
       "$zx/system/ulib/lazy_init:lazy_init-test",
       "$zx/system/ulib/lockdep:test",
