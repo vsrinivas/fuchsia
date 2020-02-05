@@ -12,6 +12,7 @@ package("bluetooth-tools") {
   deps = [
     "bt-avdtp-tool",
     "bt-avrcp-controller",
+    "bt-bredr-profile",
     "bt-cli",
     "bt-hci-emulator",
     "bt-hci-tool",
@@ -31,6 +32,11 @@ package("bluetooth-tools") {
     {
       name = "bt_avrcp_controller"
       dest = "bt-avrcp-controller"
+      shell = true
+    },
+    {
+      name = "bt_bredr_profile"
+      dest = "bt-bredr-profile"
       shell = true
     },
     {
