@@ -19,7 +19,6 @@ fuzzer_names = [
   "journal-entry",
   "journal-replay",
   "kernel-cmdline",
-  "ldmsg",
   "lz4",
   "lz4-decompress",
   "noop",

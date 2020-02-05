@@ -69,7 +69,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/io-scheduler/test",
       "$zx/system/ulib/kernel-mexec:kernel-mexec-test",
       "$zx/system/ulib/lazy_init:lazy_init-test",
-      "$zx/system/ulib/ldmsg/test",
       "$zx/system/ulib/lockdep:test",
       "$zx/system/ulib/minfs/test",
       "$zx/system/ulib/paver:paver-test",

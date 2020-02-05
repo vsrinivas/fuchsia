@@ -2,7 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+import("//build/fuzzing/fuzzer.gni")
 
 group("test") {
   testonly = true
@@ -11,5 +23,5 @@ group("test") {
 
 fuzzer("ldmsg-fuzzer") {
   sources = [ "ldmsg-fuzzer.cc" ]
-  deps = [ "$zx/system/ulib/ldmsg" ]
+  deps = [ "//zircon/public/lib/ldmsg" ]
 }
