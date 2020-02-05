@@ -59,6 +59,11 @@ class Environment : public zxtest::Environment {
     bool use_journal = true;
     bool use_pager = false;
 
+    // Power-failure related tests.
+    uint32_t power_stride = 1;  // Number of steps to skip between runs.
+    uint32_t power_start = 1;  // First step to run.
+    uint32_t power_cycles = 5;  // Last step to run.
+
     // Updates the configuration with options from the command line.
     // Returns false as soon as an option is not recognized.
     bool GetOptions(int argc, char** argv);
@@ -95,6 +100,7 @@ class Environment : public zxtest::Environment {
   const RamDisk* ramdisk() const { return ramdisk_.get(); }
 
   const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
+  const TestConfig& config() const { return config_; }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Environment);
 

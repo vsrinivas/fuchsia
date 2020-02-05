@@ -20,4 +20,8 @@ bool CreateDirectory(const std::string_view& name);
 // Creates a file with the given name.
 fbl::unique_fd CreateFile(const std::string_view& name);
 
+// Opens an existing file.
+fbl::unique_fd OpenFile(const std::string_view& name, bool read_only = false);
+inline fbl::unique_fd OpenReadOnly(const std::string_view& name) { return OpenFile(name, true); }
+
 #endif  // ZIRCON_SYSTEM_ULIB_MINFS_TEST_INTEGRATION_UTILS_H_

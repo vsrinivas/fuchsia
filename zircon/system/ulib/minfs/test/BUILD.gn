@@ -6,6 +6,7 @@ group("test") {
   testonly = true
   deps = [
     ":minfs-integration",
+    ":minfs-power",
     ":minfs-unit",
   ]
 }
@@ -45,17 +46,34 @@ zx_test("minfs-unit") {
   configs += [ "$zx/public/gn/config:static-libc++" ]
 }
 
+source_set("integration-fixtures") {
+  testonly = true
+  sources = [
+    "integration/minfs_fixtures.cc",
+    "integration/utils.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fs/test_support",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
 zx_test("minfs-integration") {
   test_group = "fs"
   sources = [
     "integration/backup-superblock.cc",
     "integration/integration_main.cc",
-    "integration/minfs_fixtures.cc",
     "integration/mount_test.cc",
+    "integration/power_test.cc",
     "integration/truncate_test.cc",
-    "integration/utils.cc",
   ]
   deps = [
+    ":integration-fixtures",
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
@@ -68,6 +86,31 @@ zx_test("minfs-integration") {
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs-test-utils",
     "$zx/system/ulib/fs/test/posix:posix_tests",
+    "$zx/system/ulib/fs/test_support",
+    "$zx/system/ulib/memfs",
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_test("minfs-power") {
+  test_group = "fs"
+  sources = [
+    "integration/power_main.cc",
+    "integration/power_test.cc",
+  ]
+  deps = [
+    ":integration-fixtures",
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs/test_support",
     "$zx/system/ulib/memfs",
     "$zx/system/ulib/minfs",

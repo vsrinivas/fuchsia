@@ -95,4 +95,43 @@ TEST(EnvironmentTest, RejectsMissingDevice) {
   EXPECT_NULL(config.physical_device_path);
 }
 
+TEST(EnvironmentTest, ValidPowerOptions) {
+  const char* options[] =
+      {"test-name", "--power_stride", "10", "--power_start", "20", "--power_cycles", "42", nullptr};
+  optind = 1;
+
+  Environment::TestConfig config = {};
+  EXPECT_TRUE(config.GetOptions(fbl::count_of(options) - 1, const_cast<char**>(options)));
+  EXPECT_EQ(10, config.power_stride);
+  EXPECT_EQ(20, config.power_start);
+  EXPECT_EQ(42, config.power_cycles);
+}
+
+TEST(EnvironmentTest, InvalidPowerStride) {
+  const char* options[] = {"test-name", "--power_stride", nullptr};
+  optind = 1;
+
+  Environment::TestConfig config = {};
+  EXPECT_FALSE(config.GetOptions(fbl::count_of(options) - 1, const_cast<char**>(options)));
+  EXPECT_EQ(1, config.power_stride);
+}
+
+TEST(EnvironmentTest, InvalidPowerStart) {
+  const char* options[] = {"test-name", "--power_start", nullptr};
+  optind = 1;
+
+  Environment::TestConfig config = {};
+  EXPECT_FALSE(config.GetOptions(fbl::count_of(options) - 1, const_cast<char**>(options)));
+  EXPECT_EQ(1, config.power_start);
+}
+
+TEST(EnvironmentTest, InvalidPowerCycles) {
+  const char* options[] = {"test-name", "--power_cycles", nullptr};
+  optind = 1;
+
+  Environment::TestConfig config = {};
+  EXPECT_FALSE(config.GetOptions(fbl::count_of(options) - 1, const_cast<char**>(options)));
+  EXPECT_EQ(5, config.power_cycles);
+}
+
 }  // namespace

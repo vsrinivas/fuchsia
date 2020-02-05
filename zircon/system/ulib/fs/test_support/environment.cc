@@ -30,7 +30,18 @@ Options:
 --device path_to_device (-d): Performs tests on top of a specific block device
 --no-journal: Don't use journal
 --pager (-p): Use pager (if supported by the filesystem)
+--power_stride n: Increment the operation count by n with each power cycle
+                  (default 1)
+--power_start n: Start cycling power at count n (default 1)
+--power_cycles n: Limit power tests to n cycles
+                  (0 to run to completion, default 5)
 --help (-h): Displays full help
+
+Running a power-type test with the default arguments prints out the number of
+cycles required for an exhaustive test and gives a rough time estimate of how
+long will take to run that test. To reduce the required time (and coverage!),
+either adjust the power_cycles (and optionally the start location, power_start),
+or increase the power_stride.
 
 )""";
 
@@ -42,6 +53,9 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         {"device", required_argument, nullptr, 'd'},
         {"no-journal", no_argument, nullptr, 'j'},  // No short option.
         {"pager", no_argument, nullptr, 'p'},
+        {"power_stride", required_argument, nullptr, '1'},
+        {"power_start", required_argument, nullptr, '2'},
+        {"power_cycles", required_argument, nullptr, '3'},
         {"help", no_argument, nullptr, 'h'},
         {"gtest_filter", optional_argument, nullptr, 'f'},
         {"gtest_list_tests", optional_argument, nullptr, 'l'},
@@ -65,6 +79,15 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         break;
       case 'p':
         config->use_pager = true;
+        break;
+      case '1':
+        config->power_stride = std::max(static_cast<uint32_t>(strtoul(optarg, NULL, 0)), 1U);
+        break;
+      case '2':
+        config->power_start = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        break;
+      case '3':
+        config->power_cycles = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
         break;
       case 'h':
         config->show_help = true;

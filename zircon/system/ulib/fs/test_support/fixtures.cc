@@ -243,4 +243,65 @@ FixedDiskSizeTestWithFvm::FixedDiskSizeTestWithFvm(uint64_t disk_size) {
   device_path_ = ramdisk_->path();
 }
 
+void PowerFailureRunner::Run(std::function<void()> function) {
+  Run(function, false);
+}
+
+void PowerFailureRunner::RunWithRestart(std::function<void()> function) {
+  Run(function, true);
+}
+
+void PowerFailureRunner::Run(std::function<void()> function, bool restart) {
+  const RamDisk* disk = test_->environment()->ramdisk();
+  ASSERT_NOT_NULL(disk, "Cannot run against real device");
+
+  ramdisk_block_write_counts_t counts;
+  ASSERT_OK(disk->GetBlockCounts(&counts));
+  uint64_t mount_count = counts.received;
+
+  function();
+
+  ASSERT_OK(disk->GetBlockCounts(&counts));
+  ASSERT_NO_FAILURES(test_->Remount());
+
+  const auto& config = test_->environment()->config();
+  uint32_t limit = config.power_cycles ? config.power_cycles :
+                   static_cast<uint32_t>(counts.received - mount_count);
+
+  zx::ticks start_ticks = zx::ticks::now();
+  zxtest::LogSink* log = zxtest::Runner::GetInstance()->mutable_reporter()->mutable_log_sink();
+  for (uint32_t i = config.power_start; i < limit; i += config.power_stride) {
+    log->Write("------------    Test start. Sleep after %d (/ %d) ----------- \n", i, limit);
+    ASSERT_OK(disk->SleepAfter(i));
+    zxtest::Runner::GetInstance()->DisableAsserts();
+
+    function();
+    log->Write("-------------   Test end\n");
+
+    test_->Unmount();
+
+    zxtest::Runner::GetInstance()->EnableAsserts();
+    ASSERT_OK(disk->WakeUp());
+
+    log->Write("--- To check fs\n");
+    ASSERT_OK(test_->CheckFs());
+
+    if (restart) {
+      log->Write("--- To format\n");
+      ASSERT_OK(mkfs(test_->device_path().c_str(), test_->format_type(), launch_stdio_sync,
+                     &default_mkfs_options));
+    }
+
+    ASSERT_NO_FAILURES(test_->Mount());
+  }
+  log->Write("--- Iteration end! ---\n");
+
+  auto ticks = zx::ticks::now() - start_ticks;
+  ticks /= (limit - config.power_start) / config.power_stride;
+  auto total_ticks = ticks * (counts.received - mount_count);
+  uint64_t minutes = total_ticks / (zx::ticks::per_second() * 60);
+  log->Write("--- Test operation count: %lu. Expected time to run full test: %lu minutes\n",
+             counts.received - mount_count, minutes);
+}
+
 }  // namespace fs

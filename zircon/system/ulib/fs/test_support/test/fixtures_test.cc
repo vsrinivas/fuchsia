@@ -17,5 +17,21 @@ TEST_F(FilesystemTest, Trivial) {}
 
 TEST_F(FilesystemTestWithFvm, Trivial) {}
 
+class PowerTest : public FilesystemTestWithFvm {
+ public:
+  PowerTest() : runner_(this) {}
+  void RunWithFailures(std::function<void()> function) { runner_.Run(function); }
+  void RunWithRestart(std::function<void()> function) { runner_.RunWithRestart(function); }
+
+ protected:
+  PowerFailureRunner runner_;
+};
+
+void DoSomeFsOperations() {}
+
+TEST_F(PowerTest, Trivial) { RunWithFailures(&DoSomeFsOperations); }
+
+TEST_F(PowerTest, TrivialWithRestart) { RunWithRestart(&DoSomeFsOperations); }
+
 }  // namespace
 }  // namespace fs

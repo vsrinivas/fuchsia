@@ -25,3 +25,8 @@ bool CreateDirectory(const std::string_view& name) {
 fbl::unique_fd CreateFile(const std::string_view& name) {
   return fbl::unique_fd(open(BuildPath(name).c_str(), O_RDWR | O_CREAT, 0644));
 }
+
+fbl::unique_fd OpenFile(const std::string_view& name, bool read_only) {
+  int flags = read_only ? O_RDONLY : O_RDWR;
+  return fbl::unique_fd(open(BuildPath(name).c_str(), flags, 0644));
+}
