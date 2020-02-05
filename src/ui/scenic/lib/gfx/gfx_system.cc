@@ -15,6 +15,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
+#include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/util/check_vulkan_support.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
@@ -123,9 +124,15 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
   auto shader_fs = escher::HackFilesystem::New(debug_dir);
   {
 #if ESCHER_USE_RUNTIME_GLSL
-    bool success = shader_fs->InitializeWithRealFiles(escher::kPaperRendererShaderPaths);
+    auto paths = escher::kPaperRendererShaderPaths;
+    paths.insert(paths.end(), escher::hmd::kPoseBufferLatchingPaths.begin(),
+                 escher::hmd::kPoseBufferLatchingPaths.end());
+    bool success = shader_fs->InitializeWithRealFiles(paths);
 #else
-    bool success = shader_fs->InitializeWithRealFiles(escher::kPaperRendererShaderSpirvPaths);
+    auto paths = escher::kPaperRendererShaderSpirvPaths;
+    paths.insert(paths.end(), escher::hmd::kPoseBufferLatchingSpirvPaths.begin(),
+                 escher::hmd::kPoseBufferLatchingSpirvPaths.end());
+    bool success = shader_fs->InitializeWithRealFiles(paths);
 #endif
     FXL_DCHECK(success) << "Failed to init shader files.";
   }

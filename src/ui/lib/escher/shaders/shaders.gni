@@ -21,6 +21,9 @@ _shader_files = [
   "paper/vert/compute_world_space_position.vert",
   "paper/vert/main_shadow_volume_extrude.vert",
   "paper/vert/vertex_attributes.vert",
+
+  # Compute shaders.
+  "compute/pose_buffer_latching.comp",
 ]
 
 _shader_files_spirv = [
@@ -40,7 +43,7 @@ _shader_files_spirv = [
   "shaders_paper_frag_main_point_light_frag4295183060635058569.spirv",
 
   # Pose buffer latching compute shader, from pose_buffer_latching_shader.cc.
-  "pose_buffer_latching_comp14695981039346656037.spirv",
+  "shaders_compute_pose_buffer_latching_comp14695981039346656037.spirv",
 ]
 
 # Exported for Escher and Scenic. |path| is the path in host file system,

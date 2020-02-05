@@ -55,6 +55,7 @@ class CommandBufferPipelineState {
   void BeginGraphicsOrComputeContext();
 
   vk::Pipeline FlushGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program);
+  vk::Pipeline FlushComputePipeline(const PipelineLayout* pipeline_layout, ShaderProgram* program);
 
   struct StaticState;
   StaticState* static_state() { return &static_state_; }
@@ -258,6 +259,7 @@ class CommandBufferPipelineState {
   };
 
   vk::Pipeline BuildGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program);
+  vk::Pipeline BuildComputePipeline(const PipelineLayout* pipeline_layout, ShaderProgram* program);
 
   // Helper functions for BuildGraphicsPipeline().
   static void InitPipelineColorBlendStateCreateInfo(

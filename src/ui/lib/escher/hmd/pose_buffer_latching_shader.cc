@@ -18,87 +18,14 @@
 namespace escher {
 namespace hmd {
 
-const char* kPoseLatchingShaderName = "pose_buffer_latching.comp";
-const char* g_kernel_src = R"GLSL(
-  #version 450
-  #extension GL_ARB_separate_shader_objects : enable
+const std::vector<std::string> kPoseBufferLatchingPaths = {
+    "shaders/compute/pose_buffer_latching.comp"};
 
-  struct Pose {
-    vec4 quaternion;
-    vec3 position;
-    uint reserved;
-  };
+const std::vector<std::string> kPoseBufferLatchingSpirvPaths = {
+    "shaders_compute_pose_buffer_latching_comp14695981039346656037.spirv"};
 
-  layout(push_constant) uniform PushConstants {
-    uint latch_index;
-  };
-
-  layout (binding = 0) uniform VPMatrices {
-    mat4 left_view_transform;
-    mat4 left_projection_matrix;
-    mat4 right_view_transform;
-    mat4 right_projection_matrix;
-  };
-
-  layout (binding = 1) buffer PoseBuffer {
-    Pose poses[];
-  };
-
-  layout (binding = 2) buffer OutputBuffer {
-    Pose latched_pose;
-    mat4 left_vp_matrix;
-    mat4 right_vp_matrix;
-  };
-
-  // interpreted from GLM's mat3_cast
-  mat3 quaternion_to_mat3(vec4 q)
-  {
-    mat3 result;
-    float qxx = q.x * q.x;
-    float qyy = q.y * q.y;
-    float qzz = q.z * q.z;
-    float qxz = q.x * q.z;
-    float qxy = q.x * q.y;
-    float qyz = q.y * q.z;
-    float qwx = q.w * q.x;
-    float qwy = q.w * q.y;
-    float qwz = q.w * q.z;
-
-    result[0][0] = float(1) - float(2) * (qyy +  qzz);
-    result[0][1] = float(2) * (qxy + qwz);
-    result[0][2] = float(2) * (qxz - qwy);
-
-    result[1][0] = float(2) * (qxy - qwz);
-    result[1][1] = float(1) - float(2) * (qxx +  qzz);
-    result[1][2] = float(2) * (qyz + qwx);
-
-    result[2][0] = float(2) * (qxz + qwy);
-    result[2][1] = float(2) * (qyz - qwx);
-    result[2][2] = float(1) - float(2) * (qxx +  qyy);
-
-    return result;
-  }
-
-  mat4 translate(vec3 t){
-    return mat4(
-        vec4(1.0, 0.0, 0.0, 0.0),
-        vec4(0.0, 1.0, 0.0, 0.0),
-        vec4(0.0, 0.0, 1.0, 0.0),
-        vec4(t.x, t.y, t.z, 1.0)
-    );
-  }
-
-  void main() {
-    latched_pose = poses[latch_index];
-    left_vp_matrix = left_projection_matrix *
-                mat4(quaternion_to_mat3(latched_pose.quaternion)) *
-                translate(latched_pose.position) * left_view_transform;
-
-    right_vp_matrix = right_projection_matrix *
-                mat4(quaternion_to_mat3(latched_pose.quaternion)) *
-                translate(latched_pose.position) * right_view_transform;
-  }
-  )GLSL";
+const ShaderProgramData kPoseBufferLatchingProgramData = {
+    .source_files = {{ShaderStage::kCompute, "shaders/compute/pose_buffer_latching.comp"}}};
 
 static constexpr size_t k4x4MatrixSize = 16 * sizeof(float);
 
@@ -137,7 +64,7 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(const FramePtr& frame,
       frame->gpu_allocator()->AllocateBuffer(escher_->resource_recycler(), 4 * k4x4MatrixSize,
                                              kVpBufferUsageFlags, kVpMemoryPropertyFlags);
 
-  auto command_buffer = frame->cmds()->impl();
+  auto command_buffer = frame->cmds();
 
   // This should be guaranteed by checks at a higher layer.  For example,
   // Scenic checks this in Session::ApplySetCameraPoseBufferCmd().
@@ -153,37 +80,19 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(const FramePtr& frame,
   vp_matrices[2] = right_camera.transform();
   vp_matrices[3] = right_camera.projection();
 
-  if (!kernel_) {
-#if ESCHER_USE_RUNTIME_GLSL
-    kernel_ = std::make_unique<impl::ComputeShader>(
-        escher_, std::vector<vk::ImageLayout>{},
-        std::vector<vk::DescriptorType>{vk::DescriptorType::eUniformBuffer,
-                                        vk::DescriptorType::eStorageBuffer,
-                                        vk::DescriptorType::eStorageBuffer},
-        sizeof(latch_index), g_kernel_src);
-#else
-    std::vector<uint32_t> spirv;
-    auto base_path = escher_->shader_program_factory()->filesystem()->base_path();
-    if (shader_util::ReadSpirvFromDisk(/*ShaderVariantArgs*/ {}, *base_path + "/shaders/",
-                                       kPoseLatchingShaderName, &spirv)) {
-      kernel_ = std::make_unique<impl::ComputeShader>(
-          escher_, std::vector<vk::ImageLayout>{},
-          std::vector<vk::DescriptorType>{vk::DescriptorType::eUniformBuffer,
-                                          vk::DescriptorType::eStorageBuffer,
-                                          vk::DescriptorType::eStorageBuffer},
-          sizeof(latch_index), spirv);
-    }
-
-#endif  // ESCHER_USE_RUNTIME_GLSL
+  if (!program_) {
+    program_ = escher_->GetProgram(kPoseBufferLatchingProgramData);
   }
 
-  std::vector<TexturePtr> textures;
-  std::vector<BufferPtr> buffers;
-  buffers.push_back(vp_matrices_buffer);
-  buffers.push_back(pose_buffer.buffer);
-  buffers.push_back(output_buffer);
+  command_buffer->BeginCompute();
+  command_buffer->SetShaderProgram(program_, nullptr);
+  command_buffer->PushConstants(latch_index, /*Offset*/ 0);
 
-  kernel_->Dispatch(textures, buffers, command_buffer, 1, 1, 1, &latch_index);
+  command_buffer->BindUniformBuffer(0, 0, vp_matrices_buffer);
+  command_buffer->BindUniformBuffer(0, 1, pose_buffer.buffer);
+  command_buffer->BindUniformBuffer(0, 2, output_buffer);
+
+  command_buffer->Dispatch(1, 1, 1);
 
   return output_buffer;
 }
