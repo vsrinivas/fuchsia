@@ -72,13 +72,9 @@ template("cmx_validate") {
 
     stamp_file = "$target_gen_dir/$target_name.verified"
 
-    inputs = [
-      invoker.data,
-    ]
+    inputs = [ invoker.data ]
 
-    outputs = [
-      stamp_file,
-    ]
+    outputs = [ stamp_file ]
 
     args = [
       "--stamp",
@@ -144,12 +140,8 @@ template("cm_compile") {
     tool_output_name = "cmc"
 
     compiled_output = "$target_out_dir/$target_name"
-    inputs = [
-      invoker.data,
-    ]
-    outputs = [
-      compiled_output,
-    ]
+    inputs = [ invoker.data ]
+    outputs = [ compiled_output ]
 
     args = [
       "compile",
@@ -180,6 +172,10 @@ template("cm_compile") {
 #   visibility (optional)
 #     Standard GN meaning.
 #
+#   dest (optional)
+#     The name the output file in the target out directory. Defaults to the
+#     target name.
+#
 # Example of usage:
 #
 #   cmx_merge(format) {
@@ -198,16 +194,19 @@ template("cmx_merge") {
                              "public_deps",
                              "testonly",
                              "visibility",
+                             "dest",
                            ])
+
+    if (!defined(dest)) {
+      dest = target_name
+    }
 
     tool = "//src/sys/cmc"
     tool_output_name = "cmc"
 
-    merged_output = "$target_out_dir/$target_name"
+    merged_output = "${target_out_dir}/${dest}"
     inputs = invoker.sources
-    outputs = [
-      merged_output,
-    ]
+    outputs = [ merged_output ]
 
     args = [
       "merge",
@@ -256,12 +255,8 @@ template("cmx_format") {
     tool_output_name = "cmc"
 
     formatted_output = "$target_out_dir/$target_name"
-    inputs = [
-      invoker.data,
-    ]
-    outputs = [
-      formatted_output,
-    ]
+    inputs = [ invoker.data ]
+    outputs = [ formatted_output ]
 
     args = [
       "format",

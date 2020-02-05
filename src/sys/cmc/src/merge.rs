@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cm_json::Error;
-use serde_json::{json, Value};
-use std::fs;
-use std::io::{Read, Write};
-use std::path::PathBuf;
+use {
+    cm_json::{self, Error},
+    serde_json::{json, Value},
+    std::fs,
+    std::io::{Read, Write},
+    std::path::PathBuf,
+};
 
 /// read in the provided list of json files, merge them, and pretty-print the merged result to
 /// stdout if output is None or to the provided path if output is Some. JSON objects are merged
@@ -21,7 +23,7 @@ pub fn merge(files: Vec<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> 
         let mut buffer = String::new();
         fs::File::open(&filename)?.read_to_string(&mut buffer)?;
 
-        let v: Value = serde_json::from_str(&buffer)
+        let v: Value = cm_json::from_json5_str(&buffer)
             .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
 
         merge_json(&mut res, &v)
@@ -172,12 +174,35 @@ mod tests {
     }
 
     #[test]
+    fn test_merge_json5() {
+        let tmp_dir = TempDir::new().unwrap();
+
+        let input = vec![
+            (tmp_dir.path().join("1.json"), "{\"foo\": 1,} // comment"),
+            (tmp_dir.path().join("2.json"), "{\"bar\": 2,} // comment"),
+        ];
+        let mut filenames = vec![];
+        for (fname, contents) in &input {
+            File::create(fname).unwrap().write_all(contents.as_bytes()).unwrap();
+            filenames.push(fname.clone());
+        }
+
+        let output_file_path = tmp_dir.path().join("output.json");
+        merge(filenames, Some(output_file_path.clone())).expect("failed to merge");
+
+        let mut buffer = String::new();
+        File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
+        let expected_json = json!({"foo": 1, "bar": 2});
+        assert_eq!(buffer, format!("{:#}", expected_json));
+    }
+
+    #[test]
     fn test_merge_invalid_json_fails() {
         let tmp_dir = TempDir::new().unwrap();
 
         let input = vec![
             (tmp_dir.path().join("1.json"), "{\"foo\": 1}"),
-            (tmp_dir.path().join("1.json"), "{\"foo\": 1,}"),
+            (tmp_dir.path().join("2.json"), "{\"foo\": 1,}"),
         ];
         let mut filenames = vec![];
         for (fname, contents) in &input {

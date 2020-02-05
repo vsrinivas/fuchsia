@@ -46,11 +46,10 @@ import("//build/package.gni")
 #       dest (optional)
 #         [path] Location the binary will be placed within `bin/`.
 #
-#
 #   tests (optional)
-#     [list of scopes] Defines the test binaries in the package. A test is
-#     typically produced by the build system and is placed in the `test/`
-#     directory of the assembled package.
+#     [list of scopes] Defines the test binaries in the package for v1 component
+#     tests. A test is typically produced by the build system and is placed in
+#     the `test/` directory of the assembled package.
 #
 #     Entries in a scope in the tests list:
 #
@@ -61,7 +60,7 @@ import("//build/package.gni")
 #         [path] Location the binary will be placed within `test/`.
 #
 #       manifest (optional)
-#         [path] Location of the component manifest file.
+#         [path] Location of the component manifest file (`.cmx` file).
 #
 #       disabled (optional)
 #         [bool] Whether to disable the test on continuous integration
@@ -69,7 +68,33 @@ import("//build/package.gni")
 #         it is too flaky or slow for CI. The test will also be skipped by
 #         the `runtests` command.
 #
-#     For each tests entry this expects a corresponding cmx file in meta directory.
+#     For each tests entry this expects a corresponding cmx file in meta
+#     directory.
+#
+#   v2_tests (optional)
+#     [list of scopes] Defines the test binaries in the package for v2 component
+#     tests. A test is typically produced by the build system and is placed in
+#     the `test/` directory of the assembled package.
+#
+#     Entries in a scope in the tests list:
+#
+#       name (required)
+#         [string] Name of the test.
+#
+#       dest (optional)
+#         [path] Location the binary will be placed within `test/`.
+#
+#       manifest (optional)
+#         [path] Location of the component manifest file (`.cml` file).
+#
+#       disabled (optional)
+#         [bool] Whether to disable the test on continuous integration
+#         jobs. This can be used when a test is temporarily broken, or if
+#         it is too flaky or slow for CI. The test will also be skipped by
+#         the `runtests` command.
+#
+#     For each v2_tests entry this expects a corresponding cml file in meta
+#     directory.
 #
 #   resources (optional)
 #     [list of scopes] Defines the resources in the package. A resource is a
@@ -103,10 +128,17 @@ template("test_package") {
   forward_variables_from(invoker,
                          [
                            "tests",
+                           "v2_tests",
                            "meta",
                          ])
   if (!defined(meta)) {
     meta = []
+  }
+  if (!defined(tests)) {
+    tests = []
+  }
+  if (!defined(v2_tests)) {
+    v2_tests = []
   }
   foreach(test, tests) {
     test_dest = test.name
@@ -126,6 +158,27 @@ template("test_package") {
       },
     ]
   }
+
+  foreach(test, v2_tests) {
+    test_dest = test.name
+    if (defined(test.dest)) {
+      test_dest = test.dest
+    }
+    if (defined(test.manifest)) {
+      test_manifest = test.manifest
+    } else {
+      test_manifest = "meta/${test_dest}.cml"
+    }
+
+    meta += [
+      {
+        path = test_manifest
+        dest = "${test_dest}.cm"
+      },
+    ]
+  }
+
+  tests += v2_tests
 
   package(target_name) {
     testonly = true
@@ -274,9 +327,7 @@ template("unittest_package") {
 
     manifest_label = "get_test_package_manifest_${test_dest}.cmx"
     generated_file(manifest_label) {
-      outputs = [
-        test_manifest,
-      ]
+      outputs = [ test_manifest ]
 
       # TODO(CF-879): As of today, CMX files require the args list to be either
       # absent or of at least one element. There is a case to be made to relax
