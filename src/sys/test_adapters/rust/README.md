@@ -65,10 +65,10 @@ and `fuchsia.logger.LogSink`.
 
     "use": [
         {
-            "service_protocol": "/svc/fuchsia.process.Launcher",
+            "protocol": "/svc/fuchsia.process.Launcher",
         },
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
         },
     ],
 }

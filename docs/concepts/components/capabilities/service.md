@@ -70,7 +70,7 @@ Consider a component with the following manifest declaration:
 ```
 {
     "use": [{
-        "service_protocol": "/svc/fuchsia.example.ExampleService",
+        "protocol": "/svc/fuchsia.example.ExampleService",
     }],
 }
 ```

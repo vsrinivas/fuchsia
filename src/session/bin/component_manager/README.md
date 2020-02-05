@@ -29,7 +29,7 @@ The session manager exposes the service with the following entry in its `.cml`.
 
 "expose": [
   {
-    "service_protocol": "some service",
+    "protocol": "some service",
     "from": "self",
   }
 ],
@@ -43,7 +43,7 @@ A command line tool then specifies the following in its `.cml`:
 ```
 "use": [
         {
-           "service_protocol": "some service",
+           "protocol": "some service",
            "from": "realm",
         }
     ]

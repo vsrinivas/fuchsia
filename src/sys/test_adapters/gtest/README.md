@@ -63,12 +63,12 @@ cml file
     },
     "use": [
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
         },
     ],
     "expose": [
         {
-            "service_protocol": "/svc/fuchsia.test.Suite",
+            "protocol": "/svc/fuchsia.test.Suite",
             "from": "self",
         },
     ],
@@ -137,10 +137,10 @@ cml file
     "use": [
         {
              // gtest adapter needs this
-            "service_protocol": "/svc/fuchsia.process.Launcher",
+            "protocol": "/svc/fuchsia.process.Launcher",
         },
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
         },
         { // gtest adapter needs this
             "directory": "/tmp",
@@ -149,7 +149,7 @@ cml file
     ],
     "expose": [
         {
-            "service_protocol": "/svc/fuchsia.test.Suite",
+            "protocol": "/svc/fuchsia.test.Suite",
             "from": "self",
         },
     ],

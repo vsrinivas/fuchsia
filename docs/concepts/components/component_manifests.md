@@ -85,7 +85,7 @@ routing, see [_Life of a service open_](life_of_a_service_open.md)
 
 The following capabilities can be routed:
 
-- `service_protocol`: A filesystem service node that can be used to open a channel to a
+- `protocol`: A filesystem service node that can be used to open a channel to a
   FIDL protocol.
 - `directory`: A filesystem directory.
 - `storage`: A filesystem directory that is isolated to the component using it.
@@ -397,7 +397,7 @@ explained in [Routing terminology](#routing-terminology).
 `use` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `service_protocol`: The [source path](#capability-paths) of a service capability,
+    - `protocol`: The [source path](#capability-paths) of a service capability,
       or an array of source paths of service capabilities.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
@@ -410,18 +410,18 @@ explained in [Routing terminology](#routing-terminology).
   capabilities, and one of `/data` or `/cache` for storage capabilities.
   This property cannot be used:
   - For meta storage capabilities.
-  - When `service_protocol` is an array of multiple items.
+  - When `protocol` is an array of multiple items.
 
 Example:
 
 ```
 "use": [
     {
-        "service_protocol": "/svc/fuchsia.logger.LogSink2",
+        "protocol": "/svc/fuchsia.logger.LogSink2",
         "as": "/svc/fuchsia.logger.LogSink",
     },
     {
-        "service_protocol": [
+        "protocol": [
             "/svc/fuchsia.ui.scenic.Scenic",
             "/svc/fuchsia.accessibility.Manager",
         ]
@@ -448,7 +448,7 @@ explained in [Routing terminology](#routing-terminology).
 `expose` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `service_protocol`: The [source path](#capability-paths) of a service capability,
+    - `protocol`: The [source path](#capability-paths) of a service capability,
       or an array of source paths to service capabilities.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
@@ -458,7 +458,7 @@ explained in [Routing terminology](#routing-terminology).
     - `#<child-name>`: A [reference](#references) to a child component instance.
 - `as` _(optional)_: The explicit [target path](#capability-paths) for the
   capability. If omitted, defaults to the source path. This property cannot be used when
-  `service_protocol` is an array of multiple items.
+  `protocol` is an array of multiple items.
 
 Example:
 
@@ -469,12 +469,12 @@ Example:
         "from": "self",
     },
     {
-        "service_protocol": "/svc/pkg_cache",
+        "protocol": "/svc/pkg_cache",
         "from": "#pkg_cache",
         "as": "/svc/fuchsia.pkg.PackageCache",
     },
     {
-        "service_protocol": [
+        "protocol": [
             "/svc/fuchsia.ui.app.ViewProvider",
             "/svc/fuchsia.fonts.Provider",
         ],
@@ -496,7 +496,7 @@ explained in [Routing terminology](#routing-terminology).
 `offer` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `service_protocol`: The [source path](#capability-paths) of a service
+    - `protocol`: The [source path](#capability-paths) of a service
       capability, or an array of source paths of service capabilities.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
@@ -512,26 +512,26 @@ explained in [Routing terminology](#routing-terminology).
       or runner capabilities.
     - `#<storage-name>` A [reference](#references) to a storage declaration.
       This source can only be used when offering storage capabilities.
-- `to`: An array of capability targets, each of which is a
-  [reference](#references) to the child or collection to which the
-  capability is being offered, of the form `#<target-name>`.
-- `as` _(optional)_: The explicit [target path](#capability-paths) for the
-  capability. If omitted, defaults to the source path.
-  `as` cannot be used:
-    - For storage capabilities.
-    - When `service_protocol` is an array of multiple items.
+    - `to`: An array of capability targets, each of which is a
+      [reference](#references) to the child or collection to which the
+      capability is being offered, of the form `#<target-name>`.
+    - `as` _(optional)_: The explicit [target path](#capability-paths) for the
+      capability. If omitted, defaults to the source path.
+      `as` cannot be used:
+        - For storage capabilities.
+        - When `protocol` is an array of multiple items.
 
 Example:
 
 ```
 "offer": [
     {
-        "service_protocol": "/svc/fuchsia.logger.LogSink",
+        "protocol": "/svc/fuchsia.logger.LogSink",
         "from": "#logger",
         "to": [ "#fshost", "#pkg_cache" ],
     },
     {
-        "service_protocol": [
+        "protocol": [
             "/svc/fuchsia.ui.app.ViewProvider",
             "/svc/fuchsia.fonts.Provider",
         ],

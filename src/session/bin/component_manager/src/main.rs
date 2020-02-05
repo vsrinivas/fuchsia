@@ -46,7 +46,7 @@ use {
 ///
 /// "expose": [
 ///   {
-///     "service_protocol": "some service",
+///     "protocol": "some service",
 ///     "from": "self",
 ///   }
 /// ],
@@ -60,7 +60,7 @@ use {
 /// ```
 /// "use": [
 ///        {
-///           "service_protocol": "some service",
+///           "protocol": "some service",
 ///           "from": "realm",
 ///        }
 ///    ]
