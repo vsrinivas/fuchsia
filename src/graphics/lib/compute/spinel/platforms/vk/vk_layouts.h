@@ -565,31 +565,9 @@
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_FILLS_SCAN,SPN_VK_GLSL_PUSH_KERNEL_FILLS_SCAN())
 
 //
-// KERNEL: FILLS EXPAND
-//
-// Compatible with FILLS SCAN
-//
-
-#define SPN_VK_GLSL_PUSH_KERNEL_FILLS_EXPAND()      \
-  SPN_VK_GLSL_PUSH_KERNEL_FILLS_SCAN()
-
-#define SPN_VK_GLSL_DECL_KERNEL_FILLS_EXPAND()                        \
-  SPN_VK_GLSL_DS_BLOCK_POOL(0,readonly,readonly,readonly,readonly);   \
-  SPN_VK_GLSL_DS_RASTERIZE (1,                                        \
-                            readonly,noaccess,                        \
-                            noaccess,readonly,readonly,               \
-                            writeonly);                               \
-  SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_FILLS_EXPAND());
-
-#define SPN_VK_HOST_DECL_KERNEL_FILLS_EXPAND()                                      \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_EXPAND,0,SPN_VK_DS_ID_BLOCK_POOL)                \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_EXPAND,1,SPN_VK_DS_ID_RASTERIZE)                 \
-  SPN_VK_HOST_PUSH(SPN_VK_P_ID_FILLS_EXPAND,SPN_VK_GLSL_PUSH_KERNEL_FILLS_EXPAND())
-
-//
 // KERNEL: FILLS DISPATCH
 //
-// Compatible with FILLS EXPAND
+// Compatible with FILLS SCAN
 //
 // Note: push constants are ignored
 // Note: descriptor set 0 is ignored
@@ -611,6 +589,27 @@
   SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_DISPATCH,1,SPN_VK_DS_ID_RASTERIZE)       \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_FILLS_DISPATCH,SPN_VK_GLSL_PUSH_KERNEL_FILLS_DISPATCH())
 
+//
+// KERNEL: FILLS EXPAND
+//
+// Compatible with FILLS SCAN
+//
+
+#define SPN_VK_GLSL_PUSH_KERNEL_FILLS_EXPAND()      \
+  SPN_VK_GLSL_PUSH_KERNEL_FILLS_SCAN()
+
+#define SPN_VK_GLSL_DECL_KERNEL_FILLS_EXPAND()                        \
+  SPN_VK_GLSL_DS_BLOCK_POOL(0,readonly,readonly,readonly,readonly);   \
+  SPN_VK_GLSL_DS_RASTERIZE (1,                                        \
+                            readonly,noaccess,                        \
+                            readonly,readonly,readonly,               \
+                            writeonly);                               \
+  SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_FILLS_EXPAND());
+
+#define SPN_VK_HOST_DECL_KERNEL_FILLS_EXPAND()                                      \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_EXPAND,0,SPN_VK_DS_ID_BLOCK_POOL)                \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_EXPAND,1,SPN_VK_DS_ID_RASTERIZE)                 \
+  SPN_VK_HOST_PUSH(SPN_VK_P_ID_FILLS_EXPAND,SPN_VK_GLSL_PUSH_KERNEL_FILLS_EXPAND())
 
 //
 // KERNEL: RASTERIZE_XXX
