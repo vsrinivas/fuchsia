@@ -144,8 +144,6 @@ int WatchpointThreadFunction(void* user) {
   return 0;
 }
 
-constexpr int kExceptionWaitTimeout = 25;
-
 // Returns whether the breakpoint was hit.
 bool TestWatchpointRun(const zx::port& port, const zx::channel& exception_channel,
                        ThreadSetup* thread_setup, uint64_t wp_address, uint32_t length,
@@ -222,6 +220,136 @@ void WatchpointTestCase() {
   // Tell the thread to exit.
   thread_setup->test_running = false;
   CHECK_OK(thread_setup->event.signal(kThreadToHarness, kHarnessToThread));
+}
+
+// Aligned Watchpoint ------------------------------------------------------------------------------
+//
+// This test runs a thread that within a loop prints a group of ints, increments them (via var++)
+// and then prints it again (the function is AlignedWatchpointThreadFunction).
+// On the control thread, it sets a read/write watchpoint on one of the globals and verifies that
+// the following accesses are hit:
+//
+// 1. Read on the first printf.
+// 2. Read on the var++.
+// 3. Write on the var++.
+// 4. Read on the second printf.
+//
+// NOTE: In order to do this correctly, this tests does the same thing that zxdb does when it
+//       encounters a breakpoint: It deactivates the breakpoint, single steps the thread and then
+//       installs the breakpoint again. The watchpoint here is installed/uninstalled for every hit
+//       and the thread is single stepped.
+
+int SomeInt = 10;
+int SomeInt2 = 20;
+int SomeInt3 = 30;
+int SomeInt4 = 40;
+
+struct AlignedWatchpointUserData {
+  // How many times to run the test.
+  int times = 10;
+};
+
+int AlignedWatchpointThreadFunction(void* user) {
+  auto* thread_setup = reinterpret_cast<ThreadSetup*>(user);
+  auto* user_data = reinterpret_cast<AlignedWatchpointUserData*>(thread_setup->user);
+
+  // We signal the test harness that we are here.
+  thread_setup->event.signal(kHarnessToThread, kThreadToHarness);
+
+  CHECK_OK(thread_setup->event.wait_one(kHarnessToThread, zx::time::infinite(), nullptr));
+
+  printf("User data times: %d.\n", user_data->times);
+  for (int i = 0; i < user_data->times; i++) {
+    printf("Before: %d, %d, %d, %d\n", SomeInt, SomeInt2, SomeInt3, SomeInt4);
+    SomeInt++;
+    SomeInt2++;
+    SomeInt3++;
+    SomeInt4++;
+    printf("After:  %d, %d, %d, %d\n", SomeInt, SomeInt2, SomeInt3, SomeInt4);
+    printf("-----------------------------\n");
+  }
+
+  fflush(stdout);
+
+  // We signal that we finished this write.
+  CHECK_OK(thread_setup->event.signal(kHarnessToThread, kThreadToHarness));
+
+  return 0;
+}
+
+void WatchpointStepOver(const zx::thread& thread, const zx::port& port,
+                        const zx::channel& exception_channel, std::optional<Exception> exception) {
+  RemoveWatchpoint(thread);
+
+  exception = SingleStep(thread, port, exception_channel, std::move(exception));
+  FXL_DCHECK(exception);
+
+  // Now that we have single stepped, we can reinstall the watchpoint.
+  InstallWatchpoint(thread, (uint64_t)&SomeInt2, 4, WatchpointType::kReadWrite);
+
+  WaitAsyncOnExceptionChannel(port, exception_channel);
+  ResumeException(thread, std::move(*exception));
+}
+
+#define GET_DEADLINE(timeout) zx::deadline_after(zx::msec((timeout)))
+
+void AlignedWatchpointTestCase() {
+  PRINT("Running aligned watchpoint test case.");
+
+  // Create test setup.
+  AlignedWatchpointUserData user_data = {};
+  user_data.times = 1000;
+  auto thread_setup = CreateTestSetup(AlignedWatchpointThreadFunction, &user_data);
+  const zx::thread& thread = thread_setup->thread;
+
+  auto [port, exception_channel] = CreateExceptionChannel(thread);
+  WaitAsyncOnExceptionChannel(port, exception_channel);
+
+  // We install a watchpoint.
+  InstallWatchpoint(thread, (uint64_t)&SomeInt2, 4, WatchpointType::kReadWrite);
+
+  // Tell the test to run.
+  CHECK_OK(thread_setup->event.signal(kThreadToHarness, kHarnessToThread));
+
+  for (int i = 0; i < user_data.times; i++) {
+    uint64_t pc = 0;
+    PRINT("ITERATION %d ---------------------------------------------------------", i);
+    // Wait until the exception is hit.
+    auto exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
+    FXL_DCHECK(exception.has_value());
+    FXL_DCHECK(exception->pc > pc);
+    FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+    pc = exception->pc;
+    PRINT("Hit first printf read!");
+    WatchpointStepOver(thread, port, exception_channel, std::move(exception));
+
+    exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
+    FXL_DCHECK(exception.has_value());
+    FXL_DCHECK(exception->pc > pc);
+    FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+    pc = exception->pc;
+    PRINT("Hit ++ read!");
+    WatchpointStepOver(thread, port, exception_channel, std::move(exception));
+
+    exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
+    FXL_DCHECK(exception.has_value());
+    FXL_DCHECK(exception->pc > pc);
+    FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+    pc = exception->pc;
+    PRINT("Hit ++ write!");
+    WatchpointStepOver(thread, port, exception_channel, std::move(exception));
+
+    exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
+    FXL_DCHECK(exception.has_value());
+    FXL_DCHECK(exception->pc > pc);
+    FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+    pc = exception->pc;
+    PRINT("Hit second printf read!");
+    WatchpointStepOver(thread, port, exception_channel, std::move(exception));
+  }
+
+  // Wait until the thread is done.
+  CHECK_OK(thread_setup->event.wait_one(kThreadToHarness, zx::time::infinite(), nullptr));
 }
 
 // Channel messaging -------------------------------------------------------------------------------
@@ -302,11 +430,13 @@ TestCase kTestCases[] = {
     {"hw_breakpoints", "Call multiple HW breakpoints on different functions.",
      BreakOnFunctionTestCase},
 
+    {"watchpoints", "Call multiple watchpoints.", WatchpointTestCase},
+
+    {"aligned_watchpoints", "Call aligned R/W watchpoint", AlignedWatchpointTestCase},
+
     {"channel_calls",
      "Send multiple messages over a channel call and read from it after it is closed.",
      ChannelMessagingTestCase},
-
-    {"watchpoints", "Call multiple watchpoints.", WatchpointTestCase},
 };
 
 void PrintUsage() {

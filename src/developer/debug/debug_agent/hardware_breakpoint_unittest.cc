@@ -9,6 +9,7 @@
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_thread.h"
+#include "src/developer/debug/debug_agent/test_utils.h"
 
 namespace debug_agent {
 namespace {
@@ -96,7 +97,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 
   // Update should install one thread
 
-  ASSERT_EQ(hw_breakpoint.Update(), ZX_OK);
+  ASSERT_ZX_EQ(hw_breakpoint.Update(), ZX_OK);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread1->koid()}));
 
   ASSERT_EQ(arch_provider->installs().size(), 1u);
@@ -106,7 +107,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 
   // Binding again to the same breakpoint should fail.
 
-  ASSERT_EQ(hw_breakpoint.RegisterBreakpoint(&breakpoint1), ZX_ERR_ALREADY_BOUND);
+  ASSERT_ZX_EQ(hw_breakpoint.RegisterBreakpoint(&breakpoint1), ZX_ERR_ALREADY_BOUND);
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 1u);
 
   // Unregistering the breakpoint should issue an uninstall. As there are no more breakpoints,
@@ -123,7 +124,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 
   // Registering again should add the breakpoint
 
-  ASSERT_EQ(hw_breakpoint.RegisterBreakpoint(&breakpoint1), ZX_OK);
+  ASSERT_ZX_EQ(hw_breakpoint.RegisterBreakpoint(&breakpoint1), ZX_OK);
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 1u);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread1->koid()}));
 
@@ -177,7 +178,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
 
   // Updating should've only installed for the third thread.
 
-  ASSERT_EQ(hw_breakpoint.Update(), ZX_OK);
+  ASSERT_ZX_EQ(hw_breakpoint.Update(), ZX_OK);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread2->koid(), thread3->koid()}));
 
   ASSERT_EQ(arch_provider->installs().size(), 4u);
@@ -203,7 +204,7 @@ TEST(HardwareBreakpoint, SimpleInstallAndRemove) {
   // Registering the breakpoint should add a breakpoint for all threads, but only updating the ones
   // that are not currently installed.
 
-  ASSERT_EQ(hw_breakpoint.RegisterBreakpoint(&breakpoint3), ZX_OK);
+  ASSERT_ZX_EQ(hw_breakpoint.RegisterBreakpoint(&breakpoint3), ZX_OK);
   ASSERT_EQ(hw_breakpoint.breakpoints().size(), 2u);
   ASSERT_TRUE(ContainsKoids(hw_breakpoint, {thread1->koid(), thread2->koid(), thread3->koid(),
                                             thread4->koid(), thread5->koid(), thread6->koid()}));
@@ -280,7 +281,7 @@ TEST(HardwareBreakpoint, StepSimple) {
   MockThread* mock_thread1 = process.AddThread(kThread1Koid);
 
   HardwareBreakpoint bp(&main_breakpoint, &process, kAddress, arch_provider);
-  ASSERT_EQ(bp.Init(), ZX_OK);
+  ASSERT_ZX_EQ(bp.Init(), ZX_OK);
 
   // Should've installed the breakpoint.
   ASSERT_EQ(arch_provider->installs().size(), 1u);
@@ -355,7 +356,7 @@ TEST(HardwareBreakpoint, MultipleSteps) {
   MockThread* mock_thread3 = process.AddThread(kThread3Koid);
 
   HardwareBreakpoint bp(&main_breakpoint, &process, kAddress, arch_provider);
-  ASSERT_EQ(bp.Init(), ZX_OK);
+  ASSERT_ZX_EQ(bp.Init(), ZX_OK);
 
   // Should've installed the breakpoint.
   ASSERT_EQ(arch_provider->installs().size(), 3u);

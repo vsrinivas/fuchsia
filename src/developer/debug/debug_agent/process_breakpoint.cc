@@ -38,7 +38,8 @@ zx_status_t ProcessBreakpoint::RegisterBreakpoint(Breakpoint* breakpoint) {
     return ZX_ERR_ALREADY_BOUND;
 
   // Should be the same type.
-  FXL_DCHECK(Type() == breakpoint->settings().type);
+  if (Type() != breakpoint->settings().type)
+    return ZX_ERR_INVALID_ARGS;
 
   breakpoints_.push_back(breakpoint);
   // Check if we need to install/uninstall a breakpoint.

@@ -53,6 +53,8 @@ constexpr int kPortKey = 0x2312451;
 constexpr uint32_t kHarnessToThread = ZX_USER_SIGNAL_0;
 constexpr uint32_t kThreadToHarness = ZX_USER_SIGNAL_1;
 
+constexpr int kExceptionWaitTimeout = 25;
+
 // Control struct for each running test case.
 struct ThreadSetup {
   using Function = int (*)(void*);
@@ -72,8 +74,9 @@ std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func, void* u
 std::pair<zx::port, zx::channel> CreateExceptionChannel(const zx::thread&);
 
 zx_thread_state_general_regs_t ReadGeneralRegs(const zx::thread& thread);
-
 void WriteGeneralRegs(const zx::thread& thread, const zx_thread_state_debug_regs_t& regs);
+
+zx_thread_state_debug_regs_t ReadDebugRegs(const zx::thread&);
 
 std::optional<zx_port_packet_t> WaitOnPort(const zx::port& port, zx_signals_t signals,
                                            zx::time deadline = zx::time::infinite());
@@ -100,6 +103,14 @@ void WaitAsyncOnExceptionChannel(const zx::port& port, const zx::channel& except
 
 bool IsOnException(const zx::thread& thread);
 
+enum class HWExceptionType {
+  kSingleStep,
+  kHardware,
+  kWatchpoint,
+  kNone,
+};
+HWExceptionType DecodeHWException(const zx::thread&, const Exception&);
+
 // NOTE: This might return an invalid (empty) suspend_token.
 //       If that happens, it means that |thread| is on an exception.
 zx::suspend_token Suspend(const zx::thread& thread);
@@ -107,9 +118,20 @@ zx::suspend_token Suspend(const zx::thread& thread);
 void InstallHWBreakpoint(const zx::thread& thread, uint64_t address);
 void RemoveHWBreakpoint(const zx::thread& thread);
 
+enum class WatchpointType {
+  kWrite,
+  kReadWrite,
+};
+
 // Length is how many bytes to hit.
 // Must be a power of 2 (1, 2, 4, 8 bytes).
-void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t length);
+void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t length,
+                       WatchpointType type = WatchpointType::kWrite);
 void RemoveWatchpoint(const zx::thread& thread);
+
+// |exception| means that the thread might be currently on an exception that needs to be resumed.
+std::optional<Exception> SingleStep(const zx::thread&, const zx::port&,
+                                    const zx::channel& exception_channel,
+                                    std::optional<Exception> exception = {});
 
 #endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_

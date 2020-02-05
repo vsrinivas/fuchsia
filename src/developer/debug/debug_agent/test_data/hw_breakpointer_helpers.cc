@@ -9,6 +9,9 @@
 #include <zircon/hw/debug/arm64.h>
 #endif
 
+#include <zircon/exception.h>
+#include <zircon/status.h>
+
 #include <vector>
 
 ThreadSetup::~ThreadSetup() {
@@ -50,8 +53,14 @@ zx_thread_state_general_regs_t ReadGeneralRegs(const zx::thread& thread) {
   return regs;
 }
 
-void WriteGeneralRegs(const zx::thread& thread, const zx_thread_state_debug_regs_t& regs) {
+void WriteGeneralRegs(const zx::thread& thread, const zx_thread_state_general_regs_t& regs) {
   CHECK_OK(thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
+}
+
+zx_thread_state_debug_regs_t ReadDebugRegs(const zx::thread& thread) {
+  zx_thread_state_debug_regs_t regs = {};
+  CHECK_OK(thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs)));
+  return regs;
 }
 
 std::optional<zx_port_packet_t> WaitOnPort(const zx::port& port, zx_signals_t signals,
@@ -102,13 +111,6 @@ std::optional<Exception> WaitForException(const zx::port& port,
 }
 
 void ResumeException(const zx::thread& thread, Exception&& exception, bool handled) {
-  /* #if defined(__aarch64__) */
-  /*   // Skip past the brk instruction. Otherwise the breakpoint will trigger again. */
-  /*   auto regs = ReadGeneralRegs(thread); */
-  /*   regs.pc += 4; */
-  /*   WriteGeneralRegs(thread, regs); */
-  /* #endif */
-
   if (handled) {
     uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
     CHECK_OK(exception.handle.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)));
@@ -130,6 +132,49 @@ bool IsOnException(const zx::thread& thread) {
   CHECK_OK(thread.get_info(ZX_INFO_THREAD, &thread_info, sizeof(thread_info), nullptr, nullptr));
 
   return thread_info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION;
+}
+
+HWExceptionType DecodeHWException(const zx::thread& thread, const Exception& exception) {
+  if (exception.info.type != ZX_EXCP_HW_BREAKPOINT)
+    return HWExceptionType::kNone;
+
+#if defined(__x86_64__)
+
+  // TODO: Implement x64 side logic for this.
+  return HWExceptionType::kNone;
+
+#elif defined(__aarch64__)
+  auto debug_regs = ReadDebugRegs(thread);
+
+  // The ESR register holds information about the last exception in the form of:
+  // |31      26|25|24                              0|
+  // |    EC    |IL|             ISS                 |
+  //
+  // Where:
+  // - EC: Exception class field (what exception occurred).
+  // - IL: Instruction length (whether the trap was 16-bit of 32-bit instruction).
+  // - ISS: Instruction Specific Syndrome. The value is specific to each EC.
+  uint32_t ec = debug_regs.esr >> 26;
+
+  switch (ec) {
+    case 0b110000: /* HW breakpoint from a lower level */
+    case 0b110001: /* HW breakpoint from same level */
+      return HWExceptionType::kHardware;
+    case 0b110010: /* software step from lower level */
+    case 0b110011: /* software step from same level */
+      return HWExceptionType::kSingleStep;
+    case 0b110100: /* HW watchpoint from a lower level */
+    case 0b110101: /* HW watchpoint from same level */
+      return HWExceptionType::kWatchpoint;
+    default:
+      return HWExceptionType::kNone;
+  }
+
+#else
+#error Undefined arch.
+#endif
+
+  return HWExceptionType::kNone;
 }
 
 zx::suspend_token Suspend(const zx::thread& thread) {
@@ -207,10 +252,10 @@ namespace {
 
 #if defined(__x86_64__)
 
-#define SET_REG(num, reg, len, address)           \
+#define SET_REG(num, reg, len, address, type)     \
   {                                               \
     X86_DBG_CONTROL_L##num##_SET((reg), 1);       \
-    X86_DBG_CONTROL_RW##num##_SET((reg), 1);      \
+    X86_DBG_CONTROL_RW##num##_SET((reg), (type)); \
     X86_DBG_CONTROL_LEN##num##_SET((reg), (len)); \
     regs.dr[(num)] = (address);                   \
   }
@@ -220,7 +265,8 @@ namespace {
 #define BYTES_4 3
 #define BYTES_8 2
 
-zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
+zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length,
+                                            WatchpointType type) {
   zx_thread_state_debug_regs_t regs = {};
   if (address == 0)
     return {};
@@ -243,17 +289,19 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
       break;
   }
 
+  uint32_t type_val = (type == WatchpointType::kWrite) ? 0b01 : 0b11;
+
   if (length == 1) {
-    SET_REG(0, &regs.dr7, BYTES_1, address);
+    SET_REG(0, &regs.dr7, BYTES_1, address, type_val);
   } else if (length == 2) {
     uint64_t aligned_address = address & static_cast<uint64_t>(~0b1);
     uint64_t diff = address - aligned_address;
 
     if (!diff) {
-      SET_REG(0, &regs.dr7, BYTES_2, address);
+      SET_REG(0, &regs.dr7, BYTES_2, address, type_val);
     } else {
-      SET_REG(0, &regs.dr7, BYTES_1, address);
-      SET_REG(1, &regs.dr7, BYTES_1, address + 1);
+      SET_REG(0, &regs.dr7, BYTES_1, address, type_val);
+      SET_REG(1, &regs.dr7, BYTES_1, address + 1, type_val);
     }
   } else if (length == 4) {
     uint64_t aligned_address = address & static_cast<uint64_t>(~0b11);
@@ -261,17 +309,17 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
 
     switch (diff) {
       case 0:
-        SET_REG(0, &regs.dr7, BYTES_4, address);
+        SET_REG(0, &regs.dr7, BYTES_4, address, type_val);
         break;
       case 1:
       case 3:
-        SET_REG(0, &regs.dr7, BYTES_1, address);
-        SET_REG(1, &regs.dr7, BYTES_2, address + 1);
-        SET_REG(2, &regs.dr7, BYTES_1, address + 3);
+        SET_REG(0, &regs.dr7, BYTES_1, address, type_val);
+        SET_REG(1, &regs.dr7, BYTES_2, address + 1, type_val);
+        SET_REG(2, &regs.dr7, BYTES_1, address + 3, type_val);
         break;
       case 2:
-        SET_REG(0, &regs.dr7, BYTES_2, address);
-        SET_REG(1, &regs.dr7, BYTES_2, address + 2);
+        SET_REG(0, &regs.dr7, BYTES_2, address, type_val);
+        SET_REG(1, &regs.dr7, BYTES_2, address + 2, type_val);
         break;
       default:
         FXL_NOTREACHED() << "Invalid diff: " << diff;
@@ -285,32 +333,32 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
 
     switch (diff) {
       case 0:
-        SET_REG(0, &regs.dr7, BYTES_8, address);
+        SET_REG(0, &regs.dr7, BYTES_8, address, type_val);
         break;
       case 1:
       case 5:
-        SET_REG(0, &regs.dr7, BYTES_1, address);
-        SET_REG(1, &regs.dr7, BYTES_2, address + 1);
-        SET_REG(2, &regs.dr7, BYTES_4, address + 3);
-        SET_REG(3, &regs.dr7, BYTES_1, address + 7);
+        SET_REG(0, &regs.dr7, BYTES_1, address, type_val);
+        SET_REG(1, &regs.dr7, BYTES_2, address + 1, type_val);
+        SET_REG(2, &regs.dr7, BYTES_4, address + 3, type_val);
+        SET_REG(3, &regs.dr7, BYTES_1, address + 7, type_val);
         break;
 
       case 2:
       case 6:
-        SET_REG(0, &regs.dr7, BYTES_2, address);
-        SET_REG(1, &regs.dr7, BYTES_4, address + 2);
-        SET_REG(2, &regs.dr7, BYTES_2, address + 6);
+        SET_REG(0, &regs.dr7, BYTES_2, address, type_val);
+        SET_REG(1, &regs.dr7, BYTES_4, address + 2, type_val);
+        SET_REG(2, &regs.dr7, BYTES_2, address + 6, type_val);
         break;
       case 3:
       case 7:
-        SET_REG(0, &regs.dr7, BYTES_1, address);
-        SET_REG(1, &regs.dr7, BYTES_4, address + 1);
-        SET_REG(2, &regs.dr7, BYTES_2, address + 5);
-        SET_REG(3, &regs.dr7, BYTES_1, address + 7);
+        SET_REG(0, &regs.dr7, BYTES_1, address, type_val);
+        SET_REG(1, &regs.dr7, BYTES_4, address + 1, type_val);
+        SET_REG(2, &regs.dr7, BYTES_2, address + 5, type_val);
+        SET_REG(3, &regs.dr7, BYTES_1, address + 7, type_val);
         break;
       case 4:
-        SET_REG(0, &regs.dr7, BYTES_4, address);
-        SET_REG(1, &regs.dr7, BYTES_4, address + 4);
+        SET_REG(0, &regs.dr7, BYTES_4, address, type_val);
+        SET_REG(1, &regs.dr7, BYTES_4, address + 4, type_val);
         break;
       default:
         FXL_NOTREACHED() << "Invalid diff: " << diff;
@@ -352,7 +400,8 @@ void PrintDebugRegs(const zx_thread_state_debug_regs_t& debug_state) {
 
 #elif defined(__aarch64__)
 
-zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
+zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length,
+                                            WatchpointType type) {
   if (address == 0)
     return {};
 
@@ -381,7 +430,7 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
 
   wp->dbgwvr = aligned_address;
 
-  uint32_t lsc = 0b01;
+  uint32_t lsc = (type == WatchpointType::kWrite) ? 0b10 : 0b11;
 
   ARM64_DBGWCR_E_SET(&wp->dbgwcr, 1);
   ARM64_DBGWCR_LSC_SET(&wp->dbgwcr, lsc);
@@ -448,11 +497,12 @@ void PrintDebugRegs(const zx_thread_state_debug_regs_t& debug_state) {
 #error Unsupported arch.
 #endif
 
-void SetWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to_hit) {
+void SetWatchpoint(const zx::thread& thread, uint64_t address, uint32_t length,
+                   WatchpointType type) {
   zx::suspend_token suspend_token = Suspend(thread);
 
   // Install the HW breakpoint.
-  auto debug_regs = WatchpointRegs(address, bytes_to_hit);
+  auto debug_regs = WatchpointRegs(address, length, type);
   static bool a = false;
 
   if (a) {
@@ -469,13 +519,39 @@ void SetWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to
 
 }  // namespace
 
-void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t bytes_to_hit) {
-  /* PRINT("Installing one byte watchpoint on 0x%zx. Bytes to hit: %s", address, */
-  /*       BytesToHitStr(bytes_to_hit).c_str()); */
-  SetWatchpoint(thread, address, bytes_to_hit);
+void InstallWatchpoint(const zx::thread& thread, uint64_t address, uint32_t length,
+                       WatchpointType type) {
+  SetWatchpoint(thread, address, length, type);
 }
 
 void RemoveWatchpoint(const zx::thread& thread) {
-  /* PRINT("Unintalling watchpoint."); */
-  SetWatchpoint(thread, 0, 0);
+  SetWatchpoint(thread, 0, 0, WatchpointType::kWrite);
+}
+
+std::optional<Exception> SingleStep(const zx::thread& thread, const zx::port& port,
+                                    const zx::channel& exception_channel,
+                                    std::optional<Exception> exception) {
+  {
+    zx_thread_state_single_step_t value = 1;
+    zx::suspend_token suspend_token = Suspend(thread);
+    CHECK_OK(thread.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value)));
+
+    WaitAsyncOnExceptionChannel(port, exception_channel);
+    ResumeException(thread, std::move(*exception));
+  }
+
+  exception = WaitForException(port, exception_channel,
+                               zx::deadline_after(zx::msec(kExceptionWaitTimeout)));
+  FXL_DCHECK(exception.has_value()) << "No exception!";
+  FXL_DCHECK(exception->info.type == ZX_EXCP_HW_BREAKPOINT)
+      << "Got: " << zx_exception_get_string(exception->info.type);
+  FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kSingleStep);
+
+  {
+    zx_thread_state_single_step_t value = 0;
+    zx::suspend_token suspend_token = Suspend(thread);
+    CHECK_OK(thread.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value)));
+  }
+
+  return exception;
 }
