@@ -158,10 +158,6 @@ void DebuggedThread::OnException(zx::exception exception_handle,
   debug_ipc::NotifyException exception;
   exception.type = arch_provider_->DecodeExceptionType(*this, exception_info.type);
 
-  DEBUG_LOG(Thread) << ThreadPreamble(this)
-                    << "Exception: " << ExceptionTypeToString(exception_info.type) << " -> "
-                    << debug_ipc::ExceptionTypeToString(exception.type);
-
   zx_thread_state_general_regs regs;
   zx_status_t status = arch_provider_->ReadGeneralState(handle_, &regs);
   if (status != ZX_OK) {
@@ -170,6 +166,11 @@ void DebuggedThread::OnException(zx::exception exception_handle,
     FXL_LOG(WARNING) << "Could not read registers from thread: " << zx_status_get_string(status);
     return;
   }
+
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception @ 0x" << std::hex
+                    << *arch::IPInRegs(&regs) << std::dec << ": "
+                    << ExceptionTypeToString(exception_info.type) << " -> "
+                    << debug_ipc::ExceptionTypeToString(exception.type);
 
   switch (exception.type) {
     case debug_ipc::ExceptionType::kSingleStep:
