@@ -128,8 +128,6 @@ template("rustc_third_party_artifact") {
 #   sdk_deps
 #   test
 template("rustc_artifact") {
-  forward_variables_from(invoker, [ "visibility" ])
-
   # BEGIN invoker.type -> type {{{
   assert(defined(invoker.type),
          "Must specify an artifact type (bin/lib/staticlib/cdylib/proc-macro)")
@@ -289,6 +287,7 @@ template("rustc_artifact") {
 
   # }}} END calculate output_file, root_file
 
+  group_target_name = target_name
   group_deps = []
 
   if (only_unit_tests) {
@@ -493,6 +492,7 @@ template("rustc_artifact") {
       }
     } else if (type == "bin") {
       executable(build_target_name) {
+        visibility = [ ":*" ]
         forward_variables_from(invoker, [ "testonly" ])
         crate_root = root_file
         crate_name = crate_name
@@ -504,6 +504,7 @@ template("rustc_artifact") {
       }
     } else if (type == "rlib") {
       rust_library(build_target_name) {
+        visibility = [ ":${group_target_name}" ]
         forward_variables_from(invoker, [ "testonly" ])
         crate_root = root_file
         crate_name = crate_name
@@ -515,6 +516,7 @@ template("rustc_artifact") {
       }
     } else if (type == "proc-macro") {
       rust_proc_macro(build_target_name) {
+        visibility = [ ":${group_target_name}" ]
         forward_variables_from(invoker, [ "testonly" ])
         crate_root = root_file
         crate_name = crate_name
@@ -526,6 +528,7 @@ template("rustc_artifact") {
       }
     } else if (type == "staticlib") {
       static_library(build_target_name) {
+        visibility = [ ":${group_target_name}" ]
         forward_variables_from(invoker, [ "testonly" ])
         crate_root = root_file
         crate_name = crate_name
@@ -538,6 +541,7 @@ template("rustc_artifact") {
       }
     } else if (type == "cdylib") {
       shared_library(build_target_name) {
+        visibility = [ ":${group_target_name}" ]
         forward_variables_from(invoker, [ "testonly" ])
         crate_root = root_file
         crate_name = crate_name
@@ -565,6 +569,8 @@ template("rustc_artifact") {
 
   # BEGIN test target {{{
   if (with_unit_tests) {
+    test_target_name = "${target_name}_test"
+
     if (current_toolchain == fidl_toolchain) {
       # If rustc is unset in the current toolchain, we need to make
       # a fake output so that our target still compiles
@@ -588,6 +594,7 @@ template("rustc_artifact") {
       }
 
       executable(build_test_target_name) {
+        visibility = [ ":${test_target_name}" ]
         crate_root = root_file
         crate_name = crate_name
         testonly = true
@@ -736,6 +743,8 @@ template("rustc_artifact") {
   }
 
   action(cargo_toml_target_name) {
+    visibility = [ ":${group_target_name}" ]
+
     script = "//build/rust/write_cargo_toml.py"
     forward_variables_from(invoker, [ "testonly" ])
 
@@ -802,8 +811,9 @@ template("rustc_artifact") {
 
   # BEGIN declare test_target_name group {{{
   if (with_unit_tests) {
-    test_target_name = "${target_name}_test"
     group(test_target_name) {
+      forward_variables_from(invoker, [ "visibility" ])
+
       testonly = true
       public_deps = test_group_deps
 
@@ -820,8 +830,8 @@ template("rustc_artifact") {
 
   # }}} END test_target_name group
 
-  group(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+  group(group_target_name) {
+    forward_variables_from(invoker, [ "testonly", "visibility" ])
     public_deps = group_deps
   }
 }
