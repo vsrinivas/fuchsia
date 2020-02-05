@@ -131,9 +131,6 @@ aggregate_manifest("legacy-image") {
 aggregate_manifest("legacy-aux") {
   deps = [
     ":bin.accept-child",
-    ":bin.affine-fuzzer.asan",
-    ":bin.affine-fuzzer.asan-ubsan",
-    ":bin.affine-fuzzer.ubsan",
     ":bin.bootfs-parser-fuzzer.asan",
     ":bin.bootfs-parser-fuzzer.asan-ubsan",
     ":bin.bootfs-parser-fuzzer.ubsan",
@@ -256,7 +253,6 @@ aggregate_manifest("legacy-aux") {
     ":test.storage.storage-buffer-test",
     ":test.storage.storage-operation-test",
     ":test.sys.abs_clock_test-test",
-    ":test.sys.affine-test",
     ":test.sys.audio-dsp-test",
     ":test.sys.backtrace-test-test",
     ":test.sys.blobfs-bench-test",
@@ -424,9 +420,6 @@ aggregate_manifest("legacy-aux") {
 
 aggregate_manifest("legacy-tests") {
   deps = [
-    ":bin.affine-fuzzer.asan",
-    ":bin.affine-fuzzer.asan-ubsan",
-    ":bin.affine-fuzzer.ubsan",
     ":bin.bootfs-parser-fuzzer.asan",
     ":bin.bootfs-parser-fuzzer.asan-ubsan",
     ":bin.bootfs-parser-fuzzer.ubsan",
@@ -542,7 +535,6 @@ aggregate_manifest("legacy-tests") {
     ":test.storage.storage-buffer-test",
     ":test.storage.storage-operation-test",
     ":test.sys.abs_clock_test-test",
-    ":test.sys.affine-test",
     ":test.sys.audio-dsp-test",
     ":test.sys.backtrace-test-test",
     ":test.sys.blobfs-bench-test",
@@ -1002,9 +994,6 @@ aggregate_manifest("migrated-aux") {
     # Please uncomment and update to //zircon/whatever below, but keep these
     # unsorted to avoid trivial rebase collisions.
     #":bin.accept-child",
-    #":bin.affine-fuzzer.asan",
-    #":bin.affine-fuzzer.asan-ubsan",
-    #":bin.affine-fuzzer.ubsan",
     "//zircon/system/uapp/blobfs:blobfs-manifest",
     #":bin.bootfs-parser-fuzzer.asan",
     #":bin.bootfs-parser-fuzzer.asan-ubsan",
@@ -1397,7 +1386,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/storage/buffer/test_support/test:storage_buffer_test_support-manifest",
     #":test.storage.storage-operation-test",
     #":test.sys.abs_clock_test-test",
-    #":test.sys.affine-test",
+    "//zircon/system/ulib/affine/test:affine-manifest",
     "//zircon/system/dev/block/ahci:ahci-unittest-manifest",
     "//zircon/system/dev/codec/alc5663/test:alc5663-test-manifest",
     "//zircon/system/dev/gpio/aml-axg-gpio:aml-axg-gpio-test-manifest",
@@ -1714,9 +1703,6 @@ aggregate_manifest("migrated-tests") {
 
     # Please uncomment and update to //zircon/whatever below, but keep these
     # unsorted to avoid trivial rebase collisions.
-    #":bin.affine-fuzzer.asan",
-    #":bin.affine-fuzzer.asan-ubsan",
-    #":bin.affine-fuzzer.ubsan",
     "//zircon/system/uapp/blobfs:blobfs-manifest",
     #":bin.bootfs-parser-fuzzer.asan",
     #":bin.bootfs-parser-fuzzer.asan-ubsan",
@@ -1836,7 +1822,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/storage/buffer/test_support/test:storage_buffer_test_support-manifest",
     #":test.storage.storage-operation-test",
     #":test.sys.abs_clock_test-test",
-    #":test.sys.affine-test",
+    "//zircon/system/ulib/affine/test:affine-manifest",
     "//zircon/system/dev/block/ahci:ahci-unittest-manifest",
     "//zircon/system/dev/codec/alc5663/test:alc5663-test-manifest",
     "//zircon/system/dev/gpio/aml-axg-gpio:aml-axg-gpio-test-manifest",

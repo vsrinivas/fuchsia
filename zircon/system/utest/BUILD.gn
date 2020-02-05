@@ -46,7 +46,6 @@ if (current_cpu != "") {
       "$zx/system/dev/test",
       "$zx/system/dev/usb/xhci-rewrite:xhci-unittest",
       "$zx/system/ulib/abs_clock:test",
-      "$zx/system/ulib/affine/test",
       "$zx/system/ulib/blobfs/test",
       "$zx/system/ulib/bootfs:bootfs-parser-fuzzer",
       "$zx/system/ulib/bootfs:bootfs-test",
