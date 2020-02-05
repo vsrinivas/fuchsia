@@ -76,63 +76,33 @@ static bool IsQemuTouchscreen(const virtio_input_config_t& config) {
   return false;
 }
 
-zx_status_t InputDevice::virtio_input_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
+zx_status_t InputDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  return fuchsia_hardware_pty_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 
-void InputDevice::virtio_input_release(void* ctx) {
-  virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
-  return inp->Release();
-}
-
-zx_status_t InputDevice::virtio_input_query(void* ctx, uint32_t options, hid_info_t* info) {
-  virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
-  return inp->Query(options, info);
-}
-
-zx_status_t InputDevice::virtio_input_get_descriptor(void* ctx, uint8_t desc_type,
-                                                     void* out_data_buffer, size_t data_size,
-                                                     size_t* out_data_actual) {
-  virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
-  return inp->GetDescriptor(desc_type, out_data_buffer, data_size, out_data_actual);
-}
-
-zx_status_t InputDevice::virtio_input_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-                                                 void* data, size_t len, size_t* out_len) {
+zx_status_t InputDevice::HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, void* data,
+                                         size_t len, size_t* out_len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t InputDevice::virtio_input_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
-                                                 const void* data, size_t len) {
+zx_status_t InputDevice::HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
+                                         const void* data, size_t len) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t InputDevice::virtio_input_get_idle(void* ctx, uint8_t rpt_type, uint8_t* duration) {
+zx_status_t InputDevice::HidbusGetIdle(uint8_t rpt_type, uint8_t* duration) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t InputDevice::virtio_input_set_idle(void* ctx, uint8_t rpt_type, uint8_t duration) {
-  return ZX_OK;
-}
+zx_status_t InputDevice::HidbusSetIdle(uint8_t rpt_type, uint8_t duration) { return ZX_OK; }
 
-zx_status_t InputDevice::virtio_input_get_protocol(void* ctx, uint8_t* protocol) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t InputDevice::HidbusGetProtocol(uint8_t* protocol) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t InputDevice::virtio_input_set_protocol(void* ctx, uint8_t protocol) { return ZX_OK; }
-
-zx_status_t InputDevice::virtio_input_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
-  virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
-  return inp->Start(ifc);
-}
-
-void InputDevice::virtio_input_stop(void* ctx) {
-  virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
-  inp->Stop();
-}
+zx_status_t InputDevice::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
 InputDevice::InputDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
-    : Device(bus_device, std::move(bti), std::move(backend)) {}
+    : virtio::Device(bus_device, std::move(bti), std::move(backend)),
+      ddk::Device<InputDevice, ddk::Messageable>(bus_device) {}
 
 InputDevice::~InputDevice() {}
 
@@ -231,43 +201,21 @@ zx_status_t InputDevice::Init() {
   StartIrqThread();
   DriverStatusOk();
 
-  device_ops_.message = virtio_input_message;
-  device_ops_.release = virtio_input_release;
-
-  hidbus_ops_.query = virtio_input_query;
-  hidbus_ops_.start = virtio_input_start;
-  hidbus_ops_.stop = virtio_input_stop;
-  hidbus_ops_.get_descriptor = virtio_input_get_descriptor;
-  hidbus_ops_.get_report = virtio_input_get_report;
-  hidbus_ops_.set_report = virtio_input_set_report;
-  hidbus_ops_.get_idle = virtio_input_get_idle;
-  hidbus_ops_.set_idle = virtio_input_set_idle;
-  hidbus_ops_.get_protocol = virtio_input_get_protocol;
-  hidbus_ops_.set_protocol = virtio_input_set_protocol;
-
   hidbus_ifc_.ops = nullptr;
 
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "virtio-input";
-  args.ctx = this;
-  args.ops = &device_ops_;
-  args.proto_id = ZX_PROTOCOL_HIDBUS;
-  args.proto_ops = &hidbus_ops_;
-
-  status = device_add(bus_device_, &args, &device_);
+  status = DdkAdd("virtio-input");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to add device: %s\n", zx_status_get_string(status));
-    device_ = nullptr;
+    zxlogf(ERROR, "%s: failed to add device: %s\n", tag(), zx_status_get_string(status));
     return status;
   }
+  device_ = zxdev();
 
   vring_.Kick();
   cleanup.cancel();
   return ZX_OK;
 }
 
-zx_status_t InputDevice::Start(const hidbus_ifc_protocol_t* ifc) {
+zx_status_t InputDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
   fbl::AutoLock lock(&lock_);
   if (hidbus_ifc_.ops != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
@@ -276,12 +224,12 @@ zx_status_t InputDevice::Start(const hidbus_ifc_protocol_t* ifc) {
   return ZX_OK;
 }
 
-void InputDevice::Stop() {
+void InputDevice::HidbusStop() {
   fbl::AutoLock lock(&lock_);
   hidbus_ifc_.ops = nullptr;
 }
 
-void InputDevice::Release() {
+void InputDevice::DdkRelease() {
   fbl::AutoLock lock(&lock_);
   hidbus_ifc_.ops = nullptr;
   for (size_t i = 0; i < kEventCount; ++i) {
@@ -291,15 +239,15 @@ void InputDevice::Release() {
   }
 }
 
-zx_status_t InputDevice::Query(uint32_t options, hid_info_t* info) {
+zx_status_t InputDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
   info->dev_num = dev_class_;  // Use type for dev_num for now.
   info->device_class = dev_class_;
   info->boot_device = true;
   return ZX_OK;
 }
 
-zx_status_t InputDevice::GetDescriptor(uint8_t desc_type, void* out_data_buffer, size_t data_size,
-                                       size_t* out_data_actual) {
+zx_status_t InputDevice::HidbusGetDescriptor(uint8_t desc_type, void* out_data_buffer,
+                                             size_t data_size, size_t* out_data_actual) {
   return hid_device_->GetDescriptor(desc_type, out_data_buffer, data_size, out_data_actual);
 }
 
