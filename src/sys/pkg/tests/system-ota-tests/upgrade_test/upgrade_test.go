@@ -7,6 +7,7 @@ package upgrade
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -287,6 +288,16 @@ func doPaveDevice(t *testing.T, ctx context.Context, device *device.Client) *sl4
 	return rpcClient
 }
 
+// FIXME(45156) In order to ease landing Omaha, we're temporarily disabling the
+// OTA test from talking directly to the update system, and instead are just
+// directly calling out to the `system_updater` like we do for the N->N'
+// upgrade. We need to do this because Omaha doesn't have a way to customize
+// which server we are talking to, so we wouldn't be able to tell it to upgrade
+// to the version of Fuchsia we want to test.
+//
+// We can revert back to this code once we've figured out how to implement this
+// customization.
+/*
 func systemOTA(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
@@ -315,6 +326,24 @@ func systemOTA(t *testing.T, ctx context.Context, device *device.Client, rpcClie
 	log.Printf("OTA complete, validating device")
 	validateDevice(t, ctx, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR)
 }
+*/
+
+func systemOTA(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) {
+	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
+	if err != nil {
+		t.Fatalf("error extracting expected system image merkle: %s", err)
+	}
+	otaToPackage(
+		t,
+		ctx,
+		device,
+		rpcClient,
+		repo,
+		expectedSystemImageMerkle,
+		"fuchsia-pkg://fuchsia.com/update",
+		checkABR,
+	)
+}
 
 func systemPrimeOTA(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) {
 	expectedSystemImageMerkle, err := repo.LookupUpdatePrimeSystemImageMerkle()
@@ -322,6 +351,28 @@ func systemPrimeOTA(t *testing.T, ctx context.Context, device *device.Client, rp
 		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
 
+	otaToPackage(
+		t,
+		ctx,
+		device,
+		rpcClient,
+		repo,
+		expectedSystemImageMerkle,
+		"fuchsia-pkg://fuchsia.com/update_prime",
+		checkABR,
+	)
+}
+
+func otaToPackage(
+	t *testing.T,
+	ctx context.Context,
+	device *device.Client,
+	rpcClient **sl4f.Client,
+	repo *packages.Repository,
+	expectedSystemImageMerkle string,
+	updatePackageUrl string,
+	checkABR bool,
+) {
 	expectedConfig, err := determineTargetConfig(ctx, *rpcClient)
 	if err != nil {
 		t.Fatalf("error determining target config: %s", err)
@@ -350,7 +401,8 @@ func systemPrimeOTA(t *testing.T, ctx context.Context, device *device.Client, rp
 
 	log.Printf("starting system OTA")
 
-	err = device.Run(`run "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx" --update "fuchsia-pkg://fuchsia.com/update_prime" && sleep 60`, os.Stdout, os.Stderr)
+	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --update \"%s\" && sleep 60", updatePackageUrl)
+	err = device.Run(cmd, os.Stdout, os.Stderr)
 	if err != nil {
 		if _, ok := err.(*ssh.ExitMissingError); !ok {
 			t.Fatalf("failed to run system_updater.cmx: %s", err)
