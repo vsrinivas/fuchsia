@@ -245,7 +245,7 @@ fx exec garnet/go/src/fidl/compiler/backend/typestest/regen.sh
 Some example tests you can run:
 
 ```sh
-fx run-host-tests fidlgen_dart_backend_ir_test
+fx run-host-tests fidlgen_dart_backend_test
 ```
 
 To regenerate the goldens:
@@ -398,25 +398,23 @@ fx build host-tools/gidl
 
 ### All Tests
 
-| Name                     | Test Command                                        | Directories Covered                                                     |
-|--------------------------|-----------------------------------------------------|-------------------------------------------------------------------------|
-| gidl parser              | fx run-host-tests gidl_parser_test                  | tools/fidl/gidl/parser                                                  |
-| fidlgen hlcpp            | fx run-host-tests fidlgen_cpp_test                  | garnet/go/src/fidl/compiler/backend/cpp                                 |
-| fidlgen llcpp            | fx run-host-tests fidlgen_llcpp_test                | garnet/go/src/fidl/compiler/llcpp_backend                               |
-| fidlgen overnet          | fx run-host-tests fidlgen_cpp_overnet_internal_test | garnet/go/src/fidl/compiler/backend/cpp_overnet_internal                |
-| fidlgen golang           | fx run-host-tests fidlgen_go_test               | garnet/go/src/fidl/compiler/backend/golang                              |
-| fidlgen rust             | fx run-host-tests fidlgen_rust_test                 | garnet/go/src/fidl/compiler/rust_backend/                               |
-| fidlgen syzkaller        | fx run-host-tests fidlgen_syzkaller_test            | garnet/go/src/fidl/compiler/backend/syzkaller                           |
-| fidlgen syzkaller ir     | fx run-host-tests fidlgen_syzkaller_ir_test         | garnet/go/src/fidl/compiler/backend/syzkaller/ir                        |
-| fidlgen type definitions | fx run-host-tests fidlgen_types_test                | garnet/go/src/fidl/compiler/backend/types                               |
-| fidl c runtime host test | fx run-host-tests fidl-test                         | zircon/system/ulib/fidl                                                 |
-| c++ host unittests       | fx run-host-tests fidl_cpp_host_unittests           | sdk/lib/fidl                                                            |
-| c++ bindings tests       | fx test fidl_tests                              | sdk/lib/fidl                                                            |
-| llcpp bindings tests     | fx test fidl_llcpp_types_test                   | garnet/go/src/fidl/compiler/llcpp_backend                               |
-| go bindings tests        | fx test go_fidl_tests                           | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
-| dart bindings tests      | fx test fidl_bindings_test                      | topaz/public/dart/fidl                                                  |
-| rust bindings            | fx test rust_fidl_tests                         | src/lib/fidl/rust/fidl                                        |
-
+| Name                     | Test Command                                | Directories Covered                                                     |
+|--------------------------|---------------------------------------------|-------------------------------------------------------------------------|
+| gidl parser              | fx run-host-tests gidl_parser_test          | tools/fidl/gidl/parser                                                  |
+| fidlgen type definitions | fx run-host-tests fidlgen_types_test        | garnet/go/src/fidl/compiler/backend/types                               |
+| fidlgen hlcpp            | fx run-host-tests fidlgen_cpp_test          | garnet/go/src/fidl/compiler/backend/cpp                                 |
+| fidlgen llcpp            | fx run-host-tests fidlgen_llcpp_test        | garnet/go/src/fidl/compiler/llcpp_backend                               |
+| fidlgen golang           | fx run-host-tests fidlgen_golang_test       | garnet/go/src/fidl/compiler/backend/golang                              |
+| fidlgen rust             | fx run-host-tests fidlgen_rust_test         | garnet/go/src/fidl/compiler/backend/rust                                |
+| fidlgen syzkaller        | fx run-host-tests fidlgen_syzkaller_test    | garnet/go/src/fidl/compiler/backend/syzkaller                           |
+| fidlgen dart             | fx run-host-tests fidlgen_dart_backend_test | topaz/bin/fidlgen_dart                                                  |
+| fidl c runtime host test | fx run-host-tests fidl-test                 | zircon/system/ulib/fidl                                                 |
+| c++ host unittests       | fx run-host-tests fidl_cpp_host_unittests   | sdk/lib/fidl                                                            |
+| c++ bindings tests       | fx test fidl_tests                          | sdk/lib/fidl                                                            |
+| llcpp bindings tests     | fx test fidl_llcpp_types_test               | garnet/go/src/fidl/compiler/llcpp_backend                               |
+| go bindings tests        | fx test go_fidl_tests                       | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
+| dart bindings tests      | fx test fidl_bindings_test                  | topaz/public/dart/fidl                                                  |
+| rust bindings            | fx test rust_fidl_tests                     | src/lib/fidl/rust/fidl                                                  |
 
 The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:zircon
 

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"fidl/compiler/backend/cpp/ir"
+	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/typestest"
 )
 
@@ -40,7 +40,7 @@ func TestCodegenHeader(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(basePath, filename)
-			tree := ir.CompileLL(fidl)
+			tree := cpp.CompileLL(fidl)
 			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
 			header := typestest.GetGolden(basePath, example(filename).header())
 
@@ -57,7 +57,7 @@ func TestCodegenSource(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(basePath, filename)
-			tree := ir.CompileLL(fidl)
+			tree := cpp.CompileLL(fidl)
 			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
 			source := typestest.GetGolden(basePath, example(filename).source())
 

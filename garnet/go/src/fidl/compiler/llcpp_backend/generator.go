@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"fidl/compiler/backend/cpp/ir"
+	"fidl/compiler/backend/cpp"
 	"fidl/compiler/llcpp_backend/templates/files"
 	"fidl/compiler/llcpp_backend/templates/fragments"
 )
@@ -21,9 +21,9 @@ type generator struct {
 
 func newGenerator() *generator {
 	tmpls := template.New("LLCPPTemplates").Funcs(template.FuncMap{
-		"Kinds": func() interface{} { return ir.Kinds },
+		"Kinds": func() interface{} { return cpp.Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
-		"MethodsHaveReqOrResp": func(ms []ir.Method) string {
+		"MethodsHaveReqOrResp": func(ms []cpp.Method) string {
 			for _, m := range ms {
 				if (m.HasRequest && len(m.Request) != 0) || (m.HasResponse && len(m.Response) != 0) {
 					return "\n"
@@ -31,8 +31,8 @@ func newGenerator() *generator {
 			}
 			return ""
 		},
-		"FilterMethodsWithReqs": func(ms []ir.Method) []ir.Method {
-			var out []ir.Method
+		"FilterMethodsWithReqs": func(ms []cpp.Method) []cpp.Method {
+			var out []cpp.Method
 			for _, m := range ms {
 				if !m.HasRequest {
 					out = append(out, m)
@@ -40,8 +40,8 @@ func newGenerator() *generator {
 			}
 			return out
 		},
-		"FilterMethodsWithoutReqs": func(ms []ir.Method) []ir.Method {
-			var out []ir.Method
+		"FilterMethodsWithoutReqs": func(ms []cpp.Method) []cpp.Method {
+			var out []cpp.Method
 			for _, m := range ms {
 				if m.HasRequest {
 					out = append(out, m)
@@ -49,8 +49,8 @@ func newGenerator() *generator {
 			}
 			return out
 		},
-		"FilterMethodsWithoutResps": func(ms []ir.Method) []ir.Method {
-			var out []ir.Method
+		"FilterMethodsWithoutResps": func(ms []cpp.Method) []cpp.Method {
+			var out []cpp.Method
 			for _, m := range ms {
 				if m.HasResponse {
 					out = append(out, m)
@@ -92,19 +92,19 @@ func newGenerator() *generator {
 }
 
 // generateHeader generates the C++ bindings header.
-func (gen *generator) generateHeader(wr io.Writer, tree ir.Root) error {
+func (gen *generator) generateHeader(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
 }
 
 // generateSource generates the C++ bindings source, i.e. implementation.
-func (gen *generator) generateSource(wr io.Writer, tree ir.Root) error {
+func (gen *generator) generateSource(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
 }
 
 // generateFidl generates all files required for the C++ bindings.
 func (gen generator) generateFidl(config config) error {
 	fidl := config.fidl
-	tree := ir.CompileLL(fidl)
+	tree := cpp.CompileLL(fidl)
 	tree.PrimaryHeader = config.primaryHeaderPath
 
 	if err := os.MkdirAll(filepath.Dir(config.headerPath), os.ModePerm); err != nil {

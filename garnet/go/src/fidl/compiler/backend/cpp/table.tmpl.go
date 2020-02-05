@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package templates
+package cpp
 
-const Table = `
+const tableTemplate = `
 {{- define "TableForwardDeclaration" }}
 class {{ .Name }};
 {{- end }}

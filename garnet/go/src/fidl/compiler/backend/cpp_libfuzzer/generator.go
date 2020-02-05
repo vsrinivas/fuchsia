@@ -12,7 +12,7 @@ import (
 	"strings"
 	"text/template"
 
-	"fidl/compiler/backend/cpp/ir"
+	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/cpp_libfuzzer/templates"
 	"fidl/compiler/backend/types"
 )
@@ -23,7 +23,7 @@ type FidlGenerator struct {
 
 func NewFidlGenerator() *FidlGenerator {
 	tmpls := template.New("LibFuzzer").Funcs(template.FuncMap{
-		"Kinds": func() interface{} { return ir.Kinds },
+		"Kinds": func() interface{} { return cpp.Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
 		"NEq":   func(a interface{}, b interface{}) bool { return a != b },
 		"DoubleColonToUnderscore": func(s string) string {
@@ -51,18 +51,18 @@ func NewFidlGenerator() *FidlGenerator {
 }
 
 // GenerateHeader generates the C++ libfuzzer traits for FIDL types.
-func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree ir.Root) error {
+func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
 }
 
 // GenerateSource generates the C++ fuzzer implementation protocols in the FIDL file.
-func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
+func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
 }
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
 func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
-	tree := ir.Compile(fidl)
+	tree := cpp.Compile(fidl)
 	prepareTree(fidl.Name, &tree)
 
 	headerPath := config.OutputBase + ".h"
@@ -83,7 +83,7 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 		return err
 	}
 
-// Note that if the FIDL library defines no protocols, this will produce an empty file.
+	// Note that if the FIDL library defines no protocols, this will produce an empty file.
 	sourceFile, err := os.Create(sourcePath)
 	if err != nil {
 		return err
@@ -107,16 +107,16 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) err
 	return nil
 }
 
-func prepareTree(name types.EncodedLibraryIdentifier, tree *ir.Root) {
+func prepareTree(name types.EncodedLibraryIdentifier, tree *cpp.Root) {
 	pkgPath := strings.Replace(string(name), ".", "/", -1)
 	tree.PrimaryHeader = pkgPath + "/cpp/libfuzzer.h"
 	tree.Headers = []string{pkgPath + "/cpp/fidl.h"}
 }
 
-func interfaces(decls []ir.Decl) []*ir.Interface {
-	ifaces := make([]*ir.Interface, 0, len(decls))
+func interfaces(decls []cpp.Decl) []*cpp.Interface {
+	ifaces := make([]*cpp.Interface, 0, len(decls))
 	for _, decl := range decls {
-		if iface, ok := decl.(*ir.Interface); ok {
+		if iface, ok := decl.(*cpp.Interface); ok {
 			ifaces = append(ifaces, iface)
 		}
 	}

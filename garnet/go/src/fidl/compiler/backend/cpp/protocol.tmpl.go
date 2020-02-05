@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package templates
+package cpp
 
-const Interface = `
+const protocolTemplate = `
 {{- define "InterfaceForwardDeclaration" }}
 #ifdef __Fuchsia__
 {{range .DocComments}}
@@ -74,7 +74,7 @@ constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
   {{- end -}}
 {{ end -}}
 
-{{- define "InterfaceDeclaration" }}
+{{- define "ProtocolDeclaration" }}
 #ifdef __Fuchsia__
 {{range .DocComments}}
 ///{{ . }}
@@ -328,7 +328,7 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
 #endif // __Fuchsia__
 {{- end }}
 
-{{- define "InterfaceDefinition" }}
+{{- define "ProtocolDefinition" }}
 #ifdef __Fuchsia__
 namespace {
 
@@ -646,10 +646,10 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
 #endif // __Fuchsia__
 {{ end }}
 
-{{- define "InterfaceTraits" }}
+{{- define "ProtocolTraits" }}
 {{- end }}
 
-{{- define "InterfaceTestBase" }}
+{{- define "ProtocolTestBase" }}
 class {{ .Name }}_TestBase : public {{ .Name }} {
   public:
   virtual ~{{ .Name }}_TestBase() { }

@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"fidl/compiler/backend/cpp/ir"
-	"fidl/compiler/backend/cpp/templates"
 	"fidl/compiler/backend/types"
 )
 
@@ -21,42 +19,42 @@ type FidlGenerator struct {
 
 func NewFidlGenerator() *FidlGenerator {
 	tmpls := template.New("CPPTemplates").Funcs(template.FuncMap{
-		"Kinds": func() interface{} { return ir.Kinds },
+		"Kinds": func() interface{} { return Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
 	})
-	template.Must(tmpls.Parse(templates.Bits))
-	template.Must(tmpls.Parse(templates.Const))
-	template.Must(tmpls.Parse(templates.Enum))
-	template.Must(tmpls.Parse(templates.Header))
-	template.Must(tmpls.Parse(templates.Implementation))
-	template.Must(tmpls.Parse(templates.Interface))
-	template.Must(tmpls.Parse(templates.Service))
-	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Table))
-	template.Must(tmpls.Parse(templates.TestBase))
-	template.Must(tmpls.Parse(templates.XUnion))
+	template.Must(tmpls.Parse(bitsTemplate))
+	template.Must(tmpls.Parse(constTemplate))
+	template.Must(tmpls.Parse(enumTemplate))
+	template.Must(tmpls.Parse(headerTemplate))
+	template.Must(tmpls.Parse(implementationTemplate))
+	template.Must(tmpls.Parse(protocolTemplate))
+	template.Must(tmpls.Parse(serviceTemplate))
+	template.Must(tmpls.Parse(structTemplate))
+	template.Must(tmpls.Parse(tableTemplate))
+	template.Must(tmpls.Parse(testBaseTemplate))
+	template.Must(tmpls.Parse(xunionTemplate))
 	return &FidlGenerator{
 		tmpls: tmpls,
 	}
 }
 
 // GenerateHeader generates the C++ bindings header.
-func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree ir.Root) error {
+func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
 }
 
 // GenerateSource generates the C++ bindings source, i.e. implementation.
-func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
+func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Implementation", tree)
 }
 
-func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree ir.Root) error {
+func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "TestBase", tree)
 }
 
 // GenerateFidl generates all files required for the C++ bindings.
 func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
-	tree := ir.Compile(fidl)
+	tree := Compile(fidl)
 
 	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)
 	if err != nil {
