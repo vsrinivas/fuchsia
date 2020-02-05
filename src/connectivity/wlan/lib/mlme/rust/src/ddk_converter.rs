@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    banjo_ddk_protocol_wlan_info as banjo_wlan_info, fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     wlan_common::{
         ie::{
             parse_ht_capabilities, parse_ht_operation, parse_vht_capabilities, parse_vht_operation,
@@ -72,6 +72,15 @@ pub fn build_ddk_assoc_ctx(
         vht_cap: { *parse_vht_capabilities(&vht_cap_bytes[..]).unwrap() }.into(),
         has_vht_op: vht_op.is_some(),
         vht_op: { *parse_vht_operation(&vht_op_bytes[..]).unwrap() }.into(),
+    }
+}
+
+pub fn get_rssi_dbm(rx_info: banjo_wlan_mac::WlanRxInfo) -> Option<i8> {
+    match rx_info.valid_fields & banjo_wlan_info::WlanRxInfoValid::RSSI.0 != 0
+        && rx_info.rssi_dbm != 0
+    {
+        true => Some(rx_info.rssi_dbm),
+        false => None,
     }
 }
 
@@ -159,5 +168,50 @@ mod tests {
         assert_eq!(true, ddk.has_vht_op);
         let expected_vht_op: banjo_wlan_info::WlanVhtOp = ie::fake_vht_operation().into();
         assert_eq!(expected_vht_op, ddk.vht_op);
+    }
+
+    fn empty_rx_info() -> banjo_wlan_mac::WlanRxInfo {
+        banjo_wlan_mac::WlanRxInfo {
+            rx_flags: 0,
+            valid_fields: 0,
+            phy: 0,
+            data_rate: 0,
+            chan: banjo_wlan_info::WlanChannel {
+                primary: 0,
+                cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+                secondary80: 0,
+            },
+            mcs: 0,
+            rssi_dbm: 0,
+            rcpi_dbmh: 0,
+            snr_dbh: 0,
+        }
+    }
+
+    #[test]
+    fn test_get_rssi_dbm_field_not_valid() {
+        let rx_info =
+            banjo_wlan_mac::WlanRxInfo { valid_fields: 0, rssi_dbm: 20, ..empty_rx_info() };
+        assert_eq!(get_rssi_dbm(rx_info), None);
+    }
+
+    #[test]
+    fn test_get_rssi_dbm_zero_dbm() {
+        let rx_info = banjo_wlan_mac::WlanRxInfo {
+            valid_fields: banjo_wlan_info::WlanRxInfoValid::RSSI.0,
+            rssi_dbm: 0,
+            ..empty_rx_info()
+        };
+        assert_eq!(get_rssi_dbm(rx_info), None);
+    }
+
+    #[test]
+    fn test_get_rssi_dbm_all_good() {
+        let rx_info = banjo_wlan_mac::WlanRxInfo {
+            valid_fields: banjo_wlan_info::WlanRxInfoValid::RSSI.0,
+            rssi_dbm: 20,
+            ..empty_rx_info()
+        };
+        assert_eq!(get_rssi_dbm(rx_info), Some(20));
     }
 }
