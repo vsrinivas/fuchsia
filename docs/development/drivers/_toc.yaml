@@ -2,6 +2,6 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "USB Development"
+- title: "USB development"
   section:
   - include: /docs/development/drivers/usb/_toc.yaml

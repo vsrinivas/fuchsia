@@ -40,5 +40,7 @@ toc:
   path: /docs/concepts/drivers/ddk-tutorial.md
 - title: "Advanced topics and tips"
   path: /docs/concepts/drivers/advanced.md
+- title: "Driver stack performance"
+  path: /docs/concepts/drivers/driver_stack_performance.md
 - title: "Reference"
   path: /docs/concepts/drivers/reference.md
