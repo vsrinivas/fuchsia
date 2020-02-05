@@ -68,11 +68,10 @@ void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t r
       continue;
     }
 
-    hid_input_report::ReportDescriptor descriptor = device->GetDescriptor();
     {
       fbl::AutoLock lock(&instance_lock_);
       for (auto& instance : instance_list_) {
-        instance.ReceiveReport(descriptor, input_report);
+        instance.ReceiveReport(input_report);
       }
     }
   }

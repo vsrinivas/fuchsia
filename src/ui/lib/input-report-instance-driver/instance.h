@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_DRIVERS_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
-#define SRC_UI_DRIVERS_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
+#ifndef SRC_UI_LIB_INPUT_REPORT_INSTANCE_DRIVER_INSTANCE_H_
+#define SRC_UI_LIB_INPUT_REPORT_INSTANCE_DRIVER_INSTANCE_H_
 
 #include <array>
 
@@ -18,13 +18,19 @@
 #include "src/ui/lib/hid-input-report/fidl.h"
 #include "src/ui/lib/hid-input-report/mouse.h"
 
-namespace hid_input_report_dev {
+namespace input_report_instance {
 
 namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
-class InputReportBase;
-
 class InputReportInstance;
+
+class InputReportBase {
+ public:
+  virtual void RemoveInstanceFromList(InputReportInstance* instance) = 0;
+  virtual const hid_input_report::ReportDescriptor* GetDescriptors(size_t* size) = 0;
+  virtual zx_status_t SendOutputReport(fuchsia_input_report::OutputReport report) = 0;
+};
+
 using InstanceDeviceType = ddk::Device<InputReportInstance, ddk::Closable, ddk::Messageable>;
 
 class InputReportInstance : public InstanceDeviceType,
@@ -43,8 +49,7 @@ class InputReportInstance : public InstanceDeviceType,
   void DdkRelease() { delete this; }
   zx_status_t DdkClose(uint32_t flags);
 
-  void ReceiveReport(const hid_input_report::ReportDescriptor& descriptor,
-                     const hid_input_report::InputReport& input_report);
+  void ReceiveReport(const hid_input_report::InputReport& input_report);
 
   // FIDL functions.
   void GetReportsEvent(GetReportsEventCompleter::Sync _completer);
@@ -68,6 +73,6 @@ class InputReportInstance : public InstanceDeviceType,
   InputReportBase* base_ = nullptr;
 };
 
-}  // namespace hid_input_report_dev
+}  // namespace input_report_instance
 
-#endif  // SRC_UI_DRIVERS_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
+#endif  // SRC_UI_LIB_INPUT_REPORT_INSTANCE_DRIVER_INSTANCE_H_

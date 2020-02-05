@@ -12,17 +12,15 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
-#include "input-report-instance.h"
 #include "src/ui/lib/hid-input-report/device.h"
+#include "src/ui/lib/input-report-instance-driver/instance.h"
 
 namespace hid_input_report_dev {
 
-class InputReportBase {
- public:
-  virtual void RemoveInstanceFromList(InputReportInstance* instance) = 0;
-  virtual const hid_input_report::ReportDescriptor* GetDescriptors(size_t* size) = 0;
-  virtual zx_status_t SendOutputReport(fuchsia_input_report::OutputReport report) = 0;
-};
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
+
+using ::input_report_instance::InputReportBase;
+using ::input_report_instance::InputReportInstance;
 
 class InputReport;
 using DeviceType = ddk::Device<InputReport, ddk::UnbindableNew, ddk::Openable>;

@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "input-report-instance.h"
+#include "instance.h"
 
 #include <ddk/debug.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 
-#include "input-report.h"
-
-namespace hid_input_report_dev {
+namespace input_report_instance {
 
 zx_status_t InputReportInstance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
@@ -98,8 +96,7 @@ void InputReportInstance::SendOutputReport(fuchsia_input_report::OutputReport re
   completer.ReplySuccess();
 }
 
-void InputReportInstance::ReceiveReport(const hid_input_report::ReportDescriptor& descriptor,
-                                        const hid_input_report::InputReport& input_report) {
+void InputReportInstance::ReceiveReport(const hid_input_report::InputReport& input_report) {
   fbl::AutoLock lock(&report_lock_);
 
   if (reports_data_.empty()) {
@@ -112,4 +109,4 @@ void InputReportInstance::ReceiveReport(const hid_input_report::ReportDescriptor
   reports_data_.push(input_report);
 }
 
-}  // namespace hid_input_report_dev
+}  // namespace input_report_instance

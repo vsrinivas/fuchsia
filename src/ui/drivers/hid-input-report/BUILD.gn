@@ -8,14 +8,12 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 driver_module("hid-input-report") {
-  sources = [
-    "input-report-instance.cc",
-    "input-report.cc",
-  ]
+  sources = [ "input-report.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
     "//src/ui/lib/hid-input-report",
+    "//src/ui/lib/input-report-instance-driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -31,7 +29,6 @@ driver_module("hid-input-report") {
 
 test("hid-input-report-test-bin") {
   sources = [
-    "input-report-instance.cc",
     "input-report.cc",
     "test.cc",
   ]
@@ -39,6 +36,7 @@ test("hid-input-report-test-bin") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
     "//src/ui/lib/hid-input-report",
+    "//src/ui/lib/input-report-instance-driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
