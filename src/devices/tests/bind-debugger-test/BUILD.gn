@@ -1,0 +1,46 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+
+executable("tests") {
+  testonly = true
+
+  output_name = "bind-debugger-test"
+
+  sources = [ "bind-debugger-test.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/fdio",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-device-test:c",
+  ]
+}
+
+devmgr_manifest("devmgr-manifest") {
+}
+
+test_package("bind-debugger-test") {
+  deps = [
+    ":devmgr-manifest",
+    ":tests",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  tests = [
+    {
+      name = "bind-debugger-test"
+      environments = basic_envs
+    },
+  ]
+}

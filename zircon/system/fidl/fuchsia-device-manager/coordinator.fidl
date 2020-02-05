@@ -53,8 +53,11 @@ const uint32 COMPONENTS_MAX = 16;
 /// Maximum number of parts that a composite device component can have
 const uint32 DEVICE_COMPONENT_PARTS_MAX = 16;
 
-/// Maximum instructions in a match program
+/// Maximum number of instructions in the match program of a device component part
 const uint32 DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX = 32;
+
+// Maximum number of instructions in a driver bind program
+const uint32 BIND_PROGRAM_INSTRUCTIONS_MAX = 256;
 
 /// Bit flags for device add configuration
 bits AddDeviceConfig : uint32 {
@@ -278,4 +281,24 @@ protocol Coordinator {
     /// Returns whether the compatibility tests started, and does not convey
     /// anything about the status of the test.
     RunCompatibilityTests(int64 hook_wait_time) -> () error zx.status;
+};
+
+/// Protocol for getting the information needed to debug bind programs from the devcoordinator.
+[Discoverable]
+protocol BindDebugger {
+    /// Returns the bind program of the given driver.
+    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
+    /// ZX_ERR_BUFFER_TOO_SMALL indicates that the driver's bind program is longer than the
+    /// maximum number of instructions (BIND_PROGRAM_INSTRUCTIONS_MAX).
+    GetBindProgram(string:DEVICE_PATH_MAX driver_path)
+        -> (vector<BindInstruction>:BIND_PROGRAM_INSTRUCTIONS_MAX instructions)
+        error zx.status;
+
+    /// Returns the list of properties of the given device.
+    /// ZX_ERR_NOT_FOUND indicates that there is no device matching the given path.
+    /// ZX_ERR_BAD_PATH indicates that the given path is not valid.
+    /// ZX_ERR_BUFFER_TOO_SMALL indicates either that the given path is too long,
+    /// or that the device has more than the maximum number of properties (PROPERTIES_MAX).
+    GetDeviceProperties(string:DEVICE_PATH_MAX device_path)
+        -> (vector<DeviceProperty>:PROPERTIES_MAX props) error zx.status;
 };

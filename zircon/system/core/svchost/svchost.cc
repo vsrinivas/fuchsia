@@ -5,6 +5,7 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/fshost/c/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/c/fidl.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
@@ -229,6 +230,7 @@ static constexpr const char* devmgr_services[] = {
     fuchsia_device_manager_Administrator_Name,
     fuchsia_device_manager_DebugDumper_Name,
     fuchsia_hardware_power_statecontrol_Admin_Name,
+    llcpp::fuchsia::device::manager::BindDebugger::Name,
     nullptr,
 };
 

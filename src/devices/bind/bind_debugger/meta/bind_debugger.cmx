@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.device.manager.BindDebugger"
+        ]
+    }
+}

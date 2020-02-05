@@ -188,7 +188,8 @@ struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
   SuspendCallback callback;
 };
 
-class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface {
+class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface,
+                    public llcpp::fuchsia::device::manager::BindDebugger::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -209,7 +210,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   void DriverAdded(Driver* drv, const char* version);
   void DriverAddedInit(Driver* drv, const char* version);
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
-  const Driver* LibnameToDriver(const fbl::String& libname) const;
+  const Driver* LibnameToDriver(const fbl::StringPiece& libname) const;
 
   // Function that is invoked to request a driver try to bind to a device
   using AttemptBindFunc =
@@ -368,7 +369,13 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   void Suspend(
       llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState state,
       llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface::SuspendCompleter::Sync
-          completer);
+          completer) override;
+
+  // Bind debugger interface
+  void GetBindProgram(::fidl::StringView driver_path,
+                      GetBindProgramCompleter::Sync completer) override;
+  void GetDeviceProperties(::fidl::StringView name,
+                           GetDevicePropertiesCompleter::Sync completer) override;
 
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);

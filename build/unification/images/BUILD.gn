@@ -964,6 +964,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/dev/test/unit-test-test:unit-test-fail-manifest",
     "//zircon/system/dev/test/unit-test-test:unit-test-pass-manifest",
     "//zircon/system/dev/test/mock-device:mock-device-manifest",
+    "//zircon/system/dev/test/bind-debugger-test:bind-debugger-test-manifest",
     "//zircon/system/dev/backlight/ti-lp8556:ti-lp8556-manifest",
     "//zircon/system/dev/block/ums-function:ums-function-manifest",
     "//zircon/system/dev/audio/usb-audio:usb-audio-manifest",

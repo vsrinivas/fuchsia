@@ -179,9 +179,9 @@ zx_status_t Coordinator::InitCoreDevices(const char* sys_device_driver) {
   return ZX_OK;
 }
 
-const Driver* Coordinator::LibnameToDriver(const fbl::String& libname) const {
+const Driver* Coordinator::LibnameToDriver(const fbl::StringPiece& libname) const {
   for (const auto& drv : drivers_) {
-    if (libname == drv.libname) {
+    if (libname.compare(drv.libname) == 0) {
       return &drv;
     }
   }
@@ -1775,6 +1775,59 @@ void Coordinator::Suspend(
       std::move(callback));
 }
 
+void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
+                                 GetBindProgramCompleter::Sync completer) {
+  fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
+  const Driver* driver = LibnameToDriver(driver_path);
+  if (driver == nullptr) {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  uint32_t count = 0;
+  if (driver->binding_size > 0) {
+    count = driver->binding_size / sizeof(driver->binding[0]);
+  }
+  if (count > fuchsia_device_manager_BIND_PROGRAM_INSTRUCTIONS_MAX) {
+    completer.ReplyError(ZX_ERR_BUFFER_TOO_SMALL);
+    return;
+  }
+
+  std::vector<llcpp::fuchsia::device::manager::BindInstruction> instructions;
+  for (uint32_t i = 0; i < count; i++) {
+    instructions.push_back(llcpp::fuchsia::device::manager::BindInstruction{
+        .op = driver->binding[i].op,
+        .arg = driver->binding[i].arg,
+    });
+  }
+  completer.ReplySuccess(::fidl::VectorView(instructions));
+}
+
+void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
+                                      GetDevicePropertiesCompleter::Sync completer) {
+  fbl::RefPtr<Device> device;
+  zx_status_t status = devfs_walk(root_device_->devnode(), device_path.data(), &device);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  if (device->props().size() > fuchsia_device_manager_PROPERTIES_MAX) {
+    completer.ReplyError(ZX_ERR_BUFFER_TOO_SMALL);
+    return;
+  }
+
+  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props;
+  for (const auto& prop : device->props()) {
+    props.push_back(llcpp::fuchsia::device::manager::DeviceProperty{
+        .id = prop.id,
+        .reserved = prop.reserved,
+        .value = prop.value,
+    });
+  }
+  completer.ReplySuccess(::fidl::VectorView(props));
+}
+
 zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto admin = [this](zx::channel request) {
     static_assert(fuchsia_device_manager_SUSPEND_FLAG_REBOOT == DEVICE_SUSPEND_FLAG_REBOOT);
@@ -1811,7 +1864,8 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto admin2 = [this](zx::channel request) {
-    auto status = fidl::Bind(this->config_.dispatcher, std::move(request), this);
+    auto status = fidl::Bind<llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface>(
+        this->config_.dispatcher, std::move(request), this);
     if (status != ZX_OK) {
       printf("Failed to bind to client channel: %d \n", status);
     }
@@ -1823,6 +1877,18 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   if (status != ZX_OK) {
     return status;
   }
+
+  const auto bind_debugger = [this](zx::channel request) {
+    auto status = fidl::Bind<llcpp::fuchsia::device::manager::BindDebugger::Interface>(
+        this->config_.dispatcher, std::move(request), this);
+    if (status != ZX_OK) {
+      printf("Failed to bind to client channel: %d \n", status);
+    }
+    return status;
+  };
+
+  svc_dir->AddEntry(llcpp::fuchsia::device::manager::BindDebugger::Name,
+                    fbl::MakeRefCounted<fs::Service>(bind_debugger));
 
   const auto debug = [this](zx::channel request) {
     static constexpr fuchsia_device_manager_DebugDumper_ops_t kOps = {

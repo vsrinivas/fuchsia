@@ -1020,9 +1020,13 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
 
   std::vector<fuchsia::device::manager::DeviceComponent> compvec = {};
   for (size_t i = 0; i < comp_desc->components_count; i++) {
-    ::fidl::Array<fuchsia::device::manager::DeviceComponentPart, 16> parts{};
+    ::fidl::Array<fuchsia::device::manager::DeviceComponentPart,
+                  fuchsia::device::manager::DEVICE_COMPONENT_PARTS_MAX>
+        parts{};
     for (uint32_t j = 0; j < comp_desc->components[i].parts_count; j++) {
-      ::fidl::Array<fuchsia::device::manager::BindInstruction, 32> bind_instructions{};
+      ::fidl::Array<fuchsia::device::manager::BindInstruction,
+                    fuchsia::device::manager::DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX>
+          bind_instructions{};
       for (uint32_t k = 0; k < comp_desc->components[i].parts[j].instruction_count; k++) {
         bind_instructions[k] = fuchsia::device::manager::BindInstruction{
             .op = comp_desc->components[i].parts[j].match_program[k].op,

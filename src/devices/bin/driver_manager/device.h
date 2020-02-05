@@ -459,6 +459,8 @@ class Device : public fbl::RefCounted<Device>,
   Devnode* self = nullptr;
   Devnode* link = nullptr;
 
+  Devnode* devnode() { return self; }
+
   // TODO(teisenbe): We probably want more states.
   enum class State {
     kActive,
