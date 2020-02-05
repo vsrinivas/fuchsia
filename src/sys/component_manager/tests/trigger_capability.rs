@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::breakpoint_system_client::Injector,
     anyhow::Error,
     async_trait::async_trait,
-    breakpoint_system_client::Injector,
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt, TryStreamExt},
     std::sync::Arc,

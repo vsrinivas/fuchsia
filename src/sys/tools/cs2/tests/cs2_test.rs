@@ -1,8 +1,11 @@
-use anyhow::Error;
-use breakpoint_system_client::*;
-use cs2::Component;
-use std::path::PathBuf;
-use test_utils::*;
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    anyhow::Error, cs2::Component, std::path::PathBuf, test_utils_lib::breakpoint_system_client::*,
+    test_utils_lib::test_utils::*,
+};
 
 fn launch_cs2(hub_v2_path: PathBuf) -> Vec<String> {
     // Do exactly what cs2 does. Point to HubV2 and get output.

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    echo_factory_capability::EchoFactoryCapability, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs, futures::StreamExt,
+    fuchsia_async as fasync, fuchsia_component::server::ServiceFs, futures::StreamExt,
+    test_utils_lib::echo_factory_capability::EchoFactoryCapability,
 };
 
 fn main() {

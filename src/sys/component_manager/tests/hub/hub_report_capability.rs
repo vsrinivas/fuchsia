@@ -4,10 +4,10 @@
 
 use {
     async_trait::async_trait,
-    breakpoint_system_client::Injector,
     fidl_fuchsia_test_hub as fhub,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::{collections::HashMap, sync::Arc},
+    test_utils_lib::breakpoint_system_client::Injector,
 };
 
 #[derive(Debug)]

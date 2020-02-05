@@ -4,11 +4,11 @@
 
 use {
     async_trait::async_trait,
-    breakpoint_system_client::Interposer,
     echo_interposer::EchoInterposer,
     fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
+    test_utils_lib::breakpoint_system_client::Interposer,
 };
 
 /// Client <---> EchoFactoryInterposer <---> EchoFactory service

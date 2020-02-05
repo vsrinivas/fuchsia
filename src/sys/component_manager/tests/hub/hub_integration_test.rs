@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    breakpoint_system_client::*,
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
     fidl_fuchsia_test_breakpoints as fbreak, fidl_fuchsia_test_hub as fhub,
@@ -13,7 +12,7 @@ use {
     hub_report_capability::*,
     io_util::*,
     std::{path::PathBuf, sync::Arc},
-    test_utils::*,
+    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
 };
 
 pub struct TestRunner {

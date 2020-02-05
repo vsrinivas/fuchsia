@@ -4,9 +4,11 @@
 
 use {
     anyhow::Error,
-    breakpoint_system_client::{BeforeStartInstance, BreakpointSystemClient, Handler, Invocation},
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    test_utils_lib::breakpoint_system_client::{
+        BeforeStartInstance, BreakpointSystemClient, Handler, Invocation,
+    },
 };
 
 #[fasync::run_singlethreaded]

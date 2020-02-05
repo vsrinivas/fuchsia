@@ -4,7 +4,6 @@
 
 use {
     async_trait::async_trait,
-    breakpoint_system_client::Injector,
     fidl_fuchsia_test_workscheduler as fws,
     fuchsia_async::{Time, Timer},
     futures::{
@@ -21,6 +20,7 @@ use {
         sync::Arc,
         time::Duration,
     },
+    test_utils_lib::breakpoint_system_client::Injector,
 };
 
 #[derive(Debug)]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, fuchsia_async as fasync};
+use {anyhow::Error, fuchsia_async as fasync, test_utils_lib::test_utils};
 
 #[fasync::run_singlethreaded(test)]
 async fn route_echo_service() -> Result<(), Error> {

@@ -9,6 +9,7 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased, Process, Task},
     std::ffi::CString,
+    test_utils_lib::test_utils,
 };
 
 // Verifies that the component_manager supports routing capabilities with different rights and that

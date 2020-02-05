@@ -4,10 +4,10 @@
 
 use {
     async_trait::async_trait,
-    breakpoint_system_client::Interposer,
     fidl_fidl_examples_routing_echo as fecho,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
+    test_utils_lib::breakpoint_system_client::Interposer,
 };
 
 /// Client <---> EchoInterposer <---> Echo service

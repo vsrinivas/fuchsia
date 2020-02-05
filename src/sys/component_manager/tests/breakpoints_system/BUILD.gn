@@ -3,22 +3,54 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+
+rustc_library("echo_interposer") {
+  name = "echo_interposer"
+  edition = "2018"
+  source_root = "echo_interposer.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_library("echo_factory_interposer") {
+  name = "echo_factory_interposer"
+  edition = "2018"
+  source_root = "echo_factory_interposer.rs"
+  deps = [
+    ":echo_interposer",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:echofactory-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+}
 
 rustc_test("breakpoints_system_integration_test_bin") {
   name = "breakpoints_system_integration_test"
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
+    ":echo_factory_interposer",
+    ":echo_interposer",
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:breakpoint_system_client",
-    "//src/sys/component_manager/tests:echo_capability",
-    "//src/sys/component_manager/tests:echo_factory_interposer",
-    "//src/sys/component_manager/tests:echo_interposer",
-    "//src/sys/component_manager/tests:test_utils",
+    "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",

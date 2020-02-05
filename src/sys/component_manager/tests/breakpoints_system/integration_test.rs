@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, breakpoint_system_client::*, echo_capability::EchoCapability,
-    echo_factory_interposer::EchoFactoryInterposer, echo_interposer::EchoInterposer,
-    fuchsia_async as fasync, futures::StreamExt, test_utils::*,
+    anyhow::Error,
+    echo_factory_interposer::EchoFactoryInterposer,
+    echo_interposer::EchoInterposer,
+    fuchsia_async as fasync,
+    futures::StreamExt,
+    test_utils_lib::{breakpoint_system_client::*, echo_capability::EchoCapability, test_utils::*},
 };
 
 #[fasync::run_singlethreaded(test)]

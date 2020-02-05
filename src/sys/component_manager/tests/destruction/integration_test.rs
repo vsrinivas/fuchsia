@@ -4,10 +4,9 @@
 
 use {
     anyhow::Error,
-    breakpoint_system_client::*,
     fuchsia_async as fasync,
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
-    test_utils::*,
+    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
 };
 
 /// Drains the required number of events, sorts them and compares them

@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, breakpoint_system_client::*, fidl_fidl_examples_echo as fidl_echo,
-    fuchsia_async as fasync, fuchsia_component::client::*, io_util, test_utils::*,
+    anyhow::Error,
+    fidl_fidl_examples_echo as fidl_echo, fuchsia_async as fasync,
+    fuchsia_component::client::*,
+    io_util,
+    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
 };
 
 #[fasync::run_singlethreaded(test)]

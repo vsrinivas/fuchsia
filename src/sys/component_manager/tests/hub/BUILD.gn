@@ -13,7 +13,7 @@ rustc_library("hub_report_capability") {
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:breakpoint_system_client",
+    "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
     "//third_party/rust_crates:async-trait",
@@ -30,8 +30,7 @@ rustc_test("hub_integration_test_bin") {
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/io_util",
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:breakpoint_system_client",
-    "//src/sys/component_manager/tests:test_utils",
+    "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
     "//third_party/rust_crates:anyhow",

@@ -4,13 +4,13 @@
 
 use {
     anyhow::{Context as _, Error},
-    breakpoint_system_client::*,
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     futures::prelude::*,
     hub_report::HubReport,
+    test_utils_lib::breakpoint_system_client::*,
 };
 
 #[fasync::run_singlethreaded]

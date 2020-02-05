@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    crate::breakpoint_system_client::BreakpointSystemClient,
     anyhow::{format_err, Context as _, Error},
-    breakpoint_system_client::BreakpointSystemClient,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,

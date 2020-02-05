@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait, breakpoint_system_client::Injector, echo_capability::EchoCapability,
-    fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync, futures::StreamExt,
+    crate::{breakpoint_system_client::Injector, echo_capability::EchoCapability},
+    async_trait::async_trait,
+    fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
+    futures::StreamExt,
     std::sync::Arc,
 };
 

@@ -5,14 +5,13 @@
 use {
     anyhow::{Context as _, Error},
     async_trait::async_trait,
-    breakpoint_system_client::*,
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::StreamExt,
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
     std::{path::PathBuf, sync::Arc},
-    test_utils::*,
+    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
 };
 
 lazy_static! {

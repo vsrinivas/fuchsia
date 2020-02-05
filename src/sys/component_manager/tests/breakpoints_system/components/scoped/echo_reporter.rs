@@ -4,14 +4,16 @@
 
 use {
     anyhow::Error,
-    breakpoint_system_client::{
-        BeforeStartInstance, BreakpointSystemClient, Invocation, RouteCapability,
-    },
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
     futures::StreamExt,
-    trigger_capability::{TriggerCapability, TriggerReceiver},
+    test_utils_lib::{
+        breakpoint_system_client::{
+            BeforeStartInstance, BreakpointSystemClient, Invocation, RouteCapability,
+        },
+        trigger_capability::{TriggerCapability, TriggerReceiver},
+    },
 };
 
 // `echo_reporter` does the following:

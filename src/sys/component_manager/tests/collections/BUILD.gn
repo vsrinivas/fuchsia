@@ -12,7 +12,7 @@ rustc_test("collections_integration_test_bin") {
   source_root = "integration_test.rs"
   deps = [
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:test_utils",
+    "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:anyhow",
   ]
 }
@@ -43,7 +43,7 @@ rustc_binary("trigger_bin") {
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests:trigger_capability",
+    "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

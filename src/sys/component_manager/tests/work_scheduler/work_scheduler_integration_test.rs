@@ -4,8 +4,7 @@
 
 use {
     anyhow::Error,
-    breakpoint_system_client::*,
-    test_utils::*,
+    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
     work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
 

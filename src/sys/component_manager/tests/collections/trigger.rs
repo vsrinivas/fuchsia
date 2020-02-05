@@ -7,7 +7,7 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     futures::StreamExt,
-    trigger_capability::TriggerCapability,
+    test_utils_lib::trigger_capability::TriggerCapability,
 };
 
 fn main() {
