@@ -1025,7 +1025,7 @@ void Scheduler::Insert(SchedTime now, thread_t* thread) {
     thread->curr_cpu = this_cpu();
 
     total_expected_runtime_ns_ += state->expected_runtime_ns_;
-    DEBUG_ASSERT(total_expected_runtime_ns_ > SchedDuration{0});
+    DEBUG_ASSERT(total_expected_runtime_ns_ >= SchedDuration{0});
 
     if (IsFairThread(thread)) {
       runnable_fair_task_count_++;
@@ -1060,8 +1060,8 @@ void Scheduler::Remove(thread_t* thread) {
   if (state->OnRemove()) {
     thread->curr_cpu = INVALID_CPU;
 
-    DEBUG_ASSERT(total_expected_runtime_ns_ > SchedDuration{0});
     total_expected_runtime_ns_ -= state->expected_runtime_ns_;
+    DEBUG_ASSERT(total_expected_runtime_ns_ >= SchedDuration{0});
 
     if (IsFairThread(thread)) {
       DEBUG_ASSERT(runnable_fair_task_count_ > 0);
