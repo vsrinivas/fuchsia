@@ -5,15 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon_images.gni")
-
-declare_args() {
-  # Use vboot images
-  use_vboot = false
-
-  # Put the "system image" package in the BOOTFS.  Hence what would
-  # otherwise be /system/... at runtime is /boot/... instead.
-  bootfs_only = false
-}
+import("//build/images/boot_args.gni")
 
 # Build a "kernel partition" target for ChromeOS targets.
 #
@@ -51,9 +43,7 @@ template("vboot") {
                            ])
 
     tool = "//garnet/tools/vboot_reference:futility"
-    outputs = [
-      output_file,
-    ]
+    outputs = [ output_file ]
 
     vboot_dir = "//third_party/vboot_reference"
     kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
@@ -152,12 +142,8 @@ template("esp") {
     tool = "//tools/make-efi"
     mkfs_msdosfs_bin = "$zircon_tools_dir/mkfs-msdosfs"
 
-    outputs = [
-      output_file,
-    ]
-    inputs = [
-      mkfs_msdosfs_bin,
-    ]
+    outputs = [ output_file ]
+    inputs = [ mkfs_msdosfs_bin ]
     args = [
       "--output",
       rebase_path(output_file),

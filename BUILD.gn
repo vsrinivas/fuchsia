@@ -5,6 +5,7 @@
 import("//build/board.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
+import("//build/images/boot_args.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
@@ -456,7 +457,8 @@ group("default") {
     "//build/unification",
     "//sdk",
   ]
-  if (base_package_labels != [] || cache_package_labels != []) {
+
+  if (bootfs_only || base_package_labels != [] || cache_package_labels != []) {
     deps += [ "//build/images" ]
   }
   if (universe_package_labels != []) {
