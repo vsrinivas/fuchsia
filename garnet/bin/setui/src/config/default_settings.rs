@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use serde::de::DeserializeOwned;
 use std::fs::File;
 use std::io::BufReader;
@@ -39,7 +39,7 @@ impl<T: DeserializeOwned + Clone> DefaultSetting<T> {
         let file = match File::open(file_path.clone()) {
             Ok(f) => f,
             Err(e) => {
-                fx_log_err!("unable to open {}, using defaults: {:?}", file_path, e);
+                fx_log_info!("unable to open {}, using defaults: {:?}", file_path, e);
                 return self.default_value.clone();
             }
         };
