@@ -77,7 +77,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/refcount/test",
       "$zx/system/ulib/runtests-utils/test",
       "$zx/system/ulib/storage:test",
-      "$zx/system/ulib/sysconfig-client/test",
       "$zx/system/ulib/tftp:tftp-fuzzer",
       "$zx/system/ulib/tftp:tftp-test",
       "$zx/system/ulib/trace-engine/test",
