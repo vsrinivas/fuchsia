@@ -14,7 +14,6 @@ import (
 	"fidl/compiler/backend/cmdline"
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/cpp_libfuzzer"
-	"fidl/compiler/backend/syzkaller"
 	"fidl/compiler/backend/types"
 )
 
@@ -25,7 +24,6 @@ type GenerateFidl interface {
 var generators = map[string]GenerateFidl{
 	"cpp":       cpp.NewFidlGenerator(),
 	"libfuzzer": cpp_libfuzzer.NewFidlGenerator(),
-	"syzkaller": syzkaller.NewFidlGenerator(),
 }
 
 func main() {

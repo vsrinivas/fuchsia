@@ -36,6 +36,12 @@ if [ ! -x "${FIDLGEN_RUST}" ]; then
     exit 1
 fi
 
+FIDLGEN_SYZ="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_syzkaller"
+if [ ! -x "${FIDLGEN_SYZ}" ]; then
+    echo "error: fidlgen_syzkaller missing; maybe fx clean-build?" 1>&2
+    exit 1
+fi
+
 EXAMPLE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 EXAMPLE_DIR="$( echo $EXAMPLE_DIR | sed -e "s+${FUCHSIA_DIR}/++" )"
 GOLDENS_DIR="${EXAMPLE_DIR}/../goldens"
@@ -134,12 +140,9 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
         -output-filename "${GOLDENS_DIR}/${rust_name}.golden"
 
     echo "  syzkaller: ${json_name} > ${syzkaller_name}"
-    ${FIDLGEN} \
-        -generators syzkaller \
+    ${FIDLGEN_SYZ} \
         -json "${GOLDENS_DIR}/${json_name}" \
-        -output-base "${GOLDENS_DIR}/${json_name}" \
-        -include-base "${GOLDENS_DIR}"
-    mv "${GOLDENS_DIR}/${syzkaller_name}" "${GOLDENS_DIR}/${syzkaller_name}.golden"
+        -output-syz "${GOLDENS_DIR}/${syzkaller_name}.golden"
 done
 
 > "${GOLDENS_DIR}/goldens.txt"

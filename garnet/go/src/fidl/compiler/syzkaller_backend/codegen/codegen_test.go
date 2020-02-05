@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-package syzkaller
+package codegen
 
 import (
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fidl/compiler/backend/syzkaller/ir"
 	"fidl/compiler/backend/typestest"
+	"fidl/compiler/syzkaller_backend/ir"
 )
 
 // basePath holds the base path to the directory containing goldens.
@@ -30,7 +30,7 @@ func TestCodegenImplDotSyzkaller(t *testing.T) {
 			tree := ir.Compile(fidl)
 			impl := typestest.GetGolden(basePath, fmt.Sprintf("%s.syz.txt.golden", filename))
 
-			actualImpl, err := NewFidlGenerator().GenerateImpl(tree)
+			actualImpl, err := NewGenerator().generate(tree)
 			if err != nil {
 				t.Fatalf("unexpected error while generating impl.syz.txt: %s", err)
 			}

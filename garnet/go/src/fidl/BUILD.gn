@@ -45,14 +45,24 @@ go_binary("fidlgen_go") {
   deps = [ ":fidl_lib" ]
 }
 
+go_binary("fidlgen_syzkaller") {
+  gopackage = "fidl/compiler/syzkaller_backend"
+
+  sdk_category = "partner"
+
+  deps = [ ":fidl_lib" ]
+}
+
 install_host_tools("fidl") {
   deps = [
     ":fidlgen",
     ":fidlgen_llcpp",
+    ":fidlgen_syzkaller",
   ]
   outputs = [
     "fidlgen",
     "fidlgen_llcpp",
+    "fidlgen_syzkaller",
   ]
 }
 
@@ -94,7 +104,7 @@ go_test("fidlgen_rust_test") {
 }
 
 go_test("fidlgen_syzkaller_test") {
-  gopackages = [ "fidl/compiler/backend/syzkaller" ]
+  gopackages = [ "fidl/compiler/syzkaller_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
 }
