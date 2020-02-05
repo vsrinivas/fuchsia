@@ -17,7 +17,10 @@ namespace {
 constexpr char kFileData[] = "lalalala";
 
 TEST(PayloadStreamerTest, TrivialLifetime) {
-  disk_pave::PayloadStreamer streamer(zx::channel, fbl::unique_fd);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+  disk_pave::PayloadStreamer streamer(std::move(server), fbl::unique_fd());
 }
 
 class PayloadStreamerTest : public zxtest::Test {

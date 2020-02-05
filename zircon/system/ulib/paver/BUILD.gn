@@ -41,6 +41,7 @@ zx_library("paver") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/ramdevice-client:ramdevice-client-static",
+    "$zx/system/ulib/svc",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/sysconfig-client:sysconfig-sync-client",
     "$zx/system/ulib/zircon",
@@ -49,7 +50,7 @@ zx_library("paver") {
     "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
     "$zx/third_party/ulib/cksum",
   ]
-  public_deps = [ "$zx/system/ulib/svc" ]
+  public_deps = [ "$zx/system/ulib/svc:headers" ]
 }
 
 zx_test("paver-test") {
