@@ -149,7 +149,7 @@ mod tests {
         let instructions = vec![Instruction::Match(Condition::Always)];
         let out_string = write_bind_template(instructions, false).unwrap();
         assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 1)"));
-        assert!(out_string.contains("{0x10,0x0}"));
+        assert!(out_string.contains("{0x1000000,0x0}"));
     }
 
     #[test]
@@ -157,6 +157,6 @@ mod tests {
         let instructions = vec![Instruction::Match(Condition::Always)];
         let out_string = write_bind_template(instructions, true).unwrap();
         assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 2)"));
-        assert!(out_string.contains("{0x20002,0x0}"));
+        assert!(out_string.contains("{0x20000002,0x0}"));
     }
 }
