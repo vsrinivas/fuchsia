@@ -4,33 +4,25 @@
 
 #pragma once
 
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>
+
+#include <fbl/string.h>
+#include <fbl/unique_fd.h>
 
 namespace devmgr_integration_test {
 
 class IsolatedDevmgr {
  public:
-  IsolatedDevmgr() = default;
+  IsolatedDevmgr();
   ~IsolatedDevmgr();
 
   IsolatedDevmgr(const IsolatedDevmgr&) = delete;
   IsolatedDevmgr& operator=(const IsolatedDevmgr&) = delete;
 
-  IsolatedDevmgr(IsolatedDevmgr&& other)
-      : job_(std::move(other.job_)), svc_root_dir_(std::move(other.svc_root_dir_)),
-      devfs_root_(std::move(other.devfs_root_)) {}
-
-  IsolatedDevmgr& operator=(IsolatedDevmgr&& other) {
-    Terminate();
-    job_ = std::move(other.job_);
-    devfs_root_ = std::move(other.devfs_root_);
-    svc_root_dir_ = std::move(other.svc_root_dir_);
-    return *this;
-  }
+  IsolatedDevmgr(IsolatedDevmgr&& other);
+  IsolatedDevmgr& operator=(IsolatedDevmgr&& other);
 
   // Path to the test sysdev driver
   static inline constexpr char kSysdevDriver[] = "/boot/driver/test/sysdev.so";
@@ -54,12 +46,17 @@ class IsolatedDevmgr {
   // used for things like binding to an exception port.
   const zx::job& containing_job() const { return job_; }
 
-  void reset() {
-    Terminate();
-    *this = IsolatedDevmgr();
-  }
+  void reset() { *this = IsolatedDevmgr(); }
 
  private:
+  using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
+  using GetArgumentsFunction = devmgr_launcher::GetArgumentsFunction;
+
+  // Opaque structure for the internal state used for serving /svc
+  struct SvcLoopState;
+  zx_status_t SetupSvcLoop(zx::channel bootsvc_server, zx::channel fshost_outgoing_client,
+                           GetBootItemFunction get_boot_item, GetArgumentsFunction get_arguments);
+
   // If |job_| exists, terminate it.
   void Terminate();
 
@@ -71,6 +68,9 @@ class IsolatedDevmgr {
 
   // FD to the root of devmgr's devfs
   fbl::unique_fd devfs_root_;
+
+  // Opaque state associated with the async_loop_
+  std::unique_ptr<SvcLoopState> svc_loop_state_;
 };
 
 // Wait for |file| to appear in |dir|, and open it when it does.
