@@ -143,6 +143,7 @@ group("ulib") {
     "statusor",
     "storage-metrics",
     "storage/buffer",
+    "storage/buffer/test_support",
     "storage/operation",
     "svc",
     "sync",
