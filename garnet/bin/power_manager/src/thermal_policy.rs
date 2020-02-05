@@ -64,7 +64,7 @@ pub struct ThermalPolicyParams {
 
     /// The temperature at which to begin limiting external subsystems which are not managed by the
     /// thermal feedback controller
-    pub thermal_limit_begin_temperature: Celsius,
+    pub thermal_limiting_range: [Celsius; 2],
 
     /// If temperature reaches or exceeds this value, the policy will command a system shutdown
     pub thermal_shutdown_temperature: Celsius,
@@ -113,9 +113,7 @@ struct ThermalState {
     state_initialized: Cell<bool>,
 
     /// A cached value in the range [0 - MAX_THERMAL_LOAD] which is defined as
-    /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD), where
-    /// range_start and range_end are the thermal_limit_begin_temperature and
-    /// thermal_shutdown_temperature, respectively.
+    /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD).
     thermal_load: Cell<ThermalLoad>,
 }
 
@@ -300,8 +298,7 @@ impl ThermalPolicy {
         );
         let thermal_load = Self::calculate_thermal_load(
             temperature,
-            self.config.policy_params.thermal_limit_begin_temperature,
-            self.config.policy_params.thermal_shutdown_temperature,
+            &self.config.policy_params.thermal_limiting_range,
         );
         fuchsia_trace::instant!(
             "power_manager",
@@ -330,11 +327,9 @@ impl ThermalPolicy {
 
     /// Calculates the thermal load which is a value in the range [0 - MAX_THERMAL_LOAD] defined as
     /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD)
-    fn calculate_thermal_load(
-        temperature: Celsius,
-        range_start: Celsius,
-        range_end: Celsius,
-    ) -> ThermalLoad {
+    fn calculate_thermal_load(temperature: Celsius, range: &[Celsius; 2]) -> ThermalLoad {
+        let range_start = range[0];
+        let range_end = range[1];
         if temperature.0 < range_start.0 {
             ThermalLoad(0)
         } else if temperature.0 > range_end.0 {
@@ -656,8 +651,7 @@ mod tests {
 
     #[test]
     fn test_calculate_thermal_load() {
-        let thermal_limit_range_start = Celsius(85.0);
-        let thermal_limit_range_stop = Celsius(95.0);
+        let thermal_limiting_range = [Celsius(85.0), Celsius(95.0)];
 
         struct TestCase {
             temperature: Celsius,      // observed temperature
@@ -683,8 +677,7 @@ mod tests {
             assert_eq!(
                 ThermalPolicy::calculate_thermal_load(
                     test_case.temperature,
-                    thermal_limit_range_start,
-                    thermal_limit_range_stop
+                    &thermal_limiting_range,
                 ),
                 test_case.thermal_load
             );
@@ -823,7 +816,7 @@ mod tests {
                 proportional_gain: 0.0,
                 integral_gain: 0.2,
             },
-            thermal_limit_begin_temperature: Celsius(85.0),
+            thermal_limiting_range: [Celsius(75.0), Celsius(85.0)],
             thermal_shutdown_temperature: Celsius(95.0),
         }
     }

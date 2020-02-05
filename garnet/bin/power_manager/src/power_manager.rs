@@ -82,20 +82,18 @@ impl PowerManager {
             sys_pwr_handler,
             thermal_limiter_node,
 
-            // TODO(fxb/41452): these are just placeholder ThermalPolicyParams. The real params
-            // should be populated here once they have been properly determined.
             policy_params: thermal_policy::ThermalPolicyParams {
                 controller_params: thermal_policy::ThermalControllerParams {
                     sample_interval: Seconds(1.0),
                     filter_time_constant: Seconds(10.0),
-                    target_temperature: Celsius(85.0),
+                    target_temperature: Celsius(80.0),
                     e_integral_min: -20.0,
                     e_integral_max: 0.0,
                     sustainable_power: Watts(1.1),
                     proportional_gain: 0.0,
                     integral_gain: 0.2,
                 },
-                thermal_limit_begin_temperature: Celsius(85.0),
+                thermal_limiting_range: [Celsius(77.0), Celsius(84.0)],
                 thermal_shutdown_temperature: Celsius(95.0),
             },
         };
