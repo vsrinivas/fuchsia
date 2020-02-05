@@ -21,22 +21,3 @@ zx_library("scsi") {
     "$zx/system/ulib/driver",
   ]
 }
-
-zx_test("scsilib-disk-test") {
-  sources = [ "scsilib-disk-test.cc" ]
-  deps = [
-    ":scsi",
-    "$zx/system/banjo/ddk.protocol.block",
-    "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
-  ]
-}

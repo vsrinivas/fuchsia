@@ -1,0 +1,27 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":scsilib-disk-test" ]
+}
+
+zx_test("scsilib-disk-test") {
+  sources = [ "scsilib-disk-test.cc" ]
+  deps = [
+    "$zx/system/dev/lib/scsi",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+  ]
+}
