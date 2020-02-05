@@ -754,7 +754,11 @@ impl ClientState {
                     Status { connected_to: None, connecting_to: Some(associated.bss.ssid.clone()) }
                 }
                 LinkState::LinkUp { .. } => Status {
-                    connected_to: Some(associated.cfg.convert_bss_description(&associated.bss)),
+                    connected_to: {
+                        let mut bss = associated.cfg.convert_bss_description(&associated.bss);
+                        bss.rx_dbm = associated.last_rssi;
+                        Some(bss)
+                    },
                     connecting_to: None,
                 },
                 _ => unreachable!(),
@@ -1797,6 +1801,18 @@ mod tests {
         assert_variant!(state, ClientState::Idle(_));
     }
 
+    #[test]
+    fn status_returns_last_rssi() {
+        let mut h = TestHelper::new();
+
+        let state = link_up_state(Box::new(unprotected_bss(b"RSSI".to_vec(), [42; 6])));
+        let state = state.on_mlme_event(signal_report_with_rssi_dbm(-42), &mut h.context);
+        assert_eq!(state.status().connected_to.unwrap().rx_dbm, -42);
+
+        let state = state.on_mlme_event(signal_report_with_rssi_dbm(-24), &mut h.context);
+        assert_eq!(state.status().connected_to.unwrap().rx_dbm, -24);
+    }
+
     // Helper functions and data structures for tests
     struct TestHelper {
         mlme_stream: MlmeStream,
@@ -2209,5 +2225,9 @@ mod tests {
 
     fn fake_channel() -> Channel {
         Channel { primary: 153, cbw: wlan_common::channel::Cbw::Cbw20 }
+    }
+
+    fn signal_report_with_rssi_dbm(rssi_dbm: i8) -> MlmeEvent {
+        MlmeEvent::SignalReport { ind: fidl_mlme::SignalReportIndication { rssi_dbm } }
     }
 }
