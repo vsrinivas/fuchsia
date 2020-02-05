@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 use {
-    crate::ui::terminal_views::{BackgroundView, GridView, ScrollBar},
+    crate::ui::terminal_views::{BackgroundView, GridView, ScrollBar, ScrollContext},
     carnelian::{Canvas, Color, MappingPixelSink, Rect, Size},
     fuchsia_trace as ftrace,
     term_model::term::RenderableCellsIter,
@@ -17,7 +17,7 @@ pub struct TerminalScene {
     size: Size,
 }
 
-const SCROLL_BAR_WIDTH: f32 = 10.0;
+const SCROLL_BAR_WIDTH: f32 = 8.0;
 
 impl TerminalScene {
     pub fn new(backgrond_color: Color) -> TerminalScene {
@@ -43,11 +43,12 @@ impl TerminalScene {
         &self,
         canvas: &mut Canvas<MappingPixelSink>,
         cells: RenderableCellsIter<'a, C>,
+        scroll_context: ScrollContext,
     ) {
         ftrace::duration!("terminal", "Scene:TerminalScene:render");
         self.background_view.render(canvas);
         self.grid_view.render(canvas, cells);
-        self.scroll_bar.render(canvas);
+        self.scroll_bar.render(canvas, scroll_context);
     }
 
     pub fn update_size(&mut self, new_size: Size) {
@@ -60,9 +61,8 @@ impl TerminalScene {
 
         // for now just simply put the scroll bar over the top of the text
         let mut scroll_bar_frame = Rect::from_size(new_size);
-        let scroll_bar_width = 10.0;
-        scroll_bar_frame.size.width = scroll_bar_width;
-        scroll_bar_frame.origin.x = new_size.width - scroll_bar_width;
+        scroll_bar_frame.size.width = SCROLL_BAR_WIDTH;
+        scroll_bar_frame.origin.x = new_size.width - SCROLL_BAR_WIDTH;
         self.scroll_bar.frame = scroll_bar_frame;
     }
 }
@@ -107,7 +107,7 @@ mod tests {
         let size = Size::new(100.0, 100.0);
         let calculated = TerminalScene::calculate_term_size_from_size(&size);
 
-        assert_eq!(calculated.width, 90.0);
+        assert_eq!(calculated.width, 92.0);
         assert_eq!(calculated.height, 100.0);
     }
 
@@ -118,10 +118,7 @@ mod tests {
         scene.update_size(size);
 
         assert_eq!(scene.background_view.frame, Rect::new(Point::zero(), Size::new(100.0, 100.0)));
-        assert_eq!(scene.grid_view.frame, Rect::new(Point::zero(), Size::new(90.0, 100.0)));
-        assert_eq!(
-            scene.scroll_bar.frame,
-            Rect::new(Point::new(90.0, 0.0), Size::new(10.0, 100.0))
-        );
+        assert_eq!(scene.grid_view.frame, Rect::new(Point::zero(), Size::new(92.0, 100.0)));
+        assert_eq!(scene.scroll_bar.frame, Rect::new(Point::new(92.0, 0.0), Size::new(8.0, 100.0)));
     }
 }

@@ -5,4 +5,4 @@
 mod terminal_scene;
 mod terminal_views;
 
-pub use terminal_scene::TerminalScene;
+pub use {terminal_scene::TerminalScene, terminal_views::ScrollContext};

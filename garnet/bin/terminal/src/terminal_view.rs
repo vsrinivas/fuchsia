@@ -5,7 +5,7 @@
 use {
     crate::key_util::get_input_sequence_for_key_event,
     crate::pty::Pty,
-    crate::ui::TerminalScene,
+    crate::ui::{ScrollContext, TerminalScene},
     anyhow::{Context as _, Error},
     carnelian::{
         make_message, AnimationMode, AppContext, Message, Size, ViewAssistant,
@@ -361,7 +361,17 @@ impl ViewAssistant for TerminalViewAssistant {
             term.renderable_cells(&config)
         };
 
-        self.terminal_scene.render(canvas, iter);
+        let grid = term.grid();
+
+        let scroll_context = ScrollContext {
+            history: grid.history_size(),
+            visible_lines: *grid.num_lines(),
+            display_offset: grid.display_offset(),
+        };
+
+        drop(grid);
+
+        self.terminal_scene.render(canvas, iter, scroll_context);
         Ok(())
     }
 
