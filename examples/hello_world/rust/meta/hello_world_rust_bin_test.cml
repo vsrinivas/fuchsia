@@ -1,0 +1,24 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: [
+            "/pkg/test/hello_world_rust_bin_test",
+        ],
+    },
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+    use: [
+        // These protocols are used by the RustTestAdapter trampoline
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
+            from: "realm",
+        },
+    ],
+}
