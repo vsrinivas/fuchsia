@@ -11,7 +11,6 @@ use {
     anyhow::Error,
     fuchsia_trace as trace,
     futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
-    log::*,
     std::{collections::HashMap, sync::Arc},
 };
 
@@ -183,34 +182,20 @@ impl BreakpointRegistry {
                     // ensures that all the futures can be driven to completion.
                     let responder_channel = async move {
                         trace::duration!("component_manager", "breakpoints:wait_for_resume");
-                        let result = responder_channel.await;
+                        let _ = responder_channel.await;
                         trace::flow_end!("component_manager", "event", event.id);
-                        if let Err(error) = result {
-                            warn!(
-                                "A responder channel was canceled. This may \
-                                 mean that an InvocationReceiver was dropped \
-                                 unintentionally. Error -> {}",
-                                error
-                            );
-                        }
                     };
                     responder_channels.push(responder_channel);
                 }
                 // There's nothing to do if event is outside the scope of the given
                 // `InvocationSender`.
                 Ok(None) => (),
-                Err(error) => {
+                Err(_) => {
                     // A send can fail if the receiver was dropped. We don't
                     // crash the system when this happens. It is perfectly
                     // valid for a receiver to be dropped. That simply means
                     // that the receiver is no longer interested in future
                     // events.
-                    warn!(
-                        "Failed to send event via InvocationSender. \
-                         This may mean that an InvocationReceiver was dropped \
-                         unintentionally. Error -> {}",
-                        error
-                    );
                 }
             }
         }
