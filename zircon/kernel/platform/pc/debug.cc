@@ -64,7 +64,7 @@ DebugUartInfo debug_uart_info() {
 
 cbuf_t console_input_buf;
 static bool output_enabled = false;
-uint32_t uart_fifo_depth;
+static uint32_t uart_fifo_depth;
 
 // tx driven irq
 static bool uart_tx_irq_enabled = false;
@@ -126,7 +126,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
   return IRQ_EOI_DEACTIVATE;
 }
 
-static void platform_drain_debug_uart_rx(void) {
+static void platform_drain_debug_uart_rx() {
   while (uart_read(5) & (1 << 0)) {
     unsigned char c = uart_read(0);
     cbuf_write_char(&console_input_buf, c);
@@ -142,9 +142,7 @@ static void uart_rx_poll(timer_t* t, zx_time_t now, void* arg) {
   platform_drain_debug_uart_rx();
 }
 
-void platform_debug_start_uart_timer();
-
-void platform_debug_start_uart_timer(void) {
+static void platform_debug_start_uart_timer() {
   static timer_t uart_rx_poll_timer;
   static bool started = false;
 
@@ -157,10 +155,10 @@ void platform_debug_start_uart_timer(void) {
 }
 
 static void init_uart() {
-  /* configure the uart */
+  // configure the uart
   int divisor = 115200 / uart_baud_rate;
 
-  /* get basic config done so that tx functions */
+  // get basic config done so that tx functions
   uart_write(1, 0);                                   // mask all irqs
   uart_write(3, 0x80);                                // set up to load divisor latch
   uart_write(0, static_cast<uint8_t>(divisor));       // lsb
@@ -174,7 +172,7 @@ static void init_uart() {
   // Drive flow control bits high since we don't actively manage them
   uart_write(4, 0x3);
 
-  /* figure out the fifo depth */
+  // figure out the fifo depth
   uint8_t fcr = uart_read(2);
   if (BITS_SHIFT(fcr, 7, 6) == 3 && BIT(fcr, 5)) {
     // this is a 16750
@@ -306,9 +304,9 @@ void pc_init_debug_early() {
   dprintf(INFO, "UART: FIFO depth %u\n", uart_fifo_depth);
 }
 
-void pc_init_debug(void) {
+void pc_init_debug() {
   bool tx_irq_driven = false;
-  /* finish uart init to get rx going */
+  // finish uart init to get rx going
   cbuf_initialize(&console_input_buf, 1024);
 
   if (!platform_serial_enabled()) {
@@ -341,20 +339,18 @@ void pc_init_debug(void) {
   }
 }
 
-void pc_suspend_debug(void) { output_enabled = false; }
+void pc_suspend_debug() { output_enabled = false; }
 
-void pc_resume_debug(void) {
+void pc_resume_debug() {
   if (platform_serial_enabled()) {
     init_uart();
     output_enabled = true;
   }
 }
 
-/*
- * This is called when the FIFO is detected to be empty. So we can write an
- * entire FIFO's worth of bytes. Much more efficient than writing 1 byte
- * at a time (and then checking for FIFO to drain).
- */
+// This is called when the FIFO is detected to be empty. So we can write an
+// entire FIFO's worth of bytes. Much more efficient than writing 1 byte
+// at a time (and then checking for FIFO to drain).
 static char* debug_platform_tx_FIFO_bytes(const char* str, size_t* len, bool* copied_CR,
                                           size_t* wrote_bytes, bool map_NL) {
   size_t i, copy_bytes;
@@ -380,20 +376,19 @@ static char* debug_platform_tx_FIFO_bytes(const char* str, size_t* len, bool* co
   return s;
 }
 
-/*
- * dputs() Tx is either polling driven (if the caller is non-preemptible
- * or earlyboot or panic) or blocking (and irq driven).
- * TODO - buffered Tx support may be a win, (lopri but worth investigating)
- * When we do that dputs() can be completely asynchronous, and return when
- * the write has been (atomically) deposited into the buffer, except when
- * we run out of room in the Tx buffer (rare) - we'd either need to spin
- * (if non-blocking) or block waiting for space in the Tx buffer (adding
- * support to optionally block in cbuf_write_char() would be easiest way
- * to achieve that).
- *
- * block : Blocking vs Non-Blocking
- * map_NL : If true, map a '\n' to '\r'+'\n'
- */
+// dputs() Tx is either polling driven (if the caller is non-preemptible
+// or earlyboot or panic) or blocking (and irq driven).
+//
+// TODO - buffered Tx support may be a win, (lopri but worth investigating)
+// When we do that dputs() can be completely asynchronous, and return when
+// the write has been (atomically) deposited into the buffer, except when
+// we run out of room in the Tx buffer (rare) - we'd either need to spin
+// (if non-blocking) or block waiting for space in the Tx buffer (adding
+// support to optionally block in cbuf_write_char() would be easiest way
+// to achieve that).
+//
+// block : Blocking vs Non-Blocking
+// map_NL : If true, map a '\n' to '\r'+'\n'
 static void platform_dputs(const char* str, size_t len, bool block, bool map_NL) {
   spin_lock_saved_state_t state;
   bool copied_CR = false;
@@ -409,10 +404,7 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
     // Is FIFO empty ?
     while (!(uart_read(5) & (1 << 5))) {
       if (block) {
-        /*
-         * We want to Tx more and FIFO is empty, re-enable
-         * Tx interrupts before blocking.
-         */
+        // We want to Tx more and FIFO is empty, re-enable Tx interrupts before blocking.
         uart_write(1, static_cast<uint8_t>((1 << 0) | ((uart_tx_irq_enabled ? 1 : 0)
                                                        << 1)));  // rx and tx interrupt enable
         spin_unlock_irqrestore(&uart_spinlock, state);
@@ -489,9 +481,8 @@ int platform_pgetc(char* c, bool wait) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-/*
- * Called on start of a panic.
- * When we do Tx buffering, drain the Tx buffer here in polling mode.
- * Turn off Tx interrupts, so force Tx be polling from this point
- */
-void platform_debug_panic_start(void) { uart_tx_irq_enabled = false; }
+// Called on start of a panic.
+//
+// When we do Tx buffering, drain the Tx buffer here in polling mode.
+// Turn off Tx interrupts, so force Tx be polling from this point
+void platform_debug_panic_start() { uart_tx_irq_enabled = false; }
