@@ -35,6 +35,8 @@ driver_module("ge2d-driver") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.amlogiccanvas",

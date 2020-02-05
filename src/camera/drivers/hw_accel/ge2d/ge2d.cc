@@ -15,6 +15,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/trace/event.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <fbl/auto_lock.h>
@@ -624,6 +625,7 @@ void Ge2dDevice::SetRects(const rect_t& input_rect, const rect_t& output_rect) {
 }
 
 void Ge2dDevice::ProcessAndWaitForIdle() {
+  TRACE_DURATION("camera", "Ge2dDevice::ProcessAndWaitForIdle");
   CmdCtrl::Get().FromValue(0).set_cmd_wr(1).WriteTo(&ge2d_mmio_);
   zx_port_packet_t packet;
   ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
@@ -670,6 +672,7 @@ void Ge2dDevice::SetDstOutput(const image_canvas_id_t& canvas) {
 
 void Ge2dDevice::ProcessResizeTask(Ge2dTask* task, uint32_t input_buffer_index,
                                    const fzl::VmoPool::Buffer& output_buffer) {
+  TRACE_DURATION("camera", "Ge2dDevice::ProcessResizeTask");
   image_format_2_t input_format = task->input_format();
   image_format_2_t output_format = task->output_format();
   rect_t output_rect = FullImageRect(output_format);
@@ -691,6 +694,7 @@ void Ge2dDevice::ProcessResizeTask(Ge2dTask* task, uint32_t input_buffer_index,
 
 void Ge2dDevice::ProcessWatermarkTask(Ge2dTask* task, uint32_t input_buffer_index,
                                       const fzl::VmoPool::Buffer& output_buffer) {
+  TRACE_DURATION("camera", "Ge2dDevice::ProcessWatermarkTask");
   image_format_2_t input_format = task->input_format();
   image_format_2_t output_format = task->output_format();
   rect_t output_rect = FullImageRect(output_format);
