@@ -15,7 +15,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
-#include "src/modular/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
+#include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/bin/basemgr/session_context_impl.h"
 #include "src/modular/lib/async/cpp/future.h"
 

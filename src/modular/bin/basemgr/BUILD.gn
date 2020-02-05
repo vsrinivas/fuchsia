@@ -92,9 +92,7 @@ source_set("wait_for_minfs") {
     "//src/lib/fxl",
   ]
 
-  deps = [
-    "//zircon/public/lib/fdio-caller",
-  ]
+  deps = [ "//zircon/public/lib/fdio-caller" ]
 }
 
 source_set("lib") {
@@ -135,7 +133,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",
-    "//src/modular/bin/basemgr/intl_property_provider_impl",
+    "//src/lib/intl/intl_property_provider_impl",
   ]
 
   public_configs = [ "//build/config:Wno-reorder-init-list" ]

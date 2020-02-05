@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MODULAR_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_
-#define SRC_MODULAR_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_
+#ifndef SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_
+#define SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_
 
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/fit/result.h>
@@ -57,4 +57,4 @@ std::string ToDayOfWeekString(UCalendarDaysOfWeek day_of_week);
 
 }  // namespace intl
 
-#endif  // SRC_MODULAR_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_
+#endif  // SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_LOCALE_UTIL_H_

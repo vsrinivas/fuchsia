@@ -7,6 +7,11 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":intl_property_provider_impl_tests" ]
+}
+
 fidl("fidl") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [

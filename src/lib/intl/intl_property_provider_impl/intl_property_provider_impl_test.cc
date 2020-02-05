@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/modular/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
+#include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>

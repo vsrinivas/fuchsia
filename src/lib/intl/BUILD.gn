@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  public_deps = [ "//src/lib/intl/unicode_utils:tests" ]
+  public_deps = [
+    "intl_property_provider_impl:tests",
+    "unicode_utils:tests",
+  ]
 }

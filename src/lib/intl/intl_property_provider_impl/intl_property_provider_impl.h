@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MODULAR_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
-#define SRC_MODULAR_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
+#ifndef SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
+#define SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
 
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/intl/internal/cpp/fidl.h>
@@ -105,4 +105,4 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider, fuchsia::setui
 
 }  // namespace modular
 
-#endif  // SRC_MODULAR_BIN_BASEMGR_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
+#endif  // SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_

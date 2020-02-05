@@ -11,7 +11,7 @@
 
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
-#include "src/modular/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
+#include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/bin/basemgr/wait_for_minfs.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"

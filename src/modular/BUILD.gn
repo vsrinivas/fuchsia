@@ -27,7 +27,6 @@ group("tests") {
     "//sdk/lib/modular/testing/cpp:modular_testing_cpp_tests",
     "//src/modular/bin/basemgr:auto_login_base_shell_test",
     "//src/modular/bin/basemgr:basemgr_unittests",
-    "//src/modular/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",
     "//src/modular/bin/basemgr_launcher:tests",
     "//src/modular/bin/modular_test_harness:tests",
     "//src/modular/bin/module_resolver:module_resolver_unittests",
