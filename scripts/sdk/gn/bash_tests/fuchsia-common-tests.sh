@@ -84,7 +84,7 @@ EOF
 TEST_get-sdk-version() {
   BT_ASSERT_FUNCTION_EXISTS get-sdk-version
   SDK_VERSION="$(get-sdk-version "${SCRIPT_SRC_DIR}/../../testdata")"
-  BT_EXPECT_EQ "${SDK_VERSION}" "8890101742249547440"
+  BT_EXPECT_EQ "${SDK_VERSION}" "8890373976687374912"
 }
 
 TEST_run-gsutil() {

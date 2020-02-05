@@ -15,78 +15,66 @@ PROJ_DIR defaults to the same directory run.py is contained in
 OUT_DIR defaults to ./out/default relative to the run.py
 """
 
-import argparse
 import imp
 import os
-from subprocess import check_output, Popen
+from subprocess import Popen
 import sys
 import unittest
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-ARCHES = [
-    'arm64',
-    'x64',
-]
-
 FUCHSIA_ROOT = '${data.fuchsia_root}'
+
+# Import gen_fidl_response_file_unittest
 GEN_FIDL_RESP_FILE_TEST_PATH = os.path.join(
     FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'gen_fidl_response_file_unittest.py')
 gen_fidl_response_file_unittest = imp.load_source(
     'gen_fidl_response_file_unittest', GEN_FIDL_RESP_FILE_TEST_PATH)
 
-DEFAULT_OUT_DIR = os.path.join(SCRIPT_DIR, 'out')
-
-
-def find_path(path):
-    if os.path.exists(path):
-        return os.path.realpath(path)
-    return ''
+# bash_tests constants
+BASH_TESTS_PATH = os.path.join(
+    FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'bash_tests', 'run_bash_tests.sh')
 
 
 class GnTester(object):
     """Class for GN SDK test setup, execution, and cleanup."""
 
-    def __init__(self, proj_dir, arch, out_dir):
-        self.proj_dir = proj_dir
-        self.arch = arch
-        self.out_dir = out_dir
+    def __init__(self):
+        self._test_failed = False
 
-    def _gen_fild_resp_file_unittest(self):
+    def _run_unit_test(self, test_module):
         loader = unittest.TestLoader()
-        tests = loader.loadTestsFromModule(gen_fidl_response_file_unittest)
+        tests = loader.loadTestsFromModule(test_module)
         suite = unittest.TestSuite()
         suite.addTests(tests)
         runner = unittest.TextTestRunner()
-        runner.run(suite)
+        result = runner.run(suite)
+        if result.failures or result.errors:
+            raise AssertionError('Unit test failed.')
+
+    def _gen_fild_resp_file_unittest(self):
+        self._run_unit_test(gen_fidl_response_file_unittest)
+
+    def _bash_tests(self):
+        job = Popen(BASH_TESTS_PATH)
+        job.communicate()
+        if job.returncode:
+            msg = 'Bash tests returned non-zero exit code: %s' % job.returncode
+            raise AssertionError(msg)
+
+    def _run_test(self, test):
+        try:
+            getattr(self, test)()
+        except:
+            self._test_failed = True
 
     def run(self):
-        if self._gen_fild_resp_file_unittest():
-            return 1
-        return 0
+        self._run_test("_gen_fild_resp_file_unittest")
+        self._run_test("_bash_tests")
+        return self._test_failed
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Runs the GN SDK tests')
-    parser.add_argument(
-        '--proj_dir',
-        help='Path to the test project directory',
-        default=SCRIPT_DIR)
-    parser.add_argument(
-        '--out_dir', help='Path to the out directory', default=DEFAULT_OUT_DIR)
-    args = parser.parse_args()
-
-    proj_dir = find_path(args.proj_dir)
-    if not proj_dir:
-        print('"%s": path not found' % (args.proj_dir))
+    if GnTester().run():
         return 1
-    out_dir = os.path.realpath(args.out_dir)
-
-    for arch in ARCHES:
-        out = os.path.join(out_dir, arch)
-        if GnTester(proj_dir, arch, out).run():
-            return 1
-
     return 0
 
 
