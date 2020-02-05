@@ -211,23 +211,6 @@ TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible4) {
                             1 << 10);
 }
 
-TEST(CompressorTests, DecompressZSTDSeekableCompressiblesFailsOnNoSize) {
-  size_t output_size = 512;
-  size_t input_size = 512;
-  size_t invalid_size = 0;
-  std::unique_ptr<char[]> input(GenerateInput(DataType::Compressible, 0, input_size));
-  std::unique_ptr<char[]> output(new char[output_size]);
-
-  ASSERT_STATUS(ZSTDDecompress(output.get(), &output_size, input.get(), &invalid_size),
-                ZX_ERR_INVALID_ARGS);
-  invalid_size = 0;
-  ASSERT_STATUS(ZSTDDecompress(output.get(), &invalid_size, input.get(), &input_size),
-                ZX_ERR_INVALID_ARGS);
-  invalid_size = 0;
-  ASSERT_STATUS(ZSTDDecompress(output.get(), &invalid_size, input.get(), &invalid_size),
-                ZX_ERR_INVALID_ARGS);
-}
-
 void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
   const size_t input_size = 1024;
   auto compressor = BlobCompressor::Create(algorithm, input_size);
@@ -355,6 +338,48 @@ TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom3) {
 TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom4) {
   RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 15,
                                  1 << 10);
+}
+
+// Regression test class: Ensure that decompression that is not advancing buffers terminates, even
+// if the "size of next recommended input" hint from zstd is a non-zero, non-error value. It turns
+// out, this hint is not intended to be authoritative, in the sense that it can be a non-zero,
+// non-error value even though subsequent invocations of `ZSTD_decompressStream` will make no
+// progress.
+class NonZeroHintNonAdvancingZSTDDecompressor : public AbstractZSTDDecompressor {
+ public:
+  NonZeroHintNonAdvancingZSTDDecompressor() = default;
+
+  // AbstractZSTDDecompressor interface.
+  size_t DecompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output,
+                          ZSTD_inBuffer* input) const final {
+    // Do not advance streams, but return non-zero, non-error value.
+    EXPECT_FALSE(ZSTD_isError(kDecompressStreamReturn));
+    return kDecompressStreamReturn;
+  }
+
+ private:
+  static const size_t kDecompressStreamReturn = 1;
+};
+
+// Regression test for fxb/44603.
+// This test prevents regressing to the following *incorrect* logic:
+//
+//     do { ... r = ZSTD_decompressStream(...) ... } while (r != 0);
+//
+// The value of `r`, when not an error code, is a hint at the size of the next chunk to pass to
+// `ZSTD_decompressStream`. Sometimes, this value is non-zero even though invoking
+// `ZSTD_decompressStream` again will make no progress, inducing an infinite loop.
+// See fxb/44603 for details.
+TEST(CompressorTests, DecompressZSTDNonZeroNonAdvancing) {
+  constexpr size_t kCompressedSize = 1;
+  constexpr size_t kUncompressedSize = 2;
+  uint8_t compressed_buf[kCompressedSize] = {0x00};
+  uint8_t uncompressed_buf[kUncompressedSize] = {0x00, 0x00};
+  size_t compressed_size = kCompressedSize;
+  size_t uncompressed_size = kUncompressedSize;
+  NonZeroHintNonAdvancingZSTDDecompressor decompressor;
+  ASSERT_OK(decompressor.Decompress(uncompressed_buf, &uncompressed_size, compressed_buf,
+                                    &compressed_size));
 }
 
 }  // namespace

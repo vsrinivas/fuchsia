@@ -21,6 +21,52 @@ namespace blobfs {
 
 constexpr int kCompressionLevel = 3;
 
+zx_status_t AbstractZSTDDecompressor::Decompress(void* target_buf, size_t* target_size,
+                                                 const void* src_buf, size_t* src_size) {
+  TRACE_DURATION("blobfs", "ZSTDDecompress", "target_size", *target_size, "src_size", *src_size);
+  ZSTD_DStream* stream = ZSTD_createDStream();
+  auto cleanup = fbl::MakeAutoCall([&stream] { ZSTD_freeDStream(stream); });
+
+  size_t r = ZSTD_initDStream(stream);
+  if (ZSTD_isError(r)) {
+    FS_TRACE_ERROR("[blobfs][zstd] Failed to initialize dstream: %s\n", ZSTD_getErrorName(r));
+    return ZX_ERR_INTERNAL;
+  }
+
+  ZSTD_inBuffer input;
+  input.src = src_buf;
+  input.size = *src_size;
+  input.pos = 0;
+
+  ZSTD_outBuffer output;
+  output.dst = target_buf;
+  output.size = *target_size;
+  output.pos = 0;
+
+  size_t prev_output_pos = 0;
+  r = 0;
+  do {
+    prev_output_pos = output.pos;
+    r = DecompressStream(stream, &output, &input);
+    if (ZSTD_isError(r)) {
+      FS_TRACE_ERROR("[blobfs][zstd] Failed to decompress: %s\n", ZSTD_getErrorName(r));
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+    // Halt decompression when no more progress is being made (or can be made) on the output buffer.
+    // Unfortunately, the return value from `ZSTD_decompressStream` cannot be used for this purpose.
+    // Paraphrasing from zstd documentation, the return value is one of:
+    //   a) 0, indicating that zstd just finished decompressing an entire _frame_ (but not
+    //      necessarily the entire archive),
+    //   b) an error code (handled by `ZSTD_isError` check above), or
+    //   c) suggested next input size, which is _just a hint for better latency_.
+    // None of these provides a difinitive signal that the entire archive has been decompressed.
+  } while (output.pos < output.size && prev_output_pos != output.pos);
+
+  *src_size = input.pos;
+  *target_size = output.pos;
+  return ZX_OK;
+}
+
 ZSTDCompressor::ZSTDCompressor(ZSTD_CCtx* stream, void* compressed_buffer,
                                size_t compressed_buffer_length)
     : stream_(stream) {
@@ -102,48 +148,15 @@ zx_status_t ZSTDCompressor::End() {
 
 size_t ZSTDCompressor::Size() const { return output_.pos; }
 
+size_t ZSTDDecompressor::DecompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output,
+                                          ZSTD_inBuffer* input) const {
+  return ZSTD_decompressStream(zds, output, input);
+}
+
 zx_status_t ZSTDDecompress(void* target_buf, size_t* target_size, const void* src_buf,
                            size_t* src_size) {
-  TRACE_DURATION("blobfs", "ZSTDDecompress", "target_size", *target_size, "src_size", *src_size);
-  ZSTD_DStream* stream = ZSTD_createDStream();
-  auto cleanup = fbl::MakeAutoCall([&stream] { ZSTD_freeDStream(stream); });
-
-  size_t r = ZSTD_initDStream(stream);
-  if (ZSTD_isError(r)) {
-    FS_TRACE_ERROR("[blobfs][zstd] Failed to initialize dstream: %s\n", ZSTD_getErrorName(r));
-    return ZX_ERR_INTERNAL;
-  }
-
-  // Passing zero length buffers to ZSTD_decompress will cause an infinite loop.
-  if (*src_size == 0 || *target_size == 0) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  ZSTD_inBuffer input;
-  input.src = src_buf;
-  input.size = *src_size;
-  input.pos = 0;
-
-  ZSTD_outBuffer output;
-  output.dst = target_buf;
-  output.size = *target_size;
-  output.pos = 0;
-
-  r = 0;
-  do {
-    r = ZSTD_decompressStream(stream, &output, &input);
-    if (ZSTD_isError(r)) {
-      FS_TRACE_ERROR("[blobfs][zstd] Failed to decompress: %s\n", ZSTD_getErrorName(r));
-      return ZX_ERR_IO_DATA_INTEGRITY;
-    }
-    // Paraphrasing from the ZSTD Documentation:
-    // For any return value > 0, there is still decoding or flushing to do
-    // within the current frame. The return value is a hint for the next input size.
-  } while (r > 0);
-
-  *src_size = input.pos;
-  *target_size = output.pos;
-  return ZX_OK;
+  ZSTDDecompressor decompressor;
+  return decompressor.Decompress(target_buf, target_size, src_buf, src_size);
 }
 
 }  // namespace blobfs

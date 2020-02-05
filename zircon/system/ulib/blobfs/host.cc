@@ -46,7 +46,7 @@ namespace {
 // TODO(markdittmer): Abstract choice of host compressor, decompressor and metadata flag to support
 // choosing from multiple strategies.
 using HostCompressor = ZSTDCompressor;
-const auto HostDecompressor = ZSTDDecompress;
+auto HostDecompressor = ZSTDDecompress;
 constexpr uint32_t kBlobFlagCompressed = kBlobFlagZSTDCompressed;
 
 zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {

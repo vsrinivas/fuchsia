@@ -38,8 +38,37 @@ class ZSTDCompressor : public Compressor {
   ZSTD_outBuffer output_ = {};
 };
 
-// Decompress the source buffer into the target buffer, until either the source is drained or
-// the target is filled (or both).
+class AbstractZSTDDecompressor {
+ public:
+  AbstractZSTDDecompressor() = default;
+  AbstractZSTDDecompressor(const AbstractZSTDDecompressor&) = delete;
+  AbstractZSTDDecompressor& operator=(const AbstractZSTDDecompressor&) = delete;
+  virtual ~AbstractZSTDDecompressor() {}
+
+  // Decompress the source buffer into the target buffer, until either the source is drained or
+  // the target is filled (or both). Internally invokes `DecompressStream` to perform streaming
+  // decompression.
+  zx_status_t Decompress(void* target_buf, size_t* target_size, const void* src_buf,
+                         size_t* src_size);
+
+ private:
+  virtual size_t DecompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output,
+                                  ZSTD_inBuffer* input) const = 0;
+};
+
+class ZSTDDecompressor : public AbstractZSTDDecompressor {
+ public:
+  ZSTDDecompressor() = default;
+
+  // AbstractZSTDDecompressor interface.
+  size_t DecompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output,
+                          ZSTD_inBuffer* input) const final;
+
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ZSTDDecompressor);
+};
+
+// Production implementation of `DoZSTDDecompress(ZSTDDecompressor{}, ...)`.
 zx_status_t ZSTDDecompress(void* target_buf, size_t* target_size, const void* src_buf,
                            size_t* src_size);
 
