@@ -291,6 +291,10 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				var batch []FifoEntry
 				c.tx.mu.Lock()
 				for {
+					if c.tx.mu.detached {
+						c.tx.mu.Unlock()
+						return nil
+					}
 					if batchSize := len(scratch) - (len(c.tx.mu.storage) - c.tx.mu.available); batchSize != 0 {
 						if c.tx.mu.queued != 0 {
 							// We have queued packets.
