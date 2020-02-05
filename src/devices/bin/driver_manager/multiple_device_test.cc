@@ -21,6 +21,7 @@ TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   zx_txid_t txid;
   // The child should be unbound first.
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(device(child_index)->controller_remote, &txid));
+  coordinator_loop()->RunUntilIdle();
 
   const uint32_t flags = DEVICE_SUSPEND_FLAG_POWEROFF;
   ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
@@ -36,9 +37,9 @@ TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
 
   // The suspend task should complete but not send a suspend message.
   ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->controller_remote));
-
   ASSERT_NO_FATAL_FAILURES(
       CheckSuspendReceivedAndReply(platform_bus_controller_remote(), flags, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
 }
 
 TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
@@ -67,9 +68,8 @@ TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
   ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(child_index)->controller_remote, ZX_OK, txid));
   coordinator_loop()->RunUntilIdle();
 
-  // The parent should have started suspending. Don't reply yet.
-  ASSERT_NO_FATAL_FAILURES(
-      CheckSuspendReceived(device(parent_index)->controller_remote, flags, &txid));
+  // The parent should not have received a suspend. It is in process of removal.
+  ASSERT_FALSE(DeviceHasPendingMessages(device(parent_index)->controller_remote));
 
   // Finish unbinding the child.
   ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(device(child_index)->controller_remote));
@@ -77,12 +77,9 @@ TEST_F(MultipleDeviceTestCase, SuspendThenUnbind) {
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(child_index)->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  // Finish suspending the parent.
-  ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(parent_index)->controller_remote, ZX_OK, txid));
-  coordinator_loop()->RunUntilIdle();
-
   ASSERT_NO_FATAL_FAILURES(
       CheckSuspendReceivedAndReply(platform_bus_controller_remote(), flags, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
 
   // The parent should now be removed.
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(parent_index)->controller_remote));

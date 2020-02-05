@@ -6,6 +6,19 @@
 
 #include "coordinator.h"
 
+namespace {
+
+bool IsDeviceBeingRemoved(fbl::RefPtr<Device> device) {
+  auto remove_task = device->GetActiveRemove();
+  if ((device->state() == Device::State::kUnbinding) || (device->state() == Device::State::kDead) ||
+      (remove_task != nullptr)) {
+    return true;
+  }
+  return false;
+}
+
+}  // namespace
+
 SuspendTask::SuspendTask(fbl::RefPtr<Device> device, uint32_t flags, Completion completion)
     : Task(device->coordinator->dispatcher(), std::move(completion)),
       device_(std::move(device)),
@@ -26,19 +39,20 @@ void SuspendTask::Run() {
     switch (child.state()) {
       // If the device is dead, any existing suspend task would have been forcibly completed.
       case Device::State::kDead:
+      case Device::State::kUnbinding:
       case Device::State::kSuspended:
         continue;
       case Device::State::kInitializing:
-      case Device::State::kUnbinding:
       case Device::State::kSuspending:
       case Device::State::kActive:
       case Device::State::kResuming:
       case Device::State::kResumed:
         break;
     }
-
-    AddDependency(child.RequestSuspendTask(flags_));
-    found_more_dependencies = true;
+    if (!IsDeviceBeingRemoved(fbl::RefPtr(&child))) {
+      AddDependency(child.RequestSuspendTask(flags_));
+      found_more_dependencies = true;
+    }
   }
   if (found_more_dependencies) {
     return;
@@ -70,13 +84,9 @@ void SuspendTask::Run() {
     return;
   }
 
-  // The device is about to be unbound, wait for it to complete.
-  if (device_->state() == Device::State::kUnbinding) {
-    // The remove task depends on the unbind task, so wait for that to complete.
-    auto remove_task = device_->GetActiveRemove();
-    ZX_ASSERT(remove_task != nullptr);
-    AddDependency(remove_task);
-    return;
+  // The device is about to be removed, complete suspend right away
+  if (IsDeviceBeingRemoved(device_)) {
+    return Complete(ZX_OK);
   }
 
   // The device is about to be resumed, wait for it to complete.
