@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 
+#include "command_buffer.h"
 #include "instructions.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
@@ -563,12 +564,12 @@ bool MsdVslDevice::LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr,
   return true;
 }
 
-bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
-                                    uint16_t link_prefetch, uint32_t link_addr) {
+bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t write_offset,
+                                    uint32_t length, uint16_t link_prefetch, uint32_t link_addr) {
   // Check if we have enough space for the LINK command.
   uint32_t link_instr_size = kInstructionDwords * sizeof(uint32_t);
 
-  if (buf->size() < length + link_instr_size) {
+  if (buf->size() < write_offset + link_instr_size) {
     return DRETF(false, "Buffer does not have %d free bytes for ringbuffer LINK", link_instr_size);
   }
 
@@ -578,7 +579,7 @@ bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
     return DRETF(false, "Failed to map command buffer");
   }
 
-  BufferWriter buf_writer(buf_cpu_addr, buf->size(), length);
+  BufferWriter buf_writer(buf_cpu_addr, buf->size(), write_offset);
   MiLink::write(&buf_writer, link_prefetch, link_addr);
   if (!buf->UnmapCpu()) {
     return DRETF(false, "Failed to unmap command buffer");
@@ -592,9 +593,8 @@ bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
 //  3) modify the penultimate WAIT in the ringbuffer to LINK to the command buffer
 bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
                                        uint32_t address_space_index,
-                                       magma::PlatformBuffer* buf,
                                        std::unique_ptr<MappedBatch> mapped_batch,
-                                       uint32_t event_id, uint16_t* prefetch_out) {
+                                       uint32_t event_id) {
   // Check if we have loaded an address space and enabled the MMU.
   if (!page_table_arrays_->IsEnabled(register_io())) {
     if (!LoadInitialAddressSpace(address_space, address_space_index)) {
@@ -627,9 +627,13 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   const uint16_t kRbPrefetch = 3;
   uint32_t prev_wait_link = ringbuffer_->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
 
-  if (buf) {
+  if (mapped_batch->IsCommandBuffer()) {
+    auto* command_buf = reinterpret_cast<CommandBuffer*>(mapped_batch.get());
+    magma::PlatformBuffer* buf = command_buf->GetBatchBuffer();
+    uint32_t write_offset = command_buf->GetBatchBufferWriteOffset();
+
     // Write a LINK at the end of the command buffer that links back to the ringbuffer.
-    if (!WriteLinkCommand(buf, length, kRbPrefetch,
+    if (!WriteLinkCommand(buf, write_offset, length, kRbPrefetch,
                           static_cast<uint32_t>(rb_gpu_addr + ringbuffer_->tail()))) {
       return DRETF(false, "Failed to write LINK from command buffer to ringbuffer");
     }
@@ -644,10 +648,6 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   uint32_t prefetch = magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t);
   if (prefetch & 0xFFFF0000)
     return DRETF(false, "Can't submit length %u (prefetch 0x%x)", length, prefetch);
-
-  if (prefetch_out) {
-    *prefetch_out = prefetch & 0xFFFF;
-  }
 
   // Write the new commands to the end of the ringbuffer.
   // Add an EVENT to the end to the ringbuffer.
@@ -690,13 +690,8 @@ magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
     // TODO(fxb/39354): queue the buffer to try again after an interrupt completes.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "No events remaining");
   }
-  magma::PlatformBuffer* buf = nullptr;
-  if (batch->IsCommandBuffer()) {
-    // TODO(fxb/39354): handle command buffers.
-    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "Command buffers not yet handled");
-  }
-  if (!SubmitCommandBuffer(address_space, address_space->page_table_array_slot(), buf,
-                           std::move(batch), event_id, nullptr /* prefetch_out */)) {
+  if (!SubmitCommandBuffer(address_space, address_space->page_table_array_slot(),
+                           std::move(batch), event_id)) {
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to submit command buffer");
   }
 

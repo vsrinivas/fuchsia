@@ -33,6 +33,7 @@ source_set("hardware_tests") {
 
   sources = [
     "//third_party/etnaviv_gpu_tests/src/etnaviv_cl_test_gc7000.c",
+    "test_command_buffer.cc",
     "test_device.cc",
     "test_events.cc",
     "test_memory_write.cc",
@@ -40,6 +41,7 @@ source_set("hardware_tests") {
 
   deps = [
     "../../src",
+    "//src/graphics/lib/magma/src/magma_util:mapped_batch",
     "//src/graphics/lib/magma/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",
   ]

@@ -11,6 +11,8 @@ int etnaviv_cl_test_gc7000(int argc, char* argv[]);
 #include <thread>
 
 #include "garnet/drivers/gpu/msd-vsl-gc/src/address_space.h"
+#include "garnet/drivers/gpu/msd-vsl-gc/src/command_buffer.h"
+#include "garnet/drivers/gpu/msd-vsl-gc/src/gpu_mapping.h"
 #include "garnet/drivers/gpu/msd-vsl-gc/src/instructions.h"
 #include "garnet/drivers/gpu/msd-vsl-gc/src/msd_vsl_device.h"
 #include "garnet/drivers/gpu/msd-vsl-gc/tests/mock/mock_mapped_batch.h"
@@ -49,12 +51,16 @@ class TestMsdVslDevice : public drm_test_info {
     device_.msd_vsl_device->page_table_arrays()->AssignAddressSpace(kAddressSpaceIndex,
                                                                     address_space_.get());
 
+    std::weak_ptr<MsdVslConnection> connection;
+    context_ = std::make_shared<MsdVslContext>(connection, address_space_);
+    EXPECT_NE(context_, nullptr);
+
     command_stream_.etna_buffer =
         static_cast<EtnaBuffer*>(etna_bo_new(this->dev, PAGE_SIZE, DRM_ETNA_GEM_CACHE_UNCACHED));
     if (!command_stream_.etna_buffer)
       return DRETF(false, "failed to get command stream buffer");
 
-    if (!command_stream_.etna_buffer->buffer->MapCpu(
+    if (!command_stream_.etna_buffer->msd_buffer->platform_buffer()->MapCpu(
             reinterpret_cast<void**>(&command_stream_.cmd_ptr)))
       return DRETF(false, "failed to map cmd_ptr");
 
@@ -83,8 +89,7 @@ class TestMsdVslDevice : public drm_test_info {
   };
 
   struct EtnaBuffer : public etna_bo {
-    std::unique_ptr<magma::PlatformBuffer> buffer;
-    std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping;
+    std::shared_ptr<MsdVslBuffer> msd_buffer;
     uint32_t gpu_addr = 0xFAFAFAFA;
   };
 
@@ -110,13 +115,41 @@ class TestMsdVslDevice : public drm_test_info {
   bool FreeInterruptEvent(uint32_t id) { return device_.msd_vsl_device->FreeInterruptEvent(id); }
 
   bool SubmitCommandBuffer(TestMsdVslDevice::EtnaBuffer* etna_buf, uint32_t length,
-                           uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal,
-                           uint16_t* prefetch_out) {
-    auto mapped_batch =
-        std::make_unique<MockMappedBatch>(etna_buf->gpu_addr, length, std::move(signal));
-    return device_.msd_vsl_device->SubmitCommandBuffer(
-        address_space_, kAddressSpaceIndex, etna_buf->buffer.get(), std::move(mapped_batch),
-        event_id, prefetch_out);
+                           std::shared_ptr<magma::PlatformSemaphore> signal) {
+    auto command_buffer = std::make_unique<magma_system_command_buffer>(magma_system_command_buffer{
+      .batch_buffer_resource_index = 0,
+      .batch_start_offset = 0,
+      .num_resources = 1,
+      .wait_semaphore_count = 0,
+      .signal_semaphore_count = 1,
+    });
+    auto batch = std::make_unique<CommandBuffer>(context_, 0, std::move(command_buffer));
+    EXPECT_NE(batch, nullptr);
+
+    std::vector<CommandBuffer::ExecResource> resources;
+    resources.emplace_back(CommandBuffer::ExecResource{
+      .buffer = etna_buf->msd_buffer,
+      .offset = 0,
+      .length = length
+    });
+
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
+    signal_semaphores.emplace_back(signal);
+    if (!batch->InitializeResources(std::move(resources), std::move(wait_semaphores),
+                                    std::move(signal_semaphores))) {
+      return DRETF(false, "failed to initialize command buffer resources");
+    }
+    if (!batch->PrepareForExecution()) {
+      return DRETF(false, "failed to prepare command buffer for execution");
+    }
+    if (!batch->IsValidBatchBuffer()) {
+      return DRETF(false, "failed to validate batch buffer");
+    }
+    if (!device_.msd_vsl_device->SubmitBatch(std::move(batch)).ok()) {
+      return DRETF(false, "failed to submit batch");
+    }
+    return true;
   }
 
   uint32_t next_gpu_addr(uint32_t size) {
@@ -142,6 +175,7 @@ class TestMsdVslDevice : public drm_test_info {
   EtnaDevice device_;
   EtnaCommandStream command_stream_;
 
+  std::shared_ptr<MsdVslContext> context_;
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   std::shared_ptr<AddressSpace> address_space_;
   uint32_t next_gpu_addr_ = 0x10000;
@@ -202,26 +236,31 @@ struct etna_bo* etna_bo_new(void* dev, uint32_t size, uint32_t flags) {
   DLOG("bo new size %u flags 0x%x", size, flags);
   auto etna_buffer = std::make_unique<TestMsdVslDevice::EtnaBuffer>();
 
-  etna_buffer->buffer = magma::PlatformBuffer::Create(size, "EtnaBuffer");
-  if (!etna_buffer->buffer)
+  std::unique_ptr<magma::PlatformBuffer> buffer =
+      magma::PlatformBuffer::Create(size, "EtnaBuffer");
+  if (!buffer)
     return DRETP(nullptr, "failed to alloc buffer size %u", size);
 
   if (flags & DRM_ETNA_GEM_CACHE_UNCACHED)
-    etna_buffer->buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING);
+    buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING);
 
   auto etna_device = static_cast<TestMsdVslDevice::EtnaDevice*>(dev);
-  uint32_t page_count = etna_buffer->buffer->size() / PAGE_SIZE;
+  uint32_t page_count = buffer->size() / PAGE_SIZE;
 
-  etna_buffer->bus_mapping =
-      etna_device->test->GetBusMapper()->MapPageRangeBus(etna_buffer->buffer.get(), 0, page_count);
-  if (!etna_buffer->bus_mapping)
-    return DRETP(nullptr, "failed to bus map buffer");
+  etna_buffer->gpu_addr = etna_device->test->next_gpu_addr(buffer->size());
 
-  etna_buffer->gpu_addr = etna_device->test->next_gpu_addr(etna_buffer->buffer->size());
+  etna_buffer->msd_buffer = std::make_unique<MsdVslBuffer>(std::move(buffer));
 
-  if (!etna_device->test->address_space()->Insert(etna_buffer->gpu_addr,
-                                                  etna_buffer->bus_mapping.get()))
-    return DRETP(nullptr, "couldn't insert into address space");
+  std::shared_ptr<GpuMapping> gpu_mapping;
+  magma::Status status = AddressSpace::MapBufferGpu(etna_device->test->address_space(),
+     etna_buffer->msd_buffer, etna_buffer->gpu_addr, 0, page_count, &gpu_mapping);
+
+  if (!status.ok()) {
+     return DRETP(nullptr, "failed to map buffer");
+  }
+
+  if (!etna_device->test->address_space()->AddMapping(gpu_mapping))
+    return DRETP(nullptr, "couldn't add mapping to address space");
 
   return etna_buffer.release();
 }
@@ -229,7 +268,7 @@ struct etna_bo* etna_bo_new(void* dev, uint32_t size, uint32_t flags) {
 void* etna_bo_map(struct etna_bo* bo) {
   DLOG("bo map %p", bo);
   void* addr;
-  if (!static_cast<TestMsdVslDevice::EtnaBuffer*>(bo)->buffer->MapCpu(&addr))
+  if (!static_cast<TestMsdVslDevice::EtnaBuffer*>(bo)->msd_buffer->platform_buffer()->MapCpu(&addr))
     return DRETP(nullptr, "Failed to map etna buffer");
   DLOG("bo map returning %p", addr);
   return addr;
@@ -262,21 +301,14 @@ void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {
   auto cmd_stream = static_cast<TestMsdVslDevice::EtnaCommandStream*>(stream);
 
   uint32_t length = cmd_stream->index * sizeof(uint32_t);
-  uint16_t prefetch = 0;
 
   DLOG("etna_cmd_stream_finish length %u", length);
 
-  uint32_t event_id;
-  EXPECT_TRUE(cmd_stream->test->AllocInterruptEvent(&event_id));
   auto semaphore = magma::PlatformSemaphore::Create();
   EXPECT_NE(semaphore, nullptr);
 
   EXPECT_TRUE(cmd_stream->test->SubmitCommandBuffer(cmd_stream->etna_buffer, length,
-                                                    event_id, semaphore->Clone(), &prefetch));
-  // The prefetch should be 1 longer than expected, as the driver inserts an additional
-  // LINK at the end.
-  EXPECT_EQ((magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t)) + 1, prefetch);
-
+                                                    semaphore->Clone()));
   auto start = std::chrono::high_resolution_clock::now();
 
   // When the command buffer completes, we expect to return back to the next WAIT-LINK
@@ -308,6 +340,4 @@ void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {
         registers::MmuSecureExceptionAddress::Get().ReadFrom(cmd_stream->test->register_io());
     EXPECT_EQ(0u, reg.reg_value());
   }
-
-  EXPECT_TRUE(cmd_stream->test->FreeInterruptEvent(event_id));
 }

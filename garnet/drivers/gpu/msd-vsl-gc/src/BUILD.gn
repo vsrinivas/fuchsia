@@ -9,6 +9,7 @@ source_set("src") {
   sources = [
     "address_space.cc",
     "address_space.h",
+    "command_buffer.h",
     "device_request.h",
     "gpu_mapping.h",
     "mapped_batch.h",

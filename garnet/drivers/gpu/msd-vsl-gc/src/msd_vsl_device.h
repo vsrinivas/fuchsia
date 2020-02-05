@@ -107,7 +107,7 @@ class MsdVslDevice : public msd_device_t,
   bool LinkRingbuffer(uint32_t wait_link_offset, uint32_t gpu_addr, uint32_t dest_prefetch);
 
   // Writes a LINK command at the end of the given buffer.
-  bool WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
+  bool WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t write_offset, uint32_t length,
                         uint16_t prefetch, uint32_t link_addr);
 
   // Returns whether the device became idle before |timeout_ms| elapsed.
@@ -120,9 +120,8 @@ class MsdVslDevice : public msd_device_t,
                                 uint16_t* prefetch_out = nullptr);
   bool SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
                            uint32_t address_space_index,
-                           magma::PlatformBuffer* buf,
                            std::unique_ptr<MappedBatch> mapped_batch,
-                           uint32_t event_id, uint16_t* prefetch_out);
+                           uint32_t event_id);
 
   magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch);
 
@@ -175,6 +174,8 @@ class MsdVslDevice : public msd_device_t,
   std::mutex events_mutex_;
 
   friend class TestMsdVslDevice;
+  friend class TestCommandBuffer;
+  friend class TestCommandBuffer_SubmitBatchWithOffset_Test;
   friend class TestEvents;
   friend class TestEvents_AllocAndFree_Test;
   friend class TestEvents_Submit_Test;
