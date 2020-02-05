@@ -301,7 +301,6 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
 
 void ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                       const InheritancePath& path, fit::callback<void(ErrOrValue)> cb) {
-  // We expect
   auto final_type = path.base_ref();
 
   // Most cases have a constant offset and we can do that right away.
@@ -326,7 +325,7 @@ void ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& 
         auto concrete = context->GetConcreteType(final_type.get());
         uint32_t size = concrete->byte_size();
         if (base_ptr.value() >= object_ptr &&
-            (base_ptr.value() - object_ptr + size < value.data().size())) {
+            (base_ptr.value() - object_ptr + size <= value.data().size())) {
           return cb(ExtractSubType(context, value, final_type, base_ptr.value() - object_ptr));
         }
 
@@ -378,12 +377,13 @@ void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer 
           first_from->location_expression(),
           [dwarf_eval, context, remaining = std::move(remaining), cb = std::move(cb)](
               DwarfExprEval*, const Err& err) mutable {
-            if (err.has_error())
-              return cb(err);
-
-            // Continue resolution on any remaining inheritance steps.
-            ResolveInheritedPtr(context, static_cast<TargetPointer>(dwarf_eval->GetResult()),
-                                remaining, std::move(cb));
+            if (err.has_error()) {
+              cb(err);
+            } else {
+              // Continue resolution on any remaining inheritance steps.
+              ResolveInheritedPtr(context, static_cast<TargetPointer>(dwarf_eval->GetResult()),
+                                  remaining, std::move(cb));
+            }
 
             // Prevent the DwarfExprEval from getting deleted from its own stack.
             debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,

@@ -378,6 +378,13 @@ TEST_F(ResolveCollectionTest, BaseClass) {
 }
 
 // Like BaseClass but using virtual inheritance. This data was copied from a test program.
+//
+// This test does its own setup instead of using the VirtualInheritanceTestSetup. That helper could
+// be used which would save some setup here. They're different partially because they were written
+// at different times and express slightly different hierarchy. But they're also different because
+// this version encodes how Clang represents virtual inheritance expressions, and the
+// VirtualBaseTestSetup does GCC's style which is slightly different. There is value in testing
+// both versions.
 TEST_F(ResolveCollectionTest, VirtualInheritance) {
   // This is the vtable information (from the ELF file).
   constexpr uint64_t kVtableAddress = 0x70f355000;

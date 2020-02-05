@@ -235,11 +235,11 @@ bool TypesAreBinaryCoercable(const Type* a, const Type* b) {
 }
 
 // Checks whether the two input types have the specified base/derived relationship (this does not
-// check for a relationship going in the opposite direction). If so, returns the offset of the base
-// class in the derived class. If not, returns an empty optional.
+// check for a relationship going in the opposite direction). If so, returns the path from derived
+// to base. If not, returns an empty optional.
 //
 // The two types must have c-v qualifiers stripped.
-std::optional<uint64_t> GetDerivedClassOffset(const Type* base, const Type* derived) {
+std::optional<InheritancePath> GetDerivedClassPath(const Type* base, const Type* derived) {
   const Collection* derived_collection = derived->AsCollection();
   if (!derived_collection)
     return std::nullopt;
@@ -249,11 +249,10 @@ std::optional<uint64_t> GetDerivedClassOffset(const Type* base, const Type* deri
     return std::nullopt;
   std::string base_name = base_collection->GetFullName();
 
-  std::optional<uint64_t> result;
+  std::optional<InheritancePath> result;
   VisitClassHierarchy(derived_collection, [&result, &base_name](const InheritancePath& path) {
     if (path.base()->GetFullName() == base_name) {
-      // TODO(bug 41503) handle non-constant offsets.
-      result = path.BaseOffsetInDerived();
+      result = path;
       return VisitResult::kDone;
     }
     return VisitResult::kContinue;
@@ -327,24 +326,35 @@ void StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context, const 
     return cb(CastIntToInt(source, concrete_from, dest_type, dest_source));
   }
 
-  if (auto found_offset = GetDerivedClassOffset(refed_to.get(), refed_from.get())) {
-    // Convert derived class ref/ptr to base class ref/ptr. This requires adjusting the pointer to
-    // point to where the base class is inside of the derived class.
-
+  if (auto found_path = GetDerivedClassPath(refed_to.get(), refed_from.get())) {
     // The 64-bit-edness of both pointers was checked above.
     uint64_t ptr_value = source.GetAs<uint64_t>();
-    ptr_value += *found_offset;
-
-    return cb(ExprValue(ptr_value, dest_type, dest_source));
+    ResolveInheritedPtr(eval_context, ptr_value, *found_path,
+                        [dest_type, cb = std::move(cb)](ErrOr<TargetPointer> result) mutable {
+                          if (result.has_error())
+                            cb(result.err());
+                          else
+                            cb(ExprValue(result.value(), dest_type));
+                        });
+    return;
   }
 
   if (cast_pointer == kAllowBaseToDerived) {
     // The reverse of the above case. This is used when the user knows a base class
     // pointer/reference actually points to a specific derived class.
-    if (auto found_offset = GetDerivedClassOffset(refed_from.get(), refed_to.get())) {
-      uint64_t ptr_value = source.GetAs<uint64_t>();
-      ptr_value -= *found_offset;
-      return cb(ExprValue(ptr_value, dest_type, dest_source));
+    if (auto found_path = GetDerivedClassPath(refed_from.get(), refed_to.get())) {
+      if (std::optional<uint32_t> found_offset = found_path->BaseOffsetInDerived()) {
+        // Adjust the pointer based on the offset of the base class in the derived one. The
+        // 64-bit-edness of both pointers was checked above.
+        uint64_t ptr_value = source.GetAs<uint64_t>();
+        ptr_value -= *found_offset;
+        return cb(ExprValue(ptr_value, dest_type, dest_source));
+      } else {
+        // Can't statically upcast from a virtually-derived base class because there's no
+        // constant offset and the DWARF expressions only go in the derived->base direction.
+        return cb(Err("Can't upcast from the virtually-derived base class '%s' to '%s'.",
+                      concrete_from->GetFullName().c_str(), concrete_to->GetFullName().c_str()));
+      }
     }
   }
 
@@ -457,12 +467,11 @@ void ImplicitCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue&
 
   // Conversions to base classes (on objects, not on pointers or references). e.g. "foo = bar" where
   // foo's type is a base class of bar's.
-  if (auto found_offset = GetDerivedClassOffset(concrete_to.get(), concrete_from.get())) {
+  if (auto found_path = GetDerivedClassPath(concrete_to.get(), concrete_from.get())) {
     // Ignore the dest_source. ResolveInherited is extracting data from inside the source object
     // which has a well-defined source location (unlike for all other casts that change the data so
     // there isn't so clear a source).
-    // TODO(brettw) use the asynchronous version instead.
-    return cb(ResolveInherited(eval_context, source, dest_type, *found_offset));
+    return ResolveInherited(eval_context, source, *found_path, std::move(cb));
   }
 
   cb(Err("Can't cast from '%s' to '%s'.", source.type()->GetFullName().c_str(),

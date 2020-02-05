@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/expr/eval_test_support.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/expr/virtual_inheritance_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
@@ -371,6 +372,45 @@ TEST_F(Cast, C) {
   // Can't cast from a ptr to a ref.
   out = SyncCastExprValue(eval_context, CastType::kC, ptr_value, d.base2_ref_type);
   EXPECT_TRUE(out.has_error());
+}
+
+// Casting a pointer when there is virtual inheritance means evaluating a DWARF expression and
+// fetching a bunch of memory to adjust the pointers.
+//
+// Note that virtual inheritance isn't inheritance with virtual methods, but rather:
+//
+//   class Derived : public virtual Base {};
+//
+// And this means that Base is accessed indirectly from a pointer in Derived, usually so that
+// diamond inheritance can be resolved. See resolve_collection_unittest.cc for more virtual
+// inheritance tests.
+TEST_F(Cast, StaticCastVirtualInheritance) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  VirtualInheritanceTestSetup setup(eval_context.get());
+  setup.SaveMockData(eval_context->data_provider());
+
+  // Casing from "derived" to "base" covers two regular and one virtual inheritance step. This is
+  // the cast for literal objects.
+  ErrOrValue result =
+      SyncCastExprValue(eval_context, CastType::kStatic, setup.derived_value, setup.base);
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(setup.base.get(), result.value().type());
+  EXPECT_EQ(setup.kBaseAddress, result.value().source().address());
+
+  // The data of the base is the last 4 bytes of the full derived data.
+  std::vector<uint8_t> expected_base_data(setup.derived_value.data().end() - 4,
+                                          setup.derived_value.data().end());
+  EXPECT_EQ(expected_base_data, result.value().data());
+
+  // Now do a cast of pointers with the same thing.
+  auto base_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, setup.base);
+  auto derived_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, setup.derived);
+  ExprValue derived_ptr(setup.kDerivedAddress, derived_ptr_type);
+  result = SyncCastExprValue(eval_context, CastType::kStatic, derived_ptr, base_ptr_type);
+
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(base_ptr_type.get(), result.value().type());
+  EXPECT_EQ(setup.kBaseAddress, result.value().GetAs<uint64_t>());
 }
 
 }  // namespace zxdb

@@ -152,8 +152,11 @@ source_set("tests") {
     "vector_register_format_unittest.cc",
     "virtual_base_test_setup.cc",
     "virtual_base_test_setup.h",
+    "virtual_inheritance_test_setup.cc",
+    "virtual_inheritance_test_setup.h",
   ]
 
+  # Note: this should not depend on client/ or console/ libraries, including their test_support.
   deps = [
     ":expr",
     ":test_support",
