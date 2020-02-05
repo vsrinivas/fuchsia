@@ -792,6 +792,60 @@ const uint16 Result = MyBits.A | MyBits.B | MyBits.D;
   END_TEST;
 }
 
+bool InvalidEnumMemberTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum EnumType : int32 {
+    A = 0x00000001;
+    B = 0x80;
+    C = 0x2;
+};
+
+const EnumType dee = EnumType.D;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 2);
+  ASSERT_STR_STR(errors[0].c_str(), "unknown enum member");
+  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+
+  END_TEST;
+}
+
+bool InvalidBitsMemberTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+bits BitsType {
+    A = 2;
+    B = 4;
+    C = 8;
+};
+
+const BitsType dee = BitsType.D;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 2);
+  ASSERT_STR_STR(errors[0].c_str(), "unknown bits member");
+  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(consts_tests)
@@ -854,5 +908,8 @@ RUN_TEST(BadConstTestAssignTypeName)
 RUN_TEST(GoodMultiFileConstReference)
 
 RUN_TEST(OrOperatorTest)
+
+RUN_TEST(InvalidEnumMemberTest)
+RUN_TEST(InvalidBitsMemberTest)
 
 END_TEST_CASE(consts_tests)

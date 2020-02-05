@@ -2131,6 +2131,11 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
             const_val = &member.value->Value();
           }
         }
+        if (!const_val) {
+          std::ostringstream msg_stream;
+          msg_stream << "unknown enum member";
+          return Fail(identifier_constant->name.span(), msg_stream.str());
+        }
         break;
       }
       __FALLTHROUGH;
@@ -2144,6 +2149,11 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           if (member.name.data() == member_name) {
             const_val = &member.value->Value();
           }
+        }
+        if (!const_val) {
+          std::ostringstream msg_stream;
+          msg_stream << "unknown bits member";
+          return Fail(identifier_constant->name.span(), msg_stream.str());
         }
         break;
       }
