@@ -12,7 +12,6 @@ group("dev") {
     "fw",
     "mlg",
     "pci",
-    "spi",
     "sysmem",
 
     # test/ allows drivers to be used by IsolateDevmgr
