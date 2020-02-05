@@ -121,6 +121,9 @@ void ExceptionBroker::FileCrashReport(ProcessException process_exception) {
   std::string process_name;
   zx::vmo minidump_vmo = GenerateMinidumpVMO(process_exception.exception(), &process_name);
 
+  // There is no need to keep the exception around anymore now that the minidump was created.
+  process_exception.mutable_exception()->reset();
+
   // Create a new connection to the crash reporter and keep track of it.
   uint64_t id = next_connection_id_++;
   auto crash_reporter_ptr = services_->Connect<fuchsia::feedback::CrashReporter>();
