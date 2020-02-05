@@ -38,6 +38,7 @@ func (bkt *GCSBucket) objectExists(ctx context.Context, object string) (bool, er
 func (bkt *GCSBucket) upload(ctx context.Context, object string, r io.Reader) error {
 	wc := bkt.bkt.Object(object).If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	if _, err := io.Copy(wc, r); err != nil {
+		wc.Close()
 		return fmt.Errorf("failed to write object %q: %v", object, err)
 	}
 	// Close completes the write operation and flushes any buffered data.
