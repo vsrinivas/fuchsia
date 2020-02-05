@@ -104,7 +104,7 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
         };
         // on -> off channel
         if from == main_channel && to != main_channel {
-            station.pre_switch_off_channel(self.ctx);
+            station.pre_switch_off_channel(&mut self.ctx);
         }
     }
 
@@ -132,7 +132,7 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
             None => return,
         };
         if from != main_channel && to == main_channel {
-            station.handle_back_on_channel(self.ctx);
+            station.handle_back_on_channel(&mut self.ctx);
         }
     }
 
@@ -154,7 +154,7 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
                     error!("Unable to revert back to main channel {:?}", e);
                 }
                 if let Some(station) = self.station.as_mut() {
-                    station.handle_back_on_channel(self.ctx);
+                    station.handle_back_on_channel(&mut self.ctx);
                 }
             }
             _ => (),
