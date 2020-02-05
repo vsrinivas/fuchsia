@@ -1,0 +1,13 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("ram-crashlog") {
+  sdk = "source"
+  sdk_headers = [ "ram-crashlog/ram-crashlog.h" ]
+  sources = [ "ram-crashlog.cc" ]
+  deps = [ "$zx/third_party/ulib/cksum" ]
+  host = true
+  kernel = true
+  static = true
+}

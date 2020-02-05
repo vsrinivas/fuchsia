@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+#
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":ram-crashlog" ]
+}
+
+test("ram-crashlog") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+
+  sources = [ "ram-crashlog-tests.cc" ]
+
+  deps = [
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/ram-crashlog",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//zircon/public/lib/zxtest" ]
+  } else {
+    deps += [ "//zircon/public/lib/zxtest-host" ]
+  }
+}
+
+migrated_manifest("ram-crashlog-manifest") {
+  deps = [ ":ram-crashlog" ]
+}

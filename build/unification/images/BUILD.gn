@@ -2152,5 +2152,6 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.zxtest-integration-test",
     #":test.sys.zxtest-test",
     "//zircon/system/dev/display/intel-i915:intel-i915-test-manifest",
+    "//zircon/system/ulib/ram-crashlog/test:ram-crashlog-manifest",
   ]
 }

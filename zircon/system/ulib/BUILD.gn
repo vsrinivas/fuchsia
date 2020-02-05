@@ -127,6 +127,7 @@ group("ulib") {
     "perftest",
     "pretty",
     "profile",
+    "ram-crashlog",
     "ramdevice-client",
     "ramdevice-client:ramdevice-client-static",
     "range",
