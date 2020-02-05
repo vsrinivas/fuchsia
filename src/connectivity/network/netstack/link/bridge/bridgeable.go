@@ -8,6 +8,7 @@ import (
 )
 
 var _ stack.LinkEndpoint = (*BridgeableEndpoint)(nil)
+var _ stack.GSOEndpoint = (*BridgeableEndpoint)(nil)
 var _ stack.NetworkDispatcher = (*Endpoint)(nil)
 
 type BridgeableEndpoint struct {
@@ -56,4 +57,11 @@ func (e *BridgeableEndpoint) DeliverNetworkPacket(ep stack.LinkEndpoint, src, ds
 	}
 
 	d.DeliverNetworkPacket(ep, src, dst, protocol, pkt)
+}
+
+func (e *BridgeableEndpoint) GSOMaxSize() uint32 {
+	if e, ok := e.LinkEndpoint.(stack.GSOEndpoint); ok {
+		return e.GSOMaxSize()
+	}
+	return 0
 }

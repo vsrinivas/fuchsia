@@ -11,6 +11,7 @@ import (
 )
 
 var _ stack.LinkEndpoint = (*endpoint)(nil)
+var _ stack.GSOEndpoint = (*Client)(nil)
 var _ stack.NetworkDispatcher = (*endpoint)(nil)
 
 type endpoint struct {
@@ -76,6 +77,13 @@ func (e *endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, 
 		protocol = eth.Type()
 	}
 	e.dispatcher.DeliverNetworkPacket(linkEP, dstLinkAddr, srcLinkAddr, protocol, pkt)
+}
+
+func (e *endpoint) GSOMaxSize() uint32 {
+	if e, ok := e.LinkEndpoint.(stack.GSOEndpoint); ok {
+		return e.GSOMaxSize()
+	}
+	return 0
 }
 
 func NewLinkEndpoint(client *Client) *endpoint {

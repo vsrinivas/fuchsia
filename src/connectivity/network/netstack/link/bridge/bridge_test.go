@@ -391,14 +391,7 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.Netw
 }
 
 func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.PacketBuffer, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
-	var n int
-	for _, pkt := range pkts {
-		if err := e.WritePacket(r, gso, protocol, pkt); err != nil {
-			return n, err
-		}
-		n++
-	}
-	return n, nil
+	panic("not implemented")
 }
 
 func (e *endpoint) WriteRawPacket(packet buffer.VectorisedView) *tcpip.Error {

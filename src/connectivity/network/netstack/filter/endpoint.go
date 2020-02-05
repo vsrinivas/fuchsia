@@ -16,6 +16,7 @@ import (
 )
 
 var _ stack.LinkEndpoint = (*Endpoint)(nil)
+var _ stack.GSOEndpoint = (*Endpoint)(nil)
 var _ stack.NetworkDispatcher = (*Endpoint)(nil)
 
 type Endpoint struct {
@@ -90,4 +91,11 @@ func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts []tcpip.Pac
 		filtered = append(filtered, pkt)
 	}
 	return e.LinkEndpoint.WritePackets(r, gso, filtered, protocol)
+}
+
+func (e *Endpoint) GSOMaxSize() uint32 {
+	if e, ok := e.LinkEndpoint.(stack.GSOEndpoint); ok {
+		return e.GSOMaxSize()
+	}
+	return 0
 }

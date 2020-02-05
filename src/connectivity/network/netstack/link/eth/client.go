@@ -6,6 +6,7 @@ package eth
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"sync"
 	"syscall/zx"
@@ -34,6 +35,7 @@ const FifoEntrySize = C.sizeof_struct_eth_fifo_entry
 var _ link.Controller = (*Client)(nil)
 
 var _ stack.LinkEndpoint = (*Client)(nil)
+var _ stack.GSOEndpoint = (*Client)(nil)
 
 // A Client is an ethernet client.
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
@@ -155,7 +157,7 @@ func (c *Client) MTU() uint32 { return c.Info.Mtu }
 
 func (c *Client) Capabilities() stack.LinkEndpointCapabilities {
 	// TODO(tamird/brunodalbo): expose hardware offloading capabilities.
-	return 0
+	return stack.CapabilitySoftwareGSO
 }
 
 func (c *Client) MaxHeaderLength() uint16 {
@@ -195,7 +197,27 @@ func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
 			entry.length = bufferSize
 			b := c.arena.bufferFromEntry(*entry)
 			used := copy(b, pkt.Header.View())
+			offset := pkt.DataOffset
+			size := pkt.DataSize
+			// Some code paths do not set DataSize; a value of zero means "use all the data provided".
+			if size == 0 {
+				size = pkt.Data.Size()
+			}
 			for _, v := range pkt.Data.Views() {
+				if size == 0 {
+					break
+				}
+				if offset > len(v) {
+					offset -= len(v)
+					continue
+				} else {
+					v = v[offset:]
+					offset = 0
+				}
+				if len(v) > size {
+					v = v[:size]
+				}
+				size -= len(v)
 				used += copy(b[used:], v)
 			}
 			*entry = c.arena.entry(b[:used])
@@ -388,6 +410,11 @@ func (c *Client) IsAttached() bool {
 // goroutine(s) spawned in Attach occurs.
 func (c *Client) Wait() {
 	c.wg.Wait()
+}
+
+func (c *Client) GSOMaxSize() uint32 {
+	// There's no limit on how much data we can take in a single software GSO write.
+	return math.MaxUint32
 }
 
 func checkStatus(status int32, text string) error {
