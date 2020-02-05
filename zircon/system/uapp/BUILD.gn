@@ -7,7 +7,6 @@ group("uapp") {
   deps = [
     "kcounter",
     "kstress",
-    "minfs",
     "syscall-check",
   ]
 }

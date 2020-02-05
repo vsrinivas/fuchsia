@@ -45,7 +45,7 @@ zx_library("fs-management") {
   # TODO(36548): restore data_deps after migration to the GN build.
   data_deps = [
     # uapp/blobfs
-    "$zx/system/uapp/minfs",
+    #"uapp/minfs",
     "$zx/third_party/uapp/fsck-msdosfs",
     "$zx/third_party/uapp/mkfs-msdosfs",
   ]
