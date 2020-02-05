@@ -98,6 +98,8 @@ pub enum Lif {
     DuplicateLIF,
     #[error("LIF not found")]
     NotFound,
+    #[error("Invalid Parameter")]
+    InvalidParameter,
     #[error("Operation is not supported")]
     NotSupported,
 }

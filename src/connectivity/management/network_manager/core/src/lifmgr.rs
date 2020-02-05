@@ -8,9 +8,7 @@
 #![allow(dead_code)]
 
 use {
-    crate::address::LifIpAddr,
-    crate::portmgr::PortId,
-    crate::{error, ElementId, Version, UUID},
+    crate::{address::LifIpAddr, error, portmgr::PortId, ElementId, Version, UUID},
     fidl_fuchsia_router_config,
     std::collections::{HashMap, HashSet},
 };
@@ -230,7 +228,8 @@ pub struct LIFProperties {
     /// fuchsia.netstack.NetInterfaceFlagUp.
     pub dhcp: bool,
     /// Current address of this interface, may be `None`.
-    pub address: Option<LifIpAddr>,
+    pub address_v4: Option<LifIpAddr>,
+    pub address_v6: Vec<LifIpAddr>,
     /// Corresponds to fuchsia.netstack.NetInterfaceFlagUp.
     pub enabled: bool,
 }
@@ -244,7 +243,7 @@ impl LIFProperties {
             } else {
                 fidl_fuchsia_router_config::WanAddressMethod::Manual
             }),
-            address_v4: self.address.as_ref().map(|x| x.into()),
+            address_v4: self.address_v4.as_ref().map(|x| x.into()),
             gateway_v4: None,
             address_v6: None,
             gateway_v6: None,
@@ -264,7 +263,7 @@ impl LIFProperties {
     /// Convert to fuchsia.router.config.LifProperties, LAN variant.
     pub fn to_fidl_lan(&self) -> fidl_fuchsia_router_config::LifProperties {
         fidl_fuchsia_router_config::LifProperties::Lan(fidl_fuchsia_router_config::LanProperties {
-            address_v4: self.address.as_ref().map(|x| x.into()),
+            address_v4: self.address_v4.as_ref().map(|x| x.into()),
             address_v6: None,
             enable: Some(self.enabled),
             dhcp_config: None,

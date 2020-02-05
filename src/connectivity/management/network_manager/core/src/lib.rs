@@ -344,7 +344,7 @@ impl DeviceState {
 
     /// Update internal state with information about an LIF that was added externally.
     fn notify_lif_added(&mut self, iface: hal::Interface) -> error::Result<()> {
-        if iface.get_address().is_none() {
+        if iface.get_address_v4().is_none() {
             return Ok(());
         }
         let port = iface.id;
@@ -358,7 +358,8 @@ impl DeviceState {
             0, // vlan
             Some(lifmgr::LIFProperties {
                 dhcp: iface.dhcp_client_enabled,
-                address: iface.get_address(),
+                address_v4: iface.get_address_v4(),
+                address_v6: iface.get_address_v6(),
                 enabled: true,
             }),
         )
@@ -372,7 +373,7 @@ impl DeviceState {
         })?;
         // TODO(guzt): This should ideally compare metrics or be manually settable when there are
         // multiple WAN ports.
-        if let Some(addr) = iface.get_address() {
+        if let Some(addr) = iface.get_address_v4() {
             self.service_manager.set_global_ip_nat(addr, port)
         }
         Ok(())
@@ -483,13 +484,7 @@ impl DeviceState {
             Some(x) => x.clone(),
         };
         // reset all properties, shut down LIF
-        self.hal
-            .apply_properties(
-                lif.pid(),
-                lif.properties(),
-                &LIFProperties { dhcp: false, address: None, enabled: false },
-            )
-            .await?;
+        self.hal.apply_properties(lif.pid(), lif.properties(), &LIFProperties::default()).await?;
         // delete bridge if there is one and shut down the related ports
         let ports = lif.ports();
         if ports.len() > 1 {
@@ -578,7 +573,7 @@ impl DeviceState {
                 match &p.address_method {
                     Some(fidl_fuchsia_router_config::WanAddressMethod::Automatic) => {
                         lp.dhcp = true;
-                        lp.address = None;
+                        lp.address_v4 = None;
                     }
                     Some(fidl_fuchsia_router_config::WanAddressMethod::Manual) => {
                         lp.dhcp = false;
@@ -591,18 +586,20 @@ impl DeviceState {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
-                        // The WAN IPv4 address is changing.
                         if lp.dhcp {
                             warn!(
                                 "Setting a static ip is not allowed when \
                                  a dhcp client is configured"
                             );
-                            return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
                         }
                         info!("Setting WAN IPv4 address to {:?}/{:?}", address, prefix_length);
                         let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
+                        if !v4addr.is_ipv4() {
+                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                        }
                         self.service_manager.set_global_ip_nat(v4addr.clone(), lif.pid());
-                        lp.address = Some(v4addr);
+                        lp.address_v4 = Some(v4addr);
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v4);
@@ -632,17 +629,12 @@ impl DeviceState {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
-                        // WAN IPv6 address is changing.
-                        if lp.dhcp {
-                            warn!(
-                                "Setting a static ip is not allowed when \
-                                 a dhcp client is configured"
-                            );
-                            return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                        }
                         info!("Setting WAN IPv6 to {:?}/{:?}", address, prefix_length);
                         let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
-                        lp.address = Some(a);
+                        if !a.is_ipv6() {
+                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                        }
+                        lp.address_v6 = vec![a];
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v6);
@@ -695,8 +687,11 @@ impl DeviceState {
                         // LAN IPv4 address is changing.
                         info!("Setting LAN IPv4 address to {:?}/{:?}", address, prefix_length);
                         let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
+                        if !v4addr.is_ipv4() {
+                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                        }
                         self.service_manager.set_local_subnet_nat(v4addr.clone());
-                        lp.address = Some(v4addr);
+                        lp.address_v4 = Some(v4addr);
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v4);
@@ -712,7 +707,10 @@ impl DeviceState {
                         // LAN IPv6 address is changing.
                         info!("Setting LAN IPv6 address to {:?}/{:?}", address, prefix_length);
                         let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
-                        lp.address = Some(a);
+                        if !a.is_ipv4() {
+                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                        }
+                        lp.address_v6 = vec![a];
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v6);

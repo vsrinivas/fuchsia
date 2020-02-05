@@ -253,7 +253,7 @@ async fn compute_state(
         return None;
     }
 
-    let ipv4_address = interface_info.get_address();
+    let ipv4_address = interface_info.get_address_v4();
 
     let mut new_info = ReachabilityInfo {
         port_type,

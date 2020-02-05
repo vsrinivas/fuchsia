@@ -716,14 +716,14 @@ impl Config {
             }
             // TODO(42315): LIFProperties doesn't support IPv6 addresses yet.
             if let (Some(address), Some(prefix)) = (c.ip, c.prefix_length) {
-                properties.address = Some(LifIpAddr { address, prefix });
+                properties.address_v4 = Some(LifIpAddr { address, prefix });
             }
         }
 
         // TODO(42315): LIF manager throws an error if both a DHCP client and a static IP address
         // configuration are set. We don't want to be generating invalid LIFProperties, so favor
         // the static IP configuration and turn off DHCP.
-        if properties.dhcp && properties.address.is_some() {
+        if properties.dhcp && properties.address_v4.is_some() {
             warn!("DHCP client and static IP cannot be configured at once: Disabling DHCP.");
             properties.dhcp = false;
         }
@@ -731,14 +731,13 @@ impl Config {
 
     /// Returns a LAN-specific [`lifmgr::LIFProperties`] based on the running configuration.
     pub fn create_lan_properties(&self, topo_path: &str) -> error::Result<lifmgr::LIFProperties> {
-        let properties =
-            crate::lifmgr::LIFProperties { enabled: false, dhcp: false, address: None };
+        let properties = crate::lifmgr::LIFProperties::default();
         self.create_properties(topo_path, properties)
     }
 
     /// Returns a WAN-specific [`lifmgr::LIFProperties`] based on the running configuration.
     pub fn create_wan_properties(&self, topo_path: &str) -> error::Result<lifmgr::LIFProperties> {
-        let properties = crate::lifmgr::LIFProperties { enabled: false, dhcp: true, address: None };
+        let properties = crate::lifmgr::LIFProperties { dhcp: true, ..Default::default() };
         self.create_properties(topo_path, properties)
     }
 
@@ -947,8 +946,7 @@ impl Config {
         &self,
         bridge: &RoutedVlan,
     ) -> error::Result<lifmgr::LIFProperties> {
-        let mut properties =
-            crate::lifmgr::LIFProperties { enabled: true, dhcp: false, address: None };
+        let mut properties = crate::lifmgr::LIFProperties { enabled: true, ..Default::default() };
 
         // TODO(42316): LIFProperties doesn't support IPv6 addresses yet.
         if bridge.ipv6.is_some() {
@@ -966,7 +964,7 @@ impl Config {
         // TODO(42316): Until LIFProperties supports IPv6 addresses, we have the possibility of
         // generating properties that do not have an IP configuration. Make sure that we have
         // at least DHCP client enabled.
-        if !properties.dhcp && properties.address.is_none() {
+        if !properties.dhcp && properties.address_v4.is_none() {
             properties.dhcp = true;
         }
         Ok(properties)
@@ -1865,8 +1863,7 @@ mod tests {
             ip: Some("127.0.0.1".parse().unwrap()),
             prefix_length: Some(32),
         };
-        let mut properties: lifmgr::LIFProperties =
-            lifmgr::LIFProperties { enabled: false, dhcp: false, address: None };
+        let mut properties: lifmgr::LIFProperties = lifmgr::LIFProperties::default();
         test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
         // The set_ip_address_config() function should not decide if the LIFProperties are enabled
         // or not, that should come from the AdminState in the config. So we shouldn't alter the
@@ -1874,18 +1871,18 @@ mod tests {
         assert_eq!(properties.enabled, false);
         assert_eq!(properties.dhcp, false);
         assert_eq!(
-            properties.address,
+            properties.address_v4,
             Some(LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
         );
 
         // Make sure DHCP client can be enabled when no static IP configuration is present.
         let ipconfig = IpAddress { dhcp_client: Some(true), ip: None, prefix_length: None };
         let mut properties: lifmgr::LIFProperties =
-            lifmgr::LIFProperties { enabled: true, dhcp: false, address: None };
+            lifmgr::LIFProperties { enabled: true, ..Default::default() };
         test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
         assert_eq!(properties.enabled, true);
         assert_eq!(properties.dhcp, true);
-        assert_eq!(properties.address, None);
+        assert_eq!(properties.address_v4, None);
 
         // Both DHCP client and static IP cannot be set simultaneously, make sure that DHCP client
         // is turned off when both are set.
@@ -1895,12 +1892,12 @@ mod tests {
             prefix_length: Some(32),
         };
         let mut properties: lifmgr::LIFProperties =
-            lifmgr::LIFProperties { enabled: true, dhcp: false, address: None };
+            lifmgr::LIFProperties { enabled: true, ..Default::default() };
         test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
         assert_eq!(properties.enabled, true);
         assert_eq!(properties.dhcp, false);
         assert_eq!(
-            properties.address,
+            properties.address_v4,
             Some(LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
         );
     }
@@ -1955,9 +1952,9 @@ mod tests {
                     );
                     assert_eq!(p.dhcp, *dhcp, "{} dhcp: got {} want {}", path, p.dhcp, dhcp);
                     assert_eq!(
-                        p.address, *address,
+                        p.address_v4, *address,
                         "{} address: got {:?} want {:?}",
-                        path, p.address, address
+                        path, p.address_v4, address
                     );
                 }
                 Err(e) => panic!("{} Got unexpected result pair: {:?}", path, e),
@@ -1998,9 +1995,9 @@ mod tests {
                     );
                     assert_eq!(&p.dhcp, dhcp, "{} dhcp: got {} want {}", path, p.dhcp, dhcp);
                     assert_eq!(
-                        &p.address, address,
+                        &p.address_v4, address,
                         "{} address: got {:?} want {:?}",
-                        path, p.address, address
+                        path, p.address_v4, address
                     );
                 }
                 Err(e) => panic!("{} Got unexpected result: {:?}", path, e),
@@ -2199,7 +2196,7 @@ mod tests {
                 assert_eq!(p.enabled, true);
                 assert_eq!(p.dhcp, false);
                 assert_eq!(
-                    p.address,
+                    p.address_v4,
                     Some(LifIpAddr { address: "192.168.0.1".parse().unwrap(), prefix: 32 })
                 );
             }

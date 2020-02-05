@@ -157,12 +157,16 @@ pub struct Interface {
 }
 
 impl Interface {
-    pub fn get_address(&self) -> Option<LifIpAddr> {
+    pub fn get_address_v4(&self) -> Option<LifIpAddr> {
         self.ipv4_addr.as_ref().map(|a| match a {
             InterfaceAddress::Unknown(a) => *a,
             InterfaceAddress::Static(a) => *a,
             InterfaceAddress::Dhcp(a) => *a,
         })
+    }
+
+    pub fn get_address_v6(&self) -> Vec<LifIpAddr> {
+        self.ipv6_addr.clone()
     }
 }
 
@@ -255,7 +259,8 @@ impl Into<LIFProperties> for Interface {
     fn into(self) -> LIFProperties {
         LIFProperties {
             dhcp: self.dhcp_client_enabled,
-            address: self.get_address(),
+            address_v4: self.get_address_v4(),
+            address_v6: self.get_address_v6(),
             enabled: self.enabled,
         }
     }
@@ -469,17 +474,17 @@ impl NetCfg {
             (true, false) => {
                 // Disable dhcp and apply manual address configuration.
                 self.set_dhcp_client_state(pid, properties.dhcp).await?;
-                self.apply_manual_ip(pid, &old.address, &properties.address).await?;
+                self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
             }
             // dhcp configuration transitions from disabled to enabled.
             (false, true) => {
                 // Remove any manual IP address and enable dhcp client.
-                self.apply_manual_ip(pid, &old.address, &None).await?;
+                self.apply_manual_ip(pid, &old.address_v4, &None).await?;
                 self.set_dhcp_client_state(pid, properties.dhcp).await?;
             }
             // dhcp is still disabled, check for manual IP address changes.
             (false, false) => {
-                self.apply_manual_ip(pid, &old.address, &properties.address).await?;
+                self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
             }
             // No changes to dhcp configuration, it is still enabled, nothing to do.
             (true, true) => {}
@@ -631,7 +636,7 @@ mod tests {
         assert_eq!(iface.name, "test/interface/info");
         assert_eq!(iface.enabled, true);
         assert_eq!(
-            iface.get_address(),
+            iface.get_address_v4(),
             Some(LifIpAddr { address: IpAddr::from([4, 3, 2, 1]), prefix: 24 })
         );
         assert_eq!(iface.id.to_u64(), 42);
