@@ -2,31 +2,59 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
-import("$zx/public/gn/fuzzer.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-if (current_toolchain != default_toolchain) {
-  zx_test("fidl-async-test") {
-    sources = [
-      "llcpp_async_bind_test.cc",
-      "llcpp_bind_test.cc",
-      "llcpp_channel_transaction_test.cc",
-    ]
-    deps = [
-      ":fidl.test.simple.llcpp",
-      "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/async-loop:async-loop-cpp",
-      "$zx/system/ulib/async-loop:async-loop-default.static",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl:fidl-llcpp",
-      "$zx/system/ulib/fidl-async:fidl-async-cpp",
-      "$zx/system/ulib/sync",
-      "$zx/system/ulib/zxtest",
-    ]
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fidl/fidl.gni")
+import("//build/fuzzing/fuzzer.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("fidl-async-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
   }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [
+    "llcpp_async_bind_test.cc",
+    "llcpp_bind_test.cc",
+    "llcpp_channel_transaction_test.cc",
+  ]
+  deps = [
+    ":fidl.test.simple_llcpp",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
-fidl_library("fidl.test.simple") {
-  visibility = [ ":*" ]
+fidl("fidl.test.simple") {
   sources = [ "simple.test.fidl" ]
+}
+
+migrated_manifest("fidl-async-test-manifest") {
+  deps = [
+    ":fidl-async-test",
+  ]
 }

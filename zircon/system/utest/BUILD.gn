@@ -58,7 +58,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/fdio-caller/test",
       "$zx/system/ulib/fdio/test",
       "$zx/system/ulib/ffl/test",
-      "$zx/system/ulib/fidl-async/test:fidl-async-test",
       "$zx/system/ulib/fs:test",
       "$zx/system/ulib/fs-pty/test",
       "$zx/system/ulib/ftl:test",
