@@ -29,7 +29,7 @@ Target     | Back-end                                               | Runtime Li
 -----------|--------------------------------------------------------|------------------
 C          | [//zircon/tools/fidl/lib/c_generator.cc][be-c]         | [//zircon/system/ulib/fidl/][rtl-c]
 C++        | [//garnet/go/src/fidl/compiler/backend/cpp/][be-cpp]   | [//zircon/system/ulib/fidl/][rtl-c] & [//sdk/lib/fidl/cpp/][rtl-cpp]
-Go         | [//garnet/go/src/fidl/compiler/backend/golang/][be-go] | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
+Go         | [//garnet/go/src/fidl/compiler/go_backend/][be-go]     | [//third_party/go/src/syscall/zx/fidl/][rtl-go]
 Rust       | [//garnet/go/src/fidl/compiler/rust_backend/][be-rust] | [//src/lib/fidl/rust/fidl/][rtl-rust]
 Dart       | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
 JavaScript | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
@@ -404,8 +404,7 @@ fx build host-tools/gidl
 | fidlgen hlcpp            | fx run-host-tests fidlgen_cpp_test                  | garnet/go/src/fidl/compiler/backend/cpp                                 |
 | fidlgen llcpp            | fx run-host-tests fidlgen_llcpp_test                | garnet/go/src/fidl/compiler/llcpp_backend                               |
 | fidlgen overnet          | fx run-host-tests fidlgen_cpp_overnet_internal_test | garnet/go/src/fidl/compiler/backend/cpp_overnet_internal                |
-| fidlgen golang           | fx run-host-tests fidlgen_golang_test               | garnet/go/src/fidl/compiler/backend/golang                              |
-| fidlgen golang ir        | fx run-host-tests fidlgen_golang_ir_test            | garnet/go/src/fidl/compiler/backend/golang/ir                           |
+| fidlgen golang           | fx run-host-tests fidlgen_go_test               | garnet/go/src/fidl/compiler/backend/golang                              |
 | fidlgen rust             | fx run-host-tests fidlgen_rust_test                 | garnet/go/src/fidl/compiler/rust_backend/                               |
 | fidlgen syzkaller        | fx run-host-tests fidlgen_syzkaller_test            | garnet/go/src/fidl/compiler/backend/syzkaller                           |
 | fidlgen syzkaller ir     | fx run-host-tests fidlgen_syzkaller_ir_test         | garnet/go/src/fidl/compiler/backend/syzkaller/ir                        |
@@ -550,7 +549,7 @@ fidl fmt --library my_library.fidl -i
 [be-c]: /zircon/tools/fidl/lib/c_generator.cc
 [be-cpp]: /garnet/go/src/fidl/compiler/backend/cpp/
 [be-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart/
-[be-go]: /garnet/go/src/fidl/compiler/backend/golang/
+[be-go]: /garnet/go/src/fidl/compiler/go_backend/
 [be-rust]: /garnet/go/src/fidl/compiler/rust_backend/
 [be-js]: https://chromium.googlesource.com/chromium/src/+/master/build/fuchsia/fidlgen_js/
 [bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test

@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-package golang
+package codegen
 
 import (
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fidl/compiler/backend/golang/ir"
 	"fidl/compiler/backend/typestest"
+	"fidl/compiler/go_backend/ir"
 )
 
 // basePath holds the base path to the directory containing goldens.
@@ -30,7 +30,7 @@ func TestCodegenImplDotGo(t *testing.T) {
 			tree := ir.Compile(fidl)
 			implDotGo := typestest.GetGolden(basePath, fmt.Sprintf("%s.go.golden", filename))
 
-			actualImplDotGo, err := NewFidlGenerator().GenerateImplDotGo(tree)
+			actualImplDotGo, err := NewGenerator().generateImplDotGo(tree)
 			if err != nil {
 				t.Fatalf("unexpected error while generating impl.go: %s", err)
 			}

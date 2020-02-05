@@ -14,7 +14,6 @@ import (
 	"fidl/compiler/backend/cmdline"
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/cpp_libfuzzer"
-	"fidl/compiler/backend/golang"
 	"fidl/compiler/backend/syzkaller"
 	"fidl/compiler/backend/types"
 )
@@ -25,7 +24,6 @@ type GenerateFidl interface {
 
 var generators = map[string]GenerateFidl{
 	"cpp":       cpp.NewFidlGenerator(),
-	"go":        golang.NewFidlGenerator(),
 	"libfuzzer": cpp_libfuzzer.NewFidlGenerator(),
 	"syzkaller": syzkaller.NewFidlGenerator(),
 }
@@ -42,6 +40,7 @@ func main() {
 		fmt.Sprintf(`comma-separated list of names of generators to run
 valid generators: %s
 for Dart, use the fidlgen_dart executable
+for Go, use the fidlgen_go executable
 for LLCPP, use the fidlgen_llcpp executable
 for Rust, use the fidlgen_rust executable`,
 			strings.Join(validGenerators, ", ")))

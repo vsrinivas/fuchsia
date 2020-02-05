@@ -29,49 +29,43 @@ template("fidl_go") {
 
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
-  file_stem = "$fidl_target_gen_dir/$library_name.fidl"
+  library_dir = "$fidl_target_gen_dir/$library_name.fidl"
+  impl_filename = "$library_dir/impl.go"
+  pkg_name_filename = "$library_dir/pkg_name"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
     visibility = [ ":*" ]
 
-    tool = "//garnet/go/src/fidl:fidlgen"
+    tool = "//garnet/go/src/fidl:fidlgen_go"
 
-    inputs = [
-      json_representation,
-    ]
+    inputs = [ json_representation ]
 
     outputs = [
-      "$file_stem/impl.go",
-      "$file_stem/pkg_name",
+      impl_filename,
+      pkg_name_filename,
     ]
 
     args = [
       "--json",
       rebase_path(json_representation, root_build_dir),
-      "--output-base",
-      rebase_path(file_stem, root_build_dir),
-      "--include-base",
-      rebase_path(root_gen_dir, root_build_dir),
-      "--generators",
-      "go",
+      "--output-impl",
+      rebase_path(impl_filename, root_build_dir),
+      "--output-pkg-name",
+      rebase_path(pkg_name_filename, root_build_dir),
     ]
 
-    deps = [
-      ":$main_target_name($fidl_toolchain)",
-    ]
+    deps = [ ":$main_target_name($fidl_toolchain)" ]
 
     forward_variables_from(invoker, [ "testonly" ])
   }
 
   go_library(main_target_name) {
-    name_file = "$file_stem/pkg_name"
+    name_file = pkg_name_filename
 
-    source_dir = file_stem
+    source_dir = library_dir
 
-    sources = [
-      "impl.go",
-    ]
+    sources = [ "impl.go" ]
 
     non_go_deps = [ ":$generation_target_name" ]
 

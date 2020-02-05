@@ -17,9 +17,22 @@ if [ ! -x "${FIDLGEN}" ]; then
     echo "error: fidlgen missing; maybe fx clean-build?" 1>&2
     exit 1
 fi
+
 FIDLGEN_LLCPP="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_llcpp"
 if [ ! -x "${FIDLGEN_LLCPP}" ]; then
     echo "error: fidlgen_llcpp missing; maybe fx clean-build?" 1>&2
+    exit 1
+fi
+
+FIDLGEN_GO="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_go"
+if [ ! -x "${FIDLGEN_GO}" ]; then
+    echo "error: fidlgen_go missing; maybe fx clean-build?" 1>&2
+    exit 1
+fi
+
+FIDLGEN_RUST="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_rust"
+if [ ! -x "${FIDLGEN_RUST}" ]; then
+    echo "error: fidlgen_rust missing; maybe fx clean-build?" 1>&2
     exit 1
 fi
 
@@ -111,21 +124,14 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     fi
 
     echo "  go: ${json_name} > ${go_impl_name}"
-    ${FIDLGEN} \
-        -generators go \
+    ${FIDLGEN_GO} \
         -json "${GOLDENS_DIR}/${json_name}" \
-        -output-base "${GOLDENS_DIR}" \
-        -include-base "${GOLDENS_DIR}"
-    rm "${GOLDENS_DIR}/pkg_name"
-    mv "${GOLDENS_DIR}/impl.go" "${GOLDENS_DIR}/${go_impl_name}.golden"
+        -output-impl "${GOLDENS_DIR}/${go_impl_name}.golden"
 
-#    echo "  rust: ${json_name} > ${rust_name}"
-#    ${FIDLGEN} \
-#        -generators rust \
-#        -json "${GOLDENS_DIR}/${json_name}" \
-#        -output-base "${GOLDENS_DIR}/${json_name}" \
-#        -include-base "${GOLDENS_DIR}"
-#    mv "${GOLDENS_DIR}/${rust_name}" "${GOLDENS_DIR}/${rust_name}.golden"
+    echo "  rust: ${json_name} > ${rust_name}"
+    ${FIDLGEN_RUST} \
+        -json "${GOLDENS_DIR}/${json_name}" \
+        -output-filename "${GOLDENS_DIR}/${rust_name}.golden"
 
     echo "  syzkaller: ${json_name} > ${syzkaller_name}"
     ${FIDLGEN} \
