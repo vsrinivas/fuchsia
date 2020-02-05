@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_INHERITANCE_PATH_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_INHERITANCE_PATH_H_
 
 #include <initializer_list>
 #include <vector>
@@ -32,7 +33,8 @@ class InheritancePath {
     Step(fxl::RefPtr<Collection> c) : from(), collection(std::move(c)) {}
 
     // Use for normal steps.
-    Step(fxl::RefPtr<InheritedFrom> f, fxl::RefPtr<Collection> c) : from(std::move(f)), collection(std::move(c)) {}
+    Step(fxl::RefPtr<InheritedFrom> f, fxl::RefPtr<Collection> c)
+        : from(std::move(f)), collection(std::move(c)) {}
 
     // How to get to the current Step in the vector from the previous (n-1) item in the vector.
     // This will be null for path()[0] because it's the start of the inheritance path.
@@ -51,10 +53,12 @@ class InheritancePath {
 
   InheritancePath() = default;
 
-  // To just supply the base class.
-  explicit InheritancePath(fxl::RefPtr<Collection> collection) {
-    path_.emplace_back(collection);
-  }
+  // To just supply one class and not inhertance information.
+  explicit InheritancePath(fxl::RefPtr<Collection> collection) { path_.emplace_back(collection); }
+
+  // Encodes a single level of inheritance from "derived" to "base".
+  InheritancePath(fxl::RefPtr<Collection> derived, fxl::RefPtr<InheritedFrom> from,
+                  fxl::RefPtr<Collection> base);
 
   // For a full path.
   InheritancePath(std::initializer_list<Step> steps) : path_(steps) {}
@@ -74,8 +78,17 @@ class InheritancePath {
   PathVector& path() { return path_; }
   const PathVector& path() const { return path_; }
 
+  // Extracts a subset of the inheritance path.
+  static constexpr size_t kToEnd = static_cast<size_t>(-1);
+  InheritancePath SubPath(size_t begin_index, size_t len = kToEnd) const;
+
+  // The "derived" is the more specific end (the one deriving from the other classes).
   const Collection* derived() const { return path_.front().collection.get(); }
+  const fxl::RefPtr<Collection> derived_ref() const { return path_.front().collection; }
+
+  // The "base" is the base class of derived that this path represents.
   const Collection* base() const { return path_.back().collection.get(); }
+  const fxl::RefPtr<Collection> base_ref() const { return path_.back().collection; }
 
   bool operator==(const InheritancePath& other) const { return path_ == other.path_; }
   bool operator!=(const InheritancePath& other) const { return !operator==(other); }
@@ -85,3 +98,5 @@ class InheritancePath {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_INHERITANCE_PATH_H_

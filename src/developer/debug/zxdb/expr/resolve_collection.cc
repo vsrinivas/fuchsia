@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/expr/async_dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/expr/bitfield.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
@@ -17,6 +18,7 @@
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
@@ -298,37 +300,101 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
 }
 
 void ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
-                      const InheritedFrom* from, const SymbolContext& from_symbol_context,
-                      fit::callback<void(ErrOrValue)> cb) {
-  const Type* from_type = from->from().Get()->AsType();
-  if (!from_type)
-    return cb(GetErrorForInvalidMemberOf(value));
+                      const InheritancePath& path, fit::callback<void(ErrOrValue)> cb) {
+  // We expect
+  auto final_type = path.base_ref();
 
-  if (from->kind() == InheritedFrom::kConstant)  // Easy constant case.
-    return cb(ExtractSubType(context, value, RefPtrTo(from_type), from->offset()));
+  // Most cases have a constant offset and we can do that right away.
+  if (auto opt_offset = path.BaseOffsetInDerived())
+    return cb(ExtractSubType(context, value, std::move(final_type), *opt_offset));
 
-  // Everything else is an expression which needs to be evaluated.
+  // Everything else is a DWARF expression which needs to be evaluated based on the pointers to the
+  // data. This requires that the class have a memory address.
   if (value.source().type() != ExprValueSource::Type::kMemory || value.source().is_bitfield())
     return cb(Err("Can't evaluate virtual inheritance on an object without a memory address."));
   TargetPointer object_ptr = value.source().address();
 
-  // This is normally async for virtual inheritance. Virtual inheritance is implemented as every
-  // derived class having a pointer to the base class rather than an offset (so multiple derived
-  // classes can point to the same base). Therefore, the expressions normally look like
-  // "take offset from object pointer and dereference."
-  FXL_DCHECK(from->kind() == InheritedFrom::kExpression);
-  auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(cb), RefPtrTo(from_type));
+  ResolveInheritedPtr(
+      context, object_ptr, path,
+      [context, value, object_ptr, final_type = std::move(final_type),
+       cb = std::move(cb)](ErrOr<TargetPointer> base_ptr) mutable {
+        if (base_ptr.has_error())
+          return cb(base_ptr.err());
 
-  // Inheritance expressions are evaluated by pushing the object pointer on the stack before
-  // execution.
-  evaluator->dwarf_eval().Push(object_ptr);
+        // The resolved data "should" be inside the original class since it's a base class so we
+        // don't have to re-request the memory from the target. Extract that if possible.
+        auto concrete = context->GetConcreteType(final_type.get());
+        uint32_t size = concrete->byte_size();
+        if (base_ptr.value() >= object_ptr &&
+            (base_ptr.value() - object_ptr + size < value.data().size())) {
+          return cb(ExtractSubType(context, value, final_type, base_ptr.value() - object_ptr));
+        }
 
-  // This will normally have to do some memory fetches to request the vtable data that will be
-  // referenced by the expression. Then it will fetch the base class anew from memory. This second
-  // fetch is unnecessary because we know it's contained inside |value| (since it's a base class of
-  // our input). It could be optimized to take advantage of this, but virtual inheritance is usually
-  // uncommon and this implementation is simpler.
-  evaluator->Eval(context, from_symbol_context, from->location_expression());
+        // The resulting pointer isn't inside the derived class. While the DWARF spec never
+        // guarantees this is the case, in our languages it will have to be for objects to make
+        // any sense. If we detect this, assume memory is corrupted rather than report a
+        // likely-incorrect address.
+        cb(Err("Virtual base class '%s' (size %u) resolved to an address 0x%" PRIx64
+               " outside of the derived class '%s' at 0x%" PRIx64 " (size %zu).",
+               final_type->GetFullName().c_str(), size, base_ptr.value(),
+               value.type()->GetFullName().c_str(), object_ptr, value.data().size()));
+      });
+}
+
+void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer derived,
+                         const InheritancePath& path,
+                         fit::function<void(ErrOr<TargetPointer>)> cb) {
+  // In the common case there will be a constant offset. This will also handle the identity cases
+  // (they will come up when this is called recursively) where there is no inheritance.
+  if (auto opt_offset = path.BaseOffsetInDerived())
+    return cb(derived + *opt_offset);
+
+  // Non-constant path, likely due to virtual inheritance. A path could have many steps, some of
+  // which are constant offsets, and some of which are expressions for virtual inheritance. For
+  // simplicity we do each step separately in a recursive manner.
+
+  // Since an inheritance path includes both the base and derived class, there should be more than
+  // one entry for there to be any inheritance.
+  FXL_DCHECK(path.path().size() > 1);
+  InheritancePath remaining = path.SubPath(1);  // Path left over after computing the first offset.
+
+  // The first step of the inheritance chain is index 1's "from".
+  const InheritedFrom* first_from = path.path()[1].from.get();
+  FXL_DCHECK(first_from);
+  switch (first_from->kind()) {
+    case InheritedFrom::kConstant: {
+      ResolveInheritedPtr(context, derived + first_from->offset(), remaining, std::move(cb));
+      return;
+    }
+    case InheritedFrom::kExpression: {
+      // Run the expression (may be asynchronous). We don't use the AsyncDwarfExprEval because
+      // that attempts to create an ExprValue from the result, which normally means dereferencing
+      // the result of the expression as a pointer. We want the literal number resulting from
+      // evaluating the expression.
+      auto dwarf_eval = std::make_shared<DwarfExprEval>();
+      dwarf_eval->Push(derived);
+      dwarf_eval->Eval(
+          context->GetDataProvider(), first_from->GetSymbolContext(context->GetProcessSymbols()),
+          first_from->location_expression(),
+          [dwarf_eval, context, remaining = std::move(remaining), cb = std::move(cb)](
+              DwarfExprEval*, const Err& err) mutable {
+            if (err.has_error())
+              return cb(err);
+
+            // Continue resolution on any remaining inheritance steps.
+            ResolveInheritedPtr(context, static_cast<TargetPointer>(dwarf_eval->GetResult()),
+                                remaining, std::move(cb));
+
+            // Prevent the DwarfExprEval from getting deleted from its own stack.
+            debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                        [dwarf_eval = std::move(dwarf_eval)]() {});
+          });
+      return;
+    }
+  }
+
+  FXL_NOTREACHED();
+  cb(Err("Internal error"));
 }
 
 ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,

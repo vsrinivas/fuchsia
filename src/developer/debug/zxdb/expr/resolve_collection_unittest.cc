@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/index_test_support.h"
+#include "src/developer/debug/zxdb/symbols/inheritance_path.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
@@ -393,7 +394,7 @@ TEST_F(ResolveCollectionTest, VirtualInheritance) {
   data_provider_->AddMemory(kVtableAddress, vtable_data);
 
   // Derived class data (on the heap).
-  constexpr uint64_t kDerivedAddress = 0x9aaa319ba8;
+  constexpr TargetPointer kDerivedAddress = 0x9aaa319ba8;
   const std::vector<uint8_t> derived_data{
       0x18, 0x50, 0x35, 0x0f, 0x07, 0x00, 0x00, 0x00,  // Derived vtable.
       0x63, 0x00, 0x00, 0x00,                          // Derived object data (uint32_t) 99.
@@ -404,8 +405,8 @@ TEST_F(ResolveCollectionTest, VirtualInheritance) {
   data_provider_->AddMemory(kDerivedAddress, derived_data);
 
   // Base class data is inside the derived data above.
-  constexpr uint64_t kBaseOffset = 0x10;
-  constexpr uint64_t kBaseAddress = kDerivedAddress + kBaseOffset;
+  constexpr TargetPointer kBaseOffset = 0x10;
+  constexpr TargetPointer kBaseAddress = kDerivedAddress + kBaseOffset;
   constexpr size_t kBaseSize = 12;  // Not counting the padding.
 
   // Clang uses "vtbl_ptr_type*" as the type for the vtable pointers at the beginning of a virtual
@@ -441,15 +442,26 @@ TEST_F(ResolveCollectionTest, VirtualInheritance) {
   derived_type->set_inherited_from({LazySymbol(inherited)});
 
   ExprValue derived(derived_type, derived_data, ExprValueSource(kDerivedAddress));
+  InheritancePath path(derived_type, inherited, base_type);
 
-  // Asynchronously evaluate the base class.
+  // First try the pointer version which should fixup the pointer data.
   bool called = false;
+  ResolveInheritedPtr(eval_context_, kDerivedAddress, path,
+                      [&called, kBaseAddress](ErrOr<TargetPointer> result) {
+                        called = true;
+                        EXPECT_TRUE(result.ok()) << result.err().msg();
+                        EXPECT_EQ(kBaseAddress, result.value());
+                      });
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(called);
+
+  // Now try the ResolveInherited version that takes a full object.
+  called = false;
   ErrOrValue result(Err("Uncalled"));
-  ResolveInherited(eval_context_, derived, inherited.get(), module_symbol_context_,
-                   [&called, &result](ErrOrValue r) {
-                     called = true;
-                     result = r;
-                   });
+  ResolveInherited(eval_context_, derived, path, [&called, &result](ErrOrValue r) {
+    called = true;
+    result = r;
+  });
   ASSERT_FALSE(called);
   loop().RunUntilNoTasks();
   ASSERT_TRUE(called);
@@ -464,6 +476,46 @@ TEST_F(ResolveCollectionTest, VirtualInheritance) {
   EXPECT_EQ(base_type.get(), base.type());
   std::vector<uint8_t> expected_base_data(derived_data.begin() + kBaseOffset,
                                           derived_data.begin() + kBaseOffset + kBaseSize);
+  EXPECT_EQ(expected_base_data, base.data());
+
+  // Add a level of non-virtual inheritance. This will put the base class ("MyDerived") at a 4-byte
+  // offset inside of the "MySuperDerived" class.
+  auto super_derived_type =
+      MakeCollectionType(DwarfTag::kClassType, "MySuperDerived", {{"super_derived_i", int32_type}});
+  auto derived_inherited =
+      fxl::MakeRefCounted<InheritedFrom>(derived_type, super_derived_type->byte_size());
+  super_derived_type->set_inherited_from({LazySymbol(derived_type)});
+  super_derived_type->set_byte_size(super_derived_type->byte_size() + derived_type->byte_size());
+
+  // Prepend the 32-bit integer to the derived data from before.
+  std::vector<uint8_t> super_derived_data = {42, 0, 0, 0};
+  super_derived_data.insert(super_derived_data.end(), derived_data.begin(), derived_data.end());
+  constexpr TargetPointer kSuperDerivedAddress = kDerivedAddress - 4;
+
+  // Prepend our item to the inheritance path for querying.
+  InheritancePath super_derived_path = path;
+  super_derived_path.path().front().from = derived_inherited;
+  super_derived_path.path().insert(super_derived_path.path().begin(),
+                                   InheritancePath::Step(super_derived_type));
+
+  // Resolve super_derived -> derived -> base path.
+  ExprValue super_derived(super_derived_type, super_derived_data,
+                          ExprValueSource(kSuperDerivedAddress));
+  called = false;
+  result = Err("Uncalled");
+  ResolveInherited(eval_context_, super_derived, super_derived_path,
+                   [&called, &result](ErrOrValue r) {
+                     called = true;
+                     result = r;
+                   });
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+
+  // Validate the result as above.
+  base = result.value();
+  EXPECT_EQ(ExprValueSource::Type::kMemory, base.source().type());
+  EXPECT_EQ(kBaseAddress, base.source().address());
+  EXPECT_EQ(base_type.get(), base.type());
   EXPECT_EQ(expected_base_data, base.data());
 }
 

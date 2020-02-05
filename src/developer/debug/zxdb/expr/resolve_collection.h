@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/expr/found_member.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
@@ -23,6 +24,7 @@ class CodeBlock;
 class EvalContext;
 class ExprValue;
 class FoundMember;
+class InheritancePath;
 class InheritedFrom;
 
 // Resolves a member given a collection (class/struct/union) and either a record for a variable
@@ -71,12 +73,30 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
                             const ParsedIdentifier& identifier,
                             fit::callback<void(ErrOrValue, const FoundMember&)> cb);
 
-// Takes a Collection value and a base class inside of it, computes the value of the base class and
-// puts it in *out.
+// Takes a collection and an InheritancePath indicating how to get from the value to the desired
+// base class, and extracts the base class. The |path| should have its derived class be of the type
+// from |value|, and its base class is the one the caller wants to extract. The path should
+// represent all intermediate classes.
+void ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
+                      const InheritancePath& path, fit::callback<void(ErrOrValue)> cb);
+
+// Converts a pointer to a derived class to a pointer to the base class identified by the given
+// path. This is the same as ResolveInherited() above but operates on pointers to objects rather
+// than objects themselves.
+//
+// For common cases this is just a constant offset, but if the inheritance path has virtual
+// inheritance, this function will compute the result according to the expressions (may require
+// fetching memory)
+void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer derived,
+                         const InheritancePath& path, fit::function<void(ErrOr<TargetPointer>)> cb);
+
+// Takes a Collection value and a base class inside of it, computes the value of the base class.
+// This does not support virtual inheritance.
+//
+// TODO(brettw) these should be removed in preference to the asynchronous version above.
 //
 // For the version that takes an InheritedFrom, the base class must be a direct base class of the
 // "value" collection, not an indirect base.
-// TODO(brettw) this variant should take a FoundMember instead.
 //
 // The asynchronous version supports virtual inheritance, while the other variants do not. The
 // from_symbol_context should be the symbol context associated with the module from which the
@@ -85,9 +105,6 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
 // For the version that takes a type and an offset, the type must already have been computed as some
 // type of base class that lives at the given offset. It need not be a direct base and no type
 // checking is done as long as the offsets and sizes are valid.
-void ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
-                      const InheritedFrom* from, const SymbolContext& from_symbol_context,
-                      fit::callback<void(ErrOrValue)> cb);
 ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                             const InheritedFrom* from);
 ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
