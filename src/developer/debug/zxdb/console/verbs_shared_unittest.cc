@@ -47,7 +47,7 @@ TEST_F(VerbsSharedTest, NewRm) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      "  # Pattern Job\n"
+      "  # pattern job\n"
       "▶ 1 foobar    *\n",
       event.output.AsString());
 
@@ -55,13 +55,13 @@ TEST_F(VerbsSharedTest, NewRm) {
   console.ProcessInputLine("filter new");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Filter 2 \"foobar\" for all jobs.", event.output.AsString());
+  EXPECT_EQ("Filter 2 pattern=foobar job=* (all attached jobs)", event.output.AsString());
 
   // Delete the original filter.
   console.ProcessInputLine("filter 1 rm");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Removed Filter 1 \"foobar\" for all jobs.", event.output.AsString());
+  EXPECT_EQ("Removed Filter 1 pattern=foobar job=* (all attached jobs)", event.output.AsString());
 
   // Create a new job.
   console.ProcessInputLine("job new");
@@ -83,7 +83,7 @@ TEST_F(VerbsSharedTest, NewRm) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      "  # Pattern Job\n"
+      "  # pattern job\n"
       "  2 foobar    *\n"
       "▶ 3 ninjas    2\n",
       event.output.AsString());
@@ -99,7 +99,7 @@ TEST_F(VerbsSharedTest, NewRm) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      " # Pattern Job\n"
+      " # pattern job\n"
       " 2 foobar    *\n",
       event.output.AsString());
 }

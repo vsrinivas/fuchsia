@@ -88,7 +88,7 @@ const char* BreakpointEnabledToString(bool enabled);
 // arguments. Used for enable/disable/clear that do one thing to a breakpoint
 Err ValidateNoArgBreakpointModification(const Command& cmd, const char* command_name);
 
-std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
+OutputBuffer FormatThread(const ConsoleContext* context, const Thread* thread);
 
 // The |show_context| flag will cause some source code to be included annotated with the breakpoint,
 // or a message about pending breakpoints if there is no location.

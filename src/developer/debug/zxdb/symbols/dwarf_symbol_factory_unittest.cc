@@ -390,12 +390,15 @@ TEST(DwarfSymbolFactory, Collection) {
   EXPECT_TRUE(member_cd->is_external());
   EXPECT_EQ("const long double", member_cd->type().Get()->AsType()->GetFullName());
   EXPECT_TRUE(member_cd->const_value().has_value());
-  // This is a "long double" which on x86 is 80 bits, but on ARM is the same as a double. Accept
-  // either encoding of "3.14". We want to test non-integer, > 64-bit values here if possible.
-  std::vector<uint8_t> expected_80bit{0, 0xf8, 0x28, 0x5c, 0x8f, 0xc2, 0xf5, 0xc8, 0, 0x40};
+  // This is a "long double" which can vary according to platform and compiler settings. Accept the
+  // standard encodings for 64, 80, and 128 bits.
   std::vector<uint8_t> expected_64bit{0x1f, 0x85, 0xeb, 0x51, 0xb8, 0x1e, 0x09, 0x40};
+  std::vector<uint8_t> expected_80bit{0, 0xf8, 0x28, 0x5c, 0x8f, 0xc2, 0xf5, 0xc8, 0, 0x40};
+  std::vector<uint8_t> expected_128bit{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0,
+                                       0x51, 0xb8, 0x1e, 0x85, 0xeb, 0x91, 0x00, 0x40};
   EXPECT_TRUE(expected_64bit == member_cd->const_value().GetConstValue(8) ||
-              expected_80bit == member_cd->const_value().GetConstValue(10));
+              expected_80bit == member_cd->const_value().GetConstValue(10) ||
+              expected_128bit == member_cd->const_value().GetConstValue(16));
 }
 
 // Covers cases of InheritedFrom not covered by the collection test above.

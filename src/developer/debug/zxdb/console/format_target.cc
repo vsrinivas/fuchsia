@@ -40,7 +40,7 @@ OutputBuffer FormatTarget(ConsoleContext* context, const Target* target) {
   out.Append(Syntax::kSpecial, std::to_string(context->IdForTarget(target)));
 
   out.Append(Syntax::kVariable, " state");
-  out.Append(std::string("=") + FormatConsoleString(TargetStateToString(target->GetState())) + " ");
+  out.Append("=" + FormatConsoleString(TargetStateToString(target->GetState())) + " ");
 
   if (target->GetState() == Target::State::kRunning) {
     out.Append(Syntax::kVariable, "koid");
@@ -48,7 +48,7 @@ OutputBuffer FormatTarget(ConsoleContext* context, const Target* target) {
   }
 
   out.Append(Syntax::kVariable, "name");
-  out.Append(std::string("=") + FormatConsoleString(GetTargetName(target)));
+  out.Append("=" + FormatConsoleString(GetTargetName(target)));
 
   return out;
 }

@@ -117,7 +117,7 @@ TEST_F(NounsTest, FilterTest) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      "  # Pattern Job\n"
+      "  # pattern job\n"
       "  1 foobar    *\n"
       "▶ 2 boofar    1\n",
       event.output.AsString());
@@ -133,7 +133,7 @@ TEST_F(NounsTest, FilterTest) {
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
       "Filters for job 1 only:\n"
-      "  # Pattern Job\n"
+      "  # pattern job\n"
       "▶ 2 boofar    1\n",
       event.output.AsString());
 

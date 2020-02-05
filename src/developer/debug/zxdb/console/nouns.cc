@@ -233,7 +233,7 @@ void ListFilters(ConsoleContext* context, JobContext* job) {
     if (job)
       out.Append(fxl::StringPrintf("Filters for job %d only:\n", context->IdForJobContext(job)));
     FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-                 ColSpec(Align::kLeft, 0, "Pattern"), ColSpec(Align::kRight, 0, "Job")},
+                 ColSpec(Align::kLeft, 0, "pattern"), ColSpec(Align::kRight, 0, "job")},
                 rows, &out);
   }
   Console::get()->Output(out);
@@ -261,6 +261,7 @@ bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
   FXL_DCHECK(cmd.filter());
   context->SetActiveFilter(cmd.filter());
+  Console::get()->Output(FormatFilter(context, cmd.filter()));
   return true;
 }
 
@@ -336,8 +337,8 @@ void ListThreads(ConsoleContext* context, Process* process) {
 
   OutputBuffer out;
   FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-               ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
-               ColSpec(Align::kLeft, 0, "Name")},
+               ColSpec(Align::kLeft, 0, "state"), ColSpec(Align::kRight, 0, "koid"),
+               ColSpec(Align::kLeft, 0, "name")},
               rows, &out);
   Console::get()->Output(out);
 }
@@ -376,7 +377,7 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveThreadForTarget(cmd.thread());
   // Setting the active thread also sets the active target.
   context->SetActiveTarget(cmd.target());
-  Console::get()->Output(DescribeThread(context, cmd.thread()));
+  Console::get()->Output(FormatThread(context, cmd.thread()));
   return true;
 }
 

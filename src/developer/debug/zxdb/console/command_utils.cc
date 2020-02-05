@@ -282,11 +282,21 @@ Err ValidateNoArgBreakpointModification(const Command& cmd, const char* command_
   return Err();
 }
 
-std::string DescribeThread(const ConsoleContext* context, const Thread* thread) {
-  return fxl::StringPrintf(
-      "Thread %d [%s] koid=%" PRIu64 " %s", context->IdForThread(thread),
-      ThreadStateToString(thread->GetState(), thread->GetBlockedReason()).c_str(),
-      thread->GetKoid(), thread->GetName().c_str());
+OutputBuffer FormatThread(const ConsoleContext* context, const Thread* thread) {
+  OutputBuffer out("Thread ");
+  out.Append(Syntax::kSpecial, std::to_string(context->IdForThread(thread)));
+
+  out.Append(Syntax::kVariable, " state");
+  out.Append("=" + FormatConsoleString(
+                       ThreadStateToString(thread->GetState(), thread->GetBlockedReason())));
+
+  out.Append(Syntax::kVariable, " koid");
+  out.Append("=" + std::to_string(thread->GetKoid()));
+
+  out.Append(Syntax::kVariable, " name");
+  out.Append("=" + FormatConsoleString(thread->GetName()));
+
+  return out;
 }
 
 OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* breakpoint,
@@ -379,20 +389,25 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
 
 OutputBuffer FormatFilter(const ConsoleContext* context, const Filter* filter) {
   OutputBuffer out("Filter ");
-  out.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForFilter(filter)));
+  out.Append(Syntax::kSpecial, std::to_string(context->IdForFilter(filter)));
+
+  out.Append(Syntax::kVariable, " pattern");
+  out.Append("=" + FormatConsoleString(filter->pattern()) + " ");
 
   if (filter->pattern().empty()) {
-    out.Append(" \"\" (disabled) ");
-  } else {
-    out.Append(fxl::StringPrintf(" \"%s\" ", filter->pattern().c_str()));
-    if (filter->pattern() == Filter::kAllProcessesPattern)
-      out.Append("(all processes) ");
+    out.Append(Syntax::kComment, "(disabled) ");
+  } else if (filter->pattern() == Filter::kAllProcessesPattern) {
+    out.Append(Syntax::kComment, "(all processes) ");
   }
 
-  if (filter->job())
-    out.Append(fxl::StringPrintf("for job %d.", context->IdForJobContext(filter->job())));
-  else
-    out.Append("for all jobs.");
+  out.Append(Syntax::kVariable, "job");
+  out.Append("=");
+  if (filter->job()) {
+    out.Append(std::to_string(context->IdForJobContext(filter->job())));
+  } else {
+    out.Append("*");
+    out.Append(Syntax::kComment, " (all attached jobs)");
+  }
 
   return out;
 }

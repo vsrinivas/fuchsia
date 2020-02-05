@@ -64,10 +64,10 @@ TEST_F(VerbAttachJob, Good) {
   // It will immediately make two filters to apply to the new job.
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Created Filter 1 \"foo\" for job 2.", event.output.AsString());
+  EXPECT_EQ("Created Filter 1 pattern=foo job=2", event.output.AsString());
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Created Filter 2 \"bar\" for job 2.", event.output.AsString());
+  EXPECT_EQ("Created Filter 2 pattern=bar job=2", event.output.AsString());
 
   // Report job attachment a success.
   ASSERT_TRUE(attach_remote_api()->last_attach);
@@ -98,14 +98,14 @@ TEST_F(VerbAttachJob, Good) {
 
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Created Filter 3 \"baz\" for job 2.", event.output.AsString());
+  EXPECT_EQ("Created Filter 3 pattern=baz job=2", event.output.AsString());
 
   // Validate the filters.
   console().ProcessInputLine("filter");
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      "  # Pattern Job\n"
+      "  # pattern job\n"
       "  1 foo       2\n"
       "  2 bar       2\n"
       "▶ 3 baz       2\n",

@@ -776,7 +776,9 @@ Err PauseThread(ConsoleContext* context, Thread* thread) {
 
     } else {
       // Not current, just output the one-line description.
-      console->Output("Paused " + DescribeThread(&console->context(), weak_thread.get()));
+      OutputBuffer out("Paused ");
+      out.Append(FormatThread(&console->context(), weak_thread.get()));
+      console->Output(out);
     }
   });
 

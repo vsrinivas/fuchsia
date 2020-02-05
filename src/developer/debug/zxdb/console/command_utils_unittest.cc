@@ -227,16 +227,18 @@ TEST(CommandUtils, FormatFilter) {
   ConsoleContext context(&session);
 
   Filter* f = session.system().CreateNewFilter();
-  EXPECT_EQ("Filter 1 \"\" (disabled) for all jobs.", FormatFilter(&context, f).AsString());
+  EXPECT_EQ("Filter 1 pattern=\"\" (disabled) job=* (all attached jobs)",
+            FormatFilter(&context, f).AsString());
 
   f->SetPattern(Filter::kAllProcessesPattern);
-  EXPECT_EQ("Filter 1 \"*\" (all processes) for all jobs.", FormatFilter(&context, f).AsString());
+  EXPECT_EQ("Filter 1 pattern=* (all processes) job=* (all attached jobs)",
+            FormatFilter(&context, f).AsString());
 
   // This will be job 2 since the system should have a default job.
   JobContext* job = session.system().CreateNewJobContext();
   f->SetJob(job);
   f->SetPattern("foo");
-  EXPECT_EQ("Filter 1 \"foo\" for job 2.", FormatFilter(&context, f).AsString());
+  EXPECT_EQ("Filter 1 pattern=foo job=2", FormatFilter(&context, f).AsString());
 }
 
 TEST(CommandUtils, FormatConsoleString) {
