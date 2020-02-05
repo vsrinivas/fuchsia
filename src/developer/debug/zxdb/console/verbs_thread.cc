@@ -944,7 +944,7 @@ const char kStepHelp[] =
 
   If the thread ends up in a new function, that function's prologue will be
   automatically skipped before the operation complets. An option to control
-  whether this happens can be added in the future if desired.
+  whether this happens can be added in the future if desired (bug 45309).
 
   See also "stepi".
 

@@ -385,8 +385,8 @@ ResolveOptions BreakpointImpl::GetResolveOptions() const {
     // (on ARM, the link register is saved in the prologue so things may look funny before that).
     // Function prologues require symbolization so we ask for both.
     //
-    // TODO(brettw) we will eventually need an option to control this like other debugger. LLDB has
-    // a per-breakpoint setting and a global default preference. In GDB you can do "break *Foo" to
+    // TODO(bug 45309) we will need an option to control this like other debuggers. LLDB has a
+    // per-breakpoint setting and a global default preference. In GDB you can do "break *Foo" to
     // skip the prologue.
     options.symbolize = true;
     options.skip_function_prologue = true;
