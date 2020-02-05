@@ -106,6 +106,10 @@ impl Repository {
                         bytes.clone(),
                         Some(vec!["sha256".to_string()]),
                     )?);
+                    root_keys.push(PublicKey::from_ed25519_with_keyid_hash_algorithms(
+                        bytes.clone(),
+                        Some(vec!["sha256".to_string(), "sha512".to_string()]),
+                    )?);
                 }
             }
         }
