@@ -9,9 +9,11 @@ use {
     fidl::Channel,
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync,
     fuchsia_component::client::*,
-    futures::future::BoxFuture,
-    futures::lock::Mutex,
-    futures::StreamExt,
+    futures::{
+        future::{AbortHandle, Abortable, BoxFuture, TryFutureExt},
+        lock::Mutex,
+        StreamExt,
+    },
     std::sync::Arc,
 };
 
@@ -59,47 +61,71 @@ impl BreakpointSystemClient {
     // This is a convenience method that sets a breakpoint on the the `RouteCapability`,
     // spawns a new task, and injects the service provided by the injector if requested
     // by the invocation.
-    pub async fn install_injector<I: 'static>(&self, injector: Arc<I>) -> Result<(), Error>
+    pub async fn install_injector<I: 'static>(&self, injector: Arc<I>) -> Result<AbortHandle, Error>
     where
         I: Injector,
     {
         let receiver = self.set_breakpoints(vec![RouteCapability::TYPE]).await?;
-        fasync::spawn(async move {
-            loop {
-                let invocation =
-                    receiver.wait_until_type::<RouteCapability>().await.expect("Type mismatch");
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        fasync::spawn(
+            Abortable::new(
+                async move {
+                    loop {
+                        let invocation = receiver
+                            .wait_until_type::<RouteCapability>()
+                            .await
+                            .expect("Type mismatch");
 
-                if invocation.capability_id == injector.capability_path() {
-                    invocation.inject(injector.clone()).await.expect("injection failed");
-                }
+                        if invocation.capability_id == injector.capability_path() {
+                            invocation.inject(injector.clone()).await.expect("injection failed");
+                        }
 
-                invocation.resume().await.expect("resumption failed");
-            }
-        });
-        Ok(())
+                        invocation.resume().await.expect("resumption failed");
+                    }
+                },
+                abort_registration,
+            )
+            .unwrap_or_else(|_| ()),
+        );
+        Ok(abort_handle)
     }
 
     // This is a convenience method that sets a breakpoint on the the `RouteCapability`,
     // spawns a new task, and interposes the service provided by the interposer if requested
     // by the invocation.
-    pub async fn install_interposer<I: 'static>(&self, interposer: Arc<I>) -> Result<(), Error>
+    pub async fn install_interposer<I: 'static>(
+        &self,
+        interposer: Arc<I>,
+    ) -> Result<AbortHandle, Error>
     where
         I: Interposer,
     {
         let receiver = self.set_breakpoints(vec![RouteCapability::TYPE]).await?;
-        fasync::spawn(async move {
-            loop {
-                let invocation =
-                    receiver.wait_until_type::<RouteCapability>().await.expect("Type mismatch");
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        fasync::spawn(
+            Abortable::new(
+                async move {
+                    loop {
+                        let invocation = receiver
+                            .wait_until_type::<RouteCapability>()
+                            .await
+                            .expect("Type mismatch");
 
-                if invocation.capability_id == interposer.capability_path() {
-                    invocation.interpose(interposer.clone()).await.expect("injection failed");
-                }
+                        if invocation.capability_id == interposer.capability_path() {
+                            invocation
+                                .interpose(interposer.clone())
+                                .await
+                                .expect("injection failed");
+                        }
 
-                invocation.resume().await.expect("resumption failed");
-            }
-        });
-        Ok(())
+                        invocation.resume().await.expect("resumption failed");
+                    }
+                },
+                abort_registration,
+            )
+            .unwrap_or_else(|_| (())),
+        );
+        Ok(abort_handle)
     }
 
     pub async fn start_component_tree(&self) -> Result<(), Error> {

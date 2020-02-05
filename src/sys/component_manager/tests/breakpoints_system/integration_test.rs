@@ -22,8 +22,8 @@ async fn echo_interposer_test() -> Result<(), Error> {
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
 
     // Setup the interposer
-    let (interposer, mut rx) = EchoInterposer::new();
-    breakpoint_system.install_interposer(interposer).await?;
+    let (echo_interposer, mut rx) = EchoInterposer::new();
+    let interposer = breakpoint_system.install_interposer(echo_interposer).await?;
 
     breakpoint_system.start_component_tree().await?;
 
@@ -33,6 +33,7 @@ async fn echo_interposer_test() -> Result<(), Error> {
         let echo_string = rx.next().await.expect("local tx/rx channel was closed");
         assert_eq!(echo_string, "Interposed: Hippos rule!");
     }
+    interposer.abort();
 
     Ok(())
 }
@@ -104,7 +105,7 @@ async fn nested_breakpoint_test() -> Result<(), Error> {
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    breakpoint_system.install_injector(capability).await?;
+    let injector = breakpoint_system.install_injector(capability).await?;
 
     breakpoint_system.start_component_tree().await?;
 
@@ -117,6 +118,7 @@ async fn nested_breakpoint_test() -> Result<(), Error> {
     }
     children.sort_unstable();
     assert_eq!(vec!["./child_a:0", "./child_b:0", "./child_c:0"], children);
+    injector.abort();
 
     Ok(())
 }
@@ -131,7 +133,7 @@ async fn chained_interpose_breakpoint_test() -> Result<(), Error> {
     let breakpoint_system = test.connect_to_breakpoint_system().await?;
 
     let (capability, mut echo_rx) = EchoFactoryInterposer::new();
-    breakpoint_system.install_interposer(capability).await?;
+    let injector = breakpoint_system.install_interposer(capability).await?;
 
     breakpoint_system.start_component_tree().await?;
 
@@ -142,6 +144,7 @@ async fn chained_interpose_breakpoint_test() -> Result<(), Error> {
     }
     messages.sort_unstable();
     assert_eq!(vec!["Interposed: a", "Interposed: b", "Interposed: c"], messages);
+    injector.abort();
 
     Ok(())
 }
