@@ -27,6 +27,7 @@ recovery_packages = [
   "//src/connectivity/wlan/wlancfg",
   "//src/connectivity/wlan/wlanstack",
   "//src/recovery/system",
+  "//src/recovery/system:config",
   "//src/security/root_ssl_certificates",
   "//src/sys/appmgr:appmgr_scheme_config",
   "//src/sys/appmgr",
