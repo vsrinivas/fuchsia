@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/blobfs_fsck_soft_target_bin"
     },
     "sandbox": {
         "dev": [

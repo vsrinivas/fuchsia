@@ -696,7 +696,6 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/biotime:biotime-manifest",
     "//zircon/system/uapp/blktest:blktest-manifest",
     "//zircon/system/uapp/blobfs:blobfs-manifest",
-    "//zircon/system/uapp/blobfs-load-generator:blobfs-load-generator-manifest",
     "//zircon/system/uapp/clock:clkctl-manifest",
     "//zircon/system/uapp/clock:clock-manifest",
     #":bin.console",

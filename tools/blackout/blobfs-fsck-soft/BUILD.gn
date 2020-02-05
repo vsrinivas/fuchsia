@@ -46,14 +46,6 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
   source_root = "src/target.rs"
 }
 
-generate_manifest("blobfs-load-generator.manifest") {
-  visibility = [ ":*" ]
-  args = [ "--binary=bin/blobfs-load-generator" ]
-}
-generator_manifest_outputs =
-    get_target_outputs(":blobfs-load-generator.manifest")
-generator_manifest_file = generator_manifest_outputs[0]
-
 generate_manifest("blobfs.manifest") {
   visibility = [ ":*" ]
   args = [ "--binary=bin/blobfs" ]
@@ -63,16 +55,20 @@ blobfs_manifest_file = blobfs_manifest_outputs[0]
 
 package("blobfs-fsck-soft-target") {
   testonly = true
-  extra = [
-    generator_manifest_file,
-    blobfs_manifest_file,
-  ]
+  extra = [ blobfs_manifest_file ]
   deps = [
     ":blobfs-fsck-soft-target-bin",
-    ":blobfs-load-generator.manifest",
     ":blobfs.manifest",
+    "//src/storage/blobfs-load-generator",
   ]
-  binary = "blobfs_fsck_soft_target_bin"
+  binaries = [
+    {
+      name = "blobfs_fsck_soft_target_bin"
+    },
+    {
+      name = "blobfs-load-generator"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/blobfs_fsck_soft_target.cmx")
@@ -82,14 +78,16 @@ package("blobfs-fsck-soft-target") {
 }
 
 test_package("blobfs-fsck-soft-target-test") {
-  extra = [
-    generator_manifest_file,
-    blobfs_manifest_file,
-  ]
+  extra = [ blobfs_manifest_file ]
   deps = [
     ":blobfs-fsck-soft-target-bin_test",
-    ":blobfs-load-generator.manifest",
     ":blobfs.manifest",
+    "//src/storage/blobfs-load-generator",
+  ]
+  binaries = [
+    {
+      name = "blobfs-load-generator"
+    },
   ]
   tests = [
     {
@@ -103,12 +101,6 @@ group("blobfs-fsck-soft") {
   testonly = true
   public_deps = [
     ":blobfs-fsck-soft-host($host_toolchain)",
-
-    # this test relies on a c++ application located in zircon for generating load on the blobfs
-    # partition. it's included in the base image with other zircon utilities. the target is -
-    # "//zircon/system/uapp/blobfs-load-generator:blobfs-load-generator",
-    # TODO(ZX-4672): ideally this should be a rust library that can be used in future tests with a
-    # content verification component.
     ":blobfs-fsck-soft-target",
   ]
 }

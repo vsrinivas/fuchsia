@@ -5,7 +5,7 @@
 use {anyhow::Error, blackout_host::Test, std::time::Duration};
 
 fn main() -> Result<(), Error> {
-    Test::new("blobfs-fsck-soft-target")
+    Test::new("blobfs_fsck_soft_target.cmx")
         .collect_options()
         .setup_step()
         .load_step(Duration::from_secs(5))
