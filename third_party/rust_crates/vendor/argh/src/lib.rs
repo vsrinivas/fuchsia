@@ -1,6 +1,6 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright (c) 2020 Google LLC All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 //! Derive-based argument parsing optimized for code size and conformance
 //! to the Fuchsia commandline tools specification
@@ -12,7 +12,7 @@
 //!
 //! ## Basic Example
 //!
-//! ```
+//! ```rust,no_run
 //! use argh::FromArgs;
 //!
 //! #[derive(FromArgs)]
@@ -33,13 +33,12 @@
 //!
 //! fn main() {
 //!     let up: GoUp = argh::from_env();
-//!     ...
 //! }
 //! ```
 //!
 //! `./some_bin --help` will then output the following:
 //!
-//! ```
+//! ```bash
 //! Usage: cmdname [-j] --height <height> [--pilot-nickname <pilot-nickname>]
 //!
 //! Reach new heights.
@@ -69,6 +68,8 @@
 //! `fn(&str) -> Result<T, String>` using the `from_str_fn` attribute:
 //!
 //! ```
+//! # use argh::FromArgs;
+//!
 //! #[derive(FromArgs)]
 //! /// Goofy thing.
 //! struct FiveStruct {
@@ -87,7 +88,8 @@
 //! the structure:
 //!
 //! ```rust
-//!//! #[derive(FromArgs, PartialEq, Debug)]
+//! use argh::FromArgs;
+//! #[derive(FromArgs, PartialEq, Debug)]
 //! /// A command with positional arguments.
 //! struct WithPositional {
 //!     #[argh(positional)]
@@ -103,6 +105,8 @@
 //! over each command:
 //!
 //! ```rust
+//! # use argh::FromArgs;
+//!
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Top-level command.
 //! struct TopLevel {
@@ -137,9 +141,6 @@
 //! ```
 
 #![deny(missing_docs)]
-
-#[cfg(not(target_os = "fuchsia"))]
-extern crate argh_shared_for_host as argh_shared;
 
 use std::str::FromStr;
 
@@ -208,6 +209,25 @@ pub fn from_env<T: TopLevelCommand>() -> T {
     let strings: Vec<String> = std::env::args().collect();
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[strs[0]], &strs[1..]).unwrap_or_else(|early_exit| {
+        println!("{}", early_exit.output);
+        std::process::exit(match early_exit.status {
+            Ok(()) => 0,
+            Err(()) => 1,
+        })
+    })
+}
+
+/// Create a `FromArgs` type from the current process's `env::args`.
+///
+/// This special cases usages where argh is being used in an environment where cargo is
+/// driving the build. We skip the second env variable.
+///
+/// This function will exit early from the current process if argument parsing
+/// was unsuccessful or if information like `--help` was requested.
+pub fn cargo_from_env<T: TopLevelCommand>() -> T {
+    let strings: Vec<String> = std::env::args().collect();
+    let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
+    T::from_args(&[strs[1]], &strs[2..]).unwrap_or_else(|early_exit| {
         println!("{}", early_exit.output);
         std::process::exit(match early_exit.status {
             Ok(()) => 0,

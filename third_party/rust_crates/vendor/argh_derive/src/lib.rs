@@ -1,13 +1,12 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 #![recursion_limit = "256"]
+// Copyright (c) 2020 Google LLC All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 
 /// Implementation of the `FromArgs` and `argh(...)` derive attributes.
 ///
 /// For more thorough documentation, see the `argh` crate itself.
-extern crate argh_shared_for_host as argh_shared;
 extern crate proc_macro;
 
 use {

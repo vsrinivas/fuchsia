@@ -52,8 +52,8 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//src/connectivity/overnet/lib/hoist",
-    "//src/lib/argh",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",

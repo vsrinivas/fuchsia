@@ -21,6 +21,7 @@ version = "0.1.0"
 [dependencies]
 # Keep this sorted alphabetically, please.
 anyhow = "1.0.25"
+argh = "0.1"
 base64 = "0.9"
 bitfield = "0.13"
 bitflags = "1"

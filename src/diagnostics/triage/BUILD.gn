@@ -18,7 +18,7 @@ rustc_binary("triage_bin") {
     "//garnet/lib/rust/cm_json",
 
     # "//src/lib/syslog/rust:syslog",
-    # "//src/lib/argh",
+    # "//third_party/rust_crates:argh",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:lazy_static",

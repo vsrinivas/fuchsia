@@ -6,7 +6,6 @@ group("lib") {
   testonly = true
   deps = [
     ":tests",
-    "argh",
     "backoff",
     "callback",
     "cobalt",
@@ -43,7 +42,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "argh/argh_tests",
     "backoff:tests",
     "by_addr:tests",
     "callback:tests",
