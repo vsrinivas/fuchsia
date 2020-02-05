@@ -204,12 +204,15 @@ def write_symbol_archive(outfile, format, ids_file, files_read):
         ids = [line.split() for line in f]
     out_ids = ''
     with format_archiver(outfile, format) as archiver:
-        for id, file in ids:
-            file = os.path.relpath(file)
+        for id in ids:
+            if len(id) != 2:
+                continue
+            build_id, path = id
+            file = os.path.relpath(path)
             files_read.add(file)
             name = os.path.relpath(file, '../..')
             archiver.add_path(file, name, False)
-            out_ids += '%s %s\n' % (id, name)
+            out_ids += '%s %s\n' % (build_id, name)
         archiver.add_contents(out_ids, 'ids.txt', False)
 
 
