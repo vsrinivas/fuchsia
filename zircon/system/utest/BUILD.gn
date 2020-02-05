@@ -79,7 +79,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/tftp:tftp-fuzzer",
       "$zx/system/ulib/tftp:tftp-test",
       "$zx/system/ulib/trace-engine/test",
-      "$zx/system/ulib/trace-provider/test",
       "$zx/system/ulib/trace-reader:tests",
       "$zx/system/ulib/trace-vthread/test",
       "$zx/system/ulib/utf_conversion/test",
