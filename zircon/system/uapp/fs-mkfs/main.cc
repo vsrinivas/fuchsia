@@ -20,6 +20,9 @@
 #include <zircon/syscalls.h>
 
 #include <fs-management/mount.h>
+#include <safemath/checked_math.h>
+
+namespace {
 
 struct {
   const char* name;
@@ -63,7 +66,7 @@ int parse_args(int argc, char** argv, mkfs_options_t* options, disk_format_t* df
         options->verbose = true;
         break;
       case 's':
-        options->fvm_data_slices = strtoul(optarg, NULL, 0);
+        options->fvm_data_slices = safemath::checked_cast<uint32_t>(strtoul(optarg, NULL, 0));
         if (options->fvm_data_slices == 0) {
           fprintf(stderr, "Invalid Args: %s\n", strerror(errno));
           return usage();
@@ -104,6 +107,7 @@ int parse_args(int argc, char** argv, mkfs_options_t* options, disk_format_t* df
   return 0;
 }
 
+}  // namespace
 int main(int argc, char** argv) {
   mkfs_options_t options = default_mkfs_options;
   char* devicepath;
