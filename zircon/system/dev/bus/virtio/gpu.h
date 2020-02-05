@@ -14,6 +14,8 @@
 
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/sysmem.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/display/controller.h>
 
 #include "device.h"
 #include "ring.h"
@@ -23,18 +25,23 @@ namespace virtio {
 
 class Ring;
 
-class GpuDevice : public Device {
+class GpuDevice;
+using DeviceType = ddk::Device<GpuDevice, ddk::GetProtocolable>;
+class GpuDevice : public Device,
+                  public DeviceType,
+                  public ddk::DisplayControllerImplProtocol<GpuDevice, ddk::base_protocol> {
  public:
   GpuDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   virtual ~GpuDevice();
 
   zx_status_t Init() override;
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
+  void DdkRelease() { virtio::Device::Release(); }
 
   void IrqRingUpdate() override;
   void IrqConfigChange() override;
 
   const virtio_gpu_resp_display_info::virtio_gpu_display_one* pmode() const { return &pmode_; }
-  display_controller_impl_protocol_ops_t* get_proto_ops() { return &proto_ops; }
 
   void Flush();
 
@@ -44,27 +51,33 @@ class GpuDevice : public Device {
                               zx::vmo* vmo_out, size_t* offset_out, uint32_t* pixel_size_out,
                               uint32_t* row_bytes_out);
 
- private:
-  // DDK driver hooks
-  static void virtio_gpu_set_display_controller_interface(
-      void* ctx, const display_controller_interface_protocol_t* intf);
-  static zx_status_t virtio_gpu_import_vmo_image(void* ctx, image_t* image, zx_handle_t vmo,
-                                                 size_t offset);
-  static zx_status_t virtio_gpu_import_image(void* ctx, image_t* image, zx_unowned_handle_t handle,
-                                             uint32_t index);
-  static void virtio_gpu_release_image(void* ctx, image_t* image);
-  static uint32_t virtio_gpu_check_configuration(void* ctx,
-                                                 const display_config_t** display_configs,
-                                                 size_t display_count, uint32_t** layer_cfg_results,
-                                                 size_t* layer_cfg_result_count);
-  static void virtio_gpu_apply_configuration(void* ctx, const display_config_t** display_configs,
-                                             size_t display_count);
-  static zx_status_t virtio_get_sysmem_connection(void* ctx, zx_handle_t handle);
-  static zx_status_t virtio_set_buffer_collection_constraints(void* ctx, const image_t* config,
-                                                              zx_unowned_handle_t collection);
-  static zx_status_t virtio_get_single_buffer_framebuffer(void* ctx, zx_handle_t* out_vmo,
-                                                          uint32_t* out_stride);
+  void DisplayControllerImplSetDisplayControllerInterface(
+      const display_controller_interface_protocol_t* intf);
 
+  zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
+
+  zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t collection,
+                                               uint32_t index);
+
+  void DisplayControllerImplReleaseImage(image_t* image);
+
+  uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_config_list,
+                                                   size_t display_config_count,
+                                                   uint32_t** out_layer_cfg_result_list,
+                                                   size_t* layer_cfg_result_count);
+
+  void DisplayControllerImplApplyConfiguration(const display_config_t** display_config_list,
+                                               size_t display_config_count);
+
+  zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel sysmem_handle);
+
+  zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
+                                                                  zx_unowned_handle_t collection);
+
+  zx_status_t DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
+                                                              uint32_t* out_stride);
+
+ private:
   // Internal routines
   template <typename RequestType, typename ResponseType>
   void send_command_response(const RequestType* cmd, ResponseType** res);
@@ -80,8 +93,6 @@ class GpuDevice : public Device {
   zx_status_t transfer_to_host_2d(uint32_t resource_id, uint32_t width, uint32_t height);
 
   zx_status_t virtio_gpu_start();
-
-  static display_controller_impl_protocol_ops_t proto_ops;
 
   thrd_t start_thread_ = {};
 

@@ -126,9 +126,11 @@ TEST_F(VirtioGpuTest, SetConstraints) {
   image.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
   image.width = 4;
   image.height = 4;
-
-  display_controller_impl_protocol_ops_t* ops = device_->get_proto_ops();
-  EXPECT_OK(ops->set_buffer_collection_constraints(device_.get(), &image, client_channel_.get()));
+  display_controller_impl_protocol_t proto;
+  EXPECT_OK(device_->DdkGetProtocol(ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL,
+                                    reinterpret_cast<void*>(&proto)));
+  EXPECT_OK(
+      proto.ops->set_buffer_collection_constraints(device_.get(), &image, client_channel_.get()));
 }
 
 }  // namespace
