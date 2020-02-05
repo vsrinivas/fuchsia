@@ -116,7 +116,6 @@ if (current_cpu != "") {
       "stdio",
       "timers",
       "trace",
-      "utc-procargs",
       "util",
       "zxcrypt",
 
