@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/ot_radio_soft_reset_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ot-radio"
+        ],
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

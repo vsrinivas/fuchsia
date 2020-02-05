@@ -369,6 +369,16 @@ zx_status_t OtRadioDevice::RadioThread(void) {
       zxlogf(TRACE, "ot-radio: interrupt\n");
       spinel_framer_->HandleInterrupt();
       ReadRadioPacket();
+      while (true) {
+        uint8_t pin_level = 0;
+        gpio_[OT_RADIO_INT_PIN].Read(&pin_level);
+        // Interrupt has de-asserted or no more frames can be received.
+        if (pin_level != 0 || inbound_allowance_ == 0) {
+          break;
+        }
+        spinel_framer_->HandleInterrupt();
+        ReadRadioPacket();
+      }
     } else if (packet.key == PORT_KEY_TX_TO_RADIO) {
       spinel_framer_->SendPacketToRadio(spi_tx_buffer_, spi_tx_buffer_len_);
     }
