@@ -17,23 +17,24 @@ namespace gfx {
 
 namespace {
 
-void LogDistanceCollisionWarning(const std::vector<std::vector<GlobalId>>& collisions) {
-  if (!collisions.empty()) {
-    std::ostringstream warning_message("Input-hittable nodes with ids ");
+// TODO(45071): Re-enable when we no longer have known misbehaving clients.
+// void LogDistanceCollisionWarning(const std::vector<std::vector<GlobalId>>& collisions) {
+//   if (!collisions.empty()) {
+//     std::ostringstream warning_message("Input-hittable nodes with ids ");
 
-    for (const std::vector<GlobalId>& ids : collisions) {
-      warning_message << "[ ";
-      for (const GlobalId& id : ids) {
-        warning_message << id << " ";
-      }
-      warning_message << "] ";
-    }
-    warning_message << "are at equal distance and overlapping. See "
-                       "https://fuchsia.dev/fuchsia-src/the-book/ui/view_bounds#collisions";
+//     for (const std::vector<GlobalId>& ids : collisions) {
+//       warning_message << "[ ";
+//       for (const GlobalId& id : ids) {
+//         warning_message << id << " ";
+//       }
+//       warning_message << "] ";
+//     }
+//     warning_message << "are at equal distance and overlapping. See "
+//                        "https://fuchsia.dev/fuchsia-src/the-book/ui/view_bounds#collisions";
 
-    FXL_LOG(WARNING) << warning_message.str();
-  }
-}
+//     FXL_LOG(WARNING) << warning_message.str();
+//   }
+// }
 
 // Checks if a node is hit by a ray. |local_ray| is the ray in the local space of the node.
 Node::IntersectionInfo HitTestSingleNode(const Node* node, escher::ray4 local_ray,
@@ -100,8 +101,9 @@ void HitTest(Node* root, const escher::ray4& ray, HitAccumulator<NodeHit>* accum
     }
   }
 
+  // TODO(45071): Re-enable when we no longer have known misbehaving clients.
   // Warn if there are objects at the same distance as that is a user error.
-  LogDistanceCollisionWarning(collision_reporter.Report());
+  // LogDistanceCollisionWarning(collision_reporter.Report());
 }
 
 }  // namespace gfx
