@@ -4,7 +4,7 @@
 
 zx_library("zircon-crypto") {
   shared = true
-  sdk = true
+  sdk = "shared"
   sdk_headers = [
     "crypto/aead.h",
     "crypto/bytes.h",
@@ -36,7 +36,7 @@ zx_library("zircon-crypto") {
 
 zx_library("zircon-crypto-static") {
   static = true
-  sdk = true
+  sdk = "source"
   sdk_headers = [
     "crypto/aead.h",
     "crypto/bytes.h",

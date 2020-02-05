@@ -97,7 +97,6 @@ aggregate_manifest("legacy-image") {
     ":driver.virtio_rng",
     ":driver.virtio_scsi",
     ":driver.virtio_socket",
-    ":driver.zxcrypt",
   ]
 
   # CPU-specific targets.
@@ -984,8 +983,8 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/dev/display/vim-display:vim-display-manifest",
     #":driver.virtio",
     "//zircon/system/dev/usb/xhci:xhci-manifest",
-    #":driver.zxcrypt",
     "//zircon/system/dev/usb/usb-bus:usb-device-manifest",
+    "//zircon/system/dev/block/zxcrypt:zxcrypt-manifest",
   ]
   if (target_cpu == "x64") {
     deps += [

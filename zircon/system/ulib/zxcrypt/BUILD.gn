@@ -4,7 +4,7 @@
 
 zx_library("zxcrypt-dev") {
   static = true
-  sdk = true
+  sdk = "source"
   sdk_headers = [
     "zxcrypt/ddk-volume.h",
     "zxcrypt/volume.h",
@@ -32,7 +32,6 @@ zx_library("zxcrypt-dev") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fs-management:headers",  # only used for zxcrypt_magic
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-crypto:zircon-crypto-static",
@@ -45,7 +44,7 @@ zx_library("zxcrypt-dev") {
 
 zx_library("zxcrypt-fdio") {
   shared = true
-  sdk = true
+  sdk = "shared"
   sdk_headers = [
     "zxcrypt/fdio-volume.h",
     "zxcrypt/volume.h",
@@ -69,7 +68,6 @@ zx_library("zxcrypt-fdio") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fs-management:headers",  # only used for zxcrypt_magic
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/kms-stateless",
     "$zx/system/ulib/ramdevice-client:static",

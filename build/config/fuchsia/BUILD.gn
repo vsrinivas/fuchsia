@@ -226,3 +226,11 @@ config("static_cpp_standard_library") {
 config("large_rust_stack") {
   rustflags = [ "-Clink-args=-zstack-size=0x200000" ]
 }
+
+# Enable additional integer-math sanitizers
+config("integer-paranoia") {
+  cflags = [
+    "-fsanitize=integer-divide-by-zero,signed-integer-overflow",
+    "-fsanitize-undefined-trap-on-error",
+  ]
+}
