@@ -9,8 +9,11 @@
 namespace fxl {
 
 void BreakDebugger() {
-  // TODO(abarth): If we're being debugged, we should break into the debugger.
-  abort();
+  // On some other systems, Crashpad (the crash catcher and reporter) doesn't treat debug exceptions
+  // as uploadable. On Fuchsia it does. Using a debug breakpoint here instead of __builtin_trap()
+  // is a little more friendly to debuggers since they can transparently continue past the debug
+  // breakpoint if the debugger user wants to continue running.
+  __builtin_debugtrap();
 }
 
 }  // namespace fxl
