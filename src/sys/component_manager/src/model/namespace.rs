@@ -61,7 +61,7 @@ impl IncomingNamespace {
     /// handles to pseudo directories.
     pub async fn populate<'a>(
         &'a mut self,
-        model: Model,
+        model: &'a Arc<Model>,
         abs_moniker: &'a AbsoluteMoniker,
         decl: &'a ComponentDecl,
     ) -> Result<fsys::ComponentNamespace, ModelError> {
@@ -88,12 +88,12 @@ impl IncomingNamespace {
                         &mut ns,
                         &mut directory_waiters,
                         use_,
-                        model.clone(),
+                        &model,
                         abs_moniker.clone(),
                     )?;
                 }
                 cm_rust::UseDecl::Protocol(s) => {
-                    Self::add_service_use(&mut svc_dirs, s, model.clone(), abs_moniker.clone())?;
+                    Self::add_service_use(&mut svc_dirs, s, model, abs_moniker.clone())?;
                 }
                 cm_rust::UseDecl::Service(_) => {
                     return Err(ModelError::unsupported("Service capability"))
@@ -103,7 +103,7 @@ impl IncomingNamespace {
                         &mut ns,
                         &mut directory_waiters,
                         use_,
-                        model.clone(),
+                        model,
                         abs_moniker.clone(),
                     )?;
                 }
@@ -147,7 +147,7 @@ impl IncomingNamespace {
         ns: &mut fsys::ComponentNamespace,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        model: Model,
+        model: &Arc<Model>,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         Self::add_directory_helper(ns, waiters, use_, model, abs_moniker)
@@ -161,7 +161,7 @@ impl IncomingNamespace {
         ns: &mut fsys::ComponentNamespace,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        model: Model,
+        model: &Arc<Model>,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         Self::add_directory_helper(ns, waiters, use_, model, abs_moniker)
@@ -171,7 +171,7 @@ impl IncomingNamespace {
         ns: &mut fsys::ComponentNamespace,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        model: Model,
+        model: &Arc<Model>,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let target_path = match use_ {
@@ -197,6 +197,7 @@ impl IncomingNamespace {
         let use_ = use_.clone();
         let (client_end, server_end) =
             create_endpoints().expect("could not create storage proxy endpoints");
+        let model = model.clone();
         let route_on_usage = async move {
             // Wait for the channel to become readable.
             let server_end = fasync::Channel::from_channel(server_end.into_channel())
@@ -256,18 +257,19 @@ impl IncomingNamespace {
     fn add_service_use(
         svc_dirs: &mut HashMap<String, Directory>,
         use_: &cm_rust::UseProtocolDecl,
-        model: Model,
+        model: &Arc<Model>,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let use_clone = use_.clone();
+        let model = model.clone();
         let route_open_fn = Box::new(
             move |flags: u32,
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
                 let use_ = UseDecl::Protocol(use_clone.clone());
-                let model = model.clone();
                 let abs_moniker = abs_moniker.clone();
+                let model = model.clone();
                 fasync::spawn(async move {
                     let abs_moniker_clone = abs_moniker.clone();
                     let res = async move {

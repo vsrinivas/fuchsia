@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The "Action" concept represents a long-running activity on a realm that should eventually
+//! The "Action" concept represents an asynchronous activity on a realm that should eventually
 //! complete.
 //!
 //! Actions decouple the "what" of what needs to happen to a component from the "how". Several
-//! client APIs may induce long-running operations on a realm's state that complete asynchronously.
-//! These operations could depend on each other in various ways.
+//! client APIs may induce operations on a realm's state that complete asynchronously. These
+//! operations could depend on each other in various ways.
 //!
 //! A key property of actions is idempotency. If two equal actions are registered on a realm, the
 //! work for that action is performed only once. This means that two distinct call sites can
@@ -51,6 +51,9 @@
 //!   child and marks `DestroyChild` finished, which will notify the client that the action is
 //!   complete.
 
+pub mod start;
+mod shutdown;
+
 use {
     crate::model::{
         error::ModelError,
@@ -58,7 +61,6 @@ use {
         model::Model,
         moniker::ChildMoniker,
         realm::Realm,
-        shutdown,
     },
     fuchsia_async as fasync,
     futures::future::{join_all, poll_fn, BoxFuture},
@@ -72,6 +74,8 @@ use {
 /// A action on a realm that must eventually be fulfilled.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Action {
+    /// This single component instance should be started.
+    Start,
     /// This realm's component instances should be shut down (stopped and never started again).
     Shutdown,
     /// The given child of this realm should be deleted.
@@ -191,6 +195,7 @@ impl Action {
         let action = self.clone();
         fasync::spawn(async move {
             let res = match &action {
+                Action::Start => start::do_start(model, realm.clone()).await,
                 Action::DeleteChild(moniker) => {
                     do_delete_child(model, realm.clone(), moniker.clone()).await
                 }

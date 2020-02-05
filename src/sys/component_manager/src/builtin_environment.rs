@@ -37,10 +37,7 @@ use {
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{lock::Mutex, stream::StreamExt},
-    std::{
-        collections::HashMap,
-        sync::{Arc, Weak},
-    },
+    std::{collections::HashMap, sync::Arc},
 };
 
 /// The built-in environment consists of the set of the root services and framework services.
@@ -138,7 +135,8 @@ impl BuiltinEnvironment {
         };
 
         // Set up work scheduler.
-        let work_scheduler = WorkScheduler::new(Arc::downgrade(model) as Weak<dyn Binder>).await;
+        let work_scheduler =
+            WorkScheduler::new(Arc::new(Arc::downgrade(model)) as Arc<dyn Binder>).await;
         model.root_realm.hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
 
         // Set up the realm service.

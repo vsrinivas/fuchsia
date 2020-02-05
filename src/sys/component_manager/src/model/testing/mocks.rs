@@ -12,6 +12,7 @@ use {
         runner::{Runner, RunnerError},
     },
     anyhow::format_err,
+    async_trait::async_trait,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
     fidl::endpoints::ServerEnd,
@@ -306,17 +307,15 @@ impl FakeBinder {
     }
 }
 
+#[async_trait]
 impl Binder for FakeBinder {
-    fn bind<'a>(
+    async fn bind<'a>(
         &'a self,
         _abs_moniker: &'a AbsoluteMoniker,
-    ) -> BoxFuture<Result<Arc<Realm>, ModelError>> {
-        async {
-            let resolver = ResolverRegistry::new();
-            let root_component_url = "test:///root".to_string();
-            Ok(Arc::new(Realm::new_root_realm(resolver, root_component_url)))
-        }
-        .boxed()
+    ) -> Result<Arc<Realm>, ModelError> {
+        let resolver = ResolverRegistry::new();
+        let root_component_url = "test:///root".to_string();
+        Ok(Arc::new(Realm::new_root_realm(resolver, root_component_url)))
     }
 }
 

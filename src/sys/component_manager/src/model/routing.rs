@@ -58,7 +58,7 @@ enum ExposeSource<'a> {
 /// `server_chan` to the hosting component's out directory (or componentmgr's namespace, if
 /// applicable) using an open request with `open_mode`.
 pub(super) async fn route_use_capability<'a>(
-    model: &'a Model,
+    model: &'a Arc<Model>,
     flags: u32,
     open_mode: u32,
     relative_path: String,
@@ -98,7 +98,7 @@ pub(super) async fn route_use_capability<'a>(
 /// `absolute_moniker`, and pass along the `server_chan` to the hosting component's out
 /// directory (or componentmgr's namespace, if applicable)
 pub(super) async fn route_expose_capability<'a>(
-    model: &'a Model,
+    model: &'a Arc<Model>,
     flags: u32,
     open_mode: u32,
     relative_path: String,
@@ -132,7 +132,7 @@ pub(super) async fn route_expose_capability<'a>(
 /// This provider will bind to the source moniker's realm and then open the service
 /// from the realm's outgoing directory.
 struct DefaultComponentCapabilityProvider {
-    model: Model,
+    model: Arc<Model>,
     path: CapabilityPath,
     source_moniker: AbsoluteMoniker,
 }
@@ -147,7 +147,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         // Start the source component, if necessary
-        let source_realm = self.model.bind(&self.source_moniker).await?;
+        let source_realm = self.model.clone().bind(&self.source_moniker).await?;
         let path = self.path.to_path_buf().attach(relative_path);
         source_realm.open_outgoing(flags, open_mode, path, server_end).await?;
         Ok(())
@@ -157,7 +157,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
 /// This method gets an optional default capability provider based on the
 /// capability source.
 fn get_default_provider(
-    model: &Model,
+    model: &Arc<Model>,
     source: &CapabilitySource,
 ) -> Option<Box<dyn CapabilityProvider>> {
     match source {
@@ -191,7 +191,7 @@ pub fn get_framework_capability_path(source: &CapabilitySource) -> Option<&Capab
 
 /// Open the capability at the given source, binding to its component instance if necessary.
 pub async fn open_capability_at_source(
-    model: &Model,
+    model: &Arc<Model>,
     flags: u32,
     open_mode: u32,
     relative_path: PathBuf,
@@ -241,7 +241,7 @@ pub async fn open_capability_at_source(
 /// Routes a `UseDecl::Storage` to the component instance providing the backing directory and
 /// opens its isolated storage with `server_chan`.
 pub async fn route_and_open_storage_capability<'a>(
-    model: &'a Model,
+    model: &'a Arc<Model>,
     use_decl: &'a UseStorageDecl,
     open_mode: u32,
     target_realm: &'a Arc<Realm>,
@@ -271,14 +271,14 @@ pub async fn route_and_open_storage_capability<'a>(
 /// Routes a `UseDecl::Storage` to the component instance providing the backing directory and
 /// deletes its isolated storage.
 pub(super) async fn route_and_delete_storage<'a>(
-    model: &'a Model,
+    model: &'a Arc<Model>,
     use_decl: &'a UseStorageDecl,
     target_realm: &'a Arc<Realm>,
 ) -> Result<(), ModelError> {
     let (dir_source_moniker, dir_source_path, relative_moniker, _) =
         route_storage_capability(model, use_decl, target_realm).await?;
     storage::delete_isolated_storage(
-        &model,
+        model,
         dir_source_moniker,
         &dir_source_path,
         &relative_moniker,

@@ -376,9 +376,7 @@ mod tests {
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,
-                testing::{
-                    mocks::*, routing_test_helpers::*, test_helpers, test_helpers::*, test_hook::*,
-                },
+                testing::{mocks::*, out_dir::OutDir, test_helpers, test_helpers::*, test_hook::*},
             },
             startup,
         },

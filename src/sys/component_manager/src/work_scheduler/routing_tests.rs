@@ -26,9 +26,9 @@ struct BindingWorkScheduler {
 
 impl BindingWorkScheduler {
     async fn new() -> Self {
-        let _binder = FakeBinder::new();
-        let work_scheduler = WorkScheduler::new(Arc::downgrade(&_binder)).await;
-        Self { work_scheduler, _binder }
+        let binder = FakeBinder::new();
+        let work_scheduler = WorkScheduler::new(binder.clone()).await;
+        Self { work_scheduler, _binder: binder }
     }
 }
 

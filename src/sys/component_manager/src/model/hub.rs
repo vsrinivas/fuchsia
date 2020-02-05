@@ -9,10 +9,12 @@ use {
         },
         model::{
             addable_directory::AddableDirectoryWithResult,
-            binding::ComponentDescriptor,
             dir_tree::{CapabilityUsageTree, DirTree},
             error::ModelError,
-            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
+            hooks::{
+                ComponentDescriptor, Event, EventPayload, EventType, Hook, HooksRegistration,
+                RuntimeInfo,
+            },
             model::Model,
             moniker::AbsoluteMoniker,
             routing_facade::RoutingFacade,

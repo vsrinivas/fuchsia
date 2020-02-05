@@ -17,17 +17,17 @@ use {
     fidl_fuchsia_io::NodeMarker,
     fuchsia_async as fasync,
     log::*,
-    std::path::PathBuf,
+    std::{path::PathBuf, sync::Arc},
 };
 
 /// A facade over `Model` that provides factories for routing functions.
 #[derive(Clone)]
 pub struct RoutingFacade {
-    model: Model,
+    model: Arc<Model>,
 }
 
 impl RoutingFacade {
-    pub fn new(model: Model) -> Self {
+    pub fn new(model: Arc<Model>) -> Self {
         RoutingFacade { model }
     }
 
@@ -61,7 +61,7 @@ impl RoutingFacade {
     }
 }
 
-fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> RoutingFn {
+fn route_use_fn(model: Arc<Model>, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let model = model.clone();
@@ -92,7 +92,7 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
 }
 
 fn route_capability_source(
-    model: Model,
+    model: Arc<Model>,
     abs_moniker: AbsoluteMoniker,
     source: CapabilitySource,
 ) -> RoutingFn {
@@ -125,7 +125,11 @@ fn route_capability_source(
     )
 }
 
-fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDecl) -> RoutingFn {
+fn route_expose_fn(
+    model: Arc<Model>,
+    abs_moniker: AbsoluteMoniker,
+    expose: ExposeDecl,
+) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
             let model = model.clone();

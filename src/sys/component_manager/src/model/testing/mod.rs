@@ -4,6 +4,7 @@
 
 pub mod echo_service;
 pub mod mocks;
+pub mod out_dir;
 pub mod routing_test_helpers;
 pub mod test_helpers;
 pub mod test_hook;

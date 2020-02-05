@@ -29,7 +29,7 @@ use {
     fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs_mt::directory::entry::DirectoryEntry,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
-    futures::TryStreamExt,
+    futures::{channel::mpsc::Receiver, StreamExt, TryStreamExt},
     std::collections::HashSet,
     std::default::Default,
     std::path::Path,
@@ -385,6 +385,19 @@ where
         },
     ));
     (entry, receiver)
+}
+
+/// Wait for a ComponentRunnerStart request, acknowledge it, and return
+/// the start info.
+///
+/// Panics if the channel closes before we receive a request.
+pub async fn wait_for_runner_request(
+    recv: &mut Receiver<fsys::ComponentRunnerRequest>,
+) -> fsys::ComponentStartInfo {
+    let fsys::ComponentRunnerRequest::Start { start_info, responder, .. } =
+        recv.next().await.expect("Channel closed before request was received.");
+    responder.send(&mut Ok(())).expect("Failed to send response over channel.");
+    start_info
 }
 
 pub fn new_test_model(

@@ -21,12 +21,12 @@ pub struct ExposedDir {
 
 impl ExposedDir {
     pub fn new(
-        model: &Model,
+        model: Arc<Model>,
         abs_moniker: &AbsoluteMoniker,
         decl: ComponentDecl,
     ) -> Result<Self, ModelError> {
         let mut dir = pfs::simple();
-        let route_fn = RoutingFacade::new(model.clone()).route_expose_fn_factory();
+        let route_fn = RoutingFacade::new(model).route_expose_fn_factory();
         let tree = DirTree::build_from_exposes(route_fn, abs_moniker, decl);
         tree.install(abs_moniker, &mut dir)?;
         Ok(ExposedDir { root_dir: dir })

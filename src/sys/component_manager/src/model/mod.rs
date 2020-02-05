@@ -19,7 +19,6 @@ pub(crate) mod resolver;
 pub(crate) mod routing;
 pub(crate) mod routing_facade;
 pub(crate) mod runner;
-pub(crate) mod shutdown;
 
 mod addable_directory;
 mod dir_tree;

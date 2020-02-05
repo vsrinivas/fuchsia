@@ -25,10 +25,7 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
     lazy_static::lazy_static,
-    std::{
-        convert::TryInto,
-        sync::{Arc, Weak},
-    },
+    std::{convert::TryInto, sync::Arc},
 };
 
 // If you change this block, please update test `work_scheduler_capability_paths`.
@@ -46,13 +43,13 @@ lazy_static! {
 pub struct WorkScheduler {
     /// Delegate that implements business logic and holds state behind `Mutex`.
     delegate: Mutex<WorkSchedulerDelegate>,
-    /// A reference to the `Model` used to bind to component instances during dispatch.
-    binder: Weak<dyn Binder>,
+    /// Used to bind to component instances during dispatch.
+    binder: Arc<dyn Binder>,
 }
 
 impl WorkScheduler {
     // `Workscheduler` is always instantiated in an `Arc` that will determine its lifetime.
-    pub async fn new(binder: Weak<dyn Binder>) -> Arc<Self> {
+    pub async fn new(binder: Arc<dyn Binder>) -> Arc<Self> {
         let work_scheduler = Self::new_raw(binder);
         {
             let mut delegate = work_scheduler.delegate.lock().await;
@@ -61,7 +58,7 @@ impl WorkScheduler {
         work_scheduler
     }
 
-    fn new_raw(binder: Weak<dyn Binder>) -> Arc<Self> {
+    fn new_raw(binder: Arc<dyn Binder>) -> Arc<Self> {
         Arc::new(Self { delegate: WorkSchedulerDelegate::new(), binder })
     }
 
@@ -288,13 +285,13 @@ mod time_tests {
         fn new() -> Self {
             let executor = Executor::new_with_fake_time().unwrap();
             executor.set_fake_time(Time::from_nanos(0));
-            let _binder = FakeBinder::new();
-            let work_scheduler = WorkScheduler::new_raw(Arc::downgrade(&_binder));
+            let binder = FakeBinder::new();
+            let work_scheduler = WorkScheduler::new_raw(binder.clone());
             block_on(async {
                 let mut delegate = work_scheduler.delegate.lock().await;
                 delegate.init(Arc::downgrade(&work_scheduler));
             });
-            TimeTest { executor, work_scheduler, _binder }
+            TimeTest { executor, work_scheduler, _binder: binder }
         }
 
         fn work_scheduler(&self) -> Arc<WorkScheduler> {
@@ -753,7 +750,7 @@ mod connect_tests {
         // Retain `Arc` to keep `Binder` alive throughout test.
         let binder = FakeBinder::new();
 
-        let work_scheduler = WorkScheduler::new(Arc::downgrade(&binder)).await;
+        let work_scheduler = WorkScheduler::new(binder).await;
         let hooks = Hooks::new(None);
         hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
 

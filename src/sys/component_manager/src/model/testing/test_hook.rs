@@ -7,9 +7,8 @@ use {
         capability::*,
         model::addable_directory::AddableDirectoryWithResult,
         model::{
-            binding::ComponentDescriptor,
             error::ModelError,
-            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            hooks::{ComponentDescriptor, Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
         },
         path::PathBufExt,

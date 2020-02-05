@@ -21,10 +21,7 @@ use {
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon as zx,
-    futures::{
-        channel::mpsc::Receiver, future::BoxFuture, join, lock::Mutex, stream::StreamExt,
-        TryStreamExt,
-    },
+    futures::{future::BoxFuture, join, lock::Mutex, TryStreamExt},
     log::*,
     std::{
         convert::{TryFrom, TryInto},
@@ -1550,19 +1547,6 @@ async fn use_in_collection_not_offered() {
         CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
-}
-
-/// Wait for a ComponentRunnerStart request, acknowledge it, and return
-/// the start info.
-///
-/// Panics if the channel closes before we receive a request.
-async fn wait_for_runner_request(
-    recv: &mut Receiver<fsys::ComponentRunnerRequest>,
-) -> fsys::ComponentStartInfo {
-    let fsys::ComponentRunnerRequest::Start { start_info, responder, .. } =
-        recv.next().await.expect("Channel closed before request was received.");
-    responder.send(&mut Ok(())).expect("Failed to send response over channel.");
-    start_info
 }
 
 ///   a

@@ -16,7 +16,7 @@ use {
     std::{
         hash::{Hash, Hasher},
         io,
-        sync::{Arc, Weak},
+        sync::Arc,
     },
     thiserror::Error,
 };
@@ -38,8 +38,6 @@ pub enum Error {
     IO(io::Error),
     #[error("component model error: {:?}", 0)]
     Model(ModelError),
-    #[error("model has been dropped")]
-    ModelNotFound,
 }
 
 /// A facade for dispatcher data needed by different parts of `WorkSchedulerDelegate`. This is
@@ -73,11 +71,11 @@ pub(super) struct RealDispatcher {
     target_moniker: AbsoluteMoniker,
     /// Implementation for binding to component and connecting to a service in its outgoing
     /// directory, in this case, the component instance's `fuchsia.sys2.Worker` server.
-    binder: Weak<dyn Binder>,
+    binder: Arc<dyn Binder>,
 }
 
 impl RealDispatcher {
-    pub(super) fn new(target_moniker: AbsoluteMoniker, binder: Weak<dyn Binder>) -> Arc<Self> {
+    pub(super) fn new(target_moniker: AbsoluteMoniker, binder: Arc<dyn Binder>) -> Arc<Self> {
         Arc::new(Self { target_moniker, binder })
     }
 }
@@ -94,14 +92,12 @@ impl Dispatcher for RealDispatcher {
 
 async fn dispatch(
     target_moniker: &AbsoluteMoniker,
-    binder: &Weak<dyn Binder>,
+    binder: &Arc<dyn Binder>,
     work_items: Vec<WorkItem>,
 ) -> Result<(), Error> {
     let (client_end, server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
 
     binder
-        .upgrade()
-        .ok_or_else(|| Error::ModelNotFound)?
         .bind(&target_moniker)
         .await
         .map_err(|err| Error::Model(err))?

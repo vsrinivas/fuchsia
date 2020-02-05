@@ -50,7 +50,6 @@ pub struct ModelParams {
 /// To facilitate unit testing, the component model does not directly perform IPC.  Instead, it
 /// delegates external interfacing concerns to other objects that implement traits such as
 /// `Runner` and `Resolver`.
-#[derive(Clone)]
 pub struct Model {
     pub root_realm: Arc<Realm>,
 

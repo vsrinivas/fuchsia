@@ -17,7 +17,7 @@ use {
         OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys,
-    std::path::PathBuf,
+    std::{path::PathBuf, sync::Arc},
     thiserror::Error,
 };
 
@@ -93,7 +93,7 @@ impl StorageError {
 /// `dir_source_realm` and `dir_source_path` are the realm hosting the directory and its capability
 /// path.
 pub async fn open_isolated_storage(
-    model: &Model,
+    model: &Arc<Model>,
     dir_source_moniker: Option<AbsoluteMoniker>,
     dir_source_path: &CapabilityPath,
     storage_type: fsys::StorageType,
@@ -159,7 +159,7 @@ pub async fn open_isolated_storage(
 /// Delete the isolated storage sub-directory for the given component.  `dir_source_realm` and
 /// `dir_source_path` are the realm hosting the directory and its capability path.
 pub async fn delete_isolated_storage(
-    model: &Model,
+    model: &Arc<Model>,
     dir_source_moniker: Option<AbsoluteMoniker>,
     dir_source_path: &CapabilityPath,
     relative_moniker: &RelativeMoniker,

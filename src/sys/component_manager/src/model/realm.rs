@@ -159,7 +159,7 @@ impl Realm {
     /// Ok(None) will be returned.
     pub async fn resolve_meta_dir(
         realm: &Arc<Realm>,
-        model: &Model,
+        model: &Arc<Model>,
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
         {
             // If our meta directory has already been resolved, just return the answer.
@@ -182,7 +182,7 @@ impl Realm {
             zx::Channel::create().expect("failed to create channel");
 
         routing::route_and_open_storage_capability(
-            &model,
+            model,
             &UseStorageDecl::Meta,
             MODE_TYPE_DIRECTORY,
             realm,
@@ -210,7 +210,7 @@ impl Realm {
     // manually write out the type.
     pub fn resolve_runner<'a>(
         realm: &'a Arc<Realm>,
-        model: &'a Model,
+        model: &'a Arc<Model>,
     ) -> BoxFuture<'a, Result<Arc<dyn Runner + Send + Sync + 'static>, ModelError>> {
         async move {
             // Fetch component declaration.
@@ -230,7 +230,7 @@ impl Realm {
                     create_endpoints::<fsys::ComponentRunnerMarker>()
                         .map_err(|_| ModelError::InsufficientResources)?;
                 routing::route_use_capability(
-                    &model,
+                    model,
                     /*flags=*/ 0,
                     /*open_mode=*/ 0,
                     String::new(),

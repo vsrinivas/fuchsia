@@ -4,235 +4,29 @@
 
 use {
     crate::model::{
+        actions::{Action, ActionSet, start},
         error::ModelError,
-        exposed_dir::ExposedDir,
-        hooks::{self, Event, EventPayload},
         model::Model,
         moniker::AbsoluteMoniker,
-        namespace::IncomingNamespace,
-        realm::{ExecutionState, Realm, Runtime},
-        resolver::Resolver,
-        routing_facade::RoutingFacade,
+        realm::Realm,
     },
-    cm_rust::data,
-    fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{
-        future::{join_all, BoxFuture},
-        FutureExt,
-    },
-    log::*,
-    std::sync::Arc,
+    async_trait::async_trait,
+    fidl_fuchsia_sys2 as fsys,
+    futures::future::{join_all, BoxFuture},
+    std::sync::{Arc, Weak},
 };
-
-#[derive(Clone)]
-pub struct ComponentDescriptor {
-    pub abs_moniker: AbsoluteMoniker,
-    pub url: String,
-}
-
-impl Model {
-    /// Binds to the component instance in the given realm, starting it if it's not already
-    /// running. Returns the list of child realms whose instances need to be eagerly started after
-    /// this function returns. The caller is responsible for calling
-    /// `bind_eager_children_recursive` to ensure eager children are recursively binded.
-    pub async fn bind_single_instance(
-        &self,
-        realm: Arc<Realm>,
-    ) -> Result<Vec<Arc<Realm>>, ModelError> {
-        // Resolve the component and find the runner to use.
-        let component = realm.resolver_registry.resolve(&realm.component_url).await?;
-        let resolved_url = component.resolved_url.ok_or(ModelError::ComponentInvalid)?;
-        let package = component.package;
-
-        let (decl, live_child_descriptors) = {
-            Realm::populate_decl(&realm, component.decl.ok_or(ModelError::ComponentInvalid)?)
-                .await?;
-            let state = realm.lock_state().await;
-            let state = state.as_ref().unwrap();
-            let decl = state.decl().clone();
-            let live_child_descriptors: Vec<_> = state
-                .live_child_realms()
-                .map(|(_, r)| ComponentDescriptor {
-                    abs_moniker: r.abs_moniker.clone(),
-                    url: r.component_url.clone(),
-                })
-                .collect();
-            (decl, live_child_descriptors)
-        };
-
-        // Pre-flight check: if the component is already started, return now (and don't invoke the
-        // hook).
-        let maybe_return_early =
-            |execution: &ExecutionState| -> Option<Result<Vec<Arc<Realm>>, ModelError>> {
-                if execution.is_shut_down() {
-                    Some(Err(ModelError::instance_shut_down(realm.abs_moniker.clone())))
-                } else if execution.runtime.is_some() {
-                    // TODO: Add binding to the execution once we track bindings.
-                    Some(Ok(vec![]))
-                } else {
-                    None
-                }
-            };
-        {
-            let execution = realm.lock_execution().await;
-            if let Some(res) = maybe_return_early(&execution) {
-                return res;
-            }
-        }
-        let runner = {
-            let res = Realm::resolve_runner(&realm, self).await;
-            res.map_err(|e| {
-                error!("failed to resolve runner for {}: {:?}", realm.abs_moniker, e);
-                e
-            })?
-        };
-
-        // Generate the Runtime which will be set in the Execution.
-        let (pending_runtime, start_info, controller_server) =
-            self.make_execution_runtime(&realm.abs_moniker, resolved_url, package, &decl).await?;
-
-        // Invoke the BeforeStart hook outside of lock, passing it a Runtime reference. Note that
-        // this could race with the component being started first in some other task. In that case,
-        // the hook will be invoked with a Runtime; from the client's perspective, this is like
-        // getting an invocation for a component that's started and immediately stopped, except it
-        // won't see a Stop event.
-        {
-            let routing_facade = RoutingFacade::new(self.clone());
-            let event = Event::new(
-                realm.abs_moniker.clone(),
-                EventPayload::BeforeStartInstance {
-                    runtime: hooks::RuntimeInfo::from_runtime(&pending_runtime),
-                    component_decl: decl.clone(),
-                    live_children: live_child_descriptors,
-                    routing_facade,
-                },
-            );
-            realm.hooks.dispatch(&event).await?;
-        }
-
-        // Set the Runtime in the Execution. From component manager's perspective, this indicates
-        // that the component has started.
-        {
-            let mut execution = realm.lock_execution().await;
-            if let Some(res) = maybe_return_early(&execution) {
-                // This task raced with another task that started the component. Return.
-                return res;
-            }
-            execution.runtime = Some(pending_runtime);
-        }
-
-        // We call `Start` outside of lock, after the Runtime is populated. When the runtime was
-        // populated, we checked if it was already set, so if there were two concurrent bind
-        // calls at most one of them will get here.
-        //
-        // It is also possible that the component is stopped before this. If so, that's fine: the
-        // runner will start the component, but its stop or kill signal will be immediately set on
-        // the component controller.
-        runner.start(start_info, controller_server).await?;
-
-        // Return eager children that need to be bound to.
-        {
-            let mut state = realm.lock_state().await;
-            let state = state.as_mut().expect("bind_single_instance: not resolved");
-            let eager_child_realms: Vec<_> = state
-                .live_child_realms()
-                .filter_map(|(_, r)| match r.startup {
-                    fsys::StartupMode::Eager => Some(r.clone()),
-                    fsys::StartupMode::Lazy => None,
-                })
-                .collect();
-            Ok(eager_child_realms)
-        }
-    }
-
-    /// Binds to a list of instances, and any eager children they may return.
-    async fn bind_eager_children_recursive<'a>(
-        &'a self,
-        mut instances_to_bind: Vec<Arc<Realm>>,
-    ) -> Result<(), ModelError> {
-        loop {
-            if instances_to_bind.is_empty() {
-                break;
-            }
-            let futures: Vec<_> = instances_to_bind
-                .iter()
-                .map(|realm| {
-                    Box::pin(async move { self.bind_single_instance(realm.clone()).await })
-                })
-                .collect();
-            let res = join_all(futures).await;
-            instances_to_bind.clear();
-            for e in res {
-                instances_to_bind.append(&mut e?);
-            }
-        }
-        Ok(())
-    }
-
-    /// Returns a configured Runtime for a component and the start info (without actually starting
-    /// the component).
-    async fn make_execution_runtime(
-        &self,
-        abs_moniker: &AbsoluteMoniker,
-        url: String,
-        package: Option<fsys::Package>,
-        decl: &cm_rust::ComponentDecl,
-    ) -> Result<
-        (Runtime, fsys::ComponentStartInfo, ServerEnd<fsys::ComponentControllerMarker>),
-        ModelError,
-    > {
-        // Create incoming/outgoing directories, and populate them.
-        let exposed_dir = ExposedDir::new(self, abs_moniker, decl.clone())?;
-        let (outgoing_dir_client, outgoing_dir_server) =
-            zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-        let (runtime_dir_client, runtime_dir_server) =
-            zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-        let mut namespace = IncomingNamespace::new(package)?;
-        let ns = namespace.populate(self.clone(), abs_moniker, decl).await?;
-
-        let (controller_client, controller_server) =
-            create_endpoints::<fsys::ComponentControllerMarker>()
-                .expect("could not create component controller endpoints");
-        let controller =
-            controller_client.into_proxy().expect("failed to create ComponentControllerProxy");
-        // Set up channels into/out of the new component.
-        let runtime = Runtime::start_from(
-            url.clone(),
-            Some(namespace),
-            Some(DirectoryProxy::from_channel(
-                fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
-            )),
-            Some(DirectoryProxy::from_channel(
-                fasync::Channel::from_channel(runtime_dir_client).unwrap(),
-            )),
-            exposed_dir,
-            Some(controller),
-        )?;
-        let start_info = fsys::ComponentStartInfo {
-            resolved_url: Some(url),
-            program: data::clone_option_dictionary(&decl.program),
-            ns: Some(ns),
-            outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
-            runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
-        };
-
-        Ok((runtime, start_info, controller_server))
-    }
-}
 
 /// A trait to enable support for different `bind()` implementations. This is used,
 /// for example, for testing code that depends on `bind()`, but no other `Model`
 /// functionality.
+#[async_trait]
 pub trait Binder: Send + Sync {
-    fn bind<'a>(
-        &'a self,
-        abs_moniker: &'a AbsoluteMoniker,
-    ) -> BoxFuture<Result<Arc<Realm>, ModelError>>;
+    async fn bind<'a>(&'a self, abs_moniker: &'a AbsoluteMoniker)
+        -> Result<Arc<Realm>, ModelError>;
 }
 
-impl Binder for Model {
+#[async_trait]
+impl Binder for Arc<Model> {
     /// Binds to the component instance with the specified moniker. This has the following effects:
     /// - Binds to the parent instance.
     /// - Starts the component instance, if it is not already running and not shut down.
@@ -240,36 +34,92 @@ impl Binder for Model {
     // TODO: This function starts the parent component, but doesn't track the bindings anywhere.
     // This means that when the child stops and the parent has no other reason to run, we won't
     // stop the parent. To solve this, we need to track the bindings.
-    fn bind<'a>(
+    async fn bind<'a>(
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
-    ) -> BoxFuture<Result<Arc<Realm>, ModelError>> {
-        async move {
-            async fn bind_one(model: &Model, m: AbsoluteMoniker) -> Result<Arc<Realm>, ModelError> {
-                let realm = model.look_up_realm(&m).await?;
-                let eager_children = model.bind_single_instance(realm.clone()).await?;
-                // If the bind to this realm's instance succeeded but the child is shut down, allow
-                // the call to succeed. If the child is shut down, that shouldn't cause the client
-                // to believe the bind to `abs_moniker` failed.
-                //
-                // TODO: Have a more general strategy for dealing with errors from eager binding.
-                // Should we ever pass along the error?
-                model.bind_eager_children_recursive(eager_children).await.or_else(|e| match e {
-                    ModelError::InstanceShutDown { .. } => Ok(()),
-                    _ => Err(e),
-                })?;
-                Ok(realm)
-            }
-            let mut cur_moniker = AbsoluteMoniker::root();
-            let mut realm = bind_one(self, cur_moniker.clone()).await?;
-            for m in abs_moniker.path().iter() {
-                cur_moniker = cur_moniker.child(m.clone());
-                realm = bind_one(self, cur_moniker.clone()).await?;
-            }
-            Ok(realm)
-        }
-        .boxed()
+    ) -> Result<Arc<Realm>, ModelError> {
+        bind_at_moniker(self, abs_moniker).await
     }
+}
+
+#[async_trait]
+impl Binder for Weak<Model> {
+    async fn bind<'a>(
+        &'a self,
+        abs_moniker: &'a AbsoluteMoniker,
+    ) -> Result<Arc<Realm>, ModelError> {
+        if let Some(model) = self.upgrade() {
+            model.bind(abs_moniker).await
+        } else {
+            Err(ModelError::ModelNotAvailable)
+        }
+    }
+}
+
+/// Binds to the component instance in the given realm, starting it if it's not already running.
+/// Returns the realm that was bound to.
+pub async fn bind_at_moniker<'a>(
+    model: &'a Arc<Model>,
+    abs_moniker: &'a AbsoluteMoniker,
+) -> Result<Arc<Realm>, ModelError> {
+    let mut cur_moniker = AbsoluteMoniker::root();
+    let mut realm = model.root_realm.clone();
+    bind_at(model, realm.clone()).await?;
+    for m in abs_moniker.path().iter() {
+        cur_moniker = cur_moniker.child(m.clone());
+        realm = model.look_up_realm(&cur_moniker).await?;
+        bind_at(model, realm.clone()).await?;
+    }
+    Ok(realm)
+}
+
+/// Binds to the component instance in the given realm, starting it if it's not already
+/// running.
+async fn bind_at(model: &Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
+    // Skip starting a component instance that was already started.
+    // Eager binding can cause `bind_at` to be re-entrant. It's important to bail out here so
+    // we don't end up in an infinite loop of binding to the same eager child.
+    {
+        let execution = realm.lock_execution().await;
+        if let Some(res) = start::should_return_early(&execution, &realm.abs_moniker) {
+            return res;
+        }
+    }
+    ActionSet::register(realm.clone(), model.clone(), Action::Start).await.await?;
+
+    let eager_children: Vec<_> = {
+        let mut state = realm.lock_state().await;
+        let state = state.as_mut().expect("bind_single_instance: not resolved");
+        state
+            .live_child_realms()
+            .filter_map(|(_, r)| match r.startup {
+                fsys::StartupMode::Eager => Some(r.clone()),
+                fsys::StartupMode::Lazy => None,
+            })
+            .collect()
+    };
+    bind_eager_children_recursive(model, eager_children).await.or_else(|e| match e {
+        ModelError::InstanceShutDown { .. } => Ok(()),
+        _ => Err(e),
+    })?;
+    Ok(())
+}
+
+/// Binds to a list of instances, and any eager children they may return.
+// This function recursive calls `bind_at`, so it returns a BoxFutuer,
+fn bind_eager_children_recursive<'a>(
+    model: &'a Arc<Model>,
+    instances_to_bind: Vec<Arc<Realm>>,
+) -> BoxFuture<'a, Result<(), ModelError>> {
+    let f = async move {
+        let futures: Vec<_> = instances_to_bind
+            .iter()
+            .map(|realm| async move { bind_at(model, realm.clone()).await })
+            .collect();
+        join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
+        Ok(())
+    };
+    Box::pin(f)
 }
 
 #[cfg(test)]
@@ -279,17 +129,23 @@ mod tests {
         crate::{
             builtin_environment::BuiltinEnvironment,
             model::{
+                actions::{Action, ActionSet},
                 breakpoints::registry::BreakpointRegistry,
                 hooks::{EventType, Hook, HooksRegistration},
                 model::{ComponentManagerConfig, ModelParams},
                 moniker::PartialMoniker,
                 resolver::ResolverRegistry,
-                testing::{mocks::*, test_helpers::*, test_hook::TestHook},
+                testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
             },
             startup,
         },
-        std::collections::HashSet,
-        std::sync::Weak,
+        cm_rust::{
+            CapabilityName, CapabilityPath, OfferDecl, OfferRunnerDecl, OfferRunnerSource,
+            OfferTarget, RunnerDecl, RunnerSource,
+        },
+        fuchsia_async as fasync,
+        futures::prelude::*,
+        std::{collections::HashSet, convert::TryFrom, sync::Weak},
     };
 
     async fn new_model(
@@ -408,30 +264,14 @@ mod tests {
             assert_eq!(mock_runner.urls_run(), expected_urls);
         }
 
-        // While the bind() is paused, bind again. Allow the component to start for the second
-        // bind.
-        {
-            let model_copy = model.clone();
-            let (f, bind_handle) = async move {
-                let m: AbsoluteMoniker = vec!["system:0"].into();
-                model_copy.bind(&m).await.expect("failed to bind 2");
-            }
-            .remote_handle();
-            fasync::spawn(f);
-
-            let invocation = breakpoint_receiver
-                .wait_until(EventType::BeforeStartInstance, vec!["system:0"].into())
-                .await;
-            invocation.resume();
-            bind_handle.await;
-            let expected_urls: Vec<String> =
-                vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
-            assert_eq!(mock_runner.urls_run(), expected_urls);
-        }
-
-        // Now allow the first bind to proceed.
+        // While the bind() is paused, simulate a second bind by explicitly scheduling a Start
+        // action. Allow the original bind to proceed, then check the result of both bindings.
+        let m: AbsoluteMoniker = vec!["system:0"].into();
+        let realm = model.look_up_realm(&m).await.expect("failed realm lookup");
+        let nf = ActionSet::register(realm, model.clone(), Action::Start).await;
         invocation.resume();
         bind_handle.await;
+        nf.await.expect("failed to bind 2");
 
         // Verify that the component was started only once.
         {
@@ -667,6 +507,77 @@ mod tests {
         }
         // Verify that the component topology matches expectations.
         assert_eq!("(a(b,c(d(e))))", hook.print());
+    }
+
+    /// `b` is an eager child of `a` that uses a runner provided by `a`. In the process of binding
+    /// to `a`, `b` will be eagerly started, which requires re-binding to `a`. This should work
+    /// without causing reentrance issues.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn bind_eager_children_reentrant() {
+        let mock_runner = Arc::new(MockRunner::new());
+        let mut mock_resolver = MockResolver::new();
+        mock_resolver.add_component(
+            "root",
+            ComponentDeclBuilder::new()
+                .add_lazy_child("a")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        );
+        mock_resolver.add_component(
+            "a",
+            ComponentDeclBuilder::new()
+                .add_eager_child("b")
+                .runner(RunnerDecl {
+                    name: "foo".to_string(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                .offer(OfferDecl::Runner(OfferRunnerDecl {
+                    source: OfferRunnerSource::Self_,
+                    source_name: CapabilityName("foo".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                    target_name: CapabilityName("foo".to_string()),
+                }))
+                .build(),
+        );
+        mock_resolver.add_component(
+            "b",
+            ComponentDeclBuilder::new_empty_component().use_runner("foo").build(),
+        );
+
+        // Set up the runner.
+        let (runner_service, mut receiver) =
+            create_service_directory_entry::<fsys::ComponentRunnerMarker>();
+        let mut out_dir = OutDir::new();
+        out_dir.add_entry(CapabilityPath::try_from("/svc/runner").unwrap(), runner_service);
+        mock_runner.add_host_fn("test:///a_resolved", out_dir.host_fn());
+
+        let hook = Arc::new(TestHook::new());
+        let (model, _builtin_environment) =
+            new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
+
+        // Bind to the top component, and check that it and the eager components were started.
+        {
+            let (f, bind_handle) = async move {
+                let m = AbsoluteMoniker::new(vec!["a:0".into()]);
+                model.bind(&m).await
+            }
+            .remote_handle();
+            fasync::spawn(f);
+            // `b` uses the runner offered by `a`.
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///b_resolved".to_string())
+            );
+            bind_handle.await.expect("bind to `a` failed");
+            let actual_urls = mock_runner.urls_run();
+            // `root` and `a` use the test runner.
+            let expected_urls =
+                vec!["test:///root_resolved".to_string(), "test:///a_resolved".to_string()];
+            assert_eq!(actual_urls, expected_urls);
+        }
+        // Verify that the component topology matches expectations.
+        assert_eq!("(a(b))", hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

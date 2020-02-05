@@ -6,8 +6,8 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            binding::ComponentDescriptor, error::ModelError, moniker::AbsoluteMoniker,
-            realm::Runtime, routing_facade::RoutingFacade,
+            error::ModelError, moniker::AbsoluteMoniker, realm::Runtime,
+            routing_facade::RoutingFacade,
         },
     },
     cm_rust::ComponentDecl,
@@ -170,6 +170,12 @@ impl fmt::Debug for EventPayload {
             | EventPayload::StopInstance => formatter.finish(),
         }
     }
+}
+
+#[derive(Clone)]
+pub struct ComponentDescriptor {
+    pub abs_moniker: AbsoluteMoniker,
+    pub url: String,
 }
 
 #[derive(Clone, Debug)]
