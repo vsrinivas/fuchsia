@@ -7,87 +7,26 @@
 /// different types of packages and when blobfs and pkgfs are in
 /// various intermediate states.
 use {
-    super::*,
+    fidl_fuchsia_pkg::ExperimentToggle as Experiment,
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
+    fuchsia_async as fasync,
     fuchsia_inspect::assert_inspect_tree,
-    fuchsia_merkle::{Hash, MerkleTree},
-    fuchsia_pkg_testing::{serve::handler, RepositoryBuilder},
-    futures::join,
+    fuchsia_merkle::MerkleTree,
+    fuchsia_pkg_testing::{serve::handler, Package, PackageBuilder, RepositoryBuilder},
+    fuchsia_zircon::Status,
+    futures::{join, prelude::*},
+    lib::{
+        extra_blob_contents, make_pkg_with_extra_blobs, resolve_package, test_package_bin,
+        test_package_cmx, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
+    },
     matches::assert_matches,
     std::{
         collections::HashSet,
-        fs::File,
         io::{self, Read},
         path::Path,
         sync::Arc,
     },
 };
-
-impl TestEnv<PkgfsRamdisk> {
-    fn add_slice_to_blobfs(&self, slice: &[u8]) {
-        let merkle = MerkleTree::from_reader(slice).expect("merkle slice").root().to_string();
-        let mut blob = self
-            .pkgfs
-            .blobfs()
-            .root_dir()
-            .expect("blobfs has root dir")
-            .write_file(merkle, 0)
-            .expect("create file in blobfs");
-        blob.set_len(slice.len() as u64).expect("set_len");
-        io::copy(&mut &slice[..], &mut blob).expect("copy from slice to blob");
-    }
-
-    fn add_file_with_merkle_to_blobfs(&self, mut file: File, merkle: &Hash) {
-        let mut blob = self
-            .pkgfs
-            .blobfs()
-            .root_dir()
-            .expect("blobfs has root dir")
-            .write_file(merkle.to_string(), 0)
-            .expect("create file in blobfs");
-        blob.set_len(file.metadata().expect("file has metadata").len()).expect("set_len");
-        io::copy(&mut file, &mut blob).expect("copy file to blobfs");
-    }
-
-    fn add_file_to_pkgfs_at_path(&self, mut file: File, path: impl openat::AsPath) {
-        let mut blob = self
-            .pkgfs
-            .root_dir()
-            .expect("pkgfs root_dir")
-            .new_file(path, 0)
-            .expect("create file in pkgfs");
-        blob.set_len(file.metadata().expect("file has metadata").len()).expect("set_len");
-        io::copy(&mut file, &mut blob).expect("copy file to pkgfs");
-    }
-
-    fn partially_add_file_to_pkgfs_at_path(&self, mut file: File, path: impl openat::AsPath) {
-        let full_len = file.metadata().expect("file has metadata").len();
-        assert!(full_len > 1, "can't partially write 1 byte");
-        let mut partial_bytes = vec![0; full_len as usize / 2];
-        file.read_exact(partial_bytes.as_mut_slice()).expect("partial read of file");
-        let mut blob = self
-            .pkgfs
-            .root_dir()
-            .expect("pkgfs root_dir")
-            .new_file(path, 0)
-            .expect("create file in pkgfs");
-        blob.set_len(full_len).expect("set_len");
-        io::copy(&mut partial_bytes.as_slice(), &mut blob).expect("copy file to pkgfs");
-    }
-
-    fn partially_add_slice_to_pkgfs_at_path(&self, slice: &[u8], path: impl openat::AsPath) {
-        assert!(slice.len() > 1, "can't partially write 1 byte");
-        let partial_slice = &slice[0..slice.len() / 2];
-        let mut blob = self
-            .pkgfs
-            .root_dir()
-            .expect("pkgfs root_dir")
-            .new_file(path, 0)
-            .expect("create file in pkgfs");
-        blob.set_len(slice.len() as u64).expect("set_len");
-        io::copy(&mut &partial_slice[..], &mut blob).expect("copy file to pkgfs");
-    }
-}
 
 #[fasync::run_singlethreaded(test)]
 async fn package_resolution() {

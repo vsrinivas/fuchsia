@@ -5,21 +5,25 @@
 /// This module tests the property that pkg_resolver propagates pkgfs errors when
 /// servicing fuchsia.pkg.PackageResolver.Resolve FIDL requests.
 use {
-    super::*,
+    anyhow::Error,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{
-        FileControlHandle, FileMarker, FileObject, FileRequest, FileRequestStream, NodeInfo,
-        NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN,
+        DirectoryMarker, DirectoryProxy, FileControlHandle, FileMarker, FileObject, FileRequest,
+        FileRequestStream, NodeInfo, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN,
     },
+    fuchsia_async as fasync,
     fuchsia_merkle::MerkleTree,
-    fuchsia_pkg_testing::RepositoryBuilder,
+    fuchsia_pkg_testing::{Package, RepositoryBuilder},
     fuchsia_vfs_pseudo_fs::{
         directory::entry::DirectoryEntry, directory::entry::EntryInfo, pseudo_directory,
     },
+    fuchsia_zircon::Status,
+    futures::prelude::*,
     futures::{
         future::FusedFuture,
         task::{Context, Poll},
     },
+    lib::{extra_blob_contents, make_pkg_with_extra_blobs, PkgFs, TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     std::{
         pin::Pin,
@@ -138,8 +142,11 @@ async fn handle_file_stream_fail_truncate(
     mut stream: FileRequestStream,
     ch: FileControlHandle,
 ) {
-    ch.send_on_open_(Status::OK.into_raw(), Some(&mut NodeInfo::File(FileObject { event: None, stream: None })))
-        .expect("send on open");
+    ch.send_on_open_(
+        Status::OK.into_raw(),
+        Some(&mut NodeInfo::File(FileObject { event: None, stream: None })),
+    )
+    .expect("send on open");
     while let Some(req) = stream.next().await {
         handle_file_req_fail_truncate(call_count.clone(), req.expect("file request unpack")).await;
     }
@@ -150,8 +157,11 @@ async fn handle_file_stream_fail_write(
     mut stream: FileRequestStream,
     ch: FileControlHandle,
 ) {
-    ch.send_on_open_(Status::OK.into_raw(), Some(&mut NodeInfo::File(FileObject { event: None, stream: None })))
-        .expect("send on open");
+    ch.send_on_open_(
+        Status::OK.into_raw(),
+        Some(&mut NodeInfo::File(FileObject { event: None, stream: None })),
+    )
+    .expect("send on open");
     while let Some(req) = stream.next().await {
         handle_file_req_fail_write(call_count.clone(), req.expect("file request unpack")).await;
     }
@@ -161,8 +171,11 @@ async fn handle_file_stream_success(
     mut stream: FileRequestStream,
     ch: FileControlHandle,
 ) {
-    ch.send_on_open_(Status::OK.into_raw(), Some(&mut NodeInfo::File(FileObject { event: None, stream: None })))
-        .expect("send on open");
+    ch.send_on_open_(
+        Status::OK.into_raw(),
+        Some(&mut NodeInfo::File(FileObject { event: None, stream: None })),
+    )
+    .expect("send on open");
     while let Some(req) = stream.next().await {
         handle_file_req_success(req.expect("file request unpack")).await;
     }

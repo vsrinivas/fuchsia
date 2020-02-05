@@ -6,12 +6,14 @@
 /// state (successfully handles retries) when the TUF server errors while
 /// servicing fuchsia.pkg.PackageResolver.Resolve FIDL requests.
 use {
-    super::*,
+    fuchsia_async as fasync,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{
         serve::{handler, UriPathHandler},
-        RepositoryBuilder,
+        Package, PackageBuilder, RepositoryBuilder,
     },
+    fuchsia_zircon::Status,
+    lib::{extra_blob_contents, make_pkg_with_extra_blobs, TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     std::sync::Arc,
 };

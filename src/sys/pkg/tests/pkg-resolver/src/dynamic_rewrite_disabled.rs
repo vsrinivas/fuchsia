@@ -2,28 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![cfg(test)]
+
 /// This module tests pkg_resolver's RewriteManager when
 /// dynamic rewrite rules have been disabled.
 use {
-    super::*,
-    crate::mock_filesystem::spawn_directory_handler,
-    fidl_fuchsia_pkg_rewrite::EngineProxy as RewriteEngineProxy,
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
-    std::{convert::TryInto, fs::File},
+    lib::{get_rules, mock_filesystem, Config, DirOrProxy, Mounts, TestEnvBuilder},
 };
-
-impl Mounts {
-    fn add_dynamic_rewrite_rules(&self, rule_config: &RuleConfig) {
-        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
-            let f = File::create(d.path().join("rewrites.json")).unwrap();
-            serde_json::to_writer(BufWriter::new(f), rule_config).unwrap();
-        } else {
-            panic!("not supported");
-        }
-    }
-}
 
 fn make_rule_config(rule: &Rule) -> RuleConfig {
     RuleConfig::Version1(vec![rule.clone()])
@@ -31,20 +19,6 @@ fn make_rule_config(rule: &Rule) -> RuleConfig {
 
 fn make_rule() -> Rule {
     Rule::new("example.com", "example.com", "/", "/").unwrap()
-}
-
-pub async fn get_rules(rewrite_engine: &RewriteEngineProxy) -> Vec<Rule> {
-    let (rule_iterator, rule_iterator_server) =
-        fidl::endpoints::create_proxy().expect("create rule iterator proxy");
-    rewrite_engine.list(rule_iterator_server).expect("list rules");
-    let mut ret = vec![];
-    loop {
-        let rules = rule_iterator.next().await.expect("advance rule iterator");
-        if rules.is_empty() {
-            return ret;
-        }
-        ret.extend(rules.into_iter().map(|r| r.try_into().unwrap()))
-    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -105,7 +79,7 @@ async fn commit_transaction_fails_if_disabled() {
 
 #[fasync::run_singlethreaded(test)]
 async fn attempt_to_open_persisted_dynamic_rules() {
-    let (proxy, open_counts) = spawn_directory_handler();
+    let (proxy, open_counts) = mock_filesystem::spawn_directory_handler();
     let mounts = Mounts {
         pkg_resolver_data: DirOrProxy::Proxy(proxy),
         pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
@@ -122,7 +96,7 @@ async fn attempt_to_open_persisted_dynamic_rules() {
 
 #[fasync::run_singlethreaded(test)]
 async fn no_attempt_to_open_persisted_dynamic_rules_if_disabled() {
-    let (proxy, open_counts) = spawn_directory_handler();
+    let (proxy, open_counts) = mock_filesystem::spawn_directory_handler();
     let mounts = Mounts {
         pkg_resolver_data: DirOrProxy::Proxy(proxy),
         pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),

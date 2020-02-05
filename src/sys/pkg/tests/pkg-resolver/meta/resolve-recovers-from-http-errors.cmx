@@ -1,0 +1,30 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.posix.socket.Provider"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/resolve-recovers-from-http-errors"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
+        "features": [
+            "hub",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

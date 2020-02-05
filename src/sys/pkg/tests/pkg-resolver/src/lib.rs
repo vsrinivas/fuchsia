@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 use {
     anyhow::Error,
     fidl::endpoints::ClientEnd,
@@ -14,36 +12,35 @@ use {
         PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy,
         RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
     },
+    fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
     fidl_fuchsia_pkg_rewrite::{
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
+    fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_inspect::reader::NodeHierarchy,
-    fuchsia_pkg_testing::{
-        get_inspect_hierarchy, serve::ServedRepository, Package, PackageBuilder,
-    },
+    fuchsia_inspect::reader::{NodeHierarchy, PartialNodeHierarchy},
+    fuchsia_merkle::{Hash, MerkleTree},
+    fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder},
     fuchsia_zircon::{self as zx, Status},
     futures::prelude::*,
     pkgfs_ramdisk::PkgfsRamdisk,
     serde_derive::Serialize,
-    std::{fs::File, io::BufWriter},
+    std::{
+        convert::TryFrom,
+        convert::TryInto,
+        fs::File,
+        io::{self, BufWriter, Read},
+    },
     tempfile::TempDir,
 };
 
-mod dynamic_repositories_disabled;
-mod dynamic_rewrite_disabled;
-mod inspect;
-mod mock_filesystem;
-mod resolve_propagates_pkgfs_failure;
-mod resolve_recovers_from_http_errors;
-mod resolve_succeeds;
-mod resolve_succeeds_with_broken_minfs;
+pub mod mock_filesystem;
 
-trait PkgFs {
+pub trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 }
 
@@ -53,17 +50,36 @@ impl PkgFs for PkgfsRamdisk {
     }
 }
 
-struct Mounts {
-    pkg_resolver_data: DirOrProxy,
-    pkg_resolver_config_data: DirOrProxy,
+pub struct Mounts {
+    pub pkg_resolver_data: DirOrProxy,
+    pub pkg_resolver_config_data: DirOrProxy,
 }
 
-enum DirOrProxy {
+impl Mounts {
+    pub fn add_dynamic_rewrite_rules(&self, rule_config: &RuleConfig) {
+        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
+            let f = File::create(d.path().join("rewrites.json")).unwrap();
+            serde_json::to_writer(BufWriter::new(f), rule_config).unwrap();
+        } else {
+            panic!("not supported");
+        }
+    }
+    pub fn add_dynamic_repositories(&self, repo_configs: &RepositoryConfigs) {
+        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
+            let f = File::create(d.path().join("repositories.json")).unwrap();
+            serde_json::to_writer(BufWriter::new(f), repo_configs).unwrap();
+        } else {
+            panic!("not supported");
+        }
+    }
+}
+
+pub enum DirOrProxy {
     Dir(TempDir),
     Proxy(DirectoryProxy),
 }
 
-trait AppBuilderExt {
+pub trait AppBuilderExt {
     fn add_dir_or_proxy_to_namespace(
         self,
         path: impl Into<String>,
@@ -88,25 +104,25 @@ impl AppBuilderExt for AppBuilder {
     }
 }
 
-fn clone_directory_proxy(proxy: &DirectoryProxy) -> zx::Handle {
+pub fn clone_directory_proxy(proxy: &DirectoryProxy) -> zx::Handle {
     let (client, server) = fidl::endpoints::create_endpoints().unwrap();
     proxy.clone(CLONE_FLAG_SAME_RIGHTS, server).unwrap();
     client.into()
 }
 
 #[derive(Serialize)]
-struct Config {
-    disable_dynamic_configuration: bool,
+pub struct Config {
+    pub disable_dynamic_configuration: bool,
 }
 
 impl Mounts {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             pkg_resolver_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
             pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
         }
     }
-    fn add_config(&self, config: &Config) {
+    pub fn add_config(&self, config: &Config) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
             let f = File::create(d.path().join("config.json")).unwrap();
             serde_json::to_writer(BufWriter::new(f), &config).unwrap();
@@ -116,7 +132,7 @@ impl Mounts {
     }
 }
 
-struct TestEnvBuilder<PkgFsFn, P, MountsFn>
+pub struct TestEnvBuilder<PkgFsFn, P, MountsFn>
 where
     PkgFsFn: FnOnce() -> P,
 {
@@ -126,7 +142,7 @@ where
 }
 
 impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             include_amber: true,
             pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"),
@@ -141,14 +157,14 @@ where
     P: PkgFs,
     MountsFn: FnOnce() -> Mounts,
 {
-    fn build(self) -> TestEnv<P> {
+    pub fn build(self) -> TestEnv<P> {
         TestEnv::new_with_pkg_fs_and_mounts((self.pkgfs)(), (self.mounts)(), self.include_amber)
     }
-    fn include_amber(mut self, include_amber: bool) -> Self {
+    pub fn include_amber(mut self, include_amber: bool) -> Self {
         self.include_amber = include_amber;
         self
     }
-    fn pkgfs<Pother>(
+    pub fn pkgfs<Pother>(
         self,
         pkgfs: Pother,
     ) -> TestEnvBuilder<impl FnOnce() -> Pother, Pother, MountsFn>
@@ -161,7 +177,7 @@ where
             mounts: self.mounts,
         }
     }
-    fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
+    pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
         TestEnvBuilder::<PkgFsFn, P, _> {
             include_amber: self.include_amber,
             pkgfs: self.pkgfs,
@@ -170,21 +186,21 @@ where
     }
 }
 
-struct Apps {
-    _amber: App,
-    _pkg_cache: App,
-    pkg_resolver: App,
+pub struct Apps {
+    pub amber: App,
+    pub pkg_cache: App,
+    pub pkg_resolver: App,
 }
 
-struct Proxies {
-    resolver_admin: PackageResolverAdminProxy,
-    resolver: PackageResolverProxy,
-    repo_manager: RepositoryManagerProxy,
-    rewrite_engine: RewriteEngineProxy,
+pub struct Proxies {
+    pub resolver_admin: PackageResolverAdminProxy,
+    pub resolver: PackageResolverProxy,
+    pub repo_manager: RepositoryManagerProxy,
+    pub rewrite_engine: RewriteEngineProxy,
 }
 
 impl Proxies {
-    fn from_app(app: &App) -> Self {
+    pub fn from_app(app: &App) -> Self {
         Proxies {
             resolver: app
                 .connect_to_service::<PackageResolverMarker>()
@@ -202,18 +218,81 @@ impl Proxies {
     }
 }
 
-struct TestEnv<P = PkgfsRamdisk> {
-    pkgfs: P,
-    env: NestedEnvironment,
-    apps: Apps,
-    proxies: Proxies,
-    _mounts: Mounts,
-    nested_environment_label: String,
+pub struct TestEnv<P = PkgfsRamdisk> {
+    pub pkgfs: P,
+    pub env: NestedEnvironment,
+    pub apps: Apps,
+    pub proxies: Proxies,
+    pub _mounts: Mounts,
+    pub nested_environment_label: String,
 }
 
 impl TestEnv<PkgfsRamdisk> {
-    // workaround for fxb/38162
-    async fn stop(self) {
+    pub fn add_slice_to_blobfs(&self, slice: &[u8]) {
+        let merkle = MerkleTree::from_reader(slice).expect("merkle slice").root().to_string();
+        let mut blob = self
+            .pkgfs
+            .blobfs()
+            .root_dir()
+            .expect("blobfs has root dir")
+            .write_file(merkle, 0)
+            .expect("create file in blobfs");
+        blob.set_len(slice.len() as u64).expect("set_len");
+        io::copy(&mut &slice[..], &mut blob).expect("copy from slice to blob");
+    }
+
+    pub fn add_file_with_merkle_to_blobfs(&self, mut file: File, merkle: &Hash) {
+        let mut blob = self
+            .pkgfs
+            .blobfs()
+            .root_dir()
+            .expect("blobfs has root dir")
+            .write_file(merkle.to_string(), 0)
+            .expect("create file in blobfs");
+        blob.set_len(file.metadata().expect("file has metadata").len()).expect("set_len");
+        io::copy(&mut file, &mut blob).expect("copy file to blobfs");
+    }
+
+    pub fn add_file_to_pkgfs_at_path(&self, mut file: File, path: impl openat::AsPath) {
+        let mut blob = self
+            .pkgfs
+            .root_dir()
+            .expect("pkgfs root_dir")
+            .new_file(path, 0)
+            .expect("create file in pkgfs");
+        blob.set_len(file.metadata().expect("file has metadata").len()).expect("set_len");
+        io::copy(&mut file, &mut blob).expect("copy file to pkgfs");
+    }
+
+    pub fn partially_add_file_to_pkgfs_at_path(&self, mut file: File, path: impl openat::AsPath) {
+        let full_len = file.metadata().expect("file has metadata").len();
+        assert!(full_len > 1, "can't partially write 1 byte");
+        let mut partial_bytes = vec![0; full_len as usize / 2];
+        file.read_exact(partial_bytes.as_mut_slice()).expect("partial read of file");
+        let mut blob = self
+            .pkgfs
+            .root_dir()
+            .expect("pkgfs root_dir")
+            .new_file(path, 0)
+            .expect("create file in pkgfs");
+        blob.set_len(full_len).expect("set_len");
+        io::copy(&mut partial_bytes.as_slice(), &mut blob).expect("copy file to pkgfs");
+    }
+
+    pub fn partially_add_slice_to_pkgfs_at_path(&self, slice: &[u8], path: impl openat::AsPath) {
+        assert!(slice.len() > 1, "can't partially write 1 byte");
+        let partial_slice = &slice[0..slice.len() / 2];
+        let mut blob = self
+            .pkgfs
+            .root_dir()
+            .expect("pkgfs root_dir")
+            .new_file(path, 0)
+            .expect("create file in pkgfs");
+        blob.set_len(slice.len() as u64).expect("set_len");
+        io::copy(&mut &partial_slice[..], &mut blob).expect("copy file to pkgfs");
+    }
+
+    pub async fn stop(self) {
         // Tear down the environment in reverse order, ending with the storage.
         drop(self.proxies);
         drop(self.apps);
@@ -223,7 +302,7 @@ impl TestEnv<PkgfsRamdisk> {
 }
 
 impl<P: PkgFs> TestEnv<P> {
-    fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts, include_amber: bool) -> Self {
+    pub fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts, include_amber: bool) -> Self {
         let mut amber = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/amber.cmx",
         )
@@ -277,13 +356,13 @@ impl<P: PkgFs> TestEnv<P> {
             env,
             pkgfs,
             proxies: Proxies::from_app(&pkg_resolver),
-            apps: Apps { _amber: amber, _pkg_cache: pkg_cache, pkg_resolver },
+            apps: Apps { amber: amber, pkg_cache: pkg_cache, pkg_resolver },
             _mounts: mounts,
             nested_environment_label: environment_label,
         }
     }
 
-    async fn set_experiment_state(&self, experiment: Experiment, state: bool) {
+    pub async fn set_experiment_state(&self, experiment: Experiment, state: bool) {
         self.proxies
             .resolver_admin
             .set_experiment_state(experiment, state)
@@ -326,41 +405,89 @@ impl<P: PkgFs> TestEnv<P> {
             .expect("test apply result is ok");
     }
 
-    fn connect_to_resolver(&self) -> PackageResolverProxy {
+    pub fn connect_to_resolver(&self) -> PackageResolverProxy {
         self.apps
             .pkg_resolver
             .connect_to_service::<PackageResolverMarker>()
             .expect("connect to package resolver")
     }
 
-    fn resolve_package(&self, url: &str) -> impl Future<Output = Result<DirectoryProxy, Status>> {
+    pub fn resolve_package(
+        &self,
+        url: &str,
+    ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
         resolve_package(&self.proxies.resolver, url)
     }
 
-    async fn pkg_resolver_inspect_hierarchy(&self) -> NodeHierarchy {
-        get_inspect_hierarchy(&self.nested_environment_label, "pkg-resolver.cmx").await
+    pub async fn pkg_resolver_inspect_hierarchy(&self) -> NodeHierarchy {
+        // When `glob` is matching a path component that is a string literal, it uses
+        // `std::fs::metadata()` to test the existence of the path instead of listing the parent dir.
+        // `metadata()` calls `stat`, which creates and destroys an fd in fdio.
+        // When the fd is for "root.inspect", which is a VMO, destroying the fd calls
+        // `zxio_vmofile_release`, which makes a fuchsia.io.File.Seek FIDL call.
+        // This FIDL call is received by `ServiceFs`, which, b/c "root.inspect" was opened
+        // by fdio with `OPEN_FLAG_NODE_REFERENCE`, is treating the zircon channel as a stream of
+        // Node requests.
+        // `ServiceFs` then closes the channel and logs a
+        // "ServiceFs failed to parse an incoming node request: UnknownOrdinal" error (with
+        // the File.Seek ordinal).
+        // `ServiceFs` closing the channel is seen by `metadata` as a `BrokenPipe` error, which
+        // `glob` interprets as there being nothing at "root.inspect", so the VMO is not found.
+        // To work around this, we use a trivial pattern in the "root.inspect" path component,
+        // which prevents the `metadata` shortcut.
+        //
+        // To fix this, `zxio_vmofile_release` probably shouldn't be unconditionally calling
+        // `fuchsia.io.File.Seek`, because, per a comment in `io.fidl`, that is not a valid
+        // method to be called on a `Node` opened with `OPEN_FLAG_NODE_REFERENCE`.
+        // `zxio_vmofile_release` could determine if the `Node` were opened with
+        // `OPEN_FLAG_NODE_REFERENCE` (by calling `Node.NodeGetFlags` or `File.GetFlags`).
+        // Note that if `zxio_vmofile_release` starts calling `File.GetFlags`, `ServiceFs`
+        // will need to stop unconditionally treating `Node`s opened with `OPEN_FLAG_NODE_REFERNCE`
+        // as `Node`s.
+        // TODO(fxb/40888)
+        let pattern = format!(
+            "/hub/r/{}/*/c/pkg-resolver.cmx/*/out/diagnostics/root.i[n]spect",
+            glob::Pattern::escape(&self.nested_environment_label)
+        );
+        let paths = glob::glob_with(
+            &pattern,
+            glob::MatchOptions {
+                case_sensitive: true,
+                require_literal_separator: true,
+                require_literal_leading_dot: false,
+            },
+        )
+        .expect("glob pattern successfully compiles");
+        let mut paths = paths.collect::<Result<Vec<_>, _>>().unwrap();
+        assert_eq!(paths.len(), 1, "{:?}", paths);
+        let path = paths.pop().unwrap();
+
+        let vmo_file = File::open(path).expect("file exists");
+        let vmo = fdio::get_vmo_copy_from_file(&vmo_file).expect("vmo exists");
+
+        PartialNodeHierarchy::try_from(&vmo).unwrap().into()
     }
 }
 
-const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
+pub const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 const RESOLVER_MANIFEST_URL: &str =
     "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver.cmx";
 
 // The following functions generate unique test package dummy content. Callers are recommended
 // to pass in the name of the test case.
-fn test_package_bin(s: &str) -> Vec<u8> {
+pub fn test_package_bin(s: &str) -> Vec<u8> {
     return format!("!/boot/bin/sh\n{}", s).as_bytes().to_owned();
 }
 
-fn test_package_cmx(s: &str) -> Vec<u8> {
+pub fn test_package_cmx(s: &str) -> Vec<u8> {
     return format!("\"{{\"program\":{{\"binary\":\"bin/{}\"}}", s).as_bytes().to_owned();
 }
 
-fn extra_blob_contents(s: &str, i: u32) -> Vec<u8> {
+pub fn extra_blob_contents(s: &str, i: u32) -> Vec<u8> {
     format!("contents of file {}-{}", s, i).as_bytes().to_owned()
 }
 
-async fn make_pkg_with_extra_blobs(s: &str, n: u32) -> Package {
+pub async fn make_pkg_with_extra_blobs(s: &str, n: u32) -> Package {
     let mut pkg = PackageBuilder::new(s)
         .add_resource_at(format!("bin/{}", s), &test_package_bin(s)[..])
         .add_resource_at(format!("meta/{}.cmx", s), &test_package_cmx(s)[..]);
@@ -371,7 +498,7 @@ async fn make_pkg_with_extra_blobs(s: &str, n: u32) -> Package {
     pkg.build().await.unwrap()
 }
 
-fn resolve_package(
+pub fn resolve_package(
     resolver: &PackageResolverProxy,
     url: &str,
 ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
@@ -387,5 +514,41 @@ fn resolve_package(
         let status = status_fut.await.expect("package resolve fidl call");
         Status::ok(status)?;
         Ok(package)
+    }
+}
+
+pub fn make_repo_config(repo: &RepositoryConfig) -> RepositoryConfigs {
+    RepositoryConfigs::Version1(vec![repo.clone()])
+}
+
+pub fn make_repo() -> RepositoryConfig {
+    RepositoryConfigBuilder::new("fuchsia-pkg://example.com".parse().unwrap()).build()
+}
+
+pub async fn get_repos(repository_manager: &RepositoryManagerProxy) -> Vec<RepositoryConfig> {
+    let (repo_iterator, repo_iterator_server) =
+        fidl::endpoints::create_proxy().expect("create repo iterator proxy");
+    repository_manager.list(repo_iterator_server).expect("list repos");
+    let mut ret = vec![];
+    loop {
+        let repos = repo_iterator.next().await.expect("advance repo iterator");
+        if repos.is_empty() {
+            return ret;
+        }
+        ret.extend(repos.into_iter().map(|r| r.try_into().unwrap()))
+    }
+}
+
+pub async fn get_rules(rewrite_engine: &RewriteEngineProxy) -> Vec<Rule> {
+    let (rule_iterator, rule_iterator_server) =
+        fidl::endpoints::create_proxy().expect("create rule iterator proxy");
+    rewrite_engine.list(rule_iterator_server).expect("list rules");
+    let mut ret = vec![];
+    loop {
+        let rules = rule_iterator.next().await.expect("advance rule iterator");
+        if rules.is_empty() {
+            return ret;
+        }
+        ret.extend(rules.into_iter().map(|r| r.try_into().unwrap()))
     }
 }

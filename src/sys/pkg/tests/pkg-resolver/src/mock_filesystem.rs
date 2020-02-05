@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    super::*,
     fidl::endpoints::RequestStream,
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
         OPEN_FLAG_DESCRIBE,
     },
+    fuchsia_async as fasync,
+    fuchsia_zircon::Status,
     futures::future::BoxFuture,
+    futures::future::FutureExt,
+    futures::stream::StreamExt,
     parking_lot::Mutex,
     std::{collections::HashMap, sync::Arc},
 };

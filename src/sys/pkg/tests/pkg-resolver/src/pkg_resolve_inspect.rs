@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    super::*,
     anyhow::format_err,
+    fidl_fuchsia_pkg::ExperimentToggle as Experiment,
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
     fuchsia_async as fasync,
     fuchsia_inspect::{
@@ -12,7 +12,9 @@ use {
         reader::Property,
         testing::{AnyProperty, PropertyAssertion},
     },
-    fuchsia_pkg_testing::RepositoryBuilder,
+    fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder},
+    fuchsia_zircon::Status,
+    lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     std::sync::Arc,
 };

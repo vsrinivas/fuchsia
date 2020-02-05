@@ -5,15 +5,21 @@
 /// This module tests pkg-resolver's resolve keeps working when
 /// MinFs is broken.
 use {
-    super::*,
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryControlHandle, DirectoryRequest, DirectoryRequestStream, NodeMarker,
     },
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
-    fuchsia_pkg_testing::{serve::ServedRepository, RepositoryBuilder},
+    fuchsia_async as fasync,
+    fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, RepositoryBuilder},
+    fuchsia_zircon::Status,
     futures::future::BoxFuture,
+    futures::prelude::*,
+    lib::{
+        get_repos, get_rules, mock_filesystem, DirOrProxy, Mounts, TestEnv, TestEnvBuilder,
+        EMPTY_REPO_PATH,
+    },
     std::sync::{
         atomic::{AtomicBool, AtomicU64},
         Arc,
@@ -54,7 +60,7 @@ where
                         let stream = DirectoryRequestStream::from_channel(
                             fasync::Channel::from_channel(object.into_channel()).unwrap(),
                         );
-                        crate::mock_filesystem::describe_dir(flags, &stream);
+                        mock_filesystem::describe_dir(flags, &stream);
                         fasync::spawn(Arc::clone(&self).handle_stream(stream));
                     }
                     DirectoryRequest::Open { flags, mode, path, object, control_handle } => self
@@ -160,10 +166,7 @@ async fn minfs_fails_create_repo_configs() {
     pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(open_handler.get_fail_count(), 3);
     env.restart_pkg_resolver().await;
-    assert_eq!(
-        crate::dynamic_repositories_disabled::get_repos(&env.proxies.repo_manager).await,
-        vec![]
-    );
+    assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![]);
     assert_eq!(open_handler.get_fail_count(), 5);
 
     // Now let MinFs recover and show how repo configs are saved on restart
@@ -173,10 +176,7 @@ async fn minfs_fails_create_repo_configs() {
     pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(open_handler.get_fail_count(), 5);
     env.restart_pkg_resolver().await;
-    assert_eq!(
-        crate::dynamic_repositories_disabled::get_repos(&env.proxies.repo_manager).await,
-        vec![config.clone()]
-    );
+    assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![config.clone()]);
 
     env.stop().await;
 }
@@ -201,10 +201,7 @@ async fn minfs_fails_create_rewrite_rules() {
     pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(open_handler.get_fail_count(), 4);
     env.restart_pkg_resolver().await;
-    assert_eq!(
-        crate::dynamic_rewrite_disabled::get_rules(&env.proxies.rewrite_engine).await,
-        vec![]
-    );
+    assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![]);
     assert_eq!(open_handler.get_fail_count(), 6);
 
     // Now let MinFs recover and show how rewrite rules are saved on restart
@@ -219,10 +216,7 @@ async fn minfs_fails_create_rewrite_rules() {
     pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(open_handler.get_fail_count(), 6);
     env.restart_pkg_resolver().await;
-    assert_eq!(
-        crate::dynamic_rewrite_disabled::get_rules(&env.proxies.rewrite_engine).await,
-        vec![rule.clone()]
-    );
+    assert_eq!(get_rules(&env.proxies.rewrite_engine).await, vec![rule.clone()]);
 
     env.stop().await;
 }
