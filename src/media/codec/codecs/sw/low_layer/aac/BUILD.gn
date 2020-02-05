@@ -222,7 +222,6 @@ static_library("libFraunhoferAAC") {
     "-Wno-#warnings",
     "-Wno-constant-logical-operand",
     "-Wno-self-assign",
-    "-Wno-unused-function",
     "-Wno-unused-const-variable",
     "-Wno-unused-variable",
     "-Wno-unused-label",
