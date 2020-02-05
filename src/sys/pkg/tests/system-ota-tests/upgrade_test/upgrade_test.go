@@ -337,18 +337,6 @@ func systemPrimeOTA(t *testing.T, ctx context.Context, device *device.Client, rp
 	}
 	defer server.Shutdown(ctx)
 
-	// Since we're invoking system_updater.cmx directly, we need to do the GC ourselves
-	// FIXME(40913): every downgrade builder should at least build
-	// sl4f as a universe package, which would ensure rpcClient is non-nil here.
-	if *rpcClient == nil {
-		err = device.DeleteRemotePath("/pkgfs/ctl/garbage")
-	} else {
-		err = (*rpcClient).FileDelete(ctx, "/pkgfs/ctl/garbage")
-	}
-	if err != nil {
-		t.Fatalf("error running GC: %v", err)
-	}
-
 	// In order to manually trigger the system updater, we need the `run`
 	// package. Since builds can be configured to not automatically install
 	// packages, we need to explicitly resolve it.
