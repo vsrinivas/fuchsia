@@ -20,7 +20,7 @@ import "C"
 // numBuffers should be greater or equal to numOfInterfaces * fifoSizeOfInterface
 // TODO (chunyingw) Design a mechanism to auto satisfy the above condtion
 // wihtout manual manipulation of numBuffers value
-const numBuffers = 2048
+const numBuffers = 4096
 const bufferSize = 2048
 const ioSize = numBuffers * bufferSize
 

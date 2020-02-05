@@ -57,7 +57,18 @@ type Client struct {
 	tx      struct {
 		mu struct {
 			sync.Mutex
-			queue []C.struct_eth_fifo_entry
+			waiters int
+
+			storage []C.struct_eth_fifo_entry
+
+			// available is the index after the last available entry.
+			available int
+
+			// queued is the index after the last queued entry.
+			queued int
+
+			// detached signals to incoming writes that the receiver is unable to service them.
+			detached bool
 		}
 		cond sync.Cond
 	}
@@ -108,13 +119,14 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		}
 		c.rxQueue = append(c.rxQueue, arena.entry(b))
 	}
-	c.tx.mu.queue = make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth)
-	for i := 0; i < cap(c.tx.mu.queue); i++ {
+	c.tx.mu.storage = make([]C.struct_eth_fifo_entry, 0, 2*fifos.TxDepth)
+	for i := 0; i < cap(c.tx.mu.storage); i++ {
 		b := arena.alloc(c)
 		if b == nil {
-			return nil, fmt.Errorf("%s: failed to allocate initial TX buffer %d/%d", tag, i, cap(c.tx.mu.queue))
+			return nil, fmt.Errorf("%s: failed to allocate initial TX buffer %d/%d", tag, i, cap(c.tx.mu.storage))
 		}
-		c.tx.mu.queue = append(c.tx.mu.queue, arena.entry(b))
+		c.tx.mu.storage = append(c.tx.mu.storage, arena.entry(b))
+		c.tx.mu.available++
 	}
 	c.tx.cond.L = &c.tx.mu.Mutex
 
@@ -155,40 +167,51 @@ func (c *Client) LinkAddress() tcpip.LinkAddress {
 }
 
 func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
-	batchSize := len(pkts)
-	if txDepth := int(c.fifos.TxDepth); batchSize > txDepth {
-		batchSize = txDepth
-	}
+	for i := 0; i < len(pkts); {
+		c.tx.mu.Lock()
+		for {
+			if c.tx.mu.detached {
+				c.tx.mu.Unlock()
+				return i, tcpip.ErrClosedForSend
+			}
 
-	c.tx.mu.Lock()
-	defer c.tx.mu.Unlock()
-	for len(c.tx.mu.queue) < batchSize {
-		c.tx.cond.Wait()
-	}
+			// queued can never exceed available because both are indices and available is never zero
+			// because it represents a storage array double the size of the tx fifo depth.
+			if c.tx.mu.queued != c.tx.mu.available {
+				break
+			}
 
-	// Acquire packets from the end to minimize how many packets may need to be shifted back.
-	queue := c.tx.mu.queue[len(c.tx.mu.queue)-batchSize:]
-	c.tx.mu.queue = c.tx.mu.queue[:len(c.tx.mu.queue)-batchSize]
-	for i, pkt := range pkts[:batchSize] {
-		// This is being reused, reset its length to get an appropriately sized buffer.
-		queue[i].length = bufferSize
-		b := c.arena.bufferFromEntry(queue[i])
-		used := copy(b, pkt.Header.View())
-		for _, v := range pkt.Data.Views() {
-			used += copy(b[used:], v)
+			c.tx.mu.waiters++
+			c.tx.cond.Wait()
+			c.tx.mu.waiters--
 		}
-		queue[i] = c.arena.entry(b[:used])
+
+		prevQueued := c.tx.mu.queued
+		// Queue as many remaining packets as possible; if we run out of space, we'll return to the
+		// waiting state in the outer loop.
+		for _, pkt := range pkts[i:] {
+			// This is being reused, reset its length to get an appropriately sized buffer.
+			entry := &c.tx.mu.storage[c.tx.mu.queued]
+			entry.length = bufferSize
+			b := c.arena.bufferFromEntry(*entry)
+			used := copy(b, pkt.Header.View())
+			for _, v := range pkt.Data.Views() {
+				used += copy(b[used:], v)
+			}
+			*entry = c.arena.entry(b[:used])
+			c.tx.mu.queued++
+			if c.tx.mu.queued == c.tx.mu.available {
+				break
+			}
+		}
+		postQueued := c.tx.mu.queued
+		c.tx.mu.Unlock()
+		c.tx.cond.Broadcast()
+
+		i += postQueued - prevQueued
 	}
-	switch status, count := fifoWrite(c.fifos.Tx, queue); status {
-	case zx.ErrOk:
-		c.tx.mu.queue = append(c.tx.mu.queue, queue[count:]...)
-		return int(count), nil
-	case zx.ErrShouldWait:
-		return 0, tcpip.ErrWouldBlock
-	default:
-		_ = syslog.WarnTf(tag, "fifoWrite(TX): %s", status)
-		return 0, tcpip.ErrClosedForSend
-	}
+
+	return len(pkts), nil
 }
 
 func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
@@ -221,7 +244,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				switch status, count := fifoRead(c.fifos.Tx, scratch); status {
 				case zx.ErrOk:
 					c.tx.mu.Lock()
-					c.tx.mu.queue = append(c.tx.mu.queue, scratch[:count]...)
+					c.tx.mu.available += copy(c.tx.mu.storage[c.tx.mu.available:], scratch[:count])
 					c.tx.mu.Unlock()
 					c.tx.cond.Broadcast()
 				default:
@@ -229,7 +252,61 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				}
 			}
 		}(); err != nil {
-			_ = syslog.WarnTf(tag, "TX loop: %s", err)
+			_ = syslog.WarnTf(tag, "TX read loop: %s", err)
+			c.tx.mu.Lock()
+			c.tx.mu.detached = true
+			c.tx.mu.Unlock()
+			c.tx.cond.Broadcast()
+		}
+	}()
+
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		if err := func() error {
+			scratch := make([]C.struct_eth_fifo_entry, c.fifos.TxDepth)
+			for {
+				var batch []C.struct_eth_fifo_entry
+				c.tx.mu.Lock()
+				for {
+					if batchSize := len(scratch) - (len(c.tx.mu.storage) - c.tx.mu.available); batchSize != 0 {
+						if c.tx.mu.queued != 0 {
+							// We have queued packets.
+							if c.tx.mu.waiters == 0 || c.tx.mu.queued == c.tx.mu.available {
+								// No application threads are waiting OR application threads are waiting on the
+								// reader.
+								//
+								// This condition is an optimization; if application threads are waiting when
+								// buffers are available then we were probably just woken up by the reader having
+								// retrieved buffers from the fifo. We avoid creating a batch until the application
+								// threads have all been satisfied, or until the buffers have all been used up.
+								batch = scratch[:batchSize]
+								break
+							}
+						}
+					}
+					c.tx.cond.Wait()
+				}
+				n := copy(batch, c.tx.mu.storage[:c.tx.mu.queued])
+				c.tx.mu.available = copy(c.tx.mu.storage, c.tx.mu.storage[n:c.tx.mu.available])
+				c.tx.mu.queued -= n
+				c.tx.mu.Unlock()
+
+				switch status, count := fifoWrite(c.fifos.Tx, batch[:n]); status {
+				case zx.ErrOk:
+					if n := uint32(n); count != n {
+						return fmt.Errorf("fifoWrite(TX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.TxDepth-n+count, c.fifos.TxDepth)
+					}
+				default:
+					return &zx.Error{Status: status, Text: "fifoWrite(TX)"}
+				}
+			}
+		}(); err != nil {
+			_ = syslog.WarnTf(tag, "TX write loop: %s", err)
+			c.tx.mu.Lock()
+			c.tx.mu.detached = true
+			c.tx.mu.Unlock()
+			c.tx.cond.Broadcast()
 		}
 	}()
 
