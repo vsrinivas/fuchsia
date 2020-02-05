@@ -4,10 +4,8 @@
 
 #[cfg(test)]
 use {
-  crate::create_environment, crate::registry::device_storage::testing::*,
-  crate::service_context::ServiceContext, crate::switchboard::base::SettingType,
-  fidl_fuchsia_setui::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
-  futures::prelude::*,
+  crate::registry::device_storage::testing::*, crate::switchboard::base::SettingType,
+  crate::EnvironmentBuilder, crate::Runtime, fidl_fuchsia_setui::*,
 };
 
 const ENV_NAME: &str = "setui_service_system_test_environment";
@@ -18,21 +16,13 @@ async fn tests_setui() {
     fidl_fuchsia_setui::LoginOverride::None;
   const CHANGED_LOGIN_MODE: fidl_fuchsia_setui::LoginOverride =
     fidl_fuchsia_setui::LoginOverride::AuthProvider;
-  let mut fs = ServiceFs::new();
 
-  assert!(create_environment(
-    fs.root_dir(),
-    [SettingType::System].iter().cloned().collect(),
-    vec![],
-    ServiceContext::create(None),
-    Box::new(InMemoryStorageFactory::create()),
-  )
-  .await
-  .unwrap()
-  .is_ok());
-
-  let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-  fasync::spawn(fs.collect());
+  let env =
+    EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), Box::new(InMemoryStorageFactory::create()))
+      .settings(&[SettingType::System])
+      .spawn_and_get_nested_environment()
+      .await
+      .unwrap();
 
   let system_proxy = env.connect_to_service::<SetUiServiceMarker>().unwrap();
 

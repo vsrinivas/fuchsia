@@ -4,19 +4,16 @@
 
 #[cfg(test)]
 use {
-    crate::create_environment,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory,
-    crate::service_context::ServiceContext,
     crate::switchboard::base::SettingType,
     crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo},
     crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},
     crate::tests::fakes::service_registry::ServiceRegistry,
+    crate::EnvironmentBuilder,
+    crate::Runtime,
     fidl_fuchsia_settings::*,
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
     futures::lock::Mutex,
-    futures::prelude::*,
     std::sync::Arc,
 };
 
@@ -25,23 +22,14 @@ const ENV_NAME: &str = "settings_service_setup_test_environment";
 // Ensures the default value returned is WiFi.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup_default() {
-    let mut fs = ServiceFs::new();
-
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Setup].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(None),
-        storage_factory,
+    let env = EnvironmentBuilder::new(
+        Runtime::Nested(ENV_NAME),
+        Box::new(InMemoryStorageFactory::create()),
     )
+    .settings(&[SettingType::Setup])
+    .spawn_and_get_nested_environment()
     .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    .unwrap();
 
     let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
 
@@ -57,8 +45,6 @@ async fn test_setup_default() {
 // updated to verify restart request is made on interface change.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup() {
-    let mut fs = ServiceFs::new();
-
     let storage_factory = Box::new(InMemoryStorageFactory::create());
     let store = storage_factory.get_store::<SetupInfo>();
 
@@ -80,19 +66,12 @@ async fn test_setup() {
     service_registry.lock().await.register_service(device_admin_service_handle.clone());
 
     // Handle reboot
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Setup].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        storage_factory,
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+        .service(ServiceRegistry::serve(service_registry.clone()))
+        .settings(&[SettingType::Setup])
+        .spawn_and_get_nested_environment()
+        .await
+        .unwrap();
 
     let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
 

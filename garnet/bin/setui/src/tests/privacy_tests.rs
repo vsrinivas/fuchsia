@@ -4,19 +4,16 @@
 
 #[cfg(test)]
 use {
-    crate::create_environment, crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::DeviceStorageFactory, crate::service_context::ServiceContext,
-    crate::switchboard::base::PrivacyInfo, crate::switchboard::base::SettingType,
-    fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
-    futures::prelude::*,
+    crate::registry::device_storage::testing::*,
+    crate::registry::device_storage::DeviceStorageFactory, crate::switchboard::base::PrivacyInfo,
+    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, crate::Runtime,
+    fidl_fuchsia_settings::*,
 };
 
 const ENV_NAME: &str = "settings_service_privacy_test_environment";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_privacy() {
-    let mut fs = ServiceFs::new();
-
     let initial_value = PrivacyInfo { user_data_sharing_consent: None };
 
     let changed_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
@@ -25,19 +22,11 @@ async fn test_privacy() {
     let factory = Box::new(InMemoryStorageFactory::create());
     let store = factory.get_store::<PrivacyInfo>();
 
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Privacy].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(None),
-        factory,
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), factory)
+        .settings(&[SettingType::Privacy])
+        .spawn_and_get_nested_environment()
+        .await
+        .unwrap();
 
     let privacy_service = env.connect_to_service::<PrivacyMarker>().unwrap();
 

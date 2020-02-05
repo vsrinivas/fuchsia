@@ -4,11 +4,10 @@
 
 #[cfg(test)]
 use {
-    crate::create_environment, crate::display::LIGHT_SENSOR_SERVICE_NAME,
-    crate::registry::device_storage::testing::*, crate::service_context::ServiceContext,
-    crate::switchboard::base::SettingType, anyhow::format_err, fidl::endpoints::ServerEnd,
-    fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
-    fuchsia_zircon as zx, futures::prelude::*,
+    crate::display::LIGHT_SENSOR_SERVICE_NAME, crate::registry::device_storage::testing::*,
+    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, crate::Runtime,
+    anyhow::format_err, fidl::endpoints::ServerEnd, fidl_fuchsia_settings::*,
+    fuchsia_async as fasync, fuchsia_zircon as zx, futures::prelude::*,
 };
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
@@ -57,21 +56,15 @@ async fn test_light_sensor() {
         Ok(())
     };
 
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::LightSensor].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(Some(Box::new(service_gen))),
+    let env = EnvironmentBuilder::new(
+        Runtime::Nested(ENV_NAME),
         Box::new(InMemoryStorageFactory::create()),
     )
+    .service(Box::new(service_gen))
+    .settings(&[SettingType::LightSensor])
+    .spawn_and_get_nested_environment()
     .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    .unwrap();
 
     let display_service = env.connect_to_service::<DisplayMarker>().unwrap();
     let data = display_service

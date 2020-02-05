@@ -22,7 +22,8 @@ async fn test_input() {
 
     service_registry.lock().await.register_service(input_device_registry_service.clone());
 
-    let service_context = ServiceContext::create(ServiceRegistry::serve(service_registry.clone()));
+    let service_context =
+        ServiceContext::create(Some(ServiceRegistry::serve(service_registry.clone())));
 
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
     assert!(monitor_mic_mute(service_context.clone(), input_tx).await.is_ok());

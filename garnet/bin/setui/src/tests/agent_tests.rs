@@ -4,19 +4,21 @@
 #[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::*;
-use crate::create_environment;
 use crate::registry::device_storage::testing::*;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
+use crate::EnvironmentBuilder;
+use crate::Runtime;
 use anyhow::{format_err, Error};
 use core::fmt::{Debug, Formatter};
-use fuchsia_component::server::ServiceFs;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use rand::Rng;
 use std::collections::HashSet;
 use std::sync::Arc;
+
+const ENV_NAME: &str = "settings_service_agent_test_environment";
 
 /// Agent provides a test agent to interact with the authority impl. It is
 /// instantiated with an id that can be used to identify it when returned by
@@ -105,11 +107,9 @@ impl TestAgent {
     }
 }
 
-/// Ensures create_environment properly invokes the right lifespans.
+/// Ensures creating environment properly invokes the right lifespans.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_environment_startup() {
-    let mut fs = ServiceFs::new();
-
     let startup_agent_id = 1;
     let (startup_tx, mut startup_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
@@ -117,16 +117,17 @@ async fn test_environment_startup() {
     let (service_tx, mut service_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let service_agent = TestAgent::new(service_agent_id, Lifespan::Service, Some(service_tx));
 
-    let completion_rx = create_environment(
-        fs.root_dir(),
-        [].iter().cloned().collect(),
-        vec![
-            TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
-            service_agent.clone(),
-        ],
-        ServiceContext::create(None),
+    let environment = EnvironmentBuilder::new(
+        Runtime::Nested(ENV_NAME),
         Box::new(InMemoryStorageFactory::create()),
-    );
+    )
+    .agents(&[
+        TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
+        service_agent.clone(),
+    ])
+    .settings(&[SettingType::Display])
+    .spawn()
+    .unwrap();
 
     // Wait for the initialization agent to receive invocation
     if let Some((id, invocation)) = startup_rx.next().await {
@@ -138,7 +139,7 @@ async fn test_environment_startup() {
     }
 
     // Wait for the environment creation to complete after initialization agents
-    assert!(completion_rx.await.unwrap().is_ok());
+    assert!(environment.completion_rx.await.unwrap().is_ok());
 
     // Wait for service agent to receive notification
     if let Some((id, invocation)) = service_rx.next().await {

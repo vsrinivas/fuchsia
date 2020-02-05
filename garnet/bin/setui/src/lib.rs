@@ -28,9 +28,12 @@ use {
     crate::registry::base::Registry,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::registry_impl::RegistryImpl,
+    crate::service_context::GenerateService,
+    crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     crate::setup::spawn_setup_fidl_handler,
+    crate::switchboard::base::get_all_setting_types,
     crate::switchboard::base::SettingType,
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     crate::system::spawn_setui_fidl_handler,
@@ -40,9 +43,10 @@ use {
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::SetUiServiceRequestStream,
     fuchsia_async as fasync,
-    fuchsia_component::server::{ServiceFsDir, ServiceObj},
+    fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_syslog::fx_log_err,
     futures::channel::oneshot::Receiver,
+    futures::StreamExt,
     std::collections::HashSet,
 };
 
@@ -68,6 +72,142 @@ pub mod config;
 pub mod registry;
 pub mod service_context;
 pub mod switchboard;
+
+/// Runtime defines where the environment will exist. Service is meant for
+/// production environments and will hydrate components to be discoverable as
+/// an environment service. Nested creates a service only usable in the scope
+/// of a test.
+pub enum Runtime {
+    Service(fasync::Executor),
+    Nested(&'static str),
+}
+#[derive(PartialEq)]
+pub enum Configuration {
+    All,
+    Empty,
+}
+
+/// Environment is handed back when an environment is spawned from the
+/// EnvironmentBuilder. A nested environment (if available) is returned,
+/// along with a receiver to be notified when initialization/setup is
+/// complete.
+pub struct Environment {
+    pub nested_environment: Option<NestedEnvironment>,
+    pub completion_rx: Receiver<Result<(), Error>>,
+}
+
+impl Environment {
+    pub fn new(
+        nested_environment: Option<NestedEnvironment>,
+        completion_rx: Receiver<Result<(), Error>>,
+    ) -> Environment {
+        Environment { nested_environment: nested_environment, completion_rx: completion_rx }
+    }
+}
+
+/// The EnvironmentBuilder aggregates the parameters surrounding an environment
+/// and ultimately spawns an environment based on them.
+pub struct EnvironmentBuilder<T: DeviceStorageFactory> {
+    runtime: Runtime,
+    configuration: Option<Configuration>,
+    settings: Vec<SettingType>,
+    agents: Vec<AgentHandle>,
+    storage_factory: Box<T>,
+    generate_service: Option<GenerateService>,
+}
+
+impl<T: DeviceStorageFactory> EnvironmentBuilder<T> {
+    pub fn new(runtime: Runtime, storage_factory: Box<T>) -> EnvironmentBuilder<T> {
+        EnvironmentBuilder {
+            runtime: runtime,
+            configuration: None,
+            settings: vec![],
+            agents: vec![],
+            storage_factory: storage_factory,
+            generate_service: None,
+        }
+    }
+
+    /// A service generator to be used as an overlay on the ServiceContext.
+    pub fn service(mut self, generate_service: GenerateService) -> EnvironmentBuilder<T> {
+        self.generate_service = Some(generate_service);
+        self
+    }
+
+    /// A preset configuration to load preset parameters as a base.
+    pub fn configuration(mut self, configuration: Configuration) -> EnvironmentBuilder<T> {
+        self.configuration = Some(configuration);
+        self
+    }
+
+    /// Setting types to participate.
+    pub fn settings(mut self, settings: &[SettingType]) -> EnvironmentBuilder<T> {
+        self.settings.append(&mut settings.to_vec());
+        self
+    }
+
+    /// Agents to participate
+    pub fn agents(mut self, agents: &[AgentHandle]) -> EnvironmentBuilder<T> {
+        self.agents.append(&mut agents.to_vec());
+        self
+    }
+
+    /// Spawns the environment based on previously set parameters.
+    pub fn spawn(self) -> Result<Environment, Error> {
+        let mut nested_environment = None;
+
+        let mut fs = ServiceFs::new();
+        let service_dir =
+            if let Runtime::Service(_) = self.runtime { fs.dir("svc") } else { fs.root_dir() };
+
+        let mut settings = match self.configuration {
+            Some(Configuration::All) => get_all_setting_types(),
+            _ => HashSet::new(),
+        };
+
+        let service_context = ServiceContext::create(self.generate_service);
+
+        for setting in self.settings {
+            settings.insert(setting);
+        }
+        let rx = create_environment(
+            service_dir,
+            settings,
+            self.agents,
+            service_context,
+            self.storage_factory,
+        );
+
+        match self.runtime {
+            Runtime::Service(mut executor) => {
+                fs.take_and_serve_directory_handle()?;
+                let () = executor.run_singlethreaded(fs.collect());
+            }
+            Runtime::Nested(environment_name) => {
+                nested_environment = Some(fs.create_salted_nested_environment(&environment_name)?);
+                fasync::spawn(fs.collect());
+            }
+        }
+
+        return Ok(Environment::new(nested_environment, rx));
+    }
+
+    /// Spawns a nested environment and returns the associated
+    /// NestedEnvironment. Note that this is a helper function that provides a
+    /// shortcut for calling EnvironmentBuilder::name() and
+    /// EnvironmentBuilder::spawn().
+    pub async fn spawn_and_get_nested_environment(self) -> Result<NestedEnvironment, Error> {
+        let environment = self.spawn()?;
+        // Wait for environment to be setup.
+        let _ = environment.completion_rx.await??;
+
+        if let Some(env) = environment.nested_environment {
+            return Ok(env);
+        }
+
+        return Err(format_err!("nested environment not created"));
+    }
+}
 
 /// Brings up the settings service environment.
 ///

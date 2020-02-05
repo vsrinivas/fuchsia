@@ -4,18 +4,15 @@
 
 #[cfg(test)]
 use {
-    crate::create_environment,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory,
-    crate::service_context::ServiceContext,
     crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
     crate::switchboard::base::SettingType,
+    crate::EnvironmentBuilder,
+    crate::Runtime,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_types::ColorRgba,
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    futures::prelude::*,
 };
 
 const ENV_NAME: &str = "settings_service_accessibility_test_environment";
@@ -23,23 +20,13 @@ const ENV_NAME: &str = "settings_service_accessibility_test_environment";
 async fn create_test_accessibility_env(
     storage_factory: Box<InMemoryStorageFactory>,
 ) -> AccessibilityProxy {
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Accessibility].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(None),
-        storage_factory,
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
-
-    env.connect_to_service::<AccessibilityMarker>().unwrap()
+    EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+        .settings(&[SettingType::Accessibility])
+        .spawn_and_get_nested_environment()
+        .await
+        .unwrap()
+        .connect_to_service::<AccessibilityMarker>()
+        .unwrap()
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

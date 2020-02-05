@@ -4,10 +4,8 @@
 
 #[cfg(test)]
 use {
-    crate::create_environment, crate::registry::device_storage::testing::*,
-    crate::service_context::ServiceContext, crate::switchboard::base::SettingType,
-    fidl_fuchsia_settings::DeviceMarker, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs, futures::prelude::*,
+    crate::registry::device_storage::testing::*, crate::switchboard::base::SettingType,
+    crate::EnvironmentBuilder, crate::Runtime, fidl_fuchsia_settings::DeviceMarker,
 };
 
 const ENV_NAME: &str = "settings_service_device_test_environment";
@@ -16,21 +14,14 @@ const ENV_NAME: &str = "settings_service_device_test_environment";
 /// sent to the switchboard.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_device() {
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Device].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(None),
+    let env = EnvironmentBuilder::new(
+        Runtime::Nested(ENV_NAME),
         Box::new(InMemoryStorageFactory::create()),
     )
+    .settings(&[SettingType::Device])
+    .spawn_and_get_nested_environment()
     .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    .unwrap();
 
     let device_proxy = env.connect_to_service::<DeviceMarker>().expect("connected to service");
 

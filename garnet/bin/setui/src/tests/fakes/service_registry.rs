@@ -9,6 +9,8 @@ use futures::executor::block_on;
 use futures::lock::Mutex;
 use std::sync::Arc;
 
+pub type ServiceRegistryHandle = Arc<Mutex<ServiceRegistry>>;
+
 /// A helper class that gathers services through registration and directs
 /// the appropriate channels to them.
 pub struct ServiceRegistry {
@@ -16,7 +18,7 @@ pub struct ServiceRegistry {
 }
 
 impl ServiceRegistry {
-    pub fn create() -> Arc<Mutex<ServiceRegistry>> {
+    pub fn create() -> ServiceRegistryHandle {
         return Arc::new(Mutex::new(ServiceRegistry { services: Vec::new() }));
     }
 
@@ -35,9 +37,9 @@ impl ServiceRegistry {
         return Err(format_err!("channel not handled for service: {}", service_name));
     }
 
-    pub fn serve(registry_handle: Arc<Mutex<ServiceRegistry>>) -> Option<GenerateService> {
-        return Some(Box::new(move |service_name: &str, channel: zx::Channel| {
+    pub fn serve(registry_handle: ServiceRegistryHandle) -> GenerateService {
+        return Box::new(move |service_name: &str, channel: zx::Channel| {
             return block_on(registry_handle.lock()).service_channel(service_name, channel);
-        }));
+        });
     }
 }

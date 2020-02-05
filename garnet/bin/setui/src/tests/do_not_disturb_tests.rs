@@ -4,22 +4,17 @@
 
 #[cfg(test)]
 use {
-    crate::create_environment,
     crate::registry::device_storage::{testing::*, DeviceStorageFactory},
-    crate::service_context::ServiceContext,
     crate::switchboard::base::{DoNotDisturbInfo, SettingType},
+    crate::EnvironmentBuilder,
+    crate::Runtime,
     fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbProxy, DoNotDisturbSettings},
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    futures::prelude::*,
 };
 
 const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_do_not_disturb() {
-    let mut fs = ServiceFs::new();
-
     let storage_factory = Box::new(InMemoryStorageFactory::create());
     let store = storage_factory.get_store::<DoNotDisturbInfo>();
 
@@ -29,19 +24,11 @@ async fn test_do_not_disturb() {
         assert!(store_lock.write(&DoNotDisturbInfo::new(true, false), false).await.is_ok());
     }
 
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::DoNotDisturb].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(None),
-        storage_factory,
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+        .settings(&[SettingType::DoNotDisturb])
+        .spawn_and_get_nested_environment()
+        .await
+        .unwrap();
 
     let dnd_proxy = env.connect_to_service::<DoNotDisturbMarker>().expect("connected to service");
 

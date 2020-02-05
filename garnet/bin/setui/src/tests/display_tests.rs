@@ -4,16 +4,14 @@
 
 #[cfg(test)]
 use {
-    crate::create_environment,
     crate::registry::device_storage::testing::*,
-    crate::service_context::ServiceContext,
     crate::switchboard::base::SettingType,
+    crate::EnvironmentBuilder,
+    crate::Runtime,
     anyhow::format_err,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_settings::*,
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::prelude::*,
 };
 
@@ -71,21 +69,15 @@ async fn test_display() {
         Ok(())
     };
 
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Display].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(Some(Box::new(service_gen))),
+    let env = EnvironmentBuilder::new(
+        Runtime::Nested(ENV_NAME),
         Box::new(InMemoryStorageFactory::create()),
     )
+    .service(Box::new(service_gen))
+    .settings(&[SettingType::Display])
+    .spawn_and_get_nested_environment()
     .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    .unwrap();
 
     let display_proxy = env.connect_to_service::<DisplayMarker>().unwrap();
 
@@ -143,21 +135,15 @@ async fn test_display_failure() {
         _ => Err(format_err!("unsupported!")),
     };
 
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Display, SettingType::Intl].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(Some(Box::new(service_gen))),
+    let env = EnvironmentBuilder::new(
+        Runtime::Nested(ENV_NAME),
         Box::new(InMemoryStorageFactory::create()),
     )
+    .service(Box::new(service_gen))
+    .settings(&[SettingType::Display, SettingType::Intl])
+    .spawn_and_get_nested_environment()
     .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    .unwrap();
 
     let display_proxy = env.connect_to_service::<DisplayMarker>().expect("connected to service");
 

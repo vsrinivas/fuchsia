@@ -4,19 +4,16 @@
 
 #[cfg(test)]
 use {
-    crate::create_environment,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory,
-    crate::service_context::ServiceContext,
     crate::switchboard::base::{SettingType, SystemInfo, SystemLoginOverrideMode},
     crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},
     crate::tests::fakes::device_settings_service::DeviceSettingsService,
     crate::tests::fakes::service_registry::ServiceRegistry,
+    crate::EnvironmentBuilder,
+    crate::Runtime,
     fidl_fuchsia_settings::*,
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
     futures::lock::Mutex,
-    futures::prelude::*,
     std::sync::Arc,
 };
 
@@ -29,7 +26,6 @@ async fn test_system() {
         fidl_fuchsia_settings::LoginOverride::AutologinGuest;
     const CHANGED_LOGIN_MODE: fidl_fuchsia_settings::LoginOverride =
         fidl_fuchsia_settings::LoginOverride::AuthProvider;
-    let mut fs = ServiceFs::new();
 
     let storage_factory = Box::new(InMemoryStorageFactory::create());
     let store = storage_factory.get_store::<SystemInfo>();
@@ -48,19 +44,12 @@ async fn test_system() {
     let device_admin_service_handle = Arc::new(Mutex::new(DeviceAdminService::new()));
     service_registry.lock().await.register_service(device_admin_service_handle.clone());
 
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::System].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry)),
-        storage_factory,
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+        .service(ServiceRegistry::serve(service_registry.clone()))
+        .settings(&[SettingType::System])
+        .spawn_and_get_nested_environment()
+        .await
+        .unwrap();
 
     let system_proxy = env.connect_to_service::<SystemMarker>().unwrap();
 

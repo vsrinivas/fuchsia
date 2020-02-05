@@ -5,11 +5,9 @@
 #[cfg(test)]
 use {
     crate::audio::default_audio_info,
-    crate::create_environment,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::{DeviceStorage, DeviceStorageFactory},
-    crate::service_context::ServiceContext,
     crate::switchboard::base::{
         AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
@@ -18,6 +16,8 @@ use {
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::SoundPlayerService,
     crate::tests::fakes::usage_reporter_service::UsageReporterService,
+    crate::EnvironmentBuilder,
+    crate::Runtime,
     fidl_fuchsia_media::{
         AudioRenderUsage, Usage,
         UsageState::{Ducked, Muted, Unadjusted},
@@ -25,10 +25,8 @@ use {
     },
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::NestedEnvironment,
     futures::lock::Mutex,
-    futures::prelude::*,
     std::sync::Arc,
 };
 
@@ -153,28 +151,26 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
     )
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_audio() {
-    let (service_registry, fake_services) = create_services().await;
-
+async fn create_environment(
+    service_registry: Arc<Mutex<ServiceRegistry>>,
+) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<AudioInfo>>>) {
     let storage_factory = Box::new(InMemoryStorageFactory::create());
     let store = create_storage(&storage_factory).await;
 
-    let mut fs = ServiceFs::new();
+    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+        .service(ServiceRegistry::serve(service_registry))
+        .settings(&[SettingType::Audio])
+        .spawn_and_get_nested_environment()
+        .await
+        .unwrap();
 
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        storage_factory,
-    )
-    .await
-    .unwrap()
-    .is_ok());
+    (env, store)
+}
 
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_audio() {
+    let (service_registry, fake_services) = create_services().await;
+    let (env, store) = create_environment(service_registry).await;
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
@@ -207,21 +203,7 @@ async fn test_audio() {
 async fn test_audio_input() {
     let (service_registry, fake_services) = create_services().await;
 
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let (env, _) = create_environment(service_registry).await;
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
@@ -241,22 +223,7 @@ async fn test_audio_input() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sounds() {
     let (service_registry, fake_services) = create_services().await;
-
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let (env, _) = create_environment(service_registry).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Test that the volume-max sound gets played on the soundplayer.
@@ -285,22 +252,7 @@ async fn test_sounds() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_max_volume_sound_on_press() {
     let (service_registry, fake_services) = create_services().await;
-
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let (env, _) = create_environment(service_registry).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Set volume to max.
@@ -330,22 +282,7 @@ async fn test_max_volume_sound_on_press() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_earcons_with_active_stream() {
     let (service_registry, fake_services) = create_services().await;
-
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let (env, _) = create_environment(service_registry).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
@@ -432,21 +369,7 @@ async fn test_bringup_without_input_registry() {
     let audio_core_service_handle = Arc::new(Mutex::new(AudioCoreService::new()));
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let (env, _) = create_environment(service_registry).await;
 
     // At this point we should not crash.
     assert!(env.connect_to_service::<AudioMarker>().is_ok());
@@ -459,21 +382,7 @@ async fn test_bringup_without_audio_core() {
     let input_registry_service_handle = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
     service_registry.lock().await.register_service(input_registry_service_handle.clone());
 
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let (env, _) = create_environment(service_registry).await;
 
     // At this point we should not crash.
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
@@ -540,21 +449,12 @@ async fn test_persisted_values_applied_at_start() {
         store_lock.write(&test_audio_info, false).await.expect("write audio info in store");
     }
 
-    let mut fs = ServiceFs::new();
-
-    assert!(create_environment(
-        fs.root_dir(),
-        [SettingType::Audio].iter().cloned().collect(),
-        vec![],
-        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
-        storage_factory,
-    )
-    .await
-    .unwrap()
-    .is_ok());
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
+    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+        .service(ServiceRegistry::serve(service_registry))
+        .settings(&[SettingType::Audio])
+        .spawn_and_get_nested_environment()
+        .await
+        .unwrap();
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
