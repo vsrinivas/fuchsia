@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/a11y_tts_log_engine"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.accessibility.tts.EngineRegistry",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

@@ -1,0 +1,15 @@
+{
+    program: {
+        binary: "bin/a11y_tts_log_engine"
+    },
+    use: [
+        {
+            protocol: [
+                "/svc/fuchsia.accessibility.tts.EngineEngineRegistry",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+            from: "realm",
+        },
+    ],
+}
+

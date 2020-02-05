@@ -8,6 +8,7 @@ group("a11y") {
   deps = [
     ":config",
     "bin/a11y_manager",
+    "bin/a11y_tts_log_engine",
     "lib",
   ]
 }
@@ -17,6 +18,7 @@ group("tests") {
 
   deps = [
     "bin/a11y_manager/tests",
+    "bin/a11y_tts_log_engine/tests",
     "lib:tests",
   ]
 }

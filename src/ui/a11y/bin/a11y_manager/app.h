@@ -21,7 +21,6 @@
 #include "src/ui/a11y/lib/magnifier/magnifier.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
-#include "src/ui/a11y/lib/tts/log_engine.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace a11y_manager {
@@ -116,8 +115,6 @@ class App {
   a11y::SemanticsManager semantics_manager_;
   a11y::TtsManager tts_manager_;
   a11y::ColorTransformManager color_transform_manager_;
-  // A simple Tts engine which logs output.
-  a11y::LogEngine log_engine_;
   // The gesture manager is instantiated whenever a11y manager starts listening
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;

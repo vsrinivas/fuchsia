@@ -4,8 +4,6 @@
 
 source_set("tts") {
   sources = [
-    "log_engine.cc",
-    "log_engine.h",
     "tts_manager.cc",
     "tts_manager.h",
   ]

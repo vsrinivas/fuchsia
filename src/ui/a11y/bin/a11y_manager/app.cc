@@ -17,10 +17,7 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
       semantics_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                          startup_context_->outgoing()->debug_dir()),
       tts_manager_(startup_context_.get()),
-      color_transform_manager_(startup_context_.get()),
-      // For now, we use a simple Tts Engine which only logs the output.
-      // On initialization, it registers itself with the Tts manager.
-      log_engine_(startup_context_.get()) {
+      color_transform_manager_(startup_context_.get()) {
   startup_context_->outgoing()->AddPublicService(
       semantics_manager_bindings_.GetHandler(&semantics_manager_));
   startup_context_->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));

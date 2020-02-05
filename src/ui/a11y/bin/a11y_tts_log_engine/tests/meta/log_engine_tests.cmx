@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/log_engine_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.accessibility.tts.EngineRegistry",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

@@ -10,18 +10,8 @@
 #include <memory>
 #include <vector>
 
-#include "src/ui/a11y/lib/tts/log_engine.h"
-
 namespace a11y {
 namespace {
-
-// Returns true if |log| contains |log_message|.
-bool LogContains(const std::string& log, const std::string& log_message) {
-  if (log.find(log_message) == std::string::npos) {
-    return false;
-  }
-  return true;
-}
 
 // Fake engine class to listen for incoming requests by the Tts Manager.
 class FakeEngine : public fuchsia::accessibility::tts::Engine {
@@ -244,50 +234,6 @@ TEST_F(TtsManagerTest, FailsWhenThereIsNoEngine) {
   // Examine sent utterance.
   EXPECT_EQ(fake_engine_new.ExamineUtterances().size(), 1u);
   EXPECT_EQ(fake_engine_new.ExamineUtterances()[0].message(), "hello world new");
-}
-
-TEST_F(TtsManagerTest, LogsEngineTest) {
-  // In order to test that FXL_LOG() calls are being made, this test first
-  // redirects std::cerr to a string.
-  std::stringstream log_output;
-  std::streambuf* old_output = std::cerr.rdbuf(log_output.rdbuf());
-
-  fuchsia::accessibility::tts::EnginePtr speaker;
-  tts_manager_->OpenEngine(speaker.NewRequest(),
-                           [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
-                             EXPECT_TRUE(result.is_response());
-                           });
-  RunLoopUntilIdle();
-  // Now, registers the LogEngine.
-  LogEngine log_engine(startup_context_.get());
-  fidl::BindingSet<fuchsia::accessibility::tts::Engine> log_engine_bindings;
-  auto engine_handle = log_engine_bindings.AddBinding(&log_engine);
-  tts_manager_->RegisterEngine(
-      std::move(engine_handle),
-      [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
-        EXPECT_TRUE(result.is_response());
-      });
-  RunLoopUntilIdle();
-  fuchsia::accessibility::tts::Utterance utterance;
-  utterance.set_message("hello world");
-  speaker->Enqueue(std::move(utterance), [](auto) {});
-  RunLoopUntilIdle();
-  EXPECT_TRUE(LogContains(log_output.str(), "Received utterance: hello world"));
-
-  speaker->Speak([](auto) {});
-  RunLoopUntilIdle();
-  EXPECT_TRUE(
-      LogContains(log_output.str(), "Received a Speak. Dispatching the following utterances:"));
-  EXPECT_TRUE(LogContains(log_output.str(), "  - hello world"));
-
-  speaker->Cancel([]() {});
-  RunLoopUntilIdle();
-  EXPECT_TRUE(LogContains(log_output.str(), "Received a Cancel"));
-
-  // Restores back std::cerr to its normal output.
-  std::cerr.rdbuf(old_output);
-  // Prints in regular cerr whatever this test case intercepted.
-  std::cerr << log_output.str();
 }
 
 }  // namespace
