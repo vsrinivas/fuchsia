@@ -40,7 +40,9 @@ using testing::UnorderedElementsAreArray;
 class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   BoardInfoProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
+      : CobaltTestFixture(/*unit_test_fixture=*/this),
+        executor_(dispatcher()),
+        cobalt_(dispatcher(), services()) {}
 
  protected:
   void SetUpBoardProvider(std::unique_ptr<StubBoard> board_provider) {
@@ -53,8 +55,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
   std::map<std::string, std::string> GetBoardInfo(
       const std::set<std::string>& annotations_to_get = {},
       const zx::duration timeout = zx::sec(1)) {
-    BoardInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout,
-                               std::make_shared<Cobalt>(dispatcher(), services()));
+    BoardInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt_);
 
     auto promise = provider.GetAnnotations();
 
@@ -83,6 +84,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
 
  private:
   std::unique_ptr<StubBoard> board_provider_;
+  Cobalt cobalt_;
 };
 
 BoardInfo CreateBoardInfo(const std::map<std::string, std::string>& annotations) {
@@ -177,10 +179,10 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
 
 TEST_F(BoardInfoProviderTest, Fail_CallGetBoardInfoTwice) {
   SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo({})));
+  Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);
-  internal::BoardInfoPtr board_info_ptr(dispatcher(), services(),
-                                        std::make_shared<Cobalt>(dispatcher(), services()));
+  internal::BoardInfoPtr board_info_ptr(dispatcher(), services(), &cobalt);
   executor_.schedule_task(board_info_ptr.GetBoardInfo(unused_timeout));
   ASSERT_DEATH(board_info_ptr.GetBoardInfo(unused_timeout),
                testing::HasSubstr("GetBoardInfo() is not intended to be called twice"));

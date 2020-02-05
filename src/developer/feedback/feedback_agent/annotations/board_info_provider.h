@@ -30,7 +30,7 @@ class BoardInfoProvider : public AnnotationProvider {
   // fuchsia.hwinfo.Board is expected to be in |services|.
   BoardInfoProvider(const std::set<std::string>& annotations_to_get, async_dispatcher_t* dispatcher,
                     std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout,
-                    std::shared_ptr<Cobalt> cobalt);
+                    Cobalt* cobalt);
 
   static std::set<std::string> GetSupportedAnnotations();
   fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
@@ -40,7 +40,7 @@ class BoardInfoProvider : public AnnotationProvider {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const zx::duration timeout_;
-  std::shared_ptr<Cobalt> cobalt_;
+  Cobalt* cobalt_;
 };
 
 namespace internal {
@@ -52,14 +52,14 @@ namespace internal {
 class BoardInfoPtr {
  public:
   BoardInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               std::shared_ptr<Cobalt> cobalt);
+               Cobalt* cobalt);
 
   fit::promise<std::map<std::string, std::string>> GetBoardInfo(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  std::shared_ptr<Cobalt> cobalt_;
+  Cobalt* cobalt_;
   // Enforces the one-shot nature of GetBoardInfo().
   bool has_called_get_board_info_ = false;
 

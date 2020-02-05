@@ -37,12 +37,12 @@ class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
   void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
   fit::result<fuchsia::mem::Buffer> GetKernelLog() {
+    cobalt_ = std::make_unique<Cobalt>(dispatcher(), environment_services_);
     fit::result<fuchsia::mem::Buffer> result;
     const zx::duration timeout(zx::sec(10));
     bool done = false;
     executor_.schedule_task(
-        CollectKernelLog(dispatcher(), environment_services_, timeout,
-                         std::make_shared<Cobalt>(dispatcher(), environment_services_))
+        CollectKernelLog(dispatcher(), environment_services_, timeout, cobalt_.get())
             .then([&result, &done](fit::result<fuchsia::mem::Buffer>& res) {
               result = std::move(res);
               done = true;
@@ -53,6 +53,7 @@ class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
 
  protected:
   std::shared_ptr<sys::ServiceDirectory> environment_services_;
+  std::unique_ptr<Cobalt> cobalt_;
   async::Executor executor_;
 };
 
@@ -104,9 +105,9 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
 }
 
 TEST_F(CollectKernelLogTest, Fail_CallGetLogTwice) {
+  Cobalt cobalt(dispatcher(), environment_services_);
   const zx::duration unused_timeout = zx::sec(1);
-  BootLog bootlog(dispatcher(), environment_services_,
-                  std::make_shared<Cobalt>(dispatcher(), environment_services_));
+  BootLog bootlog(dispatcher(), environment_services_, &cobalt);
   executor_.schedule_task(bootlog.GetLog(unused_timeout));
   ASSERT_DEATH(bootlog.GetLog(unused_timeout),
                testing::HasSubstr("GetLog() is not intended to be called twice"));
@@ -120,12 +121,11 @@ TEST_F(CollectKernelLogTest, Check_CobaltLogsTimeout) {
   auto enclosing_environment = CreateNewEnclosingEnvironment(
       "kernel_log_ptr_integration_test_environment", std::move(services));
 
+  Cobalt cobalt(dispatcher(), enclosing_environment->service_directory());
+
   // Set the timeout to 0 so kernel log collection always times out.
   const zx::duration timeout = zx::sec(0);
-
-  BootLog bootlog(
-      dispatcher(), enclosing_environment->service_directory(),
-      std::make_shared<Cobalt>(dispatcher(), enclosing_environment->service_directory()));
+  BootLog bootlog(dispatcher(), enclosing_environment->service_directory(), &cobalt);
   executor_.schedule_task(bootlog.GetLog(timeout));
 
   // We don't control the loop so we need to make sure the Cobalt event is logged before checking

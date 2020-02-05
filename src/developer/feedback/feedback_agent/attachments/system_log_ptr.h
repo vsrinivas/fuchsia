@@ -27,8 +27,7 @@ namespace feedback {
 // fuchsia.logger.Log is expected to be in |services|.
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                                    zx::duration timeout,
-                                                    std::shared_ptr<Cobalt> cobalt);
+                                                    zx::duration timeout, Cobalt* cobalt);
 
 // Wraps around fuchsia::logger::LogListenerPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
@@ -37,8 +36,7 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatch
 class LogListener : public fuchsia::logger::LogListener {
  public:
   explicit LogListener(async_dispatcher_t* dispatcher,
-                       std::shared_ptr<sys::ServiceDirectory> services,
-                       std::shared_ptr<Cobalt> cobalt);
+                       std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt);
 
   // Collects the logs and returns a promise to when the collection is done or the timeout over.
   fit::promise<void> CollectLogs(zx::duration timeout);
@@ -54,7 +52,7 @@ class LogListener : public fuchsia::logger::LogListener {
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  std::shared_ptr<Cobalt> cobalt_;
+  Cobalt* cobalt_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
   // Enforces the one-shot nature of CollectLogs().
   bool has_called_collect_logs_ = false;
