@@ -193,20 +193,19 @@ bool platform_serial_enabled() { return bootloader.uart.type != ZBI_UART_NONE; }
 // designated initializers.
 void pc_init_debug_default_early() { bootloader.uart.type = ZBI_UART_NONE; }
 
-static void handle_serial_cmdline() {
-  const char* serial_mode = gCmdline.GetString("kernel.serial");
-  if (serial_mode == NULL) {
-    return;
-  }
+zx_status_t parse_serial_cmdline(const char* serial_mode, zbi_uart_t* uart) {
+  // Check if the user has explicitly disabled the UART.
   if (!strcmp(serial_mode, "none")) {
-    bootloader.uart.type = ZBI_UART_NONE;
-    return;
+    uart->type = ZBI_UART_NONE;
+    return ZX_OK;
   }
+
+  // Legacy mode UART (x86 IO ports).
   if (!strcmp(serial_mode, "legacy")) {
-    bootloader.uart.type = ZBI_UART_PC_PORT;
-    bootloader.uart.base = 0x3f8;
-    bootloader.uart.irq = ISA_IRQ_SERIAL1;
-    return;
+    uart->type = ZBI_UART_PC_PORT;
+    uart->base = 0x3f8;
+    uart->irq = ISA_IRQ_SERIAL1;
+    return ZX_OK;
   }
 
   // type can be "ioport" or "mmio"
@@ -225,58 +224,71 @@ static void handle_serial_cmdline() {
 
   addr_start = strchr(serial_mode, ',');
   if (addr_start == nullptr) {
-    goto bail;
+    return ZX_ERR_INVALID_ARGS;
   }
   addr_start++;
   irq_start = strchr(addr_start, ',');
   if (irq_start == nullptr) {
-    goto bail;
+    return ZX_ERR_INVALID_ARGS;
   }
   irq_start++;
 
   // Parse out the type part
   type_len = addr_start - serial_mode - 1;
   if (type_len + 1 > kMaxTypeLen) {
-    goto bail;
+    return ZX_ERR_INVALID_ARGS;
   }
   memcpy(type_buf, serial_mode, type_len);
   type_buf[type_len] = 0;
   if (!strcmp(type_buf, "ioport")) {
-    bootloader.uart.type = ZBI_UART_PC_PORT;
+    uart->type = ZBI_UART_PC_PORT;
   } else if (!strcmp(type_buf, "mmio")) {
-    bootloader.uart.type = ZBI_UART_PC_MMIO;
+    uart->type = ZBI_UART_PC_MMIO;
   } else {
-    goto bail;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   // Parse out the address part
   addr_len = irq_start - addr_start - 1;
-  if (addr_len + 1 > kMaxAddrLen) {
-    goto bail;
+  if (addr_len == 0 || addr_len + 1 > kMaxAddrLen) {
+    return ZX_ERR_INVALID_ARGS;
   }
   memcpy(addr_buf, addr_start, addr_len);
   addr_buf[addr_len] = 0;
-  bootloader.uart.base = strtoul(addr_buf, &endptr, 0);
+  uart->base = strtoul(addr_buf, &endptr, 0);
   if (endptr != addr_buf + addr_len) {
-    goto bail;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   // Parse out the IRQ part
   irq_val = strtoul(irq_start, &endptr, 0);
-  if (*endptr != '\0' || irq_val > UINT32_MAX) {
-    goto bail;
+  if (endptr == irq_start || *endptr != '\0' || irq_val > UINT32_MAX) {
+    return ZX_ERR_INVALID_ARGS;
   }
+
   // For now, we don't support non-ISA IRQs
   if (irq_val >= NUM_ISA_IRQS) {
-    goto bail;
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  bootloader.uart.irq = static_cast<uint32_t>(irq_val);
-  return;
 
-bail:
-  dprintf(INFO, "Failed to parse \"kernel.serial\" parameter.\n");
-  bootloader.uart.type = ZBI_UART_NONE;
-  return;
+  uart->irq = static_cast<uint32_t>(irq_val);
+  return ZX_OK;
+}
+
+static void handle_serial_cmdline() {
+  // Fetch the command line.
+  const char* serial_mode = gCmdline.GetString("kernel.serial");
+  if (serial_mode == nullptr) {
+    // Nothing provided: leave "bootloader.uart" unmodified.
+    return;
+  }
+
+  // Otherwise, parse command line and update "bootloader.uart".
+  zx_status_t result = parse_serial_cmdline(serial_mode, &bootloader.uart);
+  if (result != ZX_OK) {
+    dprintf(INFO, "Failed to parse \"kernel.serial\" parameter.\n");
+    bootloader.uart.type = ZBI_UART_NONE;
+  }
 }
 
 void pc_init_debug_early() {
