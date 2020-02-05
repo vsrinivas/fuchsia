@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
   auto context = sys::ComponentContext::Create();
 
   const char reboot_log[] = "/boot/log/last-panic.txt";
-  auto promise = feedback::HandleRebootLog(reboot_log, context->svc())
+  auto promise = feedback::HandleRebootLog(reboot_log, loop.dispatcher(), context->svc())
                      .then([&reboot_log, &loop](const fit::result<void>& result) {
                        if (result.is_error()) {
                          FX_LOGS(ERROR)

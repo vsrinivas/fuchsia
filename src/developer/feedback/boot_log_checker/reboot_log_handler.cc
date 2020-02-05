@@ -13,7 +13,6 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/utils/metrics_registry.cb.h"
 #include "src/developer/feedback/utils/promise.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"
@@ -23,11 +22,9 @@
 
 namespace feedback {
 
-using cobalt_registry::kProjectId;
-
-fit::promise<void> HandleRebootLog(const std::string& filepath,
+fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services) {
-  auto handler = std::make_unique<internal::RebootLogHandler>(services);
+  auto handler = std::make_unique<internal::RebootLogHandler>(dispatcher, services);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
@@ -38,8 +35,9 @@ fit::promise<void> HandleRebootLog(const std::string& filepath,
 
 namespace internal {
 
-RebootLogHandler::RebootLogHandler(std::shared_ptr<sys::ServiceDirectory> services)
-    : services_(services) {}
+RebootLogHandler::RebootLogHandler(async_dispatcher_t* dispatcher,
+                                   std::shared_ptr<sys::ServiceDirectory> services)
+    : services_(services), cobalt_(dispatcher, services_) {}
 
 namespace {
 
@@ -125,18 +123,12 @@ std::string Signature(const CrashType cause) {
   }
 }
 
-std::string CobaltStatus(fuchsia::cobalt::Status status) {
-  switch (status) {
-    case fuchsia::cobalt::Status::OK:
-      return "OK";
-    case fuchsia::cobalt::Status::INVALID_ARGUMENTS:
-      return "INVALID_ARGUMENTS";
-    case fuchsia::cobalt::Status::EVENT_TOO_BIG:
-      return "EVENT_TOO_BIG";
-    case fuchsia::cobalt::Status::BUFFER_FULL:
-      return "BUFFER_FULL";
-    case fuchsia::cobalt::Status::INTERNAL_ERROR:
-      return "INTERNAL_ERROR";
+RebootReason CobaltRebootReason(const CrashType cause) {
+  switch (cause) {
+    case CrashType::KERNEL_PANIC:
+      return RebootReason::kKernelPanic;
+    case CrashType::OOM:
+      return RebootReason::kOOM;
   }
 }
 
@@ -169,17 +161,9 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
     return fit::make_result_promise<void>(fit::error());
   }
 
-  // We then wait for the network to be reachable before handing it off to the
-  // crash reporter.
-  return fit::join_promises(SendCobaltMetrics(info.crash_type),
-                            WaitForNetworkToBeReachable().and_then(FileCrashReport(info)))
-      .and_then([](std::tuple<fit::result<void>, fit::result<void>>& result) {
-        const auto& cobalt_result = std::get<0>(result);
-        if (cobalt_result.is_error()) {
-          return cobalt_result;
-        }
-        return std::get<1>(result);
-      });  // return error if either one in the tuple is error
+  cobalt_.LogOccurrence(CobaltRebootReason(info.crash_type));
+
+  return WaitForNetworkToBeReachable().and_then(FileCrashReport(info));
 }
 
 fit::promise<void> RebootLogHandler::WaitForNetworkToBeReachable() {
@@ -253,58 +237,6 @@ fit::promise<void> RebootLogHandler::FileCrashReport(const CrashInfo info) {
   });
 
   return crash_reporting_done_.consumer.promise_or(fit::error());
-}
-
-fit::promise<void> RebootLogHandler::SendCobaltMetrics(CrashType crash_type) {
-  // Connect to the cobalt fidl service provided by the environment.
-  cobalt_logger_factory_ = services_->Connect<fuchsia::cobalt::LoggerFactory>();
-  cobalt_logger_factory_.set_error_handler([this](zx_status_t status) {
-    if (!cobalt_logging_done_.completer) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.cobalt.LoggerFactory";
-    cobalt_logging_done_.completer.complete_error();
-  });
-  // Create a Cobalt Logger. The project name is the one we specified in the
-  // Cobalt metrics registry. We specify that our release stage is DOGFOOD.
-  // This means we are not allowed to use any metrics declared as DEBUG
-  // or FISHFOOD.
-  cobalt_logger_factory_->CreateLoggerFromProjectId(
-      kProjectId, cobalt_logger_.NewRequest(), [this, crash_type](fuchsia::cobalt::Status status) {
-        if (status != fuchsia::cobalt::Status::OK) {
-          FX_LOGS(ERROR) << "Error getting feedback metrics logger: " << CobaltStatus(status);
-          cobalt_logging_done_.completer.complete_error();
-          return;
-        }
-        cobalt_logger_.set_error_handler([this](zx_status_t status) {
-          if (!cobalt_logging_done_.completer) {
-            return;
-          }
-
-          FX_PLOGS(ERROR, status) << "Lost connection to feedback fuchsia.cobalt.Logger";
-          cobalt_logging_done_.completer.complete_error();
-        });
-        cobalt_registry::RebootMetricDimensionReason reboot_reason =
-            crash_type == CrashType::KERNEL_PANIC
-                ? cobalt_registry::RebootMetricDimensionReason::KernelPanic
-                : cobalt_registry::RebootMetricDimensionReason::Oom;
-        cobalt_logger_->LogEvent(cobalt_registry::kRebootMetricId, reboot_reason,
-                                 [this](fuchsia::cobalt::Status status) {
-                                   if (!cobalt_logging_done_.completer) {
-                                     return;
-                                   }
-                                   if (status != fuchsia::cobalt::Status::OK) {
-                                     FX_LOGS(ERROR) << "Error sending feedback metrics: "
-                                                    << CobaltStatus(status);
-                                     cobalt_logging_done_.completer.complete_error();
-                                     return;
-                                   }
-
-                                   cobalt_logging_done_.completer.complete_ok();
-                                 });
-      });
-  return cobalt_logging_done_.consumer.promise_or(fit::error());
 }
 
 }  // namespace internal

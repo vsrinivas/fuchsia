@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 
+#include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 
 namespace feedback {
@@ -27,7 +28,7 @@ namespace feedback {
 //
 // fuchsia.net.Connectivity, fuchsia.feedback.CrashReporter and fuchsia.cobalt.LoggerFactory are
 // expected to be in |services|.
-fit::promise<void> HandleRebootLog(const std::string& filepath,
+fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services);
 
 namespace internal {
@@ -48,14 +49,13 @@ struct CrashInfo {
 // Handle() is expected to be called only once.
 class RebootLogHandler {
  public:
-  explicit RebootLogHandler(std::shared_ptr<sys::ServiceDirectory> services);
+  RebootLogHandler(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
   fit::promise<void> Handle(const std::string& filepath);
 
  private:
   fit::promise<void> WaitForNetworkToBeReachable();
   fit::promise<void> FileCrashReport(CrashInfo info);
-  fit::promise<void> SendCobaltMetrics(CrashType crash_type);
 
   const std::shared_ptr<sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of Handle().
@@ -67,8 +67,7 @@ class RebootLogHandler {
   fit::bridge<void> network_reachable_;
   fuchsia::feedback::CrashReporterPtr crash_reporter_;
   fit::bridge<void> crash_reporting_done_;
-  fuchsia::cobalt::LoggerFactoryPtr cobalt_logger_factory_;
-  fuchsia::cobalt::LoggerPtr cobalt_logger_;
+  Cobalt cobalt_;
   fit::bridge<void> cobalt_logging_done_;
 };
 

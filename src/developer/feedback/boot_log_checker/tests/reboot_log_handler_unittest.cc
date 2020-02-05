@@ -31,6 +31,7 @@ namespace feedback {
 namespace {
 
 using testing::ElementsAre;
+using testing::IsEmpty;
 
 constexpr fit::result_state kError = fit::result_state::error;
 constexpr fit::result_state kOk = fit::result_state::ok;
@@ -74,7 +75,7 @@ class RebootLogHandlerTest : public UnitTestFixture,
   fit::result<void> HandleRebootLog() {
     fit::result<void> result;
     executor_.schedule_task(
-        feedback::HandleRebootLog(reboot_log_path_, services())
+        feedback::HandleRebootLog(reboot_log_path_, dispatcher(), services())
             .then([&result](fit::result<void>& res) { result = std::move(res); }));
     RunLoopUntilIdle();
     return result;
@@ -187,23 +188,32 @@ TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {
   network_reachability_provider_->TriggerOnNetworkReachable(false);
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kPending);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_EmptyRebootLog) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   WriteRebootLogContents("");
   EXPECT_EQ(HandleRebootLog().state(), kError);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
 }
 
 TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderNotAvailable) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(nullptr);
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   EXPECT_EQ(HandleRebootLog().state(), kError);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderClosesConnection) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kPending);
@@ -211,6 +221,8 @@ TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderClosesConnection) {
   network_reachability_provider_->CloseAllConnections();
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kError);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
@@ -220,6 +232,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kError);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
@@ -230,6 +244,8 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kError);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
@@ -240,50 +256,12 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kError);
-}
 
-TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerNotAvailable) {
-  WriteRebootLogContents();
-  SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-
-  fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
-  EXPECT_EQ(result.state(), kError);
-}
-
-TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerClosesConnection) {
-  WriteRebootLogContents();
-  SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryClosesConnection>());
-
-  fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
-  EXPECT_EQ(result.state(), kError);
-}
-
-TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerFailsToCreateLogger) {
-  WriteRebootLogContents();
-  SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryFailsToCreateLogger>());
-
-  fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
-  EXPECT_EQ(result.state(), kError);
-}
-
-TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerFailsToLogEvent) {
-  WriteRebootLogContents();
-  SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpCobaltLoggerFactory(
-      std::make_unique<StubCobaltLoggerFactory>(std::make_unique<StubCobaltLoggerFailsLogEvent>()));
-
-  fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
-  EXPECT_EQ(result.state(), kError);
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kKernelPanic)));
 }
 
 TEST_F(RebootLogHandlerTest, Fail_CallHandleTwice) {
-  internal::RebootLogHandler handler(services());
+  internal::RebootLogHandler handler(dispatcher(), services());
   handler.Handle("irrelevant");
   ASSERT_DEATH(handler.Handle("irrelevant"),
                testing::HasSubstr("Handle() is not intended to be called twice"));
