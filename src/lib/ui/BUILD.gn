@@ -17,6 +17,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":rust-ui-crates-tests",
+    "carnelian:carnelian_tests",
     "input:tests",
     "input-synthesis:input-synthesis-tests",
   ]
