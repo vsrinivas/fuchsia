@@ -11,6 +11,9 @@ update_kernels = [ "zbi.signed" ]
 use_vboot = true
 
 board_package_labels = [
+  "//garnet/bin/thermd",
+  "//garnet/bin/thermd:config",
+
   # Include all drivers for now.
   "//garnet/packages/prod:drivers",
   "//src/media/audio/bundles:virtual_audio_driver",

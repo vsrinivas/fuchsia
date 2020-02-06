@@ -2,6 +2,11 @@ target_cpu = "arm64"
 
 board_name = "as370"
 
+board_package_labels = [
+  "//garnet/bin/thermd",
+  "//garnet/bin/thermd:config",
+]
+
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/as370/package-as370-image.sh"
 

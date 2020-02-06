@@ -5,6 +5,9 @@
 target_cpu = "x64"
 
 board_package_labels = [
+  "//garnet/bin/thermd",
+  "//garnet/bin/thermd:config",
+
   # Include all drivers for now.
   "//garnet/packages/prod:drivers",
   "//boards:verify_zedboot_cmdline_params_for_toulouse",
