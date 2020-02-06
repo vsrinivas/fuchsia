@@ -66,8 +66,6 @@ aggregate_manifest("legacy-image") {
     ":driver.component.proxy",
     ":driver.crash-device",
     ":driver.e1000",
-    ":driver.integration-test",
-    ":driver.machina",
     ":driver.pci_fake",
     ":driver.pci_fake.proxy",
     ":driver.pci_protocol_test_driver",
@@ -104,19 +102,12 @@ aggregate_manifest("legacy-image") {
   if (target_cpu == "arm64") {
     deps += [
       ":driver.as370",
-      ":driver.astro",
       ":driver.c18",
-      ":driver.gauss",
-      ":driver.gauss-i2c-test",
       ":driver.hi3660-i2c-test",
       ":driver.hikey960",
       ":driver.msm8998",
       ":driver.msm8x53-som",
       ":driver.mt8167s_ref",
-      ":driver.nelson",
-      ":driver.sherlock",
-      ":driver.vim2",
-      ":driver.vim3",
     ]
   } else if (target_cpu == "x64") {
     deps += [
@@ -832,14 +823,14 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/dev/usb/hikey-usb:hikey-usb-manifest",
     "//zircon/system/dev/i2c/i2c:i2c-manifest",
     "//zircon/system/dev/input/i2c-hid:i2c-hid-manifest",
-    #":driver.integration-test",
+    "//zircon/system/dev/board/integration-test:integration-test-manifest",
     "//zircon/system/dev/audio/intel-hda/controller:intel-hda-manifest",
     "//zircon/system/dev/i2c/intel-i2c:intel-i2c-manifest",
     "//zircon/system/dev/test/isolateddevmgr:isolateddevmgr-test-manifest",
     "//zircon/system/dev/misc/ktrace:ktrace-manifest",
     "//zircon/system/dev/light-sensor/lite-on:lite-on-manifest",
     "//zircon/system/dev/light/lp50xx-light:lp50xx-light-manifest",
-    #":driver.machina",
+    "//zircon/system/dev/board/machina:machina-manifest",
     "//zircon/system/dev/audio/codecs/max98373:max98373-manifest",
     "//zircon/system/dev/codec/max98927:max98927-manifest",
     "//zircon/system/dev/block/mbr:mbr-manifest",
@@ -954,7 +945,18 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/dev/usb/usb-bus:usb-device-manifest",
     "//zircon/system/dev/block/zxcrypt:zxcrypt-manifest",
   ]
-  if (target_cpu == "x64") {
+
+  if (target_cpu == "arm64") {
+    deps += [
+      "//zircon/system/dev/board/astro:astro-manifest",
+      "//zircon/system/dev/board/gauss:gauss-manifest",
+      "//zircon/system/dev/board/gauss:gauss-i2c-test-manifest",
+      "//zircon/system/dev/board/nelson:nelson-manifest",
+      "//zircon/system/dev/board/sherlock:sherlock-manifest",
+      "//zircon/system/dev/board/vim2:vim2-manifest",
+      "//zircon/system/dev/board/vim3:vim3-manifest",
+    ]
+  } else if (target_cpu == "x64") {
     deps += [
       "//zircon/system/dev/display/intel-i915:intel-i915-manifest",
       "//zircon/system/dev/ethernet/intel-ethernet:intel-ethernet-manifest",

@@ -2,16 +2,40 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("machina") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("machina") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [
     "machina-sysmem.c",
     "machina.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/zircon",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
+}
+
+migrated_manifest("machina-manifest") {
+  deps = [ ":machina" ]
 }
