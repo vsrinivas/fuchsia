@@ -173,7 +173,6 @@ impl TestEnv {
     ) -> Result<(), fuchsia_component::client::OutputError> {
         let launcher = self.launcher();
         let blobfs_dir = File::open(&self.blobfs_path).expect("open blob dir");
-        let packages_dir = File::open(&self.packages_path).expect("open packages dir");
         let fake_dir = File::open(&self.fake_path).expect("open fake stimulus dir");
 
         let mut system_updater = AppBuilder::new(
@@ -181,8 +180,6 @@ impl TestEnv {
         )
         .add_dir_to_namespace("/blob".to_string(), blobfs_dir)
         .expect("/blob to mount")
-        .add_dir_to_namespace("/pkgfs/versions".to_string(), packages_dir)
-        .expect("/pkgfs/versions to mount")
         .add_dir_to_namespace("/fake".to_string(), fake_dir)
         .expect("/fake to mount")
         .arg(format!("-initiator={}", args.initiator))

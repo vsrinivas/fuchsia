@@ -105,12 +105,13 @@ func run(ctx *context.Context) (err error) {
 	defer dataSink.Close()
 	defer bootManager.Close()
 
-	dataPath, err := CacheUpdatePackage(updateURL, resolver)
+	updatePkg, err := CacheUpdatePackage(updateURL, resolver)
 	if err != nil {
 		return fmt.Errorf("error caching update package! %s", err)
 	}
+	defer updatePkg.Close()
 
-	pFile, err := os.Open(filepath.Join(dataPath, "packages"))
+	pFile, err := updatePkg.Open("packages")
 	if err != nil {
 		return fmt.Errorf("error opening packages data file! %s", err)
 	}
@@ -132,12 +133,12 @@ func run(ctx *context.Context) (err error) {
 		return fmt.Errorf("failed getting packages: %s", err)
 	}
 
-	if err := ValidateImgs(imgs, dataPath); err != nil {
+	if err := ValidateImgs(imgs, updatePkg); err != nil {
 		return fmt.Errorf("failed to validate imgs: %s", err)
 	}
 
 	phase = metrics.PhaseImageWrite
-	if err := WriteImgs(dataSink, bootManager, imgs, dataPath); err != nil {
+	if err := WriteImgs(dataSink, bootManager, imgs, updatePkg); err != nil {
 		return fmt.Errorf("error writing image file: %s", err)
 	}
 

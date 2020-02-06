@@ -16,7 +16,6 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	"syscall/zx/fidl"
 	zxio "syscall/zx/io"
 
 	"app/context"
@@ -84,28 +83,24 @@ func ConnectToPaver(context *context.Context) (*paver.DataSinkInterface, *paver.
 
 // CacheUpdatePackage caches the requested, possibly merkle-pinned, update
 // package URL and returns the pkgfs path to the package.
-func CacheUpdatePackage(updateURL string, resolver *pkg.PackageResolverInterface) (string, error) {
+func CacheUpdatePackage(updateURL string, resolver *pkg.PackageResolverInterface) (*UpdatePackage, error) {
 	dirPxy, err := resolvePackage(updateURL, resolver)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	defer dirPxy.Close()
+	pkg, err := NewUpdatePackage(dirPxy)
+	if err != nil {
+		return nil, err
+	}
 
-	channelProxy := (*fidl.ChannelProxy)(dirPxy)
-	updateDir := fdio.Directory{fdio.Node{(*zxio.NodeInterface)(channelProxy)}}
-	path := "meta"
-	f, err := updateDir.Open(path, zxio.OpenRightReadable, zxio.ModeTypeFile)
+	merkle, err := pkg.Merkleroot()
 	if err != nil {
-		return "", err
+		pkg.Close()
+		return nil, err
 	}
-	file := os.NewFile(uintptr(syscall.OpenFDIO(f)), path)
-	defer file.Close()
-	b, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-	merkle := string(b)
-	return "/pkgfs/versions/" + merkle, nil
+	syslog.Infof("resolved %s as %s", updateURL, merkle)
+
+	return pkg, nil
 }
 
 func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, []string, error) {
@@ -211,9 +206,8 @@ func resolvePackage(pkgURL string, resolver *pkg.PackageResolverInterface) (*fuc
 	return dirPxy, nil
 }
 
-func ValidateImgs(imgs []string, imgsPath string) error {
-	boardPath := filepath.Join(imgsPath, "board")
-	actual, err := ioutil.ReadFile(boardPath)
+func ValidateImgs(imgs []string, updatePkg *UpdatePackage) error {
+	actual, err := updatePkg.ReadFile("board")
 	if err == nil {
 		expected, err := ioutil.ReadFile("/config/build-info/board")
 		if err != nil {
@@ -229,7 +223,7 @@ func ValidateImgs(imgs []string, imgsPath string) error {
 	// Require a 'zbi' or 'zbi.signed' partition in the update package.
 	found := false
 	for _, img := range []string{"zbi", "zbi.signed"} {
-		if _, err := os.Stat(filepath.Join(imgsPath, img)); err == nil {
+		if _, err := updatePkg.Stat(img); err == nil {
 			found = true
 			break
 		}
@@ -242,8 +236,8 @@ func ValidateImgs(imgs []string, imgsPath string) error {
 	return nil
 }
 
-func WriteImgs(dataSink *paver.DataSinkInterface, bootManager *paver.BootManagerInterface, imgs []string, imgsPath string) error {
-	syslog.Infof("Writing images %+v from %q", imgs, imgsPath)
+func WriteImgs(dataSink *paver.DataSinkInterface, bootManager *paver.BootManagerInterface, imgs []string, updatePkg *UpdatePackage) error {
+	syslog.Infof("Writing images %+v from update package", imgs)
 
 	activeConfig, err := queryActiveConfig(bootManager)
 	if err != nil {
@@ -265,7 +259,7 @@ func WriteImgs(dataSink *paver.DataSinkInterface, bootManager *paver.BootManager
 	}
 
 	for _, img := range imgs {
-		if err := writeImg(dataSink, img, imgsPath, targetConfig); err != nil {
+		if err := writeImg(dataSink, img, updatePkg, targetConfig); err != nil {
 			return err
 		}
 	}
@@ -365,10 +359,8 @@ func writeAsset(svc *paver.DataSinkInterface, configuration paver.Configuration,
 	return nil
 }
 
-func writeImg(svc *paver.DataSinkInterface, img string, imgsPath string, targetConfig *paver.Configuration) error {
-	imgPath := filepath.Join(imgsPath, img)
-
-	f, err := os.Open(imgPath)
+func writeImg(svc *paver.DataSinkInterface, img string, updatePkg *UpdatePackage, targetConfig *paver.Configuration) error {
+	f, err := updatePkg.Open(img)
 	if err != nil {
 		syslog.Warnf("img_writer: %q image not found, skipping", img)
 		return nil
@@ -478,11 +470,11 @@ func writeImg(svc *paver.DataSinkInterface, img string, imgsPath string, targetC
 		return fmt.Errorf("unrecognized image %q", img)
 	}
 
-	syslog.Infof("img_writer: writing %q from %q", img, imgPath)
+	syslog.Infof("img_writer: writing %q from update package", img)
 	if err := writeImg(); err != nil {
 		return fmt.Errorf("img_writer: error writing %q: %q", img, err)
 	}
-	syslog.Infof("img_writer: wrote %q successfully from %q", img, imgPath)
+	syslog.Infof("img_writer: wrote %q successfully", img)
 
 	return nil
 }
