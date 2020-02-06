@@ -150,6 +150,82 @@ package("use_h264_decoder_secure_input_output_test") {
   ]
 }
 
+package("h264_decoder_fuzzer_test") {
+  testonly = true
+
+  deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+    "//src/media/codec/examples/use_media_decoder:h264_decoder_fuzzer_test",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/h264_decoder_fuzzer_test.cmx")
+      dest = "h264_decoder_fuzzer_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      # Should pass when run on VIM2, sherlock, or QEMU.
+      name = "h264_decoder_fuzzer_test"
+
+      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      environments = [
+        vim2_env,
+        sherlock_env,
+        qemu_env,
+      ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
+      dest = "bear.h264"
+    },
+  ]
+}
+
+package("vp9_decoder_fuzzer_test") {
+  testonly = true
+
+  deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+    "//src/media/codec/examples/use_media_decoder:vp9_decoder_fuzzer_test",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/vp9_decoder_fuzzer_test.cmx")
+      dest = "vp9_decoder_fuzzer_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "vp9_decoder_fuzzer_test"
+
+      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
+      environments = [
+        vim2_env,
+        sherlock_env,
+      ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
+      dest = "bear-vp9.ivf"
+    },
+  ]
+}
+
 #
 # Tests that don't run on CQ yet.
 #

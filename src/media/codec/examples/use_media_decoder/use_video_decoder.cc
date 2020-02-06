@@ -142,6 +142,8 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
     while (bytes_so_far != byte_count) {
       VLOGF("BlockingGetFreeInputPacket()...");
       std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
+      if (!packet)
+        return false;
       VLOGF("BlockingGetFreeInputPacket() done");
 
       if (!packet->has_header()) {
@@ -180,6 +182,7 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
       codec_client->QueueInputPacket(std::move(packet));
       bytes_so_far += bytes_to_copy;
     }
+    return true;
   };
 
   // Let caller-provided in_stream drive how far ahead we peek.  If it's not far
@@ -232,7 +235,8 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
     }
     ZX_DEBUG_ASSERT(find_end_iter > nal_start_offset);
     size_t nal_length = find_end_iter - nal_start_offset;
-    queue_access_unit(&peek[0], start_code_size_bytes + nal_length);
+    if (!queue_access_unit(&peek[0], start_code_size_bytes + nal_length))
+      return;
 
     // start code + NAL payload
     VLOGF("TossPeekedBytes()...");
@@ -253,9 +257,13 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
 
 void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp) {
   uint64_t input_frame_pts_counter = 0;
-  auto queue_access_unit = [&codec_client, in_stream, &input_frame_pts_counter, tvp](
-      size_t byte_count) {
+  auto queue_access_unit = [&codec_client, in_stream, &input_frame_pts_counter,
+                            tvp](size_t byte_count) {
     std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
+    if (!packet) {
+      fprintf(stderr, "Returning because failed to get input packet\n");
+      return false;
+    }
     ZX_ASSERT(packet->has_header());
     ZX_ASSERT(packet->header().has_packet_index());
     const CodecBuffer& buffer = codec_client->BlockingGetFreeInputBufferForPacket(packet.get());
@@ -290,8 +298,8 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
       read_address = buffer.base();
     }
 
-    zx_status_t status = in_stream->ReadBytesComplete(
-        byte_count, &actual_bytes_read, read_address, zx::deadline_after(kReadDeadlineDuration));
+    zx_status_t status = in_stream->ReadBytesComplete(byte_count, &actual_bytes_read, read_address,
+                                                      zx::deadline_after(kReadDeadlineDuration));
     ZX_ASSERT(status == ZX_OK);
     if (actual_bytes_read < byte_count) {
       Exit("Frame truncated.");
@@ -306,6 +314,7 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
     }
 
     codec_client->QueueInputPacket(std::move(packet));
+    return true;
   };
   IvfHeader header;
   uint32_t actual_bytes_read;
@@ -346,7 +355,8 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
       Exit("Frame header truncated.");
     }
     ZX_DEBUG_ASSERT(actual_bytes_read == sizeof(frame_header));
-    queue_access_unit(frame_header.size_bytes);
+    if (!queue_access_unit(frame_header.size_bytes))
+      return;
   }
 
   // Send through QueueInputEndOfStream().
@@ -362,8 +372,8 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                               InStreamPeeker* in_stream, InputCopier* copier, Format format,
                               uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
-                              bool is_secure_output, bool is_secure_input, FrameSink* frame_sink,
-                              EmitFrame emit_frame) {
+                              bool is_secure_output, bool is_secure_input, bool lax_mode,
+                              FrameSink* frame_sink, EmitFrame emit_frame) {
   VLOGF("use_video_decoder()\n");
 
   VLOGF("before CodecClient::CodecClient()...\n");
@@ -374,6 +384,7 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
   codec_client.SetMinOutputBufferCount(min_output_buffer_count);
   codec_client.set_is_output_secure(is_secure_output);
   codec_client.set_is_input_secure(is_secure_input);
+  codec_client.set_in_lax_mode(lax_mode);
 
   const char* mime_type;
   switch (format) {
@@ -467,6 +478,9 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
       VLOGF("BlockingGetEmittedOutput()...");
       std::unique_ptr<CodecOutput> output = codec_client.BlockingGetEmittedOutput();
       VLOGF("BlockingGetEmittedOutput() done");
+      if (!output) {
+        return;
+      }
       if (output->stream_lifetime_ordinal() != kStreamLifetimeOrdinal) {
         Exit(
             "server emitted a stream_lifetime_ordinal that client didn't set "
@@ -756,11 +770,11 @@ void use_h264_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                       InStreamPeeker* in_stream, InputCopier* input_copier,
                       uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
-                      bool is_secure_output, bool is_secure_input, FrameSink* frame_sink,
-                      EmitFrame emit_frame) {
+                      bool is_secure_output, bool is_secure_input, bool lax_mode,
+                      FrameSink* frame_sink, EmitFrame emit_frame) {
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem), in_stream,
                     input_copier, Format::kH264, min_output_buffer_size, min_output_buffer_count,
-                    is_secure_output, is_secure_input, frame_sink, std::move(emit_frame));
+                    is_secure_output, is_secure_input, lax_mode, frame_sink, std::move(emit_frame));
 }
 
 void use_vp9_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
@@ -768,9 +782,9 @@ void use_vp9_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      InStreamPeeker* in_stream, InputCopier* input_copier,
                      uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
-                     bool is_secure_output, bool is_secure_input, FrameSink* frame_sink,
-                     EmitFrame emit_frame) {
+                     bool is_secure_output, bool is_secure_input, bool lax_mode,
+                     FrameSink* frame_sink, EmitFrame emit_frame) {
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem), in_stream,
                     input_copier, Format::kVp9, min_output_buffer_size, min_output_buffer_count,
-                    is_secure_output, is_secure_input, frame_sink, std::move(emit_frame));
+                    is_secure_output, is_secure_input, lax_mode, frame_sink, std::move(emit_frame));
 }

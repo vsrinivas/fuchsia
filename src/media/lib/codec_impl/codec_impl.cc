@@ -534,6 +534,9 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
       return;
     }
     while (!stream_->output_end_of_stream()) {
+      if (stream_->failure_seen()) {
+        return;
+      }
       // While waiting, we'll continue to send OnOutputPacket(),
       // OnOutputConstraints(), and continue to process RecycleOutputPacket(),
       // until the client catches up to the latest config (as needed) and we've
@@ -554,7 +557,14 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
       // reasonable behavior for the server if the server normally would detect
       // and report mid-stream input corruption errors without an
       // OnStreamFailed().
-      output_end_of_stream_seen_.wait(lock);
+      // TODO(fxb/43490): Cancel wait immediately on failure without waiting for
+      // timeout.
+      if (std::cv_status::timeout ==
+          output_end_of_stream_seen_.wait_until(
+              lock, std::chrono::system_clock::now() + std::chrono::seconds(5))) {
+        FailLocked("Timeout waiting for end of stream");
+        break;
+      }
     }
 
     // Now that flush is done, we close the current stream because there is not
@@ -3256,6 +3266,8 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
       return;
     }
     stream_->SetFailureSeen();
+    // avoid hang in FlushEndOfStreamAndCloseStream_StreamControl
+    output_end_of_stream_seen_.notify_all();
 
     // We're failing the current stream.  We should still queue to the output
     // ordering domain to ensure ordering vs. any previously-sent output on this

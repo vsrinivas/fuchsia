@@ -177,8 +177,8 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
 
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
                     in_stream_peeker, input_copier.get(), min_output_buffer_size,
-                    min_output_buffer_count, is_secure_output, is_secure_input, nullptr,
-                    std::move(emit_frame));
+                    min_output_buffer_count, is_secure_output, is_secure_input, /*lax_mode=*/false,
+                    nullptr, std::move(emit_frame));
 
   return true;
 }

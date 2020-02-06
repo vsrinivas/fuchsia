@@ -193,7 +193,8 @@ int main(int argc, char* argv[]) {
                        in_stream_peeker, /*input_copier*/ nullptr, /*min_output_buffer_size=*/0,
                        /*min_output_buffer_count=*/0,
                        /*is_secure_output=*/false,
-                       /*is_secure_input=*/false, frame_sink, /*emit_frame=*/nullptr);
+                       /*is_secure_input=*/false, /*lax_mode=*/false, frame_sink,
+                       /*emit_frame=*/nullptr);
     };
   } else if (command_line.HasOption("vp9")) {
     use_decoder = [&fidl_loop, fidl_thread, codec_factory = std::move(codec_factory),
@@ -203,7 +204,8 @@ int main(int argc, char* argv[]) {
                       in_stream_peeker, /*input_copier*/ nullptr, /*min_output_buffer_size=*/0,
                       /*min_output_buffer_count=*/0,
                       /*is_secure_output=*/false,
-                      /*is_secure_input=*/false, frame_sink, /*emit_frame=*/nullptr);
+                      /*is_secure_input=*/false, /*lax_mode=*/false, frame_sink,
+                      /*emit_frame=*/nullptr);
     };
   } else {
     usage(command_line.argv0().c_str());

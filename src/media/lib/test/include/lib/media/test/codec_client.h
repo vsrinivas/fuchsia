@@ -121,6 +121,7 @@ class CodecClient {
 
   void set_is_output_secure(bool is_output_secure) { is_output_secure_ = is_output_secure; }
   void set_is_input_secure(bool is_input_secure) { is_input_secure_ = is_input_secure; }
+  void set_in_lax_mode(bool lax_mode) { in_lax_mode_ = lax_mode; }
 
   uint32_t input_buffer_count() { return all_input_buffers_.size(); }
 
@@ -139,8 +140,7 @@ class CodecClient {
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>* out_codec_sysmem_token);
 
   bool WaitForSysmemBuffersAllocated(
-      bool is_output,
-      fuchsia::sysmem::BufferCollectionSyncPtr* buffer_collection_param,
+      bool is_output, fuchsia::sysmem::BufferCollectionSyncPtr* buffer_collection_param,
       fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info);
 
   bool ConfigurePortBufferCollection(
@@ -314,6 +314,8 @@ class CodecClient {
   uint64_t current_output_buffer_lifetime_ordinal_ = 0;
   bool is_output_secure_ = false;
   bool is_input_secure_ = false;
+  // In lax mode, fatal decoder errors should be ignored.
+  bool in_lax_mode_ = false;
 
   // Invariant:
   // output_pending_ == (!emitted_output_.empty() ||
@@ -323,6 +325,9 @@ class CodecClient {
   }
   bool output_pending_ = false;
   std::condition_variable output_pending_condition_;
+  bool connection_lost_ = false;
+  std::mutex is_sync_complete_lock_;
+  std::condition_variable is_sync_complete_condition_;
 
   CodecClient(const CodecClient&) = delete;
   CodecClient(CodecClient&&) = delete;
