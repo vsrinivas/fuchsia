@@ -13,6 +13,5 @@ group("test") {
   testonly = true
   deps = [
     "buffer/test",
-    "operation/test",
   ]
 }
