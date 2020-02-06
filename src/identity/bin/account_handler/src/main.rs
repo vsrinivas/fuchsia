@@ -13,6 +13,7 @@ mod account_handler;
 mod auth_provider_supplier;
 mod common;
 mod inspect;
+mod lock_request;
 mod persona;
 mod pre_auth;
 mod stored_account;
