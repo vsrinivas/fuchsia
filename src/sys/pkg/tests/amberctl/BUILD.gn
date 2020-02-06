@@ -65,6 +65,10 @@ test_package("amberctl-tests") {
       path = rebase_path("data/test.json")
       dest = "sources/test.json"
     },
+    {
+      path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
+      dest = "ssl/cert.pem"
+    },
   ]
 
   meta = [

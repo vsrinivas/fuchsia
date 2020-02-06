@@ -326,7 +326,9 @@ impl<P: PkgFs> TestEnv<P> {
                 pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
             )
             .add_dir_or_proxy_to_namespace("/data", &mounts.pkg_resolver_data)
-            .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data);
+            .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data)
+            .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
+            .unwrap();
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
@@ -385,7 +387,9 @@ impl<P: PkgFs> TestEnv<P> {
                 self.pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
             )
             .add_dir_or_proxy_to_namespace("/data", &self._mounts.pkg_resolver_data)
-            .add_dir_or_proxy_to_namespace("/config/data", &self._mounts.pkg_resolver_config_data);
+            .add_dir_or_proxy_to_namespace("/config/data", &self._mounts.pkg_resolver_config_data)
+            .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
+            .unwrap();
         let pkg_resolver =
             pkg_resolver.spawn(self.env.launcher()).expect("package resolver to launch");
 

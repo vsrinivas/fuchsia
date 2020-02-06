@@ -14,7 +14,7 @@ use {
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
     futures::{
-        compat::{Future01CompatExt, Stream01CompatExt},
+        compat::{AsyncRead01CompatExt, Compat, Future01CompatExt, Stream01CompatExt},
         future::{BoxFuture, RemoteHandle},
         prelude::*,
         task::SpawnExt,
@@ -23,18 +23,23 @@ use {
     hyper::{header, service::service_fn, Body, Method, Request, Response, Server, StatusCode},
     std::{
         io::Cursor,
-        net::{Ipv4Addr, SocketAddr},
+        net::{Ipv6Addr, SocketAddr},
         path::{Path, PathBuf},
+        pin::Pin,
         sync::Arc,
     },
 };
 
 pub mod handler;
 
+trait AsyncReadWrite: AsyncRead + AsyncWrite + Send {}
+impl<T> AsyncReadWrite for T where T: AsyncRead + AsyncWrite + Send {}
+
 /// A builder to construct a test repository server.
 pub struct ServedRepositoryBuilder {
     repo: Arc<Repository>,
     uri_path_override_handlers: Vec<Arc<dyn UriPathHandler>>,
+    use_https: bool,
 }
 
 /// Override how a `ServedRepository` responds to GET requests on valid URI paths.
@@ -46,7 +51,7 @@ pub trait UriPathHandler: 'static + Send + Sync {
 
 impl ServedRepositoryBuilder {
     pub(crate) fn new(repo: Arc<Repository>) -> Self {
-        ServedRepositoryBuilder { repo, uri_path_override_handlers: vec![] }
+        ServedRepositoryBuilder { repo, uri_path_override_handlers: vec![], use_https: false }
     }
 
     /// Override how the `ServedRepositoryBuilder` responds to some URI paths.
@@ -58,14 +63,51 @@ impl ServedRepositoryBuilder {
         self
     }
 
+    /// Serve the repository over TLS, using a server certificate rooted to
+    /// //third_party/rust_crates/vendor/rustls/test-ca/rsa/ca.cert.
+    pub fn use_https(mut self, value: bool) -> Self {
+        self.use_https = value;
+        self
+    }
+
     /// Spawn the server on the current executor, returning a handle to manage the server.
     pub fn start(self) -> Result<ServedRepository, Error> {
-        let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
-
-        let (connections, addr) = {
+        let (listener, addr) = {
+            let addr = SocketAddr::new(Ipv6Addr::UNSPECIFIED.into(), 0);
             let listener = TcpListener::bind(&addr)?;
             let local_addr = listener.local_addr()?;
-            (listener.accept_stream().map_ok(|(conn, _addr)| conn.compat()), local_addr)
+            (listener, local_addr)
+        };
+
+        let listener = listener.accept_stream().map_err(Error::from).map_ok(|(conn, _addr)| conn);
+
+        let connections: Compat<
+            Pin<Box<dyn Stream<Item = Result<Compat<Pin<Box<dyn AsyncReadWrite>>>, Error>> + Send>>,
+        > = if self.use_https {
+            // build a server configuration using a test CA and cert chain
+            let certs = parse_cert_chain(&include_bytes!("../certs/server.certchain")[..]);
+            let key = parse_private_key(&include_bytes!("../certs/server.rsa")[..]);
+            let mut tls_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
+            tls_config.set_single_cert(certs, key).unwrap();
+            let tls_acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(tls_config));
+
+            // wrap incoming tcp streams
+            listener
+                .and_then(move |conn| {
+                    tls_acceptor.accept(conn.compat()).compat().map(|res| match res {
+                        Ok(conn) => Ok((Pin::new(Box::new(conn.compat()))
+                            as Pin<Box<dyn AsyncReadWrite>>)
+                            .compat()),
+                        Err(e) => Err(Error::from(e)),
+                    })
+                })
+                .boxed()
+                .compat()
+        } else {
+            listener
+                .map_ok(|conn| (Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>).compat())
+                .boxed()
+                .compat()
         };
 
         let root = self.repo.path();
@@ -106,7 +148,7 @@ impl ServedRepositoryBuilder {
 
         let (stop, rx_stop) = futures::channel::oneshot::channel();
 
-        let (server, wait_stop) = Server::builder(connections.compat())
+        let (server, wait_stop) = Server::builder(connections)
             .executor(EHandle::local().compat())
             .serve(service)
             .with_graceful_shutdown(rx_stop.compat())
@@ -116,8 +158,26 @@ impl ServedRepositoryBuilder {
 
         fasync::spawn(server);
 
-        Ok(ServedRepository { repo: self.repo, stop, wait_stop, addr, auto_event_sender })
+        Ok(ServedRepository {
+            repo: self.repo,
+            stop,
+            wait_stop,
+            addr,
+            use_https: self.use_https,
+            auto_event_sender,
+        })
     }
+}
+
+fn parse_cert_chain(mut bytes: &[u8]) -> Vec<rustls::Certificate> {
+    rustls::internal::pemfile::certs(&mut bytes).expect("certs to parse")
+}
+
+fn parse_private_key(mut bytes: &[u8]) -> rustls::PrivateKey {
+    let keys =
+        rustls::internal::pemfile::rsa_private_keys(&mut bytes).expect("private keys to parse");
+    assert_eq!(keys.len(), 1, "expecting a single private key");
+    keys.into_iter().next().unwrap()
 }
 
 /// A [`Repository`] being served over HTTP.
@@ -126,19 +186,27 @@ pub struct ServedRepository {
     stop: futures::channel::oneshot::Sender<()>,
     wait_stop: RemoteHandle<()>,
     addr: SocketAddr,
+    use_https: bool,
     auto_event_sender: EventSender,
 }
 
 impl ServedRepository {
+    fn scheme(&self) -> &'static str {
+        if self.use_https {
+            "https"
+        } else {
+            "http"
+        }
+    }
     /// Request the given path served by the repository over HTTP.
     pub async fn get(&self, path: impl AsRef<str>) -> Result<Vec<u8>, Error> {
-        let url = format!("http://127.0.0.1:{}/{}", self.addr.port(), path.as_ref());
+        let url = format!("{}/{}", self.local_url(), path.as_ref());
         get(url).await
     }
 
     /// Returns the URL that can be used to connect to this repository from this device.
     pub fn local_url(&self) -> String {
-        format!("http://127.0.0.1:{}", self.addr.port())
+        format!("{}://localhost:{}", self.scheme(), self.addr.port())
     }
 
     /// Returns a sorted vector of all packages contained in this repository.

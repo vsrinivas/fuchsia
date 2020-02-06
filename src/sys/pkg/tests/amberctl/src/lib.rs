@@ -143,7 +143,9 @@ impl TestEnv {
             "/pkgfs".to_owned(),
             File::open(mounts.pkgfs.path()).expect("/pkgfs temp dir to open"),
         )
-        .expect("/pkgfs to mount");
+        .expect("/pkgfs to mount")
+        .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
+        .expect("/config/ssl to mount");
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service_to::<AmberMarker, _>(amber.directory_request().unwrap().clone())

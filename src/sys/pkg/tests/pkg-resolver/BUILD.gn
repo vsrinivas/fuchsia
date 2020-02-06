@@ -456,6 +456,13 @@ test_package("pkg-resolver-integration-tests") {
     },
   ]
 
+  resources = [
+    {
+      path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
+      dest = "ssl/cert.pem"
+    },
+  ]
+
   meta = [
     {
       path = rebase_path(

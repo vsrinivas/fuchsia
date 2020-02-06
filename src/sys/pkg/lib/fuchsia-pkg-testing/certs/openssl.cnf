@@ -1,0 +1,22 @@
+[ ca ]
+basicConstraints = critical,CA:true,pathlen:1
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+keyUsage = cRLSign,keyCertSign
+
+[ itermediate ]
+basicConstraints = critical,CA:true,pathlen:0
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+keyUsage = cRLSign,keyCertSign
+
+[ server ]
+basicConstraints = critical,CA:false
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+keyUsage = nonRepudiation,digitalSignature,keyEncipherment
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = test.fuchsia.com
+DNS.2 = localhost

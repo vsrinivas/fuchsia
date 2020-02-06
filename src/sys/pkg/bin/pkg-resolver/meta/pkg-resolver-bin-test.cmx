@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
+                "fuchsia.net.NameLookup",
                 "fuchsia.posix.socket.Provider"
             ]
         }
@@ -15,6 +16,7 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher"
         ]
