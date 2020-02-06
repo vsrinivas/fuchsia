@@ -336,4 +336,27 @@ TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
   ASSERT_EQ(count_outstanding_open_vnode()->num_open(), 0);
 }
 
+TEST_F(ConnectionClosingTest, ClosingNodeLeadsToClosingServerEndChannel) {
+  // Create connection to vfs.
+  zx::channel client_end, server_end;
+  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
+  ASSERT_OK(ConnectClient(std::move(server_end)));
+
+  zx_signals_t observed = ZX_SIGNAL_NONE;
+  ASSERT_STATUS(ZX_ERR_TIMED_OUT,
+                client_end.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &observed));
+  ASSERT_FALSE(observed & ZX_CHANNEL_PEER_CLOSED);
+
+  ASSERT_OK(loop().StartThread());
+  auto result = fio::Node::Call::Close(zx::unowned_channel(client_end));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->s);
+
+  observed = ZX_SIGNAL_NONE;
+  ASSERT_OK(client_end.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
+  ASSERT_TRUE(observed & ZX_CHANNEL_PEER_CLOSED);
+
+  loop().Shutdown();
+}
+
 }  // namespace

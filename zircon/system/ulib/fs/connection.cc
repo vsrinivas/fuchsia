@@ -139,6 +139,8 @@ void Connection::AsyncTeardown() {
 }
 
 void Binding::AsyncTeardown() {
+  // This will wake up the dispatcher to call |Binding::HandleSignals|
+  // and eventually result in |Connection::SyncTeardown|.
   ZX_ASSERT(channel_.signal(0, kLocalTeardownSignal) == ZX_OK);
 }
 
@@ -214,6 +216,11 @@ bool Connection::OnMessage() {
     // Short-circuit locally destroyed connections, rather than servicing
     // requests on their behalf. This prevents new requests from being
     // served while filesystems are torn down.
+    return false;
+  }
+  if (closing_) {
+    // This prevents subsequent requests from being served after the
+    // observation of a |Node.Close| call.
     return false;
   }
   std::shared_ptr<Binding> binding = binding_;
@@ -329,7 +336,10 @@ void Connection::NodeClone(uint32_t clone_flags, zx::channel channel) {
 }
 
 Connection::Result<> Connection::NodeClose() {
-  return FromStatus(EnsureVnodeClosed());
+  Result<> result = FromStatus(EnsureVnodeClosed());
+  closing_ = true;
+  AsyncTeardown();
+  return result;
 }
 
 Connection::Result<VnodeRepresentation> Connection::NodeDescribe() {

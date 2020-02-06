@@ -71,12 +71,12 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // to prevent a race.
   virtual ~Connection();
 
-  // Set a signal on the channel which causes it to be torn down and
-  // closed asynchronously.
+  // Sets a signal on the channel which causes the dispatcher to asynchronously
+  // close, tear down, and unregister this connection from the Vfs object.
   void AsyncTeardown();
 
   // Explicitly teardown and close the connection synchronously,
-  // unregistering it from the VFS object.
+  // unregistering it from the Vfs object.
   void SyncTeardown();
 
   // Begins waiting for messages on the channel.
@@ -221,6 +221,9 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   zx_status_t EnsureVnodeClosed();
 
   bool vnode_is_open_;
+
+  // If we have received a |Node.Close| call on this connection.
+  bool closing_ = false;
 
   // The Vfs instance which owns this connection. Connections must not outlive
   // the Vfs, hence this borrowing is safe.
