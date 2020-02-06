@@ -10,6 +10,7 @@ zx_library("fbl") {
     "fbl/array.h",
     "fbl/auto_call.h",
     "fbl/auto_lock.h",
+    "fbl/conditional_select_nospec.h",
     "fbl/condition_variable.h",
     "fbl/confine_array_index.h",
     "fbl/deleter.h",
