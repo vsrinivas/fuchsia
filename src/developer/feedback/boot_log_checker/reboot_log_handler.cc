@@ -41,17 +41,28 @@ RebootLogHandler::RebootLogHandler(async_dispatcher_t* dispatcher,
 
 namespace {
 
-void ExtractCrashType(const std::string line, CrashType* crash_type) {
-  if (line == "ZIRCON KERNEL PANIC") {
-    *crash_type = CrashType::KERNEL_PANIC;
-  } else if (line == "ZIRCON OOM") {
-    *crash_type = CrashType::OOM;
-  } else {
-    FX_LOGS(ERROR)
-        << "Failed to extract a crash type from first line of reboot log - defaulting to "
-           "kernel panic";
-    *crash_type = CrashType::KERNEL_PANIC;
+void ExtractRebootReason(const std::string line, RebootReason* reboot_reason) {
+  struct StrToReason {
+    const char* str;
+    RebootReason reason;
+  };
+
+  constexpr std::array str_to_reason_map{
+      StrToReason{.str = "ZIRCON KERNEL PANIC", .reason = RebootReason::kKernelPanic},
+      StrToReason{.str = "ZIRCON OOM", .reason = RebootReason::kOOM},
+  };
+
+  for (const auto entry : str_to_reason_map) {
+    if (line == entry.str) {
+      *reboot_reason = entry.reason;
+      return;
+    }
   }
+
+  FX_LOGS(ERROR)
+      << "Failed to extract a reboot reason from first line of reboot log - defaulting to "
+         "kernel panic";
+  *reboot_reason = RebootReason::kKernelPanic;
 }
 
 void ExtractUptime(const std::string& third_line, const std::string& fourth_line,
@@ -64,7 +75,7 @@ void ExtractUptime(const std::string& third_line, const std::string& fourth_line
   *uptime = zx::msec(std::stoll(fourth_line));
 }
 
-bool ExtractCrashInfo(const std::string& reboot_log, CrashInfo* info) {
+bool ExtractRebootInfo(const std::string& reboot_log, RebootInfo* info) {
   std::istringstream iss(reboot_log);
   std::string first_line;
   if (!std::getline(iss, first_line)) {
@@ -75,7 +86,7 @@ bool ExtractCrashInfo(const std::string& reboot_log, CrashInfo* info) {
   // As we were able to read the first line of reboot log, we consider it a success from that point,
   // even if we are unable to read the next couple of lines to get the uptime.
 
-  ExtractCrashType(first_line, &(info->crash_type));
+  ExtractRebootReason(first_line, &(info->reboot_reason));
 
   std::string second_line;
   if (!std::getline(iss, second_line)) {
@@ -105,30 +116,41 @@ bool ExtractCrashInfo(const std::string& reboot_log, CrashInfo* info) {
   return true;
 }
 
-std::string ProgramName(const CrashType cause) {
-  switch (cause) {
-    case CrashType::KERNEL_PANIC:
+std::string ProgramName(const RebootReason reboot_reason) {
+  switch (reboot_reason) {
+    case RebootReason::kKernelPanic:
       return "kernel";
-    case CrashType::OOM:
+    case RebootReason::kOOM:
       return "oom";
+    case RebootReason::kBrownout:
+    case RebootReason::kHardwareWatchdog:
+    case RebootReason::kUnknown:
+      return "device";
+    case RebootReason::kClean:
+    case RebootReason::kCold:
+    case RebootReason::kSoftwareWatchdog:
+      return "system";
   }
 }
 
-std::string Signature(const CrashType cause) {
-  switch (cause) {
-    case CrashType::KERNEL_PANIC:
+std::string Signature(const RebootReason reboot_reason) {
+  switch (reboot_reason) {
+    case RebootReason::kKernelPanic:
       return "fuchsia-kernel-panic";
-    case CrashType::OOM:
+    case RebootReason::kOOM:
       return "fuchsia-oom";
-  }
-}
-
-RebootReason CobaltRebootReason(const CrashType cause) {
-  switch (cause) {
-    case CrashType::KERNEL_PANIC:
-      return RebootReason::kKernelPanic;
-    case CrashType::OOM:
-      return RebootReason::kOOM;
+    case RebootReason::kSoftwareWatchdog:
+      return "fuchsia-sw-watchdog";
+    case RebootReason::kHardwareWatchdog:
+      return "fuchsia-hw-watchdog";
+    case RebootReason::kBrownout:
+      return "fuchsia-brownout";
+    case RebootReason::kUnknown:
+      return "fuchsia-reboot-unknown";
+    case RebootReason::kClean:
+      return "fuchsia-clean-reboot";
+    case RebootReason::kCold:
+      return "fuchsia-cold-boot";
   }
 }
 
@@ -156,12 +178,12 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
   }
   FX_LOGS(INFO) << "Found reboot log:\n" << reboot_log_str;
 
-  CrashInfo info;
-  if (!ExtractCrashInfo(reboot_log_str, &info)) {
+  RebootInfo info;
+  if (!ExtractRebootInfo(reboot_log_str, &info)) {
     return fit::make_result_promise<void>(fit::error());
   }
 
-  cobalt_.LogOccurrence(CobaltRebootReason(info.crash_type));
+  cobalt_.LogOccurrence(info.reboot_reason);
 
   return WaitForNetworkToBeReachable().and_then(FileCrashReport(info));
 }
@@ -191,7 +213,7 @@ fit::promise<void> RebootLogHandler::WaitForNetworkToBeReachable() {
   return network_reachable_.consumer.promise_or(fit::error());
 }
 
-fit::promise<void> RebootLogHandler::FileCrashReport(const CrashInfo info) {
+fit::promise<void> RebootLogHandler::FileCrashReport(const RebootInfo info) {
   crash_reporter_ = services_->Connect<fuchsia::feedback::CrashReporter>();
   crash_reporter_.set_error_handler([this](zx_status_t status) {
     if (!crash_reporting_done_.completer) {
@@ -211,11 +233,11 @@ fit::promise<void> RebootLogHandler::FileCrashReport(const CrashInfo info) {
 
   // Build the crash report.
   fuchsia::feedback::GenericCrashReport generic_report;
-  generic_report.set_crash_signature(Signature(info.crash_type));
+  generic_report.set_crash_signature(Signature(info.reboot_reason));
   fuchsia::feedback::SpecificCrashReport specific_report;
   specific_report.set_generic(std::move(generic_report));
   fuchsia::feedback::CrashReport report;
-  report.set_program_name(ProgramName(info.crash_type));
+  report.set_program_name(ProgramName(info.reboot_reason));
   if (info.uptime.has_value()) {
     report.set_program_uptime(info.uptime.value().get());
   }

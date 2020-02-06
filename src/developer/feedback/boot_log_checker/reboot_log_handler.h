@@ -33,12 +33,9 @@ fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher
 
 namespace internal {
 
-// The type of crashes we expect in the crash reboot log and want to report on.
-enum class CrashType { KERNEL_PANIC, OOM };
-
-// The information extracted from the crash reboot log.
-struct CrashInfo {
-  CrashType crash_type;
+// The information extracted from the reboot log.
+struct RebootInfo {
+  RebootReason reboot_reason;
   std::optional<zx::duration> uptime;
 };
 
@@ -55,7 +52,7 @@ class RebootLogHandler {
 
  private:
   fit::promise<void> WaitForNetworkToBeReachable();
-  fit::promise<void> FileCrashReport(CrashInfo info);
+  fit::promise<void> FileCrashReport(RebootInfo info);
 
   const std::shared_ptr<sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of Handle().
