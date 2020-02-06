@@ -89,7 +89,6 @@ if (current_cpu != "") {
       "fidl-utils",
       "fit",
       "fs-test-utils",
-      "fvm",
       "kcounter",
       "kernel-cmdline:test",
       "log",

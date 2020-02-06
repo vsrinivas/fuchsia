@@ -434,26 +434,6 @@ void CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
   ASSERT_EQ(memcmp(in, out.get(), len), 0);
 }
 
-void CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
-  fbl::AllocChecker ac;
-  std::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
-  ASSERT_TRUE(ac.check());
-  memset(buf.get(), color, len);
-  ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
-  ASSERT_EQ(write(fd, buf.get(), len), static_cast<ssize_t>(len));
-}
-
-void CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
-  fbl::AllocChecker ac;
-  std::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
-  ASSERT_TRUE(ac.check());
-  ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
-  ASSERT_EQ(read(fd, buf.get(), len), static_cast<ssize_t>(len));
-  for (size_t i = 0; i < len; i++) {
-    ASSERT_EQ(buf[i], color);
-  }
-}
-
 void CheckWriteReadBlock(int fd, size_t block, size_t count) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx_status_t status;
