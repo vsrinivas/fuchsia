@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [
@@ -12,41 +25,75 @@ group("test") {
 
 # Common pieces of the unittest.
 source_set("test-common") {
-  testonly = true
   visibility = [ ":*" ]
   sources = [ "event_vthread_tests.cc" ]
   deps = [
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/trace",
-    "$zx/system/ulib/trace-provider:trace-handler",
-    "$zx/system/ulib/trace-reader",
-    "$zx/system/ulib/trace-test-utils",
-    "$zx/system/ulib/trace-vthread",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-handler",
+    "//zircon/public/lib/trace-reader",
+    "//zircon/public/lib/trace-test-utils",
+    "//zircon/public/lib/trace-vthread",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
   ]
 }
 
 # The unittest for the default case of dynamically linked trace-engine.
-zx_test("trace-vthread-test") {
+test("trace-vthread-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   deps = [
     ":test-common",
-    "$zx/system/ulib/trace-engine",
+    "//zircon/public/lib/trace-engine",
   ]
 }
 
 # The unittest with a static trace-engine.
-zx_test("trace-vthread-with-static-engine-test") {
+test("trace-vthread-with-static-engine-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   deps = [
     ":test-common",
-    "$zx/system/ulib/trace-engine:trace-engine-static",
+    "//zircon/public/lib/trace-engine-static",
   ]
+}
+
+migrated_manifest("trace-vthread-test-manifest") {
+  deps = [ ":trace-vthread-test" ]
+}
+
+migrated_manifest("trace-vthread-with-static-engine-test-manifest") {
+  deps = [ ":trace-vthread-with-static-engine-test" ]
 }
