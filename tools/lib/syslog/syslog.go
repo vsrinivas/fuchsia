@@ -6,6 +6,7 @@ package syslog
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -51,7 +52,7 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer, sinceNow bool)
 		err := s.r.Run(ctx, cmd, output, nil)
 		// We need not attempt to reconnect if the context was canceled or if we
 		// hit an error unrelated to the connection.
-		if err == nil || ctx.Err() != nil || !sshutil.IsConnectionError(err) {
+		if err == nil || ctx.Err() != nil || !errors.Is(err, sshutil.ConnectionError) {
 			return err
 		}
 		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)

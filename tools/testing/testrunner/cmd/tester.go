@@ -102,7 +102,7 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 // Test runs a test over SSH.
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
 	if err := t.r.ReconnectIfNecessary(ctx); err != nil {
-		return nil, fmt.Errorf("failed to restablish SSH connection: %v", err)
+		return nil, fmt.Errorf("failed to restablish SSH connection: %w", err)
 	}
 
 	setCommand(&test, t.useRuntests, dataOutputDir)

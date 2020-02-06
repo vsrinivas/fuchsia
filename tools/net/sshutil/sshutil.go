@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -39,6 +40,11 @@ const (
 	keepAliveOpenSSH = "keepalive@openssh.com"
 )
 
+var (
+	// ConnectionError is an all-purpose error indicating the a client had become unresponsive.
+	ConnectionError = errors.New("SSH connection error")
+)
+
 // GeneratePrivateKey generates a private SSH key.
 func GeneratePrivateKey() ([]byte, error) {
 	key, err := rsa.GenerateKey(rand.Reader, RSAKeySize)
@@ -54,36 +60,17 @@ func GeneratePrivateKey() ([]byte, error) {
 	return buf, nil
 }
 
-// ConnectionError is an all-purpose error indicating the a client had become unresponsive.
-type ConnectionError struct {
-	Err error
-}
-
-func (e *ConnectionError) Error() string {
-	return e.Err.Error()
-}
-
-func (e *ConnectionError) Unwrap() error {
-	return e.Err
-}
-
-// IsConnectionError returns whether an error is of type *ConnectionError.
-// TODO(fxbug.dev/43518): replace usage with errors.Is when on go v1.13.
-func IsConnectionError(err error) bool {
-	_, ok := err.(*ConnectionError)
-	return ok
-}
-
 // CheckConnection returns nil if a connection is verified as still alive; else
-// it returns a *ConnectionError.
+// it returns an error that unwraps as a ConnectionError.
 func CheckConnection(client *ssh.Client) error {
 	if _, _, err := client.Conn.SendRequest(keepAliveOpenSSH, true, nil); err != nil {
-		return &ConnectionError{err}
+		return fmt.Errorf("%w: %v", ConnectionError, err)
 	}
 	return nil
 }
 
-// Connect establishes an SSH connection at the given remote address.
+// Connect establishes an SSH connection at the given remote address. If it fails
+// to connect, it will return an error that unwraps as a ConnectionError.
 func Connect(ctx context.Context, raddr net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
 	network, err := network(raddr)
 	if err != nil {
@@ -97,7 +84,7 @@ func Connect(ctx context.Context, raddr net.Addr, config *ssh.ClientConfig) (*ss
 		client, err = dialWithTimeout(network, raddr.String(), config, totalDialTimeout)
 		return err
 	}, nil); err != nil {
-		return nil, fmt.Errorf("cannot connect to address %q: %v", raddr, err)
+		return nil, fmt.Errorf("%w: cannot connect to address %q: %v", ConnectionError, raddr, err)
 	}
 
 	return client, nil

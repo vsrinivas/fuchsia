@@ -140,7 +140,7 @@ func TestStream(t *testing.T) {
 		// at which point we have a stubbed nil error waiting to be consumed.
 		// The streaming error returned should too be nil, by which point we should
 		// have reconnected.
-		r.errs <- &sshutil.ConnectionError{fmt.Errorf("connection error")}
+		r.errs <- sshutil.ConnectionError
 		r.errs <- nil
 		err := <-streamErrs
 		if err != nil {

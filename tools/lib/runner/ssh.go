@@ -90,13 +90,14 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 
 // Reconnect closes the underlying connection and attempts to reopen it. The
 // method is useful after one has observed that the returned error of Run()
-// is of type *sshutil.ConnectionError. Also, this can be used
-// to recover the runner after having called Close().
+// is of type sshutil.ConnectionError. Also, this can be used
+// to recover the runner after having called Close(). If there is an underlying
+// connection error, the returned value will unwrap as sshutil.ConnectionError.
 func (r *SSHRunner) Reconnect(ctx context.Context) error {
 	raddr := r.client.Conn.RemoteAddr()
 	client, err := sshutil.Connect(ctx, raddr, r.config)
 	if err != nil {
-		return fmt.Errorf("failed to create a new client: %v", err)
+		return fmt.Errorf("failed to create a new client: %w", err)
 	}
 	r.Lock()
 	r.client.Close()
@@ -106,7 +107,8 @@ func (r *SSHRunner) Reconnect(ctx context.Context) error {
 }
 
 // ReconnectIfNecessary checks that the connection is alive and attempts to
-// reconnect if unresponsive.
+// reconnect if unresponsive. If there is an underlying connection error, the
+// returned value will unwrap as sshutil.ConnectionError.
 func (r *SSHRunner) ReconnectIfNecessary(ctx context.Context) error {
 	r.Lock()
 	err := sshutil.CheckConnection(r.client)

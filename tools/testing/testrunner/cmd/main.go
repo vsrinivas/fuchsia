@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
@@ -188,7 +190,10 @@ func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, node
 
 func runTests(ctx context.Context, tests []build.Test, t tester, outputs *testOutputs) error {
 	for _, test := range tests {
-		result := runTest(ctx, test, t)
+		result, err := runTest(ctx, test, t)
+		if errors.Is(err, sshutil.ConnectionError) {
+			return err
+		}
 		if err := outputs.record(*result); err != nil {
 			return err
 		}
@@ -196,7 +201,7 @@ func runTests(ctx context.Context, tests []build.Test, t tester, outputs *testOu
 	return nil
 }
 
-func runTest(ctx context.Context, test build.Test, t tester) *testrunner.TestResult {
+func runTest(ctx context.Context, test build.Test, t tester) (*testrunner.TestResult, error) {
 	result := runtests.TestSuccess
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
@@ -218,6 +223,9 @@ func runTest(ctx context.Context, test build.Test, t tester) *testrunner.TestRes
 			logger.Errorf(ctx, "test killed because timeout reached (%v)", perTestTimeout)
 		} else {
 			logger.Errorf(ctx, err.Error())
+			if errors.Is(err, sshutil.ConnectionError) {
+				return nil, err
+			}
 		}
 	}
 
@@ -240,5 +248,5 @@ func runTest(ctx context.Context, test build.Test, t tester) *testrunner.TestRes
 		StartTime: startTime,
 		EndTime:   endTime,
 		DataSinks: dataSinks,
-	}
+	}, nil
 }
