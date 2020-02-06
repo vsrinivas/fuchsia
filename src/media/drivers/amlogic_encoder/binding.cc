@@ -11,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 
 #include "device_ctx.h"
 #include "driver_ctx.h"

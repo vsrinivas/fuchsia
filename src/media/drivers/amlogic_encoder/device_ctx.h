@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_ENCODER_DEVICE_CTX_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_ENCODER_DEVICE_CTX_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_ENCODER_DEVICE_CTX_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_ENCODER_DEVICE_CTX_H_
+
+#include <memory>
 
 #include <ddk/driver.h>
-#include <memory>
 
 #include "driver_ctx.h"
 
@@ -25,4 +26,4 @@ class DeviceCtx {
   DriverCtx* driver_ctx_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_ENCODER_DEVICE_CTX_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_ENCODER_DEVICE_CTX_H_

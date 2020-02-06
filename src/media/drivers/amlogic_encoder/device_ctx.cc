@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
+#include "device_ctx.h"
+
 #include <zircon/assert.h>
 
-#include "device_ctx.h"
+#include <ddk/debug.h>
 
 std::pair<zx_status_t, std::unique_ptr<DeviceCtx>> DeviceCtx::Bind(DriverCtx* driver_ctx,
                                                                    zx_device_t* parent) {
