@@ -60,3 +60,8 @@ test_package("power_manager_tests") {
     },
   ]
 }
+
+config_data("config") {
+  for_pkg = "sysmgr"
+  sources = [ rebase_path("config/power_manager.config") ]
+}
