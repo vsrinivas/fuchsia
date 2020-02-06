@@ -29,6 +29,7 @@ zx_driver("sherlock") {
     "sherlock-thermal.cc",
     "sherlock-touch.cc",
     "sherlock-usb.cc",
+    "sherlock-video-enc.cc",
     "sherlock-video.cc",
     "sherlock.cc",
   ]

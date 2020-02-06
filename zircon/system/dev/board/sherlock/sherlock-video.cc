@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls/smc.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-t931/t931-hw.h>
-#include <zircon/syscalls/smc.h>
 
 #include "sherlock.h"
 
@@ -59,10 +60,6 @@ constexpr pbus_irq_t sherlock_video_irqs[] = {
     },
     {
         .irq = T931_DOS_MBOX_1_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-    {
-        .irq = T931_DOS_MBOX_2_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };

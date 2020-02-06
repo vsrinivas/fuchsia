@@ -378,6 +378,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "isp",
       "camera-controller",
       "aml-video",
+      "aml-video-enc",
       "sys/platform/05:04:17/aml-gpu",
       "sys/platform/05:04:16/sherlock-audio-in",
       "SherlockAudio",
