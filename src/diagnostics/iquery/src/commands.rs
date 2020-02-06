@@ -8,61 +8,47 @@ use {
         result::IqueryResult,
     },
     anyhow::Error,
-    futures::{future::join_all, TryFutureExt},
+    futures::future::join_all,
     std::str::FromStr,
 };
 
 /// Executes the FIND command.
-pub async fn find(paths: &[String], recursive: bool) -> Vec<IqueryResult> {
-    let futs = paths.iter().map(|path| {
-        all_locations(path).map_err(|e| {
-            eprintln!("Error: {:?}", e);
-            e
-        })
-    });
-    let mut locations = join_all(futs)
-        .await
-        .into_iter()
-        .filter_map(Result::ok)
-        .flatten()
-        .collect::<Vec<InspectLocation>>();
+pub async fn find(paths: &[String], recursive: bool) -> Vec<Result<IqueryResult, Error>> {
+    let futs = paths.iter().map(|path| all_locations(path));
+    let mut locations = Vec::<InspectLocation>::new();
+    let mut final_results = Vec::<Result<IqueryResult, Error>>::new();
+    for result in join_all(futs).await {
+        match result {
+            Ok(locs) => locations.extend(locs),
+            Err(e) => final_results.push(Err(e)),
+        }
+    }
+
     locations.sort();
+
     let results = locations.into_iter().map(|location| IqueryResult::new(location));
     if recursive {
         let futs = results.map(|mut result| async {
             result.load().await?;
             Ok(result)
         });
-        to_result(join_all(futs).await)
+        final_results.extend(join_all(futs).await);
+        final_results
     } else {
-        results.collect()
+        final_results.extend(results.map(|r| Ok(r)).collect::<Vec<_>>());
+        final_results
     }
 }
 
 /// Executes the CAT command.
-pub async fn cat(paths: &[String]) -> Vec<IqueryResult> {
+pub async fn cat(paths: &[String]) -> Vec<Result<IqueryResult, Error>> {
     let mut locations = paths
         .iter()
         .filter_map(|path| InspectLocation::from_str(path).ok())
         .collect::<Vec<InspectLocation>>();
     locations.sort();
     let futs = locations.into_iter().map(|location| IqueryResult::try_from(location));
-    let result = to_result(join_all(futs).await);
-    result
-}
-
-fn to_result(results: Vec<Result<IqueryResult, Error>>) -> Vec<IqueryResult> {
-    results
-        .into_iter()
-        .filter_map(|result| {
-            result
-                .or_else(|e| {
-                    println!("Error: {}", e);
-                    Err(e)
-                })
-                .ok()
-        })
-        .collect()
+    join_all(futs).await
 }
 
 #[cfg(test)]
@@ -79,18 +65,18 @@ mod tests {
         // Write some inspect data to a tmp file.
         let data = component::inspector().copy_vmo_data().unwrap();
         fs::write(file_path, &data).unwrap();
-        let paths = vec!["/tmp".to_string()];
+        let paths = vec![dir.path().to_string_lossy().to_string()];
 
         // The result is not loaded when non-recursive.
         let results = find(&paths, false).await;
         assert_eq!(results.len(), 1);
-        assert!(!results[0].is_loaded());
+        assert!(!results[0].as_ref().unwrap().is_loaded());
 
         // Loads the tmp file that contains the inspect hierarchy created above
         // when recursive.
         let results = find(&paths, true).await;
         assert_eq!(results.len(), 1);
-        assert!(results[0].is_loaded());
+        assert!(results[0].as_ref().unwrap().is_loaded());
 
         Ok(())
     }

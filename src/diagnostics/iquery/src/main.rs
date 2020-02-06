@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        options::{usage, ModeCommand, Options},
+        options::{usage, ModeCommand, Options, OptionsReadError},
         result::IqueryResult,
     },
     anyhow::Error,
@@ -19,7 +19,7 @@ mod options;
 mod result;
 
 /// Exceute the command specified in the |options|.
-async fn execute(options: &Options) -> Vec<IqueryResult> {
+async fn execute(options: &Options) -> Vec<Result<IqueryResult, Error>> {
     match options.mode {
         ModeCommand::Cat | ModeCommand::Ls => commands::cat(&options.path).await,
         ModeCommand::Find => commands::find(&options.path, options.recursive).await,
@@ -45,15 +45,38 @@ fn output(results: Vec<IqueryResult>, options: &Options) {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let options = Options::read(Box::new(env::args().into_iter())).await.unwrap_or_else(|error| {
-        eprintln!("Failed to parse options: {}", error);
-        eprintln!("{}", usage());
+    let options = Options::read(env::args().into_iter()).await.unwrap_or_else(|error| {
+        eprintln!("Error: {}", error);
+        match error {
+            OptionsReadError::ParseError(_) => {
+                eprintln!("{}", usage());
+            }
+            _ => {}
+        }
         std::process::exit(1);
     });
+
     if let Some(ref path) = options.global.dir {
         std::env::set_current_dir(Path::new(&path))?;
     }
-    let results = execute(&options).await;
+
+    let results = execute(&options)
+        .await
+        .into_iter()
+        .filter_map(|result| match result {
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                None
+            }
+            Ok(r) => Some(r),
+        })
+        .collect::<Vec<_>>();
+
+    if results.is_empty() {
+        std::process::exit(1);
+    }
+
     output(results, &options);
+
     Ok(())
 }

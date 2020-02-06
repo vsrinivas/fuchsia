@@ -5,7 +5,7 @@
 use {
     crate::{formatting::*, location::all_locations},
     anyhow::{format_err, Error},
-    std::{env, str::FromStr},
+    std::{env, fmt, str::FromStr},
 };
 
 #[derive(Clone, Debug)]
@@ -15,6 +15,7 @@ pub struct Options {
     pub formatting: FormattingOptions,
     pub recursive: bool,
     pub path: Vec<String>,
+    hub_path: String,
 }
 
 #[derive(Clone, Debug)]
@@ -104,6 +105,21 @@ pub fn usage() -> String {
     )
 }
 
+#[derive(Debug)]
+pub enum OptionsReadError {
+    AllLocationsError(Error),
+    ParseError(String),
+}
+
+impl fmt::Display for OptionsReadError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AllLocationsError(e) => write!(f, "{}", e),
+            Self::ParseError(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
 impl Options {
     fn new() -> Self {
         Self {
@@ -116,18 +132,36 @@ impl Options {
             },
             recursive: false,
             path: vec![],
+            hub_path: "/hub".to_string(),
         }
     }
 
-    pub async fn read(mut args: Box<dyn Iterator<Item = String>>) -> Result<Self, Error> {
+    #[cfg(test)]
+    async fn read_test(
+        args: impl Iterator<Item = String>,
+        hub_path: impl Into<String>,
+    ) -> Result<Self, OptionsReadError> {
+        let mut opts = Options::new();
+        opts.hub_path = hub_path.into();
+        opts.read_internal(args).await
+    }
+
+    pub async fn read(args: impl Iterator<Item = String>) -> Result<Self, OptionsReadError> {
+        let opts = Options::new();
+        opts.read_internal(args).await
+    }
+
+    async fn read_internal(
+        mut self,
+        mut args: impl Iterator<Item = String>,
+    ) -> Result<Self, OptionsReadError> {
         // ignore arg[0]
         let _ = args.next();
-        let mut opts = Options::new();
         while let Some(flag) = args.next() {
             let flag_str = flag.as_str();
             if !flag_str.starts_with("--") {
-                opts.path = vec![flag.to_string()];
-                opts.path.extend(args.map(|arg| arg.to_string()));
+                self.path = vec![flag.to_string()];
+                self.path.extend(args.map(|arg| arg.to_string()));
                 break;
             }
             if flag_str.starts_with("--help") {
@@ -135,37 +169,44 @@ impl Options {
                 std::process::exit(0);
             } else if flag_str.starts_with("--dir") {
                 let values = flag_str.split("=").collect::<Vec<&str>>();
-                opts.global.dir = Some(values[1].to_string());
+                self.global.dir = Some(values[1].to_string());
             } else if flag_str.starts_with("--format") {
                 let values = flag_str.split("=").collect::<Vec<&str>>();
                 match values[1] {
-                    "json" => opts.formatting.format = Format::Json,
-                    "text" => opts.formatting.format = Format::Text,
-                    value => return Err(format_err!("Unexpected format: {}", value)),
+                    "json" => self.formatting.format = Format::Json,
+                    "text" => self.formatting.format = Format::Text,
+                    value => {
+                        return Err(OptionsReadError::ParseError(format!(
+                            "Unexpected format: {}",
+                            value
+                        )))
+                    }
                 };
             } else {
                 match flag_str {
-                    "--recursive" => opts.recursive = true,
-                    "--sort" => opts.formatting.sort = true,
-                    "--full_paths" => opts.formatting.path_format = PathFormat::Full,
-                    "--absolute_paths" => opts.formatting.path_format = PathFormat::Absolute,
-                    "--cat" => opts.mode = ModeCommand::Cat,
-                    "--find" => opts.mode = ModeCommand::Find,
-                    "--ls" => opts.mode = ModeCommand::Ls,
-                    "--report" => opts.mode = ModeCommand::Report,
-                    flag => return Err(format_err!("Unknown flag: {}", flag)),
+                    "--recursive" => self.recursive = true,
+                    "--sort" => self.formatting.sort = true,
+                    "--full_paths" => self.formatting.path_format = PathFormat::Full,
+                    "--absolute_paths" => self.formatting.path_format = PathFormat::Absolute,
+                    "--cat" => self.mode = ModeCommand::Cat,
+                    "--find" => self.mode = ModeCommand::Find,
+                    "--ls" => self.mode = ModeCommand::Ls,
+                    "--report" => self.mode = ModeCommand::Report,
+                    flag => {
+                        return Err(OptionsReadError::ParseError(format!("Unknown flag: {}", flag)))
+                    }
                 }
             }
         }
 
-        if opts.mode == ModeCommand::Report {
-            Ok(opts.transform_for_report().await)
-        } else if opts.path.is_empty() {
-            // Print usage if path is empty
-            println!("{}", usage());
-            std::process::exit(0);
+        if self.mode == ModeCommand::Report {
+            self.transform_for_report().await
+        } else if self.path.is_empty() {
+            return Err(OptionsReadError::ParseError(format!(
+                "No path provided. Expected at least 1"
+            )));
         } else {
-            Ok(opts)
+            Ok(self)
         }
     }
 
@@ -200,22 +241,16 @@ impl Options {
         }
     }
 
-    async fn transform_for_report(self) -> Self {
-        let mut path = self.path.clone();
-        match all_locations("/hub").await {
-            Ok(locations) => {
-                path.extend(
-                    locations
-                        .into_iter()
-                        .map(|loc| loc.path.to_string_lossy().to_string())
-                        .filter(|p| !p.contains("/system_objects")),
-                );
-            }
-            Err(e) => {
-                eprintln!("Error: {:?}", e);
-            }
-        }
-        Self {
+    async fn transform_for_report(self) -> Result<Self, OptionsReadError> {
+        let locations = all_locations(&self.hub_path)
+            .await
+            .map_err(|error| OptionsReadError::AllLocationsError(error))?;
+        let path = locations
+            .into_iter()
+            .map(|loc| loc.path.to_string_lossy().to_string())
+            .filter(|p| !p.contains("/system_objects"))
+            .collect();
+        Ok(Self {
             mode: ModeCommand::Cat,
             global: GlobalOptions { dir: None },
             formatting: FormattingOptions {
@@ -225,13 +260,14 @@ impl Options {
             },
             recursive: true,
             path,
-        }
+            hub_path: self.hub_path,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync};
+    use {super::*, fuchsia_async as fasync, tempfile::tempdir};
 
     #[fasync::run_singlethreaded(test)]
     async fn parse_opts() {
@@ -266,15 +302,31 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn parse_report() {
-        let opts = "iquery --report PATH".split(" ").map(|s| s.to_string());
+        let dir = tempdir().unwrap();
+        let tmpfile = dir.path().join("root.inspect");
+        std::fs::write(&tmpfile, "{}").unwrap();
+        let cmnd = format!("iquery --report {:?}", dir.path());
+        let opts = cmnd.split(" ").into_iter().map(|s| s.to_string());
         let options =
-            Options::read(Box::new(opts.into_iter())).await.expect("failed to read options");
+            Options::read_test(opts.into_iter(), dir.path().to_string_lossy().to_string())
+                .await
+                .expect("failed to read options");
         assert_eq!(options.mode, ModeCommand::Cat);
         assert_eq!(options.global.dir, None);
         assert_eq!(options.formatting.format, Format::Text);
         assert!(options.formatting.sort);
         assert_eq!(options.formatting.path_format, PathFormat::Absolute);
         assert!(options.recursive);
-        assert_eq!(options.path, vec!["PATH"]);
+        assert_eq!(options.path, vec![tmpfile.to_string_lossy().to_string()]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn parse_report_unknown_path() {
+        let opts = "iquery --report PATH".split(" ").into_iter().map(|s| s.to_string());
+        let result = Options::read(opts.into_iter()).await;
+        match result {
+            Err(OptionsReadError::AllLocationsError(_)) => {}
+            r => panic!("unexpected result: {:?}", r),
+        }
     }
 }
