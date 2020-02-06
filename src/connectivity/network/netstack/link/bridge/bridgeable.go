@@ -9,7 +9,7 @@ import (
 
 var _ stack.LinkEndpoint = (*BridgeableEndpoint)(nil)
 var _ stack.GSOEndpoint = (*BridgeableEndpoint)(nil)
-var _ stack.NetworkDispatcher = (*Endpoint)(nil)
+var _ stack.NetworkDispatcher = (*BridgeableEndpoint)(nil)
 
 type BridgeableEndpoint struct {
 	stack.LinkEndpoint

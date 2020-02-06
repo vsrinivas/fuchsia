@@ -23,6 +23,13 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
+const (
+	linkAddr1 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x07")
+	linkAddr2 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x08")
+	linkAddr3 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x09")
+	linkAddr4 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x0a")
+)
+
 var (
 	timeoutReceiveReady    error = fmt.Errorf("receiveready")
 	timeoutSendReady       error = fmt.Errorf("sendready")
@@ -118,6 +125,166 @@ func TestEndpoint_Wait(t *testing.T) {
 	}
 }
 
+type testNetworkDispatcher struct {
+	pkt   tcpip.PacketBuffer
+	count int
+}
+
+func (t *testNetworkDispatcher) DeliverNetworkPacket(_ stack.LinkEndpoint, _, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
+	t.count++
+	t.pkt = pkt
+}
+
+type singlePacketEndpoint struct {
+	stack.LinkEndpoint
+	linkAddr tcpip.LinkAddress
+	pkt      tcpip.PacketBuffer
+	full     bool
+}
+
+func (e *singlePacketEndpoint) LinkAddress() tcpip.LinkAddress {
+	return e.linkAddr
+}
+
+func (e *singlePacketEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) *tcpip.Error {
+	if e.full {
+		return tcpip.ErrWouldBlock
+	}
+
+	e.pkt = packetbuffer.OutboundToInbound(pkt)
+	e.full = true
+	return nil
+}
+
+func newSinglePacketEndpoint(linkAddr tcpip.LinkAddress) *singlePacketEndpoint {
+	return &singlePacketEndpoint{
+		LinkEndpoint: loopback.New(),
+		linkAddr:     linkAddr,
+	}
+}
+
+// TestBridgeRouting makes sure that frames are directed to the right unicast
+// endpoint or floods all endpoints for multicast and broadcast frames.
+func TestBridgeRouting(t *testing.T) {
+	data := []byte{1, 2, 3, 4}
+	pkt := tcpip.PacketBuffer{
+		Data: buffer.View(data).ToVectorisedView(),
+	}
+
+	tests := []struct {
+		name               string
+		dstAddr            tcpip.LinkAddress
+		ep1ShouldGetPacket bool
+		nd1ShouldGetPacket bool
+		ep2ShouldGetPacket bool
+		nd2ShouldGetPacket bool
+		ndbShouldGetPacket bool
+	}{
+		{
+			name:               "ToMulticast",
+			dstAddr:            "\x01\x03\x04\x05\x06\x07",
+			ep1ShouldGetPacket: true,
+			nd1ShouldGetPacket: true,
+			ep2ShouldGetPacket: true,
+			nd2ShouldGetPacket: true,
+			ndbShouldGetPacket: true,
+		},
+		{
+			name:               "ToBroadcast",
+			dstAddr:            "\xff\xff\xff\xff\xff\xff",
+			ep1ShouldGetPacket: true,
+			nd1ShouldGetPacket: true,
+			ep2ShouldGetPacket: true,
+			nd2ShouldGetPacket: true,
+			ndbShouldGetPacket: true,
+		},
+		{
+			name:               "ToEP1",
+			dstAddr:            linkAddr1,
+			nd1ShouldGetPacket: true,
+		},
+		{
+			name:               "ToEP2",
+			dstAddr:            linkAddr2,
+			nd2ShouldGetPacket: true,
+		},
+		{
+			name:               "ToOther",
+			dstAddr:            linkAddr4,
+			ep1ShouldGetPacket: true,
+			ep2ShouldGetPacket: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ep1 := newSinglePacketEndpoint(linkAddr1)
+			ep2 := newSinglePacketEndpoint(linkAddr2)
+
+			bep1 := bridge.NewEndpoint(ep1)
+			bep2 := bridge.NewEndpoint(ep2)
+
+			var nd1, nd2, ndb testNetworkDispatcher
+
+			bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
+
+			bep1.Attach(&nd1)
+			bep2.Attach(&nd2)
+			bridgeEP.Attach(&ndb)
+
+			bridgeEP.DeliverNetworkPacket(bridgeEP, linkAddr3, test.dstAddr, 0, pkt)
+			if test.ep1ShouldGetPacket {
+				if got := ep1.pkt.Data.ToView(); !bytes.Equal(got, data) {
+					t.Errorf("got ep1 data = %x, want = %x", got, data)
+				}
+			} else if ep1.full {
+				t.Errorf("ep1 unexpectedly got a frame")
+			}
+
+			if test.nd1ShouldGetPacket {
+				if nd1.count != 1 {
+					t.Errorf("got nd1.count = %d, want = 1", nd1.count)
+				}
+				if got := nd1.pkt.Data.ToView(); !bytes.Equal(got, data) {
+					t.Errorf("got nd1 data = %x, want = %x", got, data)
+				}
+			} else if nd1.count != 0 {
+				t.Errorf("got nd1.count = %d, want = 0", nd1.count)
+			}
+
+			if test.ep2ShouldGetPacket {
+				if got := ep2.pkt.Data.ToView(); !bytes.Equal(got, data) {
+					t.Errorf("got ep2 data = %x, want = %x", got, data)
+				}
+			} else if ep2.full {
+				t.Errorf("ep2 unexpectedly got a frame")
+			}
+
+			if test.nd2ShouldGetPacket {
+				if nd2.count != 1 {
+					t.Errorf("got nd2.count = %d, want = 1", nd2.count)
+				}
+				if got := nd2.pkt.Data.ToView(); !bytes.Equal(got, data) {
+					t.Errorf("got nd2 data = %x, want = %x", got, data)
+				}
+			} else if nd2.count != 0 {
+				t.Errorf("got nd2.count = %d, want = 0", nd2.count)
+			}
+
+			if test.ndbShouldGetPacket {
+				if ndb.count != 1 {
+					t.Errorf("got ndb.count = %d, want = 1", ndb.count)
+				}
+				if got := ndb.pkt.Data.ToView(); !bytes.Equal(got, data) {
+					t.Errorf("got ndb data = %x, want = %x", got, data)
+				}
+			} else if ndb.count != 0 {
+				t.Errorf("got ndb.count = %d, want = 0", ndb.count)
+			}
+		})
+	}
+}
+
 func TestBridge(t *testing.T) {
 	for _, testCase := range []struct {
 		name        string
@@ -136,8 +303,8 @@ func TestBridge(t *testing.T) {
 			 s1ep <----> ep1         ep2 <----> s2ep
 										^--bridge1--^
 			*/
-			ep1, ep2 := pipe(tcpip.LinkAddress(bytes.Repeat([]byte{1}, header.EthernetAddressSize)), tcpip.LinkAddress(bytes.Repeat([]byte{2}, header.EthernetAddressSize)))
-			ep3, ep4 := pipe(tcpip.LinkAddress(bytes.Repeat([]byte{3}, header.EthernetAddressSize)), tcpip.LinkAddress(bytes.Repeat([]byte{4}, header.EthernetAddressSize)))
+			ep1, ep2 := pipe(linkAddr1, linkAddr2)
+			ep3, ep4 := pipe(linkAddr3, linkAddr4)
 			s1addr := tcpip.Address(bytes.Repeat([]byte{1}, testCase.addressSize))
 			s1subnet := util.PointSubnet(s1addr)
 			s1, err := makeStackWithEndpoint(ep1, testCase.protocol, s1addr)

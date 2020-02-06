@@ -14,6 +14,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -225,25 +226,36 @@ func (ep *Endpoint) IsAttached() bool {
 }
 
 func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt tcpip.PacketBuffer) {
-	broadcast := false
+	// Is the destination link address a multicast/broadcast?
+	//
+	// If the least significant bit of the first octet is 1, then the address is a
+	// multicast address.
+	//
+	// See the IEEE Std 802-2001 document for more details. Specifically,
+	// section 9.2.1 of http://ieee802.org/secmail/pdfocSP2xXA6d.pdf:
+	// "A 48-bit universal address consists of two parts. The first 24 bits
+	// correspond to the OUI as assigned by the IEEE, except that the
+	// assignee may set the LSB of the first octet to 1 for group addresses
+	// or set it to 0 for individual addresses."
+	flood := len(dstLinkAddr) == header.EthernetAddressSize && dstLinkAddr[0]&1 == 1
 
-	switch dstLinkAddr {
-	case tcpip.LinkAddress([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}):
-		broadcast = true
-	case ep.linkAddress:
-		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, protocol, pkt)
-		return
-	default:
-		if l, ok := ep.links[dstLinkAddr]; ok {
-			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, protocol, pkt)
+	if !flood {
+		switch dstLinkAddr {
+		case ep.linkAddress:
+			ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, protocol, pkt)
 			return
+		default:
+			if l, ok := ep.links[dstLinkAddr]; ok {
+				l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, protocol, pkt)
+				return
+			}
 		}
 	}
 
 	// The bridge `ep` isn't included in ep.links below and we don't want to write
 	// out of rxEP, otherwise the rest of this function would just be
-	// "ep.WritePacket and if broadcast, also deliver to ep.links."
-	if broadcast {
+	// "ep.WritePacket and if flood, also deliver to ep.links."
+	if flood {
 		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 	}
 
@@ -271,7 +283,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	rxaddr := rxEP.LinkAddress()
 	for linkaddr, l := range ep.links {
-		if broadcast {
+		if flood {
 			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 		}
 		// Don't write back out interface from which the frame arrived
