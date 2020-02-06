@@ -4,6 +4,8 @@
 
 library fuchsia.sys2;
 
+using fuchsia.component;
+
 /// A moniker encodes the relationship between two component instances that
 /// exist in the component instance tree at runtime.
 ///
@@ -18,5 +20,5 @@ library fuchsia.sys2;
 /// through "P" (their common ancestor).
 struct Moniker {
     /// An opaque representation of the moniker's relation.
-    string:MAX_MONIKER_LENGTH encoded_value;
+    string:fuchsia.component.MAX_MONIKER_LENGTH encoded_value;
 };
