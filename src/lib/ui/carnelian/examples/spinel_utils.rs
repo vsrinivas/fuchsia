@@ -1165,7 +1165,7 @@ extern "C" fn image_dispatch_submitter(
     queue: vk::Queue,
     fence: vk::Fence,
     cb: vk::CommandBuffer,
-    data: *mut ::std::os::raw::c_void,
+    data: *const ::std::os::raw::c_void,
 ) {
     unsafe {
         // TODO: Add acquire and release semaphores.
@@ -1181,7 +1181,7 @@ extern "C" fn image_dispatch_submitter(
             pSignalSemaphores: ptr::null(),
         };
         // Safe as images outlive the spinel context.
-        let image_ptr = data as *mut VulkanImage;
+        let image_ptr = data as *const VulkanImage;
         let result = (*image_ptr).vk.QueueSubmit(queue, 1, &info, fence);
         assert_eq!(result, vk::SUCCESS);
     }

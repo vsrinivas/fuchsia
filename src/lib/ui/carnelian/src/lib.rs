@@ -14,6 +14,7 @@ mod canvas;
 mod geometry;
 mod label;
 mod message;
+pub mod render;
 mod scenic_utils;
 mod view;
 

@@ -2,29 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use euclid::{Point2D, Rect, Size2D};
 use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Size,
-        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FrameBufferPtr,
+        Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     chrono::{Local, Timelike},
     euclid::{Angle, Transform2D, Vector2D},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
-    std::{cell::RefCell, collections::BTreeMap, f32, rc::Rc},
+    std::{collections::BTreeMap, f32},
 };
 
-mod spinel_utils;
-
-use crate::spinel_utils::{
-    Context, GroupId, MoldContext, Path, PathBuilder, Raster, RasterBuilder, RenderExt,
-    SpinelContext,
-};
-
-const APP_NAME: &'static [u8; 13usize] = b"clockface_rs\0";
-const BACKGROUND_COLOR: [f32; 4] = [0.922, 0.835, 0.702, 1.0];
+const BACKGROUND_COLOR: Color = Color { r: 235, g: 213, b: 179, a: 255 };
 
 /// Clockface.
 #[derive(Debug, FromArgs)]
@@ -60,24 +53,12 @@ impl AppAssistant for ClockfaceAppAssistant {
             .duplicate(std::u32::MAX, token_request)
             .expect("duplicate");
         let config = &fb.borrow().get_config();
+        let size = Size2D::new(config.width, config.height);
 
         if args.use_mold {
-            Ok(Box::new(ClockfaceViewAssistant::new(MoldContext::new(token, config))))
+            Ok(Box::new(ClockfaceViewAssistant::new(Mold::new_context(token, size))))
         } else {
-            const BLOCK_POOL_SIZE: u64 = 1 << 22; // 4 MB
-            const HANDLE_COUNT: u32 = 1 << 10; // 1K handles
-            const LAYERS_COUNT: u32 = 32;
-            const CMDS_COUNT: u32 = 256;
-
-            Ok(Box::new(ClockfaceViewAssistant::new(SpinelContext::new(
-                token,
-                config,
-                APP_NAME.as_ptr(),
-                BLOCK_POOL_SIZE,
-                HANDLE_COUNT,
-                LAYERS_COUNT,
-                CMDS_COUNT,
-            ))))
+            Ok(Box::new(ClockfaceViewAssistant::new(Spinel::new_context(token, size))))
         }
     }
 
@@ -86,9 +67,9 @@ impl AppAssistant for ClockfaceAppAssistant {
     }
 }
 
-fn line(path_builder: &mut dyn PathBuilder, p0: Point, p1: Point) {
-    path_builder.move_to(&p0);
-    path_builder.line_to(&p1);
+fn line<B: Backend>(path_builder: &mut impl PathBuilder<B>, p0: Point, p1: Point) {
+    path_builder.move_to(p0);
+    path_builder.line_to(p1);
 }
 
 fn lerp(t: f32, p0: Point, p1: Point) -> Point {
@@ -96,7 +77,13 @@ fn lerp(t: f32, p0: Point, p1: Point) -> Point {
 }
 
 // TODO: Remove and use spn_path_builder_cubic_to.
-fn cubic(path_builder: &mut dyn PathBuilder, p0: Point, p1: Point, p2: Point, p3: Point) {
+fn cubic<B: Backend>(
+    path_builder: &mut impl PathBuilder<B>,
+    p0: Point,
+    p1: Point,
+    p2: Point,
+    p3: Point,
+) {
     // Adjust if resolution is expected to be significantly different.
     const RESOLUTION: f32 = 1024.0;
     let deviation_x = (p0.x + p2.x - 3.0 * (p1.x + p2.x)).abs() * RESOLUTION;
@@ -111,7 +98,7 @@ fn cubic(path_builder: &mut dyn PathBuilder, p0: Point, p1: Point, p2: Point, p3
     let subdivisions = 1 + (TOLERANCE * deviation_squared).sqrt().sqrt().floor() as usize;
     let increment = (subdivisions as f32).recip();
     let mut t = 0.0;
-    path_builder.move_to(&p0);
+    path_builder.move_to(p0);
     for _ in 0..subdivisions - 1 {
         t += increment;
         let p_next = lerp(
@@ -119,24 +106,24 @@ fn cubic(path_builder: &mut dyn PathBuilder, p0: Point, p1: Point, p2: Point, p3
             lerp(t, lerp(t, p0, p1), lerp(t, p1, p2)),
             lerp(t, lerp(t, p1, p2), lerp(t, p2, p3)),
         );
-        path_builder.line_to(&p_next);
+        path_builder.line_to(p_next);
     }
-    path_builder.line_to(&p3);
+    path_builder.line_to(p3);
 }
 
-struct RoundedLine {
-    path: Path,
+struct RoundedLine<B: Backend> {
+    path: B::Path,
 }
 
-impl RoundedLine {
-    fn new(path_builder: &mut dyn PathBuilder, pos: Point, length: f32, thinkness: f32) -> Self {
+impl<B: Backend> RoundedLine<B> {
+    fn new(mut path_builder: impl PathBuilder<B>, pos: Point, length: f32, thickness: f32) -> Self {
         let dist = 4.0 / 3.0 * (f32::consts::PI / 8.0).tan();
-        let radius = thinkness / 2.0;
+        let radius = thickness / 2.0;
         let control_dist = dist * radius;
         let tl = pos.to_vector();
         let tr = pos.to_vector() + Point::new(length, 0.0).to_vector();
-        let br = pos.to_vector() + Point::new(length, thinkness).to_vector();
-        let bl = pos.to_vector() + Point::new(0.0, thinkness).to_vector();
+        let br = pos.to_vector() + Point::new(length, thickness).to_vector();
+        let bl = pos.to_vector() + Point::new(0.0, thickness).to_vector();
         let rt = Point::new(0.0, radius).to_vector();
         let rr = Point::new(-radius, 0.0).to_vector();
         let rb = Point::new(0.0, -radius).to_vector();
@@ -147,154 +134,124 @@ impl RoundedLine {
         let cl = Point::new(-control_dist, 0.0).to_vector();
 
         let path = {
-            path_builder.begin();
-
             macro_rules! c {
                 ( $v:expr ) => {
                     Point::new($v.x, $v.y)
                 };
             }
 
-            line(path_builder, c!(tl + rl), c!(tr + rr));
-            cubic(path_builder, c!(tr + rr), c!(tr + rr + cr), c!(tr + rt + ct), c!(tr + rt));
-            cubic(path_builder, c!(br + rb), c!(br + rb + cb), c!(br + rr + cr), c!(br + rr));
-            line(path_builder, c!(br + rr), c!(bl + rl));
-            cubic(path_builder, c!(bl + rl), c!(bl + rl + cl), c!(bl + rb + cb), c!(bl + rb));
-            cubic(path_builder, c!(tl + rt), c!(tl + rt + ct), c!(tl + rl + cl), c!(tl + rl));
+            line(&mut path_builder, c!(tl + rl), c!(tr + rr));
+            cubic(&mut path_builder, c!(tr + rr), c!(tr + rr + cr), c!(tr + rt + ct), c!(tr + rt));
+            cubic(&mut path_builder, c!(br + rb), c!(br + rb + cb), c!(br + rr + cr), c!(br + rr));
+            line(&mut path_builder, c!(br + rr), c!(bl + rl));
+            cubic(&mut path_builder, c!(bl + rl), c!(bl + rl + cl), c!(bl + rb + cb), c!(bl + rb));
+            cubic(&mut path_builder, c!(tl + rt), c!(tl + rt + ct), c!(tl + rl + cl), c!(tl + rl));
 
-            path_builder.end()
+            path_builder.build()
         };
 
         Self { path }
     }
 }
 
-struct Hand {
-    line: RoundedLine,
+struct Hand<B: Backend> {
+    line: RoundedLine<B>,
     elevation: f32,
-    layer_id: u32,
-    raster: Option<Rc<RefCell<Raster>>>,
-    shadow_raster: Option<Rc<RefCell<Raster>>>,
+    raster: Option<B::Raster>,
+    shadow_raster: Option<B::Raster>,
+    color: Color,
 }
 
-impl Hand {
+impl<B: Backend> Hand<B> {
     fn new_raster(
-        raster_builder: &mut dyn RasterBuilder,
-        path: &Path,
+        mut raster_builder: impl RasterBuilder<B>,
+        path: &B::Path,
         rotation: &Transform2D<f32>,
         txty: &Vector2D<f32>,
-    ) -> Raster {
+    ) -> B::Raster {
         let transform = rotation.post_translate(*txty);
-        raster_builder.begin();
-        const CLIP: [f32; 4] = [std::f32::MIN, std::f32::MIN, std::f32::MAX, std::f32::MAX];
-        raster_builder.add(path, &transform, &CLIP);
-        raster_builder.end()
+        raster_builder.add(path, Some(&transform));
+        raster_builder.build()
     }
 
     fn new(
-        context: &mut dyn Context,
-        group_id: &GroupId,
-        layer_id: u32,
-        thinkness: f32,
+        path_builder: impl PathBuilder<B>,
+        thickness: f32,
         length: f32,
         offset: f32,
-        color: &[f32; 4],
+        color: Color,
         elevation: f32,
     ) -> Self {
         let line = RoundedLine::new(
-            context.path_builder(),
-            Point::new(-(thinkness / 2.0 + offset), -thinkness / 2.0),
+            path_builder,
+            Point::new(-(thickness / 2.0 + offset), -thickness / 2.0),
             length,
-            thinkness,
+            thickness,
         );
 
-        context.styling().group_layer(group_id, layer_id, color);
-
-        Self { line, elevation, layer_id, raster: None, shadow_raster: None }
+        Self { line, elevation, raster: None, shadow_raster: None, color }
     }
 
-    fn update(&mut self, context: &mut dyn Context, scale: f32, angle: f32, position: Point) {
-        let raster_builder = context.raster_builder();
+    fn update(&mut self, context: &mut impl Context<B>, scale: f32, angle: f32, position: Point) {
         let rotation = Transform2D::create_rotation(Angle::radians(angle)).post_scale(scale, scale);
 
         let txty = Vector2D::new(position.x, position.y);
-        let raster = Self::new_raster(raster_builder, &self.line.path, &rotation, &txty);
-        self.raster.replace(Rc::new(RefCell::new(raster)));
+        let raster =
+            Self::new_raster(context.raster_builder().unwrap(), &self.line.path, &rotation, &txty);
+        self.raster.replace(raster);
 
         let shadow_offset = self.elevation * scale;
         let txty = Vector2D::new(position.x + shadow_offset, position.y + shadow_offset * 2.0);
-        let raster = Self::new_raster(raster_builder, &self.line.path, &rotation, &txty);
-        self.shadow_raster.replace(Rc::new(RefCell::new(raster)));
+        let raster =
+            Self::new_raster(context.raster_builder().unwrap(), &self.line.path, &rotation, &txty);
+        self.shadow_raster.replace(raster);
     }
 }
 
-struct Scene {
+struct Scene<B: Backend> {
     size: Size,
-    hour_hand: Hand,
-    minute_hand: Hand,
-    second_hand: Hand,
+    hour_hand: Hand<B>,
+    minute_hand: Hand<B>,
+    second_hand: Hand<B>,
     hour_index: usize,
     minute_index: usize,
     second_index: usize,
-    shadow_layer_ids: [u32; 2],
-    clear_layer_id: u32,
 }
 
-impl Scene {
-    fn new(context: &mut dyn Context) -> Self {
-        const HOUR_HAND_COLOR: [f32; 4] = [0.996, 0.282, 0.392, 1.0];
-        const MINUTE_HAND_COLOR: [f32; 4] = [0.996, 0.282, 0.392, 0.5];
-        const SECOND_HAND_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-
-        const HOUR_HAND_LAYER_ID: u32 = 0;
-        const MINUTE_HAND_LAYER_ID: u32 = HOUR_HAND_LAYER_ID + 1;
-        const SECOND_HAND_LAYER_ID: u32 = MINUTE_HAND_LAYER_ID + 1;
-        const SHADOW_LAYER_1_ID: u32 = SECOND_HAND_LAYER_ID + 1;
-        const SHADOW_LAYER_2_ID: u32 = SHADOW_LAYER_1_ID + 1;
-        const CLEAR_LAYER_ID: u32 = SHADOW_LAYER_2_ID + 1;
-
-        let group_id =
-            context.styling().alloc_group(HOUR_HAND_LAYER_ID, CLEAR_LAYER_ID, &BACKGROUND_COLOR);
-        context.styling().group_layer(&group_id, SHADOW_LAYER_1_ID, &[0.0, 0.0, 0.0, 0.05]);
-        context.styling().group_layer(&group_id, SHADOW_LAYER_2_ID, &[0.0, 0.0, 0.0, 0.05]);
-        context.styling().group_layer(&group_id, CLEAR_LAYER_ID, &BACKGROUND_COLOR);
+impl<B: Backend> Scene<B> {
+    fn new(context: &mut impl Context<B>) -> Self {
+        const HOUR_HAND_COLOR: Color = Color { r: 254, g: 72, b: 100, a: 255 };
+        const MINUTE_HAND_COLOR: Color = Color { r: 254, g: 72, b: 100, a: 127 };
+        const SECOND_HAND_COLOR: Color = Color::white();
 
         let radius = 0.4;
-        let thinkness = radius / 20.0;
+        let thickness = radius / 20.0;
         let offset = radius / 5.0;
         let elevation = 0.01;
         let hour_hand = Hand::new(
-            context,
-            &group_id,
-            HOUR_HAND_LAYER_ID,
-            thinkness * 2.0,
+            context.path_builder().unwrap(),
+            thickness * 2.0,
             radius,
             offset,
-            &HOUR_HAND_COLOR,
+            HOUR_HAND_COLOR,
             elevation,
         );
         let minute_hand = Hand::new(
-            context,
-            &group_id,
-            MINUTE_HAND_LAYER_ID,
-            thinkness,
+            context.path_builder().unwrap(),
+            thickness,
             radius,
             0.0,
-            &MINUTE_HAND_COLOR,
+            MINUTE_HAND_COLOR,
             elevation,
         );
         let second_hand = Hand::new(
-            context,
-            &group_id,
-            SECOND_HAND_LAYER_ID,
-            thinkness / 2.0,
+            context.path_builder().unwrap(),
+            thickness / 2.0,
             radius + offset,
             offset,
-            &SECOND_HAND_COLOR,
+            SECOND_HAND_COLOR,
             elevation,
         );
-
-        context.styling().seal();
 
         Self {
             size: Size::new(1.0, 1.0),
@@ -304,12 +261,10 @@ impl Scene {
             hour_index: std::usize::MAX,
             minute_index: std::usize::MAX,
             second_index: std::usize::MAX,
-            shadow_layer_ids: [SHADOW_LAYER_1_ID, SHADOW_LAYER_2_ID],
-            clear_layer_id: CLEAR_LAYER_ID,
         }
     }
 
-    fn update(&mut self, context: &mut dyn Context, size: &Size) {
+    fn update(&mut self, context: &mut impl Context<B>, size: &Size) {
         if self.size != *size {
             self.size = *size;
             self.hour_index = std::usize::MAX;
@@ -349,96 +304,90 @@ impl Scene {
     }
 }
 
-struct Contents {
-    image_id: u32,
-    composition_id: u32,
+struct Contents<B: Backend> {
+    image: B::Image,
     size: Size,
-    previous_rasters: Vec<Rc<RefCell<Raster>>>,
 }
 
-impl Contents {
-    fn new(context: &mut dyn Context, index: u32) -> Self {
-        // Use index as image and composition IDs.
-        let image_id = index;
-        context.image_from_index(image_id, index);
-        let composition_id = index;
-
-        Self { image_id, composition_id, size: Size::zero(), previous_rasters: Vec::new() }
+impl<B: Backend> Contents<B> {
+    fn new(image: B::Image) -> Self {
+        Self { image, size: Size::zero() }
     }
 
-    fn update(&mut self, context: &mut dyn Context, scene: &Scene, size: &Size) {
-        let clip: [u32; 4] = [0, 0, size.width.floor() as u32, size.height.floor() as u32];
-        let composition = context.composition(self.composition_id);
-        composition.unseal();
-        composition.reset();
+    fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size) {
+        const SHADOW_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 13 };
+        let clip = Rect::new(
+            Point2D::new(0, 0),
+            Size2D::new(size.width.floor() as u32, size.height.floor() as u32),
+        );
 
-        let exts = if self.size != *size {
+        let ext = if self.size != *size {
             self.size = *size;
-            composition.set_clip(&clip);
-            &[RenderExt::PreClear(BACKGROUND_COLOR)]
+            RenderExt {
+                pre_clear: Some(PreClear { color: BACKGROUND_COLOR }),
+                ..Default::default()
+            }
         } else {
-            &[] as &[RenderExt]
+            RenderExt::default()
         };
 
-        // New rasters for this frame.
-        let hour_hand_raster = scene.hour_hand.raster.as_ref().unwrap().clone();
-        let hour_hand_shadow_raster = scene.hour_hand.shadow_raster.as_ref().unwrap().clone();
-        let minute_hand_raster = scene.minute_hand.raster.as_ref().unwrap().clone();
-        let minute_hand_shadow_raster = scene.minute_hand.shadow_raster.as_ref().unwrap().clone();
-        let second_hand_raster = scene.second_hand.raster.as_ref().unwrap().clone();
-        let second_hand_shadow_raster = scene.second_hand.shadow_raster.as_ref().unwrap().clone();
+        let hands = [&scene.hour_hand, &scene.minute_hand, &scene.second_hand];
 
-        // Place new rasters.
-        composition.place(&hour_hand_raster.borrow(), scene.hour_hand.layer_id);
-        composition.place(&minute_hand_raster.borrow(), scene.minute_hand.layer_id);
-        composition.place(&second_hand_raster.borrow(), scene.second_hand.layer_id);
+        let layers = hands
+            .iter()
+            .map(|hand| Layer {
+                raster: hand.raster.clone().unwrap(),
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(hand.color),
+                    blend_mode: BlendMode::Over,
+                },
+            })
+            .chain(hands.iter().map(|hand| Layer {
+                raster: hand.shadow_raster.clone().unwrap(),
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(SHADOW_COLOR),
+                    blend_mode: BlendMode::Over,
+                },
+            }))
+            .chain(hands.iter().enumerate().filter_map(|(i, hand)| {
+                if i != 1 {
+                    Some(Layer {
+                        raster: hand.shadow_raster.clone().unwrap(),
+                        style: Style {
+                            fill_rule: FillRule::NonZero,
+                            fill: Fill::Solid(SHADOW_COLOR),
+                            blend_mode: BlendMode::Over,
+                        },
+                    })
+                } else {
+                    None
+                }
+            }));
 
-        // Shadow layers.
-        // TODO: use txty when supported.
-        composition.place(&hour_hand_shadow_raster.borrow(), scene.shadow_layer_ids[0]);
-        composition.place(&minute_hand_shadow_raster.borrow(), scene.shadow_layer_ids[0]);
-        composition.place(&second_hand_shadow_raster.borrow(), scene.shadow_layer_ids[0]);
-        // Minute and is translucent and left out of second shadow layer in order to
-        // have it cast a lighter shadow.
-        composition.place(&hour_hand_shadow_raster.borrow(), scene.shadow_layer_ids[1]);
-        composition.place(&second_hand_shadow_raster.borrow(), scene.shadow_layer_ids[1]);
+        let composition = Composition::new(layers, BACKGROUND_COLOR);
 
-        // Place previous rasters in clear layer.
-        // TODO: Replace with better partial update system.
-        for raster in self.previous_rasters.drain(..) {
-            composition.place(&raster.borrow(), scene.clear_layer_id);
-        }
-
-        composition.seal();
-
-        context.render(self.image_id, self.composition_id, &clip, exts);
-        context.image(self.image_id, &[0, 0]).flush();
-
-        // Keep reference to rasters for clearing.
-        self.previous_rasters.push(hour_hand_raster);
-        self.previous_rasters.push(hour_hand_shadow_raster);
-        self.previous_rasters.push(minute_hand_raster);
-        self.previous_rasters.push(minute_hand_shadow_raster);
-        self.previous_rasters.push(second_hand_raster);
-        self.previous_rasters.push(second_hand_shadow_raster);
+        context.render(&composition, Some(clip), self.image, &ext);
+        context.flush_image(self.image);
     }
 }
 
-struct ClockfaceViewAssistant<T> {
-    context: T,
-    scene: Scene,
-    contents: BTreeMap<u64, Contents>,
+struct ClockfaceViewAssistant<B: Backend, C: Context<B>> {
+    context: C,
+    scene: Scene<B>,
+    contents: BTreeMap<u64, Contents<B>>,
 }
 
-impl<T: Context> ClockfaceViewAssistant<T> {
-    pub fn new(mut context: T) -> Self {
+impl<B: Backend, C: Context<B>> ClockfaceViewAssistant<B, C> {
+    pub fn new(mut context: C) -> Self {
         let scene = Scene::new(&mut context);
 
         Self { context, scene, contents: BTreeMap::new() }
     }
 }
 
-impl<T: Context> ViewAssistant for ClockfaceViewAssistant<T> {
+impl<B: Backend, C: Context<B>> ViewAssistant for ClockfaceViewAssistant<B, C> {
     fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
@@ -446,26 +395,24 @@ impl<T: Context> ViewAssistant for ClockfaceViewAssistant<T> {
     fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let canvas = context.canvas.as_ref().unwrap().borrow();
         let size = &context.size;
-        let context = &mut self.context;
 
-        self.scene.update(context, size);
+        self.scene.update(&mut self.context, size);
 
         // Temporary hack to deal with the fact that carnelian
         // allocates a new buffer for each frame with the same
         // image ID of zero.
         let mut temp_content;
         let content;
+        let image = self.context.get_current_image(context);
 
         if canvas.id == 0 {
-            temp_content = Contents::new(context, canvas.index);
+            temp_content = Contents::new(image);
             content = &mut temp_content;
         } else {
-            content = self
-                .contents
-                .entry(canvas.id)
-                .or_insert_with(|| Contents::new(context, canvas.index));
+            content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(image));
         }
-        content.update(context, &self.scene, size);
+
+        content.update(&mut self.context, &self.scene, size);
 
         Ok(())
     }
@@ -475,7 +422,7 @@ impl<T: Context> ViewAssistant for ClockfaceViewAssistant<T> {
     }
 
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        self.context.get_pixel_format()
+        self.context.pixel_format()
     }
 }
 

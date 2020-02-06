@@ -35,12 +35,12 @@ pub fn to_565(pixel: &[u8; 4]) -> [u8; 2] {
 
 impl Color {
     /// Create a new color set to black with full alpha
-    pub fn new() -> Color {
+    pub const fn new() -> Color {
         Color { r: 0, g: 0, b: 0, a: 255 }
     }
 
     /// Create a new color set to white with full alpha
-    pub fn white() -> Color {
+    pub const fn white() -> Color {
         Color { r: 255, g: 255, b: 255, a: 255 }
     }
 
@@ -66,6 +66,10 @@ impl Color {
     pub fn to_565(&self) -> [u8; 2] {
         let pixel = [self.r, self.g, self.b, self.a];
         to_565(&pixel)
+    }
+
+    pub fn to_f32(&self) -> [f32; 4] {
+        [self.r as f32 / 255.0, self.g as f32 / 255.0, self.b as f32 / 255.0, self.a as f32 / 255.0]
     }
 }
 

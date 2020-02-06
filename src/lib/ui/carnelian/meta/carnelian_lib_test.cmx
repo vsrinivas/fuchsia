@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/carnelian_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

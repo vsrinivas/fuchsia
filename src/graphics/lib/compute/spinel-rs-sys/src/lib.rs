@@ -73,21 +73,21 @@ pub enum SpnVkRenderSubmitExtType {
     SpnVkRenderSubmitExtTypeImagePostBarrier,
 }
 
-pub type SpnVkRenderSubmitExtImageRenderPfn = unsafe extern "C" fn(
+pub type SpnVkRenderSubmitExtImageRenderPfn<T> = unsafe extern "C" fn(
     queue: vk::Queue,
     fence: vk::Fence,
     cb: vk::CommandBuffer,
-    data: *mut raw::c_void,
+    data: *const T,
 );
 
 #[repr(C)]
-pub struct SpnVkRenderSubmitExtImageRender {
+pub struct SpnVkRenderSubmitExtImageRender<T> {
     pub ext: *mut raw::c_void,
     pub type_: SpnVkRenderSubmitExtType,
     pub image: vk::Image,
     pub image_info: vk::DescriptorImageInfo,
-    pub submitter_pfn: SpnVkRenderSubmitExtImageRenderPfn,
-    pub submitter_data: *mut raw::c_void,
+    pub submitter_pfn: SpnVkRenderSubmitExtImageRenderPfn<T>,
+    pub submitter_data: *const T,
 }
 
 #[repr(C)]
@@ -242,7 +242,7 @@ macro_rules! spinel_type {
 
     ( $name:ident, $size:ty ) => {
         #[repr(C)]
-        #[derive(Clone, Copy, Debug)]
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
         pub struct $name {
             _unused: $size,
         }
@@ -337,7 +337,7 @@ extern "C" {
         vendor_id: u32,
         device_id: u32,
         spinel_target: *mut *const SpnVkTarget,
-        hotsort_target: *mut *const HotsortVkTarget,
+        hotsort_target: *mut *mut HotsortVkTarget,
         error_buffer: *mut raw::c_char,
         error_buffer_size: usize,
     ) -> bool;

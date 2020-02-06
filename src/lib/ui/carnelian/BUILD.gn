@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//src/lib/vulkan/layers.gni")
 
@@ -55,6 +56,21 @@ rustc_library("carnelian") {
     "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+  ]
+  non_rust_deps = [
+    "//src/graphics/lib/compute/common",
+    "//src/graphics/lib/compute/common/vk",
+    "//src/graphics/lib/compute/hotsort/platforms/vk",
+    "//src/graphics/lib/compute/spinel",
+    "//src/graphics/lib/compute/spinel/platforms/vk",
+    "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
+    "//src/lib/vulkan",
   ]
 }
 
@@ -560,6 +576,21 @@ package("infinite_scroll_rs") {
       },
     ]
   }
+}
+
+test_package("carnelian_render_tests") {
+  deps = [ ":carnelian_test" ]
+
+  tests = [
+    {
+      name = "carnelian_lib_test"
+      environments = basic_envs
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
 }
 
 unittest_package("carnelian_tests") {
