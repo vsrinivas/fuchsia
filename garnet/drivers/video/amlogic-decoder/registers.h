@@ -109,7 +109,23 @@ DEFINE_REGISTER(ImemDmaAdr, DosRegisterIo, 0x341);
 DEFINE_REGISTER(ImemDmaCount, DosRegisterIo, 0x342);
 DEFINE_REGISTER(LmemDmaCtrl, DosRegisterIo, 0x0350);
 DEFINE_REGISTER(DcacDmaCtrl, DosRegisterIo, 0x0e12);
-DEFINE_REGISTER(DosSwReset0, DosRegisterIo, 0x3f00);
+REGISTER_NAME(DosSwReset0, DosRegisterIo, 0x3f00)
+  DEF_BIT(14, vdec_afifo);
+  DEF_BIT(13, vdec_ddr);
+  DEF_BIT(12, vdec_ccpu);
+  DEF_BIT(11, vdec_mcpu);
+  DEF_BIT(10, vdec_psc);
+  DEF_BIT(9, vdec_pic_dc);
+  DEF_BIT(8, vdec_dblk);
+  DEF_BIT(7, vdec_mc);
+  DEF_BIT(6, vdec_iqidct);
+  DEF_BIT(5, vdec_vififo);
+  DEF_BIT(4, vdec_vld_part);
+  DEF_BIT(3, vdec_vld);
+  DEF_BIT(2, vdec_assist);
+  DEF_BIT(1, vdec_dos_reg_internal);
+};
+
 DEFINE_REGISTER(DosGclkEn, DosRegisterIo, 0x3f01);
 DEFINE_REGISTER(DosMemPdVdec, DosRegisterIo, 0x3f30);
 DEFINE_REGISTER(DosMemPdHevc, DosRegisterIo, 0x3f33);
@@ -121,6 +137,25 @@ REGISTER_NAME(DosSwReset3, DosRegisterIo, 0x3f34)
 
 DEFINE_REGISTER(DosGclkEn3, DosRegisterIo, 0x3f35);
 DEFINE_REGISTER(DosVdecMcrccStallCtrl, DosRegisterIo, 0x3f40);
+
+DEFINE_REGISTER(H264BufferInfoData, DosRegisterIo, 0x0c22)
+DEFINE_REGISTER(H264BufferInfoIndex, DosRegisterIo, 0x0c24)
+DEFINE_REGISTER(H264CurrentPocIdxReset, DosRegisterIo, 0x0c30)
+DEFINE_REGISTER(LastSliceMvAddr, DosRegisterIo, 0x0c30)
+// Both registers are at the same location.
+DEFINE_REGISTER(LastMvy, DosRegisterIo, 0x0c32)
+DEFINE_REGISTER(H264CurrentPoc, DosRegisterIo, 0x0c32)
+
+DEFINE_REGISTER(H264CoMbWrAddr, DosRegisterIo, 0x0c38)
+REGISTER_NAME(H264CoMbRdAddr, DosRegisterIo, 0x0c39)
+  DEF_FIELD(31, 30, pic_coding_struct);
+  DEF_BIT(29, bottom);
+  DEF_FIELD(28, 0, read_address); // Shifted down by 3
+};
+
+REGISTER_NAME(H264CoMbRwCtl, DosRegisterIo, 0x0c3d)
+  DEF_BIT(11, busy);
+};
 
 DEFINE_REGISTER(VldMemVififoStartPtr, DosRegisterIo, 0x0c40)
 DEFINE_REGISTER(VldMemVififoCurrPtr, DosRegisterIo, 0x0c41)
@@ -161,6 +196,9 @@ DEFINE_REGISTER(McStatus0, DosRegisterIo, 0x0909)
 DEFINE_REGISTER(McCtrl1, DosRegisterIo, 0x090b)
 DEFINE_REGISTER(DblkCtrl, DosRegisterIo, 0x0951)
 DEFINE_REGISTER(DblkStatus, DosRegisterIo, 0x0953)
+REGISTER_NAME(MdecPicDcMuxCtrl, DosRegisterIo, 0x098e)
+    DEF_BIT(31, bit31); // 1 for mmu enabled
+};
 REGISTER_NAME(MdecPicDcCtrl, DosRegisterIo, 0x098e)
     DEF_BIT(17, nv12_output); // as opposed to 3-plane YUV
     DEF_BIT(31, bit31);
@@ -168,6 +206,15 @@ REGISTER_NAME(MdecPicDcCtrl, DosRegisterIo, 0x098e)
 DEFINE_REGISTER(MdecPicDcStatus, DosRegisterIo, 0x098f)
 
 DEFINE_REGISTER(MdecSwReset, DosRegisterIo, 0x0984)
+
+DEFINE_REGISTER(DbkrCanvasCtrl, DosRegisterIo, 0x9b0)
+DEFINE_REGISTER(DbkwCanvasCtrl, DosRegisterIo, 0x9b1)
+DEFINE_REGISTER(RecCanvasCtrl, DosRegisterIo, 0x9b2)
+REGISTER_NAME(CurrCanvasCtrl, DosRegisterIo, 0x9b3)
+  DEF_FIELD(31, 24, canvas_index);
+  DEF_FIELD(15, 0, lower_canvas_index);
+};
+
 DEFINE_REGISTER(MdecPicDcThresh, DosRegisterIo, 0x9b8)
 
 // AvScratch registers are used to communicate with the AMRISC coprocessor.
@@ -201,9 +248,12 @@ DEFINE_REGISTER(AvScratchL, DosRegisterIo, 0x09d5)
 DEFINE_REGISTER(AvScratchM, DosRegisterIo, 0x09d6)
 DEFINE_REGISTER(AvScratchN, DosRegisterIo, 0x09d7)
 
+DEFINE_REGISTER(MdecExtIfCfg0, DosRegisterIo, 0x09e4)
+
 DEFINE_REGISTER(Mpeg12Reg, DosRegisterIo, 0x0c01)
 DEFINE_REGISTER(PscaleCtrl, DosRegisterIo, 0x0911)
 DEFINE_REGISTER(PicHeadInfo, DosRegisterIo, 0x0c03)
+DEFINE_REGISTER(ViffBitCnt, DosRegisterIo, 0x0c1a)
 DEFINE_REGISTER(M4ControlReg, DosRegisterIo, 0x0c29)
 DEFINE_REGISTER(VdecAssistMbox1ClrReg, DosRegisterIo, 0x0075)
 DEFINE_REGISTER(VdecAssistMbox1Mask, DosRegisterIo, 0x0076)
