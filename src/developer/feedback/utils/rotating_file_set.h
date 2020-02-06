@@ -39,9 +39,9 @@ namespace feedback {
 //
 // Additionally, it's important to note that a file will be truncated when it is opend for use by
 // the set.
-class RotatingFileSet {
+class RotatingFileSetWriter {
  public:
-  RotatingFileSet(const std::vector<const std::string>& file_paths, FileSize set_size);
+  RotatingFileSetWriter(const std::vector<const std::string>& file_paths, FileSize set_size);
 
   void Write(const std::string& line);
 
@@ -54,6 +54,16 @@ class RotatingFileSet {
 
   WriteOnlyFile* current_file_;
   std::deque<WriteOnlyFile> files_;
+};
+
+class RotatingFileSetReader {
+ public:
+  RotatingFileSetReader(const std::vector<const std::string>& file_paths);
+
+  void Concatenate(const std::string& file_path) const;
+
+ private:
+  const std::vector<const std::string> file_paths_;
 };
 
 }  // namespace feedback
