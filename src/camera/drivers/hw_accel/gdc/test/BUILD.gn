@@ -5,7 +5,7 @@
 import("//build/package.gni")
 import("//build/test.gni")
 
-executable("gdc-task") {
+executable("gdc-test") {
   testonly = true
   sources = [
     "../gdc-task.cc",

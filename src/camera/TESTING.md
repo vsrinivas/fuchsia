@@ -26,6 +26,6 @@ will be skipped.
 Single components can be tested by following the instructions above, and
 adding a ```-t test_name``` to the end.  For example:
 
-    fx run-test camera_tests -t gdc-task
+    fx run-test camera_tests -t gdc-test
 
 

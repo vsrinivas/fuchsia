@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/ge2d-test"
+    }
+}
