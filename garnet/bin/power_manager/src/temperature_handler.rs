@@ -10,8 +10,11 @@ use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_thermal as fthermal;
+use fuchsia_inspect::{self as inspect, NumericProperty, Property};
+use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 /// Node: TemperatureHandler
@@ -29,36 +32,56 @@ use std::rc::Rc;
 ///       specified by `driver_path` in the TemperatureHandler constructor
 
 /// A builder for constructing the TemperatureHandler node
-pub struct TemperatureHandlerBuilder {
+pub struct TemperatureHandlerBuilder<'a> {
     driver_path: String,
     driver_proxy: Option<fthermal::DeviceProxy>,
+    inspect_root: Option<&'a inspect::Node>,
 }
 
-impl TemperatureHandlerBuilder {
+impl<'a> TemperatureHandlerBuilder<'a> {
     pub fn new_with_driver_path(driver_path: String) -> Self {
-        Self { driver_path, driver_proxy: None }
+        Self { driver_path, driver_proxy: None, inspect_root: None }
     }
 
     #[cfg(test)]
     pub fn new_with_proxy(driver_path: String, proxy: fthermal::DeviceProxy) -> Self {
-        Self { driver_path, driver_proxy: Some(proxy) }
+        Self { driver_path, driver_proxy: Some(proxy), inspect_root: None }
+    }
+
+    #[cfg(test)]
+    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(root);
+        self
     }
 
     pub fn build(self) -> Result<Rc<TemperatureHandler>, Error> {
-        // Get default proxy if necessary
+        // Optionally use the default proxy
         let proxy = if self.driver_proxy.is_none() {
             connect_proxy::<fthermal::DeviceMarker>(&self.driver_path)?
         } else {
             self.driver_proxy.unwrap()
         };
 
-        Ok(Rc::new(TemperatureHandler { driver_path: self.driver_path, driver_proxy: proxy }))
+        // Optionally use the default inspect root node
+        let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+
+        Ok(Rc::new(TemperatureHandler {
+            driver_path: self.driver_path.clone(),
+            driver_proxy: proxy,
+            inspect: InspectData::new(
+                inspect_root,
+                format!("TemperatureHandler ({})", self.driver_path),
+            ),
+        }))
     }
 }
 
 pub struct TemperatureHandler {
     driver_path: String,
     driver_proxy: fthermal::DeviceProxy,
+
+    /// A struct for managing Component Inspection data
+    inspect: InspectData,
 }
 
 impl TemperatureHandler {
@@ -85,6 +108,14 @@ impl TemperatureHandler {
             "driver" => self.driver_path.as_str(),
             "result" => format!("{:?}", result).as_str()
         );
+
+        if result.is_ok() {
+            self.inspect.log_temperature_reading(*result.as_ref().unwrap())
+        } else {
+            self.inspect.read_errors.add(1);
+            self.inspect.last_read_error.set(format!("{}", result.as_ref().unwrap_err()).as_str());
+        }
+
         Ok(MessageReturn::ReadTemperature(result?))
     }
 
@@ -129,11 +160,42 @@ impl Node for TemperatureHandler {
     }
 }
 
+const NUM_INSPECT_TEMPERATURE_SAMPLES: usize = 10;
+
+struct InspectData {
+    temperature_readings: RefCell<BoundedListNode>,
+    read_errors: inspect::UintProperty,
+    last_read_error: inspect::StringProperty,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, name: String) -> Self {
+        // Create a local root node and properties
+        let root = parent.create_child(name);
+        let temperature_readings = RefCell::new(BoundedListNode::new(
+            root.create_child("temperature_readings"),
+            NUM_INSPECT_TEMPERATURE_SAMPLES,
+        ));
+        let read_errors = root.create_uint("read_temperature_error_count", 0);
+        let last_read_error = root.create_string("last_read_error", "");
+
+        // Pass ownership of the new node to the parent node, otherwise it'll be dropped
+        parent.record(root);
+
+        InspectData { temperature_readings, read_errors, last_read_error }
+    }
+
+    fn log_temperature_reading(&self, temperature: Celsius) {
+        inspect_log!(self.temperature_readings.borrow_mut(), temperature: temperature.0);
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
     use fuchsia_async as fasync;
     use futures::TryStreamExt;
+    use inspect::assert_inspect_tree;
 
     /// Spawns a new task that acts as a fake thermal driver for testing purposes. The driver only
     /// handles requests for GetTemperatureCelsius - trying to send any other requests to it is a
@@ -212,5 +274,36 @@ pub mod tests {
         let message = Message::GetTotalCpuLoad;
         let result = node.handle_message(&message).await;
         assert!(result.is_err());
+    }
+
+    /// Tests for the presence and correctness of dynamically-added inspect data
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_data() {
+        let temperature = Celsius(30.0);
+        let inspector = inspect::Inspector::new();
+        let node = TemperatureHandlerBuilder::new_with_proxy(
+            "Fake".to_string(),
+            setup_fake_driver(move || temperature),
+        )
+        .with_inspect_root(inspector.root())
+        .build()
+        .unwrap();
+
+        // The node will read the current temperature and log the sample into Inspect
+        node.handle_message(&Message::ReadTemperature).await.unwrap();
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                "TemperatureHandler (Fake)": contains {
+                    temperature_readings: {
+                        "0": {
+                            temperature: temperature.0,
+                            "@time": inspect::testing::AnyProperty
+                        }
+                    }
+                }
+            }
+        );
     }
 }

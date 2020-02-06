@@ -11,6 +11,8 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_kernel as fstats;
 use fuchsia_async as fasync;
+use fuchsia_inspect::{self as inspect};
+use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_syslog::fx_log_err;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -33,13 +35,14 @@ use std::rc::Rc;
 const CPU_STATS_SVC: &'static str = "/svc/fuchsia.kernel.Stats";
 
 /// A builder for constructing the CpuStatsHandler node
-pub struct CpuStatsHandlerBuilder {
+pub struct CpuStatsHandlerBuilder<'a> {
     stats_svc_proxy: Option<fstats::StatsProxy>,
+    inspect_root: Option<&'a inspect::Node>,
 }
 
-impl CpuStatsHandlerBuilder {
+impl<'a> CpuStatsHandlerBuilder<'a> {
     pub fn new() -> Self {
-        Self { stats_svc_proxy: None }
+        Self { stats_svc_proxy: None, inspect_root: None }
     }
 
     #[cfg(test)]
@@ -48,17 +51,27 @@ impl CpuStatsHandlerBuilder {
         self
     }
 
+    #[cfg(test)]
+    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(root);
+        self
+    }
+
     pub fn build(self) -> Result<Rc<CpuStatsHandler>, Error> {
-        // Get default proxy if necessary
+        // Optionally use the default proxy
         let proxy = if self.stats_svc_proxy.is_none() {
             connect_proxy::<fstats::StatsMarker>(&CPU_STATS_SVC.to_string())?
         } else {
             self.stats_svc_proxy.unwrap()
         };
 
+        // Optionally use the default inspect root node
+        let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+
         Ok(Rc::new(CpuStatsHandler {
             stats_svc_proxy: proxy,
             cpu_idle_stats: RefCell::new(Default::default()),
+            inspect: InspectData::new(inspect_root, "CpuStatsHandler".to_string()),
         }))
     }
 }
@@ -70,6 +83,9 @@ pub struct CpuStatsHandler {
 
     /// Cached CPU idle states from the most recent call
     cpu_idle_stats: RefCell<CpuIdleStats>,
+
+    /// A struct for managing Component Inspection data
+    inspect: InspectData,
 }
 
 /// A record to store the total time spent idle for each CPU in the system at a moment in time
@@ -121,6 +137,8 @@ impl CpuStatsHandler {
         } else {
             Self::calculate_total_cpu_load(&self.cpu_idle_stats.borrow(), &new_stats)
         };
+
+        self.inspect.log_cpu_load(load as f64);
         fuchsia_trace::instant!(
             "power_manager",
             "CpuStatsHandler::total_cpu_load",
@@ -212,6 +230,32 @@ impl CpuStatsHandler {
     }
 }
 
+const NUM_INSPECT_LOAD_SAMPLES: usize = 10;
+
+struct InspectData {
+    cpu_loads: RefCell<BoundedListNode>,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, name: String) -> Self {
+        // Create a local root node and properties
+        let root = parent.create_child(name);
+        let cpu_loads = RefCell::new(BoundedListNode::new(
+            root.create_child("cpu_loads"),
+            NUM_INSPECT_LOAD_SAMPLES,
+        ));
+
+        // Pass ownership of the new node to the parent node, otherwise it'll be dropped
+        parent.record(root);
+
+        InspectData { cpu_loads }
+    }
+
+    fn log_cpu_load(&self, load: f64) {
+        inspect_log!(self.cpu_loads.borrow_mut(), load: load);
+    }
+}
+
 #[async_trait(?Send)]
 impl Node for CpuStatsHandler {
     fn name(&self) -> &'static str {
@@ -231,6 +275,7 @@ impl Node for CpuStatsHandler {
 pub mod tests {
     use super::*;
     use futures::TryStreamExt;
+    use inspect::assert_inspect_tree;
 
     const TEST_NUM_CORES: u32 = 4;
 
@@ -376,5 +421,38 @@ pub mod tests {
         let node = setup_simple_test_node();
         let result = node.handle_message(&Message::ReadTemperature).await;
         assert!(result.is_err());
+    }
+
+    /// Tests for the presence and correctness of dynamically-added inspect data
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_data() {
+        let inspector = inspect::Inspector::new();
+        let node = CpuStatsHandlerBuilder::new()
+            .with_proxy(setup_fake_service(|| vec![Nanoseconds(0); TEST_NUM_CORES as usize]))
+            .with_inspect_root(inspector.root())
+            .build()
+            .unwrap();
+
+        // For each message, the node will query CPU load and log the sample into Inspect
+        node.handle_message(&Message::GetTotalCpuLoad).await.unwrap(); // first reading gives 0 load
+        node.handle_message(&Message::GetTotalCpuLoad).await.unwrap();
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                CpuStatsHandler: {
+                    cpu_loads: {
+                        "0": {
+                            load: 0.0,
+                            "@time": inspect::testing::AnyProperty
+                        },
+                        "1": {
+                            load: TEST_NUM_CORES as f64,
+                            "@time": inspect::testing::AnyProperty
+                        }
+                    }
+                }
+            }
+        );
     }
 }

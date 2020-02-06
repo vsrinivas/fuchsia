@@ -17,6 +17,8 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",

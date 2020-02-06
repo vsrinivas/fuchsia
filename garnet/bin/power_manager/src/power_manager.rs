@@ -6,6 +6,7 @@ use crate::node::Node;
 use crate::types::{Celsius, Farads, Seconds, Watts};
 use anyhow::{format_err, Error};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
+use fuchsia_inspect::component;
 use std::rc::Rc;
 
 // nodes
@@ -25,10 +26,14 @@ impl PowerManager {
         Ok(pm)
     }
 
-    pub fn init(
+    pub fn init<'a, 'b>(
         &mut self,
-        service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>,
+        service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Result<(), Error> {
+        // Required call to serve the inspect tree
+        let inspector = component::inspector();
+        inspector.serve(service_fs)?;
+
         match self.board.as_ref() {
             "astro" => self.init_astro(service_fs),
             _ => Err(format_err!("Invalid target: {}", self.board)),
@@ -37,9 +42,9 @@ impl PowerManager {
         Ok(())
     }
 
-    fn init_astro(
+    fn init_astro<'a, 'b>(
         &mut self,
-        service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>,
+        service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Result<(), Error> {
         let cpu_temperature = temperature_handler::TemperatureHandlerBuilder::new_with_driver_path(
             "/dev/class/thermal/000".to_string(),
@@ -73,7 +78,8 @@ impl PowerManager {
             system_power_handler::SystemPowerStateHandlerBuilder::new().build()?;
         self.nodes.push(sys_pwr_handler.clone());
 
-        let thermal_limiter_node = thermal_limiter::ThermalLimiter::new(service_fs)?;
+        let thermal_limiter_node =
+            thermal_limiter::ThermalLimiterBuilder::new().with_service_fs(service_fs).build()?;
         self.nodes.push(thermal_limiter_node.clone());
 
         let thermal_config = thermal_policy::ThermalConfig {
@@ -97,7 +103,7 @@ impl PowerManager {
                 thermal_shutdown_temperature: Celsius(95.0),
             },
         };
-        let thermal_policy = thermal_policy::ThermalPolicy::new(thermal_config)?;
+        let thermal_policy = thermal_policy::ThermalPolicyBuilder::new(thermal_config).build()?;
         self.nodes.push(thermal_policy);
 
         Ok(())

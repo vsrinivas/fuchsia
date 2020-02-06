@@ -10,7 +10,8 @@ use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_cpu_ctrl as fcpuctrl;
-use std::cell::{Cell, RefCell};
+use fuchsia_inspect::{self as inspect, Property};
+use std::cell::{Cell, RefCell, RefMut};
 use std::rc::Rc;
 
 /// Node: CpuControlHandler
@@ -34,7 +35,7 @@ use std::rc::Rc;
 ///       CpuCtrl interface of the CPU device specified in the CpuControlHandler constructor
 
 /// Describes a processor performance state.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct PState {
     pub frequency: Hertz,
     pub voltage: Volts,
@@ -56,6 +57,9 @@ impl CpuControlParams {
     ///  - Contains at least one element;
     ///  - Is in order of decreasing nominal power consumption.
     fn validate(&self) -> Result<(), Error> {
+        if self.num_cores == 0 {
+            return Err(format_err!("Must have > 0 cores"));
+        }
         if self.p_states.len() == 0 {
             return Err(format_err!("Must have at least one P-state"));
         } else if self.p_states.len() > 1 {
@@ -90,15 +94,16 @@ pub fn get_cpu_power(capacitance: Farads, voltage: Volts, op_completion_rate: He
 
 /// A builder for constructing the CpuControlHandler node. The fields of this struct are documented
 /// as part of the CpuControlHandler struct.
-pub struct CpuControlHandlerBuilder {
+pub struct CpuControlHandlerBuilder<'a> {
     cpu_driver_path: String,
     capacitance: Farads,
     cpu_stats_handler: Rc<dyn Node>,
     cpu_dev_handler_node: Rc<dyn Node>,
     cpu_ctrl_proxy: Option<fcpuctrl::DeviceProxy>,
+    inspect_root: Option<&'a inspect::Node>,
 }
 
-impl CpuControlHandlerBuilder {
+impl<'a> CpuControlHandlerBuilder<'a> {
     pub fn new_with_driver_path(
         cpu_driver_path: String,
         // TODO(pshickel): Eventually we may want to query capacitance from the CPU driver (same as
@@ -113,6 +118,7 @@ impl CpuControlHandlerBuilder {
             cpu_stats_handler,
             cpu_dev_handler_node,
             cpu_ctrl_proxy: None,
+            inspect_root: None,
         }
     }
 
@@ -130,19 +136,29 @@ impl CpuControlHandlerBuilder {
             capacitance,
             cpu_stats_handler,
             cpu_dev_handler_node,
+            inspect_root: None,
         }
     }
 
+    #[cfg(test)]
+    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(root);
+        self
+    }
+
     pub fn build(self) -> Result<Rc<CpuControlHandler>, Error> {
-        // Get default proxy if necessary
+        // Optionally use the default proxy
         let proxy = if self.cpu_ctrl_proxy.is_none() {
             connect_proxy::<fcpuctrl::DeviceMarker>(&self.cpu_driver_path)?
         } else {
             self.cpu_ctrl_proxy.unwrap()
         };
 
+        // Optionally use the default inspect root node
+        let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+
         Ok(Rc::new(CpuControlHandler {
-            cpu_driver_path: self.cpu_driver_path,
+            cpu_driver_path: self.cpu_driver_path.clone(),
             cpu_control_params: RefCell::new(CpuControlParams {
                 p_states: Vec::new(),
                 capacitance: self.capacitance,
@@ -152,6 +168,10 @@ impl CpuControlHandlerBuilder {
             cpu_stats_handler: self.cpu_stats_handler,
             cpu_dev_handler_node: self.cpu_dev_handler_node,
             cpu_ctrl_proxy: proxy,
+            inspect: InspectData::new(
+                inspect_root,
+                format!("CpuControlHandler ({})", self.cpu_driver_path),
+            ),
         }))
     }
 }
@@ -177,6 +197,9 @@ pub struct CpuControlHandler {
 
     /// A proxy handle to communicate with the CPU driver CpuCtrl interface.
     cpu_ctrl_proxy: fcpuctrl::DeviceProxy,
+
+    /// A struct for managing Component Inspection data
+    inspect: InspectData,
 }
 
 impl CpuControlHandler {
@@ -205,14 +228,17 @@ impl CpuControlHandler {
         params.p_states = p_states;
         params.num_cores = self.cpu_ctrl_proxy.get_num_logical_cores().await? as u32;
         params.validate()?;
+        self.inspect.set_cpu_control_params(&params);
         fuchsia_trace::instant!(
             "power_manager",
             "CpuControlHandler::received_cpu_params",
             fuchsia_trace::Scope::Thread,
             "valid" => 1,
             "p_states" => format!("{:?}", params.p_states).as_str(),
+            "capacitance" => params.capacitance.0,
             "num_cores" => params.num_cores
         );
+
         Ok(())
     }
 
@@ -295,6 +321,8 @@ impl CpuControlHandler {
         // If no P-states meet the selection criterion, use the lowest-power state.
         let mut p_state_index = cpu_params.p_states.len() - 1;
 
+        self.inspect.last_op_rate.set(last_operation_rate.0);
+        self.inspect.last_load.set(last_load);
         fuchsia_trace::instant!(
             "power_manager",
             "CpuControlHandler::set_max_power_consumption_data",
@@ -344,6 +372,7 @@ impl CpuControlHandler {
 
             // Cache the new P-state index for calculations on the next iteration
             self.current_p_state_index.set(Some(p_state_index));
+            self.inspect.p_state_index.set(p_state_index as u64);
         }
 
         Ok(MessageReturn::SetMaxPowerConsumption)
@@ -364,6 +393,49 @@ impl Node for CpuControlHandler {
     }
 }
 
+struct InspectData {
+    // Nodes
+    root_node: inspect::Node,
+
+    // Properties
+    p_state_index: inspect::UintProperty,
+    last_op_rate: inspect::DoubleProperty,
+    last_load: inspect::DoubleProperty,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, node_name: String) -> Self {
+        // Create a local root node and properties
+        let root_node = parent.create_child(node_name);
+        let p_state_index = root_node.create_uint("p_state_index", 0);
+        let last_op_rate = root_node.create_double("last_op_rate", 0.0);
+        let last_load = root_node.create_double("last_load", 0.0);
+
+        InspectData { root_node, p_state_index, last_op_rate, last_load }
+    }
+
+    fn set_cpu_control_params(&self, params: &RefMut<CpuControlParams>) {
+        let cpu_params_node = self.root_node.create_child("cpu_control_params");
+
+        // Iterate `params.p_states` in reverse order so that the Inspect nodes appear in the same
+        // order as the vector (`create_child` inserts nodes at the head).
+        for (i, p_state) in params.p_states.iter().enumerate().rev() {
+            let p_state_node = cpu_params_node.create_child(format!("p_state_{}", i));
+            p_state_node.record_double("voltage (V)", p_state.voltage.0);
+            p_state_node.record_double("frequency (Hz)", p_state.frequency.0);
+
+            // Pass ownership of the new P-state node to the parent `cpu_params_node`
+            cpu_params_node.record(p_state_node);
+        }
+
+        cpu_params_node.record_double("capacitance (F)", params.capacitance.0);
+        cpu_params_node.record_uint("num_cores", params.num_cores.into());
+
+        // Pass ownership of the new `cpu_params_node` to the root node
+        self.root_node.record(cpu_params_node);
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -371,6 +443,7 @@ pub mod tests {
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::TryStreamExt;
+    use inspect::assert_inspect_tree;
 
     fn setup_fake_service(params: CpuControlParams) -> fcpuctrl::DeviceProxy {
         let (proxy, mut stream) =
@@ -483,5 +556,50 @@ pub mod tests {
             _ => panic!(),
         }
         assert_eq!(recvd_perf_state.get(), 1);
+    }
+
+    /// Tests for the presence and correctness of dynamically-added inspect data
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_data() {
+        // Some dummy CpuControlParams to verify the params get published in Inspect
+        let num_cores = 4;
+        let p_state = PState { frequency: Hertz(2.0e9), voltage: Volts(4.5) };
+        let capacitance = Farads(100.0e-12);
+        let params = CpuControlParams { num_cores, p_states: vec![p_state], capacitance };
+
+        let inspector = inspect::Inspector::new();
+        let node = CpuControlHandlerBuilder::new_with_proxy(
+            "Fake".to_string(),
+            setup_fake_service(params),
+            capacitance,
+            cpu_stats_handler::tests::setup_simple_test_node(),
+            dev_control_handler::tests::setup_test_node(|_| ()),
+        )
+        .with_inspect_root(inspector.root())
+        .build()
+        .unwrap();
+
+        // Sending this message causes the node to lazily query the CpuParams from the fake driver.
+        // After this point, the CpuParams should be populated into the Inspect tree.
+        match node.handle_message(&Message::SetMaxPowerConsumption(Watts(1.0))).await.unwrap() {
+            MessageReturn::SetMaxPowerConsumption => {}
+            _ => panic!(),
+        }
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                "CpuControlHandler (Fake)": contains {
+                    cpu_control_params: {
+                        "capacitance (F)": capacitance.0,
+                        num_cores: num_cores as u64,
+                        p_state_0: {
+                            "voltage (V)": p_state.voltage.0,
+                            "frequency (Hz)": p_state.frequency.0
+                        }
+                    },
+                }
+            }
+        );
     }
 }

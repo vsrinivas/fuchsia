@@ -10,6 +10,7 @@ use crate::types::{Celsius, Nanoseconds, Seconds, ThermalLoad, Watts};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
+use fuchsia_inspect::{self as inspect, ArrayProperty, Property};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -29,9 +30,51 @@ use std::rc::Rc;
 ///
 /// FIDL dependencies: N/A
 
+pub struct ThermalPolicyBuilder<'a> {
+    config: ThermalConfig,
+    inspect_root: Option<&'a inspect::Node>,
+}
+
+impl<'a> ThermalPolicyBuilder<'a> {
+    pub fn new(config: ThermalConfig) -> Self {
+        Self { config, inspect_root: None }
+    }
+
+    #[cfg(test)]
+    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(root);
+        self
+    }
+
+    pub fn build(self) -> Result<Rc<ThermalPolicy>, Error> {
+        // Optionally use the default inspect root node
+        let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+
+        let node = Rc::new(ThermalPolicy {
+            config: self.config,
+            state: ThermalState {
+                prev_timestamp: Cell::new(Nanoseconds(0)),
+                max_time_delta: Cell::new(Seconds(0.0)),
+                prev_temperature: Cell::new(Celsius(0.0)),
+                error_integral: Cell::new(0.0),
+                state_initialized: Cell::new(false),
+                thermal_load: Cell::new(ThermalLoad(0)),
+            },
+            inspect: InspectData::new(inspect_root, "ThermalPolicy".to_string()),
+        });
+
+        node.inspect.set_thermal_config(&node.config);
+        node.clone().start_periodic_thermal_loop();
+        Ok(node)
+    }
+}
+
 pub struct ThermalPolicy {
     config: ThermalConfig,
     state: ThermalState,
+
+    /// A struct for managing Component Inspection data
+    inspect: InspectData,
 }
 
 /// A struct to store all configurable aspects of the ThermalPolicy node
@@ -103,6 +146,9 @@ struct ThermalState {
     /// The time of the previous controller iteration
     prev_timestamp: Cell<Nanoseconds>,
 
+    /// The largest observed time between controller iterations (may be used to detect hangs)
+    max_time_delta: Cell<Seconds>,
+
     /// The temperature reading from the previous controller iteration
     prev_temperature: Cell<Celsius>,
 
@@ -118,25 +164,10 @@ struct ThermalState {
 }
 
 impl ThermalPolicy {
-    pub fn new(config: ThermalConfig) -> Result<Rc<Self>, Error> {
-        let node = Rc::new(Self {
-            config,
-            state: ThermalState {
-                prev_timestamp: Cell::new(Nanoseconds(0)),
-                prev_temperature: Cell::new(Celsius(0.0)),
-                error_integral: Cell::new(0.0),
-                state_initialized: Cell::new(false),
-                thermal_load: Cell::new(ThermalLoad(0)),
-            },
-        });
-        node.clone().start_periodic_thermal_loop()?;
-        Ok(node)
-    }
-
     /// Starts a periodic timer that fires at the interval specified by
     /// ThermalControllerParams.sample_interval. At each timer, `iterate_thermal_control` is called
     /// and any resulting errors are logged.
-    fn start_periodic_thermal_loop(self: Rc<Self>) -> Result<(), Error> {
+    fn start_periodic_thermal_loop(self: Rc<Self>) {
         let mut periodic_timer = fasync::Interval::new(zx::Duration::from_nanos(
             self.config.policy_params.controller_params.sample_interval.into_nanos(),
         ));
@@ -158,8 +189,6 @@ impl ThermalPolicy {
                 );
             }
         });
-
-        Ok(())
     }
 
     /// This is the main body of the closed loop thermal control logic. The function is called
@@ -183,10 +212,15 @@ impl ThermalPolicy {
             self.state.prev_temperature.set(raw_temperature);
             self.state.prev_timestamp.set(timestamp);
             self.state.state_initialized.set(true);
+            self.inspect.state_initialized.set(1);
             return Ok(());
         }
 
         let time_delta = Seconds::from_nanos(timestamp.0 - self.state.prev_timestamp.get().0);
+        if time_delta.0 > self.state.max_time_delta.get().0 {
+            self.state.max_time_delta.set(time_delta);
+            self.inspect.max_time_delta.set(time_delta.0);
+        }
         self.state.prev_timestamp.set(timestamp);
 
         let filtered_temperature = Celsius(low_pass_filter(
@@ -197,6 +231,10 @@ impl ThermalPolicy {
         ));
         self.state.prev_temperature.set(filtered_temperature);
 
+        self.inspect.timestamp.set(timestamp.0);
+        self.inspect.time_delta.set(time_delta.0);
+        self.inspect.temperature_raw.set(raw_temperature.0);
+        self.inspect.temperature_filtered.set(filtered_temperature.0);
         fuchsia_trace::instant!(
             "power_manager",
             "ThermalPolicy::thermal_control_iteration_data",
@@ -217,7 +255,7 @@ impl ThermalPolicy {
         );
 
         // Update the ThermalLimiter node with the latest thermal load
-        let result = self.update_thermal_load(filtered_temperature).await;
+        let result = self.update_thermal_load(timestamp, filtered_temperature).await;
         log_if_err!(result, "Error updating thermal load");
         fuchsia_trace::instant!(
             "power_manager",
@@ -290,7 +328,11 @@ impl ThermalPolicy {
 
     /// Determines the current thermal load. If there is a change from the cached thermal_load,
     /// then the new value is sent out to the ThermalLimiter node.
-    async fn update_thermal_load(&self, temperature: Celsius) -> Result<(), Error> {
+    async fn update_thermal_load(
+        &self,
+        timestamp: Nanoseconds,
+        temperature: Celsius,
+    ) -> Result<(), Error> {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalPolicy::update_thermal_load",
@@ -315,6 +357,10 @@ impl ThermalPolicy {
                 "new_load" => thermal_load.0
             );
             self.state.thermal_load.set(thermal_load);
+            self.inspect.thermal_load.set(thermal_load.0.into());
+            if thermal_load.0 == 0 {
+                self.inspect.last_throttle_end_time.set(timestamp.0);
+            }
             self.send_message(
                 &self.config.thermal_limiter_node,
                 &Message::UpdateThermalLoad(thermal_load),
@@ -355,6 +401,7 @@ impl ThermalPolicy {
             "time_delta" => time_delta.0
         );
         let available_power = self.calculate_available_power(filtered_temperature, time_delta);
+        self.inspect.available_power.set(available_power.0);
         fuchsia_trace::instant!(
             "power_manager",
             "ThermalPolicy::iterate_controller_power_available",
@@ -382,6 +429,7 @@ impl ThermalPolicy {
             controller_params.e_integral_max,
         );
         self.state.error_integral.set(error_integral);
+        self.inspect.error_integral.set(error_integral);
 
         let p_term = temperature_error * controller_params.proportional_gain;
         let i_term = error_integral * controller_params.integral_gain;
@@ -435,6 +483,83 @@ impl Node for ThermalPolicy {
     }
 }
 
+struct InspectData {
+    // Nodes
+    root_node: inspect::Node,
+
+    // Properties
+    timestamp: inspect::IntProperty,
+    time_delta: inspect::DoubleProperty,
+    temperature_raw: inspect::DoubleProperty,
+    temperature_filtered: inspect::DoubleProperty,
+    error_integral: inspect::DoubleProperty,
+    state_initialized: inspect::UintProperty,
+    thermal_load: inspect::UintProperty,
+    available_power: inspect::DoubleProperty,
+    max_time_delta: inspect::DoubleProperty,
+    last_throttle_end_time: inspect::IntProperty,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, name: String) -> Self {
+        // Create a local root node and properties
+        let root_node = parent.create_child(name);
+        let state_node = root_node.create_child("state");
+        let stats_node = root_node.create_child("stats");
+        let timestamp = state_node.create_int("timestamp (ns)", 0);
+        let time_delta = state_node.create_double("time_delta (s)", 0.0);
+        let temperature_raw = state_node.create_double("temperature_raw (C)", 0.0);
+        let temperature_filtered = state_node.create_double("temperature_filtered (C)", 0.0);
+        let error_integral = state_node.create_double("error_integral", 0.0);
+        let state_initialized = state_node.create_uint("state_initialized", 0);
+        let thermal_load = state_node.create_uint("thermal_load", 0);
+        let available_power = state_node.create_double("available_power (W)", 0.0);
+        let last_throttle_end_time = stats_node.create_int("last_throttle_end_time (ns)", 0);
+        let max_time_delta = stats_node.create_double("max_time_delta (s)", 0.0);
+
+        // Pass ownership of the new nodes to the root node, otherwise they'll be dropped
+        root_node.record(state_node);
+        root_node.record(stats_node);
+
+        InspectData {
+            root_node,
+            timestamp,
+            time_delta,
+            max_time_delta,
+            temperature_raw,
+            temperature_filtered,
+            error_integral,
+            state_initialized,
+            thermal_load,
+            available_power,
+            last_throttle_end_time,
+        }
+    }
+
+    fn set_thermal_config(&self, config: &ThermalConfig) {
+        let policy_params_node = self.root_node.create_child("policy_params");
+        let ctrl_params_node = policy_params_node.create_child("controller_params");
+
+        let params = &config.policy_params.controller_params;
+        ctrl_params_node.record_double("sample_interval (s)", params.sample_interval.0);
+        ctrl_params_node.record_double("filter_time_constant (s)", params.filter_time_constant.0);
+        ctrl_params_node.record_double("target_temperature (C)", params.target_temperature.0);
+        ctrl_params_node.record_double("e_integral_min", params.e_integral_min);
+        ctrl_params_node.record_double("e_integral_max", params.e_integral_max);
+        ctrl_params_node.record_double("sustainable_power (W)", params.sustainable_power.0);
+        ctrl_params_node.record_double("proportional_gain", params.proportional_gain);
+        ctrl_params_node.record_double("integral_gain", params.integral_gain);
+        policy_params_node.record(ctrl_params_node);
+
+        let thermal_range = policy_params_node.create_double_array("thermal_limiting_range (C)", 2);
+        thermal_range.set(0, config.policy_params.thermal_limiting_range[0].0);
+        thermal_range.set(1, config.policy_params.thermal_limiting_range[1].0);
+        policy_params_node.record(thermal_range);
+
+        self.root_node.record(policy_params_node);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -444,6 +569,7 @@ mod tests {
         temperature_handler,
     };
     use cpu_control_handler::PState;
+    use inspect::assert_inspect_tree;
     use rkf45;
     use std::cell::RefCell;
 
@@ -755,7 +881,7 @@ mod tests {
                 thermal_limiter_node,
                 policy_params,
             };
-            ThermalPolicy::new(thermal_config).unwrap()
+            ThermalPolicyBuilder::new(thermal_config).build().unwrap()
         }
 
         /// Iterates the policy n times.
@@ -965,5 +1091,69 @@ mod tests {
             cumulative_sum / 100.0
         };
         assert!((average_temperature - target_temperature.0).abs() < 0.1);
+    }
+
+    /// Tests for the presence and correctness of dynamically-added inspect data
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_data() {
+        // Create a fake node type just to instantiate the ThermalPolicy
+        struct FakeNode;
+        #[async_trait(?Send)]
+        impl Node for FakeNode {
+            fn name(&self) -> &'static str {
+                "FakeNode"
+            }
+
+            async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+                match msg {
+                    _ => Err(format_err!("Unsupported message: {:?}", msg)),
+                }
+            }
+        }
+
+        let fake_node = Rc::new(FakeNode {});
+        let policy_params = default_policy_params();
+        let thermal_config = ThermalConfig {
+            temperature_node: fake_node.clone(),
+            cpu_control_node: fake_node.clone(),
+            sys_pwr_handler: fake_node.clone(),
+            thermal_limiter_node: fake_node.clone(),
+            policy_params: default_policy_params(),
+        };
+        let inspector = inspect::Inspector::new();
+        let _node = ThermalPolicyBuilder::new(thermal_config)
+            .with_inspect_root(inspector.root())
+            .build()
+            .unwrap();
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                ThermalPolicy: {
+                    state: contains {},
+                    stats: contains {},
+                    policy_params: {
+                        "thermal_limiting_range (C)": vec![
+                                policy_params.thermal_limiting_range[0].0,
+                                policy_params.thermal_limiting_range[1].0
+                            ],
+                        controller_params: {
+                            "sample_interval (s)":
+                                policy_params.controller_params.sample_interval.0,
+                            "filter_time_constant (s)":
+                                policy_params.controller_params.filter_time_constant.0,
+                            "target_temperature (C)":
+                                policy_params.controller_params.target_temperature.0,
+                            "e_integral_min": policy_params.controller_params.e_integral_min,
+                            "e_integral_max": policy_params.controller_params.e_integral_max,
+                            "sustainable_power (W)":
+                                policy_params.controller_params.sustainable_power.0,
+                            "proportional_gain": policy_params.controller_params.proportional_gain,
+                            "integral_gain": policy_params.controller_params.integral_gain,
+                        }
+                    }
+                }
+            }
+        );
     }
 }

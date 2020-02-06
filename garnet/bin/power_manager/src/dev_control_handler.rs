@@ -9,6 +9,7 @@ use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device as fdev;
+use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use std::rc::Rc;
@@ -31,36 +32,56 @@ use std::rc::Rc;
 pub const MAX_PERF_STATES: u32 = fdev::MAX_DEVICE_PERFORMANCE_STATES;
 
 /// A builder for constructing the DeviceControlhandler node
-pub struct DeviceControlHandlerBuilder {
+pub struct DeviceControlHandlerBuilder<'a> {
     driver_path: String,
     driver_proxy: Option<fdev::ControllerProxy>,
+    inspect_root: Option<&'a inspect::Node>,
 }
 
-impl DeviceControlHandlerBuilder {
+impl<'a> DeviceControlHandlerBuilder<'a> {
     pub fn new_with_driver_path(driver_path: String) -> Self {
-        Self { driver_path, driver_proxy: None }
+        Self { driver_path, driver_proxy: None, inspect_root: None }
     }
 
     #[cfg(test)]
     pub fn new_with_proxy(driver_path: String, proxy: fdev::ControllerProxy) -> Self {
-        Self { driver_path, driver_proxy: Some(proxy) }
+        Self { driver_path, driver_proxy: Some(proxy), inspect_root: None }
+    }
+
+    #[cfg(test)]
+    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(root);
+        self
     }
 
     pub fn build(self) -> Result<Rc<DeviceControlHandler>, Error> {
-        // Get default proxy if necessary
+        // Optionally use the default proxy
         let proxy = if self.driver_proxy.is_none() {
             connect_proxy::<fdev::ControllerMarker>(&self.driver_path)?
         } else {
             self.driver_proxy.unwrap()
         };
 
-        Ok(Rc::new(DeviceControlHandler { driver_path: self.driver_path, driver_proxy: proxy }))
+        // Optionally use the default inspect root node
+        let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+
+        Ok(Rc::new(DeviceControlHandler {
+            driver_path: self.driver_path.clone(),
+            driver_proxy: proxy,
+            inspect: InspectData::new(
+                inspect_root,
+                format!("DeviceControlHandler ({})", self.driver_path),
+            ),
+        }))
     }
 }
 
 pub struct DeviceControlHandler {
     driver_path: String,
     driver_proxy: fdev::ControllerProxy,
+
+    /// A struct for managing Component Inspection data
+    inspect: InspectData,
 }
 
 impl DeviceControlHandler {
@@ -82,16 +103,7 @@ impl DeviceControlHandler {
             "state" => in_state
         );
 
-        // Make the FIDL call
-        let result = self.driver_proxy.set_performance_state(in_state).await.map_err(|e| {
-            format_err!(
-                "{} ({}): set_performance_state IPC failed: {}",
-                self.name(),
-                self.driver_path,
-                e
-            )
-        });
-
+        let result = self.set_performance_state(in_state).await;
         log_if_err!(result, "Failed to set performance state");
         fuchsia_trace::instant!(
             "power_manager",
@@ -100,7 +112,29 @@ impl DeviceControlHandler {
             "driver" => self.driver_path.as_str(),
             "result" => format!("{:?}", result).as_str()
         );
-        let (status, out_state) = result?;
+
+        match result.as_ref() {
+            Ok(_) => self.inspect.perf_state.set(in_state.into()),
+            Err(e) => {
+                self.inspect.set_performance_state_errors.add(1);
+                self.inspect.last_set_performance_state_error.set(format!("{}", e).as_str())
+            }
+        }
+
+        result
+    }
+
+    async fn set_performance_state(&self, in_state: u32) -> Result<MessageReturn, Error> {
+        // Make the FIDL call
+        let (status, out_state) =
+            self.driver_proxy.set_performance_state(in_state).await.map_err(|e| {
+                format_err!(
+                    "{} ({}): set_performance_state IPC failed: {}",
+                    self.name(),
+                    self.driver_path,
+                    e
+                )
+            })?;
 
         // Check the status code
         zx::Status::ok(status).map_err(|e| {
@@ -142,11 +176,34 @@ impl Node for DeviceControlHandler {
     }
 }
 
+struct InspectData {
+    perf_state: inspect::UintProperty,
+    set_performance_state_errors: inspect::UintProperty,
+    last_set_performance_state_error: inspect::StringProperty,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, name: String) -> Self {
+        // Create a local root node and properties
+        let root = parent.create_child(name);
+        let perf_state = root.create_uint("performance_state", 0);
+        let set_performance_state_errors = root.create_uint("set_performance_state_errors", 0);
+        let last_set_performance_state_error =
+            root.create_string("last_set_performance_state_error", "");
+
+        // Pass ownership of the new node to the parent node, otherwise it'll be dropped
+        parent.record(root);
+
+        InspectData { perf_state, set_performance_state_errors, last_set_performance_state_error }
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
     use fuchsia_async as fasync;
     use futures::TryStreamExt;
+    use inspect::assert_inspect_tree;
     use std::cell::Cell;
 
     fn setup_fake_driver(
@@ -205,5 +262,25 @@ pub mod tests {
             _ => panic!(),
         }
         assert_eq!(recvd_perf_state.get(), new_perf_state);
+    }
+
+    /// Tests for the presence and correctness of dynamically-added inspect data
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_data() {
+        let inspector = inspect::Inspector::new();
+        let _node = DeviceControlHandlerBuilder::new_with_proxy(
+            "Fake".to_string(),
+            fidl::endpoints::create_proxy::<fdev::ControllerMarker>().unwrap().0,
+        )
+        .with_inspect_root(inspector.root())
+        .build()
+        .unwrap();
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                "DeviceControlHandler (Fake)": contains {}
+            }
+        );
     }
 }

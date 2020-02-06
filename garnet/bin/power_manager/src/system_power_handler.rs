@@ -9,6 +9,7 @@ use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device_manager as fdevmgr;
+use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use std::rc::Rc;
@@ -31,13 +32,14 @@ use std::rc::Rc;
 const DEV_MGR_SVC: &'static str = "/svc/fuchsia.device.manager.Administrator";
 
 /// A builder for constructing the SystemPowerStateHandler node
-pub struct SystemPowerStateHandlerBuilder {
+pub struct SystemPowerStateHandlerBuilder<'a> {
     svc_proxy: Option<fdevmgr::AdministratorProxy>,
+    inspect_root: Option<&'a inspect::Node>,
 }
 
-impl SystemPowerStateHandlerBuilder {
+impl<'a> SystemPowerStateHandlerBuilder<'a> {
     pub fn new() -> Self {
-        Self { svc_proxy: None }
+        Self { svc_proxy: None, inspect_root: None }
     }
 
     #[cfg(test)]
@@ -46,20 +48,35 @@ impl SystemPowerStateHandlerBuilder {
         self
     }
 
+    #[cfg(test)]
+    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(root);
+        self
+    }
+
     pub fn build(self) -> Result<Rc<SystemPowerStateHandler>, Error> {
-        // Get default proxy if necessary
+        // Optionally use the default proxy
         let proxy = if self.svc_proxy.is_none() {
             connect_proxy::<fdevmgr::AdministratorMarker>(&DEV_MGR_SVC.to_string())?
         } else {
             self.svc_proxy.unwrap()
         };
 
-        Ok(Rc::new(SystemPowerStateHandler { svc_proxy: proxy }))
+        // Optionally use the default inspect root node
+        let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+
+        Ok(Rc::new(SystemPowerStateHandler {
+            svc_proxy: proxy,
+            inspect: InspectData::new(inspect_root, "SystemPowerStateHandler".to_string()),
+        }))
     }
 }
 
 pub struct SystemPowerStateHandler {
     svc_proxy: fdevmgr::AdministratorProxy,
+
+    /// A struct for managing Component Inspection data
+    inspect: InspectData,
 }
 
 impl SystemPowerStateHandler {
@@ -78,7 +95,15 @@ impl SystemPowerStateHandler {
             fuchsia_trace::Scope::Thread,
             "result" => format!("{:?}", result).as_str()
         );
-        result.map(|_| MessageReturn::SystemShutdown)
+
+        match result {
+            Ok(_) => Ok(MessageReturn::SystemShutdown),
+            Err(e) => {
+                self.inspect.suspend_errors.add(1);
+                self.inspect.last_suspend_error.set(format!("{}", e).as_str());
+                Err(e)
+            }
+        }
     }
 
     async fn dev_mgr_suspend(&self, suspend_flag: u32) -> Result<(), Error> {
@@ -97,6 +122,8 @@ impl SystemPowerStateHandler {
                 e
             )
         })?;
+
+        self.inspect.set_system_power_state(suspend_flag);
         Ok(())
     }
 }
@@ -117,11 +144,42 @@ impl Node for SystemPowerStateHandler {
     }
 }
 
+struct InspectData {
+    system_power_state: inspect::StringProperty,
+    suspend_errors: inspect::UintProperty,
+    last_suspend_error: inspect::StringProperty,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, name: String) -> Self {
+        // Create a local root node and properties
+        let root = parent.create_child(name);
+        let system_power_state = root.create_string("system_power_state", "fully_on");
+        let suspend_errors = root.create_uint("suspend_errors", 0);
+        let last_suspend_error = root.create_string("last_suspend_error", "");
+
+        // Pass ownership of the new node to the parent node, otherwise it'll be dropped
+        parent.record(root);
+
+        InspectData { system_power_state, suspend_errors, last_suspend_error }
+    }
+
+    fn set_system_power_state(&self, suspend_flag: u32) {
+        self.system_power_state.set(match suspend_flag {
+            fdevmgr::SUSPEND_FLAG_POWEROFF => "power_off",
+            _ => "unknown",
+        })
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use fuchsia_async as fasync;
     use futures::TryStreamExt;
+    use inspect::assert_inspect_tree;
     use std::cell::Cell;
+    use std::rc::Rc;
 
     fn setup_fake_service(
         mut shutdown_function: impl FnMut() + 'static,
@@ -129,7 +187,7 @@ pub mod tests {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fdevmgr::AdministratorMarker>().unwrap();
 
-        fuchsia_async::spawn_local(async move {
+        fasync::spawn_local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fdevmgr::AdministratorRequest::Suspend {
@@ -160,7 +218,7 @@ pub mod tests {
 
     /// Tests that the node can handle the 'SystemShutdown' message as expected. The test node uses
     /// a fake device manager service here, so a system shutdown will not actually happen.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_system_shutdown() {
         let shutdown_applied = Rc::new(Cell::new(false));
         let shutdown_applied_2 = shutdown_applied.clone();
@@ -172,5 +230,23 @@ pub mod tests {
             _ => assert!(false),
         }
         assert!(shutdown_applied.get());
+    }
+
+    /// Tests for the presence and correctness of dynamically-added inspect data
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_data() {
+        let inspect = inspect::Inspector::new();
+        let _node = SystemPowerStateHandlerBuilder::new()
+            .with_proxy(fidl::endpoints::create_proxy::<fdevmgr::AdministratorMarker>().unwrap().0)
+            .with_inspect_root(inspect.root())
+            .build()
+            .unwrap();
+
+        assert_inspect_tree!(
+            inspect,
+            root: {
+                "SystemPowerStateHandler": contains {}
+            }
+        );
     }
 }

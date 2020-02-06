@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use fidl_fuchsia_thermal as fthermal;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
+use fuchsia_inspect::{self as inspect, Property};
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::AsHandleRef;
 use futures::prelude::*;
@@ -39,6 +40,49 @@ use std::rc::Rc;
 
 pub const MAX_THERMAL_LOAD: ThermalLoad = ThermalLoad(fthermal::MAX_THERMAL_LOAD);
 
+pub struct ThermalLimiterBuilder<'a, 'b> {
+    service_fs: Option<&'a mut ServiceFs<ServiceObjLocal<'b, ()>>>,
+    inspect_root: Option<&'a inspect::Node>,
+}
+
+impl<'a, 'b> ThermalLimiterBuilder<'a, 'b> {
+    pub fn new() -> Self {
+        Self { service_fs: None, inspect_root: None }
+    }
+
+    pub fn with_service_fs(
+        mut self,
+        service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
+    ) -> Self {
+        self.service_fs = Some(service_fs);
+        self
+    }
+
+    #[cfg(test)]
+    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(root);
+        self
+    }
+
+    pub fn build(self) -> Result<Rc<ThermalLimiter>, Error> {
+        // Optionally use the default inspect root node
+        let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+
+        let node = Rc::new(ThermalLimiter {
+            clients: RefCell::new(Vec::new()),
+            thermal_load: Cell::new(ThermalLoad(0)),
+            inspect: InspectData::new(inspect_root, "ThermalLimiter".to_string()),
+        });
+
+        // Publish the Controller service only if we were provided with a ServiceFs
+        if self.service_fs.is_some() {
+            node.clone().publish_fidl_service(self.service_fs.unwrap());
+        }
+
+        Ok(node)
+    }
+}
+
 /// Contains state and connection information for one thermal client
 struct ClientEntry {
     /// The Actor connection proxy to the client
@@ -52,15 +96,42 @@ struct ClientEntry {
 
     /// The thermal load trip points that the client supplied when it subscribed
     trip_points: Vec<ThermalLoad>,
+
+    /// The inspect node that this client records to. Since the ClientEntry owns the inspect node,
+    /// if the ClientEntry is dropped then so will the node.
+    _inspect_node: inspect::Node,
+
+    /// An inspect property to represent the thermal state of this client
+    inspect_state: inspect::UintProperty,
 }
 
 impl ClientEntry {
+    fn new(
+        proxy: fthermal::ActorProxy,
+        actor_type: fthermal::ActorType,
+        trip_points: Vec<ThermalLoad>,
+        inspect_node: inspect::Node,
+    ) -> Self {
+        inspect_node.record_uint("proxy", proxy.as_handle_ref().raw_handle().into());
+        inspect_node.record_uint("actor_type", actor_type as u64);
+        trip_points.iter().for_each(|val| inspect_node.record_uint("trip_point", val.0.into()));
+        ClientEntry {
+            proxy,
+            _actor_type: actor_type,
+            current_state: 0,
+            trip_points,
+            inspect_state: inspect_node.create_uint("thermal_state", 0),
+            _inspect_node: inspect_node,
+        }
+    }
+
     /// Given a thermal load, determine and update the current thermal state locally. Returns the
     /// new state if the state was changed, otherwise returns None.
     fn update_state(&mut self, thermal_load: ThermalLoad) -> Option<u32> {
         let new_state = Self::determine_thermal_state(thermal_load, &self.trip_points);
         if new_state != self.current_state {
             self.current_state = new_state;
+            self.inspect_state.set(new_state.into());
             Some(new_state)
         } else {
             None
@@ -89,29 +160,20 @@ pub struct ThermalLimiter {
 
     /// Cache of the last thermal load received
     thermal_load: Cell<ThermalLoad>,
+
+    /// A struct for managing Component Inspection data
+    inspect: InspectData,
 }
 
 impl ThermalLimiter {
-    pub fn new(service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>) -> Result<Rc<Self>, Error> {
-        let node = Self::create_thermal_limiter_node();
-        node.clone().publish_fidl_service(service_fs)?;
-        Ok(node)
-    }
-
-    /// Creates a new ThermalLimiter node (but doesn't setup the Controller service)
-    fn create_thermal_limiter_node() -> Rc<Self> {
-        Rc::new(Self { clients: RefCell::new(Vec::new()), thermal_load: Cell::new(ThermalLoad(0)) })
-    }
-
     /// Start and publish the fuchsia.thermal.Controller service
-    fn publish_fidl_service(
+    fn publish_fidl_service<'a, 'b>(
         self: Rc<Self>,
-        service_fs: &mut ServiceFs<ServiceObjLocal<'_, ()>>,
-    ) -> Result<(), Error> {
+        service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
+    ) {
         service_fs.dir("svc").add_fidl_service(move |stream: fthermal::ControllerRequestStream| {
             self.clone().handle_new_service_connection(stream);
         });
-        Ok(())
     }
 
     /// Called each time a client connects. For each client, a future is created to handle the
@@ -200,7 +262,7 @@ impl ThermalLimiter {
         let trip_points = trip_points.into_iter().map(ThermalLoad).collect();
 
         let mut client =
-            ClientEntry { proxy, _actor_type: actor_type, current_state: 0, trip_points };
+            ClientEntry::new(proxy, actor_type, trip_points, self.inspect.create_client_node());
 
         // Update the client state based on our last cached thermal load
         client.update_state(self.thermal_load.get());
@@ -246,6 +308,7 @@ impl ThermalLimiter {
 
         // Cache the thermal load value so if a new client connects we can give it the latest state
         self.thermal_load.set(thermal_load);
+        self.inspect.thermal_load.set(thermal_load.0.into());
 
         // Check the client list for any closed proxies, and remove them from the list
         self.clients.borrow_mut().retain(|client| !client.proxy.is_closed());
@@ -299,12 +362,44 @@ impl Node for ThermalLimiter {
     }
 }
 
+struct InspectData {
+    // Nodes
+    clients_node: inspect::Node,
+
+    // Properties
+    thermal_load: inspect::UintProperty,
+
+    // Internal
+    unique_name_suffix: Cell<u32>,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, name: String) -> Self {
+        // Create a local root node and properties
+        let root = parent.create_child(name);
+        let thermal_load = root.create_uint("thermal_load", 0);
+        let clients_node = root.create_child("clients");
+
+        // Pass ownership of the new node to the parent node, otherwise it'll be dropped
+        parent.record(root);
+
+        InspectData { clients_node, thermal_load, unique_name_suffix: Cell::new(0) }
+    }
+
+    fn create_client_node(&self) -> inspect::Node {
+        let unique_suffix = self.unique_name_suffix.get();
+        self.unique_name_suffix.set(unique_suffix + 1);
+        self.clients_node.create_child(format!("client{}", unique_suffix))
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use inspect::assert_inspect_tree;
 
     pub fn setup_test_node() -> Rc<ThermalLimiter> {
-        ThermalLimiter::create_thermal_limiter_node()
+        ThermalLimiterBuilder::new().build().unwrap()
     }
 
     /// Creates an Actor proxy/stream and subscribes the proxy end to the given ThermalLimiter
@@ -585,5 +680,36 @@ pub mod tests {
         assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(49), trip_points), 1);
         assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(50), trip_points), 2);
         assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(51), trip_points), 2);
+    }
+
+    /// Tests for the presence and correctness of dynamically-added inspect data
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inspect_data() {
+        let inspector = inspect::Inspector::new();
+        let node =
+            ThermalLimiterBuilder::new().with_inspect_root(inspector.root()).build().unwrap();
+        let actor_type = fthermal::ActorType::Unspecified;
+        let trip_points = vec![ThermalLoad(50)];
+
+        // Subscribe a new client and block until we get the first state update from the Controller
+        let mut stream = subscribe_actor(node.clone(), actor_type, trip_points).await.unwrap();
+        assert_eq!(get_actor_state(&mut stream).await, 0);
+
+        // Test that a client node is present for the new client
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                ThermalLimiter: contains {
+                    clients: {
+                        client0: {
+                            proxy: inspect::testing::AnyProperty,
+                            actor_type: actor_type as u64,
+                            trip_point: 50u64,
+                            thermal_state: 0u64
+                        }
+                    }
+                }
+            }
+        );
     }
 }
