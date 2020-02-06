@@ -173,7 +173,7 @@ func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, node
 		if nodename == "" {
 			return fmt.Errorf("%s must be set", nodenameEnvVar)
 		}
-		t, err = newFuchsiaSSHTester(nodename, sshKeyFile, outputs.dataDir, useRuntests)
+		t, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.dataDir, useRuntests)
 	} else {
 		// TODO(fxbug.dev/41930): create a serial test runner in this case.
 		return fmt.Errorf("%s must be set", sshKeyEnvVar)

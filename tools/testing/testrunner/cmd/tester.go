@@ -73,7 +73,7 @@ type fuchsiaSSHTester struct {
 // newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
-func newFuchsiaSSHTester(nodename, sshKeyFile, localOutputDir string, useRuntests bool) (*fuchsiaSSHTester, error) {
+func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputDir string, useRuntests bool) (*fuchsiaSSHTester, error) {
 	key, err := ioutil.ReadFile(sshKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSH key file: %v", err)
@@ -82,7 +82,7 @@ func newFuchsiaSSHTester(nodename, sshKeyFile, localOutputDir string, useRuntest
 	if err != nil {
 		return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
 	}
-	client, err := sshutil.ConnectToNode(context.Background(), nodename, config)
+	client, err := sshutil.ConnectToNode(ctx, nodename, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish an SSH connection: %v", err)
 	}
