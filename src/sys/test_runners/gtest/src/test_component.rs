@@ -7,15 +7,16 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, DirectoryMarker, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
+        self as fio, DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
+    fidl_fuchsia_test::{Outcome, RunListenerProxy, Status},
     fsys::ComponentControllerMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_runtime::job_default,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon::{self as zx, HandleBased, Task},
     futures::future::abortable,
     futures::future::AbortHandle,
@@ -33,7 +34,37 @@ use {
         str::from_utf8,
         sync::{Arc, Mutex, Weak},
     },
+    thiserror::Error,
 };
+
+/// Error encountered while working fidl lib.
+#[derive(Debug, Error)]
+pub enum FidlError {
+    #[error("cannot convert proxy to channel")]
+    ProxyToChannel,
+
+    #[error("cannot convert client end to proxy: {:?}", _0)]
+    ClientEndToProxy(fidl::Error),
+}
+
+/// Error encountered while working with kernel object.
+#[derive(Debug, Error)]
+pub enum KernelError {
+    #[error("job creation failed: {:?}", _0)]
+    CreateJob(zx::Status),
+
+    #[error("error waiting for test process to exit: {:?}", _0)]
+    ProcessExit(zx::Status),
+
+    #[error("error getting info from process: {:?}", _0)]
+    ProcessInfo(zx::Status),
+
+    #[error("error creating socket: {:?}", _0)]
+    CreateSocket(zx::Status),
+
+    #[error("cannot convert zircon socket to async socket: {:?}", _0)]
+    SocketToAsync(zx::Status),
+}
 
 /// All information about this test component.
 pub struct Component {
@@ -187,7 +218,7 @@ fn launch_fidl_service(
     let test_data_name = format!("{}", rng.gen::<u64>());
     let test_data_path = format!("/data/test_data/{}", test_data_name);
 
-    // TODO(anmittal): use async lib.
+    // TODO(45856): use async lib.
     fs::create_dir(&test_data_path).expect("cannot create test output directory.");
     let test_data_dir = io_util::open_directory_in_namespace(
         &test_data_path,
@@ -272,6 +303,44 @@ struct ListTestResult {
     pub testsuites: Vec<TestSuiteResult>,
 }
 
+/// Provides info about test case failure if any.
+#[derive(Serialize, Deserialize, Debug)]
+struct Failure {
+    pub failure: String,
+}
+
+/// Provides info about individual test cases.
+/// Example: For test FOO.Bar, this contains info about Bar.
+/// Please refer to documentation of `TestOutput` for details.
+#[derive(Serialize, Deserialize, Debug)]
+struct IndividualTestOutput {
+    pub name: String,
+    pub status: String,
+    pub time: String,
+    pub failures: Option<Vec<Failure>>,
+}
+
+/// Provides info about individual test suites.
+/// Refer to [gtest documentation] for output structure.
+/// [gtest documentation]: https://github.com/google/googletest/blob/2002f267f05be6f41a3d458954414ba2bfa3ff1d/googletest/docs/advanced.md#generating-a-json-report
+#[derive(Serialize, Deserialize, Debug)]
+struct TestSuiteOutput {
+    pub name: String,
+    pub tests: usize,
+    pub failures: usize,
+    pub disabled: usize,
+    pub time: String,
+    pub testsuite: Vec<IndividualTestOutput>,
+}
+
+/// Provides info test and the its run result.
+/// Example: For test FOO.Bar, this contains info about FOO.
+/// Please refer to documentation of `TestSuiteOutput` for details.
+#[derive(Serialize, Deserialize, Debug)]
+struct TestOutput {
+    pub testsuites: Vec<TestSuiteOutput>,
+}
+
 /// Implements `fuchsia.test.Suite` and runs provided test.
 pub struct TestServer {
     /// Cache to store enumerated test names.
@@ -281,11 +350,217 @@ pub struct TestServer {
     output_dir_proxy: fio::DirectoryProxy,
 }
 
+// Structure to guard job and kill it when going out of scope.
+struct ScopedJob {
+    internal: zx::Job,
+}
+
+impl ScopedJob {
+    fn new(job: zx::Job) -> Self {
+        Self { internal: job }
+    }
+}
+
+impl Drop for ScopedJob {
+    fn drop(&mut self) {
+        let _ = self.internal.kill();
+    }
+}
+
+/// Collects std out/err in background and gives a way to collect those logs.
+struct StdStreamReader {
+    fut: future::RemoteHandle<Result<Vec<u8>, std::io::Error>>,
+}
+
+impl StdStreamReader {
+    fn new(logger: test_runners_lib::LoggerStream) -> Self {
+        let (logger_handle, logger_fut) = logger.try_concat().remote_handle();
+        fasync::spawn_local(async move {
+            logger_handle.await;
+        });
+        Self { fut: logger_fut }
+    }
+
+    async fn get_logs(self) -> Result<Vec<u8>, LogError> {
+        self.fut.await.map_err(LogError::Read)
+    }
+}
+
+/// Opens and reads file defined by `path` in `dir`.
+async fn read_file(dir: &DirectoryProxy, path: &Path) -> Result<String, anyhow::Error> {
+    // Open the file in read-only mode.
+    let result_file_proxy = io_util::open_file(dir, path, OPEN_RIGHT_READABLE)?;
+    return io_util::read_file(&result_file_proxy).await;
+}
+
+struct LogWriter {
+    logger: fasync::Socket,
+}
+
+impl LogWriter {
+    fn new(logger: fasync::Socket) -> Self {
+        Self { logger }
+    }
+
+    async fn write_str(&mut self, s: String) -> Result<usize, LogError> {
+        self.logger.write(s.as_bytes()).await.map_err(LogError::Write)
+    }
+}
+
 impl TestServer {
     /// Creates new test server.
     /// Clients should call this function to create new object and then call `serve_test_suite`.
     pub fn new(output_dir_proxy: fio::DirectoryProxy) -> Self {
         Self { test_list: None, output_dir_proxy: output_dir_proxy }
+    }
+
+    fn test_data_namespace(&self) -> Result<fproc::NameInfo, IoError> {
+        let client_channnel =
+            io_util::clone_directory(&self.output_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
+                .map_err(IoError::CloneProxy)?
+                .into_channel()
+                .map_err(|_| FidlError::ProxyToChannel)
+                .unwrap()
+                .into_zx_channel();
+
+        Ok(fproc::NameInfo { path: "/test_data".to_owned(), directory: client_channnel.into() })
+    }
+
+    async fn run_test(
+        &self,
+        test: &String,
+        component: Arc<Component>,
+        run_listener: &RunListenerProxy,
+    ) -> Result<(), RunTestError> {
+        fx_log_info!("Running test {}", test);
+
+        let names = vec![self.test_data_namespace()?];
+
+        let test_list_file = Path::new("test_result.json");
+        let test_list_path = Path::new("/test_data").join(test_list_file);
+
+        let mut args = vec![
+            format!("--gtest_filter={}", test),
+            format!("--gtest_output=json:{}", test_list_path.display()),
+        ];
+
+        args.extend(component.args.clone());
+
+        // run test.
+        let (process, job, stdlogger) = test_runners_lib::launch_process(
+            &component.binary,
+            &component.name,
+            Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
+            component.ns.clone().map_err(NamespaceError::Clone)?,
+            Some(args),
+            Some(names),
+            None,
+        )
+        .await?;
+
+        // Load bearing to hold job guard.
+        let _job = ScopedJob::new(job);
+
+        let (test_logger, log_client) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
+            .map_err(KernelError::CreateSocket)
+            .unwrap();
+        run_listener.on_test_case_started(test, log_client).map_err(RunTestError::SendStart)?;
+        let test_logger =
+            fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
+        let mut test_logger = LogWriter::new(test_logger);
+
+        // collect stdout in background before waiting for process termination.
+        let std_reader = StdStreamReader::new(stdlogger);
+
+        fx_log_info!("Waiting for test to finish: {}", test);
+
+        // wait for test to end.
+        fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
+            .await
+            .map_err(KernelError::ProcessExit)
+            .unwrap();
+
+        fx_log_info!("Collecting logs for {}", test);
+        let logs = std_reader.get_logs().await?;
+
+        // TODO(4610): logs might not be utf8, fix the code.
+        let output = from_utf8(&logs)?;
+
+        fx_log_info!("Opening output file for {}", test);
+
+        // read test result file.
+        let result_str = match read_file(&self.output_dir_proxy, &test_list_file).await {
+            Ok(b) => b,
+            Err(e) => {
+                // TODO(45857): Introduce Status::InternalError.
+                test_logger
+                    .write_str(format!(
+                        "test did not complete, test output:\n{}\nError:{:?}",
+                        output,
+                        IoError::File(e)
+                    ))
+                    .await?;
+                run_listener
+                    .on_test_case_finished(test, Outcome { status: Some(Status::Failed) })
+                    .map_err(RunTestError::SendFinish)?;
+                return Ok(());
+            }
+        };
+
+        fx_log_info!("parse output file for {}", test);
+        let test_list: TestOutput =
+            serde_json::from_str(&result_str).map_err(RunTestError::JsonParse)?;
+        fx_log_info!("parsed output file for {}", test);
+
+        // parse test results.
+        if test_list.testsuites.len() != 1 || test_list.testsuites[0].testsuite.len() != 1 {
+            // TODO(45857): Introduce Status::InternalError.
+            test_logger
+                .write_str(format!(
+                    "unexpected output, should have received exactly one test result:\n{}",
+                    output
+                ))
+                .await?;
+            run_listener
+                .on_test_case_finished(test, Outcome { status: Some(Status::Failed) })
+                .map_err(RunTestError::SendFinish)?;
+            return Ok(());
+        }
+
+        // as we only run one test per iteration result would be always at 0 index in the arrays.
+        let test_suite = &test_list.testsuites[0].testsuite[0];
+        match &test_suite.failures {
+            Some(failures) => {
+                for f in failures {
+                    test_logger.write_str(format!("failure: {}\n", f.failure)).await?;
+                }
+                run_listener
+                    .on_test_case_finished(test, Outcome { status: Some(Status::Failed) })
+                    .map_err(RunTestError::SendFinish)?;
+            }
+            None => {
+                run_listener
+                    .on_test_case_finished(test, Outcome { status: Some(Status::Passed) })
+                    .map_err(RunTestError::SendFinish)?;
+            }
+        }
+        fx_log_info!("test finish {}", test);
+        Ok(())
+    }
+
+    /// Runs tests defined by `tests_names` and uses `run_listener` to send test events.
+    // TODO(45852): Support disabled tests.
+    // TODO(45853): Support test stdout, or devise a mechanism to replace it.
+    pub async fn run_tests(
+        &self,
+        test_names: Vec<String>,
+        component: Arc<Component>,
+        run_listener: RunListenerProxy,
+    ) -> Result<(), RunTestError> {
+        for test in &test_names {
+            self.run_test(test, component.clone(), &run_listener).await?;
+        }
+        Ok(())
     }
 
     /// Launches test process and gets test list out. Returns list of tests names in the format
@@ -300,71 +575,64 @@ impl TestServer {
             return Ok(t.clone());
         }
 
-        let (client_endpoint, server_endpoint) =
-            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()
-                .map_err(EnumerationError::CreateEndpoints)?;
+        let names = vec![self.test_data_namespace()?];
 
-        self.output_dir_proxy
-            .clone(
-                CLONE_FLAG_SAME_RIGHTS,
-                fidl::endpoints::ServerEnd::<fio::NodeMarker>::new(server_endpoint.into_channel()),
-            )
-            .map_err(EnumerationError::CloneProxy)?;
-
-        let names =
-            vec![fproc::NameInfo { path: "/test_data".to_owned(), directory: client_endpoint }];
-
-        let test_list_file = "test_list.json";
-        let test_list_path = format!("/test_data/{}", test_list_file);
+        let test_list_file = Path::new("test_list.json");
+        let test_list_path = Path::new("/test_data").join(test_list_file);
 
         let mut args = vec![
             "--gtest_list_tests".to_owned(),
-            format!("--gtest_output=json:{}", test_list_path),
+            format!("--gtest_output=json:{}", test_list_path.display()),
         ];
 
         args.extend(component.args.clone());
 
-        let (process, _job, logger) = test_runners_lib::launch_process(
+        let (process, job, stdlogger) = test_runners_lib::launch_process(
             &component.binary,
             &component.name,
-            Some(component.job.create_child_job().map_err(EnumerationError::CreateJob)?),
-            component.ns.clone().map_err(EnumerationError::CloneNamespace)?,
+            Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
+            component.ns.clone().map_err(NamespaceError::Clone)?,
             Some(args),
             Some(names),
             None,
         )
         .await?;
 
+        // collect stdout in background before waiting for process termination.
+        let std_reader = StdStreamReader::new(stdlogger);
+
+        // Load bearing to hold job guard.
+        let _job = ScopedJob::new(job);
+
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
             .await
-            .map_err(EnumerationError::ProcessExit)?;
+            .map_err(KernelError::ProcessExit)
+            .unwrap();
 
-        let process_info = process.info().map_err(EnumerationError::ProcessInfo)?;
+        let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
 
         if process_info.return_code != 0 {
-            let logs = logger.try_concat().await.map_err(EnumerationError::LogError)?;
+            let logs = std_reader.get_logs().await?;
+            // TODO(4610): logs might not be utf8, fix the code.
             let output = from_utf8(&logs)?;
-            // TODO(anmittal): Add a error logger to API so that we can display test stdout logs.
+            // TODO(45858): Add a error logger to API so that we can display test stdout logs.
             fx_log_err!("Failed getting list of tests:\n{}", output);
             return Err(EnumerationError::ListTest);
         }
 
-        // Open the file in read-only mode.
-
-        let result_file_proxy = io_util::open_file(
-            &self.output_dir_proxy,
-            Path::new(test_list_file),
-            OPEN_RIGHT_READABLE,
-        )
-        .map_err(EnumerationError::OpenFile)?;
-
-        let result_str = match io_util::read_file(&result_file_proxy).await {
+        let result_str = match read_file(&self.output_dir_proxy, &test_list_file).await {
             Ok(b) => b,
             Err(e) => {
-                let logs = logger.try_concat().await.map_err(EnumerationError::LogError)?;
+                let logs = std_reader.get_logs().await?;
+
+                // TODO(4610): logs might not be utf8, fix the code.
                 let output = from_utf8(&logs)?;
-                fx_log_err!("Failed getting list of tests from {}:\n{}", test_list_file, output);
-                return Err(EnumerationError::ReadFile(e));
+                fx_log_err!(
+                    "Failed getting list of tests from {}:\n{}",
+                    test_list_file.display(),
+                    output
+                );
+                return Err(IoError::File(e).into());
             }
         };
 
@@ -404,13 +672,24 @@ impl TestServer {
                         .send(&mut tests.into_iter().map(|name| ftest::Case { name: Some(name) }))
                         .map_err(SuiteServerError::Response)?;
                 }
-                ftest::SuiteRequest::Run { tests: _, options: _, listener: _, .. } => {
+                ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
                     let component = component.upgrade();
                     if component.is_none() {
                         // no component object, return, test has ended.
                         break;
                     }
-                    panic!("not implemented yet!");
+
+                    let test_names = tests
+                        .into_iter()
+                        .map(|t| t.name.ok_or(SuiteServerError::TestCaseName))
+                        .collect::<Result<Vec<_>, _>>()?;
+
+                    self.run_tests(
+                        test_names,
+                        component.unwrap(),
+                        listener.into_proxy().map_err(FidlError::ClientEndToProxy).unwrap(),
+                    )
+                    .await?;
                 }
             }
         }
@@ -473,6 +752,8 @@ impl ComponentRuntime {
     }
 }
 
+// TODO(45854): Add integration tests once changes are made to component_manager_for_test to
+// support runners. Currently test has to create a root cml file to offer runner to the test.
 #[cfg(test)]
 mod tests {
     use {
@@ -480,6 +761,11 @@ mod tests {
         anyhow::{Context as _, Error},
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_test::{
+            RunListenerMarker,
+            RunListenerRequest::{OnTestCaseFinished, OnTestCaseStarted},
+            RunListenerRequestStream,
+        },
         fio::OPEN_RIGHT_WRITABLE,
         fuchsia_runtime::job_default,
         runner::component::ComponentNamespaceError,
@@ -542,20 +828,25 @@ mod tests {
         };
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn can_enumerate_sample_test() -> Result<(), Error> {
-        let test_data = TestDataDir::new()?;
-
+    fn sample_test_component() -> Result<Arc<Component>, Error> {
         let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
-        let component = Arc::new(Component {
+        Ok(Arc::new(Component {
             url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
             name: "test.cm".to_owned(),
             binary: "bin/sample_tests".to_owned(),
             args: vec![],
             ns: ns,
             job: current_job!(),
-        });
+        }))
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn can_enumerate_sample_test() -> Result<(), Error> {
+        let test_data = TestDataDir::new()?;
+
+        let component = sample_test_component()?;
+
         let mut server = TestServer::new(test_data.proxy()?);
 
         assert_eq!(
@@ -597,6 +888,150 @@ mod tests {
         let mut server = TestServer::new(test_data.proxy()?);
 
         assert_eq!(server.enumerate_tests(component.clone()).await?, Vec::<String>::new());
+
+        Ok(())
+    }
+
+    #[derive(PartialEq, Debug)]
+    enum ListenerEvent {
+        StartTest(String),
+        FinishTest(String, Outcome),
+    }
+
+    async fn collect_listener_event(
+        mut listener: RunListenerRequestStream,
+    ) -> Result<Vec<ListenerEvent>, Error> {
+        let mut ret = vec![];
+        // collect loggers so that they do not die.
+        let mut loggers = vec![];
+        while let Some(result_event) = listener.try_next().await? {
+            match result_event {
+                OnTestCaseStarted { name, primary_log, .. } => {
+                    ret.push(ListenerEvent::StartTest(name));
+                    loggers.push(primary_log);
+                }
+                OnTestCaseFinished { name, outcome, .. } => {
+                    ret.push(ListenerEvent::FinishTest(name, outcome))
+                }
+            }
+        }
+        Ok(ret)
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_multiple_tests() -> Result<(), Error> {
+        let test_data = TestDataDir::new()?;
+        let component = sample_test_component()?;
+        let server = TestServer::new(test_data.proxy()?);
+
+        let (run_listener_client, run_listener) =
+            fidl::endpoints::create_request_stream::<RunListenerMarker>()
+                .expect("Failed to create run_listener");
+
+        let run_fut = server.run_tests(
+            vec![
+                "SampleTest1.SimpleFail".to_owned(),
+                "SampleTest1.Crashing".to_owned(),
+                "SampleTest2.SimplePass".to_owned(),
+                "Tests/SampleParameterizedTestFixture.Test/2".to_owned(),
+            ],
+            component,
+            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+        );
+
+        let result_fut = collect_listener_event(run_listener);
+
+        let (result, events_result) = future::join(run_fut, result_fut).await;
+        result.expect("Failed to run tests");
+
+        let events = events_result.expect("Failed to collect events");
+
+        let expected_events = vec![
+            ListenerEvent::StartTest("SampleTest1.SimpleFail".to_owned()),
+            ListenerEvent::FinishTest(
+                "SampleTest1.SimpleFail".to_owned(),
+                Outcome { status: Some(Status::Failed) },
+            ),
+            ListenerEvent::StartTest("SampleTest1.Crashing".to_owned()),
+            ListenerEvent::FinishTest(
+                "SampleTest1.Crashing".to_owned(),
+                Outcome { status: Some(Status::Failed) },
+            ),
+            ListenerEvent::StartTest("SampleTest2.SimplePass".to_owned()),
+            ListenerEvent::FinishTest(
+                "SampleTest2.SimplePass".to_owned(),
+                Outcome { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::StartTest("Tests/SampleParameterizedTestFixture.Test/2".to_owned()),
+            ListenerEvent::FinishTest(
+                "Tests/SampleParameterizedTestFixture.Test/2".to_owned(),
+                Outcome { status: Some(Status::Passed) },
+            ),
+        ];
+
+        assert_eq!(expected_events, events);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_no_test() -> Result<(), Error> {
+        let test_data = TestDataDir::new()?;
+        let component = sample_test_component()?;
+        let server = TestServer::new(test_data.proxy()?);
+
+        let (run_listener_client, run_listener) =
+            fidl::endpoints::create_request_stream::<RunListenerMarker>()
+                .expect("Failed to create run_listener");
+
+        let run_fut = server.run_tests(
+            vec![],
+            component,
+            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+        );
+
+        let result_fut = collect_listener_event(run_listener);
+
+        let (result, events_result) = future::join(run_fut, result_fut).await;
+        result.expect("Failed to run tests");
+
+        let events = events_result.expect("Failed to collect events");
+        assert_eq!(events.len(), 0);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_one_test() -> Result<(), Error> {
+        let test_data = TestDataDir::new()?;
+        let component = sample_test_component()?;
+        let server = TestServer::new(test_data.proxy()?);
+
+        let (run_listener_client, run_listener) =
+            fidl::endpoints::create_request_stream::<RunListenerMarker>()
+                .expect("Failed to create run_listener");
+
+        let run_fut = server.run_tests(
+            vec!["SampleTest2.SimplePass".to_owned()],
+            component,
+            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+        );
+
+        let result_fut = collect_listener_event(run_listener);
+
+        let (result, events_result) = future::join(run_fut, result_fut).await;
+        result.expect("Failed to run tests");
+
+        let events = events_result.expect("Failed to collect events");
+
+        let expected_events = vec![
+            ListenerEvent::StartTest("SampleTest2.SimplePass".to_owned()),
+            ListenerEvent::FinishTest(
+                "SampleTest2.SimplePass".to_owned(),
+                Outcome { status: Some(Status::Passed) },
+            ),
+        ];
+
+        assert_eq!(expected_events, events);
 
         Ok(())
     }
