@@ -107,7 +107,7 @@ class Weather extends UiSpec {
         properties['temperature']['value'] != null) {
       location
         ..observation = properties['textDescription']
-        ..tempInDegrees = properties['temperature']['value'].toDouble();
+        ..tempInDegrees = double.parse(properties['temperature']['value']);
     }
   }
 
