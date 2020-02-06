@@ -67,12 +67,16 @@ pub struct DiscoveryRequestToken {
 }
 
 impl Drop for DiscoveryRequestToken {
-    #[allow(unused_must_use)] // FIXME(BT-643)
     fn drop(&mut self) {
         fx_vlog!(1, "DiscoveryRequestToken dropped");
         if let Some(host) = self.adap.upgrade() {
-            // FIXME(nickpollard) this should be `.await`ed, but not while holding the lock
-            host.write().stop_discovery();
+            let await_response = host.write().stop_discovery();
+            fasync::spawn(async move {
+                if let Err(err) = await_response.await {
+                    // TODO(45325) - we should close the host channel if an error is returned
+                    fx_log_warn!("Unexpected error response when stopping discovery: {:?}", err);
+                }
+            });
         }
     }
 }
@@ -82,12 +86,18 @@ pub struct DiscoverableRequestToken {
 }
 
 impl Drop for DiscoverableRequestToken {
-    #[allow(unused_must_use)] // FIXME(nickpollard)
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
-            // FIXME(BT-643) this should be `.await`ed, but not while holding the lock
-            let host = host.write();
-            host.set_discoverable(false);
+            let await_response = host.write().set_discoverable(false);
+            fasync::spawn(async move {
+                if let Err(err) = await_response.await {
+                    // TODO(45325) - we should close the host channel if an error is returned
+                    fx_log_warn!(
+                        "Unexpected error response when disabling discoverable: {:?}",
+                        err
+                    );
+                }
+            });
         }
     }
 }
