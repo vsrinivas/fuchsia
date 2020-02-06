@@ -6,13 +6,14 @@ use {
     crate::mouse_pointer_hack::*,
     crate::pointer_hack_server::PointerHackServer,
     crate::touch_pointer_hack::*,
+    anyhow::{Context, Error},
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     futures::StreamExt,
     input::{
-        ime_handler::ImeHandler, input_device::InputDeviceBinding, input_handler::InputHandler,
-        input_pipeline::InputPipeline, keyboard, mouse, mouse_handler, mouse_handler::MouseHandler,
-        shortcut_handler::ShortcutHandler, touch, touch_handler::TouchHandler,
+        ime_handler::ImeHandler, input_device, input_handler::InputHandler,
+        input_pipeline::InputPipeline, mouse_handler, mouse_handler::MouseHandler,
+        shortcut_handler::ShortcutHandler, touch_handler::TouchHandler,
     },
     scene_management::{self, FlatSceneManager, SceneManager},
 };
@@ -27,42 +28,20 @@ use {
 pub async fn handle_input(
     scene_manager: FlatSceneManager,
     pointer_hack_server: &PointerHackServer,
-) {
-    let input_pipeline = InputPipeline::new(
-        device_bindings().await,
+) -> Result<(), Error> {
+    let input_pipeline = InputPipeline::new2(
+        vec![
+            input_device::InputDeviceType::Mouse,
+            input_device::InputDeviceType::Touch,
+            input_device::InputDeviceType::Keyboard,
+        ],
         input_handlers(scene_manager, pointer_hack_server).await,
-    );
+    )
+    .await
+    .context("Failed to create InputPipeline.")?;
 
-    input_pipeline.handle_input_events().await;
-}
-
-async fn device_bindings() -> Vec<Box<dyn InputDeviceBinding>> {
-    let mut bindings: Vec<Box<dyn InputDeviceBinding>> = vec![];
-    if let Ok(touch_bindings) = touch::all_touch_bindings().await {
-        let mut boxed_bindings: Vec<Box<dyn InputDeviceBinding>> = touch_bindings
-            .into_iter()
-            .map(|binding| Box::new(binding) as Box<dyn InputDeviceBinding>)
-            .collect();
-        bindings.append(&mut boxed_bindings);
-    }
-
-    if let Ok(mouse_bindings) = mouse::all_mouse_bindings().await {
-        let mut boxed_bindings: Vec<Box<dyn InputDeviceBinding>> = mouse_bindings
-            .into_iter()
-            .map(|binding| Box::new(binding) as Box<dyn InputDeviceBinding>)
-            .collect();
-        bindings.append(&mut boxed_bindings);
-    }
-
-    if let Ok(keyboard_bindings) = keyboard::all_keyboard_bindings().await {
-        let mut boxed_bindings: Vec<Box<dyn InputDeviceBinding>> = keyboard_bindings
-            .into_iter()
-            .map(|binding| Box::new(binding) as Box<dyn InputDeviceBinding>)
-            .collect();
-        bindings.append(&mut boxed_bindings);
-    }
-
-    bindings
+    input_pipeline.handle_input_events2().await;
+    Ok(())
 }
 
 async fn input_handlers(
