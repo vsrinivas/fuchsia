@@ -1,6 +1,6 @@
 # Inspect codelab
 
-This document contains the codelab for Inspect in C++ and Rust.
+This document contains the codelab for Inspect in C++, Dart and Rust.
 
 The code is available at:
 
@@ -62,12 +62,7 @@ Note: Replace core.x64 with your product and board configuration.
 There is a component that serves a protocol called [Reverser][fidl-reverser]:
 
 ```fidl
-// Implementation of a string reverser.
-[Discoverable]
-protocol Reverser {
-    // Returns the input string reversed character-by-character.
-    Reverse(string:1024 input) -> (string:1024 response);
-};
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/fidl/reverser.test.fidl" region_tag="reverser_fidl" adjust_indentation="auto" %}
 ```
 
 This protocol has a single method, called "Reverse," that simply reverses
@@ -162,19 +157,7 @@ Now that you can reproduce the problem, take a look at what the client is doing:
    In the [client main][cpp-client-main]:
 
    ```cpp
-   // Repeatedly send strings to be reversed to the other component.
-   for (int i = 2; i < argc; i++) {
-     printf("Input: %s\n", argv[i]);
-
-     std::string output;
-     if (ZX_OK != reverser->Reverse(argv[i], &output)) {
-       printf("Error: Failed to reverse string.\nPerhaps %s was not found?\n",
-              reverser_component_url.c_str());
-       exit(1);
-     }
-
-     printf("Output: %s\n", output.c_str());
-   }
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/client/main.cc" region_tag="reverse_loop" adjust_indentation="auto" %}
    ```
 
 * {Rust}
@@ -182,13 +165,7 @@ Now that you can reproduce the problem, take a look at what the client is doing:
    In the [client main][rust-client-main]:
 
    ```rust
-   for string in args.strings {
-       println!("Input: {}", string);
-       match reverser.reverse(&string).await {
-           Ok(output) => println!("Output: {}\n", output),
-           Err(e) => println!("Failed to reverse string. Error: {:?}", e),
-       }
-   }
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/client/src/main.rs" region_tag="reverse_loop" adjust_indentation="auto" %}
    ```
 
 * {Dart}
@@ -196,11 +173,7 @@ Now that you can reproduce the problem, take a look at what the client is doing:
   In the [client main][dart-client-main]:
 
   ```dart
-  for (int i = 1; i < args.length; i++) {
-      print('Input: ${args[i]}');
-      final response = await reverser.reverse(args[i]);
-      print('Output: $response');
-  }
+  {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/client/lib/main.dart" region_tag="reverse_loop" adjust_indentation="auto" %}
   ```
 
 
@@ -218,20 +191,19 @@ codelab. There is a lot of standard component setup:
    - Logging initialization
 
      ```cpp
-     InitLogger({"inspect_cpp_codelab", "part1"});
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/main.cc" region_tag="init_logger" adjust_indentation="auto" %}
      ```
 
    - Creating an asynchronous executor
 
      ```cpp
-     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-     auto context = sys::ComponentContext::Create();
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/main.cc" region_tag="async_executor" adjust_indentation="auto" %}
      ```
 
    - Serving a public service
 
      ```cpp
-     context->outgoing()->AddPublicService(Reverser::CreateDefaultHandler());
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/main.cc" region_tag="serve_outgoing" adjust_indentation="auto" %}
      ```
 
 * {Rust}
@@ -241,22 +213,25 @@ codelab. There is a lot of standard component setup:
    - Logging initialization
 
      ```rust
-     syslog::init_with_tags(&["inspect_rust_codelab", "part1"])?;
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="init_logger" adjust_indentation="auto" %}
      ```
 
    - ServiceFs initialization and collection
 
      ```rust
-     let mut fs = ServiceFs::new();
-     ...
-     let running_service_fs = fs.collect::<()>().map(Ok);
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="servicefs_init" adjust_indentation="auto" %}
+     ```
+
+   - ServiceFs collection
+
+     ```rust
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="servicefs_collect" adjust_indentation="auto" %}
      ```
 
    - Serving a public service
 
      ```rust
-     fs.dir("svc").add_fidl_service(move |stream| reverser_factory.spawn_new(stream));
-     fs.take_and_serve_directory_handle()?;
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="serve_service" adjust_indentation="auto" %}
      ```
 
 * {Dart}
@@ -266,17 +241,13 @@ codelab. There is a lot of standard component setup:
   - Logging initialization
 
     ```dart
-    setupLogger(name: 'inspect_rust_codelab', globalTags: ['part_1']);
+    {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="init_logger" adjust_indentation="auto" %}
     ```
 
   - Serving a public service
 
     ```dart
-    final context = StartupContext.fromStartupInfo();
-    context.outgoing.addPublicService<fidl_codelab.Reverser>(
-        ReverserImpl.getDefaultBinder(),
-        fidl_codelab.Reverser.$serviceName,
-    );
+    {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="serve_service" adjust_indentation="auto" %}
     ```
 
 See what the reverser definition is:
@@ -286,16 +257,7 @@ See what the reverser definition is:
    In [reverser.h][cpp-part1-reverser-h]:
 
    ```cpp
-   class Reverser final : public fuchsia::examples::inspect::Reverser {
-    public:
-     // Implementation of Reverser.Reverse().
-     void Reverse(std::string input, ReverseCallback callback) override;
-
-     // Return a request handler for the Reverser protocol that binds
-     // incoming requests to new Reversers.
-     static fidl::InterfaceRequestHandler<fuchsia::examples::inspect::Reverser>
-      CreateDefaultHandler();
-   };
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/reverser.h" region_tag="reverser_h" adjust_indentation="auto" %}
    ```
 
    This class implements the `Reverser` protocol. A helper method called
@@ -307,36 +269,7 @@ See what the reverser definition is:
    In [reverser.rs][rust-part1-reverser]:
 
    ```rust
-   pub struct ReverserServerFactory {}
-
-   impl ReverserServerFactory {
-       // CODELAB: Create a new() constructor that takes an Inspect node.
-       pub fn new() -> Self {
-           Self {}
-       }
-
-       pub fn spawn_new(&self, stream: ReverserRequestStream) {
-           ReverserServer::new().spawn(stream);
-       }
-   }
-
-   struct ReverserServer {}
-
-   impl ReverserServer {
-       fn new() -> Self {
-           Self {}
-       }
-
-       pub fn spawn(self, mut stream: ReverserRequestStream) {
-           fasync::spawn_local(async move {
-               while let Some(request) = stream.try_next().await.expect("serve reverser") {
-                   let ReverserRequest::Reverse { input, responder } = request;
-                   let result = input.chars().rev().collect::<String>();
-                   responder.send(&result).expect("send reverse request response");
-               }
-           });
-       }
-   }
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/reverser.rs" region_tag="reverser_def" adjust_indentation="auto" %}
    ```
 
    This struct serves the `Reverser` protocol. The `ReverserServerFactory` (will make more sense
@@ -347,46 +280,7 @@ See what the reverser definition is:
    In [reverser.dart][dart-part1-reverser]:
 
    ```dart
-   typedef BindCallback = void Function(InterfaceRequest<fidl_codelab.Reverser>);
-   typedef VoidCallback = void Function();
-
-   class ReverserImpl extends fidl_codelab.Reverser {
-     final _binding = fidl_codelab.ReverserBinding();
-
-     // CODELAB: Create a constructor that takes an Inspect node.
-     ReverserImpl();
-
-     @override
-     Future<String> reverse(String value) async {
-       // CODELAB: Add stats about incoming requests.
-       print(String.fromCharCodes(value.runes.toList().reversed));
-       return '';
-     }
-
-     static final _bindingSet = <ReverserImpl>{};
-     static BindCallback getDefaultBinder() {
-       return (InterfaceRequest<fidl_codelab.Reverser> request) {
-         // CODELAB: Add stats about incoming connections.
-         final reverser = ReverserImpl()..bind(request, onClose: () {});
-         _bindingSet.add(reverser);
-       };
-     }
-
-     void bind(
-       InterfaceRequest<fidl_codelab.Reverser> request, {
-       @required VoidCallback onClose,
-     }) {
-       _binding.stateChanges.listen((state) {
-         if (state == InterfaceState.closed) {
-           dispose();
-           onClose();
-         }
-       });
-       _binding.bind(this, request);
-     }
-
-     void dispose() {}
-   }
+   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/src/reverser.dart" region_tag="reverser_impl" adjust_indentation="auto" %}
    ```
 
    This class implements the `Reverser` protocol. A helper method called `getDefaultBinder` returns
@@ -415,53 +309,24 @@ state without needing to dig through logs.
       In [BUILD.gn][cpp-part1-build]:
 
       ```
-      source_set("lib") {
-        ...
-
-        public_deps = [
-          "//sdk/lib/sys/inspect/cpp",
-          ...
-        ]
-      }
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
-      In [BUILD.gn][rust-part1-build]:
+      In [BUILD.gn][rust-part1-build] in `deps` under `rustc_binary("bin")`:
 
       ```
-      rustc_binary("bin") {
-        ...
-
-        deps = [
-          "//src/lib/inspect/rust/fuchsia-inspect",
-          ...
-        ]
-      }
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
       ```
 
    * {Dart}
 
-     In [BUILD.gn][dart-part1-build]:
+     In [BUILD.gn][dart-part1-build] in `deps` under `dart_library("lib")` and
+     `dart_app("bin")`:
 
      ```
-     dart_library("lib") {
-       ...
-
-       deps = [
-         "//src/lib/inspect/rust/fuchsia-inspect",
-         ...
-       ]
-     }
-
-     dart_app("bin") {
-       ...
-
-       deps = [
-         "//src/lib/inspect/rust/fuchsia-inspect",
-         ...
-       ]
-     }
+     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
      ```
 
 2. Initialize Inspect:
@@ -471,11 +336,8 @@ state without needing to dig through logs.
       In [main.cc][cpp-part1-main]:
 
       ```cpp
-      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-      auto context = sys::ComponentContext::Create();
-
-      // Create an inspector for this component.
-      sys::ComponentInspector inspector(context.get());
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="part_1_include_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="part_1_init_inspect" adjust_indentation="auto" %}
       ```
 
 
@@ -484,8 +346,8 @@ state without needing to dig through logs.
       In [main.rs][rust-part1-main]:
 
       ```rust
-      let mut fs = ServiceFs::new();
-      component::inspector().serve(&mut fs)?;
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="part_1_use_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="part_1_serve_inspect" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -493,8 +355,8 @@ state without needing to dig through logs.
      In [main.dart][dart-part1-main]:
 
      ```dart
-     import 'package:fuchsia_inspect/inspect.dart' as inspect;
-     final inspector = inspect.Inspect();
+     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_import_inspect" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_init_inspect" adjust_indentation="auto" %}
      ```
 
    You are now using Inspect.
@@ -504,7 +366,7 @@ state without needing to dig through logs.
    * {C++}
 
       ```cpp
-      inspector.root().CreateString("version", "part1", &inspector);
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="part_1_write_version" adjust_indentation="auto" %}
       ```
 
       This snippet does the following:
@@ -530,7 +392,7 @@ state without needing to dig through logs.
    * {Rust}
 
      ```rust
-     component::inspector().root().record_string("version", "part1");
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="part_1_write_version" adjust_indentation="auto" %}
      ```
 
      This snippet does the following:
@@ -557,7 +419,7 @@ state without needing to dig through logs.
    * {Dart}
 
      ```dart
-     inspector.root.stringProperty('version').setValue('part1');
+     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_write_version" adjust_indentation="auto" %}
      ```
 
      This snippet does the following:
@@ -731,27 +593,21 @@ is even being handled by your component.
    * {C++}
 
       ```cpp
-      context->outgoing()->AddPublicService(
-          Reverser::CreateDefaultHandler(inspector.root().CreateChild("reverser_service")));
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="part_1_new_child" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
 
       ```rust
-      let reverser_factory = ReverserServerFactory::new(
-          component::inspector().root().create_child("reverser_service"));
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="part_1_new_child" adjust_indentation="auto" %}
       ```
 
    * {Dart}
 
 
       ```dart
-      final context = StartupContext.fromStartupInfo();
-      context.outgoing.addPublicService<fidl_codelab.Reverser>(
-          ReverserImpl.getDefaultBinder(inspector.root.child('reverser_service')),
-          fidl_codelab.Reverser.$serviceName,
-      );
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_new_child" adjust_indentation="auto" %}
       ```
 
 2. Update your server to accept this node:
@@ -762,9 +618,8 @@ is even being handled by your component.
       and [reverser.cc][part1-reverser-cc]:
 
       ```cpp
-      fidl::InterfaceRequestHandler<fuchsia::examples::inspect::Reverser>
-      Reverser::CreateDefaultHandler(inspect::Node node) {
-         ...
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.h" region_tag="part_1_include" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.cc" region_tag="part_1_update_server" adjust_indentation="auto" %}
       ```
 
    * {Rust}
@@ -772,19 +627,8 @@ is even being handled by your component.
       Update `ReverserServerFactory::new` to accept this node in [reverser.rs][rust-part1-reverser]:
 
       ```rust
-      pub struct ReverserServerFactory {
-          node: inspect::Node,
-      }
-
-      impl ReverserServerFactory {
-          pub fn new(node: inspect::Node) -> Self {
-              Self { node }
-          }
-
-          pub fn spawn_new(&self, stream: ReverserRequestStream) {
-              ReverserServer::new().spawn(stream)
-          }
-      }
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="part_1_use" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="part_1_update_reverser" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -793,9 +637,8 @@ is even being handled by your component.
       and [reverser.cc][part1-reverser-cc]:
 
       ```dart
-      import 'package:fuchsia_inspect/inspect.dart' as inspect;
-      static BindCallback getDefaultBinder(inspect.Node node) {
-        ...
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_import" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_update_reverser" adjust_indentation="auto" %}
       ```
 
 3. Add a property to keep track of the number of connections:
@@ -805,14 +648,7 @@ is even being handled by your component.
    * {C++}
 
       ```cpp
-      return [connection_count = node.CreateUint("connection_count", 0),
-              node = std::move(node),
-              binding_set =
-                  std::make_unique<fidl::BindingSet<ReverserProto,
-                                                    std::unique_ptr<Reverser>>>()](
-                 fidl::InterfaceRequest<ReverserProto> request) mutable {
-        connection_count.Add(1);
-        ...
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.cc" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
       ```
 
      Note: `node` is moved into the handler so that it is not dropped and
@@ -821,22 +657,7 @@ is even being handled by your component.
    * {Rust}
 
       ```rust
-      pub struct ReverserServerFactory {
-          node: inspect::Node,
-          connection_count: inspect::UintProperty,
-      }
-
-      impl ReverserServerFactory {
-          pub fn new(node: inspect::Node) -> Self {
-              let connection_count = node.create_uint("connection_count", 0);
-              Self { node, connection_count }
-          }
-
-          pub fn spawn_new(&self, stream: ReverserRequestStream) {
-              ReverserServer::new().spawn(stream);
-              self.connection_count.add(1);
-          }
-      }
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_3/src/reverser.rs" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
       ```
 
      Note: `node` is moved into the handler so that it is not dropped and
@@ -848,12 +669,7 @@ is even being handled by your component.
    * {Dart}
 
       ```dart
-      static BindCallback getDefaultBinder(inspect.Node node) {
-        final glabalConnectionCount = node.intProperty('connection_count')
-          ..setValue(0);
-        return (InterfaceRequest<fidl_codelab.Reverser> request) {
-          glabalConnectionCount.add(1);
-          ...
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
       ```
 
    This snippet demonstrates creating a new `UintProperty` (containing a 64
@@ -911,19 +727,19 @@ implementation itself. In particular, it will be helpful to know:
    * {C++}
 
       ```cpp
-      auto child = node.CreateChild(node.UniqueName("connection-"));
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.cc" region_tag="part_1_connection_child" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
       ```rust
-      let node = self.node.create_child(inspect::unique_name("connection"));
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="part_1_connection_child" adjust_indentation="auto" %}
       ```
 
    * {Dart}
 
       ```dart
-      final node = node.child(inspect.uniqueName('connection'));
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_connection_child" adjust_indentation="auto" %}
       ```
 
    This will create unique names starting with "connection".
@@ -998,20 +814,19 @@ The output above shows that the connection is still open and it received one req
 
       ```cpp
       // At the end of Reverser::Reverse
-      callback(std::move(output));
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.cc" region_tag="part_1_callback" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
       ```rust
-      responder.send(&result).expect("send reverse request response");
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="part_1_respond" adjust_indentation="auto" %}
       ```
 
    * {Dart}
 
       ```dart
-      final result = String.fromCharCodes(value.runes.toList().reversed);
-      return result;
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_result" adjust_indentation="auto" %}
       ```
 
 2. Run the client again:
@@ -1066,29 +881,19 @@ out to the "FizzBuzz" service and prints the response:
 * {C++}
 
    ```cpp
-   // Send a request to the FizzBuzz service and print the response when it arrives.
-   fuchsia::examples::inspect::FizzBuzzPtr fizz_buzz;
-   context->svc()->Connect(fizz_buzz.NewRequest());
-   fizz_buzz->Execute(30, [](std::string result) { FX_LOGS(INFO) << "Got FizzBuzz: " << result; });
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/main.cc" region_tag="fizzbuzz_connect" adjust_indentation="auto" %}
    ```
 
 * {Rust}
 
    ```rust
-   let fizzbuzz = client::connect_to_service::<FizzBuzzMarker>()
-       .context("failed to connect to fizzbuzz")?;
-   match fizzbuzz.execute(30u32).await {
-       Ok(result) => fx_log_info!("Got FizzBuzz: {}", result),
-       Err(e) => fx_log_err!("failed to FizzBuzz#Execute: {:?}", e),
-   };
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="fizzbuzz_connect" adjust_indentation="auto" %}
    ```
 
 * {Dart}
 
    ```dart
-   final fizzBuzz = fidl_codelab.FizzBuzzProxy();
-   context.incoming.connectToService(fizzBuzz);
-   final result = await fizzBuzz.execute(30);
+   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="connect_fizzbuzz" adjust_indentation="auto" %}
    ```
 
 If you see the logs, you will see that this log is never printed.
@@ -1158,52 +963,19 @@ You will need to diagnose and solve this problem.
    * {C++}
 
       ```cpp
-      // Send a request to the FizzBuzz service and print the response when it arrives.
-      fuchsia::examples::inspect::FizzBuzzPtr fizz_buzz;
-      context->svc()->Connect(fizz_buzz.NewRequest());
-
-      // Create an error handler for the FizzBuzz service.
-      fizz_buzz.set_error_handler([&](zx_status_t status) {
-        // CODELAB: Add Inspect here to see if there is an error
-      });
-
-      fizz_buzz->Execute(30, [&](std::string result) {
-        // CODELAB: Add Inspect here to see if there is a response.
-        FX_LOGS(INFO) << "Got FizzBuzz: " << result;
-      });
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
       ```rust
-      let fizzbuzz = client::connect_to_service::<FizzBuzzMarker>()
-          .context("failed to connect to fizzbuzz")?;
-      match fizzbuzz.execute(30u32).await {
-          Ok(result) => {
-              // CODELAB: Add Inspect here to see if there is a response.
-              fx_log_info!("Got FizzBuzz: {}", result);
-          },
-          Err(_) => {
-              // CODELAB: Add Inspect here to see if there is an error
-          }
-      };
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
       ```
 
    * {Dart}
 
       ```dart
-      final fizzBuzz = fidl_codelab.FizzBuzzProxy();
-      context.incoming.connectToService(fizzBuzz);
-
-      // CODELAB: Instrument our connection to FizzBuzz using Inspect. Is there an error?
-      fizzBuzz.execute(30).timeout(const Duration(seconds: 2), onTimeout: () {
-        throw Exception('timeout');
-      }).then((result) {
-        // CODELAB: Add Inspect here to see if there is a response.
-        log.info('Got FizzBuzz: $result');
-      }).catchError((e) {
-        // CODELAB: Instrument our connection to FizzBuzz using Inspect. Is there an error?
-      });
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
       ```
 
 **Exercise**: Add Inspect to the FizzBuzz connection to identify the problem
@@ -1461,9 +1233,7 @@ The code to open a Reverser looks like the following:
 * {C++}
 
    ```cpp
-   binding_set_.AddBinding(std::make_unique<Reverser>(ReverserStats::CreateDefault()),
-                           ptr.NewRequest());
-
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_3/reverser_unittests.cc" region_tag="open_reverser" adjust_indentation="auto" %}
    // Alternatively
    binding_set_.AddBinding(std::make_unique<Reverser>(inspect::Node()),
                            ptr.NewRequest());
@@ -1472,15 +1242,13 @@ The code to open a Reverser looks like the following:
 * {Rust}
 
    ```rust
-   let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<ReverserMarker>()?;
-   let reverser = ReverserServer::new(ReverserServerMetrics::default());
-   reverser::spawn(stream);
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="open_reverser" adjust_indentation="auto" %}
    ```
 
 * {Dart}
 
    ```dart
-   ReverserImpl(ReverserStats());
+   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_3/test/reverser_test.dart" region_tag="open_reverser" adjust_indentation="auto" %}
    ```
 
 A default version of the Inspect Node is passed into the Reverser. This
@@ -1533,11 +1301,8 @@ Add code to test the output in Inspect:
 * {C++}
 
    ```cpp
-   #include <lib/inspect/cpp/reader.h>
-   ...
-
-   fit::result<inspect::Hierarchy> hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo());
-   ASSERT_TRUE(hierarchy.is_ok();
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_4/reverser_unittests.cc" region_tag="include_testing" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_4/reverser_unittests.cc" region_tag="get_hierarchy" adjust_indentation="auto" %}
    ```
 
    Note: If you use the LazyNode or LazyValues features, you will need to
@@ -1550,59 +1315,21 @@ Add code to test the output in Inspect:
    You can now read individual properties and children as follows:
 
    ```cpp
-   // Get the property on root called "request_count"
-   auto* global_count =
-           hierarchy.value().node().get_property<inspect::UintPropertyValue>("request_count");
-   // Ensure it is valid.
-   ASSERT_TRUE(global_count);
-   // Check its value.
-   EXPECT_EQ(3u, global_count->value());
-
-   // Get connection 0 by path.
-   auto* connection_0 = hierarchy.value().GetByPath({"connection_0x0"});
-   // Check it is valid and obtain the request_count.
-   ASSERT_TRUE(connection_0);
-   auto* requests_0 =
-       connection_0->node().get_property<inspect::UintPropertyValue>("request_count");
-   // Check that is valid, and check its value.
-   ASSERT_TRUE(requests_0);
-   EXPECT_EQ(2u, requests_0->value());
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_4/reverser_unittests.cc" region_tag="assertions" adjust_indentation="auto" %}
    ```
 
 * {Rust}
 
    ```rust
-   use fuchsia_inspect::{Inspector, assert_inspect_tree};
-   ...
-   let inspector = Inspector::new();
-   ...
-   assert_inspect_tree!(inspector, root: {
-       reverser_service: {
-           connection_count: 2u64,
-           total_requests: 2u
-           "connection0": {
-               request_count: 2u64,
-           },
-       }
-   });
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_4/src/reverser.rs" region_tag="include_testing" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_4/src/reverser.rs" region_tag="test_inspector" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_4/src/reverser.rs" region_tag="assert_tree" adjust_indentation="auto" %}
    ```
 
 * {Dart}
 
    ```dart
-   test('reverser', () async {
-     final vmo = FakeVmoHolder(256 * 1024);
-     final inspector = inspect.Inspect.forTesting(vmo, 'root.inspect');
-     ...
-
-     final matcher = VmoMatcher(vmo);
-
-     final reverserServiceNode = matcher.node().at(['reverser_service']);
-     expect(
-         reverserServiceNode.at(['connection0'])
-           ..propertyEquals('request_count', 2)
-         hasNoErrors);
-   });
+   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_4/test/reverser_test.dart" region_tag="reverser_test" adjust_indentation="auto" %}
    ```
 
    The `VmoMatcher` is a convenient utility for testing inspect integrations. It allows to assert
@@ -1720,25 +1447,7 @@ Look at how the integration test is setup:
       Locate the integration test in [part4/tests/integration_test.cc][cpp-part4-integration].
 
       ```cpp
-      TEST_F(CodelabTest, StartWithFizzBuzz) {
-        auto ptr = StartComponentAndConnect({.include_fizzbuzz_service = true});
-
-        bool error = false;
-        ptr.set_error_handler([&](zx_status_t unused) { error = true; });
-
-        bool done = false;
-        std::string result;
-        ptr->Reverse("hello", [&](std::string value) {
-          result = std::move(value);
-          done = true;
-        });
-
-        // Run until either the error handler reports an error or the result is set.
-        RunLoopUntil([&] { return done || error; });
-
-        ASSERT_FALSE(error);
-        EXPECT_EQ("olleh", result);
-      }
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_4/tests/integration_test.cc" region_tag="integration_test" adjust_indentation="auto" %}
       ```
 
       `StartComponentAndConnect` is responsible for creating a new test
@@ -1752,26 +1461,7 @@ Look at how the integration test is setup:
       Locate the integration test in [part4/tests/integration_test.rs][rust-part4-integration].
 
       ```rust
-      #[fasync::run_singlethreaded(test)]
-      async fn start_with_fizzbuzz() -> Result<(), Error> {
-          let mut test = IntegrationTest::start()?;
-          let reverser = test.start_component_and_connect(TestOptions::default())?;
-          let result = reverser.reverse("hello").await?;
-          assert_eq!(result, "olleh");
-          // CODELAB: Check that the component was connected to FizzBuzz.
-          Ok(())
-      }
-
-      #[fasync::run_singlethreaded(test)]
-      async fn start_without_fizzbuzz() -> Result<(), Error> {
-          let mut test = IntegrationTest::start()?;
-          let reverser = test.start_component_and_connect(TestOptions { include_fizzbuzz: false })?;
-          let result = reverser.reverse("hello").await?;
-          assert_eq!(result, "olleh");
-          // CODELAB: Check that the component failed to connect to FizzBuzz.
-          Ok(())
-      }
-
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_4/tests/integration_test.rs" region_tag="integration_test" adjust_indentation="auto" %}
       ```
 
       `IntegrationTest::start` is responsible for creating a new test
@@ -1785,23 +1475,7 @@ Look at how the integration test is setup:
       Locate the integration test in [part_4/test/integration_test.dart][dart-part4-integration].
 
       ```dart
-      setUp(() async {
-        await env.create();
-      });
-
-      test('start with fizzbuzz', () async {
-        final reverser = await startComponentAndConnect(includeFizzbuzz: true);
-        final result = await reverser.reverse('hello');
-        expect(result, equals('olleh'));
-        // CODELAB: Check that the component was connected to FizzBuzz.
-      });
-
-      test('start without fizzbuzz', () async {
-        final reverser = await startComponentAndConnect();
-        final result = await reverser.reverse('hello');
-        expect(result, equals('olleh'));
-        // CODELAB: Check that the component failed to connect to FizzBuzz.
-      });
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_4/test/integration_test.dart" region_tag="integration_test" adjust_indentation="auto" %}
       ```
 
       `env.create()` is responsible for creating a new test environment.
@@ -1814,175 +1488,22 @@ Look at how the integration test is setup:
    * {C++}
 
      ```cpp
-     #include <rapidjson/document.h>
-     #include <rapidjson/pointer.h>
-
-     std::string GetInspectJson() {
-         // Connect to the Archive.
-         fuchsia::diagnostics::ArchivePtr archive;
-         real_services()->Connect(archive.NewRequest());
-
-         // Open a Reader for each type of data the Archive contains.
-         fuchsia::diagnostics::ReaderPtr reader;
-         archive->ReadInspect(reader.NewRequest(), {} /* selectors */,
-                              [](auto res) {
-                                ASSERT_FALSE(res.is_err()) << "Failed to get reader";
-                              });
-
-         // Since components are asynchronous, you do not know if the observer has seen the test
-         // components yet. You will need to repeatedly read the data.
-         while (true) {
-           std::vector<fuchsia::diagnostics::FormattedContent> current_entries;
-
-           // Get a new snapshot in JSON format.
-           fuchsia::diagnostics::BatchIteratorPtr iterator;
-           reader->GetSnapshot(fuchsia::diagnostics::Format::JSON, iterator.NewRequest(),
-                               [](auto res) {
-                                 ASSERT_FALSE(res.is_err()) << "Failed to get snapshot";
-                               });
-
-           // Get individual batches from the iterator.
-           bool done;
-           iterator->GetNext([&](auto result) {
-             auto res = fit::result<ContentVector, fuchsia::diagnostics::ReaderError>(
-                 std::move(result));
-             if (res.is_ok()) {
-               current_entries = res.take_value();
-             }
-
-             done = true;
-           });
-
-           RunLoopUntil([&] { return done; });
-
-           // Find the returned value that contains the name of your component, this is the
-           // JSON you want.
-           for (const auto& content : current_entries) {
-             std::string json;
-             fsl::StringFromVmo(content.formatted_json_hierarchy(), &json);
-             if (json.find("sys/inspect_cpp_codelab_part_5.cmx") != std::string::npos) {
-               return json;
-             }
-           }
-
-           // Retry with delay until the data appears.
-           usleep(150000);
-         }
-
-         return "";
-       }
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="include_json" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="get_inspect" adjust_indentation="auto" %}
      ```
 
    * {Rust}
 
      ```rust
-     use {
-         ...,
-         anyhow::{format_err, Context},
-         fidl_fuchsia_diagnostics::{
-             ArchiveMarker, BatchIteratorMarker, Format, FormattedContent, ReaderMarker,
-         },
-         fidl_fuchsia_mem::Buffer,
-         fuchsia_component::client,
-         fuchsia_inspect::{assert_inspect_tree, reader::NodeHierarchy},
-         fuchsia_zircon::DurationNum,
-         inspect_formatter::{json::RawJsonNodeHierarchySerializer, HierarchyDeserializer},
-         serde_json,
-     };
-
-     async fn get_inspect_hierarchy(&self) -> Result<NodeHierarchy, Error> {
-         let archive =
-             client::connect_to_service::<ArchiveMarker>().context("connect to Archive")?;
-
-         let (reader, server_end) = fidl::endpoints::create_proxy::<ReaderMarker>()?;
-         let selectors = Vec::new();
-         archive
-             .read_inspect(server_end, &mut selectors.into_iter())
-             .await
-             .context("get Reader")?
-             .map_err(|e| format_err!("accessor error: {:?}", e))?;
-
-         loop {
-             let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()?;
-             reader
-                 .get_snapshot(Format::Json, server_end)
-                 .await
-                 .context("get BatchIterator")?
-                 .map_err(|e| format_err!("get snapshot: {:?}", e))?;
-
-             if let Ok(result) = iterator.get_next().await? {
-                 for entry in result {
-                     match entry {
-                         FormattedContent::FormattedJsonHierarchy(json) => {
-                             let json_string =
-                                 self.vmo_buffer_to_string(json).context("read vmo")?;
-                             if json_string.contains(&format!(
-                                 "{}/inspect_rust_codelab_part_5.cmx",
-                                 self.environment_label
-                             )) {
-                                 let mut output: serde_json::Value =
-                                     serde_json::from_str(&json_string).expect("valid json");
-                                 let tree_json =
-                                     output.get_mut("contents").expect("contents are there").take();
-                                 return RawJsonNodeHierarchySerializer::deserialize(tree_json);
-                             }
-                         }
-                         _ => unreachable!("response should contain only json"),
-                     }
-                 }
-             }
-
-             // Retry with delay to ensure data appears.
-             150000.micros().sleep();
-         }
-     }
-
-     pub fn vmo_buffer_to_string(&self, buffer: Buffer) -> Result<String, Error> {
-         let buffer_size = buffer.size;
-         let buffer_vmo = buffer.vmo;
-         let mut bytes = vec![0; buffer_size as usize];
-         buffer_vmo.read(&mut bytes, 0)?;
-         Ok(String::from_utf8_lossy(&bytes).to_string())
-     }
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_5/tests/integration_test.rs" region_tag="include_test_stuff" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_5/tests/integration_test.rs" region_tag="get_inspect" adjust_indentation="auto" %}
      ```
 
    * {Dart}
 
      ```dart
-     import 'dart:convert';
-     import 'package:fidl_fuchsia_diagnostics/fidl_async.dart';
-     import 'package:fidl_fuchsia_mem/fidl_async.dart';
-     import 'package:fuchsia_services/services.dart';
-     import 'package:zircon/zircon.dart';
-
-     Future<Map<String, dynamic>> getInspectHierarchy() async {
-       final archive = ArchiveProxy();
-       StartupContext.fromStartupInfo().incoming.connectToService(archive);
-
-       final reader = ReaderProxy();
-       final List<SelectorArgument> selectors = [];
-       await archive.readInspect(reader.ctrl.request(), selectors);
-
-       // ignore: literal_only_boolean_expressions
-       while (true) {
-         final iterator = BatchIteratorProxy();
-         await reader.getSnapshot(Format.json, iterator.ctrl.request());
-         final batch = await iterator.getNext();
-         for (final entry in batch) {
-           final jsonData = readBuffer(entry.formattedJsonHierarchy);
-           if (jsonData.contains('inspect_dart_codelab_part_5')) {
-             return json.decode(jsonData);
-           }
-         }
-         await Future.delayed(Duration(milliseconds: 150));
-       }
-     }
-
-     String readBuffer(Buffer buffer) {
-       final dataVmo = SizedVmo(buffer.vmo.handle, buffer.size);
-       final data = dataVmo.read(buffer.size);
-       return utf8.decode(data.bytesAsUint8List());
-     }
+     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_5/test/integration_test.dart" region_tag="include_test_stuff" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_5/test/integration_test.dart" region_tag="get_inspect" adjust_indentation="auto" %}
      ```
 
 
@@ -1991,8 +1512,7 @@ Look at how the integration test is setup:
    * {C++}
 
      ```cpp
-     rapidjson::Document document;
-     document.Parse(GetInspectJson());
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="parse_result" adjust_indentation="auto" %}
      ```
 
      Add assertions on the returned JSON data.
@@ -2004,15 +1524,14 @@ Look at how the integration test is setup:
      - *Hint*: You can `EXPECT_EQ` by passing in the expected value as a rapidjson::Value:
        `rapidjson::Value("OK")`.
 
-       ```
-       rapidjson::GetValueByPointerWithDefault(
-         document, "/contents/root/fuchsia.inspect.Health/status", ""));
+       ```cpp
+       {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="hint_get_value" adjust_indentation="auto" %}
        ```
 
    * {Rust}
 
       ```rust
-      let hierarchy = test.get_inspect_hierarchy().await?;
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_5/tests/integration_test.rs" region_tag="result_hierarchy" adjust_indentation="auto" %}
       ```
 
       Add assertions on the returned `NodeHierarchy`.
@@ -2022,7 +1541,7 @@ Look at how the integration test is setup:
    * {Dart}
 
       ```dart
-      final inspectData = await getInspectHierarchy();
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_5/test/integration_test.dart" region_tag="result_hierarchy" adjust_indentation="auto" %}
       ```
 
       Add assertions on the returned Map data.
