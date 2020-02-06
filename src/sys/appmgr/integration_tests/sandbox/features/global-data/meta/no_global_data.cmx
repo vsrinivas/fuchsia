@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/no_global_data"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
     }
 }

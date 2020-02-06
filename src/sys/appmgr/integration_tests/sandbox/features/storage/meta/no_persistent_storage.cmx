@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/no_persistent_storage"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
     }
 }

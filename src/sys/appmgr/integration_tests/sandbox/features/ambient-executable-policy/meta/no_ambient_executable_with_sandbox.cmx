@@ -2,5 +2,9 @@
     "program": {
         "binary": "test/no_ambient_executable_with_sandbox"
     },
-    "sandbox": {}
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
+    }
 }

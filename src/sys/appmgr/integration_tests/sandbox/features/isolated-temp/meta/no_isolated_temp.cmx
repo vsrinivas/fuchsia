@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/no_isolated_temp"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
     }
 }

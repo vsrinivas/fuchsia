@@ -5,6 +5,9 @@
     "sandbox": {
         "features": [
             "hub"
+        ],
+        "services": [
+            "fuchsia.sys.Environment"
         ]
     }
 }

@@ -5,6 +5,9 @@
     "sandbox": {
         "features": [
             "build-info"
+        ],
+        "services": [
+            "fuchsia.sys.Environment"
         ]
     }
 }
