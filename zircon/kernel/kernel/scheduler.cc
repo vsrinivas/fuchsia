@@ -161,8 +161,7 @@ inline bool IsDeadlineThread(const thread_t* thread) {
 inline bool IsThreadAdjustable(const thread_t* thread) {
   // Checking the thread state avoids unnecessary adjustments on a thread that
   // is no longer competing.
-  return !thread_is_idle(thread) && IsFairThread(thread) &&
-         thread->state == THREAD_READY;
+  return !thread_is_idle(thread) && IsFairThread(thread) && thread->state == THREAD_READY;
 }
 
 // Returns the effective mask of CPUs a thread is may run on, based on the
@@ -954,9 +953,6 @@ void Scheduler::QueueThread(thread_t* thread, Placement placement, SchedTime now
                      "start=%" PRId64 " finish=%" PRId64 " delta_norm=%" PRId64 "\n",
                      state->start_time_.raw_value(), state->finish_time_.raw_value(),
                      delta_norm.raw_value());
-
-    fair_run_queue_.insert(thread);
-    LOCAL_KTRACE(KTRACE_DETAILED, "queue_thread");
   } else {
     if (placement == Placement::Insertion) {
       LocalTraceDuration<KTRACE_DETAILED> insert_trace{"insert_deadline: r,c"_stringref};
@@ -988,9 +984,6 @@ void Scheduler::QueueThread(thread_t* thread, Placement placement, SchedTime now
                      "start=%" PRId64 " finish=%" PRId64 " capacity=%" PRId64 "\n",
                      state->start_time_.raw_value(), state->finish_time_.raw_value(),
                      state->time_slice_ns_.raw_value());
-
-    deadline_run_queue_.insert(thread);
-    LOCAL_KTRACE(KTRACE_DETAILED, "queue_thread");
   }
 
   // Only update the generation, enqueue time, and emit a flow event if this
@@ -1006,6 +999,15 @@ void Scheduler::QueueThread(thread_t* thread, Placement placement, SchedTime now
     LOCAL_KTRACE_FLOW_BEGIN(KTRACE_FLOW, "sched_latency", FlowIdFromThreadGeneration(thread),
                             thread->user_tid);
   }
+
+  // Insert the thread into the appropriate run queue after the generation count
+  // is potentially updated above.
+  if (IsFairThread(thread)) {
+    fair_run_queue_.insert(thread);
+  } else {
+    deadline_run_queue_.insert(thread);
+  }
+  LOCAL_KTRACE(KTRACE_DETAILED, "queue_thread");
 
   trace.End(Round<uint64_t>(state->start_time_), Round<uint64_t>(state->finish_time_));
 }
