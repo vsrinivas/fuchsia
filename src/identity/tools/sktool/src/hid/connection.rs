@@ -228,7 +228,7 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_read_immediate_packet() -> Result<(), Error> {
+        async fn read_immediate_packet() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::ReadReports { responder } => {
                     let response = TEST_PACKET.to_vec();
@@ -244,7 +244,7 @@ pub mod fidl {
         }
 
         #[fasync::run_singlethreaded(test)]
-        async fn test_read_delayed_packet() -> Result<(), Error> {
+        async fn read_delayed_packet() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
                 (DeviceRequest::ReadReports { responder }, 1) => {
                     responder
@@ -270,7 +270,7 @@ pub mod fidl {
         }
 
         #[fasync::run_singlethreaded(test)]
-        async fn test_read_packet_timeout() -> Result<(), Error> {
+        async fn read_packet_timeout() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
                 (DeviceRequest::ReadReports { responder }, 1) => {
                     responder
@@ -290,7 +290,7 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_read_matching_packet_success() -> Result<(), Error> {
+        async fn read_matching_packet_success() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
                 (DeviceRequest::ReadReports { responder }, 1) => {
                     let response = DIFFERENT_PACKET.to_vec();
@@ -315,7 +315,7 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_read_matching_packet_fail() -> Result<(), Error> {
+        async fn read_matching_packet_fail() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
                 (DeviceRequest::ReadReports { responder }, 1) => {
                     let response = DIFFERENT_PACKET.to_vec();
@@ -346,7 +346,7 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_write_packet() -> Result<(), Error> {
+        async fn write_packet() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::SetReport {
                     type_: ReportType::Output,
@@ -366,7 +366,7 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_report_descriptor() -> Result<(), Error> {
+        async fn report_descriptor() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::GetReportDesc { responder } => {
                     let response = TEST_REPORT_DESCRIPTOR.to_vec();
@@ -380,7 +380,7 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_max_packet_length() -> Result<(), Error> {
+        async fn max_packet_length() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::GetMaxInputReportSize { responder } => {
                     responder.send(TEST_REPORT_LENGTH).expect("failed to send response");
@@ -393,7 +393,7 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_fidl_error() -> Result<(), Error> {
+        async fn fidl_error() -> Result<(), Error> {
             let connection = FidlConnection::new(invalid_mock_device_proxy());
             connection.report_descriptor().await.expect_err("Should have failed to get descriptor");
             connection.max_packet_length().await.expect_err("Should have failed to get packet len");
@@ -613,7 +613,7 @@ pub mod fake {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_static_properties() -> Result<(), Error> {
+        async fn static_connection_properties() -> Result<(), Error> {
             let connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             assert_eq!(connection.report_descriptor().await?, &TEST_REPORT_DESCRIPTOR[..]);
             assert_eq!(connection.max_packet_length().await?, REPORT_LENGTH);
@@ -621,7 +621,7 @@ pub mod fake {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_read_write() -> Result<(), Error> {
+        async fn read_write() -> Result<(), Error> {
             // Declare expected operations.
             let connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             connection.expect_write_error(TEST_PACKET_1.clone());
@@ -654,7 +654,7 @@ pub mod fake {
 
         #[fasync::run_until_stalled(test)]
         #[should_panic]
-        async fn test_write_unexpected_data() {
+        async fn write_unexpected_data() {
             let connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             connection.expect_write(TEST_PACKET_1.clone());
             connection.write_packet(TEST_PACKET_2.clone()).await.unwrap();
@@ -662,7 +662,7 @@ pub mod fake {
 
         #[fasync::run_until_stalled(test)]
         #[should_panic]
-        async fn test_write_when_expecting_read() {
+        async fn write_when_expecting_read() {
             let connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             connection.expect_read(TEST_PACKET_1.clone());
             connection.write_packet(TEST_PACKET_1.clone()).await.unwrap();
@@ -670,7 +670,7 @@ pub mod fake {
 
         #[fasync::run_until_stalled(test)]
         #[should_panic]
-        async fn test_read_when_expecting_write() {
+        async fn read_when_expecting_write() {
             let connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             connection.expect_write(TEST_PACKET_1.clone());
             connection.read_packet().await.unwrap();
@@ -678,14 +678,14 @@ pub mod fake {
 
         #[fasync::run_until_stalled(test)]
         #[should_panic]
-        async fn test_incomplete_operations() {
+        async fn incomplete_operations() {
             let connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             connection.expect_write(TEST_PACKET_1.clone());
             // Dropping the connection should verify all expected operations are complete.
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_invalid() -> Result<(), Error> {
+        async fn set_error() -> Result<(), Error> {
             let mut connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             connection.report_descriptor().await.expect("Should have initially suceeded");
             connection.error();

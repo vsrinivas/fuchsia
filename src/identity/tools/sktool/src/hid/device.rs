@@ -309,7 +309,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_init_valid_device() -> Result<(), Error> {
+    async fn init_valid_device() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
         con.expect_write(build_init_request(&EXPECTED_NONCE));
@@ -329,7 +329,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_init_while_other_traffic_present() -> Result<(), Error> {
+    async fn init_while_other_traffic_present() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
         con.expect_write(build_init_request(&EXPECTED_NONCE));
@@ -359,7 +359,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_init_non_fido_device() -> Result<(), Error> {
+    async fn init_non_fido_device() -> Result<(), Error> {
         let con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
         assert!(Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
             .await?
@@ -368,7 +368,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_init_fidl_error() -> Result<(), Error> {
+    async fn init_fidl_error() -> Result<(), Error> {
         let mut con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
         con.error();
         Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
@@ -378,7 +378,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_wink() -> Result<(), Error> {
+    async fn wink() -> Result<(), Error> {
         // Configure a fake connection and expect standard initialization.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
         con.expect_write(build_init_request(&EXPECTED_NONCE));

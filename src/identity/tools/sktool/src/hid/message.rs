@@ -282,7 +282,7 @@ mod tests {
     const TEST_SEQUENCE_NUM: u8 = 99;
 
     #[test]
-    fn test_command_conversion() {
+    fn command_conversion() {
         // Verify that every integer that maps to a valid command is also the value of that
         // command. Note we don't have runtime enum information to test all commands are accessible
         // from an integer.
@@ -295,7 +295,7 @@ mod tests {
 
     /// Verifies that a valid packet can be converted into bytes and back, and that the bytes and
     /// debug strings match expectations.
-    fn do_conversion_test(
+    fn do_packet_conversion_test(
         packet: Packet,
         debug_string: &str,
         bytes_string: &str,
@@ -311,9 +311,9 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_initialization_packet() -> Result<(), Error> {
+    fn empty_initialization_packet() -> Result<(), Error> {
         // Lock = 0x04
-        do_conversion_test(
+        do_packet_conversion_test(
             Packet::initialization(TEST_CHANNEL, Command::Lock, 0, vec![])?,
             "InitPacket/Lock ch=89abcdef msg_len=0 payload=[]",
             "[89, ab, cd, ef, 84, 00, 00]",
@@ -321,11 +321,11 @@ mod tests {
     }
 
     #[test]
-    fn test_non_empty_initialization_packet() -> Result<(), Error> {
+    fn non_empty_initialization_packet() -> Result<(), Error> {
         // Wink = 0x08
         // Message len = 1122 hex = 4386 dec
         // Note that in real life packets are padded.
-        do_conversion_test(
+        do_packet_conversion_test(
             Packet::initialization(
                 TEST_CHANNEL,
                 Command::Wink,
@@ -338,10 +338,10 @@ mod tests {
     }
 
     #[test]
-    fn test_padded_initialization_packet() -> Result<(), Error> {
+    fn padded_initialization_packet() -> Result<(), Error> {
         // Wink = 0x08
         // Note that in real life packets are larger than the 16 bytes here.
-        do_conversion_test(
+        do_packet_conversion_test(
             Packet::padded_initialization(
                 TEST_CHANNEL,
                 Command::Wink,
@@ -354,9 +354,9 @@ mod tests {
     }
 
     #[test]
-    fn test_non_empty_continuation_packet() -> Result<(), Error> {
+    fn non_empty_continuation_packet() -> Result<(), Error> {
         // Sequence = 99 decimal = 63 hex
-        do_conversion_test(
+        do_packet_conversion_test(
             Packet::continuation(TEST_CHANNEL, 99, vec![0xfe, 0xed, 0xcd])?,
             "ContPacket ch=89abcdef seq=99 payload=[fe, ed, cd]",
             "[89, ab, cd, ef, 63, fe, ed, cd]",
@@ -364,14 +364,14 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_initialization_packet() -> Result<(), Error> {
+    fn invalid_initialization_packet() -> Result<(), Error> {
         // Payload longer than the max packet size should fail.
         assert!(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 20000, vec![0; 10000]).is_err());
         Ok(())
     }
 
     #[test]
-    fn test_invalid_continuation_packet() -> Result<(), Error> {
+    fn invalid_continuation_packet() -> Result<(), Error> {
         // Sequence number with the MSB set should fail.
         assert!(Packet::continuation(TEST_CHANNEL, 0x88, vec![1]).is_err());
         // Continuation packet with no data should fail.
@@ -380,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn test_short_input_tryfrom() -> Result<(), Error> {
+    fn try_from_byte_vector() -> Result<(), Error> {
         // Initiation packet of 6 bytes should fail.
         assert!(Packet::try_from(vec![0x89, 0xab, 0xcd, 0xef, 0x84, 0x00]).is_err());
         // Continuation packet of 6 bytes should pass.
