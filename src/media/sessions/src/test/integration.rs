@@ -9,8 +9,7 @@ use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;
-use fuchsia_zircon::{self as zx, AsHandleRef};
-use futures::stream::TryStreamExt;
+use futures::stream::{StreamExt, TryStreamExt};
 use lazy_static::lazy_static;
 use test_util::assert_matches;
 
@@ -290,9 +289,8 @@ test!(player_disconnection_propagates, || async {
 
     drop(player);
     watcher.wait_for_removal().await?;
-    let session_channel =
-        session.into_channel().expect("Taking channel from proxy").into_zx_channel();
-    session_channel.wait_handle(zx::Signals::CHANNEL_PEER_CLOSED, zx::Time::INFINITE)?;
+    let mut session_events = session.take_event_stream();
+    while let Some(_) = session_events.next().await {}
 
     Ok(())
 });
