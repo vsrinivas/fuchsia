@@ -93,8 +93,8 @@ test("dsi-host") {
     "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/image-format-llcpp",
+    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/mock-sysmem",
-    "//zircon/public/lib/new-mock-mmio-reg",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]

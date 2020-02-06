@@ -18,8 +18,8 @@
 #include <ddk/mmio-buffer.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
+#include <mock-mmio-reg/mock-mmio-reg.h>
 #include <mock/ddktl/protocol/pwm.h>
-#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 bool operator==(const pwm_config_t& lhs, const pwm_config_t& rhs) {

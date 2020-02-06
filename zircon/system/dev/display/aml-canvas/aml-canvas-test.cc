@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
+#include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 #include "dmc-regs.h"

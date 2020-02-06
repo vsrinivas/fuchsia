@@ -5,7 +5,7 @@
 #include "../gamma-rgb-registers.h"
 
 #include <fbl/array.h>
-#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
+#include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 #include "../../mali-009/pingpong_regs.h"

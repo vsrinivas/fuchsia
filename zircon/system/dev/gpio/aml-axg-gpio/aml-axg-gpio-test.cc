@@ -9,7 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
+#include <mock-mmio-reg/mock-mmio-reg.h>
 
 #include "a113-blocks.h"
 #include "lib/device-protocol/pdev.h"

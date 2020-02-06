@@ -41,8 +41,8 @@ zx_test("mt8167-audio-lib-test") {
   deps = [
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/dev/lib/mt8167",
-    "$zx/system/dev/lib/new-mock-mmio-reg",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

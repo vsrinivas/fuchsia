@@ -7,7 +7,7 @@
 #include <lib/mock-function/mock-function.h>
 
 #include <fbl/algorithm.h>
-#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
+#include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 namespace gpio {

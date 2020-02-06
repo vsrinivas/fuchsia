@@ -65,7 +65,7 @@ test("ti-lp8556-test") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-i2c",
-    "//zircon/public/lib/new-mock-mmio-reg",
+    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

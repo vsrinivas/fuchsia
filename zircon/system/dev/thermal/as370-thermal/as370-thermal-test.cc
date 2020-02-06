@@ -7,9 +7,9 @@
 #include <fbl/algorithm.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fake_ddk/fidl-helper.h>
+#include <mock-mmio-reg/mock-mmio-reg.h>
 #include <mock/ddktl/protocol/clock.h>
 #include <mock/ddktl/protocol/power.h>
-#include <new-mock-mmio-reg/new-mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 namespace {
