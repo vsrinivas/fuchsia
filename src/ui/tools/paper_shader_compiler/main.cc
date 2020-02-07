@@ -20,6 +20,33 @@
 
 namespace escher {
 
+// Compute shaders currently make use of the glslang compiler and not the shaderc
+// compiler, and they do not take ShaderVariantArgs, so this function is tailored
+// to compile compute shaders specifically.
+bool CompileAndWriteComputeShader(HackFilesystemPtr filesystem, const char* source_code,
+                                  const std::string& name) {
+  std::string abs_root = *filesystem->base_path() + "/shaders/spirv/";
+
+  static escher::impl::GlslToSpirvCompiler compiler;
+
+  std::string code(source_code);
+
+  impl::SpirvData spirv =
+      compiler.Compile(vk::ShaderStageFlagBits::eCompute, {{code.c_str()}}, std::string(), "main")
+          .get();
+
+  FXL_LOG(INFO) << "Processing shader " << name;
+  if (shader_util::SpirvExistsOnDisk({}, abs_root, name, spirv)) {
+    if (!shader_util::WriteSpirvToDisk(spirv, {}, abs_root, name)) {
+      FXL_LOG(ERROR) << "could not write shader " << name << " to disk.";
+      return false;
+    }
+  } else {
+    FXL_LOG(INFO) << "Shader already exists on disk.";
+  }
+  return true;
+}
+
 // Compiles all of the provided shader modules and writes out their spirv
 // to disk in the source tree.
 bool CompileAndWriteShader(HackFilesystemPtr filesystem, ShaderProgramData program_data) {
@@ -60,6 +87,7 @@ bool CompileAndWriteShader(HackFilesystemPtr filesystem, ShaderProgramData progr
 
 }  // namespace escher
 
+// Program entry point.
 int main(int argc, const char** argv) {
   // Register all the shader files, along with include files, that are used by Escher.
   auto filesystem = escher::HackFilesystem::New();
@@ -69,8 +97,6 @@ int main(int argc, const char** argv) {
   auto paths = escher::kPaperRendererShaderPaths;
   paths.insert(paths.end(), escher::kFlatlandShaderPaths.begin(),
                escher::kFlatlandShaderPaths.end());
-  paths.insert(paths.end(), escher::hmd::kPoseBufferLatchingPaths.begin(),
-               escher::hmd::kPoseBufferLatchingPaths.end());
   bool success = filesystem->InitializeWithRealFiles(paths, "./../../../../src/ui/lib/escher/");
   FXL_CHECK(success);
   FXL_CHECK(filesystem->base_path());
@@ -101,7 +127,8 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
-  if (!CompileAndWriteShader(filesystem, escher::hmd::kPoseBufferLatchingProgramData)) {
+  if (!CompileAndWriteComputeShader(filesystem, escher::hmd::g_kernel_src,
+                                    escher::hmd::kPoseLatchingShaderName)) {
     return EXIT_FAILURE;
   }
 

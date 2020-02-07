@@ -421,8 +421,12 @@ template("escher_library") {
     # which must be compiled at runtime.
     if (use_runtime_glsl) {
       sources += [
+        "impl/gaussian_3x3f16.cc",
+        "impl/gaussian_3x3f16.h",
         "impl/glsl_compiler.cc",
         "impl/glsl_compiler.h",
+        "util/depth_to_color.cc",
+        "util/depth_to_color.h",
       ]
     }
 

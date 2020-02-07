@@ -65,27 +65,6 @@ void CommandBufferPipelineState::BeginGraphicsOrComputeContext() {
   dirty_vertex_bindings_ = ~0u;
 }
 
-// Unlike the |FlushGraphicsPipelineState| which hashes many attributes such as vertex bindings,
-// masks, blend states, etc, that only exist in graphics pipelines, this function computes a hash
-// just based off of the pipeline layout spec and the current static state. There isn't all that
-// much more that goes into compute pipelines, so this seems sufficient.
-vk::Pipeline CommandBufferPipelineState::FlushComputePipeline(const PipelineLayout* pipeline_layout,
-                                                              ShaderProgram* program) {
-  Hasher h;
-  h.u64(pipeline_layout->spec().hash().val);
-
-  // Try to find a previously-stashed pipeline that matches the current command
-  // state.  If none is found, build a new pipeline and stash it.
-  Hash hash = h.value();
-  if (auto pipeline = program->FindPipeline(hash)) {
-    return pipeline;
-  } else {
-    pipeline = BuildComputePipeline(pipeline_layout, program);
-    program->StashPipeline(hash, pipeline);
-    return pipeline;
-  }
-}
-
 vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
     const PipelineLayout* pipeline_layout, ShaderProgram* program) {
   Hasher h;
@@ -341,27 +320,6 @@ vk::Pipeline CommandBufferPipelineState::BuildGraphicsPipeline(
   TRACE_DURATION("gfx", "escher::CommandBuffer::BuildGraphicsPipeline[vulkan]");
   return ESCHER_CHECKED_VK_RESULT(
       program->vk_device().createGraphicsPipeline(nullptr, pipeline_info));
-}
-
-// Building a compute pipeline is much simpler than building a graphics one. All you need
-// is a single shader module and a single pipeline layout.
-vk::Pipeline CommandBufferPipelineState::BuildComputePipeline(const PipelineLayout* pipeline_layout,
-                                                              ShaderProgram* program) {
-  TRACE_DURATION("gfx", "escher::CommandBuffer::BuildComputePipeline");
-  auto& module = program->GetModuleForStage(ShaderStage::kCompute);
-  FXL_DCHECK(module && module->is_valid());
-
-  vk::PipelineShaderStageCreateInfo shader_stage_info;
-  shader_stage_info.stage = vk::ShaderStageFlagBits::eCompute;
-  shader_stage_info.module = module->vk();
-  shader_stage_info.pName = "main";
-
-  vk::ComputePipelineCreateInfo pipeline_info;
-  pipeline_info.stage = shader_stage_info;
-  pipeline_info.layout = pipeline_layout->vk();
-
-  return ESCHER_CHECKED_VK_RESULT(
-      program->vk_device().createComputePipeline(nullptr, pipeline_info));
 }
 
 void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding, uint32_t attrib,
