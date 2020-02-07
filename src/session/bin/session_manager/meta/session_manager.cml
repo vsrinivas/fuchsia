@@ -38,28 +38,133 @@
     offer: [
         {
             protocol: [
+                "/svc/fuchsia.deprecatedtimezone.Timezone",
                 "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.setui.SetUiService",
                 "/svc/fuchsia.sys.Launcher",        // Pass on the Launcher so that the session can launch cmx components.
-                "/svc/fuchsia.ui.input.ImeService",
                 "/svc/fuchsia.ui.input2.Keyboard",
+                "/svc/fuchsia.ui.input.ImeService",
                 "/svc/fuchsia.ui.scenic.Scenic",    // Sessions use Scenic to display images.
                 "/svc/fuchsia.ui.shortcut.Manager",
+
+                // setui_service
+                "/svc/fuchsia.accessibility.SettingsManager",
+                "/svc/fuchsia.device.manager.Administrator",
+                "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+                "/svc/fuchsia.media.AudioCore",
+                "/svc/fuchsia.media.audio.VolumeControl",
+                "/svc/fuchsia.media.sounds.Player",
+                "/svc/fuchsia.media.UsageReporter",
+                "/svc/fuchsia.net.Connectivity",
+                "/svc/fuchsia.netstack.Netstack",
+                "/svc/fuchsia.stash.Store",
+                "/svc/fuchsia.sys.Environment",
+                "/svc/fuchsia.timezone.Timezone",
+                "/svc/fuchsia.ui.brightness.Control",
+
+                "/svc/fuchsia.bluetooth.control.Control",
+                "/svc/fuchsia.media.Audio",
+                "/svc/fuchsia.media.sessions2.Discovery",
+                "/svc/fuchsia.net.NameLookup",
+                "/svc/fuchsia.posix.socket.Provider",
+                "/svc/fuchsia.tracing.provider.Registry",
+
+                "/svc/fuchsia.hardware.power.statecontrol.Admin",
+                "/svc/fuchsia.hwinfo.Board",
+                "/svc/fuchsia.hwinfo.Device",
+                "/svc/fuchsia.hwinfo.Product",
+                "/svc/fuchsia.bluetooth.gatt.Server",
+                "/svc/fuchsia.bluetooth.le.Peripheral",
+                "/svc/fuchsia.castauth.CastKeySigner",
+                "/svc/fuchsia.castconfig.Provider",
+                "/svc/fuchsia.device.NameProvider",
+                "/svc/fuchsia.feedback.CrashReporter",
+                "/svc/fuchsia.feedback.DataProvider",
+                "/svc/fuchsia.intl.PropertyProvider",
+                "/svc/fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+                "/svc/fuchsia.media.sessions2.Publisher",
+                "/svc/fuchsia.net.mdns.Publisher",
+                "/svc/fuchsia.net.mdns.Subscriber",
+                "/svc/fuchsia.update.channel.Provider",
+                "/svc/fuchsia.update.channelcontrol.ChannelControl",
+                "/svc/fuchsia.wlan.service.Wlan",
             ],
             from: "realm",
             to: [
                 "#session",
             ],
         },
+
+        {
+            directory: "/dev/class/input",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "r*" ],
+        },
         {
             directory: "/dev/class/input-report",
             from: "realm",
-            to: [
-                "#session",
-            ],
-            rights: [
-                "r*",
-            ],
+            to: [ "#session" ],
+            rights: [ "r*" ],
+        },
+        {
+            directory: "/dev/null",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "/dev/zero",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "rw*" ],
+        },
+
+        // features: build-info
+        {
+            directory: "/config/build-info",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "r*" ],
+        },
+
+        // features: isolated-temp
+        {
+            directory: "/tmp",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "rw*" ],
+        },
+
+        // features: isolated-persistent-storage
+        {
+            directory: "/data",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "rw*" ],
+        },
+
+        // features: config-data
+        {
+            directory: "/pkgfs/packages/config-data/0/data/setui_service",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "r*" ],
+        },
+
+        // features: config-data
+        {
+            directory: "/pkgfs/packages/config-data/0/data/cast_agent",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "r*" ],
+        },
+
+        // features: root-ssl-certificates
+        {
+            directory: "/config/ssl",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [ "r*" ],
         },
     ],
 }

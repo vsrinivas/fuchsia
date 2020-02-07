@@ -4,24 +4,73 @@
     },
     "sandbox": {
         "dev": [
-            "class/input-report"
+            "class/input",
+            "class/input-report",
+            "null",
+            "zero"
         ],
         "features": [
+            "build-info",
+            "config-data",
             "deprecated-ambient-replace-as-executable",
-            "config-data"
+            "isolated-persistent-storage",
+            "root-ssl-certificates",
+            "isolated-temp"
+        ],
+        "pkgfs": [
+            "packages/config-data/0/data/setui_service",
+            "packages/config-data/0/data/cast_agent"
         ],
         "services": [
+            "fuchsia.accessibility.SettingsManager",
+            "fuchsia.bluetooth.control.Control",
+            "fuchsia.bluetooth.gatt.Server",
+            "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.castauth.CastKeySigner",
+            "fuchsia.castconfig.Provider",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.pkg.PackageResolver",
-            "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
+            "fuchsia.deprecatedtimezone.Timezone",
+            "fuchsia.device.manager.Administrator",
+            "fuchsia.device.NameProvider",
+            "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.feedback.CrashReporter",
+            "fuchsia.feedback.DataProvider",
+            "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.hwinfo.Board",
+            "fuchsia.hwinfo.Device",
+            "fuchsia.hwinfo.Product",
+            "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
+            "fuchsia.media.Audio",
+            "fuchsia.media.AudioCore",
+            "fuchsia.media.audio.VolumeControl",
+            "fuchsia.media.sessions2.Discovery",
+            "fuchsia.media.sessions2.Publisher",
+            "fuchsia.media.sounds.Player",
+            "fuchsia.media.UsageReporter",
+            "fuchsia.net.Connectivity",
+            "fuchsia.net.mdns.Publisher",
+            "fuchsia.net.mdns.Subscriber",
+            "fuchsia.net.NameLookup",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.process.Launcher",
+            "fuchsia.setui.SetUiService",
+            "fuchsia.stash.Store",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.ui.input.ImeService",
+            "fuchsia.timezone.Timezone",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.brightness.Control",
             "fuchsia.ui.input2.Keyboard",
+            "fuchsia.ui.input.ImeService",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Manager",
-            "fuchsia.setui.SetUiService"
+            "fuchsia.update.channelcontrol.ChannelControl",
+            "fuchsia.update.channel.Provider",
+            "fuchsia.wlan.service.Wlan"
         ]
     }
 }
