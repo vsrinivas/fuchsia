@@ -72,6 +72,9 @@ def main():
     type.add_argument('--ulib',
                       help='Inspect C/C++ libraries',
                       action='store_true')
+    type.add_argument('--devlib',
+                      help='Inspect C/C++ libraries under dev',
+                      action='store_true')
     parser.add_argument('name',
                         help='Name of the library to inspect; if empty, scan '
                              'all libraries of the given type',
@@ -100,6 +103,8 @@ def main():
         type = 'banjo'
     elif args.ulib:
         type = 'ulib'
+    elif args.devlib:
+        type = 'dev/lib'
 
     # Case 1: a library name is given.
     if args.name:
