@@ -710,6 +710,9 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
       message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
       return ZX_OK;
     case RpcMessage::Command::kAccessReplayProtectedMemoryBlock:
+      zxlogf(INFO, "optee: RPMB is not yet supported.\n");
+      message.set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
+      return ZX_OK;
     case RpcMessage::Command::kAccessSqlFileSystem:
     case RpcMessage::Command::kLoadGprof:
       zxlogf(INFO, "optee: received unsupported RPC command\n");
