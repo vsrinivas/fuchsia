@@ -42,9 +42,7 @@ template("fidl_dart") {
 
     tool = "//topaz/bin/fidlgen_dart"
 
-    inputs = [
-      json_representation,
-    ]
+    inputs = [ json_representation ]
 
     outputs = [
       async_bindings_file,
@@ -54,17 +52,15 @@ template("fidl_dart") {
     args = [
       "--json",
       rebase_path(json_representation, root_build_dir),
-      "--output-base",
-      rebase_path(bindings_dir, root_build_dir),
-      "--include-base",
-      rebase_path(root_gen_dir, root_build_dir),
+      "--output-async",
+      rebase_path(async_bindings_file, root_build_dir),
+      "--output-test",
+      rebase_path(test_bindings_file, root_build_dir),
     ]
 
     # Don't run the formatter if we are using a custom-built Dart SDK in a
     # cross-build.
-    deps = [
-      ":$main_target_name($fidl_toolchain)",
-    ]
+    deps = [ ":$main_target_name($fidl_toolchain)" ]
     if (use_prebuilt_dart_sdk || host_cpu == target_cpu) {
       args += [
         "--dartfmt",
@@ -79,23 +75,15 @@ template("fidl_dart") {
   copy_options_target_name = "${target_name}_dart_options"
 
   copy(copy_pubspec_target_name) {
-    sources = [
-      "//build/dart/empty_pubspec.yaml",
-    ]
+    sources = [ "//build/dart/empty_pubspec.yaml" ]
 
-    outputs = [
-      "$root_dir/pubspec.yaml",
-    ]
+    outputs = [ "$root_dir/pubspec.yaml" ]
   }
 
   copy(copy_options_target_name) {
-    sources = [
-      "//topaz/tools/analysis_options.yaml",
-    ]
+    sources = [ "//topaz/tools/analysis_options.yaml" ]
 
-    outputs = [
-      "$root_dir/analysis_options.yaml",
-    ]
+    outputs = [ "$root_dir/analysis_options.yaml" ]
   }
 
   dart_library(main_target_name) {
