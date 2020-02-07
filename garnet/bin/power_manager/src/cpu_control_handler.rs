@@ -497,15 +497,17 @@ pub mod tests {
         assert_eq!(get_cpu_power(Farads(100.0e-12), Volts(1.0), Hertz(1.0e9)), Watts(0.1));
     }
 
+    async fn get_perf_state(devhost_node: Rc<dyn Node>) -> u32 {
+        match devhost_node.handle_message(&Message::GetPerformanceState).await.unwrap() {
+            MessageReturn::GetPerformanceState(state) => state,
+            _ => panic!(),
+        }
+    }
+
+    /// Tests that the SetMaxPowerConsumption message causes the node to correctly consider CPU load
+    /// and parameters to choose the appropriate P-states.
     #[fasync::run_singlethreaded(test)]
     async fn test_set_max_power_consumption() {
-        let recvd_perf_state = Rc::new(Cell::new(0));
-        let recvd_perf_state_clone = recvd_perf_state.clone();
-        let set_performance_state = move |state| {
-            recvd_perf_state_clone.set(state);
-        };
-        let devhost_node = dev_control_handler::tests::setup_test_node(set_performance_state);
-
         // With these PStates and capacitance, the modeled power consumption (W) is:
         //  - 4.05
         //  - 1.8
@@ -518,7 +520,8 @@ pub mod tests {
             capacitance: Farads(100.0e-12),
         };
         let cpu_stats_node = cpu_stats_handler::tests::setup_simple_test_node();
-        let cpu_ctrl_node = setup_test_node(cpu_params, cpu_stats_node, devhost_node);
+        let devhost_node = dev_control_handler::tests::setup_simple_test_node();
+        let cpu_ctrl_node = setup_test_node(cpu_params, cpu_stats_node, devhost_node.clone());
 
         // Allow power consumption greater than all PStates, expect to be in state 0
         let max_power = Watts(5.0);
@@ -530,7 +533,7 @@ pub mod tests {
             MessageReturn::SetMaxPowerConsumption => {}
             _ => panic!(),
         }
-        assert_eq!(recvd_perf_state.get(), 0);
+        assert_eq!(get_perf_state(devhost_node.clone()).await, 0);
 
         // Lower power consumption limit such that we expect to switch to state 1
         let max_power = Watts(4.0);
@@ -542,7 +545,7 @@ pub mod tests {
             MessageReturn::SetMaxPowerConsumption => {}
             _ => panic!(),
         }
-        assert_eq!(recvd_perf_state.get(), 1);
+        assert_eq!(get_perf_state(devhost_node.clone()).await, 1);
 
         // If we cannot accomodate the power limit, we should still be in the least power consuming
         // state
@@ -555,7 +558,7 @@ pub mod tests {
             MessageReturn::SetMaxPowerConsumption => {}
             _ => panic!(),
         }
-        assert_eq!(recvd_perf_state.get(), 1);
+        assert_eq!(get_perf_state(devhost_node.clone()).await, 1);
     }
 
     /// Tests for the presence and correctness of dynamically-added inspect data
@@ -573,7 +576,7 @@ pub mod tests {
             setup_fake_service(params),
             capacitance,
             cpu_stats_handler::tests::setup_simple_test_node(),
-            dev_control_handler::tests::setup_test_node(|_| ()),
+            dev_control_handler::tests::setup_simple_test_node(),
         )
         .with_inspect_root(inspector.root())
         .build()

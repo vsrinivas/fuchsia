@@ -683,6 +683,11 @@ mod tests {
             move || s.borrow().idle_times.clone()
         }
 
+        fn make_p_state_getter(sim: &Rc<RefCell<Self>>) -> impl Fn() -> u32 {
+            let s = sim.clone();
+            move || s.borrow().p_state_index as u32
+        }
+
         /// Returns a closure to set the simulator's P-state, for a device controller handler test
         /// node.
         fn make_p_state_setter(sim: &Rc<RefCell<Self>>) -> impl FnMut(u32) {
@@ -854,8 +859,10 @@ mod tests {
             let sys_pwr_handler = system_power_handler::tests::setup_test_node(
                 Simulator::make_shutdown_function(&sim),
             );
-            let cpu_dev_handler =
-                dev_control_handler::tests::setup_test_node(Simulator::make_p_state_setter(&sim));
+            let cpu_dev_handler = dev_control_handler::tests::setup_test_node(
+                Simulator::make_p_state_getter(&sim),
+                Simulator::make_p_state_setter(&sim),
+            );
 
             // Note that the model capacitance used by the control node could differ from the one
             // used by the simulator. This could be leveraged to simulate discrepancies between

@@ -91,8 +91,35 @@ impl DeviceControlHandler {
             "DeviceControlHandler::handle_get_performance_state",
             "driver" => self.driver_path.as_str()
         );
-        // TODO(fxb/43744): The controller API doesn't exist yet (fxb/43743)
-        Ok(MessageReturn::GetPerformanceState(0))
+
+        let result = self.get_performance_state().await;
+        log_if_err!(result, "Failed to get performance state");
+        fuchsia_trace::instant!(
+            "power_manager",
+            "DeviceControlHandler::get_performance_state_result",
+            fuchsia_trace::Scope::Thread,
+            "driver" => self.driver_path.as_str(),
+            "result" => format!("{:?}", result).as_str()
+        );
+
+        if result.is_err() {
+            self.inspect.get_performance_state_errors.add(1);
+        }
+
+        result.map(|state| MessageReturn::GetPerformanceState(state))
+    }
+
+    async fn get_performance_state(&self) -> Result<u32, Error> {
+        let state = self.driver_proxy.get_current_performance_state().await.map_err(|e| {
+            format_err!(
+                "{} ({}): get_performance_state IPC failed: {}",
+                self.name(),
+                self.driver_path,
+                e
+            )
+        })?;
+
+        Ok(state)
     }
 
     async fn handle_set_performance_state(&self, in_state: u32) -> Result<MessageReturn, Error> {
@@ -113,20 +140,22 @@ impl DeviceControlHandler {
             "result" => format!("{:?}", result).as_str()
         );
 
-        match result.as_ref() {
-            Ok(_) => self.inspect.perf_state.set(in_state.into()),
+        match result {
+            Ok(_) => {
+                self.inspect.perf_state.set(in_state.into());
+                Ok(MessageReturn::SetPerformanceState)
+            }
             Err(e) => {
                 self.inspect.set_performance_state_errors.add(1);
-                self.inspect.last_set_performance_state_error.set(format!("{}", e).as_str())
+                self.inspect.last_set_performance_state_error.set(format!("{}", e).as_str());
+                Err(e)
             }
         }
-
-        result
     }
 
-    async fn set_performance_state(&self, in_state: u32) -> Result<MessageReturn, Error> {
+    async fn set_performance_state(&self, in_state: u32) -> Result<(), Error> {
         // Make the FIDL call
-        let (status, out_state) =
+        let (status, _out_state) =
             self.driver_proxy.set_performance_state(in_state).await.map_err(|e| {
                 format_err!(
                     "{} ({}): set_performance_state IPC failed: {}",
@@ -146,18 +175,7 @@ impl DeviceControlHandler {
             )
         })?;
 
-        // On success, in_state will equal out_state
-        if in_state == out_state {
-            Ok(MessageReturn::SetPerformanceState)
-        } else {
-            Err(format_err!(
-                "{} ({}): expected in_state == out_state (in_state={}; out_state={})",
-                self.name(),
-                self.driver_path,
-                in_state,
-                out_state
-            ))
-        }
+        Ok(())
     }
 }
 
@@ -178,6 +196,7 @@ impl Node for DeviceControlHandler {
 
 struct InspectData {
     perf_state: inspect::UintProperty,
+    get_performance_state_errors: inspect::UintProperty,
     set_performance_state_errors: inspect::UintProperty,
     last_set_performance_state_error: inspect::StringProperty,
 }
@@ -187,6 +206,7 @@ impl InspectData {
         // Create a local root node and properties
         let root = parent.create_child(name);
         let perf_state = root.create_uint("performance_state", 0);
+        let get_performance_state_errors = root.create_uint("get_performance_state_errors", 0);
         let set_performance_state_errors = root.create_uint("set_performance_state_errors", 0);
         let last_set_performance_state_error =
             root.create_string("last_set_performance_state_error", "");
@@ -194,7 +214,12 @@ impl InspectData {
         // Pass ownership of the new node to the parent node, otherwise it'll be dropped
         parent.record(root);
 
-        InspectData { perf_state, set_performance_state_errors, last_set_performance_state_error }
+        InspectData {
+            perf_state,
+            get_performance_state_errors,
+            set_performance_state_errors,
+            last_set_performance_state_error,
+        }
     }
 }
 
@@ -207,6 +232,7 @@ pub mod tests {
     use std::cell::Cell;
 
     fn setup_fake_driver(
+        get_performance_state: impl Fn() -> u32 + 'static,
         mut set_performance_state: impl FnMut(u32) + 'static,
     ) -> fdev::ControllerProxy {
         let (proxy, mut stream) =
@@ -214,6 +240,9 @@ pub mod tests {
         fasync::spawn_local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
+                    Some(fdev::ControllerRequest::GetCurrentPerformanceState { responder }) => {
+                        let _ = responder.send(get_performance_state());
+                    }
                     Some(fdev::ControllerRequest::SetPerformanceState {
                         requested_state,
                         responder,
@@ -230,38 +259,71 @@ pub mod tests {
     }
 
     pub fn setup_test_node(
+        get_performance_state: impl Fn() -> u32 + 'static,
         set_performance_state: impl FnMut(u32) + 'static,
     ) -> Rc<DeviceControlHandler> {
         DeviceControlHandlerBuilder::new_with_proxy(
             "Fake".to_string(),
-            setup_fake_driver(set_performance_state),
+            setup_fake_driver(get_performance_state, set_performance_state),
         )
         .build()
         .unwrap()
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_performance_state() {
-        let recvd_perf_state = Rc::new(Cell::new(0));
-        let recvd_perf_state_clone = recvd_perf_state.clone();
+    pub fn setup_simple_test_node() -> Rc<DeviceControlHandler> {
+        let perf_state = Rc::new(Cell::new(0));
+        let perf_state_clone_1 = perf_state.clone();
+        let perf_state_clone_2 = perf_state.clone();
+        let get_performance_state = move || perf_state_clone_1.get();
         let set_performance_state = move |state| {
-            recvd_perf_state_clone.set(state);
+            perf_state_clone_2.set(state);
         };
-        let node = setup_test_node(set_performance_state);
+        setup_test_node(get_performance_state, set_performance_state)
+    }
 
-        let new_perf_state = 1;
-        match node.handle_message(&Message::SetPerformanceState(new_perf_state)).await.unwrap() {
+    /// Tests that the Get/SetPerformanceState messages cause the node to call the appropriate
+    /// device controller FIDL APIs.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_performance_state() {
+        let node = setup_simple_test_node();
+
+        // Send SetPerformanceState message to set a state of 1
+        let commanded_perf_state = 1;
+        match node
+            .handle_message(&Message::SetPerformanceState(commanded_perf_state))
+            .await
+            .unwrap()
+        {
             MessageReturn::SetPerformanceState => {}
             _ => panic!(),
         }
-        assert_eq!(recvd_perf_state.get(), new_perf_state);
 
-        let new_perf_state = 2;
-        match node.handle_message(&Message::SetPerformanceState(new_perf_state)).await.unwrap() {
+        // Verify GetPerformanceState reads back the same state
+        let received_perf_state =
+            match node.handle_message(&Message::GetPerformanceState).await.unwrap() {
+                MessageReturn::GetPerformanceState(state) => state,
+                _ => panic!(),
+            };
+        assert_eq!(commanded_perf_state, received_perf_state);
+
+        // Send SetPerformanceState message to set a state of 2
+        let commanded_perf_state = 2;
+        match node
+            .handle_message(&Message::SetPerformanceState(commanded_perf_state))
+            .await
+            .unwrap()
+        {
             MessageReturn::SetPerformanceState => {}
             _ => panic!(),
         }
-        assert_eq!(recvd_perf_state.get(), new_perf_state);
+
+        // Verify GetPerformanceState reads back the same state
+        let received_perf_state =
+            match node.handle_message(&Message::GetPerformanceState).await.unwrap() {
+                MessageReturn::GetPerformanceState(state) => state,
+                _ => panic!(),
+            };
+        assert_eq!(commanded_perf_state, received_perf_state);
     }
 
     /// Tests for the presence and correctness of dynamically-added inspect data
