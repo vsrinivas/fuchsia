@@ -232,14 +232,15 @@ template("fuzzers_package") {
   # sanitizers.
   foreach(sanitizer, sanitizers) {
     foreach(fuzzer, invoker.fuzzers) {
+      selected = false
       foreach(selector, select_variant_canonical) {
-        if (!pkg.is_fuzzed && selector.variant == "${sanitizer}-fuzzer" &&
+        if (!selected && selector.variant == "${sanitizer}-fuzzer" &&
             ((defined(selector.target_type) &&
               selector.target_type == [ "fuzzed_executable" ]) ||
              (defined(selector.name) && selector.name == [ fuzzer ]) ||
              (defined(selector.output_name) &&
               selector.output_name == [ fuzzer ]))) {
-          pkg.is_fuzzed = true
+          selected = true
           fuzzer_name = get_label_info(fuzzer, "name")
           fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
           fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
@@ -279,6 +280,7 @@ template("fuzzers_package") {
           pkg.host_outputs += [ fuzzer_name ]
         }
       }
+      pkg.is_fuzzed = pkg.is_fuzzed || selected
     }
   }
 
