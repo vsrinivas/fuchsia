@@ -13,6 +13,7 @@ group("connectivity") {
     "overnet",
     "ppp",
     "telephony",
+    "weave",
     "wlan",
   ]
 }
@@ -28,6 +29,7 @@ group("tests") {
     "network:tests",
     "overnet:tests",
     "ppp:tests",
+    "weave:tests",
     "wlan:tests",
   ]
 }

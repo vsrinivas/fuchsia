@@ -1,0 +1,76 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+executable("bin") {
+  output_name = "weavestack"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+group("weavestack") {
+  testonly = true
+  public_deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
+package("pkg") {
+  package_name = "weavestack"
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "weavestack"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("../meta/weavestack.cmx")
+      dest = "weavestack.cmx"
+    },
+  ]
+}
+
+executable("unittests") {
+  output_name = "weavestack_unittests"
+
+  testonly = true
+
+  sources = []
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+unittest_package("weavestack_unittests") {
+  deps = [ ":unittests" ]
+
+  tests = [
+    {
+      name = "weavestack_unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":weavestack_unittests" ]
+}

@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/weavestack"
+    },
+    "sandbox": {
+        "services": []
+    }
+}
