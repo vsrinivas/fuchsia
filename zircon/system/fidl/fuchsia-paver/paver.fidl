@@ -110,7 +110,7 @@ protocol DataSink {
 
     /// Writes FVM with data from streamed via `payload`. This potentially affects all
     /// configurations.
-    WriteVolumes(request<PayloadStream> payload) -> (zx.status status);
+    WriteVolumes(PayloadStream payload) -> (zx.status status);
 
     /// Writes bootloader partition with data from `payload`.
     ///
@@ -193,4 +193,3 @@ protocol BootManager {
     /// If the configuration is already marked healthy, no action is taken.
     SetActiveConfigurationHealthy() -> (zx.status status);
 };
-
