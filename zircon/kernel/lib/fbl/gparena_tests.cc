@@ -271,6 +271,41 @@ static bool parallel_grow_memory() {
   END_TEST;
 }
 
+static bool test_confine() {
+  BEGIN_TEST;
+  constexpr int kMaxItems = 32;
+  constexpr int kSize = 64;
+
+  GPArena<0, kSize> arena;
+  void* allocs[kMaxItems];
+
+  ASSERT_EQ(arena.Init("test", kMaxItems), ZX_OK);
+
+  for (int i = 0; i < kMaxItems; i++) {
+    allocs[i] = arena.Alloc();
+  }
+
+  const uintptr_t base = reinterpret_cast<uintptr_t>(arena.Base());
+  for (int i = 0; i < 2 * kMaxItems; i++) {
+    uintptr_t expected_object = base + i * kSize;
+    if (i < kMaxItems) {
+      EXPECT_EQ(expected_object, arena.Confine(expected_object));
+    } else {
+      EXPECT_EQ(base, arena.Confine(expected_object));
+    }
+  }
+
+  EXPECT_EQ(base, arena.Confine(-1ull));
+  EXPECT_EQ(base, arena.Confine(base - 1));
+  EXPECT_EQ(base, arena.Confine(base - kSize - 1));
+
+  for (int i = 0; i < kMaxItems; i++) {
+    arena.Free(allocs[i]);
+  }
+
+  END_TEST;
+}
+
 #define GPARENA_UNITTEST(fname) UNITTEST(#fname, fname)
 
 UNITTEST_START_TESTCASE(gparena_tests)
@@ -281,4 +316,5 @@ GPARENA_UNITTEST(does_preserve)
 GPARENA_UNITTEST(committed_monotonic)
 GPARENA_UNITTEST(parallel_alloc)
 GPARENA_UNITTEST(parallel_grow_memory)
+GPARENA_UNITTEST(test_confine)
 UNITTEST_END_TESTCASE(gparena_tests, "gparena_tests", "GPArena test")

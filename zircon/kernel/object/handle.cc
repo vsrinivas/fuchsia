@@ -207,6 +207,7 @@ Handle* Handle::FromU32(uint32_t value) {
   uintptr_t handle_addr = IndexToHandle(value & kHandleIndexMask);
   if (unlikely(!HandleTableArena::arena_.Committed(reinterpret_cast<void*>(handle_addr))))
     return nullptr;
+  handle_addr = HandleTableArena::arena_.Confine(handle_addr);
   auto handle = reinterpret_cast<Handle*>(handle_addr);
   return likely(handle->base_value() == value) ? handle : nullptr;
 }

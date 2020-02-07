@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_GPARENA_H_
 
 #include <fbl/auto_call.h>
+#include <fbl/confine_array_index.h>
 #include <fbl/mutex.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
@@ -147,6 +148,16 @@ class GPArena {
   bool Committed(void* node) const {
     uintptr_t n = reinterpret_cast<uintptr_t>(node);
     return n >= start_ && n < top_.load(ktl::memory_order_relaxed);
+  }
+
+  // Return |address| if it is within the valid range of the arena or the base of the arena if not.
+  // Hardened against Spectre V1 / bounds check bypass speculation attacks - it always returns a
+  // safe value, even under speculation.
+  uintptr_t Confine(uintptr_t address) const {
+    const size_t size = top_.load(ktl::memory_order_relaxed) - start_;
+    uintptr_t offset = address - start_;
+    offset = fbl::confine_array_index(offset, /*size=*/size);
+    return start_ + offset;
   }
 
   void* Base() const { return reinterpret_cast<void*>(start_); }
