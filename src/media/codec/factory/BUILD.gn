@@ -32,12 +32,12 @@ executable("factory") {
   deps = [ ":factory_source" ]
 }
 
-executable("codec_factory_hw_detect_test_bin") {
-  output_name = "codec_factory_hw_detect_test"
+executable("codec_detect_hw_encode_test_bin") {
+  output_name = "codec_detect_hw_encode_test"
 
   testonly = true
 
-  sources = [ "test/codec_factory_hw_detect_test.cc" ]
+  sources = [ "test/codec_detect_hw_encode_test.cc" ]
 
   deps = [
     ":factory_source",
@@ -46,17 +46,44 @@ executable("codec_factory_hw_detect_test_bin") {
   ]
 }
 
-test_package("codec_factory_hw_detect_test") {
-  deps = [ ":codec_factory_hw_detect_test_bin" ]
+test_package("codec_detect_hw_encode_test") {
+  deps = [ ":codec_detect_hw_encode_test_bin" ]
 
   tests = [
     {
-      name = "codec_factory_hw_detect_test"
+      name = "codec_detect_hw_encode_test"
+
+      # test depends on hw encoder device being present
+      environments = [ sherlock_env ]
+    },
+  ]
+}
+
+executable("codec_detect_hw_decode_test_bin") {
+  output_name = "codec_detect_hw_decode_test"
+
+  testonly = true
+
+  sources = [ "test/codec_detect_hw_decode_test.cc" ]
+
+  deps = [
+    ":factory_source",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+test_package("codec_detect_hw_decode_test") {
+  deps = [ ":codec_detect_hw_decode_test_bin" ]
+
+  tests = [
+    {
+      name = "codec_detect_hw_decode_test"
 
       # test depends on hw decoder device being present
       environments = [
-        astro_env,
         sherlock_env,
+        astro_env,
       ]
     },
   ]

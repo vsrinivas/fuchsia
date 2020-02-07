@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/codec_factory_hw_detect_test"
+        "binary": "test/codec_detect_hw_decode_test"
     },
     "sandbox": {
         "dev": [

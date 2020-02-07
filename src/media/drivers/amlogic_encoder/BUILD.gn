@@ -10,8 +10,12 @@ driver_module("amlogic_encoder_driver") {
 
   sources = [
     "binding.cc",
+    "codec_adapter_h264.cc",
+    "codec_adapter_h264.h",
     "device_ctx.cc",
     "device_ctx.h",
+    "local_codec_factory.cc",
+    "local_codec_factory.h",
     "macros.h",
     "registers.h",
   ]

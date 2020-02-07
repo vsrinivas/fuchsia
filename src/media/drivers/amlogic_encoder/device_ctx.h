@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <thread>
+#include <unordered_map>
 
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
@@ -24,6 +25,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 
+#include "src/media/drivers/amlogic_encoder/local_codec_factory.h"
 #include "src/media/drivers/amlogic_encoder/registers.h"
 
 enum class SocType {
@@ -50,13 +52,16 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   static std::pair<zx_status_t, std::unique_ptr<DeviceCtx>> Bind(zx_device_t* parent);
 
   explicit DeviceCtx(zx_device_t* parent)
-      : DeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+      : DeviceType(parent),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   DeviceCtx(const DeviceCtx&) = delete;
   DeviceCtx& operator=(const DeviceCtx&) = delete;
 
   ~DeviceCtx() { ShutDown(); }
 
+  // media codec FIDL implementation
   void GetCodecFactory(zx::channel request);
 
   // Methods required by the ddk.
@@ -64,11 +69,29 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   void DdkUnbindNew(ddk::UnbindTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
+  zx::unowned_bti bti() { return zx::unowned_bti(bti_); }
+
+  // This gets started connecting to sysmem, but returns an InterfaceHandle
+  // instead of InterfacePtr so that the caller can bind to the dispatcher.
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> ConnectToSysmem();
+
+  // encoder control
+  zx_status_t StartEncoder();
+  zx_status_t StopEncoder();
+  zx_status_t WaitForIdle();
+  zx_status_t EncodeFrame(const CodecBuffer* buffer, uint8_t* data, uint32_t len);
+  void ReturnBuffer(const CodecBuffer* buffer);
+  void SetOutputBuffers(std::vector<const CodecBuffer*> buffers);
+
+  // TODO(afoxley), this should likely take some encoder specific info struct. The intention is to
+  // support quality adjustments on the fly.
+  void SetEncodeParams(fuchsia::media::FormatDetails format_details);
+
  private:
-  zx_status_t StartThread();
   void ShutDown();
   zx_status_t Init();
-  zx_status_t AddDevice();
+  zx_status_t Start();
+  zx_status_t LoadFirmware();
 
   pdev_protocol_t pdev_;
   amlogic_canvas_protocol_t canvas_;
@@ -84,6 +107,11 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
 
   async::Loop loop_;
   thrd_t loop_thread_;
+
+  // FIDL interfaces
+  std::unordered_map<LocalCodecFactory*, std::unique_ptr<LocalCodecFactory>> codec_factories_;
+  std::unique_ptr<CodecAdmissionControl> codec_admission_control_;
+  std::unique_ptr<CodecImpl> codec_instance_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_ENCODER_DEVICE_CTX_H_

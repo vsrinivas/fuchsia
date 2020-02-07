@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/codec_detect_hw_encode_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/media-codec"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

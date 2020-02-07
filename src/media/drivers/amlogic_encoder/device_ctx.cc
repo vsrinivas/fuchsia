@@ -4,17 +4,22 @@
 
 #include "src/media/drivers/amlogic_encoder/device_ctx.h"
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <zircon/assert.h>
+#include <zircon/types.h>
 
 #include <memory>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/device.h>
 
+#include "src/media/drivers/amlogic_encoder/local_codec_factory.h"
 #include "src/media/drivers/amlogic_encoder/macros.h"
 
 enum MmioRegion {
@@ -50,7 +55,7 @@ std::pair<zx_status_t, std::unique_ptr<DeviceCtx>> DeviceCtx::Bind(zx_device_t* 
     return {status, nullptr};
   }
 
-  status = device_ctx->DdkAdd("amlogic_video_enc");
+  status = device_ctx->Start();
 
   return {status, std::move(device_ctx)};
 }
@@ -68,7 +73,23 @@ zx_status_t DeviceCtx::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void DeviceCtx::ShutDown() { loop_.Shutdown(); }
 
-zx_status_t DeviceCtx::StartThread() { return loop_.StartThread("device-loop", &loop_thread_); }
+zx_status_t DeviceCtx::Start() {
+  auto status = loop_.StartThread("device-loop", &loop_thread_);
+  if (status != ZX_OK) {
+    ENCODE_ERROR("could not start loop thread");
+    return status;
+  }
+
+  // add device, but not visible till after fw is loaded.
+  status = DdkAdd("amlogic_video_enc", DEVICE_ADD_INVISIBLE);
+
+  async::PostTask(loop_.dispatcher(), [this]() {
+    LoadFirmware();
+    DdkMakeVisible();
+  });
+
+  return status;
+}
 
 zx_status_t DeviceCtx::Init() {
   composite_protocol_t composite;
@@ -152,18 +173,60 @@ zx_status_t DeviceCtx::Init() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // TODO load firmware
-  // TODO connect to sysmem
-
-  status = StartThread();
-  if (status != ZX_OK) {
-    ENCODE_ERROR("could not start loop thread");
-    return status;
-  }
-
   return ZX_OK;
 }
 
+zx_status_t DeviceCtx::LoadFirmware() { return ZX_ERR_NOT_SUPPORTED; }
+
+// encoder control
+zx_status_t DeviceCtx::StartEncoder() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t DeviceCtx::StopEncoder() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t DeviceCtx::WaitForIdle() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t DeviceCtx::EncodeFrame(const CodecBuffer* buffer, uint8_t* data, uint32_t len) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+void DeviceCtx::ReturnBuffer(const CodecBuffer* buffer) {}
+void DeviceCtx::SetOutputBuffers(std::vector<const CodecBuffer*> buffers) {}
+
+void DeviceCtx::SetEncodeParams(fuchsia::media::FormatDetails format_details) {}
+
+fidl::InterfaceHandle<fuchsia::sysmem::Allocator> DeviceCtx::ConnectToSysmem() {
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> client_end;
+  fidl::InterfaceRequest<fuchsia::sysmem::Allocator> server_end = client_end.NewRequest();
+  zx_status_t connect_status = sysmem_connect(&sysmem_, server_end.TakeChannel().release());
+  if (connect_status != ZX_OK) {
+    // failure
+    return fidl::InterfaceHandle<fuchsia::sysmem::Allocator>();
+  }
+  return client_end;
+}
+
 void DeviceCtx::GetCodecFactory(zx::channel request) {
-  // drop
+  // post to fidl thread to avoid racing on creation/error
+  async::PostTask(loop_.dispatcher(), [this, request = std::move(request)]() mutable {
+    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> factory_request(std::move(request));
+
+    std::unique_ptr<LocalCodecFactory> codec_factory = std::make_unique<LocalCodecFactory>(
+        loop_.dispatcher(), this, std::move(factory_request),
+        /*factory_done_callback=*/
+        [this](LocalCodecFactory* codec_factory,
+               std::unique_ptr<CodecImpl> created_codec_instance) {
+          // own codec impl and bind it
+          codec_instance_ = std::move(created_codec_instance);
+          codec_instance_->BindAsync(/*error_handler=*/[this] {
+            // Drop codec impl and close channel on error
+            codec_instance_ = nullptr;
+          });
+          // drop factory and close factory channel
+          codec_factories_.erase(codec_factory);
+        },
+        codec_admission_control_.get(),
+        /* error_handler */
+        [this](LocalCodecFactory* codec_factory, zx_status_t error) {
+          // Drop and close factory channel on error.
+          codec_factories_.erase(codec_factory);
+        });
+
+    codec_factories_.emplace(codec_factory.get(), std::move(codec_factory));
+  });
 }
