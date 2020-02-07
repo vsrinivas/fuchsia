@@ -6,7 +6,6 @@ group("storage") {
   deps = [
     "ext4",
     "fs-management",
-    "ramdevice-client",
   ]
 }
 
@@ -17,6 +16,5 @@ group("tests") {
     "conformance_harness",
     "ext4:tests",
     "fs-management:tests",
-    "ramdevice-client:tests",
   ]
 }
