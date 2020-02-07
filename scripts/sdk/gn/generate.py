@@ -84,11 +84,12 @@ class GNBuilder(Frontend):
         shutil.copytree(self.source('meta'), self.dest('meta'))
 
     def finalize(self, arch, types):
-        self.write_top_level_files()
+        self.write_additional_files()
 
-    def write_top_level_files(self):
+    def write_additional_files(self):
         self.write_file(self.dest('.gitignore'), 'gitignore', self)
-        self.write_file(self.dest('BUILD.gn'), 'top_level_build', self)
+        self.write_file(
+            self.dest("build", "test_targets.gni"), 'test_targets', self)
 
     # Handlers for SDK atoms
 
