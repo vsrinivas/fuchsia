@@ -17,6 +17,7 @@ OUT_DIR defaults to ./out/default relative to the run.py
 
 import imp
 import os
+import platform
 from subprocess import Popen
 import sys
 import unittest
@@ -73,6 +74,9 @@ class GnTester(object):
 
 
 def main():
+    if platform.system() == 'Darwin':
+        print "The GN SDK does not support macOS"
+        return 0
     if GnTester().run():
         return 1
     return 0
