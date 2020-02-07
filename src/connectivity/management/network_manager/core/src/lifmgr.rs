@@ -9,7 +9,7 @@
 
 use {
     crate::{address::LifIpAddr, error, portmgr::PortId, ElementId, Version, UUID},
-    fidl_fuchsia_router_config,
+    fidl_fuchsia_router_config as netconfig,
     std::collections::{HashMap, HashSet},
 };
 
@@ -152,27 +152,27 @@ impl LIF {
     }
 }
 
-impl From<&LIF> for fidl_fuchsia_router_config::Lif {
+impl From<&LIF> for netconfig::Lif {
     /// Creates a fuchsia.router.config.Lif using the current state.
-    fn from(lif: &LIF) -> fidl_fuchsia_router_config::Lif {
+    fn from(lif: &LIF) -> netconfig::Lif {
         let ps: Vec<_> = lif.ports.iter().map(|p| p.to_u32()).collect();
         let lt;
         let p;
         match lif.l_type {
             LIFType::WAN => {
-                lt = fidl_fuchsia_router_config::LifType::Wan;
+                lt = netconfig::LifType::Wan;
                 p = Some(lif.properties.to_fidl_wan());
             }
             LIFType::LAN => {
-                lt = fidl_fuchsia_router_config::LifType::Lan;
+                lt = netconfig::LifType::Lan;
                 p = Some(lif.properties.to_fidl_lan());
             }
             _ => {
-                lt = fidl_fuchsia_router_config::LifType::Invalid;
+                lt = netconfig::LifType::Invalid;
                 p = None;
             }
         };
-        fidl_fuchsia_router_config::Lif {
+        netconfig::Lif {
             element: Some(lif.id.into()),
             type_: Some(lt),
             name: Some(lif.name.clone()),
@@ -190,8 +190,8 @@ pub(crate) struct DnsSearch {
     /// Domain to add to non fully qualified domain names.
     domain_name: Option<String>,
 }
-impl From<fidl_fuchsia_router_config::DnsSearch> for DnsSearch {
-    fn from(d: fidl_fuchsia_router_config::DnsSearch) -> Self {
+impl From<netconfig::DnsSearch> for DnsSearch {
+    fn from(d: netconfig::DnsSearch) -> Self {
         DnsSearch {
             servers: d.servers.into_iter().map(|ip| LifIpAddr::from(&ip)).collect(),
             domain_name: d.domain_name,
@@ -236,12 +236,12 @@ pub struct LIFProperties {
 
 impl LIFProperties {
     /// Convert to fuchsia.router.config.LifProperties, WAN variant.
-    pub fn to_fidl_wan(&self) -> fidl_fuchsia_router_config::LifProperties {
-        fidl_fuchsia_router_config::LifProperties::Wan(fidl_fuchsia_router_config::WanProperties {
+    pub fn to_fidl_wan(&self) -> netconfig::LifProperties {
+        netconfig::LifProperties::Wan(netconfig::WanProperties {
             address_method: Some(if self.dhcp {
-                fidl_fuchsia_router_config::WanAddressMethod::Automatic
+                netconfig::WanAddressMethod::Automatic
             } else {
-                fidl_fuchsia_router_config::WanAddressMethod::Manual
+                netconfig::WanAddressMethod::Manual
             }),
             address_v4: self.address_v4.as_ref().map(|x| x.into()),
             gateway_v4: None,
@@ -253,16 +253,14 @@ impl LIFProperties {
             hostname: None,
             clone_mac: None,
             connection_parameters: None,
-            connection_type: Some(fidl_fuchsia_router_config::WanConnection::Direct),
-            connection_v6_mode: Some(
-                fidl_fuchsia_router_config::WanIpV6ConnectionMode::Passthrough,
-            ),
+            connection_type: Some(netconfig::WanConnection::Direct),
+            connection_v6_mode: Some(netconfig::WanIpV6ConnectionMode::Passthrough),
         })
     }
 
     /// Convert to fuchsia.router.config.LifProperties, LAN variant.
-    pub fn to_fidl_lan(&self) -> fidl_fuchsia_router_config::LifProperties {
-        fidl_fuchsia_router_config::LifProperties::Lan(fidl_fuchsia_router_config::LanProperties {
+    pub fn to_fidl_lan(&self) -> netconfig::LifProperties {
+        netconfig::LifProperties::Lan(netconfig::LanProperties {
             address_v4: self.address_v4.as_ref().map(|x| x.into()),
             address_v6: None,
             enable: Some(self.enabled),

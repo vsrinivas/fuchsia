@@ -5,6 +5,7 @@
 use {
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_stack::{self as stack},
+    fidl_fuchsia_router_config as netconfig,
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr},
 };
 
@@ -49,8 +50,8 @@ impl From<&fnet::Subnet> for LifIpAddr {
     }
 }
 
-impl From<&fidl_fuchsia_router_config::CidrAddress> for LifIpAddr {
-    fn from(a: &fidl_fuchsia_router_config::CidrAddress) -> Self {
+impl From<&netconfig::CidrAddress> for LifIpAddr {
+    fn from(a: &netconfig::CidrAddress) -> Self {
         match a.address {
             Some(addr) => {
                 LifIpAddr { address: to_ip_addr(addr), prefix: a.prefix_length.unwrap_or(0) }
@@ -60,14 +61,14 @@ impl From<&fidl_fuchsia_router_config::CidrAddress> for LifIpAddr {
     }
 }
 
-impl From<&LifIpAddr> for fidl_fuchsia_router_config::CidrAddress {
+impl From<&LifIpAddr> for netconfig::CidrAddress {
     fn from(addr: &LifIpAddr) -> Self {
         match addr.address {
-            IpAddr::V4(a) => fidl_fuchsia_router_config::CidrAddress {
+            IpAddr::V4(a) => netconfig::CidrAddress {
                 address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: a.octets() })),
                 prefix_length: Some(addr.prefix),
             },
-            IpAddr::V6(a) => fidl_fuchsia_router_config::CidrAddress {
+            IpAddr::V6(a) => netconfig::CidrAddress {
                 address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: a.octets() })),
                 prefix_length: Some(addr.prefix),
             },

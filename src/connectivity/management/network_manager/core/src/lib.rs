@@ -31,7 +31,7 @@ use {
     crate::lifmgr::{LIFProperties, LIFType},
     crate::portmgr::PortId,
     fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack,
-    fidl_fuchsia_router_config::{Id, LifProperties},
+    fidl_fuchsia_router_config as netconfig,
     std::sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -63,7 +63,7 @@ pub enum DnsPolicy {
     Merge,
 }
 
-impl From<DnsPolicy> for fidl_fuchsia_router_config::DnsPolicy {
+impl From<DnsPolicy> for netconfig::DnsPolicy {
     fn from(p: DnsPolicy) -> Self {
         match p {
             DnsPolicy::Static => fidl_fuchsia_router_config::DnsPolicy::Static,
@@ -503,7 +503,7 @@ impl DeviceState {
     pub async fn update_lif_properties(
         &mut self,
         lif_id: UUID,
-        properties: &LifProperties,
+        properties: &netconfig::LifProperties,
     ) -> error::Result<()> {
         let lif = match self.lif_manager.lif_mut(&lif_id) {
             None => {
@@ -521,13 +521,13 @@ impl DeviceState {
             // Apply differences
             // If failure, revert back
             // Report result.
-            LifProperties::Wan(p) => {
+            netconfig::LifProperties::Wan(p) => {
                 let old = lif.properties();
                 let mut lp = old.clone();
 
                 match &p.connection_type {
                     None => {}
-                    Some(fidl_fuchsia_router_config::WanConnection::Direct) => {
+                    Some(netconfig::WanConnection::Direct) => {
                         info!("connection_type DIRECT ");
                     }
                     Some(cfg) => {
@@ -571,18 +571,18 @@ impl DeviceState {
                     }
                 };
                 match &p.address_method {
-                    Some(fidl_fuchsia_router_config::WanAddressMethod::Automatic) => {
+                    Some(netconfig::WanAddressMethod::Automatic) => {
                         lp.dhcp = true;
                         lp.address_v4 = None;
                     }
-                    Some(fidl_fuchsia_router_config::WanAddressMethod::Manual) => {
+                    Some(netconfig::WanAddressMethod::Manual) => {
                         lp.dhcp = false;
                     }
                     None => {}
                 };
                 match &p.address_v4 {
                     None => {}
-                    Some(fidl_fuchsia_router_config::CidrAddress {
+                    Some(netconfig::CidrAddress {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
@@ -615,7 +615,7 @@ impl DeviceState {
                 }
                 match &p.connection_v6_mode {
                     None => {}
-                    Some(fidl_fuchsia_router_config::WanIpV6ConnectionMode::Passthrough) => {
+                    Some(netconfig::WanIpV6ConnectionMode::Passthrough) => {
                         info!("v6 mode Passthrough");
                     }
                     Some(cfg) => {
@@ -625,7 +625,7 @@ impl DeviceState {
                 };
                 match &p.address_v6 {
                     None => {}
-                    Some(fidl_fuchsia_router_config::CidrAddress {
+                    Some(netconfig::CidrAddress {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
@@ -657,7 +657,7 @@ impl DeviceState {
                 self.version += 1;
                 Ok(())
             }
-            LifProperties::Lan(p) => {
+            netconfig::LifProperties::Lan(p) => {
                 let old = lif.properties();
                 let mut lp = old.clone();
 
@@ -680,7 +680,7 @@ impl DeviceState {
                 };
                 match &p.address_v4 {
                     None => {}
-                    Some(fidl_fuchsia_router_config::CidrAddress {
+                    Some(netconfig::CidrAddress {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
@@ -700,7 +700,7 @@ impl DeviceState {
                 };
                 match &p.address_v6 {
                     None => {}
-                    Some(fidl_fuchsia_router_config::CidrAddress {
+                    Some(netconfig::CidrAddress {
                         address: Some(address),
                         prefix_length: Some(prefix_length),
                     }) => {
@@ -825,10 +825,7 @@ impl DeviceState {
     }
 
     /// Installs a new packet filter rule.
-    pub async fn set_filter(
-        &self,
-        rule: fidl_fuchsia_router_config::FilterRule,
-    ) -> error::Result<()> {
+    pub async fn set_filter(&self, rule: netconfig::FilterRule) -> error::Result<()> {
         match self.packet_filter.set_filter(rule).await {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -839,7 +836,7 @@ impl DeviceState {
     }
 
     /// Deletes a packet filter rule.
-    pub async fn delete_filter(&self, _id: Id) -> error::Result<()> {
+    pub async fn delete_filter(&self, _id: netconfig::Id) -> error::Result<()> {
         // TODO(44183): Currently this method deletes all of the installed filter rules.
         // We need to associate each rule with an id when it is installed, so that individual filter
         // rules can be removed.
@@ -856,7 +853,7 @@ impl DeviceState {
     }
 
     /// Returns the currently installed packet filter rules.
-    pub async fn get_filters(&self) -> error::Result<Vec<fidl_fuchsia_router_config::FilterRule>> {
+    pub async fn get_filters(&self) -> error::Result<Vec<netconfig::FilterRule>> {
         self.packet_filter.get_filters().await.map_err(|e| {
             warn!("Failed to get filter rules: {:?}", e);
             error::NetworkManager::SERVICE(error::Service::ErrorGettingPacketFilterRules)
@@ -867,14 +864,14 @@ impl DeviceState {
         &mut self,
         servers: &mut [fidl_fuchsia_net::IpAddress],
         domain: Option<String>,
-        policy: fidl_fuchsia_router_config::DnsPolicy,
+        policy: netconfig::DnsPolicy,
     ) -> error::Result<ElementId> {
         if domain.is_some() {
             //TODO(dpradilla): lift this restriction.
             warn!("setting the dns search domain name is not supported {:?}", domain);
             return Err(error::NetworkManager::SERVICE(error::Service::NotSupported));
         }
-        let p = if policy == fidl_fuchsia_router_config::DnsPolicy::NotSet {
+        let p = if policy == netconfig::DnsPolicy::NotSet {
             DnsPolicy::default()
         } else {
             DnsPolicy::from(policy)
@@ -896,8 +893,8 @@ impl DeviceState {
     }
 
     /// Returns the dns resolver configuration.
-    pub async fn get_dns_resolver(&self) -> fidl_fuchsia_router_config::DnsResolverConfig {
-        fidl_fuchsia_router_config::DnsResolverConfig::from(&self.dns_config)
+    pub async fn get_dns_resolver(&self) -> netconfig::DnsResolverConfig {
+        netconfig::DnsResolverConfig::from(&self.dns_config)
     }
 }
 
@@ -956,9 +953,9 @@ impl ElementId {
     }
 }
 
-impl From<ElementId> for fidl_fuchsia_router_config::Id {
+impl From<ElementId> for netconfig::Id {
     fn from(id: ElementId) -> Self {
-        fidl_fuchsia_router_config::Id { uuid: id.uuid.to_ne_bytes(), version: id.version }
+        netconfig::Id { uuid: id.uuid.to_ne_bytes(), version: id.version }
     }
 }
 
@@ -984,8 +981,8 @@ mod tests {
         assert_eq!(e.version(), new_version);
 
         assert_eq!(
-            fidl_fuchsia_router_config::Id::from(e),
-            fidl_fuchsia_router_config::Id { uuid: uuid.to_ne_bytes(), version: new_version },
+            netconfig::Id::from(e),
+            netconfig::Id { uuid: uuid.to_ne_bytes(), version: new_version },
         );
     }
 

@@ -9,7 +9,7 @@ use {
     crate::servicemgr::NatConfig,
     anyhow::{format_err, Error},
     fidl_fuchsia_net_filter::{self as netfilter, Direction, FilterMarker, FilterProxy, Status},
-    fidl_fuchsia_router_config as router_config,
+    fidl_fuchsia_router_config as netconfig,
     fuchsia_component::client::connect_to_service,
     std::net::IpAddr,
 };
@@ -19,13 +19,13 @@ pub struct PacketFilter {
     filter_svc: FilterProxy,
 }
 
-/// Parses a [`netfilter::Rule`] into a [`router_config::FilterRule`].
-fn to_filter_rule(rule: netfilter::Rule) -> Result<router_config::FilterRule, Error> {
+/// Parses a [`netfilter::Rule`] into a [`netconfig::FilterRule`].
+fn to_filter_rule(rule: netfilter::Rule) -> Result<netconfig::FilterRule, Error> {
     // This is a good candidate to refactor to use TryInto/TryFrom.
-    Ok(router_config::FilterRule {
-        element: router_config::Id { uuid: [0; 16], version: 0 },
+    Ok(netconfig::FilterRule {
+        element: netconfig::Id { uuid: [0; 16], version: 0 },
         action: to_filter_action(rule.action),
-        selector: router_config::FlowSelector {
+        selector: netconfig::FlowSelector {
             src_address: to_cidr_address(rule.src_subnet),
             dst_address: to_cidr_address(rule.dst_subnet),
             src_ports: to_port_range(rule.src_port_range),
@@ -35,23 +35,23 @@ fn to_filter_rule(rule: netfilter::Rule) -> Result<router_config::FilterRule, Er
     })
 }
 
-/// Parses a [`netfilter::Action`] and turns it into a [`router_config::FilterAction`].
-fn to_filter_action(action: netfilter::Action) -> router_config::FilterAction {
+/// Parses a [`netfilter::Action`] and turns it into a [`netconfig::FilterAction`].
+fn to_filter_action(action: netfilter::Action) -> netconfig::FilterAction {
     match action {
-        netfilter::Action::Pass => router_config::FilterAction::Allow,
+        netfilter::Action::Pass => netconfig::FilterAction::Allow,
         // TODO(cgibson): What is our default drop policy? Should we gloss over the difference
         // to users of the Network Manager or should it become a parse error?
-        netfilter::Action::Drop => router_config::FilterAction::Drop,
-        netfilter::Action::DropReset => router_config::FilterAction::Drop,
+        netfilter::Action::Drop => netconfig::FilterAction::Drop,
+        netfilter::Action::DropReset => netconfig::FilterAction::Drop,
     }
 }
 
-/// Parses a [`fidl_fuchsia_net::Subnet`] and turns it into a [`router_config::CidrAddress`].
+/// Parses a [`fidl_fuchsia_net::Subnet`] and turns it into a [`netconfig::CidrAddress`].
 fn to_cidr_address(
     subnet: Option<Box<fidl_fuchsia_net::Subnet>>,
-) -> Option<router_config::CidrAddress> {
+) -> Option<netconfig::CidrAddress> {
     match subnet {
-        Some(s) => Some(router_config::CidrAddress {
+        Some(s) => Some(netconfig::CidrAddress {
             address: Some(s.addr),
             prefix_length: Some(s.prefix_len),
         }),
@@ -59,24 +59,24 @@ fn to_cidr_address(
     }
 }
 
-fn to_port_range(i: netfilter::PortRange) -> Option<Vec<router_config::PortRange>> {
-    Some(vec![router_config::PortRange { from: i.start, to: i.end }])
+fn to_port_range(i: netfilter::PortRange) -> Option<Vec<netconfig::PortRange>> {
+    Some(vec![netconfig::PortRange { from: i.start, to: i.end }])
 }
 
-/// Parses a [`netfilter::SocketProtocol`] to a [`router_config::Protocol`].
+/// Parses a [`netfilter::SocketProtocol`] to a [`netconfig::Protocol`].
 ///
 /// [`netfilter::SocketProtocol`] cannot represent multiple protocols at once (i.e: It does not have
 /// a representation for "Both", or "All", etc.).
-fn to_protocol(proto: netfilter::SocketProtocol) -> Option<router_config::Protocol> {
+fn to_protocol(proto: netfilter::SocketProtocol) -> Option<netconfig::Protocol> {
     match proto {
-        netfilter::SocketProtocol::Tcp => Some(router_config::Protocol::Tcp),
-        netfilter::SocketProtocol::Udp => Some(router_config::Protocol::Udp),
+        netfilter::SocketProtocol::Tcp => Some(netconfig::Protocol::Tcp),
+        netfilter::SocketProtocol::Udp => Some(netconfig::Protocol::Udp),
         _ => None,
     }
 }
 
-/// Parses a [`router_config::FilterRule`] into a [`netfilter::Rule`].
-fn from_filter_rule(rule: router_config::FilterRule) -> Result<Vec<netfilter::Rule>, Error> {
+/// Parses a [`netconfig::FilterRule`] into a [`netfilter::Rule`].
+fn from_filter_rule(rule: netconfig::FilterRule) -> Result<Vec<netfilter::Rule>, Error> {
     let mut netfilter_rules = Vec::new();
     let netfilter_rule = gen_netfilter_rule(&rule)?;
     match from_protocol(rule.selector.protocol) {
@@ -100,8 +100,8 @@ fn from_filter_rule(rule: router_config::FilterRule) -> Result<Vec<netfilter::Ru
     Ok(netfilter_rules)
 }
 
-/// Takes a [`router_config::FilterRule`] and converts it into a [`netfilter::Rule`].
-fn gen_netfilter_rule(rule: &router_config::FilterRule) -> Result<netfilter::Rule, Error> {
+/// Takes a [`netconfig::FilterRule`] and converts it into a [`netfilter::Rule`].
+fn gen_netfilter_rule(rule: &netconfig::FilterRule) -> Result<netfilter::Rule, Error> {
     // This is a good candidate to refactor to use TryInto/TryFrom.
     let src_port_range = from_port_range(&rule.selector.src_ports)
         .unwrap_or_else(|| netfilter::PortRange { start: 0, end: 0 });
@@ -121,8 +121,8 @@ fn gen_netfilter_rule(rule: &router_config::FilterRule) -> Result<netfilter::Rul
         src_port_range,
         dst_port_range,
         // TODO(cgibson): NIC 0 applies to *all* interfaces, however that doesn't seem like what we
-        // want to do at all. The `router_config::FilterRule` FIDL API doesn't specify interface
-        // names, and in fact should probably be a *property* of the WAN or LAN router_config FIDL
+        // want to do at all. The `netconfig::FilterRule` FIDL API doesn't specify interface
+        // names, and in fact should probably be a *property* of the WAN or LAN netconfig FIDL
         // APIs since we can have packet filters installed on every interface.
         nic: 0,
         // The proto field requires further processing, just set any value for now.
@@ -130,34 +130,34 @@ fn gen_netfilter_rule(rule: &router_config::FilterRule) -> Result<netfilter::Rul
     })
 }
 
-/// Parses a [`router_config::Protocol`] and returns the equivalent [`netfilter::SocketProtocol`].
+/// Parses a [`netconfig::Protocol`] and returns the equivalent [`netfilter::SocketProtocol`].
 ///
 /// [`netfilter::SocketProtocol`] cannot represent multiple protocols at once (i.e: It does not have
 /// a representation for "Both", or "All", etc.). "Both" is also the default when no protocol is
 /// provided. Return `None` as the representation of "Both".
-fn from_protocol(proto: Option<router_config::Protocol>) -> Option<netfilter::SocketProtocol> {
+fn from_protocol(proto: Option<netconfig::Protocol>) -> Option<netfilter::SocketProtocol> {
     match proto {
         Some(proto) => match proto {
-            router_config::Protocol::Tcp => Some(netfilter::SocketProtocol::Tcp),
-            router_config::Protocol::Udp => Some(netfilter::SocketProtocol::Udp),
-            router_config::Protocol::Both => None,
+            netconfig::Protocol::Tcp => Some(netfilter::SocketProtocol::Tcp),
+            netconfig::Protocol::Udp => Some(netfilter::SocketProtocol::Udp),
+            netconfig::Protocol::Both => None,
         },
         None => None,
     }
 }
 
-/// Parses a [`router_config::FilterAction`] and turns it into a [`netfilter::Action`]
-fn from_filter_action(action: router_config::FilterAction) -> netfilter::Action {
+/// Parses a [`netconfig::FilterAction`] and turns it into a [`netfilter::Action`]
+fn from_filter_action(action: netconfig::FilterAction) -> netfilter::Action {
     match action {
-        router_config::FilterAction::Allow => netfilter::Action::Pass,
+        netconfig::FilterAction::Allow => netfilter::Action::Pass,
         // TODO(cgibson): What is our default drop policy? Should we gloss over the difference
         // to users of the Network Manager or should it become a parse error?
-        router_config::FilterAction::Drop => netfilter::Action::Drop,
+        netconfig::FilterAction::Drop => netfilter::Action::Drop,
     }
 }
 
-/// Parses a [`router_config::PortRange`] and turns it into a [`netfilter::PortRange`] result.
-fn from_port_range(range: &Option<Vec<router_config::PortRange>>) -> Option<netfilter::PortRange> {
+/// Parses a [`netconfig::PortRange`] and turns it into a [`netfilter::PortRange`] result.
+fn from_port_range(range: &Option<Vec<netconfig::PortRange>>) -> Option<netfilter::PortRange> {
     match range {
         Some(ranges) => ranges
             .iter()
@@ -167,9 +167,9 @@ fn from_port_range(range: &Option<Vec<router_config::PortRange>>) -> Option<netf
     }
 }
 
-/// Parses a [`router_config::CidrAddress`] and turns it into a [`fidl_fuchsia_net::Subnet`].
+/// Parses a [`netconfig::CidrAddress`] and turns it into a [`fidl_fuchsia_net::Subnet`].
 fn from_cidr_address(
-    cidr_address: &Option<router_config::CidrAddress>,
+    cidr_address: &Option<netconfig::CidrAddress>,
 ) -> Result<Option<Box<fidl_fuchsia_net::Subnet>>, Error> {
     let (addr, prefix_len) = match cidr_address {
         Some(cidr_addr) => {
@@ -228,14 +228,14 @@ impl PacketFilter {
     /// Returns the current set of netfilter packet filters.
     ///
     /// Using the existing handle to the netfilter service, request the set of packet filter rules
-    /// and converts them to a vector of [`router_config::FilterRule`]'s.
+    /// and converts them to a vector of [`netconfig::FilterRule`]'s.
     ///
     /// # Error
     ///
     /// If the response from netfilter is anything other than [`netfilter::Status::Ok`] then
     /// produce an error result. Failure to convert from the [`netfilter::Rule`] to a
-    /// [`router_config::FilterRule`] produces an error result to the caller.
-    pub(crate) async fn get_filters(&self) -> Result<Vec<router_config::FilterRule>, Error> {
+    /// [`netconfig::FilterRule`] produces an error result to the caller.
+    pub(crate) async fn get_filters(&self) -> Result<Vec<netconfig::FilterRule>, Error> {
         info!("Received request to get all active packet filters");
         let netfilter_rules: Vec<netfilter::Rule> = match self.filter_svc.get_rules().await {
             Ok((rules, _, Status::Ok)) => rules,
@@ -251,12 +251,12 @@ impl PacketFilter {
                 Ok(f) => Ok(f),
                 Err(e) => Err(format_err!("Failed to parse filter rule: {:?}", e)),
             })
-            .collect::<Result<Vec<router_config::FilterRule>, Error>>()
+            .collect::<Result<Vec<netconfig::FilterRule>, Error>>()
     }
 
     /// Installs a new packet filter rule.
     ///
-    /// We convert the [`router_config::FilterRule`] and parse it into a [`netfilter::Rule`] that we
+    /// We convert the [`netconfig::FilterRule`] and parse it into a [`netfilter::Rule`] that we
     /// can send on to the netfilter service. We also need to get a `generation` number from to
     /// include in the request.
     ///
@@ -264,9 +264,9 @@ impl PacketFilter {
     ///
     /// If we fail to get the generation number from the netfilter service, or the result of the
     /// request to netfilter is anything other than [`netfilter::Status::Ok`] then produce an error
-    /// result. Failure to convert the [`router_config::FilterRule`] to a [`netfilter::Rule`] will
+    /// result. Failure to convert the [`netconfig::FilterRule`] to a [`netfilter::Rule`] will
     /// produce an error result to the caller.
-    pub(crate) async fn set_filter(&self, rule: router_config::FilterRule) -> Result<(), Error> {
+    pub(crate) async fn set_filter(&self, rule: netconfig::FilterRule) -> Result<(), Error> {
         info!("Received request to add new packet filter rule");
         let generation: u32 = match self.filter_svc.get_rules().await {
             Ok((_, generation, Status::Ok)) => generation,
@@ -483,10 +483,10 @@ mod tests {
     #[test]
     fn test_to_protocol() {
         let tcp = to_protocol(netfilter::SocketProtocol::Tcp);
-        assert_eq!(tcp.unwrap(), router_config::Protocol::Tcp);
+        assert_eq!(tcp.unwrap(), netconfig::Protocol::Tcp);
 
         let udp = to_protocol(netfilter::SocketProtocol::Udp);
-        assert_eq!(udp.unwrap(), router_config::Protocol::Udp);
+        assert_eq!(udp.unwrap(), netconfig::Protocol::Udp);
 
         let icmpv6 = to_protocol(netfilter::SocketProtocol::Icmpv6);
         assert_eq!(icmpv6.is_none(), true);
@@ -598,13 +598,13 @@ mod tests {
 
     #[test]
     fn test_from_protocol() {
-        let tcp = from_protocol(Some(router_config::Protocol::Tcp)).unwrap();
+        let tcp = from_protocol(Some(netconfig::Protocol::Tcp)).unwrap();
         assert_eq!(netfilter::SocketProtocol::Tcp, tcp);
 
-        let udp = from_protocol(Some(router_config::Protocol::Udp)).unwrap();
+        let udp = from_protocol(Some(netconfig::Protocol::Udp)).unwrap();
         assert_eq!(netfilter::SocketProtocol::Udp, udp);
 
-        let both = from_protocol(Some(router_config::Protocol::Both));
+        let both = from_protocol(Some(netconfig::Protocol::Both));
         assert_eq!(both.is_none(), true);
     }
 

@@ -20,6 +20,7 @@ use {
     fidl_fuchsia_netstack::{
         self as netstack, NetstackMarker, NetstackProxy, ResolverAdminMarker, ResolverAdminProxy,
     },
+    fidl_fuchsia_router_config as netconfig,
     fuchsia_component::client::connect_to_service,
     std::convert::TryFrom,
     std::net::IpAddr,
@@ -365,7 +366,7 @@ impl NetCfg {
         pid: PortId,
         addr: &'a LifIpAddr,
     ) -> error::Result<()> {
-        let a: fidl_fuchsia_router_config::CidrAddress = addr.into();
+        let a: netconfig::CidrAddress = addr.into();
         // TODO(dpradilla): this needs to be changed to use the stack fidl once
         // this functionality is moved there. the u32 conversion won't be needed.
         let r = self
