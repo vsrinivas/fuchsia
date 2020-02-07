@@ -258,18 +258,14 @@ func TestFuchsiaNetStack(t *testing.T) {
 }
 
 func (ni *stackImpl) isPacketFilterEnabled(id uint64) (bool, error) {
-	ni.ns.mu.Lock()
-	ifs, ok := ni.ns.mu.ifStates[tcpip.NICID(id)]
-	ni.ns.mu.Unlock()
-
+	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
 	if !ok {
-		return false, fmt.Errorf("ifStates %d not found", id)
+		return false, fmt.Errorf("NICInfo %d not found", id)
 	}
+	ifs := nicInfo.Context.(*ifState)
 	return ifs.filterEndpoint.IsEnabled(), nil
 }
 
 func (ni *stackImpl) isIpForwardingEnabled() bool {
-	ni.ns.mu.Lock()
-	defer ni.ns.mu.Unlock()
-	return ni.ns.mu.stack.Forwarding()
+	return ni.ns.stack.Forwarding()
 }

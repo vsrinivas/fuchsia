@@ -37,10 +37,10 @@ func toIpAddress(addr net.IP) netfidl.IpAddress {
 // ifconfig route add 1.2.3.4/14 gateway 9.8.7.6 iface lo
 
 func MakeNetstackService() netstackImpl {
-	var ns Netstack
-	ns.mu.stack = stack.New(stack.Options{})
 	return netstackImpl{
-		ns: &ns,
+		ns: &Netstack{
+			stack: stack.New(stack.Options{}),
+		},
 	}
 }
 

@@ -70,17 +70,14 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 	// Create a new netstack and add TCP and UDP endpoints.
 	ns := newNetstack(t)
 	wq := new(waiter.Queue)
-	// Grab locks just in case the callee has any isLock checks.
-	ns.mu.Lock()
-	tcpEP, err := ns.mu.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	tcpEP, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {
 		t.Fatal(err)
 	}
-	udpEP, err := ns.mu.stack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	udpEP, err := ns.stack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ns.mu.Unlock()
 	v := socketInfoMapInspectImpl{
 		value: &ns.endpoints,
 	}

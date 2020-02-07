@@ -143,7 +143,7 @@ func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
 func TestEndpointDoubleClose(t *testing.T) {
 	ns := newNetstack(t)
 	wq := &waiter.Queue{}
-	ep, err := ns.mu.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
+	ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
 	if err != nil {
 		t.Fatalf("NewEndpoint = %s", err)
 	}
@@ -207,7 +207,7 @@ func TestEndpointDoubleClose(t *testing.T) {
 func TestCloseEndpointsMap(t *testing.T) {
 	ns := newNetstack(t)
 	wq := &waiter.Queue{}
-	ep, err := ns.mu.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
+	ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
 	if err != nil {
 		t.Fatalf("NewEndpoint = %s", err)
 	}
@@ -261,9 +261,7 @@ func TestNicName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ifs.ns.mu.Lock()
-	name := ifs.ns.nameLocked(ifs.nicid)
-	ifs.ns.mu.Unlock()
+	name := ifs.ns.name(ifs.nicid)
 	if name != testDeviceName {
 		t.Fatalf("ifs.mu.name = %v, want = %v", name, testDeviceName)
 	}
@@ -304,10 +302,7 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 		t.Fatalf("addEth(_, _, _): %s", err)
 	}
 
-	ns.mu.Lock()
-	nicInfos := ns.mu.stack.NICInfo()
-	ns.mu.Unlock()
-
+	nicInfos := ns.stack.NICInfo()
 	nicInfo, ok := nicInfos[ifs.nicid]
 	if !ok {
 		t.Fatalf("stack.NICInfo()[%d]: %s", ifs.nicid, tcpip.ErrUnknownNICID)
@@ -455,9 +450,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 	linkLocalRoute := ipv6LinkLocalOnLinkRoute(ifs.nicid)
 
 	// Initially should not have the link-local route.
-	ns.mu.Lock()
-	rt := ns.mu.stack.GetRouteTable()
-	ns.mu.Unlock()
+	rt := ns.stack.GetRouteTable()
 	if containsRoute(rt, linkLocalRoute) {
 		t.Fatalf("got GetRouteTable() = %+v, don't want = %s", rt, linkLocalRoute)
 	}
@@ -467,9 +460,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 	if err := ifs.eth.Up(); err != nil {
 		t.Fatalf("eth.Up(): %s", err)
 	}
-	ns.mu.Lock()
-	rt = ns.mu.stack.GetRouteTable()
-	ns.mu.Unlock()
+	rt = ns.stack.GetRouteTable()
 	if !containsRoute(rt, linkLocalRoute) {
 		t.Fatalf("got GetRouteTable() = %+v, want = %s", rt, linkLocalRoute)
 	}
@@ -479,9 +470,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 	if err := ifs.eth.Down(); err != nil {
 		t.Fatalf("eth.Down(): %s", err)
 	}
-	ns.mu.Lock()
-	rt = ns.mu.stack.GetRouteTable()
-	ns.mu.Unlock()
+	rt = ns.stack.GetRouteTable()
 	if containsRoute(rt, linkLocalRoute) {
 		t.Fatalf("got GetRouteTable() = %+v, don't want = %s", rt, linkLocalRoute)
 	}
@@ -538,9 +527,7 @@ func TestDhcpConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ifs.ns.mu.Lock()
-	name := ifs.ns.nameLocked(ifs.nicid)
-	ifs.ns.mu.Unlock()
+	name := ifs.ns.name(ifs.nicid)
 
 	ifs.mu.Lock()
 	if ifs.mu.dhcp.Client == nil {
@@ -554,9 +541,9 @@ func TestDhcpConfiguration(t *testing.T) {
 	if ifs.mu.dhcp.running() {
 		t.Error("expected dhcp client to be stopped initially")
 	}
-
-	ifs.setDHCPStatusLocked(name, true)
 	ifs.mu.Unlock()
+
+	ifs.setDHCPStatus(name, true)
 
 	ifs.eth.Up()
 
@@ -607,9 +594,7 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ns.mu.Lock()
-	nicInfos := ns.mu.stack.NICInfo()
-	ns.mu.Unlock()
+	nicInfos := ns.stack.NICInfo()
 
 	nicInfo1, ok := nicInfos[ifs1.nicid]
 	if !ok {
@@ -637,22 +622,20 @@ func TestStaticIPConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ifs.ns.mu.Lock()
-	name := ifs.ns.nameLocked(ifs.nicid)
-	ifs.ns.mu.Unlock()
+	name := ifs.ns.name(ifs.nicid)
 
 	result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
 	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 		t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
 	}
 
-	ifs.mu.Lock()
-	if info, err := ifs.toNetInterface2Locked(); err != nil {
-		t.Errorf("couldn't get interface info: %s", err)
-	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testV4Address {
-		t.Errorf("got ifs.toNetInterface2Locked().Addr = %#v, want = %#v", got, testV4Address)
+	if mainAddr, err := ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
+		t.Errorf("stack.GetMainNICAddress(%d, %d): %s", ifs.nicid, ipv4.ProtocolNumber, err)
+	} else if got := mainAddr.Address; got != testV4Address {
+		t.Errorf("got stack.GetMainNICAddress(%d, %d).Addr = %#v, want = %#v", ifs.nicid, ipv4.ProtocolNumber, got, testV4Address)
 	}
 
+	ifs.mu.Lock()
 	if ifs.mu.dhcp.enabled {
 		t.Error("expected dhcp state to be disabled initially")
 	}
@@ -675,8 +658,11 @@ func TestStaticIPConfiguration(t *testing.T) {
 	if ifs.mu.dhcp.enabled {
 		t.Error("expected dhcp state to remain disabled after restarting interface")
 	}
+	ifs.mu.Unlock()
 
-	ifs.setDHCPStatusLocked(name, true)
+	ifs.setDHCPStatus(name, true)
+
+	ifs.mu.Lock()
 	if !ifs.mu.dhcp.enabled {
 		t.Error("expected dhcp state to become enabled after manually enabling it")
 	}
@@ -694,8 +680,7 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 	ns := &Netstack{
 		arena: arena,
 	}
-	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
-	ns.mu.stack = tcpipstack.New(tcpipstack.Options{
+	ns.stack = tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocol{
 			arp.NewProtocol(),
 			ipv4.NewProtocol(),
@@ -703,7 +688,6 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 		},
 	})
 
-	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
 	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{Features: ethernet.InfoFeatureWlan}, t)
@@ -717,10 +701,10 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 		t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
 	}
 
-	if info, err := ifs.toNetInterface2Locked(); err != nil {
-		t.Errorf("couldn't get interface info: %s", err)
-	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testV4Address {
-		t.Errorf("got ifs.toNetInterface2Locked().Addr = %#v, want = %#v", got, testV4Address)
+	if mainAddr, err := ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
+		t.Errorf("stack.GetMainNICAddress(%d, %d): %s", ifs.nicid, ipv4.ProtocolNumber, err)
+	} else if got := mainAddr.Address; got != testV4Address {
+		t.Errorf("got stack.GetMainNICAddress(%d, %d).Addr = %#v, want = %#v", ifs.nicid, ipv4.ProtocolNumber, got, testV4Address)
 	}
 }
 
@@ -736,11 +720,7 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 	if err != nil {
 		t.Fatal(err)
 	}
-	ns := &Netstack{
-		arena: arena,
-	}
-	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
-	ns.mu.stack = tcpipstack.New(tcpipstack.Options{
+	stack := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocol{
 			arp.NewProtocol(),
 			ipv4.NewProtocol(),
@@ -752,12 +732,14 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 		},
 		NDPDisp: ndpDisp,
 	})
-
-	// We need to initialize the DNS client, since adding/removing interfaces
-	// sets the DNS servers on that interface, which requires that dnsClient
-	// exist.
-	ns.dnsClient = dns.NewClient(ns.mu.stack)
-	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
+	ns := &Netstack{
+		arena: arena,
+		stack: stack,
+		// We need to initialize the DNS client, since adding/removing interfaces
+		// sets the DNS servers on that interface, which requires that dnsClient
+		// exist.
+		dnsClient: dns.NewClient(stack),
+	}
 	if ndpDisp != nil {
 		ndpDisp.ns = ns
 	}
@@ -1126,9 +1108,7 @@ func TestDHCPAcquired(t *testing.T) {
 				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
 			}
 
-			ns.mu.Lock()
-			infoMap := ns.mu.stack.NICInfo()
-			ns.mu.Unlock()
+			infoMap := ns.stack.NICInfo()
 			if info, ok := infoMap[ifState.nicid]; ok {
 				found := false
 				for _, address := range info.ProtocolAddresses {
@@ -1161,9 +1141,7 @@ func TestDHCPAcquired(t *testing.T) {
 				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
 			}
 
-			ns.mu.Lock()
-			infoMap = ns.mu.stack.NICInfo()
-			ns.mu.Unlock()
+			infoMap = ns.stack.NICInfo()
 			if info, ok := infoMap[ifState.nicid]; ok {
 				for _, address := range info.ProtocolAddresses {
 					if address.Protocol == ipv4.ProtocolNumber {

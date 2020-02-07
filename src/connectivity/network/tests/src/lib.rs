@@ -268,6 +268,34 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     Ok(interface.ipv6addrs)
 }
 
+/// Regression test: test that Netstack.SetInterfaceStatus does not kill the channel to the client
+/// if given an invalid interface id.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn set_interface_status_unknown_interface() -> Result {
+    let name = "set_interface_status";
+    with_netstack_and_device::<_, _, Netstack2, fidl_fuchsia_netstack::NetstackMarker>(
+        name,
+        |netstack, _device| async move {
+            let interfaces = netstack.get_interfaces2().await.context("failed to call get_interfaces2")?;
+            let next_id = 1 + interfaces
+                .iter()
+                .map(|interface| interface.id)
+                .max()
+                .ok_or(anyhow::format_err!("failed to find any network interfaces (at least localhost should be present)"))?;
+
+            let () = netstack
+                .set_interface_status(next_id, false).context("failed to call set_interface_status")?;
+            let _interfaces = netstack
+                .get_interfaces2()
+                .await
+                .context("failed to invoke netstack method after calling set_interface_status with an invalid argument")?;
+
+            Ok(())
+        },
+    )
+    .await
+}
+
 /// Test that across netstack runs, a device will initially be assigned the same
 /// IPv6 addresses.
 #[fuchsia_async::run_singlethreaded(test)]

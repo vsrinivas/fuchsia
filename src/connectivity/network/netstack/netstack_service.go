@@ -6,7 +6,6 @@ package netstack
 
 import (
 	"fidl/fuchsia/net/stack"
-	"fmt"
 	"net"
 	"sort"
 	"syscall/zx"
@@ -58,79 +57,71 @@ func interfaces2ListToInterfacesList(ifs2 []netstack.NetInterface2) []netstack.N
 	return ifs
 }
 
-func (ns *Netstack) getNetInterfaces2Locked() []netstack.NetInterface2 {
-	ifStates := ns.mu.ifStates
-	interfaces := make([]netstack.NetInterface2, 0, len(ifStates))
-	for _, ifs := range ifStates {
-		ifs.mu.Lock()
-		netInterface, err := ifs.toNetInterface2Locked()
-		ifs.mu.Unlock()
-		if err != nil {
-			syslog.Warnf("failed to call ifs.toNetInterfaceLocked: %v", err)
+func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
+	nicInfos := ns.stack.NICInfo()
+	interfaces := make([]netstack.NetInterface2, 0, len(nicInfos))
+	for _, nicInfo := range nicInfos {
+		ifs := nicInfo.Context.(*ifState)
+
+		var ipv6addrs []fidlnet.Subnet
+		for _, address := range nicInfo.ProtocolAddresses {
+			if address.Protocol == ipv6.ProtocolNumber {
+				ipv6addrs = append(ipv6addrs, fidlnet.Subnet{
+					Addr:      fidlconv.ToNetIpAddress(address.AddressWithPrefix.Address),
+					PrefixLen: uint8(address.AddressWithPrefix.PrefixLen),
+				})
+			}
 		}
+
+		netInterface := netstack.NetInterface2{
+			Id:        uint32(ifs.nicid),
+			Flags:     ifs.getFlags(),
+			Features:  ifs.features,
+			Metric:    uint32(ifs.mu.metric),
+			Name:      nicInfo.Name,
+			Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),
+			Ipv6addrs: ipv6addrs,
+		}
+
+		// Upstream reuses ErrNoLinkAddress to indicate no address can be found for the requested NIC and
+		// network protocol.
+		if addrWithPrefix, err := ifs.ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
+			syslog.Warnf("failed to call stack.GetMainNICAddress(_): %s", err)
+		} else {
+			if addrWithPrefix == (tcpip.AddressWithPrefix{}) {
+				addrWithPrefix = tcpip.AddressWithPrefix{Address: zeroIpAddr, PrefixLen: 0}
+			}
+			mask := net.CIDRMask(addrWithPrefix.PrefixLen, len(addrWithPrefix.Address)*8)
+			broadaddr := []byte(addrWithPrefix.Address)
+			for i := range broadaddr {
+				broadaddr[i] |= ^mask[i]
+			}
+			netInterface.Addr = fidlconv.ToNetIpAddress(addrWithPrefix.Address)
+			netInterface.Netmask = fidlconv.ToNetIpAddress(tcpip.Address(mask))
+			netInterface.Broadaddr = fidlconv.ToNetIpAddress(tcpip.Address(broadaddr))
+		}
+
 		interfaces = append(interfaces, netInterface)
 	}
+
 	return interfaces
 }
 
-func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
-	addrWithPrefix, err := ifs.ns.mu.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
-	// Upstream reuses ErrNoLinkAddress to indicate no address can be found for the requested NIC and
-	// network protocol.
-	if err == tcpip.ErrUnknownNICID {
-		panic(fmt.Sprintf("stack.GetMainNICAddress(%d, ...): %s", ifs.nicid, err))
-	} else if err != nil {
-		return netstack.NetInterface2{}, fmt.Errorf("stack.GetMainNICAddress(_): %s", err)
-	}
-	if addrWithPrefix == (tcpip.AddressWithPrefix{}) {
-		addrWithPrefix = tcpip.AddressWithPrefix{Address: zeroIpAddr, PrefixLen: 0}
-	}
-
-	mask := net.CIDRMask(addrWithPrefix.PrefixLen, len(addrWithPrefix.Address)*8)
-	broadaddr := []byte(addrWithPrefix.Address)
-	for i := range broadaddr {
-		broadaddr[i] |= ^mask[i]
-	}
-
-	nicInfo, ok := ifs.ns.mu.stack.NICInfo()[ifs.nicid]
-	if !ok {
-		panic(fmt.Sprintf("NIC [%d] not found in %+v", ifs.nicid, nicInfo))
-	}
-	ipv6addrs := make([]fidlnet.Subnet, 0, len(nicInfo.ProtocolAddresses))
-
-	for _, address := range nicInfo.ProtocolAddresses {
-		if address.Protocol == ipv6.ProtocolNumber {
-			ipv6addrs = append(ipv6addrs, fidlnet.Subnet{
-				Addr:      fidlconv.ToNetIpAddress(address.AddressWithPrefix.Address),
-				PrefixLen: uint8(address.AddressWithPrefix.PrefixLen),
-			})
-		}
-	}
-
+func (ifs *ifState) getFlags() uint32 {
 	var flags uint32
+	ifs.mu.Lock()
 	if ifs.mu.state == link.StateStarted {
 		flags |= netstack.NetInterfaceFlagUp
 	}
 	if ifs.mu.dhcp.enabled {
 		flags |= netstack.NetInterfaceFlagDhcp
 	}
-
-	return netstack.NetInterface2{
-		Id:        uint32(ifs.nicid),
-		Flags:     flags,
-		Features:  ifs.features,
-		Metric:    uint32(ifs.mu.metric),
-		Name:      ifs.ns.nameLocked(ifs.nicid),
-		Addr:      fidlconv.ToNetIpAddress(addrWithPrefix.Address),
-		Netmask:   fidlconv.ToNetIpAddress(tcpip.Address(mask)),
-		Broadaddr: fidlconv.ToNetIpAddress(tcpip.Address(broadaddr)),
-		Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),
-		Ipv6addrs: ipv6addrs,
-	}, nil
+	ifs.mu.Unlock()
+	return flags
 }
 
-func (ns *Netstack) getInterfaces2Locked() []netstack.NetInterface2 {
-	out := ns.getNetInterfaces2Locked()
+func (ns *Netstack) getInterfaces2() []netstack.NetInterface2 {
+	out := ns.getNetInterfaces2()
 
 	sort.Slice(out, func(i, j int) bool {
 		return out[i].Id < out[j].Id
@@ -175,9 +166,7 @@ func (ni *netstackImpl) GetAddress(name string, port uint16) ([]netstack.SocketA
 // TODO(NET-2078): Move this to GetInterfaces once Chromium stops using
 // netstack.fidl.
 func (ni *netstackImpl) GetInterfaces2() ([]netstack.NetInterface2, error) {
-	ni.ns.mu.Lock()
-	defer ni.ns.mu.Unlock()
-	return ni.ns.getInterfaces2Locked(), nil
+	return ni.ns.getInterfaces2(), nil
 }
 
 // GetInterfaces is a deprecated version that returns a list of interfaces in a
@@ -185,10 +174,8 @@ func (ni *netstackImpl) GetInterfaces2() ([]netstack.NetInterface2, error) {
 // eventually will be renamed once Chromium is not using netstack.fidl anymore
 // and this deprecated version can be removed.
 func (ni *netstackImpl) GetInterfaces() ([]netstack.NetInterface, error) {
-	ni.ns.mu.Lock()
-	defer ni.ns.mu.Unlock()
 	// Get the new interface list and convert to the old one.
-	return interfaces2ListToInterfacesList(ni.ns.getInterfaces2Locked()), nil
+	return interfaces2ListToInterfacesList(ni.ns.getInterfaces2()), nil
 }
 
 // TODO(NET-2078): Move this to GetRouteTable once Chromium stops using
@@ -357,17 +344,16 @@ func (ni *netstackImpl) SetInterfaceMetric(nicid uint32, metric uint32) (result 
 	nic := tcpip.NICID(nicid)
 	m := routes.Metric(metric)
 
-	ni.ns.mu.Lock()
-	defer ni.ns.mu.Unlock()
-
-	ifState, ok := ni.ns.mu.ifStates[nic]
+	nicInfo, ok := ni.ns.stack.NICInfo()[nic]
 	if !ok {
 		return netstack.NetErr{Status: netstack.StatusUnknownInterface}, nil
 	}
+
+	ifState := nicInfo.Context.(*ifState)
 	ifState.updateMetric(m)
 
-	ni.ns.mu.routeTable.UpdateMetricByInterface(nic, m)
-	ni.ns.mu.stack.SetRouteTable(ni.ns.mu.routeTable.GetNetstackTable())
+	ni.ns.routeTable.UpdateMetricByInterface(nic, m)
+	ni.ns.stack.SetRouteTable(ni.ns.routeTable.GetNetstackTable())
 	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
@@ -384,27 +370,33 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, uint
 }
 
 func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) error {
-	ni.ns.mu.Lock()
-	ifState, ok := ni.ns.mu.ifStates[tcpip.NICID(nicid)]
-	ni.ns.mu.Unlock()
-
+	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(nicid)]
 	if !ok {
-		// TODO(stijlist): refactor to return NetErr and use StatusUnknownInterface
-		return fmt.Errorf("no such interface id: %d", nicid)
+		// Returning a non-nil error here would close the channel to the client.
+		return nil
+	}
+	ifs := nicInfo.Context.(*ifState)
+
+	var err error
+	var op string
+	if enabled {
+		err = ifs.eth.Up()
+		op = "Up()"
+	} else {
+		err = ifs.eth.Down()
+		op = "Down()"
 	}
 
-	if enabled {
-		return ifState.eth.Up()
+	if err != nil {
+		syslog.Infof("(NIC %d).eth.%s = %s", nicid, op, err)
 	}
-	return ifState.eth.Down()
+	return nil
 }
 
 func (ni *netstackImpl) GetDhcpClient(id uint32, request dhcp.ClientInterfaceRequest) (netstack.NetstackGetDhcpClientResult, error) {
 	var result netstack.NetstackGetDhcpClientResult
 	nicid := tcpip.NICID(id)
-	ni.ns.mu.Lock()
-	defer ni.ns.mu.Unlock()
-	if _, ok := ni.ns.mu.ifStates[nicid]; !ok {
+	if _, ok := ni.ns.stack.NICInfo()[nicid]; !ok {
 		result.SetErr(int32(zx.ErrNotFound))
 		return result, nil
 	}

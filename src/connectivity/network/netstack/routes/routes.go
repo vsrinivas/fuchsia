@@ -5,6 +5,7 @@
 package routes
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -29,6 +30,10 @@ const (
 )
 
 const tag = "routes"
+
+var (
+	ErrNoSuchRoute = errors.New("no such route")
+)
 
 // Metric is the metric used for sorting the route table. It acts as a
 // priority with a lower value being better.
@@ -192,7 +197,7 @@ func (rt *RouteTable) DelRoute(route tcpip.Route) error {
 	}
 
 	if !routeDeleted {
-		return fmt.Errorf("no such route")
+		return ErrNoSuchRoute
 	}
 
 	rt.dumpLocked()

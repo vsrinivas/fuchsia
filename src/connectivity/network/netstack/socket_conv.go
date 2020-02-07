@@ -169,9 +169,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		if v == tcpip.BindToDeviceOption(0) {
 			return []byte(nil), nil
 		}
-		ns.mu.Lock()
-		nicInfos := ns.mu.stack.NICInfo()
-		ns.mu.Unlock()
+		nicInfos := ns.stack.NICInfo()
 		for id, info := range nicInfos {
 			if tcpip.BindToDeviceOption(id) == v {
 				return append([]byte(info.Name), 0), nil
@@ -480,9 +478,7 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 			return ep.SetSockOpt(tcpip.BindToDeviceOption(0))
 		}
 		name := string(optVal[:n])
-		ns.mu.Lock()
-		nicInfos := ns.mu.stack.NICInfo()
-		ns.mu.Unlock()
+		nicInfos := ns.stack.NICInfo()
 		for id, info := range nicInfos {
 			if name == info.Name {
 				return ep.SetSockOpt(tcpip.BindToDeviceOption(id))

@@ -171,30 +171,13 @@ func Main() {
 		arena:        arena,
 		dnsClient:    dns.NewClient(stk),
 		nameProvider: np,
+		stack:        stk,
 	}
-	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
-	ns.mu.stack = stk
 	ndpDisp.ns = ns
 	ndpDisp.start(ctx)
 
 	if err := ns.addLoopback(); err != nil {
 		syslog.Fatalf("loopback: %s", err)
-	}
-
-	var netstackService netstack.NetstackService
-
-	ns.OnInterfacesChanged = func(interfaces2 []netstack.NetInterface2) {
-		connectivity.InferAndNotify(interfaces2)
-		// TODO(NET-2078): Switch to the new NetInterface struct once Chromium stops
-		// using netstack.fidl.
-		interfaces := interfaces2ListToInterfacesList(interfaces2)
-		for _, key := range netstackService.BindingKeys() {
-			if p, ok := netstackService.EventProxyFor(key); ok {
-				if err := p.OnInterfacesChanged(interfaces); err != nil {
-					syslog.Warnf("OnInterfacesChanged failed: %v", err)
-				}
-			}
-		}
 	}
 
 	var posixSocketProviderService socket.ProviderService
@@ -249,17 +232,15 @@ func Main() {
 			ns: ns,
 		}},
 		func(s fidl.Stub, c zx.Channel) error {
-			k, err := netstackService.BindingSet.Add(s, c, nil)
+			k, err := ns.netstackService.BindingSet.Add(s, c, nil)
 			if err != nil {
 				syslog.Fatalf("%v", err)
 			}
 			// Send a synthetic InterfacesChanged event to each client when they join
 			// Prevents clients from having to race GetInterfaces / InterfacesChanged.
-			if p, ok := netstackService.EventProxyFor(k); ok {
-				ns.mu.Lock()
-				interfaces2 := ns.getNetInterfaces2Locked()
+			if p, ok := ns.netstackService.EventProxyFor(k); ok {
+				interfaces2 := ns.getNetInterfaces2()
 				interfaces := interfaces2ListToInterfacesList(interfaces2)
-				ns.mu.Unlock()
 
 				if err := p.OnInterfacesChanged(interfaces); err != nil {
 					syslog.Warnf("OnInterfacesChanged failed: %v", err)
@@ -323,7 +304,7 @@ func Main() {
 		syslog.Warnf("could not initialize cobalt client: %s", err)
 	} else {
 		go func() {
-			if err := runCobaltClient(ctx, cobaltLogger, &ns.stats, ns.mu.stack); err != nil {
+			if err := runCobaltClient(ctx, cobaltLogger, &ns.stats, ns.stack); err != nil {
 				syslog.Errorf("cobalt client exited unexpectedly: %s", err)
 			}
 		}()

@@ -1141,9 +1141,7 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 		return socket.ProviderSocket2ResultWithErr(code), nil
 	}
 	wq := new(waiter.Queue)
-	sp.ns.mu.Lock()
-	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
-	sp.ns.mu.Unlock()
+	ep, err := sp.ns.stack.NewEndpoint(transProto, netProto, wq)
 	if err != nil {
 		return socket.ProviderSocket2ResultWithErr(tcpipErrorToCode(err)), nil
 	}

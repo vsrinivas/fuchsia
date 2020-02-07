@@ -88,12 +88,6 @@ func waitForEmptyQueue(n *ndpDispatcher) {
 	}
 }
 
-func getRoutingTable(ns *Netstack) []tcpip.Route {
-	ns.mu.Lock()
-	defer ns.mu.Unlock()
-	return ns.mu.stack.GetRouteTable()
-}
-
 // Test that attempting to invalidate a default router which we do not have a
 // route for is not an issue.
 func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
@@ -117,7 +111,7 @@ func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
 	// though we do not yet know about it).
 	ndpDisp.OnDefaultRouterInvalidated(ifs.nicid, testLinkLocalV6Addr1)
 	waitForEmptyQueue(ndpDisp)
-	if rt, rts := defaultV6Route(ifs.nicid, testLinkLocalV6Addr1), getRoutingTable(ns); containsRoute(rts, rt) {
+	if rt, rts := defaultV6Route(ifs.nicid, testLinkLocalV6Addr1), ns.stack.GetRouteTable(); containsRoute(rts, rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", rt, rts)
 	}
 }
@@ -156,7 +150,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 	waitForEmptyQueue(ndpDisp)
 	nic1Rtr1Rt := defaultV6Route(ifs1.nicid, testLinkLocalV6Addr1)
-	if rts := getRoutingTable(ns); !containsRoute(rts, nic1Rtr1Rt) {
+	if rts := ns.stack.GetRouteTable(); !containsRoute(rts, nic1Rtr1Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
 	}
 
@@ -168,7 +162,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 	waitForEmptyQueue(ndpDisp)
 	nic2Rtr1Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr1)
-	rts := getRoutingTable(ns)
+	rts := ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic2Rtr1Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr1Rt, rts)
 	}
@@ -184,7 +178,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 	waitForEmptyQueue(ndpDisp)
 	nic2Rtr2Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr2)
-	rts = getRoutingTable(ns)
+	rts = ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic2Rtr2Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic2Rtr2Rt, rts)
 	}
@@ -199,7 +193,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	// Invalidate the router with IP testLinkLocalV6Addr1 from eth2.
 	ndpDisp.OnDefaultRouterInvalidated(ifs2.nicid, testLinkLocalV6Addr1)
 	waitForEmptyQueue(ndpDisp)
-	rts = getRoutingTable(ns)
+	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic2Rtr1Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Rtr1Rt, rts)
 	}
@@ -215,7 +209,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	// Invalidate the router with IP testLinkLocalV6Addr1 from eth1.
 	ndpDisp.OnDefaultRouterInvalidated(ifs1.nicid, testLinkLocalV6Addr1)
 	waitForEmptyQueue(ndpDisp)
-	rts = getRoutingTable(ns)
+	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic1Rtr1Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic1Rtr1Rt, rts)
 	}
@@ -231,7 +225,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	// Invalidate the router with IP testLinkLocalV6Addr2 from eth2.
 	ndpDisp.OnDefaultRouterInvalidated(ifs2.nicid, testLinkLocalV6Addr2)
 	waitForEmptyQueue(ndpDisp)
-	rts = getRoutingTable(ns)
+	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic2Rtr2Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Rtr2Rt, rts)
 	}
@@ -267,7 +261,7 @@ func TestNDPInvalidateUnknownIPv6Prefix(t *testing.T) {
 	// about it).
 	ndpDisp.OnOnLinkPrefixInvalidated(ifs.nicid, subnet1)
 	waitForEmptyQueue(ndpDisp)
-	if rt, rts := onLinkV6Route(ifs.nicid, subnet1), getRoutingTable(ns); containsRoute(rts, rt) {
+	if rt, rts := onLinkV6Route(ifs.nicid, subnet1), ns.stack.GetRouteTable(); containsRoute(rts, rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", rt, rts)
 	}
 }
@@ -306,7 +300,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	}
 	waitForEmptyQueue(ndpDisp)
 	nic1Sub1Rt := onLinkV6Route(ifs1.nicid, subnet1)
-	if rts := getRoutingTable(ns); !containsRoute(rts, nic1Sub1Rt) {
+	if rts := ns.stack.GetRouteTable(); !containsRoute(rts, nic1Sub1Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
 	}
 
@@ -317,7 +311,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	}
 	waitForEmptyQueue(ndpDisp)
 	nic2Sub1Rt := onLinkV6Route(ifs2.nicid, subnet1)
-	rts := getRoutingTable(ns)
+	rts := ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic2Sub1Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic2Sub1Rt, rts)
 	}
@@ -333,7 +327,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	}
 	waitForEmptyQueue(ndpDisp)
 	nic2Sub2Rt := onLinkV6Route(ifs2.nicid, subnet2)
-	rts = getRoutingTable(ns)
+	rts = ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic2Sub2Rt) {
 		t.Fatalf("missing route = %s from route table, got = %s", nic2Sub2Rt, rts)
 	}
@@ -348,7 +342,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	// Invalidate the prefix subnet1 from eth2.
 	ndpDisp.OnOnLinkPrefixInvalidated(ifs2.nicid, subnet1)
 	waitForEmptyQueue(ndpDisp)
-	rts = getRoutingTable(ns)
+	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic2Sub1Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Sub1Rt, rts)
 	}
@@ -364,7 +358,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	// Invalidate the prefix subnet1 from eth1.
 	ndpDisp.OnOnLinkPrefixInvalidated(ifs1.nicid, subnet1)
 	waitForEmptyQueue(ndpDisp)
-	rts = getRoutingTable(ns)
+	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic1Sub1Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic1Sub1Rt, rts)
 	}
@@ -380,7 +374,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	// Invalidate the prefix subnet2 from eth2.
 	ndpDisp.OnOnLinkPrefixInvalidated(ifs2.nicid, subnet2)
 	waitForEmptyQueue(ndpDisp)
-	rts = getRoutingTable(ns)
+	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic2Sub2Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Sub2Rt, rts)
 	}
@@ -579,17 +573,15 @@ func TestLinkDown(t *testing.T) {
 	}
 
 	// Mock discovered routers and prefixes, and auto-generated addresses.
-	ns.mu.Lock()
-	if err := ns.mu.stack.AddProtocolAddress(ifs1.nicid, nic1Addr1); err != nil {
+	if err := ns.stack.AddProtocolAddress(ifs1.nicid, nic1Addr1); err != nil {
 		t.Errorf("AddProtocolAddress(%d, %+v): %s", ifs1.nicid, nic1Addr1, err)
 	}
-	if err := ns.mu.stack.AddProtocolAddress(ifs2.nicid, nic2Addr1); err != nil {
+	if err := ns.stack.AddProtocolAddress(ifs2.nicid, nic2Addr1); err != nil {
 		t.Errorf("AddProtocolAddress(%d, %+v): %s", ifs2.nicid, nic2Addr1, err)
 	}
-	if err := ns.mu.stack.AddProtocolAddress(ifs2.nicid, nic2Addr2); err != nil {
+	if err := ns.stack.AddProtocolAddress(ifs2.nicid, nic2Addr2); err != nil {
 		t.Errorf("AddProtocolAddress(%d, %+v): %s", ifs2.nicid, nic2Addr2, err)
 	}
-	ns.mu.Unlock()
 
 	// If the test already failed, we cannot go any further.
 	if t.Failed() {
@@ -608,10 +600,8 @@ func TestLinkDown(t *testing.T) {
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, defaultLifetime)
 	ndpDisp.OnRecursiveDNSServerOption(ifs2.nicid, []tcpip.Address{addr1NIC2.Addr, addr3NIC2.Addr}, defaultLifetime)
 	waitForEmptyQueue(ndpDisp)
-	ns.mu.Lock()
-	nicInfos := ns.mu.stack.NICInfo()
-	rts := ns.mu.stack.GetRouteTable()
-	ns.mu.Unlock()
+	nicInfos := ns.stack.NICInfo()
+	rts := ns.stack.GetRouteTable()
 	nic1Rtr1Rt := defaultV6Route(ifs1.nicid, testLinkLocalV6Addr1)
 	nic2Rtr1Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr1)
 	nic2Rtr2Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr2)
@@ -699,10 +689,8 @@ func TestLinkDown(t *testing.T) {
 		t.Fatalf("ifs2.eth.Down(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
-	ns.mu.Lock()
-	nicInfos = ns.mu.stack.NICInfo()
-	rts = ns.mu.stack.GetRouteTable()
-	ns.mu.Unlock()
+	nicInfos = ns.stack.NICInfo()
+	rts = ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic1Rtr1Rt) {
 		t.Errorf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
 	}
@@ -777,10 +765,8 @@ func TestLinkDown(t *testing.T) {
 	if err := ifs2.eth.Up(); err != nil {
 		t.Fatalf("ifs2.eth.Up(): %s", err)
 	}
-	ns.mu.Lock()
-	nicInfos = ns.mu.stack.NICInfo()
-	rts = ns.mu.stack.GetRouteTable()
-	ns.mu.Unlock()
+	nicInfos = ns.stack.NICInfo()
+	rts = ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic1Rtr1Rt) {
 		t.Errorf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
 	}
@@ -861,9 +847,7 @@ func TestLinkDown(t *testing.T) {
 		t.Fatalf("ifs2.eth.Down(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
-	ns.mu.Lock()
-	rts = ns.mu.stack.GetRouteTable()
-	ns.mu.Unlock()
+	rts = ns.stack.GetRouteTable()
 	if !containsRoute(rts, nic1Rtr1Rt) {
 		t.Errorf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
 	}
