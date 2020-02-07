@@ -84,10 +84,10 @@ async fn separate_blobs_url() {
     let served_repository = Arc::clone(&repo).server().start().unwrap();
 
     // Rename the blobs directory so the blobs can't be found in the usual place.
-    // Both amber and the package resolver currently require Content-Length headers when
-    // downloading content blobs. "pm serve" will gzip compress paths that aren't prefixed with
-    // "/blobs", which removes the Content-Length header. To ensure "pm serve" does not compress
-    // the blobs stored at this alternate path, its name must start with "blobs".
+    // The package resolver currently requires Content-Length headers when downloading content
+    // blobs. "pm serve" will gzip compress paths that aren't prefixed with "/blobs", which removes
+    // the Content-Length header. To ensure "pm serve" does not compress the blobs stored at this
+    // alternate path, its name must start with "blobs".
     let repo_root = repo.path();
     std::fs::rename(repo_root.join("blobs"), repo_root.join("blobsbolb")).unwrap();
 
@@ -757,7 +757,7 @@ async fn dedup_concurrent_content_blob_fetches() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rust_tuf_experiment_identity() {
-    let env = TestEnvBuilder::new().include_amber(false).build();
+    let env = TestEnvBuilder::new().build();
     let pkg = Package::identity().await.unwrap();
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)

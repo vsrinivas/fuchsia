@@ -64,19 +64,9 @@ Updated: November 2019
   <tr>
    <td>amberctl
    </td>
-   <td>CLI for amber. `amberctl` is deprecated, scheduled to be replaced by `pkgctl`
+   <td>Deprecated CLI for various components. `amberctl` is deprecated, scheduled to be replaced by `pkgctl`
    </td>
    <td>`//src/sys/pkg/bin/amber/amberctl`
-   </td>
-   <td>Go
-   </td>
-  </tr>
-  <tr>
-   <td>amber
-   </td>
-   <td>V1 software update system. Deprecated, in the process of being removed.
-   </td>
-   <td>`//src/sys/pkg/bin/amber`
    </td>
    <td>Go
    </td>
@@ -109,8 +99,6 @@ Updated: November 2019
    <td>`//sdk/fidl/fuchsia.pkg`
 <p>
 `//sdk/fidl/fuchsia.pkg.rewrite`
-<p>
-`//sdk/fidl/fuchsia.amber`
 <p>
 `//sdk/fidl/fuchsia.update`
 <p>
@@ -227,11 +215,6 @@ TODO(wittrock): is there a global package repository we can use as a repo for
 this example?
 
 ### FAQs
-
-#### What’s the difference between amber and pkg-resolver?
-
-We’re slowly migrating from (amber, pkgfs) to (pkg-resolver, pkg-cache, pkgfs).
-We expect this migration to be complete by the end of 2019.
 
 #### How do I run a hosted package server?
 

@@ -47,10 +47,6 @@ test_package("amberctl-tests") {
 
   binaries = [
     {
-      name = "amber"
-      source = "grand_unified_binary"
-    },
-    {
       name = "amberctl"
       source = "grand_unified_binary"
     },
@@ -72,11 +68,6 @@ test_package("amberctl-tests") {
   ]
 
   meta = [
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/amber/meta/amber_with_isolated_storage.cmx")
-      dest = "amber_with_isolated_storage.cmx"
-    },
     {
       path = rebase_path("//src/sys/pkg/bin/amber/meta/amberctl.cmx")
       dest = "amberctl.cmx"

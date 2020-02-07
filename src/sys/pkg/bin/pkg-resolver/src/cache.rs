@@ -5,10 +5,9 @@
 use {
     crate::{queue, repository::Repository, repository_manager::Stats},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_amber::OpenedRepositoryProxy,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::PackageCacheProxy,
-    fidl_fuchsia_pkg_ext::{BlobId, BlobIdParseError, MirrorConfig, RepositoryConfig},
+    fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_trace as trace,
     fuchsia_url::pkg_url::PkgUrl,
@@ -25,9 +24,7 @@ use {
     pkgfs::install::BlobKind,
     std::{
         collections::HashSet,
-        convert::TryInto,
         hash::Hash,
-        num::TryFromIntError,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc,
@@ -147,18 +144,6 @@ impl From<PackageOpenError> for Status {
             _ => Status::INTERNAL,
         }
     }
-}
-
-pub async fn cache_package_using_amber<'a>(
-    repo: OpenedRepositoryProxy,
-    config: &'a RepositoryConfig,
-    url: &'a PkgUrl,
-    cache: &'a PackageCache,
-    blob_fetcher: &'a BlobFetcher,
-) -> Result<BlobId, CacheError> {
-    let (merkle, size) =
-        merkle_for_url_using_amber(&repo, url).await.map_err(CacheError::MerkleFor)?;
-    cache_package(merkle, size, config, url, cache, blob_fetcher).await
 }
 
 pub async fn cache_package_using_rust_tuf<'a>(
@@ -297,11 +282,7 @@ impl ToResolveStatus for CacheError {
 impl ToResolveStatus for MerkleForError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            MerkleForError::Fidl(_) => Status::IO,
             MerkleForError::NotFound => Status::NOT_FOUND,
-            MerkleForError::UnexpectedStatus(_) => Status::INTERNAL,
-            MerkleForError::ParseError(_) => Status::INTERNAL,
-            MerkleForError::BlobTooLarge(_) => Status::INTERNAL,
             MerkleForError::InvalidTargetPath(_) => Status::INTERNAL,
             // FIXME(42326) when tuf::Error gets an HTTP error variant, this should be mapped to Status::UNAVAILABLE
             MerkleForError::TufError(_) => Status::INTERNAL,
@@ -373,46 +354,13 @@ async fn merkle_for_url_using_rust_tuf<'a>(
     res.map(|custom| (custom.merkle(), custom.size()))
 }
 
-async fn merkle_for_url_using_amber<'a>(
-    repo: &'a OpenedRepositoryProxy,
-    url: &'a PkgUrl,
-) -> Result<(BlobId, u64), MerkleForError> {
-    let (status, message, merkle, size) =
-        repo.merkle_for(url.name().unwrap(), url.variant()).await.map_err(MerkleForError::Fidl)?;
-    match Status::ok(status) {
-        Ok(()) => Ok(()),
-        Err(Status::NOT_FOUND) => Err(MerkleForError::NotFound),
-        Err(status) => {
-            fx_log_err!("failed to lookup merkle for {}: {} {}", url, status, message);
-            Err(MerkleForError::UnexpectedStatus(status))
-        }
-    }?;
-
-    let merkle = merkle.parse().map_err(MerkleForError::ParseError)?;
-    let size = size.try_into().map_err(MerkleForError::BlobTooLarge)?;
-
-    Ok((merkle, size))
-}
-
 #[derive(Debug, Error)]
 pub enum MerkleForError {
-    #[error("failed to query amber for merkle: {}", _0)]
-    Fidl(fidl::Error),
-
     #[error("the package was not found in the repository")]
     NotFound,
 
-    #[error("amber returned an unexpected status: {}", _0)]
-    UnexpectedStatus(Status),
-
     #[error("tuf returned an unexpected error: {}", _0)]
     TufError(tuf::error::Error),
-
-    #[error("amber returned an invalid merkle root: {}", _0)]
-    ParseError(BlobIdParseError),
-
-    #[error("amber returned a blob size that was too large: {}", _0)]
-    BlobTooLarge(TryFromIntError),
 
     #[error("the target path is not safe: {}", _0)]
     InvalidTargetPath(tuf::error::Error),

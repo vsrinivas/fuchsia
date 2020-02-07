@@ -37,10 +37,7 @@ group("router") {
 
 group("amber") {
   testonly = true
-  public_deps = [
-    "//garnet/packages/config:network",
-    "//src/sys/pkg/bin/amber:config",
-  ]
+  public_deps = [ "//garnet/packages/config:network" ]
 }
 
 group("sl4f") {

@@ -50,7 +50,6 @@ async fn test_initial_inspect_state() {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
                 dynamic_configs: {},
                 static_configs: {},
-                amber_conns: {},
                 repos: {},
                 stats: {
                     mirrors: {}
@@ -101,7 +100,6 @@ async fn test_adding_repo_updates_inspect_state() {
                     }
                 },
                 static_configs: {},
-                amber_conns: {},
                 repos: {},
                 stats: {
                     mirrors: {}
@@ -171,7 +169,6 @@ async fn test_resolving_package_updates_inspect_state() {
                     }
                 },
                 static_configs: {},
-                amber_conns: {},
                 repos: {
                     "example.com": {
                         merkles_successfully_resolved_count: 1u64,

@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"amber/amberctl"
-	"amber/amberd"
 	"netstack"
 	"system_updater"
 
@@ -32,8 +31,6 @@ func main() {
 	switch name {
 	case "pkgsvr":
 		pkgsvr.Main()
-	case "amber":
-		amberd.Main()
 	case "amberctl", "amber_ctl":
 		amberctl.Main()
 	case "system_updater":

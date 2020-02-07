@@ -14,7 +14,6 @@ rustc_library("lib") {
 
   deps = [
     "//garnet/public/rust/fuchsia-hyper",
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -28,7 +27,6 @@ rustc_library("lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
-    "//src/sys/pkg/lib/fidl-fuchsia-amber-ext",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
@@ -62,7 +60,6 @@ rustc_test("dynamic_repositories_disabled") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -108,7 +105,6 @@ rustc_test("dynamic_rewrite_disabled") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -154,7 +150,6 @@ rustc_test("pkg_resolve_inspect") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -200,7 +195,6 @@ rustc_test("resolve_propagates_pkgfs_failure") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -247,7 +241,6 @@ rustc_test("resolve_recovers_from_http_errors") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -293,7 +286,6 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -339,7 +331,6 @@ rustc_test("resolve_succeeds") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -439,10 +430,6 @@ test_package("pkg-resolver-integration-tests") {
 
   binaries = [
     {
-      name = "amber"
-      source = "grand_unified_binary"
-    },
-    {
       name = "pkg-cache"
       source = "pkg_cache"
     },
@@ -464,11 +451,6 @@ test_package("pkg-resolver-integration-tests") {
   ]
 
   meta = [
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/amber/meta/amber_with_isolated_storage.cmx")
-      dest = "amber.cmx"
-    },
     {
       path = rebase_path(
               "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-integration-test.cmx")

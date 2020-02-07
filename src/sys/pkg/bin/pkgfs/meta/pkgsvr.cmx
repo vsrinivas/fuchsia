@@ -4,8 +4,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.amber.Control",
-            "fuchsia.amber.Events",
             "fuchsia.sys.Environment"
         ]
     }

@@ -39,7 +39,6 @@ group("core") {
 merge_sysmgr_config("core_config") {
   output = "pkg.config"
   deps = [
-    "bin/amber:sysmgr_config",
     "bin/pkg-cache:config",
     "bin/pkg-resolver:config",
     "bin/system-update-checker:config",

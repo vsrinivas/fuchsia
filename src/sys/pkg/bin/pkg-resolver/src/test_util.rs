@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::amber_connector::AmberConnect;
-
-use fidl_fuchsia_amber::{ControlMarker as AmberMarker, ControlProxy as AmberProxy};
-use fuchsia_zircon::Status;
 use serde::Serialize;
 use serde_json;
 use std::fs::File;
@@ -27,14 +23,4 @@ where
     }
 
     dir
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ClosedAmberConnector;
-
-impl AmberConnect for ClosedAmberConnector {
-    fn connect(&self) -> Result<AmberProxy, Status> {
-        let (proxy, _) = fidl::endpoints::create_proxy::<AmberMarker>().unwrap();
-        Ok(proxy)
-    }
 }

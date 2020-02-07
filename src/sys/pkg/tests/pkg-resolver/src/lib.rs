@@ -5,7 +5,6 @@
 use {
     anyhow::Error,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_amber::ControlMarker as AmberMarker,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, PackageCacheMarker, PackageResolverAdminMarker,
@@ -136,18 +135,13 @@ pub struct TestEnvBuilder<PkgFsFn, P, MountsFn>
 where
     PkgFsFn: FnOnce() -> P,
 {
-    include_amber: bool,
     pkgfs: PkgFsFn,
     mounts: MountsFn,
 }
 
 impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
     pub fn new() -> Self {
-        Self {
-            include_amber: true,
-            pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"),
-            mounts: || Mounts::new(),
-        }
+        Self { pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"), mounts: || Mounts::new() }
     }
 }
 
@@ -158,11 +152,7 @@ where
     MountsFn: FnOnce() -> Mounts,
 {
     pub fn build(self) -> TestEnv<P> {
-        TestEnv::new_with_pkg_fs_and_mounts((self.pkgfs)(), (self.mounts)(), self.include_amber)
-    }
-    pub fn include_amber(mut self, include_amber: bool) -> Self {
-        self.include_amber = include_amber;
-        self
+        TestEnv::new_with_pkg_fs_and_mounts((self.pkgfs)(), (self.mounts)())
     }
     pub fn pkgfs<Pother>(
         self,
@@ -171,23 +161,14 @@ where
     where
         Pother: PkgFs + 'static,
     {
-        TestEnvBuilder::<_, Pother, MountsFn> {
-            include_amber: self.include_amber,
-            pkgfs: || pkgfs,
-            mounts: self.mounts,
-        }
+        TestEnvBuilder::<_, Pother, MountsFn> { pkgfs: || pkgfs, mounts: self.mounts }
     }
     pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
-        TestEnvBuilder::<PkgFsFn, P, _> {
-            include_amber: self.include_amber,
-            pkgfs: self.pkgfs,
-            mounts: || mounts,
-        }
+        TestEnvBuilder::<PkgFsFn, P, _> { pkgfs: self.pkgfs, mounts: || mounts }
     }
 }
 
 pub struct Apps {
-    pub amber: App,
     pub pkg_cache: App,
     pub pkg_resolver: App,
 }
@@ -302,15 +283,7 @@ impl TestEnv<PkgfsRamdisk> {
 }
 
 impl<P: PkgFs> TestEnv<P> {
-    pub fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts, include_amber: bool) -> Self {
-        let mut amber = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/amber.cmx",
-        )
-        .add_handle_to_namespace(
-            "/pkgfs".to_owned(),
-            pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
-        );
-
+    pub fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts) -> Self {
         let mut pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
                 .to_owned(),
@@ -338,10 +311,6 @@ impl<P: PkgFs> TestEnv<P> {
                 pkg_cache.directory_request().unwrap().clone(),
             );
 
-        if include_amber {
-            fs.add_proxy_service_to::<AmberMarker, _>(amber.directory_request().unwrap().clone());
-        }
-
         let mut salt = [0; 4];
         zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
         let environment_label = format!("pkg-resolver-env_{}", hex::encode(&salt));
@@ -350,7 +319,6 @@ impl<P: PkgFs> TestEnv<P> {
             .expect("nested environment to create successfully");
         fasync::spawn(fs.collect());
 
-        let amber = amber.spawn(env.launcher()).expect("amber to launch");
         let pkg_cache = pkg_cache.spawn(env.launcher()).expect("package cache to launch");
         let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
 
@@ -358,7 +326,7 @@ impl<P: PkgFs> TestEnv<P> {
             env,
             pkgfs,
             proxies: Proxies::from_app(&pkg_resolver),
-            apps: Apps { amber: amber, pkg_cache: pkg_cache, pkg_resolver },
+            apps: Apps { pkg_cache: pkg_cache, pkg_resolver },
             _mounts: mounts,
             nested_environment_label: environment_label,
         }

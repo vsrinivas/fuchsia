@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::amber_connector::AmberConnect,
     crate::cache::{BlobFetcher, PackageCache},
     crate::font_package_manager::FontPackageManager,
     crate::queue,
@@ -28,15 +27,12 @@ use {
 
 pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<BlobId, Status>>;
 
-pub fn make_package_fetch_queue<A>(
+pub fn make_package_fetch_queue(
     cache: PackageCache,
-    repo_manager: Arc<RwLock<RepositoryManager<A>>>,
+    repo_manager: Arc<RwLock<RepositoryManager>>,
     blob_fetcher: BlobFetcher,
     max_concurrency: usize,
-) -> (impl Future<Output = ()>, PackageFetcher)
-where
-    A: AmberConnect + 'static,
-{
+) -> (impl Future<Output = ()>, PackageFetcher) {
     let (package_fetch_queue, package_fetcher) =
         queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
             let cache = cache.clone();
@@ -83,8 +79,7 @@ pub async fn run_resolver_service(
 
 /// Resolve the package.
 ///
-/// FIXME: at the moment, we are proxying to Amber to resolve a package name and variant to a
-/// merkleroot. Because of this, we cant' implement the update policy, so we just ignore it.
+/// FIXME: the update policy is currently ignored.
 async fn resolve<'a>(
     rewrites: &'a Arc<RwLock<RewriteManager>>,
     cache: &'a PackageCache,

@@ -19,6 +19,7 @@ use {
 pub struct Experiments(Arc<RwLock<State>>);
 
 impl Experiments {
+    #[allow(unused)]
     pub fn get(&self, experiment: Experiment) -> bool {
         self.0.read().get_state(experiment)
     }

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::amber_connector::AmberConnect;
 use crate::repository_manager::{InsertError, RemoveError, RepositoryManager};
 use fidl_fuchsia_pkg::{
     MirrorConfig as FidlMirrorConfig, RepositoryConfig as FidlRepositoryConfig,
@@ -21,12 +20,12 @@ use std::sync::Arc;
 
 const LIST_CHUNK_SIZE: usize = 100;
 
-pub struct RepositoryService<A: AmberConnect> {
-    repo_manager: Arc<RwLock<RepositoryManager<A>>>,
+pub struct RepositoryService {
+    repo_manager: Arc<RwLock<RepositoryManager>>,
 }
 
-impl<A: AmberConnect> RepositoryService<A> {
-    pub fn new(repo_manager: Arc<RwLock<RepositoryManager<A>>>) -> Self {
+impl RepositoryService {
+    pub fn new(repo_manager: Arc<RwLock<RepositoryManager>>) -> Self {
         RepositoryService { repo_manager: repo_manager }
     }
 
@@ -141,7 +140,6 @@ mod tests {
     use {
         super::*,
         crate::repository_manager::RepositoryManagerBuilder,
-        crate::test_util::ClosedAmberConnector,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_pkg::RepositoryIteratorMarker,
         fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder},
@@ -149,10 +147,7 @@ mod tests {
         std::{convert::TryInto, path::Path},
     };
 
-    async fn list<A>(service: &RepositoryService<A>) -> Vec<RepositoryConfig>
-    where
-        A: AmberConnect,
-    {
+    async fn list(service: &RepositoryService) -> Vec<RepositoryConfig> {
         let (list_iterator, stream) =
             create_proxy_and_stream::<RepositoryIteratorMarker>().unwrap();
         service.serve_list(stream);
@@ -175,10 +170,7 @@ mod tests {
     async fn test_list_empty() {
         let dynamic_dir = tempfile::tempdir().unwrap();
         let dynamic_configs_path = dynamic_dir.path().join("config");
-        let mgr =
-            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path), ClosedAmberConnector)
-                .unwrap()
-                .build();
+        let mgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path)).unwrap().build();
         let service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
         let results = list(&service).await;
@@ -197,11 +189,10 @@ mod tests {
 
         let dynamic_dir = tempfile::tempdir().unwrap();
         let dynamic_configs_path = dynamic_dir.path().join("config");
-        let mgr =
-            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path), ClosedAmberConnector)
-                .unwrap()
-                .static_configs(configs.clone())
-                .build();
+        let mgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
+            .unwrap()
+            .static_configs(configs.clone())
+            .build();
 
         let service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
@@ -214,10 +205,7 @@ mod tests {
     async fn test_insert_list_remove() {
         let dynamic_dir = tempfile::tempdir().unwrap();
         let dynamic_configs_path = dynamic_dir.path().join("config");
-        let mgr =
-            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path), ClosedAmberConnector)
-                .unwrap()
-                .build();
+        let mgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path)).unwrap().build();
         let mut service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
         // First, create a bunch of repo configs we're going to use for testing.
@@ -252,9 +240,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_insert_fails_with_access_denied_if_disabled() {
-        let mgr = RepositoryManagerBuilder::new_test(Option::<&Path>::None, ClosedAmberConnector)
-            .unwrap()
-            .build();
+        let mgr = RepositoryManagerBuilder::new_test(Option::<&Path>::None).unwrap().build();
         let mut service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
         let url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let config = RepositoryConfigBuilder::new(url).build();
@@ -265,9 +251,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_remove_fails_with_access_denied_if_disabled() {
-        let mgr = RepositoryManagerBuilder::new_test(Option::<&Path>::None, ClosedAmberConnector)
-            .unwrap()
-            .build();
+        let mgr = RepositoryManagerBuilder::new_test(Option::<&Path>::None).unwrap().build();
         let mut service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
         assert_eq!(

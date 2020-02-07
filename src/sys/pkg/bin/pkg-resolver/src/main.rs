@@ -17,7 +17,6 @@ use {
     sysconfig_client,
 };
 
-mod amber_connector;
 mod cache;
 mod clock;
 mod config;
@@ -36,7 +35,6 @@ mod rewrite_service;
 mod test_util;
 
 use crate::{
-    amber_connector::AmberConnector,
     cache::PackageCache,
     config::Config,
     experiment::Experiments,
@@ -115,8 +113,6 @@ fn main_inner() -> Result<(), Error> {
     let main_inspect_node = inspector.root().create_child("main");
     let channel_inspect_state = ChannelInspectState::new(main_inspect_node.create_child("channel"));
 
-    let amber_connector = AmberConnector::new();
-
     let mut experiment_state = experiment::State::new(inspector.root().create_child("experiments"));
     experiment_state.set_state(experiment::Experiment::RustTuf, true);
     let experiment_state = Arc::new(RwLock::new(experiment_state));
@@ -125,7 +121,6 @@ fn main_inner() -> Result<(), Error> {
     let font_package_manager = Arc::new(load_font_package_manager());
     let repo_manager = Arc::new(RwLock::new(load_repo_manager(
         inspector.root().create_child("repository_manager"),
-        amber_connector,
         experiments,
         &config,
     )));
@@ -244,15 +239,14 @@ fn main_inner() -> Result<(), Error> {
 
 fn load_repo_manager(
     node: inspect::Node,
-    amber_connector: AmberConnector,
     experiments: Experiments,
     config: &Config,
-) -> RepositoryManager<AmberConnector> {
+) -> RepositoryManager {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
     let dynamic_repo_path =
         if config.disable_dynamic_configuration() { None } else { Some(DYNAMIC_REPO_PATH) };
-    RepositoryManagerBuilder::new(dynamic_repo_path, amber_connector, experiments)
+    RepositoryManagerBuilder::new(dynamic_repo_path, experiments)
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {}", err);
             builder
@@ -277,7 +271,7 @@ fn load_repo_manager(
 
 fn load_rewrite_manager(
     node: inspect::Node,
-    repo_manager: &RepositoryManager<AmberConnector>,
+    repo_manager: &RepositoryManager,
     config: &Config,
     channel_inspect_state: &ChannelInspectState,
 ) -> RewriteManager {

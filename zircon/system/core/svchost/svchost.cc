@@ -153,7 +153,6 @@ static zx_handle_t root_resource;
 // remove the dependencies on these services.
 static constexpr const char* deprecated_services[] = {
     // clang-format off
-    "fuchsia.amber.Control",
     "fuchsia.cobalt.LoggerFactory",
     "fuchsia.devicesettings.DeviceSettingsManager",
     "fuchsia.logger.Log",

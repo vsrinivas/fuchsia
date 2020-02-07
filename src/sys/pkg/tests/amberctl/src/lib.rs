@@ -6,7 +6,6 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_amber::{ControlMarker as AmberMarker, ControlProxy as AmberProxy},
     fidl_fuchsia_amber_ext::{self as types, SourceConfigBuilder},
     fidl_fuchsia_pkg::{RepositoryManagerMarker, RepositoryManagerProxy},
     fidl_fuchsia_pkg_ext::{
@@ -36,7 +35,7 @@ fn amberctl() -> AppBuilder {
 }
 
 struct Mounts {
-    misc: tempfile::TempDir,
+    _misc: tempfile::TempDir,
     pkgfs: tempfile::TempDir,
 }
 
@@ -46,12 +45,11 @@ impl Mounts {
         let pkgfs = tempfile::tempdir().expect("/tmp to exist");
         std::fs::create_dir(pkgfs.path().join("install")).expect("mkdir pkgfs/install");
         std::fs::create_dir(pkgfs.path().join("needs")).expect("mkdir pkgfs/needs");
-        Self { misc, pkgfs }
+        Self { _misc: misc, pkgfs }
     }
 }
 
 struct Proxies {
-    amber: AmberProxy,
     repo_manager: RepositoryManagerProxy,
     rewrite_engine: RewriteEngineProxy,
 }
@@ -112,7 +110,6 @@ impl MockSpaceManager {
 }
 
 struct TestEnv {
-    _amber: App,
     _pkg_resolver: App,
     _mounts: Mounts,
     env: NestedEnvironment,
@@ -125,16 +122,6 @@ impl TestEnv {
     }
 
     fn new_with_mounts(mounts: Mounts) -> Self {
-        let mut amber = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/amber_with_isolated_storage.cmx"
-                .to_owned(),
-        )
-        .add_dir_to_namespace(
-            "/misc".to_owned(),
-            File::open(mounts.misc.path()).expect("/misc temp dir to open"),
-        )
-        .expect("/misc to mount");
-
         let mut pkg_resolver = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg-resolver-for-integration-test.cmx"
                 .to_owned(),
@@ -148,23 +135,20 @@ impl TestEnv {
         .expect("/config/ssl to mount");
 
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service_to::<AmberMarker, _>(amber.directory_request().unwrap().clone())
-            .add_proxy_service_to::<RepositoryManagerMarker, _>(
-                pkg_resolver.directory_request().unwrap().clone(),
-            )
-            .add_proxy_service_to::<RewriteEngineMarker, _>(
-                pkg_resolver.directory_request().unwrap().clone(),
-            );
+        fs.add_proxy_service_to::<RepositoryManagerMarker, _>(
+            pkg_resolver.directory_request().unwrap().clone(),
+        )
+        .add_proxy_service_to::<RewriteEngineMarker, _>(
+            pkg_resolver.directory_request().unwrap().clone(),
+        );
 
         let env = fs
             .create_salted_nested_environment("amberctl_env")
             .expect("nested environment to create successfully");
         fasync::spawn(fs.collect());
 
-        let amber = amber.spawn(env.launcher()).expect("amber to launch");
-        let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("amber to launch");
+        let pkg_resolver = pkg_resolver.spawn(env.launcher()).unwrap();
 
-        let amber_proxy = env.connect_to_service::<AmberMarker>().expect("connect to amber");
         let repo_manager_proxy = env
             .connect_to_service::<RepositoryManagerMarker>()
             .expect("connect to repository manager");
@@ -172,12 +156,10 @@ impl TestEnv {
             env.connect_to_service::<RewriteEngineMarker>().expect("connect to rewrite engine");
 
         Self {
-            _amber: amber,
             _pkg_resolver: pkg_resolver,
             _mounts: mounts,
             env,
             proxies: Proxies {
-                amber: amber_proxy,
                 repo_manager: repo_manager_proxy,
                 rewrite_engine: rewrite_engine_proxy,
             },
@@ -335,7 +317,6 @@ async fn test_services_start_with_no_config() {
     let env = TestEnv::new();
 
     assert_eq!(env.run_amberctl_list_srcs().await, Vec::<String>::new());
-    assert_eq!(env.proxies.amber.do_test(42).await.unwrap(), "Your number was 42\n");
     assert_eq!(env.resolver_list_repos().await, vec![]);
     assert_eq!(env.rewrite_engine_list_rules().await, vec![]);
 }
@@ -352,26 +333,6 @@ async fn test_add_src() {
         env.rewrite_engine_list_rules().await,
         vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
     );
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_open_repo_merkle_for() {
-    let env = TestEnv::new();
-    let (repo_proxy, repo_server_end) = fidl::endpoints::create_proxy().expect("create proxy");
-    env.proxies
-        .amber
-        .open_repository(make_test_repo_config().into(), repo_server_end)
-        .await
-        .expect("open repo");
-
-    let (status_raw, message, _merkle, _size) =
-        repo_proxy.merkle_for("example_pkg", None).await.expect("merkle for");
-
-    assert_eq!(fuchsia_zircon::Status::from_raw(status_raw), fuchsia_zircon::Status::INTERNAL);
-    assert_eq!(
-        message,
-        "error finding merkle for package example_pkg/: tuf_source: error reading TUF targets: tuf: no root keys found in local meta store"
-    )
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -640,7 +601,7 @@ async fn test_disable_src_disables_all_sources() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update() {
-    // skip using TestEnv because we don't need to start pkg_resolver or amber here.
+    // skip using TestEnv because we don't need to start pkg_resolver here.
     let mut fs = ServiceFs::new();
 
     let update_manager = Arc::new(MockUpdateManager::new());
@@ -673,7 +634,7 @@ async fn test_system_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_gc() {
-    // skip using TestEnv because we don't need to start pkg_resolver or amber here.
+    // skip using TestEnv because we don't need to start pkg_resolver here.
     let mut fs = ServiceFs::new();
 
     let space_manager = Arc::new(MockSpaceManager::new());

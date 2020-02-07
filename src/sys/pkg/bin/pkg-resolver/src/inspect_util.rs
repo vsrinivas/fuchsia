@@ -6,7 +6,6 @@ use {
     fidl_fuchsia_pkg_ext::{MirrorConfigInspectState, RepositoryConfig},
     fuchsia_inspect::{self as inspect, NumericProperty, Property},
     fuchsia_inspect_contrib::inspectable::{Inspectable, Watch},
-    fuchsia_url::pkg_url::RepoUrl,
     std::sync::Arc,
 };
 
@@ -60,24 +59,6 @@ impl Watch<Arc<RepositoryConfig>> for InspectableRepositoryConfigWatcher {
     }
 }
 
-pub type InspectableRepoUrl = Inspectable<RepoUrl, InspectableRepoUrlWatcher>;
-
-pub struct InspectableRepoUrlWatcher {
-    url_property: inspect::StringProperty,
-}
-
-impl Watch<RepoUrl> for InspectableRepoUrlWatcher {
-    fn new(repo_url: &RepoUrl, node: &inspect::Node, _name: impl AsRef<str>) -> Self {
-        let url_property = node.create_string(format!("{:?}", repo_url.host()), "");
-
-        Self { url_property }
-    }
-
-    fn watch(&mut self, _repo_url: &RepoUrl) {
-        self.url_property.set("");
-    }
-}
-
 #[derive(Debug)]
 pub struct Counter {
     prop: inspect::UintProperty,
@@ -99,6 +80,7 @@ mod test_inspectable_repository_config {
         super::*,
         fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
         fuchsia_inspect::assert_inspect_tree,
+        fuchsia_url::pkg_url::RepoUrl,
     };
 
     #[test]
@@ -170,25 +152,6 @@ mod test_inspectable_repository_config {
                   },
                   update_package_url: format!("{:?}", inspectable.update_package_url()),
                 }
-            }
-        );
-    }
-}
-
-#[cfg(test)]
-mod test_inspectable_repo_url {
-    use {super::*, fuchsia_inspect::assert_inspect_tree};
-
-    #[test]
-    fn test_initialization() {
-        let inspector = inspect::Inspector::new();
-        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
-        let _inspectable = InspectableRepoUrl::new(fuchsia_url, inspector.root(), "test-property");
-
-        assert_inspect_tree!(
-            inspector,
-            root: {
-                "\"fuchsia.com\"": ""
             }
         );
     }
