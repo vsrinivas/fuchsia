@@ -129,12 +129,12 @@ async fn get_appid_and_channel_from_vbmeta_impl(
     vmo.read(&mut buf, 0)?;
     for arg in buf.split(|&byte| byte == 0) {
         let arg = String::from_utf8_lossy(arg);
-        let appid_prefix = "omaha.appid=";
+        let appid_prefix = "omaha_app_id=";
         if arg.starts_with(appid_prefix) {
             appid = Some(arg[appid_prefix.len()..].to_string());
             continue;
         }
-        let channel_prefix = "omaha.channel=";
+        let channel_prefix = "ota_channel=";
         if arg.starts_with(channel_prefix) {
             channel = Some(arg[channel_prefix.len()..].to_string());
         }
@@ -286,7 +286,7 @@ mod tests {
         let stream_fut = async move {
             match stream.next().await.unwrap() {
                 Ok(ArgumentsRequest::Get { responder }) => {
-                    let args = b"foo=bar\0omaha.appid=test-appid\0omaha.channel=test-channel\0";
+                    let args = b"foo=bar\0omaha_app_id=test-appid\0ota_channel=test-channel\0";
                     let size = args.len() as u64;
                     let vmo = Vmo::create(size).unwrap();
                     vmo.write(args, 0).unwrap();
