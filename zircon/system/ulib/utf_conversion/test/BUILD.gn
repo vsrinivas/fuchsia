@@ -2,7 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+import("//build/fuzzing/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
@@ -11,19 +24,36 @@ group("test") {
   ]
 }
 
-zx_test("utf_conversion") {
+test("utf_conversion") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "main.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/utf_conversion",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/utf_conversion",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
 fuzzer("utf_conversion-fuzzer") {
   sources = [ "utf_conversion-fuzzer.cc" ]
-  deps = [ "$zx/system/ulib/utf_conversion" ]
+  deps = [ "//zircon/public/lib/utf_conversion" ]
+}
+
+migrated_manifest("utf_conversion-manifest") {
+  deps = [ ":utf_conversion" ]
 }

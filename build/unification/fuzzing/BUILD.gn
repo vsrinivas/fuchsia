@@ -22,7 +22,6 @@ fuzzer_names = [
   "lz4-decompress",
   "noop",
   "tftp",
-  "utf_conversion",
   "vmo_file",
   "zbi-bootfs",
   "zstd",

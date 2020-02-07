@@ -66,6 +66,7 @@ _migrated_fuzzers = [
   "//zircon/system/ulib/gfx/test:gfx-fuzzer",
   "//zircon/system/ulib/hid-parser/test:hid-parser-fuzzer",
   "//zircon/system/ulib/ldmsg-fuzzer/test:ldmsg-fuzzer",
+  "//zircon/system/ulib/utf_conversion/test:utf_conversion-fuzzer",
 ]
 
 # Emits a JSON manifest similar to the one used to incorporate Zircon fuzzers into the Fuchsia GN

@@ -70,7 +70,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/tftp:tftp-fuzzer",
       "$zx/system/ulib/tftp:tftp-test",
       "$zx/system/ulib/trace-reader:tests",
-      "$zx/system/ulib/utf_conversion/test",
       "$zx/system/ulib/zbi-bootfs:test",
       "$zx/system/ulib/zircon-crypto/test",
       "$zx/system/ulib/zxtest/test",
