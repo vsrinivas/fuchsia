@@ -141,19 +141,11 @@ spn_svg_paths_decode(struct svg const * const svg, spn_path_builder_t pb)
             break;
 
           case SVG_PATH_CMD_CIRCLE:
-            spn(path_builder_ellipse(pb,
-                                     cmd->circle.cx,
-                                     cmd->circle.cy,
-                                     cmd->circle.r,
-                                     cmd->circle.r));
+            fprintf(stderr, "Error: circle not implemented - requires rationals\n");
             break;
 
           case SVG_PATH_CMD_ELLIPSE:
-            spn(path_builder_ellipse(pb,
-                                     cmd->ellipse.cx,
-                                     cmd->ellipse.cy,
-                                     cmd->ellipse.rx,
-                                     cmd->ellipse.ry));
+            fprintf(stderr, "Error: ellipse not implemented - requires rationals\n");
             break;
 
           case SVG_PATH_CMD_LINE:

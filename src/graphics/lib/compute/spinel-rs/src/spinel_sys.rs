@@ -198,14 +198,6 @@ extern "C" {
         w1: f32,
     ) -> SpnResult;
 
-    pub fn spn_path_ellipse(
-        builder: SpnPathBuilder,
-        cx: f32,
-        cy: f32,
-        rx: f32,
-        ry: f32,
-    ) -> SpnResult;
-
     pub fn spn_raster_builder_create(
         context: SpnContext,
         builder: *mut SpnRasterBuilder,
@@ -451,17 +443,6 @@ mod spinel_null {
     ) -> SpnResult {
         SpnResult::SpnSuccess
     }
-
-    pub unsafe extern "C" fn spn_path_ellipse(
-        builder: SpnPathBuilder,
-        cx: f32,
-        cy: f32,
-        rx: f32,
-        ry: f32,
-    ) -> SpnResult {
-        SpnResult::SpnSuccess
-    }
-
     pub unsafe extern "C" fn spn_raster_builder_create(
         context: SpnContext,
         builder: *mut SpnRasterBuilder,

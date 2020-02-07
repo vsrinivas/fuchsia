@@ -60,12 +60,6 @@ spn_path_builder_flush(spn_path_builder_t path_builder);
 // PATH OPS
 //
 
-//
-// TODO(allanmac) -- add a bulk/vectorized path func
-// TODO(allanmac) -- add rational quad and cubic funcs
-// TODO(allanmac) -- move to a "spn_path_<op>(pb,xy[])" proto
-//
-
 spn_result_t
 spn_path_builder_begin(spn_path_builder_t path_builder);
 
@@ -115,7 +109,7 @@ spn_path_builder_rat_quad_to(spn_path_builder_t path_builder,  //
                              float              w1);
 
 spn_result_t
-spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
+spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,  //
                               float              x1,
                               float              y1,
                               float              x2,
@@ -124,14 +118,6 @@ spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
                               float              y3,
                               float              w1,
                               float              w2);
-
-//
-// TODO(allanmac) -- this is a synthetic built from primitives and doesn't
-// belong here
-//
-
-spn_result_t
-spn_path_builder_ellipse(spn_path_builder_t path_builder, float cx, float cy, float rx, float ry);
 
 //
 // PATH RETAIN/RELEASE

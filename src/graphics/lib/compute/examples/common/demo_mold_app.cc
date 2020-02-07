@@ -44,13 +44,6 @@ spn_composition_set_clip(spn_composition_t composition, uint32_t const clip[4])
   return SPN_SUCCESS;
 }
 
-// Not implemented by Mold yet!!
-extern "C" spn_result_t
-spn_path_builder_ellipse(spn_path_builder_t, float, float, float, float)
-{
-  return SPN_SUCCESS;
-}
-
 #define SPN_DEMO_SURFACE_CHANNEL_TYPE uint32_t
 #define SPN_DEMO_SURFACE_WIDTH 1024
 #define SPN_DEMO_SURFACE_HEIGHT 1024

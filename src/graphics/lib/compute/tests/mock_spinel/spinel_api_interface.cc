@@ -196,14 +196,18 @@ spn_path_builder_cubic_smooth_to(
 }
 
 spn_result_t
-spn_path_builder_rat_quad_to(
-  spn_path_builder_t path_builder, float x0, float y0, float x1, float y1, float w1)
+spn_path_builder_rat_quad_to(spn_path_builder_t path_builder,  //
+                             float              x0,
+                             float              y0,
+                             float              x1,
+                             float              y1,
+                             float              w1)
 {
   return fromSpinel(path_builder)->ratQuadTo(x0, y0, x1, y1, w1);
 }
 
 spn_result_t
-spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
+spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,  //
                               float              x0,
                               float              y0,
                               float              x1,
@@ -214,37 +218,6 @@ spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
                               float              w2)
 {
   return fromSpinel(path_builder)->ratCubicTo(x0, y0, x1, y1, x2, y2, w1, w2);
-}
-
-spn_result_t
-spn_path_builder_ellipse(spn_path_builder_t path_builder,  //
-                         float              cx,
-                         float              cy,
-                         float              rx,
-                         float              ry)
-{
-  spn_path_builder_move_to(path_builder, cx, cy + ry);
-
-#define SPN_KAPPA_FLOAT 0.55228474983079339840f  // moar digits!
-
-  float const kx = rx * SPN_KAPPA_FLOAT;
-  float const ky = ry * SPN_KAPPA_FLOAT;
-
-  spn_result_t err;
-  err = spn_path_builder_cubic_to(path_builder, cx + kx, cy + ry, cx + rx, cy + ky, cx + rx, cy);
-  if (err)
-    return err;
-
-  err = spn_path_builder_cubic_to(path_builder, cx + rx, cy - ky, cx + kx, cy - ry, cx, cy - ry);
-  if (err)
-    return err;
-
-  err = spn_path_builder_cubic_to(path_builder, cx - kx, cy - ry, cx - rx, cy - ky, cx - rx, cy);
-  if (err)
-    return err;
-
-  err = spn_path_builder_cubic_to(path_builder, cx - rx, cy + ky, cx - kx, cy + ry, cx, cy + ry);
-  return err;
 }
 
 spn_result_t
