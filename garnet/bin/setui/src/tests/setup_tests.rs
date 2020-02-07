@@ -22,14 +22,12 @@ const ENV_NAME: &str = "settings_service_setup_test_environment";
 // Ensures the default value returned is WiFi.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup_default() {
-    let env = EnvironmentBuilder::new(
-        Runtime::Nested(ENV_NAME),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .settings(&[SettingType::Setup])
-    .spawn_and_get_nested_environment()
-    .await
-    .unwrap();
+    let env =
+        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
+            .settings(&[SettingType::Setup])
+            .spawn_and_get_nested_environment()
+            .await
+            .unwrap();
 
     let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
 
@@ -45,8 +43,8 @@ async fn test_setup_default() {
 // updated to verify restart request is made on interface change.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup() {
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-    let store = storage_factory.get_store::<SetupInfo>();
+    let storage_factory = InMemoryStorageFactory::create_handle();
+    let store = storage_factory.lock().await.get_store::<SetupInfo>();
 
     // Prepopulate initial value
     {

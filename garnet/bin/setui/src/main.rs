@@ -7,10 +7,12 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
+    futures::lock::Mutex,
     settings::registry::device_storage::StashDeviceStorageFactory,
     settings::Configuration,
     settings::EnvironmentBuilder,
     settings::Runtime,
+    std::sync::Arc,
 };
 
 const STASH_IDENTITY: &str = "settings_service";
@@ -29,9 +31,10 @@ fn main() -> Result<(), Error> {
     // EnvironmentBuilder::spawn returns a future that can be awaited for the
     // result of the startup. Since main is a synchronous function, we cannot
     // block here and therefore continue without waiting for the result.
-    let _ = EnvironmentBuilder::new(Runtime::Service(executor), Box::new(storage_factory))
-        .configuration(Configuration::All)
-        .spawn();
+    let _ =
+        EnvironmentBuilder::new(Runtime::Service(executor), Arc::new(Mutex::new(storage_factory)))
+            .configuration(Configuration::All)
+            .spawn();
 
     Ok(())
 }

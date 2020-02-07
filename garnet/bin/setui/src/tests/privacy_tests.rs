@@ -19,8 +19,8 @@ async fn test_privacy() {
     let changed_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Box::new(InMemoryStorageFactory::create());
-    let store = factory.get_store::<PrivacyInfo>();
+    let factory = InMemoryStorageFactory::create_handle();
+    let store = factory.lock().await.get_store::<PrivacyInfo>();
 
     let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), factory)
         .settings(&[SettingType::Privacy])

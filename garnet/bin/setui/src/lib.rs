@@ -46,8 +46,11 @@ use {
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_syslog::fx_log_err,
     futures::channel::oneshot::Receiver,
+    futures::executor::block_on,
+    futures::lock::Mutex,
     futures::StreamExt,
     std::collections::HashSet,
+    std::sync::Arc,
 };
 
 mod accessibility;
@@ -112,12 +115,12 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory> {
     configuration: Option<Configuration>,
     settings: Vec<SettingType>,
     agents: Vec<AgentHandle>,
-    storage_factory: Box<T>,
+    storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
 }
 
 impl<T: DeviceStorageFactory> EnvironmentBuilder<T> {
-    pub fn new(runtime: Runtime, storage_factory: Box<T>) -> EnvironmentBuilder<T> {
+    pub fn new(runtime: Runtime, storage_factory: Arc<Mutex<T>>) -> EnvironmentBuilder<T> {
         EnvironmentBuilder {
             runtime: runtime,
             configuration: None,
@@ -219,9 +222,9 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     components: HashSet<switchboard::base::SettingType>,
     agents: Vec<AgentHandle>,
     service_context_handle: ServiceContextHandle,
-    storage_factory: Box<T>,
+    storage_factory: Arc<Mutex<T>>,
 ) -> Receiver<Result<(), Error>> {
-    let unboxed_storage_factory = &storage_factory;
+    let storage_factory_lock = block_on(storage_factory.lock());
 
     let conduit_handle = ConduitImpl::create();
 
@@ -256,7 +259,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::Accessibility,
                 spawn_accessibility_controller(
-                    unboxed_storage_factory
+                    storage_factory_lock
                         .get_store::<switchboard::accessibility_types::AccessibilityInfo>(),
                 ),
             )
@@ -275,7 +278,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
                 switchboard::base::SettingType::Audio,
                 spawn_audio_controller(
                     service_context_handle.clone(),
-                    unboxed_storage_factory.get_store::<switchboard::base::AudioInfo>(),
+                    storage_factory_lock.get_store::<switchboard::base::AudioInfo>(),
                 ),
             )
             .unwrap();
@@ -307,7 +310,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
                     switchboard::base::SettingType::Display,
                     spawn_display_controller(
                         service_context_handle.clone(),
-                        unboxed_storage_factory.get_store::<switchboard::base::DisplayInfo>(),
+                        storage_factory_lock.get_store::<switchboard::base::DisplayInfo>(),
                     ),
                 )
                 .unwrap();
@@ -331,7 +334,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
         let register_result = registry_handle.write().register(
             switchboard::base::SettingType::DoNotDisturb,
             spawn_do_not_disturb_controller(
-                unboxed_storage_factory.get_store::<switchboard::base::DoNotDisturbInfo>(),
+                storage_factory_lock.get_store::<switchboard::base::DoNotDisturbInfo>(),
             ),
         );
         match register_result {
@@ -352,7 +355,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
                 switchboard::base::SettingType::Intl,
                 IntlController::spawn(
                     service_context_handle.clone(),
-                    unboxed_storage_factory.get_store::<switchboard::intl_types::IntlInfo>(),
+                    storage_factory_lock.get_store::<switchboard::intl_types::IntlInfo>(),
                 )
                 .unwrap(),
             )
@@ -370,7 +373,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::NightMode,
                 NightModeController::spawn(
-                    unboxed_storage_factory.get_store::<switchboard::base::NightModeInfo>(),
+                    storage_factory_lock.get_store::<switchboard::base::NightModeInfo>(),
                 )
                 .unwrap(),
             )
@@ -388,7 +391,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::Privacy,
                 PrivacyController::spawn(
-                    unboxed_storage_factory.get_store::<switchboard::base::PrivacyInfo>(),
+                    storage_factory_lock.get_store::<switchboard::base::PrivacyInfo>(),
                 )
                 .unwrap(),
             )
@@ -406,7 +409,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::System,
                 spawn_system_controller(
-                    unboxed_storage_factory.get_store::<switchboard::base::SystemInfo>(),
+                    storage_factory_lock.get_store::<switchboard::base::SystemInfo>(),
                 ),
             )
             .unwrap();
@@ -430,7 +433,7 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::Setup,
                 SetupController::spawn(
-                    unboxed_storage_factory.get_store::<switchboard::base::SetupInfo>(),
+                    storage_factory_lock.get_store::<switchboard::base::SetupInfo>(),
                 )
                 .unwrap(),
             )

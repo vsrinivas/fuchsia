@@ -15,8 +15,8 @@ const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_do_not_disturb() {
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-    let store = storage_factory.get_store::<DoNotDisturbInfo>();
+    let storage_factory = InMemoryStorageFactory::create_handle();
+    let store = storage_factory.lock().await.get_store::<DoNotDisturbInfo>();
 
     // Prepopulate initial value.
     {

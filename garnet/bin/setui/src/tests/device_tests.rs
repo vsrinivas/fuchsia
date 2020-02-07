@@ -14,14 +14,12 @@ const ENV_NAME: &str = "settings_service_device_test_environment";
 /// sent to the switchboard.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_device() {
-    let env = EnvironmentBuilder::new(
-        Runtime::Nested(ENV_NAME),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .settings(&[SettingType::Device])
-    .spawn_and_get_nested_environment()
-    .await
-    .unwrap();
+    let env =
+        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
+            .settings(&[SettingType::Device])
+            .spawn_and_get_nested_environment()
+            .await
+            .unwrap();
 
     let device_proxy = env.connect_to_service::<DeviceMarker>().expect("connected to service");
 

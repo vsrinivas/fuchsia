@@ -18,8 +18,8 @@ async fn test_night_mode() {
     let changed_value = NightModeInfo { night_mode_enabled: Some(true) };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Box::new(InMemoryStorageFactory::create());
-    let store = factory.get_store::<NightModeInfo>();
+    let factory = InMemoryStorageFactory::create_handle();
+    let store = factory.lock().await.get_store::<NightModeInfo>();
 
     let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), factory)
         .settings(&[SettingType::NightMode])

@@ -137,10 +137,10 @@ fn prefixed(input_string: &str) -> String {
 pub mod testing {
     use super::*;
     use fuchsia_async as fasync;
+    use futures::executor::block_on;
+    use futures::lock::Mutex;
     use futures::prelude::*;
-    use parking_lot::RwLock;
     use std::any::TypeId;
-    use std::cell::RefCell;
     use std::collections::HashMap;
 
     #[derive(PartialEq)]
@@ -172,18 +172,22 @@ pub mod testing {
     /// Storage that does not write to disk, for testing.
     /// Only supports a single key/value pair
     pub struct InMemoryStorageFactory {
-        proxies: RefCell<HashMap<TypeId, (StoreAccessorProxy, Arc<RwLock<StashStats>>)>>,
+        proxies: Arc<Mutex<HashMap<TypeId, (StoreAccessorProxy, Arc<Mutex<StashStats>>)>>>,
     }
 
     impl InMemoryStorageFactory {
         pub fn create() -> InMemoryStorageFactory {
-            InMemoryStorageFactory { proxies: RefCell::new(HashMap::new()) }
+            InMemoryStorageFactory { proxies: Arc::new(Mutex::new(HashMap::new())) }
+        }
+
+        pub fn create_handle() -> Arc<Mutex<InMemoryStorageFactory>> {
+            Arc::new(Mutex::new(InMemoryStorageFactory::create()))
         }
 
         pub fn get_stats<T: DeviceStorageCompatible + 'static>(
             &self,
-        ) -> Result<Arc<RwLock<StashStats>>, Error> {
-            let proxies = self.proxies.borrow();
+        ) -> Result<Arc<Mutex<StashStats>>, Error> {
+            let proxies = block_on(self.proxies.lock());
             let id = TypeId::of::<T>();
             if let Some((_, stats)) = proxies.get(&id) {
                 return Ok(stats.clone());
@@ -196,7 +200,7 @@ pub mod testing {
     impl DeviceStorageFactory for InMemoryStorageFactory {
         fn get_store<T: DeviceStorageCompatible + 'static>(&self) -> Arc<Mutex<DeviceStorage<T>>> {
             let id = TypeId::of::<T>();
-            let mut proxies = self.proxies.borrow_mut();
+            let mut proxies = block_on(self.proxies.lock());
             if !proxies.contains_key(&id) {
                 proxies.insert(id, spawn_stash_proxy());
             }
@@ -212,10 +216,10 @@ pub mod testing {
         }
     }
 
-    fn spawn_stash_proxy() -> (StoreAccessorProxy, Arc<RwLock<StashStats>>) {
+    fn spawn_stash_proxy() -> (StoreAccessorProxy, Arc<Mutex<StashStats>>) {
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
-        let stats = Arc::new(RwLock::new(StashStats::new()));
+        let stats = Arc::new(Mutex::new(StashStats::new()));
         let stats_clone = stats.clone();
         fasync::spawn(async move {
             let mut stored_value: Option<Value> = None;
@@ -225,7 +229,7 @@ pub mod testing {
                 #[allow(unreachable_patterns)]
                 match req {
                     StoreAccessorRequest::GetValue { key, responder } => {
-                        stats_clone.write().record(StashAction::Get);
+                        stats_clone.lock().await.record(StashAction::Get);
                         if let Some(key_string) = stored_key {
                             assert_eq!(key, key_string);
                         }
@@ -234,7 +238,7 @@ pub mod testing {
                         responder.send(stored_value.as_mut()).unwrap();
                     }
                     StoreAccessorRequest::SetValue { key, val, control_handle: _ } => {
-                        stats_clone.write().record(StashAction::Set);
+                        stats_clone.lock().await.record(StashAction::Set);
                         if let Some(key_string) = stored_key {
                             assert_eq!(key, key_string);
                         }
@@ -242,10 +246,10 @@ pub mod testing {
                         stored_value = Some(val);
                     }
                     StoreAccessorRequest::Commit { control_handle: _ } => {
-                        stats_clone.write().record(StashAction::Commit);
+                        stats_clone.lock().await.record(StashAction::Commit);
                     }
                     StoreAccessorRequest::Flush { responder } => {
-                        stats_clone.write().record(StashAction::Flush);
+                        stats_clone.lock().await.record(StashAction::Flush);
                         responder.send(&mut Ok(())).ok();
                     }
                     _ => {}
@@ -260,6 +264,7 @@ pub mod testing {
 mod tests {
     use super::*;
     use fuchsia_async as fasync;
+    use futures::lock::Mutex;
     use futures::prelude::*;
     use serde_derive::{Deserialize, Serialize};
     use testing::*;

@@ -18,7 +18,7 @@ async fn tests_setui() {
     fidl_fuchsia_setui::LoginOverride::AuthProvider;
 
   let env =
-    EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), Box::new(InMemoryStorageFactory::create()))
+    EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
       .settings(&[SettingType::System])
       .spawn_and_get_nested_environment()
       .await

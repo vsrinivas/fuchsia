@@ -13,12 +13,14 @@ use {
     crate::Runtime,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_types::ColorRgba,
+    futures::lock::Mutex,
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_accessibility_test_environment";
 
 async fn create_test_accessibility_env(
-    storage_factory: Box<InMemoryStorageFactory>,
+    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
 ) -> AccessibilityProxy {
     EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
         .settings(&[SettingType::Accessibility])
@@ -67,8 +69,8 @@ async fn test_accessibility_set_all() {
     };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Box::new(InMemoryStorageFactory::create());
-    let store = factory.get_store::<AccessibilityInfo>();
+    let factory = InMemoryStorageFactory::create_handle();
+    let store = factory.lock().await.get_store::<AccessibilityInfo>();
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Fetch the initial value.
@@ -123,8 +125,8 @@ async fn test_accessibility_set_captions() {
     };
 
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Box::new(InMemoryStorageFactory::create());
-    let store = factory.get_store::<AccessibilityInfo>();
+    let factory = InMemoryStorageFactory::create_handle();
+    let store = factory.lock().await.get_store::<AccessibilityInfo>();
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Set for_media and window_color in the top-level CaptionsSettings.

@@ -108,9 +108,9 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
 
 // Gets the store from |factory| and populate it with default values.
 async fn create_storage(
-    factory: &Box<InMemoryStorageFactory>,
+    factory: Arc<Mutex<InMemoryStorageFactory>>,
 ) -> Arc<Mutex<DeviceStorage<AudioInfo>>> {
-    let store = factory.get_store::<AudioInfo>();
+    let store = factory.lock().await.get_store::<AudioInfo>();
     {
         let mut store_lock = store.lock().await;
         let audio_info = default_audio_info();
@@ -154,8 +154,8 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
 ) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<AudioInfo>>>) {
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-    let store = create_storage(&storage_factory).await;
+    let storage_factory = InMemoryStorageFactory::create_handle();
+    let store = create_storage(storage_factory.clone()).await;
 
     let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
         .service(ServiceRegistry::serve(service_registry))
@@ -404,8 +404,8 @@ async fn test_audio_info_copy() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_persisted_values_applied_at_start() {
     let (service_registry, fake_services) = create_services().await;
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-    let store = create_storage(&storage_factory).await;
+    let storage_factory = InMemoryStorageFactory::create_handle();
+    let store = create_storage(storage_factory.clone()).await;
 
     let test_audio_info = AudioInfo {
         streams: [

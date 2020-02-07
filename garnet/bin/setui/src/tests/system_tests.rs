@@ -27,8 +27,8 @@ async fn test_system() {
     const CHANGED_LOGIN_MODE: fidl_fuchsia_settings::LoginOverride =
         fidl_fuchsia_settings::LoginOverride::AuthProvider;
 
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-    let store = storage_factory.get_store::<SystemInfo>();
+    let storage_factory = InMemoryStorageFactory::create_handle();
+    let store = storage_factory.lock().await.get_store::<SystemInfo>();
 
     // Write out initial value to storage.
     {

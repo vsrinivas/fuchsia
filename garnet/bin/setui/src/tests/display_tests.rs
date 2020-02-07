@@ -69,15 +69,13 @@ async fn test_display() {
         Ok(())
     };
 
-    let env = EnvironmentBuilder::new(
-        Runtime::Nested(ENV_NAME),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .service(Box::new(service_gen))
-    .settings(&[SettingType::Display])
-    .spawn_and_get_nested_environment()
-    .await
-    .unwrap();
+    let env =
+        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
+            .service(Box::new(service_gen))
+            .settings(&[SettingType::Display])
+            .spawn_and_get_nested_environment()
+            .await
+            .unwrap();
 
     let display_proxy = env.connect_to_service::<DisplayMarker>().unwrap();
 
@@ -135,15 +133,13 @@ async fn test_display_failure() {
         _ => Err(format_err!("unsupported!")),
     };
 
-    let env = EnvironmentBuilder::new(
-        Runtime::Nested(ENV_NAME),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .service(Box::new(service_gen))
-    .settings(&[SettingType::Display, SettingType::Intl])
-    .spawn_and_get_nested_environment()
-    .await
-    .unwrap();
+    let env =
+        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
+            .service(Box::new(service_gen))
+            .settings(&[SettingType::Display, SettingType::Intl])
+            .spawn_and_get_nested_environment()
+            .await
+            .unwrap();
 
     let display_proxy = env.connect_to_service::<DisplayMarker>().expect("connected to service");
 

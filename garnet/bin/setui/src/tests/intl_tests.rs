@@ -13,7 +13,9 @@ use {
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::lock::Mutex,
     futures::prelude::*,
+    std::sync::Arc,
 };
 
 use crate::fidl_clone::FIDLClone;
@@ -21,7 +23,7 @@ use crate::switchboard::intl_types::IntlInfo;
 
 const ENV_NAME: &str = "settings_service_intl_test_environment";
 
-async fn create_test_intl_env(storage_factory: Box<InMemoryStorageFactory>) -> IntlProxy {
+async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>>) -> IntlProxy {
     let service_gen = |service_name: &str, channel: zx::Channel| {
         if service_name != fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME {
             return Err(format_err!("unsupported!"));
@@ -66,8 +68,8 @@ async fn create_test_intl_env(storage_factory: Box<InMemoryStorageFactory>) -> I
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_intl_e2e() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Box::new(InMemoryStorageFactory::create());
-    let store = factory.get_store::<IntlInfo>();
+    let factory = InMemoryStorageFactory::create_handle();
+    let store = factory.lock().await.get_store::<IntlInfo>();
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.
@@ -103,8 +105,8 @@ async fn test_intl_e2e() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_intl_e2e_set_twice() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Box::new(InMemoryStorageFactory::create());
-    let store = factory.get_store::<IntlInfo>();
+    let factory = InMemoryStorageFactory::create_handle();
+    let store = factory.lock().await.get_store::<IntlInfo>();
     let intl_service = create_test_intl_env(factory).await;
 
     // Initial value is not None.
@@ -142,8 +144,8 @@ async fn test_intl_e2e_set_twice() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_intl_e2e_idempotent_set() {
     // Create and fetch a store from device storage so we can read stored value for testing.
-    let factory = Box::new(InMemoryStorageFactory::create());
-    let store = factory.get_store::<IntlInfo>();
+    let factory = InMemoryStorageFactory::create_handle();
+    let store = factory.lock().await.get_store::<IntlInfo>();
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.
@@ -181,7 +183,7 @@ async fn test_intl_e2e_idempotent_set() {
 async fn test_intl_invalid_timezone() {
     const INITIAL_TIME_ZONE: &'static str = "GMT";
 
-    let factory = Box::new(InMemoryStorageFactory::create());
+    let factory = InMemoryStorageFactory::create_handle();
     let intl_service = create_test_intl_env(factory).await;
 
     // Set a real value.

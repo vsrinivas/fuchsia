@@ -117,17 +117,15 @@ async fn test_environment_startup() {
     let (service_tx, mut service_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let service_agent = TestAgent::new(service_agent_id, Lifespan::Service, Some(service_tx));
 
-    let environment = EnvironmentBuilder::new(
-        Runtime::Nested(ENV_NAME),
-        Box::new(InMemoryStorageFactory::create()),
-    )
-    .agents(&[
-        TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
-        service_agent.clone(),
-    ])
-    .settings(&[SettingType::Display])
-    .spawn()
-    .unwrap();
+    let environment =
+        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
+            .agents(&[
+                TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
+                service_agent.clone(),
+            ])
+            .settings(&[SettingType::Display])
+            .spawn()
+            .unwrap();
 
     // Wait for the initialization agent to receive invocation
     if let Some((id, invocation)) = startup_rx.next().await {
