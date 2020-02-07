@@ -87,7 +87,7 @@ protocol Account {
     /// Connects a channel to read properties of and access tokens for
     /// the default persona for the account.
     ///
-    /// `persona` The client end of a `Persona` channel
+    /// `persona` The server end of a `Persona` channel
     ///
     /// Returns: `id` The identifier for the default persona
     GetDefaultPersona(request<Persona> persona)
@@ -97,7 +97,7 @@ protocol Account {
     /// one of the personae for the account.
     ///
     /// `id` The persona's identifier as returned by GetPersonaIds()
-    /// `persona` The client end of a `Persona` channel
+    /// `persona` The server end of a `Persona` channel
     GetPersona(LocalPersonaId id, request<Persona> persona) -> () error Error;
 
     // TODO(AUTH-221): Add methods to create, delete, and manage personae.
@@ -174,7 +174,7 @@ protocol Persona {
     /// `application_url` A url for the Fuchsia agent that this channel will be
     ///                   used by. Applications are only allowed to access
     ///                   tokens that they created.
-    /// `token_manager` The client end of a `TokenManager` channel
+    /// `token_manager` The server end of a `TokenManager` channel
     GetTokenManager(
         // TODO(AUTH-218): Migrate token manager to a more appropriate form
         // of software identity. This is likely to be some verifiable
@@ -194,7 +194,7 @@ protocol Persona {
     /// `application_url` A url for the component that this channel will be
     ///                   used by. Applications are only allowed to access
     ///                   their own keys.
-    /// `key_manager` The client end of a `KeyManager` channel
+    /// `key_manager` The server end of a `KeyManager` channel
     GetKeyManager(
         // TODO(AUTH-218): Migrate key manager to a more appropriate form
         // of software identity. This might be a set of whitelisted URLs or a
