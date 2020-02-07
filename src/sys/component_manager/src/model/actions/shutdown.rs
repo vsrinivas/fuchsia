@@ -6,8 +6,6 @@ use {
     crate::model::{
         actions::{Action, ActionSet},
         error::ModelError,
-        hooks::Event,
-        hooks::EventPayload,
         model::Model,
         moniker::{ChildMoniker, PartialMoniker},
         realm::{Realm, RealmState},
@@ -16,7 +14,7 @@ use {
         ComponentDecl, OfferDecl, OfferDirectorySource, OfferRunnerSource, OfferServiceSource,
         OfferStorageSource, OfferTarget, StorageDecl, StorageDirectorySource,
     },
-    futures::future::{join_all, select_all},
+    futures::future::select_all,
     maplit::hashset,
     std::collections::{HashMap, HashSet},
     std::fmt,
@@ -227,40 +225,24 @@ impl ShutdownJob {
 }
 
 pub async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
-    let mut state_lock = realm.lock_state().await;
     {
-        let exec_state = realm.lock_execution().await;
-        if exec_state.is_shut_down() {
-            return Ok(());
+        let state_lock = realm.lock_state().await;
+        {
+            let exec_state = realm.lock_execution().await;
+            if exec_state.is_shut_down() {
+                return Ok(());
+            }
+        }
+        if let Some(state) = state_lock.as_ref() {
+            let mut shutdown_job = ShutdownJob::new(model.clone(), state).await;
+            drop(state_lock);
+            Box::pin(shutdown_job.execute()).await?;
         }
     }
-    if let Some(state) = state_lock.as_ref() {
-        let mut shutdown_job = ShutdownJob::new(model.clone(), state).await;
-        drop(state_lock);
-
-        Box::pin(shutdown_job.execute()).await?;
-        // Now that all children have shut down, shut down the parent.
-        let (was_running, nfs) = {
-            let mut state = realm.lock_state().await;
-            Realm::stop_instance(model, realm.clone(), state.as_mut(), true).await?
-        };
-        join_all(nfs).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
-        if was_running {
-            let event = Event::new(realm.abs_moniker.clone(), EventPayload::StopInstance);
-            realm.hooks.dispatch(&event).await?;
-        }
-    } else {
-        // The component was never resolved. Shut down the component now, which will prevent any
-        // children from starting.
-        // TODO: Actually implement not allowing child to start if parent is shut down.
-        let (was_running, nfs) =
-            Realm::stop_instance(model.clone(), realm.clone(), state_lock.as_mut(), true).await?;
-        assert!(!was_running, "unresolved component was running");
-        assert!(
-            nfs.is_empty(),
-            "nonempty destroy notifications when stopping unresolved component"
-        );
-    }
+    // Now that all children have shut down, shut down the parent.
+    // TODO: Put the parent in a "shutting down" state so that if it creates new instances
+    // after this point, they are created in a shut down state.
+    Realm::stop_instance(model, &realm, true).await?;
 
     Ok(())
 }

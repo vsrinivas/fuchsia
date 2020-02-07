@@ -51,8 +51,8 @@
 //!   child and marks `DestroyChild` finished, which will notify the client that the action is
 //!   complete.
 
-pub mod start;
 mod shutdown;
+pub mod start;
 
 use {
     crate::model::{
@@ -78,6 +78,8 @@ pub enum Action {
     Start,
     /// This realm's component instances should be shut down (stopped and never started again).
     Shutdown,
+    /// The given child of this realm should be marked deleting.
+    MarkDeleting(ChildMoniker),
     /// The given child of this realm should be deleted.
     DeleteChild(ChildMoniker),
     /// This realm and all its component instance should be destroyed.
@@ -196,6 +198,9 @@ impl Action {
         fasync::spawn(async move {
             let res = match &action {
                 Action::Start => start::do_start(model, realm.clone()).await,
+                Action::MarkDeleting(moniker) => {
+                    do_mark_deleting(realm.clone(), moniker.clone()).await
+                }
                 Action::DeleteChild(moniker) => {
                     do_delete_child(model, realm.clone(), moniker.clone()).await
                 }
@@ -207,28 +212,48 @@ impl Action {
     }
 }
 
+async fn do_mark_deleting(realm: Arc<Realm>, moniker: ChildMoniker) -> Result<(), ModelError> {
+    let partial_moniker = moniker.to_partial();
+    let child_realm = {
+        let state = realm.lock_state().await;
+        let state = state.as_ref().expect("do_mark_deleting: not resolved");
+        state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
+    };
+    if let Some(child_realm) = child_realm {
+        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::PreDestroyInstance);
+        child_realm.hooks.dispatch(&event).await?;
+        let mut state = realm.lock_state().await;
+        let state = state.as_mut().expect("do_mark_deleting: not resolved");
+        state.mark_child_realm_deleting(&partial_moniker);
+    } else {
+        // Child already marked deleting. Nothing to do.
+    }
+    Ok(())
+}
+
 async fn do_delete_child(
     model: Arc<Model>,
     realm: Arc<Realm>,
     moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
-    let partial_moniker = moniker.to_partial();
-    realm.mark_child_deleting(&partial_moniker).await?;
-    let child_realm = {
-        let mut state = realm.lock_state().await;
-        let state = state.as_mut().expect("do_delete_child: not resolved");
-        state.all_child_realms().get(&moniker).map(|r| r.clone())
-    };
+    // Some paths may have already marked the child deleting before scheduling the DeleteChild
+    // action, in which case this is a no-op.
+    ActionSet::register(realm.clone(), model.clone(), Action::MarkDeleting(moniker.clone()))
+        .await
+        .await?;
 
     // The child may not exist or may already be deleted by a previous DeleteChild action.
+    let child_realm = {
+        let state = realm.lock_state().await;
+        let state = state.as_ref().expect("do_delete_child: not resolved");
+        state.all_child_realms().get(&moniker).map(|r| r.clone())
+    };
     if let Some(child_realm) = child_realm {
         ActionSet::register(child_realm.clone(), model.clone(), Action::Destroy).await.await?;
-
         {
             let mut state = realm.lock_state().await;
             state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
         }
-
         let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::PostDestroyInstance);
         child_realm.hooks.dispatch(&event).await?;
     }
@@ -1613,6 +1638,119 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn mark_deleting() {
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
+            ),
+            ("a", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+
+        // Register `mark_deleting` action, and wait for it. Component should be marked deleted.
+        let realm_root = test.look_up(vec![].into()).await;
+        execute_action(test.model.clone(), realm_root.clone(), Action::MarkDeleting("a:0".into()))
+            .await
+            .expect("mark delete failed");
+        assert!(is_deleting(&realm_root, "a:0".into()).await);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
+                })
+                .collect();
+            assert_eq!(events, vec![Lifecycle::PreDestroy(vec!["a:0"].into())],);
+        }
+
+        // Execute action again, same state and no new events.
+        execute_action(test.model.clone(), realm_root.clone(), Action::MarkDeleting("a:0".into()))
+            .await
+            .expect("mark delete failed");
+        assert!(is_deleting(&realm_root, "a:0".into()).await);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
+                })
+                .collect();
+            assert_eq!(events, vec![Lifecycle::PreDestroy(vec!["a:0"].into())],);
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn mark_deleting_in_collection() {
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_collection("coll", fsys::Durability::Transient)
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
+            ),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, Some(vec![].into())).await;
+
+        // Create dynamic instances in "coll".
+        test.create_dynamic_child("coll", "a").await;
+        test.create_dynamic_child("coll", "b").await;
+
+        // Register `mark_deleting` action for "a" only.
+        let realm_root = test.look_up(vec![].into()).await;
+        execute_action(
+            test.model.clone(),
+            realm_root.clone(),
+            Action::MarkDeleting("coll:a:1".into()),
+        )
+        .await
+        .expect("mark delete failed");
+        assert!(is_deleting(&realm_root, "coll:a:1".into()).await);
+        assert!(!is_deleting(&realm_root, "coll:b:2".into()).await);
+
+        // Register `mark_deleting` action for "b".
+        execute_action(
+            test.model.clone(),
+            realm_root.clone(),
+            Action::MarkDeleting("coll:b:1".into()),
+        )
+        .await
+        .expect("mark delete failed");
+        assert!(is_deleting(&realm_root, "coll:a:1".into()).await);
+        assert!(is_deleting(&realm_root, "coll:b:2".into()).await);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
+                })
+                .collect();
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::PreDestroy(vec!["coll:a:1"].into()),
+                    Lifecycle::PreDestroy(vec!["coll:b:2"].into())
+                ],
+            );
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_one_component() {
         let components = vec![
             (
@@ -2240,6 +2378,14 @@ pub mod tests {
 
     async fn is_executing(realm: &Realm) -> bool {
         realm.lock_execution().await.runtime.is_some()
+    }
+
+    async fn is_deleting(realm: &Realm, moniker: ChildMoniker) -> bool {
+        let partial = moniker.to_partial();
+        let state = realm.lock_state().await;
+        let state = state.as_ref().unwrap();
+        state.get_live_child_realm(&partial).is_none()
+            && state.get_child_instance(&moniker).is_some()
     }
 
     /// Verifies that a child realm is deleted by checking its RealmState

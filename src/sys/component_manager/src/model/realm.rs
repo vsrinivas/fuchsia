@@ -26,7 +26,7 @@ use {
     },
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
-        future::{BoxFuture, Either, FutureExt},
+        future::{join_all, BoxFuture, Either, FutureExt},
         lock::{Mutex, MutexLockFuture},
     },
     std::convert::TryInto,
@@ -315,7 +315,21 @@ impl Realm {
         partial_moniker: &PartialMoniker,
     ) -> Result<Notification, ModelError> {
         Realm::resolve_decl(&realm).await?;
-        if let Some(child_moniker) = realm.mark_child_deleting(&partial_moniker).await? {
+        let tup = {
+            let mut state = realm.lock_state().await;
+            let state = state.as_mut().expect("remove_dynamic_child: not resolved");
+            state.live_child_realms.get(&partial_moniker).map(|t| t.clone())
+        };
+        if let Some(tup) = tup {
+            let (instance, _) = tup;
+            let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
+            ActionSet::register(
+                realm.clone(),
+                model.clone(),
+                Action::MarkDeleting(child_moniker.clone()),
+            )
+            .await
+            .await?;
             let nf =
                 ActionSet::register(realm.clone(), model, Action::DeleteChild(child_moniker)).await;
             Ok(nf)
@@ -327,81 +341,48 @@ impl Realm {
         }
     }
 
-    /// Marks a child realm deleting, and dispatches the PreDestroyInstance event. Returns the
-    /// child moniker if the child was alive.
-    pub async fn mark_child_deleting(
-        &self,
-        partial_moniker: &PartialMoniker,
-    ) -> Result<Option<ChildMoniker>, ModelError> {
-        let tup = {
-            let mut state = self.lock_state().await;
-            let state = state.as_mut().expect("remove_dynamic_child: not resolved");
-            state.live_child_realms.get(&partial_moniker).map(|t| t.clone())
-        };
-        if let Some(tup) = tup {
-            let (instance, child_realm) = tup;
-            {
-                let event =
-                    Event::new(child_realm.abs_moniker.clone(), EventPayload::PreDestroyInstance);
-                child_realm.hooks.dispatch(&event).await?;
-            }
-            let mut state = self.lock_state().await;
-            let state = state.as_mut().expect("remove_dynamic_child: not resolved");
-            state.mark_child_realm_deleting(&partial_moniker);
-            let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            Ok(Some(child_moniker))
-        } else {
-            Ok(None)
-        }
-    }
-
     /// Performs the stop protocol for this component instance.
     ///
-    /// Returns whether the instance was already running, and notifications to wait on for
-    /// transient children to be destroyed.
+    /// Returns whether the instance was already running.
     ///
     /// REQUIRES: All dependents have already been stopped.
     pub async fn stop_instance(
         model: Arc<Model>,
-        realm: Arc<Realm>,
-        state: Option<&mut RealmState>,
+        realm: &Arc<Realm>,
         shut_down: bool,
-    ) -> Result<(bool, Vec<Notification>), ModelError> {
-        let (was_running, nfs) = {
-            let was_running = {
-                let mut execution = realm.lock_execution().await;
-                let was_running = execution.runtime.is_some();
+    ) -> Result<(), ModelError> {
+        let was_running = {
+            let mut execution = realm.lock_execution().await;
+            let was_running = execution.runtime.is_some();
 
-                if let Some(runtime) = &mut execution.runtime {
-                    let timer = Box::pin(fasync::Timer::new(fasync::Time::after(
-                        // TODO(jmatt) the plan is to read this from somewhere
-                        // in the component manifest, likely a field in the
-                        // environment section.
-                        zx::Duration::from_nanos(i64::MAX),
-                    )));
-                    runtime.stop_component(timer).await.map_err(|e| {
-                        ModelError::RunnerCommunicationError {
-                            moniker: realm.abs_moniker.clone(),
-                            operation: "stop".to_string(),
-                            err: ClonableError::from(anyhow::Error::from(e)),
-                        }
-                    })?;
-                }
+            if let Some(runtime) = &mut execution.runtime {
+                let timer = Box::pin(fasync::Timer::new(fasync::Time::after(
+                    // TODO(jmatt) the plan is to read this from somewhere
+                    // in the component manifest, likely a field in the
+                    // environment section.
+                    zx::Duration::from_nanos(i64::MAX),
+                )));
+                runtime.stop_component(timer).await.map_err(|e| {
+                    ModelError::RunnerCommunicationError {
+                        moniker: realm.abs_moniker.clone(),
+                        operation: "stop".to_string(),
+                        err: ClonableError::from(anyhow::Error::from(e)),
+                    }
+                })?;
+            }
 
-                execution.runtime = None;
-                execution.shut_down |= shut_down;
-                was_running
-            };
-            let nfs = if let Some(state) = state {
-                // When the realm is stopped, any child instances in transient collections must be
-                // destroyed.
-                Self::destroy_transient_children(model.clone(), realm.clone(), state).await?
-            } else {
-                vec![]
-            };
-            (was_running, nfs)
+            execution.runtime = None;
+            execution.shut_down |= shut_down;
+            was_running
         };
-        Ok((was_running, nfs))
+        // When the realm is stopped, any child instances in transient collections must be
+        // destroyed.
+        Self::destroy_transient_children(model.clone(), realm.clone()).await?;
+        if was_running {
+            let event = Event::new(realm.abs_moniker.clone(), EventPayload::StopInstance);
+            realm.hooks.dispatch(&event).await?;
+        }
+        Ok(())
     }
 
     /// Destroys this component instance.
@@ -430,30 +411,43 @@ impl Realm {
     }
 
     /// Registers actions to destroy all children of `realm` that live in transient collections.
-    /// Returns a future that completes when all those children are destroyed.
     async fn destroy_transient_children(
         model: Arc<Model>,
         realm: Arc<Realm>,
-        state: &mut RealmState,
-    ) -> Result<Vec<Notification>, ModelError> {
-        let transient_colls: HashSet<_> = state
-            .decl()
-            .collections
-            .iter()
-            .filter_map(|c| match c.durability {
-                fsys::Durability::Transient => Some(c.name.clone()),
-                fsys::Durability::Persistent => None,
-            })
-            .collect();
+    ) -> Result<(), ModelError> {
+        let (transient_colls, child_monikers) = {
+            let state = realm.lock_state().await;
+            if state.is_none() {
+                // Component instance was not resolved, so no dynamic children.
+                return Ok(());
+            }
+            let state = state.as_ref().unwrap();
+            let transient_colls: HashSet<_> = state
+                .decl()
+                .collections
+                .iter()
+                .filter_map(|c| match c.durability {
+                    fsys::Durability::Transient => Some(c.name.clone()),
+                    fsys::Durability::Persistent => None,
+                })
+                .collect();
+            let child_monikers: Vec<_> =
+                state.all_child_realms().keys().map(|m| m.clone()).collect();
+            (transient_colls, child_monikers)
+        };
         let mut futures = vec![];
-        let child_monikers: Vec<_> = state.all_child_realms().keys().map(|m| m.clone()).collect();
         for m in child_monikers {
             // Delete a child if its collection is in the set of transient collections created
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    let partial_moniker = m.to_partial();
-                    state.mark_child_realm_deleting(&partial_moniker);
+                    ActionSet::register(
+                        realm.clone(),
+                        model.clone(),
+                        Action::MarkDeleting(m.clone()),
+                    )
+                    .await
+                    .await?;
                     let nf =
                         ActionSet::register(realm.clone(), model.clone(), Action::DeleteChild(m))
                             .await;
@@ -461,7 +455,7 @@ impl Realm {
                 }
             }
         }
-        Ok(futures)
+        join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))
     }
 
     pub async fn open_outgoing(
@@ -783,14 +777,7 @@ impl Runtime {
         exposed_dir: ExposedDir,
         controller: Option<fsys::ComponentControllerProxy>,
     ) -> Result<Self, ModelError> {
-        Ok(Runtime {
-            resolved_url,
-            namespace,
-            outgoing_dir,
-            runtime_dir,
-            exposed_dir,
-            controller,
-        })
+        Ok(Runtime { resolved_url, namespace, outgoing_dir, runtime_dir, exposed_dir, controller })
     }
 
     pub async fn wait_on_channel_close(&mut self) {

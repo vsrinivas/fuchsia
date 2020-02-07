@@ -98,6 +98,7 @@ impl ComponentInstance {
 pub enum Lifecycle {
     Bind(AbsoluteMoniker),
     Stop(AbsoluteMoniker),
+    PreDestroy(AbsoluteMoniker),
     Destroy(AbsoluteMoniker),
 }
 
@@ -106,6 +107,7 @@ impl fmt::Display for Lifecycle {
         match self {
             Lifecycle::Bind(m) => write!(f, "bind({})", m),
             Lifecycle::Stop(m) => write!(f, "stop({})", m),
+            Lifecycle::PreDestroy(m) => write!(f, "predestroy({})", m),
             Lifecycle::Destroy(m) => write!(f, "destroy({})", m),
         }
     }
@@ -209,6 +211,23 @@ impl TestHookInner {
         Ok(())
     }
 
+    pub async fn on_pre_destroy_instance_async<'a>(
+        &'a self,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        // TODO: Can this be changed not restrict to dynamic instances? Static instances can be
+        // deleted too.
+        if let Some(child_moniker) = target_moniker.leaf() {
+            if child_moniker.collection().is_some() {
+                self.remove_instance(target_moniker).await?;
+            }
+        }
+
+        let mut events = self.lifecycle_events.lock().await;
+        events.push(Lifecycle::PreDestroy(target_moniker.clone()));
+        Ok(())
+    }
+
     pub async fn on_destroy_instance_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
@@ -277,16 +296,11 @@ impl Hook for TestHookInner {
                 EventPayload::AddDynamicChild { .. } => {
                     self.create_instance_if_necessary(&event.target_moniker).await?;
                 }
-                EventPayload::PreDestroyInstance => {
-                    // This action only applies to dynamic children
-                    if let Some(child_moniker) = event.target_moniker.leaf() {
-                        if child_moniker.collection().is_some() {
-                            self.remove_instance(&event.target_moniker).await?;
-                        }
-                    }
-                }
                 EventPayload::StopInstance => {
                     self.on_stop_instance_async(&event.target_moniker).await?;
+                }
+                EventPayload::PreDestroyInstance => {
+                    self.on_pre_destroy_instance_async(&event.target_moniker).await?;
                 }
                 EventPayload::PostDestroyInstance => {
                     self.on_destroy_instance_async(&event.target_moniker).await?;
