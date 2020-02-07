@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_test("sa-unittest") {
+  sources = [ "sas-test.cc" ]
+  deps = [
+    "$zx/system/dev/audio/lib/simple-audio-stream",
+    "$zx/system/dev/lib/dev-operation",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/audio-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
