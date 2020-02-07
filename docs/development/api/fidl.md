@@ -575,7 +575,7 @@ by an IANA registry.
 
 We recommend that, where possible, developers avoid use of `0` as an enum value.
 Because many target languages use `0` as the default value for integers, it can
-be difficult for to distinguish whether a `0` value was set intentionally, or
+be difficult to distinguish whether a `0` value was set intentionally, or
 instead was set because it is the default. For instance, the
 `fuchsia.module.StoryState` defines three values:  `RUNNING` with value `1`,
 `STOPPING` with value `2`, and `STOPPED` with value `3`.
