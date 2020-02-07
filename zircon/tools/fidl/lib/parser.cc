@@ -399,6 +399,20 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
       break;
     }
 
+    case CASE_TOKEN(Token::Kind::kLeftParen): {
+      if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kEnableHandleRights))
+        return Fail();
+
+      ASTScope scope(this);
+      ConsumeToken(OfKind(Token::Kind::kLeftParen));
+      constant = ParseConstant();
+      ConsumeToken(OfKind(Token::Kind::kRightParen));
+      if (!Ok())
+        return Fail();
+      constant->update_span(scope.GetSourceElement());
+      break;
+    }
+
     default:
       return Fail();
   }
@@ -407,6 +421,8 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
       Peek().combined() == Token::Kind::kPipe) {
     ConsumeToken(OfKind(Token::Kind::kPipe));
     std::unique_ptr right_operand = ParseConstant();
+    if (!Ok())
+      return Fail();
     return std::make_unique<raw::BinaryOperatorConstant>(
         std::move(constant), std::move(right_operand), raw::BinaryOperatorConstant::Operator::kOr);
   }

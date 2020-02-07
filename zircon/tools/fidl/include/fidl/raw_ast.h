@@ -74,6 +74,11 @@ class SourceElement {
                       start_.span().source_file());
   }
 
+  void update_span(SourceElement const& element) {
+    start_ = element.start_;
+    end_ = element.end_;
+  }
+
   virtual ~SourceElement() {}
 
   Token start_;

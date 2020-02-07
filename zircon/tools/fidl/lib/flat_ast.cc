@@ -2205,14 +2205,33 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           assert(false && "Compiler bug: identifier not of const-able type.");
         }
       }
-      if (decl->name != identifier_type->type_decl->name) {
+
+      auto fail_with_mismatched_type = [this, identifier_type](std::string_view type) {
         std::ostringstream msg;
         msg << "mismatched named type assignment: cannot define a constant or default value of "
                "type "
-            << decl->name.full_name() << " using a value of type "
-            << identifier_type->type_decl->name.full_name();
+            << identifier_type->type_decl->name.full_name()
+            << " using a value of type " << type;
         return Fail(msg.str());
+      };
+
+      switch (decl->kind) {
+        case Decl::Kind::kConst: {
+          if (const_type_ctor->type->name != identifier_type->type_decl->name)
+            return fail_with_mismatched_type(const_type_ctor->type->name.full_name());
+          break;
+        }
+        case Decl::Kind::kBits:
+        case Decl::Kind::kEnum: {
+          if (decl->name != identifier_type->type_decl->name)
+            return fail_with_mismatched_type(decl->name.full_name());
+          break;
+        }
+        default: {
+          assert(false && "Compiler bug: identifier not of const-able type.");
+        }
       }
+
       if (!const_val->Convert(ConstantValuePrimitiveKind(primitive_type->subtype), &resolved_val))
         goto fail_cannot_convert;
       break;

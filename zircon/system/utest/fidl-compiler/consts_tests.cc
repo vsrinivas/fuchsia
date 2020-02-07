@@ -764,6 +764,60 @@ const uint32 SMALL_SIZE = 4;
   END_TEST;
 }
 
+bool UnknownEnumMemberTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum EnumType : int32 {
+    A = 0x00000001;
+    B = 0x80;
+    C = 0x2;
+};
+
+const EnumType dee = EnumType.D;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 2);
+  ASSERT_STR_STR(errors[0].c_str(), "unknown enum member");
+  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+
+  END_TEST;
+}
+
+bool UnknownBitsMemberTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+bits BitsType {
+    A = 2;
+    B = 4;
+    C = 8;
+};
+
+const BitsType dee = BitsType.D;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 2);
+  ASSERT_STR_STR(errors[0].c_str(), "unknown bits member");
+  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+
+  END_TEST;
+}
+
 bool OrOperatorTest() {
   BEGIN_TEST;
 
@@ -792,7 +846,7 @@ const uint16 Result = MyBits.A | MyBits.B | MyBits.D;
   END_TEST;
 }
 
-bool InvalidEnumMemberTest() {
+bool GoodOrOperatorParenthesesTest() {
   BEGIN_TEST;
 
   fidl::ExperimentalFlags experimental_flags;
@@ -801,25 +855,135 @@ bool InvalidEnumMemberTest() {
   TestLibrary library(R"FIDL(
 library example;
 
-enum EnumType : int32 {
-    A = 0x00000001;
-    B = 0x80;
-    C = 0x2;
+bits MyBits : uint8 {
+  A = 0x00000001;
+  B = 0x00000002;
+  C = 0x00000004;
+  D = 0x00000008;
 };
+const MyBits three = MyBits.A | MyBits.B;
+const MyBits seven = three | MyBits.C;
+const MyBits fifteen = ( three | seven ) | MyBits.D;
+const MyBits bitsValue = MyBits.A | ( ( ( MyBits.A | MyBits.B ) | MyBits.D ) | MyBits.C );
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_TRUE(library.Compile());
 
-const EnumType dee = EnumType.D;
+  EXPECT_TRUE(CheckConstEq<uint8_t>(library, "three", 3,
+                                     fidl::flat::Constant::Kind::kBinaryOperator,
+                                     fidl::flat::ConstantValue::Kind::kUint8));
+  EXPECT_TRUE(CheckConstEq<uint8_t>(library, "seven", 7,
+                                     fidl::flat::Constant::Kind::kBinaryOperator,
+                                     fidl::flat::ConstantValue::Kind::kUint8));
+  EXPECT_TRUE(CheckConstEq<uint8_t>(library, "fifteen", 15,
+                                     fidl::flat::Constant::Kind::kBinaryOperator,
+                                     fidl::flat::ConstantValue::Kind::kUint8));
+  EXPECT_TRUE(CheckConstEq<uint8_t>(library, "bitsValue", 15,
+                                     fidl::flat::Constant::Kind::kBinaryOperator,
+                                     fidl::flat::ConstantValue::Kind::kUint8));
+
+  END_TEST;
+}
+
+bool BadOrOperatorMissingRightParenTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library = TestLibrary(R"FIDL(
+library example;
+
+const uint16 three = 3;
+const uint16 seven = 7;
+const uint16 eight = 8;
+const uint16 fifteen = ( three | seven | eight;
+)FIDL",
+                                    std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "unexpected token Semicolon, was expecting RightParen");
+
+  END_TEST;
+}
+
+bool BadOrOperatorMissingLeftParenTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library = TestLibrary(R"FIDL(
+library example;
+
+const uint16 three = 3;
+const uint16 seven = 7;
+const uint16 eight = 8;
+const uint16 fifteen = three | seven | eight );
+)FIDL",
+                                    std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "unexpected token RightParen, was expecting Semicolon");
+
+  END_TEST;
+}
+
+bool BadOrOperatorMisplacedParenTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library = TestLibrary(R"FIDL(
+library example;
+
+const uint16 three = 3;
+const uint16 seven = 7;
+const uint16 eight = 8;
+const uint16 fifteen = ( three | seven | ) eight;
+)FIDL",
+                                    std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "found unexpected token");
+
+  END_TEST;
+}
+
+bool IdentifierConstMismatchedTypesTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum OneEnum {
+    A = 1;
+};
+enum AnotherEnum {
+    B = 1;
+};
+const OneEnum a = OneEnum.A;
+const AnotherEnum b = a;
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "unknown enum member");
+  ASSERT_STR_STR(errors[0].c_str(), "cannot define a constant or default value of type "
+                                    "AnotherEnum using a value of type OneEnum");
   ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
 
   END_TEST;
 }
 
-bool InvalidBitsMemberTest() {
+bool EnumBitsConstMismatchedTypesTest() {
   BEGIN_TEST;
 
   fidl::ExperimentalFlags experimental_flags;
@@ -828,19 +992,20 @@ bool InvalidBitsMemberTest() {
   TestLibrary library(R"FIDL(
 library example;
 
-bits BitsType {
-    A = 2;
-    B = 4;
-    C = 8;
+enum OneEnum {
+    A = 1;
 };
-
-const BitsType dee = BitsType.D;
+enum AnotherEnum {
+    B = 1;
+};
+const OneEnum a = AnotherEnum.B;
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_GE(errors.size(), 2);
-  ASSERT_STR_STR(errors[0].c_str(), "unknown bits member");
+  ASSERT_STR_STR(errors[0].c_str(), "cannot define a constant or default value of type "
+                                    "OneEnum using a value of type AnotherEnum");
   ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
 
   END_TEST;
@@ -907,9 +1072,16 @@ RUN_TEST(BadConstTestAssignTypeName)
 
 RUN_TEST(GoodMultiFileConstReference)
 
-RUN_TEST(OrOperatorTest)
+RUN_TEST(UnknownEnumMemberTest)
+RUN_TEST(UnknownBitsMemberTest)
 
-RUN_TEST(InvalidEnumMemberTest)
-RUN_TEST(InvalidBitsMemberTest)
+RUN_TEST(OrOperatorTest)
+RUN_TEST(GoodOrOperatorParenthesesTest)
+RUN_TEST(BadOrOperatorMissingRightParenTest)
+RUN_TEST(BadOrOperatorMissingLeftParenTest)
+RUN_TEST(BadOrOperatorMisplacedParenTest)
+
+RUN_TEST(IdentifierConstMismatchedTypesTest)
+RUN_TEST(EnumBitsConstMismatchedTypesTest)
 
 END_TEST_CASE(consts_tests)
