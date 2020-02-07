@@ -738,69 +738,6 @@ bool read_detach_interrupt_early_test(bool check_vmar) {
   return read_interrupt_early_test(check_vmar, true);
 }
 
-// Checks that a thread blocked on accessing a paged vmo can be safely killed.
-bool thread_kill_test(bool check_vmar) {
-  BEGIN_TEST;
-
-  UserPager pager;
-
-  ASSERT_TRUE(pager.Init());
-
-  Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(2, &vmo));
-
-  TestThread t1([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
-  TestThread t2([vmo, check_vmar]() -> bool { return check_buffer(vmo, 1, 1, check_vmar); });
-
-  ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
-
-  ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
-
-  ASSERT_TRUE(t1.Kill());
-  ASSERT_TRUE(t1.WaitForTerm());
-
-  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
-
-  ASSERT_TRUE(t2.Wait());
-
-  END_TEST;
-}
-
-// Checks that a thread blocked on accessing a paged vmo can be safely killed
-// when there is a second thread waiting for the same address.
-bool thread_kill_overlap_test(bool check_vmar) {
-  BEGIN_TEST;
-
-  UserPager pager;
-
-  ASSERT_TRUE(pager.Init());
-
-  Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(1, &vmo));
-
-  TestThread t1([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
-  TestThread t2([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
-
-  ASSERT_TRUE(t1.Start());
-  ASSERT_TRUE(t1.WaitForBlocked());
-
-  ASSERT_TRUE(t2.Start());
-  ASSERT_TRUE(t2.WaitForBlocked());
-
-  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
-
-  ASSERT_TRUE(t1.Kill());
-  ASSERT_TRUE(t1.WaitForTerm());
-
-  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
-
-  ASSERT_TRUE(t2.Wait());
-
-  END_TEST;
-}
-
 // Tests that closing a pager while a thread is accessing it doesn't cause
 // problems (other than a page fault in the accessing thread).
 bool close_pager_test() {
@@ -1920,8 +1857,6 @@ DEFINE_VMO_VMAR_TEST(read_detach_interrupt_late_test)
 DEFINE_VMO_VMAR_TEST(read_close_interrupt_late_test)
 DEFINE_VMO_VMAR_TEST(read_detach_interrupt_early_test)
 DEFINE_VMO_VMAR_TEST(read_close_interrupt_early_test)
-DEFINE_VMO_VMAR_TEST(thread_kill_test)
-DEFINE_VMO_VMAR_TEST(thread_kill_overlap_test)
 
 BEGIN_TEST_CASE(lifecycle_tests)
 RUN_TEST(vmo_info_pager_test);
@@ -1931,8 +1866,6 @@ RUN_VMO_VMAR_TEST(read_detach_interrupt_late_test);
 RUN_VMO_VMAR_TEST(read_close_interrupt_late_test);
 RUN_VMO_VMAR_TEST(read_detach_interrupt_early_test);
 RUN_VMO_VMAR_TEST(read_close_interrupt_early_test);
-RUN_VMO_VMAR_TEST(thread_kill_test);
-RUN_VMO_VMAR_TEST(thread_kill_overlap_test);
 RUN_TEST(close_pager_test);
 RUN_TEST(detach_close_pager_test);
 RUN_TEST(close_port_test);
