@@ -145,16 +145,35 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
     }
   }
 
-  if (debuglog.is_valid()) {
-    actions.push_back((fdio_spawn_action_t){
-        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0), .handle = debuglog.release()},
-    });
-  } else {
-    actions.push_back((fdio_spawn_action_t){
-        .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-        .fd = {.local_fd = stdiofd, .target_fd = FDIO_FLAG_USE_FOR_STDIO | 0},
-    });
+  auto action_uses_fd0 = [](const fdio_spawn_action_t& action) {
+    switch (action.action) {
+      case FDIO_SPAWN_ACTION_ADD_HANDLE:
+        if (PA_HND_TYPE(action.h.id) == PA_FD) {
+          int fd = PA_HND_ARG(action.h.id);
+          return (fd & ~FDIO_FLAG_USE_FOR_STDIO) == 0;
+        }
+        break;
+      case FDIO_SPAWN_ACTION_CLONE_FD:
+      case FDIO_SPAWN_ACTION_TRANSFER_FD: {
+        int fd = action.fd.target_fd;
+        return (fd & ~FDIO_FLAG_USE_FOR_STDIO) == 0;
+      }
+    }
+    return false;
+  };
+
+  if (std::none_of(actions.begin(), actions.end(), action_uses_fd0)) {
+    if (debuglog.is_valid()) {
+      actions.push_back((fdio_spawn_action_t){
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0), .handle = debuglog.release()},
+      });
+    } else {
+      actions.push_back((fdio_spawn_action_t){
+          .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+          .fd = {.local_fd = stdiofd, .target_fd = FDIO_FLAG_USE_FOR_STDIO | 0},
+      });
+    }
   }
 
   for (size_t i = 0; i < hcount; ++i) {
