@@ -126,13 +126,11 @@ the enumerated directories.
 
 ### OWNERS
 
-A directory inside an area that contains an `OWNERS` file is considered a
-subarea and must adhere to the contract for areas. A directory lacking an
-`OWNERS` file is considered part of the same area.
-
-In the `fuchsia.git` repository, there exist directories with `OWNERS` that are
-not considered areas, e.g. the top level `products` directory, or subdirectories
-of the `/src/lib` directory.
+Each area and subarea must contains an OWNERS file. Directories may contain
+`OWNERS` without being considered areas, e.g. the top level `products`
+directory, or subdirectories of the `/src/lib` directory. A directory lacking an
+`OWNERS` file is considered to have the same owners as its parent directory of
+the same area.
 
 One exception is the `//src/tests` directory where tests from different areas
 that cover multiple aspects of the system (not just a particular area) are
