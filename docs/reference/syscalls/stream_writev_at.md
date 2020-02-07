@@ -42,6 +42,9 @@ If a NULL *actual* is passed in, it will be ignored.
 
 Does not advance the seek offset of the stream.
 
+If the contents of *vector* change during this operation, if any of the buffers
+overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
+
 *options* is reserved for future use and must be 0.
 
 ## RIGHTS

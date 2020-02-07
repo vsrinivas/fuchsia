@@ -6,6 +6,7 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
 #include <stdint.h>
@@ -17,6 +18,7 @@
 #include <fbl/ref_ptr.h>
 #include <object/handle.h>
 #include <object/stream_dispatcher.h>
+#include <vm/vm_aspace.h>
 
 #include "priv.h"
 
@@ -52,33 +54,129 @@ zx_status_t sys_stream_create(uint32_t options, zx_handle_t vmo_handle, zx_off_t
 
 // zx_status_t zx_stream_writev
 zx_status_t sys_stream_writev(zx_handle_t handle, uint32_t options,
-                              user_in_ptr<const zx_iovec_t> vector, size_t num_vector,
-                              user_out_ptr<size_t> actual) {
+                              user_in_ptr<const zx_iovec_t> vector, size_t vector_count,
+                              user_out_ptr<size_t> out_actual) {
   LTRACEF("handle %x\n", handle);
-  return ZX_ERR_NOT_SUPPORTED;
+
+  if (options != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!vector) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto up = ProcessDispatcher::GetCurrent();
+  fbl::RefPtr<StreamDispatcher> stream;
+  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &stream);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t actual = 0;
+  status =
+      stream->WriteVector(up->aspace().get(), make_user_in_iovec(vector, vector_count), &actual);
+
+  if (status == ZX_OK && out_actual) {
+    status = out_actual.copy_to_user(actual);
+  }
+
+  return status;
 }
 
 // zx_status_t zx_stream_writev_at
 zx_status_t sys_stream_writev_at(zx_handle_t handle, uint32_t options, zx_off_t offset,
-                                 user_in_ptr<const zx_iovec_t> vector, size_t num_vector,
-                                 user_out_ptr<size_t> actual) {
+                                 user_in_ptr<const zx_iovec_t> vector, size_t vector_count,
+                                 user_out_ptr<size_t> out_actual) {
   LTRACEF("handle %x\n", handle);
-  return ZX_ERR_NOT_SUPPORTED;
+
+  if (options != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!vector) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto up = ProcessDispatcher::GetCurrent();
+  fbl::RefPtr<StreamDispatcher> stream;
+  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &stream);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t actual = 0;
+  status = stream->WriteVectorAt(up->aspace().get(), make_user_in_iovec(vector, vector_count),
+                                 offset, &actual);
+
+  if (status == ZX_OK && out_actual) {
+    status = out_actual.copy_to_user(actual);
+  }
+
+  return status;
 }
 
 // zx_status_t zx_stream_readv
 zx_status_t sys_stream_readv(zx_handle_t handle, uint32_t options, user_out_ptr<zx_iovec_t> vector,
-                             size_t num_vector, user_out_ptr<size_t> actual) {
+                             size_t vector_count, user_out_ptr<size_t> out_actual) {
   LTRACEF("handle %x\n", handle);
-  return ZX_ERR_NOT_SUPPORTED;
+
+  if (options != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!vector) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto up = ProcessDispatcher::GetCurrent();
+  fbl::RefPtr<StreamDispatcher> stream;
+  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &stream);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t actual = 0;
+  status =
+      stream->ReadVector(up->aspace().get(), make_user_out_iovec(vector, vector_count), &actual);
+
+  if (status == ZX_OK && out_actual) {
+    status = out_actual.copy_to_user(actual);
+  }
+
+  return status;
 }
 
 // zx_status_t zx_stream_readv_at
 zx_status_t sys_stream_readv_at(zx_handle_t handle, uint32_t options, zx_off_t offset,
-                                user_out_ptr<zx_iovec_t> vector, size_t num_vector,
-                                user_out_ptr<size_t> actual) {
+                                user_out_ptr<zx_iovec_t> vector, size_t vector_count,
+                                user_out_ptr<size_t> out_actual) {
   LTRACEF("handle %x\n", handle);
-  return ZX_ERR_NOT_SUPPORTED;
+
+  if (options != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!vector) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto up = ProcessDispatcher::GetCurrent();
+  fbl::RefPtr<StreamDispatcher> stream;
+  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &stream);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t actual = 0;
+  status = stream->ReadVectorAt(up->aspace().get(), make_user_out_iovec(vector, vector_count),
+                                offset, &actual);
+
+  if (status == ZX_OK && out_actual) {
+    status = out_actual.copy_to_user(actual);
+  }
+
+  return status;
 }
 
 // zx_status_t zx_stream_seek
@@ -98,8 +196,9 @@ zx_status_t sys_stream_seek(zx_handle_t handle, zx_stream_seek_origin_t whence, 
   }
   zx_off_t seek = 0u;
   status = stream->Seek(whence, offset, &seek);
-  if (status != ZX_OK) {
-    return status;
+
+  if (status == ZX_OK && out_seek) {
+    status = out_seek.copy_to_user(seek);
   }
-  return out_seek.copy_to_user(seek);
+  return status;
 }

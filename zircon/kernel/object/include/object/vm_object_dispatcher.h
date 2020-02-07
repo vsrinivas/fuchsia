@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VM_OBJECT_DISPATCHER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VM_OBJECT_DISPATCHER_H_
 
+#include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
 #include <sys/types.h>
 #include <zircon/rights.h>
@@ -46,8 +47,12 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   // VmObjectDispatcher own methods.
   zx_status_t Read(VmAspace* current_aspace, user_out_ptr<char> user_data, size_t length,
                    uint64_t offset);
+  zx_status_t ReadVector(VmAspace* current_aspace, user_out_iovec_t user_data, size_t length,
+                         uint64_t offset);
   zx_status_t Write(VmAspace* current_aspace, user_in_ptr<const char> user_data, size_t length,
                     uint64_t offset);
+  zx_status_t WriteVector(VmAspace* current_aspace, user_in_iovec_t user_data, size_t length,
+                          uint64_t offset);
   zx_status_t SetSize(uint64_t);
   zx_status_t GetSize(uint64_t* size);
   zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_inout_ptr<char> buffer,
@@ -61,6 +66,10 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   zx_status_t SetContentSize(uint64_t);
   uint64_t GetContentSize() const;
+
+  // Returns the actual content size after attempting to resize the VMO to fit
+  // the requested content size.
+  uint64_t ExpandContentIfNeeded(uint64_t requested_content_size);
 
   const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
   zx_koid_t pager_koid() const { return pager_koid_; }

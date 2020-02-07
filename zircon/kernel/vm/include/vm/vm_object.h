@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_H_
 
 #include <assert.h>
+#include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <list.h>
@@ -134,10 +135,14 @@ class VmObject : public fbl::RefCounted<VmObject>,
                                size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+  virtual zx_status_t ReadUserVector(VmAspace* current_aspace, user_out_iovec_t vec,
+                                     uint64_t offset, size_t len);
   virtual zx_status_t WriteUser(VmAspace* current_aspace, user_in_ptr<const char> ptr,
                                 uint64_t offset, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+  virtual zx_status_t WriteUserVector(VmAspace* current_aspace, user_in_iovec_t vec,
+                                      uint64_t offset, size_t len);
 
   // Removes the pages from this vmo in the range [offset, offset + len) and returns
   // them in pages.  This vmo must be a paged vmo with no parent, and it cannot have any

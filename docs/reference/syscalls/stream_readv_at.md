@@ -27,9 +27,15 @@ zx_status_t zx_stream_readv_at(zx_handle_t handle,
 given *offset*, into the buffers specified by *vector* and *num_vector*. If
 successful, the number of bytes actually read are return via *actual*.
 
+If the given *offset* is beyond the end of the stream, `zx_stream_readv_at()`
+will succeed in reading zero bytes.
+
 If a NULL *actual* is passed in, it will be ignored.
 
 Does not advance the seek offset of the stream.
+
+If the contents of *vector* change during this operation, if any of the buffers
+overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
 
 *options* is reserved for future use and must be 0.
 

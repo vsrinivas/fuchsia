@@ -166,6 +166,50 @@ uint32_t VmObject::share_count() const {
   return num_aspaces;
 }
 
+zx_status_t VmObject::ReadUserVector(VmAspace* current_aspace, user_out_iovec_t vec,
+                                     uint64_t offset, size_t len) {
+  if (len == 0u) {
+    return ZX_OK;
+  }
+  if (len > UINT64_MAX - offset) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  return vec.ForEach([&](user_out_ptr<char> ptr, size_t capacity) {
+    if (capacity > len) {
+      capacity = len;
+    }
+    zx_status_t status = ReadUser(current_aspace, ptr, offset, capacity);
+    if (status != ZX_OK) {
+      return status;
+    }
+    offset += capacity;
+    len -= capacity;
+    return len > 0 ? ZX_ERR_NEXT : ZX_ERR_STOP;
+  });
+}
+
+zx_status_t VmObject::WriteUserVector(VmAspace* current_aspace, user_in_iovec_t vec,
+                                      uint64_t offset, size_t len) {
+  if (len == 0u) {
+    return ZX_OK;
+  }
+  if (len > UINT64_MAX - offset) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  return vec.ForEach([&](user_in_ptr<const char> ptr, size_t capacity) {
+    if (capacity > len) {
+      capacity = len;
+    }
+    zx_status_t status = WriteUser(current_aspace, ptr, offset, capacity);
+    if (status != ZX_OK) {
+      return status;
+    }
+    offset += capacity;
+    len -= capacity;
+    return len > 0 ? ZX_ERR_NEXT : ZX_ERR_STOP;
+  });
+}
+
 void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
   Guard<fbl::Mutex> guard{&child_observer_lock_};
   child_observer_ = child_observer;

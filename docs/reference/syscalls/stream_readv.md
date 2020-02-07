@@ -26,9 +26,17 @@ zx_status_t zx_stream_readv(zx_handle_t handle,
 current seek offset, into the buffers specified by *vector* and *num_vector*.
 If successful, the number of bytes actually read are return via *actual*.
 
+If the current seek offset is beyond the end of the stream, `zx_stream_readv()`
+will succeed in reading zero bytes.
+
 If a NULL *actual* is passed in, it will be ignored.
 
 Advances the seek offset of the stream by the actual number of bytes read.
+If the read fails, the seek offset could either remain the same or have
+been changed to an unspecified value.
+
+If the contents of *vector* change during this operation, if any of the buffers
+overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
 
 *options* is reserved for future use and must be 0.
 

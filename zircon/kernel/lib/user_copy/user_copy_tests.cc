@@ -5,6 +5,7 @@
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
 #include <lib/user_copy/internal.h>
+#include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/syscalls/port.h>
 
@@ -152,6 +153,25 @@ struct SomeTypeNonTrivial {
 };
 static_assert(!internal::is_copy_allowed<SomeTypeNonTrivial>::value);
 
+bool test_get_total_capacity() {
+  BEGIN_TEST;
+
+  auto user = UserMemory::Create(PAGE_SIZE);
+
+  zx_iovec_t vec[2] = {};
+  vec[0].capacity = 348u;
+  vec[1].capacity = 58u;
+
+  ASSERT_EQ(user->VmoWrite(vec, 0, sizeof(vec)), ZX_OK, "");
+
+  user_in_iovec_t user_iovec = make_user_in_iovec(user->user_in<zx_iovec_t>(), 2);
+  size_t total_capacity = 97u;
+  ASSERT_EQ(user_iovec.GetTotalCapacity(&total_capacity), ZX_OK, "");
+  ASSERT_EQ(total_capacity, 406u);
+
+  END_TEST;
+}
+
 }  // namespace
 
 #define USER_COPY_UNITTEST(fname) UNITTEST(#fname, fname)
@@ -164,4 +184,5 @@ USER_COPY_UNITTEST(fault_copy_in)
 USER_COPY_UNITTEST(capture_faults_copy_out_success)
 USER_COPY_UNITTEST(capture_faults_copy_in_success)
 USER_COPY_UNITTEST(capture_faults_test_capture)
+USER_COPY_UNITTEST(test_get_total_capacity)
 UNITTEST_END_TESTCASE(user_copy_tests, "user_copy_tests", "User Copy test")

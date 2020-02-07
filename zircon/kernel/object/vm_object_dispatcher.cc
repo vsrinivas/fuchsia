@@ -93,6 +93,20 @@ zx_status_t VmObjectDispatcher::Read(VmAspace* current_aspace, user_out_ptr<char
   return vmo_->ReadUser(current_aspace, user_data, offset, length);
 }
 
+zx_status_t VmObjectDispatcher::ReadVector(VmAspace* current_aspace, user_out_iovec_t user_data,
+                                           size_t length, uint64_t offset) {
+  canary_.Assert();
+
+  return vmo_->ReadUserVector(current_aspace, user_data, offset, length);
+}
+
+zx_status_t VmObjectDispatcher::WriteVector(VmAspace* current_aspace, user_in_iovec_t user_data,
+                                            size_t length, uint64_t offset) {
+  canary_.Assert();
+
+  return vmo_->WriteUserVector(current_aspace, user_data, offset, length);
+}
+
 zx_status_t VmObjectDispatcher::Write(VmAspace* current_aspace, user_in_ptr<const char> user_data,
                                       size_t length, uint64_t offset) {
   canary_.Assert();
@@ -159,6 +173,31 @@ uint64_t VmObjectDispatcher::GetContentSize() const {
   canary_.Assert();
 
   Guard<fbl::Mutex> guard{get_lock()};
+  return content_size_;
+}
+
+uint64_t VmObjectDispatcher::ExpandContentIfNeeded(uint64_t requested_content_size) {
+  canary_.Assert();
+
+  Guard<fbl::Mutex> guard{get_lock()};
+  if (requested_content_size <= content_size_) {
+    return content_size_;
+  }
+
+  uint64_t required_vmo_size = ROUNDUP(requested_content_size, PAGE_SIZE);
+  uint64_t current_vmo_size = vmo_->size();
+  if (required_vmo_size <= current_vmo_size) {
+    content_size_ = requested_content_size;
+    return content_size_;
+  }
+
+  zx_status_t status = vmo_->Resize(required_vmo_size);
+  if (status != ZX_OK) {
+    content_size_ = current_vmo_size;
+    return content_size_;
+  }
+
+  content_size_ = requested_content_size;
   return content_size_;
 }
 

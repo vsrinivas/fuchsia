@@ -40,6 +40,11 @@ written to stream, the operation will return **ZX_ERR_FILE_BIG** or
 If a NULL *actual* is passed in, it will be ignored.
 
 Advances the seek offset of the stream by the actual number of bytes written.
+If the write fails, the seek offset could either remain the same or have
+been changed to an unspecified value.
+
+If the contents of *vector* change during this operation, if any of the buffers
+overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
 
 *options* is reserved for future use and must be 0.
 
