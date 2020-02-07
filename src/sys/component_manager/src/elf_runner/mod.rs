@@ -211,9 +211,12 @@ impl ElfRunner {
         // Why Late and not Center or Early? Timers firing a little later than requested is not
         // uncommon in non-realtime systems. Programs are generally tolerant of some
         // delays. However, timers firing before their dealine can be unexpected and lead to bugs.
+        //
+        // TODO(fxb/43934): For now, set the value to 50us to avoid delaying performance-critical
+        // timers in Scenic and other system services.
         child_job
             .set_policy(zx::JobPolicy::TimerSlack(
-                zx::Duration::from_micros(500),
+                zx::Duration::from_micros(50),
                 zx::JobDefaultTimerMode::Late,
             ))
             .context("error setting job policy to configure timer slack")?;
