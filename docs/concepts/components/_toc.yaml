@@ -37,6 +37,9 @@ toc:
   section:
   - title: "ELF runner"
     path: /docs/concepts/components/elf_runner.md
+- title: "Inspect"
+  section:
+  - include: /docs/concepts/components/inspect/_toc.yaml
 - title: "Life of a service open"
   path: /docs/concepts/components/life_of_a_service_open.md
 - title: "Black box testing with component manager"

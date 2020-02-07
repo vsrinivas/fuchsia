@@ -8,7 +8,7 @@ Files formatted using the Inspect Format are known as **Inspect Files**,
 which commonly have a `.inspect` file extension.
 
 For information on how to change the format. Please see
-[Extending the Inspect file format](updating.md).
+[Extending the Inspect file format][updating-format]
 
 # Overview
 
@@ -50,6 +50,7 @@ A reader may maintain a handle to the VMO containing Inspect data even
 after the writing component terminates.
 
 [inspect]: /docs/development/inspect/README.md
+[updating-format]: /docs/development/inspect/vmo-format/updating.md
 
 ## Terminology
 

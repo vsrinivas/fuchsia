@@ -2,7 +2,7 @@
 
 [TOC]
 
-This document describes how to extend the [**Component Inspection File Format**](README.md).
+This document describes how to extend the [**Component Inspection File Format**][inspect-vmo]
 
 # Adding a new type
 
@@ -19,10 +19,10 @@ This section describes how to break down your change into multiple CLs:
 
 ## Choose type number {#choose-type-number}
 
-View the type table in the [Inspect file format](README.md), and choose
+View the type table in the [Inspect file format][inspect-vmo], and choose
 an unused type number.
 
-Update the [documentation](README.md) for your new type, and then submit
+Update the [documentation][inspect-vmo] for your new type, and then submit
 this change for review.
 
 ## Update the C++ reference implementation. {#update-cpp}
@@ -220,3 +220,4 @@ TODO(43131)
 [state-unittest-cc]: /zircon/system/ulib/inspect/test/state_unittest.cc
 [types-cc]: /zircon/system/ulib/inspect/vmo/types.cc
 [types-header]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h
+[inspect-vmo]: /docs/concepts/components/inspect/vmo-format.md

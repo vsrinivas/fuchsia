@@ -15,7 +15,6 @@ that expose information.
 
 * [iquery](iquery.md) &mdash; The userspace tool for inspecting components.
 * [Getting started with Inspect](gsw-inspect.md) &mdash; A quick start guide.
-* [VMO format](vmo-format/README.md) &mdash; Describes the Inspect VMO File Format.
 * [Health checks](health.md) &mdash; Describes the health check subsystem.
 
 # Concepts
@@ -65,7 +64,7 @@ A histogram with exponentially sized buckets stored in an array.
 
 ## Inspect File Format
 
-The [Inspect File Format](vmo-format/README.md) is a binary format
+The [Inspect File Format](/docs/concepts/components/inspect/vmo-format.md) is a binary format
 that supports efficient insertion, modification, and deletion of Nodes and
 Properties at runtime. Readers take a consistent snapshot of the contents
 without communicating with writers.
