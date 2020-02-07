@@ -54,7 +54,9 @@ protocol RootDevice {
     /// Create a device with the given `name` that is a child of this device.
     /// If `name` contains a trailing ".so", it will be removed.
     ///
+    /// If `device_request` is given, it is connected to the newly created device.
+    ///
     /// On success, `path` will be the filesystem path of the new device.
-    CreateDevice(string:MAX_DEVICE_NAME_LEN name)
-                -> (zx.status status, string:MAX_DEVICE_PATH_LEN? path);
+    CreateDevice(string:MAX_DEVICE_NAME_LEN name, handle<channel>? device_request)
+        -> (zx.status status, string:MAX_DEVICE_PATH_LEN? path);
 };

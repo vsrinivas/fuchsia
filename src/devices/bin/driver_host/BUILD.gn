@@ -89,7 +89,7 @@ test("driver_host_test") {
     "//zircon/public/lib/driver-integration-test",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-device-test:c",
+    "//zircon/system/fidl/fuchsia-device-test:llcpp",
   ]
 }
 

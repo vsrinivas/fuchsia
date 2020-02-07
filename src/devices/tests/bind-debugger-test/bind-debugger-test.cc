@@ -4,7 +4,7 @@
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
-#include <fuchsia/device/test/c/fidl.h>
+#include <fuchsia/device/test/llcpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
@@ -35,31 +35,24 @@ class BindDebuggerTest : public testing::Test {
     zx_status_t status =
         devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "test/test", &root_fd);
     ASSERT_EQ(status, ZX_OK);
-    zx::channel root_channel;
-    status = fdio_get_service_handle(root_fd.release(), root_channel.reset_and_get_address());
+
+    ::llcpp::fuchsia::device::test::RootDevice::SyncClient root_device{zx::channel{}};
+    status = fdio_get_service_handle(root_fd.release(),
+                                     root_device.mutable_channel()->reset_and_get_address());
     ASSERT_EQ(status, ZX_OK);
+
+    zx::channel remote;
+    ASSERT_EQ(zx::channel::create(0, &device_channel_, &remote), ZX_OK);
 
     // Create the root test device in /dev/test/test, and get its relative path from /dev.
-    char device_path[fuchsia_device_test_MAX_DEVICE_PATH_LEN + 1];
-    size_t device_path_count;
-    zx_status_t call_status;
-    status = fuchsia_device_test_RootDeviceCreateDevice(
-        root_channel.get(), kDriverLibname.c_str(), kDriverLibname.size(), &call_status,
-        device_path, sizeof(device_path) - 1, &device_path_count);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_EQ(call_status, ZX_OK);
-    device_path[device_path_count] = 0;
+    auto result = root_device.CreateDevice(fidl::StringView{kDriverLibname}, std::move(remote));
+    ASSERT_EQ(result.status(), ZX_OK);
+    ASSERT_EQ(result->status, ZX_OK);
 
-    ASSERT_EQ(strncmp(device_path, kDevPrefix.c_str(), kDevPrefix.size()), 0);
-    relative_device_path_ = device_path + kDevPrefix.size();
-
-    // Get a channel to the new device.
-    fbl::unique_fd device_fd;
-    status = devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), relative_device_path_.c_str(), &device_fd);
-    ASSERT_EQ(status, ZX_OK);
-    status = fdio_get_service_handle(device_fd.release(), device_channel_.reset_and_get_address());
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_GE(result->path.size(), kDevPrefix.size());
+    ASSERT_EQ(strncmp(result->path.data(), kDevPrefix.c_str(), kDevPrefix.size()), 0);
+    relative_device_path_ = std::string(result->path.data() + kDevPrefix.size(),
+                                        result->path.size() - kDevPrefix.size());
 
     // Bind the test driver to the new device.
     driver_libpath_ = kDriverTestDir + "/" + kDriverLibname;
@@ -74,7 +67,7 @@ class BindDebuggerTest : public testing::Test {
     ASSERT_EQ(status, ZX_OK);
 
     // Connect to the BindDebugger service.
-    zx::channel local, remote;
+    zx::channel local;
     ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
 
     std::string svc_name =
@@ -86,7 +79,9 @@ class BindDebuggerTest : public testing::Test {
     bind_debugger_.Bind(std::move(local));
   }
 
-  void TearDown() override { fuchsia_device_test_DeviceDestroy(device_channel_.get()); }
+  void TearDown() override {
+    ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{device_channel_});
+  }
 
   IsolatedDevmgr devmgr_;
   zx::channel device_channel_;

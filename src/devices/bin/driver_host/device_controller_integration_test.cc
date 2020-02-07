@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/test/c/fidl.h>
+#include <fuchsia/device/test/llcpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
@@ -26,7 +26,6 @@ namespace {
 
 using devmgr_integration_test::IsolatedDevmgr;
 
-static constexpr const char kDevPrefix[] = "/dev/";
 static constexpr const char kManualChildDriverName[] = "devhost-test-manual.so";
 
 static constexpr const char kDriverTestDir[] = "/boot/driver/test";
@@ -66,29 +65,18 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
       devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &root_fd);
   ASSERT_OK(status);
 
-  zx::channel test_root;
-  status = fdio_get_service_handle(root_fd.release(), test_root.reset_and_get_address());
+  ::llcpp::fuchsia::device::test::RootDevice::SyncClient test_root{zx::channel{}};
+  status = fdio_get_service_handle(root_fd.release(),
+                                   test_root.mutable_channel()->reset_and_get_address());
   ASSERT_OK(status);
 
-  char devpath[fuchsia_device_test_MAX_DEVICE_PATH_LEN + 1];
-  size_t devpath_count;
-  zx_status_t call_status;
-  status = fuchsia_device_test_RootDeviceCreateDevice(test_root.get(), driver_name,
-                                                      strlen(driver_name), &call_status, devpath,
-                                                      sizeof(devpath) - 1, &devpath_count);
-  ASSERT_OK(status);
-  ASSERT_OK(call_status);
-  devpath[devpath_count] = 0;
-  ASSERT_STR_NE(devpath, kDevPrefix);
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  const char* relative_devpath = devpath + strlen(kDevPrefix);
-  fbl::unique_fd fd;
-  status =
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), relative_devpath, &fd);
-  ASSERT_OK(status);
-
-  status = fdio_get_service_handle(fd.release(), dev_channel->reset_and_get_address());
-  ASSERT_OK(status);
+  auto result = test_root.CreateDevice({driver_name, strlen(driver_name)}, std::move(remote));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+  *dev_channel = std::move(local);
 }
 
 // Test binding second time
@@ -126,7 +114,7 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   ASSERT_OK(resp2.status());
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
 
-  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+  ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
 TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
@@ -150,7 +138,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
   }
   ASSERT_OK(call_status);
 
-  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+  ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
 TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
@@ -319,7 +307,7 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   ASSERT_OK(resp2.status());
   ASSERT_EQ(call_status, ZX_ERR_ALREADY_BOUND);
 
-  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+  ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
@@ -349,7 +337,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   }
   ASSERT_OK(call_status);
 
-  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+  ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
@@ -379,7 +367,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   }
   ASSERT_EQ(call_status, ZX_ERR_BAD_STATE);
 
-  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+  ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
 // Test the flag using bind failure as a proxy for "the unit test did run".
@@ -409,7 +397,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
     call_status = resp->result.err();
   }
   ASSERT_EQ(call_status, ZX_ERR_BAD_STATE);
-  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+  ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
 // Test the flag using bind success as a proxy for "the unit test didn't run".
@@ -434,7 +422,7 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   }
   ASSERT_OK(call_status);
 
-  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+  ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
 // Test the flag using bind success as a proxy for "the unit test didn't run".
@@ -465,7 +453,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
     call_status = resp->result.err();
   }
   ASSERT_OK(call_status);
-  fuchsia_device_test_DeviceDestroy(dev_channel.get());
+  ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
 TEST(DeviceControllerIntegrationTest, TestRebindWithMakeVisible_Success) {

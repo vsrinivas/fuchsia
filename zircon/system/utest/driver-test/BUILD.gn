@@ -30,7 +30,7 @@ test("driver-test") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-device-test:c",
+    "//zircon/system/fidl/fuchsia-device-test:llcpp",
   ]
 }
 

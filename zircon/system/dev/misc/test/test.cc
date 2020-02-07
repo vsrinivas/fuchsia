@@ -69,12 +69,12 @@ class TestRootDevice : public TestRootDeviceType {
   void DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 
   static zx_status_t FidlCreateDevice(void* ctx, const char* name_data, size_t name_len,
-                                      fidl_txn_t* txn);
+                                      zx_handle_t client_remote_raw, fidl_txn_t* txn);
 
  private:
   // Create a new child device with this |name|
-  zx_status_t CreateDevice(const fbl::StringPiece& name, char* path_out, size_t path_size,
-                           size_t* path_actual);
+  zx_status_t CreateDevice(const fbl::StringPiece& name, zx::channel client_remote, char* path_out,
+                           size_t path_size, size_t* path_actual);
 };
 
 void TestDevice::TestSetOutputSocket(zx::socket socket) { output_ = std::move(socket); }
@@ -153,8 +153,8 @@ void TestDevice::DdkRelease() { delete this; }
 
 void TestDevice::DdkUnbindDeprecated() { TestDestroy(); }
 
-zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, char* path_out,
-                                         size_t path_size, size_t* path_actual) {
+zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, zx::channel client_remote,
+                                         char* path_out, size_t path_size, size_t* path_actual) {
   static_assert(fuchsia_device_test_MAX_DEVICE_NAME_LEN == ZX_DEVICE_NAME_MAX);
 
   char devname[ZX_DEVICE_NAME_MAX + 1] = {};
@@ -174,7 +174,7 @@ zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, char* pat
   }
 
   auto device = std::make_unique<TestDevice>(zxdev());
-  zx_status_t status = device->DdkAdd(devname);
+  zx_status_t status = device->DdkAdd(devname, 0, nullptr, 0, 0, nullptr, client_remote.release());
   if (status != ZX_OK) {
     return status;
   }
@@ -187,13 +187,14 @@ zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, char* pat
 }
 
 zx_status_t TestRootDevice::FidlCreateDevice(void* ctx, const char* name_data, size_t name_len,
-                                             fidl_txn_t* txn) {
+                                             zx_handle_t client_remote_raw, fidl_txn_t* txn) {
   auto root = static_cast<TestRootDevice*>(ctx);
+  zx::channel client_remote{client_remote_raw};
 
   char path[fuchsia_device_test_MAX_DEVICE_PATH_LEN];
   size_t path_size = 0;
-  zx_status_t status =
-      root->CreateDevice(fbl::StringPiece(name_data, name_len), path, sizeof(path), &path_size);
+  zx_status_t status = root->CreateDevice(fbl::StringPiece(name_data, name_len),
+                                          std::move(client_remote), path, sizeof(path), &path_size);
   return fuchsia_device_test_RootDeviceCreateDevice_reply(txn, status, path, path_size);
 }
 

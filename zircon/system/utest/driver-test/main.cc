@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/test/c/fidl.h>
+#include <fuchsia/device/test/llcpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -24,6 +24,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 
 static constexpr const char kDriverTestDir[] = "/boot/driver/test";
@@ -33,9 +34,10 @@ using devmgr_integration_test::IsolatedDevmgr;
 
 namespace {
 
-void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
+void do_one_test(const IsolatedDevmgr& devmgr,
+                 ::llcpp::fuchsia::device::test::RootDevice::SyncClient* test_root,
                  const char* drv_libname, const zx::socket& output,
-                 fuchsia_device_test_TestReport* report) {
+                 ::llcpp::fuchsia::device::test::TestReport* report) {
   // Initialize the report with a failure state to handle early returns
   *report = {
       .test_count = 1,
@@ -43,42 +45,22 @@ void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
       .failure_count = 1,
   };
 
-  char devpath[fuchsia_device_test_MAX_DEVICE_PATH_LEN + 1];
-  size_t devpath_count;
-  zx_status_t call_status;
-  zx_status_t status = fuchsia_device_test_RootDeviceCreateDevice(
-      test_root.get(), drv_libname, strlen(drv_libname), &call_status, devpath, sizeof(devpath) - 1,
-      &devpath_count);
-  if (status == ZX_OK) {
-    status = call_status;
-  }
+  zx::channel test_channel, test_remote;
+  zx_status_t status = zx::channel::create(0, &test_channel, &test_remote);
   if (status != ZX_OK) {
-    printf("driver-tests: error %s creating device for %s\n", zx_status_get_string(status),
+    printf("driver-tests: failed to create channel %s\n", zx_status_get_string(status));
+    return;
+  }
+
+  auto result = test_root->CreateDevice({drv_libname, strlen(drv_libname)}, std::move(test_remote));
+  if (result.status() != ZX_OK) {
+    printf("driver-tests: error %s during IPC for creating device for %s\n",
+           zx_status_get_string(result.status()), drv_libname);
+    return;
+  }
+  if (result->status != ZX_OK) {
+    printf("driver-tests: error %s creating device for %s\n", zx_status_get_string(result->status),
            drv_libname);
-    return;
-  }
-  devpath[devpath_count] = 0;
-
-  const char* kDevPrefix = "/dev/";
-  if (strncmp(devpath, kDevPrefix, strlen(kDevPrefix))) {
-    printf("driver-tests: bad path when creating device for %s: %s\n", drv_libname, devpath);
-    return;
-  }
-
-  const char* relative_devpath = devpath + strlen(kDevPrefix);
-
-  fbl::unique_fd fd;
-  status =
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), relative_devpath, &fd);
-  if (status != ZX_OK) {
-    printf("driver-tests: failed to open %s\n", devpath);
-    return;
-  }
-
-  zx::channel test_channel;
-  status = fdio_get_service_handle(fd.release(), test_channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    printf("driver-tests: failed to get channel %s\n", zx_status_get_string(status));
     return;
   }
 
@@ -103,17 +85,29 @@ void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
   }
   if (status != ZX_OK) {
     printf("driver-tests: error %d binding to %s\n", status, libpath);
-    // TODO(teisenbe): I think fuchsia_device_test_DeviceDestroy() should be called
+    // TODO(teisenbe): I think ::llcpp::fuchsia::device::test::DeviceDestroy() should be called
     // here?
     return;
   }
 
   // Check that Bind was synchronous by looking for the child device.
-  char child_devpath[fuchsia_device_test_MAX_DEVICE_PATH_LEN + 1];
-  snprintf(child_devpath, sizeof(child_devpath), "%s/child", relative_devpath);
-  fd.reset(openat(devmgr.devfs_root().get(), child_devpath, O_RDWR));
+  fbl::StringBuffer<::llcpp::fuchsia::device::test::MAX_DEVICE_PATH_LEN + 1> child_devpath;
+  {
+    const char* kDevPrefix = "/dev/";
+    if (result->path.size() < strlen(kDevPrefix) ||
+        memcmp(result->path.data(), kDevPrefix, strlen(kDevPrefix))) {
+      printf("driver-tests: bad path when creating device for %s: %.*s\n", drv_libname,
+             static_cast<int>(result->path.size()), result->path.data());
+      return;
+    }
+
+    child_devpath.Append(result->path.data() + strlen(kDevPrefix),
+                         result->path.size() - strlen(kDevPrefix));
+    child_devpath.Append("/child");
+  }
+  fbl::unique_fd fd(openat(devmgr.devfs_root().get(), child_devpath.data(), O_RDWR));
   if (!fd.is_valid()) {
-    printf("driver-tests: error binding device %s %s\n", devpath, relative_devpath);
+    printf("driver-tests: error binding device %s\n", child_devpath.data());
     return;
   }
 
@@ -121,27 +115,29 @@ void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
   status = output.duplicate(ZX_RIGHT_SAME_RIGHTS, &output_copy);
   if (status != ZX_OK) {
     printf("driver-tests: error %d duplicating output socket\n", status);
-    // TODO(teisenbe): I think fuchsia_device_test_DeviceDestroy() should be called
+    // TODO(teisenbe): I think ::llcpp::fuchsia::device::test::DeviceDestroy() should be called
     // here?
     return;
   }
 
-  fuchsia_device_test_DeviceSetOutputSocket(test_channel.get(), output_copy.release());
+  ::llcpp::fuchsia::device::test::Device::SyncClient test_client{std::move(test_channel)};
 
-  status = fuchsia_device_test_DeviceRunTests(test_channel.get(), &call_status, report);
-  if (status == ZX_OK) {
-    status = call_status;
-  }
-  if (status != ZX_OK) {
+  test_client.SetOutputSocket(std::move(output_copy));
+  auto test_result = test_client.RunTests();
+  if (test_result.status() != ZX_OK || test_result->status != ZX_OK) {
+    zx_status_t status =
+        (test_result.status() != ZX_OK) ? test_result.status() : test_result->status;
     printf("driver-tests: error %s running tests\n", zx_status_get_string(status));
     *report = {
         .test_count = 1,
         .success_count = 0,
         .failure_count = 1,
     };
+  } else {
+    *report = test_result->report;
   }
 
-  fuchsia_device_test_DeviceDestroy(test_channel.get());
+  test_client.Destroy();
 }
 
 int output_thread(void* arg) {
@@ -197,11 +193,15 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  zx::channel test_root;
-  status = fdio_get_service_handle(fd.release(), test_root.reset_and_get_address());
-  if (status != ZX_OK) {
-    printf("driver-tests: failed to get root channel %s\n", zx_status_get_string(status));
-    return -1;
+  ::llcpp::fuchsia::device::test::RootDevice::SyncClient test_root{zx::channel{}};
+  {
+    zx::channel test_root_channel;
+    status = fdio_get_service_handle(fd.release(), test_root_channel.reset_and_get_address());
+    if (status != ZX_OK) {
+      printf("driver-tests: failed to get root channel %s\n", zx_status_get_string(status));
+      return -1;
+    }
+    *test_root.mutable_channel() = std::move(test_root_channel);
   }
 
   thrd_t t;
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  fuchsia_device_test_TestReport final_report = {};
+  ::llcpp::fuchsia::device::test::TestReport final_report = {};
 
   DIR* dir = opendir(kDriverTestDir);
   if (dir == NULL) {
@@ -238,8 +238,8 @@ int main(int argc, char** argv) {
         strcmp(de->d_name, "bind-debugger-test.so") == 0) {
       continue;
     }
-    fuchsia_device_test_TestReport one_report = {};
-    do_one_test(devmgr, test_root, de->d_name, remote_socket, &one_report);
+    ::llcpp::fuchsia::device::test::TestReport one_report = {};
+    do_one_test(devmgr, &test_root, de->d_name, remote_socket, &one_report);
 
     final_report.test_count += one_report.test_count;
     final_report.success_count += one_report.success_count;

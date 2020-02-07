@@ -191,12 +191,15 @@ mod tests {
     fn create_test_dev(name: &str) -> Result<DeviceFile, Error> {
         let control = open_rdwr(CONTROL_DEVICE)?;
         let mut root_dev = RootDeviceSynchronousProxy::new(fdio::clone_channel(&control)?);
-        let (status, path) = root_dev.create_device(name, zx::Time::after(timeout()))?;
+
+        let (local, remote) = zx::Channel::create()?;
+        let (status, path) =
+            root_dev.create_device(name, Some(remote), zx::Time::after(timeout()))?;
         zx::Status::ok(status)?;
 
         let path =
             PathBuf::from(path.ok_or(format_err!("RootDevice.CreateDevice returned null path"))?);
-        let file = open_rdwr(&path)?;
+        let file = fdio::create_fd(zx::Handle::from(local))?;
         let topo_path = PathBuf::from(fdio::device_get_topo_path(&file)?);
         Ok(DeviceFile { file, path, topo_path })
     }

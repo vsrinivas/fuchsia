@@ -15,7 +15,8 @@ pub fn create_test_device(test_path: &str, dev_name: &str) -> Result<String, Err
     let channel = fdio::clone_channel(&test_dev)?;
     let mut interface = RootDeviceSynchronousProxy::new(channel);
 
-    let (status, devpath) = interface.create_device(dev_name, fuchsia_zircon::Time::INFINITE)?;
+    let (status, devpath) =
+        interface.create_device(dev_name, None, fuchsia_zircon::Time::INFINITE)?;
     fuchsia_zircon::Status::ok(status)?;
     devpath.ok_or(format_err!("RootDevice.CreateDevice received no devpath?"))
 }

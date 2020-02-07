@@ -140,19 +140,19 @@ impl TestDevice {
             fdio::clone_channel(&control_dev)?,
         )?);
 
+        let (local, remote) = zx::Channel::create()?;
+
         // Create a device with the requested name.
-        let (status, path) = root_device
-            .create_device(name)
+        let (status, _) = root_device
+            .create_device(name, Some(remote))
             .map_err(Error::from)
             .on_timeout(10.seconds().after_now(), || {
                 Err(format_err!("timed out waiting to create bt-hci-emulator device {}", name))
             })
             .await?;
         zx::Status::ok(status)?;
-        let path = path.ok_or(format_err!("RootDevice.CreateDevice returned null path"))?;
 
-        // Open the device that was just created.
-        Ok(TestDevice(open_rdwr(&path)?))
+        Ok(TestDevice(fdio::create_fd(zx::Handle::from(local))?))
     }
 
     // Send the test device a destroy message which will unbind the driver.

@@ -22,7 +22,7 @@ executable("tests") {
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
-    "//zircon/system/fidl/fuchsia-device-test:c",
+    "//zircon/system/fidl/fuchsia-device-test:llcpp",
   ]
 }
 

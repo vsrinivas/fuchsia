@@ -41,7 +41,6 @@ executable("tests") {
     "//zircon/public/lib/inspector",
     "//zircon/system/fidl/fuchsia-device",
     "//zircon/system/fidl/fuchsia-device-test",
-    "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test_c",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io",
   ]
 }
