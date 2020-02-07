@@ -6,6 +6,8 @@
 //!
 //! This crate's macro generates code to validate fidl tables.
 //!
+//! Import using `fidl_table_validation::*` to inherit the macro's imports.
+//!
 //! ## Basic Example
 //!
 //! ```
@@ -75,6 +77,7 @@
 //                "Option<" in field types.
 pub use fidl_table_validation_derive::ValidFidlTable;
 
+pub use anyhow;
 pub use fidl::encoding::Decodable;
 
 /// Validations on `T` that can be run during construction of a validated

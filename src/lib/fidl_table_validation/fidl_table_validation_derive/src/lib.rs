@@ -147,7 +147,7 @@ impl FidlField {
                 quote!(
                     #ident: std::convert::TryFrom::try_from(
                         src.#ident.ok_or(#missing_field_error_type::#camel_case)?
-                    ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?,
+                    ).map_err(anyhow::Error::from)?,
                 )
             }
             FidlFieldKind::Optional => quote!(
@@ -155,7 +155,7 @@ impl FidlField {
                     Some(
                         std::convert::TryFrom::try_from(
                             field
-                        ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?
+                        ).map_err(anyhow::Error::from)?
                     )
                 } else {
                     None
@@ -294,7 +294,7 @@ fn impl_valid_fidl_table(
         #[derive(Debug)]
         pub enum #error_type_name {
             MissingField(#missing_field_error_type),
-            InvalidField(Box<std::error::Error + Send + Sync>),
+            InvalidField(anyhow::Error),
             #custom_validator_error
         }
 
@@ -306,8 +306,8 @@ fn impl_valid_fidl_table(
 
         impl std::error::Error for #error_type_name {}
 
-        impl From<Box<std::error::Error + Send + Sync>> for #error_type_name {
-            fn from(src: Box<std::error::Error + Send + Sync>) -> Self {
+        impl From<anyhow::Error> for #error_type_name {
+            fn from(src: anyhow::Error) -> Self {
                 #error_type_name::InvalidField(src)
             }
         }

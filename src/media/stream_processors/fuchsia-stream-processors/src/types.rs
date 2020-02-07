@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_table_validation::{ValidFidlTable, Validate};
+use fidl_table_validation::*;
 use fuchsia_zircon as zx;
 
 use fidl_fuchsia_media::{

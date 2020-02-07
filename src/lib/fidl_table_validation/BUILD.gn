@@ -9,6 +9,7 @@ rustc_library("fidl_table_validation") {
   deps = [
     "fidl_table_validation_derive",
     "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 

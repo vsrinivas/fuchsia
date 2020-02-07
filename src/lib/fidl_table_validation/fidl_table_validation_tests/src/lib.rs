@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use fidl_table_validation::{ValidFidlTable, Validate};
+use fidl_table_validation::*;
 use std::convert::TryFrom;
 
 macro_rules! dummy_impl_decodable {
