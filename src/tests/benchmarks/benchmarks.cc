@@ -74,6 +74,14 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   benchmarks_runner->AddTspecBenchmark("ledger.stories_wait_cached", "/pkgfs/packages/ledger_benchmarks/0/data/stories_wait_cached.tspec");
   // clang-format on
 
+  // Kernel boot timeline.
+  {
+    constexpr const char* kLabel = "fuchsia.kernel.boot";
+    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
+    benchmarks_runner->AddCustomBenchmark(kLabel, {"/bin/kernel-boot-timeline", out_file},
+                                          out_file);
+  }
+
   // TODO(PT-181, PT-182): The following input latency and graphics benchmarks
   // do not make an effort to close the graphics application being benchmarked
   // at exit (the app will continue to run even after the benchmark driver

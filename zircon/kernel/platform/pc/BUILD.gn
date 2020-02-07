@@ -28,6 +28,7 @@ zx_library("pc") {
     "$zx/kernel/lib/cbuf",
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/counters",
     "$zx/kernel/lib/efi",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/fixed_point",

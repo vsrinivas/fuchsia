@@ -70,6 +70,7 @@ group("package_deps") {
     "//src/ledger:bin",
     "//src/ledger/bin/tests/benchmark",
     "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
+    "//src/tests/benchmarks:kernel-boot-benchmarks",
 
     # These are used by garnet_input_latency_benchmarks.
     "//src/ui/bin/activity",

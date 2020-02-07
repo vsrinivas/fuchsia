@@ -12,6 +12,7 @@ source_set("top") {
     "$zx/kernel/arch/$zircon_cpu",
     "$zx/kernel/dev/hw_rng",
     "$zx/kernel/kernel",
+    "$zx/kernel/lib/counters",
     "$zx/kernel/lib/debuglog",
     "$zx/kernel/lib/userabi",
     "$zx/kernel/lib/version",

@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <lib/affine/transform.h>
 #include <lib/cmdline.h>
+#include <lib/counters.h>
 #include <lib/fixed_point.h>
 #include <platform.h>
 #include <pow2.h>
@@ -38,6 +39,19 @@
 #include <platform/timer.h>
 
 #include "platform_p.h"
+
+extern "C" {
+
+// Samples taken at the first instruction in the kernel.
+uint64_t kernel_entry_ticks;
+// ... and at the entry to normal virtual-space kernel code.
+uint64_t kernel_virtual_entry_ticks;
+
+}  // extern "C"
+
+// That value is published as a kcounter.
+KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
+KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
 // Current timer scheme:
 // The HPET is used to calibrate the local APIC timers and the TSC.  If the
@@ -496,6 +510,11 @@ static void pc_init_timer(uint level) {
     current_ticks = current_ticks_rdtsc;
     platform_set_ticks_to_time_ratio(rdtsc_ticks_to_clock_monotonic);
     wall_clock = CLOCK_TSC;
+
+    // If not using TSC, these samples won't be available since they'd
+    // have to be converted from TSC ticks to prevailing ticks.
+    timeline_zbi_entry.Set(kernel_entry_ticks);
+    timeline_virtual_entry.Set(kernel_virtual_entry_ticks);
   } else {
     if (constant_tsc || invariant_tsc) {
       // Calibrate the TSC even though it's not as good as we want, so we

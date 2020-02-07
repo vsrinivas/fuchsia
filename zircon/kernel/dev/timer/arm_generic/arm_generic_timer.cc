@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
+#include <lib/counters.h>
 #include <lib/fixed_point.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
@@ -47,6 +48,19 @@
 #define TIMER_REG_CNTVCT "cntvct_el0"
 
 static int timer_irq;
+
+extern "C" {
+
+// Samples taken at the first instruction in the kernel.
+uint64_t kernel_entry_ticks[2];  // cntpct, cntvct
+// ... and at the entry to normal virtual-space kernel code.
+uint64_t kernel_virtual_entry_ticks[2];  // cntpct, cntvct
+
+}  // extern "C"
+
+// That value is published as a kcounter.
+KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
+KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
 namespace {
 
@@ -329,6 +343,7 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
   uint32_t irq_phys = driver->irq_phys;
   uint32_t irq_virt = driver->irq_virt;
   uint32_t irq_sphys = driver->irq_sphys;
+  size_t entry_ticks_idx;
 
   if (irq_phys && irq_virt && arm64_get_boot_el() < 2) {
     // If we did not boot at EL2 or above, prefer the virtual timer.
@@ -338,18 +353,24 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
     timer_irq = irq_phys;
     timer_assignment = IRQ_PHYS;
     reg_procs = &cntp_procs;
+    entry_ticks_idx = 0;
   } else if (irq_virt) {
     timer_irq = irq_virt;
     timer_assignment = IRQ_VIRT;
     reg_procs = &cntv_procs;
+    entry_ticks_idx = 1;
   } else if (irq_sphys) {
     timer_irq = irq_sphys;
     timer_assignment = IRQ_SPHYS;
     reg_procs = &cntps_procs;
+    entry_ticks_idx = 0;
   } else {
     panic("no irqs set in arm_generic_timer_pdev_init\n");
   }
   smp_mb();
+
+  timeline_zbi_entry.Set(kernel_entry_ticks[entry_ticks_idx]);
+  timeline_virtual_entry.Set(kernel_virtual_entry_ticks[entry_ticks_idx]);
 
   arm_generic_timer_init(driver->freq_override);
 }

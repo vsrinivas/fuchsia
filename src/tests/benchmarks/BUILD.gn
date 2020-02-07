@@ -7,7 +7,10 @@ import("//build/package.gni")
 
 group("benchmarks") {
   testonly = true
-  deps = [ ":fuchsia_benchmarks" ]
+  deps = [
+    ":fuchsia_benchmarks",
+    ":kernel-boot-benchmarks",
+  ]
 }
 
 executable("fuchsia_benchmarks_bin") {
@@ -55,4 +58,26 @@ package("fuchsia_benchmarks") {
     ":fuchsia_benchmarks_bin",
     ":zircon-test-manifest",
   ]
+}
+
+executable("kernel-boot-timeline") {
+  testonly = true
+  sources = [ "kernel_boot_timeline.cc" ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/inspect_deprecated:reader",
+    "//zircon/public/lib/perftest",
+    "//zircon/system/fidl/fuchsia-kernel",
+  ]
+}
+
+package("kernel-boot-benchmarks") {
+  testonly = true
+  binaries = [
+    {
+      shell = true
+      name = "kernel-boot-timeline"
+    },
+  ]
+  deps = [ ":kernel-boot-timeline" ]
 }

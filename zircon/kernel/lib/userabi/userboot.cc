@@ -66,6 +66,7 @@ constexpr const char* decompress_zbi_image = nullptr;
 constexpr size_t DECOMPRESS_ZBI_DATA_END = 0;
 #endif
 
+KCOUNTER(timeline_userboot, "boot.timeline.userboot")
 KCOUNTER(init_time, "init.userboot.time.msec")
 
 class UserbootImage : private RoDso {
@@ -336,6 +337,7 @@ void userboot_init(uint) {
                          /* initial_thread= */ true);
   ASSERT(status == ZX_OK);
 
+  timeline_userboot.Set(current_ticks());
   init_time.Add(current_time() / 1000000LL);
 }
 

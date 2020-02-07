@@ -13,6 +13,7 @@
 
 #include <arch.h>
 #include <debug.h>
+#include <lib/counters.h>
 #include <lib/debuglog.h>
 #include <lib/heap.h>
 #include <platform.h>
@@ -34,6 +35,9 @@ extern void (*const __init_array_end[])();
 static uint secondary_idle_thread_count;
 
 static int bootstrap2(void* arg);
+
+KCOUNTER(timeline_threading, "boot.timeline.threading")
+KCOUNTER(timeline_init, "boot.timeline.init")
 
 static void call_constructors() {
   for (void (*const* a)() = __init_array_start; a != __init_array_end; a++)
@@ -98,6 +102,8 @@ void lk_main() {
 }
 
 static int bootstrap2(void*) {
+  timeline_threading.Set(current_ticks());
+
   dprintf(SPEW, "top of bootstrap2()\n");
 
   lk_primary_cpu_init_level(LK_INIT_LEVEL_THREADING, LK_INIT_LEVEL_ARCH - 1);
@@ -116,6 +122,7 @@ static int bootstrap2(void*) {
   dprintf(SPEW, "moving to last init level\n");
   lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET, LK_INIT_LEVEL_LAST);
 
+  timeline_init.Set(current_ticks());
   return 0;
 }
 

@@ -25,21 +25,56 @@
 tmp                     .req x9
 tmp2                    .req x10
 wtmp2                   .req w10
+tmp3                    .req x11
+tmp4                    .req x12
+tmp5                    .req x13
 
 cpuid                   .req x19
 page_table0             .req x20
 page_table1             .req x21
 kernel_vaddr            .req x22
 
+// Collect timestamp in tmp, tmp2.  Also clobbers tmp3-5.
+.macro sample_ticks
+    mrs     tmp, cntpct_el0
+    mrs     tmp2, cntvct_el0
+
+    // Workaround for Cortex-A73 erratum 858921.
+    // See kernel/dev/timer/arm_generic/arm_generic_timer.cc::read_cntpct_a73.
+    mrs     tmp3, cntpct_el0
+    mrs     tmp4, cntvct_el0
+    eor     tmp5, tmp, tmp3
+    tst     tmp5, #(1 << 32)
+    csel    tmp, tmp, tmp3, eq
+    eor     tmp5, tmp2, tmp4
+    tst     tmp5, #(1 << 32)
+    csel    tmp2, tmp2, tmp4, eq
+.endm
+
+// Store sample_ticks results in a uint64_t[2] location.
+// Clobbers tmp3.
+.macro store_ticks symbol
+    // There is no reloc like :lo12: that works for stp's scaled immediate,
+    // so the add after the adrp can't be folded into the store like with str.
+    adr_global tmp3, \symbol
+    stp tmp, tmp2, [tmp3]
+.endm
+
 // This code is purely position-independent and generates no relocations
 // that need boot-time fixup; gen-kaslr-fixup.sh ensures this (and would
 // ignore it if this code were in .text.boot, so don't put it there).
 .text
 FUNCTION(_start)
+    // As early as possible collect the time stamp.
+    sample_ticks
+
     /* Save the Boot info for the primary CPU only */
     mrs     cpuid, mpidr_el1
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lno_save_bootinfo
+
+    // Record the entry time stamp.
+    store_ticks kernel_entry_ticks
 
     /* save x0 in zbi_paddr */
     adrp    tmp, zbi_paddr
@@ -255,6 +290,10 @@ FUNCTION(_start)
     str     x0, [tmp, #ZX_TLS_STACK_GUARD_OFFSET]
     // Don't leak the value to other code.
     mov     x0, xzr
+
+    // Collect the time stamp of entering "normal" C++ code in virtual space.
+    sample_ticks
+    store_ticks kernel_virtual_entry_ticks
 
     bl  lk_main
     b   .

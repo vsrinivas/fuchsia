@@ -35,12 +35,23 @@
     movl \value, (%ecx)
 .endm
 
+// Clobbers %rax, %rdx.
+.macro sample_ticks out
+    rdtsc
+    shl $32, %rdx
+    or %rdx, %rax
+    mov %rax, \out
+.endm
+
 // This section name is known specially to kernel.ld and gen-kaslr-fixups.sh.
 // This code has relocations for absolute physical addresses, which do not get
 // adjusted by the boot-time fixups (which this code calls at the end).
 .section .text.boot, "ax", @progbits
 .align 8
 FUNCTION_LABEL(_start)
+    // As early as possible collect the time stamp.
+    sample_ticks %r15
+
     /* set up a temporary stack pointer */
     mov $PHYS(_kstack_end), %rsp
 
@@ -68,6 +79,7 @@ FUNCTION_LABEL(_start)
 
     // _zbi_base is in bss, so now it's safe to set it.
     mov %rbx, PHYS(_zbi_base)
+    mov %r15, PHYS(kernel_entry_ticks)
 
     /* give the boot allocator a chance to compute the physical address of the kernel */
     call boot_alloc_init
@@ -221,6 +233,9 @@ high_entry:
     // configure the kernel base address
     // TODO: dynamically figure this out once we allow the x86 kernel to be loaded anywhere
     movl $PHYS_LOAD_ADDRESS, kernel_base_phys(%rip)
+
+    // Collect the time stamp of entering "normal" C++ code in virtual space.
+    sample_ticks kernel_virtual_entry_ticks(%rip)
 
     /* call the main module */
     call lk_main
