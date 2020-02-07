@@ -329,7 +329,7 @@ std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryB
   std::call_once(flag, [&static_sync_diffs_relevant_builders_ptr,
                         &static_sync_diffs_not_relevant_builders_ptr, &static_offline_builders_ptr,
                         &static_p2p_only_builders_ptr] {
-    for (auto inject_error : {InjectNetworkError::NO, InjectNetworkError::YES}) {
+    for (auto inject_error : {InjectNetworkError::NO}) {
       for (auto enable_p2p : {EnableP2PMesh::NO, EnableP2PMesh::YES}) {
         for (auto test_diffs : {TestDiffs::TEST_COMPATIBILITY, TestDiffs::TEST_NO_COMPATIBILITY}) {
           static_sync_diffs_relevant_builders_ptr->push_back(
