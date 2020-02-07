@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-process-init") {
+fidl("fuchsia.process.init") {
   sources = [ "bootstrap.fidl" ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-ldsvc",
-    "$zx/system/fidl/fuchsia-process",
+    "//zircon/system/fidl/fuchsia-ldsvc",
+    "//zircon/system/fidl/fuchsia-process",
   ]
 }
