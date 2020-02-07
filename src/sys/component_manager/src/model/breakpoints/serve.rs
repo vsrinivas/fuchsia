@@ -221,6 +221,11 @@ async fn serve_routing_protocol(
                 let external_provider = ExternalCapabilityProvider::new(client_end);
                 *capability_provider = Some(Box::new(external_provider));
 
+                // Unblock the interposer before opening the existing provider as the
+                // existing provider may generate additional events which cannot be processed
+                // until the interposer is unblocked.
+                responder.send().unwrap();
+
                 // Open the existing provider
                 if let Some(existing_provider) = existing_provider {
                     // TODO(xbhatnag): We should be passing in the flags, mode and path
@@ -232,7 +237,6 @@ async fn serve_routing_protocol(
                 } else {
                     panic!("No provider set!");
                 }
-                responder.send().unwrap();
             }
         }
     }
