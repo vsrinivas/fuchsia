@@ -173,9 +173,7 @@ typedef struct zxio_node_attr {
              link_count == other.link_count && creation_time == other.creation_time &&
              modification_time == other.modification_time;
     }
-    constexpr bool operator!=(const zxio_node_attr_has_t& other) const {
-      return !(*this == other);
-    }
+    constexpr bool operator!=(const zxio_node_attr_has_t& other) const { return !(*this == other); }
 #endif  // _cplusplus
   } has;
 
@@ -210,9 +208,7 @@ typedef struct zxio_node_attr {
     }
     return true;
   }
-  constexpr bool operator!=(const zxio_node_attr& other) const {
-    return !(*this == other);
-  }
+  constexpr bool operator!=(const zxio_node_attr& other) const { return !(*this == other); }
 #endif  // _cplusplus
 } zxio_node_attr_t;
 
@@ -225,9 +221,9 @@ typedef struct zxio_node_attr {
 
 typedef uint32_t zxio_seek_origin_t;
 
-#define ZXIO_SEEK_ORIGIN_START ((zxio_seek_origin_t)0u)
-#define ZXIO_SEEK_ORIGIN_CURRENT ((zxio_seek_origin_t)1u)
-#define ZXIO_SEEK_ORIGIN_END ((zxio_seek_origin_t)2u)
+#define ZXIO_SEEK_ORIGIN_START ((zxio_seek_origin_t)1u)
+#define ZXIO_SEEK_ORIGIN_CURRENT ((zxio_seek_origin_t)2u)
+#define ZXIO_SEEK_ORIGIN_END ((zxio_seek_origin_t)3u)
 
 // An entry in a directory.
 typedef struct zxio_dirent {
@@ -262,10 +258,10 @@ typedef struct zxio_dirent {
 } zxio_dirent_t;
 
 #define ZXIO_DIRENT_SET(attr, field_name, value) \
-  do {                                              \
+  do {                                           \
     zxio_dirent_t* _tmp_attr = &(attr);          \
-    _tmp_attr->field_name = value;                  \
-    _tmp_attr->has.field_name = true;               \
+    _tmp_attr->field_name = value;               \
+    _tmp_attr->has.field_name = true;            \
   } while (0)
 
 __END_CDECLS

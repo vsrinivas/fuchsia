@@ -41,7 +41,7 @@ zx_status_t zxio_default_write_vector(zxio_t* io, const zx_iovec_t* vector, size
 zx_status_t zxio_default_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
                                          size_t vector_count, zxio_flags_t flags,
                                          size_t* out_actual);
-zx_status_t zxio_default_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
+zx_status_t zxio_default_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                               size_t* out_offset);
 zx_status_t zxio_default_truncate(zxio_t* io, size_t length);
 zx_status_t zxio_default_flags_get(zxio_t* io, uint32_t* out_flags);

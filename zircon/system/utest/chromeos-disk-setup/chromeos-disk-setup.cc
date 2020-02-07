@@ -89,12 +89,15 @@ static zx_status_t mock_write_vector_at(zxio_t* io, zx_off_t offset, const zx_io
   return mock_write_vector(io, vector, vector_count, flags, out_actual);
 }
 
-static zx_status_t mock_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
+static zx_status_t mock_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                              size_t* out_offset) {
   if (start != ZXIO_SEEK_ORIGIN_START) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  *out_offset = offset;
+  if (offset < 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out_offset = static_cast<size_t>(offset);
   return ZX_OK;
 }
 

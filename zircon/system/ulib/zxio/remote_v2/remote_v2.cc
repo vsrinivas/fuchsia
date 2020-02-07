@@ -318,6 +318,164 @@ void zxio_file_v2_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* 
   *out_zxio_signals = zxio_signals;
 }
 
+template <typename F>
+static zx_status_t zxio_remote_do_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                         zxio_flags_t flags, size_t* out_actual, F fn) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  RemoteV2 rio(io);
+
+  return zxio_do_vector(vector, vector_count, out_actual,
+                        [&](void* data, size_t capacity, size_t* out_actual) {
+                          auto buffer = static_cast<uint8_t*>(data);
+                          size_t total = 0;
+                          while (capacity > 0) {
+                            size_t chunk = std::min(capacity, fio2::MAX_TRANSFER_SIZE);
+                            size_t actual;
+                            zx_status_t status = fn(rio.control(), buffer, chunk, &actual);
+                            if (status != ZX_OK) {
+                              return status;
+                            }
+                            total += actual;
+                            if (actual != chunk) {
+                              break;
+                            }
+                            buffer += actual;
+                            capacity -= actual;
+                          }
+                          *out_actual = total;
+                          return ZX_OK;
+                        });
+}
+
+zx_status_t zxio_remote_v2_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                       zxio_flags_t flags, size_t* out_actual) {
+  return zxio_remote_do_vector(
+      io, vector, vector_count, flags, out_actual,
+      [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+        // Explicitly allocating message buffers to avoid heap allocation.
+        fidl::Buffer<fio2::File::ReadRequest> request_buffer;
+        fidl::Buffer<fio2::File::ReadResponse> response_buffer;
+        auto result = fio2::File::Call::Read(std::move(control), request_buffer.view(), capacity,
+                                             response_buffer.view());
+        zx_status_t status;
+        if ((status = result.status()) != ZX_OK) {
+          return status;
+        }
+        if (result->result.is_err()) {
+          return result->result.err();
+        }
+        const auto& data = result->result.response().data;
+        size_t actual = data.count();
+        if (actual > capacity) {
+          return ZX_ERR_IO;
+        }
+        memcpy(buffer, data.begin(), actual);
+        *out_actual = actual;
+        return ZX_OK;
+      });
+}
+
+zx_status_t zxio_remote_v2_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                          size_t vector_count, zxio_flags_t flags,
+                                          size_t* out_actual) {
+  return zxio_remote_do_vector(
+      io, vector, vector_count, flags, out_actual,
+      [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+        fidl::Buffer<fio2::File::ReadAtRequest> request_buffer;
+        fidl::Buffer<fio2::File::ReadAtResponse> response_buffer;
+        auto result = fio2::File::Call::ReadAt(std::move(control), request_buffer.view(), capacity,
+                                               offset, response_buffer.view());
+        zx_status_t status;
+        if ((status = result.status()) != ZX_OK) {
+          return status;
+        }
+        if (result->result.is_err()) {
+          return result->result.err();
+        }
+        const auto& data = result->result.response().data;
+        size_t actual = data.count();
+        if (actual > capacity) {
+          return ZX_ERR_IO;
+        }
+        offset += actual;
+        memcpy(buffer, data.begin(), actual);
+        *out_actual = actual;
+        return ZX_OK;
+      });
+}
+
+zx_status_t zxio_remote_v2_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                        zxio_flags_t flags, size_t* out_actual) {
+  return zxio_remote_do_vector(
+      io, vector, vector_count, flags, out_actual,
+      [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+        // Explicitly allocating message buffers to avoid heap allocation.
+        fidl::Buffer<fio2::File::WriteRequest> request_buffer;
+        fidl::Buffer<fio2::File::WriteResponse> response_buffer;
+        auto result =
+            fio2::File::Call::Write(std::move(control), request_buffer.view(),
+                                    fidl::VectorView(buffer, capacity), response_buffer.view());
+        zx_status_t status;
+        if ((status = result.status()) != ZX_OK) {
+          return status;
+        }
+        if (result->result.is_err()) {
+          return result->result.err();
+        }
+        size_t actual = result->result.response().actual_count;
+        if (actual > capacity) {
+          return ZX_ERR_IO;
+        }
+        *out_actual = actual;
+        return ZX_OK;
+      });
+}
+
+zx_status_t zxio_remote_v2_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                           size_t vector_count, zxio_flags_t flags,
+                                           size_t* out_actual) {
+  return zxio_remote_do_vector(
+      io, vector, vector_count, flags, out_actual,
+      [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+        // Explicitly allocating message buffers to avoid heap allocation.
+        fidl::Buffer<fio2::File::WriteAtRequest> request_buffer;
+        fidl::Buffer<fio2::File::WriteAtResponse> response_buffer;
+        auto result = fio2::File::Call::WriteAt(std::move(control), request_buffer.view(),
+                                                fidl::VectorView(buffer, capacity), offset,
+                                                response_buffer.view());
+        zx_status_t status;
+        if ((status = result.status()) != ZX_OK) {
+          return status;
+        }
+        if (result->result.is_err()) {
+          return result->result.err();
+        }
+        size_t actual = result->result.response().actual_count;
+        if (actual > capacity) {
+          return ZX_ERR_IO;
+        }
+        offset += actual;
+        *out_actual = actual;
+        return ZX_OK;
+      });
+}
+
+zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
+                                size_t* out_offset) {
+  RemoteV2 rio(io);
+  auto result = fio2::File::Call::Seek(rio.control(), static_cast<fio2::SeekOrigin>(start), offset);
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  if (result->result.is_err()) {
+    return result->result.err();
+  }
+  *out_offset = result->result.response().offset_from_start;
+  return ZX_OK;
+}
+
 }  // namespace
 
 static constexpr zxio_ops_t zxio_file_v2_ops = []() {
@@ -330,6 +488,11 @@ static constexpr zxio_ops_t zxio_file_v2_ops = []() {
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_v2_attr_get;
   ops.attr_set = zxio_remote_v2_attr_set;
+  ops.read_vector = zxio_remote_v2_read_vector;
+  ops.read_vector_at = zxio_remote_v2_read_vector_at;
+  ops.write_vector = zxio_remote_v2_write_vector;
+  ops.write_vector_at = zxio_remote_v2_write_vector_at;
+  ops.seek = zxio_remote_v2_seek;
   return ops;
 }();
 

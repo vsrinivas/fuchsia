@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <zircon/syscalls.h>
 
 #include "private.h"
@@ -247,7 +247,7 @@ uint32_t ToIo1ModeFileType(zxio_node_protocols_t protocols) {
 
 class ToZxioAbilitiesForFile {
  public:
-  zxio_abilities_t operator() (uint32_t mode) {
+  zxio_abilities_t operator()(uint32_t mode) {
     zxio_abilities_t abilities = ZXIO_OPERATION_NONE;
     if (mode & S_IRUSR) {
       abilities |= ZXIO_OPERATION_READ_BYTES;
@@ -269,7 +269,7 @@ class ToZxioAbilitiesForFile {
 
 class ToIo1ModePermissionsForFile {
  public:
-  uint32_t operator() (zxio_abilities_t abilities) {
+  uint32_t operator()(zxio_abilities_t abilities) {
     // Permissions are not applicable on Fuchsia.
     // We could approximate them using the |abilities| of a node.
     uint32_t permission_bits = 0;
@@ -288,7 +288,7 @@ class ToIo1ModePermissionsForFile {
 
 class ToZxioAbilitiesForDirectory {
  public:
-  zxio_abilities_t operator() (uint32_t mode) {
+  zxio_abilities_t operator()(uint32_t mode) {
     zxio_abilities_t abilities = ZXIO_OPERATION_NONE;
     if (mode & S_IRUSR) {
       abilities |= ZXIO_OPERATION_ENUMERATE;
@@ -310,7 +310,7 @@ class ToZxioAbilitiesForDirectory {
 
 class ToIo1ModePermissionsForDirectory {
  public:
-  uint32_t operator() (zxio_abilities_t abilities) {
+  uint32_t operator()(zxio_abilities_t abilities) {
     // Permissions are not applicable on Fuchsia.
     // We could approximate them using the |abilities| of a node.
     uint32_t permission_bits = 0;
@@ -344,13 +344,13 @@ zxio_node_attr_t ToZxioNodeAttr(fio::NodeAttributes attr, ToZxioAbilities to_zxi
 template <typename ToIo1ModePermissions>
 fio::NodeAttributes ToNodeAttributes(zxio_node_attr_t attr, ToIo1ModePermissions to_io1) {
   return fio::NodeAttributes{
-    .mode = ToIo1ModeFileType(attr.protocols) | to_io1(attr.abilities),
-    .id = attr.has.id ? attr.id : fio::INO_UNKNOWN,
-    .content_size = attr.content_size,
-    .storage_size = attr.storage_size,
-    .link_count = attr.link_count,
-    .creation_time = attr.creation_time,
-    .modification_time = attr.modification_time,
+      .mode = ToIo1ModeFileType(attr.protocols) | to_io1(attr.abilities),
+      .id = attr.has.id ? attr.id : fio::INO_UNKNOWN,
+      .content_size = attr.content_size,
+      .storage_size = attr.storage_size,
+      .link_count = attr.link_count,
+      .creation_time = attr.creation_time,
+      .modification_time = attr.modification_time,
   };
 }
 
@@ -627,10 +627,18 @@ zx_status_t zxio_remote_write_vector_at(zxio_t* io, zx_off_t offset, const zx_io
       });
 }
 
-zx_status_t zxio_remote_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
+static constexpr fio::SeekOrigin ToIo1SeekOrigin(zxio_seek_origin_t start) {
+  return static_cast<fio::SeekOrigin>(start - 1);
+}
+
+static_assert(ToIo1SeekOrigin(ZXIO_SEEK_ORIGIN_START) == fio::SeekOrigin::START, "");
+static_assert(ToIo1SeekOrigin(ZXIO_SEEK_ORIGIN_CURRENT) == fio::SeekOrigin::CURRENT, "");
+static_assert(ToIo1SeekOrigin(ZXIO_SEEK_ORIGIN_END) == fio::SeekOrigin::END, "");
+
+zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                              size_t* out_offset) {
   Remote rio(io);
-  auto result = fio::File::Call::Seek(rio.control(), offset, static_cast<fio::SeekOrigin>(start));
+  auto result = fio::File::Call::Seek(rio.control(), offset, ToIo1SeekOrigin(start));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -694,8 +702,8 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo
 zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                                    size_t path_len, zx_handle_t request) {
   Remote rio(io);
-  auto result = fio::Directory::Call::Open(
-      rio.control(), flags, mode, fidl::StringView(path, path_len), zx::channel(request));
+  auto result = fio::Directory::Call::Open(rio.control(), flags, mode,
+                                           fidl::StringView(path, path_len), zx::channel(request));
   return result.status();
 }
 

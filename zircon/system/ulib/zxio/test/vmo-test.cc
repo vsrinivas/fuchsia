@@ -59,7 +59,7 @@ TEST_F(VmoTest, Basic) {
   EXPECT_STR_EQ("bcdefg", buffer);
 
   size_t offset = 2u;
-  ASSERT_OK(zxio_seek(io, 2u, ZXIO_SEEK_ORIGIN_START, &offset));
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_START, 2, &offset));
   EXPECT_EQ(offset, 2u);
   memset(buffer, 0, sizeof(buffer));
   actual = 0u;

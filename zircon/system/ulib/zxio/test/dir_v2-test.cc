@@ -102,7 +102,7 @@ class DirV2 : public zxtest::Test {
   ServerImpl* StartServer() {
     server_ = std::make_unique<ServerImpl>();
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    zx_status_t status;
+    zx_status_t status = ZX_OK;
     EXPECT_OK(status = loop_->StartThread("fake-filesystem"));
     if (status != ZX_OK) {
       return nullptr;

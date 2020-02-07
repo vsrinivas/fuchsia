@@ -113,7 +113,7 @@ static zx_status_t zxio_vmo_write_vector_at(zxio_t* io, zx_off_t offset, const z
                             });
 }
 
-zx_status_t zxio_vmo_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
+zx_status_t zxio_vmo_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                           size_t* out_offset) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
@@ -124,9 +124,11 @@ zx_status_t zxio_vmo_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
       at = offset;
       break;
     case ZXIO_SEEK_ORIGIN_CURRENT:
+      // TODO: This code does not appear to handle overflow correctly.
       at = file->offset + offset;
       break;
     case ZXIO_SEEK_ORIGIN_END:
+      // TODO: This code does not appear to handle overflow correctly.
       at = file->size + offset;
       break;
     default:

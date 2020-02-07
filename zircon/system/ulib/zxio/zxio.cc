@@ -23,9 +23,7 @@ static_assert(sizeof(zxio_t) == sizeof(zxio_internal_t), "zxio_t should match zx
 // Converters from the public (opaque) types to the internal (implementation) types.
 namespace {
 
-zxio_internal_t* to_internal(zxio_t* io) {
-  return reinterpret_cast<zxio_internal_t*>(io);
-}
+zxio_internal_t* to_internal(zxio_t* io) { return reinterpret_cast<zxio_internal_t*>(io); }
 
 }  // namespace
 
@@ -153,9 +151,9 @@ zx_status_t zxio_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
   return zio->ops->write_vector_at(io, offset, vector, vector_count, flags, out_actual);
 }
 
-zx_status_t zxio_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start, size_t* out_offset) {
+zx_status_t zxio_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset, size_t* out_offset) {
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->seek(io, offset, start, out_offset);
+  return zio->ops->seek(io, start, offset, out_offset);
 }
 
 zx_status_t zxio_truncate(zxio_t* io, size_t length) {
@@ -202,13 +200,15 @@ zx_status_t zxio_unlink(zxio_t* directory, const char* path) {
 
 zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
                         zx_handle_t new_directory_token, const char* new_path) {
-  zxio_internal_t* zio = to_internal(old_directory);;
+  zxio_internal_t* zio = to_internal(old_directory);
+  ;
   return zio->ops->rename(old_directory, old_path, new_directory_token, new_path);
 }
 
 zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zx_handle_t dst_directory_token,
                       const char* dst_path) {
-  zxio_internal_t* zio = to_internal(src_directory);;
+  zxio_internal_t* zio = to_internal(src_directory);
+  ;
   return zio->ops->link(src_directory, src_path, dst_directory_token, dst_path);
 }
 

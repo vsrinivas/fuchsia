@@ -64,7 +64,7 @@ TEST_F(VmoFileNonZeroOffsetTest, Basic) {
   ASSERT_STATUS(ZX_ERR_WRONG_TYPE, zxio_write(io, buffer, sizeof(buffer), 0, &actual));
   ASSERT_STATUS(ZX_ERR_WRONG_TYPE, zxio_write_at(io, 0u, buffer, sizeof(buffer), 0, &actual));
   size_t offset = 2u;
-  ASSERT_OK(zxio_seek(io, 2u, ZXIO_SEEK_ORIGIN_START, &offset));
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_START, 2, &offset));
   EXPECT_EQ(offset, 2u);
   memset(buffer, 0, sizeof(buffer));
   actual = 0u;

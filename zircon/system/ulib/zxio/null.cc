@@ -57,7 +57,7 @@ zx_status_t zxio_default_write_vector_at(zxio_t* io, zx_off_t offset, const zx_i
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
+zx_status_t zxio_default_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                               size_t* out_offset) {
   return ZX_ERR_WRONG_TYPE;
 }

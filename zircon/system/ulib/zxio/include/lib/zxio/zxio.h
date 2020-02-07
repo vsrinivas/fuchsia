@@ -164,7 +164,7 @@ zx_status_t zxio_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
 //
 // The resulting seek offset relative to the start of the file is returned in
 // |out_offset|.
-zx_status_t zxio_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start, size_t* out_offset);
+zx_status_t zxio_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset, size_t* out_offset);
 
 // Shrink the file size to |length| bytes.
 zx_status_t zxio_truncate(zxio_t* io, size_t length);
