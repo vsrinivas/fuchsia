@@ -236,19 +236,19 @@ codelab. There is a lot of standard component setup:
 
 * {Dart}
 
-  In the [part 1 main][dart-part1-main]:
+   In the [part 1 main][dart-part1-main]:
 
-  - Logging initialization
+   - Logging initialization
 
-    ```dart
-    {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="init_logger" adjust_indentation="auto" %}
-    ```
+     ```dart
+     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="init_logger" adjust_indentation="auto" %}
+     ```
 
-  - Serving a public service
+   - Serving a public service
 
-    ```dart
-    {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="serve_service" adjust_indentation="auto" %}
-    ```
+     ```dart
+     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart" region_tag="serve_service" adjust_indentation="auto" %}
+     ```
 
 See what the reverser definition is:
 
@@ -352,12 +352,12 @@ state without needing to dig through logs.
 
    * {Dart}
 
-     In [main.dart][dart-part1-main]:
+      In [main.dart][dart-part1-main]:
 
-     ```dart
-     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_import_inspect" adjust_indentation="auto" %}
-     {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_init_inspect" adjust_indentation="auto" %}
-     ```
+      ```dart
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_import_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/main.dart" region_tag="part_1_init_inspect" adjust_indentation="auto" %}
+      ```
 
    You are now using Inspect.
 
@@ -985,10 +985,10 @@ error handler for the connection attempt.
 
 * {C++}
 
-   - *Follow up*: Can you store the status somewhere? You can convert it
+   *Follow up*: Can you store the status somewhere? You can convert it
    to a string using `zx_status_get_string(status)`.
 
-   - *Advanced*: `inspector` has a method called `Health()` that announces
+   *Advanced*: `inspector` has a method called `Health()` that announces
    overall health status in a special location. Since our service is not
    healthy unless it can connect to FizzBuzz, can you incorporate this:
 
@@ -1511,22 +1511,22 @@ Look at how the integration test is setup:
 
    * {C++}
 
-     ```cpp
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="parse_result" adjust_indentation="auto" %}
-     ```
+      ```cpp
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="parse_result" adjust_indentation="auto" %}
+      ```
 
-     Add assertions on the returned JSON data.
+      Add assertions on the returned JSON data.
 
-     - *Hint*: It may help to print the JSON output to view the schema.
+      - *Hint*: It may help to print the JSON output to view the schema.
 
-     - *Hint*: You can read values by path as follows:
+      - *Hint*: You can read values by path as follows:
 
-     - *Hint*: You can `EXPECT_EQ` by passing in the expected value as a rapidjson::Value:
-       `rapidjson::Value("OK")`.
+      - *Hint*: You can `EXPECT_EQ` by passing in the expected value as a rapidjson::Value:
+        `rapidjson::Value("OK")`.
 
-       ```cpp
-       {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="hint_get_value" adjust_indentation="auto" %}
-       ```
+      ```cpp
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="hint_get_value" adjust_indentation="auto" %}
+      ```
 
    * {Rust}
 
