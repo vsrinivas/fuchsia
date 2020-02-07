@@ -20,9 +20,13 @@ static void PrintProps(const std::vector<std::string> &props) {
 
 namespace vkp {
 
-static bool MatchProperties(const std::vector<const char *> &desired_props, SearchProp search_prop,
-                            const vk::PhysicalDevice &phys_device, const char *layer,
-                            std::unordered_set<std::string> *props_found_set) {
+//
+// Enumerate properties categorically using |search_prop| and populate |props_found_set|
+// with the results.  Returns false if no properties are enumerated.
+//
+static bool EnumerateProperties(SearchProp search_prop, const vk::PhysicalDevice &phys_device,
+                                const char *layer,
+                                std::unordered_set<std::string> *props_found_set) {
   std::optional<vk::ResultValue<std::vector<vk::ExtensionProperties>>> rv_ext;
   std::optional<vk::ResultValue<std::vector<vk::LayerProperties>>> rv_layer;
   std::vector<vk::ExtensionProperties> ext_props;
@@ -80,8 +84,7 @@ bool FindMatchingProperties(const std::vector<const char *> &desired_props, Sear
 
   // Match Vulkan properties.  "Vulkan properties" are those
   // found when the layer argument is set to null.
-  bool success =
-      MatchProperties(desired_props, search_prop, *phys_device, nullptr, &props_found_set);
+  bool success = EnumerateProperties(search_prop, *phys_device, nullptr, &props_found_set);
 
   if (!success) {
     if (missing_props_out) {
@@ -94,7 +97,7 @@ bool FindMatchingProperties(const std::vector<const char *> &desired_props, Sear
   // Match layer properties.
   if (search_prop != INSTANCE_LAYER_PROP && layer &&
       props_found_set.size() != desired_props.size()) {
-    success = MatchProperties(desired_props, search_prop, *phys_device, layer, &props_found_set);
+    success = EnumerateProperties(search_prop, *phys_device, layer, &props_found_set);
   }
 
   if (missing_props_out) {
