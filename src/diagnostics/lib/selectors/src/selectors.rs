@@ -137,8 +137,8 @@ pub fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error>
         }
     }
 
-    match &tree_selector.target_properties {
-        Some(target_properties) => match target_properties {
+    if let Some(target_properties) = &tree_selector.target_properties {
+        match target_properties {
             StringSelector::StringPattern(pattern) => match validate_string_pattern(pattern) {
                 Ok(_) => {}
                 Err(e) => {
@@ -153,12 +153,6 @@ pub fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error>
                     "target_properties must be either string patterns or exact matches."
                 ))
             }
-        },
-        None => {
-            return Err(format_err!(
-                "Empty target properties are not valid syntax. You must provide a matcher
- describing the propert(y|ies) you wish to retrieve from the nodes you have selected."
-            ));
         }
     }
 
@@ -283,7 +277,7 @@ pub fn parse_component_selector(
 /// a TreeSelector.
 pub fn parse_tree_selector(
     unparsed_node_path: &String,
-    unparsed_property_selector: &String,
+    unparsed_property_selector: Option<&String>,
 ) -> Result<TreeSelector, Error> {
     let mut tree_selector: TreeSelector = TreeSelector::empty();
 
@@ -298,8 +292,10 @@ pub fn parse_tree_selector(
         );
     }
 
-    tree_selector.target_properties =
-        Some(convert_string_to_string_selector(unparsed_property_selector)?);
+    tree_selector.target_properties = match unparsed_property_selector {
+        Some(unparsed_string) => Some(convert_string_to_string_selector(unparsed_string)?),
+        None => None,
+    };
 
     validate_tree_selector(&tree_selector)?;
     return Ok(tree_selector);
@@ -313,11 +309,15 @@ pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, Error> {
     match selector_sections.as_slice() {
         [component_selector, inspect_node_selector, property_selector] => Ok(Selector {
             component_selector: parse_component_selector(component_selector)?,
-            tree_selector: parse_tree_selector(inspect_node_selector, property_selector)?,
+            tree_selector: parse_tree_selector(inspect_node_selector, Some(property_selector))?,
         }),
-        _ => {
-            Err(format_err!("Selector format requires exactly 3 subselectors delimited by a `:`.",))
-        }
+        [component_selector, inspect_node_selector] => Ok(Selector {
+            component_selector: parse_component_selector(component_selector)?,
+            tree_selector: parse_tree_selector(inspect_node_selector, None)?,
+        }),
+        _ => Err(format_err!(
+            "Selector format requires at least 2 subselectors delimited by a `:`.",
+        )),
     }
 }
 
@@ -461,7 +461,10 @@ pub fn convert_string_selector_to_regex(
 /// NOTE: The resulting regular expression makes the assumption that all "nodes" in the
 /// strings encoding paths that it will match against have been sanitized by the
 /// sanitize_string_for_selectors API in this crate.
-pub fn convert_path_selector_to_regex(selector: &[StringSelector]) -> Result<Regex, Error> {
+pub fn convert_path_selector_to_regex(
+    selector: &[StringSelector],
+    is_subtree_selector: bool,
+) -> Result<Regex, Error> {
     let mut regex_string = "^".to_string();
     for path_selector in selector {
         // Path selectors replace wildcards with a regex that only extends to the next
@@ -472,6 +475,11 @@ pub fn convert_path_selector_to_regex(selector: &[StringSelector]) -> Result<Reg
         regex_string.push_str(&node_regex);
         regex_string.push_str("/");
     }
+
+    if is_subtree_selector {
+        regex_string.push_str(".*")
+    }
+
     regex_string.push_str("$");
 
     Ok(Regex::new(&regex_string)?)
@@ -614,31 +622,38 @@ mod tests {
     fn canonical_tree_selector_test() {
         let test_vector: Vec<(
             String,
-            String,
+            Option<String>,
             StringSelector,
             StringSelector,
             Option<StringSelector>,
         )> = vec![
             (
                 "a/b".to_string(),
-                "c".to_string(),
+                Some("c".to_string()),
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("b".to_string()),
                 Some(StringSelector::StringPattern("c".to_string())),
             ),
             (
                 "a/*".to_string(),
-                "c".to_string(),
+                Some("c".to_string()),
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("*".to_string()),
                 Some(StringSelector::StringPattern("c".to_string())),
             ),
             (
                 "a/b".to_string(),
-                "*".to_string(),
+                Some("*".to_string()),
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("b".to_string()),
                 Some(StringSelector::StringPattern("*".to_string())),
+            ),
+            (
+                "a/b".to_string(),
+                None,
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern("b".to_string()),
+                None,
             ),
         ];
 
@@ -651,7 +666,7 @@ mod tests {
         ) in test_vector
         {
             let tree_selector =
-                parse_tree_selector(&test_node_path, &test_target_property).unwrap();
+                parse_tree_selector(&test_node_path, test_target_property.as_ref()).unwrap();
             assert_eq!(tree_selector.target_properties, parsed_property);
             match tree_selector.node_path.as_ref().unwrap().as_slice() {
                 [first, second] => {
@@ -665,23 +680,24 @@ mod tests {
 
     #[test]
     fn errorful_tree_selector_test() {
-        let test_vector: Vec<(String, String)> = vec![
+        let test_vector: Vec<(String, Option<String>)> = vec![
             // Not allowed due to empty property selector.
-            ("a/b".to_string(), "".to_string()),
+            ("a/b".to_string(), Some("".to_string())),
             // Not allowed due to glob property selector.
-            ("a/b".to_string(), "**".to_string()),
+            ("a/b".to_string(), Some("**".to_string())),
             // Not allowed due to escape-char without a thing to escape.
-            (r#"a/b\"#.to_string(), "c".to_string()),
+            (r#"a/b\"#.to_string(), Some("c".to_string())),
             // String literals can't have globs.
-            (r#"a/b**"#.to_string(), "c".to_string()),
+            (r#"a/b**"#.to_string(), Some("c".to_string())),
             // Property selector string literals cant have globs.
-            (r#"a/b"#.to_string(), "c**".to_string()),
+            (r#"a/b"#.to_string(), Some("c**".to_string())),
             // Node path cant have globs.
-            ("a/**".to_string(), "c".to_string()),
-            ("".to_string(), "c".to_string()),
+            ("a/**".to_string(), Some("c".to_string())),
+            ("".to_string(), Some("c".to_string())),
         ];
-        for (test_nodepath, test_targetproperty) in test_vector {
-            let tree_selector_result = parse_tree_selector(&test_nodepath, &test_targetproperty);
+        for (test_nodepath, test_target_property) in test_vector {
+            let tree_selector_result =
+                parse_tree_selector(&test_nodepath, test_target_property.as_ref());
             assert!(tree_selector_result.is_err());
         }
     }
@@ -747,6 +763,10 @@ mod tests {
             (r#"echo.cmx:a/*/*/d/*/*:*"#, vec!["a", "b", "/c", "d", "e*", "f"]),
             (r#"echo.cmx:a/*/\/c/d/e\*/*:*"#, vec!["a", "b", "/c", "d", "e*", "f"]),
             (r#"echo.cmx:a/b*/c:*"#, vec!["a", "bob", "c"]),
+            (r#"echo.cmx:a/b/c"#, vec!["a", "b", "c"]),
+            (r#"echo.cmx:a/b/c"#, vec!["a", "b", "c", "/"]),
+            (r#"echo.cmx:a/b/c"#, vec!["a", "b", "c", "d"]),
+            (r#"echo.cmx:a/b/c"#, vec!["a", "b", "c", "d", "e"]),
         ];
         for (selector, string_to_match) in test_cases {
             let mut sanitized_node_path = string_to_match
@@ -761,7 +781,9 @@ mod tests {
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let node_path = tree_selector.node_path.unwrap();
-            let selector_regex = convert_path_selector_to_regex(&node_path).unwrap();
+            let is_subtree_selector = tree_selector.target_properties.is_none();
+            let selector_regex =
+                convert_path_selector_to_regex(&node_path, is_subtree_selector).unwrap();
             assert!(selector_regex.is_match(&sanitized_node_path));
         }
     }
@@ -775,6 +797,9 @@ mod tests {
             (r#"echo.cmx:a/*/d/*/f:*"#, vec!["a", "b", "c", "e", "f"]),
             // Failing because the match string doesnt end at the c node.
             (r#"echo.cmx:a/*/*/*/*/*/c:*"#, vec!["a", "b", "g", "e", "d", "f"]),
+            (r#"echo.cmx:a/b/c"#, vec!["a", "b"]),
+            (r#"echo.cmx:a/b/c"#, vec!["a", "b", "card"]),
+            (r#"echo.cmx:a/b/c"#, vec!["a", "b", "c/"]),
         ];
         for (selector, string_to_match) in test_cases {
             let mut sanitized_node_path = string_to_match
@@ -789,7 +814,9 @@ mod tests {
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let node_path = tree_selector.node_path.unwrap();
-            let selector_regex = convert_path_selector_to_regex(&node_path).unwrap();
+            let is_subtree_selector = tree_selector.target_properties.is_none();
+            let selector_regex =
+                convert_path_selector_to_regex(&node_path, is_subtree_selector).unwrap();
             assert!(!selector_regex.is_match(&sanitized_node_path));
         }
     }

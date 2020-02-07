@@ -249,5 +249,17 @@ async fn unified_reader() -> Result<(), Error> {
         panic!("failed to get meaningful results from reader service.")
     })
     .await;
+
+    // Then verify that subtree selection retrieves all trees under and including root.
+    retrieve_and_validate_results(
+        &archivist_app,
+        vec![&mut SelectorArgument::RawSelector("iquery_example_component.cmx:root".to_string())],
+        &*ALL_GOLDEN_JSON_PATH,
+        3,
+    )
+    .on_timeout(READ_TIMEOUT_SECONDS.seconds().after_now(), || {
+        panic!("failed to get meaningful results from reader service.")
+    })
+    .await;
     Ok(())
 }

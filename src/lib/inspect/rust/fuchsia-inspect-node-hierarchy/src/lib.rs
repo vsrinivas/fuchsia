@@ -6,7 +6,7 @@ use {
     crate::trie::*,
     anyhow::Error,
     core::marker::PhantomData,
-    fidl_fuchsia_diagnostics::Selector,
+    fidl_fuchsia_diagnostics::{Selector, StringSelector},
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::bounds::Bounded,
     regex::{Regex, RegexSet},
@@ -472,7 +472,10 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
         let node_path_regexes = selectors
             .iter()
             .map(|selector| match &selector.tree_selector.node_path {
-                Some(node_path) => selectors::convert_path_selector_to_regex(node_path),
+                Some(node_path) => selectors::convert_path_selector_to_regex(
+                    node_path,
+                    selector.tree_selector.target_properties.is_none(),
+                ),
                 None => unreachable!("Selectors are required to specify a node path."),
             })
             .collect::<Result<Vec<Regex>, Error>>()?;
@@ -490,7 +493,9 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
                 Some(target_property) => {
                     selectors::convert_property_selector_to_regex(target_property)
                 }
-                None => unreachable!("Selectors are required to specify a node path."),
+                None => selectors::convert_property_selector_to_regex(
+                    &StringSelector::StringPattern("*".to_string()),
+                ),
             })
             .collect::<Result<Vec<Regex>, Error>>()?;
 
@@ -530,11 +535,18 @@ pub fn filter_inspect_snapshot(
         // hierarchy node paths don't, but we want to reuse the regex logic.
         formatted_node_path.push('/');
 
+        // TODO(44926): If any of the selectors in the current set are a
+        // subtree selector, we dont have to compile new property selector sets
+        // until we iterate out of the subtree.
         let property_regex_set: &RegexSet = match &working_node_path {
             Some(working_path) if *working_path == formatted_node_path => {
                 working_property_regex_set.as_ref().unwrap()
             }
             _ => {
+                // Either we never created a property Regex or we've iterated
+                // to a new trie node. Either way, we need to find the relevant
+                // selectors for the current node and create a new property
+                // regex set.
                 let property_regex_strings = hierarchy_matcher
                     .component_node_selector
                     .matches(&formatted_node_path)
@@ -837,9 +849,32 @@ mod tests {
         assert_eq!(buckets[5], ArrayBucket { floor: 128, upper: i64::max_value(), count: 5 });
     }
 
-    #[test]
-    fn test_filter_hierarchy() {
-        let hierarchy = NodeHierarchy::new(
+    fn parse_selectors_and_filter_hierarchy(
+        hierarchy: NodeHierarchy,
+        test_selectors: Vec<&str>,
+    ) -> NodeHierarchy {
+        let parsed_test_selectors = test_selectors
+            .into_iter()
+            .map(|selector_string| {
+                Arc::new(
+                    selectors::parse_selector(selector_string)
+                        .expect("All test selectors are valid and parsable."),
+                )
+            })
+            .collect::<Vec<Arc<Selector>>>();
+
+        let hierarchy_matcher: InspectHierarchyMatcher =
+            (&parsed_test_selectors).try_into().unwrap();
+
+        let mut filtered_hierarchy = filter_inspect_snapshot(hierarchy, &hierarchy_matcher)
+            .expect("filtered hierarchy should succeed.")
+            .expect("There should be an actual resulting hierarchy.");
+        filtered_hierarchy.sort();
+        filtered_hierarchy
+    }
+
+    fn get_test_hierarchy() -> NodeHierarchy {
+        NodeHierarchy::new(
             "root",
             vec![
                 Property::String("x".to_string(), "foo".to_string()),
@@ -854,32 +889,31 @@ mod tests {
                         Property::Bytes("123".to_string(), "foo".bytes().into_iter().collect()),
                         Property::Double("0".to_string(), 8.1),
                     ],
-                    vec![],
+                    vec![NodeHierarchy::new(
+                        "zed",
+                        vec![Property::Int("13".to_string(), -4)],
+                        vec![],
+                    )],
                 ),
-                NodeHierarchy::new("bar", vec![], vec![]),
+                NodeHierarchy::new(
+                    "bar",
+                    vec![Property::Int("12".to_string(), -4)],
+                    vec![NodeHierarchy::new(
+                        "zed",
+                        vec![Property::Int("13".to_string(), -4)],
+                        vec![],
+                    )],
+                ),
             ],
-        );
+        )
+    }
 
+    #[test]
+    fn test_filter_hierarchy() {
         let test_selectors = vec!["*:root/foo:11", "*:root:z"];
-        let parsed_test_selectors = test_selectors
-            .into_iter()
-            .map(|selector_string| {
-                Arc::new(
-                    selectors::parse_selector(selector_string)
-                        .expect("All test selectors are valid and parsable."),
-                )
-            })
-            .collect::<Vec<Arc<Selector>>>();
-        let hierarchy_matcher: InspectHierarchyMatcher =
-            (&parsed_test_selectors).try_into().unwrap();
-
-        let mut filtered_hierarchy = filter_inspect_snapshot(hierarchy, &hierarchy_matcher)
-            .expect("filtered hierarchy should succeed.")
-            .expect("There should be an actual resulting hierarchy.");
-        filtered_hierarchy.sort();
 
         assert_eq!(
-            filtered_hierarchy,
+            parse_selectors_and_filter_hierarchy(get_test_hierarchy(), test_selectors),
             NodeHierarchy::new(
                 "root",
                 vec![Property::Int("z".to_string(), -4),],
@@ -887,6 +921,14 @@ mod tests {
                     NodeHierarchy::new("foo", vec![Property::Int("11".to_string(), -4),], vec![],),
                 ],
             )
+        );
+
+        let test_selectors = vec!["*:root"];
+        let mut sorted_expected = get_test_hierarchy();
+        sorted_expected.sort();
+        assert_eq!(
+            parse_selectors_and_filter_hierarchy(get_test_hierarchy(), test_selectors),
+            sorted_expected
         );
     }
 }
