@@ -6,3 +6,5 @@ toc:
   path: /docs/development/debugger/README.md
 - title: "Quickstart"
   path: /docs/development/debugger/debugger_usage.md
+- title: "Just In Time Debugging"
+  path: /docs/development/debugger/just_in_time_debugging.md

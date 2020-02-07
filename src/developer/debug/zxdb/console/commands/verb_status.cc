@@ -190,9 +190,8 @@ OutputBuffer GetLimboStatus(const std::vector<debug_ipc::ProcessRecord>& limbo) 
   } else {
     result.Append(fxl::StringPrintf("  %zu process(es) waiting on exception.\n", limbo.size()));
     result.Append(
-        "  Run \"attach <KOID>\" to load them into zxdb or \"detach <KOID>\" to free them back "
-        "into "
-        "the system.\n");
+        "  Run \"attach <KOID>\" to load them into zxdb or \"detach <KOID>\" terminate them.\n");
+    result.Append("  Run \"help jitd\" for more information on Just In Time Debugging.\n");
 
     result.Append(FormatProcessRecords(limbo, 2));
   }

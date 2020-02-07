@@ -145,6 +145,51 @@ Common errors
       instructions for finding the variable.
 )";
 
+constexpr char kJitdName[] = "jitd";
+constexpr char kJitdHelp[] = R"(Just In Time Debugging
+
+  Just In Time Debugging is a way for the system to suspend processes that have crashed without
+  any exception handlers. The system will keep those processes in a place called the "Process
+  Limbo". Later, zxdb is able to connect to the Process Limbo and attach to any process waiting to
+  be debugged.
+
+Listing Processes
+
+  When zxdb starts up, any process waiting to be debugged within the Process Limbo will be listed
+  like this:
+
+  👉 To get started, try "status" or "help".
+  Processes waiting on exception:
+  2780309: process-that-crashed
+  2783544: some-other-process-that-crashed
+  Type "attach <pid>" to reconnect.
+  [zxdb]
+
+  You call also run the "status" command and get the same information:
+
+  [zxdb] status
+  ...
+  Processes waiting on exception
+  2 process(es) waiting on exception.
+  Run "attach <KOID>" to load them into zxdb or "detach <KOID>" to free them back into the system.
+      Koid Name
+   2780309 process-that-crashed
+   2783544 some-other-process-that-crashed
+
+Attaching/Removing Processes
+
+  From the point of view of zxdb, the processes within the limbo behave very similar to what a
+  normal running process does. In order to start debugging one, simply do "attach <KOID>" and zxdb
+  will retrieve the process from limbo and start debugging it. Once attached, you can manipulate the
+  process as normal, and even detach or kill it. Note that if you detach from a crashing process,
+  the exception will be re-triggered and it will caught by the Process Limbo. Killing it will
+  terminate the process as usual.
+
+  The only difference comes when attempting to release a process from the Process Limbo, without
+  attaching from it. In that case, you need to instruct the debugger to "detach" from it by issuing
+  a "detach <KOID>" commnad.
+)";
+
 const char kHelpShortHelp[] = R"(help / h: Help.)";
 const char kHelpHelp[] =
     R"(help
@@ -295,6 +340,8 @@ Err RunVerbHelp(ConsoleContext* context, const Command& cmd) {
       // Check for standalone topic.
       if (on_what == kExpressionsName) {
         help = kExpressionsHelp;
+      } else if (on_what == kJitdName) {
+        help = kJitdHelp;
       } else {
         // Not a valid command.
         out.Append(Err("\"" + on_what +
