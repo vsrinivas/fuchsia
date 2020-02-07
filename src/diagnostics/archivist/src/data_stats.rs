@@ -71,7 +71,7 @@ async fn get_data_directory_stats(name: String, path: PathBuf) -> Result<Vec<u8>
     )
     .or(Err(zx::Status::INTERNAL))?;
 
-    let mut file_and_size = files_async::readdir_recursive(&proxy)
+    let mut file_and_size = files_async::readdir_recursive(&proxy, None)
         .await
         .or(Err(zx::Status::INTERNAL))?
         .into_iter()

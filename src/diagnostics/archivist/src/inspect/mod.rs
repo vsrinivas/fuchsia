@@ -96,15 +96,12 @@ impl InspectDataCollector {
     pub async fn populate_data_map(&mut self, inspect_proxy: &DirectoryProxy) -> Result<(), Error> {
         // TODO(36762): Use a streaming and bounded readdir API when available to avoid
         // being hung.
-        for entry in files_async::readdir_recursive(inspect_proxy)
-            .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
-                Err(format_err!(
-                    "Timed out recursively searching diagnostics directory: {:?}",
-                    inspect_proxy
-                ))
-            })
-            .await?
-            .into_iter()
+        for entry in files_async::readdir_recursive(
+            inspect_proxy,
+            Some(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds()),
+        )
+        .await?
+        .into_iter()
         {
             // We are only currently interested in inspect VMO files (root.inspect) and
             // inspect services.

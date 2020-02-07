@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     files_async,
-    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon::DurationNum,
     io_util,
     lazy_static::lazy_static,
@@ -35,24 +34,22 @@ pub async fn all_locations(root: &str) -> Result<Vec<InspectLocation>, Error> {
         &path.to_string_lossy().to_string(),
         io_util::OPEN_RIGHT_READABLE,
     )?;
-    let locations = files_async::readdir_recursive(&dir_proxy)
-        .on_timeout(READDIR_TIMEOUT_SECONDS.seconds().after_now(), || {
-            Err(format_err!("Timed out recursively searching directory: {:?}", dir_proxy))
-        })
-        .await?
-        .into_iter()
-        .filter_map(|entry| {
-            let mut path = PathBuf::from(&root);
-            path.push(&entry.name);
-            EXPECTED_FILES.iter().find(|(filename, _)| entry.name.ends_with(filename)).map(
-                |(_, inspect_type)| InspectLocation {
-                    inspect_type: inspect_type.clone(),
-                    path,
-                    parts: vec![],
-                },
-            )
-        })
-        .collect::<Vec<InspectLocation>>();
+    let locations =
+        files_async::readdir_recursive(&dir_proxy, Some(READDIR_TIMEOUT_SECONDS.seconds()))
+            .await?
+            .into_iter()
+            .filter_map(|entry| {
+                let mut path = PathBuf::from(&root);
+                path.push(&entry.name);
+                EXPECTED_FILES.iter().find(|(filename, _)| entry.name.ends_with(filename)).map(
+                    |(_, inspect_type)| InspectLocation {
+                        inspect_type: inspect_type.clone(),
+                        path,
+                        parts: vec![],
+                    },
+                )
+            })
+            .collect::<Vec<InspectLocation>>();
     Ok(locations)
 }
 

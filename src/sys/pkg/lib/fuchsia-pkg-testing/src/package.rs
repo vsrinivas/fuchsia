@@ -211,7 +211,11 @@ impl Package {
         }
 
         // Verify no other entries exist in the served directory.
-        for path in files_async::readdir_recursive(dir).await?.into_iter().map(|entry| entry.name) {
+        for path in files_async::readdir_recursive(dir, /*timeout=*/ None)
+            .await?
+            .into_iter()
+            .map(|entry| entry.name)
+        {
             if !expected_paths.contains(path.as_str()) {
                 return Err(VerificationError::ExtraFile { path });
             }

@@ -58,7 +58,7 @@ fn main() -> Result<(), anyhow::Error> {
                     .await?;
                 zx::Status::ok(res)?;
 
-                let entries = files_async::readdir_recursive(&dir).await?;
+                let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None).await?;
                 println!("package contents:");
                 for entry in entries {
                     println!("/{}", entry.name);
@@ -82,7 +82,7 @@ fn main() -> Result<(), anyhow::Error> {
                     .await?;
                 zx::Status::ok(res)?;
 
-                let entries = files_async::readdir_recursive(&dir).await?;
+                let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None).await?;
                 println!("package contents:");
                 for entry in entries {
                     println!("/{}", entry.name);
