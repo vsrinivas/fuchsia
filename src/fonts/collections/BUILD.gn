@@ -1,0 +1,113 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/fonts/build/fonts.gni")
+
+# Group of all open-source font packages. This should be added to
+# `universe_package_labels`.
+group("open-fonts") {
+  deps = [
+    "//src/fonts/groups:material-icons",
+    "//src/fonts/groups:noto-sans",
+    "//src/fonts/groups:noto-serif",
+    "//src/fonts/groups:roboto",
+    "//src/fonts/groups:roboto-mono",
+    "//src/fonts/groups:roboto-slab",
+  ]
+}
+
+local_font_bundle("open-fonts-local") {
+  asset_names = [
+    "MaterialIcons-Regular.ttf",
+    "Roboto-Regular.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-Medium.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoSlab-Regular.ttf",
+  ]
+}
+
+# Font collection for open-source products. This should be added to
+# `base_package_labels` or `cache_package_labels`.
+font_collection("open-fonts-collection") {
+  # Ephemeral font packages are temporarily disabled because they break
+  # Chromium/Cast tests (fxb/43327).
+
+  # font_packages = [ ":open-fonts" ]
+  local_font_bundles = [ ":open-fonts-local" ]
+}
+
+local_font_bundle("test-fonts-small-local") {
+  testonly = true
+  asset_names = [
+    "MaterialIcons-Regular.ttf",
+    "Roboto-Regular.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-Medium.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoSlab-Regular.ttf",
+  ]
+}
+
+local_font_bundle("noto-cjk-test-fonts-local") {
+  testonly = true
+  asset_names = [
+    "NotoSerifCJK-Regular.ttc",
+    "NotoSansCJK-Regular.ttc",
+  ]
+}
+
+local_font_bundle("test-fonts-downstream-local") {
+  testonly = true
+  asset_names = [
+    "Roboto-Regular.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-Medium.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoSlab-Regular.ttf",
+  ]
+}
+
+# Font collection for semi-hermetic downstream tests (e.g. Chromium) that need
+# to use a fixed set of fonts.
+font_collection("downstream-test-fonts-collection") {
+  testonly = true
+  manifest_prefix = "downstream_test_fonts"
+  local_font_bundles = [ ":test-fonts-downstream-local" ]
+}
+
+# Minimal font collection for some tests.
+# See out/default/obj/src/fonts/test_fonts_small.font_manifest.json
+font_collection("test-fonts-small-collection") {
+  testonly = true
+  manifest_prefix = "test_fonts_small"
+  local_font_bundles = [ ":test-fonts-small-local" ]
+}
+
+# Minimal font collection plus Noto CJK fonts, for tests.
+# See out/default/obj/src/fonts/test_fonts.font_manifest.json
+font_collection("test-fonts-medium-collection") {
+  testonly = true
+  manifest_prefix = "test_fonts_medium"
+  local_font_bundles = [
+    ":test-fonts-small-local",
+    ":noto-cjk-test-fonts-local",
+  ]
+}
+
+# Large font collection consisting of most of the open-source fonts we have.
+# See out/default/obj/src/fonts/test_fonts_large.font_manifest.json
+font_collection("test-fonts-large-collection") {
+  testonly = true
+  manifest_prefix = "test_fonts_large"
+  font_packages = [ ":open-fonts" ]
+  local_font_bundles = [ ":open-fonts-local" ]
+}
+
+# Empty font collection for products that spawn a font server but don't want any
+# actual fonts. This should be added to `base_package_labels` or
+# `cache_package_labels`.
+font_collection("empty-font-collection") {
+  empty = true
+}

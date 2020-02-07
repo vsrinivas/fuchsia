@@ -1,5 +1,0 @@
-{
-  "program": {
-      "binary": "test/font_server_bin_test"
-  }
-}

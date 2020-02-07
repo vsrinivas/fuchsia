@@ -2,31 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
-use super::util::*;
+use {super::util::*, crate::MANIFEST_TEST_FONTS_SMALL};
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_typefaces_by_family() -> Result<(), Error> {
-    let roboto = roboto_info(1, fonts::WEIGHT_NORMAL);
-    let roboto_light = roboto_info(2, 300);
-    let roboto_medium = roboto_info(3, 500);
-
-    let (_app, font_provider) = start_provider_with_default_fonts()?;
+    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
     let mut family = fonts::FamilyName { name: String::from("Roboto") };
 
     let response = font_provider.get_typefaces_by_family(&mut family).await?;
     let faces = response.unwrap().results.unwrap();
 
     assert_eq!(faces.len(), 3);
-    assert_eq!(faces[0], roboto);
-    assert_eq!(faces[1], roboto_light);
-    assert_eq!(faces[2], roboto_medium);
+    assert_eq!(faces[0], roboto_info(1, fonts::WEIGHT_LIGHT));
+    assert_eq!(faces[1], roboto_info(2, fonts::WEIGHT_MEDIUM));
+    assert_eq!(faces[2], roboto_info(3, fonts::WEIGHT_NORMAL));
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_typefaces_by_family_alias() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_default_fonts()?;
-    let mut family = fonts::FamilyName { name: String::from("Material Icons") };
+    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
+    let mut family = fonts::FamilyName { name: String::from("Material Design Icons") };
     let mut alias = fonts::FamilyName { name: String::from("MaterialIcons") };
 
     let by_family = font_provider.get_typefaces_by_family(&mut family).await?;
@@ -43,7 +39,7 @@ async fn test_get_typefaces_by_family_alias() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_typefaces_by_family_not_found() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_default_fonts()?;
+    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
     let mut family = fonts::FamilyName { name: String::from("NoSuchFont") };
     let response = font_provider.get_typefaces_by_family(&mut family).await?;
     assert_eq!(response.unwrap_err(), fonts_exp::Error::NotFound);

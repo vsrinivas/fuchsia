@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("smoke") {
+  testonly = true
+  public_deps = [ ":font_provider_smoke_tests" ]
+}
+
+rustc_test("font_provider_smoke_tests_bin") {
+  name = "font_provider_smoke_tests"
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/fidl_fuchsia_fonts_ext",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+test_package("font_provider_smoke_tests") {
+  deps = [ ":font_provider_smoke_tests_bin" ]
+
+  tests = [
+    {
+      name = "font_provider_smoke_tests"
+      environments = basic_envs
+    },
+  ]
+}

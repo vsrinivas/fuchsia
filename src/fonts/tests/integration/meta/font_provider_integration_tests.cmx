@@ -2,13 +2,13 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.pkg.FontResolver": "fuchsia-pkg://fuchsia.com/font_provider_tests#meta/mock_font_resolver.cmx",
+                "fuchsia.pkg.FontResolver": "fuchsia-pkg://fuchsia.com/mock_font_resolver#meta/mock_font_resolver.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
             }
         }
     },
     "program": {
-        "binary": "test/font_provider_test"
+        "binary": "test/font_provider_integration_tests"
     },
     "sandbox": {
         "services": [

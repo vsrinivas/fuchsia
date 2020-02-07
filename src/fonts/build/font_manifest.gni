@@ -18,6 +18,7 @@ import("//src/fonts/build/font_args.gni")
 #     Required: Path to a JSON file containing an array of the local font file
 #     names in the target product. This should be a subset of the array in
 #     `all_fonts_path`.
+#     Type: file
 #
 #   font_files
 #      Required: Paths to all of the font files that will be included in this
@@ -87,9 +88,7 @@ template("font_manifest") {
                 all_fonts_path,
                 local_fonts_path,
               ] + font_pkgs_paths + font_catalog_paths + font_files
-    outputs = [
-      output,
-    ]
+    outputs = [ output ]
     deps = invoker.deps
 
     args = []

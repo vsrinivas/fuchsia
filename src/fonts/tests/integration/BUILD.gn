@@ -1,0 +1,71 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+group("integration") {
+  testonly = true
+  deps = [
+    ":font_provider_integration_tests",
+    "//src/fonts/testing:mock_font_resolver",
+  ]
+}
+
+# Integration tests without a `main()` function.
+rustc_test("font_provider_integration_tests_bin") {
+  name = "font_provider_integration_tests"
+  edition = "2018"
+  deps = [
+    "//garnet/lib/rust/fidl_fuchsia_fonts_ext",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/fonts/char_set",
+    "//src/fonts/manifest",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-url",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:thiserror",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+  visibility = [ ":*" ]
+}
+
+test_package("font_provider_integration_tests") {
+  deps = [
+    ":font_provider_integration_tests_bin",
+    "//src/fonts/collections:test-fonts-large-collection",
+    "//src/fonts/collections:test-fonts-medium-collection",
+    "//src/fonts/collections:test-fonts-small-collection",
+    "//src/fonts/testing:mock_font_resolver",
+  ]
+
+  tests = [
+    {
+      name = "font_provider_integration_tests"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("ephemeral.font_manifest.json")
+      dest = "testdata/ephemeral.font_manifest.json"
+    },
+    {
+      path = rebase_path("aliases.font_manifest.json")
+      dest = "testdata/aliases.font_manifest.json"
+    },
+  ]
+}
