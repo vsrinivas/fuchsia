@@ -5,7 +5,9 @@
 use {
     crate::graphics_utils::ImageResource, anyhow::Error, async_trait::async_trait,
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
-    fidl_fuchsia_ui_scenic as ui_scenic, fuchsia_scenic as scenic, fuchsia_scenic,
+    fidl_fuchsia_ui_scenic as ui_scenic, fuchsia_async as fasync, fuchsia_scenic as scenic,
+    fuchsia_scenic, fuchsia_syslog as syslog, futures::future::TryFutureExt, futures::prelude::*,
+    parking_lot::Mutex, std::sync::Weak,
 };
 
 /// A [`SceneManager`] sets up and manages a Scenic scene graph.
@@ -131,13 +133,42 @@ pub trait SceneManager: Sized {
 
         cursor_shape
     }
+}
 
-    /// Presents the current scene and all the views which have been added to it.
-    ///
-    /// The presentation is done by spawning a future. The [`SessionPtr`] uses a
-    /// [`parking_lot::Mutex`] to guard the session proxy. This means that
-    /// `session.lock().present(...)` returns a future which can not be awaited.
-    ///
-    /// For example, `session.lock().present(0).await` cannot be done from an async function.
-    fn present(&self);
+/// Connects to the Scenic event stream to listen for OnFramePresented messages and calls present
+/// when Scenic is ready for an update.
+pub fn start_presentation_loop(weak_session: Weak<Mutex<scenic::Session>>) {
+    fasync::spawn_local(async move {
+        if let Some(session) = weak_session.upgrade() {
+            present(&session);
+            let mut event_stream = session.lock().take_event_stream();
+            while let Some(event) = event_stream.try_next().await.expect("Failed to get next event")
+            {
+                match event {
+                    ui_scenic::SessionEvent::OnFramePresented { frame_presented_info: _ } => {
+                        if let Some(session) = weak_session.upgrade() {
+                            present(&session);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/// Inform Scenic that is should render any pending changes
+fn present(session: &scenic::SessionPtr) {
+    fasync::spawn_local(
+        session
+            .lock()
+            // Passing 0 for requested_presentation_time tells scenic that that it should process
+            // enqueued operation as soon as possible.
+            // Passing 0 for requested_prediction_span guarantees that scenic will provide at least
+            // one future time.
+            .present2(0, 0)
+            .map_ok(|_| ())
+            .unwrap_or_else(|error| syslog::fx_log_err!("Present error: {:?}", error)),
+    );
 }

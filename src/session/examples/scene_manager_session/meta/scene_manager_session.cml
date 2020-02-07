@@ -4,6 +4,13 @@
     },
     use: [
         {
+            directory: "/dev/class/input-report",
+            from: "realm",
+            rights: [
+                "r*",
+            ],
+        },
+        {
             protocol: "/svc/fuchsia.ui.scenic.Scenic",
         },
         {

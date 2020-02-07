@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::display_metrics::DisplayMetrics, crate::scene_manager::SceneManager, anyhow::Error,
-    async_trait::async_trait, fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
+    crate::display_metrics::DisplayMetrics,
+    crate::scene_manager::{self, SceneManager},
+    anyhow::Error,
+    async_trait::async_trait,
+    fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic, fuchsia_syslog as syslog,
-    futures::future::TryFutureExt,
+    fuchsia_scenic as scenic, fuchsia_scenic,
+    std::sync::Arc,
 };
 
 /// The [`FlatSceneManager`] constructs an empty scene with a single white ambient light.
@@ -111,6 +114,8 @@ impl SceneManager for FlatSceneManager {
             _scene: scene,
         };
 
+        scene_manager::start_presentation_loop(Arc::downgrade(&session));
+
         Ok(FlatSceneManager {
             session,
             root_node,
@@ -134,7 +139,6 @@ impl SceneManager for FlatSceneManager {
         view_provider.create_view(token_pair.view_token.value, None, None)?;
         let view_holder_node = self.create_view_holder_node(token_pair.view_holder_token, name);
         self.root_node.add_child(&view_holder_node);
-        self.present();
         Ok(view_holder_node)
     }
 
@@ -149,7 +153,6 @@ impl SceneManager for FlatSceneManager {
         }
 
         self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
-        self.present();
     }
 
     fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
@@ -161,18 +164,6 @@ impl SceneManager for FlatSceneManager {
 
         self.cursor_node().add_child(&shape);
         self.cursor_shape = Some(shape);
-
-        self.present();
-    }
-
-    fn present(&self) {
-        fasync::spawn_local(
-            self.session
-                .lock()
-                .present(0)
-                .map_ok(|_| ())
-                .unwrap_or_else(|error| syslog::fx_log_err!("Present error: {:?}", error)),
-        );
     }
 }
 

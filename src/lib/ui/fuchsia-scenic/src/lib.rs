@@ -10,6 +10,7 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_images::{
     ImageInfo, ImagePipe2Marker, MemoryType, PixelFormat, PresentationInfo, Tiling,
 };
+use fidl_fuchsia_scenic_scheduling::FuturePresentationTimes;
 use fidl_fuchsia_ui_gfx::{
     AmbientLightArgs, CameraArgs, CircleArgs, ColorRgb, ColorRgba, DirectionalLightArgs,
     DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImagePipe2Args, LayerArgs, LayerStackArgs,
@@ -17,7 +18,7 @@ use fidl_fuchsia_ui_gfx::{
     RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewHolderArgs,
     ViewProperties,
 };
-use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
+use fidl_fuchsia_ui_scenic::{Command, Present2Args, SessionEventStream, SessionProxy};
 use fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken};
 use fuchsia_zircon::{Event, HandleBased, Rights, Status, Vmo};
 use mapped_vmo::Mapping;
@@ -77,6 +78,25 @@ impl Session {
             &mut self.acquire_fences.drain(..),
             &mut self.release_fences.drain(..),
         )
+    }
+
+    pub fn present2(
+        &mut self,
+        requested_prediction_span: i64,
+        requested_presentation_time: i64,
+    ) -> fidl::client::QueryResponseFut<FuturePresentationTimes> {
+        self.flush();
+        let args = Present2Args {
+            requested_presentation_time: Some(requested_presentation_time),
+            requested_prediction_span: Some(requested_prediction_span),
+            acquire_fences: Some(self.acquire_fences.drain(..).collect()),
+            release_fences: Some(self.release_fences.drain(..).collect()),
+        };
+        self.session.present2(args)
+    }
+
+    pub fn take_event_stream(&self) -> SessionEventStream {
+        self.session.take_event_stream()
     }
 
     pub fn next_resource_id(&self) -> u32 {
