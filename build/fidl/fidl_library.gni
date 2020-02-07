@@ -40,6 +40,11 @@ template("fidl_library") {
     excluded_checks = invoker.excluded_checks
   }
 
+  experimental_flags = []
+  if (defined(invoker.experimental_flags)) {
+    experimental_flags = invoker.experimental_flags
+  }
+
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"
@@ -104,6 +109,13 @@ template("fidl_library") {
              "--sources",
            ] + rebase_path(sources, root_build_dir)
 
+    foreach(flag, experimental_flags) {
+      args += [
+        "--experimental-flag",
+        flag,
+      ]
+    }
+
     if (all_deps != []) {
       dep_libraries = []
 
@@ -143,18 +155,12 @@ template("fidl_library") {
     tool_out_dir = get_label_info(host_tool, "root_out_dir")
     host_executable = "$tool_out_dir/$tool_output_name"
 
-    deps = [
-      host_tool,
-    ]
+    deps = [ host_tool ]
 
     # Add the executable itself as an input.
-    inputs = [
-      host_executable,
-    ]
+    inputs = [ host_executable ]
 
-    outputs = [
-      lint_stamp_file,
-    ]
+    outputs = [ lint_stamp_file ]
 
     should_lint = true
     foreach(library, unlinted_libraries) {
@@ -215,9 +221,7 @@ template("fidl_library") {
 
     tool = "//zircon/public/tool/fidlc"
 
-    inputs = [
-      response_file,
-    ]
+    inputs = [ response_file ]
 
     outputs = [
       c_client,
@@ -242,9 +246,7 @@ template("fidl_library") {
     visibility = [ ":*" ]
     data = json_representation
     schema = "//zircon/tools/fidl/schema.json"
-    deps = [
-      ":$compilation_target_name",
-    ]
+    deps = [ ":$compilation_target_name" ]
   }
 
   group(main_target_name) {
@@ -266,9 +268,7 @@ template("fidl_library") {
       ":$response_file_target_name",
     ]
 
-    deps = [
-      ":$verification_target_name",
-    ]
+    deps = [ ":$verification_target_name" ]
   }
 
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
@@ -322,9 +322,7 @@ template("fidl_library") {
 
       inputs = sdk_metas
 
-      outputs = [
-        meta_file,
-      ]
+      outputs = [ meta_file ]
 
       args = [
                "--out",
@@ -364,8 +362,8 @@ template("fidl_library") {
       }
 
       non_sdk_deps = [
-        ":$meta_target_name",
         ":$compilation_target_name",
+        ":$meta_target_name",
       ]
 
       deps = []

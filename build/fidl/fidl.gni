@@ -53,6 +53,9 @@ import("//build/rust/toolchain.gni")
 #         },
 #         ...
 #       ]
+#
+#   experimental_flags (optional)
+#     A list of experimental fidlc features to enable.
 
 template("fidl") {
   if (defined(invoker.sdk_category)) {
@@ -66,6 +69,9 @@ template("fidl") {
   }
   if (defined(invoker.fuzzers)) {
     not_needed(invoker, [ "fuzzers" ])
+  }
+  if (defined(invoker.experimental_flags)) {
+    not_needed(invoker, [ "experimental_flags" ])
   }
 
   assert(!defined(invoker.deps),
@@ -82,22 +88,17 @@ template("fidl") {
       foreach(suffix, [ "" ]) {
         group(target_name + suffix) {
           forward_variables_from(invoker, [ "testonly" ])
-          public_deps = [
-            "//zircon/public/fidl/$compat_name:$compat_name$suffix",
-          ]
+          public_deps =
+              [ "//zircon/public/fidl/$compat_name:$compat_name$suffix" ]
         }
       }
       copy("${target_name}_dot_packages") {
         forward_variables_from(invoker, [ "testonly" ])
-        deps = [
-          "//zircon/public/fidl/$compat_name:${compat_name}_dot_packages",
-        ]
-        sources = [
-          get_label_info(deps[0], "target_gen_dir") + "/$compat_name.packages",
-        ]
-        outputs = [
-          "$target_gen_dir/$target_name.packages",
-        ]
+        deps =
+            [ "//zircon/public/fidl/$compat_name:${compat_name}_dot_packages" ]
+        sources = [ get_label_info(deps[0], "target_gen_dir") +
+                    "/$compat_name.packages" ]
+        outputs = [ "$target_gen_dir/$target_name.packages" ]
       }
       if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
         import("//build/sdk/sdk_atom_alias.gni")
@@ -108,15 +109,10 @@ template("fidl") {
     } else if (current_toolchain == fidl_toolchain) {
       copy(target_name) {
         forward_variables_from(invoker, [ "testonly" ])
-        deps = [
-          "//zircon/public/fidl/$compat_name:${compat_name}",
-        ]
-        sources = [
-          get_label_info(deps[0], "target_gen_dir") + "/$compat_name.libraries",
-        ]
-        outputs = [
-          "$target_gen_dir/$target_name.libraries",
-        ]
+        deps = [ "//zircon/public/fidl/$compat_name:${compat_name}" ]
+        sources = [ get_label_info(deps[0], "target_gen_dir") +
+                    "/$compat_name.libraries" ]
+        outputs = [ "$target_gen_dir/$target_name.libraries" ]
       }
     } else {
       foreach(suffix,
@@ -130,9 +126,8 @@ template("fidl") {
               ]) {
         group(target_name + suffix) {
           forward_variables_from(invoker, [ "testonly" ])
-          public_deps = [
-            "//zircon/public/fidl/$compat_name:$compat_name$suffix",
-          ]
+          public_deps =
+              [ "//zircon/public/fidl/$compat_name:$compat_name$suffix" ]
         }
       }
     }
