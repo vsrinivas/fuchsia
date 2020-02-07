@@ -3,9 +3,6 @@
         "binary": "test/inspect_ptr_unittest"
     },
     "sandbox": {
-        "features": [
-            "hub"
-        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",

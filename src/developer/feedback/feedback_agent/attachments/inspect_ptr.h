@@ -5,48 +5,70 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_INSPECT_PTR_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_INSPECT_PTR_H_
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
 
 #include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include "src/developer/feedback/utils/cobalt.h"
+#include "src/lib/fxl/functional/cancelable_callback.h"
+#include "src/lib/fxl/macros.h"
 
 namespace feedback {
 
 // Collects the Inspect data.
 //
-// Requires a dispatcher on which to post the delayed task for the timeout and an executor on which
-// to run the Inspect data collection. They must run on different loops and threads as the executor
-// could have hanging tasks blocked on synchronous I/O operations.
-//
-// Requires "hub" in the features of the calling component's sandbox to access the hub.
-fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* timeout_dispatcher,
-                                                      zx::duration timeout, Cobalt* cobalt,
-                                                      async::Executor* collection_executor);
+// fuchsia.diagnostics.Archive is expected to be in |services|.
+fit::promise<fuchsia::mem::Buffer> CollectInspectData(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    zx::duration timeout, Cobalt* cobalt);
 
-// Wrapper around the Inspect data collection to track the lifetime of the objects more easily.
+// Wraps around fuchsia::diagnostics::ArchivePtr, fuchsia::diagnostics::ReaderPtr and
+// fuchsia::diagnostics::BatchIteratorPtr to handle establishing the connection, losing the
+// connection, waiting for the callback, enforcing a timeout, etc.
+//
+// Collect() is expected to be called exactly once.
 class Inspect {
  public:
-  Inspect(async_dispatcher_t* timeout_dispatcher, Cobalt* cobalt,
-          async::Executor* collection_executor);
+  Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+          Cobalt* cobalt);
 
   fit::promise<fuchsia::mem::Buffer> Collect(zx::duration timeout);
 
  private:
-  async_dispatcher_t* timeout_dispatcher_;
+  void SetUp();
+  void GetInspectReader();
+  void GetInspectSnapshot();
+  void AppendNextInspectBatch();
+
+  async_dispatcher_t* dispatcher_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   Cobalt* cobalt_;
-  async::Executor* collection_executor_;
   // Enforces the one-shot nature of Collect().
   bool has_called_collect_ = false;
 
-  std::shared_ptr<fit::bridge<fuchsia::mem::Buffer>> collection_done_;
-  std::shared_ptr<std::mutex> collection_done_lock_;
+  fuchsia::diagnostics::ArchivePtr archive_;
+  fuchsia::diagnostics::ReaderPtr reader_;
+  fuchsia::diagnostics::BatchIteratorPtr snapshot_iterator_;
+
+  // Accumulated Inspect data. Each element corresponds to one valid Inspect "block" in JSON format.
+  // A block would typically be the Inspect data for one component.
+  std::vector<std::string> inspect_data_;
+
+  fit::bridge<> done_;
+  // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
+  // cancel it if we are done another way.
+  fxl::CancelableClosure done_after_timeout_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(Inspect);
 };
 
 }  // namespace feedback

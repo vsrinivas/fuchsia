@@ -11,7 +11,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -27,6 +26,9 @@
 #include "src/developer/feedback/feedback_agent/feedback_id.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_board.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
+#include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
+#include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
+#include "src/developer/feedback/feedback_agent/tests/stub_inspect_reader.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_product.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
@@ -88,8 +90,7 @@ const std::set<std::string> kDefaultAnnotations = {
 
 const std::set<std::string> kDefaultAttachments = {
     kAttachmentBuildSnapshot,
-    // TODO(fxb/39804): re-enable once using Inspect service.
-    // kAttachmentInspect,
+    kAttachmentInspect,
     kAttachmentLogKernel,
     kAttachmentLogSystem,
 };
@@ -247,6 +248,15 @@ class DataProviderTest : public UnitTestFixture {
     }
   }
 
+  void SetUpInspect(const std::string& inspect_chunk) {
+    inspect_archive_ = std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+        std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({
+            {inspect_chunk},
+            {},
+        }))));
+    InjectServiceProvider(inspect_archive_.get());
+  }
+
   void SetUpLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
     logger_.reset(new StubLogger());
     logger_->set_messages(messages);
@@ -311,6 +321,7 @@ class DataProviderTest : public UnitTestFixture {
  private:
   std::unique_ptr<StubChannelProvider> channel_provider_;
   std::unique_ptr<StubScenic> scenic_;
+  std::unique_ptr<StubInspectArchive> inspect_archive_;
   std::unique_ptr<StubLogger> logger_;
   std::unique_ptr<StubBoard> board_provider_;
   std::unique_ptr<StubProduct> product_provider_;
@@ -573,6 +584,23 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     EXPECT_TRUE(json.Accept(validator));
   }
   EXPECT_TRUE(found_annotations_attachment);
+}
+
+TEST_F(DataProviderTest, GetData_Inspect) {
+  // CollectInspectData() has its own set of unit tests so we only cover one chunk of Inspect data
+  // here to check that we are attaching the Inspect data.
+  SetUpInspect("foo");
+
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+
+  // There should be a "inspect.json" attachment present in the attachment bundle.
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(data, &unpacked_attachments);
+  EXPECT_THAT(unpacked_attachments,
+              testing::Contains(MatchesAttachment(kAttachmentInspect, "[\nfoo\n]")));
 }
 
 TEST_F(DataProviderTest, GetData_SysLog) {
@@ -880,120 +908,6 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
 
   // TIME = 95; TIMEOUT @ 95 (unchanged)
   EXPECT_TRUE(data_provider_timed_out_);
-}
-
-// Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL interface when we need
-// to control the test environment, e.g. to inject additional components.
-//
-// This does not test the environment service. It directly instantiates the class, without
-// connecting through FIDL.
-class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
- public:
-  void SetUp() override {
-    SetUpDataProvider(Config{kDefaultAnnotations,
-                             {
-                                 kAttachmentBuildSnapshot,
-                                 kAttachmentLogKernel,
-                                 kAttachmentInspect,
-                                 kAttachmentLogSystem,
-                             }});
-  }
-
-  void TearDown() override {
-    if (inspect_test_app_controller_) {
-      TerminateInspectTestApp();
-    }
-  }
-
- protected:
-  void SetUpDataProvider(const Config& config) {
-    data_provider_.reset(new DataProvider(
-        dispatcher(), service_directory_provider_.service_directory(), config, []() {},
-        zx::duration::infinite()));
-  }
-
-  // Injects a test app that exposes some Inspect data in the test environment.
-  //
-  // Useful to guarantee there is a component within the environment that exposes Inspect data as
-  // we are excluding system_objects paths from the Inspect discovery and the test component
-  // itself only has a system_objects Inspect node.
-  void InjectInspectTestApp() {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
-    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
-    environment_->CreateComponent(std::move(launch_info),
-                                  inspect_test_app_controller_.NewRequest());
-    bool ready = false;
-    inspect_test_app_controller_.events().OnDirectoryReady = [&ready] { ready = true; };
-    RunLoopUntil([&ready] { return ready; });
-  }
-
-  fit::result<Data, zx_status_t> GetData() {
-    fit::result<Data, zx_status_t> out_result;
-    bool has_out_result = false;
-    data_provider_->GetData([&out_result, &has_out_result](fit::result<Data, zx_status_t> result) {
-      out_result = std::move(result);
-      has_out_result = true;
-    });
-    RunLoopUntil([&has_out_result] { return has_out_result; });
-    return out_result;
-  }
-
-  void UnpackAttachmentBundle(const Data& data, std::vector<Attachment>* unpacked_attachments) {
-    ASSERT_TRUE(data.has_attachment_bundle());
-    const auto& attachment_bundle = data.attachment_bundle();
-    EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
-    ASSERT_TRUE(Unpack(attachment_bundle.value, unpacked_attachments));
-  }
-
- private:
-  void TerminateInspectTestApp() {
-    inspect_test_app_controller_->Kill();
-    bool is_inspect_test_app_terminated = false;
-    inspect_test_app_controller_.events().OnTerminated =
-        [&is_inspect_test_app_terminated](int64_t code, fuchsia::sys::TerminationReason reason) {
-          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
-          is_inspect_test_app_terminated = true;
-        };
-    RunLoopUntil([&is_inspect_test_app_terminated] { return is_inspect_test_app_terminated; });
-  }
-
- protected:
-  std::unique_ptr<DataProvider> data_provider_;
-
- private:
-  sys::testing::ServiceDirectoryProvider service_directory_provider_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::sys::ComponentControllerPtr inspect_test_app_controller_;
-};
-
-TEST_F(DataProviderTestWithEnv, GetData_Inspect) {
-  InjectInspectTestApp();
-
-  fit::result<Data, zx_status_t> result = GetData();
-
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-
-  // There should be an "inspect.json" attachment present in the attachment bundle.
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
-  bool found_inspect_attachment = false;
-  std::string inspect_json;
-  for (const auto& attachment : unpacked_attachments) {
-    if (attachment.key != kAttachmentInspect) {
-      continue;
-    }
-    found_inspect_attachment = true;
-
-    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_json));
-    ASSERT_FALSE(inspect_json.empty());
-  }
-  EXPECT_TRUE(found_inspect_attachment);
-
-  EXPECT_THAT(unpacked_attachments,
-              testing::Contains(MatchesAttachment(kAttachmentInspect, inspect_json)));
 }
 
 }  // namespace

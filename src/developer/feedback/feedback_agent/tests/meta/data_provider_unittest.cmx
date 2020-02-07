@@ -12,7 +12,6 @@
     "sandbox": {
         "features": [
             "build-info",
-            "hub",
             "isolated-persistent-storage",
             "isolated-temp"
         ],

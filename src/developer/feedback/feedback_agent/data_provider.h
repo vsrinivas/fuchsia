@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_DATA_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -55,20 +54,6 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   Cobalt cobalt_;
   RefCountedDelayedTask after_timeout_;
   async::Executor executor_;
-
-  // We run the Inspect data collection in a separate loop, thread and executor as the calling
-  // component will itself be discovered and we don't want to deadlock it, cf. fxb/4632.
-  //
-  // Ideally, DataProvider wouldn't have to own the loop and executor, but the lifetime of the
-  // executor needs to be guaranteed as long as it has tasks scheduled and the current task could be
-  // hanging.
-  //
-  // Note that the second thread could be left dangling if it hangs forever trying to opendir() a
-  // currently serving out/ directory from one of the discovered components. It is okay to have
-  // potentially dangling threads as we run each fuchsia.feedback.DataProvider request in a separate
-  // process that exits when the connection with the client is closed.
-  async::Loop inspect_loop_;
-  async::Executor inspect_executor_;
 
   bool shut_down_ = false;
 };

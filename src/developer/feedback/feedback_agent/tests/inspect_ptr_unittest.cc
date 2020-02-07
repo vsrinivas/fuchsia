@@ -6,227 +6,225 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/time.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
+#include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
+#include "src/developer/feedback/feedback_agent/tests/stub_inspect_reader.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/schema.h"
 
 namespace feedback {
 namespace {
 
+using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
-class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
+class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   CollectInspectDataTest()
-      : executor_(dispatcher()),
-        collection_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        collection_executor_(collection_loop_.dispatcher()) {}
-
-  void SetUp() override {
-    ASSERT_EQ(collection_loop_.StartThread("collection-thread"), ZX_OK);
-
-    // Provide a default environment that can be overridden if services need to be injected.
-    environment_ =
-        CreateNewEnclosingEnvironment("inspect_test_app_environment_default", CreateServices());
-  }
-
-  void TearDown() override {
-    std::cout << "TearDown START" << std::endl << std::flush;
-    if (inspect_test_app_controller_) {
-      TerminateInspectTestApp();
-    }
-    // To make sure there are no more running tasks on |collection_executor_| when it gets
-    // destroyed, cf. fxb/39880.
-    collection_loop_.Shutdown();
-    std::cout << "TearDown END" << std::endl << std::flush;
-  }
+      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
-  // Injects a test app that exposes some Inspect data in the test environment.
-  //
-  // Useful to guarantee there is a component within the environment that exposes Inspect data as
-  // we are excluding system_objects paths from the Inspect discovery and the test component itself
-  // only has a system_objects Inspect node.
-  void InjectInspectTestApp(const std::vector<std::string>& args = {},
-                            std::unique_ptr<sys::testing::EnvironmentServices> services = nullptr) {
-    if (!services) {
-      services = CreateServices();
+  void SetUpInspect(std::unique_ptr<StubInspectArchive> inspect_archive) {
+    inspect_archive_ = std::move(inspect_archive);
+    if (inspect_archive_) {
+      InjectServiceProvider(inspect_archive_.get());
     }
-
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
-    launch_info.arguments = args;
-    environment_ =
-        CreateNewEnclosingEnvironment("inspect_test_app_environment", std::move(services));
-    environment_->CreateComponent(std::move(launch_info),
-                                  inspect_test_app_controller_.NewRequest());
-    bool ready = false;
-    inspect_test_app_controller_.events().OnDirectoryReady = [&ready] { ready = true; };
-    RunLoopUntil([&ready] { return ready; });
   }
 
-  auto service_directory() { return environment_->service_directory(); }
-
   fit::result<fuchsia::mem::Buffer> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
-    Cobalt cobalt(dispatcher(), service_directory());
+    Cobalt cobalt(dispatcher(), services());
 
     fit::result<fuchsia::mem::Buffer> result;
-    bool has_result = false;
     executor_.schedule_task(
-        feedback::CollectInspectData(dispatcher(), timeout, &cobalt, &collection_executor_)
-            .then([&result, &has_result](fit::result<fuchsia::mem::Buffer>& res) {
-              result = std::move(res);
-              has_result = true;
-            }));
-    RunLoopUntil([&has_result] { return has_result; });
+        feedback::CollectInspectData(dispatcher(), services(), timeout, &cobalt)
+            .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
+    RunLoopFor(timeout);
     return result;
   }
 
- private:
-  void TerminateInspectTestApp() {
-    std::cout << "TerminateInspectTestApp START" << std::endl << std::flush;
-    inspect_test_app_controller_->Kill();
-    bool is_inspect_test_app_terminated = false;
-    inspect_test_app_controller_.events().OnTerminated =
-        [&is_inspect_test_app_terminated](int64_t code, fuchsia::sys::TerminationReason reason) {
-          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
-          is_inspect_test_app_terminated = true;
-        };
-    RunLoopUntil([&is_inspect_test_app_terminated] { return is_inspect_test_app_terminated; });
-    std::cout << "TerminateInspectTestApp END" << std::endl << std::flush;
+  void CheckNoTimeout() { EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty()); }
+
+  void CheckTimeout() {
+    EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                            CobaltEvent(TimedOutData::kInspect),
+                                        }));
   }
 
- protected:
   async::Executor executor_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::sys::ComponentControllerPtr inspect_test_app_controller_;
 
  private:
-  async::Loop collection_loop_;
-
- protected:
-  async::Executor collection_executor_;
+  std::unique_ptr<StubInspectArchive> inspect_archive_;
 };
 
-constexpr char kInspectJsonSchema[] = R"({
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "path": {
-        "type": "string"
-      },
-      "contents": {
-        "type": "object"
-      }
-    },
-    "required": [
-      "path",
-      "contents"
-    ],
-    "additionalProperties": false
-  },
-  "uniqueItems": true
-})";
-
-TEST_F(CollectInspectDataTest, Succeed_OneComponentExposesInspectData) {
-  InjectInspectTestApp();
+TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
+  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+      std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({
+          {"foo1", "foo2"},
+          {"bar1"},
+          {},
+      })))));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
-
   ASSERT_TRUE(result.is_ok());
 
   const fuchsia::mem::Buffer& inspect = result.value();
-
   std::string inspect_json;
   ASSERT_TRUE(fsl::StringFromVmo(inspect, &inspect_json));
-  ASSERT_FALSE(inspect_json.empty());
+  ASSERT_STREQ(inspect_json.c_str(), R"([
+foo1,
+foo2,
+bar1
+])");
 
-  // JSON verification.
-  // We check that the output is a valid JSON and that it matches the schema.
-  rapidjson::Document json;
-  ASSERT_FALSE(json.Parse(inspect_json.c_str()).HasParseError());
-  rapidjson::Document schema_json;
-  ASSERT_FALSE(schema_json.Parse(kInspectJsonSchema).HasParseError());
-  rapidjson::SchemaDocument schema(schema_json);
-  rapidjson::SchemaValidator validator(schema);
-  EXPECT_TRUE(json.Accept(validator));
-
-  // We then check that we get the expected Inspect data for the injected test app.
-  bool has_entry_for_test_app = false;
-  for (const auto& obj : json.GetArray()) {
-    const std::string path = obj["path"].GetString();
-    if (path.find("inspect_test_app.cmx") != std::string::npos) {
-      has_entry_for_test_app = true;
-      const auto contents = obj["contents"].GetObject();
-      ASSERT_TRUE(contents.HasMember("root"));
-      const auto root = contents["root"].GetObject();
-      ASSERT_TRUE(root.HasMember("obj1"));
-      ASSERT_TRUE(root.HasMember("obj2"));
-      const auto obj1 = root["obj1"].GetObject();
-      const auto obj2 = root["obj2"].GetObject();
-      ASSERT_TRUE(obj1.HasMember("version"));
-      ASSERT_TRUE(obj2.HasMember("version"));
-      EXPECT_STREQ(obj1["version"].GetString(), "1.0");
-      EXPECT_STREQ(obj2["version"].GetString(), "1.0");
-      ASSERT_TRUE(obj1.HasMember("value"));
-      ASSERT_TRUE(obj2.HasMember("value"));
-      EXPECT_EQ(obj1["value"].GetUint(), 100u);
-      EXPECT_EQ(obj2["value"].GetUint(), 200u);
-    }
-  }
-  EXPECT_TRUE(has_entry_for_test_app);
+  CheckNoTimeout();
 }
 
-TEST_F(CollectInspectDataTest, Fail_NoComponentExposesInspectData) {
+TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
+  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+      std::make_unique<StubInspectBatchIteratorNeverRespondsAfterOneBatch>(
+          std::vector<std::string>({"foo1", "foo2"})))));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_ok());
 
-  ASSERT_TRUE(result.is_error());
+  const fuchsia::mem::Buffer& inspect = result.value();
+  std::string inspect_json;
+  ASSERT_TRUE(fsl::StringFromVmo(inspect, &inspect_json));
+  ASSERT_STREQ(inspect_json.c_str(), R"([
+foo1,
+foo2
+])");
+
+  CheckTimeout();
 }
 
-TEST_F(CollectInspectDataTest, Fail_InspectDiscoveryTimeout) {
-  std::cout << "Fail_InspectDiscoveryTimeout START" << std::endl << std::flush;
+TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
+  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+      std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({{}})))));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
-  std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
-  StubCobaltLoggerFactory logger_factory;
-  services->AddService(logger_factory.GetHandler());
-
-  // The test app exposes some Inspect data, but will be too busy to answer.
-  InjectInspectTestApp({"--busy"}, std::move(services));
-
-  // The test will need to actually wait for the timeout so we don't put a value too high.
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData(/*timeout=*/zx::msec(50));
-
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
-  // We don't control the loop so we need to make sure the Cobalt event is logged before checking
-  // its value.
-  RunLoopUntil([&logger_factory] { return logger_factory.Events().size() > 0u; });
-  EXPECT_THAT(logger_factory.Events(), UnorderedElementsAreArray({
-                                           CobaltEvent(TimedOutData::kInspect),
-                                       }));
+  CheckNoTimeout();
+}
 
-  std::cout << "Fail_InspectDiscoveryTimeout END" << std::endl << std::flush;
+TEST_F(CollectInspectDataTest, Fail_BatchIteratorClosesConnection) {
+  SetUpInspect(std::make_unique<StubInspectArchive>(
+      std::make_unique<StubInspectReaderClosesBatchIteratorConnection>(
+          std::make_unique<StubInspectBatchIterator>())));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckNoTimeout();
+}
+
+TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
+  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+      std::make_unique<StubInspectBatchIteratorReturnsError>())));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckNoTimeout();
+}
+
+TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
+  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+      std::make_unique<StubInspectBatchIteratorNeverResponds>())));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckTimeout();
+}
+
+TEST_F(CollectInspectDataTest, Fail_ReaderClosesConnection) {
+  SetUpInspect(std::make_unique<StubInspectArchiveClosesReaderConnection>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckNoTimeout();
+}
+
+TEST_F(CollectInspectDataTest, Fail_ReaderReturnsError) {
+  SetUpInspect(
+      std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReaderReturnsError>()));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckNoTimeout();
+}
+
+TEST_F(CollectInspectDataTest, Fail_ReaderNeverResponds) {
+  SetUpInspect(
+      std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReaderNeverResponds>()));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckTimeout();
+}
+
+TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
+  SetUpInspect(std::make_unique<StubInspectArchiveClosesArchiveConnection>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckNoTimeout();
+}
+
+TEST_F(CollectInspectDataTest, Fail_ArchiveReturnsError) {
+  SetUpInspect(std::make_unique<StubInspectArchiveReturnsError>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckNoTimeout();
+}
+
+TEST_F(CollectInspectDataTest, Fail_ArchiveNeverResponds) {
+  SetUpInspect(std::make_unique<StubInspectArchiveNeverResponds>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  ASSERT_TRUE(result.is_error());
+
+  CheckTimeout();
 }
 
 TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {
-  Cobalt cobalt(dispatcher(), real_services());
+  Cobalt cobalt(dispatcher(), services());
   const zx::duration unused_timeout = zx::sec(1);
-  Inspect inspect(dispatcher(), &cobalt, &collection_executor_);
+  Inspect inspect(dispatcher(), services(), &cobalt);
   executor_.schedule_task(inspect.Collect(unused_timeout));
   ASSERT_DEATH(inspect.Collect(unused_timeout),
                testing::HasSubstr("Collect() is not intended to be called twice"));

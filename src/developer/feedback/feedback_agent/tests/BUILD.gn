@@ -195,6 +195,7 @@ executable("data_provider_unittest") {
   deps = [
     ":stub_board",
     ":stub_channel_provider",
+    ":stub_inspect",
     ":stub_logger",
     ":stub_product",
     ":stub_scenic",
@@ -249,6 +250,7 @@ executable("feedback_agent_integration_test") {
     "//src/ui/lib/escher/test:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger",
@@ -295,10 +297,8 @@ executable("inspect_exe") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -308,6 +308,7 @@ executable("inspect_ptr_unittest") {
   sources = [ "inspect_ptr_unittest.cc" ]
 
   deps = [
+    ":stub_inspect",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/testing:cobalt_test_fixture",
@@ -315,7 +316,6 @@ executable("inspect_ptr_unittest") {
     "//src/lib/fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
   ]
 }
 
@@ -490,6 +490,24 @@ source_set("stub_board") {
   public_deps = [
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/lib/fidl/cpp",
+  ]
+}
+
+source_set("stub_inspect") {
+  sources = [
+    "stub_inspect_archive.cc",
+    "stub_inspect_archive.h",
+    "stub_inspect_batch_iterator.cc",
+    "stub_inspect_batch_iterator.h",
+    "stub_inspect_reader.cc",
+    "stub_inspect_reader.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
   ]
 }
 

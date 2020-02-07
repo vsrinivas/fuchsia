@@ -40,6 +40,8 @@
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/schema.h"
 
 namespace feedback {
 namespace {
@@ -184,6 +186,7 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     services->AddServiceWithLaunchInfo(std::move(launch_info), "fuchsia.feedback.DataProvider");
     // We inherit the other injected services from the parent environment.
     services->AllowParentService("fuchsia.cobalt.LoggerFactory");
+    services->AllowParentService("fuchsia.diagnostics.Archive");
     services->AllowParentService("fuchsia.hwinfo.Board");
     services->AllowParentService("fuchsia.hwinfo.Product");
     services->AllowParentService("fuchsia.boot.ReadOnlyLog");
@@ -335,6 +338,27 @@ VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
   // or not depending on which device the test runs.
 }
 
+constexpr char kInspectJsonSchema[] = R"({
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "contents": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "path",
+      "contents"
+    ],
+    "additionalProperties": false
+  },
+  "uniqueItems": true
+})";
+
 TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   // We make sure the components serving the services GetData() connects to are up and running.
   WaitForLogger();
@@ -385,13 +409,57 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
   std::vector<Attachment> unpacked_attachments;
   ASSERT_TRUE(Unpack(attachment_bundle.value, &unpacked_attachments));
-  EXPECT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
+  ASSERT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
                                         MatchesKey(kAttachmentAnnotations),
                                         MatchesKey(kAttachmentBuildSnapshot),
                                         MatchesKey(kAttachmentInspect),
                                         MatchesKey(kAttachmentLogKernel),
                                         MatchesKey(kAttachmentLogSystem),
                                     }));
+
+  std::string inspect_json;
+  for (const auto& attachment : unpacked_attachments) {
+    if (attachment.key != kAttachmentInspect) {
+      continue;
+    }
+    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_json));
+  }
+  ASSERT_FALSE(inspect_json.empty());
+
+  // JSON verification.
+  // We check that the output is a valid JSON and that it matches the schema.
+  rapidjson::Document json;
+  ASSERT_FALSE(json.Parse(inspect_json.c_str()).HasParseError());
+  rapidjson::Document schema_json;
+  ASSERT_FALSE(schema_json.Parse(kInspectJsonSchema).HasParseError());
+  rapidjson::SchemaDocument schema(schema_json);
+  rapidjson::SchemaValidator validator(schema);
+  EXPECT_TRUE(json.Accept(validator));
+
+  // We then check that we get the expected Inspect data for the injected test app.
+  bool has_entry_for_test_app = false;
+  for (const auto& obj : json.GetArray()) {
+    const std::string path = obj["path"].GetString();
+    if (path.find("inspect_test_app.cmx") != std::string::npos) {
+      has_entry_for_test_app = true;
+      const auto contents = obj["contents"].GetObject();
+      ASSERT_TRUE(contents.HasMember("root"));
+      const auto root = contents["root"].GetObject();
+      ASSERT_TRUE(root.HasMember("obj1"));
+      ASSERT_TRUE(root.HasMember("obj2"));
+      const auto obj1 = root["obj1"].GetObject();
+      const auto obj2 = root["obj2"].GetObject();
+      ASSERT_TRUE(obj1.HasMember("version"));
+      ASSERT_TRUE(obj2.HasMember("version"));
+      EXPECT_STREQ(obj1["version"].GetString(), "1.0");
+      EXPECT_STREQ(obj2["version"].GetString(), "1.0");
+      ASSERT_TRUE(obj1.HasMember("value"));
+      ASSERT_TRUE(obj2.HasMember("value"));
+      EXPECT_EQ(obj1["value"].GetUint(), 100u);
+      EXPECT_EQ(obj2["value"].GetUint(), 200u);
+    }
+  }
+  EXPECT_TRUE(has_entry_for_test_app);
 }
 
 TEST_F(FeedbackAgentIntegrationTest, OneDataProviderPerRequest) {

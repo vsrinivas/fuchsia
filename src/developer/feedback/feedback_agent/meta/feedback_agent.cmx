@@ -6,13 +6,13 @@
         "features": [
             "build-info",
             "config-data",
-            "hub",
             "isolated-persistent-storage",
             "isolated-temp"
         ],
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.diagnostics.Archive",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.hwinfo.Board",

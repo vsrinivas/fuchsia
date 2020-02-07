@@ -15,6 +15,7 @@ source_set("attachment_providers") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -31,12 +32,10 @@ source_set("attachment_providers") {
   ]
 
   deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.diagnostics",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/utils:promise",
     "//src/lib/fsl",
-    "//src/lib/inspect_deprecated/query",
-    "//src/lib/inspect_deprecated/query:json_formatter",
     "//src/lib/syslog/cpp",
-    "//third_party/rapidjson",
   ]
 }
