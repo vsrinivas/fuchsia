@@ -28,7 +28,6 @@ group("tests") {
     "dhcpd-cli:dhcpd_cli_tests",
     "dns:dns_resolver_tests",
     "dns:dns_tests",
-    "drivers:tests",
     "http_client:tests",
     "mdns/service:mdns_tests",
     "net-cli:net-cli-tests",
