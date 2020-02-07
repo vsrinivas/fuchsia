@@ -8,10 +8,6 @@
             "deprecated-misc-storage",
             "isolated-persistent-storage"
         ],
-        "pkgfs": [
-            "packages",
-            "versions"
-        ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.manager.Administrator",

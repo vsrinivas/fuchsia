@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"syscall/zx"
@@ -165,14 +164,6 @@ func FetchPackages(pkgs []*Package, resolver *pkg.PackageResolverInterface) erro
 }
 
 func fetchPackage(p *Package, resolver *pkg.PackageResolverInterface) error {
-	b, err := ioutil.ReadFile(filepath.Join("/pkgfs/versions", p.merkle, "meta"))
-	if err == nil {
-		// package is already installed, skip
-		if string(b) == p.merkle {
-			return nil
-		}
-	}
-
 	pkgURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", p.namever, p.merkle)
 	dirPxy, err := resolvePackage(pkgURL, resolver)
 	if dirPxy != nil {
