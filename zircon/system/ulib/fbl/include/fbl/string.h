@@ -31,7 +31,7 @@ struct StringTestHelper;
 // The content of a fbl::String object is always stored with a null terminator
 // so that |c_str()| is fast.  However, be aware that the string may also contain
 // embedded null characters (this is not checked by the implementation).
-class String {
+class __OWNER(char) String {
  public:
   // Creates an empty string.
   // Does not allocate heap memory.

@@ -95,7 +95,7 @@ struct AlignedAllocatorTraits {
 // deletion at the end (due to possible reallocations during push_back
 // and pop_back).
 template <typename T, typename AllocatorTraits = AlignedAllocatorTraits<T>>
-class Vector {
+class __OWNER(T) Vector {
  public:
   // move semantics only
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Vector);

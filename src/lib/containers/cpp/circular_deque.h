@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "src/lib/containers/cpp/ownership.h"
 #include "src/lib/containers/cpp/template_util.h"
 #include "src/lib/containers/cpp/vector_buffer.h"
 
@@ -128,7 +129,7 @@ namespace internal {
 constexpr size_t kCircularBufferInitialCapacity = 3;
 
 template <typename T>
-class circular_deque_const_iterator {
+class __POINTER(T) circular_deque_const_iterator {
  public:
   using difference_type = std::ptrdiff_t;
   using value_type = T;
@@ -317,7 +318,7 @@ class circular_deque_const_iterator {
 };
 
 template <typename T>
-class circular_deque_iterator : public circular_deque_const_iterator<T> {
+class __POINTER(T) circular_deque_iterator : public circular_deque_const_iterator<T> {
   using containers = circular_deque_const_iterator<T>;
 
  public:
@@ -387,7 +388,7 @@ class circular_deque_iterator : public circular_deque_const_iterator<T> {
 }  // namespace internal
 
 template <typename T>
-class circular_deque {
+class __OWNER(T) circular_deque {
  private:
   using VectorBuffer = internal::VectorBuffer<T>;
 

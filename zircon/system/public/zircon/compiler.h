@@ -177,4 +177,15 @@
 #define __ANALYZER_CREATE_SINK  // no-op
 #endif
 
+// Lifetime analysis
+#ifndef __OWNER
+#ifdef __clang__
+#define __OWNER(x) [[gsl::Owner(x)]]
+#define __POINTER(x) [[gsl::Pointer(x)]]
+#else
+#define __OWNER(x)
+#define __POINTER(x)
+#endif
+#endif
+
 #endif  // SYSROOT_ZIRCON_COMPILER_H_
