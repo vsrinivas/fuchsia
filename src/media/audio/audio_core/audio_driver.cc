@@ -130,28 +130,6 @@ TimelineFunction AudioDriver::clock_mono_to_ring_pos_bytes() const {
   }
 }
 
-void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
-  TRACE_DURATION("audio", "AudioDriver::SnapshotRingBuffer");
-  FX_DCHECK(snapshot);
-  auto format = GetFormat();
-
-  std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
-
-  if (format) {
-    auto [clock_mono_to_fractional_frame, generation] = clock_mono_to_fractional_frame_->get();
-    snapshot->clock_mono_to_ring_pos_bytes =
-        TransposeFractionalFramesToBytes(*format, clock_mono_to_fractional_frame);
-    snapshot->gen_id = generation;
-  } else {
-    snapshot->clock_mono_to_ring_pos_bytes = TimelineFunction();
-    snapshot->gen_id = kInvalidGenerationId;
-  }
-
-  snapshot->ring_buffer = ring_buffer_;
-  snapshot->position_to_end_fence_frames = owner_->is_input() ? fifo_depth_frames() : 0;
-  snapshot->end_fence_to_start_fence_frames = end_fence_to_start_fence_frames_;
-}
-
 std::optional<Format> AudioDriver::GetFormat() const {
   TRACE_DURATION("audio", "AudioDriver::GetFormat");
   std::lock_guard<std::mutex> lock(configured_format_lock_);

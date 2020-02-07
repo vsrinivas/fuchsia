@@ -337,19 +337,13 @@ void DriverOutput::OnDriverInfoFetched() {
   }
 
   // TODO(mpuryear): Save to the hub the configured format for this output.
-
-  TimelineRate ns_to_frames(pref_fps, ZX_SEC(1));
-  int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec.to_nsecs());
-  FX_DCHECK(retention_frames != TimelineRate::kOverflow);
-  FX_DCHECK(retention_frames <= std::numeric_limits<uint32_t>::max());
-  driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(retention_frames));
-
-  // Select our output producer
   Format format(fuchsia::media::AudioStreamType{
       .sample_format = pref_fmt,
       .channels = pref_chan,
       .frames_per_second = pref_fps,
   });
+
+  // Select our output producer
   output_producer_ = OutputProducer::Select(format.stream_type());
   if (!output_producer_) {
     FX_LOGS(ERROR) << "Output: OutputProducer cannot support this request: " << pref_fps << " Hz, "

@@ -12,14 +12,13 @@
 #include <memory>
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
-
-constexpr bool VERBOSE_TIMING_DEBUG = false;
 
 // To what extent should client-side under/overflows be logged? (A "client-side underflow" or
 // "client-side overflow" refers to when part of a data section is discarded because its start
@@ -50,69 +49,6 @@ constexpr fuchsia::media::AudioStreamType kInitialFormat{
     .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
     .channels = 1,
     .frames_per_second = 8000};
-
-struct RbRegion {
-  uint32_t srb_pos;                     // start ring buffer pos
-  uint32_t len;                         // region length in frames
-  FractionalFrames<int64_t> sfrac_pts;  // start fractional frame pts
-};
-
-// Utility functions to debug clocking in MixToIntermediate.
-//
-// Display ring-buffer region info.
-[[maybe_unused]] void DumpRbRegions(const RbRegion* regions) {
-  for (auto i = 0; i < 2; ++i) {
-    if (regions[i].len) {
-      AUD_VLOG(SPEW) << "[" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
-                     << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts.raw_value()
-                     << " (" << std::dec << regions[i].sfrac_pts.Floor() << " frames)";
-    } else {
-      AUD_VLOG(SPEW) << "[" << i << "] len 0x0";
-    }
-  }
-}
-
-// Display a timeline function.
-[[maybe_unused]] void DumpTimelineFunction(const media::TimelineFunction& timeline_function) {
-  FX_VLOGS(SPEW) << "(TLFunction) sub/ref deltas " << timeline_function.subject_delta() << "/"
-                 << timeline_function.reference_delta() << ", sub/ref times "
-                 << timeline_function.subject_time() << "/" << timeline_function.reference_time();
-}
-
-// Display a ring-buffer snapshot.
-[[maybe_unused]] void DumpRbSnapshot(const AudioDriver::RingBufferSnapshot& rb_snap) {
-  AUD_VLOG_OBJ(SPEW, &rb_snap) << "(RBSnapshot) position_to_end_fence_frames "
-                               << rb_snap.position_to_end_fence_frames
-                               << ", end_fence_to_start_fence_frames "
-                               << rb_snap.end_fence_to_start_fence_frames << ", gen_id "
-                               << rb_snap.gen_id;
-
-  FX_VLOGS(SPEW) << "rb_snap.clock_mono_to_ring_pos_bytes:";
-  DumpTimelineFunction(rb_snap.clock_mono_to_ring_pos_bytes);
-
-  auto rb = rb_snap.ring_buffer;
-  AUD_VLOG_OBJ(SPEW, rb_snap.ring_buffer.get())
-      << "(DriverRBuf) size " << rb->size() << ", frames " << rb->frames() << ", frame_size "
-      << rb->frame_size() << ", start " << static_cast<void*>(rb->virt());
-}
-
-// Display a mixer bookkeeping struct.
-[[maybe_unused]] void DumpMixer(const Mixer& mixer) {
-  auto& mix_state = mixer.bookkeeping();
-  AUD_VLOG_OBJ(SPEW, &mix_state) << "(Bookkeep) mixer " << &mixer << " gain " << &mix_state.gain
-                                 << ", step_size x" << std::hex << mix_state.step_size
-                                 << ", rate_mod/den " << std::dec << mix_state.rate_modulo << "/"
-                                 << mix_state.denominator << " src_pos_mod "
-                                 << mix_state.src_pos_modulo << ", src_trans_gen "
-                                 << mix_state.source_trans_gen_id << ", dest_trans_gen "
-                                 << mix_state.dest_trans_gen_id;
-
-  FX_VLOGS(SPEW) << "mix_state.dest_frames_to_frac_source_frames:";
-  DumpTimelineFunction(mix_state.dest_frames_to_frac_source_frames);
-
-  FX_VLOGS(SPEW) << "mix_state.clock_mono_to_frac_source_frames:";
-  DumpTimelineFunction(mix_state.clock_mono_to_frac_source_frames);
-}
 
 }  // namespace
 
@@ -257,14 +193,13 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSo
     const AudioObject& source, std::shared_ptr<Stream> stream) {
   TRACE_DURATION("audio", "AudioCapturerImpl::InitializeSourceLink");
 
-  // Choose a mixer
   switch (state_.load()) {
-    // We are operational. Go ahead and choose a mixer.
+    // We are operational. Go ahead and add the input to our mix stage.
     case State::OperatingSync:
     case State::OperatingAsync:
     case State::AsyncStopping:
     case State::AsyncStoppingCallbackPending:
-      return ChooseMixer(source, std::move(stream));
+      return fit::ok(mix_stage_->AddInput(std::move(stream)));
 
     // If we are shut down, then I'm not sure why new links are being added, but
     // just go ahead and reject this one. We will be going away shortly.
@@ -275,6 +210,11 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSo
     case State::WaitingForVmo:
       return fit::error(ZX_ERR_BAD_STATE);
   }
+}
+
+void AudioCapturerImpl::CleanupSourceLink(const AudioObject& source,
+                                          std::shared_ptr<Stream> stream) {
+  mix_stage_->RemoveInput(*stream);
 }
 
 void AudioCapturerImpl::GetStreamType(GetStreamTypeCallback cbk) {
@@ -385,10 +325,11 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
                             << ", frames:" << payload_buf_frames_
                             << ", bytes/frame:" << format_.bytes_per_frame();
 
-  // Allocate our intermediate buffer for mixing.
+  // Allocate our MixStage for mixing.
   //
   // TODO(39886): Limit this to something more reasonable than the entire user-provided VMO.
-  mix_buf_ = std::make_unique<float[]>(payload_buf_frames_);
+  mix_stage_ = std::make_shared<MixStage>(format_, payload_buf_frames_,
+                                          clock_mono_to_fractional_dest_frames_);
 
   // Map the VMO into our process.
   res = payload_buf_.Map(payload_buf_vmo, /*offset=*/0, payload_buf_size,
@@ -802,13 +743,18 @@ zx_status_t AudioCapturerImpl::Process() {
     }
 
     // Mix the requested number of frames from sources to intermediate buffer, then into output.
-    if (!MixToIntermediate(now, mix_frames)) {
+    auto buf = mix_stage_->LockBuffer(now, frame_count_, mix_frames);
+    FX_DCHECK(buf);
+    FX_DCHECK(buf->start().Floor() == frame_count_);
+    FX_DCHECK(buf->length().Floor() == mix_frames);
+    if (!buf) {
       ShutdownFromMixDomain();
       return ZX_ERR_INTERNAL;
     }
 
     FX_DCHECK(output_producer_ != nullptr);
-    output_producer_->ProduceOutput(mix_buf_.get(), mix_target, mix_frames);
+    output_producer_->ProduceOutput(reinterpret_cast<float*>(buf->payload()), mix_target,
+                                    mix_frames);
 
     // Update the pending buffer in progress. If finished, return it to the user. If flushed (no
     // pending packet, or queue head was different from what we were working on), just move on.
@@ -952,372 +898,6 @@ void AudioCapturerImpl::PartialOverflowOccurred(FractionalFrames<int64_t> frac_s
                       << " mix (capture) frames to align with source region";
     }
   }
-}
-
-bool AudioCapturerImpl::MixToIntermediate(zx::time now, uint32_t mix_frames) {
-  TRACE_DURATION("audio", "AudioCapturerImpl::MixToIntermediate");
-  FX_DCHECK(source_links_.size() == 0);
-  link_matrix_.SourceLinks(*this, &source_links_);
-
-  // No matter what happens here, make certain that we are not holding any link
-  // references in our snapshot when we are done.
-  //
-  // Note: We need to disable the clang static thread analysis code with this
-  // lambda because clang is not able to know that...
-  // 1) Once placed within the fit::defer, this cleanup routine cannot be
-  //    transferred out of the scope of the MixToIntermediate function (so its
-  //    life is bound to the scope of this function).
-  // 2) Because of this, the defer basically should inherit all of the thread
-  //    analysis attributes of MixToIntermediate, including the assertion that
-  //    MixToIntermediate is running in the mixer execution domain, which is
-  //    what guards the source_links_ member.
-  // For this reason, we manually disable thread analysis on the cleanup lambda.
-  auto release_snapshot_refs =
-      fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_links_.clear(); });
-
-  // Silence our intermediate buffer.
-  size_t job_bytes = sizeof(mix_buf_[0]) * mix_frames * format_.channels();
-  std::memset(mix_buf_.get(), 0u, job_bytes);
-
-  // If our capturer is mute, we have nothing to do after filling with silence.
-  if (mute_ || (stream_gain_db_.load() <= fuchsia::media::audio::MUTED_GAIN_DB)) {
-    return true;
-  }
-
-  bool accumulate = false;
-  for (auto& link : source_links_) {
-    FX_DCHECK(link.object->is_input() || link.object->is_output());
-
-    // Get a hold of our device source (we know it is a device because this is a
-    // ring buffer source, and ring buffer sources are always currently input
-    // devices) and snapshot the current state of the ring buffer.
-    const auto& device = static_cast<const AudioDevice&>(*link.object);
-
-    // TODO(MTWN-52): Right now, the only device without a driver is the throttle output. Sourcing a
-    // capturer from the throttle output would be a mistake. For now if we detect this, log a
-    // warning, signal error and shut down. Once this is resolved, come back and remove this.
-    const auto& driver = device.driver();
-    if (driver == nullptr) {
-      FX_LOGS(ERROR) << "AudioCapturer appears to be linked to throttle output! Shutting down";
-      return false;
-    }
-
-    // Get our capture link mixer.
-    FX_DCHECK(link.mixer != nullptr);
-    auto& mixer = static_cast<Mixer&>(*link.mixer);
-    auto& info = mixer.bookkeeping();
-
-    // If this gain scale is at or below our mute threshold, skip this source,
-    // as it will not contribute to this mix pass.
-    if (info.gain.IsSilent()) {
-      AUD_LOG_OBJ(INFO, &link) << "Skipping this capture source -- it is mute";
-      continue;
-    }
-
-    AudioDriver::RingBufferSnapshot rb_snap;
-    driver->SnapshotRingBuffer(&rb_snap);
-
-    // If a driver does not have its ring buffer, or a valid clock monotonic to
-    // ring buffer position transformation, then there is nothing to do (at the
-    // moment). Just skip this source and move on to the next one.
-    if ((rb_snap.ring_buffer == nullptr) || (!rb_snap.clock_mono_to_ring_pos_bytes.invertible())) {
-      AUD_LOG_OBJ(INFO, &link) << "Skipping this capture source -- it isn't ready";
-      continue;
-    }
-
-    // Update clock transformation if needed.
-    UpdateTransformation(&mixer.bookkeeping(), rb_snap);
-
-    // Based on current timestamp, determine which ring buffer portions can be safely read. This
-    // safe area will be contiguous, although it may be split by the ring boundary. Determine the
-    // starting PTS of these region(s), expressed in fractional source frames.
-    //
-    // TODO(13688): This mix job handling is similar to sections in AudioOutput that sample from
-    // packet sources. Here we basically model the available ring buffer space as either 1 or 2
-    // packets, depending on which regions can be safely read. Re-factor so both AudioCapturer and
-    // AudioOutput can sample from packets and ring-buffers, sharing common logic across input mix
-    // pump (AudioCapturer) and output mix pump (AudioOutput).
-    //
-    const auto& rb = rb_snap.ring_buffer;
-
-    int64_t end_fence_frames =
-        FractionalFrames<int64_t>::FromRaw(info.clock_mono_to_frac_source_frames.Apply(now.get()))
-            .Floor();
-    // If, because of significant FIFO depth or external delay, the calculated end_fence_frames
-    // value is in the past, MOD it up into our ring buffer range.
-    while (end_fence_frames < 0) {
-      end_fence_frames += rb->frames();
-    }
-
-    auto start_fence_frames = end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
-    auto rb_frames = rb->frames();
-
-    // Sometimes, because of audio input devices with large FIFO depth (or external delay),
-    // start_fence_frames can be negative at stream-start time. If so, bring start_fence_frames to 0
-    // and ensure that end_fence_frames is still within the ring range.
-    FX_CHECK(end_fence_frames >= 0);
-
-    start_fence_frames = std::max(start_fence_frames, 0l);
-    FX_DCHECK(end_fence_frames - start_fence_frames < rb_frames);
-
-    uint32_t start_frames_mod = start_fence_frames % rb_frames;
-    uint32_t end_frames_mod = end_fence_frames % rb_frames;
-
-    RbRegion regions[2];
-    if (start_frames_mod <= end_frames_mod) {
-      // One region
-      regions[0].srb_pos = start_frames_mod;
-      regions[0].len = end_frames_mod - start_frames_mod;
-      regions[0].sfrac_pts = FractionalFrames<int64_t>(start_fence_frames);
-
-      regions[1].len = 0;
-    } else {
-      // Two regions
-      regions[0].srb_pos = start_frames_mod;
-      regions[0].len = rb_frames - start_frames_mod;
-      regions[0].sfrac_pts = FractionalFrames<int64_t>(start_fence_frames);
-
-      regions[1].srb_pos = 0;
-      regions[1].len = end_frames_mod;
-      regions[1].sfrac_pts = regions[0].sfrac_pts + regions[0].len;
-    }
-
-    if constexpr (VERBOSE_TIMING_DEBUG) {
-      DumpRbRegions(regions);
-    }
-
-    uint32_t frames_left = mix_frames;
-    float* buf = mix_buf_.get();
-
-    // Now for each of the possible regions, intersect with our job and mix.
-    for (const auto& region : regions) {
-      // If we encounter a region of zero length, we are done.
-      if (region.len == 0) {
-        break;
-      }
-
-      // Determine the first and last sampling points of this job, in fractional source frames.
-      FX_DCHECK(frames_left > 0);
-      const auto& trans = info.dest_frames_to_frac_source_frames;
-      auto job_start =
-          FractionalFrames<int64_t>::FromRaw(trans.Apply(frame_count_ + mix_frames - frames_left));
-      FractionalFrames<int64_t> job_end =
-          job_start + FractionalFrames<int64_t>::FromRaw(trans.rate().Scale(frames_left - 1));
-
-      // Determine the PTS of the final frame of audio in our source region.
-      FractionalFrames<int64_t> region_last_frame_pts = region.sfrac_pts + (region.len - 1);
-      FractionalFrames<int64_t> rb_last_frame_pts = FractionalFrames<int64_t>(end_fence_frames - 1);
-      FX_DCHECK(rb_last_frame_pts >= region.sfrac_pts);
-
-      if constexpr (VERBOSE_TIMING_DEBUG) {
-        auto job_start_cm =
-            info.clock_mono_to_frac_source_frames.Inverse().Apply(job_start.raw_value());
-        auto job_end_cm =
-            info.clock_mono_to_frac_source_frames.Inverse().Apply(job_end.raw_value());
-        auto region_start_cm =
-            info.clock_mono_to_frac_source_frames.Inverse().Apply(region.sfrac_pts.raw_value());
-        auto region_end_cm =
-            info.clock_mono_to_frac_source_frames.Inverse().Apply(rb_last_frame_pts.raw_value());
-
-        AUD_VLOG_OBJ(SPEW, this) << "Will mix " << job_start_cm << "-" << job_end_cm << " ("
-                                 << std::hex << job_start.raw_value() << "-" << job_end.raw_value()
-                                 << ")";
-        AUD_VLOG_OBJ(SPEW, this) << "Region   " << region_start_cm << "-" << region_end_cm << " ("
-                                 << std::hex << region.sfrac_pts.raw_value() << "-"
-                                 << region_last_frame_pts.raw_value() << ")";
-        AUD_VLOG_OBJ(SPEW, this) << "Buffer   " << region_start_cm << "-" << region_end_cm << " ("
-                                 << std::hex << region.sfrac_pts.raw_value() << "-"
-                                 << rb_last_frame_pts.raw_value() << ")";
-      }
-
-      // If this source region's final frame occurs before our filter's negative edge (centered at
-      // this job's first sample), this source region is entirely in the past and must be skipped.
-      // We have overflowed; we could have started [job_start-region_start+negative_edge] sooner.
-      if (region_last_frame_pts < (job_start - mixer.neg_filter_width())) {
-        if (rb_last_frame_pts < (job_start - mixer.neg_filter_width())) {
-          auto clock_mono_late =
-              zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
-                  FractionalFrames<int64_t>(job_start - rb_last_frame_pts).raw_value()));
-          OverflowOccurred(rb_last_frame_pts, job_start, clock_mono_late);
-        }
-        // Move on to the next region
-        continue;
-      }
-      // Otherwise, if this job_start is beyond this region, skip it (regardless of width)
-      if (region.sfrac_pts + region.len < job_start) {
-        continue;
-      }
-
-      // If the PTS of the first frame of audio in our source region is after
-      // the positive window edge of our filter centered at our job's sampling
-      // point, then source region is entirely in the future and we are done.
-      if (region.sfrac_pts > (job_end + mixer.pos_filter_width())) {
-        break;
-      }
-
-      // Looks like this source region intersects our mix job (when including its filter). Compute
-      // where in the intermediate buffer the first produced frame will be placed, as well as where,
-      // relative to start of source region, the first sampling point will be.
-      FractionalFrames<int64_t> source_offset_64 = job_start - region.sfrac_pts;
-      int64_t dest_offset_64 = 0;
-      FractionalFrames<int64_t> first_sample_pos_window_edge = job_start + mixer.pos_filter_width();
-
-      const TimelineRate& dest_to_src = info.dest_frames_to_frac_source_frames.rate();
-      // If source region's first frame is after filter's positive edge, skip some output frames.
-      if (region.sfrac_pts > first_sample_pos_window_edge) {
-        FractionalFrames<int64_t> src_to_skip = region.sfrac_pts - first_sample_pos_window_edge;
-
-        // In scaling our (fractional) source_offset to (integral) dest_offset, we want to "round
-        // up" to the next integer dest frame, but the 'scale' operation truncates any fractional
-        // result. ALL source_offset values have SOME fractional component except for the X.0 case.
-        // So to "round up" while scaling, we subtract the smallest fractional value first, then
-        // scale-truncate, then add one to the final result.
-        dest_offset_64 = dest_to_src.Inverse().Scale(src_to_skip.raw_value() - 1) + 1;
-        source_offset_64 += FractionalFrames<int64_t>::FromRaw(dest_to_src.Scale(dest_offset_64));
-
-        PartialOverflowOccurred(source_offset_64, dest_offset_64);
-      }
-
-      FX_DCHECK(dest_offset_64 >= 0);
-      FX_DCHECK(dest_offset_64 < static_cast<int64_t>(mix_frames));
-      FX_DCHECK(source_offset_64 <= FractionalFrames<int32_t>::Max());
-      FX_DCHECK(source_offset_64 >= FractionalFrames<int32_t>::Min());
-
-      auto region_frac_frame_len = FractionalFrames<uint32_t>(region.len);
-      auto dest_offset = static_cast<uint32_t>(dest_offset_64);
-      auto frac_source_offset = FractionalFrames<int32_t>(source_offset_64);
-
-      FX_DCHECK(frac_source_offset < FractionalFrames<int32_t>(region_frac_frame_len))
-          << std::hex << frac_source_offset.raw_value() << " must be less than "
-          << FractionalFrames<int32_t>(region_frac_frame_len).raw_value();
-      const uint8_t* region_source = rb->virt() + (region.srb_pos * rb->frame_size());
-
-      // Invalidate the region of the cache we are about to read, on architectures requiring it.
-      //
-      // TODO(35022): Optimize this. In particular...
-      // 1) When we have multiple clients of this ring buffer, only invalidate a section once.
-      // 2) If this ring buffer is not fed directly from hardware, don't invalidate cache at all.
-      //
-      // Also, at some point double-check that mixer filter width is accounted for properly here.
-      FX_DCHECK(dest_offset <= frames_left);
-      auto cache_target_frac_frames =
-          FractionalFrames<int64_t>::FromRaw(dest_to_src.Scale(frames_left - dest_offset));
-      uint32_t cache_target_frames = cache_target_frac_frames.Ceiling();
-      cache_target_frames = std::min(cache_target_frames, region.len);
-      zx_cache_flush(region_source, cache_target_frames * rb->frame_size(),
-                     ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
-
-      // Looks like we are ready to go. Mix.
-      // TODO(13415): integrate bookkeeping into the Mixer itself.
-      //
-      // When calling Mix(), we communicate the resampling rate with three
-      // parameters. We augment frac_step_size with rate_modulo and denominator
-      // arguments that capture the remaining rate component that cannot be
-      // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
-      // frac_source_offset use the same format -- they have the same limitations
-      // in what they can and cannot communicate. This begs two questions:
-      //
-      // Q1: For perfect position accuracy, just as we track incoming/outgoing
-      // fractional source offset, wouldn't we also need a src_pos_modulo?
-      // A1: Yes, for optimum position accuracy (within quantization limits), we
-      // SHOULD incorporate the ongoing subframe_position_modulo in this way.
-      //
-      // For now, we are deferring this work, tracking it with MTWN-128.
-      //
-      // Q2: Why did we solve this issue for rate but not for initial position?
-      // A2: We solved this issue for *rate* because its effect accumulates over
-      // time, causing clearly measurable distortion that becomes crippling with
-      // larger jobs. For *position*, there is no accumulated magnification over
-      // time -- in analyzing the distortion that this should cause, mix job
-      // size would affect the distortion frequency but not amplitude. We expect
-      // the effects to be below audible thresholds. Until the effects are
-      // measurable and attributable to this jitter, we will defer this work.
-      //
-      // Update: src_pos_modulo is added to Mix(), but for now we omit it here.
-
-      bool consumed_source;
-      {
-        int32_t raw_source_offset = frac_source_offset.raw_value();
-        consumed_source =
-            mixer.Mix(buf, frames_left, &dest_offset, region_source,
-                      region_frac_frame_len.raw_value(), &raw_source_offset, accumulate);
-        frac_source_offset = FractionalFrames<int32_t>::FromRaw(raw_source_offset);
-      }
-      FX_DCHECK(dest_offset <= frames_left);
-
-      if (!consumed_source) {
-        // Looks like we didn't consume all of this region. Assert that we
-        // have produced all of our frames and we are done.
-        FX_DCHECK(dest_offset == frames_left);
-        break;
-      }
-
-      buf += dest_offset * format_.channels();
-      frames_left -= dest_offset;
-      if (!frames_left) {
-        break;
-      }
-    }
-
-    // We have now added something to the intermediate mix buffer. For our next
-    // source to process, we cannot assume that it is just silence. Set the
-    // accumulate flag to tell the mixer to accumulate (not overwrite).
-    accumulate = true;
-  }
-
-  return true;
-}
-
-void AudioCapturerImpl::UpdateTransformation(Mixer::Bookkeeping* info,
-                                             const AudioDriver::RingBufferSnapshot& rb_snap) {
-  TRACE_DURATION("audio", "AudioCapturerImpl::UpdateTransformation");
-  FX_DCHECK(info != nullptr);
-  auto [clock_mono_to_fractional_dest_frames, clock_mono_to_fractional_dest_frames_gen] =
-      clock_mono_to_fractional_dest_frames_->get();
-
-  if ((info->dest_trans_gen_id == clock_mono_to_fractional_dest_frames_gen) &&
-      (info->source_trans_gen_id == rb_snap.gen_id)) {
-    return;
-  }
-
-  FX_DCHECK(rb_snap.ring_buffer != nullptr);
-  FX_DCHECK(rb_snap.ring_buffer->frame_size() != 0);
-  FX_DCHECK(rb_snap.clock_mono_to_ring_pos_bytes.invertible());
-
-  TimelineRate src_bytes_to_frac_frames(FractionalFrames<int32_t>(1).raw_value(),
-                                        rb_snap.ring_buffer->frame_size());
-
-  // This represents ring-buffer frac frames since DMA engine was started
-  auto clock_mono_to_ring_pos_frac_frames = TimelineFunction::Compose(
-      TimelineFunction(src_bytes_to_frac_frames), rb_snap.clock_mono_to_ring_pos_bytes);
-
-  TimelineRate frames_per_fractional_frame =
-      TimelineRate(1, FractionalFrames<uint32_t>(1).raw_value());
-  auto dest_frames_to_clock_mono =
-      TimelineFunction::Compose(TimelineFunction(frames_per_fractional_frame),
-                                clock_mono_to_fractional_dest_frames)
-          .Inverse();
-
-  info->dest_frames_to_frac_source_frames =
-      TimelineFunction::Compose(clock_mono_to_ring_pos_frac_frames, dest_frames_to_clock_mono);
-
-  // Our frac source frame sampling point should lag the ring buffer DMA position by this offset.
-  auto offset = FractionalFrames<int64_t>(rb_snap.position_to_end_fence_frames);
-  info->clock_mono_to_frac_source_frames =
-      TimelineFunction::Compose(TimelineFunction(-offset.raw_value(), 0, TimelineRate(1u, 1u)),
-                                clock_mono_to_ring_pos_frac_frames);
-
-  int64_t tmp_step_size = info->dest_frames_to_frac_source_frames.rate().Scale(1);
-  FX_DCHECK(tmp_step_size >= 0);
-  FX_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
-  info->step_size = static_cast<uint32_t>(tmp_step_size);
-  info->denominator = info->SnapshotDenominatorFromDestTrans();
-  info->rate_modulo = info->dest_frames_to_frac_source_frames.rate().subject_delta() -
-                      (info->denominator * info->step_size);
-
-  FX_DCHECK(info->denominator > 0);
-  info->dest_trans_gen_id = clock_mono_to_fractional_dest_frames_gen;
-  info->source_trans_gen_id = rb_snap.gen_id;
 }
 
 void AudioCapturerImpl::DoStopAsyncCapture() {
@@ -1509,73 +1089,6 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioStreamType stream_type
 
   FX_DCHECK(tmp <= std::numeric_limits<uint32_t>::max());
   FX_DCHECK(max_frames_per_capture_ > 0);
-}
-
-fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
-    const AudioObject& source, std::shared_ptr<Stream> stream) {
-  TRACE_DURATION("audio", "AudioCapturerImpl::ChooseMixer");
-
-  if (!source.is_input() && !source.is_output()) {
-    FX_LOGS(ERROR) << "Failed to find mixer for source of type "
-                   << static_cast<uint32_t>(source.type());
-    return fit::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  // Throttle outputs are the only driver-less devices. MTWN-52 is the work to
-  // remove this construct and have packet sources maintain pending packet
-  // queues, trimmed by a thread from the pool managed by the device manager.
-  const auto& device = *(static_cast<const AudioDevice*>(&source));
-  if (device.driver() == nullptr) {
-    return fit::error(ZX_ERR_BAD_STATE);
-  }
-
-  // Get the driver's current format. Without one, we can't setup the mixer.
-  std::optional<Format> source_format = device.driver()->GetFormat();
-  if (!source_format) {
-    FX_LOGS(WARNING) << "Source driver has no configured format";
-    return fit::error(ZX_ERR_BAD_STATE);
-  }
-
-  // Select a mixer.
-  auto mixer = std::shared_ptr<Mixer>(
-      Mixer::Select(source_format->stream_type(), format_.stream_type()).release());
-  if (!mixer) {
-    FX_LOGS(WARNING) << "Failed to find mixer for capturer.";
-    FX_LOGS(WARNING) << "Source cfg: rate " << source_format->frames_per_second() << " ch "
-                     << source_format->channels() << " sample fmt "
-                     << fidl::ToUnderlying(source_format->sample_format());
-    FX_LOGS(WARNING) << "Dest cfg  : rate " << format_.frames_per_second() << " ch "
-                     << format_.channels() << " sample fmt "
-                     << fidl::ToUnderlying(format_.sample_format());
-    return fit::error(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  // The Gain object contains multiple stages. In capture, device (or
-  // master) gain is "source" gain and stream gain is "dest" gain.
-  //
-  // First, set the source gain -- based on device gain.
-  if (device.is_input()) {
-    // Initialize the source gain, from (Audio Input) device settings.
-    fuchsia::media::AudioDeviceInfo device_info;
-    device.GetDeviceInfo(&device_info);
-
-    const auto muted = device_info.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute;
-    mixer->bookkeeping().gain.SetSourceGain(
-        muted ? fuchsia::media::audio::MUTED_GAIN_DB
-              : std::clamp(device_info.gain_info.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
-  }
-
-  mixers_.emplace_back(&source, mixer);
-  return fit::ok(std::move(mixer));
-}
-
-void AudioCapturerImpl::CleanupSourceLink(const AudioObject& source,
-                                          std::shared_ptr<Stream> stream) {
-  auto it = std::find_if(mixers_.begin(), mixers_.end(),
-                         [source = &source](auto& holder) { return holder.object == source; });
-  if (it != mixers_.end()) {
-    mixers_.erase(it);
-  }
 }
 
 void AudioCapturerImpl::BindGainControl(

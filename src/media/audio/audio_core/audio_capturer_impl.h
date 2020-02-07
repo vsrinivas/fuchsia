@@ -16,9 +16,7 @@
 #include <mutex>
 
 #include <fbl/intrusive_double_list.h>
-#include <fbl/slab_allocator.h>
 
-#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
@@ -168,10 +166,6 @@ class AudioCapturerImpl : public AudioObject,
 
   // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool MixToIntermediate(zx::time now, uint32_t mix_frames)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  void UpdateTransformation(Mixer::Bookkeeping* bk, const AudioDriver::RingBufferSnapshot& rb_snap)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void DoStopAsyncCapture() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool QueueNextAsyncPendingBuffer() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token())
       FXL_LOCKS_EXCLUDED(pending_lock_);
@@ -188,10 +182,6 @@ class AudioCapturerImpl : public AudioObject,
   // Mixer helper.
   void UpdateFormat(fuchsia::media::AudioStreamType stream_type)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
-
-  // Select a mixer for the link supplied.
-  fit::result<std::shared_ptr<Mixer>, zx_status_t> ChooseMixer(const AudioObject& source,
-                                                               std::shared_ptr<Stream> stream);
 
   fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void CleanupFromMixThread() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
@@ -251,13 +241,11 @@ class AudioCapturerImpl : public AudioObject,
 
   // Intermediate mixing buffer and output producer
   std::unique_ptr<OutputProducer> output_producer_;
-  std::unique_ptr<float[]> mix_buf_;
 
   std::vector<LinkMatrix::LinkHandle> source_links_ FXL_GUARDED_BY(mix_domain_->token());
 
   // Capture bookkeeping
   bool async_mode_ = false;
-
   fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_fractional_dest_frames_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
@@ -270,23 +258,7 @@ class AudioCapturerImpl : public AudioObject,
   std::atomic<uint16_t> overflow_count_;
   std::atomic<uint16_t> partial_overflow_count_;
 
-  struct MixerHolder {
-    // We hold a raw pointer to the |AudioObject| here since it is what we use to identify the mixer
-    // between calls to |InitializeSourceLink| and |CleanupSourceLink|, and by freeing the
-    // |MixerHolder| in |CleanupSourceLink|, we ensure we don't retain this pointer past the point
-    // that the |AudioLink| is valid.
-    //
-    // Furthermore, we don't ever dereference this pointer, it's only used to identify the
-    // corresponding |Mixer| in |CleanupSourceLink|.
-    //
-    // TODO(13688): This will be removed once we migrate AudioCapturerImpl to use the |MixStage|
-    //              mix-pump logic.
-    const AudioObject* object;
-    std::shared_ptr<Mixer> mixer;
-    MixerHolder(const AudioObject* _object, std::shared_ptr<Mixer> _mixer)
-        : object(_object), mixer(std::move(_mixer)) {}
-  };
-  std::vector<MixerHolder> mixers_;
+  std::shared_ptr<MixStage> mix_stage_;
 
   LinkMatrix& link_matrix_;
 };
