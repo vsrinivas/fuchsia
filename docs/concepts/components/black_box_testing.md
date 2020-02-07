@@ -181,6 +181,40 @@ let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
 invocation.resume().await?;
 ```
 
+### Scoping of breakpoints
+
+The breakpoints system can be requested by any component instance within the
+component topology served by the component manager. The component manager only
+delivers system events within the realm of the requesting component instance.
+
+A component instance can request a scoped `BreakpointSystem` in its manifest
+file as follows:
+
+```
+{
+    "program": {
+        "binary": "bin/client",
+    },
+    "use": [
+        {
+            "protocol": [
+                "/svc/fuchsia.test.breakpoints.BreakpointSystem",
+            ],
+            "from": "framework"
+        },
+    ],
+}
+```
+
+Another component can pass along its scope of system events by passing along the
+`BreakpointSystem` capability through the conventional routing operations `offer`,
+`expose` and `use`.
+
+If a component requests a `BreakpointSystem` then its children cannot start until it explicitly
+calls `start_component_tree`.
+
+### Additional functionality
+
 With complex component hierarchies, event propagation is hard to predict and
 may even be non-deterministic due to the asynchronous nature of component
 manager. To deal with these cases, breakpoints offer the following additional
@@ -210,8 +244,8 @@ for _ in 1..=5 {
     invocation.resume().await?;
 }
 
-// Expect a RouteCapability event from /foo:0
-let invocation = route_receiver.expect_exact::<RouteCapability>("/foo:0").await?;
+// Expect a RouteCapability event from ./foo:0
+let invocation = route_receiver.expect_exact::<RouteCapability>("./foo:0").await?;
 invocation.resume().await?;
 ```
 
@@ -228,8 +262,8 @@ let stop_receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).
     // Temporarily set a breakpoint on RouteCapability events
     let use_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
-    // Expect a RouteCapability event from /bar:0
-    let invocation = route_receiver.expect_exact::<RouteCapability>("/bar:0").await?;
+    // Expect a RouteCapability event from ./bar:0
+    let invocation = route_receiver.expect_exact::<RouteCapability>("./bar:0").await?;
     println!("/bar:0 used capability -> {}", invocation.capability_id);
     invocation.resume().await?;
 }
@@ -280,9 +314,9 @@ let echo_capability = EchoCapability::new();
 // Set a breakpoint on RouteCapability events
 let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
-// Wait until /foo:0 attempts to connect to the EchoService component capability
+// Wait until ./foo:0 attempts to connect to the EchoService component capability
 let invocation = receiver.wait_until_component_capability(
-    "/foo:0",
+    "./foo:0",
     "/svc/fuchsia.echo.EchoService",
 ).await?;
 
@@ -383,7 +417,7 @@ let receiver = breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]
 let sink = breakpoint_system.soak_events(vec![BeforeStartInstance::TYPE]).await?;
 
 // Wait for the root component to be destroyed
-let invocation = receiver.expect_exact::<PostDestroyInstance>("/").await?;
+let invocation = receiver.expect_exact::<PostDestroyInstance>(".").await?;
 invocation.resume().await?;
 
 // Drain events from the sink
@@ -393,15 +427,15 @@ let events = sink.drain().await;
 assert_eq!(events, vec![
     DrainedEvent {
         event_type: BeforeStartInstance::TYPE,
-        target_moniker: "/".to_string()
+        target_moniker: "./".to_string()
     },
     DrainedEvent {
         event_type: BeforeStartInstance::TYPE,
-        target_moniker: "/foo:0".to_string()
+        target_moniker: "./foo:0".to_string()
     },
     DrainedEvent {
         event_type: BeforeStartInstance::TYPE,
-        target_moniker: "/foo:0/bar:0".to_string()
+        target_moniker: "./foo:0/bar:0".to_string()
     }
 ]);
 ```
