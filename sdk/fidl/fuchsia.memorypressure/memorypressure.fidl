@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.memorypressure;
 
-using zx;
-
 // Indicates the memory pressure level.
 enum Level {
     // The memory pressure level is healthy.
