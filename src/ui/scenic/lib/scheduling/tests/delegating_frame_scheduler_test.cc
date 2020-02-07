@@ -36,7 +36,7 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
   }
 
   // Call public methods on the DelegatingFrameScheduler.
-  delegating_frame_scheduler.ScheduleUpdateForSession(zx::time(0), 0);
+  delegating_frame_scheduler.ScheduleUpdateForSession(zx::time(0), {0, 0});
   delegating_frame_scheduler.SetRenderContinuously(true);
   delegating_frame_scheduler.GetFuturePresentationInfos(zx::duration(0), [](auto infos) {});
   delegating_frame_scheduler.SetOnFramePresentedCallbackForSession(0, [](auto info) {});
@@ -63,7 +63,7 @@ TEST(DelegatingFrameSchedulerTest, CallbacksFiredOnInitialization) {
   EXPECT_EQ(1u, num_set_on_frame_presented_callback_for_session_callbacks);
 
   // Invoke method after initialized, invoked immediately.
-  delegating_frame_scheduler.ScheduleUpdateForSession(zx::time(0), 0);
+  delegating_frame_scheduler.ScheduleUpdateForSession(zx::time(0), {0, 0});
   EXPECT_EQ(2u, num_schedule_update_callbacks);
 }
 

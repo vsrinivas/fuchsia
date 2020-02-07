@@ -44,9 +44,9 @@ void DelegatingFrameScheduler::SetOnUpdateFailedCallbackForSession(
 }
 
 void DelegatingFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
-                                                        SessionId session_id) {
-  CallWhenFrameSchedulerAvailable([presentation_time, session_id](FrameScheduler* frame_scheduler) {
-    frame_scheduler->ScheduleUpdateForSession(presentation_time, session_id);
+                                                        SchedulingIdPair id_pair) {
+  CallWhenFrameSchedulerAvailable([presentation_time, id_pair](FrameScheduler* frame_scheduler) {
+    frame_scheduler->ScheduleUpdateForSession(presentation_time, id_pair);
   });
 }
 

@@ -10,11 +10,13 @@ namespace {
 
 // The session id is global to support cross-system registration and debugging.
 std::atomic<scheduling::SessionId> next_session_id = 1;
+std::atomic<scheduling::PresentId> next_present_id = 1;
 
 }  // namespace
 
 namespace scheduling {
 
 SessionId GetNextSessionId() { return next_session_id++; }
+PresentId GetNextPresentId() { return next_present_id++; }
 
 }  // namespace scheduling

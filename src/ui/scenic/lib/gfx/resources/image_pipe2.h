@@ -35,29 +35,25 @@ class ImagePipe2 : public ImagePipeBase {
 
   static const ResourceTypeInfo kTypeInfo;
 
-  // fuchsia::images::ImagePipe2 implementation
   void AddBufferCollection(
       uint32_t buffer_collection_id,
       ::fidl::InterfaceHandle<::fuchsia::sysmem::BufferCollectionToken> buffer_collection_token);
 
-  // fuchsia::images::ImagePipe2 implementation
   void AddImage(uint32_t image_id, uint32_t buffer_collection_id, uint32_t buffer_collection_index,
                 ::fuchsia::sysmem::ImageFormat_2 image_format);
 
-  // fuchsia::images::ImagePipe2 implementation
   void RemoveBufferCollection(uint32_t buffer_collection_id);
 
-  // fuchsia::images::ImagePipe2 implementation
   void RemoveImage(uint32_t image_id);
 
-  // fuchsia::images::ImagePipe2 implementation
-  void PresentImage(uint32_t image_id, zx::time presentation_time,
-                    std::vector<::zx::event> acquire_fences,
-                    std::vector<::zx::event> release_fences, PresentCallback callback);
+  // Return PresentId of this present call.
+  scheduling::PresentId PresentImage(uint32_t image_id, zx::time presentation_time,
+                                     std::vector<::zx::event> acquire_fences,
+                                     std::vector<::zx::event> release_fences,
+                                     PresentImageCallback callback);
 
   // ImagePipeBase implementation
-  ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-                                zx::time presentation_time) override;
+  ImagePipeUpdateResults Update(scheduling::PresentId present_id) override;
 
   // ImageBase implementation
   // Updates the Escher image to the current frame. This should be called after
@@ -113,14 +109,9 @@ class ImagePipe2 : public ImagePipeBase {
 
   // A |Frame| stores the arguments passed to a particular invocation of Present().
   struct Frame {
+    scheduling::PresentId present_id;
     ImagePtr image;
     zx::time presentation_time;
-    std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    ::fidl::VectorPtr<zx::event> release_fences;
-
-    // Callback to report when the update has been applied in response to an invocation of
-    // |ImagePipe.PresentImage()|.
-    PresentCallback present_image_callback;
   };
   std::queue<Frame> frames_;
   std::unique_ptr<ImagePipe2Handler> handler_;
@@ -128,7 +119,6 @@ class ImagePipe2 : public ImagePipeBase {
   Session* const session_;
   ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
-  ::fidl::VectorPtr<zx::event> current_release_fences_;
 
   std::unordered_map<BufferCollectionId, BufferCollectionInfo> buffer_collections_;
   std::unordered_map<ResourceId, ImagePtr> images_;

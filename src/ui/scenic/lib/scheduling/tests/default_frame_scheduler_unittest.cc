@@ -32,8 +32,8 @@ class MockSessionUpdaterWithFunctionOnUpdate : public MockSessionUpdater {
 
   // |SessionUpdater|
   SessionUpdater::UpdateResults UpdateSessions(
-      const std::unordered_set<SessionId>& sessions_to_update, zx::time target_presentation_time,
-      zx::time latched_time, uint64_t trace_id = 0) override {
+      const std::unordered_map<SessionId, PresentId>& sessions_to_update,
+      zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id = 0) override {
     if (function_) {
       function_();
     }
@@ -53,7 +53,7 @@ static void ScheduleUpdateAndCallback(const std::unique_ptr<DefaultFrameSchedule
                                       const std::unique_ptr<MockSessionUpdater>& updater,
                                       SessionId session_id, zx::time presentation_time,
                                       zx::time acquire_fence_time = zx::time(0)) {
-  scheduler->ScheduleUpdateForSession(presentation_time, session_id);
+  scheduler->ScheduleUpdateForSession(presentation_time, {session_id, GetNextPresentId()});
   updater->AddCallback(session_id, presentation_time, acquire_fence_time);
 }
 
@@ -69,7 +69,7 @@ static void SchedulePresent2Update(const std::unique_ptr<DefaultFrameScheduler>&
   info.SetLatchedTime(latched_time);
   info.SetPresentReceivedTime(present_received_time);
 
-  scheduler->ScheduleUpdateForSession(presentation_time, session_id);
+  scheduler->ScheduleUpdateForSession(presentation_time, {session_id, GetNextPresentId()});
   updater->AddPresent2Info(std::move(info), presentation_time, acquire_fence_time);
 }
 
@@ -88,7 +88,7 @@ static std::shared_ptr<const MockSessionUpdater::CallbackStatus> ScheduleUpdateA
     const std::unique_ptr<DefaultFrameScheduler::UpdateManager>& update_manager,
     MockSessionUpdater* updater, SessionId session_id, zx::time presentation_time,
     zx::time acquire_fence_time = zx::time(0)) {
-  update_manager->ScheduleUpdate(presentation_time, session_id);
+  update_manager->ScheduleUpdate(presentation_time, {session_id, GetNextPresentId()});
   return updater->AddCallback(session_id, presentation_time, acquire_fence_time);
 }
 

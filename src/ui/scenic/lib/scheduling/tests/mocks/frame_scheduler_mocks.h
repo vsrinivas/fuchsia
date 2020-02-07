@@ -32,7 +32,7 @@ class MockFrameScheduler : public FrameScheduler {
       SessionId session, OnSessionUpdateFailedCallback update_failed_callback) override {}
 
   // |FrameScheduler|
-  void ScheduleUpdateForSession(zx::time presentation_time, SessionId session) override;
+  void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) override;
 
   // |FrameScheduler|
   void GetFuturePresentationInfos(
@@ -48,7 +48,7 @@ class MockFrameScheduler : public FrameScheduler {
 
   // Testing only. Used for mock method callbacks.
   using OnSetRenderContinuouslyCallback = std::function<void(bool)>;
-  using OnScheduleUpdateForSessionCallback = std::function<void(zx::time, SessionId)>;
+  using OnScheduleUpdateForSessionCallback = std::function<void(zx::time, SchedulingIdPair)>;
   using OnGetFuturePresentationInfosCallback =
       std::function<std::vector<fuchsia::scenic::scheduling::PresentationInfo>(
           zx::duration requested_prediction_span)>;
@@ -91,8 +91,8 @@ class MockSessionUpdater : public SessionUpdater {
 
   // |SessionUpdater|
   SessionUpdater::UpdateResults UpdateSessions(
-      const std::unordered_set<SessionId>& sessions_to_update, zx::time target_presentation_time,
-      zx::time latched_time, uint64_t trace_id = 0) override;
+      const std::unordered_map<SessionId, PresentId>& sessions_to_update,
+      zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id = 0) override;
 
   // |SessionUpdater|
   void PrepareFrame(zx::time presentation_time, uint64_t frame_number) override {

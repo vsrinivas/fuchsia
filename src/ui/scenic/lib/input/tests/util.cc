@@ -132,8 +132,7 @@ SessionWrapper InputSystemTest::CreateClient(const std::string& name,
 }
 
 void InputSystemTest::InitializeScenic(Scenic* scenic) {
-  command_buffer_sequencer_ = std::make_unique<CommandBufferSequencer>();
-  auto signaller = std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
+  auto signaller = std::make_unique<ReleaseFenceSignallerForTest>();
   display_ = std::make_unique<Display>(
       /*id*/ 0, test_display_width_px(), test_display_height_px());
   auto frame_scheduler = std::make_shared<DefaultFrameScheduler>(
@@ -163,7 +162,6 @@ void InputSystemTest::TearDown() {
   ScenicTest::TearDown();
   engine_.reset();
   display_.reset();
-  command_buffer_sequencer_.reset();
 }
 
 PointerCommandGenerator::PointerCommandGenerator(ResourceId compositor_id, uint32_t device_id,

@@ -72,10 +72,10 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, SessionIntegration1) {
   bool scheduled_update = false;
   // Mock method callback for test.
   frame_scheduler->set_schedule_update_for_session_callback(
-      [&](zx::time presentation_time, scenic_impl::SessionId session_id) {
+      [&](zx::time presentation_time, scheduling::SchedulingIdPair id_pair) {
         scheduled_update = true;
         EXPECT_EQ(kPresentationTime, presentation_time);
-        EXPECT_EQ(kSessionId, session_id);
+        EXPECT_EQ(kSessionId, id_pair.session_id);
       });
 
   // Once |frame_scheduler| is set, expect it to get a call to ScheduleUpdateForSession.
@@ -147,17 +147,19 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, ImagePipeUpdaterIntegration) {
                                          gfx_session.session_context.release_fence_signaller);
 
   constexpr zx::time kPresentationTime = zx::time(5);
-  image_pipe_updater->ScheduleImagePipeUpdate(kPresentationTime, /*image_pipe=*/nullptr);
+  image_pipe_updater->ScheduleImagePipeUpdate(kPresentationTime, /*image_pipe=*/nullptr,
+                                              /*acquire_fences=*/{}, /*release_fences=*/{},
+                                              /*callback=*/[](auto...) {});
 
   auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
 
   bool scheduled_update = false;
   // Mock method callback for test.
   frame_scheduler->set_schedule_update_for_session_callback(
-      [&](zx::time presentation_time, scenic_impl::SessionId session_id) {
+      [&](zx::time presentation_time, scheduling::SchedulingIdPair id_pair) {
         scheduled_update = true;
         EXPECT_EQ(kPresentationTime, presentation_time);
-        EXPECT_EQ(image_pipe_updater->GetSchedulingId(), session_id);
+        EXPECT_EQ(image_pipe_updater->GetSchedulingId(), id_pair.session_id);
       });
 
   // Once |frame_scheduler| is set, expect it to get a call to ScheduleUpdateForSession.

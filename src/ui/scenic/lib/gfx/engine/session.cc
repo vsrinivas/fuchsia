@@ -31,12 +31,6 @@ using scheduling::Present2Info;
 namespace scenic_impl {
 namespace gfx {
 
-namespace {
-
-#define SESSION_TRACE_ID(session_id, count) (((uint64_t)(session_id) << 32) | (count))
-
-}  // anonymous namespace
-
 Session::Session(SessionId id, SessionContext session_context,
                  std::shared_ptr<EventReporter> event_reporter,
                  std::shared_ptr<ErrorReporter> error_reporter,
@@ -146,16 +140,16 @@ bool Session::ScheduleUpdateCommon(zx::time requested_presentation_time,
     return false;
   }
 
-  async::PostTask(async_get_default_dispatcher(),
-                  [weak = GetWeakPtr(), requested_presentation_time] {
-                    // This weak pointer will go out of scope if the channel is killed between a
-                    // call to Present() and the looper executing this task.
-                    if (weak) {
-                      FXL_DCHECK(weak->session_context_.frame_scheduler);
-                      weak->session_context_.frame_scheduler->ScheduleUpdateForSession(
-                          requested_presentation_time, weak->id());
-                    }
-                  });
+  async::PostTask(
+      async_get_default_dispatcher(), [weak = GetWeakPtr(), requested_presentation_time] {
+        // This weak pointer will go out of scope if the channel is killed between a
+        // call to Present() and the looper executing this task.
+        if (weak) {
+          FXL_DCHECK(weak->session_context_.frame_scheduler);
+          weak->session_context_.frame_scheduler->ScheduleUpdateForSession(
+              requested_presentation_time, {weak->id(), scheduling::GetNextPresentId()});
+        }
+      });
 
   ++scheduled_update_count_;
   TRACE_FLOW_BEGIN("gfx", "scheduled_update", SESSION_TRACE_ID(id_, scheduled_update_count_));

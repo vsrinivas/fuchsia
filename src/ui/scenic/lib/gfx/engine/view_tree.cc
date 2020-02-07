@@ -218,7 +218,7 @@ bool ViewTree::IsStateValid() const {
       FXL_LOG(ERROR) << "Count of scene-connected ViewRefs for session " << session_id
                      << " exceeds 1. Reference SCN-1249.";
       // TODO(SCN-1249): Enable invariant check when one-view-per-session is enforced.
-      //return false;
+      // return false;
     }
   }
 
@@ -386,7 +386,7 @@ void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWea
   FXL_DCHECK(!IsTracked(koid)) << "precondition";
   FXL_DCHECK(may_receive_focus) << "precondition";  // Callback exists.
   FXL_DCHECK(global_transform) << "precondition";   // Callback exists.
-  FXL_DCHECK(session_id != scheduling::INVALID_SESSION_ID) << "precondition";
+  FXL_DCHECK(session_id != scheduling::kInvalidSessionId) << "precondition";
 
   if (!IsValid(koid) || IsTracked(koid))
     return;  // Bail.

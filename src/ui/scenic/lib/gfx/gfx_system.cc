@@ -217,7 +217,7 @@ void GfxSystem::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallba
 // Applies scheduled updates to a session. If the update fails, the session is
 // killed. Returns true if a new render is needed, false otherwise.
 scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
-    const std::unordered_set<scheduling::SessionId>& sessions_to_update,
+    const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) {
   scheduling::SessionUpdater::UpdateResults update_results;
 
@@ -227,7 +227,7 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
         display_manager_, engine_->scene_graph());
   }
 
-  for (auto session_id : sessions_to_update) {
+  for (auto [session_id, present_id] : sessions_to_update) {
     TRACE_DURATION("gfx", "GfxSystem::UpdateSessions", "session_id", session_id,
                    "target_presentation_time", target_presentation_time.get());
     auto session = session_manager_.FindSession(session_id);

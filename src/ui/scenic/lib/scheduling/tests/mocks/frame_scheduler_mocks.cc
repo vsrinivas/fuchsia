@@ -15,9 +15,10 @@ void MockFrameScheduler::SetRenderContinuously(bool render_continuously) {
   }
 }
 
-void MockFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time, SessionId session) {
+void MockFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
+                                                  SchedulingIdPair id_pair) {
   if (schedule_update_for_session_callback_) {
-    schedule_update_for_session_callback_(presentation_time, session);
+    schedule_update_for_session_callback_(presentation_time, id_pair);
   }
 }
 
@@ -39,13 +40,13 @@ void MockFrameScheduler::SetOnFramePresentedCallbackForSession(
 }
 
 SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
-    const std::unordered_set<SessionId>& sessions_to_update, zx::time presentation_time,
+    const std::unordered_map<SessionId, PresentId>& sessions_to_update, zx::time presentation_time,
     zx::time wakeup_time, uint64_t trace_id) {
   ++update_sessions_call_count_;
 
   UpdateResults results;
 
-  for (auto session_id : sessions_to_update) {
+  for (auto [session_id, present_id] : sessions_to_update) {
     if (dead_sessions_.find(session_id) != dead_sessions_.end()) {
       continue;
     }

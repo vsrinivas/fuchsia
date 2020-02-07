@@ -10,11 +10,16 @@
 #include <queue>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
+
+namespace test {
+class MockImagePipeUpdater;
+}  // namespace test
 
 class ImagePipeBase;
 using ImagePipeBasePtr = fxl::RefPtr<ImagePipeBase>;
@@ -34,16 +39,20 @@ class ImagePipeUpdater : public scheduling::SessionUpdater {
  public:
   ImagePipeUpdater(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
                    escher::ReleaseFenceSignaller* release_fence_signaller);
+  ~ImagePipeUpdater();
 
   // Called by ImagePipe::PresentImage(). Stashes the arguments without applying them; they will
   // later be applied by ApplyScheduledUpdates(). This method can also be used to clean up after an
   // ImagePipe when it is being closed/cleaned-up; in this case, pass in a null ImagePipe.
-  void ScheduleImagePipeUpdate(zx::time presentation_time, fxl::WeakPtr<ImagePipeBase> image_pipe);
-
+  // Virtual for testing.
+  virtual scheduling::PresentId ScheduleImagePipeUpdate(
+      zx::time presentation_time, fxl::WeakPtr<ImagePipeBase> image_pipe,
+      std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
+      fuchsia::images::ImagePipe::PresentImageCallback callback);
   // |scheduling::SessionUpdater|
-  UpdateResults UpdateSessions(const std::unordered_set<scheduling::SessionId>& sessions_to_update,
-                               zx::time presentation_time, zx::time latched_time,
-                               uint64_t trace_id) override;
+  UpdateResults UpdateSessions(
+      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+      zx::time presentation_time, zx::time latched_time, uint64_t trace_id) override;
 
   // |scheduling::SessionUpdater|
   void PrepareFrame(zx::time presentation_time, uint64_t trace_id) override;
@@ -52,23 +61,32 @@ class ImagePipeUpdater : public scheduling::SessionUpdater {
   scheduling::SessionId GetSchedulingId() { return scheduling_id_; }
 
  private:
-  struct ImagePipeUpdate {
-    zx::time presentation_time;
-    fxl::WeakPtr<ImagePipeBase> image_pipe;
+  friend class test::MockImagePipeUpdater;
 
-    bool operator>(const ImagePipeUpdate& rhs) const {
-      return presentation_time > rhs.presentation_time;
-    }
-  };
-  // The least element should be on top.
-  std::priority_queue<ImagePipeUpdate, std::vector<ImagePipeUpdate>, std::greater<ImagePipeUpdate>>
-      scheduled_image_pipe_updates_;
+  // Constructor for test.
+  ImagePipeUpdater();
+
+  // Map of fence listeners per present call. Listeners are removed when they are either signalled,
+  // or when an UpdateSessions call for the corresponding SchedulingIdPair or a subsequent one is
+  // made.
+  std::map<scheduling::SchedulingIdPair, escher::FenceSetListener> fence_listeners_;
+  // Release fences by SchedulingIdPair. Are moved onto the release fence signaller when an
+  // UpdateSessions call for a subsequent SchedulingIdPair is made, to be signalled when that image
+  // is presented to the display.
+  std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> release_fences_;
+  // OnFramePresented callbacks by SchedulingIdPair. Are returned in order when an UpdateSessions()
+  // call for the corresponding SchedulingIdPair or a subsequent one is made.
+  std::map<scheduling::SchedulingIdPair, fuchsia::images::ImagePipe::PresentImageCallback>
+      callbacks_;
+  // Map from SessionId to ImagePipe. Currently only has a single value in it, since
+  // ImagePipeUpdater is mapped one to one with ImagePipes.
+  std::map<scheduling::SessionId, fxl::WeakPtr<ImagePipeBase>> image_pipes_;
 
   const scheduling::SessionId scheduling_id_;
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
-  // TODO(43165): Remove this pointer once the release fences are handled by FrameScheduler. This
-  // code is only safe now because we guarantee that the ReleaseFenceSignaller outlives the
+  // TODO(43165): Remove this pointer once the release fences are handled by FrameScheduler.
+  // This code is only safe now because we guarantee that the ReleaseFenceSignaller outlives the
   // ImagePipeUpdater (ReleaseFenceSignaller lives in Engine). Do not add any additional
   // dependencies on this pointer, as this will change in the future.
   escher::ReleaseFenceSignaller* release_fence_signaller_;

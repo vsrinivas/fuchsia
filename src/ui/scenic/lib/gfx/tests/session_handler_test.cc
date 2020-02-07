@@ -30,7 +30,6 @@ void SessionHandlerTest::TearDown() {
   command_dispatcher_.reset();
   engine_.reset();
   frame_scheduler_.reset();
-  command_buffer_sequencer_.reset();
   scenic_.reset();
   session_manager_.reset();
 
@@ -55,10 +54,7 @@ void SessionHandlerTest::InitializeCommandDispatcher() {
 }
 
 void SessionHandlerTest::InitializeEngine() {
-  command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
-
-  auto mock_release_fence_signaller =
-      std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
+  auto mock_release_fence_signaller = std::make_unique<ReleaseFenceSignallerForTest>();
 
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
@@ -81,13 +77,13 @@ void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
 escher::EscherWeakPtr SessionHandlerTest::GetEscherWeakPtr() { return escher::EscherWeakPtr(); }
 
 scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
-    const std::unordered_set<scheduling::SessionId>& sessions_to_update,
+    const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) {
   UpdateResults update_results;
   CommandContext command_context(/*uploader*/ nullptr, /*sysmem*/ nullptr,
                                  /*display_manager*/ nullptr, engine_->scene_graph()->GetWeakPtr());
 
-  for (auto session_id : sessions_to_update) {
+  for (auto [session_id, present_id] : sessions_to_update) {
     auto session = session_manager_->FindSession(session_id);
     if (!session) {
       // This means the session that requested the update died after the

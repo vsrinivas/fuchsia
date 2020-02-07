@@ -10,7 +10,6 @@
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -86,7 +85,9 @@ void ImagePipe::CloseConnectionAndCleanUp() {
 
   // Schedule a new frame.
   FXL_DCHECK(image_pipe_updater_);
-  image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>());
+  image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>(),
+                                               /*acquire_fences*/ {}, /*release_fences*/ {},
+                                               /*callback*/ [](auto...) {});
 }
 
 void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }
@@ -107,10 +108,10 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
   }
 };
 
-void ImagePipe::PresentImage(uint32_t image_id, zx::time presentation_time,
-                             std::vector<zx::event> acquire_fences,
-                             std::vector<zx::event> release_fences,
-                             fuchsia::images::ImagePipe::PresentImageCallback callback) {
+scheduling::PresentId ImagePipe::PresentImage(
+    uint32_t image_id, zx::time presentation_time, std::vector<zx::event> acquire_fences,
+    std::vector<zx::event> release_fences,
+    fuchsia::images::ImagePipe::PresentImageCallback callback) {
   TRACE_DURATION("gfx", "ImagePipe::PresentImage", "image_id", image_id);
   TRACE_FLOW_END("gfx", "image_pipe_present_image", image_id);
 
@@ -120,7 +121,7 @@ void ImagePipe::PresentImage(uint32_t image_id, zx::time presentation_time,
         << presentation_time
         << ", last scheduled presentation time=" << frames_.back().presentation_time;
     CloseConnectionAndCleanUp();
-    return;
+    return scheduling::kInvalidPresentId;
   }
 
   // Verify that image_id is valid.
@@ -129,36 +130,28 @@ void ImagePipe::PresentImage(uint32_t image_id, zx::time presentation_time,
     error_reporter_->ERROR() << "ImagePipe::PresentImage could not find Image with ID: "
                              << image_id;
     CloseConnectionAndCleanUp();
-    return;
+    return scheduling::kInvalidPresentId;
   }
 
-  auto acquire_fences_listener =
-      std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
-  acquire_fences_listener->WaitReadyAsync(
-      [weak = weak_ptr_factory_.GetWeakPtr(), presentation_time] {
-        if (weak) {
-          FXL_DCHECK(weak->image_pipe_updater_);
-          weak->image_pipe_updater_->ScheduleImagePipeUpdate(presentation_time, weak);
-        }
-      });
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image_to_update", image_id);
-  frames_.push(Frame{image_it->second, presentation_time, std::move(acquire_fences_listener),
-                     fidl::VectorPtr(std::move(release_fences)), std::move(callback)});
+  const auto present_id = image_pipe_updater_->ScheduleImagePipeUpdate(
+      presentation_time, weak_ptr_factory_.GetWeakPtr(), std::move(acquire_fences),
+      std::move(release_fences), std::move(callback));
+  frames_.push({.present_id = present_id,
+                .image = image_it->second,
+                .presentation_time = presentation_time});
+
+  return present_id;
 };
 
-ImagePipeUpdateResults ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-                                         zx::time presentation_time) {
-  FXL_DCHECK(release_fence_signaller);
-
+ImagePipeUpdateResults ImagePipe::Update(scheduling::PresentId present_id) {
   ImagePipeUpdateResults results{.image_updated = false};
 
   bool present_next_image = false;
   ResourceId next_image_id = current_image_id_;
-  fidl::VectorPtr<zx::event> next_release_fences;
 
   ImagePtr next_image = nullptr;
-  while (!frames_.empty() && frames_.front().presentation_time <= presentation_time &&
-         frames_.front().acquire_fences->ready()) {
+  while (!frames_.empty() && frames_.front().present_id <= present_id) {
     if (next_image) {
       // We're skipping a frame, so we should also mark the image as dirty, in
       // case the producer updates the pixels in the buffer between now and a
@@ -170,18 +163,8 @@ ImagePipeUpdateResults ImagePipe::Update(escher::ReleaseFenceSignaller* release_
     FXL_DCHECK(next_image);
     next_image_id = next_image->id();
 
-    if (next_release_fences.has_value() && !next_release_fences->empty()) {
-      // We're skipping a frame, so we can immediately signal its release
-      // fences.
-      for (auto& fence : *next_release_fences) {
-        fence.signal(0u, escher::kFenceSignalled);
-      }
-    }
-
-    next_release_fences = std::move(frames_.front().release_fences);
-
-    results.callbacks.push_back(std::move(frames_.front().present_image_callback));
     TRACE_FLOW_END("gfx", "image_pipe_present_image_to_update", next_image_id);
+
     frames_.pop();
     present_next_image = true;
   }
@@ -201,13 +184,6 @@ ImagePipeUpdateResults ImagePipe::Update(escher::ReleaseFenceSignaller* release_
     return results;
   }
 
-  // We're replacing a frame with a new one, so we hand off its release
-  // fence to the |ReleaseFenceSignaller|, which will signal it as soon as
-  // all work previously submitted to the GPU is finished.
-  if (current_release_fences_) {
-    release_fence_signaller->AddCPUReleaseFences(std::move(current_release_fences_));
-  }
-  current_release_fences_ = std::move(next_release_fences);
   current_image_id_ = next_image_id;
   // TODO(SCN-1010): Determine proper signaling for marking images as dirty.
   // For now, mark all released images as dirty, with the assumption that the

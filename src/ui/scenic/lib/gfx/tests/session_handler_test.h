@@ -50,15 +50,14 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
   Engine* engine() { return engine_.get(); }
 
   // |scheduling::SessionUpdater|
-  UpdateResults UpdateSessions(const std::unordered_set<scheduling::SessionId>& sessions_to_update,
-                               zx::time target_presentation_time, zx::time latched_time,
-                               uint64_t trace_id) override;
+  UpdateResults UpdateSessions(
+      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+      zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) override;
   // |scheduling::SessionUpdater|
   void PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) override;
 
   sys::testing::ComponentContextProvider app_context_;
   std::unique_ptr<Scenic> scenic_;
-  std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<Engine> engine_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<Sysmem> sysmem_;

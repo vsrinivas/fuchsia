@@ -248,12 +248,12 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 }
 
 void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
-                                                     SessionId session_id) {
-  update_manager_.ScheduleUpdate(presentation_time, session_id);
+                                                     SchedulingIdPair id_pair) {
+  update_manager_.ScheduleUpdate(presentation_time, id_pair);
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
-    FXL_VLOG(1) << "ScheduleUpdateForSession session_id: " << session_id
+    FXL_VLOG(1) << "ScheduleUpdateForSession session_id: " << id_pair.session_id
                 << " presentation_time: " << presentation_time.get();
   }
 
@@ -434,10 +434,10 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
   // NOTE: this name is used by scenic_processing_helpers.go
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time", target_presentation_time.get());
 
-  std::unordered_set<SessionId> sessions_to_update;
+  std::unordered_map<SessionId, PresentId> sessions_to_update;
   while (!updatable_sessions_.empty() &&
          updatable_sessions_.top().requested_presentation_time <= target_presentation_time) {
-    sessions_to_update.insert(updatable_sessions_.top().session_id);
+    sessions_to_update[updatable_sessions_.top().session_id] = updatable_sessions_.top().present_id;
     updatable_sessions_.pop();
   }
 
@@ -516,9 +516,10 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
 }
 
 void DefaultFrameScheduler::UpdateManager::ScheduleUpdate(zx::time presentation_time,
-                                                          SessionId session_id) {
-  updatable_sessions_.push(
-      {.session_id = session_id, .requested_presentation_time = presentation_time});
+                                                          SchedulingIdPair id_pair) {
+  updatable_sessions_.push({.session_id = id_pair.session_id,
+                            .present_id = id_pair.present_id,
+                            .requested_presentation_time = presentation_time});
 }
 
 void DefaultFrameScheduler::UpdateManager::RatchetPresentCallbacks(zx::time presentation_time,

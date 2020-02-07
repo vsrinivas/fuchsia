@@ -102,7 +102,6 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   void InitializeScenic(scenic_impl::Scenic* scenic) override;
 
   sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<scenic_impl::gfx::Engine> engine_;
   std::shared_ptr<scenic_impl::display::Display> display_;
 

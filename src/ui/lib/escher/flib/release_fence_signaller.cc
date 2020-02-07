@@ -10,12 +10,18 @@ ReleaseFenceSignaller::ReleaseFenceSignaller(
     escher::impl::CommandBufferSequencer* command_buffer_sequencer)
     : command_buffer_sequencer_(command_buffer_sequencer) {
   // Register ourselves for sequence number updates.
-  command_buffer_sequencer_->AddListener(this);
+  // Nullable for test.
+  if (command_buffer_sequencer_) {
+    command_buffer_sequencer_->AddListener(this);
+  }
 }
 
 ReleaseFenceSignaller::~ReleaseFenceSignaller() {
   // Unregister ourselves.
-  command_buffer_sequencer_->RemoveListener(this);
+  // Nullable for test.
+  if (command_buffer_sequencer_) {
+    command_buffer_sequencer_->RemoveListener(this);
+  }
 };
 
 void ReleaseFenceSignaller::AddVulkanReleaseFence(zx::event fence) {

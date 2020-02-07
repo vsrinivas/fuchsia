@@ -53,7 +53,7 @@ class DefaultFrameScheduler : public FrameScheduler {
   //
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
-  void ScheduleUpdateForSession(zx::time presentation_time, SessionId session) override;
+  void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) override;
 
   // |FrameScheduler|
   //
@@ -90,7 +90,7 @@ class DefaultFrameScheduler : public FrameScheduler {
     // Schedules an update for the specified session.  All updaters registered by
     // |AddSessionUpdater()| are notified when |ApplyUpdates()| is called with an equal or later
     // presentation time.
-    void ScheduleUpdate(zx::time presentation_time, SessionId session);
+    void ScheduleUpdate(zx::time presentation_time, SchedulingIdPair id_pair);
 
     // Returned by |ApplyUpdates()|; used by a |FrameScheduler| to decide whether to render a frame
     // and/or schedule another frame to be rendered.
@@ -141,6 +141,7 @@ class DefaultFrameScheduler : public FrameScheduler {
     // latest.
     struct SessionUpdate {
       SessionId session_id;
+      PresentId present_id;
       zx::time requested_presentation_time;
 
       bool operator>(const SessionUpdate& rhs) const {

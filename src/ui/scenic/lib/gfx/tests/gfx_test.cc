@@ -15,14 +15,11 @@ void GfxSystemTest::TearDown() {
   ScenicTest::TearDown();
   engine_.reset();
   frame_scheduler_.reset();
-  command_buffer_sequencer_.reset();
   FXL_DCHECK(!gfx_system_);
 }
 
 void GfxSystemTest::InitializeScenic(Scenic* scenic) {
-  FXL_DCHECK(!command_buffer_sequencer_);
-  command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
-  auto signaller = std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
+  auto signaller = std::make_unique<ReleaseFenceSignallerForTest>();
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::WindowedFramePredictor>(

@@ -152,6 +152,7 @@ executable("unittests") {
     "image_pipe_render_unittest.cc",
     "image_pipe_unittest.cc",
     "image_pipe_unittest_common.cc",
+    "image_pipe_updater_unittest.cc",
     "memory_unittest.cc",
     "node_unittest.cc",
     "object_linker_unittest.cc",

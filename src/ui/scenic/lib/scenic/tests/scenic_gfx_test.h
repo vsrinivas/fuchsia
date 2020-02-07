@@ -21,7 +21,6 @@ class ScenicGfxTest : public ScenicTest {
   void InitializeScenic(Scenic* scenic) override;
 
  private:
-  std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<gfx::Engine> engine_;
 };

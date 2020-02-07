@@ -45,7 +45,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   frame_scheduler->AddSessionUpdater(updater.GetWeakPtr());
 
   const SessionId client_id = 5;
-  frame_scheduler->ScheduleUpdateForSession(schedule_present_time, client_id);
+  frame_scheduler->ScheduleUpdateForSession(schedule_present_time, {client_id, 1});
 
   test_loop.RunUntilIdle();
 

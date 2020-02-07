@@ -10,12 +10,6 @@
 
 #include <trace/event.h>
 
-namespace {
-
-#define SESSION_TRACE_ID(session_id, count) (((uint64_t)(session_id) << 32) | (count))
-
-}  // anonymous namespace
-
 namespace scenic_impl {
 
 Session::Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,

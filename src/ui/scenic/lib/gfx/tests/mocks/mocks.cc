@@ -10,9 +10,7 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-ReleaseFenceSignallerForTest::ReleaseFenceSignallerForTest(
-    escher::impl::CommandBufferSequencer* command_buffer_sequencer)
-    : ReleaseFenceSignaller(command_buffer_sequencer) {}
+ReleaseFenceSignallerForTest::ReleaseFenceSignallerForTest() : ReleaseFenceSignaller(nullptr) {}
 
 void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
   // Signal immediately for testing purposes.

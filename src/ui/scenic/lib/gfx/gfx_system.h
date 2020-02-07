@@ -45,7 +45,7 @@ class GfxSystem : public System,
 
   // |scheduling::SessionUpdater|
   virtual UpdateResults UpdateSessions(
-      const std::unordered_set<scheduling::SessionId>& sessions_to_update,
+      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) override;
 
   // |scheduling::SessionUpdater|

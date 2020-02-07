@@ -11,9 +11,11 @@
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
+#include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
 #include "src/ui/scenic/lib/gfx/tests/image_pipe_unittest_common.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
-#include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 
 namespace scenic_impl::gfx::test {
@@ -120,23 +122,20 @@ VK_TEST_F(CreateImagePipe2CmdTest, ApplyCommand) {
 
 class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
  public:
-  ImagePipe2ThatCreatesFakeImages(Session* session,
+  ImagePipe2ThatCreatesFakeImages(gfx::Session* session, std::unique_ptr<ImagePipeUpdater> updater,
                                   fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request,
                                   escher::ResourceManager* fake_resource_manager)
-      : ImagePipe2(session, 0u, std::move(request), CreateImagePipeUpdater(session),
+      : ImagePipe2(session, 0u, std::move(request), std::move(updater),
                    session->shared_error_reporter()),
         fake_resource_manager_(fake_resource_manager) {
-    FXL_CHECK(session->session_context().frame_scheduler);
-
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
     EXPECT_EQ(status, ZX_OK);
   }
   ~ImagePipe2ThatCreatesFakeImages() { CloseConnectionAndCleanUp(); }
 
-  ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-                                zx::time presentation_time) override {
-    auto result = ImagePipe2::Update(release_fence_signaller, presentation_time);
+  ImagePipeUpdateResults Update(scheduling::PresentId present_id) override {
+    auto result = ImagePipe2::Update(present_id);
     if (result.image_updated) {
       static_cast<FakeImage*>(current_image().get())->update_count_++;
     }
@@ -189,181 +188,218 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
 };
 
 // Creates test environment.
-class ImagePipe2Test : public SessionHandlerTest, public escher::ResourceManager {
+class ImagePipe2Test : public ErrorReportingTest, public escher::ResourceManager {
  public:
   ImagePipe2Test() : escher::ResourceManager(escher::EscherWeakPtr()) {}
 
-  fxl::RefPtr<ImagePipe2ThatCreatesFakeImages> CreateImagePipe() {
-    return fxl::MakeRefCounted<ImagePipe2ThatCreatesFakeImages>(
-        session(), image_pipe_handle_.NewRequest(), this);
-  }
-
   void OnReceiveOwnable(std::unique_ptr<escher::Resource> resource) override {}
 
+  void SetUp() override {
+    ErrorReportingTest::SetUp();
+
+    gfx_session_ = std::make_unique<gfx::Session>(/*id=*/1, SessionContext{},
+                                                  shared_event_reporter(), shared_error_reporter());
+    auto updater = std::make_unique<MockImagePipeUpdater>();
+    image_pipe_updater_ = updater.get();
+    image_pipe_ = fxl::MakeRefCounted<ImagePipe2ThatCreatesFakeImages>(
+        gfx_session_.get(), std::move(updater), image_pipe_handle_.NewRequest(), this);
+  }
+
+  void TearDown() override {
+    image_pipe_.reset();
+    image_pipe_updater_ = nullptr;
+    gfx_session_.reset();
+
+    ErrorReportingTest::TearDown();
+  }
+
+  fxl::RefPtr<ImagePipe2ThatCreatesFakeImages> image_pipe_;
+  MockImagePipeUpdater* image_pipe_updater_;
+
  private:
+  std::unique_ptr<gfx::Session> gfx_session_;
   fidl::InterfacePtr<fuchsia::images::ImagePipe2> image_pipe_handle_;
 };
 
-TEST_F(ImagePipe2Test, CreateAndDestroyImagePipe) { auto image_pipe = CreateImagePipe(); }
-
 // Present a BufferCollection with an Id of zero, and expect an error.
 TEST_F(ImagePipe2Test, BufferCollectionIdMustNotBeZero) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), false);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), false);
 
   const uint32_t kBufferId = 0;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   ExpectLastReportedError("AddBufferCollection: BufferCollection can not be assigned an ID of 0.");
 }
 
 // Present an image with an Id of zero, and expect an error.
 TEST_F(ImagePipe2Test, ImagePipeImageIdMustNotBeZero) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), false);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), false);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kImageId = 0;
-  image_pipe->AddImage(kImageId, kBufferId, 0, fuchsia::sysmem::ImageFormat_2());
+  image_pipe_->AddImage(kImageId, kBufferId, 0, fuchsia::sysmem::ImageFormat_2());
 
   ExpectLastReportedError("AddImage: Image can not be assigned an ID of 0.");
 }
 
 // Add multiple images from same buffer collection.
 TEST_F(ImagePipe2Test, AddMultipleImagesFromABufferCollection) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
                  kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
   const uint32_t kImageId1 = 1;
-  image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
   const uint32_t kImageId2 = 2;
-  image_pipe->AddImage(kImageId2, kBufferId, 1, image_format);
+  image_pipe_->AddImage(kImageId2, kBufferId, 1, image_format);
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Add multiple images from an invalid buffer collection id.
 TEST_F(ImagePipe2Test, BufferCollectionIdMustBeValid) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
                  kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
   const uint32_t kImageId1 = 1;
-  image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
   const uint32_t kImageId2 = 2;
-  image_pipe->AddImage(kImageId2, kBufferId + 1, 1, image_format);
+  image_pipe_->AddImage(kImageId2, kBufferId + 1, 1, image_format);
 
   ExpectLastReportedError("AddImage: resource with ID not found.");
 }
 
 // Add multiple images from same buffer collection.
 TEST_F(ImagePipe2Test, BufferCollectionIndexMustBeValid) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
                  kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
   const uint32_t kImageId1 = 1;
-  image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
   const uint32_t kImageId2 = 2;
-  image_pipe->AddImage(kImageId2, kBufferId, kImageCount, image_format);
+  image_pipe_->AddImage(kImageId2, kBufferId, kImageCount, image_format);
 
   ExpectLastReportedError("AddImage: buffer_collection_index out of bounds");
 }
 
 // Removing buffer collection removes associated images.
 TEST_F(ImagePipe2Test, RemoveBufferCollectionRemovesImages) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
                  kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
   const uint32_t kImageId1 = 1;
-  image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
-  image_pipe->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
-                           std::vector<zx::event>(), nullptr);
+  image_pipe_->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
+                            std::vector<zx::event>(), nullptr);
 
   // Remove buffer collection
-  image_pipe->RemoveBufferCollection(kBufferId);
-  image_pipe->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
-                           std::vector<zx::event>(), nullptr);
+  image_pipe_->RemoveBufferCollection(kBufferId);
+  image_pipe_->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
+                            std::vector<zx::event>(), nullptr);
 
   ExpectLastReportedError("PresentImage: could not find Image with ID: 1");
 }
 
-// Call Present with out-of-order presentation times, and expect an error.
-TEST_F(ImagePipe2Test, PresentImagesOutOfOrder) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+// Call Present with in-order presentation times, and expect no error.
+TEST_F(ImagePipe2Test, PresentImage_ShouldCallScheduleUpdate) {
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
                  fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   const uint32_t kImageId = 1;
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
-  image_pipe->AddImage(kImageId, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId, kBufferId, 0, image_format);
+
+  EXPECT_EQ(image_pipe_updater_->schedule_update_call_count_, 0u);
+
+  image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
+                            CopyEventIntoFidlArray(CreateEvent()), [](auto) {});
+
+  EXPECT_EQ(image_pipe_updater_->schedule_update_call_count_, 1u);
+
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
+}
+
+// Call Present with out-of-order presentation times, and expect an error.
+TEST_F(ImagePipe2Test, PresentImagesOutOfOrder) {
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
+
+  const uint32_t kBufferId = 1;
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+
+  const uint32_t kWidth = 32;
+  const uint32_t kHeight = 32;
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
+                 fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
+
+  const uint32_t kImageId = 1;
+  fuchsia::sysmem::ImageFormat_2 image_format = {};
+  image_format.coded_width = kWidth;
+  image_format.coded_height = kHeight;
+  image_pipe_->AddImage(kImageId, kBufferId, 0, image_format);
 
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
-  image_pipe->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
-  image_pipe->PresentImage(kImageId, zx::time(0), CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+  image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
+                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+  image_pipe_->PresentImage(kImageId, zx::time(0), CopyEventIntoFidlArray(CreateEvent()),
+                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
   ExpectLastReportedError(
       "PresentImage: Present called with out-of-order presentation "
@@ -372,28 +408,27 @@ TEST_F(ImagePipe2Test, PresentImagesOutOfOrder) {
 
 // Call Present with in-order presentation times, and expect no error.
 TEST_F(ImagePipe2Test, PresentImagesInOrder) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
                  fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   const uint32_t kImageId = 1;
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
-  image_pipe->AddImage(kImageId, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId, kBufferId, 0, image_format);
 
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
-  image_pipe->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
-  image_pipe->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+  image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
+                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+  image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
+                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
@@ -401,202 +436,173 @@ TEST_F(ImagePipe2Test, PresentImagesInOrder) {
 // Call Present with an image with an odd size(possible offset) into its memory, and expect no
 // error.
 TEST_F(ImagePipe2Test, PresentImagesWithOddSize) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 35;
   const uint32_t kHeight = 35;
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight, 1u,
                  fuchsia::sysmem::PixelFormatType::BGRA32, true, &buffer_collection);
 
   const uint32_t kImageId = 1;
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
-  image_pipe->AddImage(kImageId, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId, kBufferId, 0, image_format);
 
   fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
-  image_pipe->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
-  image_pipe->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                           CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+  image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
+                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+  image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
+                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
-// Present two frames on the ImagePipe, making sure that both buffers are allocated, acquire fence
-// is being listened to and release fences are signalled.
+// Present two frames on the ImagePipe, making sure that both buffers are allocated, and that both
+// are updated with their respective Update calls.
 TEST_F(ImagePipe2Test, ImagePipePresentTwoFrames) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
                  kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
   const uint32_t kImageId1 = 1;
-  image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
-  zx::event acquire_fence1 = CreateEvent();
-  zx::event release_fence1 = CreateEvent();
-  image_pipe->PresentImage(kImageId1, zx::time(0), CopyEventIntoFidlArray(acquire_fence1),
-                           CopyEventIntoFidlArray(release_fence1), nullptr);
+  const auto present_id = image_pipe_->PresentImage(kImageId1, zx::time(0), /*acquire_fences=*/{},
+                                                    /*release_fences=*/{}, /*callback=*/nullptr);
 
-  // Current presented image should be null, since we haven't signalled acquire fence yet.
-  ASSERT_FALSE(RunLoopFor(zx::sec(1)));
-  ASSERT_FALSE(image_pipe->current_image());
-  ASSERT_FALSE(image_pipe->GetEscherImage());
+  // Current presented image should be null, since we haven't called Update yet.
+  ASSERT_FALSE(image_pipe_->current_image());
+  ASSERT_FALSE(image_pipe_->GetEscherImage());
 
-  // Signal on the acquire fence.
-  acquire_fence1.signal(0u, escher::kFenceSignalled);
-
-  // Run until image1 is presented, but image1 will not be rendered since we have no engine render
-  // visitor.
-  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  ASSERT_TRUE(image_pipe->current_image());
-  ASSERT_FALSE(image_pipe->GetEscherImage());
+  image_pipe_->Update(present_id);
+  ASSERT_TRUE(image_pipe_->current_image());
+  ASSERT_FALSE(image_pipe_->GetEscherImage());
 
   // Image should now be presented.
-  ImagePtr image1 = image_pipe->current_image();
+  ImagePtr image1 = image_pipe_->current_image();
   ASSERT_TRUE(image1);
 
   const uint32_t kImageId2 = 2;
-  image_pipe->AddImage(kImageId2, kBufferId, 1, image_format);
+  image_pipe_->AddImage(kImageId2, kBufferId, 1, image_format);
 
-  // The first image should not have been released.
-  ASSERT_FALSE(RunLoopFor(zx::sec(1)));
-  ASSERT_FALSE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
-
-  // Make gradient the currently displayed image.
-  zx::event acquire_fence2 = CreateEvent();
-  zx::event release_fence2 = CreateEvent();
-
-  image_pipe->PresentImage(kImageId2, zx::time(0), CopyEventIntoFidlArray(acquire_fence2),
-                           CopyEventIntoFidlArray(release_fence2), nullptr);
+  const auto present_id2 = image_pipe_->PresentImage(kImageId2, zx::time(0), /*acquire_fences=*/{},
+                                                     /*release_fences=*/{}, /*callback=*/nullptr);
 
   // Verify that the currently display image hasn't changed yet, since we
-  // haven't signalled the acquire fence.
-  ASSERT_FALSE(RunLoopUntilIdle());
-  ASSERT_FALSE(image_pipe->GetEscherImage());
-  ASSERT_EQ(image_pipe->current_image(), image1);
+  // haven't called Update yet.
+  ASSERT_FALSE(image_pipe_->GetEscherImage());
+  ASSERT_EQ(image_pipe_->current_image(), image1);
 
-  // Signal on the acquire fence.
-  acquire_fence2.signal(0u, escher::kFenceSignalled);
+  image_pipe_->Update(present_id2);
 
   // There should be a new image presented.
-  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  ASSERT_FALSE(image_pipe->GetEscherImage());
-  ImagePtr image2 = image_pipe->current_image();
+  ASSERT_FALSE(image_pipe_->GetEscherImage());
+  ImagePtr image2 = image_pipe_->current_image();
   ASSERT_TRUE(image2);
   ASSERT_NE(image1, image2);
-
-  // The first image should have been released.
-  ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
-  ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
 }
 
-// Present two frames on the ImagePipe, making sure that UpdatePixels is only called on images that
-// are acquired and used.
+// Present two frames on the ImagePipe and skip one, making sure that UpdatePixels is only called on
+// images that are used.
 TEST_F(ImagePipe2Test, ImagePipeUpdateTwoFrames) {
-  auto image_pipe = CreateImagePipe();
-
   // Add first image 32x32
-  auto tokens1 = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens1 = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBuffer1Id = 1;
-  image_pipe->AddBufferCollection(kBuffer1Id, std::move(tokens1.local_token));
+  image_pipe_->AddBufferCollection(kBuffer1Id, std::move(tokens1.local_token));
 
   const uint32_t kImage1Width = 32;
   const uint32_t kImage1Height = 32;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens1.dup_token), kImage1Width,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens1.dup_token), kImage1Width,
                  kImage1Height, 1u, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format1 = {};
   image_format1.coded_width = kImage1Width;
   image_format1.coded_height = kImage1Height;
   const uint32_t kImageId1 = 1;
-  image_pipe->AddImage(kImageId1, kBuffer1Id, 0, image_format1);
+  image_pipe_->AddImage(kImageId1, kBuffer1Id, 0, image_format1);
 
   // Add second image 48x48
-  auto tokens2 = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens2 = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBuffer2Id = 2;
-  image_pipe->AddBufferCollection(kBuffer2Id, std::move(tokens2.local_token));
+  image_pipe_->AddBufferCollection(kBuffer2Id, std::move(tokens2.local_token));
 
   const uint32_t kImage2Width = 48;
   const uint32_t kImage2Height = 48;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens2.dup_token), kImage2Width,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens2.dup_token), kImage2Width,
                  kImage2Height, 1u, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format_2 = {};
   image_format_2.coded_width = kImage2Width;
   image_format_2.coded_height = kImage2Height;
   const uint32_t kImageId2 = 2;
-  image_pipe->AddImage(kImageId2, kBuffer2Id, 0, image_format_2);
+  image_pipe_->AddImage(kImageId2, kBuffer2Id, 0, image_format_2);
 
   // Present both images
-  image_pipe->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
-                           std::vector<zx::event>(), nullptr);
-  image_pipe->PresentImage(kImageId2, zx::time(0), std::vector<zx::event>(),
-                           std::vector<zx::event>(), nullptr);
+  image_pipe_->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
+                            std::vector<zx::event>(), nullptr);
+  const auto present_id = image_pipe_->PresentImage(
+      kImageId2, zx::time(0), std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
 
-  // Let all updates get scheduled and finished
-  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
+  image_pipe_->Update(present_id);
 
-  auto image_out = image_pipe->current_image();
+  auto image_out = image_pipe_->current_image();
   // We should get the second image in the queue, since both should have been ready.
   ASSERT_TRUE(image_out);
-  ASSERT_FALSE(image_pipe->GetEscherImage());
+  ASSERT_FALSE(image_pipe_->GetEscherImage());
   ASSERT_EQ(static_cast<FakeImage*>(image_out.get())->image_info_.width, kImage2Width);
-  ASSERT_EQ(image_pipe->fake_images_.size(), 2u);
-  ASSERT_EQ(image_pipe->fake_images_[0]->update_count_, 0u);
-  ASSERT_EQ(image_pipe->fake_images_[1]->update_count_, 1u);
+  ASSERT_EQ(image_pipe_->fake_images_.size(), 2u);
+  ASSERT_EQ(image_pipe_->fake_images_[0]->update_count_, 0u);
+  ASSERT_EQ(image_pipe_->fake_images_[1]->update_count_, 1u);
 
   // Do it again, to make sure that update is called a second time (since released images could be
   // edited by the client before presentation).
   //
   // In this case, we need to run to idle after presenting image A, so that image B is returned by
   // the pool, marked dirty, and is free to be acquired again.
-  image_pipe->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
-                           std::vector<zx::event>(), nullptr);
-  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  image_pipe->PresentImage(kImageId2, zx::time(0), std::vector<zx::event>(),
-                           std::vector<zx::event>(), nullptr);
-  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
+  const auto present_id2 = image_pipe_->PresentImage(
+      kImageId1, zx::time(0), std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
+  image_pipe_->Update(present_id2);
+  const auto present_id3 = image_pipe_->PresentImage(
+      kImageId2, zx::time(0), std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
+  image_pipe_->Update(present_id3);
 
-  image_out = image_pipe->current_image();
-  ASSERT_EQ(image_pipe->fake_images_.size(), 2u);
+  image_out = image_pipe_->current_image();
+  ASSERT_EQ(image_pipe_->fake_images_.size(), 2u);
   // Because Present was handled for image 1, we should have a call to
   // UpdatePixels for that image.
-  ASSERT_EQ(image_pipe->fake_images_[0]->update_count_, 1u);
-  ASSERT_EQ(image_pipe->fake_images_[1]->update_count_, 2u);
+  ASSERT_EQ(image_pipe_->fake_images_[0]->update_count_, 1u);
+  ASSERT_EQ(image_pipe_->fake_images_[1]->update_count_, 2u);
 }
 
 // Present two frames on the ImagePipe. After presenting the first image but before signaling its
 // acquire fence, remove it. Verify that this doesn't cause any errors.
 TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
                  kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   // Add first image
@@ -604,127 +610,103 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
-  image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
+  image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
-  zx::event acquire_fence1 = CreateEvent();
-  zx::event release_fence1 = CreateEvent();
-  image_pipe->PresentImage(kImageId1, zx::time(0), CopyEventIntoFidlArray(acquire_fence1),
-                           CopyEventIntoFidlArray(release_fence1), nullptr);
+  const auto present_id = image_pipe_->PresentImage(kImageId1, zx::time(0), /*acquire_fences=*/{},
+                                                    /*release_fences=*/{}, /*callback=*/nullptr);
 
-  // Current presented image should be null, since we haven't signalled acquire fence yet.
-  ASSERT_FALSE(RunLoopFor(zx::sec(1)));
-  ASSERT_FALSE(image_pipe->current_image());
-  ASSERT_FALSE(image_pipe->GetEscherImage());
+  // Current presented image should be null, since we haven't called Update yet.
+  ASSERT_FALSE(image_pipe_->current_image());
+  ASSERT_FALSE(image_pipe_->GetEscherImage());
 
   // Remove the image; by the ImagePipe semantics, the consumer will
   // still keep a reference to it so any future presents will still work.
-  image_pipe->RemoveImage(kImageId1);
+  image_pipe_->RemoveImage(kImageId1);
 
-  // Signal on the acquire fence.
-  acquire_fence1.signal(0u, escher::kFenceSignalled);
-
-  // Run until image1 is presented.
-  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  ASSERT_TRUE(image_pipe->current_image());
-  ASSERT_FALSE(image_pipe->GetEscherImage());
-  ImagePtr image1 = image_pipe->current_image();
+  // Update to image1.
+  image_pipe_->Update(present_id);
+  ASSERT_TRUE(image_pipe_->current_image());
+  ASSERT_FALSE(image_pipe_->GetEscherImage());
+  ImagePtr image1 = image_pipe_->current_image();
 
   // Image should now be presented.
   ASSERT_TRUE(image1);
 
   // Add second image
   const uint32_t kImageId2 = 2;
-  image_pipe->AddImage(kImageId2, kBufferId, 1, image_format);
-  RunLoopUntilIdle();
-
-  // The first image should not have been released.
-  ASSERT_FALSE(RunLoopFor(zx::sec(1)));
-  ASSERT_FALSE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
+  image_pipe_->AddImage(kImageId2, kBufferId, 1, image_format);
 
   // Make gradient the currently displayed image.
-  zx::event acquire_fence2 = CreateEvent();
-  zx::event release_fence2 = CreateEvent();
+  const auto present_id2 = image_pipe_->PresentImage(kImageId2, zx::time(0), /*acquire_fences=*/{},
+                                                     /*release_fences=*/{}, /*callback=*/nullptr);
 
-  image_pipe->PresentImage(kImageId2, zx::time(0), CopyEventIntoFidlArray(acquire_fence2),
-                           CopyEventIntoFidlArray(release_fence2), nullptr);
+  // Verify that the currently display image hasn't changed yet, since we haven't called Update yet.
+  ASSERT_EQ(image_pipe_->current_image(), image1);
 
-  // Verify that the currently display image hasn't changed yet, since we
-  // haven't signalled the acquire fence.
-  ASSERT_FALSE(RunLoopFor(zx::sec(1)));
-  ASSERT_EQ(image_pipe->current_image(), image1);
-
-  // Signal on the acquire fence.
-  acquire_fence2.signal(0u, escher::kFenceSignalled);
+  // Update to image2.
+  image_pipe_->Update(present_id2);
 
   // There should be a new image presented.
-  ASSERT_TRUE(RunLoopFor(zx::sec(1)));
-  ImagePtr image2 = image_pipe->current_image();
+  ImagePtr image2 = image_pipe_->current_image();
   ASSERT_TRUE(image2);
-  ASSERT_FALSE(image_pipe->GetEscherImage());
+  ASSERT_FALSE(image_pipe_->GetEscherImage());
   ASSERT_NE(image1, image2);
-
-  // The first image should have been released.
-  ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
-  ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Detects protected memory backed image added.
 TEST_F(ImagePipe2Test, DetectsProtectedMemory) {
-  auto image_pipe = CreateImagePipe();
-  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
 
   const uint32_t kBufferId = 1;
-  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+  image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
   const uint32_t kWidth = 32;
   const uint32_t kHeight = 32;
   const uint32_t kImageCount = 2;
-  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
                  kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, true, nullptr);
 
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = kWidth;
   image_format.coded_height = kHeight;
   const uint32_t kImageId1 = 1;
-  image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
-  ASSERT_FALSE(image_pipe->use_protected_memory());
+  image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
+  ASSERT_FALSE(image_pipe_->use_protected_memory());
 
-  image_pipe->set_next_image_is_protected(true);
+  image_pipe_->set_next_image_is_protected(true);
   const uint32_t kImageId2 = 2;
-  image_pipe->AddImage(kImageId2, kBufferId, 1, image_format);
-  ASSERT_TRUE(image_pipe->use_protected_memory());
+  image_pipe_->AddImage(kImageId2, kBufferId, 1, image_format);
+  ASSERT_TRUE(image_pipe_->use_protected_memory());
 
-  image_pipe->RemoveImage(kImageId2);
-  ASSERT_FALSE(image_pipe->use_protected_memory());
+  image_pipe_->RemoveImage(kImageId2);
+  ASSERT_FALSE(image_pipe_->use_protected_memory());
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Checks if NV12 and BGRAimage can be added.
 TEST_F(ImagePipe2Test, AddMultipleFormatsImage) {
-  auto image_pipe = CreateImagePipe();
-
   std::vector<fuchsia::sysmem::PixelFormatType> formats{fuchsia::sysmem::PixelFormatType::BGRA32,
                                                         fuchsia::sysmem::PixelFormatType::NV12};
   for (auto format : formats) {
-    auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+    auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
     const uint32_t kBufferId = 1;
-    image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+    image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));
 
     const uint32_t kWidth = 32;
     const uint32_t kHeight = 32;
     const uint32_t kImageCount = 1;
-    SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+    SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
                    kImageCount, format, true, nullptr);
 
     fuchsia::sysmem::ImageFormat_2 image_format = {};
     image_format.coded_width = kWidth;
     image_format.coded_height = kHeight;
     const uint32_t kImageId1 = 1;
-    image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
-    EXPECT_EQ(format, image_pipe->pixel_format_);
-    image_pipe->RemoveBufferCollection(kBufferId);
+    image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
+    EXPECT_EQ(format, image_pipe_->pixel_format_);
+    image_pipe_->RemoveBufferCollection(kBufferId);
   }
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);

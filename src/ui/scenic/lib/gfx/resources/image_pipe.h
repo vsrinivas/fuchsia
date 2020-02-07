@@ -18,6 +18,7 @@
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace escher {
 class BatchGpuUploader;
@@ -46,14 +47,14 @@ class ImagePipe : public ImagePipeBase {
                 uint64_t offset_bytes, uint64_t size_bytes,
                 fuchsia::images::MemoryType memory_type);
   void RemoveImage(uint32_t image_id);
-
-  void PresentImage(uint32_t image_id, zx::time presentation_time,
-                    std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
-                    PresentCallback callback);
+  // Returns the PresentId of this Present call.
+  scheduling::PresentId PresentImage(uint32_t image_id, zx::time presentation_time,
+                                     std::vector<zx::event> acquire_fences,
+                                     std::vector<zx::event> release_fences,
+                                     PresentImageCallback callback);
 
   // ImagePipeBase implementation
-  ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-                                zx::time presentation_time) override;
+  ImagePipeUpdateResults Update(scheduling::PresentId present_id) override;
 
   // Updates the Escher image to the current frame. This should be called after
   // Update() indicates the current Image changed, and before calling
@@ -92,21 +93,15 @@ class ImagePipe : public ImagePipeBase {
   // A |Frame| stores the arguments passed to a particular invocation of
   // Present().
   struct Frame {
+    scheduling::PresentId present_id;
     ImagePtr image;
     zx::time presentation_time;
-    std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    fidl::VectorPtr<zx::event> release_fences;
-
-    // Callback to report when the update has been applied in response to
-    // an invocation of |ImagePipe.PresentImage()|.
-    PresentCallback present_image_callback;
   };
   std::queue<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;
 
   ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
-  fidl::VectorPtr<zx::event> current_release_fences_;
 
   std::unordered_map<ResourceId, ImagePtr> images_;
   bool is_valid_ = true;

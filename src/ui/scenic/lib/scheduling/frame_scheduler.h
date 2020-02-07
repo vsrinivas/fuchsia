@@ -11,6 +11,7 @@
 #include <lib/zx/time.h>
 
 #include <queue>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -52,9 +53,9 @@ class SessionUpdater {
   // For each known session in |sessions_to_update|, apply all of the "ready" updates.  A "ready"
   // update is one that is scheduled at or before |presentation_time|, and for which all other
   // preconditions have been met (for example, all acquire fences have been signaled).
-  virtual UpdateResults UpdateSessions(const std::unordered_set<SessionId>& sessions_to_update,
-                                       zx::time presentation_time, zx::time latched_time,
-                                       uint64_t trace_id) = 0;
+  virtual UpdateResults UpdateSessions(
+      const std::unordered_map<SessionId, PresentId>& sessions_to_update,
+      zx::time presentation_time, zx::time latched_time, uint64_t trace_id) = 0;
 
   // Notify updater that no more sessions will be updated before rendering the next frame; now is
   // the time to do any necessary work before the frame is rendered.  For example, animations might
@@ -113,7 +114,7 @@ class FrameScheduler {
 
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
-  virtual void ScheduleUpdateForSession(zx::time presentation_time, SessionId session) = 0;
+  virtual void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) = 0;
 
   // Gets the predicted latch points and presentation times for the frames at or before the next
   // |requested_prediction_span| time span. Uses the FramePredictor to do so.
