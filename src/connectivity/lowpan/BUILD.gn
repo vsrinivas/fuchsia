@@ -5,6 +5,7 @@
 group("lowpan") {
   testonly = true
   deps = [
+    "config",
     "drivers",
     "service",
     "tools",
