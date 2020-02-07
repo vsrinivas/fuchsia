@@ -109,4 +109,17 @@ std::optional<Stream::Buffer> EffectsStage::LockBuffer(zx::time ref_time, int64_
   return current_block_;
 }
 
+Stream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFractionalFrames() const {
+  auto snapshot = source_->ReferenceClockToFractionalFrames();
+
+  // Update our timeline function to include the latency introduced by these effects.
+  int64_t delay_frames = effects_processor_->delay_frames();
+  auto delay_frac_frames = FractionalFrames<int64_t>(-delay_frames);
+  auto delay_function = TimelineFunction(delay_frac_frames.raw_value(), 0, TimelineRate(1, 1));
+  snapshot.timeline_function =
+      TimelineFunction::Compose(delay_function, snapshot.timeline_function);
+
+  return snapshot;
+}
+
 }  // namespace media::audio

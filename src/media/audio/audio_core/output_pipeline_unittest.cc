@@ -139,13 +139,8 @@ TEST_F(OutputPipelineTest, Trim) {
 }
 
 TEST_F(OutputPipelineTest, Loopback) {
-  auto test_effects = testing::OpenTestEffectsExt();
-  ASSERT_EQ(ZX_OK, test_effects->add_effect({{"add_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                              FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                             FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
-                                             FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-                                             TEST_EFFECTS_ACTION_ADD,
-                                             1.0}));
+  auto test_effects = testing::TestEffectsModule::Open();
+  test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   PipelineConfig::MixGroup root{.name = "linearize",
                                 .input_streams =
                                     {
@@ -192,8 +187,6 @@ TEST_F(OutputPipelineTest, Loopback) {
   ASSERT_EQ(loopback_buf->start().Floor(), 0u);
   ASSERT_EQ(loopback_buf->length().Floor(), 48u);
   CheckBuffer(loopback_buf->payload(), 0.0, 96);
-
-  test_effects->clear_effects();
 }
 
 }  // namespace

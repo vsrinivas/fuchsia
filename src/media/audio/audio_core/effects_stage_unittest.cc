@@ -146,5 +146,45 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
   }
 }
 
+TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
+  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+
+  // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
+  // streams format.
+  stream->timeline_function()->Update(TimelineFunction(
+      TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+
+  test_effects_.AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
+  test_effects_.AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
+
+  // Create the effects stage. We expect 13 total frames of latency (summed across the 2 effects).
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "effect_with_delay_10",
+      .effect_config = "",
+  });
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "effect_with_delay_3",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream);
+
+  // Since our effect is introducing 13 frames of latency, the frame at time 0 is now actually frame
+  // -13, and the actual frame 0 will occur once it makes its way through the effect.
+  auto timeline_function = effects_stage->ReferenceClockToFractionalFrames().timeline_function;
+  EXPECT_EQ(FractionalFrames<int64_t>::FromRaw(timeline_function.Apply(0)),
+            FractionalFrames<int64_t>(-13));
+
+  // Similarly, at the time we'd normally expect frame 13, we should instead be seeing frame 0. Use
+  // a fuzzy compare to allow for slight rounding errors.
+  int64_t frame_13_time = (zx::sec(13).to_nsecs()) / kDefaultFormat.frames_per_second();
+  auto frame_13_frac_frames =
+      FractionalFrames<int64_t>::FromRaw(timeline_function.Apply(frame_13_time)).Absolute();
+  EXPECT_LE(frame_13_frac_frames.raw_value(), 1);
+}
+
 }  // namespace
 }  // namespace media::audio

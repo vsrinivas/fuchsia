@@ -32,9 +32,7 @@ class EffectsStage : public Stream {
                                            uint32_t frame_count) override;
   void UnlockBuffer(bool release_buffer) override { source_->UnlockBuffer(release_buffer); }
   void Trim(zx::time trim_threshold) override { source_->Trim(trim_threshold); }
-  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
-    return source_->ReferenceClockToFractionalFrames();
-  }
+  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
                        FractionalFrames<int64_t> frac_source_mix_point,
                        zx::duration underflow_duration) override {

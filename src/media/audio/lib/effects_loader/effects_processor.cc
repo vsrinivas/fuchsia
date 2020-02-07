@@ -53,6 +53,8 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
     max_batch_size_ = ComputeMaxFramesPerBuffer(params.max_frames_per_buffer, block_size_);
   }
 
+  delay_frames_ += params.signal_latency_frames;
+
   if (effects_chain_.empty()) {
     // This is the first effect; the processors input channels will be whatever this effect
     // accepts.

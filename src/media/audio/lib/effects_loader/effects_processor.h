@@ -69,6 +69,10 @@ class EffectsProcessor {
   // Returns 0 if the plugin can handle arbitrary buffer sizes.
   [[nodiscard]] uint32_t max_batch_size() const { return max_batch_size_; }
 
+  // Returns the number of frames the input signal will be delayed after being run through this
+  // |EffectsProcessor|.
+  [[nodiscard]] uint32_t delay_frames() const { return delay_frames_; }
+
   [[nodiscard]] auto begin() { return effects_chain_.begin(); }
   [[nodiscard]] auto end() { return effects_chain_.end(); }
   [[nodiscard]] auto cbegin() const { return effects_chain_.cbegin(); }
@@ -87,6 +91,7 @@ class EffectsProcessor {
   uint32_t channels_out_ = 0;
   uint32_t block_size_ = 1;
   uint32_t max_batch_size_ = 0;
+  uint32_t delay_frames_ = 0;
 };
 
 }  // namespace media::audio
