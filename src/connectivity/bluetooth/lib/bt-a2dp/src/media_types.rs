@@ -113,12 +113,12 @@ bitfield! {
     pub struct SbcCodecInfo(u32);
     impl Debug;
     u8;
-    maxbitpoolval, set_maxbpv: 7, 0;
+    pub maxbitpoolval, set_maxbpv: 7, 0;
     minbitpoolval, set_minbpv: 15, 8;
-    allocation_method, set_allocation_method: 17,16;
-    subbands, set_sub_bands: 19, 18;
-    block_count, set_block_count: 23, 20;
-    channel_mode, set_channel_mode: 27, 24;
+    pub allocation_method, set_allocation_method: 17,16;
+    pub subbands, set_sub_bands: 19, 18;
+    pub block_count, set_block_count: 23, 20;
+    pub channel_mode, set_channel_mode: 27, 24;
     pub sampling_frequency, set_sampling_frequency: 31, 28;
 }
 

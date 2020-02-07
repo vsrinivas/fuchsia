@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use bitfield::bitfield;
+use bt_a2dp::media_types as a2dp;
 use bt_avdtp as avdtp;
 use fidl_fuchsia_media::{
     AudioFormat, AudioUncompressedFormat, DomainFormat, EncoderSettings, PcmFormat, SbcAllocation,
@@ -16,7 +17,7 @@ use futures::{
     task::{Context, Poll},
     Stream, StreamExt,
 };
-use std::{collections::VecDeque, pin::Pin};
+use std::{collections::VecDeque, convert::TryFrom, pin::Pin};
 
 use fuchsia_syslog::fx_log_info;
 
@@ -107,19 +108,60 @@ pub struct EncodedStream {
 impl EncodedStream {
     pub fn build(
         input_format: PcmFormat,
-        _sbc_settings: &avdtp::ServiceCapability,
+        codec_settings: &avdtp::ServiceCapability,
         source: BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>,
         pcm_frames_per_encoded_frame: u32,
         encoded_frames_per_packet: u8,
     ) -> Result<Self, Error> {
-        // TODO: take these from the sbc_settings
-        let sbc_encoder_settings = EncoderSettings::Sbc(SbcEncoderSettings {
-            sub_bands: SbcSubBands::SubBands8,
-            allocation: SbcAllocation::AllocLoudness,
-            block_count: SbcBlockCount::BlockCount16,
-            channel_mode: SbcChannelMode::JointStereo,
-            bit_pool: 53,
-        });
+        let encoder_settings = match codec_settings {
+            avdtp::ServiceCapability::MediaCodec {
+                media_type: avdtp::MediaType::Audio,
+                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                codec_extra,
+            } => {
+                let codec_info = a2dp::SbcCodecInfo::try_from(&codec_extra[..])?;
+
+                let sub_bands = match a2dp::SbcSubBands::from_bits_truncate(codec_info.subbands()) {
+                    a2dp::SbcSubBands::FOUR => SbcSubBands::SubBands4,
+                    a2dp::SbcSubBands::EIGHT => SbcSubBands::SubBands8,
+                    _ => return Err(format_err!("out of range")),
+                };
+
+                let allocation =
+                    match a2dp::SbcAllocation::from_bits_truncate(codec_info.allocation_method()) {
+                        a2dp::SbcAllocation::SNR => SbcAllocation::AllocSnr,
+                        a2dp::SbcAllocation::LOUDNESS => SbcAllocation::AllocLoudness,
+                        _ => return Err(format_err!("out of range")),
+                    };
+
+                let block_count =
+                    match a2dp::SbcBlockCount::from_bits_truncate(codec_info.block_count()) {
+                        a2dp::SbcBlockCount::FOUR => SbcBlockCount::BlockCount4,
+                        a2dp::SbcBlockCount::EIGHT => SbcBlockCount::BlockCount8,
+                        a2dp::SbcBlockCount::TWELVE => SbcBlockCount::BlockCount12,
+                        a2dp::SbcBlockCount::SIXTEEN => SbcBlockCount::BlockCount16,
+                        _ => return Err(format_err!("out of range")),
+                    };
+
+                let channel_mode =
+                    match a2dp::SbcChannelMode::from_bits_truncate(codec_info.channel_mode()) {
+                        a2dp::SbcChannelMode::MONO => SbcChannelMode::Mono,
+                        a2dp::SbcChannelMode::DUAL_CHANNEL => SbcChannelMode::Dual,
+                        a2dp::SbcChannelMode::STEREO => SbcChannelMode::Stereo,
+                        a2dp::SbcChannelMode::JOINT_STEREO => SbcChannelMode::JointStereo,
+                        _ => return Err(format_err!("out of range")),
+                    };
+
+                EncoderSettings::Sbc(SbcEncoderSettings {
+                    sub_bands,
+                    allocation,
+                    block_count,
+                    channel_mode,
+                    bit_pool: codec_info.maxbitpoolval() as u64,
+                })
+            }
+            _ => return Err(format_err!("Unsupported codec {:?}", codec_settings)),
+        };
 
         let bytes_per_pcm_frame =
             (input_format.bits_per_sample / 8) as usize * input_format.channel_map.len();
@@ -130,7 +172,7 @@ impl EncodedStream {
         let pcm_input_format = DomainFormat::Audio(AudioFormat::Uncompressed(
             AudioUncompressedFormat::Pcm(input_format),
         ));
-        let mut encoder = StreamProcessor::create_encoder(pcm_input_format, sbc_encoder_settings)?;
+        let mut encoder = StreamProcessor::create_encoder(pcm_input_format, encoder_settings)?;
         let encoded_stream = encoder.take_output_stream()?;
 
         Ok(Self {
@@ -323,8 +365,7 @@ mod tests {
 
         match exec.run_singlethreaded(&mut next_frame_fut) {
             Some(Ok(enc_frame)) => {
-                // maybe match the actual SBC output here, but since the encoder itself is tested,
-                // just confirming output can be created here is probably sufficient
+                // TODO(45775) validate encoder settings match what we specified in sbc_settings
                 assert!(!enc_frame.is_empty());
             }
             Some(Err(e)) => panic!("Uexpected error encoding: {}", e),

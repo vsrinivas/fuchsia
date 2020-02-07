@@ -207,6 +207,61 @@ impl Peers {
 const ENCODED_FRAMES_PER_SBC_PACKET: u8 = 5;
 const PCM_FRAMES_PER_SBC_FRAME: u32 = 640;
 
+// Represents a chosen remote stream endpoint and negotiated codec and encoder settings
+struct SelectedStream<'a> {
+    remote_stream: &'a avdtp::StreamEndpoint,
+    codec_settings: avdtp::ServiceCapability,
+    pcm_format: PcmFormat,
+    seid: u8,
+    encoded_frames_per_packet: u8,
+    pcm_frames_per_encoded_frame: u32,
+    frame_header: Vec<u8>,
+}
+
+impl<'a> SelectedStream<'a> {
+    // From the list of available remote streams, pick our preferred one and return matching codec parameters.
+    fn pick(
+        remote_streams: &'a Vec<avdtp::StreamEndpoint>,
+    ) -> Result<SelectedStream, anyhow::Error> {
+        // Find the SBC stream, which should exist (it is required)
+        let sbc_stream = remote_streams
+            .iter()
+            .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Sink)
+            .find(|stream| stream.codec_type() == Some(&avdtp::MediaCodecType::AUDIO_SBC))
+            .ok_or(format_err!("Couldn't find a compatible stream"))?;
+
+        // TODO(39321): Choose codec options based on availability and quality.
+        let sbc_codec_info = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ48000HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::SIXTEEN,
+            SbcSubBands::EIGHT,
+            SbcAllocation::LOUDNESS,
+            /* min_bpv= */ 53,
+            /* max_bpv= */ 53,
+        )?;
+
+        Ok(SelectedStream {
+            remote_stream: sbc_stream,
+            codec_settings: avdtp::ServiceCapability::MediaCodec {
+                media_type: avdtp::MediaType::Audio,
+                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                codec_extra: sbc_codec_info.to_bytes(),
+            },
+            pcm_format: PcmFormat {
+                pcm_mode: AudioPcmMode::Linear,
+                bits_per_sample: 16,
+                frames_per_second: 48000,
+                channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
+            },
+            seid: SBC_SEID,
+            encoded_frames_per_packet: ENCODED_FRAMES_PER_SBC_PACKET,
+            pcm_frames_per_encoded_frame: PCM_FRAMES_PER_SBC_FRAME,
+            frame_header: vec![ENCODED_FRAMES_PER_SBC_PACKET],
+        })
+    }
+}
+
 async fn start_streaming(
     peer: &DetachableWeak<PeerId, Peer>,
     source_type: AudioSourceType,
@@ -216,52 +271,34 @@ async fn start_streaming(
         strong.collect_capabilities()
     };
     let remote_streams = streams_fut.await?;
-
-    // Find the SBC stream, which should exist (it is required)
-    let remote_stream = remote_streams
-        .iter()
-        .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Sink)
-        .find(|stream| stream.codec_type() == Some(&avdtp::MediaCodecType::AUDIO_SBC))
-        .ok_or(format_err!("Couldn't find a compatible stream"))?;
-
-    // TODO(39321): Choose codec options based on availability and quality.
-    let sbc_settings = avdtp::ServiceCapability::MediaCodec {
-        media_type: avdtp::MediaType::Audio,
-        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-        codec_extra: vec![0x11, 0x15, 2, 53],
-    };
+    let selected_stream = SelectedStream::pick(&remote_streams)?;
 
     let start_stream_fut = {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         strong.start_stream(
-            SBC_SEID.try_into().unwrap(),
-            remote_stream.local_id().clone(),
-            sbc_settings.clone(),
+            selected_stream.seid.try_into()?,
+            selected_stream.remote_stream.local_id().clone(),
+            selected_stream.codec_settings.clone(),
         )
     };
 
     let mut media_stream = start_stream_fut.await?;
 
-    // This format represents the settings in `sbc_settings` above
-    let pcm_format = PcmFormat {
-        pcm_mode: AudioPcmMode::Linear,
-        bits_per_sample: 16,
-        frames_per_second: 48000,
-        channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
-    };
-
-    let source_stream = sources::build_stream(&peer.key(), pcm_format.clone(), source_type)?;
+    let source_stream =
+        sources::build_stream(&peer.key(), selected_stream.pcm_format.clone(), source_type)?;
 
     let mut encoded_stream = EncodedStream::build(
-        pcm_format,
-        &sbc_settings,
+        selected_stream.pcm_format.clone(),
+        &selected_stream.codec_settings,
         source_stream,
-        PCM_FRAMES_PER_SBC_FRAME,
-        ENCODED_FRAMES_PER_SBC_PACKET,
+        selected_stream.pcm_frames_per_encoded_frame,
+        selected_stream.encoded_frames_per_packet,
     )?;
 
-    let mut builder =
-        RtpPacketBuilder::new(ENCODED_FRAMES_PER_SBC_PACKET, vec![ENCODED_FRAMES_PER_SBC_PACKET]);
+    let mut builder = RtpPacketBuilder::new(
+        selected_stream.encoded_frames_per_packet,
+        selected_stream.frame_header,
+    );
 
     while let Some(encoded) = encoded_stream.try_next().await? {
         if let Some(packet) = builder.push_frame(encoded, PCM_FRAMES_PER_SBC_FRAME)? {
