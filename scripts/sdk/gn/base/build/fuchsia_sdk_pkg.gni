@@ -78,7 +78,7 @@ template("fuchsia_sdk_fidl_pkg") {
 #
 #   sdk_dist_dir
 #     Optional: Directory of libraries to distribute in the
-#               target. Defaults to ${fuchsia_sdk}/sdk/arch/${target_cpu}/dist.
+#               target. Defaults to ${fuchsia_sdk}/arch/${target_cpu}/dist.
 #   deps
 #     Optional: List of other targets that this library depends on.
 #
@@ -94,7 +94,7 @@ template("fuchsia_sdk_pkg") {
     if (defined(invoker.sdk_dist_dir)) {
       sdk_dist_dir = invoker.sdk_dist_dir
     } else {
-      sdk_dist_dir = "${fuchsia_sdk}/sdk/arch/${target_cpu}/dist"
+      sdk_dist_dir = "${fuchsia_sdk}/arch/${target_cpu}/dist"
     }
 
     copy("${target_name}_dist_libs") {
@@ -121,7 +121,7 @@ template("fuchsia_sdk_pkg") {
     public_configs = [ ":${invoker.target_name}_config" ]
 
     if (defined(invoker.shared_libs)) {
-      configs += [ "${fuchsia_sdk}:sdk_lib_dirs_config" ]
+      configs += [ "${fuchsia_sdk}/build/config:sdk_lib_dirs_config" ]
       libs = invoker.shared_libs
       data_deps = [ ":${target_name}_dist_libs" ]
     } else if (defined(invoker.static_libs)) {
