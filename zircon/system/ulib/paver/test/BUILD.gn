@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":paver-test" ]
+}
+
+zx_test("paver-test") {
+  output_name = "paver-test"
+  sources = [
+    "abr-test.cc",
+    "device-partitioner-test.cc",
+    "fvm-test.cc",
+    "partition-client-test.cc",
+    "paversvc-test.cc",
+    "stream-reader-test.cc",
+    "test-utils.cc",
+  ]
+  include_dirs = [ "$zx/system/ulib/paver" ]
+  deps = [
+    "$zx/system/dev/lib/amlogic:amlogic.headers",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-block:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-block-partition:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-nand:c",
+    "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
+    "$zx/system/fidl/fuchsia-paver:llcpp",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/block-client",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio-caller",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/gpt",
+    "$zx/system/ulib/paver",
+    "$zx/system/ulib/ramdevice-client:static",
+    "$zx/system/ulib/svc",
+    "$zx/system/ulib/sysconfig-client:sysconfig-sync-client",
+    "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/cksum",
+  ]
+}
