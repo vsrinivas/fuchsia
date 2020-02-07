@@ -11,8 +11,13 @@ use self::{
     player_event::{PlayerEvent, SessionsWatcherEvent},
     watcher::*,
 };
-use crate::{proxies::player::Player, Result, CHANNEL_BUFFER_SIZE};
-use anyhow::Error;
+use crate::{
+    proxies::{
+        observer::*,
+        player::{ForwardControlRequest, Player},
+    },
+    Result, CHANNEL_BUFFER_SIZE,
+};
 use fidl::{
     encoding::Decodable,
     endpoints::{ClientEnd, ServerEnd},
@@ -24,32 +29,16 @@ use futures::{
     channel::mpsc,
     future::BoxFuture,
     prelude::*,
-    stream::{self, BoxStream, Once, Stream},
-    task::{Context, Poll},
+    stream::{self, Once, Stream},
     StreamExt,
 };
 use mpmc;
-use std::{collections::HashMap, marker::Unpin, ops::RangeFrom, pin::Pin};
+use std::{collections::HashMap, convert::TryFrom, marker::Unpin, ops::RangeFrom};
 use streammap::StreamMap;
 
 const LOG_TAG: &str = "discovery";
 
-struct WatcherClient {
-    event_forward: BoxFuture<'static, Result<()>>,
-    disconnect_signal: BoxStream<'static, ()>,
-}
-
-impl Future for WatcherClient {
-    type Output = Result<()>;
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        if Pin::new(&mut self.disconnect_signal).poll_next(cx).is_ready() {
-            // The client has disconnected.
-            return Poll::Ready(Ok(()));
-        }
-
-        Pin::new(&mut self.event_forward).poll(cx)
-    }
-}
+type Task = Once<BoxFuture<'static, Result<()>>>;
 
 /// Implements `fuchsia.media.session2.Discovery`.
 pub struct Discovery {
@@ -58,7 +47,7 @@ pub struct Discovery {
     watcher_ids: RangeFrom<usize>,
     /// Clients watching the stream of player events, through a collection view or
     /// through a `SessionControl` channel.
-    watchers: StreamMap<usize, Once<WatcherClient>>,
+    watchers: StreamMap<usize, Task>,
     /// Connections to player serving sessions.
     player_updates: StreamMap<u64, Player>,
     /// The sender through which we distribute player events to all watchers.
@@ -77,24 +66,15 @@ impl Discovery {
         }
     }
 
-    async fn add_watcher_client(
+    fn make_session_info_stream(
         &mut self,
-        disconnect_signal: impl Stream<Item = ()> + Unpin + Send + 'static,
-        watcher_sink: impl Sink<(u64, SessionsWatcherEvent), Error = Error> + Unpin + Send + 'static,
-        player_events: impl Stream<Item = FilterApplicant<(u64, PlayerEvent)>> + Unpin + Send + 'static,
         filter: Filter,
-    ) {
+    ) -> impl Stream<Item = (u64, SessionsWatcherEvent)> + Unpin + Send + 'static {
         let queue: Vec<FilterApplicant<(u64, PlayerEvent)>> =
             self.catch_up_events.values().cloned().collect();
-        let event_stream =
-            stream::iter(queue).chain(player_events).filter_map(watcher_filter(filter));
-
-        let event_forward = event_stream.map(Ok).forward(watcher_sink).boxed();
-        let disconnect_signal = disconnect_signal.boxed();
-        let watcher = WatcherClient { event_forward, disconnect_signal };
-
-        let id = self.watcher_ids.next().expect("Taking next element from infinite sequence");
-        self.watchers.insert(id, stream::once(watcher)).await;
+        stream::iter(queue)
+            .chain(self.player_update_sender.new_receiver())
+            .filter_map(watcher_filter(filter))
     }
 
     /// Connects a client to a single session if that session exists.
@@ -103,7 +83,7 @@ impl Discovery {
         session_id: u64,
         session_control_request: ServerEnd<SessionControlMarker>,
     ) {
-        let requests = match session_control_request.into_stream() {
+        let mut requests = match session_control_request.into_stream() {
             Ok(requests) => requests,
             Err(e) => {
                 fx_log_warn!(
@@ -115,33 +95,44 @@ impl Discovery {
             }
         };
 
-        let (watcher_send, watcher_recv) = mpsc::channel(CHANNEL_BUFFER_SIZE);
-        self.add_watcher_client(
-            stream::pending(),
-            watcher_send.sink_map_err(Error::from),
-            self.player_update_sender.new_receiver(),
-            Filter::new(WatchOptions {
+        let session_info_stream = self
+            .make_session_info_stream(Filter::new(WatchOptions {
                 allowed_sessions: Some(vec![session_id]),
                 ..Decodable::new_empty()
-            }),
-        )
-        .await;
+            }))
+            .filter_map(move |(id, event)| {
+                if id != session_id {
+                    fx_log_warn!(tag: LOG_TAG, "Watcher did not filter sessions by id");
+                    future::ready(None)
+                } else {
+                    match event {
+                        SessionsWatcherEvent::Updated(update) => future::ready(Some(update)),
+                        _ => future::ready(None),
+                    }
+                }
+            });
 
-        let player_event_loopback = watcher_recv.filter_map(move |(id, event)| {
-            if id != session_id {
-                fx_log_warn!(tag: LOG_TAG, "Watcher did not filter sessions by id");
-                future::ready(None)
-            } else {
-                match event {
-                    SessionsWatcherEvent::Updated(update) => future::ready(Some(update)),
-                    _ => future::ready(None),
+        let (mut control_request_sink, control_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
+        let (mut status_request_sink, status_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
+
+        let partitioner = move || async move {
+            while let Some(request) = requests.try_next().await? {
+                match ForwardControlRequest::try_from(request) {
+                    Ok(control_request) => control_request_sink.send(control_request).await?,
+                    Err(status_request) => status_request_sink.send(status_request).await?,
                 }
             }
-        });
+
+            Result::Ok(())
+        };
+        let partitioner = partitioner();
+        let observer = Observer::new(session_info_stream, status_request_stream);
+        let task = future::join(partitioner, observer).map(drop).boxed();
 
         self.player_updates
             .with_elem(session_id, move |player: &mut Player| {
-                player.serve_controls(requests, player_event_loopback);
+                player.serve_controls(control_request_stream);
+                player.add_proxy_task(task);
             })
             .await;
     }
@@ -164,13 +155,12 @@ impl Discovery {
             }
         };
 
-        self.add_watcher_client(
-            proxy.take_event_stream().map(drop),
-            FlowControlledProxySink::from(proxy),
-            self.player_update_sender.new_receiver(),
-            Filter::new(watch_options),
-        )
-        .await;
+        let session_info_stream = self.make_session_info_stream(Filter::new(watch_options));
+        let sink = FlowControlledProxySink::from(proxy);
+        let event_forward = session_info_stream.map(Ok).forward(sink).boxed();
+
+        let id = self.watcher_ids.next().expect("Taking next element from infinite sequence");
+        self.watchers.insert(id, stream::once(event_forward)).await;
     }
 
     async fn handle_player_update(&mut self, player_update: FilterApplicant<(u64, PlayerEvent)>) {

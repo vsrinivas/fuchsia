@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use crate::Result;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_syslog::fx_log_warn;

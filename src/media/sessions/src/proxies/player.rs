@@ -8,17 +8,18 @@ use crate::{
     Result,
 };
 use anyhow::Error as FError;
-use fidl::endpoints::ClientEnd;
+use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl::{self, client::QueryResponseFut};
 use fidl_fuchsia_media::*;
+use fidl_fuchsia_media_audio::*;
 use fidl_fuchsia_media_sessions2::*;
 use fidl_table_validation::*;
 use fuchsia_inspect as inspect;
-use fuchsia_syslog::{fx_log_info, fx_log_warn};
+use fuchsia_syslog::fx_log_info;
 use futures::{
-    future::{BoxFuture, FutureExt},
+    future::BoxFuture,
     stream::{FusedStream, FuturesUnordered},
-    Future, Stream, StreamExt, TryStreamExt,
+    Future, FutureExt, Stream, StreamExt,
 };
 use inspect::Property;
 use std::{
@@ -136,6 +137,53 @@ impl ValidPlayerInfoDelta {
     }
 }
 
+/// A control request which can be forwarded to the proxied client.
+pub enum ForwardControlRequest {
+    Play,
+    Pause,
+    Stop,
+    Seek(i64),
+    SkipForward,
+    SkipReverse,
+    NextItem,
+    PrevItem,
+    SetPlaybackRate(f32),
+    SetRepeatMode(RepeatMode),
+    SetShuffleMode { shuffle_on: bool },
+    BindVolumeControl(ServerEnd<VolumeControlMarker>),
+}
+
+impl TryFrom<SessionControlRequest> for ForwardControlRequest {
+    type Error = SessionControlWatchStatusResponder;
+    fn try_from(src: SessionControlRequest) -> std::result::Result<Self, Self::Error> {
+        match src {
+            SessionControlRequest::Play { .. } => Ok(ForwardControlRequest::Play),
+            SessionControlRequest::Pause { .. } => Ok(ForwardControlRequest::Pause),
+            SessionControlRequest::Stop { .. } => Ok(ForwardControlRequest::Stop),
+            SessionControlRequest::Seek { position, .. } => {
+                Ok(ForwardControlRequest::Seek(position))
+            }
+            SessionControlRequest::SkipForward { .. } => Ok(ForwardControlRequest::SkipForward),
+            SessionControlRequest::SkipReverse { .. } => Ok(ForwardControlRequest::SkipReverse),
+            SessionControlRequest::NextItem { .. } => Ok(ForwardControlRequest::NextItem),
+            SessionControlRequest::PrevItem { .. } => Ok(ForwardControlRequest::PrevItem),
+            SessionControlRequest::SetPlaybackRate { playback_rate, .. } => {
+                Ok(ForwardControlRequest::SetPlaybackRate(playback_rate))
+            }
+            SessionControlRequest::SetRepeatMode { repeat_mode, .. } => {
+                Ok(ForwardControlRequest::SetRepeatMode(repeat_mode))
+            }
+            SessionControlRequest::SetShuffleMode { shuffle_on, .. } => {
+                Ok(ForwardControlRequest::SetShuffleMode { shuffle_on })
+            }
+            SessionControlRequest::BindVolumeControl { volume_control_request, .. } => {
+                Ok(ForwardControlRequest::BindVolumeControl(volume_control_request))
+            }
+            SessionControlRequest::WatchStatus { responder } => Err(responder),
+        }
+    }
+}
+
 /// A proxy for published `fuchsia.media.sessions2.Player` protocols.
 #[derive(Debug)]
 pub struct Player {
@@ -148,7 +196,7 @@ pub struct Player {
     // TODO(41131): Use structured data when a proc macro to derive
     // Inspect support is available.
     inspect_handle: inspect::StringProperty,
-    control_tasks: FuturesUnordered<BoxFuture<'static, ()>>,
+    proxy_tasks: FuturesUnordered<BoxFuture<'static, ()>>,
     waker: Option<Waker>,
 }
 
@@ -167,7 +215,7 @@ impl Player {
             hanging_get: None,
             terminated: false,
             inspect_handle,
-            control_tasks: FuturesUnordered::new(),
+            proxy_tasks: FuturesUnordered::new(),
             waker: None,
         })
     }
@@ -182,6 +230,14 @@ impl Player {
         self.inspect_handle.set(&format!("{:#?}", self.state));
     }
 
+    /// Adds a task to the player proxy which depends on a connection to the
+    /// backing player. The player stream will drive the task until the backing
+    /// player disconnects, at which point the task will be dropped.
+    pub fn add_proxy_task(&mut self, proxy_task: BoxFuture<'static, ()>) {
+        self.proxy_tasks.push(proxy_task);
+        self.waker.iter().for_each(Waker::wake_by_ref);
+    }
+
     /// Spawns a task to serve requests from `fuchsia.media.sessions2.SessionControl` with the
     /// backing `fuchsia.media.sessions2.Player` protocol.
     ///
@@ -189,84 +245,43 @@ impl Player {
     /// request, or if `disconnect_proxied_clients` is called.
     pub fn serve_controls(
         &mut self,
-        requests: SessionControlRequestStream,
-        mut recv: impl FusedStream + Stream<Item = SessionInfoDelta> + Send + Unpin + 'static,
+        mut requests: impl Stream<Item = ForwardControlRequest> + Unpin + Send + 'static,
     ) {
         let proxy = self.inner.clone();
 
-        let mut requests = requests.map_err(FError::from).fuse();
-        let mut status = None;
-        let mut hanging_get = None;
-
         let control_task = async move {
-            loop {
-                futures::select! {
-                    request = requests.select_next_some() => {
-                        // Type inference fails dramatically here. Hand-holding required.
-                        let request = match request {
-                            Ok(request) => request,
-                            Err(e) => {
-                                let e: FError = e;
-                                return Err(e);
-                            }
-                        };
-                        match request {
-                            SessionControlRequest::Play { .. } => proxy.play()?,
-                            SessionControlRequest::Pause { .. } => proxy.pause()?,
-                            SessionControlRequest::Stop { .. } => proxy.stop()?,
-                            SessionControlRequest::Seek { position, .. } => {
-                                proxy.seek(position)?
-                            }
-                            SessionControlRequest::SkipForward { .. } => proxy.skip_forward()?,
-                            SessionControlRequest::SkipReverse { .. } => proxy.skip_reverse()?,
-                            SessionControlRequest::NextItem { .. } => proxy.next_item()?,
-                            SessionControlRequest::PrevItem { .. } => proxy.prev_item()?,
-                            SessionControlRequest::SetPlaybackRate {
-                                playback_rate, ..
-                            } => proxy.set_playback_rate(playback_rate)?,
-                            SessionControlRequest::SetRepeatMode { repeat_mode, .. } => {
-                                proxy.set_repeat_mode(repeat_mode)?
-                            }
-                            SessionControlRequest::SetShuffleMode { shuffle_on, .. } => {
-                                proxy.set_shuffle_mode(shuffle_on)?
-                            }
-                            SessionControlRequest::BindVolumeControl {
-                                volume_control_request,
-                                ..
-                            } => proxy.bind_volume_control(volume_control_request)?,
-                            SessionControlRequest::WatchStatus { responder } => {
-                                if hanging_get.is_some() {
-                                    fx_log_warn!(
-                                        tag: "player_proxy",
-                                        "Session observer sent duplicate watch"
-                                    );
-                                    // Close the channel.
-                                    return Ok(());
-                                }
+            while let Some(request) = requests.next().await {
+                let r: fidl::Result<()> = match request {
+                    ForwardControlRequest::Play => proxy.play(),
+                    ForwardControlRequest::Pause => proxy.pause(),
+                    ForwardControlRequest::Stop => proxy.stop(),
+                    ForwardControlRequest::Seek(position) => proxy.seek(position),
+                    ForwardControlRequest::SkipForward => proxy.skip_forward(),
+                    ForwardControlRequest::SkipReverse => proxy.skip_reverse(),
+                    ForwardControlRequest::NextItem => proxy.next_item(),
+                    ForwardControlRequest::PrevItem => proxy.prev_item(),
+                    ForwardControlRequest::SetPlaybackRate(playback_rate) => {
+                        proxy.set_playback_rate(playback_rate)
+                    }
+                    ForwardControlRequest::SetRepeatMode(repeat_mode) => {
+                        proxy.set_repeat_mode(repeat_mode)
+                    }
+                    ForwardControlRequest::SetShuffleMode { shuffle_on } => {
+                        proxy.set_shuffle_mode(shuffle_on)
+                    }
+                    ForwardControlRequest::BindVolumeControl(volume_control_request) => {
+                        proxy.bind_volume_control(volume_control_request)
+                    }
+                };
 
-                                if let Some(status) = status.take() {
-                                    responder.send(status)?;
-                                } else {
-                                    hanging_get = Some(responder);
-                                }
-                            }
-                        }
-                    }
-                    update = recv.select_next_some() => {
-                        if let Some(hanging_get) = hanging_get.take() {
-                            hanging_get.send(update)?;
-                        } else {
-                            status = Some(update);
-                        }
-                    }
-                    complete => {
-                        return Ok(());
-                    },
+                match r {
+                    Err(_) => return,
+                    Ok(_) => {}
                 }
             }
         };
 
-        self.control_tasks.push(control_task.map(drop).boxed());
+        self.proxy_tasks.push(control_task.map(drop).boxed());
         self.waker.iter().for_each(Waker::wake_by_ref);
     }
 
@@ -290,7 +305,7 @@ impl Stream for Player {
 
         // Send any queued messages to the player.
         self.waker = Some(cx.waker().clone());
-        let _ = Pin::new(&mut self.control_tasks).poll_next(cx);
+        let _ = Pin::new(&mut self.proxy_tasks).poll_next(cx);
 
         let proxy = self.inner.clone();
         let hanging_get = self.hanging_get.get_or_insert_with(move || proxy.watch_info_change());
@@ -351,10 +366,8 @@ mod test {
     use fidl::endpoints::*;
     use fuchsia_async as fasync;
     use futures::{
-        channel::mpsc::channel,
         future,
-        sink::SinkExt,
-        stream::{self, StreamExt},
+        stream::{StreamExt, TryStreamExt},
     };
     use futures_test::task::noop_waker;
     use inspect::{assert_inspect_tree, Inspector};
@@ -378,57 +391,6 @@ mod test {
 
     #[fasync::run_singlethreaded]
     #[test]
-    async fn clients_waits_for_new_status() -> Result<()> {
-        let (_inspector, mut player, _player_server) = test_player();
-
-        let (session_control_client, session_control_server) =
-            create_endpoints::<SessionControlMarker>()?;
-        let session_control_fidl_proxy: SessionControlProxy =
-            session_control_client.into_proxy()?;
-        let session_control_request_stream = session_control_server.into_stream()?;
-
-        let (mut sender, receiver) = channel(1);
-        player.serve_controls(session_control_request_stream, receiver);
-        fasync::spawn(async move { while let Some(_) = player.next().await {} });
-
-        let waker = noop_waker();
-        let mut ctx = Context::from_waker(&waker);
-        let mut status_fut = session_control_fidl_proxy.watch_status();
-        let poll_result = Pin::new(&mut status_fut).poll(&mut ctx);
-        assert_matches!(poll_result, Poll::Pending);
-
-        sender.send(SessionInfoDelta::new_empty()).await?;
-        let result = status_fut.await;
-        assert_matches!(result, Ok(_));
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded]
-    #[test]
-    async fn client_gets_cached_player_status() -> Result<()> {
-        let (_inspector, mut player, _player_server) = test_player();
-
-        let (session_control_client, session_control_server) =
-            create_endpoints::<SessionControlMarker>()?;
-        let session_control_fidl_proxy: SessionControlProxy =
-            session_control_client.into_proxy()?;
-        let session_control_request_stream = session_control_server.into_stream()?;
-
-        player.serve_controls(
-            session_control_request_stream,
-            stream::once(future::ready(SessionInfoDelta::new_empty())),
-        );
-
-        fasync::spawn(async move { while let Some(_) = player.next().await {} });
-
-        assert_matches!(session_control_fidl_proxy.watch_status().await, Ok(_));
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded]
-    #[test]
     async fn client_channel_closes_when_backing_player_disconnects() -> Result<()> {
         let (_inspector, mut player, _player_server) = test_player();
 
@@ -437,8 +399,12 @@ mod test {
         let session_control_fidl_proxy: SessionControlProxy =
             session_control_client.into_proxy()?;
         let session_control_request_stream = session_control_server.into_stream()?;
+        let control_request_stream = session_control_request_stream
+            .filter_map(|r| future::ready(r.ok()))
+            .map(ForwardControlRequest::try_from)
+            .filter_map(|r| future::ready(r.ok()));
 
-        player.serve_controls(session_control_request_stream, stream::empty());
+        player.serve_controls(control_request_stream);
 
         assert!(session_control_fidl_proxy.play().is_ok());
 
