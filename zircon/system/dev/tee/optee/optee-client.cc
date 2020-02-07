@@ -1043,8 +1043,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
   zx::channel file_channel;
   static constexpr uint32_t kCreateFlags =
       fuchsia_io::OPEN_RIGHT_READABLE | fuchsia_io::OPEN_RIGHT_WRITABLE |
-      fuchsia_io::OPEN_FLAG_CREATE | fuchsia_io::OPEN_FLAG_CREATE_IF_ABSENT |
-      fuchsia_io::OPEN_FLAG_DESCRIBE;
+      fuchsia_io::OPEN_FLAG_CREATE | fuchsia_io::OPEN_FLAG_DESCRIBE;
   static constexpr uint32_t kCreateMode = fuchsia_io::MODE_TYPE_FILE;
   status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kCreateFlags, kCreateMode,
                                  path.filename().string(), &file_channel);
