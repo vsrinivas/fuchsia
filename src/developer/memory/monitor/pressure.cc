@@ -20,14 +20,20 @@
 
 namespace monitor {
 
-Pressure::Pressure(bool watch_for_changes) {
+Pressure::Pressure(bool watch_for_changes, sys::ComponentContext* context,
+                   async_dispatcher_t* dispatcher)
+    : provider_dispatcher_(dispatcher) {
   if (InitMemPressureEvents() != ZX_OK) {
     return;
   }
 
+  if (context) {
+    context->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  }
+
   if (watch_for_changes) {
     loop_.StartThread("memory-pressure-loop");
-    task_.Post(loop_.dispatcher());
+    watch_task_.Post(loop_.dispatcher());
   }
 }
 
@@ -85,7 +91,7 @@ zx_status_t Pressure::InitMemPressureEvents() {
 void Pressure::WatchForChanges() {
   WaitOnLevelChange();
 
-  task_.Post(loop_.dispatcher());
+  watch_task_.Post(loop_.dispatcher());
 }
 
 void Pressure::WaitOnLevelChange() {
@@ -122,6 +128,65 @@ void Pressure::OnLevelChanged(zx_handle_t handle) {
 
   FXL_LOG(INFO) << "Memory pressure level changed from " << kLevelNames[old_level] << " to "
                 << kLevelNames[level_];
+  if (provider_dispatcher_) {
+    post_task_.Post(provider_dispatcher_);
+  }
+}
+
+void Pressure::PostLevelChange() {
+  Level level_to_send = level_;
+  // TODO(rashaeqbal): Throttle notifications to prevent thrashing.
+  for (auto& watcher : watchers_) {
+    // Notify the watcher only if we received a response for the previous change.
+    if (watcher.response_received) {
+      NotifyWatcher(watcher, level_to_send);
+    }
+  }
+}
+
+void Pressure::NotifyWatcher(WatcherState& watcher, Level level) {
+  watcher.level_sent = level;
+  watcher.response_received = false;
+
+  watcher.proxy->OnLevelChanged(ConvertLevel(level), [&watcher, this]() {
+    watcher.response_received = true;
+    Level current_level = level_;
+    // The watcher might have missed a level change if it occurred before this callback. If the
+    // level has changed, notify the watcher.
+    if (watcher.level_sent != current_level) {
+      async::PostTask(provider_dispatcher_, [&]() { NotifyWatcher(watcher, current_level); });
+    }
+  });
+}
+
+void Pressure::RegisterWatcher(fidl::InterfaceHandle<fuchsia::memorypressure::Watcher> watcher) {
+  fuchsia::memorypressure::WatcherPtr watcher_proxy = watcher.Bind();
+  fuchsia::memorypressure::Watcher* proxy_raw_ptr = watcher_proxy.get();
+  watcher_proxy.set_error_handler(
+      [this, proxy_raw_ptr](zx_status_t status) { ReleaseWatcher(proxy_raw_ptr); });
+
+  Level current_level = level_;
+  watchers_.push_back({std::move(watcher_proxy), current_level, false});
+
+  // Return current level.
+  NotifyWatcher(watchers_.back(), current_level);
+}
+
+void Pressure::ReleaseWatcher(fuchsia::memorypressure::Watcher* watcher) {
+  auto predicate = [watcher](const auto& target) { return target.proxy.get() == watcher; };
+  watchers_.erase(std::remove_if(watchers_.begin(), watchers_.end(), predicate));
+}
+
+fuchsia::memorypressure::Level Pressure::ConvertLevel(Level level) {
+  switch (level) {
+    case Level::kCritical:
+      return fuchsia::memorypressure::Level::CRITICAL;
+    case Level::kWarning:
+      return fuchsia::memorypressure::Level::WARNING;
+    case Level::kNormal:
+    default:
+      return fuchsia::memorypressure::Level::NORMAL;
+  }
 }
 
 }  // namespace monitor

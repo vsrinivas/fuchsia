@@ -149,7 +149,8 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
         [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
   }
 
-  pressure_ = std::make_unique<Pressure>(watch_memory_pressure);
+  pressure_ =
+      std::make_unique<Pressure>(watch_memory_pressure, component_context_.get(), dispatcher);
 
   SampleAndPost();
 }

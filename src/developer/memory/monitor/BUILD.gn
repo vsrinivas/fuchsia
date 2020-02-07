@@ -19,6 +19,7 @@ source_set("lib") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.memory",
+    "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/lib/sys/cpp",
     "//src/developer/memory/metrics",
     "//zircon/public/lib/inspect",
