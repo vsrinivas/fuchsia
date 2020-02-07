@@ -24,6 +24,11 @@ import unittest
 
 FUCHSIA_ROOT = '${data.fuchsia_root}'
 
+# Import test_generate
+TEST_GEN_PATH = os.path.join(
+    FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'test_generate.py')
+test_generate = imp.load_source('test_generate', TEST_GEN_PATH)
+
 # Import gen_fidl_response_file_unittest
 GEN_FIDL_RESP_FILE_TEST_PATH = os.path.join(
     FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'gen_fidl_response_file_unittest.py')
@@ -51,6 +56,9 @@ class GnTester(object):
         if result.failures or result.errors:
             raise AssertionError('Unit test failed.')
 
+    def _generate_test(self):
+        self._run_unit_test(test_generate)
+
     def _gen_fild_resp_file_unittest(self):
         self._run_unit_test(gen_fidl_response_file_unittest)
 
@@ -68,6 +76,7 @@ class GnTester(object):
             self._test_failed = True
 
     def run(self):
+        self._run_test("_generate_test")
         self._run_test("_gen_fild_resp_file_unittest")
         self._run_test("_bash_tests")
         return self._test_failed

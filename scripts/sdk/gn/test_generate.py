@@ -1,19 +1,19 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2.7
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import argparse
 import filecmp
-import generate
+import imp
 import os
 import shutil
 import sys
 import tempfile
 import unittest
-from unittest import mock
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+GENERATE_FILEPATH = os.path.join(SCRIPT_DIR, 'generate.py')
+generate = imp.load_source('generate', GENERATE_FILEPATH)
 
 TMP_DIR_NAME = tempfile.mkdtemp(prefix='tmp_unittest_%s_' % 'GNGenerateTest')
 
@@ -30,17 +30,15 @@ class GNGenerateTest(unittest.TestCase):
         if os.path.exists(TMP_DIR_NAME):
             shutil.rmtree(TMP_DIR_NAME)
 
-    # Use a mock to patch in the command line arguments.
-    @mock.patch(
-        'argparse.ArgumentParser.parse_args',
-        return_value=argparse.Namespace(
-            output=TMP_DIR_NAME,
-            archive='',
-            directory=os.path.join(SCRIPT_DIR, 'testdata'),
-            tests=''))
-    def testEmptyArchive(self, mock_args):
+    def testEmptyArchive(self):
         # Run the generator.
-        generate.main()
+        generate.main(
+            [
+                "--output",
+                TMP_DIR_NAME,
+                "--directory",
+                os.path.join(SCRIPT_DIR, 'testdata'),
+            ])
         self.verify_contents(TMP_DIR_NAME)
 
     def verify_contents(self, outdir):

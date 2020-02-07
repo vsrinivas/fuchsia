@@ -200,7 +200,7 @@ def create_test_workspace(output):
     return True
 
 
-def main():
+def main(args_list=None):
     parser = argparse.ArgumentParser(
         description='Creates a GN SDK for a given SDK tarball.')
     source_group = parser.add_mutually_exclusive_group(required=True)
@@ -214,7 +214,10 @@ def main():
         required=True)
     parser.add_argument(
         '--tests', help='Path to the directory where to generate tests')
-    args = parser.parse_args()
+    if args_list:
+        args = parser.parse_args(args_list)
+    else:
+        args = parser.parse_args()
 
     return run_generator(
         archive=args.archive,
