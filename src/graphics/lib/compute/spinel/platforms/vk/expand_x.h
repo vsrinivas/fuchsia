@@ -15,6 +15,8 @@
 // clang-format off
 //
 
+#define SPN_EXPAND_0()                          \
+
 #define SPN_EXPAND_1()                          \
   SPN_EXPAND_X(0, 1, 0,  true)
 
