@@ -123,7 +123,6 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.simplecamera:fuchsia.simplecamera_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_sdk($fidl_toolchain)",
