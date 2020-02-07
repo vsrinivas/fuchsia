@@ -666,7 +666,8 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 		for {
 			var err *tcpip.Error
 			v, _, err = eps.ep.Read(&sender)
-			if err == tcpip.ErrInvalidEndpointState {
+			// TODO(tamird/eyalsoha): remove InvalidEndpointState once gvisor rolls.
+			if err == tcpip.ErrInvalidEndpointState || err == tcpip.ErrNotConnected {
 				if connected {
 					panic(fmt.Sprintf("connected endpoint returned %s", err))
 				}
