@@ -111,6 +111,9 @@ fn main() -> Result<(), Error> {
         let display_size = IntSize::new(config.width as i32, config.height as i32);
 
         fb.allocate_frames(1, config.format).await?;
+        // The framebuffer library doesn't get a correct value for 'stride' until
+        // allocating the first frame. Calling get_config again to get accurate config
+        let config = fb.get_config();
         fb.present_first_frame(None, true)?;
 
         let face = FontFace::new(FONT_DATA).unwrap();
