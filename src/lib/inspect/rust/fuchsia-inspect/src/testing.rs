@@ -82,6 +82,11 @@ use {
 /// let inspector = Inspector::new().unwrap();
 /// assert_inspect_tree!(inspector, root: {});
 /// ```
+///
+/// A tree may contain multiple properties or children with the same name. This macro does *not*
+/// support matching against them, and will throw an error if it detects duplicates. This is
+/// to provide warning for users who accidentally log the same name multiple times, as the
+/// behavior for reading properties or children with duplicate names is not well defined.
 #[macro_export]
 macro_rules! assert_inspect_tree {
     (@build $tree_assertion:expr,) => {};
@@ -275,7 +280,12 @@ impl TreeAssertion {
         }
 
         for (name, assertion) in self.properties.iter() {
-            match actual.properties.iter().find(|p| p.name() == name) {
+            let mut matched = actual.properties.iter().filter(|p| p.name() == name);
+            let first_match = matched.next();
+            if let Some(_second_match) = matched.next() {
+                bail!("node `{}` - multiple properties found with name `{}`", self.path, name);
+            }
+            match first_match {
                 Some(property) => {
                     if let Err(e) = assertion.run(property) {
                         bail!(
@@ -286,21 +296,22 @@ impl TreeAssertion {
                         );
                     }
                 }
-                None => {
-                    return Err(format_err!("node `{}` - no property named `{}`", self.path, name))
-                }
+                None => bail!("node `{}` - no property named `{}`", self.path, name),
             }
         }
         for assertion in self.children.iter() {
-            match actual.children.iter().find(|c| c.name == assertion.name) {
+            let mut matched = actual.children.iter().filter(|c| c.name == assertion.name);
+            let first_match = matched.next();
+            if let Some(_second_match) = matched.next() {
+                bail!(
+                    "node `{}` - multiple children found with name `{}`",
+                    self.path,
+                    assertion.name
+                );
+            }
+            match first_match {
                 Some(child) => assertion.run(&child)?,
-                None => {
-                    return Err(format_err!(
-                        "node `{}` - no child named `{}`",
-                        self.path,
-                        assertion.name
-                    ))
-                }
+                None => bail!("node `{}` - no child named `{}`", self.path, assertion.name),
             }
         }
         Ok(())
@@ -662,6 +673,66 @@ mod tests {
         });
     }
 
+    #[test]
+    #[should_panic]
+    fn test_matching_non_unique_property_fails() {
+        let node_hierarchy = non_unique_prop_tree();
+        assert_inspect_tree!(node_hierarchy, key: { prop: "prop_value#0" });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_matching_non_unique_property_fails_2() {
+        let node_hierarchy = non_unique_prop_tree();
+        assert_inspect_tree!(node_hierarchy, key: { prop: "prop_value#1" });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_matching_non_unique_property_fails_3() {
+        let node_hierarchy = non_unique_prop_tree();
+        assert_inspect_tree!(node_hierarchy, key: {
+            prop: "prop_value#0",
+            prop: "prop_value#1",
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_matching_non_unique_child_fails() {
+        let node_hierarchy = non_unique_child_tree();
+        assert_inspect_tree!(node_hierarchy, key: {
+            child: {
+                prop: 10i64
+            }
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_matching_non_unique_child_fails_2() {
+        let node_hierarchy = non_unique_child_tree();
+        assert_inspect_tree!(node_hierarchy, key: {
+            child: {
+                prop: 20i64
+            }
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_matching_non_unique_child_fails_3() {
+        let node_hierarchy = non_unique_child_tree();
+        assert_inspect_tree!(node_hierarchy, key: {
+            child: {
+                prop: 10i64,
+            },
+            child: {
+                prop: 20i64,
+            },
+        });
+    }
+
     fn simple_tree() -> NodeHierarchy {
         NodeHierarchy::new(
             "key",
@@ -691,6 +762,28 @@ mod tests {
                     vec![Property::Uint("child2_sub".to_string(), 20u64)],
                     vec![],
                 ),
+            ],
+        )
+    }
+
+    fn non_unique_prop_tree() -> NodeHierarchy {
+        NodeHierarchy::new(
+            "key",
+            vec![
+                Property::String("prop".to_string(), "prop_value#0".to_string()),
+                Property::String("prop".to_string(), "prop_value#1".to_string()),
+            ],
+            vec![],
+        )
+    }
+
+    fn non_unique_child_tree() -> NodeHierarchy {
+        NodeHierarchy::new(
+            "key",
+            vec![],
+            vec![
+                NodeHierarchy::new("child", vec![Property::Int("prop".to_string(), 10i64)], vec![]),
+                NodeHierarchy::new("child", vec![Property::Int("prop".to_string(), 20i64)], vec![]),
             ],
         )
     }
