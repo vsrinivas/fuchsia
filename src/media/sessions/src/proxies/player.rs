@@ -369,7 +369,7 @@ mod test {
         let player = Player::new(
             Id::new().expect("Creating id for test player"),
             player_client,
-            PlayerRegistration { domain: Some(TEST_DOMAIN.to_string()) },
+            PlayerRegistration { domain: Some(TEST_DOMAIN.to_string()), ..Decodable::new_empty() },
             inspector.root().create_string("test_player", ""),
         )
         .expect("Creating player from valid prereqs");

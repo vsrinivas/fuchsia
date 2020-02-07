@@ -98,7 +98,10 @@ impl TestPlayer {
             create_request_stream().context("Creating player request stream")?;
         let id = service
             .publisher
-            .publish(player_client, PlayerRegistration { domain: Some(test_domain()) })
+            .publish(
+                player_client,
+                PlayerRegistration { domain: Some(test_domain()), ..Decodable::new_empty() },
+            )
             .await
             .context("Registering new player")?;
         Ok(Self { requests, id })

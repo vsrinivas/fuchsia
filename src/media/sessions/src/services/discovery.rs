@@ -257,7 +257,10 @@ mod test {
         let player = Player::new(
             Id::new()?,
             player_client,
-            PlayerRegistration { domain: Some(String::from("test_domain://")) },
+            PlayerRegistration {
+                domain: Some(String::from("test_domain://")),
+                ..Decodable::new_empty()
+            },
             inspector.root().create_string("test_player", ""),
         )?;
         player_sink.send(player).await?;
