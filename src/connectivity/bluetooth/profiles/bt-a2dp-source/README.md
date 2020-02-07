@@ -19,12 +19,12 @@ The `bt-a2dp-source` component needs access to the following at runtime:
   - The codec factory must be able to encode SBC audio. This is currently
      provided in the `codec_runner_sw_sbc` package.
 
-Without too many extra dependencies, adding the `audio` bundle and
-`media_codec_sw_sbc` bundle to the available packages will provide all the
-required services so adding the following to your Fuchsia set configuration
+Without too many extra dependencies, adding the `audio`, `codec_factory`, and
+`codec_runner_sw_sbc` packages to the available packages will provide all the
+required services. Adding the following to your Fuchsia set configuration
 should build them all and make them available:
 
-`--with //src/connectivity/bluetooth/profiles/bt-a2dp-source --with src/media/audio --with src/media/codec/codecs/sw/sbc --with src/media/codec/factory`
+`--with //src/connectivity/bluetooth/profiles/bt-a2dp-source --with //src/media/audio --with //src/media/codec:codec_factory --with //src/media/codec:codec_runner_sw_sbc`
 
 The profile makes an effort to determine if encoding media will fail, and quits
 with a message on startup.

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
@@ -58,6 +59,12 @@ package("bt-a2dp-source") {
       dest = "bt-a2dp-source.cmx"
     },
   ]
+}
+
+config_data("startup_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "bt-a2dp-startup.config" ]
+  sources = [ "startup.config" ]
 }
 
 test_package("bt-a2dp-source-tests") {
