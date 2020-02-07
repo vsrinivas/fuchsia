@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package cpp_libfuzzer
+package codegen
 
 import (
 	"fmt"
@@ -13,7 +13,6 @@ import (
 	"text/template"
 
 	"fidl/compiler/backend/cpp"
-	"fidl/compiler/backend/cpp_libfuzzer/templates"
 	"fidl/compiler/backend/types"
 )
 
@@ -37,13 +36,13 @@ func NewFidlGenerator() *FidlGenerator {
 		"Interfaces": interfaces,
 	})
 
-	template.Must(tmpls.Parse(templates.Bits))
-	template.Must(tmpls.Parse(templates.Enum))
-	template.Must(tmpls.Parse(templates.Header))
-	template.Must(tmpls.Parse(templates.Source))
-	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Table))
-	template.Must(tmpls.Parse(templates.XUnion))
+	template.Must(tmpls.Parse(tmplBits))
+	template.Must(tmpls.Parse(tmplEnum))
+	template.Must(tmpls.Parse(tmplHeader))
+	template.Must(tmpls.Parse(tmplSource))
+	template.Must(tmpls.Parse(tmplStruct))
+	template.Must(tmpls.Parse(tmplTable))
+	template.Must(tmpls.Parse(tmplXUnion))
 
 	return &FidlGenerator{
 		tmpls: tmpls,
@@ -62,7 +61,7 @@ func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree cpp.Root) error {
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
 func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
-	tree := cpp.Compile(fidl)
+	tree := cpp.CompileHL(fidl)
 	prepareTree(fidl.Name, &tree)
 
 	headerPath := config.OutputBase + ".h"

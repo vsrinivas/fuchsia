@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package codegen
 
 import (
 	"io"
@@ -15,11 +15,11 @@ import (
 	"fidl/compiler/llcpp_backend/templates/fragments"
 )
 
-type generator struct {
+type Generator struct {
 	tmpls *template.Template
 }
 
-func newGenerator() *generator {
+func NewGenerator() *Generator {
 	tmpls := template.New("LLCPPTemplates").Funcs(template.FuncMap{
 		"Kinds": func() interface{} { return cpp.Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
@@ -86,54 +86,49 @@ func newGenerator() *generator {
 	for _, t := range templates {
 		template.Must(tmpls.Parse(t))
 	}
-	return &generator{
+	return &Generator{
 		tmpls: tmpls,
 	}
 }
 
-// generateHeader generates the C++ bindings header.
-func (gen *generator) generateHeader(wr io.Writer, tree cpp.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
-}
-
-// generateSource generates the C++ bindings source, i.e. implementation.
-func (gen *generator) generateSource(wr io.Writer, tree cpp.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
-}
-
-// generateFidl generates all files required for the C++ bindings.
-func (gen generator) generateFidl(config config) error {
-	fidl := config.fidl
-	tree := cpp.CompileLL(fidl)
-	tree.PrimaryHeader = config.primaryHeaderPath
-
-	if err := os.MkdirAll(filepath.Dir(config.headerPath), os.ModePerm); err != nil {
+func generateFile(filename string, contentGenerator func(wr io.Writer) error) error {
+	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(config.sourcePath), os.ModePerm); err != nil {
-		return err
-	}
-
-	headerFile, err := os.Create(config.headerPath)
+	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
-	defer headerFile.Close()
+	defer file.Close()
 
-	if err := gen.generateHeader(headerFile, tree); err != nil {
-		return err
-	}
-
-	sourceFile, err := os.Create(config.sourcePath)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	if err := gen.generateSource(sourceFile, tree); err != nil {
+	if err := contentGenerator(file); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (gen *Generator) generateHeader(wr io.Writer, tree cpp.Root) error {
+	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
+}
+
+func (gen *Generator) generateSource(wr io.Writer, tree cpp.Root) error {
+	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
+}
+
+// GenerateHeader generates the LLCPP bindings header, and writes it into
+// the target filename.
+func (gen *Generator) GenerateHeader(tree cpp.Root, filename string) error {
+	return generateFile(filename, func(wr io.Writer) error {
+		return gen.generateHeader(wr, tree)
+	})
+}
+
+// GenerateSource generates the LLCPP bindings header, and writes it into
+// the target filename.
+func (gen *Generator) GenerateSource(tree cpp.Root, filename string) error {
+	return generateFile(filename, func(wr io.Writer) error {
+		return gen.generateSource(wr, tree)
+	})
 }

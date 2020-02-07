@@ -1258,7 +1258,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	return root
 }
 
-func Compile(r types.Root) Root {
+func CompileHL(r types.Root) Root {
 	return compile(r, formatNamespace)
 }
 

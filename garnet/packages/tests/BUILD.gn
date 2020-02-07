@@ -434,7 +434,7 @@ group("fidl") {
     "//examples/fidl/echo_test/cpp",
     "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
     "//garnet/go/src/fidl:fidlgen_common_test($host_toolchain)",
-    "//garnet/go/src/fidl:fidlgen_cpp_test($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_hlcpp_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_go_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_libfuzzer_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_llcpp_test($host_toolchain)",

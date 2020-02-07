@@ -218,13 +218,13 @@ template("fidl") {
       forward_variables_from(invoker, "*")
       generators = [
         {
-          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
+          fidlgen_tool = "//garnet/go/src/fidl:fidlgen_hlcpp"
           fidlgen_generator = "cpp"
           output_stem = "cpp/fidl"
           additional_public_deps = hlcpp_public_deps
         },
         {
-          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
+          fidlgen_tool = "//garnet/go/src/fidl:fidlgen_libfuzzer"
           fidlgen_generator = "libfuzzer"
           output_stem = "cpp/libfuzzer"
           target_suffix = "libfuzzer"

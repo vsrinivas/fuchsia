@@ -1,13 +1,15 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-package cpp_libfuzzer
+
+package codegen
 
 import (
 	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"fidl/compiler/backend/cpp"
@@ -26,41 +28,24 @@ var basePath = func() string {
 
 type example string
 
-func (s example) primaryHeader() string {
-	return fmt.Sprintf("%s.h", s)
+func (s example) header() string {
+	return fmt.Sprintf("%s.llcpp.h.golden", s)
 }
 
-func (s example) goldenHeader() string {
-	return fmt.Sprintf("%s.libfuzzer.h.golden", s)
-}
-
-func (s example) goldenSource() string {
-	return fmt.Sprintf("%s.libfuzzer.cc.golden", s)
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
+func (s example) source() string {
+	return fmt.Sprintf("%s.llcpp.cc.golden", s)
 }
 
 func TestCodegenHeader(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {
-		path := filepath.Join(basePath, example(filename).goldenHeader())
-		if !fileExists(path) {
-			t.Logf("No golden: %s", path)
-			continue
-		}
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(basePath, filename)
-			tree := cpp.Compile(fidl)
-			prepareTree(fidl.Name, &tree)
-			header := typestest.GetGolden(basePath, example(filename).goldenHeader())
+			tree := cpp.CompileLL(fidl)
+			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
+			header := typestest.GetGolden(basePath, example(filename).header())
 
 			buf := new(bytes.Buffer)
-			if err := NewFidlGenerator().GenerateHeader(buf, tree); err != nil {
+			if err := NewGenerator().generateHeader(buf, tree); err != nil {
 				t.Fatalf("unexpected error while generating header: %s", err)
 			}
 
@@ -68,22 +53,16 @@ func TestCodegenHeader(t *testing.T) {
 		})
 	}
 }
-
 func TestCodegenSource(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {
-		path := filepath.Join(basePath, example(filename).goldenSource())
-		if !fileExists(path) {
-			t.Logf("No golden: %s", path)
-			continue
-		}
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(basePath, filename)
-			tree := cpp.Compile(fidl)
-			prepareTree(fidl.Name, &tree)
-			source := typestest.GetGolden(basePath, example(filename).goldenSource())
+			tree := cpp.CompileLL(fidl)
+			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
+			source := typestest.GetGolden(basePath, example(filename).source())
 
 			buf := new(bytes.Buffer)
-			if err := NewFidlGenerator().GenerateSource(buf, tree); err != nil {
+			if err := NewGenerator().generateSource(buf, tree); err != nil {
 				t.Fatalf("unexpected error while generating source: %s", err)
 			}
 

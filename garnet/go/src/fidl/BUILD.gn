@@ -13,8 +13,26 @@ go_library("fidl_lib") {
   deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
+# TODO(fxb/45483): Remove once all SDK customers are using HLCPP backend
+# directly.
 go_binary("fidlgen") {
-  gopackage = "fidl/compiler/backend"
+  gopackage = "fidl/compiler/hlcpp_backend"
+
+  sdk_category = "partner"
+
+  deps = [ ":fidl_lib" ]
+}
+
+go_binary("fidlgen_hlcpp") {
+  gopackage = "fidl/compiler/hlcpp_backend"
+
+  sdk_category = "partner"
+
+  deps = [ ":fidl_lib" ]
+}
+
+go_binary("fidlgen_libfuzzer") {
+  gopackage = "fidl/compiler/libfuzzer_backend"
 
   sdk_category = "partner"
 
@@ -55,12 +73,12 @@ go_binary("fidlgen_syzkaller") {
 
 install_host_tools("fidl") {
   deps = [
-    ":fidlgen",
+    ":fidlgen_hlcpp",
     ":fidlgen_llcpp",
     ":fidlgen_syzkaller",
   ]
   outputs = [
-    "fidlgen",
+    "fidlgen_hlcpp",
     "fidlgen_llcpp",
     "fidlgen_syzkaller",
   ]
@@ -73,14 +91,14 @@ go_library("fidlgen_test_lib") {
   }
 }
 
-go_test("fidlgen_cpp_test") {
-  gopackages = [ "fidl/compiler/backend/cpp" ]
+go_test("fidlgen_hlcpp_test") {
+  gopackages = [ "fidl/compiler/hlcpp_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_llcpp_test") {
-  gopackages = [ "fidl/compiler/llcpp_backend" ]
+  gopackages = [ "fidl/compiler/llcpp_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
 }
@@ -92,7 +110,7 @@ go_test("fidlgen_go_test") {
 }
 
 go_test("fidlgen_libfuzzer_test") {
-  gopackages = [ "fidl/compiler/backend/cpp_libfuzzer" ]
+  gopackages = [ "fidl/compiler/libfuzzer_backend/codegen" ]
 
   deps = [ ":fidlgen_test_lib" ]
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package cpp
+package codegen
 
 import (
 	"io"
@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/types"
 )
 
@@ -19,7 +20,7 @@ type FidlGenerator struct {
 
 func NewFidlGenerator() *FidlGenerator {
 	tmpls := template.New("CPPTemplates").Funcs(template.FuncMap{
-		"Kinds": func() interface{} { return Kinds },
+		"Kinds": func() interface{} { return cpp.Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
 	})
 	template.Must(tmpls.Parse(bitsTemplate))
@@ -39,22 +40,22 @@ func NewFidlGenerator() *FidlGenerator {
 }
 
 // GenerateHeader generates the C++ bindings header.
-func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree Root) error {
+func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
 }
 
 // GenerateSource generates the C++ bindings source, i.e. implementation.
-func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree Root) error {
+func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "Implementation", tree)
 }
 
-func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree Root) error {
+func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree cpp.Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "TestBase", tree)
 }
 
 // GenerateFidl generates all files required for the C++ bindings.
-func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
-	tree := Compile(fidl)
+func (gen *FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
+	tree := cpp.CompileHL(fidl)
 
 	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)
 	if err != nil {

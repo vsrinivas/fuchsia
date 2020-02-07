@@ -230,7 +230,7 @@ $FUCHSIA_DIR/out/default/host_x64/fidlgen
 Some example tests you can run:
 
 ```sh
-fx run-host-tests fidlgen_cpp_test
+fx run-host-tests fidlgen_hlcpp_test
 fx run-host-tests fidlgen_golang_ir_test
 ```
 
@@ -402,7 +402,7 @@ fx build host-tools/gidl
 |--------------------------|---------------------------------------------|-------------------------------------------------------------------------|
 | gidl parser              | fx run-host-tests gidl_parser_test          | tools/fidl/gidl/parser                                                  |
 | fidlgen type definitions | fx run-host-tests fidlgen_types_test        | garnet/go/src/fidl/compiler/backend/types                               |
-| fidlgen hlcpp            | fx run-host-tests fidlgen_cpp_test          | garnet/go/src/fidl/compiler/backend/cpp                                 |
+| fidlgen hlcpp            | fx run-host-tests fidlgen_hlcpp_test        | garnet/go/src/fidl/compiler/hlcpp_backend                               |
 | fidlgen llcpp            | fx run-host-tests fidlgen_llcpp_test        | garnet/go/src/fidl/compiler/llcpp_backend                               |
 | fidlgen golang           | fx run-host-tests fidlgen_golang_test       | garnet/go/src/fidl/compiler/backend/golang                              |
 | fidlgen rust             | fx run-host-tests fidlgen_rust_test         | garnet/go/src/fidl/compiler/backend/rust                                |

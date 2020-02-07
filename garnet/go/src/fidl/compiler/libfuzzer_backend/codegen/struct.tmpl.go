@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package templates
+package codegen
 
-const Table = `
-{{- define "TableSizeAndAlloc" }}
+const tmplStruct = `
+{{- define "StructSizeAndAlloc" }}
 template<>
 struct MinSize<{{ .Name }}> {
   operator size_t() {
@@ -23,7 +23,7 @@ struct Allocate<{{ .Name }}> {
     size_t out_size;
     {{- range .Members }}
     out_size = MinSize<{{ .Type.Decl }}>() + slack_per_member;
-    out.set_{{ .Name }}(Allocate<{{ .Type.Decl }}>{}(src, &out_size));
+    out.{{ .Name }} = Allocate<{{ .Type.Decl }}>{}(src, &out_size);
     {{- end }}
     return out;
   }
