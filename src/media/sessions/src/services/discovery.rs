@@ -177,9 +177,6 @@ impl Discovery {
         let (id, event) = &player_update.applicant;
         if let PlayerEvent::Removed = event {
             self.catch_up_events.remove(id);
-            if let Some(mut player) = self.player_updates.remove(*id).await {
-                player.disconnect_proxied_clients().await;
-            }
         } else {
             self.catch_up_events.insert(*id, player_update.clone());
         }

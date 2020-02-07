@@ -13,19 +13,19 @@ use fidl::{self, client::QueryResponseFut};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
 use fidl_table_validation::*;
-use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
 use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use futures::{
-    future::{AbortHandle, Abortable},
-    stream::FusedStream,
-    task::{Context, Poll},
-    Future, FutureExt, Stream, StreamExt, TryStreamExt,
+    future::{BoxFuture, FutureExt},
+    stream::{FusedStream, FuturesUnordered},
+    Future, Stream, StreamExt, TryStreamExt,
 };
 use inspect::Property;
-use std::convert::*;
-use std::pin::Pin;
-use waitgroup::*;
+use std::{
+    convert::*,
+    pin::Pin,
+    task::{Context, Poll, Waker},
+};
 
 #[derive(Debug, Clone, ValidFidlTable, PartialEq)]
 #[fidl_table_src(PlayerRegistration)]
@@ -142,14 +142,14 @@ pub struct Player {
     id: Id,
     inner: PlayerProxy,
     state: ValidPlayerInfoDelta,
-    server_handles: Vec<AbortHandle>,
-    server_wait_group: WaitGroup,
     registration: ValidPlayerRegistration,
     hanging_get: Option<QueryResponseFut<PlayerInfoDelta>>,
     terminated: bool,
     // TODO(41131): Use structured data when a proc macro to derive
     // Inspect support is available.
     inspect_handle: inspect::StringProperty,
+    control_tasks: FuturesUnordered<BoxFuture<'static, ()>>,
+    waker: Option<Waker>,
 }
 
 impl Player {
@@ -163,12 +163,12 @@ impl Player {
             id,
             inner: client_end.into_proxy()?,
             state: ValidPlayerInfoDelta::default(),
-            server_handles: vec![],
-            server_wait_group: WaitGroup::new(),
             registration: ValidPlayerRegistration::try_from(registration)?,
             hanging_get: None,
             terminated: false,
             inspect_handle,
+            control_tasks: FuturesUnordered::new(),
+            waker: None,
         })
     }
 
@@ -190,101 +190,84 @@ impl Player {
     pub fn serve_controls(
         &mut self,
         requests: SessionControlRequestStream,
-        mut recv: impl FusedStream + Stream<Item = SessionInfoDelta> + Unpin + 'static,
+        mut recv: impl FusedStream + Stream<Item = SessionInfoDelta> + Send + Unpin + 'static,
     ) {
         let proxy = self.inner.clone();
-
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        self.server_handles.push(abort_handle);
-
-        let waiter = self.server_wait_group.new_waiter();
 
         let mut requests = requests.map_err(FError::from).fuse();
         let mut status = None;
         let mut hanging_get = None;
 
-        fasync::spawn_local(
-            Abortable::new(
-                async move {
-                    let _waiter = waiter;
-                    loop {
-                        futures::select! {
-                            request = requests.select_next_some() => {
-                                // Type inference fails dramatically here. Hand-holding required.
-                                let request = match request {
-                                    Ok(request) => request,
-                                    Err(e) => {
-                                        let e: FError = e;
-                                        return Err(e);
-                                    }
-                                };
-                                match request {
-                                    SessionControlRequest::Play { .. } => proxy.play()?,
-                                    SessionControlRequest::Pause { .. } => proxy.pause()?,
-                                    SessionControlRequest::Stop { .. } => proxy.stop()?,
-                                    SessionControlRequest::Seek { position, .. } => {
-                                        proxy.seek(position)?
-                                    }
-                                    SessionControlRequest::SkipForward { .. } => proxy.skip_forward()?,
-                                    SessionControlRequest::SkipReverse { .. } => proxy.skip_reverse()?,
-                                    SessionControlRequest::NextItem { .. } => proxy.next_item()?,
-                                    SessionControlRequest::PrevItem { .. } => proxy.prev_item()?,
-                                    SessionControlRequest::SetPlaybackRate {
-                                        playback_rate, ..
-                                    } => proxy.set_playback_rate(playback_rate)?,
-                                    SessionControlRequest::SetRepeatMode { repeat_mode, .. } => {
-                                        proxy.set_repeat_mode(repeat_mode)?
-                                    }
-                                    SessionControlRequest::SetShuffleMode { shuffle_on, .. } => {
-                                        proxy.set_shuffle_mode(shuffle_on)?
-                                    }
-                                    SessionControlRequest::BindVolumeControl {
-                                        volume_control_request,
-                                        ..
-                                    } => proxy.bind_volume_control(volume_control_request)?,
-                                    SessionControlRequest::WatchStatus { responder } => {
-                                        if hanging_get.is_some() {
-                                            fx_log_warn!(
-                                                tag: "player_proxy",
-                                                "Session observer sent duplicate watch"
-                                            );
-                                            // Close the channel.
-                                            return Ok(());
-                                        }
+        let control_task = async move {
+            loop {
+                futures::select! {
+                    request = requests.select_next_some() => {
+                        // Type inference fails dramatically here. Hand-holding required.
+                        let request = match request {
+                            Ok(request) => request,
+                            Err(e) => {
+                                let e: FError = e;
+                                return Err(e);
+                            }
+                        };
+                        match request {
+                            SessionControlRequest::Play { .. } => proxy.play()?,
+                            SessionControlRequest::Pause { .. } => proxy.pause()?,
+                            SessionControlRequest::Stop { .. } => proxy.stop()?,
+                            SessionControlRequest::Seek { position, .. } => {
+                                proxy.seek(position)?
+                            }
+                            SessionControlRequest::SkipForward { .. } => proxy.skip_forward()?,
+                            SessionControlRequest::SkipReverse { .. } => proxy.skip_reverse()?,
+                            SessionControlRequest::NextItem { .. } => proxy.next_item()?,
+                            SessionControlRequest::PrevItem { .. } => proxy.prev_item()?,
+                            SessionControlRequest::SetPlaybackRate {
+                                playback_rate, ..
+                            } => proxy.set_playback_rate(playback_rate)?,
+                            SessionControlRequest::SetRepeatMode { repeat_mode, .. } => {
+                                proxy.set_repeat_mode(repeat_mode)?
+                            }
+                            SessionControlRequest::SetShuffleMode { shuffle_on, .. } => {
+                                proxy.set_shuffle_mode(shuffle_on)?
+                            }
+                            SessionControlRequest::BindVolumeControl {
+                                volume_control_request,
+                                ..
+                            } => proxy.bind_volume_control(volume_control_request)?,
+                            SessionControlRequest::WatchStatus { responder } => {
+                                if hanging_get.is_some() {
+                                    fx_log_warn!(
+                                        tag: "player_proxy",
+                                        "Session observer sent duplicate watch"
+                                    );
+                                    // Close the channel.
+                                    return Ok(());
+                                }
 
-                                        if let Some(status) = status.take() {
-                                            responder.send(status)?;
-                                        } else {
-                                            hanging_get = Some(responder);
-                                        }
-                                    }
-                                }
-                            }
-                            update = recv.select_next_some() => {
-                                if let Some(hanging_get) = hanging_get.take() {
-                                    hanging_get.send(update)?;
+                                if let Some(status) = status.take() {
+                                    responder.send(status)?;
                                 } else {
-                                    status = Some(update);
+                                    hanging_get = Some(responder);
                                 }
                             }
-                            complete => {
-                                return Ok(());
-                            },
                         }
                     }
-                },
-                abort_registration,
-            )
-            .map(drop),
-        );
-    }
+                    update = recv.select_next_some() => {
+                        if let Some(hanging_get) = hanging_get.take() {
+                            hanging_get.send(update)?;
+                        } else {
+                            status = Some(update);
+                        }
+                    }
+                    complete => {
+                        return Ok(());
+                    },
+                }
+            }
+        };
 
-    /// Disconnects all proxied clients. Returns when all clients are disconnected.
-    pub fn disconnect_proxied_clients<'a>(&'a mut self) -> impl Future<Output = ()> + 'a {
-        for server in self.server_handles.drain(0..) {
-            server.abort();
-        }
-        self.server_wait_group.wait()
+        self.control_tasks.push(control_task.map(drop).boxed());
+        self.waker.iter().for_each(Waker::wake_by_ref);
     }
 
     fn options_satisfied(&self) -> WatchOptions {
@@ -301,6 +284,14 @@ impl Stream for Player {
     type Item = FilterApplicant<(u64, PlayerEvent)>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if self.terminated {
+            return Poll::Ready(None);
+        }
+
+        // Send any queued messages to the player.
+        self.waker = Some(cx.waker().clone());
+        let _ = Pin::new(&mut self.control_tasks).poll_next(cx);
+
         let proxy = self.inner.clone();
         let hanging_get = self.hanging_get.get_or_insert_with(move || proxy.watch_info_change());
 
@@ -358,6 +349,7 @@ mod test {
     use super::*;
     use fidl::encoding::Decodable;
     use fidl::endpoints::*;
+    use fuchsia_async as fasync;
     use futures::{
         channel::mpsc::channel,
         future,
@@ -397,6 +389,7 @@ mod test {
 
         let (mut sender, receiver) = channel(1);
         player.serve_controls(session_control_request_stream, receiver);
+        fasync::spawn(async move { while let Some(_) = player.next().await {} });
 
         let waker = noop_waker();
         let mut ctx = Context::from_waker(&waker);
@@ -427,6 +420,8 @@ mod test {
             stream::once(future::ready(SessionInfoDelta::new_empty())),
         );
 
+        fasync::spawn(async move { while let Some(_) = player.next().await {} });
+
         assert_matches!(session_control_fidl_proxy.watch_status().await, Ok(_));
 
         Ok(())
@@ -447,7 +442,7 @@ mod test {
 
         assert!(session_control_fidl_proxy.play().is_ok());
 
-        player.disconnect_proxied_clients().await;
+        drop(player);
 
         assert!(session_control_fidl_proxy.pause().is_err());
 
