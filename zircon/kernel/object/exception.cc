@@ -55,7 +55,6 @@ static const char* excp_type_to_string(uint type) {
 // Exception handlers are tried in the following order:
 // - debugger
 // - thread
-// - thread channel
 // - process
 // - job (first owning job, then its parent job, and so on up to root job)
 class ExceptionHandlerIterator final {
