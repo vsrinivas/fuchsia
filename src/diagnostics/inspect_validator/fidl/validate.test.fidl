@@ -79,6 +79,15 @@ struct CreateStringProperty {
     string value;
 };
 
+/// Tells the puppet to create a property with the given boolean value.
+struct CreateBooleanProperty {
+  uint32 parent;
+  uint32 id;
+  string name;
+  bool value;
+};
+
+
 /// Tells the puppet to delete an existing property.
 struct DeleteProperty {
     uint32 id;
@@ -107,6 +116,11 @@ struct SetBytes {
 struct SetString {
     uint32 id;
     string value;
+};
+
+struct SetBoolean {
+  uint32 id;
+  bool value;
 };
 
 struct CreateArrayProperty {
@@ -186,6 +200,8 @@ xunion Action {
     17: CreateExponentialHistogram create_exponential_histogram;
     18: Insert insert;
     19: InsertMultiple insert_multiple;
+    20: CreateBooleanProperty create_boolean_property;
+    21: SetBoolean set_boolean;
 };
 
 [Discoverable]
