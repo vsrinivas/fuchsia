@@ -74,11 +74,11 @@ class RingBuffer : public Stream {
   uint32_t offset_frames() const { return offset_frames_; }
 
  private:
-  Endpoint endpoint_;
-  fbl::RefPtr<RefCountedVmoMapper> vmo_mapper_;
-  uint32_t frames_ = 0;
-  fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame_;
-  uint32_t offset_frames_;
+  const Endpoint endpoint_;
+  const fbl::RefPtr<RefCountedVmoMapper> vmo_mapper_;
+  const uint32_t frames_ = 0;
+  const fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame_;
+  const uint32_t offset_frames_;
 };
 
 }  // namespace media::audio
