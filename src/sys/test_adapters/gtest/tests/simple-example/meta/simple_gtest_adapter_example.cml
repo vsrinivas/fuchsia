@@ -5,6 +5,7 @@
         "args": ["/pkg/test/simple_gtest_adapter_example"]
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.process.Launcher",
         },

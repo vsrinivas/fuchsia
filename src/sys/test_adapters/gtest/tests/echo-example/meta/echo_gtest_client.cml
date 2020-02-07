@@ -7,6 +7,7 @@
         "args": ["/pkg/bin/echo_gtest_client"]
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fidl.examples.routing.echo.Echo",
         },

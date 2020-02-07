@@ -4,6 +4,7 @@
         "args": ["/pkg/bin/gtest_sample_tests"]
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.process.Launcher",
         },

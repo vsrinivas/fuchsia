@@ -7,6 +7,15 @@
         }
     ],
     offer: [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#gtest_runner",
+                "#memfs",
+            ]
+        },
         {
             storage: "data",
             from: "#test_storage",

@@ -2,7 +2,10 @@
     program: {
         binary: "bin/memfs"
     },
-    use: [{ protocol: "/svc/fuchsia.logger.LogSink" }],
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" }
+    ],
     expose: [
         {
             directory: "/svc/fuchsia.io.Directory",
