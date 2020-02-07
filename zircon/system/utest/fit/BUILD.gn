@@ -2,7 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("fit") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("fit") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [
     "barrier_tests.cc",
     "bridge_tests.cc",
@@ -28,21 +55,29 @@ zx_test("fit") {
     "utility_internal_tests.cc",
     "variant_tests.cc",
   ]
-  deps = [
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/unittest",
-  ]
-  configs += [ ":config" ]
+  deps = [ "//zircon/public/lib/fit" ]
   if (is_fuchsia) {
-    deps += [ "$zx/system/ulib/fdio" ]
+    deps += [ "//zircon/public/lib/unittest" ]
+  } else {
+    deps += [ "//zircon/public/lib/unittest-static-host" ]
   }
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+  configs += [ ":shadow" ]
+  if (is_fuchsia) {
+    deps += [ "//zircon/public/lib/fdio" ]
+  }
+  public_configs = [ ":no_unused_function" ]
 }
 
-# chromium uses this library, and enables the following flag,
-# so these tests should work with this flag enabled
-config("config") {
-  if (!is_gcc) {
-    cflags_cc = [ "-Wshadow" ]
-  }
+config("shadow") {
+  # chromium uses this library, and enables the following flag,
+  # so these tests should work with this flag enabled
+  cflags_cc = [ "-Wshadow" ]
+}
+
+config("no_unused_function") {
+  cflags = [ "-Wno-unused-function" ]
+}
+
+migrated_manifest("fit-manifest") {
+  deps = [ ":fit" ]
 }

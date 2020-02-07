@@ -34,7 +34,6 @@ listed_tests = [
   "ffl",
   "fidl",
   "fidl-compiler",
-  "fit",
   "fs-host",
   "fvm-host",
   "fvm-unit",
@@ -88,6 +87,7 @@ group("migrated-tests") {
     "//zircon/system/ulib/fbl/test:fbl",
     "//zircon/system/ulib/libzbi/test:zbi",
     "//zircon/system/utest/cmdline",
+    "//zircon/system/utest/fit",
   ]
 
   if (current_os == "linux") {
