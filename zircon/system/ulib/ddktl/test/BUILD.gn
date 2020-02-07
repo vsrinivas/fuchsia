@@ -1,0 +1,31 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":ddktl-test" ]
+}
+
+zx_test_driver("ddktl-test") {
+  sources = [
+    "ddktl-test-binding.c",
+    "ddktl-test.cc",
+    "device-tests.cc",
+    "ethernet-tests.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.ethernet",
+    "$zx/system/banjo/ddk.protocol.test",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
+}

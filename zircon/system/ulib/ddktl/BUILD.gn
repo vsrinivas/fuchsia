@@ -26,26 +26,3 @@ zx_library("ddktl") {
     "$zx/system/ulib/zx",
   ]
 }
-
-zx_test_driver("ddktl-test") {
-  sources = [
-    "test/ddktl-test-binding.c",
-    "test/ddktl-test.cc",
-    "test/device-tests.cc",
-    "test/ethernet-tests.cc",
-  ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.ethernet",
-    "$zx/system/banjo/ddk.protocol.test",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-  ]
-
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  deprecated_inhibit_driver_shlib_allowlist = true
-}
