@@ -1,11 +1,15 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("device-protocol-pdev") {
-  sdk = "source"
-  sdk_headers = [ "lib/device-protocol/pdev.h" ]
-  sources = [ "pdev.cc" ]
+group("test") {
+  testonly = true
+  deps = [ ":device-protocol-pdev-test" ]
+}
+
+zx_test("device-protocol-pdev-test") {
+  output_name = "device-protocol-pdev-test"
+  sources = [ "pdev-test.cc" ]
   public_deps = [
     # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
     "$zx/system/banjo/ddk.protocol.platform.device",
@@ -19,6 +23,10 @@ zx_library("device-protocol-pdev") {
 
   deps = [
     # pdev.cpp has #include <lib/mmio/mmio.h>.
+    "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zxtest",
   ]
 }
