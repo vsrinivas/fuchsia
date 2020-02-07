@@ -595,7 +595,6 @@ where
 
             self.report_success_event(&request_params, EventType::UpdateDownloadFinished, &apps)
                 .await;
-            self.set_state(State::FinalizingUpdate).await;
 
             // TODO: Verify downloaded update if needed.
 
@@ -847,14 +846,17 @@ mod tests {
         },
         configuration::test_support::config_generator,
         http_request::{mock::MockHttpRequest, StubHttpRequest},
-        installer::stub::StubInstaller,
+        installer::{
+            stub::{StubInstallErrors, StubInstaller, StubPlan},
+            ProgressObserver,
+        },
         metrics::{MockMetricsReporter, StubMetricsReporter},
         policy::{MockPolicyEngine, StubPolicyEngine},
         protocol::Cohort,
         storage::MemStorage,
     };
     use futures::executor::{block_on, LocalPool};
-    use futures::future::LocalBoxFuture;
+    use futures::future::{BoxFuture, LocalBoxFuture};
     use futures::task::LocalSpawnExt;
     use log::info;
     use matches::assert_matches;
@@ -1382,11 +1384,6 @@ mod tests {
 
     impl Observer for TestObserver {
         fn on_state_change(&mut self, state: State) -> LocalBoxFuture<'_, ()> {
-            // For `test_report_successful_update_duration()`.
-            if state == State::FinalizingUpdate {
-                clock::mock::set(time::i64_to_time(222222222))
-            }
-
             if let Some(actual_states) = &self.actual_states {
                 let mut actual_states = actual_states.borrow_mut();
                 actual_states.push(state);
@@ -1802,6 +1799,22 @@ mod tests {
         });
     }
 
+    #[derive(Debug)]
+    pub struct TestInstaller;
+
+    impl Installer for TestInstaller {
+        type InstallPlan = StubPlan;
+        type Error = StubInstallErrors;
+        fn perform_install(
+            &mut self,
+            _install_plan: &StubPlan,
+            _observer: Option<&dyn ProgressObserver>,
+        ) -> BoxFuture<'_, Result<(), Self::Error>> {
+            clock::mock::set(time::i64_to_time(222222222));
+            future::ready(Ok(())).boxed()
+        }
+    }
+
     #[test]
     fn test_report_successful_update_duration() {
         block_on(async {
@@ -1822,7 +1835,7 @@ mod tests {
             let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 http,
-                StubInstaller::default(),
+                TestInstaller,
                 &config,
                 StubTimer,
                 MockMetricsReporter::new(false),
@@ -1838,7 +1851,6 @@ mod tests {
                 storage.set_int(UPDATE_FIRST_SEEN_TIME, 23456789).await.unwrap();
                 storage.commit().await.unwrap();
             }
-            state_machine.set_observer(TestObserver::default());
             state_machine.start_update_check(CheckOptions::default()).await;
 
             assert!(state_machine
