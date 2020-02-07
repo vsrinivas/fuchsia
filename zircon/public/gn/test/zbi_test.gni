@@ -52,6 +52,13 @@ zbi_test_success_string =
 #     be built and can be run manually, but won't be run automatically.
 #     - Type: list(string)
 #
+#   * device_types
+#     - Optional: The list of device types that this test should be run on.
+#       Allowable values are those among the entries in //build/testing/platforms.gni;
+#       others will be ignored.
+#     - Default: [ "QEMU" ]
+#     - Type: list(string)
+#
 # See zbi() for other parameters.
 template("zbi_test") {
   test_target = target_name
@@ -87,13 +94,15 @@ template("zbi_test") {
       output_name = test_target
     }
     deps = invoker.deps + [ ":$cmdline_target" ]
+  }
 
-    # TODO(BLD-353): The legacy build matches the "zbi-test" tag to drive the
-    # test runners.
-    if (!defined(tags)) {
-      tags = []
-    }
-    tags += [ "zbi-test" ]
+  outputs = get_target_outputs(":$zbi_target")
+  output_path = outputs[0]
+
+  if (defined(invoker.device_types)) {
+    _device_types = invoker.device_types
+  } else {
+    _device_types = [ "QEMU" ]
   }
 
   # The main target is a group that provides a metadata.zbi_barrier
@@ -105,17 +114,29 @@ template("zbi_test") {
                              "visibility",
                            ])
     testonly = true
-    deps = [
-      ":$zbi_target",
-    ]
+    deps = [ ":$zbi_target" ]
     metadata = {
-      # The test_zbi() target will not affect the contents of any zbi()
+      # The zbi_test() target will not affect the contents of any zbi()
       # targets that depend on it (directly or indirectly).
       zbi_barrier = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
+
+      zbi_tests = [
+        {
+          cpu = current_cpu
+          disabled =
+              defined(tags) && tags + [ "disabled" ] - [ "disabled" ] != tags
+          name = test_target
+          label = get_label_info(":$test_target", "label_with_toolchain")
+          path = rebase_path(output_path, root_build_dir)
+          bootserver_netboot = [ "--boot" ]
+          success_string = zbi_test_success_string
+          device_types = _device_types
+        },
+      ]
     }
   }
 }

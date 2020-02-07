@@ -46,6 +46,7 @@ build_api_module("api") {
     ":packages",
     ":tests",
     ":tool_paths",
+    ":zbi_tests",
   ]
 }
 
@@ -329,6 +330,55 @@ group("tool_paths.metadata") {
   }
 }
 
+# This tells the infra recipes how to run ZBI tests, defined with zbi_test(),
+# which is a class of tests that are 'run' by booting an associated ZBI and
+# listening on serial for a particular string indicating success.
+#
+# The schema produced here matches //:images with the addition of the
+# `success_string` key.
+#
+# Type: list(scope)
+#
+#   cpu
+#     Required: CPU architecture the image is for, e.g. "arm64" or "x64".
+#     Type: string
+#
+#   name
+#     Required: The primary way that this ZBI is known to consumers.
+#     Note that the name need not be unique within the images list.
+#     The tuple of ($name, $cpu) should be unique.
+#     Type: string
+#
+#   label
+#     Required: The GN label of the image target.
+#     Type: label_with_toolchain
+#
+#   path
+#     Required: Path to where the file is found, relative to $root_build_dir.
+#     This is also the argument to Ninja that ensures this image will be built.
+#     Type: path relative to $root_build_dir
+#
+#   bootserver_netboot
+#     Required: bootserver commandline option for booting the ZBI.
+#     Type: string
+#
+#   success_string
+#     Required: The string that the ZBI test outputs to indicate success.
+#     Type: string
+#
+#   device_types
+#     Require: The list of device types that this test should be run on.
+#     Allowable values are those among the entries in
+#     https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/build/testing/platforms.gni;
+#     others will be ignored.
+#     Type: list(string)
+#
+build_api_module("zbi_tests") {
+  testonly = true
+  data_keys = [ "zbi_tests" ]
+  deps = [ ":everything" ] + default_deps
+}
+
 ###
 ### Top-level targets.
 ###
@@ -600,11 +650,4 @@ foreach(cpu, standard_fuchsia_cpus) {
       ":legacy-tests-deps-$cpu",
     ]
   }
-}
-
-# TODO(BLD-353): This is just for the legacy build and is not really a
-# proper build API module.  In the unified build, this string will just be
-# directly embedded inside test metadata.
-build_api_module("zbi_test_success_string") {
-  contents = zbi_test_success_string
 }

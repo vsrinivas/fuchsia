@@ -195,6 +195,7 @@ build_api_module("api") {
     ":prebuilt_packages",
     ":tests",
     ":tool_paths",
+    ":zbi_tests",
     ":zircon",
   ]
 }
@@ -416,6 +417,36 @@ group("tool_paths.zircon") {
       tool_paths += [
         {
           forward_variables_from(tool, "*")
+          path = rebase_path(path, root_build_dir, zircon_root_build_dir)
+          label = string_replace(label, "//", "//zircon/")
+        },
+      ]
+    }
+  }
+}
+
+# This describes all the "ZBI tests" the build can produce.
+#
+# See //zircon:zbi_tests for a description and a schema definition.
+#
+build_api_module("zbi_tests") {
+  testonly = true
+  data_keys = [ "zbi_tests" ]
+  deps = [
+    ":zbi_tests.zircon",
+    "build/images",
+  ]
+}
+
+group("zbi_tests.zircon") {
+  visibility = [ ":zbi_tests" ]
+  zircon_entries = read_file("$zircon_root_build_dir/zbi_tests.json", "json")
+  metadata = {
+    zbi_tests = []
+    foreach(zbi_test, zircon_entries) {
+      zbi_tests += [
+        {
+          forward_variables_from(zbi_test, "*")
           path = rebase_path(path, root_build_dir, zircon_root_build_dir)
           label = string_replace(label, "//", "//zircon/")
         },

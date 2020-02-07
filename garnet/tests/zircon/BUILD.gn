@@ -101,37 +101,7 @@ fuzzers_package("zircon_fuzzers") {
   deps = [ ":migrated_fuzzers_manifest" ]
 }
 
-# This tells the infra recipes how to run ZBI tests.  These are defined in
-# the Zircon build with zbi_test().  Bringing the packages from this file
-# into the build causes this file to be written, so a build including one
-# of these packages is a build whose bots will run the ZBI tests.
-#
-# The schema produced here matches images.json with the addition of the
-# `success_string` key.
-generated_file("zbi_tests") {
-  outputs = [ "$root_build_dir/zbi_tests.json" ]
-  output_conversion = "json"
-
-  zbi_test_success_string =
-      read_file("$zircon_root_build_dir/zbi_test_success_string.json", "json")
-
-  contents = []
-  foreach(image, zircon_images) {
-    if (image.type == "zbi" && defined(image.tags) &&
-        image.tags + [ "zbi-test" ] - [ "zbi-test" ] != image.tags &&
-        image.tags + [ "disabled" ] - [ "disabled" ] == image.tags &&
-        image.cpu == current_cpu) {
-      contents += [
-        {
-          cpu = image.cpu
-          name = image.name
-          path = rebase_path(image.path, root_build_dir, zircon_root_build_dir)
-          label = image.label
-          type = "zbi"
-          bootserver_netboot = [ "--boot" ]
-          success_string = zbi_test_success_string
-        },
-      ]
-    }
-  }
+# Known to infrastructure.
+# TODO(fxbug.dev/10198): delete me. zbi_tests.json is now always produced.
+group("zbi_tests") {
 }
