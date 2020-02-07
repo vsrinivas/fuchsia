@@ -13,6 +13,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
+#include <threads.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/time.h>
 
@@ -26,6 +27,7 @@
 #include <zxtest/zxtest.h>
 
 #include "paver.h"
+#include "zircon/errors.h"
 
 enum class Command {
   kUnknown,
@@ -43,6 +45,27 @@ enum class Command {
   kWipeVolume,
   kInitPartitionTables,
   kWipePartitionTables,
+};
+
+struct AbrSlotData {
+  bool unbootable;
+  bool active;
+};
+
+struct AbrData {
+  AbrSlotData slot_a;
+  AbrSlotData slot_b;
+};
+
+constexpr AbrData kInitAbrData = {
+  .slot_a = {
+    .unbootable = false,
+    .active = false,
+  },
+  .slot_b = {
+    .unbootable = false,
+    .active = false,
+  },
 };
 
 class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
@@ -104,10 +127,22 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
                               SetConfigurationActiveCompleter::Sync completer) override {
     last_command_ = Command::kSetConfigurationActive;
     zx_status_t status;
-    if (configuration == ::llcpp::fuchsia::paver::Configuration::A) {
-      status = ZX_OK;
-    } else {
-      status = ZX_ERR_INVALID_ARGS;
+    switch (configuration) {
+      case ::llcpp::fuchsia::paver::Configuration::A:
+        abr_data_.slot_a.active = true;
+        abr_data_.slot_a.unbootable = false;
+        status = ZX_OK;
+        break;
+
+      case ::llcpp::fuchsia::paver::Configuration::B:
+        abr_data_.slot_b.active = true;
+        abr_data_.slot_b.unbootable = false;
+        status = ZX_OK;
+        break;
+
+      case ::llcpp::fuchsia::paver::Configuration::RECOVERY:
+        status = ZX_ERR_INVALID_ARGS;
+        break;
     }
     completer.Reply(status);
   }
@@ -116,10 +151,20 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
                                   SetConfigurationUnbootableCompleter::Sync completer) override {
     last_command_ = Command::kSetConfigurationUnbootable;
     zx_status_t status;
-    if (configuration == ::llcpp::fuchsia::paver::Configuration::RECOVERY) {
-      status = ZX_ERR_INVALID_ARGS;
-    } else {
-      status = ZX_OK;
+    switch (configuration) {
+      case ::llcpp::fuchsia::paver::Configuration::A:
+        abr_data_.slot_a.unbootable = true;
+        status = ZX_OK;
+        break;
+
+      case ::llcpp::fuchsia::paver::Configuration::B:
+        abr_data_.slot_b.unbootable = true;
+        status = ZX_OK;
+        break;
+
+      case ::llcpp::fuchsia::paver::Configuration::RECOVERY:
+        status = ZX_ERR_INVALID_ARGS;
+        break;
     }
     completer.Reply(status);
   }
@@ -240,6 +285,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   void set_wait_for_start_signal(bool wait) { wait_for_start_signal_ = wait; }
   void set_expected_device(std::string expected) { expected_block_device_ = expected; }
 
+  AbrData& abr_data() { return abr_data_; }
+
  private:
   bool wait_for_start_signal_ = false;
   sync_completion_t start_signal_;
@@ -251,6 +298,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   std::string expected_block_device_;
   bool abr_supported_ = false;
   bool abr_initialized_ = false;
+  AbrData abr_data_ = kInitAbrData;
 
   async_dispatcher_t* dispatcher_ = nullptr;
 };

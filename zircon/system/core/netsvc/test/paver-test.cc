@@ -198,7 +198,10 @@ TEST_F(PaverTest, WriteVbMetaAWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kSetConfigurationActive);
+  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kSetConfigurationUnbootable);
+  ASSERT_FALSE(fake_svc_.fake_paver().abr_data().slot_a.unbootable);
+  ASSERT_TRUE(fake_svc_.fake_paver().abr_data().slot_a.active);
+  ASSERT_TRUE(fake_svc_.fake_paver().abr_data().slot_b.unbootable);
 }
 
 TEST_F(PaverTest, WriteVbMetaBWithABRSupported) {
@@ -211,7 +214,10 @@ TEST_F(PaverTest, WriteVbMetaBWithABRSupported) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteAsset);
+  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kSetConfigurationUnbootable);
+  ASSERT_FALSE(fake_svc_.fake_paver().abr_data().slot_b.unbootable);
+  ASSERT_TRUE(fake_svc_.fake_paver().abr_data().slot_b.active);
+  ASSERT_TRUE(fake_svc_.fake_paver().abr_data().slot_a.unbootable);
 }
 
 TEST_F(PaverTest, WriteVbMetaRWithABRSupported) {

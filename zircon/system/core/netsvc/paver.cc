@@ -4,20 +4,22 @@
 
 #include "paver.h"
 
-#include <algorithm>
 #include <fcntl.h>
-#include <stdio.h>
-
-#include <fbl/auto_call.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/clock.h>
+#include <stdio.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
+#include <fbl/auto_call.h>
+
+#include "lib/async-loop/loop.h"
 #include "lib/fdio/cpp/caller.h"
 #include "payload-streamer.h"
 #include "zircon/errors.h"
@@ -185,7 +187,7 @@ int Paver::StreamBuffer() {
 
   // Blocks untils paving is complete.
   auto res2 = ::llcpp::fuchsia::paver::DataSink::Call::WriteVolumes(zx::unowned(data_sink),
-                                                                   std::move(client));
+                                                                    std::move(client));
   status = res2.status() == ZX_OK ? res2.value().status : res2.status();
 
   exit_code_.store(status);
@@ -236,9 +238,9 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data
       return status;
     }
   }
-  // Set configuration A as default.
+  // Set configuration A/B as default.
   // We assume that verified boot metadata asset will only be written after the kernel asset.
-  if (!boot_manager || configuration_ != ::llcpp::fuchsia::paver::Configuration::A ||
+  if (!boot_manager || configuration_ == ::llcpp::fuchsia::paver::Configuration::RECOVERY ||
       asset_ != ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA) {
     return ZX_OK;
   }
@@ -247,6 +249,18 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to set configuration as active.\n");
+      return status;
+    }
+  }
+  {
+    auto opposite = configuration_ == ::llcpp::fuchsia::paver::Configuration::A
+                        ? ::llcpp::fuchsia::paver::Configuration::B
+                        : ::llcpp::fuchsia::paver::Configuration::A;
+
+    auto result = boot_manager->SetConfigurationUnbootable(opposite);
+    auto status = result.ok() ? result->status : result.status();
+    if (status != ZX_OK) {
+      fprintf(stderr, "netsvc: Unable to set opposite configuration as unbootable.\n");
       return status;
     }
   }
@@ -421,8 +435,7 @@ int Paver::MonitorBuffer() {
   // Blocks untils paving is complete.
   switch (command_) {
     case Command::kDataFile: {
-      auto res =
-          data_sink.WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));
+      auto res = data_sink.WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));
       status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
     }
@@ -553,7 +566,7 @@ tftp_status Paver::OpenWrite(const char* filename, size_t size) {
 tftp_status Paver::Write(const void* data, size_t* length, off_t offset) {
   if (!InProgress()) {
     printf("netsvc: paver exited prematurely with %s. Check the debuglog for more information.\n",
-            zx_status_get_string(exit_code()));
+           zx_status_get_string(exit_code()));
     reset_exit_code();
     return TFTP_ERR_IO;
   }
