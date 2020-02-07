@@ -85,7 +85,10 @@ async fn main() -> Result<()> {
         .context("Connecting to publisher.")?
         .publish_player(
             player_client_end,
-            PlayerRegistration { domain: Some("domain://example".to_string()) },
+            PlayerRegistration {
+                domain: Some("domain://example".to_string()),
+                ..Decodable::new_empty()
+            },
         )
         .context("Publishing our player client end.")?;
     println!("Registered with Fuchsia Media Session service");
@@ -107,6 +110,7 @@ async fn main() -> Result<()> {
                 value: String::from("Sine"),
             }],
         }),
+        ..Decodable::new_empty()
     });
     let mut hanging_get = None;
 
