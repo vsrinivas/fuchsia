@@ -12,7 +12,7 @@ the syntax for writing [component manifest source](#component-manifest-source).
 Component declarations contain:
 
 - Information about [how to run the component](#runtime).
-- The realm's [child component instances][children] and
+- The component's [child component instances][children] and
   [component collections][collections].
 - [Routing rules](#capability-routing) that describe how capabilities are used,
   exposed, and offered between components.
@@ -391,8 +391,8 @@ Example:
 
 ### use
 
-The `use` section contains `use` declarations of child component instances as
-explained in [Routing terminology](#routing-terminology).
+The `use` section declares the capabilities that the component
+can use at runtime, as explained in [Routing terminology](#routing-terminology).
 
 `use` is an array of objects with the following properties:
 
@@ -442,7 +442,7 @@ Example:
 
 ### expose
 
-The `expose` section declares capabilities exposed by this component, as
+The `expose` section declares the capabilities exposed by this component, as
 explained in [Routing terminology](#routing-terminology).
 
 `expose` is an array of objects with the following properties:
@@ -490,7 +490,7 @@ Example:
 
 ### offer
 
-The `offer` section declares capabilities offered by this component, as
+The `offer` section declares the capabilities offered by this component, as
 explained in [Routing terminology](#routing-terminology).
 
 `offer` is an array of objects with the following properties:
