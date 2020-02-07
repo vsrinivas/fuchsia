@@ -60,32 +60,38 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 	if err != nil {
 		return fmt.Errorf("failed to create an SSH session: %v", err)
 	}
-	defer func() {
-		session.Signal(ssh.SIGKILL)
-		session.Close()
-	}()
 
-	// TERM=dumb to avoid a loop fetching a cursor position.
-	session.Setenv("TERM", "dumb")
 	session.Stdout = stdout
 	session.Stderr = stderr
 
-	cmd := strings.Join(command, " ")
-	if err := session.Start(cmd); err != nil {
-		return err
-	}
-
-	done := make(chan error)
+	errs := make(chan error)
 	go func() {
-		done <- session.Wait()
+		if err := session.Run(strings.Join(command, " ")); err != nil {
+			errs <- fmt.Errorf("failed to run SSH command: %v", err)
+			return
+		}
+		errs <- nil
 	}()
 
+	var runErr error
 	select {
-	case err := <-done:
-		return err
+	case runErr = <-errs:
 	case <-ctx.Done():
-		return ctx.Err()
+		runErr = ctx.Err()
 	}
+
+	// A successful ssh.Session.Run() will close the session: no clean-up required.
+	if runErr == nil {
+		return nil
+	}
+	logger.Infof(ctx, "attempting to close SSH session due to: %v", runErr)
+	if err := session.Signal(ssh.SIGKILL); err != nil {
+		logger.Errorf(ctx, "failed to send KILL signal over SSH session: %v", err)
+	}
+	if err := session.Close(); err != nil {
+		logger.Errorf(ctx, "failed to close SSH session: %v", err)
+	}
+	return runErr
 }
 
 // Reconnect closes the underlying connection and attempts to reopen it. The
@@ -125,5 +131,8 @@ func (r *SSHRunner) Close() error {
 	r.Lock()
 	err := r.client.Close()
 	r.Unlock()
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to close SSHRunner: %v", err)
+	}
+	return nil
 }
