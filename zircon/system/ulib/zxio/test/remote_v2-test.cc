@@ -168,8 +168,8 @@ TEST_F(RemoteV2, SetAttributes) {
 
       uint64_t creation_time = kCreationTime;
       EXPECT_EQ(creation_time, attributes.creation_time());
-      completer.ReplySuccess();
       called_.store(true);
+      completer.ReplySuccess();
     }
 
     std::atomic<bool> called_ = false;
