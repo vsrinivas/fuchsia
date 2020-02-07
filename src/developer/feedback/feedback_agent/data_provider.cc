@@ -75,6 +75,7 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
 }
 
 void DataProvider::GetData(GetDataCallback callback) {
+  FX_CHECK(!shut_down_);
   after_timeout_.Acquire();
   auto annotations =
       fit::join_promise_vector(GetAnnotations(dispatcher_, services_, config_.annotation_allowlist,
@@ -167,6 +168,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
+  FX_CHECK(!shut_down_);
   after_timeout_.Acquire();
   auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, &cobalt_)
                      .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
@@ -196,6 +198,11 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
                      });
 
   executor_.schedule_task(std::move(promise));
+}
+
+void DataProvider::Shutdown() {
+  shut_down_ = true;
+  cobalt_.Shutdown();
 }
 
 }  // namespace feedback

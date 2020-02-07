@@ -45,6 +45,9 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
                      GetScreenshotCallback callback) override;
 
+  // Irreversibly shuts down an instance of |DataProvider|.
+  void Shutdown();
+
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -66,6 +69,8 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   // process that exits when the connection with the client is closed.
   async::Loop inspect_loop_;
   async::Executor inspect_executor_;
+
+  bool shut_down_ = false;
 };
 
 }  // namespace feedback

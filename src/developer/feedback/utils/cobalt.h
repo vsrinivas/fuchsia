@@ -41,6 +41,9 @@ class Cobalt {
     LogEvent(CobaltEvent(event_code, count));
   }
 
+  // Immediately shutdown |Cobalt| so it can no longer be used to log events.
+  void Shutdown();
+
  private:
   void ConnectToLogger(fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request);
   void RetryConnectingToLogger();
@@ -63,6 +66,7 @@ class Cobalt {
   fxl::CancelableClosure reconnect_task_;
 
   uint64_t next_event_id_ = 0;
+  bool shut_down_ = false;
 };
 
 }  // namespace feedback

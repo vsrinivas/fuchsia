@@ -53,7 +53,8 @@ int main(int argc, const char** argv) {
   // inactivity.
   std::unique_ptr<feedback::DataProvider> data_provider = feedback::DataProvider::TryCreate(
       loop.dispatcher(), context->svc(),
-      [&loop, &binding, &process_identifier] {
+      [&] {
+        data_provider->Shutdown();
         loop.Shutdown();
         if (const auto status = binding->Close(ZX_ERR_TIMED_OUT) != ZX_OK) {
           FX_PLOGS(ERROR, status) << "Error closing connection to client";
@@ -70,7 +71,8 @@ int main(int argc, const char** argv) {
   }
 
   binding = std::make_unique<fidl::Binding<fuchsia::feedback::DataProvider>>(data_provider.get());
-  binding->set_error_handler([&loop, &process_identifier](zx_status_t status) {
+  binding->set_error_handler([&](zx_status_t status) {
+    data_provider->Shutdown();
     loop.Shutdown();
     // We exit successfully when the client closes the connection.
     if (status == ZX_ERR_PEER_CLOSED) {

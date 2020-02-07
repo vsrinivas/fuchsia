@@ -19,7 +19,7 @@ using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::Status;
 using fxl::StringPrintf;
 
-constexpr uint32_t kMaxQueueSize = 500u;
+constexpr uint32_t kMaxPendingEvents = 500u;
 
 // Convert a status to a string.
 std::string ToString(const Status& status) {
@@ -51,6 +51,17 @@ Cobalt::Cobalt(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
 
   auto logger_request = logger_.NewRequest();
   ConnectToLogger(std::move(logger_request));
+}
+
+void Cobalt::Shutdown() {
+  shut_down_ = true;
+
+  pending_events_.clear();
+
+  reconnect_task_.Cancel();
+
+  logger_factory_.Unbind();
+  logger_.Unbind();
 }
 
 void Cobalt::ConnectToLogger(fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request) {
@@ -97,7 +108,8 @@ void Cobalt::RetryConnectingToLogger() {
 }
 
 void Cobalt::LogEvent(CobaltEvent event) {
-  if (pending_events_.size() >= kMaxQueueSize) {
+  FX_CHECK(!shut_down_);
+  if (pending_events_.size() >= kMaxPendingEvents) {
     FX_LOGS(INFO) << StringPrintf("Dropping Cobalt event %s - too many pending events (%lu)",
                                   event.ToString().c_str(), pending_events_.size());
     return;
