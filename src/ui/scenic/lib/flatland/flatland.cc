@@ -14,28 +14,23 @@ using fuchsia::ui::scenic::internal::ContentLinkToken;
 using fuchsia::ui::scenic::internal::Error;
 using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
-using fuchsia::ui::scenic::internal::LayoutInfo;
 using fuchsia::ui::scenic::internal::LinkProperties;
 using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
-
-// Links created without a logical_size field in the properties table should be initialized to a
-// unit square.
-static constexpr float kDefaultLayoutSize = 1.0f;
 
 Flatland::Flatland(const std::shared_ptr<LinkSystem>& link_system,
                    const std::shared_ptr<TopologySystem>& topology_system)
     : link_system_(link_system),
       topology_system_(topology_system),
       transform_graph_(topology_system_->CreateGraph()),
-      link_origin_(transform_graph_.CreateTransform()) {}
+      local_root_(transform_graph_.CreateTransform()) {}
 
 Flatland::~Flatland() {
   if (parent_link_) {
-    topology_system_->ClearLocalTopology(parent_link_->link_handle);
+    topology_system_->ClearLocalTopology(parent_link_->link_origin);
   }
-  topology_system_->ClearLocalTopology(link_origin_);
+  topology_system_->ClearLocalTopology(local_root_);
 }
 
 void Flatland::Present(PresentCallback callback) {
@@ -53,8 +48,7 @@ void Flatland::Present(PresentCallback callback) {
   pending_operations_.clear();
 
   // TODO(40818): Decide on a proper limit on compute time for topological sorting.
-  auto data =
-      transform_graph_.ComputeAndCleanup(link_origin_, std::numeric_limits<uint64_t>::max());
+  auto data = transform_graph_.ComputeAndCleanup(local_root_, std::numeric_limits<uint64_t>::max());
   FXL_DCHECK(data.iterations != std::numeric_limits<uint64_t>::max());
 
   // TODO(36166): Once the 2D scene graph is externalized, don't commit changes if a cycle is
@@ -62,7 +56,7 @@ void Flatland::Present(PresentCallback callback) {
   success &= data.cyclical_edges.empty();
 
   if (success) {
-    FXL_DCHECK(data.sorted_transforms[0].handle == link_origin_);
+    FXL_DCHECK(data.sorted_transforms[0].handle == local_root_);
     topology_system_->SetLocalTopology(data.sorted_transforms);
     // TODO(36161): Once present operations can be pipelined, this variable will change state based
     // on the number of outstanding Present calls. Until then, this call is synchronous, and we can
@@ -77,7 +71,7 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
-    pending_operations_.push_back([](){
+    pending_operations_.push_back([]() {
       FXL_LOG(ERROR) << "LinkToParent failed, GraphLinkToken was invalid";
       return false;
     });
@@ -90,25 +84,25 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // layout information before this operation has been presented. By initializing the link
   // immediately, parents can inform children of layout changes, and child clients can perform
   // layout decisions before their first call to Present().
+  TransformHandle link_origin = transform_graph_.CreateTransform();
   LinkSystem::ParentLink link =
-      link_system_->CreateParentLink(std::move(token), std::move(graph_link));
+      link_system_->CreateParentLink(std::move(token), link_origin, std::move(graph_link));
 
   // This portion of the method is feed-forward. Our Link should not actually be changed until
   // Present() is called, so that the update to the Link is atomic with all other operations in the
-  // batch. The local topology from the |link_handle| to our |link_origin_| establishes the
+  // batch. The local topology from the |link_handle| to our |local_root_| establishes the
   // transform hierarchy between the two instances.
-  pending_operations_.push_back([this, link = std::move(link)]() mutable {
-    if (parent_link_) {
-      topology_system_->ClearLocalTopology(parent_link_->link_handle);
-    }
-    parent_link_ = std::move(link);
-    // TODO(42750): thread safety guarantees for link impls
-    parent_link_->impl->UpdateLinkStatus(
-        fuchsia::ui::scenic::internal::ContentLinkStatus::CONTENT_HAS_PRESENTED);
-    // TODO(42583): create link-specific topologies atomically.
-    topology_system_->SetLocalTopology({{parent_link_->link_handle, 0}, {link_origin_, 0}});
-    return true;
-  });
+  pending_operations_.push_back(
+      [this, link = std::move(link), link_origin = link_origin]() mutable {
+        if (parent_link_) {
+          topology_system_->ClearLocalTopology(parent_link_->link_origin);
+          transform_graph_.ReleaseTransform(parent_link_->link_origin);
+        }
+        parent_link_ = {.link = std::move(link), .link_origin = link_origin};
+        // TODO(42583): create link-specific topologies atomically.
+        topology_system_->SetLocalTopology({{link_origin, 0}, {local_root_, 0}});
+        return true;
+      });
 }
 
 void Flatland::UnlinkFromParent(
@@ -123,7 +117,7 @@ void Flatland::UnlinkFromParent(
 
     // If the link is still valid, return the original token. If not, create an orphaned
     // zx::eventpair and return it since the ObjectLinker does not retain the orphaned token.
-    auto link_token = parent_link_->exporter.ReleaseToken();
+    auto link_token = parent_link_->link.exporter.ReleaseToken();
     if (link_token.has_value()) {
       return_token.value = zx::eventpair(std::move(link_token.value()));
     } else {
@@ -133,7 +127,7 @@ void Flatland::UnlinkFromParent(
     }
 
     // TODO(42583): create link-specific topologies atomically.
-    topology_system_->ClearLocalTopology(parent_link_->link_handle);
+    topology_system_->ClearLocalTopology(parent_link_->link_origin);
 
     parent_link_.reset();
 
@@ -147,9 +141,9 @@ void Flatland::ClearGraph() {
   pending_operations_.push_back([=]() {
     transforms_.clear();
     // We always preserve the link origin when clearing the graph.
-    transform_graph_.ResetGraph(link_origin_);
+    transform_graph_.ResetGraph(local_root_);
     child_links_.clear();
-    parent_link_ = LinkSystem::ParentLink();
+    parent_link_.reset();
     return true;
   });
 }
@@ -241,7 +235,7 @@ void Flatland::RemoveChild(TransformId parent_transform_id, TransformId child_tr
 
 void Flatland::SetRootTransform(TransformId transform_id) {
   pending_operations_.push_back([=]() {
-    transform_graph_.ClearChildren(link_origin_);
+    transform_graph_.ClearChildren(local_root_);
 
     // SetRootTransform(0) is special -- it only clears the existing root transform.
     if (transform_id == kInvalidId) {
@@ -254,7 +248,7 @@ void Flatland::SetRootTransform(TransformId transform_id) {
       return false;
     }
 
-    bool added = transform_graph_.AddChild(link_origin_, global_kv->second);
+    bool added = transform_graph_.AddChild(local_root_, global_kv->second);
     FXL_DCHECK(added);
     return true;
   });
@@ -265,8 +259,16 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
-    pending_operations_.push_back([](){
+    pending_operations_.push_back([]() {
       FXL_LOG(ERROR) << "CreateLink failed, ContentLinkToken was invalid";
+      return false;
+    });
+    return;
+  }
+
+  if (!properties.has_logical_size()) {
+    pending_operations_.push_back([]() {
+      FXL_LOG(ERROR) << "CreateLink must be provided with LinkProperties with a logical size.";
       return false;
     });
     return;
@@ -275,9 +277,12 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
   FXL_DCHECK(link_system_);
 
   // We can initialize the link importer immediately, since no state changes actually occur before
-  // the feed-forward portion of this method.
-  LinkSystem::ChildLink link =
-      link_system_->CreateChildLink(std::move(token), std::move(content_link));
+  // the feed-forward portion of this method. We also forward the initial LinkProperties through
+  // the LinkSystem immediately, so the child can receive them as soon as possible.
+  LinkProperties initial_properties;
+  fidl::Clone(properties, &initial_properties);
+  LinkSystem::ChildLink link = link_system_->CreateChildLink(
+      std::move(token), std::move(initial_properties), std::move(content_link));
 
   // This is the feed-forward portion of the method. Here, we add the link to the map, and
   // initialize its layout with the desired properties. The link will not actually result in
@@ -292,21 +297,19 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
           return false;
         }
 
-        LayoutInfo info;
-        if (properties.has_logical_size()) {
-          info.set_logical_size(properties.logical_size());
-        } else {
-          info.set_logical_size(Vec2{kDefaultLayoutSize, kDefaultLayoutSize});
-        }
-
-        // TODO(42750): thread safety guarantees for link impls
-        link.impl->UpdateLayoutInfo(std::move(info));
+        // The link system expects some parent of a ChildLink TransformHandle to have LinkProperties
+        // attached to it. Even though we've already sent the initial LinkProperties, we set them
+        // here as well to aid in LinkSystem's evaluation of the global topology.
+        //
+        // TODO(44334): Replace this function call with a unified structure update for all Flatland
+        // instance-local data (similar to and merged with the local topology update).
+        link_system_->SetLinkProperties(link.link_handle, std::move(properties));
         child_links_[link_id] = std::move(link);
         return true;
       });
 }
 
-void Flatland::SetLinkOnTransform(TransformId transform_id, LinkId link_id) {
+void Flatland::SetLinkOnTransform(LinkId link_id, TransformId transform_id) {
   pending_operations_.push_back([=]() {
     if (transform_id == kInvalidId) {
       FXL_LOG(ERROR) << "SetLinkOnTransform called with transform_id zero";
@@ -338,8 +341,6 @@ void Flatland::SetLinkOnTransform(TransformId transform_id, LinkId link_id) {
 }
 
 void Flatland::SetLinkProperties(LinkId id, LinkProperties properties) {
-  // This entire method is feed-forward, but we need a custom closure to capture the properties via
-  // move semantics.
   pending_operations_.push_back([=, properties = std::move(properties)]() mutable {
     if (id == 0) {
       return false;
@@ -351,17 +352,11 @@ void Flatland::SetLinkProperties(LinkId id, LinkProperties properties) {
       return false;
     }
 
-    FXL_DCHECK(link_kv->second.impl);
     FXL_DCHECK(link_kv->second.importer.valid());
-    LayoutInfo info;
-    if (properties.has_logical_size()) {
-      info.set_logical_size(properties.logical_size());
-    } else {
-      info.set_logical_size(Vec2{kDefaultLayoutSize, kDefaultLayoutSize});
-    }
 
-    // TODO(42750): thread safety guarantees for link impls
-    link_kv->second.impl->UpdateLayoutInfo(std::move(info));
+    // TODO(44334): Replace this function call with a unified structure update for all Flatland
+    // instance-local data (similar to and merged with the local topology update).
+    link_system_->SetLinkProperties(link_kv->second.link_handle, std::move(properties));
     return true;
   });
 }
@@ -424,6 +419,6 @@ void Flatland::ReleaseLink(LinkId link_id,
   });
 }
 
-TransformHandle Flatland::GetLinkOrigin() const { return link_origin_; }
+TransformHandle Flatland::GetLocalRoot() const { return local_root_; }
 
 }  // namespace flatland

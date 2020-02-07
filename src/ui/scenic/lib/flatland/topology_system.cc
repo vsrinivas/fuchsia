@@ -18,7 +18,7 @@ namespace flatland {
 
 TransformGraph TopologySystem::CreateGraph() { return TransformGraph(next_graph_id_++); }
 
-TransformGraph::TopologyVector TopologySystem::ComputeGlobalTopologyVector(TransformHandle root) {
+TopologySystem::TopologyData TopologySystem::ComputeGlobalTopologyVector(TransformHandle root) {
   std::scoped_lock lock(map_mutex_);
 
   // This is a stack of vector "iterators". We store the raw index, instead of an iterator, so that
@@ -30,16 +30,10 @@ TransformGraph::TopologyVector TopologySystem::ComputeGlobalTopologyVector(Trans
                      /*global_index=*/uint64_t, pair_hash>
       global_index_map;
   TransformGraph::TopologyVector retval;
+  std::unordered_set<TransformHandle> live_transforms;
 
-  // We should have a graph map entry for our root graph.
-  FXL_DCHECK(topology_map_.count(root));
-
+  // If we don't have the root in the map, the initial vector will be empty.
   const TransformGraph::TopologyVector& initial_vector = topology_map_[root];
-
-  // The root should be the first entry in the topological vector.
-  FXL_DCHECK(!initial_vector.empty());
-  FXL_DCHECK(initial_vector[0].handle == root);
-  FXL_DCHECK(initial_vector[0].parent_index == 0);
 
   // Initialize the iterator stack.
   vector_stack.push_back({initial_vector, 0});
@@ -62,6 +56,7 @@ TransformGraph::TopologyVector TopologySystem::ComputeGlobalTopologyVector(Trans
     uint64_t global_parent_index = global_index_map[{current_root_handle, local_parent_index}];
     auto current_transform = vector[iterator_index].handle;
     retval.push_back({current_transform, global_parent_index});
+    live_transforms.insert(current_transform);
     ++iterator_index;
 
     auto new_graph_entry = topology_map_.find(current_transform);
@@ -90,7 +85,7 @@ TransformGraph::TopologyVector TopologySystem::ComputeGlobalTopologyVector(Trans
     global_index_map[{current_transform, 0}] = new_global_index;
   }
 
-  return retval;
+  return {.topology_vector = std::move(retval), .live_handles = std::move(live_transforms)};
 }
 
 void TopologySystem::SetLocalTopology(const TransformGraph::TopologyVector& sorted_transforms) {

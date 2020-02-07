@@ -8,85 +8,154 @@
 
 #include "src/lib/fxl/logging.h"
 
+using fuchsia::ui::scenic::internal::GraphLinkStatus;
+using fuchsia::ui::scenic::internal::LayoutInfo;
+using fuchsia::ui::scenic::internal::Vec2;
+
 namespace flatland {
 namespace test {
 
-TEST(HangingGetHelperTest, HangingGet) {
-  HangingGetHelper<uint64_t> helper;
+TEST(HangingGetHelperTest, HangingGetProducesValidResponse) {
+  HangingGetHelper<Vec2> helper;
 
-  std::optional<uint64_t> data;
-  helper.SetCallback([&](uint64_t d) { data = d; });
+  std::optional<Vec2> data;
+  helper.SetCallback([&](Vec2 d) { data = d; });
   EXPECT_FALSE(data);
 
-  helper.Update(1);
+  helper.Update(Vec2{1.0f, 2.0f});
 
   EXPECT_TRUE(data);
-  EXPECT_EQ(1u, data.value());
+  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
 }
 
-TEST(HangingGetHelperTest, NonHangingGet) {
-  HangingGetHelper<uint64_t> helper;
+TEST(HangingGetHelperTest, NonHangingGetProducesValidResponse) {
+  HangingGetHelper<Vec2> helper;
 
-  helper.Update(1);
+  helper.Update(Vec2{1.0f, 2.0f});
 
-  std::optional<uint64_t> data;
-  helper.SetCallback([&](uint64_t d) { data = d; });
+  std::optional<Vec2> data;
+  helper.SetCallback([&](Vec2 d) { data = d; });
   EXPECT_TRUE(data);
-  EXPECT_EQ(1u, data.value());
+  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
 }
 
-TEST(HangingGetHelperTest, DataOverride) {
-  HangingGetHelper<uint64_t> helper;
+TEST(HangingGetHelperTest, DataOverrideResultsInFinalValue) {
+  HangingGetHelper<Vec2> helper;
 
-  helper.Update(1);
-  helper.Update(2);
-  helper.Update(3);
+  helper.Update(Vec2{1.0f, 2.0f});
+  helper.Update(Vec2{3.0f, 4.0f});
+  helper.Update(Vec2{5.0f, 6.0f});
 
-  std::optional<uint64_t> data;
-  helper.SetCallback([&](uint64_t d) { data = d; });
+  std::optional<Vec2> data;
+  helper.SetCallback([&](Vec2 d) { data = d; });
   EXPECT_TRUE(data);
-  EXPECT_EQ(3u, data.value());
+  EXPECT_TRUE(fidl::Equals(Vec2{5.0f, 6.0f}, data.value()));
 }
 
-TEST(HangingGetHelperTest, MultipleUpdatesWithGap) {
-  HangingGetHelper<uint64_t> helper;
+TEST(HangingGetHelperTest, DataOverrideInBatches) {
+  HangingGetHelper<Vec2> helper;
 
-  std::optional<uint64_t> data;
-  helper.SetCallback([&](uint64_t d) { data = d; });
+  std::optional<Vec2> data;
+  helper.SetCallback([&](Vec2 d) { data = d; });
   EXPECT_FALSE(data);
 
-  helper.Update(1);
+  helper.Update(Vec2{1.0f, 2.0f});
   EXPECT_TRUE(data);
-  EXPECT_EQ(1u, data.value());
+  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
 
-  helper.Update(2);
-  helper.Update(3);
+  helper.Update(Vec2{3.0f, 4.0f});
+  helper.Update(Vec2{5.0f, 6.0f});
 
-  EXPECT_EQ(1u, data.value());
+  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
   data.reset();
-  helper.SetCallback([&](uint64_t d) { data = d; });
+  helper.SetCallback([&](Vec2 d) { data = d; });
   EXPECT_TRUE(data);
-  EXPECT_EQ(3u, data.value());
+  EXPECT_TRUE(fidl::Equals(Vec2{5.0f, 6.0f}, data.value()));
 }
 
-TEST(HangingGetHelperTest, DuplicateData) {
-  HangingGetHelper<uint64_t> helper;
+TEST(HangingGetHelperTest, DuplicateDataIsIgnored) {
+  HangingGetHelper<Vec2> helper;
 
-  std::optional<uint64_t> data;
-  helper.SetCallback([&](uint64_t d) { data = d; });
+  std::optional<Vec2> data;
+  helper.SetCallback([&](Vec2 d) { data = d; });
   EXPECT_FALSE(data);
 
-  helper.Update(1);
-  EXPECT_TRUE(data);
-  EXPECT_EQ(1u, data.value());
+  helper.Update(Vec2{1.0f, 2.0f});
+  ASSERT_TRUE(data);
+  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
 
   data.reset();
-  helper.SetCallback([&](uint64_t d) { data = d; });
+  helper.SetCallback([&](Vec2 d) { data = d; });
   EXPECT_FALSE(data);
 
-  helper.Update(1);
-  EXPECT_TRUE(data);
-  EXPECT_EQ(1u, data.value());
+  helper.Update(Vec2{1.0f, 2.0f});
+  EXPECT_FALSE(data);
+
+  helper.Update(Vec2{3.0f, 4.0f});
+  ASSERT_TRUE(data);
+  EXPECT_TRUE(fidl::Equals(Vec2{3.0f, 4.0f}, data.value()));
+}
+
+TEST(HangingGetHelperTest, EnumDuplicateDataIsIgnored) {
+  HangingGetHelper<GraphLinkStatus> helper;
+  std::optional<GraphLinkStatus> data;
+  helper.SetCallback([&](GraphLinkStatus d) { data = std::move(d); });
+  EXPECT_FALSE(data);
+
+  helper.Update(GraphLinkStatus::CONNECTED_TO_DISPLAY);
+  ASSERT_TRUE(data);
+  EXPECT_TRUE(fidl::Equals(GraphLinkStatus::CONNECTED_TO_DISPLAY, data.value()));
+
+  data.reset();
+  helper.SetCallback([&](GraphLinkStatus d) { data = std::move(d); });
+  EXPECT_FALSE(data);
+
+  helper.Update(GraphLinkStatus::CONNECTED_TO_DISPLAY);
+  EXPECT_FALSE(data);
+
+  helper.Update(GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+  ASSERT_TRUE(data);
+  EXPECT_TRUE(fidl::Equals(GraphLinkStatus::DISCONNECTED_FROM_DISPLAY, data.value()));
+}
+
+TEST(HangingGetHelperTest, TableDuplicateDataIsIgnored) {
+  HangingGetHelper<LayoutInfo> helper;
+  std::optional<LayoutInfo> data;
+  helper.SetCallback([&](LayoutInfo d) { data = std::move(d); });
+  EXPECT_FALSE(data);
+
+  LayoutInfo info;
+  info.set_logical_size(Vec2{1.0f, 2.0f});
+
+  {
+    LayoutInfo info2;
+    info.Clone(&info2);
+    helper.Update(std::move(info2));
+  }
+  ASSERT_TRUE(data);
+  EXPECT_TRUE(fidl::Equals(info, data.value()));
+
+  data.reset();
+  helper.SetCallback([&](LayoutInfo d) { data = std::move(d); });
+  EXPECT_FALSE(data);
+
+  {
+    LayoutInfo info3;
+    info.Clone(&info3);
+    helper.Update(std::move(info3));
+  }
+  EXPECT_FALSE(data);
+
+  LayoutInfo new_info;
+  new_info.set_logical_size(Vec2{3.0f, 4.0f});
+
+  {
+    LayoutInfo info4;
+    new_info.Clone(&info4);
+    helper.Update(std::move(info4));
+  }
+  ASSERT_TRUE(data);
+  EXPECT_TRUE(fidl::Equals(new_info, data.value()));
 }
 
 }  // namespace test

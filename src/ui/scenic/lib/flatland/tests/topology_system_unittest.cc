@@ -15,6 +15,29 @@
 namespace flatland {
 namespace test {
 
+// This is a macro so that, if the various test macros fail, we get a line number associated with a
+// particular call in a unit test.
+//
+// |data| is a TopologySystem::TopologyData object.
+#define CHECK_OUTPUT(data)                           \
+  {                                                  \
+    std::unordered_set<TransformHandle> all_handles; \
+    for (auto entry : data.topology_vector) {        \
+      all_handles.insert(entry.handle);              \
+    }                                                \
+    EXPECT_EQ(all_handles, data.live_handles);       \
+  }
+
+TEST(TopologySystemTest, UnknownGraph) {
+  TopologySystem system;
+
+  TransformHandle unknown_handle = {1, 1};
+
+  auto output = system.ComputeGlobalTopologyVector(unknown_handle);
+  EXPECT_TRUE(output.topology_vector.empty());
+  EXPECT_TRUE(output.live_handles.empty());
+}
+
 TEST(TopologySystemTest, GraphUniqueness) {
   TopologySystem system;
 
@@ -86,7 +109,8 @@ TEST(TopologySystemTest, BasicRetrieval) {
 
   for (auto v : vectors) {
     auto output = system.ComputeGlobalTopologyVector(v[0].handle);
-    EXPECT_EQ(output, v);
+    CHECK_OUTPUT(output);
+    EXPECT_EQ(v, output.topology_vector);
   }
 }
 
@@ -107,7 +131,8 @@ TEST(TopologySystemTest, BasicExpansion) {
   // 0:0 - 0:1 - 0:2
   TransformGraph::TopologyVector expected_output = {{{0, 0}, 0}, {{0, 1}, 0}, {{0, 2}, 1}};
   auto output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(expected_output, output);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(expected_output, output.topology_vector);
 }
 
 TEST(TopologySystemTest, IndexFixup) {
@@ -138,7 +163,8 @@ TEST(TopologySystemTest, IndexFixup) {
   TransformGraph::TopologyVector expected_output = {
       {{0, 0}, 0}, {{1, 0}, 0}, {{1, 1}, 1}, {{1, 2}, 1}, {{2, 0}, 0}, {{2, 1}, 4}, {{2, 2}, 5}};
   auto output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(expected_output, output);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(expected_output, output.topology_vector);
 
   // Replace graph 0 with a new vector which swaps the order of the children.
   //
@@ -158,7 +184,8 @@ TEST(TopologySystemTest, IndexFixup) {
   TransformGraph::TopologyVector expected_output_alternate = {
       {{0, 0}, 0}, {{2, 0}, 0}, {{2, 1}, 1}, {{2, 2}, 2}, {{1, 0}, 0}, {{1, 1}, 4}, {{1, 2}, 4}};
   output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(expected_output_alternate, output);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(expected_output_alternate, output.topology_vector);
 }
 
 TEST(TopologySystemTest, DanglingChild) {
@@ -178,7 +205,8 @@ TEST(TopologySystemTest, DanglingChild) {
   // With only the top level vector updated, we get the same result at the retrieval test.
   system.SetLocalTopology(vectors[0]);
   auto output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(output, vectors[0]);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(vectors[0], output.topology_vector);
 
   // With the first and third vectors updated, we get a partial global listing. The
   // middle transform references a vector that has not been updated yet and, therefore, does not
@@ -191,7 +219,8 @@ TEST(TopologySystemTest, DanglingChild) {
       {{0, 0}, 0}, {{1, 0}, 0}, {{2, 0}, 0}, {{2, 1}, 2}, {{2, 2}, 3}};
   system.SetLocalTopology(vectors[2]);
   output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(expected_output_partial, output);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(expected_output_partial, output.topology_vector);
 
   // Combined, the global vector looks like this.
   //
@@ -204,7 +233,8 @@ TEST(TopologySystemTest, DanglingChild) {
       {{0, 0}, 0}, {{1, 0}, 0}, {{1, 1}, 1}, {{1, 2}, 1}, {{2, 0}, 0}, {{2, 1}, 4}, {{2, 2}, 5}};
   system.SetLocalTopology(vectors[1]);
   output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(expected_output, output);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(expected_output, output.topology_vector);
 }
 
 TEST(TopologySystemTest, DiamondInheritance) {
@@ -244,7 +274,8 @@ TEST(TopologySystemTest, DiamondInheritance) {
       {{0, 0}, 0}, {{1, 0}, 0}, {{1, 1}, 1}, {{3, 0}, 1}, {{3, 1}, 3}, {{3, 2}, 4},
       {{2, 0}, 0}, {{3, 0}, 6}, {{3, 1}, 7}, {{3, 2}, 8}, {{2, 2}, 7}};
   auto output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(expected_output, output);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(expected_output, output.topology_vector);
 }
 
 TEST(TopologySystemTest, MultithreadedUpdates) {
@@ -325,9 +356,10 @@ TEST(TopologySystemTest, MultithreadedUpdates) {
 
   std::vector<uint64_t> expected_indices = {0, 0, 1, 2, 2, 1, 0, 6, 7, 7, 6};
   auto output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(output.size(), expected_indices.size());
-  for (uint64_t i = 0; i < output.size(); i++) {
-    EXPECT_EQ(output[i].parent_index, expected_indices[i]);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(output.topology_vector.size(), expected_indices.size());
+  for (uint64_t i = 0; i < output.topology_vector.size(); i++) {
+    EXPECT_EQ(expected_indices[i], output.topology_vector[i].parent_index);
   }
 
   // Initialize the graph with alternate vectors.
@@ -336,9 +368,10 @@ TEST(TopologySystemTest, MultithreadedUpdates) {
   }
 
   output = system.ComputeGlobalTopologyVector({0, 0});
-  EXPECT_EQ(output.size(), expected_indices.size());
-  for (uint64_t i = 0; i < output.size(); i++) {
-    EXPECT_EQ(output[i].parent_index, expected_indices[i]);
+  CHECK_OUTPUT(output);
+  EXPECT_EQ(output.topology_vector.size(), expected_indices.size());
+  for (uint64_t i = 0; i < output.topology_vector.size(); i++) {
+    EXPECT_EQ(expected_indices[i], output.topology_vector[i].parent_index);
   }
 
   std::vector<std::thread> threads;
@@ -362,9 +395,10 @@ TEST(TopologySystemTest, MultithreadedUpdates) {
     // intermediate state, with a mix of graphs, should always produce the same set of parent
     // indexes.
     output = system.ComputeGlobalTopologyVector({0, 0});
-    EXPECT_EQ(output.size(), expected_indices.size());
-    for (uint64_t i = 0; i < output.size(); i++) {
-      EXPECT_EQ(output[i].parent_index, expected_indices[i]);
+    CHECK_OUTPUT(output);
+    EXPECT_EQ(output.topology_vector.size(), expected_indices.size());
+    for (uint64_t i = 0; i < output.topology_vector.size(); i++) {
+      EXPECT_EQ(expected_indices[i], output.topology_vector[i].parent_index);
     }
 
     // This sleep triggers the Compute call at a random point in the middle of all of the

@@ -25,6 +25,14 @@ table LayoutInfo {
     1: Vec2 logical_size;
 };
 
+/// GraphLinks will be informed when they are actively attached to a output display (either
+/// directly, or through a chain of parent links) and when they are not. Until they are connected to
+/// a display, some pieces of information (such as pixel scale) may be unavailable.
+enum GraphLinkStatus {
+    CONNECTED_TO_DISPLAY = 0;
+    DISCONNECTED_FROM_DISPLAY = 1;
+};
+
 /// A protocol that provides information about a particular Link to the child client. Each Flatland
 /// instance may only specify a single root transform, so other objects in the graph can only be
 /// children of a single GraphLink. However, more than one GraphLink protocol may be active at a
@@ -37,12 +45,24 @@ protocol GraphLink {
     /// content before their first call to Present(). In transition cases where two GraphLink
     /// channels exist at the same time, both protocol instances will be receiving different layout
     /// information.
+    ///
+    /// This hanging get will only fire when the LayoutInfo is different than the previously
+    /// returned LayoutInfo. Note that, since LayoutInfo is a table, only some fields may have
+    /// changed.
     GetLayout() -> (LayoutInfo info);
+
+    /// A hanging get for receiving the status of the Link. This provides global connectivity
+    /// information to the child.
+    ///
+    /// This hanging get will only fire when the GraphLinkStatus is different than the previously
+    /// returned GraphLinkStatus.
+    GetStatus() -> (GraphLinkStatus status);
 };
 
 enum ContentLinkStatus {
-    /// The underlying Graph has connected its Link, called Present(), and the acquisition fences of
-    /// the Present() call have all be reached.
+    /// The underlying Graph has connected its Link, called Present(), the acquisition fences of
+    /// the Present() call have all be reached, and the Graph's content has been rendered to an
+    /// output device.
     CONTENT_HAS_PRESENTED = 0;
 };
 
@@ -52,6 +72,9 @@ enum ContentLinkStatus {
 protocol ContentLink {
     /// A hanging get for receiving the status of a Link. This provides information to the parent,
     /// such as whether or not the child has successfully presented content through this Link.
+    ///
+    /// This hanging get will only fire when the ContentLinkStatus is different than the previously
+    /// returned ContentLinkStatus.
     GetStatus() -> (ContentLinkStatus status);
 };
 
@@ -213,6 +236,9 @@ protocol Flatland {
     /// A Link is a connection between the objects authored in this Graph, and the objects in
     /// another process. The parent process has control over how the linked content is integrated
     /// into their Graph through this Link object, and the object's associated Link properties.
+    ///
+    /// |LinkProperties| must have logical_size set. This is the initial size that will drive the
+    /// layout of the child.
     CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties properties,
                request<ContentLink> content_link);
 
@@ -222,7 +248,7 @@ protocol Flatland {
     /// as long as the Transform is visible from the root Transform. The contents of the Link will
     /// be rendered before, and therefore "behind", any content attached to the descendants of the
     /// Transform.
-    SetLinkOnTransform(TransformId transform_id, LinkId link_id);
+    SetLinkOnTransform(LinkId link_id, TransformId transform_id);
 
     // Content mutators
 

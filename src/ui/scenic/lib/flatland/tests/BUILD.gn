@@ -23,5 +23,6 @@ executable("unittests") {
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/flatland",
+    "//third_party/googletest:gmock",
   ]
 }

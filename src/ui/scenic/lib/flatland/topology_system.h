@@ -26,6 +26,13 @@ class TopologySystem {
   // by the same TopologySystem instance.
   TransformGraph CreateGraph();
 
+  // For ease of computation, we return both the topology vector, as well as a set containing every
+  // TransformHandle within that vector.
+  struct TopologyData {
+    TransformGraph::TopologyVector topology_vector;
+    std::unordered_set<TransformHandle> live_handles;
+  };
+
   // Computes the topologically sorted vector, consisting of all TransformHandles reachable from
   // |root|.
   //
@@ -35,7 +42,7 @@ class TopologySystem {
   // assuming that SetLocalTopology() has been called for that TransformHandle. If
   // SetLocalTopology() has not been called, the TransformHandle will still be present in the output
   // vector, but will not be expanded further.
-  TransformGraph::TopologyVector ComputeGlobalTopologyVector(TransformHandle root);
+  TopologyData ComputeGlobalTopologyVector(TransformHandle root);
 
   // Sets the topological vector for |sorted_transforms[0]|. Each TransformHandle may only have one
   // vector committed to the system at a time, calling SetLocalTopology() again will override the
@@ -54,6 +61,9 @@ class TopologySystem {
 
   std::atomic<uint64_t> next_graph_id_ = 0;
 
+  // TODO(44335): This map is modified by Flatland instances when Flatland::Present() is called, and
+  // read within ComputeGlobalTopologyVector() on the render thread, producing a possible priority
+  // inversion between the two threads.
   std::mutex map_mutex_;
   TopologyMap topology_map_;
 };

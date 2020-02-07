@@ -69,7 +69,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
       fuchsia::ui::scenic::internal::LinkProperties properties,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetLinkOnTransform(TransformId transform_id, LinkId link_id) override;
+  void SetLinkOnTransform(LinkId link_id, TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkProperties(LinkId id,
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;
@@ -80,7 +80,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
                    fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
 
   // For validating the transform hierarchy in tests only.
-  TransformHandle GetLinkOrigin() const;
+  TransformHandle GetLocalRoot() const;
 
  private:
   // Users are not allowed to use zero as a transform ID.
@@ -99,7 +99,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   std::shared_ptr<LinkSystem> link_system_;
 
   // A topology system shared between Flatland instances, so that child edges can be made between
-  // them (by way of local topologies on Transforms that are not the link_origin_).
+  // them (by way of local topologies on Transforms that are not the local_root_).
   std::shared_ptr<TopologySystem> topology_system_;
 
   // The set of operations that are pending a call to Present().
@@ -116,16 +116,21 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A graph representing this flatland instance's local transforms and their relationships.
   TransformGraph transform_graph_;
 
-  // A unique transform for this instance, the link_origin_ is part of the transform_graph_, and
-  // will never be released or changed during the course of the instance's lifetime. This makes it a
-  // fixed attachment point for cross-instance Links.
-  const TransformHandle link_origin_;
+  // A unique transform for this instance, the local_root_, is part of the transform_graph_,
+  // and will never be released or changed during the course of the instance's lifetime. This makes
+  // it a fixed attachment point for cross-instance Links.
+  const TransformHandle local_root_;
 
   // A mapping from user-generated id to ChildLink.
   LinkMap child_links_;
 
+  struct ParentLinkData {
+    LinkSystem::ParentLink link;
+    TransformHandle link_origin;
+  };
+
   // The link from this Flatland instance to our parent.
-  std::optional<LinkSystem::ParentLink> parent_link_;
+  std::optional<ParentLinkData> parent_link_;
 };
 
 }  // namespace flatland
