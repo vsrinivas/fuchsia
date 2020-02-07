@@ -77,7 +77,10 @@ executable("unittest_bin") {
     "channel_strip_unittest.cc",
     "filter_unittest.cc",
     "gain_unittest.cc",
+    "linear_sampler_unittest.cc",
+    "mixer_utils_unittest.cc",
     "output_producer_unittest.cc",
+    "point_sampler_unittest.cc",
     "position_manager_unittest.cc",
     "sinc_sampler_unittest.cc",
   ]

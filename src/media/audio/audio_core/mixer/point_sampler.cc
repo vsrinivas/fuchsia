@@ -145,8 +145,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       float* out = dest + (dest_off * DestChanCount);
 
       for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
-        auto src_chan_offset = dest_chan % SrcChanCount;
-        float sample = SR::Read(src + src_iter + src_chan_offset);
+        float sample = SR::Read(src + src_iter, dest_chan);
         out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
 
@@ -489,25 +488,39 @@ template <size_t DestChanCount, typename SrcSampleType>
 static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectPSM(dChan,sType)");
+
   switch (src_format.channels) {
     case 1:
-      return SelectPSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
+      if constexpr (DestChanCount <= 4) {
+        return SelectPSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
+      }
+      break;
     case 2:
-      return SelectPSM<DestChanCount, SrcSampleType, 2>(src_format, dest_format);
+      if constexpr (DestChanCount <= 4) {
+        return SelectPSM<DestChanCount, SrcSampleType, 2>(src_format, dest_format);
+      }
+      break;
+    case 3:
+      if constexpr (DestChanCount <= 2) {
+        return SelectPSM<DestChanCount, SrcSampleType, 3>(src_format, dest_format);
+      }
+      break;
     case 4:
-      if (dest_format.channels == 1 || dest_format.channels == 2) {
+      if constexpr (DestChanCount <= 2) {
         return SelectPSM<DestChanCount, SrcSampleType, 4>(src_format, dest_format);
       }
-      return nullptr;
+      break;
     default:
-      return nullptr;
+      break;
   }
+  return nullptr;
 }
 
 template <size_t DestChanCount>
 static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectPSM(dChan)");
+
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return SelectPSM<DestChanCount, uint8_t>(src_format, dest_format);
@@ -542,10 +555,16 @@ static inline std::unique_ptr<Mixer> SelectNxNPSM(
 std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamType& src_format,
                                             const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "PointSampler::Select");
+
   // If num_channels for src and dest are equal and > 2, directly map these one-to-one.
   // TODO(MTWN-75): eliminate the NxN mixers, replacing with flexible rechannelization (see below).
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {
     return SelectNxNPSM(src_format);
+  }
+
+  if ((src_format.channels < 1 || dest_format.channels < 1) ||
+      (src_format.channels > 4 || dest_format.channels > 4)) {
+    return nullptr;
   }
 
   switch (dest_format.channels) {
@@ -553,18 +572,19 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
       return SelectPSM<1>(src_format, dest_format);
     case 2:
       return SelectPSM<2>(src_format, dest_format);
+    case 3:
+      return SelectPSM<3>(src_format, dest_format);
     case 4:
       // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
-      // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM). Audio
-      // formats do not include info needed to filter frequencies or locate channels in 3D space.
+      // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
+      // Audio formats do not include info needed to filter frequencies or locate channels in 3D
+      // space.
       // TODO(MTWN-399): enable the mixer to rechannelize in a more sophisticated way.
       // TODO(MTWN-402): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
       return SelectPSM<4>(src_format, dest_format);
     default:
       return nullptr;
   }
-
-  return nullptr;
 }
 
 }  // namespace media::audio::mixer

@@ -620,7 +620,16 @@ struct Format {
   uint32_t rate_family_flags;
 };
 
-constexpr Format kFormatSpecs[4] = {
+// These formats exercise various scenarios:
+// 0: full range of rates in both families (but not 48k), both 1-2 chans
+// 1: float-only, 48k family extends to 96k, 2 or 4 chan
+// 2: fixed 48k 2-chan 16b
+// 3: 16k 2-chan 16b
+// 4: 96k and 48k, 2-chan 16b
+// 5: 3-chan device at 48k 16b
+//
+// Going forward, it would be best to have chans, rate and bitdepth specifiable individually.
+constexpr Format kFormatSpecs[6] = {
     {.flags = AUDIO_SAMPLE_FORMAT_16BIT | AUDIO_SAMPLE_FORMAT_24BIT_IN32,
      .min_rate = 8000,
      .max_rate = 44100,
@@ -644,6 +653,18 @@ constexpr Format kFormatSpecs[4] = {
      .max_rate = 16000,
      .min_chans = 2,
      .max_chans = 2,
+     .rate_family_flags = ASF_RANGE_FLAG_FPS_48000_FAMILY},
+    {.flags = AUDIO_SAMPLE_FORMAT_16BIT,
+     .min_rate = 48000,
+     .max_rate = 96000,
+     .min_chans = 2,
+     .max_chans = 2,
+     .rate_family_flags = ASF_RANGE_FLAG_FPS_48000_FAMILY},
+    {.flags = AUDIO_SAMPLE_FORMAT_16BIT,
+     .min_rate = 48000,
+     .max_rate = 48000,
+     .min_chans = 3,
+     .max_chans = 3,
      .rate_family_flags = ASF_RANGE_FLAG_FPS_48000_FAMILY}};
 
 bool VirtualAudioUtil::AddFormatRange(const std::string& format_range_str) {

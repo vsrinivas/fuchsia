@@ -46,7 +46,13 @@ TEST(SincSamplerTest, Construction) {
 
   //
   // These formats are not supported
-  mixer = SelectSincSampler(3, 24000, fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 22050);
+  mixer = SelectSincSampler(4, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16, 3, 48000);
+  EXPECT_EQ(mixer, nullptr);
+
+  mixer = SelectSincSampler(3, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000);
+  EXPECT_EQ(mixer, nullptr);
+
+  mixer = SelectSincSampler(5, 24000, fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 22050);
   EXPECT_EQ(mixer, nullptr);
 
   mixer = SelectSincSampler(1, 48000, fuchsia::media::AudioSampleFormat::FLOAT, 9, 96000);

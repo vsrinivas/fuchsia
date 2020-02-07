@@ -100,8 +100,7 @@ SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::PopulateFramesToCha
 
     // Do this one dest_chan at a time
     for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
-      auto src_chan_offset = dest_chan % SrcChanCount;
-      (*channel_strip)[dest_chan][next_cache_idx_to_fill] = SR::Read(src_frame + src_chan_offset);
+      (*channel_strip)[dest_chan][next_cache_idx_to_fill] = SR::Read(src_frame, dest_chan);
     }
   }
 }
@@ -289,24 +288,42 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
 template <size_t DestChanCount, typename SrcSampleType>
 static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
+  TRACE_DURATION("audio", "SelectSSM(dChan,sType)");
+
   switch (src_format.channels) {
     case 1:
-      return SelectSSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
+      if constexpr (DestChanCount <= 4) {
+        return SelectSSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
+      }
+      break;
     case 2:
-      return SelectSSM<DestChanCount, SrcSampleType, 2>(src_format, dest_format);
+      if constexpr (DestChanCount <= 4) {
+        return SelectSSM<DestChanCount, SrcSampleType, 2>(src_format, dest_format);
+      }
+      break;
+    case 3:
+      // Unlike other samplers, we handle 3:3 here since there is no NxN sinc sampler variant.
+      if constexpr (DestChanCount <= 3) {
+        return SelectSSM<DestChanCount, SrcSampleType, 3>(src_format, dest_format);
+      }
+      break;
     case 4:
-      if (dest_format.channels == 1 || dest_format.channels == 2) {
+      // Unlike other samplers, we handle 4:4 here since there is no NxN sinc sampler variant.
+      if constexpr (DestChanCount <= 2 || DestChanCount == 4) {
         return SelectSSM<DestChanCount, SrcSampleType, 4>(src_format, dest_format);
       }
-      return nullptr;
+      break;
     default:
-      return nullptr;
+      break;
   }
+  return nullptr;
 }
 
 template <size_t DestChanCount>
 static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
+  TRACE_DURATION("audio", "SelectSSM(dChan)");
+
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return SelectSSM<DestChanCount, uint8_t>(src_format, dest_format);
@@ -323,11 +340,20 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
 
 std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType& src_format,
                                            const fuchsia::media::AudioStreamType& dest_format) {
+  TRACE_DURATION("audio", "SincSampler::Select");
+
+  if ((src_format.channels < 1 || dest_format.channels < 1) ||
+      (src_format.channels > 4 || dest_format.channels > 4)) {
+    return nullptr;
+  }
+
   switch (dest_format.channels) {
     case 1:
       return SelectSSM<1>(src_format, dest_format);
     case 2:
       return SelectSSM<2>(src_format, dest_format);
+    case 3:
+      return SelectSSM<3>(src_format, dest_format);
     case 4:
       // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
       // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).

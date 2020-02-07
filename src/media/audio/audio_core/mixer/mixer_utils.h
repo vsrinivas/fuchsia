@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_MIXER_UTILS_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_MIXER_UTILS_H_
 
+#include <cmath>
 #include <type_traits>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
@@ -98,35 +99,109 @@ class SampleScaler<ScaleType, typename std::enable_if_t<(ScaleType == ScalerType
 template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount, typename Enable = void>
 class SrcReader;
 
+// N:N mapper
 template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
-                typename std::enable_if_t<(SrcChanCount == DestChanCount) || (SrcChanCount == 1) ||
-                                          ((SrcChanCount == 2) && (DestChanCount == 4))>> {
+                typename std::enable_if_t<(SrcChanCount == DestChanCount)>> {
  public:
-  static inline float Read(const SrcSampleType* src) {
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
+    return SampleNormalizer<SrcSampleType>::Read(src + dest_chan);
+  }
+};
+
+// 1:N mapper
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
+class SrcReader<
+    SrcSampleType, SrcChanCount, DestChanCount,
+    typename std::enable_if_t<((SrcChanCount == 1) && (SrcChanCount != DestChanCount))>> {
+ public:
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
     return SampleNormalizer<SrcSampleType>::Read(src);
   }
 };
 
+// Mappers for 2-channel sources
+//
+// 2->1 mapper
 template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
                 typename std::enable_if_t<(SrcChanCount == 2) && (DestChanCount == 1)>> {
  public:
   // This simple 2:1 channel mapping assumes a "LR" stereo configuration for the source channels.
   // Each dest frame's single value is essentially the average of the 2 source chans.
-  static inline float Read(const SrcSampleType* src) {
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
     return 0.5f * (SampleNormalizer<SrcSampleType>::Read(src + 0) +
                    SampleNormalizer<SrcSampleType>::Read(src + 1));
   }
 };
 
+// 2->3 mapper
 template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
-                typename std::enable_if_t<(SrcChanCount == 4) && (DestChanCount == 1)>> {
+                typename std::enable_if_t<((SrcChanCount == 2) && (DestChanCount == 3))>> {
+ public:
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
+    return (dest_chan < 2 ? SampleNormalizer<SrcSampleType>::Read(src + dest_chan)
+                          : 0.5 * (SampleNormalizer<SrcSampleType>::Read(src) +
+                                   SampleNormalizer<SrcSampleType>::Read(src + 1)));
+  }
+};
+
+// 2->4 mapper
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
+class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
+                typename std::enable_if_t<((SrcChanCount == 2) && (DestChanCount == 4))>> {
+ public:
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
+    return SampleNormalizer<SrcSampleType>::Read(src + dest_chan % 2);
+  }
+};
+
+// Mappers for 3-channel sources
+//
+// 3->1 mapper
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
+class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
+                typename std::enable_if_t<((SrcChanCount == 3) && (DestChanCount == 1))>> {
+ public:
+  // This simple 3:1 channel mapping assumes an equal weighting of the 3 source channels.
+  // Each dest frame's single value is essentially the average of the 3 source chans.
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
+    return (SampleNormalizer<SrcSampleType>::Read(src + 0) +
+            SampleNormalizer<SrcSampleType>::Read(src + 1) +
+            SampleNormalizer<SrcSampleType>::Read(src + 2)) /
+           3.0f;
+  }
+};
+
+// 3->2 mapper
+constexpr float kOnePlusRootHalf = M_SQRT1_2 + 1;                  // 1.70710678118654752
+constexpr float kInverseOnePlusRootHalf = 1.0 / kOnePlusRootHalf;  // 0.58578643762690495
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
+class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
+                typename std::enable_if_t<((SrcChanCount == 3) && (DestChanCount == 2))>> {
+ public:
+  // This simple 3:2 channel mapping assumes a "LRC" configuration for the 3 source channels. Thus
+  // in each 3-chan source frame and 2-chan dest frame, we mix source chans 0+2 to dest chan 0, and
+  // source chans 1+2 to dest chan 1. Because we mix it equally into two dest channels, we multiply
+  // source chan2 by sqr(.5) to maintain an equal-power contribution compared to source chans 0&1.
+  // Finally, normalize both dest chans (divide by max possible value) to keep result within bounds.
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
+    return kInverseOnePlusRootHalf * SampleNormalizer<SrcSampleType>::Read(src + dest_chan) +
+           (kInverseOnePlusRootHalf * M_SQRT1_2) * SampleNormalizer<SrcSampleType>::Read(src + 2);
+  }
+};
+
+// Mappers for 4-channel sources
+//
+// 4->1 mapper
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
+class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
+                typename std::enable_if_t<((SrcChanCount == 4) && (DestChanCount == 1))>> {
  public:
   // This simple 4:1 channel mapping averages the incoming 4 source channels to determine the value
   // for the lone destination channel.
-  static inline float Read(const SrcSampleType* src) {
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
     return 0.25f * (SampleNormalizer<SrcSampleType>::Read(src + 0) +
                     SampleNormalizer<SrcSampleType>::Read(src + 1) +
                     SampleNormalizer<SrcSampleType>::Read(src + 2) +
@@ -134,16 +209,17 @@ class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
   }
 };
 
+// 4->2 mapper
 template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
-                typename std::enable_if_t<(SrcChanCount == 4) && (DestChanCount == 2)>> {
+                typename std::enable_if_t<((SrcChanCount == 4) && (DestChanCount == 2))>> {
  public:
   // This simple 4:2 channel mapping assumes a "LRLR" configuration for the 4 source channels (e.g.
   // a "four corners" Quad config: FrontL|FrontR|BackL|BackR). Thus in each 4-chan source frame and
   // 2-chan dest frame, we mix source chans 0+2 to dest chan 0, and source chans 1+3 to dest chan 1.
-  static inline float Read(const SrcSampleType* src) {
-    return 0.5f * (SampleNormalizer<SrcSampleType>::Read(src + 0) +
-                   SampleNormalizer<SrcSampleType>::Read(src + 2));
+  static inline float Read(const SrcSampleType* src, size_t dest_chan) {
+    return 0.5f * (SampleNormalizer<SrcSampleType>::Read(src + dest_chan) +
+                   SampleNormalizer<SrcSampleType>::Read(src + dest_chan + 2));
   }
 };
 

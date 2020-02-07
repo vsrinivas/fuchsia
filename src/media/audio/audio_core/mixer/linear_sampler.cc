@@ -166,8 +166,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
       for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
         float cache = filter_data_[dest_chan];
-        auto src_chan_offset = dest_chan % SrcChanCount;
-        float s0 = SR::Read(src + src_chan_offset);
+        float s0 = SR::Read(src, dest_chan);
 
         float sample = LinearInterpolate(cache, s0, src_off + FRAC_ONE);
         out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
@@ -196,12 +195,11 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
       for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
         float sample;
-        auto src_chan_offset = dest_chan % SrcChanCount;
-        float s0 = SR::Read(src + src_offset_frame_start + src_chan_offset);
+        float s0 = SR::Read(src + src_offset_frame_start, dest_chan);
         if ((src_off & FRAC_MASK) == 0) {
           sample = s0;
         } else {
-          float s1 = SR::Read(src + src_offset_frame_start + src_chan_offset + SrcChanCount);
+          float s1 = SR::Read(src + src_offset_frame_start + SrcChanCount, dest_chan);
           sample = LinearInterpolate(s0, s1, src_off & FRAC_MASK);
         }
         out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
@@ -268,8 +266,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
         // ... which, if MUTE, is silence (what we actually produced).
         filter_data_[dest_chan] = 0;
       } else {
-        auto src_chan_offset = dest_chan % SrcChanCount;
-        filter_data_[dest_chan] = SR::Read(src + src_offset_last_frame + src_chan_offset);
+        filter_data_[dest_chan] = SR::Read(src + src_offset_last_frame, dest_chan);
       }
     }
 
@@ -472,7 +469,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
           sample = s0;
         } else {
           float s1 = SampleNormalizer<SrcSampleType>::Read(src + src_offset_frame_start +
-                                                           dest_chan + chan_count);
+                                                           chan_count + dest_chan);
           sample = LinearInterpolate(s0, s1, src_off & FRAC_MASK);
         }
         out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
@@ -625,25 +622,39 @@ template <size_t DestChanCount, typename SrcSampleType>
 static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectLSM(dChan,sType)");
+
   switch (src_format.channels) {
     case 1:
-      return SelectLSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
+      if constexpr (DestChanCount <= 4) {
+        return SelectLSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
+      }
+      break;
     case 2:
-      return SelectLSM<DestChanCount, SrcSampleType, 2>(src_format, dest_format);
+      if constexpr (DestChanCount <= 4) {
+        return SelectLSM<DestChanCount, SrcSampleType, 2>(src_format, dest_format);
+      }
+      break;
+    case 3:
+      if constexpr (DestChanCount <= 2) {
+        return SelectLSM<DestChanCount, SrcSampleType, 3>(src_format, dest_format);
+      }
+      break;
     case 4:
-      if (dest_format.channels == 1 || dest_format.channels == 2) {
+      if constexpr (DestChanCount <= 2) {
         return SelectLSM<DestChanCount, SrcSampleType, 4>(src_format, dest_format);
       }
-      return nullptr;
+      break;
     default:
-      return nullptr;
+      break;
   }
+  return nullptr;
 }
 
 template <size_t DestChanCount>
 static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectLSM(dChan)");
+
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return SelectLSM<DestChanCount, uint8_t>(src_format, dest_format);
@@ -661,6 +672,7 @@ static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStream
 static inline std::unique_ptr<Mixer> SelectNxNLSM(
     const fuchsia::media::AudioStreamType& src_format) {
   TRACE_DURATION("audio", "SelectNxNLSM");
+
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return std::make_unique<NxNLinearSamplerImpl<uint8_t>>(src_format.channels);
@@ -678,10 +690,17 @@ static inline std::unique_ptr<Mixer> SelectNxNLSM(
 std::unique_ptr<Mixer> LinearSampler::Select(const fuchsia::media::AudioStreamType& src_format,
                                              const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "LinearSampler::Select");
+
   // If num_channels for src and dest are equal and > 2, directly map these one-to-one.
-  // TODO(MTWN-75): eliminate the NxN mixers, replacing with flexible rechannelization (see below).
+  // TODO(MTWN-75): eliminate the NxN mixers, replacing with flexible rechannelization (see
+  // below).
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {
     return SelectNxNLSM(src_format);
+  }
+
+  if ((src_format.channels < 1 || dest_format.channels < 1) ||
+      (src_format.channels > 4 || dest_format.channels > 4)) {
+    return nullptr;
   }
 
   switch (dest_format.channels) {
@@ -689,10 +708,13 @@ std::unique_ptr<Mixer> LinearSampler::Select(const fuchsia::media::AudioStreamTy
       return SelectLSM<1>(src_format, dest_format);
     case 2:
       return SelectLSM<2>(src_format, dest_format);
+    case 3:
+      return SelectLSM<3>(src_format, dest_format);
     case 4:
       // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
-      // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM). Audio
-      // formats do not include info needed to filter frequencies or locate channels in 3D space.
+      // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
+      // Audio formats do not include info needed to filter frequencies or locate channels in 3D
+      // space.
       // TODO(MTWN-399): enable the mixer to rechannelize in a more sophisticated way.
       // TODO(MTWN-402): account for frequency range (e.g. a "4-channel" stereo woofer+tweeter).
       return SelectLSM<4>(src_format, dest_format);
