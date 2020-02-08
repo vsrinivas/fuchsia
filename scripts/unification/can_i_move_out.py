@@ -30,22 +30,25 @@ class Finder(object):
         try:
             output = subprocess.check_output(command)
         except subprocess.CalledProcessError:
-            return None
+            return None, None
 
-        references = set()
+        same_type_references = set()
+        other_type_references = set()
         for line in output.splitlines():
             line = line.strip()
-            if line.startswith(base_label):
+            if line.startswith(base_label + ':'):
                 continue
             # Remove target name and toolchain.
             line = line[0:line.find(':')]
             if line == category_label:
                 continue
+            same_type = line.startswith(category_label)
             # Insert 'zircon' directory at the start.
             line = '//zircon' + line[1:]
-            references.add(line)
+            refs = same_type_references if same_type else other_type_references
+            refs.add(line)
 
-        return references
+        return same_type_references, other_type_references
 
 
     def find_libraries(self, type):
@@ -114,14 +117,14 @@ def main():
             # hyphen: be nice to users and support both forms.
             name = name.replace('.', '-')
 
-        references = finder.find_references(type, name)
+        same_type_refs, other_type_refs = finder.find_references(type, name)
 
-        if references is None:
+        if same_type_refs is None:
             print('Could not find "%s", please check spelling!' % args.name)
             return 1
-        elif references:
+        elif same_type_refs or other_type_refs:
             print('Nope, there are still references in the ZN build:')
-            for ref in sorted(references):
+            for ref in sorted(same_type_refs | other_type_refs):
                 print('  ' + ref)
         else:
             print('Yes you can!')
@@ -131,11 +134,19 @@ def main():
     # Case 2: no library name given.
     print('Warning: this operation can take a while!')
     names = finder.find_libraries(type)
-    movable = set()
+    candidates = {}
     for name in names:
-        references = finder.find_references(type, name)
-        if not references:
-            movable.add(name)
+        same_type_refs, other_type_refs = finder.find_references(type, name)
+        if other_type_refs:
+            continue
+        candidates[name] = same_type_refs
+    movable = {n for n, r in candidates.iteritems() if not r}
+    type_blocked = {n for n, r in candidates.iteritems()
+                    if r and set(r).issubset(movable)}
+    if type_blocked:
+        print('These libraries are only blocked by libraries waiting to be moved:')
+        for name in sorted(type_blocked):
+            print('  ' + name + ' (' + ','.join(candidates[name]) + ')')
     if movable:
         print('These libraries are free to go:')
         for name in sorted(movable):
