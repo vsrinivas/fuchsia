@@ -846,6 +846,52 @@ const uint16 Result = MyBits.A | MyBits.B | MyBits.D;
   END_TEST;
 }
 
+bool BadOrOperatorDifferentTypesTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const uint8 one = 0x0001;
+const uint16 two_fifty_six = 0x0100;
+const uint8 two_fifty_seven = one | two_fifty_six;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_GE(errors.size(), 2);
+  ASSERT_STR_STR(errors[0].c_str(), "cannot be converted to type uint8");
+  ASSERT_STR_STR(errors[1].c_str(), "unable to resolve constant value");
+
+  END_TEST;
+}
+
+bool GoodOrOperatorDifferentTypesTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const uint8 one = 0x0001;
+const uint16 two_fifty_six = 0x0100;
+const uint16 two_fifty_seven = one | two_fifty_six;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_TRUE(library.Compile());
+
+  EXPECT_TRUE(CheckConstEq<uint16_t>(library, "two_fifty_seven", 257,
+                                     fidl::flat::Constant::Kind::kBinaryOperator,
+                                     fidl::flat::ConstantValue::Kind::kUint16));
+
+  END_TEST;
+}
+
 bool GoodOrOperatorParenthesesTest() {
   BEGIN_TEST;
 
@@ -1076,6 +1122,8 @@ RUN_TEST(UnknownEnumMemberTest)
 RUN_TEST(UnknownBitsMemberTest)
 
 RUN_TEST(OrOperatorTest)
+RUN_TEST(BadOrOperatorDifferentTypesTest)
+RUN_TEST(GoodOrOperatorDifferentTypesTest)
 RUN_TEST(GoodOrOperatorParenthesesTest)
 RUN_TEST(BadOrOperatorMissingRightParenTest)
 RUN_TEST(BadOrOperatorMissingLeftParenTest)

@@ -2003,10 +2003,8 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
 bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
                                         const ConstantValue& left_operand,
                                         const ConstantValue& right_operand) {
-  if (left_operand.kind != right_operand.kind) {
-    // TODO(b/43742) Add support for values of different size.
-    return Fail("left and right operands of or operator must be of the same kind");
-  }
+  assert(left_operand.kind == right_operand.kind &&
+         "left and right operands of or operator must be of the same kind");
   type = TypeResolve(type);
   if (type == nullptr)
     return false;
