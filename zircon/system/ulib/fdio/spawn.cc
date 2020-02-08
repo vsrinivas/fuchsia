@@ -28,6 +28,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <bitset>
 #include <list>
 #include <string>
 #include <utility>
@@ -388,6 +389,19 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
   size_t a = 0;
   size_t msg_len = 0;
 
+  std::bitset<FDIO_MAX_FD> fds_in_use;
+  auto check_fd = [&fds_in_use](int fd) -> zx_status_t {
+    fd &= ~FDIO_FLAG_USE_FOR_STDIO;
+    if (fd < 0 || fd >= FDIO_MAX_FD) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    if (fds_in_use.test(fd)) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+    fds_in_use.set(fd);
+    return ZX_OK;
+  };
+
   if ((flags & FDIO_SPAWN_CLONE_JOB) != 0) {
     handle_infos[h].handle = FIDL_HANDLE_PRESENT;
     handle_infos[h].id = PA_JOB_DEFAULT;
@@ -406,8 +420,73 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
     handles[h++] = ldsvc.release();
   }
 
+  for (; a < action_count; ++a) {
+    zx_handle_t fd_handle = ZX_HANDLE_INVALID;
+
+    switch (actions[a].action) {
+      case FDIO_SPAWN_ACTION_CLONE_FD:
+        status = check_fd(actions[a].fd.target_fd);
+        if (status != ZX_OK) {
+          report_error(err_msg, "invalid target %d to clone fd %d (action index %zu): %d",
+                       actions[a].fd.target_fd, actions[a].fd.local_fd, a, status);
+          goto cleanup;
+        }
+        status = fdio_fd_clone(actions[a].fd.local_fd, &fd_handle);
+        if (status != ZX_OK) {
+          report_error(err_msg, "failed to clone fd %d (action index %zu): %d",
+                       actions[a].fd.local_fd, a, status);
+          goto cleanup;
+        }
+        break;
+      case FDIO_SPAWN_ACTION_TRANSFER_FD:
+        status = check_fd(actions[a].fd.target_fd);
+        if (status != ZX_OK) {
+          report_error(err_msg, "invalid target %d to transfer fd %d (action index %zu): %d",
+                       actions[a].fd.target_fd, actions[a].fd.local_fd, a, status);
+          goto cleanup;
+        }
+        status = fdio_fd_transfer(actions[a].fd.local_fd, &fd_handle);
+        if (status != ZX_OK) {
+          report_error(err_msg, "invalid target %d to transfer fd %d (action index %zu): %d",
+                       actions[a].fd.target_fd, actions[a].fd.local_fd, a, status);
+          goto cleanup;
+        }
+        if (status != ZX_OK) {
+          report_error(err_msg, "failed to transfer fd %d (action index %zu): %d",
+                       actions[a].fd.local_fd, a, status);
+          goto cleanup;
+        }
+        break;
+      case FDIO_SPAWN_ACTION_ADD_HANDLE:
+        if (PA_HND_TYPE(actions[a].h.id) == PA_FD) {
+          int fd = PA_HND_ARG(actions[a].h.id) & ~FDIO_FLAG_USE_FOR_STDIO;
+          status = check_fd(fd);
+          if (status != ZX_OK) {
+            report_error(err_msg, "add-handle action has invalid fd %d (action index %zu): %d", fd, a,
+                         status);
+            goto cleanup;
+          }
+        }
+        handle_infos[h].handle = FIDL_HANDLE_PRESENT;
+        handle_infos[h].id = actions[a].h.id;
+        handles[h++] = actions[a].h.handle;
+        continue;
+      default:
+        continue;
+    }
+
+    handle_infos[h].handle = FIDL_HANDLE_PRESENT;
+    handle_infos[h].id = PA_HND(PA_FD, actions[a].fd.target_fd);
+    handles[h++] = fd_handle;
+  }
+
+  // Do these after generic actions so that actions can set these fds first.
   if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0) {
     for (int fd = 0; fd < 3; ++fd) {
+      if (fds_in_use.test(fd)) {
+        // Skip a standard fd that was explicitly set by an action.
+        continue;
+      }
       zx_handle_t fd_handle = ZX_HANDLE_INVALID;
       status = fdio_fd_clone(fd, &fd_handle);
       if (status == ZX_ERR_INVALID_ARGS || status == ZX_ERR_NOT_SUPPORTED) {
@@ -424,40 +503,6 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
       handle_infos[h].id = PA_HND(PA_FD, fd);
       handles[h++] = fd_handle;
     }
-  }
-
-  for (; a < action_count; ++a) {
-    zx_handle_t fd_handle = ZX_HANDLE_INVALID;
-
-    switch (actions[a].action) {
-      case FDIO_SPAWN_ACTION_CLONE_FD:
-        status = fdio_fd_clone(actions[a].fd.local_fd, &fd_handle);
-        if (status != ZX_OK) {
-          report_error(err_msg, "failed to clone fd %d (action index %zu): %d",
-                       actions[a].fd.local_fd, a, status);
-          goto cleanup;
-        }
-        break;
-      case FDIO_SPAWN_ACTION_TRANSFER_FD:
-        status = fdio_fd_transfer(actions[a].fd.local_fd, &fd_handle);
-        if (status != ZX_OK) {
-          report_error(err_msg, "failed to transfer fd %d (action index %zu): %d",
-                       actions[a].fd.local_fd, a, status);
-          goto cleanup;
-        }
-        break;
-      case FDIO_SPAWN_ACTION_ADD_HANDLE:
-        handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-        handle_infos[h].id = actions[a].h.id;
-        handles[h++] = actions[a].h.handle;
-        continue;
-      default:
-        continue;
-    }
-
-    handle_infos[h].handle = FIDL_HANDLE_PRESENT;
-    handle_infos[h].id = PA_HND(PA_FD, actions[a].fd.target_fd);
-    handles[h++] = fd_handle;
   }
 
   req->handles.count = h;
@@ -797,8 +842,8 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   }
 
   if (explicit_environ) {
-    status =
-        send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsGenOrdinal, explicit_environ);
+    status = send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsGenOrdinal,
+                                explicit_environ);
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment: %d", status);
       goto cleanup;

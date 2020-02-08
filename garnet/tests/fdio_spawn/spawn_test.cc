@@ -102,11 +102,9 @@ TEST(SpawnTest, SpawnLauncher) {
   {
     zx::job job;
     ASSERT_EQ(ZX_OK, zx::job::create(*zx::job::default_job(), 0, &job));
-    zx_policy_basic_v2_t policy = {
-        .condition = ZX_POL_NEW_PROCESS,
-        .action = ZX_POL_ACTION_DENY,
-        .flags = ZX_POL_OVERRIDE_DENY
-    };
+    zx_policy_basic_v2_t policy = {.condition = ZX_POL_NEW_PROCESS,
+                                   .action = ZX_POL_ACTION_DENY,
+                                   .flags = ZX_POL_OVERRIDE_DENY};
     ASSERT_EQ(ZX_OK, job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy, 1));
 
     status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, launcher_bin_path, argv,
@@ -222,6 +220,23 @@ TEST(SpawnTest, SpawnFlags) {
     status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_STDIO,
                         bin_path, argv, process.reset_and_get_address());
     ASSERT_EQ(ZX_OK, status);
+    join(process, &return_code);
+    EXPECT_EQ(return_code, 54);
+  }
+
+  {
+    // Redundant CLONE_STDIO vs individual fd actions should work.
+    const char* argv[] = {bin_path, "--flags", "stdio", nullptr};
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    const fdio_spawn_action_t actions[] = {
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = 0, .target_fd = 0}},
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = 1, .target_fd = 1}},
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = 2, .target_fd = 2}},
+    };
+    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_STDIO,
+                            bin_path, argv, nullptr, std::size(actions), actions,
+                            process.reset_and_get_address(), err_msg);
+    ASSERT_EQ(ZX_OK, status) << err_msg;
     join(process, &return_code);
     EXPECT_EQ(return_code, 54);
   }
@@ -740,6 +755,31 @@ TEST(SpawnTest, SpawnErrors) {
 
     // Unbind the test namespace.
     EXPECT_EQ(ZX_OK, fdio_ns_unbind(ns, "/foo/bar/baz"));
+  }
+
+  {
+    ASSERT_EQ(30, dup2(0, 30));
+    ASSERT_EQ(31, dup2(0, 31));
+    const fdio_spawn_action_t actions[] = {
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = 30, .target_fd = 1}},
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = 31, .target_fd = 1}},
+    };
+    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr,
+                            std::size(actions), actions, process.reset_and_get_address(), err_msg);
+    EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status) << err_msg;
+    ASSERT_EQ(0, close(30));
+    ASSERT_EQ(0, close(31));
+  }
+
+  {
+    ASSERT_EQ(30, dup2(0, 30));
+    const fdio_spawn_action_t actions[] = {
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = 30, .target_fd = FDIO_MAX_FD}},
+    };
+    status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, bin_path, argv, nullptr,
+                            std::size(actions), actions, process.reset_and_get_address(), err_msg);
+    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status) << err_msg;
+    ASSERT_EQ(0, close(30));
   }
 }
 
