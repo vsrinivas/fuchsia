@@ -2,10 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("sysmem_common_srcs") {
-  sdk = "source"
-  sdk_headers = []
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+source_set("sysmem_common_srcs") {
   sources = [
     "allocator.cc",
     "buffer_collection.cc",
@@ -20,46 +31,68 @@ zx_library("sysmem_common_srcs") {
     "usage_pixel_format_cost.cc",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/fidl/fuchsia-sysmem:llcpp",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/closure-queue:headers",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async-2:headers",
-    "$zx/system/ulib/fidl-utils:headers",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/image-format:headers",
-    "$zx/system/ulib/region-alloc:headers",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/closure-queue",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async-2",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/region-alloc",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
 
   deps = [
-    "$zx/system/ulib/closure-queue",
-    "$zx/system/ulib/fidl-async-2",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/image-format",
-    "$zx/system/ulib/region-alloc",
+    "//zircon/public/lib/closure-queue",
+    "//zircon/public/lib/fidl-async-2",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/region-alloc",
   ]
 }
 
-zx_driver("sysmem") {
+driver_module("sysmem") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "binding.cc" ]
-  deps = [ ":sysmem_common_srcs" ]
-
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  deprecated_inhibit_driver_shlib_allowlist = true
+  deps = [
+    ":sysmem_common_srcs",
+    "//src/devices:driver",
+  ]
 }
 
-zx_test("sysmem-unittest") {
+test("sysmem-unittest") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   output_name = "sysmem-unittest"
   sources = [
     "test/contiguous_pooled_memory_allocator_test.cc",
@@ -69,27 +102,34 @@ zx_test("sysmem-unittest") {
   include_dirs = [ "." ]
   deps = [
     ":sysmem_common_srcs",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.sysmem",
-    "$zx/system/dev/lib/fake-bti",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/closure-queue",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-async-2",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/image-format",
-    "$zx/system/ulib/region-alloc",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/closure-queue",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async-2",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/region-alloc",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
+}
+
+migrated_manifest("sysmem-manifest") {
+  deps = [ ":sysmem" ]
+}
+
+migrated_manifest("sysmem-unittest-manifest") {
+  deps = [ ":sysmem-unittest" ]
 }

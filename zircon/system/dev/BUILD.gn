@@ -9,7 +9,6 @@ group("dev") {
     "$zx/third_party/dev/ethernet/e1000",
     "board",
     "bus",
-    "sysmem",
 
     # test/ allows drivers to be used by IsolateDevmgr
     "$zx/system/utest/platform-bus:test",
