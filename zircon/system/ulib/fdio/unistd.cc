@@ -642,6 +642,10 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
           zx_handle_close(h);
           continue;
         }
+        ZX_ASSERT_MSG(arg_fd < FDIO_MAX_FD,
+                      "unreasonably large fd number %u in PA_FD (must be less than %u)", arg_fd,
+                      FDIO_MAX_FD);
+        ZX_ASSERT_MSG(fdio_fdtab[arg_fd] == NULL, "duplicate fd number %u in PA_FD", arg_fd);
         fdio_fdtab[arg_fd] = io;
         fdio_dupcount_acquire(fdio_fdtab[arg_fd]);
         break;

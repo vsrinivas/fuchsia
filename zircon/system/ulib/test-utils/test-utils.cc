@@ -353,6 +353,10 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   return new springboard(response->data);
 }
 
+void springboard_set_bootstrap(springboard_t* sb, zx_handle_t bootstrap) {
+  sb->data.bootstrap.reset(bootstrap);
+}
+
 zx_handle_t tu_launch_fini(springboard* sb) {
   zx_handle_t process = sb->data.process.release();
   zx_handle_t thread = sb->data.thread.release();

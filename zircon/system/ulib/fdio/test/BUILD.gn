@@ -24,6 +24,7 @@ zx_test("fdio") {
     "fdio_root.c",
     "fdio_socket.cc",
     "fdio_socketpair.cc",
+    "fdio_startup.cc",
     "fdio_stubs.cc",
     "fdio_unsafe.cc",
     "fdio_watcher.cc",
@@ -39,6 +40,7 @@ zx_test("fdio") {
     "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/test-utils",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
@@ -46,6 +48,7 @@ zx_test("fdio") {
 
   data_deps = [
     ":accept-child",
+    ":hello-world",
     ":null-namespace-child",
   ]
 
@@ -73,6 +76,13 @@ zx_executable("accept-child") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]
+}
+
+zx_executable("hello-world") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [ "hello.cc" ]
+  deps = [ "$zx/system/ulib/fdio" ]
 }
 
 zx_executable("null-namespace-child") {

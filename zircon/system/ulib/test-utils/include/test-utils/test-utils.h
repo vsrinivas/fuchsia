@@ -70,6 +70,10 @@ zx_handle_t springboard_get_process_handle(springboard_t* sb);
 
 zx_handle_t springboard_get_root_vmar_handle(springboard_t* sb);
 
+// Replace the bootstrap channel to be sent to the new process
+// with the given handle.
+void springboard_set_bootstrap(springboard_t* sb, zx_handle_t);
+
 // Initializes a process.
 
 springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const char* const* argv,
