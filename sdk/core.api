@@ -82,6 +82,7 @@ sdk://fidl/fuchsia.ui.vectorial
 sdk://fidl/fuchsia.ui.views
 sdk://fidl/fuchsia.update.channel
 sdk://fidl/fuchsia.update.channelcontrol
+sdk://fidl/fuchsia.url
 sdk://fidl/fuchsia.web
 sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.service
