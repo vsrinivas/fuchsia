@@ -14,7 +14,7 @@
 // (e.g. PaperShapeCache and PaperRenderQueue).
 class PaperDemoScene1 : public Scene {
  public:
-  explicit PaperDemoScene1(Demo* demo);
+  explicit PaperDemoScene1(Demo* demo, const escher::TexturePtr& translucent_texture = nullptr);
   ~PaperDemoScene1();
 
   // |Scene|
@@ -73,6 +73,7 @@ class PaperDemoScene1 : public Scene {
 
   RectState translucent_rectangle_;
   escher::MaterialPtr translucent_;
+  escher::TexturePtr tex_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PaperDemoScene1);
 };

@@ -14,4 +14,6 @@ ResourceManager::ResourceManager(EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
       vulkan_context_(escher_ ? escher_->vulkan_context() : VulkanContext()) {}
 
+const VulkanDeviceQueues::Caps& ResourceManager::caps() const { return escher_->device()->caps(); }
+
 }  // namespace escher

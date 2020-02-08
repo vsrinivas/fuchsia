@@ -4,6 +4,7 @@
 
 #include "src/ui/examples/escher/waterfall/waterfall_demo.h"
 
+#include "src/lib/files/file.h"
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene1.h"
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
@@ -17,6 +18,7 @@
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/util/enum_utils.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
@@ -37,14 +39,16 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, int argc, char** a
   escher()->shader_program_factory()->filesystem()->InitializeWithRealFiles(
       kPaperRendererShaderPaths);
 
+  auto& device_caps = escher()->device()->caps();
+
   renderer_ = escher::PaperRenderer::New(GetEscherWeakPtr());
 
   // Determine the allowable MSAA sample counts to cycle through with "M" key.
   {
     auto filtered =
         // TODO(44326): 8x MSAA causes a segfault on NVIDIA/Linux.
-        // escher()->device()->caps().GetAllMatchingSampleCounts({1U, 2U, 4U, 8});
-        escher()->device()->caps().GetAllMatchingSampleCounts({1U, 2U, 4U});
+        // device_caps.GetAllMatchingSampleCounts({1U, 2U, 4U, 8});
+        device_caps.GetAllMatchingSampleCounts({1U, 2U, 4U});
     FXL_CHECK(!filtered.empty());
     allowed_sample_counts_.reserve(filtered.size());
     for (auto sample_count : filtered) {
@@ -57,12 +61,16 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, int argc, char** a
     }
   }
 
+  if (device_caps.allow_ycbcr) {
+    InitializeYcbcrTexture();
+  }
+
   renderer_config_.debug_frame_number = true;
   renderer_config_.shadow_type = PaperRendererShadowType::kShadowVolume;
   renderer_config_.msaa_sample_count = allowed_sample_counts_[current_sample_count_index_];
   renderer_config_.num_depth_buffers = 2;
   renderer_config_.depth_stencil_format =
-      ESCHER_CHECKED_VK_RESULT(escher()->device()->caps().GetMatchingDepthStencilFormat(
+      ESCHER_CHECKED_VK_RESULT(device_caps.GetMatchingDepthStencilFormat(
           {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}));
 
   renderer_->SetConfig(renderer_config_);
@@ -87,9 +95,44 @@ void WaterfallDemo::SetWindowSize(vk::Extent2D window_size) {
   InitializeDemoScenes();
 }
 
+void WaterfallDemo::InitializeYcbcrTexture() {
+  FXL_CHECK(escher()->device()->caps().allow_ycbcr);
+
+  const char* kYuvFramePath = "/assets/bbb_frame.yuv";
+  constexpr uint32_t kYuvFrameWidth = 320;
+  constexpr uint32_t kYuvFrameHeight = 180;
+  constexpr vk::Format kYuvFrameFormat = vk::Format::eG8B8G8R8422Unorm;
+
+  auto base = escher()->shader_program_factory()->filesystem()->base_path();
+  FXL_CHECK(base);
+  std::string path = *base + kYuvFramePath;
+  std::vector<uint8_t> data;
+  FXL_CHECK(files::ReadFileToVector(path, &data)) << "failed to read: " << path;
+
+  auto image = escher()->gpu_allocator()->AllocateImage(
+      escher()->resource_recycler(),
+      {
+          .format = kYuvFrameFormat,
+          .width = kYuvFrameWidth,
+          .height = kYuvFrameHeight,
+          .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
+      });
+
+  BatchGpuUploader gpu_uploader(escher()->GetWeakPtr(), 0);
+  image_utils::WritePixelsToImage(&gpu_uploader, data.data(), image,
+                                  vk::ImageLayout::eShaderReadOnlyOptimal);
+
+  // NOTE: we *could* use a semaphore to guarantee that the upload finishes before we use the
+  // texture.  However, we still haven't warmed the pipeline cache; this will take millisecond, by
+  // which time the texture should be finished uploading.
+  gpu_uploader.Submit();
+
+  ycbcr_tex_ = escher::Texture::New(escher()->resource_recycler(), image, vk::Filter::eNearest);
+}
+
 void WaterfallDemo::InitializeDemoScenes() {
   demo_scenes_.clear();
-  demo_scenes_.emplace_back(new PaperDemoScene1(this));
+  demo_scenes_.emplace_back(new PaperDemoScene1(this, ycbcr_tex_));
   demo_scenes_.emplace_back(new PaperDemoScene1(this));
   demo_scenes_.back()->ToggleGraph();
   for (auto& scene : demo_scenes_) {

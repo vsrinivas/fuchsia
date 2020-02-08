@@ -1,0 +1,31 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/ui/examples/escher/common/assets/assets.gni")
+
+assert(
+    is_linux,
+    "assets need only be copied to the build directory for linux tests/examples")
+
+# Copies shaders needed for escher linux tests to a specific test data
+# directory near the test binary.
+group_deps = []
+test_data = []
+foreach(asset, escher_examples_assets) {
+  name = get_path_info(asset.path, "file")
+  copy_name = "copy_$name"
+  copy(copy_name) {
+    sources = [ asset.path ]
+    outputs = [ "$root_out_dir/test_data/escher/" + asset.dest ]
+  }
+  group_deps += [ ":$copy_name" ]
+  test_data += get_target_outputs(":$copy_name")
+}
+
+group("linux_assets") {
+  deps = group_deps
+  metadata = {
+    test_runtime_deps = test_data
+  }
+}

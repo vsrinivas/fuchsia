@@ -49,6 +49,7 @@ class VulkanDeviceQueues : public fxl::RefCountedThreadSafe<VulkanDeviceQueues> 
     std::set<std::string> extensions;
     uint32_t device_api_version;
     bool allow_protected_memory;
+    bool allow_ycbcr;
 
     vk::PhysicalDeviceFeatures enabled_features;
 

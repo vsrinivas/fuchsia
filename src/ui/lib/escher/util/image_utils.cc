@@ -43,6 +43,9 @@ size_t BytesPerPixel(vk::Format format) {
     case vk::Format::eR8G8B8A8Srgb:
     case vk::Format::eB8G8R8A8Srgb:
       return 4;
+    case vk::Format::eG8B8G8R8422Unorm:
+    case vk::Format::eG8B8R82Plane420Unorm:
+      return 2;
     case vk::Format::eR8Unorm:
       return 1;
     default:

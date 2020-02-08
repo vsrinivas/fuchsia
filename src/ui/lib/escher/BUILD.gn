@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 
+import("//src/ui/examples/escher/common/assets/assets.gni")
 import("//src/ui/lib/escher/build_args.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
 
@@ -41,6 +42,7 @@ test_package("escher_tests") {
   resources = vulkan_validation_layers.resources
   resources += escher_shaders_resources
   resources += escher_shaders_spirv_resources
+  resources += escher_examples_assets
 }
 
 # Used by 'source_set("vulkan")' for all Vulkan builds.  If building on Linux

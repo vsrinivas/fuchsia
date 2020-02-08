@@ -50,6 +50,9 @@ class WaterfallDemo : public Demo {
 
   void SetWindowSize(vk::Extent2D window_size);
 
+  // If the device supports Ycbcr conversion, we exercise it by creating a texture from disk.
+  void InitializeYcbcrTexture();
+
   void InitializeDemoScenes();
   void CycleNumLights();
 
@@ -81,6 +84,9 @@ class WaterfallDemo : public Demo {
 
   std::vector<uint8_t> allowed_sample_counts_;
   size_t current_sample_count_index_ = 0;
+
+  // Created by InitializeYcbcrTexture().
+  escher::TexturePtr ycbcr_tex_;
 
   // Toggle debug overlays.
   bool show_debug_info_ = false;

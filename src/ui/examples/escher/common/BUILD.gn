@@ -28,6 +28,7 @@ static_library("common") {
   if (is_linux) {
     deps += [
       ":demo_harness_linux",
+      "assets:linux_assets",
       "//src/ui/lib/escher/shaders:linux_shader_data",
     ]
   }

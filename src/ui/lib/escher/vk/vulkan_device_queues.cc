@@ -291,6 +291,8 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   for (auto& extension : caps.extensions) {
     extension_names.push_back(extension.c_str());
   }
+  caps.allow_ycbcr =
+      caps.extensions.find(VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME) != caps.extensions.end();
 
   // Specify the required physical device features, and verify that they are all
   // supported.

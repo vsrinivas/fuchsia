@@ -38,7 +38,9 @@ void DemoHarness::Init(InstanceParams instance_params) {
 
   std::set<std::string> device_extension_names;
   AppendPlatformSpecificDeviceExtensionNames(&device_extension_names);
-  CreateDeviceAndQueue({std::move(device_extension_names), {}, surface});
+  CreateDeviceAndQueue({std::move(device_extension_names),
+                        {VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME},
+                        surface});
 
   escher::GlslangInitializeProcess();
   CreateEscher();

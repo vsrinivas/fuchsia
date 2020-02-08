@@ -9,6 +9,7 @@
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
+#include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 
 namespace escher {
 
@@ -27,6 +28,7 @@ class ResourceManager : public Owner<Resource, ResourceTypeInfo> {
   EscherWeakPtr GetEscherWeakPtr() { return escher_; }
   const VulkanContext& vulkan_context() const { return vulkan_context_; }
   vk::Device vk_device() const { return vulkan_context_.device; }
+  const VulkanDeviceQueues::Caps& caps() const;
 
  private:
   friend class Resource;

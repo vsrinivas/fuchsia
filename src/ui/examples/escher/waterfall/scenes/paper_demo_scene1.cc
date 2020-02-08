@@ -27,7 +27,8 @@ using escher::vec2;
 using escher::vec3;
 using escher::vec4;
 
-PaperDemoScene1::PaperDemoScene1(Demo* demo) : Scene(demo) {}
+PaperDemoScene1::PaperDemoScene1(Demo* demo, const escher::TexturePtr& translucent_texture)
+    : Scene(demo), tex_(translucent_texture) {}
 
 void PaperDemoScene1::Init(escher::PaperScene* scene) {
   red_ = fxl::MakeRefCounted<escher::Material>();
@@ -83,8 +84,13 @@ void PaperDemoScene1::Init(escher::PaperScene* scene) {
   // of the planes above.
   {
     translucent_ = fxl::MakeRefCounted<escher::Material>();
-    translucent_->set_color(vec4(0.2f, 0.8f, 0.5f, 0.7f));
     translucent_->set_type(escher::Material::Type::kTranslucent);
+    if (tex_) {
+      translucent_->SetTexture(tex_);
+      translucent_->set_color(vec4(1.f, 1.f, 1.f, 0.7f));
+    } else {
+      translucent_->set_color(vec4(0.2f, 0.8f, 0.5f, 0.7f));
+    }
 
     const float big_radius = 200.f;
     const float tiny_radius = 30.f;
