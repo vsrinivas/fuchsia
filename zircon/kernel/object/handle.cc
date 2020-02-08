@@ -6,6 +6,7 @@
 
 #include "object/handle.h"
 
+#include <fbl/conditional_select_nospec.h>
 #include <lib/counters.h>
 #include <pow2.h>
 
@@ -209,7 +210,8 @@ Handle* Handle::FromU32(uint32_t value) {
     return nullptr;
   handle_addr = HandleTableArena::arena_.Confine(handle_addr);
   auto handle = reinterpret_cast<Handle*>(handle_addr);
-  return likely(handle->base_value() == value) ? handle : nullptr;
+  return reinterpret_cast<Handle*>(fbl::conditional_select_nospec_eq(handle->base_value(), value,
+                                                                     handle_addr, 0));
 }
 
 uint32_t Handle::Count(const fbl::RefPtr<const Dispatcher>& dispatcher) {
