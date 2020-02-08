@@ -16,6 +16,7 @@
 #include "fake_ge2d.h"
 #include "fake_isp.h"
 #include "lib/async-loop/default.h"
+#include "lib/async/cpp/task.h"
 #include "lib/fit/result.h"
 #include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
 #include "src/camera/drivers/controller/controller-protocol.h"
@@ -40,29 +41,25 @@ constexpr auto kNumBuffers = 5;
 
 class ControllerProtocolTest : public gtest::TestLoopFixture {
  public:
-  ControllerProtocolTest()
-      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        context_(sys::ComponentContext::Create()) {}
+  ControllerProtocolTest() : context_(sys::ComponentContext::Create()) {}
 
   void SetUp() override {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator1_.NewRequest()));
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator2_.NewRequest()));
-    ASSERT_EQ(ZX_OK, loop_.StartThread("test-controller-frame-processing-thread",
-                                       &controller_frame_processing_thread_));
     ASSERT_EQ(ZX_OK, zx::event::create(0, &event_));
 
     isp_ = fake_isp_.client();
     gdc_ = fake_gdc_.client();
     ge2d_ = fake_ge2d_.client();
     pipeline_manager_ =
-        std::make_unique<PipelineManager>(fake_ddk::kFakeParent, loop_.dispatcher(), isp_, gdc_,
-                                          ge2d_, std::move(sysmem_allocator1_), event_);
+        std::make_unique<PipelineManager>(fake_ddk::kFakeParent, dispatcher(), isp_, gdc_, ge2d_,
+                                          std::move(sysmem_allocator1_), event_);
     internal_config_info_ = SherlockInternalConfigs();
   }
 
   void TearDown() override {
     pipeline_manager_ = nullptr;
-    loop_.Shutdown();
+    QuitLoop();
     context_ = nullptr;
     sysmem_allocator1_ = nullptr;
     sysmem_allocator2_ = nullptr;
@@ -121,7 +118,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info->output_buffers = FakeBufferCollection();
     info->image_format_index = 0;
 
-    auto result = camera::InputNode::CreateInputNode(info, allocator, loop_.dispatcher(), isp_);
+    auto result = camera::InputNode::CreateInputNode(info, allocator, dispatcher(), isp_);
     EXPECT_TRUE(result.is_ok());
 
     EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
@@ -163,8 +160,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     // Testing successful creation of |OutputNode|.
     auto input_result = GetInputNode(allocator, &info);
-    auto output_result = OutputNode::CreateOutputNode(loop_.dispatcher(), &info,
-                                                      input_result.value().get(), info.node);
+    auto output_result =
+        OutputNode::CreateOutputNode(dispatcher(), &info, input_result.value().get(), info.node);
     EXPECT_TRUE(output_result.is_ok());
     ASSERT_NE(nullptr, output_result.value());
     EXPECT_NE(nullptr, output_result.value()->client_stream());
@@ -175,11 +172,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
         OutputNode::CreateOutputNode(nullptr, &info, input_result.value().get(), info.node);
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, output_result.error());
 
-    output_result = OutputNode::CreateOutputNode(loop_.dispatcher(), nullptr,
-                                                 input_result.value().get(), info.node);
+    output_result =
+        OutputNode::CreateOutputNode(dispatcher(), nullptr, input_result.value().get(), info.node);
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, output_result.error());
 
-    output_result = OutputNode::CreateOutputNode(loop_.dispatcher(), &info, nullptr, info.node);
+    output_result = OutputNode::CreateOutputNode(dispatcher(), &info, nullptr, info.node);
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, output_result.error());
   }
 
@@ -198,41 +195,34 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto next_node_internal = GetNextNodeInPipeline(kStreamTypeDS | kStreamTypeML, info.node);
     ASSERT_NE(nullptr, next_node_internal);
     auto gdc_result =
-        GdcNode::CreateGdcNode(allocator, loop_.dispatcher(), fake_ddk::kFakeParent, gdc_, &info,
+        GdcNode::CreateGdcNode(allocator, dispatcher(), fake_ddk::kFakeParent, gdc_, &info,
                                input_result.value().get(), *next_node_internal);
     EXPECT_TRUE(gdc_result.is_ok());
     ASSERT_NE(nullptr, gdc_result.value());
     EXPECT_EQ(NodeType::kGdc, gdc_result.value()->type());
   }
 
-  fit::result<std::pair<fidl::InterfaceRequest<fuchsia::camera2::Stream>, StreamCreationData>,
-              zx_status_t>
-  SetupStream(uint32_t config, fuchsia::camera2::CameraStreamType stream_type,
-              fuchsia::camera2::StreamPtr& stream) {
-    auto stream_config_node = GetStreamConfigNode(config, stream_type);
-    if (stream_config_node == nullptr) {
-      return fit::error(ZX_ERR_INVALID_ARGS);
-    }
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-    info.output_buffers = FakeBufferCollection();
-    auto stream_request = stream.NewRequest();
-    auto status = pipeline_manager_->ConfigureStreamPipeline(&info, stream_request);
-    if (status != ZX_OK) {
-      return fit::error(status);
-    }
-    auto result = std::make_pair(std::move(stream_request), std::move(info));
-    return fit::ok(std::move(result));
+  zx_status_t SetupStream(uint32_t config, fuchsia::camera2::CameraStreamType stream_type,
+                          fuchsia::camera2::StreamPtr& stream) {
+    async::PostTask(dispatcher(), [this, config, stream_type, &stream]() {
+      auto stream_config_node = GetStreamConfigNode(config, stream_type);
+      StreamCreationData info;
+      stream_config_.properties.set_stream_type(stream_type);
+      info.stream_config = &stream_config_;
+      info.node = *stream_config_node;
+      info.output_buffers = FakeBufferCollection();
+      auto stream_request = stream.NewRequest();
+      pipeline_manager_->ConfigureStreamPipeline(std::move(info), std::move(stream_request));
+    });
+
+    RunLoopUntilIdle();
+    return ZX_OK;
   }
 
   void TestConfigureDebugConfig() {
     fuchsia::camera2::StreamPtr stream;
     auto stream_type = kStreamTypeFR;
-    auto result = SetupStream(kDebugConfig, stream_type, stream);
-    ASSERT_EQ(ZX_OK, result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     EXPECT_EQ(fr_head_node->type(), NodeType::kInputStream);
@@ -250,8 +240,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     fuchsia::camera2::StreamPtr stream;
     auto stream_type1 = kStreamTypeDS | kStreamTypeML;
     auto stream_type2 = kStreamTypeFR | kStreamTypeML;
-    auto result = SetupStream(kMonitorConfig, stream_type2, stream);
-    ASSERT_EQ(ZX_OK, result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type2, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -274,8 +263,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_type1 = kStreamTypeDS | kStreamTypeML;
     auto stream_type2 = kStreamTypeFR | kStreamTypeML;
     fuchsia::camera2::StreamPtr stream;
-    auto result = SetupStream(kMonitorConfig, stream_type1, stream);
-    ASSERT_EQ(ZX_OK, result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type1, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
@@ -306,11 +294,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_type1 = kStreamTypeDS | kStreamTypeML;
     auto stream_type2 = kStreamTypeFR | kStreamTypeML;
 
-    auto result2 = SetupStream(kMonitorConfig, stream_type2, stream2);
-    ASSERT_EQ(ZX_OK, result2.error());
-
-    auto result1 = SetupStream(kMonitorConfig, stream_type1, stream1);
-    ASSERT_EQ(ZX_OK, result1.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type2, stream2));
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type1, stream1));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -360,22 +345,21 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     fuchsia::camera2::StreamPtr stream1;
     fuchsia::camera2::StreamPtr stream2;
 
-    auto result1 = SetupStream(kMonitorConfig, stream_type1, stream1);
-    ASSERT_EQ(ZX_OK, result1.error());
+    bool stream_alive = true;
+    stream2.set_error_handler([&](zx_status_t /* status*/) { stream_alive = false; });
 
-    auto result2 = SetupStream(kMonitorConfig, stream_type2, stream2);
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result2.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type1, stream1));
+    EXPECT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type2, stream2));
+    EXPECT_FALSE(stream_alive);
   }
 
   void TestConfigureVideoConfigStream1() {
     auto stream_type = kStreamTypeFR | kStreamTypeML | kStreamTypeVideo;
     fuchsia::camera2::StreamPtr stream;
-    auto result = SetupStream(kVideoConfig, stream_type, stream);
-    ASSERT_EQ(ZX_OK, result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kVideoConfig, stream_type, stream));
 
     fuchsia::camera2::StreamPtr stream_video;
-    auto video_result = SetupStream(kVideoConfig, kStreamTypeVideo, stream_video);
-    ASSERT_EQ(ZX_OK, video_result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kVideoConfig, kStreamTypeVideo, stream_video));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
@@ -467,8 +451,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   void TestMultipleStartStreaming() {
     auto stream_type = kStreamTypeFR;
     fuchsia::camera2::StreamPtr stream;
-    auto result = SetupStream(kDebugConfig, stream_type, stream);
-    ASSERT_EQ(ZX_OK, result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kDebugConfig, stream_type, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -481,8 +464,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   void TestInUseBufferCounts() {
     auto stream_type = kStreamTypeFR | kStreamTypeML;
     fuchsia::camera2::StreamPtr stream;
-    auto result = SetupStream(kMonitorConfig, stream_type, stream);
-    ASSERT_EQ(ZX_OK, result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type, stream));
 
     bool stream_alive = true;
     stream.set_error_handler([&](zx_status_t /*status*/) { stream_alive = false; });
@@ -495,8 +477,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
 
     // Start streaming.
-    stream->Start();
-
+    async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
     RunLoopUntilIdle();
 
     // ISP is single parent for two nodes.
@@ -514,7 +495,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     for (uint32_t i = 0; i < kNumBuffers; i++) {
       frame_info.buffer_id = i;
-      EXPECT_NO_FATAL_FAILURE(fr_head_node->OnReadyToProcess(&frame_info));
+      async::PostTask(dispatcher(),
+                      [&fr_head_node, frame_info] { fr_head_node->OnReadyToProcess(&frame_info); });
+      RunLoopUntilIdle();
     }
 
     while (!frame_received) {
@@ -522,27 +505,26 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     }
 
     EXPECT_TRUE(frame_received);
-
     EXPECT_EQ(fr_head_node->get_in_use_buffer_count(0), 0u);
     EXPECT_EQ(fr_head_node->get_in_use_buffer_count(1), 0u);
     EXPECT_EQ(fr_head_node->get_in_use_buffer_count(2), 1u);
     EXPECT_EQ(fr_head_node->get_in_use_buffer_count(3), 0u);
 
-    stream->ReleaseFrame(2);
+    async::PostTask(dispatcher(), [&stream]() { stream->ReleaseFrame(2); });
     RunLoopUntilIdle();
 
     EXPECT_EQ(fr_head_node->get_in_use_buffer_count(2), 0u);
+
     stream->Stop();
   }
 
   void TestReleaseAfterStopStreaming() {
     auto stream_type = kStreamTypeDS | kStreamTypeML;
     fuchsia::camera2::StreamPtr stream;
-    auto result = SetupStream(kMonitorConfig, stream_type, stream);
-    ASSERT_EQ(ZX_OK, result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type, stream));
 
     // Start streaming.
-    stream->Start();
+    async::PostTask(dispatcher(), [&stream]() { stream->Start(); });
     RunLoopUntilIdle();
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
@@ -556,7 +538,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(ds_ml_output_node->enabled());
 
     // Stop streaming.
-    stream->Stop();
+    async::PostTask(dispatcher(), [&stream]() { stream->Stop(); });
     RunLoopUntilIdle();
 
     EXPECT_FALSE(fr_head_node->enabled());
@@ -593,15 +575,12 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
     auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
 
-    auto result_fr = SetupStream(kMonitorConfig, stream_type_fr, stream_fr);
-    ASSERT_EQ(ZX_OK, result_fr.error());
-
-    auto result_ds = SetupStream(kMonitorConfig, stream_type_ds, stream_ds);
-    ASSERT_EQ(ZX_OK, result_ds.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type_fr, stream_fr));
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type_ds, stream_ds));
 
     // Start streaming.
-    stream_fr->Start();
-    stream_ds->Start();
+    async::PostTask(dispatcher(), [&stream_fr]() { stream_fr->Start(); });
+    async::PostTask(dispatcher(), [&stream_ds]() { stream_ds->Start(); });
     RunLoopUntilIdle();
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
@@ -614,14 +593,16 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(gdc_node->enabled());
     EXPECT_TRUE(ds_ml_output_node->enabled());
 
-    pipeline_manager_->StopStreaming();
+    async::PostTask(dispatcher(), [this]() { pipeline_manager_->StopStreaming(); });
+    RunLoopUntilIdle();
 
     EXPECT_FALSE(fr_head_node->enabled());
     EXPECT_FALSE(fr_ml_output_node->enabled());
     EXPECT_FALSE(gdc_node->enabled());
     EXPECT_FALSE(ds_ml_output_node->enabled());
 
-    pipeline_manager_->StartStreaming();
+    async::PostTask(dispatcher(), [this]() { pipeline_manager_->StartStreaming(); });
+    RunLoopUntilIdle();
 
     EXPECT_TRUE(fr_head_node->enabled());
     EXPECT_TRUE(fr_ml_output_node->enabled());
@@ -633,12 +614,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto fr_stream_type = kStreamTypeFR | kStreamTypeML;
     auto ds_stream_type = kStreamTypeMonitoring;
     fuchsia::camera2::StreamPtr fr_stream;
-    auto fr_result = SetupStream(kMonitorConfig, fr_stream_type, fr_stream);
-    ASSERT_EQ(ZX_OK, fr_result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, fr_stream_type, fr_stream));
 
     fuchsia::camera2::StreamPtr ds_stream;
-    auto ds_result = SetupStream(kMonitorConfig, ds_stream_type, ds_stream);
-    ASSERT_EQ(ZX_OK, ds_result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, ds_stream_type, ds_stream));
 
     bool fr_stream_alive = true;
     fr_stream.set_error_handler([&](zx_status_t /*status*/) { fr_stream_alive = false; });
@@ -666,9 +645,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto ds_head_node = pipeline_manager_->downscaled_resolution_stream();
 
     // Start streaming.
-    fr_stream->Start();
-    ds_stream->Start();
-
+    async::PostTask(dispatcher(), [&fr_stream]() { fr_stream->Start(); });
+    async::PostTask(dispatcher(), [&ds_stream]() { ds_stream->Start(); });
     RunLoopUntilIdle();
 
     // Invoke OnFrameAvailable() for the ISP node. Buffer index = 1.
@@ -685,21 +663,17 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     for (uint32_t i = 0; i < kNumBuffers; i++) {
       frame_info.buffer_id = i;
-      EXPECT_NO_FATAL_FAILURE(fr_head_node->OnReadyToProcess(&frame_info));
-      EXPECT_NO_FATAL_FAILURE(ds_head_node->OnReadyToProcess(&frame_info));
-    }
-
-    while (!fr_frame_received) {
+      async::PostTask(dispatcher(), [&frame_info, &fr_head_node]() {
+        fr_head_node->OnReadyToProcess(&frame_info);
+      });
+      RunLoopUntilIdle();
+      async::PostTask(dispatcher(), [&frame_info, &ds_head_node]() {
+        ds_head_node->OnReadyToProcess(&frame_info);
+      });
       RunLoopUntilIdle();
     }
 
     EXPECT_EQ(fr_frame_index, 2u);
-
-    while (ds_frame_count != kNumBuffers) {
-      RunLoopUntilIdle();
-    }
-
-    // Check if all frames are recieved.
     EXPECT_EQ(ds_frame_index, 4u);
     EXPECT_EQ(ds_frame_count, 5u);
   }
@@ -708,12 +682,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto fr_stream_type = kStreamTypeFR | kStreamTypeML;
     auto ds_stream_type = kStreamTypeMonitoring;
     fuchsia::camera2::StreamPtr fr_stream;
-    auto fr_result = SetupStream(kMonitorConfig, fr_stream_type, fr_stream);
-    ASSERT_EQ(ZX_OK, fr_result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, fr_stream_type, fr_stream));
 
     fuchsia::camera2::StreamPtr ds_stream;
-    auto ds_result = SetupStream(kMonitorConfig, ds_stream_type, ds_stream);
-    ASSERT_EQ(ZX_OK, ds_result.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, ds_stream_type, ds_stream));
 
     auto result = pipeline_manager_->FindGraphHead(fr_stream_type);
     EXPECT_FALSE(result.is_error());
@@ -735,23 +707,19 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
     auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
 
-    auto result_fr = SetupStream(kMonitorConfig, stream_type_fr, stream_fr);
-    ASSERT_EQ(ZX_OK, result_fr.error());
-
-    auto result_ds = SetupStream(kMonitorConfig, stream_type_ds, stream_ds);
-    ASSERT_EQ(ZX_OK, result_ds.error());
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type_fr, stream_fr));
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, stream_type_ds, stream_ds));
 
     // Start streaming.
-    stream_fr->Start();
-    stream_ds->Start();
+    async::PostTask(dispatcher(), [&stream_fr]() { stream_fr->Start(); });
+    async::PostTask(dispatcher(), [&stream_ds]() { stream_ds->Start(); });
     RunLoopUntilIdle();
 
-    async::PostTask(loop_.dispatcher(), [this]() { pipeline_manager_->Shutdown(); });
+    async::PostTask(dispatcher(), [this]() { pipeline_manager_->Shutdown(); });
+    RunLoopUntilIdle();
 
     zx_signals_t pending;
     event_.wait_one(kPipelineManagerSignalExitDone, zx::time::infinite(), &pending);
-
-    RunLoopUntilIdle();
 
     EXPECT_EQ(nullptr, pipeline_manager_->full_resolution_stream());
     EXPECT_EQ(nullptr, pipeline_manager_->downscaled_resolution_stream());
@@ -761,7 +729,6 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   FakeGdc fake_gdc_;
   FakeGe2d fake_ge2d_;
   zx::event event_;
-  async::Loop loop_;
   thrd_t controller_frame_processing_thread_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
   std::unique_ptr<sys::ComponentContext> context_;
@@ -772,6 +739,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   ddk::GdcProtocolClient gdc_;
   ddk::Ge2dProtocolClient ge2d_;
   InternalConfigs internal_config_info_;
+  fuchsia::camera2::hal::StreamConfig stream_config_;
 };
 
 TEST_F(ControllerProtocolTest, GetDebugStreamConfig) { TestDebugStreamConfigNode(); }

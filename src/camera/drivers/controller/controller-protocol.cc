@@ -115,15 +115,11 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   info.node = *stream_config_node;
   info.stream_config = &stream_config;
 
+  cleanup.cancel();
+
   // We now have the stream_config_node which needs to be configured
   // Configure the stream pipeline
-  status = pipeline_manager_.ConfigureStreamPipeline(&info, stream);
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Unable to create Stream Pipeline";
-    return;
-  }
-
-  cleanup.cancel();
+  pipeline_manager_.ConfigureStreamPipeline(std::move(info), std::move(stream));
 }
 
 void ControllerImpl::EnableStreaming() { pipeline_manager_.StartStreaming(); }

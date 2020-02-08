@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "fbl/macros.h"
+#include "lib/async/cpp/task.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"
@@ -26,6 +27,7 @@ namespace camera {
 
 namespace {
 constexpr auto kPipelineManagerSignalExitDone = ZX_USER_SIGNAL_0;
+constexpr auto kSerialzedTaskQueued = ZX_USER_SIGNAL_0;
 }  // namespace
 
 // |PipelineManager|
@@ -47,10 +49,12 @@ class PipelineManager {
         isp_(isp),
         gdc_(gdc),
         ge2d_(ge2d),
-        memory_allocator_(std::move(sysmem_allocator)) {}
+        memory_allocator_(std::move(sysmem_allocator)) {
+    SetupTaskWaiter();
+  }
 
-  zx_status_t ConfigureStreamPipeline(StreamCreationData* info,
-                                      fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
+  void ConfigureStreamPipeline(StreamCreationData info,
+                               fidl::InterfaceRequest<fuchsia::camera2::Stream> stream);
 
   // Creates the stream pipeline graph and appends it to the input node (|parent_node|).
   // Args:
@@ -103,6 +107,12 @@ class PipelineManager {
   FindGraphHead(fuchsia::camera2::CameraStreamType stream_type);
 
  private:
+  // Creates a async wait object which waits on |serialized_tasks_event_|
+  // to check the serialized task queue and drains it.
+  void SetupTaskWaiter();
+
+  void SerializedTaskComplete();
+
   fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
       StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
@@ -118,6 +128,10 @@ class PipelineManager {
   std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
   std::map<fuchsia::camera2::CameraStreamType, OutputNode*> output_nodes_info_;
   std::vector<fuchsia::camera2::CameraStreamType> stream_shutdown_requested_;
+  bool serialized_task_in_progress_ = false;
+  zx::event serialized_tasks_event_;
+  async::Wait serialized_tasks_event_waiter_;
+  std::queue<fit::closure> serialized_task_queue_;
 };
 
 }  // namespace camera
