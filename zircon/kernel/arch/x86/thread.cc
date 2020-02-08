@@ -92,7 +92,7 @@ void* arch_thread_get_blocked_fp(thread_t* t) {
   return (void*)frame->rbp;
 }
 
-__NO_SAFESTACK static void x86_aspace_context_switch(thread_t* oldthread, thread_t* newthread) {
+__NO_SAFESTACK static void x86_context_switch_spec_mitigations(thread_t* oldthread, thread_t* newthread) {
   // Spectre V2: Overwrite the Return Address Stack to ensure its not poisoned
   // Only overwrite/fill if the prior thread was a user thread or if we're on CPUs vulnerable to
   // RSB underflow attacks.
@@ -187,7 +187,7 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thre
   x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET, newthread->arch.unsafe_sp);
 #endif
 
-  x86_aspace_context_switch(oldthread, newthread);
+  x86_context_switch_spec_mitigations(oldthread, newthread);
 
   x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }
