@@ -193,6 +193,7 @@ func (s cloudSink) write(ctx context.Context, name string, path string, expected
 	w := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	w.ChunkSize = chunkSize
 	w.MD5 = expectedChecksum
+	w.ContentType = "application/octet-stream"
 	w.ContentEncoding = "gzip"
 
 	fd, err := os.Open(path)

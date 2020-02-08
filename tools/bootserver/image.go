@@ -110,17 +110,14 @@ func getUncompressedReader(obj *storage.ObjectHandle) (io.ReadCloser, error) {
 	if objAttrs.ContentEncoding != "gzip" {
 		return obj.NewReader(ctx)
 	}
-	// TODO(https://github.com/googleapis/google-cloud-go/issues/1743): Use NewReader() once bug is fixed.
-	// Currently, ReadCompressed(true) only works with NewRangeReader with any negative offset.
-	// Setting the offset to -size should return the same range as offset 0.
-	offset := 0 - objAttrs.Size
-	r, err := obj.ReadCompressed(true).NewRangeReader(ctx, offset, -1)
+	r, err := obj.ReadCompressed(true).NewReader(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if r.Remain() != r.Size() {
-		return nil, fmt.Errorf("only retrieved reader for last %d bytes", r.Remain())
+	if r.Attrs.ContentEncoding != "gzip" {
+		return nil, fmt.Errorf("content-encoding expected: gzip, actual: %s", r.Attrs.ContentEncoding)
 	}
+
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get gzip reader: %v", err)
