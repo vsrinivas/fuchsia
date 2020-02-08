@@ -16,6 +16,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # scripts
     SCRIPT_DIR))                 # unification
+FX = os.path.join(FUCHSIA_ROOT, 'scripts', 'fx')
 
 
 def run_command(command):
@@ -47,8 +48,8 @@ def main():
 
     # Edit the build file.
     is_dummy = not (lib.startswith('ddk.protocol') or lib.startswith('ddk.hw'))
-    for line in fileinput.FileInput(os.path.join(sdk_dir, 'BUILD.gn'),
-                                    inplace=True):
+    build_path = os.path.join(sdk_dir, 'BUILD.gn')
+    for line in fileinput.FileInput(build_path, inplace=True):
         line = line.replace('$zx_build/public/gn/banjo.gni',
                             '//build/banjo/banjo.gni')
         line = line.replace('banjo_library',
@@ -58,14 +59,16 @@ def main():
         line = line.replace('$zx/system/banjo',
                             '//zircon/system/banjo')
         sys.stdout.write(line)
+    run_command([FX, 'format-code', '--files=' + build_path])
 
     # Edit references to the library.
     for base, _, files in os.walk(FUCHSIA_ROOT):
         for file in files:
             if file != 'BUILD.gn':
                 continue
-            for line in fileinput.FileInput(os.path.join(base, file),
-                                            inplace=True):
+            file_path = os.path.join(base, file)
+            has_changes = False
+            for original_line in fileinput.FileInput(file_path, inplace=True):
                 # Make sure that only exact matches are replaced, as some
                 # library names are prefix of other names.
                 # Examples:
@@ -73,8 +76,13 @@ def main():
                 # //zircon/s/b/ddk.foo.bar:boop" --> "//sdk/b/foo.bar:boop"
                 line = re.sub('"(//zircon/system/banjo/' + lib + ')([:"])',
                               '"//sdk/banjo/' + lib + '\\2',
-                              line)
+                              original_line)
+                if line != original_line:
+                    has_changes = True
                 sys.stdout.write(line)
+            if has_changes:
+                run_command([FX, 'format-code', '--files=' + file_path])
+
     for line in fileinput.FileInput(os.path.join(banjo_base, 'BUILD.gn'),
                                     inplace=True):
         if not '"' + lib + '"' in line:
