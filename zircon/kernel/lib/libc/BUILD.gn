@@ -6,13 +6,11 @@ source_set("libc") {
   sources = [
     "atoi.c",
     "atomic.cc",
-    "bsearch.c",
     "cxa_atexit.cc",
     "cxa_pure_virtual.cc",
     "cxx_allocator.cc",
     "errno.c",
     "printf.c",
-    "qsort.c",
     "rand.c",
     "stdio.c",
     "strtol.c",

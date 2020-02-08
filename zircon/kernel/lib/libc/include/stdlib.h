@@ -38,9 +38,6 @@ long long strtoll(const char *nptr, char **endptr, int base);
 #define IS_ALIGNED(a, b) (!(((uintptr_t)(a)) & (((uintptr_t)(b)) - 1)))
 
 void abort(void) __attribute__((noreturn));
-void qsort(void *aa, size_t n, size_t es, int (*cmp)(const void *, const void *));
-void *bsearch(const void *key, const void *base, size_t num_elems, size_t size,
-              int (*compare)(const void *, const void *));
 unsigned long int strtoul(const char *nptr, char **endptr, int base);
 char *getenv(const char *name);
 

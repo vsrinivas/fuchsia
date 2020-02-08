@@ -5,5 +5,17 @@
 library("ktl") {
   kernel = true
   static = false
-  sources = []
+  sources = [ "dummy-new.cc" ]
+
+  public_configs = [ ":ktl.config" ]
+}
+
+config("ktl.config") {
+  visibility = [ ":*" ]
+
+  # This tells the headers not to use `extern template` declarations that
+  # expect specific instantiations/specializations to come from the libc++
+  # library rather than the headers.  In the kernel, only the headers are
+  # ever going to be available.
+  defines = [ "_LIBCPP_DISABLE_EXTERN_TEMPLATE" ]
 }

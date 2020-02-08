@@ -18,6 +18,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/inline_array.h>
 #include <fbl/mutex.h>
+#include <ktl/algorithm.h>
 #include <object/process_dispatcher.h>
 
 KCOUNTER(dispatcher_job_create_count, "dispatcher.job.create")
@@ -333,15 +334,11 @@ bool JobDispatcher::KillJobWithKillOnOOM() {
     return false;
   }
 
-  // Sort by max height. TODO(scottmg): This is not stable, which makes the
-  // ordering unpredictable in theory. We don't currently have a stable sort in
-  // kernel.
-  qsort(reinterpret_cast<void*>(oom_jobs.begin()), count, sizeof(oom_jobs[0]),
-        [](const void* a, const void* b) -> int {
-          const auto& ta = *reinterpret_cast<const fbl::RefPtr<JobDispatcher>*>(a);
-          const auto& tb = *reinterpret_cast<const fbl::RefPtr<JobDispatcher>*>(b);
-          return ta->max_height() < tb->max_height();
-        });
+  // Sort by max height.
+  ktl::stable_sort(oom_jobs.begin(), oom_jobs.begin() + count,
+                   [](const fbl::RefPtr<JobDispatcher>& a, const fbl::RefPtr<JobDispatcher>& b) {
+                     return a->max_height() < b->max_height();
+                   });
 
   // Kill lowest to highest until we find something to kill.
   for (int i = count - 1; i >= 0; --i) {
