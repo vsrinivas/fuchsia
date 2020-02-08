@@ -135,6 +135,22 @@ table PlayerCapabilities {
     1: PlayerCapabilityFlags flags;
 };
 
+/// The behavior enforced on the player when it is
+/// interrupted, such as by an alarm.
+///
+/// Interruptions are detected using the player's usage.
+///
+/// By default the interruption behavior is `NONE`.
+enum InterruptionBehavior {
+    /// Interruptions have no effect on the player
+    /// and it may continue in spite of reduced audibility.
+    NONE = 0;
+    /// With this behavior, when playback is interrupted, the player
+    /// will be paused until the interruption is over, so the user
+    /// does not miss any content.
+    PAUSE = 1;
+};
+
 /// When emitted, fields that have changed should be set.
 /// The first emission to a new client should be a snapshot.
 table PlayerInfoDelta {
@@ -147,6 +163,7 @@ table PlayerInfoDelta {
     3: fuchsia.media.Metadata metadata;
     4: vector<MediaImage>:16 media_images;
     5: PlayerCapabilities player_capabilities;
+    6: InterruptionBehavior interruption_behavior;
 };
 
 /// `Player` is a handle for a media player. Unsupported commands are

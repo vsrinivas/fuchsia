@@ -4,6 +4,8 @@
 
 library fuchsia.media.sessions2;
 
+using fuchsia.media;
+
 /// All information required by the media session registry service to
 /// register a player so that clients may observe its status and control
 /// it.
@@ -11,6 +13,9 @@ table PlayerRegistration {
     /// The domain on which the player exists. Unset if it is the native
     /// Fuchsia domain.
     1: Domain domain;
+    /// The usage of the player's audio output. By default, this is assumed
+    /// to be MEDIA.
+    2: fuchsia.media.AudioRenderUsage usage;
 };
 
 /// `Publisher` publishes media players so they may be discovered and

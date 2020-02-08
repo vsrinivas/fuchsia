@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.media.sessions2/discovery.fidl": "11151770ff0d90bce0ab4dda495e2f0c",
   "fidl/fuchsia.media.sessions2/images.fidl": "1f6803a1a1570999d2037e5ffdbd1de1",
-  "fidl/fuchsia.media.sessions2/player.fidl": "c1dd39a0368a0bee3aae7734c610e243",
-  "fidl/fuchsia.media.sessions2/publisher.fidl": "ed789ea30d114f70df64aaa6e6666f1a"
+  "fidl/fuchsia.media.sessions2/player.fidl": "e48992141b37d46a643986e46d499281",
+  "fidl/fuchsia.media.sessions2/publisher.fidl": "73634f1c2546ce3eae151f6962dcd509"
 }
