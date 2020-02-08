@@ -32,6 +32,10 @@ For address spaces that use ASLR this controls the number of bits of entropy in
 the randomization. Higher entropy results in a sparser address space and uses
 more memory for page tables. Valid values range from 0-36, with default being 30.
 
+## blobfs.userpager=\<bool\>
+
+Controls whether the blobfs user pager is enabled. Disabled by default.
+
 ## bootsvc.next=\<bootfs path\>
 
 Controls what program is executed by bootsvc to continue the boot process.

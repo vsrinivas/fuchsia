@@ -10,12 +10,12 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <inttypes.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -350,6 +350,9 @@ zx_status_t BlockDevice::MountFilesystem() {
       mount_options_t options = default_mount_options;
       options.enable_journal = true;
       options.collect_metrics = true;
+      if (mounter_->boot_args()) {
+        options.enable_pager = mounter_->boot_args()->blobfs_enable_userpager();
+      }
       zx_status_t status = mounter_->MountBlob(std::move(block_device), options);
       if (status != ZX_OK) {
         printf("fshost: Failed to mount blobfs partition: %s.\n", zx_status_get_string(status));

@@ -39,6 +39,7 @@ TEST(FshostBootArgsTest, GetDefaultBools) {
   ASSERT_EQ(false, boot_args->netboot());
   ASSERT_EQ(false, boot_args->check_filesystems());
   ASSERT_EQ(true, boot_args->wait_for_data());
+  ASSERT_EQ(false, boot_args->blobfs_enable_userpager());
 }
 
 TEST(FshostBootArgsTest, GetNonDefaultBools) {
@@ -46,12 +47,14 @@ TEST(FshostBootArgsTest, GetNonDefaultBools) {
       "netsvc.netboot"
       "\0zircon.system.disable-automount"
       "\0zircon.system.filesystem-check"
-      "\0zircon.system.wait-for-data=false";
+      "\0zircon.system.wait-for-data=false"
+      "\0blobfs.userpager";
   auto boot_args = CreateFshostBootArgs(config, sizeof(config));
 
   ASSERT_EQ(true, boot_args->netboot());
   ASSERT_EQ(true, boot_args->check_filesystems());
   ASSERT_EQ(false, boot_args->wait_for_data());
+  ASSERT_EQ(true, boot_args->blobfs_enable_userpager());
 }
 
 TEST(FshostBootArgsTest, GetPkgfsFile) {
