@@ -311,6 +311,7 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
       {"runs", required_argument, nullptr, 0},
       {"seed", required_argument, nullptr, 0},
       {"pager", no_argument, nullptr, 0},
+      {"write-uncompressed", no_argument, nullptr, 0},
       {0, 0, 0, 0},
   };
   // Resets the internal state of getopt*, making this function idempotent.
@@ -379,6 +380,9 @@ bool ParseCommandLineArgs(int argc, const char* const* argv, FixtureOptions* fix
             break;
           case 13:
             fixture_options->use_pager = true;
+            break;
+          case 14:
+            fixture_options->write_uncompressed = true;
             break;
           default:
             break;

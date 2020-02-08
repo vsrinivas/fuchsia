@@ -35,16 +35,13 @@ int parse_args(int argc, char** argv, mount_options_t* options, char** devicepat
                char** mountpath) {
   while (1) {
     static struct option opts[] = {
-        {"readonly", no_argument, NULL, 'r'},
-        {"metrics", no_argument, NULL, 'm'},
-        {"journal", no_argument, NULL, 'j'},
-        {"verbose", no_argument, NULL, 'v'},
-        {"pager", no_argument, NULL, 'p'},
-        {"help", no_argument, NULL, 'h'},
-        {NULL, 0, NULL, 0},
+        {"readonly", no_argument, NULL, 'r'}, {"metrics", no_argument, NULL, 'm'},
+        {"journal", no_argument, NULL, 'j'},  {"verbose", no_argument, NULL, 'v'},
+        {"pager", no_argument, NULL, 'p'},    {"write-uncompressed", no_argument, NULL, 'u'},
+        {"help", no_argument, NULL, 'h'},     {NULL, 0, NULL, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "rmjvph", opts, &opt_index);
+    int c = getopt_long(argc, argv, "rmjvpuh", opts, &opt_index);
     if (c < 0) {
       break;
     }
@@ -63,6 +60,9 @@ int parse_args(int argc, char** argv, mount_options_t* options, char** devicepat
         break;
       case 'p':
         options->enable_pager = true;
+        break;
+      case 'u':
+        options->write_uncompressed = true;
         break;
       case 'h':
       default:

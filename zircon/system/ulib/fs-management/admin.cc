@@ -57,6 +57,9 @@ zx_status_t InitNativeFs(const char* binary, zx::channel device, const init_opti
   if (options.enable_pager) {
     argv.push_back("--pager");
   }
+  if (options.write_uncompressed) {
+    argv.push_back("--write-uncompressed");
+  }
   argv.push_back("mount");
   argv.push_back(nullptr);
   int argc = static_cast<int>(argv.size() - 1);
@@ -98,6 +101,7 @@ const init_options_t default_init_options = {
     .wait_until_ready = true,
     .enable_journal = true,
     .enable_pager = false,
+    .write_uncompressed = false,
     .callback = launch_stdio_async,
 };
 

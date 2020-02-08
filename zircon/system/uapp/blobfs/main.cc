@@ -86,19 +86,22 @@ const struct {
 };
 
 int usage() {
-  fprintf(stderr,
-          "usage: blobfs [ <options>* ] <command> [ <arg>* ]\n"
-          "\n"
-          "options: -r|--readonly  Mount filesystem read-only\n"
-          "         -m|--metrics   Collect filesystem metrics\n"
-          "         -j|--journal   Utilize the blobfs journal\n"
-          "                        For fsck, the journal is replayed before verification\n"
-          "         -h|--help      Display this message\n"
-          "\n"
-          "On Fuchsia, blobfs takes the block device argument by handle.\n"
-          "This can make 'blobfs' commands hard to invoke from command line.\n"
-          "Try using the [mkfs,fsck,mount,umount] commands instead\n"
-          "\n");
+  fprintf(
+      stderr,
+      "usage: blobfs [ <options>* ] <command> [ <arg>* ]\n"
+      "\n"
+      "options: -r|--readonly              Mount filesystem read-only\n"
+      "         -m|--metrics               Collect filesystem metrics\n"
+      "         -j|--journal               Utilize the blobfs journal\n"
+      "                                    For fsck, the journal is replayed before verification\n"
+      "         -p|--pager                 Enable user pager\n"
+      "         -u|--write-uncompressed    Write blobs uncompressed\n"
+      "         -h|--help                  Display this message\n"
+      "\n"
+      "On Fuchsia, blobfs takes the block device argument by handle.\n"
+      "This can make 'blobfs' commands hard to invoke from command line.\n"
+      "Try using the [mkfs,fsck,mount,umount] commands instead\n"
+      "\n");
   for (unsigned n = 0; n < (sizeof(kCmds) / sizeof(kCmds[0])); n++) {
     fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:", kCmds[n].name, kCmds[n].help);
   }
@@ -110,12 +113,16 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
                         blobfs::MountOptions* options) {
   while (1) {
     static struct option opts[] = {
-        {"readonly", no_argument, nullptr, 'r'}, {"metrics", no_argument, nullptr, 'm'},
-        {"journal", no_argument, nullptr, 'j'},  {"pager", no_argument, nullptr, 'p'},
-        {"help", no_argument, nullptr, 'h'},     {nullptr, 0, nullptr, 0},
+        {"readonly", no_argument, nullptr, 'r'},
+        {"metrics", no_argument, nullptr, 'm'},
+        {"journal", no_argument, nullptr, 'j'},
+        {"pager", no_argument, nullptr, 'p'},
+        {"write-uncompressed", no_argument, nullptr, 'u'},
+        {"help", no_argument, nullptr, 'h'},
+        {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "rmjph", opts, &opt_index);
+    int c = getopt_long(argc, argv, "rmjpuh", opts, &opt_index);
     if (c < 0) {
       break;
     }
@@ -131,6 +138,9 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         break;
       case 'p':
         options->pager = true;
+        break;
+      case 'u':
+        options->write_uncompressed = true;
         break;
       case 'h':
       default:

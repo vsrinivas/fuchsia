@@ -58,10 +58,11 @@ class Environment : public zxtest::Environment {
     bool show_help;
     bool use_journal = true;
     bool use_pager = false;
+    bool write_uncompressed = false;
 
     // Power-failure related tests.
     uint32_t power_stride = 1;  // Number of steps to skip between runs.
-    uint32_t power_start = 1;  // First step to run.
+    uint32_t power_start = 1;   // First step to run.
     uint32_t power_cycles = 5;  // Last step to run.
 
     // Updates the configuration with options from the command line.
@@ -82,6 +83,8 @@ class Environment : public zxtest::Environment {
   bool use_journal() const { return config_.use_journal; }
 
   bool use_pager() const { return config_.use_pager; }
+
+  bool write_uncompressed() const { return config_.write_uncompressed; }
 
   disk_format_type format_type() const { return config_.format_type; }
 

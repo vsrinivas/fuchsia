@@ -243,6 +243,9 @@ zx_status_t Fixture::Mount() {
   if (options_.use_pager) {
     mount_options.enable_pager = true;
   }
+  if (options_.write_uncompressed) {
+    mount_options.write_uncompressed = true;
+  }
 
   disk_format_t format = detect_disk_format(fd.get());
   zx_status_t result =

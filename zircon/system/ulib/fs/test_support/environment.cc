@@ -10,8 +10,8 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
 #include <lib/devmgr-launcher/launch.h>
-#include <lib/fdio/namespace.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/namespace.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <zircon/status.h>
@@ -30,6 +30,7 @@ Options:
 --device path_to_device (-d): Performs tests on top of a specific block device
 --no-journal: Don't use journal
 --pager (-p): Use pager (if supported by the filesystem)
+--write-uncompressed (-u): Write files uncompressed. Disable compression (if supported by the filesystem)
 --power_stride n: Increment the operation count by n with each power cycle
                   (default 1)
 --power_start n: Start cycling power at count n (default 1)
@@ -53,6 +54,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         {"device", required_argument, nullptr, 'd'},
         {"no-journal", no_argument, nullptr, 'j'},  // No short option.
         {"pager", no_argument, nullptr, 'p'},
+        {"write-uncompressed", no_argument, nullptr, 'u'},
         {"power_stride", required_argument, nullptr, '1'},
         {"power_start", required_argument, nullptr, '2'},
         {"power_cycles", required_argument, nullptr, '3'},
@@ -66,7 +68,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "d:phf::l::s::i:r:b::", options, &opt_index);
+    int c = getopt_long(argc, argv, "d:puhf::l::s::i:r:b::", options, &opt_index);
     if (c < 0) {
       break;
     }
@@ -79,6 +81,9 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         break;
       case 'p':
         config->use_pager = true;
+        break;
+      case 'u':
+        config->write_uncompressed = true;
         break;
       case '1':
         config->power_stride = std::max(static_cast<uint32_t>(strtoul(optarg, NULL, 0)), 1U);

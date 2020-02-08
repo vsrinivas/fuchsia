@@ -29,6 +29,8 @@ typedef struct init_options {
   bool enable_journal;
   // Enable paging on the file system (if supported).
   bool enable_pager;
+  // Write files uncompressed. Disables compression (if supported).
+  bool write_uncompressed;
   // Provide a launch callback function pointer for configuring how the underlying filesystem
   // process is launched.
   LaunchCallback callback;

@@ -44,6 +44,7 @@ struct MountOptions {
   bool metrics = false;
   bool journal = false;
   bool pager = false;
+  bool write_uncompressed = false;
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 

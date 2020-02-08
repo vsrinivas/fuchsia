@@ -43,6 +43,7 @@ const mount_options_t test_mount_options = {
     .create_mountpoint = false,
     .enable_journal = true,
     .enable_pager = false,
+    .write_uncompressed = false,
 };
 
 fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {

@@ -255,6 +255,7 @@ constexpr mount_options_t kDefaultMinfsMountOptions = {
     .create_mountpoint = false,
     .enable_journal = true,
     .enable_pager = false,
+    .write_uncompressed = false,
 };
 
 constexpr const char kDefaultMinfsMountPath[] = "/tmp/minfs_micro_benchmark_test";

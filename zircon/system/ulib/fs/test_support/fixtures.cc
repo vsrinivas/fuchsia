@@ -8,10 +8,10 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 
 #include <fbl/unique_fd.h>
@@ -64,6 +64,7 @@ void FilesystemTest::Mount() {
   init_options_t options = default_init_options;
   options.enable_journal = environment_->use_journal();
   options.enable_pager = environment_->use_pager();
+  options.write_uncompressed = environment_->write_uncompressed();
 
   if (read_only_) {
     options.readonly = true;

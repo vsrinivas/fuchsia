@@ -60,6 +60,9 @@ zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const cha
   if (options.enable_pager) {
     argv.push_back("--pager");
   }
+  if (options.write_uncompressed) {
+    argv.push_back("--write-uncompressed");
+  }
   argv.push_back("mount");
   argv.push_back(nullptr);
   status = LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, kNumHandles);

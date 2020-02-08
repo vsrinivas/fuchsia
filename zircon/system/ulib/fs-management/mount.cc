@@ -6,12 +6,12 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <unistd.h>
@@ -104,6 +104,7 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
       .wait_until_ready = options->wait_until_ready,
       .enable_journal = options->enable_journal,
       .enable_pager = options->enable_pager,
+      .write_uncompressed = options->write_uncompressed,
       .callback = cb,
   };
 
@@ -132,6 +133,7 @@ const mount_options_t default_mount_options = {
     .create_mountpoint = false,
     .enable_journal = true,
     .enable_pager = false,
+    .write_uncompressed = false,
 };
 
 const mkfs_options_t default_mkfs_options = {
