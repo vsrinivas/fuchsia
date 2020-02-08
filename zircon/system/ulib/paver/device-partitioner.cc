@@ -13,12 +13,12 @@
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fdio/cpp/caller.h>
 #include <libgen.h>
 #include <zircon/status.h>
 
@@ -844,21 +844,21 @@ zx_status_t EfiDevicePartitioner::AddPartition(
     case Partition::kZirconA: {
       const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
       memcpy(type, zircon_a_type, GPT_GUID_LEN);
-      minimum_size_bytes = 32LU * (1 << 20);
+      minimum_size_bytes = 64LU * (1 << 20);
       name = kZirconAName;
       break;
     }
     case Partition::kZirconB: {
       const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
       memcpy(type, zircon_b_type, GPT_GUID_LEN);
-      minimum_size_bytes = 32LU * (1 << 20);
+      minimum_size_bytes = 64LU * (1 << 20);
       name = kZirconBName;
       break;
     }
     case Partition::kZirconR: {
       const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
       memcpy(type, zircon_r_type, GPT_GUID_LEN);
-      minimum_size_bytes = 48LU * (1 << 20);
+      minimum_size_bytes = 96LU * (1 << 20);
       name = kZirconRName;
       break;
     }
