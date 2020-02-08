@@ -387,13 +387,13 @@ func (epe *endpointWithEvent) Shutdown(how int16) (socket.DatagramSocketShutdown
 	var flags tcpip.ShutdownFlags
 	switch how {
 	case C.SHUT_RD:
-		signals = zxsioSignalShutdownRead
+		signals = zxsocket.SignalShutdownRead
 		flags = tcpip.ShutdownRead
 	case C.SHUT_WR:
-		signals = zxsioSignalShutdownWrite
+		signals = zxsocket.SignalShutdownWrite
 		flags = tcpip.ShutdownWrite
 	case C.SHUT_RDWR:
-		signals = zxsioSignalShutdownRead | zxsioSignalShutdownWrite
+		signals = zxsocket.SignalShutdownRead | zxsocket.SignalShutdownWrite
 		flags = tcpip.ShutdownRead | tcpip.ShutdownWrite
 	default:
 		return socket.DatagramSocketShutdownResultWithErr(C.EINVAL), nil
@@ -410,12 +410,7 @@ func (epe *endpointWithEvent) Shutdown(how int16) (socket.DatagramSocketShutdown
 	return socket.DatagramSocketShutdownResultWithResponse(socket.DatagramSocketShutdownResponse{}), nil
 }
 
-const (
-	localSignalClosing = zx.SignalUser1
-	// TODO(tamird): use definitions from third_party/go when they're available.
-	zxsioSignalShutdownRead  = zx.SignalUser4
-	zxsioSignalShutdownWrite = zx.SignalUser5
-)
+const localSignalClosing = zx.SignalUser1
 
 // close destroys the endpoint and releases associated resources, taking its
 // reference count into account.
@@ -666,8 +661,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 		for {
 			var err *tcpip.Error
 			v, _, err = eps.ep.Read(&sender)
-			// TODO(tamird/eyalsoha): remove InvalidEndpointState once gvisor rolls.
-			if err == tcpip.ErrInvalidEndpointState || err == tcpip.ErrNotConnected {
+			if err == tcpip.ErrNotConnected {
 				if connected {
 					panic(fmt.Sprintf("connected endpoint returned %s", err))
 				}
