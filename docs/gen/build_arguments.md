@@ -38,7 +38,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:1030
+From //build/images/BUILD.gn:1037
 
 ### asan_default_options
 TODO(45047): Temporary until all lsan bugs are filed and marked with
@@ -222,7 +222,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/arm64.gni:9
 
@@ -230,7 +230,7 @@ From //boards/arm64.gni:9
 
 From //build/board.gni:11
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/x64.gni:9
 
@@ -264,7 +264,7 @@ with `sources` and `outputs` in the style of a copy() target:
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:469
+From //build/images/BUILD.gn:476
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -292,7 +292,7 @@ process.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:483
+From //build/images/BUILD.gn:490
 
 ### bootloader_prebuilt
 Prebuilt bootloader image to be included into update (OTA) package and
@@ -300,7 +300,7 @@ paving process.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:479
+From //build/images/BUILD.gn:486
 
 ### build_all_vp9_file_decoder_conformance_tests
 
@@ -437,6 +437,13 @@ Selects the Cobalt environment to send data to. Choices:
 
 From //src/cobalt/bin/app/BUILD.gn:15
 
+### compress_blobs
+Whether to compress the blobfs image.
+
+**Current value (from the default):** `true`
+
+From //build/images/BUILD.gn:70
+
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
 
@@ -489,13 +496,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b97e77bcf521d358fa8dde13c4a5b673f4da6997/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/7ed4d5c454c6702c900e31198cca3a18228b93e1/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/b97e77bcf521d358fa8dde13c4a5b673f4da6997/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/7ed4d5c454c6702c900e31198cca3a18228b93e1/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -577,7 +584,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/a73f69cdb12b1e55bb2be0f65ac9f4506c7de9b9/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/62ecc2b88288a31ef01c09aba73d36f77517aafe/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -592,7 +599,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/a73f69cdb12b1e55bb2be0f65ac9f4506c7de9b9/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/62ecc2b88288a31ef01c09aba73d36f77517aafe/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -642,7 +649,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/a73f69cdb12b1e55bb2be0f65ac9f4506c7de9b9/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/62ecc2b88288a31ef01c09aba73d36f77517aafe/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -747,7 +754,7 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:452
+From //build/images/BUILD.gn:459
 
 ### enable_api_diff
 Detect dart API changes
@@ -904,7 +911,7 @@ From //build/fidl/wireformat.gni:9
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/a73f69cdb12b1e55bb2be0f65ac9f4506c7de9b9/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/62ecc2b88288a31ef01c09aba73d36f77517aafe/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enable flutter_driver builds. This is effective only on debug builds.
@@ -917,14 +924,14 @@ From //src/experiences/session_shells/ermine/shell/BUILD.gn:21
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/a73f69cdb12b1e55bb2be0f65ac9f4506c7de9b9/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/62ecc2b88288a31ef01c09aba73d36f77517aafe/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/a73f69cdb12b1e55bb2be0f65ac9f4506c7de9b9/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/62ecc2b88288a31ef01c09aba73d36f77517aafe/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1176,7 +1183,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:457
+From //build/images/BUILD.gn:464
 
 **Current value for `target_cpu = "x64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
@@ -1184,7 +1191,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:457
+From //build/images/BUILD.gn:464
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -1194,7 +1201,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:463
+From //build/images/BUILD.gn:470
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -1460,7 +1467,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:15
+From //boards/arm64.gni:18
 
 **Overridden from the default:** `"0"`
 
@@ -1468,7 +1475,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:16
+From //boards/x64.gni:19
 
 **Overridden from the default:** `"0"`
 
@@ -1495,7 +1502,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:16
+From //boards/arm64.gni:19
 
 **Overridden from the default:** `"0"`
 
@@ -1503,7 +1510,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:17
+From //boards/x64.gni:20
 
 **Overridden from the default:** `"0"`
 
@@ -2012,13 +2019,10 @@ A file in integration containing historical test duration data for this
 build configuration. This file is used by infra to efficiently schedule
 tests. "default.json" is a dummy file that contains no real duration data,
 and causes infra to schedule tests as if each one has the same duration.
-TODO(fxb/43704): Change to
-"[//integration/infra/test_durations/default.json](https://fuchsia.googlesource.com/integration/+/cc8003fe4386b789d8bf82f6d3642baa79d178ec/infra/test_durations/default.json)" after the recipes start
-setting this arg.
 
-**Current value (from the default):** `"//integration/infra/test_durations.json"`
+**Current value (from the default):** `"//integration/infra/test_durations/default.json"`
 
-From //BUILD.gn:37
+From //BUILD.gn:34
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2120,7 +2124,7 @@ From //products/core.gni:80
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:45
+From //BUILD.gn:42
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
@@ -2128,7 +2132,7 @@ From //products/core.gni:80
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:45
+From //BUILD.gn:42
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2148,7 +2152,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:475
+From //build/images/BUILD.gn:482
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -2384,7 +2388,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:94
+From //BUILD.gn:91
 
 ### zircon_asserts
 
@@ -2409,7 +2413,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:73
+From //BUILD.gn:70
 
 ### zircon_enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -2421,7 +2425,7 @@ From //products/core.gni:12
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:66
+From //BUILD.gn:63
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -2429,7 +2433,7 @@ From //products/core.gni:12
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:66
+From //BUILD.gn:63
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2446,14 +2450,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:58
+From //BUILD.gn:55
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:62
+From //BUILD.gn:59
 
 ### zircon_r_partition
 
@@ -2467,7 +2471,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:70
+From //BUILD.gn:67
 
 ### zvb_partition_name
 Partition name from where image will be verified
