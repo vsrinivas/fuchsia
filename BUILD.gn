@@ -31,10 +31,7 @@ declare_args() {
   # build configuration. This file is used by infra to efficiently schedule
   # tests. "default.json" is a dummy file that contains no real duration data,
   # and causes infra to schedule tests as if each one has the same duration.
-  # TODO(fxb/43704): Change to
-  # "//integration/infra/test_durations/default.json" after the recipes start
-  # setting this arg.
-  test_durations_file = "//integration/infra/test_durations.json"
+  test_durations_file = "//integration/infra/test_durations/default.json"
 
   # If you add package labels to this variable, the packages will be included
   # in the 'universe' package set, which represents all software that is
