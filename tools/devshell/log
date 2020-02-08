@@ -4,13 +4,25 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Run, inspect and debug
-### listen for logs.
+### listen for logs from the on-device log_listener
 
-## usage: fx syslog [--raw] [flags]
+## usage: fx log [-h | --help] [--raw] [-r | --remote-symbols] LOG_LISTENER_FLAGS
+##
+##    --raw                   do not attempt to symbolize the log
+##
+##    --remote-symbols|-r     attemp to resolve symbols using predefined remote
+##                            symbol servers for symbols that cannot be resolved
+##                            locally. See `fx help symbolize` for more
+##                            information on remote symbol servers.
+##
+##    --help|-h               show this help and attempt to also show the
+##                            on-device log_listener help
+##
+##    LOG_LISTENER_FLAGS      bypass flags for the on-device log_listener
 ##
 ## Creates an SSH connection with a device and starts listening for logs.
-## Pass -h to get help with log-listener flags.
-## pass --raw as the first argument to get the raw, unsymbolized logs.
+## It will listen to the device specified with `fx -d DEVICE log` or
+## `fx set-device`, otherwise it will try to find a connected device.
 
 set -o pipefail
 
@@ -20,20 +32,51 @@ function listen {
   while true; do
     fx-command-run wait || return
     fx-command-run shell log_listener "$@"
-    echo "$(date '+%Y-%m-%d %H:%M:%S %Z'): Connection lost, reconnecting..."
+    local error_code=$?
+    if [[ "${error_code}" -eq 0 ]]; then
+      # this is necessary, so that "--dump_logs yes" works as expected.
+      break
+    fi
+    echo "$(date '+%Y-%m-%d %H:%M:%S %Z'): Connection lost (status ${error_code}), reconnecting..."
   done
 }
 
-for arg in "$@"; do
-  if [[ "$arg" = "-h" || "$arg" = "--help" ]]; then
-    fx-command-exec shell log_listener "$arg"
-  fi
+declare is_raw=0
+declare is_remote=0
+
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  -h|--help)
+    fx-command-help
+    echo
+    echo "*** Help for on-device log_listener:"
+    fx-command-exec shell log_listener -h
+    exit 0
+    ;;
+  --raw)
+    is_raw=1
+    ;;
+  --remote-symbols|-r)
+    is_remote=1
+    ;;
+  *)
+    break
+  esac
+  shift
 done
 
-echo "Connecting..."
-if [[ $# > 0 && "$1" = "--raw" ]]; then
-  shift
+if (( is_raw )) && (( is_remote )); then
+  fx-error "Invalid syntax: --raw and -r cannot be used together"
+  fx-command-help
+  exit 1
+fi
+
+if (( is_raw )); then
   listen "$@"
 else
-  listen "$@" | fx-symbolize
+  declare symbolizer=( "fx-command-run" "symbolize" )
+  if (( is_remote )); then
+    symbolizer+=("-r")
+  fi
+  listen "$@" | "${symbolizer[@]}"
 fi

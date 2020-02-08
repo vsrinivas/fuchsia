@@ -1,0 +1,55 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of fx symbolize
+
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/symbolize"
+)
+
+declare fx symbolize
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  symbolize="$(btf::make_hosttools_mock symbolize)"
+}
+
+TEST_symbolize_local() {
+  BT_EXPECT ${fx} symbolize
+  source "${symbolize}.mock_state"
+  local symbol_args="$(count_symbol_server_args)"
+  BT_EXPECT_EQ "${symbol_args}" "0" "symbolize should not get any -symbol-server arguments: ${symbol_args}"
+}
+
+TEST_symbolize_remote() {
+  BT_EXPECT ${fx} symbolize -r
+  source "${symbolize}.mock_state"
+  local symbol_args="$(count_symbol_server_args)"
+  BT_EXPECT_EQ $((symbol_args>0)) "1" "symbolize should get at least one -symbol-server argument: ${symbol_args}"
+}
+
+TEST_symbolize_remote_long() {
+  BT_EXPECT ${fx} symbolize --remote-symbols
+  source "${symbolize}.mock_state"
+  local symbol_args="$(count_symbol_server_args)"
+  BT_EXPECT_EQ $((symbol_args>0)) "1" "symbolize should get at least one -symbol-server argument: ${symbol_args}"
+}
+
+count_symbol_server_args() {
+  local symbol_server_args=0
+  for i in "${!BT_MOCK_ARGS[@]}"; do
+    if [[ "${BT_MOCK_ARGS[$i]}" == "-symbol-server" ]]; then
+      ((symbol_server_args++))
+    fi
+  done
+  echo ${symbol_server_args}
+}
+
+BT_RUN_TESTS "$@"

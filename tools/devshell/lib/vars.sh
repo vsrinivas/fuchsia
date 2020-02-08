@@ -35,27 +35,6 @@ function fx-error {
   fi
 }
 
-function fx-symbolize {
-  if [[ -z "$FUCHSIA_BUILD_DIR" ]]; then
-    fx-config-read
-  fi
-  local idstxt=()
-  if [[ $# -gt 0 ]]; then
-    idstxt=(-ids-rel -ids "$1")
-  fi
-  local symbolize="${HOST_OUT_DIR}/symbolize"
-  local llvm_symbolizer="${PREBUILT_CLANG_DIR}/bin/llvm-symbolizer"
-  local toolchain_dir="${PREBUILT_CLANG_DIR}/lib/debug/.build-id"
-  local prebuilt_build_ids_dir="${FUCHSIA_BUILD_DIR}/gen/build/gn/prebuilt_build_ids"
-  local out_dir="${FUCHSIA_BUILD_DIR}/.build-id"
-  local zircon_dir="${ZIRCON_BUILDROOT}/.build-id"
-  set -x
-  "$symbolize" -llvm-symbolizer "$llvm_symbolizer" \
-    "${idstxt[@]}" \
-    -build-id-dir "$prebuilt_build_ids_dir" -build-id-dir "$toolchain_dir" \
-    -build-id-dir "$out_dir" -build-id-dir "$zircon_dir"
-}
-
 function fx-gn {
   "${PREBUILT_GN}" "$@"
 }

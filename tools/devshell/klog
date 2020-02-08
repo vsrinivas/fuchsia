@@ -4,11 +4,20 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Run, inspect and debug
-### listen for kernel logs.
+### listen for kernel logs
 
+## usage: fx klog [--raw] [-r | --remote-symbols]
+##
+##    --raw                   do not attempt to symbolize the log
+##
+##    --remote-symbols|-r     attemp to resolve symbols using predefined remote
+##                            symbol servers for symbols that cannot be resolved
+##                            locally. See `fx help symbolize` for more
+##                            information on remote symbol servers.
+##
 ## This command delegates to the Zircon `loglistener` binary.
-## This will listen to the device specified with `fx set-device`; otherwise
-## one of the devices on the link-local network.
+## It will listen to the device specified with `fx -d DEVICE klog` or
+## `fx set-device`, otherwise one of the devices on the link-local network.
 
 set -e
 set -o pipefail
@@ -16,9 +25,41 @@ set -o pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-if [[ $# > 0 && $1 = "--raw" ]]; then
+declare is_raw=0
+declare is_remote=0
+
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  -h|--help)
+    fx-command-help
+    exit 0
+    ;;
+  --raw)
+    is_raw=1
+    ;;
+  --remote-symbols|-r)
+    is_remote=1
+    ;;
+  *)
+    fx-error Invalid syntax
+    fx-command-help
+    exit 1
+  esac
   shift
+done
+
+if (( is_raw )) && (( is_remote )); then
+  fx-error "Invalid syntax: --raw and -r cannot be used together"
+  fx-command-help
+  exit 1
+fi
+
+if (( is_raw )); then
   exec "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)"
 else
-  "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)" | fx-symbolize
+  declare symbolizer=( "fx-command-run" "symbolize" )
+  if (( is_remote )); then
+    symbolizer+=("-r")
+  fi
+  "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)" | "${symbolizer[@]}"
 fi
