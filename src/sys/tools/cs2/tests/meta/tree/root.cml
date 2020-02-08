@@ -12,5 +12,16 @@
             "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/bar.cm",
             "startup": "eager",
         },
+    ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#foo",
+                "#bar",
+            ]
+        },
     ]
 }

@@ -4,9 +4,10 @@
         "args": [ "-c", "/pkg/bin/hello_world" ]
     },
     "use": [
-      {
-        "protocol": "/svc/fuchsia.process.Launcher",
-        "as": "/svc/fuchsia.process.Launcher",
-      },
+        { "runner": "elf" },
+        {
+          "protocol": "/svc/fuchsia.process.Launcher",
+          "as": "/svc/fuchsia.process.Launcher",
+        },
     ]
 }
