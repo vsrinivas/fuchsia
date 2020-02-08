@@ -29,21 +29,30 @@ enum PixelFormatType {
     INVALID = 0;
 
     /// RGB only, 8 bits per each of R/G/B/A sample
+    /// Compatible with VK_FORMAT_R8G8B8A8_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_ABGR_8888 and ZX_PIXEL_FORMAT_BGR_x8888.
     R8G8B8A8 = 1;
 
     /// 32bpp BGRA, 1 plane.  RGB only, 8 bits per each of B/G/R/A sample.
+    /// Compatible with VK_FORMAT_B8G8R8A8_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_x888 and ZX_PIXEL_FORMAT_ARGB_8888.
     BGRA32 = 101; // For UVC compliance.
 
     /// YUV only, 8 bits per Y sample
+    /// Compatible with VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM.
     I420 = 102; // For UVC compliance.
 
     /// YUV only, 8 bits per Y sample
+    /// Not compatible with any vulkan format.
     M420 = 103; // For UVC compliance.
 
     /// YUV only, 8 bits per Y sample
+    /// Compatible with VK_FORMAT_G8_B8R8_2PLANE_420_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_NV12.
     NV12 = 104; // For UVC compliance.
 
     /// YUV only, 8 bits per Y sample
+    /// Compatible with VK_FORMAT_G8B8G8R8_422_UNORM.
     YUY2 = 105; // For UVC compliance.
 
     // TODO(garratt): Please elaborate in a comment here re. what/where the spec
@@ -52,21 +61,32 @@ enum PixelFormatType {
     MJPEG = 106; // For UVC compliance.
 
     /// YUV only, 8 bits per Y sample
+    /// Compatible with VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM with B and R swizzled.
     YV12 = 107;
 
     /// 24bpp BGR, 1 plane. RGB only, 8 bits per each of B/G/R sample
+    /// Compatible with VK_FORMAT_B8G8R8_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_888.
     BGR24 = 108;
 
     /// 16bpp RGB, 1 plane. 5 bits R, 6 bits G, 5 bits B
+    /// Compatible with VK_FORMAT_R5G6B5_UNORM_PACK16.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_565.
     RGB565 = 109;
 
     /// 8bpp RGB, 1 plane. 3 bits R, 3 bits G, 2 bits B
+    /// Not compatible with any vulkan format.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_332.
     RGB332 = 110;
 
     /// 8bpp RGB, 1 plane. 2 bits R, 2 bits G, 2 bits B
+    /// Not compatible with any vulkan format.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_2220.
     RGB2220 = 111;
 
     /// 8bpp, Luminance-only.
+    /// Compatible with VK_FORMAT_R8_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_GRAY_8 and ZX_PIXEL_FORMAT_MONO_8.
     L8 = 112;
 };
 
