@@ -15,7 +15,11 @@ zx_library("nand-redundant-storage") {
   host = true
 
   if (current_os == "linux") {
-    sources = [ "nand-rs.cc" ]
+    sources = [
+      "file-nand-rs.cc",
+      "nand-rs-header.cc",
+      "nand-rs.cc",
+    ]
   }
 
   public_deps = [ "$zx/system/ulib/mtd" ]
