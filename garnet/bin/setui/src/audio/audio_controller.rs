@@ -177,8 +177,13 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                                 volume_on_stream(AudioStreamType::Media, &stream_volume_controls);
                             let volume_up_max_pressed = new_media_user_volume == Some(1.0)
                                 && *volume_button_event_clone.lock().await == 1;
-                            if last_media_user_volume != new_media_user_volume
-                                || volume_up_max_pressed
+                            let stream_is_media = volume
+                                .iter()
+                                .find(|&&x| x.stream_type == AudioStreamType::Media)
+                                .is_some();
+                            if (last_media_user_volume != new_media_user_volume
+                                || volume_up_max_pressed)
+                                && stream_is_media
                             {
                                 fasync::spawn(play_media_volume_sound(
                                     sound_player_connection.clone(),

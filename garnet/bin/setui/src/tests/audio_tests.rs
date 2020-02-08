@@ -72,6 +72,24 @@ const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettin
     }),
 };
 
+const CHANGED_COMMUNICATION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Communication),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: Some(MAX_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_UNMUTED),
+    }),
+};
+
+const CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::SystemAgent),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: Some(MAX_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_UNMUTED),
+    }),
+};
+
 // Used to store fake services for mocking dependencies and checking input/outputs.
 // To add a new fake to these tests, add here, in create_services, and then use
 // in your test.
@@ -226,7 +244,7 @@ async fn test_sounds() {
     let (env, _) = create_environment(service_registry).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    // Test that the volume-max sound gets played on the soundplayer.
+    // Test that the volume-changed sound gets played on the soundplayer.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
@@ -275,6 +293,23 @@ async fn test_max_volume_sound_on_press() {
     // Check that the sound played more than once.
     assert!(fake_services.sound_player.lock().await.id_exists(0));
     assert!(fake_services.sound_player.lock().await.get_play_count(0).unwrap() > 1);
+}
+
+// Test to ensure that when the volume is changed on multiple channels, the sound only plays once.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_earcons_on_multiple_channel_change() {
+    let (service_registry, fake_services) = create_services().await;
+    let (env, _) = create_environment(service_registry).await;
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    // Set volume to max on multiple channels.
+    set_volume(&audio_proxy, vec![CHANGED_COMMUNICATION_STREAM_SETTINGS_MAX]).await;
+    set_volume(&audio_proxy, vec![CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX]).await;
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+
+    audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    assert!(fake_services.sound_player.lock().await.id_exists(0));
+    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
 }
 
 // Test to ensure that when another higher priority stream is playing,
