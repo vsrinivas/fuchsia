@@ -15,6 +15,7 @@ import("//build/testing/environments.gni")
 
 test_list = [
   "garnet_input_latency_benchmarks_test",
+  "kernel_boot_timeline_test",
   "ledger_perf_test",
   "microbenchmarks_test",
   "rust_inspect_benchmarks_test",
