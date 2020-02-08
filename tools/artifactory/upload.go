@@ -12,4 +12,9 @@ type Upload struct {
 
 	// Destination is the path to upload to relative to a gcs bucket and namespace.
 	Destination string
+
+	// Deduplicate gives a collision strategy. If true, then an upload should
+	// not fail in the event of a collision, allowing for deduplication of, for
+	// example, content-addressed uploads.
+	Deduplicate bool
 }

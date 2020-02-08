@@ -117,78 +117,33 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	keyDir := path.Join(repo, keyDirName)
 	blobDir := path.Join(metadataDir, blobDirName)
 
-	uploads := []struct {
-		// Path on disk to a directory from which to upload.
-		dir  artifactory.Upload
-		opts uploadOptions
-		// Specific files to upload.
-		files []artifactory.Upload
-	}{
+	dirs := []artifactory.Upload{
 		{
-			dir: artifactory.Upload{
-				Source:      blobDir,
-				Destination: blobDirName,
-			},
-			opts: uploadOptions{
-				// Note: there are O(10^3) blobs in a given clean build.
-				j: cmd.j,
-				// We want to dedup blobs across uploads.
-				failOnCollision: false,
-			},
-		},
-
-		{
-			dir: artifactory.Upload{
-				Source:      metadataDir,
-				Destination: path.Join(cmd.uuid, metadataDirName),
-			},
-			opts: uploadOptions{
-				// O(10^1) metadata files.
-				j:               1,
-				failOnCollision: true,
-			},
+			Source:      blobDir,
+			Destination: blobDirName,
+			Deduplicate: true,
 		},
 		{
-			dir: artifactory.Upload{
-				Source:      keyDir,
-				Destination: path.Join(cmd.uuid, keyDirName),
-			},
-			opts: uploadOptions{
-				// O(10^0) keys.
-				j:               1,
-				failOnCollision: true,
-			},
+			Source:      metadataDir,
+			Destination: path.Join(cmd.uuid, metadataDirName),
+			Deduplicate: false,
 		},
 		{
-			opts: uploadOptions{
-				j:               5,
-				failOnCollision: true,
-			},
-			files: artifactory.ImageUploads(m, path.Join(cmd.uuid, imageDirName)),
+			Source:      keyDir,
+			Destination: path.Join(cmd.uuid, keyDirName),
+			Deduplicate: false,
 		},
 	}
 
-	for _, upload := range uploads {
-		if upload.dir.Source != "" {
-			if err = uploadDir(ctx, upload.dir, sink, upload.opts); err != nil {
-				return err
-			}
-		}
-		if err = uploadFiles(ctx, upload.files, sink, upload.opts); err != nil {
+	files := artifactory.ImageUploads(m, path.Join(cmd.uuid, imageDirName))
+	for _, dir := range dirs {
+		fs, err := dirToFiles(ctx, dir)
+		if err != nil {
 			return err
 		}
+		files = append(files, fs...)
 	}
-	return nil
-}
-
-// UploadOptions provides options to parametrize the upload behavior.
-type uploadOptions struct {
-	// Concurrency factor: number of separate uploading routines.
-	j int
-
-	// FailOnCollision indicates that an upload should fail if the object's
-	// destination already exists.
-	failOnCollision bool
+	return uploadFiles(ctx, files, sink, cmd.j)
 }
 
 // DataSink is an abstract data sink, providing a mockable interface to
@@ -272,10 +227,13 @@ func (err checksumError) Error() string {
 }
 
 // dirToFiles returns a list of the top-level files in the dir.
-func dirToFiles(dir artifactory.Upload) ([]artifactory.Upload, error) {
+func dirToFiles(ctx context.Context, dir artifactory.Upload) ([]artifactory.Upload, error) {
 	var files []artifactory.Upload
 	entries, err := ioutil.ReadDir(dir.Source)
-	if err != nil {
+	if os.IsNotExist(err) {
+		logger.Debugf(ctx, "%s does not exist; skipping upload", dir.Source)
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	for _, fi := range entries {
@@ -285,38 +243,19 @@ func dirToFiles(dir artifactory.Upload) ([]artifactory.Upload, error) {
 		files = append(files, artifactory.Upload{
 			Source:      filepath.Join(dir.Source, fi.Name()),
 			Destination: filepath.Join(dir.Destination, fi.Name()),
+			Deduplicate: dir.Deduplicate,
 		})
 	}
 	return files, nil
 }
 
-func uploadDir(ctx context.Context, dir artifactory.Upload, dest dataSink, opts uploadOptions) error {
-	if opts.j <= 0 {
+func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink, j int) error {
+	if j <= 0 {
 		return fmt.Errorf("Concurrency factor j must be a positive number")
 	}
 
-	if _, err := os.Stat(dir.Source); err != nil {
-		// The associated artifacts might not actually have been created, which is valid.
-		if os.IsNotExist(err) {
-			logger.Debugf(ctx, "%s does not exist; skipping upload", dir.Source)
-			return nil
-		}
-		return err
-	}
-	files, err := dirToFiles(dir)
-	if err != nil {
-		return err
-	}
-	return uploadFiles(ctx, files, dest, opts)
-}
-
-func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink, opts uploadOptions) error {
-	if opts.j <= 0 {
-		return fmt.Errorf("Concurrency factor j must be a positive number")
-	}
-
-	uploads := make(chan artifactory.Upload, opts.j)
-	errs := make(chan error, opts.j)
+	uploads := make(chan artifactory.Upload, j)
+	errs := make(chan error, j)
 
 	queueUploads := func() {
 		defer close(uploads)
@@ -335,7 +274,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(opts.j)
+	wg.Add(j)
 	upload := func() {
 		defer wg.Done()
 		for upload := range uploads {
@@ -346,7 +285,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 			}
 			if exists {
 				logger.Debugf(ctx, "object %q: already exists remotely", upload.Destination)
-				if opts.failOnCollision {
+				if !upload.Deduplicate {
 					errs <- fmt.Errorf("object %q: collided", upload.Destination)
 					return
 				}
@@ -359,16 +298,16 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 				return
 			}
 
-			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
 			if err := dest.write(ctx, upload.Destination, upload.Source, checksum); err != nil {
 				errs <- fmt.Errorf("%s: %v", upload.Destination, err)
 				return
 			}
+			logger.Debugf(ctx, "object %q: created", upload.Destination)
 		}
 	}
 
 	go queueUploads()
-	for i := 0; i < opts.j; i++ {
+	for i := 0; i < j; i++ {
 		go upload()
 	}
 	wg.Wait()

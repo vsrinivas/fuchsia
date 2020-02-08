@@ -118,13 +118,13 @@ func newDirWithContents(t *testing.T, contents map[string][]byte) string {
 	return dir
 }
 
-func sinkHasExpectedContents(t *testing.T, actual, expected map[string][]byte, opts uploadOptions) {
+func sinkHasExpectedContents(t *testing.T, actual, expected map[string][]byte, j int) {
 	dir := newDirWithContents(t, actual)
 	defer os.RemoveAll(dir)
 	sink := newMemSink()
 	ctx := context.Background()
 	files := getUploadFiles(dir, expected)
-	if err := uploadFiles(ctx, files, sink, opts); err != nil {
+	if err := uploadFiles(ctx, files, sink, j); err != nil {
 		t.Fatalf("failed to upload contents: %v", err)
 	}
 	sinkHasContents(t, sink, expected)
@@ -153,8 +153,7 @@ func TestUploading(t *testing.T) {
 			"a":   []byte("one"),
 			"c/d": []byte("three"),
 		}
-		opts := uploadOptions{j: 1}
-		sinkHasExpectedContents(t, actual, expected, opts)
+		sinkHasExpectedContents(t, actual, expected, 1)
 	})
 
 	t.Run("behaves under high concurrency", func(t *testing.T) {
@@ -164,8 +163,7 @@ func TestUploading(t *testing.T) {
 			actual[s] = []byte(s)
 		}
 		expected := actual
-		opts := uploadOptions{j: 100}
-		sinkHasExpectedContents(t, actual, expected, opts)
+		sinkHasExpectedContents(t, actual, expected, 100)
 	})
 
 	t.Run("only top-level files are uploaded", func(t *testing.T) {
@@ -181,7 +179,7 @@ func TestUploading(t *testing.T) {
 			{Source: filepath.Join(dir.Source, "a"), Destination: "a"},
 			{Source: filepath.Join(dir.Source, "b"), Destination: "b"},
 		}
-		files, err := dirToFiles(dir)
+		files, err := dirToFiles(context.Background(), dir)
 		if err != nil {
 			t.Fatalf("failed to read dir: %v", err)
 		}
@@ -198,16 +196,15 @@ func TestUploading(t *testing.T) {
 		defer os.RemoveAll(dir)
 		sink := newMemSink()
 		ctx := context.Background()
-		opts := uploadOptions{j: 1}
 		nonexistentFile := artifactory.Upload{Source: filepath.Join(dir, "nonexistent")}
-		if err = uploadFiles(ctx, []artifactory.Upload{nonexistentFile}, sink, opts); err != nil {
+		if err = uploadFiles(ctx, []artifactory.Upload{nonexistentFile}, sink, 1); err != nil {
 			t.Fatal(err)
 		}
 		if len(sink.contents) > 0 {
 			t.Fatal("sink should be empty")
 		}
 		// Now check that uploading an empty files list also does not result in an error.
-		if err = uploadFiles(ctx, []artifactory.Upload{}, sink, opts); err != nil {
+		if err = uploadFiles(ctx, []artifactory.Upload{}, sink, 1); err != nil {
 			t.Fatal(err)
 		}
 		if len(sink.contents) > 0 {
