@@ -32,7 +32,7 @@ if (current_cpu != "") {
       "$zx/system/dev/bus/pci:pci-unit",
       "$zx/system/dev/bus/virtio:virtio-test",
       "$zx/system/dev/lib/device-protocol-pdev/test",
-      "$zx/system/dev/lib/fake-mmio-reg:fake-mmio-reg-test",
+      "$zx/system/dev/lib/fake-mmio-reg/test",
       "$zx/system/dev/lib/mock-mmio-reg:mock-mmio-reg-test",
       "$zx/system/dev/sysmem/sysmem:sysmem-unittest",
       "$zx/system/ulib/abs_clock:test",
