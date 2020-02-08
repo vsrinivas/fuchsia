@@ -44,8 +44,6 @@ toc:
 - title: "Diagnostics"
   section:
   - include: /docs/concepts/components/inspect/_toc.yaml
-  - title: "Instrumentation hooks"
-    path: /docs/concepts/components/instrumentation_hooks.md
 - title: "Implementation details"
   section:
   - title: "Life of a service open"

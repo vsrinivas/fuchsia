@@ -31,8 +31,6 @@ between executions.
   runtimes.
 - [Resolvers](resolvers.md): find components from URLs; add support for
   methods of software packaging and distribution.
-- [Instrumentation hooks](instrumentation_hooks.md): intercept events in the
-  component runtime.
 
 **Debugging & troubleshooting**
 

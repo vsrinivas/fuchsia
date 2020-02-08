@@ -380,7 +380,6 @@ components to compartments have been formalized.
 
 Components use framework capabilities to interact with their environment:
 
-- [Instrumentation Hooks][doc-hooks]: Diagnose and debug components.
 - [Hub][doc-hub]: Examine the component topology at runtime.
 - [Realm][doc-realms]: Manage and bind to child components.
 - [Lifecycle][doc-lifecycle]: Listen and handle lifecycle events.
@@ -465,7 +464,6 @@ set size by stopping less essential components at a moment's notice.
 [doc-capabilities]: capabilities
 [doc-collections]: realms.md#collections
 [doc-component-urls]: component_urls.md
-[doc-hooks]: instrumentation_hooks.md
 [doc-hub]: hub.md
 [doc-lifecycle]: lifecycle.md
 [doc-manifests]: component_manifests.md
