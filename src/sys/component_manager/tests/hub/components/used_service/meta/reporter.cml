@@ -3,6 +3,7 @@
         "binary": "bin/used_service_reporter",
     },
     "use": [
+        { "runner": "elf" },
         {
             "directory": "/hub", "from": "framework", "rights": ["r*"]
         },

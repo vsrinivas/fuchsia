@@ -6,6 +6,7 @@
         "args": [ "Triggered", "b" ],
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fidl.examples.routing.echo.Echo",
         },

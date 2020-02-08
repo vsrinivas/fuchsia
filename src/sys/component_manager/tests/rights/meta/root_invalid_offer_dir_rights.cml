@@ -14,6 +14,15 @@
     },
   ],
   "offer": [
+    // Offer the ELF runner to children.
+    {
+      "runner": "elf",
+      "from": "realm",
+      "to": [
+        "#use_dir_rights",
+        "#expose_dir_rights",
+      ]
+    },
     // This offer is invalidly increased in scope by the parent to rw*. This should fail and
     // result in the directory not being mapped to the child proccess.
     {

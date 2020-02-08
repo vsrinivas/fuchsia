@@ -3,6 +3,7 @@
     "binary": "bin/use_storage",
   },
   "use": [
+    { "runner": "elf" },
     { "storage": "data" },
   ]
 }

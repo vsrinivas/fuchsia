@@ -8,6 +8,7 @@
         },
     ],
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
         },

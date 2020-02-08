@@ -1,5 +1,14 @@
 {
     "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#worker_sibling",
+                "#worker_child",
+            ]
+        },
         {
             "protocol": "/svc/fuchsia.sys2.WorkScheduler",
              "from": "#worker_child",

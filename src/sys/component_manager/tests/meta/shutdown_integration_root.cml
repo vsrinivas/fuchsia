@@ -5,6 +5,14 @@
 // Realm for the shutdown integration test, it requests the SystemController protocol
 {
     "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#power_switch",
+            ]
+        },
         {
             "protocol": "/svc/fuchsia.sys2.SystemController",
             "from": "realm",

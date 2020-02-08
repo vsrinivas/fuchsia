@@ -1,9 +1,19 @@
 {
-     "children": [
+    "children": [
         {
             "name": "grandchild",
             "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/grandchild.cm",
             "startup": "eager"
         }
     ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#grandchild",
+            ]
+        },
+    ]
 }

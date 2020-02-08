@@ -3,6 +3,7 @@
         "binary": "bin/storage_user",
     },
     "use": [
+        { "runner": "elf" },
         { "storage": "data" },
         { "protocol": "/svc/fuchsia.logger.LogSink" },
     ],

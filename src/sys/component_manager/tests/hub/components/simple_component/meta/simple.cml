@@ -2,10 +2,23 @@
     "program": {
         "binary": "bin/simple"
     },
+    "use": [
+        { "runner": "elf" }
+    ],
     "children": [
         {
             "name": "child",
             "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
         },
     ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#child",
+            ]
+        },
+    ]
 }

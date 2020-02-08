@@ -6,6 +6,9 @@
   "program": {
     "binary": "bin/expose_dir_rights",
   },
+  "use": [
+    { "runner": "elf" }
+  ],
   "expose": [
       {
         "directory": "/read_only",

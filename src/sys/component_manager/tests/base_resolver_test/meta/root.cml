@@ -7,7 +7,18 @@
       "url": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm",
     },
   ],
+  "offer": [
+    // Offer the ELF runner to children.
+    {
+      "runner": "elf",
+      "from": "realm",
+      "to": [
+        "#echo_server",
+      ]
+    },
+  ],
   "use": [
+    { "runner": "elf" },
     {
       "protocol": "/svc/fuchsia.sys2.Realm",
       "from": "framework",

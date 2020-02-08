@@ -9,6 +9,14 @@
     ],
     // Route Echo service to child.
     "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#trigger",
+            ]
+        },
         {
             "protocol": [
                 "/svc/fuchsia.logger.LogSink",

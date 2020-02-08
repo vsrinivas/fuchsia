@@ -75,9 +75,12 @@ async fn storage_from_collection() -> Result<(), Error> {
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("breakpoint system did not connect");
     let receiver = breakpoint_system
-        .set_breakpoints(vec![BeforeStartInstance::TYPE, PostDestroyInstance::TYPE])
+        .set_breakpoints(vec![
+            BeforeStartInstance::TYPE,
+            PostDestroyInstance::TYPE,
+            RouteCapability::TYPE,
+        ])
         .await?;
-    let bind_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
     // The root component connects to the Trigger capability to start the dynamic child.
     // Inject the Trigger capability upon request.
@@ -87,21 +90,15 @@ async fn storage_from_collection() -> Result<(), Error> {
     breakpoint_system.start_component_tree().await?;
 
     // Expect the root component to be started
-    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
-    invocation.resume().await?;
-
-    // The root component connects to the Realm service to start the dynamic child
-    let invocation = bind_receiver
-        .wait_until_framework_capability(".", "/svc/fuchsia.sys2.Realm", Some("."))
-        .await?;
+    let invocation = receiver.wait_until_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
 
     // Expect 2 children to be started - one static and one dynamic
     // Order is irrelevant
-    let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
+    let invocation = receiver.wait_until_type::<BeforeStartInstance>().await?;
     invocation.resume().await?;
 
-    let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
+    let invocation = receiver.wait_until_type::<BeforeStartInstance>().await?;
     invocation.resume().await?;
 
     // With all children started, do the test
@@ -112,10 +109,9 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await?;
 
-    drop(bind_receiver);
-
     // Expect the dynamic child to be destroyed
-    let invocation = receiver.expect_exact::<PostDestroyInstance>("./coll:storage_user:1").await?;
+    let invocation =
+        receiver.wait_until_exact::<PostDestroyInstance>("./coll:storage_user:1").await?;
 
     println!("checking that storage was destroyed");
     let memfs_proxy = io_util::open_directory_in_namespace(

@@ -3,6 +3,7 @@
         "binary": "bin/visibility_reporter"
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.test.hub.HubReport",
             "from": "framework"
@@ -19,4 +20,14 @@
             "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/child.cm",
         }
     ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#child",
+            ]
+        },
+    ]
 }

@@ -4,6 +4,7 @@
         "binary": "bin/collection_realm",
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.logger.LogSink",
         },
@@ -14,6 +15,15 @@
     ],
     // Route Echo service from server to collection.
     "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#echo_server",
+                "#coll",
+            ]
+        },
         {
             "protocol": "/svc/fuchsia.logger.LogSink",
             "from": "realm",

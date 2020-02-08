@@ -3,6 +3,7 @@
         "binary": "bin/memfs",
     },
     "use": [
+        { "runner": "elf" },
         { "protocol": "/svc/fuchsia.logger.LogSink" },
     ],
     "expose": [

@@ -4,6 +4,9 @@
     "program": {
         "binary": "bin/trigger",
     },
+    "use": [
+        { "runner": "elf" }
+    ],
     "expose": [
         {
             "protocol": "/svc/fidl.test.components.Trigger",

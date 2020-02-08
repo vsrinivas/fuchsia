@@ -3,6 +3,7 @@
         "binary": "bin/unbound_child_worker_sibling",
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.sys2.WorkScheduler",
              "from": "realm",

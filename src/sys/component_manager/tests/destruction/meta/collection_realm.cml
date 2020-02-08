@@ -4,6 +4,7 @@
         "binary": "bin/collection_realm",
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.logger.LogSink",
         },
@@ -18,4 +19,14 @@
             "durability": "transient",
         },
     ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#coll",
+            ]
+        },
+    ]
 }

@@ -233,7 +233,9 @@ mod tests {
                     value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
                 }],
             }),
-            uses: None,
+            uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                source_name: Some("elf".to_string()),
+            })]),
             exposes: None,
             offers: None,
             facets: None,

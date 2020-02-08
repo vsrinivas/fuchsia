@@ -11,6 +11,7 @@
         }
     ],
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
             "from": "framework",

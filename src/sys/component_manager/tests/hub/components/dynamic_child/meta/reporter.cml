@@ -3,6 +3,7 @@
         "binary": "bin/dynamic_child_reporter"
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": [
                 "/svc/fuchsia.sys2.Realm",
@@ -21,6 +22,16 @@
         {
             "name": "coll",
             "durability": "transient",
+        },
+    ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#coll",
+            ]
         },
     ]
 }

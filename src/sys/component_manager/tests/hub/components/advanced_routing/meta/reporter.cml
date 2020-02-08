@@ -4,6 +4,7 @@
         "args": ["Hippos", "rule!"],
     },
     "use": [
+        { "runner": "elf" },
         {
            "directory": "/hub", "from": "realm", "as": "/parent_hub", "rights": ["r*"]
         },

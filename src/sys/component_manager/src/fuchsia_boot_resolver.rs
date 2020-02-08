@@ -153,7 +153,9 @@ mod tests {
         };
         let component_decl = ComponentDecl {
             program: Some(program),
-            uses: None,
+            uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                source_name: Some("elf".to_string()),
+            })]),
             exposes: None,
             offers: None,
             facets: None,

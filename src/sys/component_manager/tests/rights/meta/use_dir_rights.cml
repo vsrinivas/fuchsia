@@ -3,6 +3,7 @@
     "binary": "bin/use_dir_rights",
   },
   "use": [
+    { "runner": "elf" },
     { "directory": "/read_only", "rights":["r*"] },
     { "directory": "/read_write", "rights":["rw*"] },
     { "directory": "/read_write_dup", "rights":["rw*"] },

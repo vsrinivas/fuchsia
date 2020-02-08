@@ -6,6 +6,16 @@
       "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
     },
   ],
+  "offer": [
+    // Offer the ELF runner to children.
+    {
+      "runner": "elf",
+      "from": "realm",
+      "to": [
+        "#expose_dir_rights",
+      ]
+    },
+  ],
   "expose": [
       // This has invalidly been scoped up to RW.
       {

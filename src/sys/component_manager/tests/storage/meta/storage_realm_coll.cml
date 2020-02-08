@@ -10,6 +10,7 @@
         },
     ],
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fuchsia.sys2.Realm",
             "from": "framework"
@@ -20,6 +21,15 @@
         },
     ],
     "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#memfs",
+                "#coll",
+            ]
+        },
         {
             "storage": "data",
             "from": "#mystorage",
