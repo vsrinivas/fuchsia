@@ -15,12 +15,14 @@ use syn::{punctuated::*, token::*, *};
 
 type Result<T> = std::result::Result<T, Error>;
 
-const INVALID_FIDL_FIELD_ATTRIBUTE_MSG: &str =
-    "fidl_field_type attribute must be required, optional, or default = value";
+const INVALID_FIDL_FIELD_ATTRIBUTE_MSG: &str = concat!(
+    "fidl_field_type attribute must be required, optional, ",
+    "or default = value; alternatively use fidl_field_with_default for non-literal constants"
+);
 
 #[proc_macro_derive(
     ValidFidlTable,
-    attributes(fidl_table_src, fidl_field_type, fidl_table_validator)
+    attributes(fidl_table_src, fidl_field_type, fidl_table_validator, fidl_field_with_default)
 )]
 pub fn validate_fidl_table(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input: DeriveInput = syn::parse(input).unwrap();
@@ -123,16 +125,15 @@ struct FidlField {
 impl TryFrom<Field> for FidlField {
     type Error = Error;
     fn try_from(src: Field) -> Result<Self> {
+        let span = src.span();
         let ident = match src.ident {
             Some(ident) => Ok(ident),
-            None => Err(Error::new(
-                src.span(),
-                "ValidFidlTable can only be derived for non-tuple structs.",
-            )),
+            None => {
+                Err(Error::new(span, "ValidFidlTable can only be derived for non-tuple structs."))
+            }
         }?;
 
-        let attrs = src.attrs;
-        let kind = FidlFieldKind::try_from(attrs.as_slice())?;
+        let kind = FidlFieldKind::try_from((span, src.attrs.as_slice()))?;
 
         let in_vec = match src.ty {
             syn::Type::Path(path) => {
@@ -226,6 +227,9 @@ impl FidlField {
                     },
                 ),
             },
+            FidlFieldKind::ExprDefault(default_ident) => quote!(
+                #ident: src.#ident.unwrap_or(#default_ident),
+            ),
             FidlFieldKind::HasDefault(value) => quote!(
                 #ident: src.#ident.unwrap_or(#value),
             ),
@@ -237,28 +241,38 @@ impl FidlField {
 enum FidlFieldKind {
     Required,
     Optional,
+    ExprDefault(Ident),
     HasDefault(Lit),
 }
 
-impl TryFrom<&[Attribute]> for FidlFieldKind {
+impl TryFrom<(Span, &[Attribute])> for FidlFieldKind {
     type Error = Error;
-    fn try_from(attrs: &[Attribute]) -> Result<Self> {
-        match unique_list_with_arg(attrs, "fidl_field_type")? {
-            Some(NestedMeta::Meta(Meta::Path(field_type))) => field_type
-                .get_ident()
-                .and_then(|i| match i.to_string().as_str() {
+    fn try_from((span, attrs): (Span, &[Attribute])) -> Result<Self> {
+        if let Some(kind) = match unique_list_with_arg(attrs, "fidl_field_type")? {
+            Some(NestedMeta::Meta(Meta::Path(field_type))) => {
+                field_type.get_ident().and_then(|i| match i.to_string().as_str() {
                     "required" => Some(FidlFieldKind::Required),
                     "optional" => Some(FidlFieldKind::Optional),
                     _ => None,
                 })
-                .ok_or(Error::new(field_type.span(), INVALID_FIDL_FIELD_ATTRIBUTE_MSG)),
+            }
             Some(NestedMeta::Meta(Meta::NameValue(ref default_value)))
                 if default_value.path.is_ident("default") =>
             {
-                Ok(FidlFieldKind::HasDefault(default_value.lit.clone()))
+                Some(FidlFieldKind::HasDefault(default_value.lit.clone()))
             }
-            None => Ok(FidlFieldKind::Required),
-            Some(meta) => Err(Error::new(meta.span(), INVALID_FIDL_FIELD_ATTRIBUTE_MSG)),
+            _ => None,
+        } {
+            return Ok(kind);
+        }
+
+        let error = Err(Error::new(span, INVALID_FIDL_FIELD_ATTRIBUTE_MSG));
+        match unique_list_with_arg(attrs, "fidl_field_with_default")? {
+            Some(NestedMeta::Meta(Meta::Path(field_type))) => match field_type.get_ident() {
+                Some(ident) => Ok(FidlFieldKind::ExprDefault(ident.clone())),
+                _ => error,
+            },
+            _ => Ok(FidlFieldKind::Required),
         }
     }
 }
@@ -323,18 +337,6 @@ fn impl_valid_fidl_table(
     field_intos.extend(fields.iter().map(|field| {
         let ident = &field.ident;
         match &field.kind {
-            FidlFieldKind::Required | FidlFieldKind::HasDefault(_) => match field.in_vec {
-                true => quote!(
-                    #ident: Some(
-                        src.#ident.into_iter().map(Into::into).collect()
-                    ),
-                ),
-                false => quote!(
-                    #ident: Some(
-                        src.#ident.into()
-                    ),
-                ),
-            },
             FidlFieldKind::Optional => match field.in_vec {
                 true => quote!(
                     #ident: if let Some(field) = src.#ident {
@@ -349,6 +351,18 @@ fn impl_valid_fidl_table(
                     } else {
                         None
                     },
+                ),
+            },
+            _ => match field.in_vec {
+                true => quote!(
+                    #ident: Some(
+                        src.#ident.into_iter().map(Into::into).collect()
+                    ),
+                ),
+                false => quote!(
+                    #ident: Some(
+                        src.#ident.into()
+                    ),
                 ),
             },
         }

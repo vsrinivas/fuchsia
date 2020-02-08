@@ -72,6 +72,22 @@
 //! ...
 //! ```
 //!
+//! ## Non-literal defaults
+//!
+//! Attribute syntax for `name = value` only supports literals. Another attribute for
+//! expressing defaults is used for consts.
+//!
+//! ```
+//! const MY_DEFAULT: MyEnum = MyEnum::MyVariant;
+//!
+//! #[derive(ValidFidlTable)]
+//! #[fidl_table_src(FidlHello)]
+//! struct ValidatedFidlTable {
+//!     #[fidl_field_with_default(MY_DEFAULT)]
+//!     has_default: MyEnum,
+//! }
+//! ```
+//!
 ///! This adds a `Logical(YourErrorType)` variant to the generated error enum.
 // TODO(turnage): Infer optionality based on parsing for
 //                "Option<" in field types.

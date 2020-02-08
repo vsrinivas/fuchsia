@@ -409,3 +409,43 @@ fn works_with_optional_vec_wrapped_nested_fields() {
         Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
     };
 }
+
+#[test]
+fn works_with_identifier_defaults() {
+    #[derive(Debug, PartialEq)]
+    enum Cheese {
+        Cheddar,
+        Swiss,
+    }
+
+    const DEFAULT_CHEESE: Cheese = Cheese::Cheddar;
+
+    impl Default for Cheese {
+        fn default() -> Self {
+            DEFAULT_CHEESE
+        }
+    }
+
+    #[derive(Default, Debug, PartialEq)]
+    struct Fidl {
+        cheese: Option<Cheese>,
+    }
+    dummy_impl_decodable!(Fidl);
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(Fidl)]
+    struct ValidFidl {
+        #[fidl_field_with_default(DEFAULT_CHEESE)]
+        cheese: Cheese,
+    }
+
+    match ValidFidl::try_from(Fidl { cheese: None }) {
+        Ok(valid) => assert_eq!(ValidFidl { cheese: DEFAULT_CHEESE }, valid),
+        Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
+    };
+
+    match ValidFidl::try_from(Fidl { cheese: Some(Cheese::Swiss) }) {
+        Ok(valid) => assert_eq!(ValidFidl { cheese: Cheese::Swiss }, valid),
+        Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
+    };
+}
