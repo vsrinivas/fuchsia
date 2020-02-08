@@ -41,6 +41,7 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
     // Called after the connection's destructor has been called, so the
     // refcount should be 0.
     virtual void DeregisterConnection() {}
+    virtual void SetCurrentThreadToDefaultPriority() {}
   };
 
   static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);

@@ -197,6 +197,13 @@ bool MsdArmDevice::Init(void* device_handle) {
   scheduler_ = std::make_unique<JobScheduler>(this, 3);
   address_manager_ = std::make_unique<AddressManager>(this, gpu_features_.address_space_count);
 
+  default_profile_ = platform_device_->GetSchedulerProfile(magma::PlatformDevice::kPriorityDefault,
+                                                           "msd-arm-mali/default-thread-priority");
+
+  if (!default_profile_) {
+    return DRETF(0, "Failed to get normal priority");
+  }
+
   bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
   if (!bus_mapper_)
     return DRETF(false, "Failed to create bus mapper");
@@ -1233,6 +1240,10 @@ magma::Status MsdArmDevice::ProcessPerfCounterRequest(uint32_t type) {
     return MAGMA_STATUS_INVALID_ARGS;
   }
   return MAGMA_STATUS_OK;
+}
+
+void MsdArmDevice::SetCurrentThreadToDefaultPriority() {
+  magma::PlatformThreadHelper::SetProfile(default_profile_.get());
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

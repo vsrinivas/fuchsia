@@ -99,6 +99,7 @@ class MsdArmDevice : public msd_device_t,
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
   bool IsProtectedModeSupported() override;
   void DeregisterConnection() override;
+  void SetCurrentThreadToDefaultPriority() override;
 
   magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
   magma_status_t QueryReturnsBuffer(uint64_t id, uint32_t* buffer_out);
@@ -203,6 +204,8 @@ class MsdArmDevice : public msd_device_t,
   std::unique_ptr<magma::PlatformInterrupt> gpu_interrupt_;
   std::unique_ptr<magma::PlatformInterrupt> job_interrupt_;
   std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;
+
+  std::unique_ptr<magma::PlatformHandle> default_profile_;
 
   GpuFeatures gpu_features_;
   ArmMaliCacheCoherencyStatus cache_coherency_status_ = kArmMaliCacheCoherencyNone;

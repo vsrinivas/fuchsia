@@ -45,15 +45,18 @@ class FakeConnectionOwner : public MsdArmConnection::Owner {
   ArmMaliCacheCoherencyStatus cache_coherency_status() override {
     return kArmMaliCacheCoherencyAce;
   }
+  void SetCurrentThreadToDefaultPriority() override { got_set_to_default_priority_ = true; }
 
   const std::vector<MsdArmConnection*>& cancel_atoms_list() { return cancel_atoms_list_; }
   const std::vector<std::shared_ptr<MsdArmAtom>>& atoms_list() { return atoms_list_; }
+  bool got_set_to_default_priority() const { return got_set_to_default_priority_; }
 
  private:
   TestAddressSpaceObserver observer_;
   MockConsistentBusMapper bus_mapper_;
   std::vector<MsdArmConnection*> cancel_atoms_list_;
   std::vector<std::shared_ptr<MsdArmAtom>> atoms_list_;
+  bool got_set_to_default_priority_ = false;
 };
 
 class DeregisterConnectionOwner : public FakeConnectionOwner {
@@ -335,6 +338,8 @@ class TestConnection {
     uint32_t token;
     connection->SetNotificationCallback(&TestCallback, &token);
     connection->MarkDestroyed();
+
+    EXPECT_TRUE(owner.got_set_to_default_priority());
 
     EXPECT_EQ(sizeof(g_status), g_test_data_size);
     EXPECT_EQ(&token, g_test_token);

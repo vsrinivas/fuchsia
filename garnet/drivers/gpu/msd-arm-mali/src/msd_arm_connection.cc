@@ -475,6 +475,7 @@ void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode 
 }
 
 void MsdArmConnection::MarkDestroyed() {
+  owner_->SetCurrentThreadToDefaultPriority();
   owner_->CancelAtoms(shared_from_this());
 
   std::lock_guard<std::mutex> lock(callback_lock_);
