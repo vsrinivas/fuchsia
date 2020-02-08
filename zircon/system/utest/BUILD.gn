@@ -137,7 +137,6 @@ if (current_cpu != "") {
         "$zx/system/ulib/ftl-mtd/test",
         "ftl-mtd",
         "mtd",
-        "nand-redundant-storage",
       ]
     }
   }

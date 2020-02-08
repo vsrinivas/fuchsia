@@ -16,9 +16,12 @@ zx_library("mtd") {
     sources = [ "mtd-interface.cc" ]
   }
 
-  public_deps = [ "$zx/system/ulib/fbl" ]
+  public_deps = [ "$zx/system/ulib/fbl:headers" ]
 
-  deps = [ "$zx/system/ulib/log" ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/log",
+  ]
 
   defines = []
 

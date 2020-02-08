@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <lib/cksum.h>
-#include <lib/log/log.h>
 #include <lib/mtd/nand-interface.h>
 #include <lib/nand-redundant-storage/nand-redundant-storage-header.h>
 #include <lib/nand-redundant-storage/nand-redundant-storage-interface.h>

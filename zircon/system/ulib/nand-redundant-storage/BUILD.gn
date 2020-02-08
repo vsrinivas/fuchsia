@@ -22,11 +22,11 @@ zx_library("nand-redundant-storage") {
     ]
   }
 
-  public_deps = [ "$zx/system/ulib/mtd" ]
+  public_deps = [ "$zx/system/ulib/mtd:headers" ]
 
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/log",
+    "$zx/system/ulib/mtd",
     "$zx/third_party/ulib/cksum",
   ]
 }

@@ -76,9 +76,6 @@ void log_set_min_level(log_level_t level) {
 }
 
 __EXPORT
-log_config_t* log_get_config(void) { return g_log_config_ptr.get(); }
-
-__EXPORT
 void log_initialize(log_level_t min_level, log_writer_t* log_writer, const size_t num_tags,
                     const char** tags) {
   if (g_log_config_ptr.get() != nullptr) {

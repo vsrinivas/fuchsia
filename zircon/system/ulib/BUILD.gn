@@ -203,15 +203,22 @@ group("ulib") {
 group("ulib-host") {
   testonly = true
   deps = [
+    "$zx/third_party/ulib/cksum",
     "cmdline",
     "fbl",
+    "fdio",
     "fit",
     "libzbi",
+    "log",
     "pretty",
     "unittest:unittest-static",
     "zxtest",
   ]
   if (current_os == "linux") {
-    deps += [ "//third_party/ulib/usbhost:usbhost-static" ]
+    deps += [
+      "$zx/third_party/ulib/usbhost:usbhost-static",
+      "mtd",
+      "nand-redundant-storage",
+    ]
   }
 }

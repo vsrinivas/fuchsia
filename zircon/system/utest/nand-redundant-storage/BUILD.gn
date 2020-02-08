@@ -2,19 +2,55 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("nand-redundant-storage") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("nand-redundant-storage") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "nand-rs-tests.cc" ]
 
-  deps = [ "$zx/system/ulib/zxtest" ]
-
-  if (current_os == "linux") {
+  if (is_fuchsia) {
+    deps = [ "//zircon/public/lib/zxtest" ]
+  } else if (current_os == "linux") {
     # This library requires an environment with mtd/mtd-user.h and MTD support.
     # Currently, Linux is the only OS with that support.
-    deps += [ "$zx/system/ulib/nand-redundant-storage" ]
+    deps = [
+      "//zircon/public/lib/nand-redundant-storage-host",
+      "//zircon/public/lib/zxtest-host",
+    ]
+  } else {
+    assert(false, "Unsupported OS: $current_os")
   }
 
   # Used by the test to point to the correct simulated MTD storage.
   if (current_cpu == "arm64") {
     defines = [ "ASTRO" ]
   }
+}
+
+migrated_manifest("nand-redundant-storage-manifest") {
+  deps = [ ":nand-redundant-storage" ]
 }
